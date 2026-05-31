@@ -33,6 +33,10 @@ build/
 .vscode/
 .claude
 CLAUDE-*.log
-CLAUDE.md
 .worktree/
 .worktree
+
+### Ambiente / segredos ###
+.env
+*.env
+!.env.example

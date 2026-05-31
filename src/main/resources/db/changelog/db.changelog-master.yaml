@@ -1,0 +1,9 @@
+# Changelog raiz do Liquibase.
+# Cada migration vira um arquivo em db/changelog/changes/ e e incluido aqui em ordem.
+# A primeira entrada real (criacao de tabelas) entra na Sprint 2 - Notas Fiscais.
+databaseChangeLog:
+  - changeSet:
+      id: 0000-baseline
+      author: supersonic-team
+      comment: Baseline vazio. Marca o inicio do versionamento do schema.
+      changes: []
