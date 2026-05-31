@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,8 +22,14 @@ public class CorsConfig {
     private final List<String> allowedOrigins;
 
     public CorsConfig(
-            @Value("${app.cors.allowed-origins:http://localhost:4200}") List<String> allowedOrigins) {
-        this.allowedOrigins = allowedOrigins;
+            @Value("${app.cors.allowed-origins:http://localhost:4200}") String allowedOrigins) {
+        // Split explicito da lista separada por virgula (ex: "http://a, http://b"),
+        // com trim e descarte de entradas vazias. Auto-documentado e independente
+        // do conversion service.
+        this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
     }
 
     @Bean
