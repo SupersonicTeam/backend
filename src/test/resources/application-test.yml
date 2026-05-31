@@ -1,0 +1,23 @@
+# Profile TEST — banco H2 em memoria, sem Docker, para os testes de contexto.
+spring:
+  datasource:
+    url: jdbc:h2:mem:agrocontabil;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  docker:
+    compose:
+      enabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+app:
+  cors:
+    allowed-origins: http://localhost:4200

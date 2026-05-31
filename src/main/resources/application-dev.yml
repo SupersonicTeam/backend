@@ -1,0 +1,25 @@
+# Profile DEV — desenvolvimento local com Postgres via Docker Compose.
+# O spring-boot-docker-compose sobe o compose.yaml automaticamente ao iniciar.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${DB_NAME:agrocontabil}
+    username: ${DB_USER:agrocontabil}
+    password: ${DB_PASSWORD:agrocontabil}
+
+  docker:
+    compose:
+      enabled: true
+      file: compose.yaml
+      lifecycle-management: start-and-stop
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# Logs verbosos em dev para facilitar o desenvolvimento.
+logging:
+  level:
+    br.com.agrocontabil: DEBUG
+    org.hibernate.SQL: DEBUG
