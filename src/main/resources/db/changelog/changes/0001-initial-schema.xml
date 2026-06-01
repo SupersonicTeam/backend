@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="0001-create-produtores" author="supersonic-team">
+        <createTable tableName="produtores">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nome_completo" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cpf_cnpj" type="VARCHAR(20)"/>
+            <column name="tipo_produtor" type="VARCHAR(20)">
+                <constraints checkConstraint="CHECK (tipo_produtor IN ('pessoa_fisica', 'pessoa_juridica'))"/>
+            </column>
+            <column name="regime_tributario" type="VARCHAR(20)">
+                <constraints checkConstraint="CHECK (regime_tributario IN ('mei', 'simples', 'presumido', 'real'))"/>
+            </column>
+            <column name="porte_empresa" type="VARCHAR(20)">
+                <constraints checkConstraint="CHECK (porte_empresa IN ('mei', 'me', 'epp', 'medio', 'grande'))"/>
+            </column>
+            <column name="culturas" type="text[]"/>
+            <column name="faturamento_anual" type="DECIMAL(15,2)"/>
+            <column name="estado" type="CHAR(2)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="telefone" type="VARCHAR(20)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0001-create-diagnosticos" author="supersonic-team">
+        <createTable tableName="diagnosticos">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="uuid"/>
+            <column name="impacto_geral" type="VARCHAR(20)">
+                <constraints checkConstraint="CHECK (impacto_geral IN ('positivo', 'neutro', 'negativo'))"/>
+            </column>
+            <column name="pontuacao" type="INTEGER">
+                <constraints checkConstraint="CHECK (pontuacao >= 0 AND pontuacao &lt;= 100)"/>
+            </column>
+            <column name="analises" type="jsonb"/>
+            <column name="recomendacoes" type="text[]"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="diagnosticos"
+                baseColumnNames="produtor_id"
+                constraintName="fk_diagnosticos_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="0001-create-conversas" author="supersonic-team">
+        <createTable tableName="conversas">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="uuid"/>
+            <column name="mensagens" type="jsonb" defaultValueComputed="'[]'::jsonb"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="conversas"
+                baseColumnNames="produtor_id"
+                constraintName="fk_conversas_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="0001-create-feedback" author="supersonic-team">
+        <createTable tableName="feedback">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tipo" type="VARCHAR(20)">
+                <constraints checkConstraint="CHECK (tipo IN ('chat', 'diagnostico', 'geral'))"/>
+            </column>
+            <column name="avaliacao" type="INTEGER">
+                <constraints checkConstraint="CHECK (avaliacao >= 1 AND avaliacao &lt;= 5)"/>
+            </column>
+            <column name="comentario" type="TEXT"/>
+            <column name="metadata" type="jsonb"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0001-create-indexes" author="supersonic-team">
+        <createIndex tableName="produtores" indexName="idx_produtores_regime">
+            <column name="regime_tributario"/>
+        </createIndex>
+        <createIndex tableName="produtores" indexName="idx_produtores_estado">
+            <column name="estado"/>
+        </createIndex>
+        <createIndex tableName="diagnosticos" indexName="idx_diagnosticos_produtor">
+            <column name="produtor_id"/>
+        </createIndex>
+        <createIndex tableName="diagnosticos" indexName="idx_diagnosticos_data">
+            <column name="created_at" descending="true"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0001-triggers" author="supersonic-team">
+        <sql splitStatements="false"><![CDATA[
+            CREATE OR REPLACE FUNCTION update_updated_at_column()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $$ language 'plpgsql';
+
+            CREATE TRIGGER update_produtores_updated_at
+                BEFORE UPDATE ON produtores
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+
+            CREATE TRIGGER update_conversas_updated_at
+                BEFORE UPDATE ON conversas
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>
