@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-agrocontabil}
       POSTGRES_USER: ${DB_USER:-agrocontabil}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-agrocontabil}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - '${DB_PORT:-5432}:5432'
     volumes:
@@ -25,7 +25,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-agrocontabil}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-agrocontabil}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-agrocontabil}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
     ports:
       - '8080:8080'
