@@ -1,5 +1,7 @@
 # AgroContabil — Backend
 
+[![CI](https://github.com/SupersonicTeam/backend/actions/workflows/ci.yml/badge.svg)](https://github.com/SupersonicTeam/backend/actions/workflows/ci.yml)
+
 Backend do **AgroContabil**, software de auxílio ao produtor rural e ao escritório de contabilidade frente à reforma tributária do agronegócio (IBS/CBS — EC 132/2023 + LC 214/2025). TCC 2026 — Supersonic Team.
 
 ## Stack
