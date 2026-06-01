@@ -154,10 +154,23 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 
+			<!-- Testes unitários: propaga argLine do JaCoCo -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>@{jacoco.agent.argLine}</argLine>
+				</configuration>
+			</plugin>
+
 			<!-- Testes de integração (*IT.java) -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.3.2</version>
+				<configuration>
+					<argLine>@{jacoco.agent.argLine}</argLine>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
@@ -174,17 +187,24 @@
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
 				<executions>
+					<!-- Instrumentação: gera a propriedade ${jacoco.agent.argLine} -->
 					<execution>
 						<id>prepare-agent</id>
 						<goals><goal>prepare-agent</goal></goals>
+						<configuration>
+							<propertyName>jacoco.agent.argLine</propertyName>
+						</configuration>
 					</execution>
+					<!-- Relatório APÓS testes de integração (fase verify) -->
 					<execution>
 						<id>report</id>
-						<phase>test</phase>
+						<phase>verify</phase>
 						<goals><goal>report</goal></goals>
 					</execution>
+					<!-- Threshold de cobertura -->
 					<execution>
 						<id>check</id>
+						<phase>verify</phase>
 						<goals><goal>check</goal></goals>
 						<configuration>
 							<rules>
@@ -194,7 +214,7 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.0</minimum> <!-- Sprint 9 elevará para 0.80 -->
+											<minimum>0.0</minimum>
 										</limit>
 									</limits>
 								</rule>
@@ -209,9 +229,16 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
 				<version>3.5.0</version>
+				<dependencies>
+					<dependency>
+						<groupId>com.puppycrawl.tools</groupId>
+						<artifactId>checkstyle</artifactId>
+						<version>10.20.0</version>
+					</dependency>
+				</dependencies>
 				<configuration>
 					<configLocation>google_checks.xml</configLocation>
-					<failsOnError>false</failsOnError> <!-- warn only por ora; Sprint 9 liga failsOnError -->
+					<failsOnError>false</failsOnError>
 					<consoleOutput>true</consoleOutput>
 					<includeTestSourceDirectory>false</includeTestSourceDirectory>
 				</configuration>
