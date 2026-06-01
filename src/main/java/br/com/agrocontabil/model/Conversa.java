@@ -13,6 +13,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -37,7 +39,8 @@ public class Conversa {
   @JoinColumn(name = "produtor_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
   private Produtor produtor;
 
-  @Column(name = "mensagens", columnDefinition = "VARCHAR(8000)")
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "mensagens", columnDefinition = "jsonb")
   private String mensagens;
 
   @Column(name = "created_at", updatable = false)

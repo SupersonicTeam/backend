@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -39,7 +41,8 @@ public class Feedback {
   @Column(name = "comentario", columnDefinition = "TEXT")
   private String comentario;
 
-  @Column(name = "metadata", columnDefinition = "VARCHAR(4000)")
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "metadata", columnDefinition = "jsonb")
   private String metadata;
 
   @Column(name = "created_at", updatable = false)

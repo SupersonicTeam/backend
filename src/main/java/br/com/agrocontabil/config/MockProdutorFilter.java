@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,6 +21,7 @@ public class MockProdutorFilter extends OncePerRequestFilter {
   private static final String MOCK_CPF = "123.456.789-00";
 
   private final ProdutorRepository produtorRepository;
+  private volatile Produtor cachedProdutor;
 
   public MockProdutorFilter(ProdutorRepository produtorRepository) {
     this.produtorRepository = produtorRepository;
@@ -31,16 +33,25 @@ public class MockProdutorFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
 
     if (SecurityContextHolder.getContext().getAuthentication() == null) {
-      produtorRepository
-          .findByCpfCnpj(MOCK_CPF)
-          .ifPresent(
-              produtor -> {
-                UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(produtor, null, List.of());
-                SecurityContextHolder.getContext().setAuthentication(auth);
-              });
+      Produtor produtor = getOrLoadMockProdutor();
+      if (produtor != null) {
+        UsernamePasswordAuthenticationToken auth =
+            new UsernamePasswordAuthenticationToken(produtor, null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+      }
     }
 
     filterChain.doFilter(request, response);
+  }
+
+  private Produtor getOrLoadMockProdutor() {
+    if (cachedProdutor == null) {
+      synchronized (this) {
+        if (cachedProdutor == null) {
+          cachedProdutor = produtorRepository.findByCpfCnpj(MOCK_CPF).orElse(null);
+        }
+      }
+    }
+    return cachedProdutor;
   }
 }

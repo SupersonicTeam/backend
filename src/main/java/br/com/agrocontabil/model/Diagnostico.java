@@ -14,6 +14,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -45,11 +47,13 @@ public class Diagnostico {
   @Column(name = "pontuacao")
   private Integer pontuacao;
 
-  @Column(name = "analises", columnDefinition = "VARCHAR(4000)")
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "analises", columnDefinition = "jsonb")
   private String analises;
 
-  @Column(name = "recomendacoes", columnDefinition = "VARCHAR(4000)")
-  private String recomendacoes;
+  @JdbcTypeCode(SqlTypes.ARRAY)
+  @Column(name = "recomendacoes", columnDefinition = "text[]")
+  private String[] recomendacoes;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;

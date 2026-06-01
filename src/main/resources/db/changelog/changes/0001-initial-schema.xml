@@ -15,13 +15,13 @@
             </column>
             <column name="cpf_cnpj" type="VARCHAR(20)"/>
             <column name="tipo_produtor" type="VARCHAR(20)">
-                <constraints checkConstraint="CHECK (tipo_produtor IN ('pessoa_fisica', 'pessoa_juridica'))"/>
+                <constraints checkConstraint="CHECK (tipo_produtor IN ('PESSOA_FISICA', 'PESSOA_JURIDICA'))"/>
             </column>
             <column name="regime_tributario" type="VARCHAR(20)">
-                <constraints checkConstraint="CHECK (regime_tributario IN ('mei', 'simples', 'presumido', 'real'))"/>
+                <constraints checkConstraint="CHECK (regime_tributario IN ('MEI', 'SIMPLES', 'PRESUMIDO', 'REAL'))"/>
             </column>
             <column name="porte_empresa" type="VARCHAR(20)">
-                <constraints checkConstraint="CHECK (porte_empresa IN ('mei', 'me', 'epp', 'medio', 'grande'))"/>
+                <constraints checkConstraint="CHECK (porte_empresa IN ('MEI', 'ME', 'EPP', 'MEDIO', 'GRANDE'))"/>
             </column>
             <column name="culturas" type="text[]"/>
             <column name="faturamento_anual" type="DECIMAL(15,2)"/>
@@ -33,6 +33,13 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="0001-produtor-unique-cpf-cnpj" author="supersonic-team">
+        <addUniqueConstraint
+            tableName="produtores"
+            columnNames="cpf_cnpj"
+            constraintName="uk_produtores_cpf_cnpj"/>
+    </changeSet>
+
     <changeSet id="0001-create-diagnosticos" author="supersonic-team">
         <createTable tableName="diagnosticos">
             <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
@@ -40,7 +47,7 @@
             </column>
             <column name="produtor_id" type="uuid"/>
             <column name="impacto_geral" type="VARCHAR(20)">
-                <constraints checkConstraint="CHECK (impacto_geral IN ('positivo', 'neutro', 'negativo'))"/>
+                <constraints checkConstraint="CHECK (impacto_geral IN ('POSITIVO', 'NEUTRO', 'NEGATIVO'))"/>
             </column>
             <column name="pontuacao" type="INTEGER">
                 <constraints checkConstraint="CHECK (pontuacao >= 0 AND pontuacao &lt;= 100)"/>
@@ -85,7 +92,7 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="tipo" type="VARCHAR(20)">
-                <constraints checkConstraint="CHECK (tipo IN ('chat', 'diagnostico', 'geral'))"/>
+                <constraints checkConstraint="CHECK (tipo IN ('CHAT', 'DIAGNOSTICO', 'GERAL'))"/>
             </column>
             <column name="avaliacao" type="INTEGER">
                 <constraints checkConstraint="CHECK (avaliacao >= 1 AND avaliacao &lt;= 5)"/>

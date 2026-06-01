@@ -28,12 +28,13 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
   private final CorsConfigurationSource corsConfigurationSource;
+  private final MockProdutorFilter mockProdutorFilter;
 
-  @Autowired(required = false)
-  private MockProdutorFilter mockProdutorFilter;
-
-  public SecurityConfig(CorsConfigurationSource corsConfigurationSource) {
+  public SecurityConfig(
+      CorsConfigurationSource corsConfigurationSource,
+      @Autowired(required = false) MockProdutorFilter mockProdutorFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
+    this.mockProdutorFilter = mockProdutorFilter;
   }
 
   @Bean

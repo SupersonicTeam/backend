@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -49,8 +51,9 @@ public class Produtor {
   @Column(name = "porte_empresa", columnDefinition = "VARCHAR(20)")
   private PorteEmpresa porteEmpresa;
 
-  @Column(name = "culturas", columnDefinition = "VARCHAR(2000)")
-  private String culturas;
+  @JdbcTypeCode(SqlTypes.ARRAY)
+  @Column(name = "culturas", columnDefinition = "text[]")
+  private String[] culturas;
 
   @Column(name = "faturamento_anual", precision = 15, scale = 2)
   private BigDecimal faturamentoAnual;

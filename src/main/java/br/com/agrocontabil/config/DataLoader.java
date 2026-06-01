@@ -35,7 +35,7 @@ public class DataLoader implements CommandLineRunner {
             .tipoProdutor(TipoProdutor.PESSOA_FISICA)
             .regimeTributario(RegimeTributario.SIMPLES)
             .porteEmpresa(PorteEmpresa.ME)
-            .culturas("[\"soja\",\"milho\",\"algodao\"]")
+            .culturas(new String[]{"soja", "milho", "algodao"})
             .faturamentoAnual(new BigDecimal("2500000.00"))
             .estado("MT")
             .email("joao.produtor@example.com")
