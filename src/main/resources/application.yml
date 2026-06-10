@@ -6,6 +6,12 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+        default-page-size: 20
+
   jpa:
     open-in-view: false
     hibernate:

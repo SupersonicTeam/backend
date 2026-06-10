@@ -52,6 +52,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    /** Nota fiscal nao editavel — status diferente de RASCUNHO. HTTP 409 Conflict. */
+    @ExceptionHandler(NotaFiscalNaoEditavelException.class)
+    public ResponseEntity<ApiError> handleNotaFiscalNaoEditavel(
+            NotaFiscalNaoEditavelException ex, HttpServletRequest request) {
+        log.warn("Tentativa de edicao em nota nao editavel: uri={}", request.getRequestURI());
+        ApiError body = ApiError.of(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     /** Argumento ilegal vindo da camada de servico. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(
