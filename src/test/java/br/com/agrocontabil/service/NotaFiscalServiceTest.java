@@ -335,7 +335,8 @@ class NotaFiscalServiceTest {
         "6101",
         "UN",
         new BigDecimal("3"),
-        new BigDecimal("1.005"));
+        new BigDecimal("1.005"),
+        null, null, null);
 
     NotaFiscalRequest request = new NotaFiscalRequest(
         2L,
@@ -368,10 +369,10 @@ class NotaFiscalServiceTest {
     // Total esperado: 45.00
     NotaFiscalItemRequest item1 = new NotaFiscalItemRequest(
         1, null, "Soja em graos", "12010090", "6101", "KG",
-        new BigDecimal("10"), new BigDecimal("2.50"));
+        new BigDecimal("10"), new BigDecimal("2.50"), null, null, null);
     NotaFiscalItemRequest item2 = new NotaFiscalItemRequest(
         2, null, "Milho em graos", "10059010", "6101", "KG",
-        new BigDecimal("5"), new BigDecimal("4.00"));
+        new BigDecimal("5"), new BigDecimal("4.00"), null, null, null);
 
     NotaFiscalRequest request = new NotaFiscalRequest(
         3L, 1, "Venda de producao rural",
@@ -423,7 +424,7 @@ class NotaFiscalServiceTest {
         null, null,
         List.of(new NotaFiscalItemRequest(
             1, null, "Soja", "12010090", "6101", "KG",
-            new BigDecimal("1"), new BigDecimal("10.00"))));
+            new BigDecimal("1"), new BigDecimal("10.00"), null, null, null)));
 
     when(produtorProvider.get()).thenReturn(produtor);
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -487,10 +488,10 @@ class NotaFiscalServiceTest {
     // Novo request com 2 itens
     NotaFiscalItemRequest item1 = new NotaFiscalItemRequest(
         1, null, "Soja", "12010090", "6101", "KG",
-        new BigDecimal("100"), new BigDecimal("3.00"));
+        new BigDecimal("100"), new BigDecimal("3.00"), null, null, null);
     NotaFiscalItemRequest item2 = new NotaFiscalItemRequest(
         2, null, "Milho", "10059010", "6101", "KG",
-        new BigDecimal("200"), new BigDecimal("1.50"));
+        new BigDecimal("200"), new BigDecimal("1.50"), null, null, null);
 
     NotaFiscalRequest requestComDoisItens = new NotaFiscalRequest(
         1L, 1, "Venda de producao rural",
