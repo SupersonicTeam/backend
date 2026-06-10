@@ -302,6 +302,219 @@ class NotaFiscalServiceTest {
   }
 
   // -------------------------------------------------------------------------
+  // create — calculos de totais com multiplos itens e vinculo ao produtor
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("create deve calcular valorTotal por item (quantidade * valorUnitario, HALF_UP 2dp)")
+  void createShouldCalculatePerItemValueWithHalfUpRounding() {
+    // Item: 3 unidades a 1.005 = 3.015 → arredondado HALF_UP em 2dp = 3.02
+    NotaFiscalItemRequest item = new NotaFiscalItemRequest(
+        1,
+        null,
+        "Produto com fracao",
+        "12010090",
+        "6101",
+        "UN",
+        new BigDecimal("3"),
+        new BigDecimal("1.005"));
+
+    NotaFiscalRequest request = new NotaFiscalRequest(
+        2L,
+        1,
+        "Venda de producao rural",
+        OffsetDateTime.now(),
+        null,
+        "Comprador Teste",
+        "12345678901",
+        null,
+        null,
+        List.of(item));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.create(request);
+
+    assertThat(response.itens()).hasSize(1);
+    assertThat(response.itens().get(0).valorTotal()).isEqualByComparingTo("3.02");
+    assertThat(response.valorTotalProdutos()).isEqualByComparingTo("3.02");
+    assertThat(response.valorTotalNota()).isEqualByComparingTo("3.02");
+  }
+
+  @Test
+  @DisplayName("create com multiplos itens deve somar valorTotal corretamente")
+  void createWithMultipleItemsShouldSumTotalsCorrectly() {
+    // Item 1: 10 * 2.50 = 25.00
+    // Item 2: 5 * 4.00 = 20.00
+    // Total esperado: 45.00
+    NotaFiscalItemRequest item1 = new NotaFiscalItemRequest(
+        1, null, "Soja em graos", "12010090", "6101", "KG",
+        new BigDecimal("10"), new BigDecimal("2.50"));
+    NotaFiscalItemRequest item2 = new NotaFiscalItemRequest(
+        2, null, "Milho em graos", "10059010", "6101", "KG",
+        new BigDecimal("5"), new BigDecimal("4.00"));
+
+    NotaFiscalRequest request = new NotaFiscalRequest(
+        3L, 1, "Venda de producao rural",
+        OffsetDateTime.now(), null,
+        "Comprador Teste", "12345678901",
+        null, null,
+        List.of(item1, item2));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.create(request);
+
+    assertThat(response.itens()).hasSize(2);
+    assertThat(response.valorTotalProdutos()).isEqualByComparingTo("45.00");
+    assertThat(response.valorTotalNota()).isEqualByComparingTo("45.00");
+  }
+
+  @Test
+  @DisplayName("create deve vincular nota ao produtor autenticado e retornar produtorId correto")
+  void createShouldLinkNotaToAuthenticatedProdutor() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.create(buildRequest());
+
+    assertThat(response.produtorId()).isEqualTo(produtorId);
+  }
+
+  @Test
+  @DisplayName("create deve fixar modelo '55' e status RASCUNHO independente do request")
+  void createShouldFixModeloAs55AndStatusAsRascunho() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.create(buildRequest());
+
+    assertThat(response.modelo()).isEqualTo("55");
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.RASCUNHO);
+  }
+
+  @Test
+  @DisplayName("create deve usar serie 1 como padrao quando serie nao informada no request")
+  void createShouldDefaultSerieToOneWhenNull() {
+    NotaFiscalRequest requestSemSerie = new NotaFiscalRequest(
+        1L, null, "Venda de producao rural",
+        OffsetDateTime.now(), null,
+        "Comprador Teste", "12345678901",
+        null, null,
+        List.of(new NotaFiscalItemRequest(
+            1, null, "Soja", "12010090", "6101", "KG",
+            new BigDecimal("1"), new BigDecimal("10.00"))));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.create(requestSemSerie);
+
+    assertThat(response.serie()).isEqualTo(1);
+  }
+
+  // -------------------------------------------------------------------------
+  // findAll — paginacao repassada ao repository
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("findAll deve repassar exatamente o Pageable recebido ao repository")
+  void findAllShouldForwardPageableToRepository() {
+    var pageable = PageRequest.of(2, 10);
+    Page<NotaFiscal> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByProdutorId(produtorId, pageable)).thenReturn(emptyPage);
+
+    Page<NotaFiscalResponse> result = notaFiscalService.findAll(pageable);
+
+    assertThat(result.getPageable().getPageNumber()).isEqualTo(2);
+    assertThat(result.getPageable().getPageSize()).isEqualTo(10);
+    verify(notaFiscalRepository).findByProdutorId(produtorId, pageable);
+  }
+
+  // -------------------------------------------------------------------------
+  // update — nota nao encontrada deve lancar ResourceNotFoundException
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("update deve lancar ResourceNotFoundException quando nota nao encontrada")
+  void updateShouldThrowResourceNotFoundWhenNotaNotFound() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    NotaFiscalRequest request = buildRequest();
+
+    assertThatThrownBy(() -> notaFiscalService.update(notaId, request))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("update deve substituir todos os itens e retornar contagem correta apos update")
+  void updateShouldReplaceAllItemsAndReturnCorrectCount() {
+    UUID notaId = UUID.randomUUID();
+    // Nota original tem 1 item
+    NotaFiscal notaExistente = buildNotaSalva();
+    notaExistente.setId(notaId);
+    assertThat(notaExistente.getItens()).hasSize(1);
+
+    // Novo request com 2 itens
+    NotaFiscalItemRequest item1 = new NotaFiscalItemRequest(
+        1, null, "Soja", "12010090", "6101", "KG",
+        new BigDecimal("100"), new BigDecimal("3.00"));
+    NotaFiscalItemRequest item2 = new NotaFiscalItemRequest(
+        2, null, "Milho", "10059010", "6101", "KG",
+        new BigDecimal("200"), new BigDecimal("1.50"));
+
+    NotaFiscalRequest requestComDoisItens = new NotaFiscalRequest(
+        1L, 1, "Venda de producao rural",
+        OffsetDateTime.now(), null,
+        "Jose Comprador", "12345678901",
+        null, null,
+        List.of(item1, item2));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(notaExistente));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.update(notaId, requestComDoisItens);
+
+    // 100*3.00 = 300.00, 200*1.50 = 300.00, total = 600.00
+    assertThat(response.itens()).hasSize(2);
+    assertThat(response.valorTotalProdutos()).isEqualByComparingTo("600.00");
+    assertThat(response.valorTotalNota()).isEqualByComparingTo("600.00");
+  }
+
+  // -------------------------------------------------------------------------
+  // delete — nota nao encontrada deve lancar ResourceNotFoundException
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("delete deve lancar ResourceNotFoundException quando nota nao encontrada")
+  void deleteShouldThrowResourceNotFoundWhenNotaNotFound() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> notaFiscalService.delete(notaId))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
+
+    verify(notaFiscalRepository, never()).delete(any(NotaFiscal.class));
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
