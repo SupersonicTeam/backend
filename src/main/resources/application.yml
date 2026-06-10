@@ -48,6 +48,17 @@ app:
     # Lista separada por virgula; sobrescrita por APP_CORS_ALLOWED_ORIGINS em prod.
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
 
+# Tributos — IBS/CBS (EC 132/2023 + LC 214/2025)
+# Alíquotas de referência para o ano-teste de 2026 (parametrizáveis sem recompilar).
+# IBS: 0,10 % | CBS: 0,90 % — valores informativos; sem recolhimento efetivo em 2026.
+# Ajuste conforme regulamentação complementar futura da LC 214/2025.
+agrocontabil:
+  tributos:
+    ibs:
+      aliquota: 0.0010
+    cbs:
+      aliquota: 0.0090
+
 # Log base. Nunca logar senha/token — ver application-prod.yml para nivel de prod.
 logging:
   level:

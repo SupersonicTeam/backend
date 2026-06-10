@@ -57,6 +57,16 @@ class NotaFiscalServiceTest {
   @Mock
   private AuthenticatedProdutorProvider produtorProvider;
 
+  /**
+   * CalculoIbsCbsService é um colaborador real de NotaFiscalService.
+   * Aqui usamos um mock para isolar o serviço de nota fiscal dos detalhes
+   * de cálculo tributário (testados isoladamente em CalculoIbsCbsServiceTest).
+   * O mock retorna a própria nota passada (identidade), permitindo que as
+   * asserções de totais de produtos continuem válidas.
+   */
+  @Mock
+  private CalculoIbsCbsService calculoIbsCbsService;
+
   @InjectMocks
   private NotaFiscalService notaFiscalService;
 
@@ -85,6 +95,9 @@ class NotaFiscalServiceTest {
     NotaFiscalRequest request = buildRequest();
     NotaFiscal notaSalva = buildNotaSalva();
 
+    // CalculoIbsCbsService é colaborador: mock retorna a própria nota (sem alterar campos).
+    when(calculoIbsCbsService.calcular(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenReturn(notaSalva);
 
     NotaFiscalResponse response = notaFiscalService.create(request);
@@ -276,7 +289,10 @@ class NotaFiscalServiceTest {
         "6101",
         "KG",
         new BigDecimal("10.0000"),
-        new BigDecimal("50.0000"));
+        new BigDecimal("50.0000"),
+        null,   // cstIbsCbs
+        null,   // cClassTrib
+        null);  // percentualReducao
 
     NotaFiscalRequest requestAtualizado = new NotaFiscalRequest(
         1L,
@@ -293,6 +309,8 @@ class NotaFiscalServiceTest {
     when(produtorProvider.get()).thenReturn(produtor);
     when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
         .thenReturn(Optional.of(notaExistente));
+    when(calculoIbsCbsService.calcular(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
 
     NotaFiscalResponse response = notaFiscalService.update(notaId, requestAtualizado);
@@ -527,7 +545,10 @@ class NotaFiscalServiceTest {
         "6101",
         "KG",
         new BigDecimal("500.0000"),
-        new BigDecimal("2.0000"));
+        new BigDecimal("2.0000"),
+        null,   // cstIbsCbs  — opcional
+        null,   // cClassTrib — opcional
+        null);  // percentualReducao — opcional (default 0)
 
     return new NotaFiscalRequest(
         1L,

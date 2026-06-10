@@ -44,12 +44,15 @@ public class NotaFiscalService {
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
+  private final CalculoIbsCbsService calculoIbsCbsService;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
-      AuthenticatedProdutorProvider produtorProvider) {
+      AuthenticatedProdutorProvider produtorProvider,
+      CalculoIbsCbsService calculoIbsCbsService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
+    this.calculoIbsCbsService = calculoIbsCbsService;
   }
 
   /**
@@ -61,6 +64,8 @@ public class NotaFiscalService {
   public NotaFiscalResponse create(NotaFiscalRequest request) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
+    // Calcula IBS/CBS após montagem dos itens e cálculo dos totais de produtos.
+    calculoIbsCbsService.calcular(nota);
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal criada: id={} produtor={} numero={}",
         saved.getId(), produtor.getId(), saved.getNumero());
@@ -149,6 +154,9 @@ public class NotaFiscalService {
 
     nota.setValorTotalProdutos(totalProdutos);
     nota.setValorTotalNota(totalProdutos);
+
+    // Recalcula IBS/CBS após substituição dos itens e recálculo dos totais de produtos.
+    calculoIbsCbsService.calcular(nota);
 
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal atualizada: id={} produtor={}", saved.getId(), produtor.getId());

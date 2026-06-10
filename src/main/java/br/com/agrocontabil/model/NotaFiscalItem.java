@@ -29,6 +29,29 @@ import lombok.ToString;
  * <p>Mapeado para a tabela {@code nota_fiscal_item}. Cada item pertence a exatamente uma
  * nota fiscal e é removido em cascata quando a nota é excluída
  * (gerenciado pelo lado {@link NotaFiscal#getItens()}).
+ *
+ * <p><strong>Campos IBS/CBS (Sprint 2 – Sessão 4):</strong> adicionados para conformidade com a
+ * reforma tributária. Base legal:
+ * <ul>
+ *   <li><strong>EC 132/2023</strong> (art. 156-A e 195, III) — institui o IBS (Imposto sobre
+ *       Bens e Serviços, de competência estadual/municipal) e a CBS (Contribuição sobre Bens e
+ *       Serviços, federal), em substituição gradual ao ICMS, ISS, PIS e COFINS.</li>
+ *   <li><strong>LC 214/2025</strong> — regulamenta a apuração, alíquotas, regimes diferenciados
+ *       e obrigações acessórias do IBS e da CBS.</li>
+ *   <li><strong>Ano-teste de 2026:</strong> alíquotas reduzidas (referência técnica amplamente
+ *       citada: CBS 0,9 % e IBS 0,1 %). Os valores são destacados de forma informativa nas
+ *       notas fiscais, não gerando recolhimento efetivo nesta fase. As alíquotas efetivas são
+ *       parametrizadas em {@code application.yml} (prefix {@code agrocontabil.tributos}) e
+ *       nunca fixadas em código.</li>
+ *   <li><strong>Produtor rural / agropecuária:</strong> a LC 214/2025 prevê regimes
+ *       diferenciados e possíveis reduções de base para produtos agropecuários. O campo
+ *       {@link #percentualReducao} permite modelar essa redução; o percentual exato por
+ *       NCM/produto será refinado em sprint futura conforme regulamentação complementar —
+ *       <em>incerteza registrada intencionalmente</em>.</li>
+ * </ul>
+ *
+ * <p>Todos os campos IBS/CBS são nullable para compatibilidade com notas emitidas antes
+ * desta sessão.
  */
 @Entity
 @Table(name = "nota_fiscal_item")
@@ -86,6 +109,86 @@ public class NotaFiscalItem {
   /** Valor total do item ({@code quantidade * valorUnitario}), com 2 casas decimais. */
   @Column(name = "valor_total", precision = 15, scale = 2, nullable = false)
   private BigDecimal valorTotal;
+
+  // -------------------------------------------------------------------------
+  // Campos IBS/CBS — EC 132/2023 + LC 214/2025 (Sprint 2 – Sessão 4)
+  // Todos nullable: compatibilidade com notas emitidas antes desta sessão.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Código de Situação Tributária do IBS/CBS (3 dígitos, ex.: {@code "000"}).
+   *
+   * <p>Tabela de CST definida pela LC 214/2025 e regulamentação complementar.
+   * Analogia ao CST de PIS/COFINS (tabela A/B do SPED), adaptada ao novo tributo.
+   */
+  @Column(name = "cst_ibs_cbs", length = 3)
+  private String cstIbsCbs;
+
+  /**
+   * Código de Classificação Tributária — cClassTrib (6 dígitos).
+   *
+   * <p>Identifica o enquadramento do item na tabela de classificações do IBS/CBS
+   * conforme LC 214/2025 e Nota Técnica da RFB/CONFAZ.
+   */
+  @Column(name = "c_class_trib", length = 6)
+  private String cClassTrib;
+
+  /**
+   * Base de cálculo do IBS/CBS deste item, com 2 casas decimais.
+   *
+   * <p>Calculado como: {@code valorTotal × (1 − percentualReducao / 100)}.
+   * EC 132/2023, art. 156-A, § 1.º; LC 214/2025, arts. 12–18.
+   */
+  @Column(name = "base_calculo_ibs_cbs", precision = 15, scale = 2)
+  private BigDecimal baseCalculoIbsCbs;
+
+  /**
+   * Alíquota do IBS aplicada a este item (proporção decimal, ex.: {@code 0.0010} = 0,10 %).
+   *
+   * <p>Alíquota de referência para 2026 (ano-teste): 0,10 %. Parametrizável via
+   * {@code agrocontabil.tributos.ibs.aliquota} em {@code application.yml}.
+   * EC 132/2023; LC 214/2025, arts. 87–92 (alíquotas de referência).
+   */
+  @Column(name = "aliquota_ibs", precision = 7, scale = 4)
+  private BigDecimal aliquotaIbs;
+
+  /**
+   * Valor do IBS calculado para este item, com 2 casas decimais.
+   *
+   * <p>{@code valorIbs = baseCalculoIbsCbs × aliquotaIbs}, arredondamento HALF_UP.
+   */
+  @Column(name = "valor_ibs", precision = 15, scale = 2)
+  private BigDecimal valorIbs;
+
+  /**
+   * Alíquota da CBS aplicada a este item (proporção decimal, ex.: {@code 0.0090} = 0,90 %).
+   *
+   * <p>Alíquota de referência para 2026 (ano-teste): 0,90 %. Parametrizável via
+   * {@code agrocontabil.tributos.cbs.aliquota} em {@code application.yml}.
+   * EC 132/2023; LC 214/2025, arts. 87–92.
+   */
+  @Column(name = "aliquota_cbs", precision = 7, scale = 4)
+  private BigDecimal aliquotaCbs;
+
+  /**
+   * Valor da CBS calculada para este item, com 2 casas decimais.
+   *
+   * <p>{@code valorCbs = baseCalculoIbsCbs × aliquotaCbs}, arredondamento HALF_UP.
+   */
+  @Column(name = "valor_cbs", precision = 15, scale = 2)
+  private BigDecimal valorCbs;
+
+  /**
+   * Percentual de redução da base de cálculo, de 0 a 100 (ex.: {@code 60} = 60 %).
+   *
+   * <p>Permite modelar regimes diferenciados de produtos agropecuários. A LC 214/2025
+   * prevê reduções para determinados produtos (ex.: alimentos da cesta básica, insumos
+   * agropecuários). O percentual exato por NCM/produto será refinado em sprint futura
+   * conforme regulamentação complementar — <em>incerteza registrada intencionalmente</em>.
+   * Default {@code 0} = sem redução (alíquota cheia).
+   */
+  @Column(name = "percentual_reducao", precision = 5, scale = 2)
+  private BigDecimal percentualReducao;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
