@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0002-nota-fiscal.xml
+         Sprint 2 — Sessão 1: schema das tabelas nota_fiscal e nota_fiscal_item.
+         Não inclui campos IBS/CBS nem xml_gerado (sessões futuras).
+         ================================================================ -->
+
+    <changeSet id="0002-create-nota-fiscal" author="supersonic-team">
+        <createTable tableName="nota_fiscal">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="chave_acesso" type="VARCHAR(44)"/>
+            <column name="numero" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="serie" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modelo" type="VARCHAR(2)" defaultValue="55">
+                <constraints nullable="false"/>
+            </column>
+            <column name="natureza_operacao" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_emissao" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_saida" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="produtor_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="destinatario_nome" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="destinatario_cpf_cnpj" type="VARCHAR(14)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="destinatario_ie" type="VARCHAR(20)"/>
+            <!-- Endereço embeddable do destinatário -->
+            <column name="dest_logradouro" type="VARCHAR(255)"/>
+            <column name="dest_numero" type="VARCHAR(20)"/>
+            <column name="dest_municipio" type="VARCHAR(255)"/>
+            <column name="dest_codigo_municipio_ibge" type="VARCHAR(7)"/>
+            <column name="dest_uf" type="VARCHAR(2)"/>
+            <column name="dest_cep" type="VARCHAR(8)"/>
+            <!-- Totais -->
+            <column name="valor_total_produtos" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valor_total_nota" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="RASCUNHO">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Auditoria — mesmo padrão do 0001 -->
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="nota_fiscal"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-nota-fiscal-fk-produtor" author="supersonic-team">
+        <addForeignKeyConstraint
+                baseTableName="nota_fiscal"
+                baseColumnNames="produtor_id"
+                constraintName="fk_nota_fiscal_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="RESTRICT"/>
+        <rollback>
+            <dropForeignKeyConstraint
+                    baseTableName="nota_fiscal"
+                    constraintName="fk_nota_fiscal_produtor"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-nota-fiscal-unique-chave-acesso" author="supersonic-team">
+        <!-- NULL não conflita em unique simples no PostgreSQL -->
+        <addUniqueConstraint
+                tableName="nota_fiscal"
+                columnNames="chave_acesso"
+                constraintName="uk_nota_fiscal_chave_acesso"/>
+        <rollback>
+            <dropUniqueConstraint
+                    tableName="nota_fiscal"
+                    constraintName="uk_nota_fiscal_chave_acesso"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-nota-fiscal-unique-nota-por-produtor" author="supersonic-team">
+        <!-- Evita nota duplicada: mesmo produtor não pode ter dois documentos
+             com a mesma combinação número + série + modelo -->
+        <addUniqueConstraint
+                tableName="nota_fiscal"
+                columnNames="produtor_id, numero, serie, modelo"
+                constraintName="uk_nota_fiscal_produtor_numero_serie_modelo"/>
+        <rollback>
+            <dropUniqueConstraint
+                    tableName="nota_fiscal"
+                    constraintName="uk_nota_fiscal_produtor_numero_serie_modelo"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-create-nota-fiscal-item" author="supersonic-team">
+        <createTable tableName="nota_fiscal_item">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nota_fiscal_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="numero_item" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="codigo_produto" type="VARCHAR(60)"/>
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ncm" type="VARCHAR(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cfop" type="VARCHAR(4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unidade" type="VARCHAR(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantidade" type="DECIMAL(15,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valor_unitario" type="DECIMAL(15,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valor_total" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Auditoria — mesmo padrão do 0001 -->
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="nota_fiscal_item"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-nota-fiscal-item-fk-nota" author="supersonic-team">
+        <addForeignKeyConstraint
+                baseTableName="nota_fiscal_item"
+                baseColumnNames="nota_fiscal_id"
+                constraintName="fk_nota_fiscal_item_nota"
+                referencedTableName="nota_fiscal"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <rollback>
+            <dropForeignKeyConstraint
+                    baseTableName="nota_fiscal_item"
+                    constraintName="fk_nota_fiscal_item_nota"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-nota-fiscal-item-unique-numero-item" author="supersonic-team">
+        <addUniqueConstraint
+                tableName="nota_fiscal_item"
+                columnNames="nota_fiscal_id, numero_item"
+                constraintName="uk_nota_fiscal_item_nota_numero"/>
+        <rollback>
+            <dropUniqueConstraint
+                    tableName="nota_fiscal_item"
+                    constraintName="uk_nota_fiscal_item_nota_numero"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-create-indexes" author="supersonic-team">
+        <createIndex tableName="nota_fiscal" indexName="idx_nota_fiscal_produtor_id">
+            <column name="produtor_id"/>
+        </createIndex>
+        <createIndex tableName="nota_fiscal_item" indexName="idx_nota_fiscal_item_nota_fiscal_id">
+            <column name="nota_fiscal_id"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="nota_fiscal_item" indexName="idx_nota_fiscal_item_nota_fiscal_id"/>
+            <dropIndex tableName="nota_fiscal" indexName="idx_nota_fiscal_produtor_id"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0002-triggers" author="supersonic-team">
+        <!-- updated_at automático na nota_fiscal — reutiliza a função criada em 0001 -->
+        <sql splitStatements="false"><![CDATA[
+            CREATE TRIGGER update_nota_fiscal_updated_at
+                BEFORE UPDATE ON nota_fiscal
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+        ]]></sql>
+        <sql splitStatements="false"><![CDATA[
+            CREATE TRIGGER update_nota_fiscal_item_updated_at
+                BEFORE UPDATE ON nota_fiscal_item
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+        ]]></sql>
+        <rollback>
+            <sql>DROP TRIGGER IF EXISTS update_nota_fiscal_item_updated_at ON nota_fiscal_item;</sql>
+            <sql>DROP TRIGGER IF EXISTS update_nota_fiscal_updated_at ON nota_fiscal;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
