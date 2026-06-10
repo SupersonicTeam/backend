@@ -8,3 +8,5 @@ databaseChangeLog:
       changes: []
   - include:
       file: db/changelog/changes/0001-initial-schema.xml
+  - include:
+      file: db/changelog/changes/0002-nota-fiscal.xml
