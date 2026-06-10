@@ -17,31 +17,38 @@ import java.util.List;
 /**
  * Converte entre DTOs de nota fiscal e entidades JPA.
  *
- * <p>Regras de negocio do mapper:
+ * <p>Regras de negócio do mapper:
  * <ul>
- *   <li>O modelo e fixado como {@code "55"} (NF-e) — nunca aceito do cliente.</li>
- *   <li>O status inicial e sempre {@link StatusNotaFiscal#RASCUNHO}.</li>
- *   <li>A serie padrao e {@code 1} quando nao informada.</li>
+ *   <li>O modelo é fixado como {@code "55"} (NF-e) — nunca aceito do cliente.</li>
+ *   <li>O status inicial é sempre {@link StatusNotaFiscal#RASCUNHO}.</li>
+ *   <li>A série padrão é {@code 1} quando não informada.</li>
  *   <li>{@code valorTotal} de cada item = {@code quantidade * valorUnitario},
  *       arredondado HALF_UP em 2 casas decimais.</li>
  *   <li>{@code valorTotalProdutos} = soma dos valorTotal dos itens.</li>
  *   <li>{@code valorTotalNota} = {@code valorTotalProdutos} (sem impostos na Sprint 2).</li>
+ *   <li>Campos IBS/CBS dos itens ({@code cstIbsCbs}, {@code cClassTrib},
+ *       {@code percentualReducao}) são copiados do request quando presentes;
+ *       os valores calculados ({@code valorIbs}, {@code valorCbs} etc.) são preenchidos
+ *       pelo {@link br.com.agrocontabil.service.CalculoIbsCbsService} — nunca aceitos
+ *       do cliente (evita mass-assignment).</li>
  * </ul>
  *
- * <p>Esta classe nao e um Spring bean — todos os metodos sao estaticos.
- * Isso mantém o mapper testavel sem contexto Spring.
+ * <p>Esta classe não é um Spring bean — todos os métodos são estáticos.
+ * Isso mantém o mapper testável sem contexto Spring.
  */
 public final class NotaFiscalMapper {
 
   private NotaFiscalMapper() {}
 
   /**
-   * Converte um {@link NotaFiscalRequest} em uma entidade {@link NotaFiscal} pronta para persistencia.
+   * Converte um {@link NotaFiscalRequest} em uma entidade {@link NotaFiscal} pronta para
+   * persistência.
    *
-   * <p>O produtor passado por parametro e o produtor autenticado; nunca vem do corpo da requisicao.
+   * <p>O produtor passado por parâmetro é o produtor autenticado; nunca vem do corpo da
+   * requisição.
    *
    * @param request  dados de entrada validados
-   * @param produtor produtor autenticado que sera o emissor da nota
+   * @param produtor produtor autenticado que será o emissor da nota
    * @return entidade montada com itens, totais calculados e status RASCUNHO
    */
   public static NotaFiscal toEntity(NotaFiscalRequest request, Produtor produtor) {
@@ -79,7 +86,7 @@ public final class NotaFiscalMapper {
    * Converte uma entidade {@link NotaFiscal} em {@link NotaFiscalResponse}.
    *
    * @param nota entidade persistida
-   * @return DTO de saida com todos os campos, incluindo itens mapeados
+   * @return DTO de saída com todos os campos, incluindo itens e campos IBS/CBS mapeados
    */
   public static NotaFiscalResponse toResponse(NotaFiscal nota) {
     List<NotaFiscalItemResponse> itensResponse = nota.getItens().stream()
@@ -103,6 +110,8 @@ public final class NotaFiscalMapper {
         toEnderecoResponse(nota.getDestinatarioEndereco()),
         nota.getValorTotalProdutos(),
         nota.getValorTotalNota(),
+        nota.getValorTotalIbs(),
+        nota.getValorTotalCbs(),
         itensResponse,
         nota.getCreatedAt(),
         nota.getUpdatedAt());
@@ -115,11 +124,11 @@ public final class NotaFiscalMapper {
   /**
    * Converte uma lista de {@link NotaFiscalItemRequest} em entidades {@link NotaFiscalItem}.
    *
-   * <p>Destinado ao uso pela camada de servico quando e necessario substituir itens
-   * de uma nota existente sem recriar a nota inteira (ex.: operacao de update).
+   * <p>Destinado ao uso pela camada de serviço quando é necessário substituir itens
+   * de uma nota existente sem recriar a nota inteira (ex.: operação de update).
    *
-   * @param itens lista de DTOs de entrada dos itens, nao nula
-   * @return lista de entidades de itens sem associacao com nota fiscal (sem ID)
+   * @param itens lista de DTOs de entrada dos itens, não nula
+   * @return lista de entidades de itens sem associação com nota fiscal (sem ID)
    */
   public static List<NotaFiscalItem> toItemEntityList(List<NotaFiscalItemRequest> itens) {
     return itens.stream()
@@ -131,10 +140,13 @@ public final class NotaFiscalMapper {
    * Converte um {@link NotaFiscalItemRequest} em entidade {@link NotaFiscalItem}.
    *
    * <p>Calcula {@code valorTotal = quantidade * valorUnitario} com arredondamento HALF_UP
-   * em 2 casas decimais.
+   * em 2 casas decimais. Copia os campos classificatórios opcionais de IBS/CBS
+   * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}).
+   * Os campos calculados (valorIbs, valorCbs etc.) são preenchidos posteriormente
+   * pelo {@link br.com.agrocontabil.service.CalculoIbsCbsService}.
    *
    * @param req DTO de entrada do item
-   * @return entidade do item sem associacao com nota fiscal (sem ID)
+   * @return entidade do item sem associação com nota fiscal (sem ID)
    */
   private static NotaFiscalItem toItemEntity(NotaFiscalItemRequest req) {
     BigDecimal valorTotal = req.quantidade()
@@ -151,6 +163,9 @@ public final class NotaFiscalMapper {
         .quantidade(req.quantidade())
         .valorUnitario(req.valorUnitario())
         .valorTotal(valorTotal)
+        .cstIbsCbs(req.cstIbsCbs())
+        .cClassTrib(req.cClassTrib())
+        .percentualReducao(req.percentualReducao())
         .build();
   }
 
@@ -166,6 +181,14 @@ public final class NotaFiscalMapper {
         item.getQuantidade(),
         item.getValorUnitario(),
         item.getValorTotal(),
+        item.getCstIbsCbs(),
+        item.getCClassTrib(),
+        item.getPercentualReducao(),
+        item.getBaseCalculoIbsCbs(),
+        item.getAliquotaIbs(),
+        item.getValorIbs(),
+        item.getAliquotaCbs(),
+        item.getValorCbs(),
         item.getCreatedAt(),
         item.getUpdatedAt());
   }

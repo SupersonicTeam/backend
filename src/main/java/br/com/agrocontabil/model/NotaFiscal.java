@@ -130,6 +130,24 @@ public class NotaFiscal {
   @Column(name = "valor_total_nota", precision = 15, scale = 2, nullable = false)
   private BigDecimal valorTotalNota;
 
+  /**
+   * Somatório do IBS calculado de todos os itens da nota, com 2 casas decimais.
+   *
+   * <p>Nullable: notas emitidas antes da Sessão 4 (IBS/CBS) não possuem este valor.
+   * EC 132/2023; LC 214/2025.
+   */
+  @Column(name = "valor_total_ibs", precision = 15, scale = 2)
+  private BigDecimal valorTotalIbs;
+
+  /**
+   * Somatório da CBS calculada de todos os itens da nota, com 2 casas decimais.
+   *
+   * <p>Nullable: notas emitidas antes da Sessão 4 (IBS/CBS) não possuem este valor.
+   * EC 132/2023; LC 214/2025.
+   */
+  @Column(name = "valor_total_cbs", precision = 15, scale = 2)
+  private BigDecimal valorTotalCbs;
+
   /** Status do ciclo de vida da nota. Inicia como {@link StatusNotaFiscal#RASCUNHO}. */
   @Enumerated(EnumType.STRING)
   @Column(name = "status", length = 20, nullable = false, columnDefinition = "VARCHAR(20)")

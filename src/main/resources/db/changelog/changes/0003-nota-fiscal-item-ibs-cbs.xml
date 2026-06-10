@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0003-nota-fiscal-item-ibs-cbs.xml
+         Sprint 2 — Sessão 4: campos de IBS/CBS por item e totais na nota.
+
+         Base legal:
+           - EC 132/2023 (art. 156-A e 195, III): institui o IBS (estadual/
+             municipal) e a CBS (federal), substitutos graduais de
+             ICMS/ISS/PIS/COFINS.
+           - LC 214/2025 (Lei do IBS/CBS/IS): regulamenta a apuração,
+             alíquotas, regimes diferenciados e obrigações acessórias.
+           - Para 2026 (ano-teste): alíquotas são informativas/reduzidas
+             (referência técnica: CBS ~0,9 % e IBS ~0,1 %); os valores são
+             destacados na nota apenas para fins de adequação dos sistemas,
+             não gerando recolhimento efetivo. As alíquotas NÃO estão
+             cravadas aqui — são parametrizadas em application.yml.
+
+         Todas as colunas são nullable para compatibilidade retroativa com
+         notas emitidas antes desta sessão (Sessões 1–2).
+         Tipos DECIMAL são portáveis (H2 e PostgreSQL).
+         NÃO editamos 0001 nem 0002.
+         ================================================================ -->
+
+    <changeSet id="0003-nota-fiscal-item-add-ibs-cbs-fields" author="supersonic-team">
+        <comment>
+            Adiciona campos de tributação IBS/CBS em nota_fiscal_item.
+            Todos nullable para compatibilidade retroativa com notas existentes.
+            Base legal: EC 132/2023 + LC 214/2025.
+        </comment>
+
+        <!-- CST IBS/CBS: Código de Situação Tributária (3 dígitos, ex.: "000") -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="cst_ibs_cbs" type="VARCHAR(3)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Código de Classificação Tributária (6 dígitos) -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="c_class_trib" type="VARCHAR(6)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Base de cálculo do IBS/CBS = valorTotal * (1 - percentualReducao/100) -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="base_calculo_ibs_cbs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Alíquota IBS (proporção decimal, ex.: 0.0010 = 0,10 %) -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="aliquota_ibs" type="DECIMAL(7,4)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Valor do IBS calculado = baseCalculo * aliquotaIbs -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="valor_ibs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Alíquota CBS (proporção decimal, ex.: 0.0090 = 0,90 %) -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="aliquota_cbs" type="DECIMAL(7,4)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Valor da CBS calculada = baseCalculo * aliquotaCbs -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="valor_cbs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!--
+            Percentual de redução da base de cálculo (0-100).
+            Usado para produtos agropecuários com redução de alíquota.
+            LC 214/2025 prevê regimes diferenciados; o percentual exato
+            por NCM/produto será refinado em sprint futura conforme
+            regulamentação complementar. Default 0 = sem redução.
+        -->
+        <addColumn tableName="nota_fiscal_item">
+            <column name="percentual_reducao" type="DECIMAL(5,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal_item" columnName="cst_ibs_cbs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="c_class_trib"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="base_calculo_ibs_cbs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="aliquota_ibs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="valor_ibs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="aliquota_cbs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="valor_cbs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="percentual_reducao"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0003-nota-fiscal-add-totais-ibs-cbs" author="supersonic-team">
+        <comment>
+            Adiciona totais de IBS e CBS na nota_fiscal (soma dos valores dos itens).
+            Nullable para compatibilidade com notas criadas antes desta sessão.
+        </comment>
+
+        <!-- Somatório de valor_ibs de todos os itens da nota -->
+        <addColumn tableName="nota_fiscal">
+            <column name="valor_total_ibs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Somatório de valor_cbs de todos os itens da nota -->
+        <addColumn tableName="nota_fiscal">
+            <column name="valor_total_cbs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="valor_total_ibs"/>
+            <dropColumn tableName="nota_fiscal" columnName="valor_total_cbs"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

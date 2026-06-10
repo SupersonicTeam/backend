@@ -363,6 +363,8 @@ class NotaFiscalControllerTest {
         null,
         new BigDecimal("1000.00"),
         new BigDecimal("1000.00"),
+        new BigDecimal("1.00"),   // valorTotalIbs — informativo 2026
+        new BigDecimal("9.00"),   // valorTotalCbs — informativo 2026
         List.of(),
         OffsetDateTime.now(),
         OffsetDateTime.now());

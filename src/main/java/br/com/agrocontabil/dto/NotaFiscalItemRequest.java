@@ -1,6 +1,8 @@
 package br.com.agrocontabil.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -11,9 +13,16 @@ import java.math.BigDecimal;
 /**
  * DTO de entrada para um item de nota fiscal.
  *
- * <p>Todos os campos obrigatorios sao validados via Bean Validation.
- * O valorTotal do item nao e aceito do cliente — e calculado no mapper
- * (quantidade * valorUnitario, arredondado HALF_UP em 2 casas).
+ * <p>Campos obrigatórios são validados via Bean Validation.
+ * O {@code valorTotal} do item não é aceito do cliente — é calculado no mapper
+ * ({@code quantidade × valorUnitario}, arredondado HALF_UP em 2 casas).
+ *
+ * <p>Os campos de IBS/CBS ({@code valorIbs}, {@code valorCbs}, {@code baseCalculoIbsCbs},
+ * {@code aliquotaIbs}, {@code aliquotaCbs}) são <strong>calculados pelo servidor</strong> e
+ * nunca aceitos do cliente (evita mass-assignment). Apenas campos informativos/classificatórios
+ * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}) são opcionais na entrada.
+ *
+ * <p>Base legal: EC 132/2023 + LC 214/2025.
  */
 @Schema(description = "Item de produto/servico a ser incluido na nota fiscal")
 public record NotaFiscalItemRequest(
@@ -56,5 +65,44 @@ public record NotaFiscalItemRequest(
     @Schema(description = "Valor unitario do produto", example = "2.50")
     @NotNull(message = "valorUnitario e obrigatorio")
     @Positive(message = "valorUnitario deve ser positivo")
-    BigDecimal valorUnitario
+    BigDecimal valorUnitario,
+
+    // -------------------------------------------------------------------------
+    // Campos opcionais de IBS/CBS — apenas classificatórios/informativos.
+    // Valores calculados (valorIbs, valorCbs, baseCalculo, alíquotas) NÃO vêm
+    // do cliente — são computados pelo CalculoIbsCbsService.
+    // Base legal: EC 132/2023 + LC 214/2025.
+    // -------------------------------------------------------------------------
+
+    @Schema(
+        description =
+            "CST IBS/CBS: Codigo de Situacao Tributaria (3 digitos). "
+                + "Opcional; tabela definida pela LC 214/2025.",
+        example = "000")
+    @Pattern(
+        regexp = "\\d{3}",
+        message = "cstIbsCbs deve ter exatamente 3 digitos numericos")
+    String cstIbsCbs,
+
+    @Schema(
+        description =
+            "Codigo de Classificacao Tributaria — cClassTrib (6 digitos). "
+                + "Opcional; definido pela LC 214/2025 e Nota Tecnica RFB/CONFAZ.",
+        example = "010100")
+    @Pattern(
+        regexp = "\\d{6}",
+        message = "cClassTrib deve ter exatamente 6 digitos numericos")
+    String cClassTrib,
+
+    @Schema(
+        description =
+            "Percentual de reducao da base de calculo IBS/CBS (0 a 100). "
+                + "Opcional; default 0 (sem reducao). "
+                + "Usado para regimes diferenciados de produtos agropecuarios "
+                + "(LC 214/2025 — percentual exato por produto sera refinado em "
+                + "sprint futura conforme regulamentacao complementar).",
+        example = "0.00")
+    @DecimalMin(value = "0", message = "percentualReducao deve ser entre 0 e 100")
+    @DecimalMax(value = "100", message = "percentualReducao deve ser entre 0 e 100")
+    BigDecimal percentualReducao
 ) {}

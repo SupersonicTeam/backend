@@ -8,11 +8,14 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * DTO de saida para uma nota fiscal.
+ * DTO de saída para uma nota fiscal.
  *
- * <p>Expoe todos os campos relevantes da entidade {@link br.com.agrocontabil.model.NotaFiscal},
+ * <p>Expõe todos os campos relevantes da entidade {@link br.com.agrocontabil.model.NotaFiscal},
  * incluindo os valores calculados, status, itens e timestamps de auditoria.
- * A entidade JPA nunca e exposta diretamente — sempre via este record.
+ * A entidade JPA nunca é exposta diretamente — sempre via este record.
+ *
+ * <p>Os campos {@code valorTotalIbs} e {@code valorTotalCbs} são nulos para notas emitidas
+ * antes da Sprint 2 – Sessão 4 (IBS/CBS). Base legal: EC 132/2023 + LC 214/2025.
  */
 @Schema(description = "Dados completos de uma nota fiscal eletronica (NF-e modelo 55)")
 public record NotaFiscalResponse(
@@ -68,6 +71,22 @@ public record NotaFiscalResponse(
 
     @Schema(description = "Valor total da nota fiscal", example = "1250.00")
     BigDecimal valorTotalNota,
+
+    @Schema(
+        description =
+            "Somatório do IBS calculado de todos os itens. "
+                + "Informativo em 2026 (ano-teste, LC 214/2025). "
+                + "Nulo para notas anteriores à Sprint 2 Sessão 4.",
+        example = "1.25")
+    BigDecimal valorTotalIbs,
+
+    @Schema(
+        description =
+            "Somatório da CBS calculada de todos os itens. "
+                + "Informativo em 2026 (ano-teste, LC 214/2025). "
+                + "Nulo para notas anteriores à Sprint 2 Sessão 4.",
+        example = "11.25")
+    BigDecimal valorTotalCbs,
 
     @Schema(description = "Itens da nota fiscal")
     List<NotaFiscalItemResponse> itens,

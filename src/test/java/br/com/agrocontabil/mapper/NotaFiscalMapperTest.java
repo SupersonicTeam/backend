@@ -440,7 +440,8 @@ class NotaFiscalMapperTest {
         "6101",
         "KG",
         new BigDecimal(quantidade),
-        new BigDecimal(valorUnitario));
+        new BigDecimal(valorUnitario),
+        null, null, null);
   }
 
   private NotaFiscalItem buildItemEntity() {
