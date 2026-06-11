@@ -98,7 +98,10 @@ public record NotaFiscalResponse(
     @Schema(description = "Data e hora da ultima atualizacao da nota")
     OffsetDateTime updatedAt,
 
-    @Schema(description = "Tipo do documento fiscal (NFE ou NFA)", example = "NFE")
+    @Schema(
+        description = "Tipo do documento fiscal: NFE (padrao) ou NFA (Nota Fiscal Avulsa "
+            + "do produtor rural pessoa fisica)",
+        example = "NFE")
     TipoDocumento tipoDocumento
 ) {
 
