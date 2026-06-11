@@ -109,6 +109,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.unprocessableEntity().body(body);
     }
 
+    /**
+     * Emitente invalido para Nota Fiscal Avulsa — produtor nao e PF ou CPF invalido.
+     * HTTP 422 Unprocessable Entity. Mensagem generica ao cliente; detalhe no log.
+     */
+    @ExceptionHandler(NfaEmitenteInvalidoException.class)
+    public ResponseEntity<ApiError> handleNfaEmitenteInvalido(
+            NfaEmitenteInvalidoException ex, HttpServletRequest request) {
+        log.warn("Emitente invalido para NFA: uri={} detalhe={}",
+                request.getRequestURI(), ex.getMessage());
+        ApiError body = ApiError.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase(),
+                "Emitente invalido para Nota Fiscal Avulsa: o produtor deve ser "
+                    + "pessoa fisica com CPF valido.",
+                request.getRequestURI());
+        return ResponseEntity.unprocessableEntity().body(body);
+    }
+
     /** Argumento ilegal vindo da camada de servico. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(
