@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0006-ncm-cfop-referencia.xml
+         Sprint 2 — issue #20 (RN008): validacao de NCM e CFOP.
+         Cria duas tabelas de referencia com seed curado.
+         Tipos VARCHAR portaveis H2/PostgreSQL.
+         NAO editar changesets anteriores (0001-0005).
+         ================================================================ -->
+
+    <changeSet id="0006-create-ncm-agropecuario" author="supersonic-team">
+        <createTable tableName="ncm_agropecuario">
+            <column name="codigo" type="VARCHAR(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0006-create-cfop-produtor-rural" author="supersonic-team">
+        <createTable tableName="cfop_produtor_rural">
+            <column name="codigo" type="VARCHAR(4)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo_operacao" type="VARCHAR(7)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ambito" type="VARCHAR(15)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0006-seed-ncm-agropecuario" author="supersonic-team">
+        <comment>Seed curado de NCMs agropecuarios representativos.</comment>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="12010090"/><column name="descricao" value="Soja, mesmo triturada (exceto para semeadura)"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="10059010"/><column name="descricao" value="Milho em grao"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="09011110"/><column name="descricao" value="Cafe nao torrado, nao descafeinado, em grao"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="01029000"/><column name="descricao" value="Animais vivos da especie bovina"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="04012010"/><column name="descricao" value="Leite (teor de gordura ate 6%)"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="52010010"/><column name="descricao" value="Algodao nao cardado nem penteado"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="10063021"/><column name="descricao" value="Arroz semibranqueado ou branqueado"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="10019900"/><column name="descricao" value="Trigo (exceto para semeadura)"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="12129200"/><column name="descricao" value="Cana-de-acucar"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="08043000"/><column name="descricao" value="Abacaxis frescos ou secos"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="07020000"/><column name="descricao" value="Tomates frescos ou refrigerados"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="02013000"/><column name="descricao" value="Carne bovina desossada, fresca ou refrigerada"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="12024200"/><column name="descricao" value="Amendoim sem casca"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="18010000"/><column name="descricao" value="Cacau inteiro ou partido, em bruto ou torrado"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="24011010"/><column name="descricao" value="Fumo (tabaco) nao destalado"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="44039900"/><column name="descricao" value="Madeira em bruto"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="23099010"/><column name="descricao" value="Preparacoes para alimentacao animal (racao)"/></insert>
+        <insert tableName="ncm_agropecuario"><column name="codigo" value="06031100"/><column name="descricao" value="Rosas cortadas, frescas"/></insert>
+    </changeSet>
+
+    <changeSet id="0006-seed-cfop-produtor-rural" author="supersonic-team">
+        <comment>Seed dos CFOPs tipicos do produtor rural com tipo de operacao e ambito.</comment>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="5101"/><column name="descricao" value="Venda de producao do estabelecimento"/><column name="tipo_operacao" value="SAIDA"/><column name="ambito" value="INTERNA"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="5102"/><column name="descricao" value="Venda de mercadoria adquirida ou recebida de terceiros"/><column name="tipo_operacao" value="SAIDA"/><column name="ambito" value="INTERNA"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="5949"/><column name="descricao" value="Outra saida de mercadoria nao especificada"/><column name="tipo_operacao" value="SAIDA"/><column name="ambito" value="INTERNA"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="6101"/><column name="descricao" value="Venda de producao do estabelecimento"/><column name="tipo_operacao" value="SAIDA"/><column name="ambito" value="INTERESTADUAL"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="6102"/><column name="descricao" value="Venda de mercadoria adquirida ou recebida de terceiros"/><column name="tipo_operacao" value="SAIDA"/><column name="ambito" value="INTERESTADUAL"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="6949"/><column name="descricao" value="Outra saida de mercadoria nao especificada"/><column name="tipo_operacao" value="SAIDA"/><column name="ambito" value="INTERESTADUAL"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="1101"/><column name="descricao" value="Compra para industrializacao ou producao rural"/><column name="tipo_operacao" value="ENTRADA"/><column name="ambito" value="INTERNA"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="1102"/><column name="descricao" value="Compra para comercializacao"/><column name="tipo_operacao" value="ENTRADA"/><column name="ambito" value="INTERNA"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="1949"/><column name="descricao" value="Outra entrada de mercadoria nao especificada"/><column name="tipo_operacao" value="ENTRADA"/><column name="ambito" value="INTERNA"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="2101"/><column name="descricao" value="Compra para industrializacao ou producao rural"/><column name="tipo_operacao" value="ENTRADA"/><column name="ambito" value="INTERESTADUAL"/></insert>
+        <insert tableName="cfop_produtor_rural"><column name="codigo" value="2102"/><column name="descricao" value="Compra para comercializacao"/><column name="tipo_operacao" value="ENTRADA"/><column name="ambito" value="INTERESTADUAL"/></insert>
+
+        <rollback>
+            <dropTable tableName="cfop_produtor_rural"/>
+            <dropTable tableName="ncm_agropecuario"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
