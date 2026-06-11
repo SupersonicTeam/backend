@@ -1,6 +1,7 @@
 package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoDocumento;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -95,7 +96,10 @@ public record NotaFiscalResponse(
     OffsetDateTime createdAt,
 
     @Schema(description = "Data e hora da ultima atualizacao da nota")
-    OffsetDateTime updatedAt
+    OffsetDateTime updatedAt,
+
+    @Schema(description = "Tipo do documento fiscal (NFE ou NFA)", example = "NFE")
+    TipoDocumento tipoDocumento
 ) {
 
   /**

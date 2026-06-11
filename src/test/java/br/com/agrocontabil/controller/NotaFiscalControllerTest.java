@@ -435,7 +435,8 @@ class NotaFiscalControllerTest {
         new BigDecimal("9.00"),   // valorTotalCbs — informativo 2026
         List.of(),
         OffsetDateTime.now(),
-        OffsetDateTime.now());
+        OffsetDateTime.now(),
+        br.com.agrocontabil.model.TipoDocumento.NFE);
   }
 
   private NotaFiscalResponse buildResponseXmlGerado(UUID id) {
@@ -460,6 +461,7 @@ class NotaFiscalControllerTest {
         new BigDecimal("9.00"),
         List.of(),
         OffsetDateTime.now(),
-        OffsetDateTime.now());
+        OffsetDateTime.now(),
+        br.com.agrocontabil.model.TipoDocumento.NFE);
   }
 }

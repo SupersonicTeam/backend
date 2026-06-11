@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoDocumento;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -88,7 +89,7 @@ class NotaFiscalMapperTest {
         OffsetDateTime.now(), null,
         "Comprador", "12345678901",
         null, null,
-        List.of(buildItem("1", "10.00")));
+        List.of(buildItem("1", "10.00")), null);
 
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
 
@@ -103,7 +104,7 @@ class NotaFiscalMapperTest {
         OffsetDateTime.now(), null,
         "Comprador", "12345678901",
         null, null,
-        List.of(buildItem("1", "10.00")));
+        List.of(buildItem("1", "10.00")), null);
 
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
 
@@ -232,7 +233,7 @@ class NotaFiscalMapperTest {
         OffsetDateTime.now(), null,
         "Comprador", "12345678901",
         null, enderecoReq,
-        List.of(buildItem("1", "10.00")));
+        List.of(buildItem("1", "10.00")), null);
 
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
 
@@ -410,6 +411,38 @@ class NotaFiscalMapperTest {
   }
 
   // -------------------------------------------------------------------------
+  // tipoDocumento — default NFE e round-trip
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("toEntity usa NFE como default quando tipoDocumento e null")
+  void toEntityDefaultNfe() {
+    NotaFiscalRequest request = buildRequest(List.of(buildItem("1", "10.00")));
+    // buildRequest passa tipoDocumento = null
+
+    NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
+
+    assertThat(nota.getTipoDocumento()).isEqualTo(TipoDocumento.NFE);
+  }
+
+  @Test
+  @DisplayName("toResponse expoe o tipoDocumento da entidade")
+  void toResponseExpoeTipoDocumento() {
+    NotaFiscalRequest request = new NotaFiscalRequest(
+        1L, 1, "Venda de producao rural",
+        OffsetDateTime.now(), null,
+        "Comprador", "12345678901",
+        null, null,
+        List.of(buildItem("1", "10.00")), TipoDocumento.NFA);
+
+    NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
+
+    NotaFiscalResponse response = NotaFiscalMapper.toResponse(nota);
+
+    assertThat(response.tipoDocumento()).isEqualTo(TipoDocumento.NFA);
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
@@ -424,7 +457,8 @@ class NotaFiscalMapperTest {
         "12345678901",
         null,
         null,
-        itens);
+        itens,
+        null);
   }
 
   /**

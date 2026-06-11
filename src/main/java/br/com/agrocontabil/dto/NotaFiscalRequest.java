@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.model.TipoDocumento;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -72,7 +73,13 @@ public record NotaFiscalRequest(
     @NotEmpty(message = "itens nao pode ser vazio")
     @Size(max = 990, message = "A nota fiscal pode ter no maximo 990 itens")
     @Valid
-    List<NotaFiscalItemRequest> itens
+    List<NotaFiscalItemRequest> itens,
+
+    @Schema(
+        description = "Tipo do documento: NFE (padrao) ou NFA (Nota Fiscal Avulsa "
+            + "do produtor rural pessoa fisica)",
+        example = "NFE")
+    TipoDocumento tipoDocumento
 ) {
 
   /**

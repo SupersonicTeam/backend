@@ -10,6 +10,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoDocumento;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -56,6 +57,8 @@ public final class NotaFiscalMapper {
         .numero(request.numero())
         .serie(request.serie() != null ? request.serie() : 1)
         .modelo("55")
+        .tipoDocumento(request.tipoDocumento() != null
+            ? request.tipoDocumento() : TipoDocumento.NFE)
         .naturezaOperacao(request.naturezaOperacao())
         .dataEmissao(request.dataEmissao())
         .dataSaida(request.dataSaida())
@@ -114,7 +117,8 @@ public final class NotaFiscalMapper {
         nota.getValorTotalCbs(),
         itensResponse,
         nota.getCreatedAt(),
-        nota.getUpdatedAt());
+        nota.getUpdatedAt(),
+        nota.getTipoDocumento());
   }
 
   // -------------------------------------------------------------------------
