@@ -33,20 +33,22 @@ Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 
 
 ```
 br.com.agrocontabil
-├── config/        # SecurityConfig, CorsConfig, OpenApiConfig
-├── controller/    # REST controllers
-├── service/       # regras de negócio
+├── config/        # SecurityConfig, CorsConfig, OpenApiConfig, MockProdutorFilter, TributosProperties/Config, DataLoader
+├── controller/    # REST controllers (HealthController, NotaFiscalController)
+├── service/       # regras de negócio (NotaFiscalService, CalculoIbsCbsService, GeracaoNotaFiscalService, ChaveAcessoGenerator, AuthenticatedProdutorProvider)
 ├── repository/    # Spring Data JPA
-├── model/         # entidades JPA
+├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario, enums...)
 ├── dto/           # request/response (records)
-├── mapper/        # entidade <-> DTO
+├── mapper/        # entidade <-> DTO (NotaFiscalMapper)
+├── nfe/           # geração de NF-e: model/ (classes JAXB puras do layout 4.00), FiscalRulesValidator, NotaFiscalNfeMapper, XmlGenerator, XsdValidator
 ├── exception/     # handler global + exceções de domínio
 └── common/        # ApiError, utilitários
 ```
 
 ## Segurança
 
-- **Auth em stand-by até a Sprint 8.** O `SecurityConfig` está com `permitAll()` em todos os endpoints, mas com CSRF off, sessão stateless e CORS controlado. A estrutura permite plugar JWT sem refatorar controllers — basta trocar o `permitAll()` por regras reais e adicionar o filtro JWT.
+- **Auth em stand-by até a Sprint 8.** O `SecurityConfig` está com `permitAll()` em todos os endpoints, mas com CSRF off, sessão stateless e CORS controlado. A estrutura permite plugar JWT sem refatorar controllers — basta trocar o `permitAll()` por regras reais e adicionar o filtro JWT. O produtor "autenticado" vem do `MockProdutorFilter` via `AuthenticatedProdutorProvider`.
+- **Ownership (anti-IDOR) já aplicado.** Toda operação sobre nota fiscal usa `findByIdAndProdutorId` e responde **404** (não 403) para nota de outro produtor — não revela existência. Mensagens de erro de geração de XML são genéricas ao cliente (detalhe técnico só no log).
 - **Nenhum segredo no repositório.** Senha de banco e JWT secret vêm de env var (`${DB_PASSWORD}`, `${JWT_SECRET}`). Ver `.env.example`.
 - **CORS** controlado por `app.cors.allowed-origins` (env `APP_CORS_ALLOWED_ORIGINS`). Nunca usar `*` em prod.
 - **Logs nunca contêm senha/token.** Ao logar requisições ou erros, não incluir credenciais.
@@ -72,9 +74,25 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
 
-## Estado atual — Sprint 0
+## Estado atual — Sprint 2 concluída (2026-06-11)
 
-Entregue: pom limpo e fixado, estrutura de pacotes, `SecurityConfig`/`CorsConfig`/`OpenApiConfig`, `GlobalExceptionHandler` + `ApiError`, `HealthController`, configs por profile, Docker Compose e baseline do Liquibase. **Sem entidades de domínio ainda.**
+**Sprint 0** (fundação): pom fixado, estrutura de pacotes, `SecurityConfig`/`CorsConfig`/`OpenApiConfig`, `GlobalExceptionHandler` + `ApiError`, `HealthController`, configs por profile, Docker Compose, baseline do Liquibase, `MockProdutorFilter` (auth mockada por produtor até a Sprint 8) e `DataLoader` (seed).
+
+**Sprint 2** — módulo de Notas Fiscais (issues #15 e #16, ambas fechadas; 6 PRs incrementais #7–#12):
+
+- **CRUD de notas fiscais (RF008 — issue #15):** entidades `NotaFiscal`/`NotaFiscalItem`/`EnderecoDestinatario` + enum `StatusNotaFiscal` (RASCUNHO, XML_GERADO, AUTORIZADA, CANCELADA — só os 2 primeiros em uso); `NotaFiscalRepository` (paginado + ownership via `findByIdAndProdutorId`); `NotaFiscalService` (CRUD vinculado ao produtor autenticado, anti-IDOR 404, bloqueio de edição fora de RASCUNHO → 409); `NotaFiscalController` (`GET /api/notas` paginado, `GET/POST/PUT/DELETE /api/notas/{id}`); DTOs `record` com Bean Validation; OpenAPI; migration `0002`.
+- **Geração de NF-e modelo 55 (RF009 — issue #16):**
+  - **IBS/CBS (EC 132/2023, transição 2026):** `CalculoIbsCbsService` (regra pura) + campos nos itens; alíquotas parametrizadas em `application.yml` via `TributosProperties` (IBS 0,10% / CBS 0,90% — nunca cravadas em código); migration `0003`.
+  - **Geração do XML (JAXB, arquitetura em camadas):** `FiscalRulesValidator` → `NotaFiscalNfeMapper` (formatação) → classes JAXB **puras** em `nfe/model/` → `XmlGenerator` → `XsdValidator`. Validação contra o XSD oficial do layout 4.00 (`src/main/resources/xsd/`), com hardening XXE. `ChaveAcessoGenerator` (44 dígitos + DV módulo 11).
+  - **Persistência + endpoints:** coluna `xml_gerado` (migration `0004`); `POST /api/notas/{id}/gerar-xml` (transição RASCUNHO→XML_GERADO, idempotente, XML imutável) e `GET /api/notas/{id}/xml` (`application/xml`).
+
+Cobertura: 94 testes (JUnit + Mockito), service ≥ 80% (JaCoCo). Cada PR passou por code review + auditoria de segurança (OWASP) e CI verde.
+
+### Débitos técnicos abertos (registrados nos PRs da Sprint 2)
+
+- **Sprint 7 (transmissão SEFAZ):** assinatura digital ICP-Brasil (`ds:Signature` é obrigatória no XSD — hoje o `XsdValidator` tolera apenas essa ausência e mantém todo o resto fatal); `cNF` da chave de acesso via `SecureRandom` (hoje determinístico para teste).
+- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`; validação de dígitos verificadores de CPF/CNPJ.
+- **Modelo:** o `Produtor` ainda não tem endereço completo nem IE (o `NotaFiscalNfeMapper` usa placeholders); divisão IBS UF/Município hoje é 50/50 (parametrização real pendente).
 
 ## Roadmap pós-básico (não implementado)
 
