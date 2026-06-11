@@ -61,6 +61,9 @@
         <insert tableName="ncm_agropecuario"><column name="codigo" value="44039900"/><column name="descricao" value="Madeira em bruto"/></insert>
         <insert tableName="ncm_agropecuario"><column name="codigo" value="23099010"/><column name="descricao" value="Preparacoes para alimentacao animal (racao)"/></insert>
         <insert tableName="ncm_agropecuario"><column name="codigo" value="06031100"/><column name="descricao" value="Rosas cortadas, frescas"/></insert>
+        <rollback>
+            <delete tableName="ncm_agropecuario"/>
+        </rollback>
     </changeSet>
 
     <changeSet id="0006-seed-cfop-produtor-rural" author="supersonic-team">
@@ -78,8 +81,7 @@
         <insert tableName="cfop_produtor_rural"><column name="codigo" value="2102"/><column name="descricao" value="Compra para comercializacao"/><column name="tipo_operacao" value="ENTRADA"/><column name="ambito" value="INTERESTADUAL"/></insert>
 
         <rollback>
-            <dropTable tableName="cfop_produtor_rural"/>
-            <dropTable tableName="ncm_agropecuario"/>
+            <delete tableName="cfop_produtor_rural"/>
         </rollback>
     </changeSet>
 
