@@ -4,6 +4,7 @@ import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -11,6 +12,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -34,25 +36,34 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Busca por ID: 404 se inexistente OU se pertencer a outro produtor.</li>
  *   <li>Atualizacao: somente se status == RASCUNHO; caso contrario, 409 Conflict.</li>
  *   <li>Exclusao: somente se status == RASCUNHO; caso contrario, 409 Conflict.</li>
+ *   <li>Geracao de XML: somente se status == RASCUNHO; persiste XML, versao, data
+ *       e transiciona status para XML_GERADO.</li>
+ *   <li>Obtencao do XML: retorna o XML armazenado; 404 se ainda nao gerado.</li>
  * </ul>
  */
 @Service
 @Transactional
 public class NotaFiscalService {
 
+  /** Versao do layout NF-e gerado por esta implementacao. */
+  private static final String VERSAO_LAYOUT_NFE = "4.00";
+
   private static final Logger log = LoggerFactory.getLogger(NotaFiscalService.class);
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CalculoIbsCbsService calculoIbsCbsService;
+  private final GeracaoNotaFiscalService geracaoNotaFiscalService;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
-      CalculoIbsCbsService calculoIbsCbsService) {
+      CalculoIbsCbsService calculoIbsCbsService,
+      GeracaoNotaFiscalService geracaoNotaFiscalService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
+    this.geracaoNotaFiscalService = geracaoNotaFiscalService;
   }
 
   /**
@@ -182,6 +193,132 @@ public class NotaFiscalService {
 
     notaFiscalRepository.delete(nota);
     log.info("NotaFiscal excluida: id={} produtor={}", id, produtor.getId());
+  }
+
+  // -------------------------------------------------------------------------
+  // Geracao e obtencao do XML da NF-e (Sprint 2, Sessao 6)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Gera o XML da NF-e para a nota indicada, persiste-o e transiciona o status.
+   *
+   * <p>Regras:
+   * <ul>
+   *   <li>Ownership: busca via {@code findByIdAndProdutorId} — 404 se a nota nao pertencer
+   *       ao produtor autenticado (anti-IDOR).</li>
+   *   <li>Idempotencia/transicao: somente notas em {@link StatusNotaFiscal#RASCUNHO} podem
+   *       ter o XML gerado; qualquer outro status resulta em
+   *       {@link NotaFiscalNaoEditavelException} (HTTP 409).</li>
+   *   <li>Apos a geracao: {@code xmlGerado}, {@code versaoLayoutNfe} e
+   *       {@code dataGeracaoXml} sao preenchidos; o status transita para
+   *       {@link StatusNotaFiscal#XML_GERADO}; a chave de acesso e extraida do atributo
+   *       {@code Id} da {@code infNFe} ({@code "NFe" + 44 digitos}) via
+   *       {@link GeracaoNotaFiscalService#gerarXml(NotaFiscal)}.</li>
+   *   <li>Imutabilidade: apos a transicao o status nao e RASCUNHO, portanto os endpoints
+   *       de update e delete ja bloqueiam sobrescrita — o XML e a chave sao imutaveis.</li>
+   * </ul>
+   *
+   * @param id identificador da nota fiscal
+   * @return DTO de resposta atualizado com status XML_GERADO e chave de acesso preenchida
+   * @throws ResourceNotFoundException        se a nota nao existir ou pertencer a outro produtor
+   * @throws NotaFiscalNaoEditavelException   se o status nao for RASCUNHO (409 Conflict)
+   * @throws br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException
+   *         se dados obrigatorios da NF-e estiverem ausentes (422)
+   * @throws br.com.agrocontabil.exception.XmlGenerationException
+   *         se o XML gerado nao for valido segundo o XSD (422)
+   */
+  public NotaFiscalResponse gerarXml(UUID id) {
+    Produtor produtor = produtorProvider.get();
+    NotaFiscal nota = notaFiscalRepository
+        .findByIdAndProdutorId(id, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+
+    if (nota.getStatus() != StatusNotaFiscal.RASCUNHO) {
+      throw new NotaFiscalNaoEditavelException(id, nota.getStatus());
+    }
+
+    String xml = geracaoNotaFiscalService.gerarXml(nota);
+
+    // Extrai a chave de acesso do atributo Id da infNFe: "NFe" + 44 digitos numericos.
+    // O GeracaoNotaFiscalService garante que o Id esta no formato correto apos geracao
+    // bem-sucedida — fazemos a extracao direto do XML para nao expor o grafo JAXB.
+    String chaveAcesso = extrairChaveAcessoDoXml(xml);
+
+    nota.setXmlGerado(xml);
+    nota.setVersaoLayoutNfe(VERSAO_LAYOUT_NFE);
+    nota.setDataGeracaoXml(OffsetDateTime.now());
+    nota.setStatus(StatusNotaFiscal.XML_GERADO);
+    nota.setChaveAcesso(chaveAcesso);
+
+    NotaFiscal saved = notaFiscalRepository.save(nota);
+    log.info("XML da NF-e gerado e persistido: id={} produtor={} chave={}",
+        saved.getId(), produtor.getId(), chaveAcesso);
+    return NotaFiscalMapper.toResponse(saved);
+  }
+
+  /**
+   * Retorna o XML da NF-e armazenado para a nota indicada.
+   *
+   * <p>Ownership: busca via {@code findByIdAndProdutorId} — 404 se a nota nao pertencer
+   * ao produtor autenticado (anti-IDOR).
+   *
+   * @param id identificador da nota fiscal
+   * @return XML da NF-e como string UTF-8
+   * @throws ResourceNotFoundException se a nota nao existir, pertencer a outro produtor
+   *                                   ou o XML ainda nao tiver sido gerado
+   */
+  @Transactional(readOnly = true)
+  public String obterXml(UUID id) {
+    Produtor produtor = produtorProvider.get();
+    NotaFiscal nota = notaFiscalRepository
+        .findByIdAndProdutorId(id, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+
+    if (nota.getXmlGerado() == null) {
+      throw new ResourceNotFoundException(
+          "XML da NF-e ainda nao gerado para a nota '" + id + "'. "
+              + "Chame POST /api/notas/{id}/gerar-xml primeiro.");
+    }
+
+    return nota.getXmlGerado();
+  }
+
+  // -------------------------------------------------------------------------
+  // Helper privado de extracao da chave de acesso
+  // -------------------------------------------------------------------------
+
+  /**
+   * Extrai os 44 digitos da chave de acesso do atributo {@code Id} da infNFe no XML.
+   *
+   * <p>O formato e {@code Id="NFe&lt;44 digitos&gt;"} — remove o prefixo "NFe" e retorna
+   * apenas os 44 digitos numericos. Nao faz parse completo do XML para evitar overhead;
+   * usa busca por substring confiavel dado que o GeracaoNotaFiscalService garante o formato.
+   *
+   * @param xml XML valido da NF-e
+   * @return chave de acesso com 44 digitos numericos
+   * @throws XmlGenerationException se a chave nao puder ser extraida (XML sem o atributo
+   *         {@code Id} no formato esperado) — evita persistir o XML com chave nula
+   */
+  private String extrairChaveAcessoDoXml(String xml) {
+    // Formato: Id="NFe<44 digitos>"
+    String prefix = "Id=\"NFe";
+    int start = xml.indexOf(prefix);
+    if (start == -1) {
+      throw new XmlGenerationException(
+          "Falha ao extrair a chave de acesso: atributo Id da infNFe nao encontrado no XML gerado.");
+    }
+    int chaveStart = start + prefix.length();
+    // Chave tem exatamente 44 digitos
+    if (chaveStart + 44 > xml.length()) {
+      throw new XmlGenerationException(
+          "Falha ao extrair a chave de acesso: XML truncado ou malformado.");
+    }
+    String chave = xml.substring(chaveStart, chaveStart + 44);
+    if (!chave.matches("\\d{44}")) {
+      throw new XmlGenerationException(
+          "Falha ao extrair a chave de acesso: valor extraido nao possui 44 digitos numericos.");
+    }
+    return chave;
   }
 
   // -------------------------------------------------------------------------

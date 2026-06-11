@@ -154,6 +154,32 @@ public class NotaFiscal {
   @Builder.Default
   private StatusNotaFiscal status = StatusNotaFiscal.RASCUNHO;
 
+  /**
+   * Corpo completo do XML da NF-e gerado e validado pelo pipeline de geracao.
+   *
+   * <p>Nulo enquanto a nota esta em status {@link StatusNotaFiscal#RASCUNHO}. Preenchido
+   * na transicao {@code RASCUNHO → XML_GERADO}. Imutavel apos essa transicao — o bloqueio
+   * de edicao do status garante que nenhum update sobrescreve este campo.
+   */
+  @Column(name = "xml_gerado", columnDefinition = "TEXT")
+  private String xmlGerado;
+
+  /**
+   * Versao do layout NF-e utilizado na geracao do XML (ex.: {@code "4.00"}).
+   *
+   * <p>Nulo enquanto a nota esta em {@link StatusNotaFiscal#RASCUNHO}.
+   */
+  @Column(name = "versao_layout_nfe", length = 10)
+  private String versaoLayoutNfe;
+
+  /**
+   * Data e hora (com fuso horario) em que o XML da NF-e foi gerado pela primeira vez.
+   *
+   * <p>Nulo enquanto a nota esta em {@link StatusNotaFiscal#RASCUNHO}.
+   */
+  @Column(name = "data_geracao_xml")
+  private OffsetDateTime dataGeracaoXml;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

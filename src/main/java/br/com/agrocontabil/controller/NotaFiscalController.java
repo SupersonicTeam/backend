@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -156,5 +157,63 @@ public class NotaFiscalController {
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     notaFiscalService.delete(id);
     return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Gera o XML da NF-e para a nota indicada, persiste-o e transiciona o status.
+   *
+   * <p>Idempotencia: somente notas em RASCUNHO podem ter o XML gerado. Chamadas
+   * subsequentes com status XML_GERADO retornam 409 — use GET /{id}/xml para
+   * obter o XML ja gerado.
+   */
+  @PostMapping("/{id}/gerar-xml")
+  @Operation(
+      summary = "Gera o XML da NF-e",
+      description = "Gera, valida (XSD) e persiste o XML da NF-e. "
+          + "Transiciona o status de RASCUNHO para XML_GERADO. "
+          + "Preenche chaveAcesso e dataGeracaoXml na entidade. "
+          + "Somente notas em RASCUNHO podem ser processadas; "
+          + "retorna 409 se o status nao for RASCUNHO.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "XML gerado com sucesso; nota atualizada com status XML_GERADO"),
+      @ApiResponse(responseCode = "404", description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Nota nao esta em status RASCUNHO — XML ja foi gerado ou nota cancelada",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "422",
+          description = "Dados da nota invalidos para emissao ou falha na validacao XSD",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<NotaFiscalResponse> gerarXml(@PathVariable UUID id) {
+    return ResponseEntity.ok(notaFiscalService.gerarXml(id));
+  }
+
+  /**
+   * Retorna o XML da NF-e gerado e armazenado para a nota indicada.
+   *
+   * <p>Retorna 404 se o XML ainda nao foi gerado (nota ainda em RASCUNHO).
+   * O Content-Type da resposta e {@code application/xml}.
+   */
+  @GetMapping(value = "/{id}/xml", produces = MediaType.APPLICATION_XML_VALUE)
+  @Operation(
+      summary = "Obtem o XML da NF-e",
+      description = "Retorna o XML da NF-e gerado e armazenado para a nota. "
+          + "Retorna 404 se a nota nao existir, nao pertencer ao produtor autenticado "
+          + "ou se o XML ainda nao tiver sido gerado (use POST /{id}/gerar-xml primeiro).")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "XML retornado com sucesso",
+          content = @Content(mediaType = MediaType.APPLICATION_XML_VALUE)),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou XML ainda nao gerado",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<String> obterXml(@PathVariable UUID id) {
+    String xml = notaFiscalService.obterXml(id);
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_XML)
+        .body(xml);
   }
 }

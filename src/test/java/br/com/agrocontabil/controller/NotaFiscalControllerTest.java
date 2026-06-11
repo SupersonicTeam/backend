@@ -318,6 +318,74 @@ class NotaFiscalControllerTest {
   }
 
   // -------------------------------------------------------------------------
+  // POST /{id}/gerar-xml → 200 NotaFiscalResponse
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/gerar-xml deve retornar 200 com status XML_GERADO")
+  void postGerarXmlShouldReturn200WithXmlGeradoStatus() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscalResponse mockResponse = buildResponseXmlGerado(notaId);
+
+    when(notaFiscalService.gerarXml(eq(notaId))).thenReturn(mockResponse);
+
+    mockMvc.perform(post("/api/notas/{id}/gerar-xml", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(notaId.toString()))
+        .andExpect(jsonPath("$.status").value("XML_GERADO"))
+        .andExpect(jsonPath("$.chaveAcesso").exists());
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/gerar-xml deve retornar 409 quando status nao e RASCUNHO")
+  void postGerarXmlShouldReturn409WhenStatusIsNotRascunho() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(notaFiscalService.gerarXml(eq(notaId)))
+        .thenThrow(new br.com.agrocontabil.exception.NotaFiscalNaoEditavelException(
+            notaId, br.com.agrocontabil.model.StatusNotaFiscal.XML_GERADO));
+
+    mockMvc.perform(post("/api/notas/{id}/gerar-xml", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409));
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/xml → 200 application/xml  /  404 quando nao gerado
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/xml deve retornar 200 com Content-Type application/xml")
+  void getXmlShouldReturn200WithApplicationXmlContentType() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    String xmlFake = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><NFe><infNFe/></NFe>";
+
+    when(notaFiscalService.obterXml(eq(notaId))).thenReturn(xmlFake);
+
+    mockMvc.perform(get("/api/notas/{id}/xml", notaId)
+            .accept(MediaType.APPLICATION_XML))
+        .andExpect(status().isOk())
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+            .content().contentTypeCompatibleWith(MediaType.APPLICATION_XML))
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+            .content().string(xmlFake));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/xml deve retornar 404 quando XML nao foi gerado")
+  void getXmlShouldReturn404WhenXmlNotYetGenerated() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(notaFiscalService.obterXml(eq(notaId)))
+        .thenThrow(new ResourceNotFoundException(
+            "XML da NF-e ainda nao gerado para a nota '" + notaId + "'."));
+
+    mockMvc.perform(get("/api/notas/{id}/xml", notaId)
+            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON))
+        .andExpect(status().isNotFound());
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
@@ -365,6 +433,31 @@ class NotaFiscalControllerTest {
         new BigDecimal("1000.00"),
         new BigDecimal("1.00"),   // valorTotalIbs — informativo 2026
         new BigDecimal("9.00"),   // valorTotalCbs — informativo 2026
+        List.of(),
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
+  }
+
+  private NotaFiscalResponse buildResponseXmlGerado(UUID id) {
+    return new NotaFiscalResponse(
+        id,
+        "41262612345678000195550010000000011000000012", // chaveAcesso — 44 digitos
+        1L,
+        1,
+        "55",
+        "Venda de producao rural",
+        StatusNotaFiscal.XML_GERADO,
+        OffsetDateTime.now(),
+        null,
+        UUID.randomUUID(),
+        "Jose Comprador",
+        "12345678901",
+        null,
+        null,
+        new BigDecimal("1000.00"),
+        new BigDecimal("1000.00"),
+        new BigDecimal("1.00"),
+        new BigDecimal("9.00"),
         List.of(),
         OffsetDateTime.now(),
         OffsetDateTime.now());
