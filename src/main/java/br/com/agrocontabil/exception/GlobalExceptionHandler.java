@@ -65,6 +65,44 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    /**
+     * Nota fiscal com dados insuficientes para emissao — regras fiscais nao satisfeitas.
+     * HTTP 422 Unprocessable Entity, com lista de campos e motivos.
+     */
+    @ExceptionHandler(NotaFiscalInvalidaParaEmissaoException.class)
+    public ResponseEntity<ApiError> handleNotaFiscalInvalidaParaEmissao(
+            NotaFiscalInvalidaParaEmissaoException ex, HttpServletRequest request) {
+        log.warn("Nota fiscal invalida para emissao: uri={} violacoes={}",
+                request.getRequestURI(), ex.getViolations().size());
+        List<ApiError.FieldError> fields = ex.getViolations().stream()
+                .map(v -> new ApiError.FieldError(v.field(), v.reason()))
+                .toList();
+        ApiError body = ApiError.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase(),
+                "Nota fiscal invalida para emissao da NF-e. Corrija os campos listados.",
+                request.getRequestURI(),
+                fields);
+        return ResponseEntity.unprocessableEntity().body(body);
+    }
+
+    /**
+     * Erro na geracao ou validacao do XML da NF-e (falha tecnica ou XSD invalido).
+     * HTTP 422 Unprocessable Entity.
+     */
+    @ExceptionHandler(XmlGenerationException.class)
+    public ResponseEntity<ApiError> handleXmlGenerationException(
+            XmlGenerationException ex, HttpServletRequest request) {
+        log.warn("Erro na geracao do XML da NF-e: uri={} erro={}",
+                request.getRequestURI(), ex.getMessage());
+        ApiError body = ApiError.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.unprocessableEntity().body(body);
+    }
+
     /** Argumento ilegal vindo da camada de servico. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(

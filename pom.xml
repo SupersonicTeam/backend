@@ -134,6 +134,18 @@
 			<version>8.10.1</version>
 		</dependency>
 
+		<!-- JAXB API + runtime (Jakarta EE 10 / Spring Boot 3.x) -->
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+			<!-- version managed by Spring Boot BOM (via jakarta.xml.bind-api in 3.x) -->
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jaxb</groupId>
+			<artifactId>jaxb-runtime</artifactId>
+			<!-- version managed by Spring Boot BOM -->
+		</dependency>
+
 		<!-- Testcontainers -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
