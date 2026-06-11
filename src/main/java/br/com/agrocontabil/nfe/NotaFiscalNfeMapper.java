@@ -5,6 +5,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.model.TipoDocumento;
 import br.com.agrocontabil.nfe.model.Dest;
 import br.com.agrocontabil.nfe.model.Det;
 import br.com.agrocontabil.nfe.model.Emit;
@@ -148,7 +149,7 @@ public class NotaFiscalNfeMapper {
     infNFe.setTotal(buildTotal(nota));
     infNFe.setTransp(buildTransp());
     infNFe.setPag(buildPag(nota));
-    infNFe.setInfAdic(buildInfAdic());
+    infNFe.setInfAdic(buildInfAdic(nota));
     nfe.setInfNFe(infNFe);
     return nfe;
   }
@@ -475,11 +476,15 @@ public class NotaFiscalNfeMapper {
     return pag;
   }
 
-  private InfAdic buildInfAdic() {
-    InfAdic infAdic = new InfAdic();
-    infAdic.setInfCpl(
+  private InfAdic buildInfAdic(NotaFiscal nota) {
+    StringBuilder infCpl = new StringBuilder(
         "NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL. "
             + "IBS/CBS INFORMATIVOS - ANO-TESTE 2026 - EC 132/2023 / LC 214/2025.");
+    if (nota.getTipoDocumento() == TipoDocumento.NFA) {
+      infCpl.append(" NOTA FISCAL AVULSA - PRODUTOR RURAL PESSOA FISICA.");
+    }
+    InfAdic infAdic = new InfAdic();
+    infAdic.setInfCpl(infCpl.toString());
     return infAdic;
   }
 
