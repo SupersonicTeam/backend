@@ -34,6 +34,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import br.com.agrocontabil.service.GeracaoNotaFiscalService;
+
 /**
  * Testes unitarios do {@link NotaFiscalService}.
  *
@@ -58,14 +60,21 @@ class NotaFiscalServiceTest {
   private AuthenticatedProdutorProvider produtorProvider;
 
   /**
-   * CalculoIbsCbsService é um colaborador real de NotaFiscalService.
-   * Aqui usamos um mock para isolar o serviço de nota fiscal dos detalhes
-   * de cálculo tributário (testados isoladamente em CalculoIbsCbsServiceTest).
-   * O mock retorna a própria nota passada (identidade), permitindo que as
-   * asserções de totais de produtos continuem válidas.
+   * CalculoIbsCbsService e um colaborador real de NotaFiscalService.
+   * Aqui usamos um mock para isolar o servico de nota fiscal dos detalhes
+   * de calculo tributario (testados isoladamente em CalculoIbsCbsServiceTest).
+   * O mock retorna a propria nota passada (identidade), permitindo que as
+   * assercoes de totais de produtos continuem validas.
    */
   @Mock
   private CalculoIbsCbsService calculoIbsCbsService;
+
+  /**
+   * GeracaoNotaFiscalService e o pipeline de geracao de XML.
+   * Mockado para isolar NotaFiscalService dos detalhes de marshalling/XSD.
+   */
+  @Mock
+  private GeracaoNotaFiscalService geracaoNotaFiscalService;
 
   @InjectMocks
   private NotaFiscalService notaFiscalService;
@@ -531,6 +540,146 @@ class NotaFiscalServiceTest {
         .hasMessageContaining(notaId.toString());
 
     verify(notaFiscalRepository, never()).delete(any(NotaFiscal.class));
+  }
+
+  // -------------------------------------------------------------------------
+  // gerarXml — happy path, idempotencia e ownership
+  // -------------------------------------------------------------------------
+
+  /**
+   * XML de exemplo com chave de acesso para uso nos testes de gerarXml.
+   * Formato correto: Id="NFe" + 44 digitos numericos.
+   * Composicao: cUF(2) + AAMM(4) + CNPJ(14) + mod(2) + serie(3) + nNF(9) + tpEmis(1) + cNF(8) + cDV(1) = 44
+   */
+  private static final String CHAVE_FAKE = "41262612345678000195550010000000011000000012";
+  // 44 digitos: 41 (PR) + 2626 (AAMM) + 12345678000195 (CNPJ) + 55 (mod) + 001 + 000000001 + 1 + 00000001 + 2
+  private static final String XML_FAKE =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+          + "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\">"
+          + "<infNFe Id=\"NFe" + CHAVE_FAKE + "\" versao=\"4.00\"></infNFe></NFe>";
+
+  @Test
+  @DisplayName("gerarXml deve persistir xml, status XML_GERADO, versao e chave de acesso")
+  void gerarXmlShouldPersistXmlAndTransitionStatus() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(XML_FAKE);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.gerarXml(notaId);
+
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.XML_GERADO);
+    assertThat(response.chaveAcesso()).isEqualTo(CHAVE_FAKE);
+    // Verifica persistencia via save
+    verify(notaFiscalRepository).save(any(NotaFiscal.class));
+    // Verifica que o XML e a versao foram atribuidos a entidade
+    assertThat(nota.getXmlGerado()).isEqualTo(XML_FAKE);
+    assertThat(nota.getVersaoLayoutNfe()).isEqualTo("4.00");
+    assertThat(nota.getDataGeracaoXml()).isNotNull();
+    assertThat(nota.getChaveAcesso()).isEqualTo(CHAVE_FAKE);
+  }
+
+  @Test
+  @DisplayName("gerarXml deve lancar NotaFiscalNaoEditavelException quando status nao e RASCUNHO")
+  void gerarXmlShouldThrowWhenStatusIsNotRascunho() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.XML_GERADO);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(NotaFiscalNaoEditavelException.class)
+        .hasMessageContaining(notaId.toString());
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("gerarXml deve lancar ResourceNotFoundException quando nota pertence a outro produtor")
+  void gerarXmlShouldThrowWhenNotaBelongsToAnotherProdutor() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("gerarXml deve lancar XmlGenerationException e NAO persistir se a chave nao for extraivel")
+  void gerarXmlShouldThrowAndNotPersistWhenChaveCannotBeExtracted() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+
+    // XML sem o atributo Id="NFe..." → chave nao pode ser extraida
+    String xmlSemChave =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            + "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\"><infNFe versao=\"4.00\"></infNFe></NFe>";
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(xmlSemChave);
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(br.com.agrocontabil.exception.XmlGenerationException.class);
+
+    // Nao deve persistir estado inconsistente (chave nula)
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  // -------------------------------------------------------------------------
+  // obterXml — happy path e nao gerado
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("obterXml deve retornar o XML armazenado quando existente")
+  void obterXmlShouldReturnStoredXml() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.XML_GERADO);
+    nota.setXmlGerado(XML_FAKE);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    String xml = notaFiscalService.obterXml(notaId);
+
+    assertThat(xml).isEqualTo(XML_FAKE);
+  }
+
+  @Test
+  @DisplayName("obterXml deve lancar ResourceNotFoundException quando XML ainda nao foi gerado")
+  void obterXmlShouldThrowWhenXmlNotYetGenerated() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    // xmlGerado = null (status RASCUNHO, XML nao gerado)
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> notaFiscalService.obterXml(notaId))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
   }
 
   // -------------------------------------------------------------------------

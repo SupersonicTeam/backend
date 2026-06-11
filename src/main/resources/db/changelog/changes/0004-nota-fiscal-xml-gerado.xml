@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0004-nota-fiscal-xml-gerado.xml
+         Sprint 2 — Sessao 6: persistencia do XML gerado na nota fiscal.
+
+         Adiciona tres colunas nullable em nota_fiscal:
+           - xml_gerado       TEXT              : corpo completo do XML da NF-e gerado
+           - versao_layout_nfe VARCHAR(10)       : versao do layout (ex.: "4.00")
+           - data_geracao_xml TIMESTAMP WITH TZ  : momento em que o XML foi gerado
+
+         Todas nullable para compatibilidade retroativa com notas criadas antes
+         desta sessao (Sessoes 1-5).
+         Tipos TEXT e VARCHAR sao portaveis H2/PostgreSQL.
+         NÃO editar changesets anteriores (0001-0003).
+         ================================================================ -->
+
+    <changeSet id="0004-nota-fiscal-add-xml-gerado-fields" author="supersonic-team">
+        <comment>
+            Adiciona colunas de persistencia do XML gerado na NF-e: xml_gerado (TEXT),
+            versao_layout_nfe (VARCHAR(10)) e data_geracao_xml (TIMESTAMP WITH TIME ZONE).
+            Todas nullable para compatibilidade retroativa com notas existentes (status RASCUNHO).
+        </comment>
+
+        <!-- Corpo do XML da NF-e gerado e validado pelo pipeline de geracao -->
+        <addColumn tableName="nota_fiscal">
+            <column name="xml_gerado" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Versao do layout NF-e utilizado na geracao (ex.: "4.00") -->
+        <addColumn tableName="nota_fiscal">
+            <column name="versao_layout_nfe" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Data/hora em que o XML foi gerado pela primeira vez -->
+        <addColumn tableName="nota_fiscal">
+            <column name="data_geracao_xml" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="xml_gerado"/>
+            <dropColumn tableName="nota_fiscal" columnName="versao_layout_nfe"/>
+            <dropColumn tableName="nota_fiscal" columnName="data_geracao_xml"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -89,16 +89,22 @@ public class GlobalExceptionHandler {
     /**
      * Erro na geracao ou validacao do XML da NF-e (falha tecnica ou XSD invalido).
      * HTTP 422 Unprocessable Entity.
+     *
+     * <p>A mensagem tecnica ({@code ex.getMessage()}) pode conter fragmentos do XML ou
+     * dados do producao (ex.: SAXParseException com contexto do XSD). Por seguranca,
+     * apenas um texto generico e devolvido ao cliente; o detalhe tecnico fica no log
+     * server-side para diagnostico.
      */
     @ExceptionHandler(XmlGenerationException.class)
     public ResponseEntity<ApiError> handleXmlGenerationException(
             XmlGenerationException ex, HttpServletRequest request) {
-        log.warn("Erro na geracao do XML da NF-e: uri={} erro={}",
+        log.warn("Erro na geracao do XML da NF-e: uri={} detalhe={}",
                 request.getRequestURI(), ex.getMessage());
         ApiError body = ApiError.of(
                 HttpStatus.UNPROCESSABLE_ENTITY.value(),
                 HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase(),
-                ex.getMessage(),
+                "Nao foi possivel gerar o XML da NF-e. "
+                    + "Verifique os dados cadastrais do emitente e do destinatario.",
                 request.getRequestURI());
         return ResponseEntity.unprocessableEntity().body(body);
     }
