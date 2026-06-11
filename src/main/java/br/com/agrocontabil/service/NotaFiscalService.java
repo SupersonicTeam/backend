@@ -10,6 +10,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoDocumento;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -54,16 +55,19 @@ public class NotaFiscalService {
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CalculoIbsCbsService calculoIbsCbsService;
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
+  private final GeracaoNfaService geracaoNfaService;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
       CalculoIbsCbsService calculoIbsCbsService,
-      GeracaoNotaFiscalService geracaoNotaFiscalService) {
+      GeracaoNotaFiscalService geracaoNotaFiscalService,
+      GeracaoNfaService geracaoNfaService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
+    this.geracaoNfaService = geracaoNfaService;
   }
 
   /**
@@ -237,7 +241,9 @@ public class NotaFiscalService {
       throw new NotaFiscalNaoEditavelException(id, nota.getStatus());
     }
 
-    String xml = geracaoNotaFiscalService.gerarXml(nota);
+    String xml = nota.getTipoDocumento() == TipoDocumento.NFA
+        ? geracaoNfaService.gerarXml(nota)
+        : geracaoNotaFiscalService.gerarXml(nota);
 
     // Extrai a chave de acesso do atributo Id da infNFe: "NFe" + 44 digitos numericos.
     // O GeracaoNotaFiscalService garante que o Id esta no formato correto apos geracao

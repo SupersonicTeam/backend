@@ -34,6 +34,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import br.com.agrocontabil.model.TipoDocumento;
+import br.com.agrocontabil.service.GeracaoNfaService;
 import br.com.agrocontabil.service.GeracaoNotaFiscalService;
 
 /**
@@ -75,6 +77,9 @@ class NotaFiscalServiceTest {
    */
   @Mock
   private GeracaoNotaFiscalService geracaoNotaFiscalService;
+
+  @Mock
+  private GeracaoNfaService geracaoNfaService;
 
   @InjectMocks
   private NotaFiscalService notaFiscalService;
@@ -680,6 +685,65 @@ class NotaFiscalServiceTest {
     assertThatThrownBy(() -> notaFiscalService.obterXml(notaId))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining(notaId.toString());
+  }
+
+  // -------------------------------------------------------------------------
+  // gerarXml — roteamento por tipoDocumento
+  // -------------------------------------------------------------------------
+
+  /** XML minimo com atributo Id no formato exigido por extrairChaveAcessoDoXml. */
+  private static final String VALID_XML =
+      "<?xml version=\"1.0\"?><NFe><infNFe Id=\"NFe"
+          + "41262612345678000195550010000000011000000012\"></infNFe></NFe>";
+
+  @Test
+  @DisplayName("gerarXml roteia para o pipeline NF-e quando tipoDocumento e NFE")
+  void gerarXmlRoteiaParaNfe() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = NotaFiscal.builder()
+        .id(notaId)
+        .numero(1L)
+        .tipoDocumento(TipoDocumento.NFE)
+        .status(StatusNotaFiscal.RASCUNHO)
+        .produtor(produtor)
+        .build();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(VALID_XML);
+    when(notaFiscalRepository.save(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    notaFiscalService.gerarXml(notaId);
+
+    verify(geracaoNotaFiscalService).gerarXml(nota);
+    verify(geracaoNfaService, never()).gerarXml(any());
+  }
+
+  @Test
+  @DisplayName("gerarXml roteia para o pipeline NFA quando tipoDocumento e NFA")
+  void gerarXmlRoteiaParaNfa() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = NotaFiscal.builder()
+        .id(notaId)
+        .numero(1L)
+        .tipoDocumento(TipoDocumento.NFA)
+        .status(StatusNotaFiscal.RASCUNHO)
+        .produtor(produtor)
+        .build();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNfaService.gerarXml(nota)).thenReturn(VALID_XML);
+    when(notaFiscalRepository.save(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    notaFiscalService.gerarXml(notaId);
+
+    verify(geracaoNfaService).gerarXml(nota);
+    verify(geracaoNotaFiscalService, never()).gerarXml(any());
   }
 
   // -------------------------------------------------------------------------
