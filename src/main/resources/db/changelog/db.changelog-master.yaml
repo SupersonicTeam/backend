@@ -14,3 +14,5 @@ databaseChangeLog:
       file: db/changelog/changes/0003-nota-fiscal-item-ibs-cbs.xml
   - include:
       file: db/changelog/changes/0004-nota-fiscal-xml-gerado.xml
+  - include:
+      file: db/changelog/changes/0005-nota-fiscal-tipo-documento.xml

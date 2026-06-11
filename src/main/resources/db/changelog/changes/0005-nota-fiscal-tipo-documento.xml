@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0005-nota-fiscal-tipo-documento.xml
+         Sprint 2 — issue #18: diferenciacao NF-e vs NFA.
+
+         Adiciona a coluna tipo_documento em nota_fiscal:
+           - tipo_documento VARCHAR(3) NOT NULL DEFAULT 'NFE'
+
+         Default 'NFE' garante compatibilidade retroativa: notas
+         existentes (NF-e) recebem 'NFE' automaticamente.
+         VARCHAR e portavel H2/PostgreSQL.
+         NAO editar changesets anteriores (0001-0004).
+         ================================================================ -->
+
+    <changeSet id="0005-nota-fiscal-add-tipo-documento" author="supersonic-team">
+        <comment>
+            Adiciona a coluna tipo_documento (VARCHAR(3) NOT NULL DEFAULT 'NFE')
+            para diferenciar NF-e de NFA (Nota Fiscal Avulsa do produtor rural PF).
+        </comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="tipo_documento" type="VARCHAR(3)" defaultValue="NFE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="tipo_documento"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -78,6 +78,17 @@ public class NotaFiscal {
   @Builder.Default
   private String modelo = "55";
 
+  /**
+   * Tipo do documento fiscal: {@link TipoDocumento#NFE} (padrao) ou
+   * {@link TipoDocumento#NFA} (Nota Fiscal Avulsa do produtor rural PF).
+   * Diferencia NF-e de NFA no banco e roteia o fluxo de geracao.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "tipo_documento", length = 3, nullable = false,
+      columnDefinition = "VARCHAR(3)")
+  @Builder.Default
+  private TipoDocumento tipoDocumento = TipoDocumento.NFE;
+
   /** Descrição da natureza da operação (ex.: "Venda de produção rural"). */
   @Column(name = "natureza_operacao", nullable = false)
   private String naturezaOperacao;
