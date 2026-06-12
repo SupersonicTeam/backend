@@ -48,6 +48,10 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     xml_gerado                  TEXT,
     versao_layout_nfe           VARCHAR(10),
     data_geracao_xml            TIMESTAMP WITH TIME ZONE,
+    -- Importacao de XML de terceiros — Sprint 2 issue #19
+    origem                      VARCHAR(10)    NOT NULL DEFAULT 'PROPRIA',
+    emitente_nome               VARCHAR(255),
+    emitente_cpf_cnpj           VARCHAR(14),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)

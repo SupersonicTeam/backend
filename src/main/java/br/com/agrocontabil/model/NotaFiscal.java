@@ -89,6 +89,26 @@ public class NotaFiscal {
   @Builder.Default
   private TipoDocumento tipoDocumento = TipoDocumento.NFE;
 
+  /**
+   * Origem da nota: {@link Origem#PROPRIA} (emitida pelo produtor) ou
+   * {@link Origem#IMPORTADA} (XML de terceiro importado).
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "origem", length = 10, nullable = false, columnDefinition = "VARCHAR(10)")
+  @Builder.Default
+  private Origem origem = Origem.PROPRIA;
+
+  /**
+   * Nome/razão social do emitente terceiro. Preenchido apenas em notas
+   * {@link Origem#IMPORTADA}; nulo nas próprias (o emitente é o {@link #produtor}).
+   */
+  @Column(name = "emitente_nome", length = 255)
+  private String emitenteNome;
+
+  /** CPF/CNPJ do emitente terceiro (somente dígitos). Apenas em notas importadas. */
+  @Column(name = "emitente_cpf_cnpj", length = 14)
+  private String emitenteCpfCnpj;
+
   /** Descrição da natureza da operação (ex.: "Venda de produção rural"). */
   @Column(name = "natureza_operacao", nullable = false)
   private String naturezaOperacao;
