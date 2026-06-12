@@ -25,4 +25,23 @@ public class NotaFiscalNaoEditavelException extends RuntimeException {
             .formatted(id, status)
             + "Somente notas em status RASCUNHO podem ser alteradas.");
   }
+
+  /** Construtor de mensagem livre, para variacoes de motivo (ex.: cancelamento). */
+  private NotaFiscalNaoEditavelException(String message) {
+    super(message);
+  }
+
+  /**
+   * Cria a excecao para tentativa de cancelamento de nota fora do status AUTORIZADA.
+   *
+   * @param id     identificador da nota
+   * @param status status atual
+   * @return excecao com mensagem especifica de cancelamento (HTTP 409)
+   */
+  public static NotaFiscalNaoEditavelException naoCancelavel(UUID id, StatusNotaFiscal status) {
+    return new NotaFiscalNaoEditavelException(
+        "Nota fiscal '%s' nao pode ser cancelada no status '%s'. "
+            .formatted(id, status)
+            + "Somente notas AUTORIZADAS podem ser canceladas.");
+  }
 }

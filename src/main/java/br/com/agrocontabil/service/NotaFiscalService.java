@@ -1,11 +1,15 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.dto.CancelamentoRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.exception.BusinessException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
+import br.com.agrocontabil.service.sefaz.CancelamentoSefazResult;
+import br.com.agrocontabil.service.sefaz.SefazService;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
@@ -49,6 +53,9 @@ public class NotaFiscalService {
   /** Versao do layout NF-e gerado por esta implementacao. */
   private static final String VERSAO_LAYOUT_NFE = "4.00";
 
+  /** Limite legal para cancelamento de NF-e após a emissão (RN006). */
+  private static final int PRAZO_CANCELAMENTO_DIAS = 30;
+
   private static final Logger log = LoggerFactory.getLogger(NotaFiscalService.class);
 
   private final NotaFiscalRepository notaFiscalRepository;
@@ -57,6 +64,7 @@ public class NotaFiscalService {
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
   private final GeracaoNfaService geracaoNfaService;
   private final CfopOperacaoValidator cfopOperacaoValidator;
+  private final SefazService sefazService;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
@@ -64,13 +72,15 @@ public class NotaFiscalService {
       CalculoIbsCbsService calculoIbsCbsService,
       GeracaoNotaFiscalService geracaoNotaFiscalService,
       GeracaoNfaService geracaoNfaService,
-      CfopOperacaoValidator cfopOperacaoValidator) {
+      CfopOperacaoValidator cfopOperacaoValidator,
+      SefazService sefazService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
     this.geracaoNfaService = geracaoNfaService;
     this.cfopOperacaoValidator = cfopOperacaoValidator;
+    this.sefazService = sefazService;
   }
 
   /**
@@ -294,6 +304,54 @@ public class NotaFiscalService {
     }
 
     return nota.getXmlGerado();
+  }
+
+  // -------------------------------------------------------------------------
+  // Cancelamento (RN006) — Sprint 3
+  // -------------------------------------------------------------------------
+
+  /**
+   * Cancela uma NF-e autorizada do produtor autenticado, respeitando o limite de
+   * {@value #PRAZO_CANCELAMENTO_DIAS} dias após a emissão (RN006).
+   *
+   * @param id      identificador da nota
+   * @param request justificativa do cancelamento (validada no DTO)
+   * @return DTO atualizado com status CANCELADA
+   * @throws ResourceNotFoundException      se não existir ou for de outro produtor (404)
+   * @throws NotaFiscalNaoEditavelException se o status não for AUTORIZADA (409)
+   * @throws BusinessException              se fora do prazo de 30 dias (422)
+   */
+  public NotaFiscalResponse cancelar(UUID id, CancelamentoRequest request) {
+    Produtor produtor = produtorProvider.get();
+    NotaFiscal nota = notaFiscalRepository
+        .findByIdAndProdutorId(id, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+
+    if (nota.getStatus() != StatusNotaFiscal.AUTORIZADA) {
+      throw NotaFiscalNaoEditavelException.naoCancelavel(id, nota.getStatus());
+    }
+
+    long diasDesdeEmissao = java.time.Duration
+        .between(nota.getDataEmissao(), OffsetDateTime.now()).toDays();
+    if (diasDesdeEmissao > PRAZO_CANCELAMENTO_DIAS) {
+      throw new BusinessException(
+          "Cancelamento nao permitido: a nota foi emitida ha " + diasDesdeEmissao
+              + " dias, acima do limite de " + PRAZO_CANCELAMENTO_DIAS
+              + " dias apos a emissao (RN006).");
+    }
+
+    CancelamentoSefazResult resultado =
+        sefazService.cancelar(nota.getChaveAcesso(), request.motivo());
+
+    nota.setStatus(StatusNotaFiscal.CANCELADA);
+    nota.setDataCancelamento(resultado.dataHora());
+    nota.setMotivoCancelamento(request.motivo());
+    nota.setProtocoloCancelamento(resultado.protocolo());
+
+    NotaFiscal saved = notaFiscalRepository.save(nota);
+    log.info("NotaFiscal cancelada: id={} produtor={} protocolo={}",
+        saved.getId(), produtor.getId(), resultado.protocolo());
+    return NotaFiscalMapper.toResponse(saved);
   }
 
   // -------------------------------------------------------------------------

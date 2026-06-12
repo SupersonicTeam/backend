@@ -3,15 +3,20 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.dto.CancelamentoRequest;
 import br.com.agrocontabil.dto.NotaFiscalItemRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.exception.BusinessException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.service.sefaz.CancelamentoSefazResult;
+import br.com.agrocontabil.service.sefaz.SefazService;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -83,6 +88,9 @@ class NotaFiscalServiceTest {
 
   @Mock
   private CfopOperacaoValidator cfopOperacaoValidator;
+
+  @Mock
+  private SefazService sefazService;
 
   @InjectMocks
   private NotaFiscalService notaFiscalService;
@@ -777,6 +785,96 @@ class NotaFiscalServiceTest {
 
     verify(geracaoNfaService).gerarXml(nota);
     verify(geracaoNotaFiscalService, never()).gerarXml(any());
+  }
+
+  // -------------------------------------------------------------------------
+  // cancelar — RN006
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("cancelar dentro do prazo transiciona para CANCELADA e chama a SEFAZ")
+  void cancelarDentroDoPrazo() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = NotaFiscal.builder()
+        .id(notaId)
+        .numero(1L)
+        .status(StatusNotaFiscal.AUTORIZADA)
+        .chaveAcesso("41260612345678000195550010000000011000000017")
+        .dataEmissao(OffsetDateTime.now().minusDays(5))
+        .produtor(produtor)
+        .build();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(sefazService.cancelar(any(), any()))
+        .thenReturn(new CancelamentoSefazResult("MOCK000000000000001", OffsetDateTime.now()));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    notaFiscalService.cancelar(notaId, new CancelamentoRequest("Erro nos dados do destinatario"));
+
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.CANCELADA);
+    assertThat(nota.getDataCancelamento()).isNotNull();
+    assertThat(nota.getProtocoloCancelamento()).isEqualTo("MOCK000000000000001");
+    assertThat(nota.getMotivoCancelamento()).isEqualTo("Erro nos dados do destinatario");
+    verify(sefazService).cancelar(eq("41260612345678000195550010000000011000000017"), any());
+  }
+
+  @Test
+  @DisplayName("cancelar fora do prazo de 30 dias lanca BusinessException (422) sem chamar SEFAZ")
+  void cancelarForaDoPrazo() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = NotaFiscal.builder()
+        .id(notaId).numero(1L).status(StatusNotaFiscal.AUTORIZADA)
+        .chaveAcesso("41260612345678000195550010000000011000000017")
+        .dataEmissao(OffsetDateTime.now().minusDays(31))
+        .produtor(produtor)
+        .build();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() ->
+        notaFiscalService.cancelar(notaId, new CancelamentoRequest("Motivo com mais de 15 chars")))
+        .isInstanceOf(BusinessException.class);
+
+    verify(sefazService, never()).cancelar(any(), any());
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("cancelar nota nao-AUTORIZADA lanca NotaFiscalNaoEditavelException (409)")
+  void cancelarStatusInvalido() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = NotaFiscal.builder()
+        .id(notaId).numero(1L).status(StatusNotaFiscal.RASCUNHO)
+        .dataEmissao(OffsetDateTime.now())
+        .produtor(produtor)
+        .build();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() ->
+        notaFiscalService.cancelar(notaId, new CancelamentoRequest("Motivo com mais de 15 chars")))
+        .isInstanceOf(NotaFiscalNaoEditavelException.class);
+
+    verify(sefazService, never()).cancelar(any(), any());
+  }
+
+  @Test
+  @DisplayName("cancelar nota de outro produtor lanca ResourceNotFoundException (404)")
+  void cancelarNotaInexistente() {
+    UUID notaId = UUID.randomUUID();
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() ->
+        notaFiscalService.cancelar(notaId, new CancelamentoRequest("Motivo com mais de 15 chars")))
+        .isInstanceOf(ResourceNotFoundException.class);
   }
 
   // -------------------------------------------------------------------------
