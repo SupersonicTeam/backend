@@ -83,10 +83,12 @@ public class KeyStoreCertificadoProvider {
 
       this.privateKey = key;
       this.certificate = cert;
-    } catch (java.security.cert.CertificateExpiredException
-        | java.security.cert.CertificateNotYetValidException e) {
+    } catch (java.security.cert.CertificateExpiredException e) {
       throw new AssinaturaDigitalException(ErrorCode.CERTIFICADO_EXPIRADO,
-          "Certificado fora do periodo de validade: " + e.getMessage(), e);
+          "Certificado expirado: " + e.getMessage(), e);
+    } catch (java.security.cert.CertificateNotYetValidException e) {
+      throw new AssinaturaDigitalException(ErrorCode.CERTIFICADO_INVALIDO,
+          "Certificado ainda nao valido (data de inicio futura): " + e.getMessage(), e);
     } catch (AssinaturaDigitalException e) {
       throw e;
     } catch (Exception e) {

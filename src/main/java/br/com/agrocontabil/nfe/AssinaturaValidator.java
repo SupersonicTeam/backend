@@ -4,10 +4,9 @@ import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.exception.AssinaturaDigitalException;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
-import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.xml.security.Init;
 import org.apache.xml.security.keys.KeyInfo;
 import org.apache.xml.security.signature.XMLSignature;
@@ -57,10 +56,19 @@ public class AssinaturaValidator {
 
       XMLSignature signature = new XMLSignature(sigElement, "");
       KeyInfo keyInfo = signature.getKeyInfo();
-      X509Certificate cert = keyInfo == null ? null : keyInfo.getX509Certificate();
+      if (keyInfo == null) {
+        throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_INVALIDA,
+            "Assinatura sem KeyInfo");
+      }
+      X509Certificate cert = keyInfo.getX509Certificate();
+      PublicKey publicKey = cert != null ? cert.getPublicKey() : keyInfo.getPublicKey();
+      if (publicKey == null) {
+        throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_INVALIDA,
+            "Assinatura sem chave publica no KeyInfo (X509Certificate/PublicKey ausentes)");
+      }
       boolean valido = cert != null
           ? signature.checkSignatureValue(cert)
-          : signature.checkSignatureValue(keyInfo == null ? null : keyInfo.getPublicKey());
+          : signature.checkSignatureValue(publicKey);
 
       if (!valido) {
         throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_INVALIDA,
@@ -75,14 +83,7 @@ public class AssinaturaValidator {
   }
 
   private Document parseSeguro(String xml) throws Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-    dbf.setNamespaceAware(true);
-    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-    dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-    dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-    dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-    DocumentBuilder db = dbf.newDocumentBuilder();
+    DocumentBuilder db = SecureXmlFactories.hardenedDocumentBuilderFactory().newDocumentBuilder();
     return db.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
   }
 }

@@ -44,4 +44,14 @@ class AssinaturaValidatorTest {
     assertThatThrownBy(() -> validator.validar(xmlNfe(id)))
         .isInstanceOf(AssinaturaDigitalException.class);
   }
+
+  @Test
+  void signatureWithoutKeyInfoShouldFail() {
+    String id = "NFe41250600000000000000000000000000000000000013";
+    String assinado = assinador.assinar(xmlNfe(id), id);
+    // remove o bloco KeyInfo (tolerante a prefixo de namespace) → sem chave para validar
+    String semKeyInfo = assinado.replaceAll("(?s)<(\\w+:)?KeyInfo>.*?</(\\w+:)?KeyInfo>", "");
+    assertThatThrownBy(() -> validator.validar(semKeyInfo))
+        .isInstanceOf(AssinaturaDigitalException.class);
+  }
 }

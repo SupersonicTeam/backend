@@ -1,8 +1,10 @@
 package br.com.agrocontabil.nfe;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.config.CertificadoDigitalProperties;
+import br.com.agrocontabil.exception.AssinaturaDigitalException;
 import org.junit.jupiter.api.Test;
 
 class NfeAssinadorTest {
@@ -42,5 +44,22 @@ class NfeAssinadorTest {
     int iniSig = assinado.indexOf("Signature");
     assertThat(fimInf).isGreaterThan(0);
     assertThat(iniSig).isGreaterThan(fimInf);
+  }
+
+  @Test
+  void shouldFailWhenProvidedIdDivergesFromDomId() {
+    String idNoXml = "NFe41250600000000000000000000000000000000000003";
+    String idDivergente = "NFe41250600000000000000000000000000000000000099";
+    assertThatThrownBy(() -> novoAssinador().assinar(xmlNfe(idNoXml), idDivergente))
+        .isInstanceOf(AssinaturaDigitalException.class);
+  }
+
+  @Test
+  void shouldFailWhenInfNFeHasNoId() {
+    String semId = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        + "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\">"
+        + "<infNFe versao=\"4.00\"><ide><cUF>41</cUF></ide></infNFe></NFe>";
+    assertThatThrownBy(() -> novoAssinador().assinar(semId, null))
+        .isInstanceOf(AssinaturaDigitalException.class);
   }
 }

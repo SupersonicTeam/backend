@@ -5,12 +5,9 @@ import br.com.agrocontabil.exception.AssinaturaDigitalException;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.apache.xml.security.Init;
@@ -61,6 +58,19 @@ public class NfeAssinador {
         throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
             "Elemento infNFe nao encontrado no XML");
       }
+
+      // A Reference URI deve apontar para o Id real do infNFe no DOM. Derivamos do
+      // proprio elemento e validamos contra o parametro — divergencia/ausencia geraria
+      // assinatura invalida de forma silenciosa.
+      String domId = infNFe.getAttribute("Id");
+      if (domId == null || domId.isBlank()) {
+        throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
+            "Elemento infNFe sem atributo Id");
+      }
+      if (infNfeId != null && !infNfeId.isBlank() && !infNfeId.equals(domId)) {
+        throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
+            "Id informado ('" + infNfeId + "') diverge do Id do infNFe no XML ('" + domId + "')");
+      }
       infNFe.setIdAttributeNS(null, "Id", true);
 
       Element nfe = (Element) infNFe.getParentNode();
@@ -75,7 +85,7 @@ public class NfeAssinador {
       Transforms transforms = new Transforms(doc);
       transforms.addTransform(Transforms.TRANSFORM_ENVELOPED_SIGNATURE);
       transforms.addTransform(Transforms.TRANSFORM_C14N_OMIT_COMMENTS);
-      signature.addDocument("#" + infNfeId, transforms,
+      signature.addDocument("#" + domId, transforms,
           Constants.ALGO_ID_DIGEST_SHA1);
 
       signature.addKeyInfo(certificadoProvider.getCertificate());
@@ -91,23 +101,12 @@ public class NfeAssinador {
   }
 
   private Document parseSeguro(String xml) throws Exception {
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-    dbf.setNamespaceAware(true);
-    // Hardening XXE (mesmo padrão do XsdValidator)
-    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-    dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-    dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-    dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-    DocumentBuilder db = dbf.newDocumentBuilder();
+    DocumentBuilder db = SecureXmlFactories.hardenedDocumentBuilderFactory().newDocumentBuilder();
     return db.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
   }
 
   private String serializar(Document doc) throws Exception {
-    TransformerFactory tf = TransformerFactory.newInstance();
-    tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
-    Transformer transformer = tf.newTransformer();
+    Transformer transformer = SecureXmlFactories.hardenedTransformerFactory().newTransformer();
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
     transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
     StringWriter writer = new StringWriter();
