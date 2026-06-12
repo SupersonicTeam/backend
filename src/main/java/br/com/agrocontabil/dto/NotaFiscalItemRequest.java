@@ -1,5 +1,7 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.common.validation.ValidCfop;
+import br.com.agrocontabil.common.validation.ValidNcm;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -44,12 +46,14 @@ public record NotaFiscalItemRequest(
     @Schema(description = "Codigo NCM com 8 digitos numericos", example = "12010090")
     @NotBlank(message = "ncm e obrigatorio")
     @Pattern(regexp = "\\d{8}", message = "ncm deve ter exatamente 8 digitos numericos")
+    @ValidNcm
     String ncm,
 
     @Schema(description = "CFOP — Codigo Fiscal de Operacoes e Prestacoes (4 digitos)",
         example = "6101")
     @NotBlank(message = "cfop e obrigatorio")
     @Pattern(regexp = "\\d{4}", message = "cfop deve ter exatamente 4 digitos numericos")
+    @ValidCfop
     String cfop,
 
     @Schema(description = "Unidade comercial (ex.: UN, KG, CX)", example = "KG")

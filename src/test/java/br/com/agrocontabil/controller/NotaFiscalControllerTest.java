@@ -17,6 +17,8 @@ import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.repository.CfopProdutorRuralRepository;
+import br.com.agrocontabil.repository.NcmAgropecuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.NotaFiscalService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,6 +73,17 @@ class NotaFiscalControllerTest {
   @MockBean
   private ProdutorRepository produtorRepository;
 
+  /**
+   * Os validators @ValidNcm/@ValidCfop injetam estes repositorios. No slice
+   * @WebMvcTest (sem JPA) eles precisam existir como bean para a fabrica de
+   * validators do Spring conseguir instanciar os ConstraintValidators.
+   */
+  @MockBean
+  private NcmAgropecuarioRepository ncmAgropecuarioRepository;
+
+  @MockBean
+  private CfopProdutorRuralRepository cfopProdutorRuralRepository;
+
   private ObjectMapper objectMapper;
 
   @BeforeEach
@@ -79,6 +92,13 @@ class NotaFiscalControllerTest {
     objectMapper.registerModule(new JavaTimeModule());
     objectMapper.disable(
         com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    // Por padrao, NCM/CFOP sao considerados validos (cadastrados) para nao
+    // bloquear os caminhos felizes. Testes especificos sobrescrevem com false.
+    when(ncmAgropecuarioRepository.existsByCodigo(org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(true);
+    when(cfopProdutorRuralRepository.existsByCodigo(org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(true);
   }
 
   // -------------------------------------------------------------------------
@@ -140,6 +160,41 @@ class NotaFiscalControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
         .andExpect(jsonPath("$.fields").isArray())
+        .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
+  }
+
+  @Test
+  @DisplayName("POST com NCM bem-formado porem nao cadastrado deve retornar 400")
+  void postWithUnregisteredNcmShouldReturn400() throws Exception {
+    // NCM com 8 digitos (passa no @Pattern) mas ausente da tabela de referencia
+    when(ncmAgropecuarioRepository.existsByCodigo("00000000")).thenReturn(false);
+
+    String payload = """
+        {
+          "numero": 1,
+          "naturezaOperacao": "Venda",
+          "dataEmissao": "2026-06-10T10:00:00-03:00",
+          "destinatarioNome": "Comprador",
+          "destinatarioCpfCnpj": "12345678901",
+          "itens": [
+            {
+              "numeroItem": 1,
+              "descricao": "Produto X",
+              "ncm": "00000000",
+              "cfop": "6101",
+              "unidade": "UN",
+              "quantidade": 10,
+              "valorUnitario": 5.00
+            }
+          ]
+        }
+        """;
+
+    mockMvc.perform(post("/api/notas")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400))
         .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
   }
 
