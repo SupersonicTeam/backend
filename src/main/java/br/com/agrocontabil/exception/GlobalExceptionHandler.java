@@ -144,6 +144,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    /** Violacao de regra de negocio (ex.: prazo de cancelamento). HTTP 422. */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiError> handleBusiness(
+            BusinessException ex, HttpServletRequest request) {
+        log.warn("Regra de negocio violada: uri={} detalhe={}",
+                request.getRequestURI(), ex.getMessage());
+        ApiError body = ApiError.of(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.unprocessableEntity().body(body);
+    }
+
     /** Parte multipart obrigatoria ausente (ex.: nenhum arquivo no import). HTTP 400. */
     @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
     public ResponseEntity<ApiError> handleMissingPart(
