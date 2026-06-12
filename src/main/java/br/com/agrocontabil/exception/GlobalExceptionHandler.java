@@ -127,6 +127,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.unprocessableEntity().body(body);
     }
 
+    /**
+     * CFOP incompativel com o tipo de operacao da nota (entrada/saida, ambito).
+     * HTTP 400 Bad Request, com a mensagem descritiva da regra de negocio.
+     */
+    @ExceptionHandler(CfopIncompativelException.class)
+    public ResponseEntity<ApiError> handleCfopIncompativel(
+            CfopIncompativelException ex, HttpServletRequest request) {
+        log.warn("CFOP incompativel: uri={} detalhe={}",
+                request.getRequestURI(), ex.getMessage());
+        ApiError body = ApiError.of(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
     /** Argumento ilegal vindo da camada de servico. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(

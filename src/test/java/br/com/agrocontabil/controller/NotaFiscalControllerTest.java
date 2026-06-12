@@ -255,6 +255,22 @@ class NotaFiscalControllerTest {
             jsonPath("$.fields[?(@.field == 'itens[0].valorUnitario')]").exists());
   }
 
+  @Test
+  @DisplayName("POST cujo servico lanca CfopIncompativelException retorna 400")
+  void postComCfopIncompativelRetorna400() throws Exception {
+    when(notaFiscalService.create(any(NotaFiscalRequest.class)))
+        .thenThrow(new br.com.agrocontabil.exception.CfopIncompativelException(
+            "Item 1: CFOP 5101 (INTERNA) incompativel com operacao INTERESTADUAL. Use um CFOP 6xxx."));
+
+    mockMvc.perform(post("/api/notas")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(buildValidPayload()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.message").value(
+            org.hamcrest.Matchers.containsString("incompativel")));
+  }
+
   // -------------------------------------------------------------------------
   // GET /{id} nao existente → 404
   // -------------------------------------------------------------------------
