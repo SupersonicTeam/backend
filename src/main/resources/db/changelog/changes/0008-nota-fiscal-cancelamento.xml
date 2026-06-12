@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0008-nota-fiscal-cancelamento.xml
+         Sprint 3 — issue #21 (RN006): cancelamento de NF-e.
+
+         Adiciona em nota_fiscal (todas nullable):
+           - data_cancelamento       TIMESTAMP WITH TZ
+           - motivo_cancelamento      VARCHAR(255)
+           - protocolo_cancelamento   VARCHAR(50)
+
+         A coluna status ja existe (enum inclui CANCELADA).
+         NAO editar changesets anteriores (0001-0007).
+         ================================================================ -->
+
+    <changeSet id="0008-nota-fiscal-add-cancelamento" author="supersonic-team">
+        <comment>Campos de cancelamento da NF-e (data, motivo, protocolo).</comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="data_cancelamento" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="nota_fiscal">
+            <column name="motivo_cancelamento" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="nota_fiscal">
+            <column name="protocolo_cancelamento" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="data_cancelamento"/>
+            <dropColumn tableName="nota_fiscal" columnName="motivo_cancelamento"/>
+            <dropColumn tableName="nota_fiscal" columnName="protocolo_cancelamento"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

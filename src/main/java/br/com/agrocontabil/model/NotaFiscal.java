@@ -211,6 +211,20 @@ public class NotaFiscal {
   @Column(name = "data_geracao_xml")
   private OffsetDateTime dataGeracaoXml;
 
+  /**
+   * Data e hora do cancelamento da nota junto à SEFAZ. Nula até o cancelamento.
+   */
+  @Column(name = "data_cancelamento")
+  private OffsetDateTime dataCancelamento;
+
+  /** Justificativa do cancelamento (15–255 caracteres). Nula até o cancelamento. */
+  @Column(name = "motivo_cancelamento", length = 255)
+  private String motivoCancelamento;
+
+  /** Protocolo do evento de cancelamento retornado pela SEFAZ. Nulo até o cancelamento. */
+  @Column(name = "protocolo_cancelamento", length = 50)
+  private String protocoloCancelamento;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

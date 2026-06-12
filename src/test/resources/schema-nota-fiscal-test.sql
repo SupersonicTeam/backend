@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     origem                      VARCHAR(10)    NOT NULL DEFAULT 'PROPRIA',
     emitente_nome               VARCHAR(255),
     emitente_cpf_cnpj           VARCHAR(14),
+    -- Cancelamento — Sprint 3 issue #21 (RN006)
+    data_cancelamento           TIMESTAMP WITH TIME ZONE,
+    motivo_cancelamento         VARCHAR(255),
+    protocolo_cancelamento      VARCHAR(50),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
