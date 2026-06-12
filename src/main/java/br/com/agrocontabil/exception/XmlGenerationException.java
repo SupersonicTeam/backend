@@ -1,29 +1,34 @@
 package br.com.agrocontabil.exception;
 
-/**
- * Lançada quando ocorre um erro técnico durante a geração ou validação do XML da NF-e.
- *
- * <p>Cobre falhas de marshalling JAXB e falhas de validação XSD.
- * Mapeada para HTTP 422 pelo {@code GlobalExceptionHandler}.
- */
-public class XmlGenerationException extends RuntimeException {
+import br.com.agrocontabil.common.ErrorCode;
+import br.com.agrocontabil.common.ErrorDetail;
+import java.util.List;
+import org.springframework.http.HttpStatus;
 
-  /**
-   * Cria a exceção com mensagem de erro amigável.
-   *
-   * @param message descrição do problema
-   */
-  public XmlGenerationException(String message) {
-    super(message);
+/**
+ * Erro técnico na geração/validação do XML da NF-e (marshalling JAXB ou XSD). HTTP 422.
+ *
+ * <p>A mensagem técnica ({@link #getMessage()}) só vai para o log (via handler). Ao cliente
+ * é devolvido um envelope genérico, sem vazar fragmento de XML ou contexto do XSD.
+ */
+public class XmlGenerationException extends DomainException {
+
+  private static final String CLIENT_MESSAGE =
+      "Nao foi possivel gerar o XML da NF-e. "
+          + "Verifique os dados cadastrais do emitente e do destinatario.";
+
+  public XmlGenerationException(String technicalMessage) {
+    super(HttpStatus.UNPROCESSABLE_ENTITY, technicalMessage,
+        List.of(ErrorDetail.of(ErrorCode.XML_GENERATION_ERROR, CLIENT_MESSAGE)));
   }
 
-  /**
-   * Cria a exceção com mensagem e causa raiz.
-   *
-   * @param message descrição do problema
-   * @param cause   exceção original (não exposta ao cliente)
-   */
-  public XmlGenerationException(String message, Throwable cause) {
-    super(message, cause);
+  public XmlGenerationException(String technicalMessage, Throwable cause) {
+    this(technicalMessage);
+    initCause(cause);
+  }
+
+  /** Mensagem genérica e segura para exibir ao cliente. */
+  public String clientMessage() {
+    return CLIENT_MESSAGE;
   }
 }

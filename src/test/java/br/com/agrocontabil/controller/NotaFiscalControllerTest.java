@@ -139,8 +139,9 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields").isArray())
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens[0].ncm')]").exists())
+        .andExpect(jsonPath("$.errors[?(@.code == 'VALIDATION_ERROR')]").exists());
   }
 
   @Test
@@ -162,8 +163,8 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields").isArray())
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens')]").exists());
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens')]").exists());
   }
 
   @Test
@@ -195,9 +196,9 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields").isArray())
+        .andExpect(jsonPath("$.errors").isArray())
         .andExpect(
-            jsonPath("$.fields[?(@.field == 'itens[0].valorUnitario')]").exists());
+            jsonPath("$.errors[?(@.field == 'itens[0].valorUnitario')]").exists());
   }
 
   // -------------------------------------------------------------------------
@@ -215,7 +216,9 @@ class NotaFiscalControllerTest {
     mockMvc.perform(get("/api/notas/{id}", notaId))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.status").value(404))
-        .andExpect(jsonPath("$.message").exists());
+        .andExpect(jsonPath("$.message").exists())
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.code == 'RESOURCE_NOT_FOUND')]").exists());
   }
 
   // -------------------------------------------------------------------------
@@ -265,7 +268,7 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens')]").exists());
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens')]").exists());
   }
 
   @Test
@@ -299,7 +302,7 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens[0].ncm')]").exists());
   }
 
   // -------------------------------------------------------------------------

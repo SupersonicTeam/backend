@@ -177,8 +177,8 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations())
-              .anyMatch(v -> v.field().contains("cpfCnpj"));
+          assertThat(e.getErrors())
+              .anyMatch(v -> v.field() != null && v.field().contains("cpfCnpj"));
         });
   }
 
@@ -195,7 +195,7 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations()).hasSizeGreaterThanOrEqualTo(3);
+          assertThat(e.getErrors()).hasSizeGreaterThanOrEqualTo(3);
         });
   }
 
@@ -210,8 +210,8 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations())
-              .anyMatch(v -> v.field().equals("itens"));
+          assertThat(e.getErrors())
+              .anyMatch(v -> v.field() != null && v.field().equals("itens"));
         });
   }
 
@@ -226,8 +226,8 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations())
-              .anyMatch(v -> v.field().contains("destinatarioEndereco"));
+          assertThat(e.getErrors())
+              .anyMatch(v -> v.field() != null && v.field().contains("destinatarioEndereco"));
         });
   }
 
