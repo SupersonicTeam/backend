@@ -1,7 +1,6 @@
 package br.com.agrocontabil.exception;
 
 import br.com.agrocontabil.common.ErrorDetail;
-import java.util.Collections;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 
@@ -20,7 +19,8 @@ public abstract class DomainException extends RuntimeException {
   protected DomainException(HttpStatus status, String message, List<ErrorDetail> errors) {
     super(message);
     this.status = status;
-    this.errors = errors == null ? List.of() : Collections.unmodifiableList(errors);
+    // List.copyOf faz cópia defensiva real e imutável — desacopla da lista do chamador
+    this.errors = errors == null ? List.of() : List.copyOf(errors);
   }
 
   /** Status HTTP de resposta para esta exceção. */
