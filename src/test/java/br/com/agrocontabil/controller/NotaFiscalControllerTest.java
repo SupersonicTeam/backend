@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.dto.ImportacaoItemResultado;
+import br.com.agrocontabil.dto.ImportacaoLoteResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
@@ -20,6 +22,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CfopProdutorRuralRepository;
 import br.com.agrocontabil.repository.NcmAgropecuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.service.ImportacaoNotaFiscalService;
 import br.com.agrocontabil.service.NotaFiscalService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -83,6 +86,9 @@ class NotaFiscalControllerTest {
 
   @MockBean
   private CfopProdutorRuralRepository cfopProdutorRuralRepository;
+
+  @MockBean
+  private ImportacaoNotaFiscalService importacaoNotaFiscalService;
 
   private ObjectMapper objectMapper;
 
@@ -386,6 +392,47 @@ class NotaFiscalControllerTest {
 
     mockMvc.perform(delete("/api/notas/{id}", notaId))
         .andExpect(status().isNoContent());
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /importar → 200 relatorio  /  400 sem arquivos
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("POST /api/notas/importar com 2 arquivos retorna 200 com relatorio")
+  void importarMultiplosArquivosRetorna200() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    ImportacaoLoteResponse relatorio = ImportacaoLoteResponse.de(java.util.List.of(
+        ImportacaoItemResultado.sucesso("nota1.xml", notaId,
+            "41260612345678000195550010000000011000000017"),
+        ImportacaoItemResultado.erro("nota2.xml", "XML invalido")));
+    when(importacaoNotaFiscalService.importar(org.mockito.ArgumentMatchers.anyList()))
+        .thenReturn(relatorio);
+
+    org.springframework.mock.web.MockMultipartFile a1 =
+        new org.springframework.mock.web.MockMultipartFile(
+            "arquivos", "nota1.xml", "application/xml", "<NFe/>".getBytes());
+    org.springframework.mock.web.MockMultipartFile a2 =
+        new org.springframework.mock.web.MockMultipartFile(
+            "arquivos", "nota2.xml", "application/xml", "<x/>".getBytes());
+
+    mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .multipart("/api/notas/importar").file(a1).file(a2))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.importados").value(1))
+        .andExpect(jsonPath("$.falhas").value(1))
+        .andExpect(jsonPath("$.resultados").isArray());
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/importar sem arquivos retorna 400")
+  void importarSemArquivosRetorna400() throws Exception {
+    mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .multipart("/api/notas/importar"))
+        .andExpect(status().isBadRequest());
   }
 
   // -------------------------------------------------------------------------

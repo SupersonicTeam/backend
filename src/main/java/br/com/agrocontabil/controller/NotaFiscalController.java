@@ -1,9 +1,14 @@
 package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.dto.ImportacaoLoteResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.service.ImportacaoNotaFiscalService;
 import br.com.agrocontabil.service.NotaFiscalService;
+import java.util.List;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -45,9 +50,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class NotaFiscalController {
 
   private final NotaFiscalService notaFiscalService;
+  private final ImportacaoNotaFiscalService importacaoNotaFiscalService;
 
-  public NotaFiscalController(NotaFiscalService notaFiscalService) {
+  public NotaFiscalController(
+      NotaFiscalService notaFiscalService,
+      ImportacaoNotaFiscalService importacaoNotaFiscalService) {
     this.notaFiscalService = notaFiscalService;
+    this.importacaoNotaFiscalService = importacaoNotaFiscalService;
   }
 
   /**
@@ -215,5 +224,31 @@ public class NotaFiscalController {
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_XML)
         .body(xml);
+  }
+
+  /**
+   * Importa XML de notas fiscais de terceiros (upload múltiplo).
+   *
+   * <p>Cada arquivo é processado independentemente; o relatório retorna sucesso/erro
+   * por arquivo. Arquivos válidos são importados mesmo que outros falhem.
+   */
+  @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(
+      summary = "Importa XML de notas fiscais de terceiros",
+      description = "Recebe um ou mais arquivos XML (multipart) e importa cada um. "
+          + "Retorna um relatorio por arquivo (sucesso/erro). Notas importadas ficam com "
+          + "origem IMPORTADA e status AUTORIZADA.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Relatorio de importacao gerado"),
+      @ApiResponse(responseCode = "400",
+          description = "Nenhum arquivo enviado ou requisicao invalida",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<ImportacaoLoteResponse> importar(
+      @RequestParam("arquivos") List<MultipartFile> arquivos) {
+    if (arquivos == null || arquivos.isEmpty()) {
+      throw new IllegalArgumentException("Nenhum arquivo enviado para importacao.");
+    }
+    return ResponseEntity.ok(importacaoNotaFiscalService.importar(arquivos));
   }
 }

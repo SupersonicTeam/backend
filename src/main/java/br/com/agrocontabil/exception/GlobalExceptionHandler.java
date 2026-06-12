@@ -144,6 +144,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    /** Parte multipart obrigatoria ausente (ex.: nenhum arquivo no import). HTTP 400. */
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<ApiError> handleMissingPart(
+            org.springframework.web.multipart.support.MissingServletRequestPartException ex,
+            HttpServletRequest request) {
+        ApiError body = ApiError.of(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Requisicao de upload invalida: " + ex.getMessage(),
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /** Upload acima do limite configurado (spring.servlet.multipart.max-file-size). */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUpload(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex,
+            HttpServletRequest request) {
+        log.warn("Upload acima do limite: uri={}", request.getRequestURI());
+        ApiError body = ApiError.of(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Arquivo acima do tamanho maximo permitido para importacao.",
+                request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
     /** Argumento ilegal vindo da camada de servico. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(
