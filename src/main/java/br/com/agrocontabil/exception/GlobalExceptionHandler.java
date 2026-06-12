@@ -82,12 +82,17 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Para {@link XmlGenerationException} usa a mensagem-cliente genérica como envelope,
-   * não o detalhe técnico. Demais exceções usam {@code getMessage()}.
+   * Mensagem de envelope segura ao cliente. {@link XmlGenerationException} usa sua
+   * mensagem-cliente genérica; qualquer 5xx (ex.: {@link AssinaturaDigitalException},
+   * cujo {@code getMessage()} carrega detalhe técnico) recebe texto genérico; demais
+   * exceções (4xx) usam {@code getMessage()}, que já é seguro.
    */
   private String clientMessageFor(DomainException ex) {
     if (ex instanceof XmlGenerationException xml) {
       return xml.clientMessage();
+    }
+    if (ex.getStatus().is5xxServerError()) {
+      return "Erro interno ao processar a NF-e. Tente novamente mais tarde.";
     }
     return ex.getMessage();
   }

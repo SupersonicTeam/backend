@@ -13,7 +13,13 @@ public enum ErrorCode {
   // Nota fiscal
   NOTA_NAO_EDITAVEL,
   NOTA_INVALIDA_EMISSAO,
-  XML_GENERATION_ERROR;
+  XML_GENERATION_ERROR,
+  // Assinatura digital
+  CERTIFICADO_AUSENTE,
+  CERTIFICADO_EXPIRADO,
+  CERTIFICADO_INVALIDO,
+  ASSINATURA_FALHOU,
+  ASSINATURA_INVALIDA;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
