@@ -554,7 +554,9 @@ class NotaFiscalControllerTest {
         List.of(),
         OffsetDateTime.now(),
         OffsetDateTime.now(),
-        br.com.agrocontabil.model.TipoDocumento.NFE);
+        br.com.agrocontabil.model.TipoDocumento.NFE,
+        null,
+        null);
   }
 
   private NotaFiscalResponse buildResponseXmlGerado(UUID id) {
@@ -580,6 +582,8 @@ class NotaFiscalControllerTest {
         List.of(),
         OffsetDateTime.now(),
         OffsetDateTime.now(),
-        br.com.agrocontabil.model.TipoDocumento.NFE);
+        br.com.agrocontabil.model.TipoDocumento.NFE,
+        null,
+        null);
   }
 }

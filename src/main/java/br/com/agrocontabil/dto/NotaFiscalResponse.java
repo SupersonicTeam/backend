@@ -102,7 +102,13 @@ public record NotaFiscalResponse(
         description = "Tipo do documento fiscal: NFE (padrao) ou NFA (Nota Fiscal Avulsa "
             + "do produtor rural pessoa fisica)",
         example = "NFE")
-    TipoDocumento tipoDocumento
+    TipoDocumento tipoDocumento,
+
+    @Schema(description = "Data/hora do cancelamento (nula se nao cancelada)")
+    OffsetDateTime dataCancelamento,
+
+    @Schema(description = "Motivo do cancelamento (nulo se nao cancelada)")
+    String motivoCancelamento
 ) {
 
   /**

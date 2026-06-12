@@ -118,7 +118,9 @@ public final class NotaFiscalMapper {
         itensResponse,
         nota.getCreatedAt(),
         nota.getUpdatedAt(),
-        nota.getTipoDocumento());
+        nota.getTipoDocumento(),
+        nota.getDataCancelamento(),
+        nota.getMotivoCancelamento());
   }
 
   // -------------------------------------------------------------------------
