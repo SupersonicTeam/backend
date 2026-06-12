@@ -81,6 +81,9 @@ class NotaFiscalServiceTest {
   @Mock
   private GeracaoNfaService geracaoNfaService;
 
+  @Mock
+  private CfopOperacaoValidator cfopOperacaoValidator;
+
   @InjectMocks
   private NotaFiscalService notaFiscalService;
 
@@ -124,6 +127,33 @@ class NotaFiscalServiceTest {
     assertThat(response.produtorId()).isEqualTo(produtorId);
 
     verify(notaFiscalRepository).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("create chama o CfopOperacaoValidator antes de persistir")
+  void createShouldInvokeCfopValidator() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(calculoIbsCbsService.calcular(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenReturn(buildNotaSalva());
+
+    notaFiscalService.create(buildRequest());
+
+    verify(cfopOperacaoValidator).validar(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("create propaga CfopIncompativelException e nao persiste quando CFOP incompativel")
+  void createShouldPropagateCfopIncompativel() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    org.mockito.Mockito.doThrow(
+            new br.com.agrocontabil.exception.CfopIncompativelException("CFOP incompativel"))
+        .when(cfopOperacaoValidator).validar(any(NotaFiscal.class));
+
+    assertThatThrownBy(() -> notaFiscalService.create(buildRequest()))
+        .isInstanceOf(br.com.agrocontabil.exception.CfopIncompativelException.class);
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
   }
 
   // -------------------------------------------------------------------------

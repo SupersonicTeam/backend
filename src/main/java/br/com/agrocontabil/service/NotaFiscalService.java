@@ -56,18 +56,21 @@ public class NotaFiscalService {
   private final CalculoIbsCbsService calculoIbsCbsService;
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
   private final GeracaoNfaService geracaoNfaService;
+  private final CfopOperacaoValidator cfopOperacaoValidator;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
       CalculoIbsCbsService calculoIbsCbsService,
       GeracaoNotaFiscalService geracaoNotaFiscalService,
-      GeracaoNfaService geracaoNfaService) {
+      GeracaoNfaService geracaoNfaService,
+      CfopOperacaoValidator cfopOperacaoValidator) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
     this.geracaoNfaService = geracaoNfaService;
+    this.cfopOperacaoValidator = cfopOperacaoValidator;
   }
 
   /**
@@ -81,6 +84,8 @@ public class NotaFiscalService {
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
     // Calcula IBS/CBS após montagem dos itens e cálculo dos totais de produtos.
     calculoIbsCbsService.calcular(nota);
+    // Valida a compatibilidade CFOP × operação antes de persistir.
+    cfopOperacaoValidator.validar(nota);
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal criada: id={} produtor={} numero={}",
         saved.getId(), produtor.getId(), saved.getNumero());
@@ -172,6 +177,8 @@ public class NotaFiscalService {
 
     // Recalcula IBS/CBS após substituição dos itens e recálculo dos totais de produtos.
     calculoIbsCbsService.calcular(nota);
+    // Valida a compatibilidade CFOP × operação antes de persistir.
+    cfopOperacaoValidator.validar(nota);
 
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal atualizada: id={} produtor={}", saved.getId(), produtor.getId());
