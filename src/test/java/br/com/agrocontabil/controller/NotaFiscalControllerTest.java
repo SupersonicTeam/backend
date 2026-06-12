@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.dto.CancelamentoRequest;
 import br.com.agrocontabil.dto.ImportacaoItemResultado;
 import br.com.agrocontabil.dto.ImportacaoLoteResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
@@ -466,6 +467,75 @@ class NotaFiscalControllerTest {
     mockMvc.perform(post("/api/notas/{id}/gerar-xml", notaId))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.status").value(409));
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /{id}/cancelar → 200 / 422 / 409 / 400
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/cancelar valido retorna 200")
+  void cancelarValidoRetorna200() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    when(notaFiscalService.cancelar(eq(notaId), any(CancelamentoRequest.class)))
+        .thenReturn(buildResponse(notaId));
+
+    String payload = "{\"motivo\": \"Erro nos dados do destinatario informado\"}";
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(notaId.toString()));
+  }
+
+  @Test
+  @DisplayName("POST cancelar fora do prazo (servico lanca BusinessException) retorna 422")
+  void cancelarForaDoPrazoRetorna422() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    when(notaFiscalService.cancelar(eq(notaId), any(CancelamentoRequest.class)))
+        .thenThrow(new br.com.agrocontabil.exception.BusinessException(
+            "Cancelamento nao permitido: 31 dias, acima do limite de 30 dias (RN006)."));
+
+    String payload = "{\"motivo\": \"Erro nos dados do destinatario informado\"}";
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.status").value(422))
+        .andExpect(jsonPath("$.message").value(
+            org.hamcrest.Matchers.containsString("RN006")));
+  }
+
+  @Test
+  @DisplayName("POST cancelar com status invalido (servico lanca 409) retorna 409")
+  void cancelarStatusInvalidoRetorna409() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    when(notaFiscalService.cancelar(eq(notaId), any(CancelamentoRequest.class)))
+        .thenThrow(br.com.agrocontabil.exception.NotaFiscalNaoEditavelException
+            .naoCancelavel(notaId, StatusNotaFiscal.RASCUNHO));
+
+    String payload = "{\"motivo\": \"Erro nos dados do destinatario informado\"}";
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409));
+  }
+
+  @Test
+  @DisplayName("POST cancelar com motivo curto (<15) retorna 400")
+  void cancelarMotivoCurtoRetorna400() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    String payload = "{\"motivo\": \"curto\"}";
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.fields[?(@.field == 'motivo')]").exists());
   }
 
   // -------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.dto.CancelamentoRequest;
 import br.com.agrocontabil.dto.ImportacaoLoteResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
@@ -250,5 +251,30 @@ public class NotaFiscalController {
       throw new IllegalArgumentException("Nenhum arquivo enviado para importacao.");
     }
     return ResponseEntity.ok(importacaoNotaFiscalService.importar(arquivos));
+  }
+
+  /**
+   * Cancela uma NF-e autorizada, respeitando o limite de 30 dias após a emissão (RN006).
+   */
+  @PostMapping("/{id}/cancelar")
+  @Operation(
+      summary = "Cancela uma NF-e autorizada",
+      description = "Cancela a nota (status AUTORIZADA) dentro do limite de 30 dias apos a "
+          + "emissao. Retorna 409 se o status nao for AUTORIZADA e 422 se fora do prazo.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Nota cancelada com sucesso"),
+      @ApiResponse(responseCode = "400", description = "Motivo invalido",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "404", description = "Nota nao encontrada",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409", description = "Nota nao esta em status AUTORIZADA",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "422", description = "Fora do prazo de 30 dias (RN006)",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<NotaFiscalResponse> cancelar(
+      @PathVariable UUID id,
+      @RequestBody @Valid CancelamentoRequest request) {
+    return ResponseEntity.ok(notaFiscalService.cancelar(id, request));
   }
 }
