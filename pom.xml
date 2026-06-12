@@ -146,6 +146,15 @@
 			<!-- version managed by Spring Boot BOM -->
 		</dependency>
 
+		<!-- Apache Santuario (XML Security) — assinatura digital da NF-e (ds:Signature).
+		     Nao gerenciado pelo BOM do Spring Boot: versao explicita. Linha 3.0.x estavel,
+		     compativel com Java 21, API classica org.apache.xml.security.* -->
+		<dependency>
+			<groupId>org.apache.santuario</groupId>
+			<artifactId>xmlsec</artifactId>
+			<version>3.0.6</version>
+		</dependency>
+
 		<!-- Testcontainers -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>

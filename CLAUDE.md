@@ -27,22 +27,22 @@ Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 
 - **Regra de negócio** vive só na camada `service`.
 - **Entidades JPA nunca são expostas** na API — sempre converter para DTO via `mapper`. Request e response são DTOs (`record`).
 - **Validação** de entrada via Bean Validation (`@Valid` + anotações nos DTOs). Nunca validar manualmente o que a anotação resolve.
-- **Erros** sempre pelo `GlobalExceptionHandler` (`@RestControllerAdvice`), devolvendo `ApiError`. Nunca tratar exceção dentro do controller nem vazar stack trace ao cliente.
+- **Erros** sempre pelo `GlobalExceptionHandler` (`@RestControllerAdvice`), devolvendo `ApiError` com envelope **`errors[]`** estruturado (`code`/`field`/`message`/`suggestion`/`rejectedValue`/`expectedValue`). Exceções de domínio estendem `DomainException` (carrega `HttpStatus` + lista de `ErrorDetail`). Nunca tratar exceção dentro do controller, nem vazar stack trace ou detalhe técnico ao cliente (5xx usa mensagem genérica; detalhe só no log).
 
 ## Estrutura de pacotes
 
 ```
 br.com.agrocontabil
-├── config/        # SecurityConfig, CorsConfig, OpenApiConfig, MockProdutorFilter, TributosProperties/Config, DataLoader
+├── config/        # SecurityConfig, CorsConfig, OpenApiConfig, MockProdutorFilter, TributosProperties/Config, CertificadoDigitalProperties/Config, DataLoader
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, CalculoIbsCbsService, GeracaoNotaFiscalService, ChaveAcessoGenerator, AuthenticatedProdutorProvider)
 ├── repository/    # Spring Data JPA
 ├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario, enums...)
 ├── dto/           # request/response (records)
 ├── mapper/        # entidade <-> DTO (NotaFiscalMapper)
-├── nfe/           # geração de NF-e: model/ (classes JAXB puras do layout 4.00), FiscalRulesValidator, NotaFiscalNfeMapper, XmlGenerator, XsdValidator
-├── exception/     # handler global + exceções de domínio
-└── common/        # ApiError, utilitários
+├── nfe/           # geração de NF-e: model/ (JAXB puras do layout 4.00), FiscalRulesValidator, NotaFiscalNfeMapper, XmlGenerator, XsdValidator, NfeAssinador, AssinaturaValidator, KeyStoreCertificadoProvider
+├── exception/     # GlobalExceptionHandler + DomainException (base) + exceções de domínio
+└── common/        # ApiError (envelope errors[]), ErrorCode, ErrorDetail, utilitários
 ```
 
 ## Segurança
@@ -88,9 +88,15 @@ br.com.agrocontabil
 
 Cobertura: 94 testes (JUnit + Mockito), service ≥ 80% (JaCoCo). Cada PR passou por code review + auditoria de segurança (OWASP) e CI verde.
 
+**Sprint 3 — em andamento (issues #14, #15, #16, #17 + #22):**
+
+- **Contrato de erro estruturado (camada A — PR #24, mergeado):** `ApiError.errors[]` com `ErrorDetail` (`code`/`field`/`message`/`suggestion`/`rejectedValue`/`expectedValue`); `ErrorCode` (catálogo); `DomainException` (base); `GlobalExceptionHandler` unificado.
+- **Assinatura digital NF-e (RF014 — issue #17):** `NfeAssinador` (assinatura enveloped no `infNFe` via **Apache Santuario** — C14N inclusiva, RSA-SHA1, SHA-1, `X509Data`), `AssinaturaValidator` (core validation + tamper detection), `KeyStoreCertificadoProvider` (carrega `.p12` PKCS#12; cert autoassinado de teste em `src/test/resources/certs/`, real via env `NFE_CERT_*`). Integrada ao pipeline do `GeracaoNotaFiscalService` (assina → valida assinatura → XSD). O `XsdValidator` voltou a **exigir** `ds:Signature` (tolerância da Sprint 2 removida). Ver `docs/nfe-certificado-digital.md`.
+- **Pendente:** persistência de inconsistências + status (camada C — issue #22); envio SEFAZ (#15); consulta status (#16); download PDF/DANFE (#14).
+
 ### Débitos técnicos abertos (registrados nos PRs da Sprint 2)
 
-- **Sprint 7 (transmissão SEFAZ):** assinatura digital ICP-Brasil (`ds:Signature` é obrigatória no XSD — hoje o `XsdValidator` tolera apenas essa ausência e mantém todo o resto fatal); `cNF` da chave de acesso via `SecureRandom` (hoje determinístico para teste).
+- **Sprint 7 (transmissão SEFAZ):** `cNF` da chave de acesso via `SecureRandom` (hoje determinístico para teste). Certificado **ICP-Brasil real** em produção + aceitação efetiva pela SEFAZ (a assinatura já está implementada; falta o certificado real e o envio — issue #15).
 - **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`; validação de dígitos verificadores de CPF/CNPJ.
 - **Modelo:** o `Produtor` ainda não tem endereço completo nem IE (o `NotaFiscalNfeMapper` usa placeholders); divisão IBS UF/Município hoje é 50/50 (parametrização real pendente).
 

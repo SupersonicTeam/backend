@@ -1,7 +1,9 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.nfe.AssinaturaValidator;
 import br.com.agrocontabil.nfe.FiscalRulesValidator;
+import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
@@ -21,16 +23,20 @@ import org.springframework.stereotype.Service;
  *   <li>{@link NotaFiscalNfeMapper#toNfe(NotaFiscal)} — mapeia a entidade para o grafo JAXB;
  *       aplica toda formatação de decimais, datas, zero-padding e gera a chave de acesso.</li>
  *   <li>{@link XmlGenerator#marshal(NFe)} — serializa o grafo para XML UTF-8 sem indentação.</li>
- *   <li>{@link XsdValidator#validar(String)} — valida o XML contra {@code nfe_v4.00.xsd};
- *       lança {@link br.com.agrocontabil.exception.XmlGenerationException} com os erros
- *       de validação em caso de invalidade.</li>
+ *   <li>{@link NfeAssinador#assinar(String, String)} — assina digitalmente o XML
+ *       (assinatura enveloped no {@code infNFe}, padrão SEFAZ).</li>
+ *   <li>{@link AssinaturaValidator#validar(String)} — confere criptograficamente a
+ *       assinatura gerada antes da validação estrutural.</li>
+ *   <li>{@link XsdValidator#validar(String)} — valida o XML <strong>assinado</strong> contra
+ *       {@code nfe_v4.00.xsd}; lança {@link br.com.agrocontabil.exception.XmlGenerationException}
+ *       com os erros de validação em caso de invalidade.</li>
  * </ol>
  *
- * <p><strong>Escopo deste serviço:</strong> gerar e validar o XML localmente.
- * Ele <em>não</em> transmite à SEFAZ, <em>não</em> assina digitalmente (assinatura
- * digital é Sprint 7) e <em>não</em> persiste o XML — a persistência e a atualização
- * do status ({@code XML_GERADO}) são responsabilidade do serviço de orquestração
- * que chamará este serviço (Sessão 6).
+ * <p><strong>Escopo deste serviço:</strong> gerar, assinar e validar o XML localmente.
+ * Ele <em>não</em> transmite à SEFAZ (issue #15) e <em>não</em> persiste o XML — a
+ * persistência e a atualização do status ({@code XML_GERADO}) são responsabilidade do
+ * serviço de orquestração que chama este serviço. A assinatura usa o certificado
+ * configurado em {@code app.nfe.certificado} (sandbox/autoassinado em dev/test).
  */
 @Service
 public class GeracaoNotaFiscalService {
@@ -40,6 +46,8 @@ public class GeracaoNotaFiscalService {
   private final FiscalRulesValidator fiscalRulesValidator;
   private final NotaFiscalNfeMapper notaFiscalNfeMapper;
   private final XmlGenerator xmlGenerator;
+  private final NfeAssinador nfeAssinador;
+  private final AssinaturaValidator assinaturaValidator;
   private final XsdValidator xsdValidator;
 
   /** Constrói o serviço com todas as dependências do pipeline. */
@@ -47,10 +55,14 @@ public class GeracaoNotaFiscalService {
       FiscalRulesValidator fiscalRulesValidator,
       NotaFiscalNfeMapper notaFiscalNfeMapper,
       XmlGenerator xmlGenerator,
+      NfeAssinador nfeAssinador,
+      AssinaturaValidator assinaturaValidator,
       XsdValidator xsdValidator) {
     this.fiscalRulesValidator = fiscalRulesValidator;
     this.notaFiscalNfeMapper = notaFiscalNfeMapper;
     this.xmlGenerator = xmlGenerator;
+    this.nfeAssinador = nfeAssinador;
+    this.assinaturaValidator = assinaturaValidator;
     this.xsdValidator = xsdValidator;
   }
 
@@ -82,14 +94,15 @@ public class GeracaoNotaFiscalService {
 
     NFe nfe = notaFiscalNfeMapper.toNfe(nota);
     String xml = xmlGenerator.marshal(nfe);
-
-    xsdValidator.validar(xml);
+    String xmlAssinado = nfeAssinador.assinar(xml, nfe.getInfNFe().getId());
+    assinaturaValidator.validar(xmlAssinado);
+    xsdValidator.validar(xmlAssinado);
 
     log.info(
-        "XML da NF-e gerado e validado com sucesso: notaId={} chave={}",
+        "XML da NF-e gerado, assinado e validado com sucesso: notaId={} chave={}",
         nota.getId(),
         nfe.getInfNFe().getId());
 
-    return xml;
+    return xmlAssinado;
   }
 }
