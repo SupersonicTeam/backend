@@ -186,6 +186,19 @@ class NotaFiscalRepositoryTest {
     assertThat(result.get().getId()).isEqualTo(nota.getId());
   }
 
+  @Test
+  @DisplayName("existsByChaveAcesso retorna true para chave existente e false para inexistente")
+  void existsByChaveAcesso() {
+    NotaFiscal nota = buildNotaFiscal();
+    nota.setChaveAcesso("41260612345678000195550010000000011000000017");
+    notaFiscalRepository.saveAndFlush(nota);
+
+    assertThat(notaFiscalRepository.existsByChaveAcesso(
+        "41260612345678000195550010000000011000000017")).isTrue();
+    assertThat(notaFiscalRepository.existsByChaveAcesso(
+        "00000000000000000000000000000000000000000000")).isFalse();
+  }
+
   // -------------------------------------------------------------------------
   // Helpers de construção
   // -------------------------------------------------------------------------

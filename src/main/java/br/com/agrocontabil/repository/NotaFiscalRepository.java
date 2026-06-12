@@ -35,4 +35,12 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * @return {@link Optional} com a nota fiscal, ou vazio se não encontrada
    */
   Optional<NotaFiscal> findByIdAndProdutorId(UUID id, UUID produtorId);
+
+  /**
+   * Indica se já existe nota com a chave de acesso informada (dedup de importação).
+   *
+   * @param chaveAcesso chave de 44 dígitos
+   * @return {@code true} se já houver uma nota com essa chave
+   */
+  boolean existsByChaveAcesso(String chaveAcesso);
 }
