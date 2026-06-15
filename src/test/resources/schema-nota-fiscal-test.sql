@@ -48,6 +48,12 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     xml_gerado                  TEXT,
     versao_layout_nfe           VARCHAR(10),
     data_geracao_xml            TIMESTAMP WITH TIME ZONE,
+    -- Retorno da SEFAZ — Sprint 3 issue #15
+    protocolo_autorizacao       VARCHAR(20),
+    data_autorizacao            TIMESTAMP WITH TIME ZONE,
+    sefaz_cstat                 VARCHAR(10),
+    sefaz_motivo                VARCHAR(255),
+    sefaz_ambiente              VARCHAR(20),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)

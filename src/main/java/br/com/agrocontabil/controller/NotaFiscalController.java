@@ -3,7 +3,9 @@ package br.com.agrocontabil.controller;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.service.NotaFiscalService;
+import br.com.agrocontabil.service.SefazService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -45,9 +47,12 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class NotaFiscalController {
 
   private final NotaFiscalService notaFiscalService;
+  private final SefazService sefazService;
 
-  public NotaFiscalController(NotaFiscalService notaFiscalService) {
+  public NotaFiscalController(
+      NotaFiscalService notaFiscalService, SefazService sefazService) {
     this.notaFiscalService = notaFiscalService;
+    this.sefazService = sefazService;
   }
 
   /**
@@ -215,5 +220,36 @@ public class NotaFiscalController {
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_XML)
         .body(xml);
+  }
+
+  /**
+   * Transmite a NF-e indicada à SEFAZ (ambiente de homologação) e registra o retorno.
+   *
+   * <p>Somente notas em {@code XML_GERADO} (XML gerado e assinado) podem ser enviadas;
+   * caso contrário, retorna 409. O status da nota transita conforme o retorno do fisco
+   * (AUTORIZADA, REJEITADA ou PENDENTE_SEFAZ). Na Sprint 3 o transporte é mock/sandbox.
+   */
+  @PostMapping("/{id}/enviar-sefaz")
+  @Operation(
+      summary = "Envia a NF-e para a SEFAZ",
+      description = "Transmite o XML assinado da NF-e ao ambiente de homologacao da SEFAZ "
+          + "e persiste o retorno (status, cStat, motivo, protocolo). "
+          + "Somente notas em status XML_GERADO podem ser enviadas; retorna 409 caso contrario. "
+          + "Na Sprint 3 o transporte e mock/sandbox (envio real e debito da Sprint 7).")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "Nota enviada; retorno da SEFAZ registrado"),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Nota nao esta em status XML_GERADO",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "502",
+          description = "Falha de comunicacao com a SEFAZ apos esgotar as tentativas",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<SefazEnvioResponse> enviarSefaz(@PathVariable UUID id) {
+    return ResponseEntity.ok(sefazService.enviar(id));
   }
 }
