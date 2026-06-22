@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
+import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SefazComunicacaoException;
@@ -23,6 +25,7 @@ import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -177,6 +180,87 @@ class SefazServiceTest {
         .isInstanceOf(SefazComunicacaoException.class);
 
     verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  // -------------------------------------------------------------------------
+  // sincronizarStatus / sincronizarPendentes (issue #16)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("sincronizarStatus deve atualizar nota PENDENTE_SEFAZ para AUTORIZADA")
+  void sincronizarStatusShouldUpdatePendingToAuthorized() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    nota.setStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
+    nota.setSefazAmbiente(SefazAmbiente.HOMOLOGACAO);
+    OffsetDateTime autorizacao = OffsetDateTime.now();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(sefazClient.consultarStatus(eq(CHAVE), eq(SefazAmbiente.HOMOLOGACAO)))
+        .thenReturn(new SefazRetorno(
+            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
+            autorizacao));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    SefazStatusResponse response = sefazService.sincronizarStatus(notaId);
+
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(response.protocolo()).isEqualTo("141260000000017");
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+  }
+
+  @Test
+  @DisplayName("sincronizarStatus deve lancar NotaFiscalNaoConsultavelException quando RASCUNHO")
+  void sincronizarStatusShouldThrowWhenRascunho() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    nota.setStatus(StatusNotaFiscal.RASCUNHO);
+    nota.setChaveAcesso(null);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> sefazService.sincronizarStatus(notaId))
+        .isInstanceOf(NotaFiscalNaoConsultavelException.class);
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("sincronizarStatus deve lancar ResourceNotFoundException quando nao encontrada")
+  void sincronizarStatusShouldThrowWhenNotFound() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> sefazService.sincronizarStatus(notaId))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
+  }
+
+  @Test
+  @DisplayName("sincronizarPendentes deve consultar a SEFAZ e contar as notas atualizadas")
+  void sincronizarPendentesShouldConsultAndCountUpdated() {
+    NotaFiscal nota = buildNotaXmlGerado(UUID.randomUUID());
+    nota.setStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
+
+    when(notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ))
+        .thenReturn(List.of(nota));
+    when(sefazClient.consultarStatus(eq(CHAVE), any()))
+        .thenReturn(new SefazRetorno(
+            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
+            OffsetDateTime.now()));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    int atualizadas = sefazService.sincronizarPendentes();
+
+    assertThat(atualizadas).isEqualTo(1);
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
   }
 
   private NotaFiscal buildNotaXmlGerado(UUID notaId) {

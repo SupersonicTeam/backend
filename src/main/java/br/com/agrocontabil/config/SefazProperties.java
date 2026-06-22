@@ -39,6 +39,9 @@ public class SefazProperties {
   /** Configurações de retry automático em falhas de comunicação. */
   private Retry retry = new Retry();
 
+  /** Configurações do job de sincronização de status (issue #16). */
+  private Sync sync = new Sync();
+
   /** Retorna o ambiente de comunicação com a SEFAZ. */
   public SefazAmbiente getAmbiente() {
     return ambiente;
@@ -67,6 +70,16 @@ public class SefazProperties {
   /** Define as configurações de retry. */
   public void setRetry(Retry retry) {
     this.retry = retry;
+  }
+
+  /** Retorna as configurações do job de sincronização. */
+  public Sync getSync() {
+    return sync;
+  }
+
+  /** Define as configurações do job de sincronização. */
+  public void setSync(Sync sync) {
+    this.sync = sync;
   }
 
   /**
@@ -132,6 +145,41 @@ public class SefazProperties {
     /** Define o intervalo de backoff em milissegundos. */
     public void setBackoffMs(long backoffMs) {
       this.backoffMs = backoffMs;
+    }
+  }
+
+  /**
+   * Configurações do job agendado de sincronização de status com a SEFAZ (issue #16).
+   *
+   * <p>O job ({@link br.com.agrocontabil.sefaz.SefazStatusSyncJob}) consulta periodicamente
+   * a SEFAZ para as notas em {@code PENDENTE_SEFAZ}. Desativado no perfil de testes.
+   */
+  public static class Sync {
+
+    /** Habilita o job de sincronização. Padrão {@code true}. Definir {@code false} em testes. */
+    private boolean enabled = true;
+
+    /** Intervalo entre execuções em milissegundos. Padrão {@code 900000} (15 min). */
+    private long intervalMs = 900000L;
+
+    /** Retorna se o job de sincronização está habilitado. */
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    /** Define se o job de sincronização está habilitado. */
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    /** Retorna o intervalo entre execuções em milissegundos. */
+    public long getIntervalMs() {
+      return intervalMs;
+    }
+
+    /** Define o intervalo entre execuções em milissegundos. */
+    public void setIntervalMs(long intervalMs) {
+      this.intervalMs = intervalMs;
     }
   }
 }

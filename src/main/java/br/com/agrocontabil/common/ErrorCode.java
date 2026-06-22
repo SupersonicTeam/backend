@@ -24,7 +24,9 @@ public enum ErrorCode {
   /** Falha de comunicação com a SEFAZ (timeout, conexão recusada, I/O). HTTP 502. */
   SEFAZ_COMUNICACAO_FALHOU,
   /** Nota fiscal não está em status XML_GERADO para envio à SEFAZ. HTTP 409. */
-  NOTA_NAO_ENVIAVEL;
+  NOTA_NAO_ENVIAVEL,
+  /** Nota fiscal ainda não foi transmitida — não há status SEFAZ a consultar. HTTP 409. */
+  NOTA_NAO_CONSULTAVEL;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

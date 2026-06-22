@@ -4,6 +4,7 @@ import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
+import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.service.NotaFiscalService;
 import br.com.agrocontabil.service.SefazService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -251,5 +252,34 @@ public class NotaFiscalController {
   })
   public ResponseEntity<SefazEnvioResponse> enviarSefaz(@PathVariable UUID id) {
     return ResponseEntity.ok(sefazService.enviar(id));
+  }
+
+  /**
+   * Consulta o status da NF-e na SEFAZ e sincroniza o status local (issue #16 — RF013).
+   *
+   * <p>Só é permitido para notas já transmitidas (com chave de acesso); caso contrário,
+   * retorna 409. O status local é atualizado conforme o retorno do fisco.
+   */
+  @GetMapping("/{id}/status-sefaz")
+  @Operation(
+      summary = "Consulta o status da NF-e na SEFAZ",
+      description = "Consulta a situacao da NF-e na SEFAZ pela chave de acesso e sincroniza "
+          + "o status local. Somente notas ja transmitidas podem ser consultadas; "
+          + "retorna 409 caso contrario. Na Sprint 3 o transporte e mock/sandbox.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "Status consultado e sincronizado"),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Nota ainda nao foi transmitida (sem chave de acesso)",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "502",
+          description = "Falha de comunicacao com a SEFAZ apos esgotar as tentativas",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<SefazStatusResponse> consultarStatusSefaz(@PathVariable UUID id) {
+    return ResponseEntity.ok(sefazService.sincronizarStatus(id));
   }
 }
