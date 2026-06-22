@@ -1,7 +1,9 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlGenerationException;
@@ -54,16 +56,19 @@ public class NotaFiscalService {
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CalculoIbsCbsService calculoIbsCbsService;
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
+  private final DanfePdfService danfePdfService;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
       CalculoIbsCbsService calculoIbsCbsService,
-      GeracaoNotaFiscalService geracaoNotaFiscalService) {
+      GeracaoNotaFiscalService geracaoNotaFiscalService,
+      DanfePdfService danfePdfService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
+    this.danfePdfService = danfePdfService;
   }
 
   /**
@@ -281,6 +286,35 @@ public class NotaFiscalService {
     }
 
     return nota.getXmlGerado();
+  }
+
+  /**
+   * Gera o PDF da DANFE da nota indicada (issue #14 — RF011).
+   *
+   * <p>Ownership anti-IDOR: busca via {@code findByIdAndProdutorId} — 404 se a nota não
+   * pertencer ao produtor autenticado. A DANFE só está disponível após a geração do XML
+   * (status XML_GERADO em diante); caso contrário, lança {@link DanfeIndisponivelException}
+   * (HTTP 409).
+   *
+   * @param id identificador da nota fiscal
+   * @return bytes do PDF da DANFE
+   * @throws ResourceNotFoundException     se a nota não existir ou pertencer a outro produtor
+   * @throws DanfeIndisponivelException    se o XML ainda não foi gerado (HTTP 409)
+   * @throws br.com.agrocontabil.exception.DanfeGenerationException
+   *         se a geração do PDF falhar (HTTP 500)
+   */
+  @Transactional(readOnly = true)
+  public byte[] gerarPdf(UUID id) {
+    Produtor produtor = produtorProvider.get();
+    NotaFiscal nota = notaFiscalRepository
+        .findByIdAndProdutorId(id, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+
+    if (nota.getXmlGerado() == null) {
+      throw new DanfeIndisponivelException(id, nota.getStatus());
+    }
+
+    return danfePdfService.gerarPdf(nota);
   }
 
   // -------------------------------------------------------------------------

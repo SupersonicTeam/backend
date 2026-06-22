@@ -19,7 +19,12 @@ public enum ErrorCode {
   CERTIFICADO_EXPIRADO,
   CERTIFICADO_INVALIDO,
   ASSINATURA_FALHOU,
-  ASSINATURA_INVALIDA;
+  ASSINATURA_INVALIDA,
+  // Geração de PDF (DANFE — issue #14)
+  /** Falha técnica ao gerar o PDF da DANFE. HTTP 500. */
+  DANFE_GENERATION_ERROR,
+  /** DANFE indisponível: a nota ainda não gerou o XML. HTTP 409. */
+  DANFE_INDISPONIVEL;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

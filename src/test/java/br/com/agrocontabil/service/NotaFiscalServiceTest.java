@@ -7,9 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.NotaFiscalItemRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
@@ -75,6 +77,10 @@ class NotaFiscalServiceTest {
    */
   @Mock
   private GeracaoNotaFiscalService geracaoNotaFiscalService;
+
+  /** Servico de geracao do PDF da DANFE (issue #14), mockado neste teste de unidade. */
+  @Mock
+  private DanfePdfService danfePdfService;
 
   @InjectMocks
   private NotaFiscalService notaFiscalService;
@@ -678,6 +684,60 @@ class NotaFiscalServiceTest {
         .thenReturn(Optional.of(nota));
 
     assertThatThrownBy(() -> notaFiscalService.obterXml(notaId))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
+  }
+
+  // -------------------------------------------------------------------------
+  // gerarPdf (issue #14 — DANFE)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("gerarPdf deve retornar os bytes do PDF quando o XML ja foi gerado")
+  void gerarPdfShouldReturnBytesWhenXmlExists() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.XML_GERADO);
+    nota.setXmlGerado("<NFe/>");
+    byte[] pdfFake = new byte[] {'%', 'P', 'D', 'F'};
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(danfePdfService.gerarPdf(nota)).thenReturn(pdfFake);
+
+    byte[] result = notaFiscalService.gerarPdf(notaId);
+
+    assertThat(result).isEqualTo(pdfFake);
+  }
+
+  @Test
+  @DisplayName("gerarPdf deve lancar DanfeIndisponivelException quando o XML ainda nao foi gerado")
+  void gerarPdfShouldThrowWhenXmlNull() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva(); // RASCUNHO, xmlGerado == null
+    nota.setId(notaId);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))
+        .isInstanceOf(DanfeIndisponivelException.class)
+        .hasMessageContaining(notaId.toString());
+  }
+
+  @Test
+  @DisplayName("gerarPdf deve lancar ResourceNotFoundException quando nota pertence a outro produtor")
+  void gerarPdfShouldThrowWhenNotaOfAnotherProdutor() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining(notaId.toString());
   }
