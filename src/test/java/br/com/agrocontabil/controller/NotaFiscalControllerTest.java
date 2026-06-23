@@ -15,8 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
+import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -467,6 +469,44 @@ class NotaFiscalControllerTest {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.status").value(409))
         .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_ENVIAVEL')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/status-sefaz → 200 SefazStatusResponse  /  409 quando nao consultavel
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/status-sefaz deve retornar 200 com status sincronizado")
+  void getStatusSefazShouldReturn200() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    SefazStatusResponse mockResponse = new SefazStatusResponse(
+        "41262612345678000195550010000000011000000012",
+        StatusNotaFiscal.AUTORIZADA,
+        "100",
+        "Autorizado o uso da NF-e",
+        "141260000000017",
+        OffsetDateTime.now());
+
+    when(sefazService.sincronizarStatus(eq(notaId))).thenReturn(mockResponse);
+
+    mockMvc.perform(get("/api/notas/{id}/status-sefaz", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AUTORIZADA"))
+        .andExpect(jsonPath("$.cStat").value("100"));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/status-sefaz deve retornar 409 quando nota nao consultavel")
+  void getStatusSefazShouldReturn409WhenNotConsultavel() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.sincronizarStatus(eq(notaId)))
+        .thenThrow(new NotaFiscalNaoConsultavelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(get("/api/notas/{id}/status-sefaz", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_CONSULTAVEL')]").exists());
   }
 
   // -------------------------------------------------------------------------

@@ -2,8 +2,11 @@ package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
+import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.SefazComunicacaoException;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -12,6 +15,7 @@ import br.com.agrocontabil.sefaz.SefazAmbiente;
 import br.com.agrocontabil.sefaz.SefazClient;
 import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +109,77 @@ public class SefazService {
   }
 
   /**
+   * Consulta o status atual da NF-e na SEFAZ e sincroniza o status local (issue #16 — RF013).
+   *
+   * @param notaId identificador da nota fiscal
+   * @return DTO com o status atualizado e os dados do retorno do fisco
+   * @throws ResourceNotFoundException          se a nota não existir ou pertencer a outro produtor
+   * @throws NotaFiscalNaoConsultavelException  se a nota ainda não foi transmitida (HTTP 409)
+   * @throws SefazComunicacaoException          se a comunicação falhar após o retry (HTTP 502)
+   */
+  public SefazStatusResponse sincronizarStatus(UUID notaId) {
+    Produtor produtor = produtorProvider.get();
+    NotaFiscal nota = notaFiscalRepository
+        .findByIdAndProdutorId(notaId, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
+
+    if (nota.getChaveAcesso() == null || nota.getStatus() == StatusNotaFiscal.RASCUNHO) {
+      throw new NotaFiscalNaoConsultavelException(notaId, nota.getStatus());
+    }
+
+    consultarEAtualizar(nota);
+    NotaFiscal salva = notaFiscalRepository.save(nota);
+
+    log.info(
+        "Status sincronizado com a SEFAZ: notaId={} chave={} cStat={} situacao={}",
+        salva.getId(),
+        salva.getChaveAcesso(),
+        salva.getSefazCstat(),
+        salva.getStatus());
+
+    return toStatusResponse(salva);
+  }
+
+  /**
+   * Sincroniza o status de todas as notas em {@link StatusNotaFiscal#PENDENTE_SEFAZ}.
+   *
+   * <p>Operação de sistema (sem produtor autenticado), executada pelo job agendado
+   * {@link br.com.agrocontabil.sefaz.SefazStatusSyncJob}. Uma falha de comunicação numa
+   * nota é registrada e não interrompe o processamento das demais.
+   *
+   * @return quantidade de notas cujo status mudou após a consulta
+   */
+  public int sincronizarPendentes() {
+    List<NotaFiscal> pendentes =
+        notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
+    int atualizadas = 0;
+    for (NotaFiscal nota : pendentes) {
+      try {
+        StatusNotaFiscal anterior = nota.getStatus();
+        consultarEAtualizar(nota);
+        notaFiscalRepository.save(nota);
+        if (nota.getStatus() != anterior) {
+          atualizadas++;
+        }
+      } catch (SefazComunicacaoException e) {
+        // Falha numa nota não interrompe o lote — sera reprocessada na proxima execucao.
+        log.warn("Falha ao sincronizar status da nota {} com a SEFAZ: {}",
+            nota.getId(), e.getMessage());
+      }
+    }
+    return atualizadas;
+  }
+
+  /** Consulta a SEFAZ pela chave de acesso e aplica o retorno à nota. */
+  private void consultarEAtualizar(NotaFiscal nota) {
+    SefazAmbiente ambiente = nota.getSefazAmbiente() != null
+        ? nota.getSefazAmbiente()
+        : sefazProperties.getAmbiente();
+    SefazRetorno retorno = sefazClient.consultarStatus(nota.getChaveAcesso(), ambiente);
+    aplicarRetorno(nota, retorno, ambiente);
+  }
+
+  /**
    * Aplica o retorno do fisco à entidade: status, código/motivo, ambiente e, se autorizada,
    * protocolo e data de autorização.
    */
@@ -131,6 +206,17 @@ public class SefazService {
   /** Converte a entidade já atualizada no DTO de resposta do envio. */
   private SefazEnvioResponse toResponse(NotaFiscal nota) {
     return new SefazEnvioResponse(
+        nota.getChaveAcesso(),
+        nota.getStatus(),
+        nota.getSefazCstat(),
+        nota.getSefazMotivo(),
+        nota.getProtocoloAutorizacao(),
+        nota.getDataAutorizacao());
+  }
+
+  /** Converte a entidade já atualizada no DTO de resposta da consulta de status. */
+  private SefazStatusResponse toStatusResponse(NotaFiscal nota) {
+    return new SefazStatusResponse(
         nota.getChaveAcesso(),
         nota.getStatus(),
         nota.getSefazCstat(),
