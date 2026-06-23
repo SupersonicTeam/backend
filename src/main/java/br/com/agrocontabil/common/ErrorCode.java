@@ -20,6 +20,11 @@ public enum ErrorCode {
   CERTIFICADO_INVALIDO,
   ASSINATURA_FALHOU,
   ASSINATURA_INVALIDA,
+  // Geração de PDF (DANFE — issue #14)
+  /** Falha técnica ao gerar o PDF da DANFE. HTTP 500. */
+  DANFE_GENERATION_ERROR,
+  /** DANFE indisponível: a nota ainda não gerou o XML. HTTP 409. */
+  DANFE_INDISPONIVEL,
   // Integração SEFAZ (Sprint 3 — issue #15)
   /** Falha de comunicação com a SEFAZ (timeout, conexão recusada, I/O). HTTP 502. */
   SEFAZ_COMUNICACAO_FALHOU,
