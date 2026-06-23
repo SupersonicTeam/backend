@@ -14,12 +14,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.NotaFiscalService;
+import br.com.agrocontabil.service.SefazService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.math.BigDecimal;
@@ -63,6 +66,10 @@ class NotaFiscalControllerTest {
 
   @MockBean
   private NotaFiscalService notaFiscalService;
+
+  /** Dependencia do controller para o endpoint de envio a SEFAZ (issue #15). */
+  @MockBean
+  private SefazService sefazService;
 
   /**
    * MockProdutorFilter e um @Component que depende de ProdutorRepository.
@@ -421,6 +428,45 @@ class NotaFiscalControllerTest {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.status").value(409))
         .andExpect(jsonPath("$.errors[?(@.code == 'DANFE_INDISPONIVEL')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /{id}/enviar-sefaz → 200 SefazEnvioResponse  /  409 quando nao enviavel
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/enviar-sefaz deve retornar 200 com status AUTORIZADA")
+  void postEnviarSefazShouldReturn200WithAutorizadaStatus() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    SefazEnvioResponse mockResponse = new SefazEnvioResponse(
+        "41262612345678000195550010000000011000000012",
+        StatusNotaFiscal.AUTORIZADA,
+        "100",
+        "Autorizado o uso da NF-e",
+        "141260000000017",
+        OffsetDateTime.now());
+
+    when(sefazService.enviar(eq(notaId))).thenReturn(mockResponse);
+
+    mockMvc.perform(post("/api/notas/{id}/enviar-sefaz", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AUTORIZADA"))
+        .andExpect(jsonPath("$.cStat").value("100"))
+        .andExpect(jsonPath("$.protocolo").value("141260000000017"));
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/enviar-sefaz deve retornar 409 quando status nao e XML_GERADO")
+  void postEnviarSefazShouldReturn409WhenNotaNotEnviavel() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.enviar(eq(notaId)))
+        .thenThrow(new NotaFiscalNaoEnviavelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(post("/api/notas/{id}/enviar-sefaz", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_ENVIAVEL')]").exists());
   }
 
   // -------------------------------------------------------------------------
