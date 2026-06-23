@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -221,6 +222,38 @@ public class NotaFiscalController {
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_XML)
         .body(xml);
+  }
+
+  /**
+   * Gera e retorna o PDF da DANFE da nota indicada (issue #14 — RF011).
+   *
+   * <p>Disponível apenas para notas com XML gerado (status XML_GERADO em diante);
+   * retorna 409 caso contrário e 404 para nota inexistente ou de outro produtor.
+   */
+  @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+  @Operation(
+      summary = "Baixa a DANFE (PDF) da NF-e",
+      description = "Gera e retorna o PDF da DANFE (Documento Auxiliar da NF-e) com os dados "
+          + "da nota. Disponivel somente apos a geracao do XML; retorna 409 caso a nota "
+          + "ainda esteja em RASCUNHO e 404 se nao existir ou nao pertencer ao produtor.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "PDF da DANFE retornado com sucesso",
+          content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "DANFE indisponivel — XML ainda nao gerado",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<byte[]> baixarPdf(@PathVariable UUID id) {
+    byte[] pdf = notaFiscalService.gerarPdf(id);
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_PDF)
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"danfe-" + id + ".pdf\"")
+        .body(pdf);
   }
 
   /**

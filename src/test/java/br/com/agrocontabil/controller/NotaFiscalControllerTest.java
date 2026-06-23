@@ -16,6 +16,7 @@ import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
@@ -395,6 +396,40 @@ class NotaFiscalControllerTest {
     mockMvc.perform(get("/api/notas/{id}/xml", notaId)
             .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/pdf → 200 application/pdf  /  409 quando DANFE indisponivel
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/pdf deve retornar 200 com Content-Type application/pdf")
+  void getPdfShouldReturn200WithPdfContentType() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    byte[] pdf = new byte[] {'%', 'P', 'D', 'F', '-', '1', '.', '4'};
+
+    when(notaFiscalService.gerarPdf(eq(notaId))).thenReturn(pdf);
+
+    mockMvc.perform(get("/api/notas/{id}/pdf", notaId))
+        .andExpect(status().isOk())
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+            .content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF))
+        .andExpect(header().string("Content-Disposition",
+            org.hamcrest.Matchers.containsString("danfe-" + notaId + ".pdf")));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/pdf deve retornar 409 quando a DANFE esta indisponivel")
+  void getPdfShouldReturn409WhenDanfeUnavailable() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(notaFiscalService.gerarPdf(eq(notaId)))
+        .thenThrow(new DanfeIndisponivelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(get("/api/notas/{id}/pdf", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'DANFE_INDISPONIVEL')]").exists());
   }
 
   // -------------------------------------------------------------------------
