@@ -31,10 +31,16 @@ build/
 
 ### VS Code ###
 .vscode/
-.claude
 CLAUDE-*.log
 .worktree/
 .worktree
+
+### Claude Code — ignorar dados de sessão, rastrear skills do projeto ###
+.claude/worktrees/
+.claude/.worktrees/
+.claude/agent-*
+.claude/*.jsonl
+.claude/settings.local.json
 
 ### Ambiente / segredos ###
 .env
