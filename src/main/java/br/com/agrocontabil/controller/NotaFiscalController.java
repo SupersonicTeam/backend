@@ -3,9 +3,11 @@ package br.com.agrocontabil.controller;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.service.NotaFiscalService;
+import br.com.agrocontabil.service.NotaFiscalValidacaoService;
 import br.com.agrocontabil.service.SefazService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -16,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -50,11 +53,15 @@ public class NotaFiscalController {
 
   private final NotaFiscalService notaFiscalService;
   private final SefazService sefazService;
+  private final NotaFiscalValidacaoService validacaoService;
 
   public NotaFiscalController(
-      NotaFiscalService notaFiscalService, SefazService sefazService) {
+      NotaFiscalService notaFiscalService,
+      SefazService sefazService,
+      NotaFiscalValidacaoService validacaoService) {
     this.notaFiscalService = notaFiscalService;
     this.sefazService = sefazService;
+    this.validacaoService = validacaoService;
   }
 
   /**
@@ -314,5 +321,31 @@ public class NotaFiscalController {
   })
   public ResponseEntity<SefazStatusResponse> consultarStatusSefaz(@PathVariable UUID id) {
     return ResponseEntity.ok(sefazService.sincronizarStatus(id));
+  }
+
+  /**
+   * Lista o histórico de inconsistências de validação da nota indicada (issue #22 — RF014/C).
+   *
+   * <p>Retorna as inconsistências registradas nas tentativas de geração do XML, da mais
+   * recente para a mais antiga, agrupáveis por {@code loteValidacao}. Respeita o ownership
+   * anti-IDOR (404 para nota inexistente ou de outro produtor). Retorna lista vazia se a nota
+   * nunca apresentou inconsistências.
+   */
+  @GetMapping("/{id}/validacoes")
+  @Operation(
+      summary = "Lista o historico de inconsistencias de validacao da NF-e",
+      description = "Retorna as inconsistencias registradas ao validar/gerar o XML da nota, "
+          + "ordenadas da tentativa mais recente para a mais antiga e agrupaveis por "
+          + "loteValidacao. Retorna 404 se a nota nao existir ou nao pertencer ao produtor "
+          + "autenticado (anti-IDOR); lista vazia se nunca houve inconsistencias.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Historico de validacoes retornado"),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<List<NotaFiscalValidacaoResponse>> listarValidacoes(
+      @PathVariable UUID id) {
+    return ResponseEntity.ok(validacaoService.listarValidacoes(id));
   }
 }

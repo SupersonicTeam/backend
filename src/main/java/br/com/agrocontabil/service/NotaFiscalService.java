@@ -4,6 +4,7 @@ import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
+import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlGenerationException;
@@ -15,7 +16,9 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,23 +55,34 @@ public class NotaFiscalService {
 
   private static final Logger log = LoggerFactory.getLogger(NotaFiscalService.class);
 
+  /**
+   * Status em que a nota ainda é considerada "rascunho" editável: além de
+   * {@link StatusNotaFiscal#RASCUNHO}, uma nota {@link StatusNotaFiscal#COM_INCONSISTENCIAS}
+   * (issue #22) pode ser editada e ter o XML gerado novamente após a correção dos campos.
+   */
+  private static final Set<StatusNotaFiscal> STATUS_EDITAVEIS =
+      EnumSet.of(StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS);
+
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CalculoIbsCbsService calculoIbsCbsService;
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
   private final DanfePdfService danfePdfService;
+  private final NotaFiscalValidacaoService validacaoService;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
       CalculoIbsCbsService calculoIbsCbsService,
       GeracaoNotaFiscalService geracaoNotaFiscalService,
-      DanfePdfService danfePdfService) {
+      DanfePdfService danfePdfService,
+      NotaFiscalValidacaoService validacaoService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
     this.danfePdfService = danfePdfService;
+    this.validacaoService = validacaoService;
   }
 
   /**
@@ -139,7 +153,7 @@ public class NotaFiscalService {
         .findByIdAndProdutorId(id, produtor.getId())
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
 
-    if (nota.getStatus() != StatusNotaFiscal.RASCUNHO) {
+    if (!STATUS_EDITAVEIS.contains(nota.getStatus())) {
       throw new NotaFiscalNaoEditavelException(id, nota.getStatus());
     }
 
@@ -192,7 +206,7 @@ public class NotaFiscalService {
         .findByIdAndProdutorId(id, produtor.getId())
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
 
-    if (nota.getStatus() != StatusNotaFiscal.RASCUNHO) {
+    if (!STATUS_EDITAVEIS.contains(nota.getStatus())) {
       throw new NotaFiscalNaoEditavelException(id, nota.getStatus());
     }
 
@@ -211,9 +225,13 @@ public class NotaFiscalService {
    * <ul>
    *   <li>Ownership: busca via {@code findByIdAndProdutorId} — 404 se a nota nao pertencer
    *       ao produtor autenticado (anti-IDOR).</li>
-   *   <li>Idempotencia/transicao: somente notas em {@link StatusNotaFiscal#RASCUNHO} podem
-   *       ter o XML gerado; qualquer outro status resulta em
-   *       {@link NotaFiscalNaoEditavelException} (HTTP 409).</li>
+   *   <li>Idempotencia/transicao: somente notas em {@link StatusNotaFiscal#RASCUNHO} ou
+   *       {@link StatusNotaFiscal#COM_INCONSISTENCIAS} (issue #22) podem ter o XML gerado;
+   *       qualquer outro status resulta em {@link NotaFiscalNaoEditavelException} (HTTP 409).</li>
+   *   <li>Inconsistencias (issue #22): se a validacao fiscal ou XSD falhar, as inconsistencias
+   *       sao persistidas, a nota e marcada como {@link StatusNotaFiscal#COM_INCONSISTENCIAS}
+   *       e o erro 422 e propagado ao cliente. O historico fica em
+   *       {@code GET /api/notas/{id}/validacoes}.</li>
    *   <li>Apos a geracao: {@code xmlGerado}, {@code versaoLayoutNfe} e
    *       {@code dataGeracaoXml} sao preenchidos; o status transita para
    *       {@link StatusNotaFiscal#XML_GERADO}; a chave de acesso e extraida do atributo
@@ -238,11 +256,11 @@ public class NotaFiscalService {
         .findByIdAndProdutorId(id, produtor.getId())
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
 
-    if (nota.getStatus() != StatusNotaFiscal.RASCUNHO) {
+    if (!STATUS_EDITAVEIS.contains(nota.getStatus())) {
       throw new NotaFiscalNaoEditavelException(id, nota.getStatus());
     }
 
-    String xml = geracaoNotaFiscalService.gerarXml(nota);
+    String xml = gerarXmlRegistrandoInconsistencias(nota);
 
     // Extrai a chave de acesso do atributo Id da infNFe: "NFe" + 44 digitos numericos.
     // O GeracaoNotaFiscalService garante que o Id esta no formato correto apos geracao
@@ -315,6 +333,33 @@ public class NotaFiscalService {
     }
 
     return danfePdfService.gerarPdf(nota);
+  }
+
+  // -------------------------------------------------------------------------
+  // Helper privado de geracao de XML com registro de inconsistencias (issue #22)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Executa o pipeline de geração do XML, persistindo o histórico de inconsistências antes
+   * de propagar o erro ao cliente (issue #22).
+   *
+   * <p>Quando a validação fiscal ({@link NotaFiscalInvalidaParaEmissaoException}) ou a
+   * validação do XML gerado ({@link XmlGenerationException}) falha, as inconsistências são
+   * registradas via {@link NotaFiscalValidacaoService#registrarInconsistencias(UUID, List)} —
+   * numa transação independente, que sobrevive ao rollback desta — e a nota é marcada como
+   * {@link StatusNotaFiscal#COM_INCONSISTENCIAS}. A exceção é então relançada para que o
+   * cliente continue recebendo o HTTP 422 com o envelope {@code errors[]}.
+   *
+   * @param nota nota fiscal a ter o XML gerado
+   * @return XML gerado, assinado e validado em caso de sucesso
+   */
+  private String gerarXmlRegistrandoInconsistencias(NotaFiscal nota) {
+    try {
+      return geracaoNotaFiscalService.gerarXml(nota);
+    } catch (NotaFiscalInvalidaParaEmissaoException | XmlGenerationException e) {
+      validacaoService.registrarInconsistencias(nota.getId(), e.getErrors());
+      throw e;
+    }
   }
 
   // -------------------------------------------------------------------------

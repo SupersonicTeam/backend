@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -81,6 +82,10 @@ class NotaFiscalServiceTest {
   /** Servico de geracao do PDF da DANFE (issue #14), mockado neste teste de unidade. */
   @Mock
   private DanfePdfService danfePdfService;
+
+  /** Servico de persistencia de inconsistencias (issue #22), mockado neste teste de unidade. */
+  @Mock
+  private NotaFiscalValidacaoService validacaoService;
 
   @InjectMocks
   private NotaFiscalService notaFiscalService;
@@ -647,6 +652,97 @@ class NotaFiscalServiceTest {
 
     // Nao deve persistir estado inconsistente (chave nula)
     verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  // -------------------------------------------------------------------------
+  // gerarXml — registro de inconsistencias e status COM_INCONSISTENCIAS (issue #22)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("gerarXml deve registrar inconsistencias e relancar 422 quando a validacao fiscal falha")
+  void gerarXmlShouldRegisterInconsistenciasAndRethrowWhenValidationFails() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+
+    var violation = new br.com.agrocontabil.exception
+        .NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+        "item[1].ncm", "NCM e obrigatorio no layout da NF-e");
+    var emissaoException = new br.com.agrocontabil.exception
+        .NotaFiscalInvalidaParaEmissaoException(List.of(violation));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenThrow(emissaoException);
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException.class);
+
+    // Inconsistencias persistidas com os ErrorDetail da excecao; nota nao transita para XML_GERADO
+    verify(validacaoService).registrarInconsistencias(eq(notaId), eq(emissaoException.getErrors()));
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("gerarXml deve registrar inconsistencias quando a validacao XSD falha (XmlGenerationException)")
+  void gerarXmlShouldRegisterInconsistenciasWhenXsdValidationFails() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+
+    var xmlException = new br.com.agrocontabil.exception.XmlGenerationException(
+        "XML invalido segundo o XSD");
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenThrow(xmlException);
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(br.com.agrocontabil.exception.XmlGenerationException.class);
+
+    verify(validacaoService).registrarInconsistencias(eq(notaId), eq(xmlException.getErrors()));
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("gerarXml deve ser permitido a partir de COM_INCONSISTENCIAS (nota corrigida e reprocessada)")
+  void gerarXmlShouldBeAllowedFromComInconsistencias() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(XML_FAKE);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.gerarXml(notaId);
+
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.XML_GERADO);
+    assertThat(response.chaveAcesso()).isEqualTo(CHAVE_FAKE);
+  }
+
+  @Test
+  @DisplayName("update deve ser permitido a partir de COM_INCONSISTENCIAS (correcao dos campos)")
+  void updateShouldBeAllowedFromComInconsistencias() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.update(notaId, buildRequest());
+
+    assertThat(response).isNotNull();
+    verify(notaFiscalRepository).save(any(NotaFiscal.class));
   }
 
   // -------------------------------------------------------------------------
