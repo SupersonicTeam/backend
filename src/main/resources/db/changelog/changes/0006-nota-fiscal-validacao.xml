@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0006-nota-fiscal-validacao.xml
+         Sprint 3 — issue #22: persistencia de inconsistencias de validacao.
+
+         Cria a tabela nota_fiscal_validacao para armazenar o historico de
+         inconsistencias encontradas ao validar/gerar o XML da NF-e. Cada
+         registro espelha um ErrorDetail da camada A (contrato de erro):
+           - id              UUID PK
+           - nota_fiscal_id  UUID               : FK para nota_fiscal (sem constraint;
+                                                    indexada para a consulta de historico)
+           - lote_validacao  UUID               : agrupa as inconsistencias de uma mesma tentativa
+           - code            VARCHAR(60)        : codigo estavel do erro (ErrorCode)
+           - field           VARCHAR(120)       : campo afetado (nullable)
+           - message         VARCHAR(500)       : mensagem amigavel
+           - suggestion      VARCHAR(500)       : sugestao de correcao (nullable)
+           - rejected_value  VARCHAR(500)       : valor rejeitado (nullable)
+           - expected_value  VARCHAR(500)       : valor esperado (nullable)
+           - validado_em     TIMESTAMP WITH TZ  : instante da validacao
+
+         Tipos portaveis H2/PostgreSQL. NAO editar changesets anteriores (0001-0005).
+         ================================================================ -->
+
+    <changeSet id="0006-create-nota-fiscal-validacao" author="supersonic-team">
+        <comment>
+            Cria a tabela nota_fiscal_validacao (historico de inconsistencias de validacao
+            da NF-e, issue #22) com indice em nota_fiscal_id para a consulta de historico.
+        </comment>
+
+        <createTable tableName="nota_fiscal_validacao">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nota_fiscal_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lote_validacao" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="field" type="VARCHAR(120)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="message" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="suggestion" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="rejected_value" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="expected_value" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="validado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="nota_fiscal_validacao" indexName="idx_nf_validacao_nota_fiscal">
+            <column name="nota_fiscal_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="nota_fiscal_validacao" indexName="idx_nf_validacao_nota_fiscal"/>
+            <dropTable tableName="nota_fiscal_validacao"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
