@@ -136,7 +136,9 @@ public class NotaFiscalService {
   }
 
   /**
-   * Atualiza uma nota fiscal existente, somente se estiver em status RASCUNHO.
+   * Atualiza uma nota fiscal existente, somente se estiver em status RASCUNHO ou
+   * {@link StatusNotaFiscal#COM_INCONSISTENCIAS} (issue #22 — nota com inconsistencias
+   * permanece corrigivel).
    *
    * <p>Os itens antigos sao substituidos pelos novos (orphanRemoval cuida da exclusao
    * dos itens removidos). Os totais sao recalculados.
@@ -145,7 +147,7 @@ public class NotaFiscalService {
    * @param request novos dados validados
    * @return DTO de resposta atualizado
    * @throws ResourceNotFoundException        se nao encontrada ou pertencer a outro produtor
-   * @throws NotaFiscalNaoEditavelException   se o status nao for RASCUNHO (409 Conflict)
+   * @throws NotaFiscalNaoEditavelException   se o status nao for editavel (409 Conflict)
    */
   public NotaFiscalResponse update(UUID id, NotaFiscalRequest request) {
     Produtor produtor = produtorProvider.get();
@@ -194,11 +196,12 @@ public class NotaFiscalService {
   }
 
   /**
-   * Exclui uma nota fiscal, somente se estiver em status RASCUNHO.
+   * Exclui uma nota fiscal, somente se estiver em status RASCUNHO ou
+   * {@link StatusNotaFiscal#COM_INCONSISTENCIAS} (issue #22).
    *
    * @param id identificador da nota fiscal
    * @throws ResourceNotFoundException      se nao encontrada ou pertencer a outro produtor
-   * @throws NotaFiscalNaoEditavelException se o status nao for RASCUNHO (409 Conflict)
+   * @throws NotaFiscalNaoEditavelException se o status nao for editavel (409 Conflict)
    */
   public void delete(UUID id) {
     Produtor produtor = produtorProvider.get();

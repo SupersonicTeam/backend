@@ -134,8 +134,9 @@ public class NotaFiscalController {
   @PutMapping("/{id}")
   @Operation(
       summary = "Atualiza uma nota fiscal",
-      description = "Somente notas em status RASCUNHO podem ser atualizadas. "
-          + "Retorna 409 se o status nao for RASCUNHO.")
+      description = "Somente notas em status RASCUNHO ou COM_INCONSISTENCIAS podem ser "
+          + "atualizadas (a nota com inconsistencias e corrigivel). "
+          + "Retorna 409 nos demais status.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Nota atualizada com sucesso"),
       @ApiResponse(responseCode = "400", description = "Dados invalidos",
@@ -158,8 +159,8 @@ public class NotaFiscalController {
   @DeleteMapping("/{id}")
   @Operation(
       summary = "Exclui uma nota fiscal",
-      description = "Somente notas em status RASCUNHO podem ser excluidas. "
-          + "Retorna 409 se o status nao for RASCUNHO.")
+      description = "Somente notas em status RASCUNHO ou COM_INCONSISTENCIAS podem ser "
+          + "excluidas. Retorna 409 nos demais status.")
   @ApiResponses({
       @ApiResponse(responseCode = "204", description = "Nota excluida com sucesso"),
       @ApiResponse(responseCode = "404", description = "Nota nao encontrada",
@@ -176,18 +177,20 @@ public class NotaFiscalController {
   /**
    * Gera o XML da NF-e para a nota indicada, persiste-o e transiciona o status.
    *
-   * <p>Idempotencia: somente notas em RASCUNHO podem ter o XML gerado. Chamadas
-   * subsequentes com status XML_GERADO retornam 409 — use GET /{id}/xml para
-   * obter o XML ja gerado.
+   * <p>Idempotencia: somente notas em RASCUNHO ou COM_INCONSISTENCIAS podem ter o XML
+   * gerado. Chamadas subsequentes com status XML_GERADO retornam 409 — use GET /{id}/xml
+   * para obter o XML ja gerado. Se a validacao falhar, a nota vai para COM_INCONSISTENCIAS
+   * e o historico fica em GET /{id}/validacoes (issue #22).
    */
   @PostMapping("/{id}/gerar-xml")
   @Operation(
       summary = "Gera o XML da NF-e",
       description = "Gera, valida (XSD) e persiste o XML da NF-e. "
-          + "Transiciona o status de RASCUNHO para XML_GERADO. "
-          + "Preenche chaveAcesso e dataGeracaoXml na entidade. "
-          + "Somente notas em RASCUNHO podem ser processadas; "
-          + "retorna 409 se o status nao for RASCUNHO.")
+          + "Transiciona o status de RASCUNHO (ou COM_INCONSISTENCIAS, apos correcao) "
+          + "para XML_GERADO. Preenche chaveAcesso e dataGeracaoXml na entidade. "
+          + "Se a validacao falhar, a nota vai para COM_INCONSISTENCIAS (422) e as "
+          + "inconsistencias ficam em GET /{id}/validacoes. "
+          + "Retorna 409 se o status nao permitir geracao (ex.: XML ja gerado).")
   @ApiResponses({
       @ApiResponse(responseCode = "200",
           description = "XML gerado com sucesso; nota atualizada com status XML_GERADO"),
