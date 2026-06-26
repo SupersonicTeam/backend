@@ -10,6 +10,7 @@ package br.com.agrocontabil.model;
  * <p>A coluna {@code status} é {@code VARCHAR(20)} — todos os nomes cabem.
  *
  * <p>Adicionados na Sprint 3 (issue #15): {@link #REJEITADA} e {@link #PENDENTE_SEFAZ}.
+ * Adicionado na Sprint 3 (issue #22): {@link #COM_INCONSISTENCIAS}.
  */
 public enum StatusNotaFiscal {
 
@@ -17,6 +18,17 @@ public enum StatusNotaFiscal {
    * Nota em edição — ainda não gerou XML. Estado inicial de toda nota criada pelo sistema.
    */
   RASCUNHO,
+
+  /**
+   * A última tentativa de gerar o XML falhou na validação (regras fiscais ou XSD).
+   *
+   * <p>As inconsistências encontradas ficam persistidas em {@code nota_fiscal_validacao}
+   * (issue #22) e podem ser consultadas em {@code GET /api/notas/{id}/validacoes}. A nota
+   * permanece <strong>editável</strong> — equivale a um RASCUNHO que precisa de correção:
+   * após corrigir os campos, uma nova chamada a {@code gerar-xml} pode promovê-la a
+   * {@link #XML_GERADO}. Adicionado na Sprint 3 (issue #22).
+   */
+  COM_INCONSISTENCIAS,
 
   /**
    * XML da NF-e foi gerado e assinado localmente. Pronto para envio à SEFAZ.

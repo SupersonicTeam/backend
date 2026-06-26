@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
@@ -24,6 +25,7 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.NotaFiscalService;
+import br.com.agrocontabil.service.NotaFiscalValidacaoService;
 import br.com.agrocontabil.service.SefazService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -72,6 +74,10 @@ class NotaFiscalControllerTest {
   /** Dependencia do controller para o endpoint de envio a SEFAZ (issue #15). */
   @MockBean
   private SefazService sefazService;
+
+  /** Dependencia do controller para o endpoint de historico de validacoes (issue #22). */
+  @MockBean
+  private NotaFiscalValidacaoService validacaoService;
 
   /**
    * MockProdutorFilter e um @Component que depende de ProdutorRepository.
@@ -507,6 +513,62 @@ class NotaFiscalControllerTest {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.status").value(409))
         .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_CONSULTAVEL')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/validacoes → 200 historico  /  404 anti-IDOR (issue #22)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/validacoes deve retornar 200 com o historico de inconsistencias")
+  void getValidacoesShouldReturn200WithHistory() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    UUID lote = UUID.randomUUID();
+    NotaFiscalValidacaoResponse validacao = new NotaFiscalValidacaoResponse(
+        lote,
+        "NOTA_INVALIDA_EMISSAO",
+        "item[1].ncm",
+        "NCM e obrigatorio no layout da NF-e",
+        null,
+        null,
+        null,
+        OffsetDateTime.now());
+
+    when(validacaoService.listarValidacoes(eq(notaId))).thenReturn(List.of(validacao));
+
+    mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$[0].loteValidacao").value(lote.toString()))
+        .andExpect(jsonPath("$[0].code").value("NOTA_INVALIDA_EMISSAO"))
+        .andExpect(jsonPath("$[0].field").value("item[1].ncm"));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/validacoes deve retornar 200 com lista vazia quando nao ha inconsistencias")
+  void getValidacoesShouldReturn200WithEmptyList() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(validacaoService.listarValidacoes(eq(notaId))).thenReturn(List.of());
+
+    mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/validacoes deve retornar 404 para nota inexistente ou de outro produtor")
+  void getValidacoesShouldReturn404WhenNotaNotFound() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(validacaoService.listarValidacoes(eq(notaId)))
+        .thenThrow(new ResourceNotFoundException("NotaFiscal", notaId));
+
+    mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.errors[?(@.code == 'RESOURCE_NOT_FOUND')]").exists());
   }
 
   // -------------------------------------------------------------------------

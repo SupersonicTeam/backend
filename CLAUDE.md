@@ -39,14 +39,16 @@ br.com.agrocontabil
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, GeracaoNotaFiscalService,
 │                  # SefazService, CalculoIbsCbsService, ChaveAcessoGenerator,
-│                  # AuthenticatedProdutorProvider)
+│                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider)
 ├── repository/    # Spring Data JPA
 ├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario)
-│                  # enums: StatusNotaFiscal (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA)
+│                  # enums: StatusNotaFiscal (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS)
+│                  # NotaFiscalValidacao (historico de inconsistencias de validacao — issue #22)
 │                  # modelos pré-criados para sprint futura de consultoria AI:
 │                  # Conversa, Diagnostico, Feedback, ImpactoGeral, PorteEmpresa, TipoFeedback, RegimeTributario
 ├── dto/           # request/response (records): NotaFiscalRequest/Response,
-│                  # NotaFiscalItemRequest/Response, SefazEnvioResponse, SefazStatusResponse
+│                  # NotaFiscalItemRequest/Response, SefazEnvioResponse, SefazStatusResponse,
+│                  # NotaFiscalValidacaoResponse
 ├── mapper/        # entidade <-> DTO (NotaFiscalMapper)
 ├── nfe/           # geração de NF-e: model/ (JAXB puras layout 4.00), FiscalRulesValidator,
 │                  # NotaFiscalNfeMapper, XmlGenerator, XsdValidator, SecureXmlFactories (XXE),
@@ -73,6 +75,7 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
+| GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
 
 ## Segurança
 
@@ -90,8 +93,13 @@ br.com.agrocontabil
 
 ## Convenções
 
-- **Idioma do código:** inglês (variáveis, métodos, classes). **Comunicação:** português.
-- **Estilo:** Google Java Style Guide.
+- **Idioma do código (convenção híbrida, refletindo a base real):**
+  - **Domínio fiscal → português.** Classes, métodos de negócio e campos do domínio usam português porque os termos são intraduzíveis sem perda de sentido fiscal-BR: `NotaFiscal`, `NotaFiscalItem`, `Produtor`, `ChaveAcessoGenerator`, `CalculoIbsCbsService`, `gerarXml`, `sincronizarStatus`, `registrarInconsistencias`. (`NotaFiscal → Invoice` perde a conotação fiscal brasileira; `SEFAZ`, `DANFE`, `IBS/CBS` não têm tradução.)
+  - **Infra e utilitários técnicos genéricos → inglês.** Quando o conceito não é do domínio fiscal: `ApiError`, `ErrorCode`, `ErrorDetail`, `XmlGenerator`, `XsdValidator`, `SecureXmlFactories`, `GlobalExceptionHandler`, `*Config`, `DataLoader`.
+  - **API obrigatória do Java/Spring → inglês.** Getters/setters (`getId`/`setStatus`), nomes exigidos por frameworks e anotações permanecem em inglês.
+  - **Regra prática:** escreva como o código ao redor. Na dúvida sobre um termo do domínio fiscal, use português; para um utilitário técnico genérico, use inglês.
+  - **Comunicação (PR, commits, conversa):** português.
+- **Estilo:** Google Java Style Guide (checkstyle `google_checks.xml` no `verify`, severidade *warning* — não bloqueante).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
 - **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix:`, `chore/` + worktree isolado.
 - **PRs pequenos e deployáveis** — uma responsabilidade lógica por PR (programação incremental).
@@ -102,7 +110,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 140 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 157 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 3 concluída (2026-06-24)
 
@@ -120,12 +128,12 @@ br.com.agrocontabil
 - **Envio SEFAZ homologação — issue #15 (PR #26):** `SefazTransport` (interface plugável); `MockSefazTransport` (mock determinístico — autoriza/rejeita com base no cStat); `SefazClient` (orquestra retry via `RetryConfig`); `SefazService` (transita status: XML_GERADO → AUTORIZADA/REJEITADA/PENDENTE_SEFAZ); endpoint `POST /api/notas/{id}/enviar-sefaz`; `SefazProperties` (ambiente, retry); `StatusNotaFiscal` expandido (+ REJEITADA, PENDENTE_SEFAZ).
 - **Consulta status SEFAZ — issue #16 (PR #27):** `SefazService.sincronizarStatus()` consulta pela chave de acesso e atualiza status local; `SefazStatusSyncJob` (job agendado via `@Scheduled`, `SchedulingConfig`); endpoint `GET /api/notas/{id}/status-sefaz`.
 - **Download DANFE PDF — issue #14 (PR #28):** `DanfePdfService` (JasperReports + template `.jrxml`); `DanfeItemRow`; endpoint `GET /api/notas/{id}/pdf` (`application/pdf`, `Content-Disposition: attachment`); exceções `DanfeIndisponivelException` (409 para RASCUNHO) e `DanfeGenerationException`.
+- **Persistência de inconsistências de validação — issue #22 (PR #29):** entidade `NotaFiscalValidacao` (espelha `ErrorDetail` + `loteValidacao` UUID que agrupa cada tentativa + `validadoEm`); `NotaFiscalValidacaoRepository`; migration `0006`; novo status `COM_INCONSISTENCIAS` (decisão: só este — `VALIDADA`/`AGUARDANDO_CORRECAO` descartados por redundância, pois `XML_GERADO` já implica validação OK). `NotaFiscalValidacaoService` persiste o lote em transação **`REQUIRES_NEW`** (sobrevive ao rollback do 422) e marca a nota `COM_INCONSISTENCIAS`; `NotaFiscalService.gerarXml` captura `NotaFiscalInvalidaParaEmissaoException`/`XmlGenerationException`, registra o histórico e relança. `COM_INCONSISTENCIAS` é **editável** (update/delete/gerar-xml liberados como RASCUNHO). Histórico acumulado por tentativa em `GET /api/notas/{id}/validacoes` (ownership anti-IDOR 404).
 
-Cobertura: **140 testes** (JUnit + Mockito). Cada PR passou por code review (GitHub Copilot) + auditoria OWASP + CI verde.
+Cobertura: **157 testes** (JUnit + Mockito). Cada PR passou por code review (GitHub Copilot) + auditoria OWASP + CI verde.
 
 ### Próxima sprint — issues abertas
 
-- **#22** Persistência de inconsistências de validação + status da nota
 - **#21** Cancelamento de NF-e (RN006 — limite 30 dias)
 - **#20** Validação de NCM e CFOP (RN008)
 - **#19** Importação de XML de nota fiscal (UC002)

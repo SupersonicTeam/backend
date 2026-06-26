@@ -84,3 +84,18 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     updated_at              TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
 );
+
+-- Inconsistencias de validacao da NF-e — Sprint 3 issue #22 (migration 0006)
+CREATE TABLE IF NOT EXISTS nota_fiscal_validacao (
+    id              UUID           NOT NULL,
+    nota_fiscal_id  UUID           NOT NULL,
+    lote_validacao  UUID           NOT NULL,
+    code            VARCHAR(60)    NOT NULL,
+    field           VARCHAR(120),
+    message         VARCHAR(500)   NOT NULL,
+    suggestion      VARCHAR(500),
+    rejected_value  VARCHAR(500),
+    expected_value  VARCHAR(500),
+    validado_em     TIMESTAMP WITH TIME ZONE NOT NULL,
+    PRIMARY KEY (id)
+);
