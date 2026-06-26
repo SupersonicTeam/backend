@@ -21,10 +21,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
 
 /**
  * Testes de integração do fluxo de persistência de inconsistências (issue #22).
@@ -42,6 +49,12 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = Replace.NONE)
+@TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=none")
+@Sql(
+    scripts = "classpath:schema-nota-fiscal-test.sql",
+    executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
+@DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 class NotaFiscalValidacaoFlowTest {
 
   @Autowired
