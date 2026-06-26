@@ -93,8 +93,13 @@ br.com.agrocontabil
 
 ## Convenções
 
-- **Idioma do código:** inglês (variáveis, métodos, classes). **Comunicação:** português.
-- **Estilo:** Google Java Style Guide.
+- **Idioma do código (convenção híbrida, refletindo a base real):**
+  - **Domínio fiscal → português.** Classes, métodos de negócio e campos do domínio usam português porque os termos são intraduzíveis sem perda de sentido fiscal-BR: `NotaFiscal`, `NotaFiscalItem`, `Produtor`, `ChaveAcessoGenerator`, `CalculoIbsCbsService`, `gerarXml`, `sincronizarStatus`, `registrarInconsistencias`. (`NotaFiscal → Invoice` perde a conotação fiscal brasileira; `SEFAZ`, `DANFE`, `IBS/CBS` não têm tradução.)
+  - **Infra e utilitários técnicos genéricos → inglês.** Quando o conceito não é do domínio fiscal: `ApiError`, `ErrorCode`, `ErrorDetail`, `XmlGenerator`, `XsdValidator`, `SecureXmlFactories`, `GlobalExceptionHandler`, `*Config`, `DataLoader`.
+  - **API obrigatória do Java/Spring → inglês.** Getters/setters (`getId`/`setStatus`), nomes exigidos por frameworks e anotações permanecem em inglês.
+  - **Regra prática:** escreva como o código ao redor. Na dúvida sobre um termo do domínio fiscal, use português; para um utilitário técnico genérico, use inglês.
+  - **Comunicação (PR, commits, conversa):** português.
+- **Estilo:** Google Java Style Guide (checkstyle `google_checks.xml` no `verify`, severidade *warning* — não bloqueante).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
 - **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix:`, `chore/` + worktree isolado.
 - **PRs pequenos e deployáveis** — uma responsabilidade lógica por PR (programação incremental).
