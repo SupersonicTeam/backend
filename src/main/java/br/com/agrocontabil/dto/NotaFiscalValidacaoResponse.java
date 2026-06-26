@@ -1,6 +1,5 @@
 package br.com.agrocontabil.dto;
 
-import br.com.agrocontabil.model.NotaFiscalValidacao;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
@@ -33,17 +32,4 @@ public record NotaFiscalValidacaoResponse(
     String rejectedValue,
     String expectedValue,
     OffsetDateTime validadoEm) {
-
-  /** Converte a entidade persistida no DTO de resposta. */
-  public static NotaFiscalValidacaoResponse from(NotaFiscalValidacao validacao) {
-    return new NotaFiscalValidacaoResponse(
-        validacao.getLoteValidacao(),
-        validacao.getCode(),
-        validacao.getField(),
-        validacao.getMessage(),
-        validacao.getSuggestion(),
-        validacao.getRejectedValue(),
-        validacao.getExpectedValue(),
-        validacao.getValidadoEm());
-  }
 }

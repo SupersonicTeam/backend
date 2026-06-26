@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.Produtor;
@@ -119,10 +120,7 @@ public class NotaFiscalValidacaoService {
         .findByIdAndProdutorId(notaId, produtor.getId())
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
 
-    return validacaoRepository
-        .findByNotaFiscalIdOrderByValidadoEmDesc(notaId)
-        .stream()
-        .map(NotaFiscalValidacaoResponse::from)
-        .toList();
+    return NotaFiscalMapper.toValidacaoResponseList(
+        validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(notaId));
   }
 }
