@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 /**
  * Testes unitarios do {@link MockSefazTransport}.
  *
- * <p>Verifica o retorno determinístico de autorização e a derivação do protocol a partir
- * da key de acesso. Sem contexto Spring — instanciacao direta.
+ * <p>Verifica o retorno determinístico de autorização e a derivação do protocolo a partir
+ * da chave de acesso. Sem contexto Spring — instanciacao direta.
  */
 class MockSefazTransportTest {
 
@@ -20,30 +20,30 @@ class MockSefazTransportTest {
   @Test
   @DisplayName("enviar deve retornar AUTORIZADA com cStat 100 e protocolo derivado da chave")
   void enviarShouldReturnAuthorizedWithDerivedProtocol() {
-    SefazReturn retorno = transport.send("<xml/>", CHAVE, SefazEnvironment.HOMOLOGACAO);
+    SefazRetorno retorno = transport.enviar("<xml/>", CHAVE, SefazAmbiente.HOMOLOGACAO);
 
-    assertThat(retorno.situation()).isEqualTo(SefazSituation.AUTORIZADA);
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
     assertThat(retorno.cStat()).isEqualTo("100");
     assertThat(retorno.xMotivo()).isEqualTo("Autorizado o uso da NF-e");
-    assertThat(retorno.protocol()).isEqualTo("1" + CHAVE.substring(0, 14));
-    assertThat(retorno.authorizationDate()).isNotNull();
+    assertThat(retorno.protocolo()).isEqualTo("1" + CHAVE.substring(0, 14));
+    assertThat(retorno.dataAutorizacao()).isNotNull();
   }
 
   @Test
   @DisplayName("consultarStatus deve retornar AUTORIZADA de forma deterministica")
   void consultarStatusShouldReturnAuthorized() {
-    SefazReturn retorno = transport.queryStatus(CHAVE, SefazEnvironment.HOMOLOGACAO);
+    SefazRetorno retorno = transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
 
-    assertThat(retorno.situation()).isEqualTo(SefazSituation.AUTORIZADA);
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
     assertThat(retorno.cStat()).isEqualTo("100");
   }
 
   @Test
   @DisplayName("enviar deve usar protocolo de fallback quando a chave e nula")
   void enviarShouldFallbackProtocolWhenChaveIsNull() {
-    SefazReturn retorno = transport.send("<xml/>", null, SefazEnvironment.HOMOLOGACAO);
+    SefazRetorno retorno = transport.enviar("<xml/>", null, SefazAmbiente.HOMOLOGACAO);
 
-    assertThat(retorno.situation()).isEqualTo(SefazSituation.AUTORIZADA);
-    assertThat(retorno.protocol()).isEqualTo("100000000000001");
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
+    assertThat(retorno.protocolo()).isEqualTo("100000000000001");
   }
 }

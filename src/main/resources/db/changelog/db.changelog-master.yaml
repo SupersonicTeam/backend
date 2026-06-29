@@ -15,14 +15,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/0004-nota-fiscal-xml-gerado.xml
   - include:
-      file: db/changelog/changes/0005-nota-fiscal-tipo-documento.xml
-  - include:
-      file: db/changelog/changes/0006-ncm-cfop-referencia.xml
-  - include:
-      file: db/changelog/changes/0007-nota-fiscal-importacao.xml
-  - include:
-      file: db/changelog/changes/0008-nota-fiscal-cancelamento.xml
-  - include:
       file: db/changelog/changes/0005-nota-fiscal-sefaz.xml
   - include:
       file: db/changelog/changes/0006-nota-fiscal-validacao.xml

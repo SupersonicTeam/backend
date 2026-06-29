@@ -83,7 +83,7 @@ public class GlobalExceptionHandler {
 
   /**
    * Mensagem de envelope segura ao cliente. {@link XmlGenerationException} usa sua
-   * mensagem-cliente genérica; qualquer 5xx (ex.: {@link DigitalSignatureException},
+   * mensagem-cliente genérica; qualquer 5xx (ex.: {@link AssinaturaDigitalException},
    * cujo {@code getMessage()} carrega detalhe técnico) recebe texto genérico; demais
    * exceções (4xx) usam {@code getMessage()}, que já é seguro.
    */
@@ -95,36 +95,6 @@ public class GlobalExceptionHandler {
       return "Erro interno ao processar a NF-e. Tente novamente mais tarde.";
     }
     return ex.getMessage();
-  }
-
-  /** Parte multipart obrigatoria ausente (ex.: nenhum fileName no import). HTTP 400. */
-  @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
-  public ResponseEntity<ApiError> handleMissingPart(
-      org.springframework.web.multipart.support.MissingServletRequestPartException ex,
-      HttpServletRequest request) {
-    ApiError body = ApiError.of(
-        HttpStatus.BAD_REQUEST.value(),
-        HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Requisicao de upload invalida: " + ex.getMessage(),
-        request.getRequestURI(),
-        List.of(ErrorDetail.of(ErrorCode.ILLEGAL_ARGUMENT, "Requisicao de upload invalida.")));
-    return ResponseEntity.badRequest().body(body);
-  }
-
-  /** Upload acima do limite configurado (spring.servlet.multipart.max-file-size). HTTP 400. */
-  @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
-  public ResponseEntity<ApiError> handleMaxUpload(
-      org.springframework.web.multipart.MaxUploadSizeExceededException ex,
-      HttpServletRequest request) {
-    log.warn("Upload acima do limite: uri={}", request.getRequestURI());
-    ApiError body = ApiError.of(
-        HttpStatus.BAD_REQUEST.value(),
-        HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Arquivo acima do tamanho maximo permitido para importacao.",
-        request.getRequestURI(),
-        List.of(ErrorDetail.of(ErrorCode.ILLEGAL_ARGUMENT,
-            "Arquivo acima do tamanho maximo permitido para importacao.")));
-    return ResponseEntity.badRequest().body(body);
   }
 
   private ErrorDetail toErrorDetail(FieldError error) {

@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 
 /**
- * Lançada quando a geração do PDF da DANFE falha por reason técnico (compilação do template,
+ * Lançada quando a geração do PDF da DANFE falha por motivo técnico (compilação do template,
  * preenchimento ou exportação do relatório). HTTP 500 Internal Server Error.
  *
  * <p>O detalhe técnico vai apenas para o log; ao cliente é exposta uma mensagem genérica.

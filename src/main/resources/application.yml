@@ -12,11 +12,6 @@ spring:
         max-page-size: 100
         default-page-size: 20
 
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 50MB
-
   jpa:
     open-in-view: false
     hibernate:

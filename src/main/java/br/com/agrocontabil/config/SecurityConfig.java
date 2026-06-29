@@ -21,18 +21,18 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * <p>Mesmo liberado, mantemos: CSRF desabilitado (API stateless), sessao stateless e CORS
  * controlado por configuracao.
  *
- * <p>Em perfil {@code dev}, o {@link MockProducerFilter} e registrado automaticamente para simular
+ * <p>Em perfil {@code dev}, o {@link MockProdutorFilter} e registrado automaticamente para simular
  * um usuario autenticado sem necessidade de credenciais reais.
  */
 @Configuration
 public class SecurityConfig {
 
   private final CorsConfigurationSource corsConfigurationSource;
-  private final MockProducerFilter mockProdutorFilter;
+  private final MockProdutorFilter mockProdutorFilter;
 
   public SecurityConfig(
       CorsConfigurationSource corsConfigurationSource,
-      @Autowired(required = false) MockProducerFilter mockProdutorFilter) {
+      @Autowired(required = false) MockProdutorFilter mockProdutorFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
     this.mockProdutorFilter = mockProdutorFilter;
   }

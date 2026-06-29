@@ -44,20 +44,10 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     valor_total_ibs             NUMERIC(15,2),
     valor_total_cbs             NUMERIC(15,2),
     status                      VARCHAR(20)    NOT NULL DEFAULT 'RASCUNHO',
-    -- Tipo de documento — Sprint 2 issue #18 (NFA)
-    tipo_documento              VARCHAR(3)     NOT NULL DEFAULT 'NFE',
     -- XML gerado — Sprint 2 Sessão 6
     xml_gerado                  TEXT,
     versao_layout_nfe           VARCHAR(10),
     data_geracao_xml            TIMESTAMP WITH TIME ZONE,
-    -- Importacao de XML de terceiros — Sprint 2 issue #19
-    origem                      VARCHAR(10)    NOT NULL DEFAULT 'PROPRIA',
-    emitente_nome               VARCHAR(255),
-    emitente_cpf_cnpj           VARCHAR(14),
-    -- Cancelamento — Sprint 3 issue #21 (RN006)
-    data_cancelamento           TIMESTAMP WITH TIME ZONE,
-    motivo_cancelamento         VARCHAR(255),
-    protocolo_cancelamento      VARCHAR(50),
     -- Retorno da SEFAZ — Sprint 3 issue #15
     protocolo_autorizacao       VARCHAR(20),
     data_autorizacao            TIMESTAMP WITH TIME ZONE,

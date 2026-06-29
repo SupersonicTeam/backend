@@ -18,27 +18,27 @@ import lombok.Getter;
 @AllArgsConstructor
 public class DanfeItemRow {
 
-  /** Número sequencial do item na invoice. */
-  private final Integer itemNumber;
+  /** Número sequencial do item na nota. */
+  private final Integer numeroItem;
 
   /** Descrição do produto/serviço. */
-  private final String description;
+  private final String descricao;
 
   /** Unidade comercial (ex.: KG, UN). */
-  private final String unit;
+  private final String unidade;
 
   /** Quantidade já formatada. */
-  private final String quantity;
+  private final String quantidade;
 
   /** Valor unitário já formatado. */
-  private final String unitPrice;
+  private final String valorUnitario;
 
   /** Valor total do item já formatado. */
-  private final String totalValue;
+  private final String valorTotal;
 
   /** Valor do IBS do item já formatado. */
-  private final String ibsValue;
+  private final String valorIbs;
 
   /** Valor da CBS do item já formatado. */
-  private final String cbsValue;
+  private final String valorCbs;
 }
