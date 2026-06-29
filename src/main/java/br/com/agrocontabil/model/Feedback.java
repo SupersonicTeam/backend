@@ -33,13 +33,13 @@ public class Feedback {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "tipo", columnDefinition = "VARCHAR(20)")
-  private TipoFeedback tipo;
+  private FeedbackType type;
 
   @Column(name = "avaliacao")
-  private Integer avaliacao;
+  private Integer rating;
 
   @Column(name = "comentario", columnDefinition = "TEXT")
-  private String comentario;
+  private String comment;
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "metadata", columnDefinition = "jsonb")

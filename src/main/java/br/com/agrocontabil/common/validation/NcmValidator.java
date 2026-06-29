@@ -1,21 +1,21 @@
 package br.com.agrocontabil.common.validation;
 
-import br.com.agrocontabil.repository.NcmAgropecuarioRepository;
+import br.com.agrocontabil.repository.AgriculturalNcmRepository;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 /**
  * Implementa {@link ValidNcm} consultando a tabela de referência via
- * {@link NcmAgropecuarioRepository}. Instanciado pela fábrica de validators do
+ * {@link AgriculturalNcmRepository}. Instanciado pela fábrica de validators do
  * Spring com injeção de construtor (o repositório vem do contexto).
  *
  * <p>{@code null}/blank → válido (defere ao {@code @NotBlank}).
  */
 public class NcmValidator implements ConstraintValidator<ValidNcm, String> {
 
-  private final NcmAgropecuarioRepository repository;
+  private final AgriculturalNcmRepository repository;
 
-  public NcmValidator(NcmAgropecuarioRepository repository) {
+  public NcmValidator(AgriculturalNcmRepository repository) {
     this.repository = repository;
   }
 

@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 
 /**
- * Base de todas as exceções de domínio mapeadas para o contrato de erro estruturado.
+ * Base de todas as exceções de domínio mapeadas para o contrato de error estruturado.
  *
  * <p>Carrega o {@link HttpStatus} de resposta, a mensagem de envelope (amigável ao
  * cliente) e a lista de {@link ErrorDetail}. O {@code GlobalExceptionHandler} converte

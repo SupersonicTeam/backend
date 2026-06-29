@@ -14,7 +14,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
  * Valida que o valor anotado e um CPF estruturalmente valido (modulo 11).
  *
  * <p>Um valor {@code null} e considerado valido — combine com {@code @NotBlank}
- * quando o campo for obrigatorio. A validacao remove formatacao (pontos e traco)
+ * quando o field for obrigatorio. A validacao remove formatacao (pontos e traco)
  * antes de checar os digitos verificadores.
  */
 @Documented

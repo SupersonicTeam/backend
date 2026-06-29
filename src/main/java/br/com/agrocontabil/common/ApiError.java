@@ -4,12 +4,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * Corpo padronizado de resposta de erro da API.
+ * Corpo padronizado de resposta de error da API.
  *
  * <p>Usado por toda a aplicacao através do {@code GlobalExceptionHandler}.
  * Nunca expõe stack trace nem detalhes sensíveis ao cliente.
  *
- * @param timestamp instante do erro
+ * @param timestamp instante do error
  * @param status    código HTTP
  * @param error     descrição curta do status (ex.: "Not Found")
  * @param message   mensagem amigável (envelope) para o cliente

@@ -64,7 +64,7 @@ public class XsdValidator {
    * @param xml string XML gerada pelo {@link XmlGenerator}
    * @throws XmlGenerationException se o XML não for válido, com lista de erros formatados
    */
-  public void validar(String xml) {
+  public void validate(String xml) {
     Schema s = getSchema();
     Validator validator = s.newValidator();
 
@@ -103,7 +103,7 @@ public class XsdValidator {
       }
     }
 
-    // A NF-e é assinada digitalmente (ds:Signature) antes da validação XSD — todo erro
+    // A NF-e é assinada digitalmente (ds:Signature) antes da validação XSD — todo error
     // de validação é fatal (a tolerância da Sprint 2 à ausência de assinatura foi removida
     // quando a assinatura ICP-Brasil/sandbox passou a integrar o pipeline de geração).
     if (!errors.isEmpty()) {
@@ -197,7 +197,7 @@ public class XsdValidator {
       if (systemId == null) {
         return null;
       }
-      // Extrai o nome do arquivo do systemId (pode ter path relativo)
+      // Extrai o name do fileName do systemId (pode ter path relativo)
       String fileName = systemId.contains("/")
           ? systemId.substring(systemId.lastIndexOf('/') + 1)
           : systemId;

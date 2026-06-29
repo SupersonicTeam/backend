@@ -3,7 +3,7 @@ package br.com.agrocontabil.common.validation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import br.com.agrocontabil.repository.CfopProdutorRuralRepository;
+import br.com.agrocontabil.repository.RuralProducerCfopRepository;
 import jakarta.validation.ConstraintValidatorContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CfopValidatorTest {
 
   @Mock
-  private CfopProdutorRuralRepository repository;
+  private RuralProducerCfopRepository repository;
 
   private CfopValidator validator;
   private ConstraintValidatorContext context;
