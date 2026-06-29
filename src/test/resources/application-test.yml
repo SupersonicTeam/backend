@@ -23,3 +23,13 @@ spring:
 app:
   cors:
     allowed-origins: http://localhost:4200
+  nfe:
+    # Certificado autoassinado de teste (sem valor juridico) — ver src/test/resources/certs/README.md
+    certificado:
+      path: classpath:certs/nfe-teste.p12
+      password: changeit
+      alias: nfe-teste
+    # SEFAZ: job de sincronizacao desativado nos testes (nao interferir nas assercoes).
+    sefaz:
+      sync:
+        enabled: false

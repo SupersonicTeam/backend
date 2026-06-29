@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.com.agrocontabil.config.CertificadoDigitalProperties;
 import br.com.agrocontabil.config.TributosProperties;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
@@ -11,7 +12,10 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
+import br.com.agrocontabil.nfe.AssinaturaValidator;
 import br.com.agrocontabil.nfe.FiscalRulesValidator;
+import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
+import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
@@ -61,9 +65,14 @@ class GeracaoNotaFiscalServiceTest {
     FiscalRulesValidator validator = new FiscalRulesValidator();
     NotaFiscalNfeMapper mapper = new NotaFiscalNfeMapper(chaveAcessoGenerator);
     XmlGenerator xmlGenerator = new XmlGenerator();
+    KeyStoreCertificadoProvider certProvider = new KeyStoreCertificadoProvider(
+        new CertificadoDigitalProperties("classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"));
+    NfeAssinador nfeAssinador = new NfeAssinador(certProvider);
+    AssinaturaValidator assinaturaValidator = new AssinaturaValidator();
     XsdValidator xsdValidator = new XsdValidator();
 
-    service = new GeracaoNotaFiscalService(validator, mapper, xmlGenerator, xsdValidator);
+    service = new GeracaoNotaFiscalService(
+        validator, mapper, xmlGenerator, nfeAssinador, assinaturaValidator, xsdValidator);
   }
 
   // =========================================================================
@@ -140,26 +149,39 @@ class GeracaoNotaFiscalServiceTest {
   }
 
   // =========================================================================
-  // Cenário 2b: o filtro de "documento sem assinatura" NÃO mascara outros erros
+  // Cenário 2b: XML gerado vem assinado; erro estrutural no XSD é fatal
   // =========================================================================
 
   @Test
-  @DisplayName("XsdValidator deve lancar para erro estrutural (alem da assinatura ausente)")
-  void xsdValidatorDeveRejeitarErroEstruturalAlemDaAssinatura() {
+  @DisplayName("XML gerado pelo pipeline vem assinado digitalmente (ds:Signature + X509)")
+  void xmlGeradoVemAssinado() {
+    NotaFiscal nota = buildNotaCompleta();
+    calculoIbsCbsService.calcular(nota);
+
+    String xml = service.gerarXml(nota);
+
+    assertThat(xml).contains("Signature");
+    assertThat(xml).contains("X509Certificate");
+    assertThat(xml).contains("rsa-sha1");
+  }
+
+  @Test
+  @DisplayName("XsdValidator rejeita erro estrutural (hardening da assinatura ausente revertido)")
+  void xsdValidatorRejeitaErroEstrutural() {
     NotaFiscal nota = buildNotaCompleta();
     calculoIbsCbsService.calcular(nota);
 
     String xmlValido = service.gerarXml(nota);
     // Corrompe a estrutura: remove o elemento obrigatorio <vNF> dos totais (ICMSTot).
-    // Isso gera um erro XSD que NAO e a ausencia de assinatura — deve permanecer fatal.
     String xmlCorrompido = xmlValido.replaceFirst("<vNF>[^<]*</vNF>", "");
     assertThat(xmlCorrompido).doesNotContain("<vNF>");
 
     XsdValidator validatorReal = new XsdValidator();
 
+    // Todo erro XSD agora e fatal — nada e tolerado.
     assertThatThrownBy(() -> validatorReal.validar(xmlCorrompido))
         .isInstanceOf(br.com.agrocontabil.exception.XmlGenerationException.class)
-        .satisfies(ex -> assertThat(ex.getMessage()).doesNotContain("infNFeSupl"));
+        .satisfies(ex -> assertThat(ex.getMessage()).contains("vNF"));
   }
 
   // =========================================================================
@@ -177,8 +199,8 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations())
-              .anyMatch(v -> v.field().contains("cpfCnpj"));
+          assertThat(e.getErrors())
+              .anyMatch(v -> v.field() != null && v.field().contains("cpfCnpj"));
         });
   }
 
@@ -195,7 +217,7 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations()).hasSizeGreaterThanOrEqualTo(3);
+          assertThat(e.getErrors()).hasSizeGreaterThanOrEqualTo(3);
         });
   }
 
@@ -210,8 +232,8 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations())
-              .anyMatch(v -> v.field().equals("itens"));
+          assertThat(e.getErrors())
+              .anyMatch(v -> v.field() != null && v.field().equals("itens"));
         });
   }
 
@@ -226,8 +248,8 @@ class GeracaoNotaFiscalServiceTest {
         .satisfies(ex -> {
           NotaFiscalInvalidaParaEmissaoException e =
               (NotaFiscalInvalidaParaEmissaoException) ex;
-          assertThat(e.getViolations())
-              .anyMatch(v -> v.field().contains("destinatarioEndereco"));
+          assertThat(e.getErrors())
+              .anyMatch(v -> v.field() != null && v.field().contains("destinatarioEndereco"));
         });
   }
 

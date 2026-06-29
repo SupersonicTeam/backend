@@ -103,44 +103,15 @@ public class XsdValidator {
       }
     }
 
-    // Escopo Sprint 2: a NF-e é gerada SEM assinatura digital (ds:Signature),
-    // que é obrigatória no XSD (TNFe) mas depende de certificado ICP-Brasil —
-    // implementada em sprint futura. Toleramos APENAS a ausência do Signature;
-    // qualquer outro erro estrutural permanece fatal.
-    List<String> fatalErrors = errors.stream()
-        .filter(e -> !isUnsignedDocumentOmission(e))
-        .toList();
-
-    if (!fatalErrors.isEmpty()) {
-      String detail = String.join("; ", fatalErrors);
+    // A NF-e é assinada digitalmente (ds:Signature) antes da validação XSD — todo erro
+    // de validação é fatal (a tolerância da Sprint 2 à ausência de assinatura foi removida
+    // quando a assinatura ICP-Brasil/sandbox passou a integrar o pipeline de geração).
+    if (!errors.isEmpty()) {
+      String detail = String.join("; ", errors);
       log.warn("XML da NF-e invalido contra o XSD: {}", detail);
       throw new XmlGenerationException(
           "XML da NF-e invalido: " + detail);
     }
-
-    if (errors.size() != fatalErrors.size()) {
-      log.debug(
-          "XML da NF-e estruturalmente valido; ausencia de ds:Signature tolerada "
-              + "(assinatura digital ICP-Brasil sera implementada em sprint futura).");
-    }
-  }
-
-  /**
-   * Indica se um erro de validação corresponde unicamente à ausência da assinatura
-   * digital ({@code ds:Signature}) — omissão esperada e tolerada nesta sprint, pois
-   * a assinatura ICP-Brasil só será implementada em sprint futura.
-   *
-   * <p>O XSD declara {@code <xs:element ref="ds:Signature"/>} sem {@code minOccurs="0"}
-   * dentro de {@code TNFe}, então o parser reporta o elemento {@code NFe} como
-   * incompleto, esperando {@code infNFeSupl} ou {@code Signature}. Esse e somente esse
-   * erro é considerado não-fatal.
-   *
-   * @param error mensagem de erro formatada
-   * @return {@code true} se o erro for exclusivamente a ausência do Signature
-   */
-  private boolean isUnsignedDocumentOmission(String error) {
-    return error.contains("Signature")
-        && (error.contains("not complete") || error.contains("infNFeSupl"));
   }
 
   // =========================================================================

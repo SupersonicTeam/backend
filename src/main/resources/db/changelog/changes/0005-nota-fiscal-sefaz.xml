@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0005-nota-fiscal-sefaz.xml
+         Sprint 3 — issue #15 (RF012): transmissao da NF-e para a SEFAZ.
+
+         Adiciona cinco colunas nullable em nota_fiscal para registrar o
+         retorno do fisco apos o envio:
+           - protocolo_autorizacao VARCHAR(20)        : numero do protocolo de autorizacao
+           - data_autorizacao      TIMESTAMP WITH TZ  : instante da autorizacao pelo fisco
+           - sefaz_cstat           VARCHAR(10)        : codigo de status (cStat) retornado
+           - sefaz_motivo          VARCHAR(255)       : descricao textual (xMotivo) do status
+           - sefaz_ambiente        VARCHAR(20)        : ambiente do envio (HOMOLOGACAO/PRODUCAO)
+
+         Todas nullable para compatibilidade retroativa com notas ainda nao enviadas.
+         Tipos portaveis H2/PostgreSQL. NAO editar changesets anteriores (0001-0004).
+         ================================================================ -->
+
+    <changeSet id="0005-nota-fiscal-add-sefaz-fields" author="supersonic-team">
+        <comment>
+            Adiciona colunas de retorno da SEFAZ na NF-e: protocolo_autorizacao (VARCHAR(20)),
+            data_autorizacao (TIMESTAMP WITH TIME ZONE), sefaz_cstat (VARCHAR(10)),
+            sefaz_motivo (VARCHAR(255)) e sefaz_ambiente (VARCHAR(20)). Todas nullable.
+        </comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="protocolo_autorizacao" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="data_autorizacao" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="sefaz_cstat" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="sefaz_motivo" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="sefaz_ambiente" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="protocolo_autorizacao"/>
+            <dropColumn tableName="nota_fiscal" columnName="data_autorizacao"/>
+            <dropColumn tableName="nota_fiscal" columnName="sefaz_cstat"/>
+            <dropColumn tableName="nota_fiscal" columnName="sefaz_motivo"/>
+            <dropColumn tableName="nota_fiscal" columnName="sefaz_ambiente"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

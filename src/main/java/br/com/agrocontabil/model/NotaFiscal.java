@@ -1,5 +1,6 @@
 package br.com.agrocontabil.model;
 
+import br.com.agrocontabil.sefaz.SefazAmbiente;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
@@ -224,6 +225,36 @@ public class NotaFiscal {
   /** Protocolo do evento de cancelamento retornado pela SEFAZ. Nulo até o cancelamento. */
   @Column(name = "protocolo_cancelamento", length = 50)
   private String protocoloCancelamento;
+
+  // -------------------------------------------------------------------------
+  // Retorno da SEFAZ (Sprint 3 — issue #15). Preenchidos apos o envio.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Numero do protocolo de autorizacao retornado pela SEFAZ.
+   *
+   * <p>Nulo enquanto a nota nao foi autorizada. Preenchido na transicao
+   * {@code XML_GERADO → AUTORIZADA}.
+   */
+  @Column(name = "protocolo_autorizacao", length = 20)
+  private String protocoloAutorizacao;
+
+  /** Data e hora (com fuso) da autorizacao pelo fisco. Nula se nao autorizada. */
+  @Column(name = "data_autorizacao")
+  private OffsetDateTime dataAutorizacao;
+
+  /** Codigo de status (cStat) retornado pela SEFAZ no ultimo envio/consulta. */
+  @Column(name = "sefaz_cstat", length = 10)
+  private String sefazCstat;
+
+  /** Descricao textual (xMotivo) do status retornado pela SEFAZ. */
+  @Column(name = "sefaz_motivo", length = 255)
+  private String sefazMotivo;
+
+  /** Ambiente do envio (homologacao/producao). Nulo enquanto a nota nao foi enviada. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "sefaz_ambiente", length = 20)
+  private SefazAmbiente sefazAmbiente;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;

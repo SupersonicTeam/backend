@@ -18,6 +18,7 @@
 		<java.version>21</java.version>
 		<springdoc.version>2.8.16</springdoc.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<jasperreports.version>6.21.3</jasperreports.version>
 	</properties>
 
 	<dependencyManagement>
@@ -144,6 +145,25 @@
 			<groupId>org.glassfish.jaxb</groupId>
 			<artifactId>jaxb-runtime</artifactId>
 			<!-- version managed by Spring Boot BOM -->
+		</dependency>
+
+		<!-- Apache Santuario (XML Security) — assinatura digital da NF-e (ds:Signature).
+		     Nao gerenciado pelo BOM do Spring Boot: versao explicita. Linha 3.0.x estavel,
+		     compativel com Java 21, API classica org.apache.xml.security.* -->
+		<dependency>
+			<groupId>org.apache.santuario</groupId>
+			<artifactId>xmlsec</artifactId>
+			<version>3.0.6</version>
+		</dependency>
+
+		<!-- JasperReports — geração de PDF (DANFE simplificada, issue #14).
+		     Linha 6.21.x: JRXML classico, artefato unico (ja inclui o export PDF via OpenPDF
+		     e o compilador de expressoes ecj). A linha 7.x foi descartada por exigir um novo
+		     schema JRXML incompativel com o template classico ("Unable to load report"). -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports</artifactId>
+			<version>${jasperreports.version}</version>
 		</dependency>
 
 		<!-- Testcontainers -->

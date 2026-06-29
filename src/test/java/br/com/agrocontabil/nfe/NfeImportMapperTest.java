@@ -1,4 +1,5 @@
 package br.com.agrocontabil.nfe;
+import br.com.agrocontabil.config.CertificadoDigitalProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,6 +49,10 @@ class NfeImportMapperTest {
         new FiscalRulesValidator(),
         new NotaFiscalNfeMapper(new ChaveAcessoGenerator()),
         new XmlGenerator(),
+        new NfeAssinador(new KeyStoreCertificadoProvider(
+            new CertificadoDigitalProperties(
+                "classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"))),
+        new AssinaturaValidator(),
         new XsdValidator());
 
     NotaFiscal origem = buildNota();

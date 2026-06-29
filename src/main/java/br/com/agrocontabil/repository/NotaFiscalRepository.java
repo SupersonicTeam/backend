@@ -1,6 +1,8 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.StatusNotaFiscal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -43,4 +45,15 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * @return {@code true} se já houver uma nota com essa chave
    */
   boolean existsByChaveAcesso(String chaveAcesso);
+
+  /**
+   * Retorna todas as notas em um determinado status, sem filtro de produtor.
+   *
+   * <p>Uso restrito a jobs de sistema (ex.: sincronização agendada de status com a SEFAZ —
+   * issue #16), que operam sobre todas as notas pendentes independentemente do produtor.
+   *
+   * @param status status do ciclo de vida a filtrar
+   * @return lista de notas no status informado
+   */
+  List<NotaFiscal> findByStatus(StatusNotaFiscal status);
 }

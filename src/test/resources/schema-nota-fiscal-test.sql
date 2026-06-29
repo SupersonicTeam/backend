@@ -58,6 +58,12 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     data_cancelamento           TIMESTAMP WITH TIME ZONE,
     motivo_cancelamento         VARCHAR(255),
     protocolo_cancelamento      VARCHAR(50),
+    -- Retorno da SEFAZ — Sprint 3 issue #15
+    protocolo_autorizacao       VARCHAR(20),
+    data_autorizacao            TIMESTAMP WITH TIME ZONE,
+    sefaz_cstat                 VARCHAR(10),
+    sefaz_motivo                VARCHAR(255),
+    sefaz_ambiente              VARCHAR(20),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
@@ -86,5 +92,20 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     percentual_reducao      NUMERIC(5,2)   DEFAULT 0,
     created_at              TIMESTAMP WITH TIME ZONE,
     updated_at              TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+-- Inconsistencias de validacao da NF-e — Sprint 3 issue #22 (migration 0006)
+CREATE TABLE IF NOT EXISTS nota_fiscal_validacao (
+    id              UUID           NOT NULL,
+    nota_fiscal_id  UUID           NOT NULL,
+    lote_validacao  UUID           NOT NULL,
+    code            VARCHAR(60)    NOT NULL,
+    field           VARCHAR(120),
+    message         VARCHAR(500)   NOT NULL,
+    suggestion      VARCHAR(500),
+    rejected_value  VARCHAR(500),
+    expected_value  VARCHAR(500),
+    validado_em     TIMESTAMP WITH TIME ZONE NOT NULL,
     PRIMARY KEY (id)
 );

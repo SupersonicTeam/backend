@@ -17,7 +17,13 @@ import br.com.agrocontabil.dto.ImportacaoItemResultado;
 import br.com.agrocontabil.dto.ImportacaoLoteResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
+import br.com.agrocontabil.dto.SefazEnvioResponse;
+import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
+import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CfopProdutorRuralRepository;
@@ -25,6 +31,8 @@ import br.com.agrocontabil.repository.NcmAgropecuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.ImportacaoNotaFiscalService;
 import br.com.agrocontabil.service.NotaFiscalService;
+import br.com.agrocontabil.service.NotaFiscalValidacaoService;
+import br.com.agrocontabil.service.SefazService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.math.BigDecimal;
@@ -68,6 +76,14 @@ class NotaFiscalControllerTest {
 
   @MockBean
   private NotaFiscalService notaFiscalService;
+
+  /** Dependencia do controller para o endpoint de envio a SEFAZ (issue #15). */
+  @MockBean
+  private SefazService sefazService;
+
+  /** Dependencia do controller para o endpoint de historico de validacoes (issue #22). */
+  @MockBean
+  private NotaFiscalValidacaoService validacaoService;
 
   /**
    * MockProdutorFilter e um @Component que depende de ProdutorRepository.
@@ -166,8 +182,9 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields").isArray())
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens[0].ncm')]").exists())
+        .andExpect(jsonPath("$.errors[?(@.code == 'VALIDATION_ERROR')]").exists());
   }
 
   @Test
@@ -202,7 +219,7 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens[0].ncm')]").exists());
   }
 
   @Test
@@ -224,8 +241,8 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields").isArray())
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens')]").exists());
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens')]").exists());
   }
 
   @Test
@@ -257,9 +274,9 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields").isArray())
+        .andExpect(jsonPath("$.errors").isArray())
         .andExpect(
-            jsonPath("$.fields[?(@.field == 'itens[0].valorUnitario')]").exists());
+            jsonPath("$.errors[?(@.field == 'itens[0].valorUnitario')]").exists());
   }
 
   @Test
@@ -293,7 +310,9 @@ class NotaFiscalControllerTest {
     mockMvc.perform(get("/api/notas/{id}", notaId))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.status").value(404))
-        .andExpect(jsonPath("$.message").exists());
+        .andExpect(jsonPath("$.message").exists())
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.code == 'RESOURCE_NOT_FOUND')]").exists());
   }
 
   // -------------------------------------------------------------------------
@@ -343,7 +362,7 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens')]").exists());
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens')]").exists());
   }
 
   @Test
@@ -377,7 +396,7 @@ class NotaFiscalControllerTest {
             .content(payload))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.status").value(400))
-        .andExpect(jsonPath("$.fields[?(@.field == 'itens[0].ncm')]").exists());
+        .andExpect(jsonPath("$.errors[?(@.field == 'itens[0].ncm')]").exists());
   }
 
   // -------------------------------------------------------------------------
@@ -535,7 +554,7 @@ class NotaFiscalControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(payload))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.fields[?(@.field == 'motivo')]").exists());
+        .andExpect(jsonPath("$.errors[?(@.field == 'motivo')]").exists());
   }
 
   // -------------------------------------------------------------------------
@@ -571,6 +590,173 @@ class NotaFiscalControllerTest {
     mockMvc.perform(get("/api/notas/{id}/xml", notaId)
             .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/pdf → 200 application/pdf  /  409 quando DANFE indisponivel
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/pdf deve retornar 200 com Content-Type application/pdf")
+  void getPdfShouldReturn200WithPdfContentType() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    byte[] pdf = new byte[] {'%', 'P', 'D', 'F', '-', '1', '.', '4'};
+
+    when(notaFiscalService.gerarPdf(eq(notaId))).thenReturn(pdf);
+
+    mockMvc.perform(get("/api/notas/{id}/pdf", notaId))
+        .andExpect(status().isOk())
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+            .content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF))
+        .andExpect(header().string("Content-Disposition",
+            org.hamcrest.Matchers.containsString("danfe-" + notaId + ".pdf")));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/pdf deve retornar 409 quando a DANFE esta indisponivel")
+  void getPdfShouldReturn409WhenDanfeUnavailable() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(notaFiscalService.gerarPdf(eq(notaId)))
+        .thenThrow(new DanfeIndisponivelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(get("/api/notas/{id}/pdf", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'DANFE_INDISPONIVEL')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /{id}/enviar-sefaz → 200 SefazEnvioResponse  /  409 quando nao enviavel
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/enviar-sefaz deve retornar 200 com status AUTORIZADA")
+  void postEnviarSefazShouldReturn200WithAutorizadaStatus() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    SefazEnvioResponse mockResponse = new SefazEnvioResponse(
+        "41262612345678000195550010000000011000000012",
+        StatusNotaFiscal.AUTORIZADA,
+        "100",
+        "Autorizado o uso da NF-e",
+        "141260000000017",
+        OffsetDateTime.now());
+
+    when(sefazService.enviar(eq(notaId))).thenReturn(mockResponse);
+
+    mockMvc.perform(post("/api/notas/{id}/enviar-sefaz", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AUTORIZADA"))
+        .andExpect(jsonPath("$.cStat").value("100"))
+        .andExpect(jsonPath("$.protocolo").value("141260000000017"));
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/enviar-sefaz deve retornar 409 quando status nao e XML_GERADO")
+  void postEnviarSefazShouldReturn409WhenNotaNotEnviavel() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.enviar(eq(notaId)))
+        .thenThrow(new NotaFiscalNaoEnviavelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(post("/api/notas/{id}/enviar-sefaz", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_ENVIAVEL')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/status-sefaz → 200 SefazStatusResponse  /  409 quando nao consultavel
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/status-sefaz deve retornar 200 com status sincronizado")
+  void getStatusSefazShouldReturn200() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    SefazStatusResponse mockResponse = new SefazStatusResponse(
+        "41262612345678000195550010000000011000000012",
+        StatusNotaFiscal.AUTORIZADA,
+        "100",
+        "Autorizado o uso da NF-e",
+        "141260000000017",
+        OffsetDateTime.now());
+
+    when(sefazService.sincronizarStatus(eq(notaId))).thenReturn(mockResponse);
+
+    mockMvc.perform(get("/api/notas/{id}/status-sefaz", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AUTORIZADA"))
+        .andExpect(jsonPath("$.cStat").value("100"));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/status-sefaz deve retornar 409 quando nota nao consultavel")
+  void getStatusSefazShouldReturn409WhenNotConsultavel() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.sincronizarStatus(eq(notaId)))
+        .thenThrow(new NotaFiscalNaoConsultavelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(get("/api/notas/{id}/status-sefaz", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_CONSULTAVEL')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /{id}/validacoes → 200 historico  /  404 anti-IDOR (issue #22)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/validacoes deve retornar 200 com o historico de inconsistencias")
+  void getValidacoesShouldReturn200WithHistory() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    UUID lote = UUID.randomUUID();
+    NotaFiscalValidacaoResponse validacao = new NotaFiscalValidacaoResponse(
+        lote,
+        "NOTA_INVALIDA_EMISSAO",
+        "item[1].ncm",
+        "NCM e obrigatorio no layout da NF-e",
+        null,
+        null,
+        null,
+        OffsetDateTime.now());
+
+    when(validacaoService.listarValidacoes(eq(notaId))).thenReturn(List.of(validacao));
+
+    mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$[0].loteValidacao").value(lote.toString()))
+        .andExpect(jsonPath("$[0].code").value("NOTA_INVALIDA_EMISSAO"))
+        .andExpect(jsonPath("$[0].field").value("item[1].ncm"));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/validacoes deve retornar 200 com lista vazia quando nao ha inconsistencias")
+  void getValidacoesShouldReturn200WithEmptyList() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(validacaoService.listarValidacoes(eq(notaId))).thenReturn(List.of());
+
+    mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/validacoes deve retornar 404 para nota inexistente ou de outro produtor")
+  void getValidacoesShouldReturn404WhenNotaNotFound() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(validacaoService.listarValidacoes(eq(notaId)))
+        .thenThrow(new ResourceNotFoundException("NotaFiscal", notaId));
+
+    mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.errors[?(@.code == 'RESOURCE_NOT_FOUND')]").exists());
   }
 
   // -------------------------------------------------------------------------

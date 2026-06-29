@@ -8,11 +8,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.CancelamentoRequest;
 import br.com.agrocontabil.dto.NotaFiscalItemRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.BusinessException;
+import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.service.sefaz.CancelamentoSefazResult;
@@ -91,6 +93,14 @@ class NotaFiscalServiceTest {
 
   @Mock
   private SefazService sefazService;
+
+  /** Servico de geracao do PDF da DANFE (issue #14), mockado neste teste de unidade. */
+  @Mock
+  private DanfePdfService danfePdfService;
+
+  /** Servico de persistencia de inconsistencias (issue #22), mockado neste teste de unidade. */
+  @Mock
+  private NotaFiscalValidacaoService validacaoService;
 
   @InjectMocks
   private NotaFiscalService notaFiscalService;
@@ -690,6 +700,97 @@ class NotaFiscalServiceTest {
   }
 
   // -------------------------------------------------------------------------
+  // gerarXml — registro de inconsistencias e status COM_INCONSISTENCIAS (issue #22)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("gerarXml deve registrar inconsistencias e relancar 422 quando a validacao fiscal falha")
+  void gerarXmlShouldRegisterInconsistenciasAndRethrowWhenValidationFails() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+
+    var violation = new br.com.agrocontabil.exception
+        .NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+        "item[1].ncm", "NCM e obrigatorio no layout da NF-e");
+    var emissaoException = new br.com.agrocontabil.exception
+        .NotaFiscalInvalidaParaEmissaoException(List.of(violation));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenThrow(emissaoException);
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException.class);
+
+    // Inconsistencias persistidas com os ErrorDetail da excecao; nota nao transita para XML_GERADO
+    verify(validacaoService).registrarInconsistencias(eq(notaId), eq(emissaoException.getErrors()));
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("gerarXml deve registrar inconsistencias quando a validacao XSD falha (XmlGenerationException)")
+  void gerarXmlShouldRegisterInconsistenciasWhenXsdValidationFails() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+
+    var xmlException = new br.com.agrocontabil.exception.XmlGenerationException(
+        "XML invalido segundo o XSD");
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenThrow(xmlException);
+
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(br.com.agrocontabil.exception.XmlGenerationException.class);
+
+    verify(validacaoService).registrarInconsistencias(eq(notaId), eq(xmlException.getErrors()));
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("gerarXml deve ser permitido a partir de COM_INCONSISTENCIAS (nota corrigida e reprocessada)")
+  void gerarXmlShouldBeAllowedFromComInconsistencias() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(XML_FAKE);
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.gerarXml(notaId);
+
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.XML_GERADO);
+    assertThat(response.chaveAcesso()).isEqualTo(CHAVE_FAKE);
+  }
+
+  @Test
+  @DisplayName("update deve ser permitido a partir de COM_INCONSISTENCIAS (correcao dos campos)")
+  void updateShouldBeAllowedFromComInconsistencias() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    NotaFiscalResponse response = notaFiscalService.update(notaId, buildRequest());
+
+    assertThat(response).isNotNull();
+    verify(notaFiscalRepository).save(any(NotaFiscal.class));
+  }
+
+  // -------------------------------------------------------------------------
   // obterXml — happy path e nao gerado
   // -------------------------------------------------------------------------
 
@@ -875,6 +976,60 @@ class NotaFiscalServiceTest {
     assertThatThrownBy(() ->
         notaFiscalService.cancelar(notaId, new CancelamentoRequest("Motivo com mais de 15 chars")))
         .isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  // -------------------------------------------------------------------------
+  // gerarPdf (issue #14 — DANFE)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("gerarPdf deve retornar os bytes do PDF quando o XML ja foi gerado")
+  void gerarPdfShouldReturnBytesWhenXmlExists() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(StatusNotaFiscal.XML_GERADO);
+    nota.setXmlGerado("<NFe/>");
+    byte[] pdfFake = new byte[] {'%', 'P', 'D', 'F'};
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(danfePdfService.gerarPdf(nota)).thenReturn(pdfFake);
+
+    byte[] result = notaFiscalService.gerarPdf(notaId);
+
+    assertThat(result).isEqualTo(pdfFake);
+  }
+
+  @Test
+  @DisplayName("gerarPdf deve lancar DanfeIndisponivelException quando o XML ainda nao foi gerado")
+  void gerarPdfShouldThrowWhenXmlNull() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva(); // RASCUNHO, xmlGerado == null
+    nota.setId(notaId);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))
+        .isInstanceOf(DanfeIndisponivelException.class)
+        .hasMessageContaining(notaId.toString());
+  }
+
+  @Test
+  @DisplayName("gerarPdf deve lancar ResourceNotFoundException quando nota pertence a outro produtor")
+  void gerarPdfShouldThrowWhenNotaOfAnotherProdutor() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
   }
 
   // -------------------------------------------------------------------------

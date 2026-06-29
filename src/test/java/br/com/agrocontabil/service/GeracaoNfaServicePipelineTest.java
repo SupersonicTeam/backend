@@ -1,4 +1,8 @@
 package br.com.agrocontabil.service;
+import br.com.agrocontabil.config.CertificadoDigitalProperties;
+import br.com.agrocontabil.nfe.AssinaturaValidator;
+import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
+import br.com.agrocontabil.nfe.NfeAssinador;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -45,6 +49,10 @@ class GeracaoNfaServicePipelineTest {
         new FiscalRulesValidator(),
         new NotaFiscalNfeMapper(new ChaveAcessoGenerator()),
         new XmlGenerator(),
+        new NfeAssinador(new KeyStoreCertificadoProvider(
+            new CertificadoDigitalProperties(
+                "classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"))),
+        new AssinaturaValidator(),
         new XsdValidator());
     nfaService = new GeracaoNfaService(pipeline);
   }

@@ -52,6 +52,27 @@ app:
   cors:
     # Lista separada por virgula; sobrescrita por APP_CORS_ALLOWED_ORIGINS em prod.
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  nfe:
+    # Certificado digital A1 (.p12) para assinatura da NF-e. Em prod vem de env var.
+    # Nenhum segredo no repositorio — ver .env.example.
+    certificado:
+      path: ${NFE_CERT_PATH:}
+      password: ${NFE_CERT_PASSWORD:}
+      alias: ${NFE_CERT_ALIAS:}
+    # Integracao SEFAZ (issue #15). Sprint 3 usa transporte mock (sandbox).
+    # O envio SOAP+mTLS real com certificado ICP-Brasil e debito da Sprint 7:
+    # basta definir mock.enabled=false e plugar a implementacao real de SefazTransport.
+    sefaz:
+      ambiente: ${NFE_SEFAZ_AMBIENTE:HOMOLOGACAO}   # HOMOLOGACAO | PRODUCAO
+      mock:
+        enabled: ${NFE_SEFAZ_MOCK_ENABLED:true}
+      retry:
+        max-attempts: ${NFE_SEFAZ_RETRY_MAX_ATTEMPTS:3}
+        backoff-ms: ${NFE_SEFAZ_RETRY_BACKOFF_MS:1000}
+      # Job de sincronizacao de status de notas pendentes (issue #16).
+      sync:
+        enabled: ${NFE_SEFAZ_SYNC_ENABLED:true}
+        interval-ms: ${NFE_SEFAZ_SYNC_INTERVAL_MS:900000}   # 15 min
 
 # Tributos — IBS/CBS (EC 132/2023 + LC 214/2025)
 # Alíquotas de referência para o ano-teste de 2026 (parametrizáveis sem recompilar).

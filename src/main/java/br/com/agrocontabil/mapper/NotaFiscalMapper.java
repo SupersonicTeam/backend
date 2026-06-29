@@ -5,9 +5,11 @@ import br.com.agrocontabil.dto.NotaFiscalItemResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.NotaFiscalResponse.EnderecoDestinatarioResponse;
+import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumento;
@@ -121,6 +123,38 @@ public final class NotaFiscalMapper {
         nota.getTipoDocumento(),
         nota.getDataCancelamento(),
         nota.getMotivoCancelamento());
+  }
+
+  /**
+   * Converte uma {@link NotaFiscalValidacao} em {@link NotaFiscalValidacaoResponse} (issue #22).
+   *
+   * @param validacao inconsistência de validação persistida
+   * @return DTO de saída para o histórico de validações
+   */
+  public static NotaFiscalValidacaoResponse toValidacaoResponse(NotaFiscalValidacao validacao) {
+    return new NotaFiscalValidacaoResponse(
+        validacao.getLoteValidacao(),
+        validacao.getCode(),
+        validacao.getField(),
+        validacao.getMessage(),
+        validacao.getSuggestion(),
+        validacao.getRejectedValue(),
+        validacao.getExpectedValue(),
+        validacao.getValidadoEm());
+  }
+
+  /**
+   * Converte uma lista de {@link NotaFiscalValidacao} em DTOs de resposta, preservando a ordem
+   * fornecida pela consulta (issue #22).
+   *
+   * @param validacoes inconsistências persistidas, já ordenadas pelo repositório
+   * @return lista de DTOs de saída
+   */
+  public static List<NotaFiscalValidacaoResponse> toValidacaoResponseList(
+      List<NotaFiscalValidacao> validacoes) {
+    return validacoes.stream()
+        .map(NotaFiscalMapper::toValidacaoResponse)
+        .toList();
   }
 
   // -------------------------------------------------------------------------

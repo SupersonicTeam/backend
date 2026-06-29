@@ -1,34 +1,33 @@
 package br.com.agrocontabil.exception;
 
+import br.com.agrocontabil.common.ErrorCode;
+import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 
 /**
- * Lancada quando uma operacao de edicao ou exclusao e tentada em uma nota fiscal
- * cujo status nao e {@link StatusNotaFiscal#RASCUNHO}.
- *
- * <p>Mapeada para HTTP 409 Conflict pelo {@code GlobalExceptionHandler}, pois indica
- * um conflito de estado de negocio — a nota existe, mas nao pode ser modificada
- * no estado atual.
+ * Lançada quando edição/exclusão é tentada em nota cujo status não é RASCUNHO. HTTP 409.
  */
-public class NotaFiscalNaoEditavelException extends RuntimeException {
+public class NotaFiscalNaoEditavelException extends DomainException {
 
-  /**
-   * Cria a excecao informando o ID da nota e o status que impediu a operacao.
-   *
-   * @param id     identificador da nota fiscal
-   * @param status status atual da nota
-   */
   public NotaFiscalNaoEditavelException(UUID id, StatusNotaFiscal status) {
     super(
+        HttpStatus.CONFLICT,
         "Nota fiscal '%s' nao pode ser editada ou excluida no status '%s'. "
             .formatted(id, status)
-            + "Somente notas em status RASCUNHO podem ser alteradas.");
+            + "Somente notas em status RASCUNHO podem ser alteradas.",
+        List.of(ErrorDetail.of(ErrorCode.NOTA_NAO_EDITAVEL,
+            "Somente notas em RASCUNHO podem ser alteradas.")));
   }
 
-  /** Construtor de mensagem livre, para variacoes de motivo (ex.: cancelamento). */
+  /** Construtor de mensagem livre, para variacoes de motivo (ex.: cancelamento). HTTP 409. */
   private NotaFiscalNaoEditavelException(String message) {
-    super(message);
+    super(
+        HttpStatus.CONFLICT,
+        message,
+        List.of(ErrorDetail.of(ErrorCode.NOTA_NAO_EDITAVEL, message)));
   }
 
   /**
