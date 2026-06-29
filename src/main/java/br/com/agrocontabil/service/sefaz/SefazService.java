@@ -12,9 +12,9 @@ public interface SefazService {
   /**
    * Solicita o cancelamento de uma NF-e autorizada.
    *
-   * @param accessKey key de acesso (44 dígitos) da NF-e
-   * @param reason      justificativa do cancelamento (15–255 caracteres)
-   * @return result com o protocol e a data/hora do cancelamento
+   * @param chaveAcesso chave de acesso (44 dígitos) da NF-e
+   * @param motivo      justificativa do cancelamento (15–255 caracteres)
+   * @return resultado com o protocolo e a data/hora do cancelamento
    */
-  SefazCancellationResult cancel(String accessKey, String reason);
+  CancelamentoSefazResult cancelar(String chaveAcesso, String motivo);
 }

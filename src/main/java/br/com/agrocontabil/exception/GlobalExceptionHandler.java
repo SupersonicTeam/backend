@@ -83,7 +83,7 @@ public class GlobalExceptionHandler {
 
   /**
    * Mensagem de envelope segura ao cliente. {@link XmlGenerationException} usa sua
-   * mensagem-cliente genérica; qualquer 5xx (ex.: {@link DigitalSignatureException},
+   * mensagem-cliente genérica; qualquer 5xx (ex.: {@link AssinaturaDigitalException},
    * cujo {@code getMessage()} carrega detalhe técnico) recebe texto genérico; demais
    * exceções (4xx) usam {@code getMessage()}, que já é seguro.
    */
@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
     return ex.getMessage();
   }
 
-  /** Parte multipart obrigatoria ausente (ex.: nenhum fileName no import). HTTP 400. */
+  /** Parte multipart obrigatoria ausente (ex.: nenhum arquivo no import). HTTP 400. */
   @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
   public ResponseEntity<ApiError> handleMissingPart(
       org.springframework.web.multipart.support.MissingServletRequestPartException ex,

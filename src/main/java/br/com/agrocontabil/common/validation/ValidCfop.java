@@ -13,12 +13,12 @@ import java.lang.annotation.Target;
 
 /**
  * Valida que o CFOP informado está cadastrado na tabela de CFOPs aplicáveis ao
- * producer rural.
+ * produtor rural.
  *
  * <p>{@code null}/blank são considerados válidos — combine com {@code @NotBlank}.
  * A validação de formato (4 dígitos) é feita por {@code @Pattern}. A compatibilidade
  * com o tipo de operação é validada separadamente como regra de negócio
- * ({@code CfopOperationValidator}).
+ * ({@code CfopOperacaoValidator}).
  */
 @Documented
 @Constraint(validatedBy = CfopValidator.class)

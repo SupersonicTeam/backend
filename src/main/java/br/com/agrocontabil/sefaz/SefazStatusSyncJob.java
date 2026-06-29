@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>Periodicamente (intervalo configurável em {@code app.nfe.sefaz.sync.interval-ms},
  * padrão 15 min) consulta a SEFAZ para todas as notas em
- * {@link br.com.agrocontabil.model.InvoiceStatus#PENDENTE_SEFAZ} e atualiza o status
+ * {@link br.com.agrocontabil.model.StatusNotaFiscal#PENDENTE_SEFAZ} e atualiza o status
  * local conforme o retorno.
  *
  * <p>Ativo somente quando {@code app.nfe.sefaz.sync.enabled=true} (padrão). Desabilitado

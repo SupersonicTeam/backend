@@ -6,7 +6,7 @@ package br.com.agrocontabil.common.validation;
  *
  * <p>Sem dependencia de Spring ou Jakarta — testavel isoladamente e reutilizavel
  * tanto pela camada de Bean Validation ({@link CpfValidator}) quanto pela camada
- * de servico (validacao do CPF do producer emitente da NFA).
+ * de servico (validacao do CPF do produtor emitente da NFA).
  */
 public final class CpfUtils {
 
@@ -16,7 +16,7 @@ public final class CpfUtils {
    * Valida um CPF. Aceita o valor com ou sem formatacao (pontos e traco sao
    * removidos antes da validacao).
    *
-   * @param cpf CPF a validate (pode ser null)
+   * @param cpf CPF a validar (pode ser null)
    * @return {@code true} se for um CPF estruturalmente valido; {@code false} caso
    *         contrario (null, tamanho != 11, digitos repetidos ou DV invalido)
    */
@@ -47,12 +47,12 @@ public final class CpfUtils {
   }
 
   /**
-   * Calcula um digit verificador do CPF.
+   * Calcula um digito verificador do CPF.
    *
    * @param digits  string com os 11 digitos do CPF
-   * @param length  number de digitos considerados no calculo (9 para o 1o DV,
+   * @param length  numero de digitos considerados no calculo (9 para o 1o DV,
    *                10 para o 2o DV)
-   * @return o digit verificador esperado (0-9)
+   * @return o digito verificador esperado (0-9)
    */
   private static int checkDigit(String digits, int length) {
     int sum = 0;

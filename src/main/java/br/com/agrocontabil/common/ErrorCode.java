@@ -1,7 +1,7 @@
 package br.com.agrocontabil.common;
 
 /**
- * Catálogo central de códigos de error estáveis expostos ao cliente no field
+ * Catálogo central de códigos de erro estáveis expostos ao cliente no campo
  * {@code errors[].code}. O frontend pode reagir programaticamente por código.
  */
 public enum ErrorCode {
@@ -16,7 +16,7 @@ public enum ErrorCode {
   XML_GENERATION_ERROR,
   /** Violação de regra de negócio (ex.: prazo de cancelamento RN006). HTTP 422. */
   REGRA_NEGOCIO,
-  /** CFOP incompatível com o tipo/âmbito da operação da invoice. HTTP 400. */
+  /** CFOP incompatível com o tipo/âmbito da operação da nota. HTTP 400. */
   CFOP_INCOMPATIVEL,
   /** Emitente inválido para Nota Fiscal Avulsa (não é PF ou CPF inválido). HTTP 422. */
   NFA_EMITENTE_INVALIDO,
@@ -27,9 +27,9 @@ public enum ErrorCode {
   ASSINATURA_FALHOU,
   ASSINATURA_INVALIDA,
   // Geração de PDF (DANFE — issue #14)
-  /** Falha técnica ao generate o PDF da DANFE. HTTP 500. */
+  /** Falha técnica ao gerar o PDF da DANFE. HTTP 500. */
   DANFE_GENERATION_ERROR,
-  /** DANFE indisponível: a invoice ainda não gerou o XML. HTTP 409. */
+  /** DANFE indisponível: a nota ainda não gerou o XML. HTTP 409. */
   DANFE_INDISPONIVEL,
   // Integração SEFAZ (Sprint 3 — issue #15)
   /** Falha de comunicação com a SEFAZ (timeout, conexão recusada, I/O). HTTP 502. */
@@ -39,7 +39,7 @@ public enum ErrorCode {
   /** Nota fiscal ainda não foi transmitida — não há status SEFAZ a consultar. HTTP 409. */
   NOTA_NAO_CONSULTAVEL;
 
-  /** Retorna o código estável (igual ao name da constante). */
+  /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
     return name();
   }

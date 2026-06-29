@@ -1,21 +1,21 @@
 package br.com.agrocontabil.nfe;
-import br.com.agrocontabil.config.DigitalCertificateProperties;
+import br.com.agrocontabil.config.CertificadoDigitalProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import br.com.agrocontabil.config.TaxProperties;
-import br.com.agrocontabil.exception.XmlImportException;
-import br.com.agrocontabil.model.RecipientAddress;
-import br.com.agrocontabil.model.Invoice;
-import br.com.agrocontabil.model.InvoiceItem;
-import br.com.agrocontabil.model.Producer;
-import br.com.agrocontabil.model.TaxRegime;
-import br.com.agrocontabil.model.ProducerType;
+import br.com.agrocontabil.config.TributosProperties;
+import br.com.agrocontabil.exception.XmlImportacaoException;
+import br.com.agrocontabil.model.EnderecoDestinatario;
+import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.nfe.model.NFe;
-import br.com.agrocontabil.service.IbsCbsCalculationService;
-import br.com.agrocontabil.service.AccessKeyGenerator;
-import br.com.agrocontabil.service.InvoiceXmlService;
+import br.com.agrocontabil.service.CalculoIbsCbsService;
+import br.com.agrocontabil.service.ChaveAcessoGenerator;
+import br.com.agrocontabil.service.GeracaoNotaFiscalService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -35,28 +35,28 @@ class NfeXmlParserTest {
   void setUp() {
     parser = new NfeXmlParser(new XsdValidator());
 
-    TaxProperties props = new TaxProperties();
-    TaxProperties.Ibs ibs = new TaxProperties.Ibs();
+    TributosProperties props = new TributosProperties();
+    TributosProperties.Ibs ibs = new TributosProperties.Ibs();
     ibs.setAliquota(new BigDecimal("0.0010"));
-    TaxProperties.Cbs cbs = new TaxProperties.Cbs();
+    TributosProperties.Cbs cbs = new TributosProperties.Cbs();
     cbs.setAliquota(new BigDecimal("0.0090"));
     props.setIbs(ibs);
     props.setCbs(cbs);
-    IbsCbsCalculationService calculo = new IbsCbsCalculationService(props);
+    CalculoIbsCbsService calculo = new CalculoIbsCbsService(props);
 
-    InvoiceXmlService pipeline = new InvoiceXmlService(
+    GeracaoNotaFiscalService pipeline = new GeracaoNotaFiscalService(
         new FiscalRulesValidator(),
-        new InvoiceNfeMapper(new AccessKeyGenerator()),
+        new NotaFiscalNfeMapper(new ChaveAcessoGenerator()),
         new XmlGenerator(),
-        new NfeSigner(new KeyStoreCertificateProvider(
-            new DigitalCertificateProperties(
+        new NfeAssinador(new KeyStoreCertificadoProvider(
+            new CertificadoDigitalProperties(
                 "classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"))),
-        new SignatureValidator(),
+        new AssinaturaValidator(),
         new XsdValidator());
 
-    Invoice invoice = buildNota();
-    calculo.calculate(invoice);
-    nfeXml = pipeline.generateXml(invoice);
+    NotaFiscal nota = buildNota();
+    calculo.calcular(nota);
+    nfeXml = pipeline.gerarXml(nota);
   }
 
   @Test
@@ -87,7 +87,7 @@ class NfeXmlParserTest {
   @DisplayName("XML malformado lanca XmlImportacaoException")
   void xmlMalformado() {
     assertThatThrownBy(() -> parser.parse("<isto nao e xml valido".getBytes(StandardCharsets.UTF_8)))
-        .isInstanceOf(XmlImportException.class);
+        .isInstanceOf(XmlImportacaoException.class);
   }
 
   @Test
@@ -95,7 +95,7 @@ class NfeXmlParserTest {
   void xmlSemNfe() {
     String semNfe = "<?xml version=\"1.0\"?><outraCoisa></outraCoisa>";
     assertThatThrownBy(() -> parser.parse(semNfe.getBytes(StandardCharsets.UTF_8)))
-        .isInstanceOf(XmlImportException.class);
+        .isInstanceOf(XmlImportacaoException.class);
   }
 
   @Test
@@ -106,51 +106,51 @@ class NfeXmlParserTest {
             + "<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>"
             + "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\"><infNFe>&xxe;</infNFe></NFe>";
     assertThatThrownBy(() -> parser.parse(xxe.getBytes(StandardCharsets.UTF_8)))
-        .isInstanceOf(XmlImportException.class);
+        .isInstanceOf(XmlImportacaoException.class);
   }
 
-  private Invoice buildNota() {
-    Producer producer = Producer.builder()
+  private NotaFiscal buildNota() {
+    Produtor produtor = Produtor.builder()
         .id(UUID.randomUUID())
-        .fullName("EMITENTE TERCEIRO LTDA")
-        .taxId("12345678000195")
-        .producerType(ProducerType.PESSOA_JURIDICA)
-        .taxRegime(TaxRegime.SIMPLES)
-        .state("PR")
+        .nomeCompleto("EMITENTE TERCEIRO LTDA")
+        .cpfCnpj("12345678000195")
+        .tipoProdutor(TipoProdutor.PESSOA_JURIDICA)
+        .regimeTributario(RegimeTributario.SIMPLES)
+        .estado("PR")
         .build();
 
-    InvoiceItem item = InvoiceItem.builder()
+    NotaFiscalItem item = NotaFiscalItem.builder()
         .id(UUID.randomUUID())
-        .itemNumber(1)
-        .productCode("SOJA001")
-        .description("Soja em grao")
+        .numeroItem(1)
+        .codigoProduto("SOJA001")
+        .descricao("Soja em grao")
         .ncm("12010090")
         .cfop("5101")
-        .unit("KG")
-        .quantity(new BigDecimal("1000.0000"))
-        .unitPrice(new BigDecimal("1.0000"))
-        .totalValue(new BigDecimal("1000.00"))
+        .unidade("KG")
+        .quantidade(new BigDecimal("1000.0000"))
+        .valorUnitario(new BigDecimal("1.0000"))
+        .valorTotal(new BigDecimal("1000.00"))
         .cstIbsCbs("101")
         .cClassTrib("010100")
         .build();
 
-    RecipientAddress endDest = RecipientAddress.builder()
-        .street("Rua das Flores").number("100").city("Curitiba")
-        .ibgeCityCode("4106902").uf("PR").zipCode("80010000").build();
+    EnderecoDestinatario endDest = EnderecoDestinatario.builder()
+        .logradouro("Rua das Flores").numero("100").municipio("Curitiba")
+        .codigoMunicipioIbge("4106902").uf("PR").cep("80010000").build();
 
-    Invoice invoice = Invoice.builder()
+    NotaFiscal nota = NotaFiscal.builder()
         .id(UUID.randomUUID())
-        .number(1L).series(1).model("55")
-        .operationNature("Venda de producao rural")
-        .issuanceDate(OffsetDateTime.of(2026, 12, 1, 10, 0, 0, 0, ZoneOffset.of("-03:00")))
-        .producer(producer)
-        .recipientName("COMPRADORA SA")
-        .recipientTaxId("98765432000199")
-        .recipientAddress(endDest)
-        .totalProductsValue(new BigDecimal("1000.00"))
-        .totalInvoiceValue(new BigDecimal("1000.00"))
+        .numero(1L).serie(1).modelo("55")
+        .naturezaOperacao("Venda de producao rural")
+        .dataEmissao(OffsetDateTime.of(2026, 12, 1, 10, 0, 0, 0, ZoneOffset.of("-03:00")))
+        .produtor(produtor)
+        .destinatarioNome("COMPRADORA SA")
+        .destinatarioCpfCnpj("98765432000199")
+        .destinatarioEndereco(endDest)
+        .valorTotalProdutos(new BigDecimal("1000.00"))
+        .valorTotalNota(new BigDecimal("1000.00"))
         .build();
-    invoice.addItem(item);
-    return invoice;
+    nota.addItem(item);
+    return nota;
   }
 }

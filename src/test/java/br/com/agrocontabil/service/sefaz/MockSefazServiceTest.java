@@ -13,11 +13,11 @@ class MockSefazServiceTest {
   @Test
   @DisplayName("retorna protocolo nao-vazio e dataHora ao cancelar")
   void cancelarRetornaProtocolo() {
-    SefazCancellationResult result =
-        service.cancel("41260612345678000195550010000000011000000017", "Erro de digitacao nos dados");
+    CancelamentoSefazResult result =
+        service.cancelar("41260612345678000195550010000000011000000017", "Erro de digitacao nos dados");
 
     assertThat(result).isNotNull();
-    assertThat(result.protocol()).isNotBlank();
-    assertThat(result.dateTime()).isNotNull();
+    assertThat(result.protocolo()).isNotBlank();
+    assertThat(result.dataHora()).isNotNull();
   }
 }

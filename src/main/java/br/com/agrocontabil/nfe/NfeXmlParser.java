@@ -1,6 +1,6 @@
 package br.com.agrocontabil.nfe;
 
-import br.com.agrocontabil.exception.XmlImportException;
+import br.com.agrocontabil.exception.XmlImportacaoException;
 import br.com.agrocontabil.nfe.model.NFe;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.Unmarshaller;
@@ -25,11 +25,11 @@ import org.w3c.dom.NodeList;
  * Faz o parse de um XML de NF-e importado para o grafo JAXB {@link NFe}.
  *
  * <p>Pipeline: parse DOM com hardening XXE → localiza o elemento {@code <NFe>}
- * (raiz {@code <nfeProc>} de fileName autorizado, ou {@code <NFe>} puro) →
+ * (raiz {@code <nfeProc>} de arquivo autorizado, ou {@code <NFe>} puro) →
  * serializa o nó e valida contra o XSD via {@link XsdValidator} → unmarshal JAXB.
  *
  * <p>Qualquer falha (malformado, sem {@code <NFe>}, XSD inválido) lança
- * {@link XmlImportException}.
+ * {@link XmlImportacaoException}.
  */
 @Component
 public class NfeXmlParser {
@@ -46,16 +46,16 @@ public class NfeXmlParser {
   /**
    * Parseia o XML importado e retorna o grafo JAXB da NF-e.
    *
-   * @param xmlBytes conteúdo bruto do fileName XML
+   * @param xmlBytes conteúdo bruto do arquivo XML
    * @return grafo {@link NFe} extraído e validado contra o XSD
-   * @throws XmlImportException se o XML for inválido ou não contiver {@code <NFe>}
+   * @throws XmlImportacaoException se o XML for inválido ou não contiver {@code <NFe>}
    */
   public NFe parse(byte[] xmlBytes) {
     Document doc = parseSeguro(xmlBytes);
 
     NodeList nfeNodes = doc.getElementsByTagNameNS(NFE_NS, "NFe");
     if (nfeNodes.getLength() == 0) {
-      throw new XmlImportException(
+      throw new XmlImportacaoException(
           "XML nao contem o elemento <NFe> no namespace da NF-e.");
     }
     Node nfeNode = nfeNodes.item(0);
@@ -63,7 +63,7 @@ public class NfeXmlParser {
     String nfeXml = serializar(nfeNode);
 
     // Valida o <NFe> contra o XSD oficial (XsdValidator tolera ausencia de assinatura).
-    xsdValidator.validate(nfeXml);
+    xsdValidator.validar(nfeXml);
 
     return unmarshal(nfeNode);
   }
@@ -83,7 +83,7 @@ public class NfeXmlParser {
       return builder.parse(new ByteArrayInputStream(xmlBytes));
     } catch (Exception e) {
       log.warn("Falha ao parsear XML importado: {}", e.getMessage());
-      throw new XmlImportException("XML invalido ou malformado: " + e.getMessage(), e);
+      throw new XmlImportacaoException("XML invalido ou malformado: " + e.getMessage(), e);
     }
   }
 
@@ -98,7 +98,7 @@ public class NfeXmlParser {
       transformer.transform(new DOMSource(node), new StreamResult(writer));
       return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + writer;
     } catch (Exception e) {
-      throw new XmlImportException("Falha ao serializar o elemento NFe: " + e.getMessage(), e);
+      throw new XmlImportacaoException("Falha ao serializar o elemento NFe: " + e.getMessage(), e);
     }
   }
 
@@ -108,7 +108,7 @@ public class NfeXmlParser {
       Unmarshaller unmarshaller = context.createUnmarshaller();
       return (NFe) unmarshaller.unmarshal(nfeNode);
     } catch (Exception e) {
-      throw new XmlImportException("Falha ao desserializar a NF-e (JAXB): " + e.getMessage(), e);
+      throw new XmlImportacaoException("Falha ao desserializar a NF-e (JAXB): " + e.getMessage(), e);
     }
   }
 }

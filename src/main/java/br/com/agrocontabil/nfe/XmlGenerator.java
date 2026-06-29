@@ -58,7 +58,7 @@ public class XmlGenerator {
   /**
    * Retorna o {@link JAXBContext} cacheado, criando-o na primeira chamada.
    *
-   * <p>Inclui todas as classes do model NF-e (pacote principal e tipos internos
+   * <p>Inclui todas as classes do modelo NF-e (pacote principal e tipos internos
    * dos grupos IBS/CBS) necessárias para o marshalling correto.
    */
   private JAXBContext getContext() throws JAXBException {

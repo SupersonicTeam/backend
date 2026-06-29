@@ -3,7 +3,7 @@ package br.com.agrocontabil.common.validation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import br.com.agrocontabil.repository.AgriculturalNcmRepository;
+import br.com.agrocontabil.repository.NcmAgropecuarioRepository;
 import jakarta.validation.ConstraintValidatorContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NcmValidatorTest {
 
   @Mock
-  private AgriculturalNcmRepository repository;
+  private NcmAgropecuarioRepository repository;
 
   private NcmValidator validator;
   private ConstraintValidatorContext context;

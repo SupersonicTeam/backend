@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Implementação mock do {@link SefazService} para as sprints anteriores à
- * integração real (Sprint 7). Gera um protocol determinístico e não realiza
+ * integração real (Sprint 7). Gera um protocolo determinístico e não realiza
  * qualquer comunicação externa.
  *
  * <p><strong>Não usar em produção real:</strong> nenhuma transmissão SOAP nem
@@ -19,12 +19,12 @@ public class MockSefazService implements SefazService {
 
   private static final Logger log = LoggerFactory.getLogger(MockSefazService.class);
 
-  private final AtomicLong sequence = new AtomicLong(1);
+  private final AtomicLong sequencia = new AtomicLong(1);
 
   @Override
-  public SefazCancellationResult cancel(String accessKey, String reason) {
-    String protocol = "MOCK" + String.format("%015d", sequence.getAndIncrement());
-    log.info("MOCK SEFAZ: cancelamento simulado chave={} protocolo={}", accessKey, protocol);
-    return new SefazCancellationResult(protocol, OffsetDateTime.now());
+  public CancelamentoSefazResult cancelar(String chaveAcesso, String motivo) {
+    String protocolo = "MOCK" + String.format("%015d", sequencia.getAndIncrement());
+    log.info("MOCK SEFAZ: cancelamento simulado chave={} protocolo={}", chaveAcesso, protocolo);
+    return new CancelamentoSefazResult(protocolo, OffsetDateTime.now());
   }
 }
