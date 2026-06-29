@@ -9,20 +9,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.SefazProperties;
-import br.com.agrocontabil.dto.SefazEnvioResponse;
+import br.com.agrocontabil.dto.SefazSubmissionResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
-import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
-import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
+import br.com.agrocontabil.exception.InvoiceNotQueryableException;
+import br.com.agrocontabil.exception.InvoiceNotSubmittableException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
-import br.com.agrocontabil.exception.SefazComunicacaoException;
-import br.com.agrocontabil.model.NotaFiscal;
-import br.com.agrocontabil.model.Produtor;
-import br.com.agrocontabil.model.StatusNotaFiscal;
-import br.com.agrocontabil.repository.NotaFiscalRepository;
-import br.com.agrocontabil.sefaz.SefazAmbiente;
+import br.com.agrocontabil.exception.SefazCommunicationException;
+import br.com.agrocontabil.model.Invoice;
+import br.com.agrocontabil.model.Producer;
+import br.com.agrocontabil.model.InvoiceStatus;
+import br.com.agrocontabil.repository.InvoiceRepository;
+import br.com.agrocontabil.sefaz.SefazEnvironment;
 import br.com.agrocontabil.sefaz.SefazClient;
-import br.com.agrocontabil.sefaz.SefazRetorno;
-import br.com.agrocontabil.sefaz.SituacaoSefaz;
+import br.com.agrocontabil.sefaz.SefazReturn;
+import br.com.agrocontabil.sefaz.SefazSituation;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -38,7 +38,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 /**
  * Testes unitarios do {@link SefazService} (issue #15 — envio SEFAZ).
  *
- * <p>Mockito puro: {@link NotaFiscalRepository}, {@link AuthenticatedProdutorProvider} e
+ * <p>Mockito puro: {@link InvoiceRepository}, {@link AuthenticatedProducerProvider} e
  * {@link SefazClient} sao mockados. {@link SefazProperties} usa instancia real (default
  * HOMOLOGACAO) para evitar stubs desnecessarios (strict stubs).
  *
@@ -49,10 +49,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SefazServiceTest {
 
   @Mock
-  private NotaFiscalRepository notaFiscalRepository;
+  private InvoiceRepository invoiceRepository;
 
   @Mock
-  private AuthenticatedProdutorProvider produtorProvider;
+  private AuthenticatedProducerProvider producerProvider;
 
   @Mock
   private SefazClient sefazClient;
@@ -64,222 +64,222 @@ class SefazServiceTest {
 
   private static final String CHAVE = "41262612345678000195550010000000011000000012";
 
-  private Produtor produtor;
-  private UUID produtorId;
+  private Producer producer;
+  private UUID producerId;
 
   @BeforeEach
   void setUp() {
-    produtorId = UUID.randomUUID();
-    produtor = Produtor.builder()
-        .id(produtorId)
-        .nomeCompleto("Murilo Produtor")
-        .cpfCnpj("12345678901")
+    producerId = UUID.randomUUID();
+    producer = Producer.builder()
+        .id(producerId)
+        .fullName("Murilo Produtor")
+        .taxId("12345678901")
         .build();
     sefazService = new SefazService(
-        notaFiscalRepository, produtorProvider, sefazClient, sefazProperties);
+        invoiceRepository, producerProvider, sefazClient, sefazProperties);
   }
 
   @Test
   @DisplayName("enviar deve autorizar a nota e persistir protocolo/data quando cStat=100")
   void enviarShouldAuthorizeAndPersistProtocol() {
-    UUID notaId = UUID.randomUUID();
-    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    UUID invoiceId = UUID.randomUUID();
+    Invoice invoice = buildNotaXmlGerado(invoiceId);
     OffsetDateTime autorizacao = OffsetDateTime.now();
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
-        .thenReturn(Optional.of(nota));
-    when(sefazClient.enviar(eq(nota.getXmlGerado()), eq(CHAVE), eq(SefazAmbiente.HOMOLOGACAO)))
-        .thenReturn(new SefazRetorno(
-            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
+        .thenReturn(Optional.of(invoice));
+    when(sefazClient.send(eq(invoice.getGeneratedXml()), eq(CHAVE), eq(SefazEnvironment.HOMOLOGACAO)))
+        .thenReturn(new SefazReturn(
+            SefazSituation.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
             autorizacao));
-    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    SefazEnvioResponse response = sefazService.enviar(notaId);
+    SefazSubmissionResponse response = sefazService.send(invoiceId);
 
-    assertThat(response.status()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(response.status()).isEqualTo(InvoiceStatus.AUTORIZADA);
     assertThat(response.cStat()).isEqualTo("100");
-    assertThat(response.protocolo()).isEqualTo("141260000000017");
-    assertThat(response.dataAutorizacao()).isEqualTo(autorizacao);
-    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
-    assertThat(nota.getProtocoloAutorizacao()).isEqualTo("141260000000017");
-    assertThat(nota.getSefazAmbiente()).isEqualTo(SefazAmbiente.HOMOLOGACAO);
-    verify(notaFiscalRepository).save(nota);
+    assertThat(response.protocol()).isEqualTo("141260000000017");
+    assertThat(response.authorizationDate()).isEqualTo(autorizacao);
+    assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.AUTORIZADA);
+    assertThat(invoice.getAuthorizationProtocol()).isEqualTo("141260000000017");
+    assertThat(invoice.getSefazEnvironment()).isEqualTo(SefazEnvironment.HOMOLOGACAO);
+    verify(invoiceRepository).save(invoice);
   }
 
   @Test
   @DisplayName("enviar deve marcar REJEITADA e nao preencher protocolo quando o fisco rejeita")
   void enviarShouldPersistRejectionWithoutProtocol() {
-    UUID notaId = UUID.randomUUID();
-    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    UUID invoiceId = UUID.randomUUID();
+    Invoice invoice = buildNotaXmlGerado(invoiceId);
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
-        .thenReturn(Optional.of(nota));
-    when(sefazClient.enviar(any(), any(), any()))
-        .thenReturn(new SefazRetorno(
-            SituacaoSefaz.REJEITADA, "204", "Duplicidade de NF-e", null, null));
-    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
+        .thenReturn(Optional.of(invoice));
+    when(sefazClient.send(any(), any(), any()))
+        .thenReturn(new SefazReturn(
+            SefazSituation.REJEITADA, "204", "Duplicidade de NF-e", null, null));
+    when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    SefazEnvioResponse response = sefazService.enviar(notaId);
+    SefazSubmissionResponse response = sefazService.send(invoiceId);
 
-    assertThat(response.status()).isEqualTo(StatusNotaFiscal.REJEITADA);
+    assertThat(response.status()).isEqualTo(InvoiceStatus.REJEITADA);
     assertThat(response.cStat()).isEqualTo("204");
-    assertThat(response.protocolo()).isNull();
-    assertThat(nota.getProtocoloAutorizacao()).isNull();
-    assertThat(nota.getDataAutorizacao()).isNull();
+    assertThat(response.protocol()).isNull();
+    assertThat(invoice.getAuthorizationProtocol()).isNull();
+    assertThat(invoice.getAuthorizationDate()).isNull();
   }
 
   @Test
   @DisplayName("enviar deve lancar NotaFiscalNaoEnviavelException quando status nao e XML_GERADO")
   void enviarShouldThrowWhenStatusIsNotXmlGerado() {
-    UUID notaId = UUID.randomUUID();
-    NotaFiscal nota = buildNotaXmlGerado(notaId);
-    nota.setStatus(StatusNotaFiscal.RASCUNHO);
+    UUID invoiceId = UUID.randomUUID();
+    Invoice invoice = buildNotaXmlGerado(invoiceId);
+    invoice.setStatus(InvoiceStatus.RASCUNHO);
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
-        .thenReturn(Optional.of(nota));
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
+        .thenReturn(Optional.of(invoice));
 
-    assertThatThrownBy(() -> sefazService.enviar(notaId))
-        .isInstanceOf(NotaFiscalNaoEnviavelException.class)
+    assertThatThrownBy(() -> sefazService.send(invoiceId))
+        .isInstanceOf(InvoiceNotSubmittableException.class)
         .hasMessageContaining("RASCUNHO");
 
-    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+    verify(invoiceRepository, never()).save(any(Invoice.class));
   }
 
   @Test
   @DisplayName("enviar deve lancar ResourceNotFoundException quando nota pertence a outro produtor")
   void enviarShouldThrowWhenNotaBelongsToAnotherProdutor() {
-    UUID notaId = UUID.randomUUID();
+    UUID invoiceId = UUID.randomUUID();
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
         .thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> sefazService.enviar(notaId))
+    assertThatThrownBy(() -> sefazService.send(invoiceId))
         .isInstanceOf(ResourceNotFoundException.class)
-        .hasMessageContaining(notaId.toString());
+        .hasMessageContaining(invoiceId.toString());
 
-    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+    verify(invoiceRepository, never()).save(any(Invoice.class));
   }
 
   @Test
   @DisplayName("enviar deve propagar SefazComunicacaoException sem persistir quando o transporte falha")
   void enviarShouldPropagateCommunicationFailure() {
-    UUID notaId = UUID.randomUUID();
-    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    UUID invoiceId = UUID.randomUUID();
+    Invoice invoice = buildNotaXmlGerado(invoiceId);
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
-        .thenReturn(Optional.of(nota));
-    when(sefazClient.enviar(any(), any(), any()))
-        .thenThrow(new SefazComunicacaoException("timeout simulado"));
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
+        .thenReturn(Optional.of(invoice));
+    when(sefazClient.send(any(), any(), any()))
+        .thenThrow(new SefazCommunicationException("timeout simulado"));
 
-    assertThatThrownBy(() -> sefazService.enviar(notaId))
-        .isInstanceOf(SefazComunicacaoException.class);
+    assertThatThrownBy(() -> sefazService.send(invoiceId))
+        .isInstanceOf(SefazCommunicationException.class);
 
-    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+    verify(invoiceRepository, never()).save(any(Invoice.class));
   }
 
   // -------------------------------------------------------------------------
-  // sincronizarStatus / sincronizarPendentes (issue #16)
+  // syncStatus / sincronizarPendentes (issue #16)
   // -------------------------------------------------------------------------
 
   @Test
   @DisplayName("sincronizarStatus deve atualizar nota PENDENTE_SEFAZ para AUTORIZADA")
   void sincronizarStatusShouldUpdatePendingToAuthorized() {
-    UUID notaId = UUID.randomUUID();
-    NotaFiscal nota = buildNotaXmlGerado(notaId);
-    nota.setStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
-    nota.setSefazAmbiente(SefazAmbiente.HOMOLOGACAO);
+    UUID invoiceId = UUID.randomUUID();
+    Invoice invoice = buildNotaXmlGerado(invoiceId);
+    invoice.setStatus(InvoiceStatus.PENDENTE_SEFAZ);
+    invoice.setSefazEnvironment(SefazEnvironment.HOMOLOGACAO);
     OffsetDateTime autorizacao = OffsetDateTime.now();
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
-        .thenReturn(Optional.of(nota));
-    when(sefazClient.consultarStatus(eq(CHAVE), eq(SefazAmbiente.HOMOLOGACAO)))
-        .thenReturn(new SefazRetorno(
-            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
+        .thenReturn(Optional.of(invoice));
+    when(sefazClient.queryStatus(eq(CHAVE), eq(SefazEnvironment.HOMOLOGACAO)))
+        .thenReturn(new SefazReturn(
+            SefazSituation.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
             autorizacao));
-    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    SefazStatusResponse response = sefazService.sincronizarStatus(notaId);
+    SefazStatusResponse response = sefazService.syncStatus(invoiceId);
 
-    assertThat(response.status()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
-    assertThat(response.protocolo()).isEqualTo("141260000000017");
-    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(response.status()).isEqualTo(InvoiceStatus.AUTORIZADA);
+    assertThat(response.protocol()).isEqualTo("141260000000017");
+    assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.AUTORIZADA);
   }
 
   @Test
   @DisplayName("sincronizarStatus deve lancar NotaFiscalNaoConsultavelException quando RASCUNHO")
   void sincronizarStatusShouldThrowWhenRascunho() {
-    UUID notaId = UUID.randomUUID();
-    NotaFiscal nota = buildNotaXmlGerado(notaId);
-    nota.setStatus(StatusNotaFiscal.RASCUNHO);
-    nota.setChaveAcesso(null);
+    UUID invoiceId = UUID.randomUUID();
+    Invoice invoice = buildNotaXmlGerado(invoiceId);
+    invoice.setStatus(InvoiceStatus.RASCUNHO);
+    invoice.setAccessKey(null);
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
-        .thenReturn(Optional.of(nota));
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
+        .thenReturn(Optional.of(invoice));
 
-    assertThatThrownBy(() -> sefazService.sincronizarStatus(notaId))
-        .isInstanceOf(NotaFiscalNaoConsultavelException.class);
+    assertThatThrownBy(() -> sefazService.syncStatus(invoiceId))
+        .isInstanceOf(InvoiceNotQueryableException.class);
 
-    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+    verify(invoiceRepository, never()).save(any(Invoice.class));
   }
 
   @Test
   @DisplayName("sincronizarStatus deve lancar ResourceNotFoundException quando nao encontrada")
   void sincronizarStatusShouldThrowWhenNotFound() {
-    UUID notaId = UUID.randomUUID();
+    UUID invoiceId = UUID.randomUUID();
 
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(producerProvider.get()).thenReturn(producer);
+    when(invoiceRepository.findByIdAndProducerId(invoiceId, producerId))
         .thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> sefazService.sincronizarStatus(notaId))
+    assertThatThrownBy(() -> sefazService.syncStatus(invoiceId))
         .isInstanceOf(ResourceNotFoundException.class)
-        .hasMessageContaining(notaId.toString());
+        .hasMessageContaining(invoiceId.toString());
   }
 
   @Test
   @DisplayName("sincronizarPendentes deve consultar a SEFAZ e contar as notas atualizadas")
   void sincronizarPendentesShouldConsultAndCountUpdated() {
-    NotaFiscal nota = buildNotaXmlGerado(UUID.randomUUID());
-    nota.setStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
+    Invoice invoice = buildNotaXmlGerado(UUID.randomUUID());
+    invoice.setStatus(InvoiceStatus.PENDENTE_SEFAZ);
 
-    when(notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ))
-        .thenReturn(List.of(nota));
-    when(sefazClient.consultarStatus(eq(CHAVE), any()))
-        .thenReturn(new SefazRetorno(
-            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
+    when(invoiceRepository.findByStatus(InvoiceStatus.PENDENTE_SEFAZ))
+        .thenReturn(List.of(invoice));
+    when(sefazClient.queryStatus(eq(CHAVE), any()))
+        .thenReturn(new SefazReturn(
+            SefazSituation.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
             OffsetDateTime.now()));
-    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
 
     int atualizadas = sefazService.sincronizarPendentes();
 
     assertThat(atualizadas).isEqualTo(1);
-    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.AUTORIZADA);
   }
 
-  private NotaFiscal buildNotaXmlGerado(UUID notaId) {
-    return NotaFiscal.builder()
-        .id(notaId)
-        .numero(1L)
-        .serie(1)
-        .modelo("55")
-        .naturezaOperacao("Venda de producao rural")
-        .dataEmissao(OffsetDateTime.now())
-        .produtor(produtor)
-        .destinatarioNome("Jose Comprador")
-        .destinatarioCpfCnpj("12345678901")
-        .valorTotalProdutos(new BigDecimal("1000.00"))
-        .valorTotalNota(new BigDecimal("1000.00"))
-        .status(StatusNotaFiscal.XML_GERADO)
-        .chaveAcesso(CHAVE)
-        .xmlGerado("<NFe><infNFe Id=\"NFe" + CHAVE + "\"/></NFe>")
-        .versaoLayoutNfe("4.00")
+  private Invoice buildNotaXmlGerado(UUID invoiceId) {
+    return Invoice.builder()
+        .id(invoiceId)
+        .number(1L)
+        .series(1)
+        .model("55")
+        .operationNature("Venda de producao rural")
+        .issuanceDate(OffsetDateTime.now())
+        .producer(producer)
+        .recipientName("Jose Comprador")
+        .recipientTaxId("12345678901")
+        .totalProductsValue(new BigDecimal("1000.00"))
+        .totalInvoiceValue(new BigDecimal("1000.00"))
+        .status(InvoiceStatus.XML_GERADO)
+        .accessKey(CHAVE)
+        .generatedXml("<NFe><infNFe Id=\"NFe" + CHAVE + "\"/></NFe>")
+        .nfeLayoutVersion("4.00")
         .build();
   }
 }

@@ -45,14 +45,14 @@
   <!-- =====================================================================
        Campos do datasource (colecao de itens — DanfeItemRow)
        ===================================================================== -->
-  <field name="numeroItem"    class="java.lang.Integer"/>
-  <field name="descricao"     class="java.lang.String"/>
-  <field name="unidade"       class="java.lang.String"/>
-  <field name="quantidade"    class="java.lang.String"/>
-  <field name="valorUnitario" class="java.lang.String"/>
-  <field name="valorTotal"    class="java.lang.String"/>
-  <field name="valorIbs"      class="java.lang.String"/>
-  <field name="valorCbs"      class="java.lang.String"/>
+  <field name="itemNumber"    class="java.lang.Integer"/>
+  <field name="description"     class="java.lang.String"/>
+  <field name="unit"       class="java.lang.String"/>
+  <field name="quantity"    class="java.lang.String"/>
+  <field name="unitPrice" class="java.lang.String"/>
+  <field name="totalValue"    class="java.lang.String"/>
+  <field name="ibsValue"      class="java.lang.String"/>
+  <field name="cbsValue"      class="java.lang.String"/>
 
   <!-- =====================================================================
        Cabecalho do documento (title)
@@ -357,42 +357,42 @@
       <textField isBlankWhenNull="true">
         <reportElement x="0"   y="2" width="20"  height="12"/>
         <textElement><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{numeroItem}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{itemNumber}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="20"  y="2" width="185" height="12"/>
         <textElement><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{descricao}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="205" y="2" width="30"  height="12"/>
         <textElement textAlignment="Center"><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{unidade}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{unit}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="235" y="2" width="55"  height="12"/>
         <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{quantidade}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="290" y="2" width="60"  height="12"/>
         <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{valorUnitario}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{unitPrice}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="350" y="2" width="60"  height="12"/>
         <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{valorTotal}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{totalValue}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="410" y="2" width="60"  height="12"/>
         <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{valorIbs}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{ibsValue}]]></textFieldExpression>
       </textField>
       <textField isBlankWhenNull="true">
         <reportElement x="470" y="2" width="65"  height="12"/>
         <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
-        <textFieldExpression><![CDATA[$F{valorCbs}]]></textFieldExpression>
+        <textFieldExpression><![CDATA[$F{cbsValue}]]></textFieldExpression>
       </textField>
 
     </band>

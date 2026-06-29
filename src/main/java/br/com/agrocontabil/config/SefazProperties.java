@@ -1,6 +1,6 @@
 package br.com.agrocontabil.config;
 
-import br.com.agrocontabil.sefaz.SefazAmbiente;
+import br.com.agrocontabil.sefaz.SefazEnvironment;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -27,28 +27,28 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SefazProperties {
 
   /**
-   * Ambiente de comunicação com a SEFAZ. Padrão: {@link SefazAmbiente#HOMOLOGACAO}.
+   * Ambiente de comunicação com a SEFAZ. Padrão: {@link SefazEnvironment#HOMOLOGACAO}.
    *
    * <p>Em produção (Sprint 7), alterar para {@code PRODUCAO} e fornecer certificado ICP-Brasil.
    */
-  private SefazAmbiente ambiente = SefazAmbiente.HOMOLOGACAO;
+  private SefazEnvironment ambiente = SefazEnvironment.HOMOLOGACAO;
 
   /** Configurações do mock de transporte SEFAZ. */
   private Mock mock = new Mock();
 
-  /** Configurações de retry automático em falhas de comunicação. */
+  /** Configurações de retry automático em failures de comunicação. */
   private Retry retry = new Retry();
 
   /** Configurações do job de sincronização de status (issue #16). */
   private Sync sync = new Sync();
 
   /** Retorna o ambiente de comunicação com a SEFAZ. */
-  public SefazAmbiente getAmbiente() {
+  public SefazEnvironment getAmbiente() {
     return ambiente;
   }
 
   /** Define o ambiente de comunicação com a SEFAZ. */
-  public void setAmbiente(SefazAmbiente ambiente) {
+  public void setAmbiente(SefazEnvironment ambiente) {
     this.ambiente = ambiente;
   }
 
@@ -108,10 +108,10 @@ public class SefazProperties {
   }
 
   /**
-   * Configurações de retry automático para falhas de comunicação com a SEFAZ.
+   * Configurações de retry automático para failures de comunicação com a SEFAZ.
    *
    * <p>Aplicado via {@code @Retryable} no {@link br.com.agrocontabil.service.SefazService}.
-   * Somente {@link br.com.agrocontabil.exception.SefazComunicacaoException} aciona o retry.
+   * Somente {@link br.com.agrocontabil.exception.SefazCommunicationException} aciona o retry.
    */
   public static class Retry {
 

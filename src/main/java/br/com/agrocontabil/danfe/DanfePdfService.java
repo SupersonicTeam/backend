@@ -1,10 +1,10 @@
 package br.com.agrocontabil.danfe;
 
 import br.com.agrocontabil.exception.DanfeGenerationException;
-import br.com.agrocontabil.model.EnderecoDestinatario;
-import br.com.agrocontabil.model.NotaFiscal;
-import br.com.agrocontabil.model.NotaFiscalItem;
-import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RecipientAddress;
+import br.com.agrocontabil.model.Invoice;
+import br.com.agrocontabil.model.InvoiceItem;
+import br.com.agrocontabil.model.Producer;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -27,7 +27,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 /**
- * Gera o PDF da DANFE (Documento Auxiliar da NF-e) a partir de uma {@link NotaFiscal}
+ * Gera o PDF da DANFE (Documento Auxiliar da NF-e) a partir de uma {@link Invoice}
  * (issue #14 — RF011), usando JasperReports.
  *
  * <p>O template {@code reports/danfe.jrxml} é compilado uma única vez (cache do
@@ -51,32 +51,32 @@ public class DanfePdfService {
   private volatile JasperReport compiledReport;
 
   /**
-   * Gera o PDF da DANFE para a nota informada.
+   * Gera o PDF da DANFE para a invoice informada.
    *
-   * <p>Deve ser chamado dentro de uma transação ativa: acessa a coleção de itens (lazy)
-   * da nota.
+   * <p>Deve ser chamado dentro de uma transação ativa: acessa a coleção de items (lazy)
+   * da invoice.
    *
-   * @param nota nota fiscal com produtor, itens e totais carregados
+   * @param invoice invoice fiscal com producer, items e totais carregados
    * @return bytes do PDF gerado
    * @throws DanfeGenerationException se a compilação/preenchimento/exportação falhar
    */
-  public byte[] gerarPdf(NotaFiscal nota) {
+  public byte[] generatePdf(Invoice invoice) {
     try {
-      Map<String, Object> params = montarParametros(nota);
-      List<DanfeItemRow> itens = montarItens(nota);
+      Map<String, Object> params = buildParameters(invoice);
+      List<DanfeItemRow> items = buildItems(invoice);
       JasperPrint print =
-          JasperFillManager.fillReport(getReport(), params, new JRBeanCollectionDataSource(itens));
+          JasperFillManager.fillReport(getReport(), params, new JRBeanCollectionDataSource(items));
       byte[] pdf = JasperExportManager.exportReportToPdf(print);
       log.info("DANFE gerada: notaId={} itens={} bytes={}",
-          nota.getId(), itens.size(), pdf.length);
+          invoice.getId(), items.size(), pdf.length);
       return pdf;
     } catch (DanfeGenerationException e) {
       throw e;
     } catch (Exception e) {
       // Detalhe técnico só no log; ao cliente, mensagem genérica via DanfeGenerationException.
-      log.error("Falha ao gerar a DANFE da nota {}", nota.getId(), e);
+      log.error("Falha ao gerar a DANFE da nota {}", invoice.getId(), e);
       throw new DanfeGenerationException(
-          "Falha ao gerar o PDF da DANFE para a nota " + nota.getId(), e);
+          "Falha ao gerar o PDF da DANFE para a nota " + invoice.getId(), e);
     }
   }
 
@@ -100,47 +100,47 @@ public class DanfePdfService {
     return report;
   }
 
-  /** Monta os parâmetros escalares do relatório a partir da nota. */
-  private Map<String, Object> montarParametros(NotaFiscal nota) {
+  /** Monta os parâmetros escalares do relatório a partir da invoice. */
+  private Map<String, Object> buildParameters(Invoice invoice) {
     Map<String, Object> params = new HashMap<>();
     params.put("TITULO", "DANFE");
-    params.put("NUMERO", nota.getNumero() != null ? String.valueOf(nota.getNumero()) : "");
-    params.put("SERIE", nota.getSerie() != null ? String.valueOf(nota.getSerie()) : "");
-    params.put("MODELO", nota.getModelo());
-    params.put("NAT_OPERACAO", nota.getNaturezaOperacao());
-    params.put("CHAVE_ACESSO", nota.getChaveAcesso());
-    params.put("DATA_EMISSAO", formatarData(nota.getDataEmissao()));
-    params.put("STATUS", nota.getStatus() != null ? nota.getStatus().name() : "");
+    params.put("NUMERO", invoice.getNumber() != null ? String.valueOf(invoice.getNumber()) : "");
+    params.put("SERIE", invoice.getSeries() != null ? String.valueOf(invoice.getSeries()) : "");
+    params.put("MODELO", invoice.getModel());
+    params.put("NAT_OPERACAO", invoice.getOperationNature());
+    params.put("CHAVE_ACESSO", invoice.getAccessKey());
+    params.put("DATA_EMISSAO", formatarData(invoice.getIssuanceDate()));
+    params.put("STATUS", invoice.getStatus() != null ? invoice.getStatus().name() : "");
 
-    Produtor emit = nota.getProdutor();
-    params.put("EMIT_NOME", emit != null ? emit.getNomeCompleto() : "");
-    params.put("EMIT_CPF_CNPJ", emit != null ? emit.getCpfCnpj() : "");
-    params.put("EMIT_ESTADO", emit != null ? emit.getEstado() : "");
+    Producer emit = invoice.getProducer();
+    params.put("EMIT_NOME", emit != null ? emit.getFullName() : "");
+    params.put("EMIT_CPF_CNPJ", emit != null ? emit.getTaxId() : "");
+    params.put("EMIT_ESTADO", emit != null ? emit.getState() : "");
 
-    params.put("DEST_NOME", nota.getDestinatarioNome());
-    params.put("DEST_CPF_CNPJ", nota.getDestinatarioCpfCnpj());
-    params.put("DEST_ENDERECO", formatarEndereco(nota.getDestinatarioEndereco()));
+    params.put("DEST_NOME", invoice.getRecipientName());
+    params.put("DEST_CPF_CNPJ", invoice.getRecipientTaxId());
+    params.put("DEST_ENDERECO", formatarEndereco(invoice.getRecipientAddress()));
 
-    params.put("TOTAL_PRODUTOS", moeda(nota.getValorTotalProdutos()));
-    params.put("TOTAL_IBS", moeda(nota.getValorTotalIbs()));
-    params.put("TOTAL_CBS", moeda(nota.getValorTotalCbs()));
-    params.put("TOTAL_NOTA", moeda(nota.getValorTotalNota()));
+    params.put("TOTAL_PRODUTOS", moeda(invoice.getTotalProductsValue()));
+    params.put("TOTAL_IBS", moeda(invoice.getTotalIbsValue()));
+    params.put("TOTAL_CBS", moeda(invoice.getTotalCbsValue()));
+    params.put("TOTAL_NOTA", moeda(invoice.getTotalInvoiceValue()));
     return params;
   }
 
-  /** Converte os itens da nota em linhas formatadas para o datasource. */
-  private List<DanfeItemRow> montarItens(NotaFiscal nota) {
+  /** Converte os items da invoice em linhas formatadas para o datasource. */
+  private List<DanfeItemRow> buildItems(Invoice invoice) {
     List<DanfeItemRow> rows = new ArrayList<>();
-    for (NotaFiscalItem item : nota.getItens()) {
+    for (InvoiceItem item : invoice.getItems()) {
       rows.add(new DanfeItemRow(
-          item.getNumeroItem(),
-          item.getDescricao(),
-          item.getUnidade(),
-          quantidade(item.getQuantidade()),
-          moeda(item.getValorUnitario()),
-          moeda(item.getValorTotal()),
-          moeda(item.getValorIbs()),
-          moeda(item.getValorCbs())));
+          item.getItemNumber(),
+          item.getDescription(),
+          item.getUnit(),
+          quantity(item.getQuantity()),
+          moeda(item.getUnitPrice()),
+          moeda(item.getTotalValue()),
+          moeda(item.getIbsValue()),
+          moeda(item.getCbsValue())));
     }
     return rows;
   }
@@ -156,8 +156,8 @@ public class DanfePdfService {
     return nf.format(valor);
   }
 
-  /** Formata uma quantidade em pt-BR com até 4 casas decimais; nulo vira "-". */
-  private String quantidade(BigDecimal valor) {
+  /** Formata uma quantity em pt-BR com até 4 casas decimais; nulo vira "-". */
+  private String quantity(BigDecimal valor) {
     if (valor == null) {
       return "-";
     }
@@ -173,27 +173,27 @@ public class DanfePdfService {
   }
 
   /** Compõe o endereço do destinatário numa única linha; nulo/vazio vira "-". */
-  private String formatarEndereco(EnderecoDestinatario endereco) {
+  private String formatarEndereco(RecipientAddress endereco) {
     if (endereco == null) {
       return "-";
     }
     List<String> partes = new ArrayList<>();
-    if (endereco.getLogradouro() != null && !endereco.getLogradouro().isBlank()) {
-      String logradouro = endereco.getLogradouro();
-      if (endereco.getNumero() != null && !endereco.getNumero().isBlank()) {
-        logradouro = logradouro + ", " + endereco.getNumero();
+    if (endereco.getStreet() != null && !endereco.getStreet().isBlank()) {
+      String street = endereco.getStreet();
+      if (endereco.getNumber() != null && !endereco.getNumber().isBlank()) {
+        street = street + ", " + endereco.getNumber();
       }
-      partes.add(logradouro);
+      partes.add(street);
     }
-    if (endereco.getMunicipio() != null && !endereco.getMunicipio().isBlank()) {
-      String municipio = endereco.getMunicipio();
+    if (endereco.getCity() != null && !endereco.getCity().isBlank()) {
+      String city = endereco.getCity();
       if (endereco.getUf() != null && !endereco.getUf().isBlank()) {
-        municipio = municipio + "/" + endereco.getUf();
+        city = city + "/" + endereco.getUf();
       }
-      partes.add(municipio);
+      partes.add(city);
     }
-    if (endereco.getCep() != null && !endereco.getCep().isBlank()) {
-      partes.add("CEP " + endereco.getCep());
+    if (endereco.getZipCode() != null && !endereco.getZipCode().isBlank()) {
+      partes.add("CEP " + endereco.getZipCode());
     }
     return partes.isEmpty() ? "-" : String.join(" - ", partes);
   }

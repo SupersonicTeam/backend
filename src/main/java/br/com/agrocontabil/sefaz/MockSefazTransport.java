@@ -22,9 +22,9 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>{@code cStat = "100"} — Autorizado o uso da NF-e</li>
  *   <li>{@code xMotivo = "Autorizado o uso da NF-e"}</li>
- *   <li>{@code situacao = AUTORIZADA}</li>
- *   <li>{@code protocolo} derivado da chave de acesso (prefixo "1" + primeiros 14 dígitos)</li>
- *   <li>{@code dataAutorizacao = OffsetDateTime.now()}</li>
+ *   <li>{@code situation = AUTORIZADA}</li>
+ *   <li>{@code protocol} derivado da key de acesso (prefix "1" + primeiros 14 dígitos)</li>
+ *   <li>{@code authorizationDate = OffsetDateTime.now()}</li>
  * </ul>
  */
 @Component
@@ -40,55 +40,55 @@ public class MockSefazTransport implements SefazTransport {
   /**
    * {@inheritDoc}
    *
-   * <p>Simula autorização imediata e determinística. O protocolo é derivado da chave
+   * <p>Simula autorização imediata e determinística. O protocol é derivado da key
    * de acesso para facilitar rastreabilidade em testes.
    */
   @Override
-  public SefazRetorno enviar(String xmlAssinado, String chaveAcesso, SefazAmbiente ambiente) {
-    log.info("[MOCK SEFAZ] Simulando envio de NF-e: chave={} ambiente={}", chaveAcesso, ambiente);
-    String protocolo = buildProtocolo(chaveAcesso);
-    SefazRetorno retorno = new SefazRetorno(
-        SituacaoSefaz.AUTORIZADA,
+  public SefazReturn send(String xmlAssinado, String accessKey, SefazEnvironment ambiente) {
+    log.info("[MOCK SEFAZ] Simulando envio de NF-e: chave={} ambiente={}", accessKey, ambiente);
+    String protocol = buildProtocolo(accessKey);
+    SefazReturn retorno = new SefazReturn(
+        SefazSituation.AUTORIZADA,
         CSTAT_AUTORIZADO,
         XMOTIVO_AUTORIZADO,
-        protocolo,
+        protocol,
         OffsetDateTime.now());
-    log.info("[MOCK SEFAZ] Retorno simulado: cStat={} protocolo={}", retorno.cStat(), protocolo);
+    log.info("[MOCK SEFAZ] Retorno simulado: cStat={} protocolo={}", retorno.cStat(), protocol);
     return retorno;
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>Simula consulta de status retornando sempre {@link SituacaoSefaz#AUTORIZADA}
-   * para a chave informada. Implementação real na Sprint 7 (NfeConsultaProtocolo).
+   * <p>Simula consulta de status retornando sempre {@link SefazSituation#AUTORIZADA}
+   * para a key informada. Implementação real na Sprint 7 (NfeConsultaProtocolo).
    */
   @Override
-  public SefazRetorno consultarStatus(String chaveAcesso, SefazAmbiente ambiente) {
-    log.info("[MOCK SEFAZ] Simulando consulta de status: chave={} ambiente={}", chaveAcesso,
+  public SefazReturn queryStatus(String accessKey, SefazEnvironment ambiente) {
+    log.info("[MOCK SEFAZ] Simulando consulta de status: chave={} ambiente={}", accessKey,
         ambiente);
-    String protocolo = buildProtocolo(chaveAcesso);
-    return new SefazRetorno(
-        SituacaoSefaz.AUTORIZADA,
+    String protocol = buildProtocolo(accessKey);
+    return new SefazReturn(
+        SefazSituation.AUTORIZADA,
         CSTAT_AUTORIZADO,
         XMOTIVO_AUTORIZADO,
-        protocolo,
+        protocol,
         OffsetDateTime.now());
   }
 
   /**
-   * Gera um número de protocolo fictício derivado da chave de acesso.
+   * Gera um número de protocol fictício derivado da key de acesso.
    *
-   * <p>Formato: "1" + primeiros 14 dígitos da chave = 15 dígitos no total.
-   * Garante unicidade relativa por chave e facilita rastreabilidade em logs de teste.
+   * <p>Formato: "1" + primeiros 14 dígitos da key = 15 dígitos no total.
+   * Garante unicidade relativa por key e facilita rastreabilidade em logs de teste.
    *
-   * @param chaveAcesso chave de acesso de 44 dígitos
-   * @return protocolo de 15 dígitos (fictício)
+   * @param accessKey key de acesso de 44 dígitos
+   * @return protocol de 15 dígitos (fictício)
    */
-  private String buildProtocolo(String chaveAcesso) {
-    if (chaveAcesso == null || chaveAcesso.length() < 14) {
+  private String buildProtocolo(String accessKey) {
+    if (accessKey == null || accessKey.length() < 14) {
       return "100000000000001";
     }
-    return "1" + chaveAcesso.substring(0, 14);
+    return "1" + accessKey.substring(0, 14);
   }
 }
