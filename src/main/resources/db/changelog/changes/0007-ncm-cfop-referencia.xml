@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0007-ncm-cfop-referencia.xml
+         Sprint 2 — issue #20 (RN008): tabelas de referência de NCM e CFOP
+         do agronegócio + seed curado. Usadas pelos validadores de existência
+         (@ValidNcm/@ValidCfop) na camada de entrada (HTTP 400).
+
+         Subconjunto curado e versionado — NÃO é o catálogo oficial completo
+         de NCM/CFOP; suficiente para o escopo do TCC.
+         ================================================================ -->
+
+    <changeSet id="0007-create-ncm-agropecuario" author="supersonic-team">
+        <createTable tableName="ncm_agropecuario">
+            <column name="codigo" type="VARCHAR(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="ncm_agropecuario"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0007-create-cfop-referencia" author="supersonic-team">
+        <createTable tableName="cfop_referencia">
+            <column name="codigo" type="VARCHAR(4)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo_operacao" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ambito" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="aplicavel_produtor_rural" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="cfop_referencia"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ================================================================
+         Seed de NCM do agronegócio (produtos agropecuários típicos).
+         ================================================================ -->
+    <changeSet id="0007-seed-ncm-agropecuario" author="supersonic-team">
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="12010090"/>
+            <column name="descricao" value="Soja, mesmo triturada (exceto para semeadura)"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="12010010"/>
+            <column name="descricao" value="Soja para semeadura"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10059010"/>
+            <column name="descricao" value="Milho em grao (exceto para semeadura)"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10051000"/>
+            <column name="descricao" value="Milho para semeadura"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10011900"/>
+            <column name="descricao" value="Trigo duro (exceto para semeadura)"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10063021"/>
+            <column name="descricao" value="Arroz semibranqueado ou branqueado, polido"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="09011110"/>
+            <column name="descricao" value="Cafe nao torrado, nao descafeinado, em grao"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="17011400"/>
+            <column name="descricao" value="Outros acucares de cana, em bruto"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="52010020"/>
+            <column name="descricao" value="Algodao em bruto, nao cardado nem penteado"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="01022110"/>
+            <column name="descricao" value="Bovinos reprodutores de raca pura, prenhes ou com cria"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="01039000"/>
+            <column name="descricao" value="Suinos vivos (exceto reprodutores de raca pura)"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04070090"/>
+            <column name="descricao" value="Outros ovos de aves, com casca, frescos"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04012010"/>
+            <column name="descricao" value="Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="08043000"/>
+            <column name="descricao" value="Abacaxis (ananases) frescos ou secos"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="07020000"/>
+            <column name="descricao" value="Tomates frescos ou refrigerados"/>
+        </insert>
+        <rollback>
+            <delete tableName="ncm_agropecuario"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ================================================================
+         Seed de CFOP de saída relevantes ao produtor rural + alguns de
+         entrada/inaplicáveis para exercitar a regra de aplicabilidade.
+         ================================================================ -->
+    <changeSet id="0007-seed-cfop-referencia" author="supersonic-team">
+        <!-- Saídas internas (5xxx) aplicáveis ao produtor rural -->
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="5101"/>
+            <column name="descricao" value="Venda de producao do estabelecimento (operacao interna)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERNO"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="5102"/>
+            <column name="descricao" value="Venda de mercadoria adquirida de terceiros (operacao interna)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERNO"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="5901"/>
+            <column name="descricao" value="Remessa para industrializacao por encomenda (interna)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERNO"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="5949"/>
+            <column name="descricao" value="Outra saida de mercadoria ou prestacao de servico nao especificada (interna)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERNO"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <!-- Saídas interestaduais (6xxx) aplicáveis ao produtor rural -->
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="6101"/>
+            <column name="descricao" value="Venda de producao do estabelecimento (operacao interestadual)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERESTADUAL"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="6102"/>
+            <column name="descricao" value="Venda de mercadoria adquirida de terceiros (operacao interestadual)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERESTADUAL"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="6949"/>
+            <column name="descricao" value="Outra saida de mercadoria ou prestacao de servico nao especificada (interestadual)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="INTERESTADUAL"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <!-- Saída para o exterior (7xxx) aplicável ao produtor rural -->
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="7101"/>
+            <column name="descricao" value="Venda de producao do estabelecimento (exportacao)"/>
+            <column name="tipo_operacao" value="SAIDA"/>
+            <column name="ambito" value="EXTERIOR"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="true"/>
+        </insert>
+        <!-- CFOP de entrada/industrializacao: existe na tabela mas NAO e aplicavel ao
+             produtor rural na emissao de saida — exercita a regra de aplicabilidade. -->
+        <insert tableName="cfop_referencia">
+            <column name="codigo" value="1556"/>
+            <column name="descricao" value="Compra de material para uso ou consumo (operacao interna)"/>
+            <column name="tipo_operacao" value="ENTRADA"/>
+            <column name="ambito" value="INTERNO"/>
+            <column name="aplicavel_produtor_rural" valueBoolean="false"/>
+        </insert>
+        <rollback>
+            <delete tableName="cfop_referencia"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

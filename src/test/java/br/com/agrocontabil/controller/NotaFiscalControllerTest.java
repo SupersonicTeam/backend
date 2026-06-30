@@ -87,6 +87,20 @@ class NotaFiscalControllerTest {
   @MockBean
   private ProdutorRepository produtorRepository;
 
+  /**
+   * Os validadores @ValidNcm/@ValidCfop (issue #20) sao @Component instanciados pela fabrica de
+   * ConstraintValidator do Spring e injetam estes repositorios por construtor. Como @WebMvcTest
+   * nao sobe JPA, mockamos os repositorios para satisfazer a injecao na inicializacao do
+   * contexto. Sem stub configurado, findAllCodigos/findCodigosAplicaveisProdutorRural retornam
+   * lista vazia (Mockito default) — combinado com a estrategia fail-open dos validadores, NCM e
+   * CFOP validos no payload nao sao bloqueados nestes testes de camada web.
+   */
+  @MockBean
+  private br.com.agrocontabil.repository.NcmReferenciaRepository ncmReferenciaRepository;
+
+  @MockBean
+  private br.com.agrocontabil.repository.CfopReferenciaRepository cfopReferenciaRepository;
+
   private ObjectMapper objectMapper;
 
   @BeforeEach
