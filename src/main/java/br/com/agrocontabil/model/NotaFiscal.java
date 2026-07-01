@@ -156,6 +156,15 @@ public class NotaFiscal {
   private StatusNotaFiscal status = StatusNotaFiscal.RASCUNHO;
 
   /**
+   * Tipo do documento fiscal (issue #18): {@link TipoDocumentoFiscal#NFE} (padrao) ou
+   * {@link TipoDocumentoFiscal#NFA} (Nota Fiscal Avulsa do produtor rural pessoa fisica).
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "tipo_documento", length = 10, nullable = false, columnDefinition = "VARCHAR(10)")
+  @Builder.Default
+  private TipoDocumentoFiscal tipoDocumento = TipoDocumentoFiscal.NFE;
+
+  /**
    * Corpo completo do XML da NF-e gerado e validado pelo pipeline de geracao.
    *
    * <p>Nulo enquanto a nota esta em status {@link StatusNotaFiscal#RASCUNHO}. Preenchido

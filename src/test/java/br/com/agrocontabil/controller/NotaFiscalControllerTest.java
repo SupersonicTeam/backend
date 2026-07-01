@@ -231,6 +231,40 @@ class NotaFiscalControllerTest {
             jsonPath("$.errors[?(@.field == 'itens[0].valorUnitario')]").exists());
   }
 
+  @Test
+  @DisplayName("POST com destinatarioCpfCnpj de digito verificador invalido deve retornar 400")
+  void postWithInvalidCpfCnpjShouldReturn400() throws Exception {
+    // Formato valido (11 digitos) mas DV invalido: @Pattern passa, @ValidCpfCnpj rejeita (#18).
+    String payload = """
+        {
+          "numero": 1,
+          "naturezaOperacao": "Venda",
+          "dataEmissao": "2026-06-10T10:00:00-03:00",
+          "destinatarioNome": "Comprador",
+          "destinatarioCpfCnpj": "12345678902",
+          "itens": [
+            {
+              "numeroItem": 1,
+              "descricao": "Produto X",
+              "ncm": "12010090",
+              "cfop": "6101",
+              "unidade": "UN",
+              "quantidade": 10,
+              "valorUnitario": 5.00
+            }
+          ]
+        }
+        """;
+
+    mockMvc.perform(post("/api/notas")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.field == 'destinatarioCpfCnpj')]").exists());
+  }
+
   // -------------------------------------------------------------------------
   // GET /{id} nao existente → 404
   // -------------------------------------------------------------------------
@@ -597,7 +631,7 @@ class NotaFiscalControllerTest {
           "naturezaOperacao": "Venda de producao rural",
           "dataEmissao": "2026-06-10T10:00:00-03:00",
           "destinatarioNome": "Jose Comprador",
-          "destinatarioCpfCnpj": "12345678901",
+          "destinatarioCpfCnpj": "52998224725",
           "itens": [
             {
               "numeroItem": 1,
@@ -622,6 +656,7 @@ class NotaFiscalControllerTest {
         "55",
         "Venda de producao rural",
         StatusNotaFiscal.RASCUNHO,
+        br.com.agrocontabil.model.TipoDocumentoFiscal.NFE,
         OffsetDateTime.now(),
         null,
         UUID.randomUUID(),
@@ -647,6 +682,7 @@ class NotaFiscalControllerTest {
         "55",
         "Venda de producao rural",
         StatusNotaFiscal.XML_GERADO,
+        br.com.agrocontabil.model.TipoDocumentoFiscal.NFE,
         OffsetDateTime.now(),
         null,
         UUID.randomUUID(),

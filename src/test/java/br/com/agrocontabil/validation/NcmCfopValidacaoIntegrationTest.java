@@ -128,7 +128,7 @@ class NcmCfopValidacaoIntegrationTest {
           "naturezaOperacao": "Venda de producao",
           "dataEmissao": "2026-06-10T10:00:00-03:00",
           "destinatarioNome": "Comprador",
-          "destinatarioCpfCnpj": "12345678901",
+          "destinatarioCpfCnpj": "52998224725",
           "itens": [
             {
               "numeroItem": 1,
