@@ -178,6 +178,8 @@ public class FiscalRulesValidator {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 prefixo + ".cfop", "CFOP e obrigatorio no layout da NF-e"));
+      } else {
+        validarAmbitoCfop(nota, item, prefixo, violations);
       }
 
       if (item.getValorTotal() == null
@@ -185,6 +187,83 @@ public class FiscalRulesValidator {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 prefixo + ".valorTotal", "Valor total do item deve ser maior que zero"));
+      }
+    }
+  }
+
+  /**
+   * Valida a compatibilidade entre o âmbito codificado no 1.º dígito do CFOP e a relação real
+   * de UFs (emitente × destinatário) — RN008, issue #20.
+   *
+   * <p>O 1.º dígito de um CFOP de saída codifica o âmbito da operação:
+   * <ul>
+   *   <li>{@code 5} → operação <strong>interna</strong> (mesma UF do emitente);</li>
+   *   <li>{@code 6} → operação <strong>interestadual</strong> (UF diferente);</li>
+   *   <li>{@code 7} → operação com o <strong>exterior</strong> (UF do destinatário {@code EX}).</li>
+   * </ul>
+   *
+   * <p>Esta validação só roda quando há UF de emitente e de destinatário; a ausência de UF já é
+   * sinalizada por outras regras ({@code validarEmitente}/{@code validarDestinatario}) — não
+   * duplicamos a violação aqui.
+   */
+  private void validarAmbitoCfop(
+      NotaFiscal nota,
+      NotaFiscalItem item,
+      String prefixo,
+      List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+
+    char primeiroDigito = item.getCfop().charAt(0);
+
+    Produtor produtor = nota.getProdutor();
+    EnderecoDestinatario endereco = nota.getDestinatarioEndereco();
+
+    String ufEmitente = produtor == null ? null : produtor.getEstado();
+    String ufDestinatario = endereco == null ? null : endereco.getUf();
+
+    // Sem alguma das UFs não há como avaliar o âmbito — outras regras já cobrem a ausência.
+    if (isBlank(ufEmitente) || isBlank(ufDestinatario)) {
+      return;
+    }
+
+    String emitente = ufEmitente.trim().toUpperCase();
+    String destinatario = ufDestinatario.trim().toUpperCase();
+
+    boolean operacaoExterior = "EX".equals(destinatario);
+    boolean mesmaUf = emitente.equals(destinatario);
+
+    switch (primeiroDigito) {
+      case '5' -> {
+        if (!mesmaUf) {
+          violations.add(
+              new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+                  prefixo + ".cfop",
+                  "CFOP de operacao interna (iniciado em 5) e incompativel com operacao "
+                      + "interestadual (" + emitente + " -> " + destinatario
+                      + "). Use um CFOP iniciado em 6."));
+        }
+      }
+      case '6' -> {
+        if (mesmaUf) {
+          violations.add(
+              new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+                  prefixo + ".cfop",
+                  "CFOP de operacao interestadual (iniciado em 6) e incompativel com operacao "
+                      + "interna (mesma UF " + emitente
+                      + "). Use um CFOP iniciado em 5."));
+        }
+      }
+      case '7' -> {
+        if (!operacaoExterior) {
+          violations.add(
+              new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+                  prefixo + ".cfop",
+                  "CFOP de operacao com o exterior (iniciado em 7) exige destinatario no "
+                      + "exterior (UF 'EX'). Para operacao nacional use CFOP iniciado em 5 ou 6."));
+        }
+      }
+      default -> {
+        // Outros 1.os dígitos (1,2,3 = entradas) não são esperados na saída do produtor;
+        // não bloqueamos aqui para não restringir cenários futuros (ex.: importação — issue #19).
       }
     }
   }

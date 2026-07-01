@@ -99,3 +99,54 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_validacao (
     validado_em     TIMESTAMP WITH TIME ZONE NOT NULL,
     PRIMARY KEY (id)
 );
+
+-- ============================================================================
+-- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).
+-- O perfil de teste desabilita o Liquibase (liquibase.enabled=false), entao o
+-- seed via <insert> do changeset NAO roda nos testes. Replicamos as tabelas e o
+-- seed curado aqui para que os validadores @ValidNcm/@ValidCfop tenham dados nos
+-- testes de integracao que usam este script via @Sql.
+-- Manter sincronizado com 0007-ncm-cfop-referencia.xml.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS ncm_agropecuario (
+    codigo      VARCHAR(8)    NOT NULL,
+    descricao   VARCHAR(255)  NOT NULL,
+    PRIMARY KEY (codigo)
+);
+
+CREATE TABLE IF NOT EXISTS cfop_referencia (
+    codigo                    VARCHAR(4)    NOT NULL,
+    descricao                 VARCHAR(255)  NOT NULL,
+    tipo_operacao             VARCHAR(20)   NOT NULL,
+    ambito                    VARCHAR(20)   NOT NULL,
+    aplicavel_produtor_rural  BOOLEAN       NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (codigo)
+);
+
+MERGE INTO ncm_agropecuario (codigo, descricao) KEY (codigo) VALUES
+    ('12010090', 'Soja, mesmo triturada (exceto para semeadura)'),
+    ('12010010', 'Soja para semeadura'),
+    ('10059010', 'Milho em grao (exceto para semeadura)'),
+    ('10051000', 'Milho para semeadura'),
+    ('10011900', 'Trigo duro (exceto para semeadura)'),
+    ('10063021', 'Arroz semibranqueado ou branqueado, polido'),
+    ('09011110', 'Cafe nao torrado, nao descafeinado, em grao'),
+    ('17011400', 'Outros acucares de cana, em bruto'),
+    ('52010020', 'Algodao em bruto, nao cardado nem penteado'),
+    ('01022110', 'Bovinos reprodutores de raca pura, prenhes ou com cria'),
+    ('01039000', 'Suinos vivos (exceto reprodutores de raca pura)'),
+    ('04070090', 'Outros ovos de aves, com casca, frescos'),
+    ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro'),
+    ('08043000', 'Abacaxis (ananases) frescos ou secos'),
+    ('07020000', 'Tomates frescos ou refrigerados');
+
+MERGE INTO cfop_referencia (codigo, descricao, tipo_operacao, ambito, aplicavel_produtor_rural) KEY (codigo) VALUES
+    ('5101', 'Venda de producao do estabelecimento (operacao interna)', 'SAIDA', 'INTERNO', TRUE),
+    ('5102', 'Venda de mercadoria adquirida de terceiros (operacao interna)', 'SAIDA', 'INTERNO', TRUE),
+    ('5901', 'Remessa para industrializacao por encomenda (interna)', 'SAIDA', 'INTERNO', TRUE),
+    ('5949', 'Outra saida de mercadoria ou prestacao de servico nao especificada (interna)', 'SAIDA', 'INTERNO', TRUE),
+    ('6101', 'Venda de producao do estabelecimento (operacao interestadual)', 'SAIDA', 'INTERESTADUAL', TRUE),
+    ('6102', 'Venda de mercadoria adquirida de terceiros (operacao interestadual)', 'SAIDA', 'INTERESTADUAL', TRUE),
+    ('6949', 'Outra saida de mercadoria ou prestacao de servico nao especificada (interestadual)', 'SAIDA', 'INTERESTADUAL', TRUE),
+    ('7101', 'Venda de producao do estabelecimento (exportacao)', 'SAIDA', 'EXTERIOR', TRUE),
+    ('1556', 'Compra de material para uso ou consumo (operacao interna)', 'ENTRADA', 'INTERNO', FALSE);
