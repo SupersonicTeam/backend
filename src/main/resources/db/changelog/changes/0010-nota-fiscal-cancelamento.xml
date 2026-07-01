@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0010-nota-fiscal-cancelamento.xml
+         Sprint 3 — issue #21: cancelamento de NF-e (RN006, limite 30 dias).
+
+         Registra o cancelamento de uma NF-e AUTORIZADA junto a SEFAZ. O
+         status terminal CANCELADA ja existe no enum StatusNotaFiscal; estas
+         colunas guardam os dados do evento de cancelamento (todas nullable —
+         so preenchidas quando a nota e efetivamente cancelada):
+
+           - data_cancelamento TIMESTAMP WITH TIME ZONE (instante do cancelamento)
+           - motivo_cancelamento VARCHAR(255) (justificativa 15-255 chars — SEFAZ)
+           - protocolo_cancelamento VARCHAR(20) (protocolo do evento de cancelamento)
+
+         Obs.: o perfil de teste desabilita o Liquibase (liquibase.enabled=false);
+         estas 3 colunas foram replicadas em
+         src/test/resources/schema-nota-fiscal-test.sql. Manter em sincronia.
+
+         NAO editar changesets anteriores (0001-0009).
+         ================================================================ -->
+
+    <changeSet id="0010-nota-fiscal-add-cancelamento" author="supersonic-team">
+        <comment>
+            Adiciona as colunas de cancelamento (todas nullable) em nota_fiscal — issue #21.
+        </comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="data_cancelamento" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="motivo_cancelamento" type="VARCHAR(255)"/>
+            <column name="protocolo_cancelamento" type="VARCHAR(20)"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="protocolo_cancelamento"/>
+            <dropColumn tableName="nota_fiscal" columnName="motivo_cancelamento"/>
+            <dropColumn tableName="nota_fiscal" columnName="data_cancelamento"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

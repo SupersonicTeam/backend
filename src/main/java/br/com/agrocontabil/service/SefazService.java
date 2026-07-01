@@ -1,8 +1,11 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.config.SefazProperties;
+import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
+import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
@@ -15,7 +18,10 @@ import br.com.agrocontabil.sefaz.SefazAmbiente;
 import br.com.agrocontabil.sefaz.SefazClient;
 import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +56,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class SefazService {
 
   private static final Logger log = LoggerFactory.getLogger(SefazService.class);
+
+  /** Fuso oficial da aplicação para o cálculo do prazo de cancelamento (RN006). */
+  private static final ZoneId FUSO_BRASIL = ZoneId.of("America/Sao_Paulo");
+
+  /** Prazo legal, em dias corridos, para cancelar uma NF-e após a emissão (RN006). */
+  private static final int PRAZO_CANCELAMENTO_DIAS = 30;
+
+  /**
+   * Códigos cStat que indicam cancelamento aceito pela SEFAZ (evento vinculado à NF-e):
+   * 135 (evento registrado e vinculado) e 155 (evento registrado, vinculado fora do prazo).
+   */
+  private static final Set<String> CSTAT_CANCELAMENTO_ACEITO = Set.of("135", "155");
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
@@ -141,6 +159,81 @@ public class SefazService {
   }
 
   /**
+   * Cancela uma NF-e autorizada junto à SEFAZ e persiste o resultado (issue #21 — RN006).
+   *
+   * <p>Fluxo (espelha {@link #enviar(UUID)}):
+   * <ol>
+   *   <li>Ownership anti-IDOR: {@code findByIdAndProdutorId} → 404 se inexistente/de outro
+   *       produtor.</li>
+   *   <li>Pré-condição: status deve ser {@link StatusNotaFiscal#AUTORIZADA}; caso contrário
+   *       {@link NotaFiscalNaoCancelavelException} (HTTP 409).</li>
+   *   <li>RN006: {@code dataEmissao} + 30 dias (fuso {@code America/Sao_Paulo}, limite
+   *       inclusivo) vs. agora; se expirado, {@link CancelamentoForaPrazoException}
+   *       (HTTP 422).</li>
+   *   <li>{@link SefazClient#cancelar} (com retry em falha de comunicação → HTTP 502).</li>
+   *   <li>Sucesso (cStat de evento vinculado ∈ {135, 155}): status {@code CANCELADA},
+   *       data/motivo/protocolo de cancelamento e cStat/motivo atualizados; persiste.</li>
+   * </ol>
+   *
+   * @param notaId identificador da nota fiscal
+   * @param motivo justificativa do cancelamento (15 a 255 caracteres — validada no controller)
+   * @return DTO com o resultado do cancelamento
+   * @throws ResourceNotFoundException           se a nota não existir ou pertencer a outro produtor
+   * @throws NotaFiscalNaoCancelavelException     se o status não for AUTORIZADA (HTTP 409)
+   * @throws CancelamentoForaPrazoException       se fora do prazo de 30 dias (HTTP 422)
+   * @throws SefazComunicacaoException            se a comunicação falhar após o retry (HTTP 502)
+   */
+  public CancelamentoResponse cancelar(UUID notaId, String motivo) {
+    Produtor produtor = produtorProvider.get();
+    NotaFiscal nota = notaFiscalRepository
+        .findByIdAndProdutorId(notaId, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
+
+    if (nota.getStatus() != StatusNotaFiscal.AUTORIZADA) {
+      throw new NotaFiscalNaoCancelavelException(notaId, nota.getStatus());
+    }
+
+    // RN006: prazo de 30 dias corridos da emissao, limite inclusivo (fuso America/Sao_Paulo).
+    OffsetDateTime agora = OffsetDateTime.now(FUSO_BRASIL);
+    OffsetDateTime limite = nota.getDataEmissao().plusDays(PRAZO_CANCELAMENTO_DIAS);
+    if (agora.isAfter(limite)) {
+      throw new CancelamentoForaPrazoException(notaId, limite);
+    }
+
+    SefazAmbiente ambiente = nota.getSefazAmbiente() != null
+        ? nota.getSefazAmbiente()
+        : sefazProperties.getAmbiente();
+    SefazRetorno retorno = sefazClient.cancelar(
+        nota.getChaveAcesso(), motivo, nota.getProtocoloAutorizacao(), ambiente);
+
+    if (!CSTAT_CANCELAMENTO_ACEITO.contains(retorno.cStat())) {
+      // Cancelamento rejeitado pelo fisco (cStat de evento nao vinculado). Na Sprint 3 o mock
+      // sempre aceita; o tratamento fino da rejeicao de cancelamento e debito da Sprint 7.
+      throw new NotaFiscalNaoCancelavelException(notaId, nota.getStatus());
+    }
+
+    nota.setStatus(StatusNotaFiscal.CANCELADA);
+    nota.setDataCancelamento(agora);
+    nota.setMotivoCancelamento(motivo);
+    nota.setProtocoloCancelamento(retorno.protocolo());
+    nota.setSefazCstat(retorno.cStat());
+    nota.setSefazMotivo(retorno.xMotivo());
+    nota.setSefazAmbiente(ambiente);
+    NotaFiscal salva = notaFiscalRepository.save(nota);
+
+    // Log de auditoria — nunca inclui a justificativa (pode conter dado sensivel) nem CPF/CNPJ.
+    log.info(
+        "NF-e cancelada na SEFAZ: notaId={} chave={} ambiente={} cStat={} protocolo={}",
+        salva.getId(),
+        salva.getChaveAcesso(),
+        ambiente,
+        retorno.cStat(),
+        retorno.protocolo());
+
+    return toCancelamentoResponse(salva);
+  }
+
+  /**
    * Sincroniza o status de todas as notas em {@link StatusNotaFiscal#PENDENTE_SEFAZ}.
    *
    * <p>Operação de sistema (sem produtor autenticado), executada pelo job agendado
@@ -212,6 +305,18 @@ public class SefazService {
         nota.getSefazMotivo(),
         nota.getProtocoloAutorizacao(),
         nota.getDataAutorizacao());
+  }
+
+  /** Converte a entidade já cancelada no DTO de resposta do cancelamento. */
+  private CancelamentoResponse toCancelamentoResponse(NotaFiscal nota) {
+    return new CancelamentoResponse(
+        nota.getChaveAcesso(),
+        nota.getStatus(),
+        nota.getDataCancelamento(),
+        nota.getProtocoloCancelamento(),
+        nota.getMotivoCancelamento(),
+        nota.getSefazCstat(),
+        nota.getSefazMotivo());
   }
 
   /** Converte a entidade já atualizada no DTO de resposta da consulta de status. */

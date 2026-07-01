@@ -61,7 +61,14 @@ public enum StatusNotaFiscal {
   PENDENTE_SEFAZ,
 
   /**
-   * Nota cancelada junto à SEFAZ. Reservado para integração futura (Sprint 7+).
+   * Nota cancelada junto à SEFAZ (issue #21, RN006). <strong>Estado terminal</strong>:
+   * nenhuma operação (edição, exclusão, geração de XML, envio ou novo cancelamento)
+   * é permitida após o cancelamento.
+   *
+   * <p>Só uma nota {@link #AUTORIZADA} pode ser cancelada, e apenas dentro do prazo
+   * de 30 dias corridos da emissão (RN006). Ao cancelar, os campos
+   * {@code dataCancelamento}, {@code motivoCancelamento} e {@code protocoloCancelamento}
+   * ficam preenchidos na entidade. Adicionado o fluxo real na Sprint 3 (issue #21).
    */
   CANCELADA
 }

@@ -36,6 +36,8 @@ public class MockSefazTransport implements SefazTransport {
 
   private static final String CSTAT_AUTORIZADO = "100";
   private static final String XMOTIVO_AUTORIZADO = "Autorizado o uso da NF-e";
+  private static final String CSTAT_EVENTO_VINCULADO = "135";
+  private static final String XMOTIVO_EVENTO_VINCULADO = "Evento registrado e vinculado a NF-e";
 
   /**
    * {@inheritDoc}
@@ -74,6 +76,35 @@ public class MockSefazTransport implements SefazTransport {
         XMOTIVO_AUTORIZADO,
         protocolo,
         OffsetDateTime.now());
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Simula o cancelamento com sucesso determinístico: retorna o evento de cancelamento
+   * homologado (cStat 135 — "Evento registrado e vinculado a NF-e"), com protocolo derivado
+   * da chave. A {@link SituacaoSefaz} não recebe um valor específico de cancelamento — o
+   * sucesso é interpretado pelo serviço via cStat de evento vinculado (∈ {135, 155}); aqui
+   * usamos {@link SituacaoSefaz#AUTORIZADA} apenas como marcador semântico de sucesso
+   * técnico da comunicação. O evento SOAP real (110111) é débito da Sprint 7.
+   */
+  @Override
+  public SefazRetorno cancelar(
+      String chaveAcesso, String justificativa, String protocoloAutorizacao,
+      SefazAmbiente ambiente) {
+    // Nunca logar a justificativa completa (pode conter dados sensiveis) — LGPD.
+    log.info("[MOCK SEFAZ] Simulando cancelamento de NF-e: chave={} ambiente={}",
+        chaveAcesso, ambiente);
+    String protocolo = buildProtocolo(chaveAcesso);
+    SefazRetorno retorno = new SefazRetorno(
+        SituacaoSefaz.AUTORIZADA,
+        CSTAT_EVENTO_VINCULADO,
+        XMOTIVO_EVENTO_VINCULADO,
+        protocolo,
+        OffsetDateTime.now());
+    log.info("[MOCK SEFAZ] Retorno de cancelamento simulado: cStat={} protocolo={}",
+        retorno.cStat(), protocolo);
+    return retorno;
   }
 
   /**

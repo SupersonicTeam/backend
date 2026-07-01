@@ -9,8 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.SefazProperties;
+import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
+import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
@@ -261,6 +264,147 @@ class SefazServiceTest {
 
     assertThat(atualizadas).isEqualTo(1);
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+  }
+
+  // -------------------------------------------------------------------------
+  // cancelar (issue #21 — RN006, limite de 30 dias)
+  // -------------------------------------------------------------------------
+
+  private static final String MOTIVO_VALIDO = "Erro na quantidade dos produtos vendidos";
+
+  @Test
+  @DisplayName("cancelar deve marcar CANCELADA e persistir data/motivo/protocolo quando dentro do prazo")
+  void cancelarShouldCancelWhenAuthorizedAndWithinDeadline() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(5));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(sefazClient.cancelar(eq(CHAVE), eq(MOTIVO_VALIDO), eq("141260000000017"),
+        eq(SefazAmbiente.HOMOLOGACAO)))
+        .thenReturn(new SefazRetorno(
+            SituacaoSefaz.AUTORIZADA, "135", "Evento registrado e vinculado a NF-e",
+            "141260000000099", OffsetDateTime.now()));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    CancelamentoResponse response = sefazService.cancelar(notaId, MOTIVO_VALIDO);
+
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.CANCELADA);
+    assertThat(response.sefazCstat()).isEqualTo("135");
+    assertThat(response.protocoloCancelamento()).isEqualTo("141260000000099");
+    assertThat(response.motivoCancelamento()).isEqualTo(MOTIVO_VALIDO);
+    assertThat(response.dataCancelamento()).isNotNull();
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.CANCELADA);
+    assertThat(nota.getDataCancelamento()).isNotNull();
+    assertThat(nota.getMotivoCancelamento()).isEqualTo(MOTIVO_VALIDO);
+    assertThat(nota.getProtocoloCancelamento()).isEqualTo("141260000000099");
+    verify(notaFiscalRepository).save(nota);
+  }
+
+  @Test
+  @DisplayName("cancelar deve lancar NotaFiscalNaoCancelavelException quando status nao e AUTORIZADA")
+  void cancelarShouldThrowWhenStatusIsNotAutorizada() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(1));
+    nota.setStatus(StatusNotaFiscal.XML_GERADO);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
+        .isInstanceOf(NotaFiscalNaoCancelavelException.class)
+        .hasMessageContaining("XML_GERADO");
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("cancelar deve lancar ResourceNotFoundException quando nota pertence a outro produtor")
+  void cancelarShouldThrowWhenNotaBelongsToAnotherProdutor() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining(notaId.toString());
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("cancelar deve permitir cancelamento exatamente no 30o dia (limite inclusivo)")
+  void cancelarShouldAllowOnExactly30thDay() {
+    UUID notaId = UUID.randomUUID();
+    // Emissao ha quase 30 dias (30 dias menos 1 hora) — ainda dentro do limite inclusivo.
+    NotaFiscal nota =
+        buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(30).plusHours(1));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(sefazClient.cancelar(any(), any(), any(), any()))
+        .thenReturn(new SefazRetorno(
+            SituacaoSefaz.AUTORIZADA, "135", "Evento registrado e vinculado a NF-e",
+            "141260000000099", OffsetDateTime.now()));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    CancelamentoResponse response = sefazService.cancelar(notaId, MOTIVO_VALIDO);
+
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.CANCELADA);
+  }
+
+  @Test
+  @DisplayName("cancelar deve lancar CancelamentoForaPrazoException no 31o dia (fora do prazo)")
+  void cancelarShouldThrowOn31stDay() {
+    UUID notaId = UUID.randomUUID();
+    // Emissao ha 31 dias — passou do limite de 30 dias corridos.
+    NotaFiscal nota =
+        buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(31));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
+        .isInstanceOf(CancelamentoForaPrazoException.class);
+
+    verify(sefazClient, never()).cancelar(any(), any(), any(), any());
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("cancelar deve propagar SefazComunicacaoException sem persistir quando o transporte falha")
+  void cancelarShouldPropagateCommunicationFailure() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(2));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(sefazClient.cancelar(any(), any(), any(), any()))
+        .thenThrow(new SefazComunicacaoException("timeout simulado"));
+
+    assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
+        .isInstanceOf(SefazComunicacaoException.class);
+
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  private NotaFiscal buildNotaAutorizada(UUID notaId, OffsetDateTime dataEmissao) {
+    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    nota.setStatus(StatusNotaFiscal.AUTORIZADA);
+    nota.setDataEmissao(dataEmissao);
+    nota.setSefazAmbiente(SefazAmbiente.HOMOLOGACAO);
+    nota.setProtocoloAutorizacao("141260000000017");
+    nota.setDataAutorizacao(dataEmissao);
+    nota.setSefazCstat("100");
+    nota.setSefazMotivo("Autorizado o uso da NF-e");
+    return nota;
   }
 
   private NotaFiscal buildNotaXmlGerado(UUID notaId) {

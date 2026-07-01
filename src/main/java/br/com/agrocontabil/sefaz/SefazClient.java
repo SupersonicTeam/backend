@@ -62,4 +62,25 @@ public class SefazClient {
   public SefazRetorno consultarStatus(String chaveAcesso, SefazAmbiente ambiente) {
     return transport.consultarStatus(chaveAcesso, ambiente);
   }
+
+  /**
+   * Solicita o cancelamento de uma NF-e à SEFAZ, com retry automático em falha de comunicação
+   * (issue #21). Mantém o retry fora da transação, como {@code enviar}/{@code consultarStatus}.
+   *
+   * @param chaveAcesso          chave de acesso de 44 dígitos da NF-e a cancelar
+   * @param justificativa        motivo do cancelamento (15 a 255 caracteres)
+   * @param protocoloAutorizacao protocolo de autorização da NF-e
+   * @param ambiente             ambiente de destino
+   * @return retorno do evento de cancelamento (cStat, motivo, protocolo)
+   * @throws SefazComunicacaoException se a comunicação falhar após esgotar as tentativas
+   */
+  @Retryable(
+      retryFor = SefazComunicacaoException.class,
+      maxAttemptsExpression = "${app.nfe.sefaz.retry.max-attempts:3}",
+      backoff = @Backoff(delayExpression = "${app.nfe.sefaz.retry.backoff-ms:1000}"))
+  public SefazRetorno cancelar(
+      String chaveAcesso, String justificativa, String protocoloAutorizacao,
+      SefazAmbiente ambiente) {
+    return transport.cancelar(chaveAcesso, justificativa, protocoloAutorizacao, ambiente);
+  }
 }
