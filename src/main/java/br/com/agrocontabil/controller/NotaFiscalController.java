@@ -1,11 +1,14 @@
 package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.dto.ImportacaoNotaResultado;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.service.ImportacaoNotaFiscalService;
+import br.com.agrocontabil.service.ImportacaoNotaFiscalService.ArquivoXml;
 import br.com.agrocontabil.service.NotaFiscalService;
 import br.com.agrocontabil.service.NotaFiscalValidacaoService;
 import br.com.agrocontabil.service.SefazService;
@@ -17,7 +20,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
@@ -33,7 +38,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
@@ -54,14 +61,17 @@ public class NotaFiscalController {
   private final NotaFiscalService notaFiscalService;
   private final SefazService sefazService;
   private final NotaFiscalValidacaoService validacaoService;
+  private final ImportacaoNotaFiscalService importacaoService;
 
   public NotaFiscalController(
       NotaFiscalService notaFiscalService,
       SefazService sefazService,
-      NotaFiscalValidacaoService validacaoService) {
+      NotaFiscalValidacaoService validacaoService,
+      ImportacaoNotaFiscalService importacaoService) {
     this.notaFiscalService = notaFiscalService;
     this.sefazService = sefazService;
     this.validacaoService = validacaoService;
+    this.importacaoService = importacaoService;
   }
 
   /**
@@ -126,6 +136,41 @@ public class NotaFiscalController {
         .buildAndExpand(response.id())
         .toUri();
     return ResponseEntity.created(location).body(response);
+  }
+
+  /**
+   * Importa uma ou mais notas fiscais a partir de arquivos XML (issue #19 — UC002).
+   *
+   * <p>O produtor autenticado e o destinatario das notas importadas (notas de entrada/compra;
+   * o emitente e um terceiro). O lote e resiliente: cada arquivo produz um resultado
+   * (importada, duplicada ou invalida) e um arquivo ruim nunca derruba os demais nem gera 500.
+   */
+  @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(
+      summary = "Importa notas fiscais a partir de arquivos XML",
+      description = "Recebe um ou mais arquivos XML (nfeProc ou NFe) e importa cada um como "
+          + "nota de entrada (origem=IMPORTADA) do produtor autenticado (destinatario). "
+          + "O parsing e XXE-safe e o XML e validado contra o XSD 4.00. Retorna a lista de "
+          + "resultados por arquivo: um arquivo invalido ou de chave duplicada e reportado "
+          + "sem derrubar o lote (sucesso parcial, nunca 500 por arquivo ruim).")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "Lote processado; lista de resultados por arquivo retornada"),
+      @ApiResponse(responseCode = "400", description = "Nenhum arquivo enviado",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<List<ImportacaoNotaResultado>> importar(
+      @RequestParam("arquivos") List<MultipartFile> arquivos) throws IOException {
+    if (arquivos == null || arquivos.isEmpty()) {
+      throw new IllegalArgumentException("Envie ao menos um arquivo XML no campo 'arquivos'.");
+    }
+    List<ArquivoXml> entradas = new ArrayList<>();
+    for (MultipartFile arquivo : arquivos) {
+      String nome = arquivo.getOriginalFilename() != null
+          ? arquivo.getOriginalFilename() : "sem-nome.xml";
+      entradas.add(new ArquivoXml(nome, arquivo.getBytes()));
+    }
+    return ResponseEntity.ok(importacaoService.importar(entradas));
   }
 
   /**

@@ -165,6 +165,33 @@ public class NotaFiscal {
   private TipoDocumentoFiscal tipoDocumento = TipoDocumentoFiscal.NFE;
 
   /**
+   * Origem da nota (issue #19): {@link OrigemNotaFiscal#PROPRIA} (padrao, emitida pelo
+   * produtor) ou {@link OrigemNotaFiscal#IMPORTADA} (nota de entrada importada do XML de um
+   * terceiro, em que o produtor autenticado e o destinatario).
+   *
+   * <p>Afeta a unicidade: apenas notas {@code PROPRIA} respeitam o indice unico parcial
+   * {@code (produtor_id, numero, serie, modelo)}. Importadas dedupam por {@code chaveAcesso}.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "origem", length = 10, nullable = false, columnDefinition = "VARCHAR(10)")
+  @Builder.Default
+  private OrigemNotaFiscal origem = OrigemNotaFiscal.PROPRIA;
+
+  /**
+   * Nome/razao social do emitente terceiro. Preenchido apenas em notas
+   * {@link OrigemNotaFiscal#IMPORTADA} (nulo em notas proprias, cujo emitente e o produtor).
+   */
+  @Column(name = "emitente_nome")
+  private String emitenteNome;
+
+  /**
+   * CPF ou CNPJ do emitente terceiro (somente digitos, ate 14 caracteres). Preenchido apenas
+   * em notas {@link OrigemNotaFiscal#IMPORTADA}. Nunca logar completo (LGPD).
+   */
+  @Column(name = "emitente_cpf_cnpj", length = 14)
+  private String emitenteCpfCnpj;
+
+  /**
    * Corpo completo do XML da NF-e gerado e validado pelo pipeline de geracao.
    *
    * <p>Nulo enquanto a nota esta em status {@link StatusNotaFiscal#RASCUNHO}. Preenchido

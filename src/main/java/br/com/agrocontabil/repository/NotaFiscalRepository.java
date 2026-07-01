@@ -48,4 +48,15 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * @return lista de notas no status informado
    */
   List<NotaFiscal> findByStatus(StatusNotaFiscal status);
+
+  /**
+   * Indica se ja existe uma nota com a chave de acesso informada (issue #19).
+   *
+   * <p>Usado na deduplicacao de notas importadas: a {@code chave_acesso} e globalmente unica
+   * (44 digitos), entao a existencia previa sinaliza um XML ja importado.
+   *
+   * @param chaveAcesso chave de acesso de 44 digitos
+   * @return {@code true} se ja houver uma nota com esta chave
+   */
+  boolean existsByChaveAcesso(String chaveAcesso);
 }
