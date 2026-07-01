@@ -31,7 +31,12 @@ public enum ErrorCode {
   /** Nota fiscal não está em status XML_GERADO para envio à SEFAZ. HTTP 409. */
   NOTA_NAO_ENVIAVEL,
   /** Nota fiscal ainda não foi transmitida — não há status SEFAZ a consultar. HTTP 409. */
-  NOTA_NAO_CONSULTAVEL;
+  NOTA_NAO_CONSULTAVEL,
+  // Geração de NFA (Sprint 2 — issue #18)
+  /** NFA exige produtor pessoa física; o produtor autenticado não é PF. HTTP 422. */
+  NFA_PRODUTOR_NAO_PF,
+  /** CPF/CNPJ do emitente inválido (dígito verificador ou formato). HTTP 422. */
+  DOCUMENTO_INVALIDO;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

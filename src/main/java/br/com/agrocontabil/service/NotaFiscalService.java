@@ -4,6 +4,7 @@ import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
+import br.com.agrocontabil.exception.NfaInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
@@ -13,6 +14,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -67,6 +69,7 @@ public class NotaFiscalService {
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CalculoIbsCbsService calculoIbsCbsService;
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
+  private final GeracaoNfaService geracaoNfaService;
   private final DanfePdfService danfePdfService;
   private final NotaFiscalValidacaoService validacaoService;
 
@@ -75,12 +78,14 @@ public class NotaFiscalService {
       AuthenticatedProdutorProvider produtorProvider,
       CalculoIbsCbsService calculoIbsCbsService,
       GeracaoNotaFiscalService geracaoNotaFiscalService,
+      GeracaoNfaService geracaoNfaService,
       DanfePdfService danfePdfService,
       NotaFiscalValidacaoService validacaoService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.calculoIbsCbsService = calculoIbsCbsService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
+    this.geracaoNfaService = geracaoNfaService;
     this.danfePdfService = danfePdfService;
     this.validacaoService = validacaoService;
   }
@@ -161,6 +166,9 @@ public class NotaFiscalService {
 
     nota.setNumero(request.numero());
     nota.setSerie(request.serie() != null ? request.serie() : 1);
+    if (request.tipoDocumento() != null) {
+      nota.setTipoDocumento(request.tipoDocumento());
+    }
     nota.setNaturezaOperacao(request.naturezaOperacao());
     nota.setDataEmissao(request.dataEmissao());
     nota.setDataSaida(request.dataSaida());
@@ -358,8 +366,15 @@ public class NotaFiscalService {
    */
   private String gerarXmlRegistrandoInconsistencias(NotaFiscal nota) {
     try {
+      // Roteia por tipo de documento (issue #18): NFA passa pelas pre-condicoes especificas
+      // do produtor rural pessoa fisica; NFE segue direto ao pipeline padrao.
+      if (nota.getTipoDocumento() == TipoDocumentoFiscal.NFA) {
+        return geracaoNfaService.gerarXml(nota);
+      }
       return geracaoNotaFiscalService.gerarXml(nota);
-    } catch (NotaFiscalInvalidaParaEmissaoException | XmlGenerationException e) {
+    } catch (NfaInvalidaParaEmissaoException
+        | NotaFiscalInvalidaParaEmissaoException
+        | XmlGenerationException e) {
       validacaoService.registrarInconsistencias(nota.getId(), e.getErrors());
       throw e;
     }

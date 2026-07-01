@@ -1,5 +1,7 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.validation.ValidCpfCnpj;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -46,6 +48,12 @@ public record NotaFiscalRequest(
         example = "2026-06-10T14:00:00-03:00")
     OffsetDateTime dataSaida,
 
+    @Schema(
+        description = "Tipo do documento fiscal: NFE (padrao) ou NFA (Nota Fiscal Avulsa do "
+            + "produtor rural pessoa fisica). Quando omitido, assume NFE.",
+        example = "NFE")
+    TipoDocumentoFiscal tipoDocumento,
+
     @Schema(description = "Nome ou razao social do destinatario", example = "Jose Comprador")
     @NotBlank(message = "destinatarioNome e obrigatorio")
     @Size(max = 255)
@@ -58,6 +66,7 @@ public record NotaFiscalRequest(
     @Pattern(
         regexp = "\\d{11}|\\d{14}",
         message = "destinatarioCpfCnpj deve ter 11 digitos (CPF) ou 14 digitos (CNPJ)")
+    @ValidCpfCnpj
     String destinatarioCpfCnpj,
 
     @Schema(description = "Inscricao Estadual do destinatario (opcional)", example = "123456789")

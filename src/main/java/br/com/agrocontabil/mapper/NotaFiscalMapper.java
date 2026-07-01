@@ -12,6 +12,7 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -67,6 +68,8 @@ public final class NotaFiscalMapper {
         .destinatarioIe(request.destinatarioIe())
         .destinatarioEndereco(toEnderecoEntity(request.destinatarioEndereco()))
         .status(StatusNotaFiscal.RASCUNHO)
+        .tipoDocumento(request.tipoDocumento() != null
+            ? request.tipoDocumento() : TipoDocumentoFiscal.NFE)
         .valorTotalProdutos(BigDecimal.ZERO)
         .valorTotalNota(BigDecimal.ZERO)
         .build();
@@ -103,6 +106,7 @@ public final class NotaFiscalMapper {
         nota.getModelo(),
         nota.getNaturezaOperacao(),
         nota.getStatus(),
+        nota.getTipoDocumento(),
         nota.getDataEmissao(),
         nota.getDataSaida(),
         nota.getProdutor().getId(),

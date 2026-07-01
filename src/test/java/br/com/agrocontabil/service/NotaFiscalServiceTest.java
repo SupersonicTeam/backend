@@ -79,6 +79,10 @@ class NotaFiscalServiceTest {
   @Mock
   private GeracaoNotaFiscalService geracaoNotaFiscalService;
 
+  /** Fluxo de emissao de NFA (issue #18), mockado neste teste de unidade. */
+  @Mock
+  private GeracaoNfaService geracaoNfaService;
+
   /** Servico de geracao do PDF da DANFE (issue #14), mockado neste teste de unidade. */
   @Mock
   private DanfePdfService danfePdfService;
@@ -320,6 +324,7 @@ class NotaFiscalServiceTest {
         "Venda de producao rural",
         OffsetDateTime.now(),
         null,
+        null,
         "Jose Comprador",
         "12345678901",
         null,
@@ -364,6 +369,7 @@ class NotaFiscalServiceTest {
         "Venda de producao rural",
         OffsetDateTime.now(),
         null,
+        null,
         "Comprador Teste",
         "12345678901",
         null,
@@ -396,7 +402,7 @@ class NotaFiscalServiceTest {
 
     NotaFiscalRequest request = new NotaFiscalRequest(
         3L, 1, "Venda de producao rural",
-        OffsetDateTime.now(), null,
+        OffsetDateTime.now(), null, null,
         "Comprador Teste", "12345678901",
         null, null,
         List.of(item1, item2));
@@ -439,7 +445,7 @@ class NotaFiscalServiceTest {
   void createShouldDefaultSerieToOneWhenNull() {
     NotaFiscalRequest requestSemSerie = new NotaFiscalRequest(
         1L, null, "Venda de producao rural",
-        OffsetDateTime.now(), null,
+        OffsetDateTime.now(), null, null,
         "Comprador Teste", "12345678901",
         null, null,
         List.of(new NotaFiscalItemRequest(
@@ -515,7 +521,7 @@ class NotaFiscalServiceTest {
 
     NotaFiscalRequest requestComDoisItens = new NotaFiscalRequest(
         1L, 1, "Venda de producao rural",
-        OffsetDateTime.now(), null,
+        OffsetDateTime.now(), null, null,
         "Jose Comprador", "12345678901",
         null, null,
         List.of(item1, item2));
@@ -861,6 +867,7 @@ class NotaFiscalServiceTest {
         1,
         "Venda de producao rural",
         OffsetDateTime.now(),
+        null,
         null,
         "Jose Comprador",
         "12345678901",

@@ -85,7 +85,7 @@ class NotaFiscalMapperTest {
   void toEntityShouldDefaultSerieToOneWhenNull() {
     NotaFiscalRequest request = new NotaFiscalRequest(
         1L, null, "Venda de producao rural",
-        OffsetDateTime.now(), null,
+        OffsetDateTime.now(), null, null,
         "Comprador", "12345678901",
         null, null,
         List.of(buildItem("1", "10.00")));
@@ -100,7 +100,7 @@ class NotaFiscalMapperTest {
   void toEntityShouldPreserveSerieWhenProvided() {
     NotaFiscalRequest request = new NotaFiscalRequest(
         1L, 3, "Venda de producao rural",
-        OffsetDateTime.now(), null,
+        OffsetDateTime.now(), null, null,
         "Comprador", "12345678901",
         null, null,
         List.of(buildItem("1", "10.00")));
@@ -229,7 +229,7 @@ class NotaFiscalMapperTest {
             "Rua das Flores", "100", "Cuiaba", "5103403", "MT", "78000000");
     NotaFiscalRequest request = new NotaFiscalRequest(
         1L, 1, "Venda de producao rural",
-        OffsetDateTime.now(), null,
+        OffsetDateTime.now(), null, null,
         "Comprador", "12345678901",
         null, enderecoReq,
         List.of(buildItem("1", "10.00")));
@@ -419,6 +419,7 @@ class NotaFiscalMapperTest {
         1,
         "Venda de producao rural",
         OffsetDateTime.now(),
+        null,
         null,
         "Comprador Teste",
         "12345678901",

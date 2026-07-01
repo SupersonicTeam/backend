@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     valor_total_ibs             NUMERIC(15,2),
     valor_total_cbs             NUMERIC(15,2),
     status                      VARCHAR(20)    NOT NULL DEFAULT 'RASCUNHO',
+    -- Discriminador NFE/NFA — Sprint 2 issue #18 (migration 0008)
+    tipo_documento              VARCHAR(10)    NOT NULL DEFAULT 'NFE',
     -- XML gerado — Sprint 2 Sessão 6
     xml_gerado                  TEXT,
     versao_layout_nfe           VARCHAR(10),
