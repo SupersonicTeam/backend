@@ -12,6 +12,13 @@ spring:
         max-page-size: 100
         default-page-size: 20
 
+  # Upload de XML para importacao de notas (issue #19). Limites conservadores: um XML de
+  # NF-e assinado costuma ter dezenas de KB; permitimos lotes de varios arquivos.
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 20MB
+
   jpa:
     open-in-view: false
     hibernate:

@@ -46,6 +46,15 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     status                      VARCHAR(20)    NOT NULL DEFAULT 'RASCUNHO',
     -- Discriminador NFE/NFA — Sprint 2 issue #18 (migration 0008)
     tipo_documento              VARCHAR(10)    NOT NULL DEFAULT 'NFE',
+    -- Importacao de XML — Sprint 2 issue #19 (migration 0009).
+    -- origem: PROPRIA (emitida pelo produtor) | IMPORTADA (nota de entrada de terceiro).
+    -- emitente_*: preenchidos apenas em notas importadas.
+    -- Obs.: o indice unico PARCIAL (WHERE origem='PROPRIA') do PostgreSQL nao e portavel
+    -- para o H2 usado nos testes; aqui garantimos as colunas. A dedup de importadas por
+    -- chave_acesso e coberta pelo unique de chave_acesso ja existente na entidade/migration.
+    origem                      VARCHAR(10)    NOT NULL DEFAULT 'PROPRIA',
+    emitente_nome               VARCHAR(255),
+    emitente_cpf_cnpj           VARCHAR(14),
     -- XML gerado — Sprint 2 Sessão 6
     xml_gerado                  TEXT,
     versao_layout_nfe           VARCHAR(10),

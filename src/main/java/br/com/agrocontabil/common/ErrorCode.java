@@ -36,7 +36,10 @@ public enum ErrorCode {
   /** NFA exige produtor pessoa física; o produtor autenticado não é PF. HTTP 422. */
   NFA_PRODUTOR_NAO_PF,
   /** CPF/CNPJ do emitente inválido (dígito verificador ou formato). HTTP 422. */
-  DOCUMENTO_INVALIDO;
+  DOCUMENTO_INVALIDO,
+  // Importacao de XML (Sprint 2 — issue #19)
+  /** XML importado invalido: nao parseavel, sem NFe ou reprovado no XSD. HTTP 422. */
+  XML_IMPORTACAO_INVALIDA;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

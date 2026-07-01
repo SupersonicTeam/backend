@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0009-nota-fiscal-importacao.xml
+         Sprint 2 — issue #19: importacao de XML de nota fiscal (UC002).
+
+         Adiciona suporte a notas de ENTRADA importadas do XML de um terceiro
+         emitente (o produtor autenticado e o DESTINATARIO):
+
+           - origem VARCHAR(10) NOT NULL DEFAULT 'PROPRIA'
+             (enum OrigemNotaFiscal: PROPRIA | IMPORTADA)
+           - emitente_nome VARCHAR(255) NULL     (so para importadas)
+           - emitente_cpf_cnpj VARCHAR(14) NULL  (so para importadas)
+
+         Correcao de constraint: o unique (produtor_id, numero, serie, modelo) assume
+         produtor = emitente e quebra para importadas (numero/serie sao do terceiro e
+         podem colidir entre fornecedores). Substituimos por um INDICE UNICO PARCIAL
+         que so vale para origem='PROPRIA'. Notas importadas dedupam por chave_acesso
+         (unique ja existente em 0002).
+
+         NAO editar changesets anteriores (0001-0008).
+         ================================================================ -->
+
+    <changeSet id="0009-nota-fiscal-add-origem" author="supersonic-team">
+        <comment>
+            Adiciona origem (VARCHAR(10), NOT NULL, DEFAULT 'PROPRIA') e as colunas do
+            emitente terceiro (nullable) em nota_fiscal — issue #19.
+        </comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="origem" type="VARCHAR(10)" defaultValue="PROPRIA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="emitente_nome" type="VARCHAR(255)"/>
+            <column name="emitente_cpf_cnpj" type="VARCHAR(14)"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="emitente_cpf_cnpj"/>
+            <dropColumn tableName="nota_fiscal" columnName="emitente_nome"/>
+            <dropColumn tableName="nota_fiscal" columnName="origem"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0009-nota-fiscal-drop-unique-numero-serie-modelo" author="supersonic-team">
+        <comment>
+            Remove o unique total (produtor_id, numero, serie, modelo): ele assume
+            produtor = emitente e quebra para notas importadas de terceiros.
+        </comment>
+        <dropUniqueConstraint
+                tableName="nota_fiscal"
+                constraintName="uk_nota_fiscal_produtor_numero_serie_modelo"/>
+        <rollback>
+            <addUniqueConstraint
+                    tableName="nota_fiscal"
+                    columnNames="produtor_id, numero, serie, modelo"
+                    constraintName="uk_nota_fiscal_produtor_numero_serie_modelo"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0009-nota-fiscal-partial-unique-propria" author="supersonic-team">
+        <comment>
+            Indice unico PARCIAL (PostgreSQL): a unicidade de numero/serie/modelo por produtor
+            so se aplica a notas emitidas pelo proprio produtor (origem='PROPRIA'). Notas
+            importadas dedupam por chave_acesso. Sintaxe WHERE em indice unico e suportada
+            pelo PostgreSQL; no perfil de teste (H2) o Liquibase esta desabilitado e o schema
+            de teste replica esta regra em src/test/resources/schema-nota-fiscal-test.sql.
+        </comment>
+        <sql>
+            CREATE UNIQUE INDEX uk_nota_fiscal_propria_numero_serie_modelo
+                ON nota_fiscal (produtor_id, numero, serie, modelo)
+                WHERE origem = 'PROPRIA';
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS uk_nota_fiscal_propria_numero_serie_modelo;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

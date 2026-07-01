@@ -79,6 +79,10 @@ class NotaFiscalControllerTest {
   @MockBean
   private NotaFiscalValidacaoService validacaoService;
 
+  /** Dependencia do controller para o endpoint de importacao de XML (issue #19). */
+  @MockBean
+  private br.com.agrocontabil.service.ImportacaoNotaFiscalService importacaoService;
+
   /**
    * MockProdutorFilter e um @Component que depende de ProdutorRepository.
    * @WebMvcTest nao sobe JPA, entao o ProdutorRepository precisa ser mockado

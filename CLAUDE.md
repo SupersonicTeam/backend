@@ -68,6 +68,7 @@ br.com.agrocontabil
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
+| POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; produtor=destinatário; origem=IMPORTADA) |
 | PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO) |
 | DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO) |
 | POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
