@@ -32,6 +32,11 @@ public enum ErrorCode {
   NOTA_NAO_ENVIAVEL,
   /** Nota fiscal ainda não foi transmitida — não há status SEFAZ a consultar. HTTP 409. */
   NOTA_NAO_CONSULTAVEL,
+  // Cancelamento de NF-e (Sprint 3 — issue #21, RN006)
+  /** Nota fiscal não está em status AUTORIZADA para cancelamento. HTTP 409. */
+  NOTA_NAO_CANCELAVEL,
+  /** Cancelamento fora do prazo legal de 30 dias corridos da emissão (RN006). HTTP 422. */
+  CANCELAMENTO_FORA_PRAZO,
   // Geração de NFA (Sprint 2 — issue #18)
   /** NFA exige produtor pessoa física; o produtor autenticado não é PF. HTTP 422. */
   NFA_PRODUTOR_NAO_PF,

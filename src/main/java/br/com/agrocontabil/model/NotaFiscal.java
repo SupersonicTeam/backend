@@ -247,6 +247,33 @@ public class NotaFiscal {
   @Column(name = "sefaz_ambiente", length = 20)
   private SefazAmbiente sefazAmbiente;
 
+  // -------------------------------------------------------------------------
+  // Cancelamento da NF-e (Sprint 3 — issue #21, RN006). Preenchidos ao cancelar.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Data e hora (com fuso) em que a NF-e foi cancelada junto a SEFAZ.
+   *
+   * <p>Nula enquanto a nota nao foi cancelada. Preenchida na transicao terminal
+   * {@code AUTORIZADA → CANCELADA} (issue #21).
+   */
+  @Column(name = "data_cancelamento")
+  private OffsetDateTime dataCancelamento;
+
+  /**
+   * Justificativa do cancelamento informada pelo emitente (15 a 255 caracteres,
+   * padrao SEFAZ). Nula enquanto a nota nao foi cancelada.
+   */
+  @Column(name = "motivo_cancelamento", length = 255)
+  private String motivoCancelamento;
+
+  /**
+   * Numero do protocolo do evento de cancelamento retornado pela SEFAZ.
+   * Nulo enquanto a nota nao foi cancelada.
+   */
+  @Column(name = "protocolo_cancelamento", length = 20)
+  private String protocoloCancelamento;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

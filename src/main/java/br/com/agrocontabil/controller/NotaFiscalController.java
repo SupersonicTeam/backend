@@ -1,6 +1,8 @@
 package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.dto.CancelamentoRequest;
+import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.ImportacaoNotaResultado;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
@@ -369,6 +371,48 @@ public class NotaFiscalController {
   })
   public ResponseEntity<SefazStatusResponse> consultarStatusSefaz(@PathVariable UUID id) {
     return ResponseEntity.ok(sefazService.sincronizarStatus(id));
+  }
+
+  /**
+   * Cancela a NF-e indicada junto à SEFAZ (issue #21 — RN006).
+   *
+   * <p>Somente notas {@code AUTORIZADA} podem ser canceladas (409 caso contrário) e apenas
+   * dentro do prazo de 30 dias corridos da emissão (422 se fora do prazo). O motivo é uma
+   * justificativa de 15 a 255 caracteres (400 se inválido). O controller apenas orquestra:
+   * delega a {@link SefazService#cancelar(UUID, String)}.
+   */
+  @PostMapping("/{id}/cancelar")
+  @Operation(
+      summary = "Cancela a NF-e junto a SEFAZ",
+      description = "Cancela uma NF-e AUTORIZADA dentro do prazo legal de 30 dias corridos da "
+          + "emissao (RN006), transmitindo o evento de cancelamento a SEFAZ e persistindo o "
+          + "resultado (status CANCELADA, data, motivo e protocolo). Retorna 409 se a nota nao "
+          + "estiver AUTORIZADA, 422 se o prazo de 30 dias expirou, 400 se o motivo for invalido "
+          + "e 404 se a nota nao existir ou nao pertencer ao produtor. Na Sprint 3 o transporte "
+          + "e mock/sandbox (evento SOAP real e debito da Sprint 7).")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "Nota cancelada; evento registrado na SEFAZ"),
+      @ApiResponse(responseCode = "400",
+          description = "Motivo do cancelamento invalido (fora de 15 a 255 caracteres)",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Nota nao esta em status AUTORIZADA",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "422",
+          description = "Cancelamento fora do prazo de 30 dias da emissao (RN006)",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "502",
+          description = "Falha de comunicacao com a SEFAZ apos esgotar as tentativas",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<CancelamentoResponse> cancelar(
+      @PathVariable UUID id,
+      @Valid @RequestBody CancelamentoRequest request) {
+    return ResponseEntity.ok(sefazService.cancelar(id, request.motivo()));
   }
 
   /**

@@ -24,3 +24,5 @@ databaseChangeLog:
       file: db/changelog/changes/0008-nota-fiscal-tipo-documento.xml
   - include:
       file: db/changelog/changes/0009-nota-fiscal-importacao.xml
+  - include:
+      file: db/changelog/changes/0010-nota-fiscal-cancelamento.xml

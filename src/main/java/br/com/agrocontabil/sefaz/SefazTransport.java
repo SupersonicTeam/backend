@@ -44,4 +44,24 @@ public interface SefazTransport {
    * @throws br.com.agrocontabil.exception.SefazComunicacaoException se falhar por comunicação
    */
   SefazRetorno consultarStatus(String chaveAcesso, SefazAmbiente ambiente);
+
+  /**
+   * Solicita o cancelamento de uma NF-e autorizada (evento de cancelamento — issue #21).
+   *
+   * <p>No transporte real (Sprint 7) corresponde ao evento SOAP 110111 (RecepcaoEvento).
+   * O {@link MockSefazTransport} retorna sucesso determinístico com {@code cStat="135"}
+   * ("Evento registrado e vinculado a NF-e"). O serviço interpreta o sucesso pelo
+   * {@code cStat} do retorno (evento vinculado ∈ {135, 155}), sem inflar
+   * {@link SituacaoSefaz} com um valor novo.
+   *
+   * @param chaveAcesso           chave de acesso de 44 dígitos da NF-e a cancelar
+   * @param justificativa         motivo do cancelamento (15 a 255 caracteres)
+   * @param protocoloAutorizacao  protocolo de autorização da NF-e (obrigatório no evento)
+   * @param ambiente              ambiente de destino
+   * @return retorno do evento com {@code cStat}, motivo e protocolo do cancelamento
+   * @throws br.com.agrocontabil.exception.SefazComunicacaoException se falhar por comunicação
+   */
+  SefazRetorno cancelar(
+      String chaveAcesso, String justificativa, String protocoloAutorizacao,
+      SefazAmbiente ambiente);
 }

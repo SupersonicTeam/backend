@@ -46,4 +46,17 @@ class MockSefazTransportTest {
     assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
     assertThat(retorno.protocolo()).isEqualTo("100000000000001");
   }
+
+  @Test
+  @DisplayName("cancelar deve retornar evento vinculado (cStat 135) com protocolo derivado da chave")
+  void cancelarShouldReturnLinkedEventWithDerivedProtocol() {
+    SefazRetorno retorno = transport.cancelar(
+        CHAVE, "Erro na quantidade dos produtos vendidos", "141260000000017",
+        SefazAmbiente.HOMOLOGACAO);
+
+    assertThat(retorno.cStat()).isEqualTo("135");
+    assertThat(retorno.xMotivo()).isEqualTo("Evento registrado e vinculado a NF-e");
+    assertThat(retorno.protocolo()).isEqualTo("1" + CHAVE.substring(0, 14));
+    assertThat(retorno.dataAutorizacao()).isNotNull();
+  }
 }

@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     sefaz_cstat                 VARCHAR(10),
     sefaz_motivo                VARCHAR(255),
     sefaz_ambiente              VARCHAR(20),
+    -- Cancelamento da NF-e — Sprint 3 issue #21 (migration 0010)
+    data_cancelamento           TIMESTAMP WITH TIME ZONE,
+    motivo_cancelamento         VARCHAR(255),
+    protocolo_cancelamento      VARCHAR(20),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)

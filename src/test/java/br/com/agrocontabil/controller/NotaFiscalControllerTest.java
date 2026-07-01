@@ -12,13 +12,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
@@ -618,6 +621,117 @@ class NotaFiscalControllerTest {
         .thenThrow(new ResourceNotFoundException("NotaFiscal", notaId));
 
     mockMvc.perform(get("/api/notas/{id}/validacoes", notaId))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.errors[?(@.code == 'RESOURCE_NOT_FOUND')]").exists());
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /{id}/cancelar → 200 CancelamentoResponse / 400 / 404 / 409 / 422 (issue #21)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/cancelar valido deve retornar 200 com status CANCELADA")
+  void postCancelarShouldReturn200WithCanceladaStatus() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    CancelamentoResponse mockResponse = new CancelamentoResponse(
+        "41262612345678000195550010000000011000000012",
+        StatusNotaFiscal.CANCELADA,
+        OffsetDateTime.now(),
+        "141260000000099",
+        "Erro na quantidade dos produtos vendidos",
+        "135",
+        "Evento registrado e vinculado a NF-e");
+
+    when(sefazService.cancelar(eq(notaId), eq("Erro na quantidade dos produtos vendidos")))
+        .thenReturn(mockResponse);
+
+    String payload = """
+        {"motivo": "Erro na quantidade dos produtos vendidos"}
+        """;
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELADA"))
+        .andExpect(jsonPath("$.sefazCstat").value("135"))
+        .andExpect(jsonPath("$.protocoloCancelamento").value("141260000000099"));
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/cancelar com motivo curto (< 15 chars) deve retornar 400")
+  void postCancelarShouldReturn400WhenMotivoTooShort() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    String payload = """
+        {"motivo": "erro"}
+        """;
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[?(@.field == 'motivo')]").exists());
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/cancelar deve retornar 409 quando status nao e AUTORIZADA")
+  void postCancelarShouldReturn409WhenNotaNaoCancelavel() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.cancelar(eq(notaId), any()))
+        .thenThrow(new NotaFiscalNaoCancelavelException(notaId, StatusNotaFiscal.XML_GERADO));
+
+    String payload = """
+        {"motivo": "Erro na quantidade dos produtos vendidos"}
+        """;
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'NOTA_NAO_CANCELAVEL')]").exists());
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/cancelar deve retornar 422 quando fora do prazo de 30 dias")
+  void postCancelarShouldReturn422WhenForaPrazo() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.cancelar(eq(notaId), any()))
+        .thenThrow(new CancelamentoForaPrazoException(notaId, OffsetDateTime.now().minusDays(1)));
+
+    String payload = """
+        {"motivo": "Erro na quantidade dos produtos vendidos"}
+        """;
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.status").value(422))
+        .andExpect(jsonPath("$.errors[?(@.code == 'CANCELAMENTO_FORA_PRAZO')]").exists());
+  }
+
+  @Test
+  @DisplayName("POST /api/notas/{id}/cancelar deve retornar 404 para nota de outro produtor")
+  void postCancelarShouldReturn404WhenNotaNotFound() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(sefazService.cancelar(eq(notaId), any()))
+        .thenThrow(new ResourceNotFoundException("NotaFiscal", notaId));
+
+    String payload = """
+        {"motivo": "Erro na quantidade dos produtos vendidos"}
+        """;
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.status").value(404))
         .andExpect(jsonPath("$.errors[?(@.code == 'RESOURCE_NOT_FOUND')]").exists());
