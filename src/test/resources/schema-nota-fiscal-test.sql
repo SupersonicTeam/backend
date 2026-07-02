@@ -129,6 +129,30 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_validacao (
 );
 
 -- ============================================================================
+-- Apuracao mensal de IBS/CBS — Sprint 4 issue Agrocontabil#41 (migration 0014).
+-- O perfil de teste desabilita o Liquibase; replicamos a tabela para que os testes de
+-- integracao que usam este script via @Sql tenham o schema da apuracao.
+-- Manter sincronizado com 0014-apuracao-mensal.xml.
+CREATE TABLE IF NOT EXISTS apuracao_mensal (
+    id               UUID           NOT NULL,
+    produtor_id      UUID           NOT NULL,
+    periodo          VARCHAR(7)     NOT NULL,
+    status           VARCHAR(20)    NOT NULL,
+    debito_ibs       NUMERIC(15,2)  NOT NULL,
+    debito_cbs       NUMERIC(15,2)  NOT NULL,
+    credito_ibs      NUMERIC(15,2)  NOT NULL,
+    credito_cbs      NUMERIC(15,2)  NOT NULL,
+    saldo_ibs        NUMERIC(15,2)  NOT NULL,
+    saldo_cbs        NUMERIC(15,2)  NOT NULL,
+    total_notas      BIGINT         NOT NULL DEFAULT 0,
+    data_fechamento  TIMESTAMP WITH TIME ZONE,
+    created_at       TIMESTAMP WITH TIME ZONE,
+    updated_at       TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_apuracao_produtor_periodo UNIQUE (produtor_id, periodo)
+);
+
+-- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).
 -- O perfil de teste desabilita o Liquibase (liquibase.enabled=false), entao o
 -- seed via <insert> do changeset NAO roda nos testes. Replicamos as tabelas e o

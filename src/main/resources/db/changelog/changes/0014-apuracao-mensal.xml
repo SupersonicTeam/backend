@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0014-apuracao-mensal.xml
+         Sprint 4 — issue Agrocontabil#41 (RN004): apuracao mensal de
+         IBS/CBS com fechamento automatico.
+
+         Consolida, por produtor e por periodo (YYYY-MM), o debito das
+         saidas AUTORIZADAS e o credito das entradas IMPORTADAS, apurando
+         o saldo (debito - credito) de IBS e CBS. Os valores vem das
+         agregacoes ja existentes em NotaFiscalRepository
+         (somarDebitosPorPeriodo / somarCreditosPorPeriodo); esta tabela
+         apenas persiste o resultado e o ciclo de vida (StatusApuracao).
+
+         Unique (produtor_id, periodo): no maximo uma apuracao por
+         produtor/periodo. Tipos portaveis (H2 e PostgreSQL). NAO editamos
+         changeSets anteriores. O perfil de teste desabilita o Liquibase;
+         a mesma tabela esta replicada em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0014-create-apuracao-mensal" author="supersonic-team">
+        <comment>
+            Cria a tabela apuracao_mensal (debito/credito/saldo de IBS e CBS
+            por produtor e periodo, com status do ciclo de vida e auditoria).
+        </comment>
+
+        <createTable tableName="apuracao_mensal">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="periodo" type="VARCHAR(7)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="debito_ibs" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="debito_cbs" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="credito_ibs" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="credito_cbs" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="saldo_ibs" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="saldo_cbs" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_notas" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_fechamento" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="apuracao_mensal"
+                baseColumnNames="produtor_id"
+                constraintName="fk_apuracao_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"/>
+
+        <addUniqueConstraint
+                tableName="apuracao_mensal"
+                columnNames="produtor_id, periodo"
+                constraintName="uk_apuracao_produtor_periodo"/>
+
+        <rollback>
+            <dropTable tableName="apuracao_mensal"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
