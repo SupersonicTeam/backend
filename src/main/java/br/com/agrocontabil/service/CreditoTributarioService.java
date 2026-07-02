@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
  * <p><strong>Regra de cálculo por item elegível:</strong>
  * <ol>
  *   <li>{@code baseCalculo = valorTotalItem × (1 − percentualReducao / 100)} — mesma base do
- *       débito calculado em {@link CalculoIbsCbsService}, para simetria débito × crédito</li>
+ *       débito calculado em {@link TributacaoService}, para simetria débito × crédito</li>
  *   <li>{@code creditoIbs = baseCalculo × aliquotaIbs × percentualAproveitamento / 100} —
  *       arredondamento HALF_UP, 2 casas</li>
  *   <li>{@code creditoCbs = baseCalculo × aliquotaCbs × percentualAproveitamento / 100} —
@@ -146,7 +146,7 @@ public class CreditoTributarioService {
   }
 
   /**
-   * Base de cálculo do crédito: mesma regra da base do débito em {@link CalculoIbsCbsService}
+   * Base de cálculo do crédito: mesma regra da base do débito em {@link TributacaoService}
    * ({@code valorTotal × (1 − percentualReducao / 100)}), garantindo simetria débito × crédito.
    */
   private BigDecimal baseCalculo(NotaFiscalItem item) {

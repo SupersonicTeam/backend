@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0012-tributacao-natureza-ncm-reducao.xml
+         Sprint 4 — issue Agrocontabil#30 (RF015): motor de calculo
+         tributario por operacao e por NCM (TributacaoService).
+
+         Duas mudancas de schema:
+           1. natureza_operacao em nota_fiscal_item — natureza tributaria
+              (DEBITO em saidas / CREDITO em entradas) classificada pelo
+              1.º digito do CFOP; consumida pela apuracao mensal (#41).
+           2. percentual_reducao_padrao em ncm_agropecuario — reducao de
+              base de IBS/CBS padrao por NCM, usada como default quando o
+              item nao informa percentualReducao. Seed de referencia de
+              ano-teste (as tabelas oficiais de reducao por NCM da
+              LC 214/2025 ainda nao foram finalizadas pela RFB/CONFAZ).
+
+         Tipos portaveis (H2 e PostgreSQL). NAO editamos changeSets
+         anteriores. O perfil de teste desabilita o Liquibase; as mesmas
+         colunas/seed estao replicadas em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0012-nota-fiscal-item-add-natureza-operacao" author="supersonic-team">
+        <comment>
+            Adiciona natureza_operacao (DEBITO/CREDITO) em nota_fiscal_item.
+            Nullable: itens gravados antes desta sprint nao possuem natureza.
+        </comment>
+
+        <addColumn tableName="nota_fiscal_item">
+            <column name="natureza_operacao" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal_item" columnName="natureza_operacao"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0012-ncm-agropecuario-add-reducao-padrao" author="supersonic-team">
+        <comment>
+            Adiciona percentual_reducao_padrao (0-100) em ncm_agropecuario.
+            NOT NULL com default 0 (sem reducao) para os NCMs ja semeados no 0007.
+        </comment>
+
+        <addColumn tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" type="DECIMAL(5,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="ncm_agropecuario" columnName="percentual_reducao_padrao"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ================================================================
+         Seed de reducao de referencia (ANO-TESTE) por NCM.
+         PREMISSA/INCERTEZA: valores hipoteticos ilustrando os regimes
+         diferenciados agropecuarios da LC 214/2025 (cesta basica,
+         insumos etc.) — NAO sao a tabela oficial (ainda em elaboracao).
+         Parametrizaveis: ajustar aqui em novo changeset quando publicada.
+           - Cesta basica / alimentos (reducao ampla, referencia 60%):
+             arroz, leite, ovos, tomate, abacaxi, milho em grao.
+           - Demais NCMs mantem 0 (default da coluna) — sem reducao.
+         ================================================================ -->
+    <changeSet id="0012-seed-ncm-reducao-padrao" author="supersonic-team">
+        <update tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+            <where>codigo = '10063021'</where>
+        </update>
+        <update tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+            <where>codigo = '04012010'</where>
+        </update>
+        <update tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+            <where>codigo = '04070090'</where>
+        </update>
+        <update tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+            <where>codigo = '07020000'</where>
+        </update>
+        <update tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+            <where>codigo = '08043000'</where>
+        </update>
+        <update tableName="ncm_agropecuario">
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+            <where>codigo = '10059010'</where>
+        </update>
+
+        <rollback>
+            <update tableName="ncm_agropecuario">
+                <column name="percentual_reducao_padrao" valueNumeric="0"/>
+                <where>codigo IN ('10063021','04012010','04070090','07020000','08043000','10059010')</where>
+            </update>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

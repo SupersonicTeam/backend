@@ -8,12 +8,18 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
-import br.com.agrocontabil.service.CalculoIbsCbsService;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import br.com.agrocontabil.service.GeracaoNotaFiscalService;
+import br.com.agrocontabil.service.TributacaoService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -133,7 +139,7 @@ public final class NfeImportTestFixtures {
         """.formatted(nfeSemDecl, chave);
   }
 
-  private static CalculoIbsCbsService tributos() {
+  private static TributacaoService tributos() {
     TributosProperties props = new TributosProperties();
     TributosProperties.Ibs ibs = new TributosProperties.Ibs();
     ibs.setAliquota(new BigDecimal("0.0010"));
@@ -141,7 +147,10 @@ public final class NfeImportTestFixtures {
     cbs.setAliquota(new BigDecimal("0.0090"));
     props.setIbs(ibs);
     props.setCbs(cbs);
-    return new CalculoIbsCbsService(props);
+    // Sem redução por NCM nas fixtures: repositório mockado devolve Optional.empty().
+    NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
+    when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
+    return new TributacaoService(props, ncmRepo);
   }
 
   private static String removerDeclaracao(String xml) {

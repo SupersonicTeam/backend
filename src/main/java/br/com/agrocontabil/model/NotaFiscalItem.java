@@ -3,6 +3,8 @@ package br.com.agrocontabil.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
@@ -215,6 +217,24 @@ public class NotaFiscalItem {
    */
   @Column(name = "valor_credito_cbs", precision = 15, scale = 2)
   private BigDecimal valorCreditoCbs;
+
+  // -------------------------------------------------------------------------
+  // Natureza tributaria por operacao — Sprint 4, issue Agrocontabil#30 (RF015).
+  // Classificada pelo 1.º digito do CFOP: 5/6/7 -> DEBITO (saida); 1/2/3 -> CREDITO
+  // (entrada). Consumida pela apuracao mensal (issue #41). Nullable: compatibilidade
+  // com itens gravados antes desta sprint.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Natureza tributaria do item para fins de apuracao (DEBITO em saidas, CREDITO em entradas).
+   *
+   * <p>Resolvida pelo {@code TributacaoService} a partir do 1.º digito do CFOP na criacao e
+   * atualizacao da nota. Nula em itens gravados antes da Sprint 4 (issue #30) ou quando o CFOP
+   * nao segue o padrao numerico esperado.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "natureza_operacao", length = 10)
+  private NaturezaOperacaoTributaria naturezaOperacao;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;

@@ -28,3 +28,5 @@ databaseChangeLog:
       file: db/changelog/changes/0010-nota-fiscal-cancelamento.xml
   - include:
       file: db/changelog/changes/0011-nota-fiscal-credito-tributario.xml
+  - include:
+      file: db/changelog/changes/0012-tributacao-natureza-ncm-reducao.xml

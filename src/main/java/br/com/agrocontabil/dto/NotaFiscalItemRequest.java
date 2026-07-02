@@ -74,7 +74,7 @@ public record NotaFiscalItemRequest(
     // -------------------------------------------------------------------------
     // Campos opcionais de IBS/CBS — apenas classificatórios/informativos.
     // Valores calculados (valorIbs, valorCbs, baseCalculo, alíquotas) NÃO vêm
-    // do cliente — são computados pelo CalculoIbsCbsService.
+    // do cliente — são computados pelo TributacaoService.
     // Base legal: EC 132/2023 + LC 214/2025.
     // -------------------------------------------------------------------------
 

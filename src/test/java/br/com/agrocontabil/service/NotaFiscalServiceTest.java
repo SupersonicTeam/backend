@@ -63,14 +63,14 @@ class NotaFiscalServiceTest {
   private AuthenticatedProdutorProvider produtorProvider;
 
   /**
-   * CalculoIbsCbsService e um colaborador real de NotaFiscalService.
+   * TributacaoService e um colaborador real de NotaFiscalService.
    * Aqui usamos um mock para isolar o servico de nota fiscal dos detalhes
-   * de calculo tributario (testados isoladamente em CalculoIbsCbsServiceTest).
+   * de calculo tributario (testados isoladamente em TributacaoServiceTest).
    * O mock retorna a propria nota passada (identidade), permitindo que as
    * assercoes de totais de produtos continuem validas.
    */
   @Mock
-  private CalculoIbsCbsService calculoIbsCbsService;
+  private TributacaoService tributacaoService;
 
   /**
    * GeracaoNotaFiscalService e o pipeline de geracao de XML.
@@ -119,8 +119,8 @@ class NotaFiscalServiceTest {
     NotaFiscalRequest request = buildRequest();
     NotaFiscal notaSalva = buildNotaSalva();
 
-    // CalculoIbsCbsService é colaborador: mock retorna a própria nota (sem alterar campos).
-    when(calculoIbsCbsService.calcular(any(NotaFiscal.class)))
+    // TributacaoService é colaborador: mock retorna a própria nota (sem alterar campos).
+    when(tributacaoService.calcular(any(NotaFiscal.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenReturn(notaSalva);
 
@@ -334,7 +334,7 @@ class NotaFiscalServiceTest {
     when(produtorProvider.get()).thenReturn(produtor);
     when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
         .thenReturn(Optional.of(notaExistente));
-    when(calculoIbsCbsService.calcular(any(NotaFiscal.class)))
+    when(tributacaoService.calcular(any(NotaFiscal.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
 

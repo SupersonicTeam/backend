@@ -67,7 +67,7 @@ public class NotaFiscalService {
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
-  private final CalculoIbsCbsService calculoIbsCbsService;
+  private final TributacaoService tributacaoService;
   private final GeracaoNotaFiscalService geracaoNotaFiscalService;
   private final GeracaoNfaService geracaoNfaService;
   private final DanfePdfService danfePdfService;
@@ -76,14 +76,14 @@ public class NotaFiscalService {
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
-      CalculoIbsCbsService calculoIbsCbsService,
+      TributacaoService tributacaoService,
       GeracaoNotaFiscalService geracaoNotaFiscalService,
       GeracaoNfaService geracaoNfaService,
       DanfePdfService danfePdfService,
       NotaFiscalValidacaoService validacaoService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
-    this.calculoIbsCbsService = calculoIbsCbsService;
+    this.tributacaoService = tributacaoService;
     this.geracaoNotaFiscalService = geracaoNotaFiscalService;
     this.geracaoNfaService = geracaoNfaService;
     this.danfePdfService = danfePdfService;
@@ -100,7 +100,7 @@ public class NotaFiscalService {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
     // Calcula IBS/CBS após montagem dos itens e cálculo dos totais de produtos.
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal criada: id={} produtor={} numero={}",
         saved.getId(), produtor.getId(), saved.getNumero());
@@ -196,7 +196,7 @@ public class NotaFiscalService {
     nota.setValorTotalNota(totalProdutos);
 
     // Recalcula IBS/CBS após substituição dos itens e recálculo dos totais de produtos.
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal atualizada: id={} produtor={}", saved.getId(), produtor.getId());

@@ -2,6 +2,9 @@ package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.CertificadoDigitalProperties;
 import br.com.agrocontabil.config.TributosProperties;
@@ -19,9 +22,11 @@ import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
+import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +36,7 @@ import org.junit.jupiter.api.Test;
  * Teste de integração do pipeline de geração do XML da NF-e.
  *
  * <p>Sem contexto Spring (sem banco): instancia os componentes reais em memória.
- * Usa o {@link CalculoIbsCbsService} com alíquotas padrão para calcular IBS/CBS,
+ * Usa o {@link TributacaoService} com alíquotas padrão para calcular IBS/CBS,
  * simulando o DataLoader.
  *
  * <p>Cobertura:
@@ -46,7 +51,7 @@ import org.junit.jupiter.api.Test;
 class GeracaoNotaFiscalServiceTest {
 
   private GeracaoNotaFiscalService service;
-  private CalculoIbsCbsService calculoIbsCbsService;
+  private TributacaoService tributacaoService;
 
   @BeforeEach
   void setUp() {
@@ -59,7 +64,9 @@ class GeracaoNotaFiscalServiceTest {
     props.setIbs(ibs);
     props.setCbs(cbs);
 
-    calculoIbsCbsService = new CalculoIbsCbsService(props);
+    NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
+    when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
+    tributacaoService = new TributacaoService(props, ncmRepo);
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();
@@ -83,7 +90,7 @@ class GeracaoNotaFiscalServiceTest {
   @DisplayName("deve gerar XML valido contra o XSD para nota completa com IBS/CBS")
   void deveGerarXmlValidoContraXsd() {
     NotaFiscal nota = buildNotaCompleta();
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     String xml = service.gerarXml(nota);
 
@@ -102,7 +109,7 @@ class GeracaoNotaFiscalServiceTest {
   @DisplayName("XML deve conter grupo IBSCBS com valores de IBS e CBS do item")
   void xmlDeveConterGrupoIbsCbsComValores() {
     NotaFiscal nota = buildNotaCompleta();
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     String xml = service.gerarXml(nota);
 
@@ -120,7 +127,7 @@ class GeracaoNotaFiscalServiceTest {
   @DisplayName("XML deve conter grupo IBSCBSTot nos totais")
   void xmlDeveConterIbsCbsTotNosTotal() {
     NotaFiscal nota = buildNotaCompleta();
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     String xml = service.gerarXml(nota);
 
@@ -135,7 +142,7 @@ class GeracaoNotaFiscalServiceTest {
   @DisplayName("valor do IBS no XML deve corresponder ao calculado pelo servico")
   void valorIbsNoXmlDeveCorresponderAoCalculado() {
     NotaFiscal nota = buildNotaCompleta();
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     // IBS = base * 0.0010; base = 1000.00 (sem redução) → IBS = 1.00
     BigDecimal expectedIbs = nota.getValorTotalIbs();
@@ -156,7 +163,7 @@ class GeracaoNotaFiscalServiceTest {
   @DisplayName("XML gerado pelo pipeline vem assinado digitalmente (ds:Signature + X509)")
   void xmlGeradoVemAssinado() {
     NotaFiscal nota = buildNotaCompleta();
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     String xml = service.gerarXml(nota);
 
@@ -169,7 +176,7 @@ class GeracaoNotaFiscalServiceTest {
   @DisplayName("XsdValidator rejeita erro estrutural (hardening da assinatura ausente revertido)")
   void xsdValidatorRejeitaErroEstrutural() {
     NotaFiscal nota = buildNotaCompleta();
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     String xmlValido = service.gerarXml(nota);
     // Corrompe a estrutura: remove o elemento obrigatorio <vNF> dos totais (ICMSTot).
