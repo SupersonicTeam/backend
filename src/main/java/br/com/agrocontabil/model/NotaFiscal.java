@@ -149,6 +149,28 @@ public class NotaFiscal {
   @Column(name = "valor_total_cbs", precision = 15, scale = 2)
   private BigDecimal valorTotalCbs;
 
+  /**
+   * Somatório do crédito de IBS aproveitável de todos os itens elegíveis da nota
+   * (Sprint 4 — issue Agrocontabil#30, RN003), com 2 casas decimais.
+   *
+   * <p>Preenchido apenas em notas {@link OrigemNotaFiscal#IMPORTADA} (entrada); {@code 0.00}
+   * quando nenhum item é elegível. Nulo em notas próprias e em importadas anteriores à
+   * Sprint 4. EC 132/2023, art. 156-A, § 1.º, VIII; LC 214/2025, art. 47.
+   */
+  @Column(name = "valor_total_credito_ibs", precision = 15, scale = 2)
+  private BigDecimal valorTotalCreditoIbs;
+
+  /**
+   * Somatório do crédito de CBS aproveitável de todos os itens elegíveis da nota
+   * (Sprint 4 — issue Agrocontabil#30, RN003), com 2 casas decimais.
+   *
+   * <p>Preenchido apenas em notas {@link OrigemNotaFiscal#IMPORTADA} (entrada); {@code 0.00}
+   * quando nenhum item é elegível. Nulo em notas próprias e em importadas anteriores à
+   * Sprint 4. EC 132/2023, art. 156-A, § 1.º, VIII; LC 214/2025, art. 47.
+   */
+  @Column(name = "valor_total_credito_cbs", precision = 15, scale = 2)
+  private BigDecimal valorTotalCreditoCbs;
+
   /** Status do ciclo de vida da nota. Inicia como {@link StatusNotaFiscal#RASCUNHO}. */
   @Enumerated(EnumType.STRING)
   @Column(name = "status", length = 20, nullable = false, columnDefinition = "VARCHAR(20)")

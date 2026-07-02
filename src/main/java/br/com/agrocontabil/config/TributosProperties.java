@@ -37,6 +37,7 @@ public class TributosProperties {
 
   private Ibs ibs = new Ibs();
   private Cbs cbs = new Cbs();
+  private Credito credito = new Credito();
 
   /** Retorna as propriedades do IBS. */
   public Ibs getIbs() {
@@ -56,6 +57,16 @@ public class TributosProperties {
   /** Define as propriedades da CBS. */
   public void setCbs(Cbs cbs) {
     this.cbs = cbs;
+  }
+
+  /** Retorna as propriedades do crédito tributário de entrada. */
+  public Credito getCredito() {
+    return credito;
+  }
+
+  /** Define as propriedades do crédito tributário de entrada. */
+  public void setCredito(Credito credito) {
+    this.credito = credito;
   }
 
   /**
@@ -107,6 +118,40 @@ public class TributosProperties {
     /** Define a alíquota da CBS. */
     public void setAliquota(BigDecimal aliquota) {
       this.aliquota = aliquota;
+    }
+  }
+
+  /**
+   * Propriedades do crédito tributário de IBS/CBS nas aquisições (notas de entrada).
+   *
+   * <p><strong>Base legal:</strong> a não-cumulatividade do IBS/CBS garante ao adquirente
+   * crédito integral do imposto incidente na operação anterior (EC 132/2023, art. 156-A,
+   * § 1.º, VIII; LC 214/2025, arts. 47 e seguintes). Para o produtor rural, a LC 214/2025
+   * prevê regimes diferenciados (arts. 164 e seguintes — produtor rural não contribuinte
+   * gera <em>crédito presumido</em> ao adquirente, com percentual dependente de ato do
+   * Comitê Gestor/RFB ainda não editado). Por essa incerteza regulatória, o percentual de
+   * aproveitamento é <strong>parametrizado</strong> — nunca cravado em código.
+   */
+  public static class Credito {
+
+    /**
+     * Percentual do crédito aproveitável sobre o IBS/CBS da operação de entrada, de 0 a 100
+     * (ex.: {@code 100} = crédito integral, regra geral da não-cumulatividade).
+     *
+     * <p>Ajustável em {@code application.yml}
+     * ({@code agrocontabil.tributos.credito.percentual-aproveitamento}) sem recompilar,
+     * para refletir a regulamentação complementar da LC 214/2025 quando editada.
+     */
+    private BigDecimal percentualAproveitamento = new BigDecimal("100");
+
+    /** Retorna o percentual de aproveitamento do crédito (0–100). */
+    public BigDecimal getPercentualAproveitamento() {
+      return percentualAproveitamento;
+    }
+
+    /** Define o percentual de aproveitamento do crédito (0–100). */
+    public void setPercentualAproveitamento(BigDecimal percentualAproveitamento) {
+      this.percentualAproveitamento = percentualAproveitamento;
     }
   }
 }

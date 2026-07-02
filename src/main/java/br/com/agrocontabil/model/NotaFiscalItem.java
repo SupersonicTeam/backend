@@ -190,6 +190,32 @@ public class NotaFiscalItem {
   @Column(name = "percentual_reducao", precision = 5, scale = 2)
   private BigDecimal percentualReducao;
 
+  // -------------------------------------------------------------------------
+  // Crédito tributário de entrada — Sprint 4, issue Agrocontabil#30 (RN003).
+  // EC 132/2023, art. 156-A, § 1.º, VIII (não-cumulatividade); LC 214/2025, art. 47.
+  // Nullable: preenchidos apenas em itens elegíveis de notas IMPORTADAS.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Valor do crédito de IBS aproveitável neste item (nota de entrada), com 2 casas decimais.
+   *
+   * <p>{@code valorCreditoIbs = baseCalculo × aliquotaIbs × percentualAproveitamento / 100},
+   * arredondamento HALF_UP. Calculado pelo {@code CreditoTributarioService} na importação.
+   * Nulo em itens não elegíveis (ex.: CFOP de exportação) e em notas próprias (saída).
+   */
+  @Column(name = "valor_credito_ibs", precision = 15, scale = 2)
+  private BigDecimal valorCreditoIbs;
+
+  /**
+   * Valor do crédito de CBS aproveitável neste item (nota de entrada), com 2 casas decimais.
+   *
+   * <p>{@code valorCreditoCbs = baseCalculo × aliquotaCbs × percentualAproveitamento / 100},
+   * arredondamento HALF_UP. Calculado pelo {@code CreditoTributarioService} na importação.
+   * Nulo em itens não elegíveis e em notas próprias (saída).
+   */
+  @Column(name = "valor_credito_cbs", precision = 15, scale = 2)
+  private BigDecimal valorCreditoCbs;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

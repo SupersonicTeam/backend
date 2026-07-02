@@ -42,6 +42,7 @@ class ImportacaoNotaFiscalServiceTest {
   @Mock private NfeToNotaFiscalMapper nfeToNotaFiscalMapper;
   @Mock private NotaFiscalRepository notaFiscalRepository;
   @Mock private AuthenticatedProdutorProvider produtorProvider;
+  @Mock private CreditoTributarioService creditoTributarioService;
 
   @InjectMocks private ImportacaoNotaFiscalService service;
 
@@ -79,6 +80,8 @@ class ImportacaoNotaFiscalServiceTest {
     assertThat(resultados.get(0).status()).isEqualTo(Status.IMPORTADA);
     assertThat(resultados.get(1).sucesso()).isFalse();
     assertThat(resultados.get(1).status()).isEqualTo(Status.INVALIDA);
+    // RN003 (issue Agrocontabil#30): o credito tributario e calculado antes de persistir.
+    verify(creditoTributarioService).calcular(nota);
   }
 
   @Test
@@ -100,6 +103,8 @@ class ImportacaoNotaFiscalServiceTest {
     assertThat(resultados.get(0).status()).isEqualTo(Status.DUPLICADA);
     assertThat(resultados.get(0).sucesso()).isFalse();
     verify(notaFiscalRepository, never()).save(any());
+    // Nota duplicada nao e persistida — tampouco recalcula credito.
+    verify(creditoTributarioService, never()).calcular(any());
   }
 
   private NotaFiscal notaComChave(String chave) {

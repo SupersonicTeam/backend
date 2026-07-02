@@ -86,6 +86,13 @@ agrocontabil:
       aliquota: 0.0010
     cbs:
       aliquota: 0.0090
+    # Crédito tributário nas notas de entrada (Sprint 4 — RN003).
+    # Percentual do crédito aproveitável sobre o IBS/CBS da aquisição (0–100).
+    # 100 = crédito integral (não-cumulatividade — LC 214/2025, art. 47). O crédito
+    # presumido nas aquisições de produtor rural não contribuinte (arts. 164+) depende
+    # de regulamentação futura — ajustar aqui quando editada, sem recompilar.
+    credito:
+      percentual-aproveitamento: 100
 
 # Log base. Nunca logar senha/token — ver application-prod.yml para nivel de prod.
 logging:

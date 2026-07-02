@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     data_cancelamento           TIMESTAMP WITH TIME ZONE,
     motivo_cancelamento         VARCHAR(255),
     protocolo_cancelamento      VARCHAR(20),
+    -- Crédito tributário de entrada — Sprint 4 issue Agrocontabil#30 (migration 0011)
+    valor_total_credito_ibs     NUMERIC(15,2),
+    valor_total_credito_cbs     NUMERIC(15,2),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
@@ -95,6 +98,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     aliquota_cbs            NUMERIC(7,4),
     valor_cbs               NUMERIC(15,2),
     percentual_reducao      NUMERIC(5,2)   DEFAULT 0,
+    -- Crédito tributário de entrada — Sprint 4 issue Agrocontabil#30 (migration 0011)
+    valor_credito_ibs       NUMERIC(15,2),
+    valor_credito_cbs       NUMERIC(15,2),
     created_at              TIMESTAMP WITH TIME ZONE,
     updated_at              TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
