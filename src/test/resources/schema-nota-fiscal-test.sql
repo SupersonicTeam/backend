@@ -101,6 +101,8 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     -- Crédito tributário de entrada — Sprint 4 issue Agrocontabil#30 (migration 0011)
     valor_credito_ibs       NUMERIC(15,2),
     valor_credito_cbs       NUMERIC(15,2),
+    -- Natureza tributária por operação (DEBITO/CREDITO) — Sprint 4 issue #30 (migration 0012)
+    natureza_operacao       VARCHAR(10),
     created_at              TIMESTAMP WITH TIME ZONE,
     updated_at              TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
@@ -130,8 +132,10 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_validacao (
 -- Manter sincronizado com 0007-ncm-cfop-referencia.xml.
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ncm_agropecuario (
-    codigo      VARCHAR(8)    NOT NULL,
-    descricao   VARCHAR(255)  NOT NULL,
+    codigo                     VARCHAR(8)    NOT NULL,
+    descricao                  VARCHAR(255)  NOT NULL,
+    -- Redução padrão de base IBS/CBS por NCM — Sprint 4 issue #30 (migration 0012)
+    percentual_reducao_padrao  DECIMAL(5,2)  NOT NULL DEFAULT 0,
     PRIMARY KEY (codigo)
 );
 
@@ -144,22 +148,23 @@ CREATE TABLE IF NOT EXISTS cfop_referencia (
     PRIMARY KEY (codigo)
 );
 
-MERGE INTO ncm_agropecuario (codigo, descricao) KEY (codigo) VALUES
-    ('12010090', 'Soja, mesmo triturada (exceto para semeadura)'),
-    ('12010010', 'Soja para semeadura'),
-    ('10059010', 'Milho em grao (exceto para semeadura)'),
-    ('10051000', 'Milho para semeadura'),
-    ('10011900', 'Trigo duro (exceto para semeadura)'),
-    ('10063021', 'Arroz semibranqueado ou branqueado, polido'),
-    ('09011110', 'Cafe nao torrado, nao descafeinado, em grao'),
-    ('17011400', 'Outros acucares de cana, em bruto'),
-    ('52010020', 'Algodao em bruto, nao cardado nem penteado'),
-    ('01022110', 'Bovinos reprodutores de raca pura, prenhes ou com cria'),
-    ('01039000', 'Suinos vivos (exceto reprodutores de raca pura)'),
-    ('04070090', 'Outros ovos de aves, com casca, frescos'),
-    ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro'),
-    ('08043000', 'Abacaxis (ananases) frescos ou secos'),
-    ('07020000', 'Tomates frescos ou refrigerados');
+-- percentual_reducao_padrao replicado do seed do changeset 0012 (ano-teste, incerteza documentada).
+MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (codigo) VALUES
+    ('12010090', 'Soja, mesmo triturada (exceto para semeadura)', 0),
+    ('12010010', 'Soja para semeadura', 0),
+    ('10059010', 'Milho em grao (exceto para semeadura)', 60),
+    ('10051000', 'Milho para semeadura', 0),
+    ('10011900', 'Trigo duro (exceto para semeadura)', 0),
+    ('10063021', 'Arroz semibranqueado ou branqueado, polido', 60),
+    ('09011110', 'Cafe nao torrado, nao descafeinado, em grao', 0),
+    ('17011400', 'Outros acucares de cana, em bruto', 0),
+    ('52010020', 'Algodao em bruto, nao cardado nem penteado', 0),
+    ('01022110', 'Bovinos reprodutores de raca pura, prenhes ou com cria', 0),
+    ('01039000', 'Suinos vivos (exceto reprodutores de raca pura)', 0),
+    ('04070090', 'Outros ovos de aves, com casca, frescos', 60),
+    ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', 60),
+    ('08043000', 'Abacaxis (ananases) frescos ou secos', 60),
+    ('07020000', 'Tomates frescos ou refrigerados', 60);
 
 MERGE INTO cfop_referencia (codigo, descricao, tipo_operacao, ambito, aplicavel_produtor_rural) KEY (codigo) VALUES
     ('5101', 'Venda de producao do estabelecimento (operacao interna)', 'SAIDA', 'INTERNO', TRUE),

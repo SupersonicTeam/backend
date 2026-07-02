@@ -32,7 +32,7 @@ import java.util.List;
  *   <li>Campos IBS/CBS dos itens ({@code cstIbsCbs}, {@code cClassTrib},
  *       {@code percentualReducao}) são copiados do request quando presentes;
  *       os valores calculados ({@code valorIbs}, {@code valorCbs} etc.) são preenchidos
- *       pelo {@link br.com.agrocontabil.service.CalculoIbsCbsService} — nunca aceitos
+ *       pelo {@link br.com.agrocontabil.service.TributacaoService} — nunca aceitos
  *       do cliente (evita mass-assignment).</li>
  * </ul>
  *
@@ -181,7 +181,7 @@ public final class NotaFiscalMapper {
    * em 2 casas decimais. Copia os campos classificatórios opcionais de IBS/CBS
    * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}).
    * Os campos calculados (valorIbs, valorCbs etc.) são preenchidos posteriormente
-   * pelo {@link br.com.agrocontabil.service.CalculoIbsCbsService}.
+   * pelo {@link br.com.agrocontabil.service.TributacaoService}.
    *
    * @param req DTO de entrada do item
    * @return entidade do item sem associação com nota fiscal (sem ID)

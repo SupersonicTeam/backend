@@ -2,6 +2,9 @@ package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.CertificadoDigitalProperties;
 import br.com.agrocontabil.config.TributosProperties;
@@ -20,9 +23,11 @@ import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
+import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +53,7 @@ class GeracaoNfaFlowTest {
   private static final String CPF_VALIDO = "52998224725";
 
   private GeracaoNfaService geracaoNfaService;
-  private CalculoIbsCbsService calculoIbsCbsService;
+  private TributacaoService tributacaoService;
 
   @BeforeEach
   void setUp() {
@@ -59,7 +64,9 @@ class GeracaoNfaFlowTest {
     cbs.setAliquota(new BigDecimal("0.0090"));
     props.setIbs(ibs);
     props.setCbs(cbs);
-    calculoIbsCbsService = new CalculoIbsCbsService(props);
+    NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
+    when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
+    tributacaoService = new TributacaoService(props, ncmRepo);
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();
@@ -80,7 +87,7 @@ class GeracaoNfaFlowTest {
   @DisplayName("NFA de produtor PF com CPF valido emite XML com <CPF> no emitente")
   void nfaPfComCpfValidoEmiteXmlComCpf() {
     NotaFiscal nota = buildNfaCompleta(TipoProdutor.PESSOA_FISICA, CPF_VALIDO);
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     String xml = geracaoNfaService.gerarXml(nota);
 
@@ -95,7 +102,7 @@ class GeracaoNfaFlowTest {
   @DisplayName("NFA com produtor PJ deve falhar com 422 (NFA_PRODUTOR_NAO_PF)")
   void nfaComProdutorPjDeveFalhar() {
     NotaFiscal nota = buildNfaCompleta(TipoProdutor.PESSOA_JURIDICA, "11222333000181");
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     assertThatThrownBy(() -> geracaoNfaService.gerarXml(nota))
         .isInstanceOf(NfaInvalidaParaEmissaoException.class)
@@ -107,7 +114,7 @@ class GeracaoNfaFlowTest {
   @DisplayName("NFA de PF com CPF de DV invalido deve falhar com 422 (DOCUMENTO_INVALIDO)")
   void nfaComCpfInvalidoDeveFalhar() {
     NotaFiscal nota = buildNfaCompleta(TipoProdutor.PESSOA_FISICA, "12345678901");
-    calculoIbsCbsService.calcular(nota);
+    tributacaoService.calcular(nota);
 
     assertThatThrownBy(() -> geracaoNfaService.gerarXml(nota))
         .isInstanceOf(NfaInvalidaParaEmissaoException.class);
