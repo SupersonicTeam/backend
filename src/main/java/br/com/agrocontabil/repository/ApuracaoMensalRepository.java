@@ -25,4 +25,16 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
    * @return {@link Optional} com a apuração, ou vazio se ainda não consolidada
    */
   Optional<ApuracaoMensal> findByProdutorIdAndPeriodo(UUID produtorId, String periodo);
+
+  /**
+   * Busca uma apuração por ID restringindo ao produtor dono (recorte anti-IDOR).
+   *
+   * <p>Usada na reabertura (issue Agrocontabil#42): retorna vazio — resultando em 404 — quando a
+   * apuração pertence a outro produtor, sem revelar sua existência.
+   *
+   * @param id         identificador da apuração
+   * @param produtorId identificador do produtor autenticado
+   * @return {@link Optional} com a apuração, ou vazio se inexistente ou de outro produtor
+   */
+  Optional<ApuracaoMensal> findByIdAndProdutorId(UUID id, UUID produtorId);
 }

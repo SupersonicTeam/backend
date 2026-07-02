@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0015-apuracao-reabertura.xml
+         Sprint 4 — issue Agrocontabil#42 (RN005): reabertura auditada de
+         periodo fechado (max. 3 meses retroativos).
+
+         Adiciona a auditoria de reabertura a apuracao_mensal:
+         - reaberto_por: identidade de quem reabriu (ID do produtor
+           autenticado — identidade mock ate a Sprint 8; nunca CPF/CNPJ).
+         - data_reabertura: instante da ultima reabertura.
+
+         Preenchidas explicitamente pelo ApuracaoService.reabrir() a partir
+         do AuditorAware, para conviver com os callbacks manuais
+         @PrePersist/@PreUpdate (created_at/updated_at) sem sobrepor
+         listeners. NAO editamos changeSets anteriores. O perfil de teste
+         desabilita o Liquibase; as mesmas colunas estao replicadas em
+         schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0015-add-apuracao-reabertura" author="supersonic-team">
+        <comment>
+            Adiciona colunas de auditoria de reabertura (reaberto_por,
+            data_reabertura) a tabela apuracao_mensal.
+        </comment>
+
+        <addColumn tableName="apuracao_mensal">
+            <column name="reaberto_por" type="VARCHAR(64)"/>
+            <column name="data_reabertura" type="TIMESTAMP WITH TIME ZONE"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="apuracao_mensal" columnName="reaberto_por"/>
+            <dropColumn tableName="apuracao_mensal" columnName="data_reabertura"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

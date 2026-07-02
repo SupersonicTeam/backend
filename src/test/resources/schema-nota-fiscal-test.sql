@@ -146,6 +146,9 @@ CREATE TABLE IF NOT EXISTS apuracao_mensal (
     saldo_cbs        NUMERIC(15,2)  NOT NULL,
     total_notas      BIGINT         NOT NULL DEFAULT 0,
     data_fechamento  TIMESTAMP WITH TIME ZONE,
+    -- Auditoria de reabertura — Sprint 4 issue Agrocontabil#42 (migration 0015).
+    reaberto_por     VARCHAR(64),
+    data_reabertura  TIMESTAMP WITH TIME ZONE,
     created_at       TIMESTAMP WITH TIME ZONE,
     updated_at       TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),

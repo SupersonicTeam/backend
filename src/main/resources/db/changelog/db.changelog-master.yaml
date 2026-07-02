@@ -34,3 +34,5 @@ databaseChangeLog:
       file: db/changelog/changes/0013-aliquota-ibs-uf.xml
   - include:
       file: db/changelog/changes/0014-apuracao-mensal.xml
+  - include:
+      file: db/changelog/changes/0015-apuracao-reabertura.xml
