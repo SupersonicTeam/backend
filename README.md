@@ -79,26 +79,52 @@ Variáveis de ambiente principais (ver `.env.example`): `DB_NAME`, `DB_USER`, `D
 
 ```
 br.com.agrocontabil
-├── config/        # SecurityConfig, CorsConfig, OpenApiConfig
+├── config/        # SecurityConfig, CorsConfig, OpenApiConfig, certificado, SEFAZ, tributos
 ├── controller/    # REST controllers (orquestram, sem regra de negócio)
-├── service/       # regras de negócio
+├── service/       # regras de negócio (notas, geração NF-e/NFA, importação, SEFAZ)
 ├── repository/    # Spring Data JPA
-├── model/         # entidades JPA
+├── model/         # entidades JPA + enums de domínio
 ├── dto/           # request/response (records)
 ├── mapper/        # entidade <-> DTO
+├── nfe/           # geração/importação de NF-e: JAXB layout 4.00, XML, assinatura digital, XSD
+├── danfe/         # DANFE em PDF (JasperReports)
+├── sefaz/         # transmissão à SEFAZ (transporte plugável, retry, job de sync)
 ├── exception/     # GlobalExceptionHandler + exceções de domínio
-└── common/        # ApiError e utilitários compartilhados
+└── common/        # ApiError (envelope errors[]) e utilitários compartilhados
 ```
 
-Arquitetura em camadas (MVC/clean): o fluxo de uma requisição é sempre `Controller → Service → Repository`. Controllers nunca contêm regra de negócio; entidades JPA nunca são expostas diretamente — sempre via DTO.
+Arquitetura em camadas (MVC/clean): o fluxo de uma requisição é sempre `Controller → Service → Repository`. Controllers nunca contêm regra de negócio; entidades JPA nunca são expostas diretamente — sempre via DTO. Erros saem padronizados pelo `GlobalExceptionHandler` no envelope `ApiError.errors[]`.
+
+## Funcionalidades (módulo Notas Fiscais)
+
+Emissão completa de NF-e modelo 55, exposta em `/api/notas`:
+
+| Método | Path | Descrição |
+|--------|------|-----------|
+| GET | `/api/notas` | Lista paginada (do produtor autenticado) |
+| GET | `/api/notas/{id}` | Busca por ID (anti-IDOR: 404 para nota de outro produtor) |
+| POST | `/api/notas` | Cria nota (status RASCUNHO) |
+| POST | `/api/notas/importar` | Importa XML(s) de NF-e recebida (multipart) |
+| PUT / DELETE | `/api/notas/{id}` | Atualiza / exclui (só RASCUNHO ou COM_INCONSISTENCIAS) |
+| POST | `/api/notas/{id}/gerar-xml` | Gera e assina o XML da NF-e |
+| GET | `/api/notas/{id}/xml` | Baixa o XML assinado |
+| GET | `/api/notas/{id}/pdf` | Baixa a DANFE em PDF |
+| POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (homologação) |
+| GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza o status na SEFAZ |
+| POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite de 30 dias) |
+| GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação |
+
+Inclui cálculo de IBS/CBS por item, geração de NFA (Nota Fiscal Avulsa do produtor rural), validação de NCM/CFOP do agronegócio, assinatura digital (certificado `.p12`) e validação contra o XSD oficial layout 4.00. A comunicação com a SEFAZ usa um transporte plugável com mock determinístico até a integração real (Sprint 7).
 
 ## Migrations (Liquibase)
 
 O schema é versionado pelo Liquibase. O Hibernate roda em `ddl-auto: validate` — **nunca** altera o banco. Cada mudança de schema vira um changeSet em `src/main/resources/db/changelog/changes/`, incluído no `db.changelog-master.yaml`.
 
-## Status atual — Sprint 0 (Fundação)
+## Status atual
 
-Esta entrega é a Sprint 0: configuração, classes transversais e um endpoint de health que prova que a aplicação sobe ponta a ponta. Ainda **não** há entidades de domínio (notas fiscais, tributos) — essas entram a partir da Sprint 2.
+O módulo de **Notas Fiscais** está completo: CRUD, geração e assinatura de NF-e modelo 55, DANFE em PDF, importação de XML, geração de NFA, validação de NCM/CFOP, envio/consulta à SEFAZ (homologação, via mock plugável) e cancelamento dentro do prazo. A próxima sprint (Sprint 4) foca em créditos tributários e relatórios de conformidade (apuração mensal de IBS/CBS).
+
+Autenticação está em stand-by até a Sprint 8 — o produtor é injetado por um filtro mock, e a estrutura de segurança permite plugar JWT sem refatorar os controllers. Detalhes de arquitetura, decisões e roadmap completo no `CLAUDE.md`.
 
 ## Roadmap pós-básico
 

@@ -2,6 +2,18 @@
 
 Guia para o Claude Code (e qualquer agente) trabalhar neste repositório. Leia antes de tocar no código.
 
+## Skills do projeto — USE PRIMEIRO (economia de tokens/contexto)
+
+Este repositório tem skills fixas em `.claude/skills/`. **Antes** de ler arquivos, escrever código ou levantar o estado do projeto, invoque a skill correspondente via `Skill` tool — ela já traz o contexto destilado, evitando `find`/`ls`/leituras amplas e releitura deste arquivo inteiro.
+
+| Skill | Quando usar |
+|-------|-------------|
+| **`codebase-map`** | ANTES de procurar/ler arquivos. Mapa pacote → classe → responsabilidade. Diz exatamente onde está cada coisa. |
+| **`project-conventions`** | ANTES de escrever ou revisar código. Padrões inegociáveis: camadas, fluxo de nova feature, contrato de erro, DTO/mapper, validação, testes, migrations, git. |
+| **`project-status`** | No início da sessão ou quando precisar do estado atual (issues abertas, último PR, saúde dos testes, próxima ação). |
+
+> **Manutenção:** ao adicionar pacote/classe significativa, atualize `codebase-map`. Ao mudar um padrão de projeto, atualize `project-conventions`. As skills são a fonte de verdade operacional; este CLAUDE.md é o guia de fundo.
+
 ## O que é
 
 Backend do **AgroContabil** — software de auxílio ao produtor rural e ao escritório de contabilidade na reforma tributária do agronegócio (IBS/CBS — EC 132/2023 + LC 214/2025). TCC 2026, Supersonic Team (Murillo Weiss, Luiz Feliz Gervazio, Herick Eduardo Vavassori).
@@ -38,27 +50,35 @@ br.com.agrocontabil
 │                  # SefazProperties/Config, RetryConfig, SchedulingConfig, DataLoader
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, GeracaoNotaFiscalService,
-│                  # SefazService, CalculoIbsCbsService, ChaveAcessoGenerator,
+│                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,
+│                  # CalculoIbsCbsService, ChaveAcessoGenerator,
 │                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider)
-├── repository/    # Spring Data JPA
-├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario)
-│                  # enums: StatusNotaFiscal (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS)
-│                  # NotaFiscalValidacao (historico de inconsistencias de validacao — issue #22)
+├── repository/    # Spring Data JPA (NotaFiscal, NotaFiscalValidacao, Produtor,
+│                  # CfopReferencia, NcmReferencia + repos do scaffolding AI)
+├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario,
+│                  # NotaFiscalValidacao [#22], CfopReferencia/NcmReferencia [#20])
+│                  # enums: StatusNotaFiscal (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS),
+│                  # OrigemNotaFiscal (PROPRIA/IMPORTADA), TipoDocumentoFiscal (NFE/NFA),
+│                  # TipoOperacaoCfop, AmbitoCfop, TipoProdutor
 │                  # modelos pré-criados para sprint futura de consultoria AI:
 │                  # Conversa, Diagnostico, Feedback, ImpactoGeral, PorteEmpresa, TipoFeedback, RegimeTributario
 ├── dto/           # request/response (records): NotaFiscalRequest/Response,
-│                  # NotaFiscalItemRequest/Response, SefazEnvioResponse, SefazStatusResponse,
+│                  # NotaFiscalItemRequest/Response, CancelamentoRequest/Response [#21],
+│                  # ImportacaoNotaResultado [#19], SefazEnvioResponse, SefazStatusResponse,
 │                  # NotaFiscalValidacaoResponse
 ├── mapper/        # entidade <-> DTO (NotaFiscalMapper)
-├── nfe/           # geração de NF-e: model/ (JAXB puras layout 4.00), FiscalRulesValidator,
-│                  # NotaFiscalNfeMapper, XmlGenerator, XsdValidator, SecureXmlFactories (XXE),
+├── validation/    # Bean Validation customizada: @ValidCpfCnpj/@ValidNcm/@ValidCfop
+│                  # + validators (CpfCnpjValidator, NcmValidator, CfopValidator)
+├── nfe/           # geração/importação de NF-e: model/ (JAXB puras layout 4.00), FiscalRulesValidator,
+│                  # NotaFiscalNfeMapper, NfeToNotaFiscalMapper (reverso), NfeXmlImporter (XXE-safe),
+│                  # XmlGenerator, XsdValidator, SecureXmlFactories (XXE),
 │                  # NfeAssinador, AssinaturaValidator, KeyStoreCertificadoProvider
 ├── danfe/         # DANFE em PDF: DanfePdfService (JasperReports), DanfeItemRow
 ├── sefaz/         # transmissão SEFAZ: SefazTransport (interface plugável), MockSefazTransport,
 │                  # SefazClient, SefazRetorno, SituacaoSefaz, SefazAmbiente,
 │                  # SefazStatusSyncJob (job agendado de sincronização)
 ├── exception/     # GlobalExceptionHandler + DomainException (base) + exceções de domínio
-└── common/        # ApiError (envelope errors[]), ErrorCode, ErrorDetail, utilitários
+└── common/        # ApiError (envelope errors[]), ErrorCode, ErrorDetail, DocumentoFiscalValidator
 ```
 
 ### Endpoints REST ativos
@@ -69,13 +89,14 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; produtor=destinatário; origem=IMPORTADA) |
-| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO) |
-| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO) |
-| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
+| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS) |
+| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS) |
+| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO/COM_INCONSISTENCIAS→XML_GERADO) |
 | GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
+| POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
 
 ## Segurança
@@ -111,7 +132,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 157 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 228 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 3 concluída (2026-06-24)
 
@@ -131,19 +152,27 @@ br.com.agrocontabil
 - **Download DANFE PDF — issue #14 (PR #28):** `DanfePdfService` (JasperReports + template `.jrxml`); `DanfeItemRow`; endpoint `GET /api/notas/{id}/pdf` (`application/pdf`, `Content-Disposition: attachment`); exceções `DanfeIndisponivelException` (409 para RASCUNHO) e `DanfeGenerationException`.
 - **Persistência de inconsistências de validação — issue #22 (PR #29):** entidade `NotaFiscalValidacao` (espelha `ErrorDetail` + `loteValidacao` UUID que agrupa cada tentativa + `validadoEm`); `NotaFiscalValidacaoRepository`; migration `0006`; novo status `COM_INCONSISTENCIAS` (decisão: só este — `VALIDADA`/`AGUARDANDO_CORRECAO` descartados por redundância, pois `XML_GERADO` já implica validação OK). `NotaFiscalValidacaoService` persiste o lote em transação **`REQUIRES_NEW`** (sobrevive ao rollback do 422) e marca a nota `COM_INCONSISTENCIAS`; `NotaFiscalService.gerarXml` captura `NotaFiscalInvalidaParaEmissaoException`/`XmlGenerationException`, registra o histórico e relança. `COM_INCONSISTENCIAS` é **editável** (update/delete/gerar-xml liberados como RASCUNHO). Histórico acumulado por tentativa em `GET /api/notas/{id}/validacoes` (ownership anti-IDOR 404).
 
-Cobertura: **157 testes** (JUnit + Mockito). Cada PR passou por code review (GitHub Copilot) + auditoria OWASP + CI verde.
+Cobertura: **228 testes** (JUnit + Mockito). Cada PR passou por code review (GitHub Copilot) + auditoria OWASP + CI verde.
 
-### Próxima sprint — issues abertas
+### Sprint de emissão avançada — concluída (issues #18–#22, PRs #35–#38)
 
-- **#21** Cancelamento de NF-e (RN006 — limite 30 dias)
-- **#20** Validação de NCM e CFOP (RN008)
-- **#19** Importação de XML de nota fiscal (UC002)
-- **#18** Geração de NFA (Nota Fiscal Avulsa do produtor rural)
+- **#20** Validação de NCM e CFOP do agronegócio (RN008) — `CfopReferencia`/`NcmReferencia` + validação no `FiscalRulesValidator`.
+- **#18** Geração de NFA (Nota Fiscal Avulsa do produtor rural) — `GeracaoNfaService`, `TipoDocumentoFiscal` (NFE/NFA), `DocumentoFiscalValidator` (CPF/CNPJ).
+- **#19** Importação de XML de NF-e (UC002) — `ImportacaoNotaFiscalService`, `NfeXmlImporter` (XXE-safe), `NfeToNotaFiscalMapper`, `OrigemNotaFiscal` (PROPRIA/IMPORTADA); endpoint `POST /api/notas/importar`.
+- **#21** Cancelamento de NF-e (RN006 — limite 30 dias) — `SefazService` cancelamento, `CancelamentoRequest/Response`, `CancelamentoForaPrazoException`; endpoint `POST /api/notas/{id}/cancelar`.
+
+### Próxima sprint — Sprint 4 (créditos e conformidade, issues abertas)
+
+- **#30** Cálculo automático de IBS e CBS por operação (EC 132/2023 + LC 214/2025)
+- **#31** Alíquota IBS por estado (RN002)
+- **#41** Apuração mensal com fechamento automático (RN004)
+- **#42** Reabertura de período pelo contador — máx. 3 meses (RN005)
+- **#40** Relatório de conformidade tributária (UC004)
 
 ### Débitos técnicos abertos
 
 - **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico para teste). Substituir `MockSefazTransport` por transporte SOAP real + certificado **ICP-Brasil** em produção.
-- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`; validação de dígitos verificadores de CPF/CNPJ.
+- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.)
 - **Modelo:** `Produtor` sem endereço completo nem IE (placeholders no `NotaFiscalNfeMapper`); divisão IBS UF/Município hoje 50/50 (parametrização real pendente).
 - **Modelos pré-criados (consultoria AI — sprint não definida):** entidades `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback` e respectivos repositories existem no código mas **não têm controller nem service** — são scaffolding de feature futura. Não criar lógica sobre elas sem decisão explícita do Murillo.
 

@@ -24,20 +24,23 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `SefazProperties/Config` | Ambiente (HOMOLOGACAO/PRODUCAO), timeouts |
 | `RetryConfig` | Spring Retry para chamadas SEFAZ |
 | `SchedulingConfig` | Habilita `@Scheduled` (job de sync SEFAZ) |
-| `DataLoader` | Seed de dados em dev/test |
+| `DataLoader` | Seed de dados em dev/test (inclui referências NCM/CFOP) |
 
 ### `controller/`
 | Classe | Endpoints |
 |--------|-----------|
-| `HealthController` | `GET /health` |
-| `NotaFiscalController` | `/api/notas/**` — todos os 9 endpoints |
+| `HealthController` | `GET /api/v1/health` |
+| `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 
 ### `service/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `NotaFiscalService` | CRUD de notas + geração XML + DANFE |
-| `GeracaoNotaFiscalService` | Orquestra pipeline: validar → mapear → gerar XML → assinar → validar XSD |
-| `SefazService` | Envio e consulta de status na SEFAZ |
+| `NotaFiscalService` | CRUD de notas + orquestra geração XML, DANFE, envio, cancelamento (anti-IDOR 404) |
+| `GeracaoNotaFiscalService` | Pipeline NF-e mod. 55: validar → mapear → gerar XML → assinar → validar XSD |
+| `GeracaoNfaService` | Geração de NFA (Nota Fiscal Avulsa do produtor rural — issue #18) |
+| `ImportacaoNotaFiscalService` | Importa XML(s) de NF-e recebida (multipart; produtor=destinatário; issue #19) |
+| `NotaFiscalValidacaoService` | Persiste lote de inconsistências em `REQUIRES_NEW`; marca nota `COM_INCONSISTENCIAS` |
+| `SefazService` | Envio, consulta de status e cancelamento na SEFAZ |
 | `CalculoIbsCbsService` | Cálculo puro de IBS/CBS por item |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext` |
@@ -45,8 +48,10 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 ### `nfe/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `FiscalRulesValidator` | Valida regras de negócio fiscal antes de gerar XML |
+| `FiscalRulesValidator` | Valida regras de negócio fiscal antes de gerar XML (inclui NCM/CFOP — issue #20) |
 | `NotaFiscalNfeMapper` | Entidade → classes JAXB (formatação fiscal) |
+| `NfeToNotaFiscalMapper` | Mapper reverso: XML NF-e importado → entidade (issue #19) |
+| `NfeXmlImporter` | Parser XXE-safe do XML importado |
 | `XmlGenerator` | JAXB marshall → String XML |
 | `XsdValidator` | Valida XML contra XSD oficial layout 4.00 |
 | `SecureXmlFactories` | Fábrica XML com hardening XXE (centralizado) |
@@ -65,7 +70,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `SefazTransport` | Interface plugável de transmissão |
-| `MockSefazTransport` | Mock determinístico (Sprint 3; substituto até Sprint 7) |
+| `MockSefazTransport` | Mock determinístico (substituto até Sprint 7) |
 | `SefazClient` | Orquestra retry + chama `SefazTransport` |
 | `SefazRetorno` | Record com cStat, motivo, protocolo, situação |
 | `SituacaoSefaz` | Enum: AUTORIZADA, REJEITADA, PENDENTE |
@@ -79,34 +84,75 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `NotaFiscalItem` | Itens da nota (tabela `nota_fiscal_itens`) |
 | `EnderecoDestinatario` | Embedded address do destinatário |
 | `Produtor` | Produtor rural autenticado |
-| `StatusNotaFiscal` | Enum: RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA |
-| `Conversa`, `Diagnostico`, `Feedback`… | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
+| `NotaFiscalValidacao` | Histórico de inconsistências de validação (issue #22) |
+| `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20) |
+| **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` |
+| `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback`, `RegimeTributario` | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
 
 ### `dto/`
 - `NotaFiscalRequest/Response` — CRUD principal
 - `NotaFiscalItemRequest/Response` — itens da nota
-- `SefazEnvioResponse` — retorno do envio SEFAZ
-- `SefazStatusResponse` — retorno da consulta de status
+- `CancelamentoRequest/Response` — cancelamento de NF-e (issue #21)
+- `ImportacaoNotaResultado` — resultado da importação de XML (issue #19)
+- `NotaFiscalValidacaoResponse` — histórico de inconsistências
+- `SefazEnvioResponse` / `SefazStatusResponse` — retornos SEFAZ
+
+### `mapper/`
+- `NotaFiscalMapper` — entidade ↔ DTO (request/response)
+
+### `validation/`
+Bean Validation customizada (anotação + validator):
+| Anotação | Validator | Valida |
+|----------|-----------|--------|
+| `@ValidCpfCnpj` | `CpfCnpjValidator` | Dígitos verificadores de CPF/CNPJ (issue #18) |
+| `@ValidNcm` | `NcmValidator` | NCM contra tabela de referência (issue #20) |
+| `@ValidCfop` | `CfopValidator` | CFOP contra tabela de referência (issue #20) |
 
 ### `exception/`
 | Classe | HTTP | Quando |
 |--------|------|--------|
 | `ResourceNotFoundException` | 404 | Nota não encontrada / outro produtor |
-| `NotaFiscalNaoEditavelException` | 409 | Edição fora de RASCUNHO |
+| `NotaFiscalNaoEditavelException` | 409 | Edição fora de RASCUNHO/COM_INCONSISTENCIAS |
 | `NotaFiscalNaoEnviavelException` | 409 | Envio sem XML gerado |
 | `NotaFiscalNaoConsultavelException` | 409 | Consulta sem chave de acesso |
+| `NotaFiscalNaoCancelavelException` | 409 | Cancelamento em status inválido |
+| `CancelamentoForaPrazoException` | 422 | Cancelamento após 30 dias (RN006) |
 | `NotaFiscalInvalidaParaEmissaoException` | 422 | Dados inválidos para emissão |
+| `NfaInvalidaParaEmissaoException` | 422 | Dados inválidos para NFA |
+| `XmlImportacaoInvalidaException` | 422 | XML importado inválido/malformado |
 | `DanfeIndisponivelException` | 409 | PDF pedido antes do XML |
 | `DanfeGenerationException` | 500 (genérico) | Falha interna no JasperReports |
 | `AssinaturaDigitalException` | 500 (genérico) | Falha na assinatura/cert |
 | `SefazComunicacaoException` | 502 | Timeout/falha após retry |
 | `XmlGenerationException` | 422/500 | Falha na geração ou validação XSD |
 | `DomainException` | configurável | Base para exceções de domínio |
+| `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |
 
 ### `common/`
 - `ApiError` — envelope `{ errors: [] }` de resposta de erro
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
+- `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
+
+### `repository/`
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository` · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+
+## Endpoints REST (`/api/notas`)
+| Método | Path | Descrição |
+|--------|------|-----------|
+| GET | `/api/notas` | Lista paginada (produtor autenticado) |
+| GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
+| POST | `/api/notas` | Cria nota (status RASCUNHO) |
+| POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; origem=IMPORTADA) |
+| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS) |
+| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS) |
+| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
+| GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`) |
+| GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
+| POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
+| GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
+| POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
+| GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências (anti-IDOR 404) |
 
 ## Recursos em `src/main/resources/`
 - `xsd/` — XSD oficial NF-e layout 4.00
@@ -115,9 +161,9 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 
 ## Testes em `src/test/`
 - `resources/certs/` — certificado autoassinado para testes de assinatura
-- Padrão: `*Test.java` (unitário Mockito) + `* integração*` (Spring + H2)
+- Padrão: `*Test.java` (unitário Mockito) + teste de integração (Spring + H2)
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets individuais (0001 → 0005+)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0010-nota-fiscal-cancelamento`
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.
