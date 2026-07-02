@@ -6,11 +6,14 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.TributosProperties;
+import br.com.agrocontabil.model.AliquotaIbsUf;
+import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NaturezaOperacaoTributaria;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -49,6 +52,7 @@ class TributacaoServiceTest {
   private static final BigDecimal ALIQUOTA_CBS = new BigDecimal("0.0090");
 
   @Mock private NcmReferenciaRepository ncmReferenciaRepository;
+  @Mock private AliquotaIbsUfRepository aliquotaIbsUfRepository;
 
   private TributacaoService service;
 
@@ -57,10 +61,15 @@ class TributacaoServiceTest {
     TributosProperties props = new TributosProperties();
     props.getIbs().setAliquota(ALIQUOTA_IBS);
     props.getCbs().setAliquota(ALIQUOTA_CBS);
-    service = new TributacaoService(props, ncmReferenciaRepository);
+    service = new TributacaoService(props, ncmReferenciaRepository, aliquotaIbsUfRepository);
     // Por padrão nenhum NCM tem redução de referência; casos específicos sobrescrevem.
     lenient()
         .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
+        .thenReturn(Optional.empty());
+    // Por padrão nenhuma UF de referência (notas sem endereço caem no fallback das properties);
+    // casos específicos sobrescrevem por UF.
+    lenient()
+        .when(aliquotaIbsUfRepository.findByUf(anyString()))
         .thenReturn(Optional.empty());
   }
 
@@ -252,8 +261,105 @@ class TributacaoServiceTest {
   }
 
   // -------------------------------------------------------------------------
+  // Alíquota de IBS por UF (RN002, issue #31) — resolução interestadual/intraestadual
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("operacao interestadual deve usar a aliquota de IBS da UF de DESTINO — RN002")
+  void interestadualShouldUseDestinationUfRate() {
+    // Emitente em SP; destino em MG com IBS diferenciado (UF = MG, 0,03% estadual + 0,01% mun).
+    when(aliquotaIbsUfRepository.findByUf("MG"))
+        .thenReturn(Optional.of(aliquota("MG", "0.0003", "0.0001")));
+
+    NotaFiscal nota = buildNota("SP", "MG", new BigDecimal("1000.00"), "6101");
+
+    service.calcular(nota);
+
+    NotaFiscalItem item = nota.getItens().get(0);
+    // Alíquota total de IBS = 0.0003 + 0.0001 = 0.0004 (da UF de destino, MG).
+    assertThat(item.getAliquotaIbs()).isEqualByComparingTo("0.0004");
+    assertThat(item.getAliquotaIbsUf()).isEqualByComparingTo("0.0003");
+    assertThat(item.getAliquotaIbsMun()).isEqualByComparingTo("0.0001");
+    // valorIbs = 1000 * 0.0004 = 0.40; parcelas: UF = 1000*0.0003 = 0.30; Mun = 0.10.
+    assertThat(item.getValorIbs()).isEqualByComparingTo("0.40");
+    assertThat(item.getValorIbsUf()).isEqualByComparingTo("0.30");
+    assertThat(item.getValorIbsMun()).isEqualByComparingTo("0.10");
+  }
+
+  @Test
+  @DisplayName("operacao intraestadual deve usar a aliquota de IBS da UF do EMITENTE — RN002")
+  void intraestadualShouldUseEmitenteUfRate() {
+    // Emitente e destino em SP; SP com IBS 0,0006 estadual + 0,0002 municipal.
+    when(aliquotaIbsUfRepository.findByUf("SP"))
+        .thenReturn(Optional.of(aliquota("SP", "0.0006", "0.0002")));
+
+    NotaFiscal nota = buildNota("SP", "SP", new BigDecimal("1000.00"), "5101");
+
+    service.calcular(nota);
+
+    NotaFiscalItem item = nota.getItens().get(0);
+    assertThat(item.getAliquotaIbs()).isEqualByComparingTo("0.0008");
+    assertThat(item.getAliquotaIbsUf()).isEqualByComparingTo("0.0006");
+    assertThat(item.getAliquotaIbsMun()).isEqualByComparingTo("0.0002");
+    // valorIbs = 1000 * 0.0008 = 0.80; UF = 0.60; Mun = 0.20.
+    assertThat(item.getValorIbs()).isEqualByComparingTo("0.80");
+    assertThat(item.getValorIbsUf()).isEqualByComparingTo("0.60");
+    assertThat(item.getValorIbsMun()).isEqualByComparingTo("0.20");
+  }
+
+  @Test
+  @DisplayName("split estadual/municipal deve somar exatamente o valorIbs (sem perda no arredondamento)")
+  void splitShouldSumToTotalIbs() {
+    // Base impar para forcar arredondamento: 333.33 * 0.0005 = 0.166665 -> parcelas de centavo.
+    when(aliquotaIbsUfRepository.findByUf("MG"))
+        .thenReturn(Optional.of(aliquota("MG", "0.0005", "0.0005")));
+
+    NotaFiscal nota = buildNota("SP", "MG", new BigDecimal("333.33"), "6101");
+
+    service.calcular(nota);
+
+    NotaFiscalItem item = nota.getItens().get(0);
+    assertThat(item.getValorIbsUf().add(item.getValorIbsMun()))
+        .isEqualByComparingTo(item.getValorIbs());
+  }
+
+  @Test
+  @DisplayName("UF fora da tabela de referencia deve cair no fallback da aliquota parametrizada")
+  void unknownUfShouldFallBackToConfiguredRate() {
+    // findByUf devolve empty (default do setUp) para uma UF nao mapeada.
+    NotaFiscal nota = buildNota("SP", "MG", new BigDecimal("1000.00"), "6101");
+
+    service.calcular(nota);
+
+    NotaFiscalItem item = nota.getItens().get(0);
+    // Fallback: aliquota cheia das properties (0.0010), dividida igualmente entre UF e municipio.
+    assertThat(item.getAliquotaIbs()).isEqualByComparingTo(ALIQUOTA_IBS);
+    assertThat(item.getValorIbs()).isEqualByComparingTo("1.00");
+    assertThat(item.getValorIbsUf().add(item.getValorIbsMun()))
+        .isEqualByComparingTo(item.getValorIbs());
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  private AliquotaIbsUf aliquota(String uf, String estadual, String municipal) {
+    return AliquotaIbsUf.builder()
+        .uf(uf)
+        .aliquotaEstadual(new BigDecimal(estadual))
+        .aliquotaMunicipal(new BigDecimal(municipal))
+        .build();
+  }
+
+  private NotaFiscal buildNota(
+      String ufEmitente, String ufDestino, BigDecimal valorTotal, String cfop) {
+    NotaFiscal nota = buildNotaVazia();
+    nota.getProdutor().setEstado(ufEmitente);
+    nota.setDestinatarioEndereco(
+        EnderecoDestinatario.builder().uf(ufDestino).municipio("Municipio").build());
+    nota.addItem(buildItem(valorTotal, BigDecimal.ZERO, cfop));
+    return nota;
+  }
 
   private NotaFiscal buildNotaVazia() {
     Produtor produtor =

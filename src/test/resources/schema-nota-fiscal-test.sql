@@ -103,6 +103,11 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     valor_credito_cbs       NUMERIC(15,2),
     -- Natureza tributária por operação (DEBITO/CREDITO) — Sprint 4 issue #30 (migration 0012)
     natureza_operacao       VARCHAR(10),
+    -- Parcelas estadual/municipal reais de IBS — Sprint 4 issue #31 (migration 0013)
+    aliquota_ibs_uf         NUMERIC(7,4),
+    aliquota_ibs_mun        NUMERIC(7,4),
+    valor_ibs_uf            NUMERIC(15,2),
+    valor_ibs_mun           NUMERIC(15,2),
     created_at              TIMESTAMP WITH TIME ZONE,
     updated_at              TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
@@ -165,6 +170,30 @@ MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (
     ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', 60),
     ('08043000', 'Abacaxis (ananases) frescos ou secos', 60),
     ('07020000', 'Tomates frescos ou refrigerados', 60);
+
+-- ============================================================================
+-- Aliquota de IBS por UF — Sprint 4 issue #31 (migration 0013).
+-- Parcela estadual + municipal por UF. Seed de referencia ano-teste replicado
+-- do changeset 0013 (Liquibase desabilitado no perfil de teste).
+-- Manter sincronizado com 0013-aliquota-ibs-uf.xml.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS aliquota_ibs_uf (
+    uf                 VARCHAR(2)    NOT NULL,
+    aliquota_estadual  NUMERIC(7,4)  NOT NULL,
+    aliquota_municipal NUMERIC(7,4)  NOT NULL,
+    PRIMARY KEY (uf)
+);
+
+MERGE INTO aliquota_ibs_uf (uf, aliquota_estadual, aliquota_municipal) KEY (uf) VALUES
+    ('AC', 0.0005, 0.0005), ('AL', 0.0005, 0.0005), ('AM', 0.0005, 0.0005),
+    ('AP', 0.0005, 0.0005), ('BA', 0.0005, 0.0005), ('CE', 0.0005, 0.0005),
+    ('DF', 0.0005, 0.0005), ('ES', 0.0005, 0.0005), ('GO', 0.0005, 0.0005),
+    ('MA', 0.0005, 0.0005), ('MG', 0.0005, 0.0005), ('MS', 0.0005, 0.0005),
+    ('MT', 0.0005, 0.0005), ('PA', 0.0005, 0.0005), ('PB', 0.0005, 0.0005),
+    ('PE', 0.0005, 0.0005), ('PI', 0.0005, 0.0005), ('PR', 0.0005, 0.0005),
+    ('RJ', 0.0005, 0.0005), ('RN', 0.0005, 0.0005), ('RO', 0.0005, 0.0005),
+    ('RR', 0.0005, 0.0005), ('RS', 0.0005, 0.0005), ('SC', 0.0005, 0.0005),
+    ('SE', 0.0005, 0.0005), ('SP', 0.0005, 0.0005), ('TO', 0.0005, 0.0005);
 
 MERGE INTO cfop_referencia (codigo, descricao, tipo_operacao, ambito, aplicavel_produtor_rural) KEY (codigo) VALUES
     ('5101', 'Venda de producao do estabelecimento (operacao interna)', 'SAIDA', 'INTERNO', TRUE),

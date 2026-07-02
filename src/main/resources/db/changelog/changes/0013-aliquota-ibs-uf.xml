@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0013-aliquota-ibs-uf.xml
+         Sprint 4 — issue Agrocontabil#31 (RN002): aliquota de IBS
+         diferenciada por UF, resolvendo o debito do split 50/50 do
+         NotaFiscalNfeMapper.
+
+         O IBS e um imposto de competencia compartilhada estado/municipio
+         (EC 132/2023, art. 156-A). A aliquota total do IBS de uma operacao
+         e a soma de uma parcela ESTADUAL (definida pela UF) e uma parcela
+         MUNICIPAL. Esta tabela de referencia guarda essas duas parcelas
+         por UF; o TributacaoService resolve a UF aplicavel (destino em
+         operacao interestadual, emitente em operacao interna) e produz as
+         parcelas reais, dispensando a divisao 50/50 antes usada no mapper.
+
+         Duas mudancas de schema:
+           1. tabela aliquota_ibs_uf (uf PK, aliquota_estadual,
+              aliquota_municipal) + seed das 27 UFs (ano-teste).
+           2. colunas aliquota_ibs_uf / aliquota_ibs_mun / valor_ibs_uf /
+              valor_ibs_mun em nota_fiscal_item — parcelas reais gravadas
+              pelo TributacaoService e consumidas pelo mapper.
+
+         PREMISSA/INCERTEZA: as parcelas por UF sao referencia de ano-teste.
+         A LC 214/2025 preve que estados e municipios fixem suas aliquotas;
+         enquanto os atos nao sao publicados, adotamos uma referencia
+         uniforme (metade estadual, metade municipal da aliquota-teste de
+         0,10%, i.e. 0,0005 + 0,0005) para todas as UFs, parametrizavel em
+         novo changeset quando as aliquotas oficiais forem publicadas.
+
+         Tipos portaveis (H2 e PostgreSQL). NAO editamos changeSets
+         anteriores. O perfil de teste desabilita o Liquibase; as mesmas
+         colunas/seed estao replicadas em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0013-create-aliquota-ibs-uf" author="supersonic-team">
+        <comment>
+            Cria a tabela de referencia aliquota_ibs_uf (aliquota estadual e
+            municipal de IBS por UF). Somente leitura em runtime; populada por seed.
+        </comment>
+
+        <createTable tableName="aliquota_ibs_uf">
+            <column name="uf" type="VARCHAR(2)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="aliquota_estadual" type="NUMERIC(7,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="aliquota_municipal" type="NUMERIC(7,4)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="aliquota_ibs_uf"/>
+        </rollback>
+    </changeSet>
+
+    <!-- ================================================================
+         Seed das 27 UFs (ano-teste). Referencia uniforme: 0,0005 estadual
+         + 0,0005 municipal = 0,0010 (0,10%), coerente com a aliquota-teste
+         de IBS ja parametrizada em application.yml. Ajustar por UF em novo
+         changeset quando as aliquotas oficiais forem publicadas.
+         ================================================================ -->
+    <changeSet id="0013-seed-aliquota-ibs-uf" author="supersonic-team">
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="AC"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="AL"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="AM"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="AP"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="BA"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="CE"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="DF"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="ES"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="GO"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="MA"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="MG"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="MS"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="MT"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="PA"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="PB"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="PE"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="PI"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="PR"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="RJ"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="RN"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="RO"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="RR"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="RS"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="SC"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="SE"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="SP"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+        <insert tableName="aliquota_ibs_uf"><column name="uf" value="TO"/><column name="aliquota_estadual" valueNumeric="0.0005"/><column name="aliquota_municipal" valueNumeric="0.0005"/></insert>
+
+        <rollback>
+            <delete tableName="aliquota_ibs_uf"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0013-nota-fiscal-item-add-ibs-uf-mun" author="supersonic-team">
+        <comment>
+            Adiciona as parcelas estadual/municipal reais de IBS por item:
+            aliquota_ibs_uf/aliquota_ibs_mun (parcelas da aliquota) e
+            valor_ibs_uf/valor_ibs_mun (parcelas do valor). Gravadas pelo
+            TributacaoService a partir de aliquota_ibs_uf; consumidas pelo
+            NotaFiscalNfeMapper no lugar da antiga divisao 50/50. Nullable:
+            itens gravados antes desta sprint nao possuem as parcelas.
+        </comment>
+
+        <addColumn tableName="nota_fiscal_item">
+            <column name="aliquota_ibs_uf" type="NUMERIC(7,4)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="aliquota_ibs_mun" type="NUMERIC(7,4)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="valor_ibs_uf" type="NUMERIC(15,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="valor_ibs_mun" type="NUMERIC(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal_item" columnName="aliquota_ibs_uf"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="aliquota_ibs_mun"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="valor_ibs_uf"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="valor_ibs_mun"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
