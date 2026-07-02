@@ -24,12 +24,32 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Inconsistência de validação registrada para uma nota fiscal")
 public record NotaFiscalValidacaoResponse(
+
+    @Schema(description = "Identificador da tentativa de validacao (agrupa o historico)",
+        example = "a1b2c3d4-e5f6-7890-ab12-cd34ef56ab78")
     UUID loteValidacao,
+
+    @Schema(description = "Codigo estavel do erro", example = "NCM_INVALIDO")
     String code,
+
+    @Schema(description = "Campo afetado (opcional)", example = "item[1].ncm")
     String field,
+
+    @Schema(description = "Mensagem amigavel ao usuario",
+        example = "O NCM informado nao existe na tabela de referencia.")
     String message,
+
+    @Schema(description = "Sugestao de correcao (opcional)",
+        example = "Consulte a tabela NCM vigente e informe um codigo valido de 8 digitos.")
     String suggestion,
+
+    @Schema(description = "Valor recebido (opcional)", example = "00000000")
     String rejectedValue,
+
+    @Schema(description = "Valor esperado (opcional)", example = "NCM valido de 8 digitos")
     String expectedValue,
+
+    @Schema(description = "Instante em que a validacao foi executada",
+        example = "2026-06-24T10:15:30-03:00")
     OffsetDateTime validadoEm) {
 }
