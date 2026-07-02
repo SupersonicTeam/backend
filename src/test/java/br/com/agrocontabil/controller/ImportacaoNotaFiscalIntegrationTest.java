@@ -111,6 +111,14 @@ class ImportacaoNotaFiscalIntegrationTest {
         .isEqualTo(OrigemNotaFiscal.IMPORTADA);
     org.assertj.core.api.Assertions.assertThat(notas.get(0).getEmitenteCpfCnpj())
         .isEqualTo(NfeImportTestFixtures.EMITENTE_CNPJ);
+
+    // RN003 (issue Agrocontabil#30): credito de IBS/CBS calculado e persistido na importacao.
+    // Item do fixture: CFOP 6101 (elegivel), valorTotal 1750.00 → com as aliquotas-teste
+    // 2026 (IBS 0,10 % / CBS 0,90 %) e aproveitamento 100 %: IBS 1.75 e CBS 15.75.
+    org.assertj.core.api.Assertions.assertThat(notas.get(0).getValorTotalCreditoIbs())
+        .isEqualByComparingTo("1.75");
+    org.assertj.core.api.Assertions.assertThat(notas.get(0).getValorTotalCreditoCbs())
+        .isEqualByComparingTo("15.75");
   }
 
   @Test

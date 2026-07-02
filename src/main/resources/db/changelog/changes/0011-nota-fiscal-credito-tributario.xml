@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0011-nota-fiscal-credito-tributario.xml
+         Sprint 4 — issue Agrocontabil#30 (RN003): crédito tributário de
+         IBS/CBS aproveitável nas notas de ENTRADA (origem=IMPORTADA).
+
+         Base legal:
+           - EC 132/2023 (art. 156-A, § 1.º, VIII): não-cumulatividade
+             ampla — o adquirente se credita do IBS/CBS da aquisição.
+           - LC 214/2025 (art. 47): apropriação do crédito; arts. 164+
+             preveem crédito presumido nas aquisições de produtor rural
+             não contribuinte (percentual pendente de regulamentação —
+             por isso o aproveitamento é parametrizado em application.yml,
+             prefix agrocontabil.tributos.credito).
+
+         Todas as colunas são nullable: notas próprias (saída) e notas
+         importadas antes da Sprint 4 não possuem crédito calculado.
+         Tipos DECIMAL portáveis (H2 e PostgreSQL).
+         NÃO editamos changeSets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0011-nota-fiscal-item-add-credito" author="supersonic-team">
+        <comment>
+            Adiciona valor_credito_ibs e valor_credito_cbs em nota_fiscal_item.
+            Preenchidos apenas em itens elegíveis de notas IMPORTADAS (RN003).
+        </comment>
+
+        <addColumn tableName="nota_fiscal_item">
+            <column name="valor_credito_ibs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="nota_fiscal_item">
+            <column name="valor_credito_cbs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal_item" columnName="valor_credito_ibs"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="valor_credito_cbs"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0011-nota-fiscal-add-totais-credito" author="supersonic-team">
+        <comment>
+            Adiciona totais de crédito IBS/CBS na nota_fiscal (soma dos itens elegíveis).
+            Preenchidos apenas em notas IMPORTADAS; 0.00 quando nenhum item é elegível.
+        </comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="valor_total_credito_ibs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="valor_total_credito_cbs" type="DECIMAL(15,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="valor_total_credito_ibs"/>
+            <dropColumn tableName="nota_fiscal" columnName="valor_total_credito_cbs"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

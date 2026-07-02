@@ -17,8 +17,9 @@ import org.springframework.stereotype.Service;
  * Orquestra a importacao de XMLs de nota fiscal (issue #19 — UC002).
  *
  * <p>Fluxo por arquivo: parse XXE-safe → validacao XSD → dedup por chave de acesso →
- * mapeamento reverso → persistencia. O produtor autenticado e o dono/destinatario da nota
- * importada (nota de entrada/compra; emitente = terceiro).
+ * mapeamento reverso → calculo do credito tributario (RN003 — issue Agrocontabil#30) →
+ * persistencia. O produtor autenticado e o dono/destinatario da nota importada
+ * (nota de entrada/compra; emitente = terceiro).
  *
  * <p><strong>Resiliencia do lote:</strong> {@link #importar(List)} nunca propaga excecao por
  * arquivo ruim — cada arquivo produz um {@link ImportacaoNotaResultado} (sucesso, duplicada ou
@@ -37,17 +38,20 @@ public class ImportacaoNotaFiscalService {
   private final NfeToNotaFiscalMapper nfeToNotaFiscalMapper;
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
+  private final CreditoTributarioService creditoTributarioService;
 
-  /** Constroi o servico com as dependencias de parse, mapeamento e persistencia. */
+  /** Constroi o servico com as dependencias de parse, mapeamento, credito e persistencia. */
   public ImportacaoNotaFiscalService(
       NfeXmlImporter nfeXmlImporter,
       NfeToNotaFiscalMapper nfeToNotaFiscalMapper,
       NotaFiscalRepository notaFiscalRepository,
-      AuthenticatedProdutorProvider produtorProvider) {
+      AuthenticatedProdutorProvider produtorProvider,
+      CreditoTributarioService creditoTributarioService) {
     this.nfeXmlImporter = nfeXmlImporter;
     this.nfeToNotaFiscalMapper = nfeToNotaFiscalMapper;
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
+    this.creditoTributarioService = creditoTributarioService;
   }
 
   /**
@@ -81,6 +85,10 @@ public class ImportacaoNotaFiscalService {
             nome, produtor.getId());
         return ImportacaoNotaResultado.duplicada(nome, chave);
       }
+
+      // RN003 (issue Agrocontabil#30): credito de IBS/CBS aproveitavel da nota de entrada,
+      // calculado por item elegivel antes da persistencia.
+      creditoTributarioService.calcular(nota);
 
       NotaFiscal salva = notaFiscalRepository.save(nota);
       log.info("XML importado com sucesso: arquivo={} notaId={} produtor={} emitente={}",

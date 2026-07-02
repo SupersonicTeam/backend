@@ -26,3 +26,5 @@ databaseChangeLog:
       file: db/changelog/changes/0009-nota-fiscal-importacao.xml
   - include:
       file: db/changelog/changes/0010-nota-fiscal-cancelamento.xml
+  - include:
+      file: db/changelog/changes/0011-nota-fiscal-credito-tributario.xml
