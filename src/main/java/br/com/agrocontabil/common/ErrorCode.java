@@ -25,6 +25,9 @@ public enum ErrorCode {
   DANFE_GENERATION_ERROR,
   /** DANFE indisponível: a nota ainda não gerou o XML. HTTP 409. */
   DANFE_INDISPONIVEL,
+  // Relatório de conformidade (Sprint 4 — issue Agrocontabil#32)
+  /** Falha técnica ao gerar o PDF do relatório de conformidade. HTTP 500. */
+  RELATORIO_GENERATION_ERROR,
   // Integração SEFAZ (Sprint 3 — issue #15)
   /** Falha de comunicação com a SEFAZ (timeout, conexão recusada, I/O). HTTP 502. */
   SEFAZ_COMUNICACAO_FALHOU,
