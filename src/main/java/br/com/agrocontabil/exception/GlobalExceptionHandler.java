@@ -80,11 +80,10 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ResponseEntity<ApiError> handleMissingParam(
       MissingServletRequestParameterException ex, HttpServletRequest request) {
-    ErrorDetail detail = new ErrorDetail(
-        ErrorCode.VALIDATION_ERROR.code(),
+    ErrorDetail detail = ErrorDetail.of(
+        ErrorCode.VALIDATION_ERROR,
         ex.getParameterName(),
-        "Parametro obrigatorio ausente: " + ex.getParameterName() + ".",
-        null, null, null);
+        "Parametro obrigatorio ausente: " + ex.getParameterName() + ".");
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
