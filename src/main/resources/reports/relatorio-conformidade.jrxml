@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Relatorio de Conformidade Tributaria — IBS/CBS (UC004, issue Agrocontabil#32).
+     Documento informativo do TCC; nao substitui a apuracao oficial da SEFAZ. -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+                http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="relatorio-conformidade"
+              pageWidth="595"
+              pageHeight="842"
+              columnWidth="535"
+              leftMargin="30"
+              rightMargin="30"
+              topMargin="20"
+              bottomMargin="20"
+              whenNoDataType="AllSectionsNoDetail">
+
+  <!-- Cabecalho -->
+  <parameter name="PERIODO"         class="java.lang.String"/>
+  <parameter name="PRODUTOR_NOME"   class="java.lang.String"/>
+  <parameter name="PRODUTOR_ESTADO" class="java.lang.String"/>
+
+  <!-- Debitos (saidas autorizadas) -->
+  <parameter name="DEBITO_IBS"      class="java.lang.String"/>
+  <parameter name="DEBITO_CBS"      class="java.lang.String"/>
+  <parameter name="DEBITO_TOTAL"    class="java.lang.String"/>
+  <parameter name="QTD_SAIDAS"      class="java.lang.String"/>
+
+  <!-- Creditos (entradas) -->
+  <parameter name="CREDITO_IBS"     class="java.lang.String"/>
+  <parameter name="CREDITO_CBS"     class="java.lang.String"/>
+  <parameter name="CREDITO_TOTAL"   class="java.lang.String"/>
+  <parameter name="QTD_ENTRADAS"    class="java.lang.String"/>
+
+  <!-- Saldo -->
+  <parameter name="SALDO_IBS"       class="java.lang.String"/>
+  <parameter name="SALDO_CBS"       class="java.lang.String"/>
+  <parameter name="SALDO_A_PAGAR"   class="java.lang.String"/>
+  <parameter name="SALDO_LABEL"     class="java.lang.String"/>
+
+  <!-- =====================================================================
+       Corpo do relatorio (title) — resumo consolidado
+       ===================================================================== -->
+  <title>
+    <band height="470" splitType="Stretch">
+
+      <!-- Linha de topo -->
+      <line>
+        <reportElement x="0" y="0" width="535" height="1"/>
+        <graphicElement><pen lineWidth="2.0" lineColor="#2D6A4F"/></graphicElement>
+      </line>
+
+      <!-- Titulo -->
+      <staticText>
+        <reportElement x="0" y="8" width="535" height="18"/>
+        <textElement textAlignment="Center" verticalAlignment="Middle">
+          <font fontName="SansSerif" size="13" isBold="true"/>
+        </textElement>
+        <text><![CDATA[Relatório de Conformidade Tributária — IBS/CBS]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="0" y="26" width="535" height="12"/>
+        <textElement textAlignment="Center"><font fontName="SansSerif" size="8" isItalic="true"/></textElement>
+        <text><![CDATA[Documento informativo (EC 132/2023 + LC 214/2025). Não substitui a apuração oficial da SEFAZ.]]></text>
+      </staticText>
+
+      <line>
+        <reportElement x="0" y="42" width="535" height="1"/>
+        <graphicElement><pen lineWidth="0.5" lineColor="#AAAAAA"/></graphicElement>
+      </line>
+
+      <!-- Identificacao -->
+      <staticText>
+        <reportElement x="0" y="50" width="80" height="12"/>
+        <textElement><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Período:]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="80" y="50" width="150" height="12"/>
+        <textElement><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{PERIODO}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="240" y="50" width="60" height="12"/>
+        <textElement><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Estado:]]></text>
+      </staticText>
+      <textField isBlankWhenNull="true">
+        <reportElement x="300" y="50" width="235" height="12"/>
+        <textElement><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{PRODUTOR_ESTADO}]]></textFieldExpression>
+      </textField>
+
+      <staticText>
+        <reportElement x="0" y="66" width="80" height="12"/>
+        <textElement><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Produtor:]]></text>
+      </staticText>
+      <textField isBlankWhenNull="true">
+        <reportElement x="80" y="66" width="455" height="12"/>
+        <textElement><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{PRODUTOR_NOME}]]></textFieldExpression>
+      </textField>
+
+      <!-- ============================ DEBITOS ============================ -->
+      <rectangle>
+        <reportElement x="0" y="92" width="535" height="16" backcolor="#EAF4EE"/>
+        <graphicElement><pen lineWidth="0.0"/></graphicElement>
+      </rectangle>
+      <staticText>
+        <reportElement x="6" y="94" width="529" height="12"/>
+        <textElement><font fontName="SansSerif" size="9" isBold="true"/></textElement>
+        <text><![CDATA[DÉBITOS — Saídas autorizadas]]></text>
+      </staticText>
+
+      <staticText>
+        <reportElement x="0" y="112" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Débito IBS (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="112" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{DEBITO_IBS}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="126" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Débito CBS (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="126" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{DEBITO_CBS}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="140" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Total de débitos (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="140" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$P{DEBITO_TOTAL}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="154" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
+        <text><![CDATA[Notas de saída autorizadas:]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="154" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
+        <textFieldExpression><![CDATA[$P{QTD_SAIDAS}]]></textFieldExpression>
+      </textField>
+
+      <!-- ============================ CREDITOS =========================== -->
+      <rectangle>
+        <reportElement x="0" y="176" width="535" height="16" backcolor="#EAF4EE"/>
+        <graphicElement><pen lineWidth="0.0"/></graphicElement>
+      </rectangle>
+      <staticText>
+        <reportElement x="6" y="178" width="529" height="12"/>
+        <textElement><font fontName="SansSerif" size="9" isBold="true"/></textElement>
+        <text><![CDATA[CRÉDITOS — Entradas (aquisições)]]></text>
+      </staticText>
+
+      <staticText>
+        <reportElement x="0" y="196" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Crédito IBS (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="196" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{CREDITO_IBS}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="210" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Crédito CBS (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="210" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{CREDITO_CBS}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="224" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Total de créditos (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="224" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$P{CREDITO_TOTAL}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="238" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
+        <text><![CDATA[Notas de entrada:]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="238" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
+        <textFieldExpression><![CDATA[$P{QTD_ENTRADAS}]]></textFieldExpression>
+      </textField>
+
+      <!-- ============================= SALDO ============================= -->
+      <line>
+        <reportElement x="0" y="262" width="535" height="1"/>
+        <graphicElement><pen lineWidth="1.0" lineColor="#2D6A4F"/></graphicElement>
+      </line>
+
+      <staticText>
+        <reportElement x="0" y="270" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Saldo IBS (débito - crédito) (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="270" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{SALDO_IBS}]]></textFieldExpression>
+      </textField>
+      <staticText>
+        <reportElement x="0" y="284" width="300" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+        <text><![CDATA[Saldo CBS (débito - crédito) (R$):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="300" y="284" width="235" height="12"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="8"/></textElement>
+        <textFieldExpression><![CDATA[$P{SALDO_CBS}]]></textFieldExpression>
+      </textField>
+
+      <rectangle>
+        <reportElement x="0" y="300" width="535" height="20" backcolor="#D8EFE0"/>
+        <graphicElement><pen lineWidth="0.0"/></graphicElement>
+      </rectangle>
+      <textField>
+        <reportElement x="0" y="304" width="300" height="14"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="10" isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$P{SALDO_LABEL}]]></textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="300" y="304" width="235" height="14"/>
+        <textElement textAlignment="Right"><font fontName="SansSerif" size="10" isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$P{SALDO_A_PAGAR}]]></textFieldExpression>
+      </textField>
+
+      <staticText>
+        <reportElement x="0" y="330" width="535" height="24"/>
+        <textElement><font fontName="SansSerif" size="7" isItalic="true"/></textElement>
+        <text><![CDATA[Apuração não-cumulativa (LC 214/2025, arts. 47-51): do débito das saídas do período deduz-se o crédito das entradas. Saldo negativo indica saldo credor a transportar ao período seguinte.]]></text>
+      </staticText>
+
+    </band>
+  </title>
+
+  <!-- Rodape -->
+  <pageFooter>
+    <band height="20" splitType="Stretch">
+      <line>
+        <reportElement x="0" y="0" width="535" height="1"/>
+        <graphicElement><pen lineWidth="0.5" lineColor="#AAAAAA"/></graphicElement>
+      </line>
+      <staticText>
+        <reportElement x="0" y="4" width="400" height="12"/>
+        <textElement><font fontName="SansSerif" size="7" isItalic="true"/></textElement>
+        <text><![CDATA[AgroContabil — Documento gerado automaticamente. Consulte a SEFAZ para a apuração oficial.]]></text>
+      </staticText>
+    </band>
+  </pageFooter>
+
+</jasperReport>
