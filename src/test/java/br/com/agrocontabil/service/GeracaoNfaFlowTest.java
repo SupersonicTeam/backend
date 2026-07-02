@@ -23,6 +23,7 @@ import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
+import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -66,7 +67,9 @@ class GeracaoNfaFlowTest {
     props.setCbs(cbs);
     NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
     when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
-    tributacaoService = new TributacaoService(props, ncmRepo);
+    AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
+    when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
+    tributacaoService = new TributacaoService(props, ncmRepo, aliquotaRepo);
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();

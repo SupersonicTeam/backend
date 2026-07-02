@@ -236,6 +236,50 @@ public class NotaFiscalItem {
   @Column(name = "natureza_operacao", length = 10)
   private NaturezaOperacaoTributaria naturezaOperacao;
 
+  // -------------------------------------------------------------------------
+  // Parcelas estadual/municipal reais de IBS — Sprint 4, issue Agrocontabil#31 (RN002).
+  // O IBS e de competencia compartilhada estado/municipio (EC 132/2023, art. 156-A).
+  // O TributacaoService resolve a UF aplicavel (destino em operacao interestadual,
+  // emitente em operacao interna) e grava aqui as parcelas reais, consumidas pelo
+  // NotaFiscalNfeMapper no lugar da antiga divisao 50/50. Nullable: compatibilidade
+  // com itens gravados antes desta sprint.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Parcela estadual da alíquota de IBS deste item (proporção decimal, ex.: {@code 0.0005}).
+   *
+   * <p>Resolvida pelo {@code TributacaoService} a partir da tabela {@code aliquota_ibs_uf} para a
+   * UF aplicável. A soma {@code aliquotaIbsUf + aliquotaIbsMun} equivale a {@link #aliquotaIbs}.
+   */
+  @Column(name = "aliquota_ibs_uf", precision = 7, scale = 4)
+  private BigDecimal aliquotaIbsUf;
+
+  /**
+   * Parcela municipal da alíquota de IBS deste item (proporção decimal, ex.: {@code 0.0005}).
+   *
+   * <p>Resolvida pelo {@code TributacaoService} a partir da tabela {@code aliquota_ibs_uf} para a
+   * UF aplicável.
+   */
+  @Column(name = "aliquota_ibs_mun", precision = 7, scale = 4)
+  private BigDecimal aliquotaIbsMun;
+
+  /**
+   * Valor do IBS estadual deste item, com 2 casas decimais ({@code baseCalculo × aliquotaIbsUf}).
+   *
+   * <p>Parcela estadual real de {@link #valorIbs}, consumida pelo mapper em {@code vIBSUF}.
+   */
+  @Column(name = "valor_ibs_uf", precision = 15, scale = 2)
+  private BigDecimal valorIbsUf;
+
+  /**
+   * Valor do IBS municipal deste item, com 2 casas decimais.
+   *
+   * <p>Complemento de {@link #valorIbsUf} para fechar {@link #valorIbs} sem erro de arredondamento
+   * ({@code valorIbs − valorIbsUf}), consumido pelo mapper em {@code vIBSMun}.
+   */
+  @Column(name = "valor_ibs_mun", precision = 15, scale = 2)
+  private BigDecimal valorIbsMun;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 
