@@ -89,9 +89,9 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; produtor=destinatário; origem=IMPORTADA) |
-| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO) |
-| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO) |
-| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
+| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS) |
+| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS) |
+| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO/COM_INCONSISTENCIAS→XML_GERADO) |
 | GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |

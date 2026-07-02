@@ -20,7 +20,7 @@ import java.util.UUID;
  * @param motivo     descricao amigavel do resultado (motivo da falha, quando houver).
  *                   Nunca contem CPF/CNPJ completo (LGPD).
  */
-@Schema(description = "Resultado da importacao de um arquivo XML no lote")
+@Schema(description = "Resultado da importação de um arquivo XML no lote")
 public record ImportacaoNotaResultado(
 
     @Schema(description = "Nome do arquivo enviado (para correlacionar o resultado)",
@@ -30,19 +30,19 @@ public record ImportacaoNotaResultado(
     @Schema(description = "true se a nota foi importada e persistida", example = "true")
     boolean sucesso,
 
-    @Schema(description = "Classificacao detalhada do resultado", example = "IMPORTADA")
+    @Schema(description = "Classificação detalhada do resultado", example = "IMPORTADA")
     Status status,
 
-    @Schema(description = "Id da nota criada quando sucesso=true; null caso contrario",
+    @Schema(description = "Id da nota criada quando sucesso=true; null caso contrário",
         example = "3f9a1c2e-5b7d-4e8a-9c1f-2a3b4c5d6e7f")
     UUID notaId,
 
-    @Schema(description = "Chave de acesso da NF-e importada, quando disponivel",
+    @Schema(description = "Chave de acesso da NF-e importada, quando disponível",
         example = "35240612345678000190550010000000011000000010")
     String chaveAcesso,
 
-    @Schema(description = "Descricao amigavel do resultado (motivo da falha, quando houver). "
-        + "Nunca contem CPF/CNPJ completo (LGPD).",
+    @Schema(description = "Descrição amigável do resultado (motivo da falha, quando houver). "
+        + "Nunca contém CPF/CNPJ completo (LGPD).",
         example = "Nota importada com sucesso.")
     String motivo) {
 

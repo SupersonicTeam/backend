@@ -25,31 +25,31 @@ import java.util.UUID;
 @Schema(description = "Inconsistência de validação registrada para uma nota fiscal")
 public record NotaFiscalValidacaoResponse(
 
-    @Schema(description = "Identificador da tentativa de validacao (agrupa o historico)",
+    @Schema(description = "Identificador da tentativa de validação (agrupa o histórico)",
         example = "a1b2c3d4-e5f6-7890-ab12-cd34ef56ab78")
     UUID loteValidacao,
 
-    @Schema(description = "Codigo estavel do erro", example = "NCM_INVALIDO")
+    @Schema(description = "Código estável do erro", example = "NCM_INVALIDO")
     String code,
 
     @Schema(description = "Campo afetado (opcional)", example = "item[1].ncm")
     String field,
 
-    @Schema(description = "Mensagem amigavel ao usuario",
-        example = "O NCM informado nao existe na tabela de referencia.")
+    @Schema(description = "Mensagem amigável ao usuário",
+        example = "O NCM informado não existe na tabela de referência.")
     String message,
 
-    @Schema(description = "Sugestao de correcao (opcional)",
-        example = "Consulte a tabela NCM vigente e informe um codigo valido de 8 digitos.")
+    @Schema(description = "Sugestão de correção (opcional)",
+        example = "Consulte a tabela NCM vigente e informe um código válido de 8 dígitos.")
     String suggestion,
 
     @Schema(description = "Valor recebido (opcional)", example = "00000000")
     String rejectedValue,
 
-    @Schema(description = "Valor esperado (opcional)", example = "NCM valido de 8 digitos")
+    @Schema(description = "Valor esperado (opcional)", example = "NCM válido de 8 dígitos")
     String expectedValue,
 
-    @Schema(description = "Instante em que a validacao foi executada",
+    @Schema(description = "Instante em que a validação foi executada",
         example = "2026-06-24T10:15:30-03:00")
     OffsetDateTime validadoEm) {
 }
