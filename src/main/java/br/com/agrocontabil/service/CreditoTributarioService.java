@@ -77,9 +77,13 @@ public class CreditoTributarioService {
    * Calcula o crédito de IBS/CBS aproveitável por item e agrega os totais na nota.
    *
    * <p>Somente notas {@link OrigemNotaFiscal#IMPORTADA} são processadas — nas demais a nota é
-   * devolvida intacta. Itens não elegíveis permanecem com crédito nulo; os totais da nota
+   * devolvida intacta. Itens não elegíveis têm o crédito zerado (nulo); os totais da nota
    * importada são sempre preenchidos (inclusive {@code 0.00} sem itens elegíveis), permitindo
    * agregação por período sem tratar nulos.
+   *
+   * <p>O método é <strong>idempotente</strong>: recalcular sobre uma nota já processada
+   * recompõe crédito e totais do zero — um item que deixou de ser elegível tem o crédito
+   * limpo, evitando divergência entre créditos por item e totais da nota.
    *
    * @param nota nota fiscal com itens já carregados; modificada in-place
    * @return a mesma {@code nota} com os campos de crédito preenchidos quando aplicável
@@ -100,6 +104,10 @@ public class CreditoTributarioService {
 
     for (NotaFiscalItem item : nota.getItens()) {
       if (!itemElegivel(item)) {
+        // Idempotência: zera credito de item nao elegivel para nao manter valor
+        // antigo em recalculo (ex.: reprocessamento/edicao), honrando o contrato.
+        item.setValorCreditoIbs(null);
+        item.setValorCreditoCbs(null);
         continue;
       }
       BigDecimal baseCalculo = baseCalculo(item);

@@ -138,6 +138,24 @@ class CreditoTributarioServiceTest {
     assertThat(nota.getValorTotalCreditoCbs()).isEqualByComparingTo("27.00");
   }
 
+  @Test
+  @DisplayName("Recalculo zera credito de item que deixou de ser elegivel (idempotencia)")
+  void recalculoZeraCreditoDeItemNaoMaisElegivel() {
+    NotaFiscalItem item = item("7101", "1000.00");
+    // Simula estado antigo: item ja tinha credito preenchido por um calculo anterior.
+    item.setValorCreditoIbs(new BigDecimal("1.00"));
+    item.setValorCreditoCbs(new BigDecimal("9.00"));
+    NotaFiscal nota = notaImportada(item);
+
+    service.calcular(nota);
+
+    // CFOP 7101 (exportacao) nao e elegivel: credito deve ser limpo, nao mantido.
+    assertThat(item.getValorCreditoIbs()).isNull();
+    assertThat(item.getValorCreditoCbs()).isNull();
+    assertThat(nota.getValorTotalCreditoIbs()).isEqualByComparingTo("0.00");
+    assertThat(nota.getValorTotalCreditoCbs()).isEqualByComparingTo("0.00");
+  }
+
   // ---------------------------------------------------------------------------------------
 
   private NotaFiscal notaImportada(NotaFiscalItem... itens) {
