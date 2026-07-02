@@ -4,6 +4,8 @@ import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -51,6 +54,43 @@ public class GlobalExceptionHandler {
         "Um ou mais campos sao invalidos.",
         request.getRequestURI(),
         errors);
+    return ResponseEntity.badRequest().body(body);
+  }
+
+  /**
+   * Violação de constraint em parâmetros de método (ex.: {@code @Pattern} em {@code @RequestParam}
+   * de um controller {@code @Validated}). Cada violação vira um {@link ErrorDetail}. HTTP 400.
+   */
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<ApiError> handleConstraintViolation(
+      ConstraintViolationException ex, HttpServletRequest request) {
+    List<ErrorDetail> errors = ex.getConstraintViolations().stream()
+        .map(this::toErrorDetail)
+        .toList();
+    ApiError body = ApiError.of(
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        "Um ou mais parametros sao invalidos.",
+        request.getRequestURI(),
+        errors);
+    return ResponseEntity.badRequest().body(body);
+  }
+
+  /** Parâmetro de requisição obrigatório ausente (ex.: {@code @RequestParam} sem valor). HTTP 400. */
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ApiError> handleMissingParam(
+      MissingServletRequestParameterException ex, HttpServletRequest request) {
+    ErrorDetail detail = new ErrorDetail(
+        ErrorCode.VALIDATION_ERROR.code(),
+        ex.getParameterName(),
+        "Parametro obrigatorio ausente: " + ex.getParameterName() + ".",
+        null, null, null);
+    ApiError body = ApiError.of(
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        "Parametro obrigatorio ausente.",
+        request.getRequestURI(),
+        List.of(detail));
     return ResponseEntity.badRequest().body(body);
   }
 
@@ -95,6 +135,27 @@ public class GlobalExceptionHandler {
       return "Erro interno ao processar a NF-e. Tente novamente mais tarde.";
     }
     return ex.getMessage();
+  }
+
+  private ErrorDetail toErrorDetail(ConstraintViolation<?> violation) {
+    String field = lastNode(violation);
+    String rejected = violation.getInvalidValue() == null
+        ? null
+        : String.valueOf(violation.getInvalidValue());
+    return new ErrorDetail(
+        ErrorCode.VALIDATION_ERROR.code(),
+        field,
+        violation.getMessage(),
+        null,
+        rejected,
+        null);
+  }
+
+  /** Extrai o último nó do property path (nome do parâmetro), ex.: {@code saldo.periodo → periodo}. */
+  private String lastNode(ConstraintViolation<?> violation) {
+    String path = violation.getPropertyPath().toString();
+    int lastDot = path.lastIndexOf('.');
+    return lastDot >= 0 ? path.substring(lastDot + 1) : path;
   }
 
   private ErrorDetail toErrorDetail(FieldError error) {
