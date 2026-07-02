@@ -1,6 +1,9 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
+import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
+import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
+import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusApuracao;
@@ -11,6 +14,7 @@ import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -19,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,21 +56,34 @@ public class ApuracaoService {
   /** Fuso de referência do projeto para o recorte mensal do período. */
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
+  /** Janela máxima de reabertura retroativa (RN005): 3 meses inclusivos. */
+  private static final int MESES_MAX_REABERTURA = 3;
+
   private final NotaFiscalRepository notaFiscalRepository;
   private final ApuracaoMensalRepository apuracaoRepository;
   private final ProdutorRepository produtorRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
+  private final AuditorAware<String> auditorAware;
+  private final Clock clock;
 
-  /** Constrói o serviço com os repositórios de notas/apuração/produtor e o provedor autenticado. */
+  /**
+   * Constrói o serviço com os repositórios de notas/apuração/produtor, o provedor autenticado, o
+   * {@link AuditorAware} (identidade de quem reabre) e o {@link Clock} (mês de referência da RN005;
+   * injetável para tornar determinística a borda de 3 meses nos testes).
+   */
   public ApuracaoService(
       NotaFiscalRepository notaFiscalRepository,
       ApuracaoMensalRepository apuracaoRepository,
       ProdutorRepository produtorRepository,
-      AuthenticatedProdutorProvider produtorProvider) {
+      AuthenticatedProdutorProvider produtorProvider,
+      AuditorAware<String> auditorAware,
+      Clock clock) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.apuracaoRepository = apuracaoRepository;
     this.produtorRepository = produtorRepository;
     this.produtorProvider = produtorProvider;
+    this.auditorAware = auditorAware;
+    this.clock = clock;
   }
 
   /**
@@ -119,6 +137,54 @@ public class ApuracaoService {
     }
     log.info("Fechamento de apuracao concluido: periodo={} produtores={}", mes, produtores.size());
     return produtores.size();
+  }
+
+  /**
+   * Reabre uma apuração FECHADA do produtor autenticado, transitando-a para
+   * {@link StatusApuracao#ABERTO} e registrando quem reabriu e quando (auditoria — RN005).
+   *
+   * <p>Validações, nesta ordem:
+   * <ol>
+   *   <li><strong>Ownership (anti-IDOR):</strong> busca por {@code (id, produtorId)} — apuração
+   *       de outro produtor (ou inexistente) resulta em {@link ResourceNotFoundException} (404),
+   *       sem revelar existência.</li>
+   *   <li><strong>Precondição de status:</strong> apenas {@link StatusApuracao#FECHADO} é
+   *       reabrível — senão {@link ApuracaoNaoReabrivelException} (409).</li>
+   *   <li><strong>RN005 — prazo:</strong> o período deve estar dentro dos 3 meses retroativos
+   *       (inclusive) em relação ao mês atual ({@code America/Sao_Paulo}) — senão
+   *       {@link ReaberturaForaPrazoException} (422).</li>
+   * </ol>
+   *
+   * @param id identificador da apuração
+   * @return apuração reaberta ({@code status == ABERTO})
+   * @throws ResourceNotFoundException      se inexistente ou de outro produtor (404)
+   * @throws ApuracaoNaoReabrivelException  se o status não for FECHADO (409)
+   * @throws ReaberturaForaPrazoException   se o período estiver fora do limite de 3 meses (422)
+   */
+  public ApuracaoResponse reabrir(UUID id) {
+    Produtor produtor = produtorProvider.get();
+    ApuracaoMensal apuracao = apuracaoRepository
+        .findByIdAndProdutorId(id, produtor.getId())
+        .orElseThrow(() -> new ResourceNotFoundException("Apuracao", id));
+
+    if (apuracao.getStatus() != StatusApuracao.FECHADO) {
+      throw new ApuracaoNaoReabrivelException(id, apuracao.getStatus());
+    }
+
+    YearMonth periodo = YearMonth.parse(apuracao.getPeriodo());
+    YearMonth periodoLimite = YearMonth.now(clock).minusMonths(MESES_MAX_REABERTURA);
+    if (periodo.isBefore(periodoLimite)) {
+      throw new ReaberturaForaPrazoException(id, periodo, periodoLimite);
+    }
+
+    apuracao.setStatus(StatusApuracao.ABERTO);
+    apuracao.setDataFechamento(null);
+    apuracao.setReabertoPor(auditorAware.getCurrentAuditor().orElse(null));
+    apuracao.setDataReabertura(OffsetDateTime.now(clock));
+    ApuracaoMensal salva = apuracaoRepository.save(apuracao);
+    log.info("Apuracao reaberta: id={} periodo={} reabertoPor={}",
+        salva.getId(), salva.getPeriodo(), salva.getReabertoPor());
+    return toResponse(salva);
   }
 
   /**

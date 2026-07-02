@@ -111,6 +111,18 @@ public class ApuracaoMensal {
   @Column(name = "data_fechamento")
   private OffsetDateTime dataFechamento;
 
+  /**
+   * Identidade de quem reabriu a apuração pela última vez (auditoria — issue Agrocontabil#42,
+   * RN005). Fornecida pelo {@code AuditorAware} (hoje o ID do produtor autenticado — identidade
+   * mock; será o contador quando a auth real chegar na Sprint 8). Nulo se nunca reaberta.
+   */
+  @Column(name = "reaberto_por", length = 64)
+  private String reabertoPor;
+
+  /** Instante da última reabertura; nulo se a apuração nunca foi reaberta. */
+  @Column(name = "data_reabertura")
+  private OffsetDateTime dataReabertura;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

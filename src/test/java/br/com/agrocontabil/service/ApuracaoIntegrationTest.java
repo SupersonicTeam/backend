@@ -9,11 +9,15 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -131,6 +135,51 @@ class ApuracaoIntegrationTest {
     assertThat(a.getStatus()).isEqualTo(StatusApuracao.FECHADO);
     assertThat(a.getDataFechamento()).isNotNull();
     assertThat(a.getSaldoIbs()).isEqualByComparingTo("80.00");
+  }
+
+  @Test
+  @DisplayName("Reabre apuracao FECHADA do mes atual: volta a ABERTO com auditoria (quem/quando)")
+  void reabreApuracaoFechadaComAuditoria() {
+    // Periodo do mes corrente -> sempre dentro da janela de 3 meses (RN005), independe da data.
+    String periodo = YearMonth.now(ZONE).toString();
+    OffsetDateTime emissao = OffsetDateTime.now(ZONE);
+    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, emissao, "80.00", "80.00");
+    apuracaoService.fecharPeriodo(periodo);
+    ApuracaoMensal fechada =
+        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), periodo).orElseThrow();
+    assertThat(fechada.getStatus()).isEqualTo(StatusApuracao.FECHADO);
+
+    var resposta = apuracaoService.reabrir(fechada.getId());
+
+    assertThat(resposta.status()).isEqualTo("ABERTO");
+    ApuracaoMensal reaberta = apuracaoRepository.findById(fechada.getId()).orElseThrow();
+    assertThat(reaberta.getStatus()).isEqualTo(StatusApuracao.ABERTO);
+    assertThat(reaberta.getDataReabertura()).isNotNull();
+    // Auditoria registra o ID do produtor autenticado (identidade mock; nunca CPF/CNPJ — LGPD).
+    assertThat(reaberta.getReabertoPor()).isEqualTo(produtor.getId().toString());
+    assertThat(reaberta.getReabertoPor()).doesNotContain(produtor.getCpfCnpj());
+  }
+
+  @Test
+  @DisplayName("Reabrir apuracao de outro produtor retorna 404 (anti-IDOR)")
+  void reabrirDeOutroProdutorRetorna404() {
+    Produtor outro = produtorRepository.save(
+        Produtor.builder().nomeCompleto("Outro Produtor").cpfCnpj("11122233344").build());
+    ApuracaoMensal doOutro = apuracaoRepository.save(ApuracaoMensal.builder()
+        .produtor(outro)
+        .periodo(YearMonth.now(ZONE).toString())
+        .status(StatusApuracao.FECHADO)
+        .debitoIbs(BigDecimal.ZERO).debitoCbs(BigDecimal.ZERO)
+        .creditoIbs(BigDecimal.ZERO).creditoCbs(BigDecimal.ZERO)
+        .saldoIbs(BigDecimal.ZERO).saldoCbs(BigDecimal.ZERO)
+        .totalNotas(0L)
+        .build());
+
+    // O produtor autenticado (setUp) e "produtor", nao "outro".
+    assertThatThrownBy(() -> apuracaoService.reabrir(doOutro.getId()))
+        .isInstanceOf(ResourceNotFoundException.class);
+    assertThat(apuracaoRepository.findById(doOutro.getId()).orElseThrow().getStatus())
+        .isEqualTo(StatusApuracao.FECHADO);
   }
 
   // -------------------------------------------------------------------------

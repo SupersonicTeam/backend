@@ -40,6 +40,11 @@ public enum ErrorCode {
   NOTA_NAO_CANCELAVEL,
   /** Cancelamento fora do prazo legal de 30 dias corridos da emissão (RN006). HTTP 422. */
   CANCELAMENTO_FORA_PRAZO,
+  // Reabertura de apuração mensal (Sprint 4 — issue Agrocontabil#42, RN005)
+  /** Apuração não está em status FECHADO para reabertura. HTTP 409. */
+  APURACAO_NAO_REABRIVEL,
+  /** Reabertura fora do limite de 3 meses retroativos (RN005). HTTP 422. */
+  REABERTURA_FORA_PRAZO,
   // Geração de NFA (Sprint 2 — issue #18)
   /** NFA exige produtor pessoa física; o produtor autenticado não é PF. HTTP 422. */
   NFA_PRODUTOR_NAO_PF,

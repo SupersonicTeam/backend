@@ -11,9 +11,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -64,5 +67,37 @@ public class ApuracaoController {
           message = "Periodo deve estar no formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).")
       String periodo) {
     return ResponseEntity.ok(apuracaoService.consultar(periodo));
+  }
+
+  /**
+   * Reabre uma apuração fechada do produtor autenticado (issue Agrocontabil#42 — RN005).
+   *
+   * <p>Delega ao {@link ApuracaoService#reabrir(UUID)}, que aplica ownership (404), precondição de
+   * status FECHADO (409) e o limite de 3 meses retroativos (422). Registra quem reabriu e quando.
+   *
+   * @param id identificador da apuração
+   * @return apuração reaberta ({@code status == ABERTO})
+   */
+  @PostMapping("/{id}/reabrir")
+  @Operation(
+      summary = "Reabre uma apuracao mensal fechada",
+      description = "Transita uma apuracao de FECHADO para ABERTO, registrando quem reabriu e "
+          + "quando (auditoria). A reabertura so e permitida dentro de 3 meses retroativos ao mes "
+          + "atual (RN005). Restrito ao produtor autenticado (anti-IDOR).")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Apuracao reaberta com sucesso"),
+      @ApiResponse(responseCode = "404",
+          description = "Apuracao inexistente ou de outro produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Apuracao nao esta em status FECHADO",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "422",
+          description = "Periodo fora do limite de 3 meses retroativos (RN005)",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<ApuracaoResponse> reabrir(
+      @Parameter(description = "Identificador da apuracao") @PathVariable UUID id) {
+    return ResponseEntity.ok(apuracaoService.reabrir(id));
   }
 }

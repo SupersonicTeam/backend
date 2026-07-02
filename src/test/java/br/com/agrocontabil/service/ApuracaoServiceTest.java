@@ -10,6 +10,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
+import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
+import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
+import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusApuracao;
@@ -19,7 +22,10 @@ import br.com.agrocontabil.repository.DebitoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,6 +54,7 @@ class ApuracaoServiceTest {
   @Mock private ApuracaoMensalRepository apuracaoRepository;
   @Mock private ProdutorRepository produtorRepository;
   @Mock private AuthenticatedProdutorProvider produtorProvider;
+  @Mock private org.springframework.data.domain.AuditorAware<String> auditorAware;
 
   private ApuracaoService service;
 
@@ -57,11 +64,114 @@ class ApuracaoServiceTest {
 
   private Produtor produtor;
 
+  /**
+   * Relógio fixo em 2026-07-15 (fuso America/Sao_Paulo) para tornar determinística a borda de 3
+   * meses da RN005. Com "hoje" em 2026-07, os períodos permitidos são 2026-04..2026-07 (o 3º mês
+   * retroativo, abril, é a borda inclusiva) e 2026-03 (4º mês) é negado.
+   */
+  private static final Clock CLOCK_FIXO = Clock.fixed(
+      Instant.parse("2026-07-15T12:00:00Z"), ZoneId.of("America/Sao_Paulo"));
+
   @BeforeEach
   void setUp() {
     service = new ApuracaoService(
-        notaFiscalRepository, apuracaoRepository, produtorRepository, produtorProvider);
+        notaFiscalRepository, apuracaoRepository, produtorRepository, produtorProvider,
+        auditorAware, CLOCK_FIXO);
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Produtor").build();
+  }
+
+  private ApuracaoMensal fechada(String periodo) {
+    return ApuracaoMensal.builder()
+        .id(UUID.randomUUID())
+        .produtor(produtor)
+        .periodo(periodo)
+        .status(StatusApuracao.FECHADO)
+        .debitoIbs(new BigDecimal("100.00"))
+        .debitoCbs(new BigDecimal("50.00"))
+        .creditoIbs(new BigDecimal("10.00"))
+        .creditoCbs(new BigDecimal("5.00"))
+        .saldoIbs(new BigDecimal("90.00"))
+        .saldoCbs(new BigDecimal("45.00"))
+        .totalNotas(3L)
+        .dataFechamento(OffsetDateTime.parse("2026-07-31T23:00:00-03:00"))
+        .build();
+  }
+
+  @Test
+  @DisplayName("Reabre apuracao FECHADA dentro de 3 meses: volta a ABERTO com auditoria preenchida")
+  void reabreDentroDoPrazo() {
+    ApuracaoMensal apuracao = fechada("2026-06");
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(produtor.getId().toString()));
+    when(apuracaoRepository.findByIdAndProdutorId(apuracao.getId(), produtor.getId()))
+        .thenReturn(Optional.of(apuracao));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    ApuracaoResponse resposta = service.reabrir(apuracao.getId());
+
+    assertThat(resposta.status()).isEqualTo("ABERTO");
+    verify(apuracaoRepository).save(apuracaoCaptor.capture());
+    ApuracaoMensal salva = apuracaoCaptor.getValue();
+    assertThat(salva.getStatus()).isEqualTo(StatusApuracao.ABERTO);
+    assertThat(salva.getReabertoPor()).isEqualTo(produtor.getId().toString());
+    assertThat(salva.getDataReabertura()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("Reabre o 3o mes retroativo (2026-04): borda inclusiva permitida")
+  void reabreTerceiroMesRetroativoPermitido() {
+    ApuracaoMensal apuracao = fechada("2026-04");
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(apuracaoRepository.findByIdAndProdutorId(apuracao.getId(), produtor.getId()))
+        .thenReturn(Optional.of(apuracao));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    ApuracaoResponse resposta = service.reabrir(apuracao.getId());
+
+    assertThat(resposta.status()).isEqualTo("ABERTO");
+  }
+
+  @Test
+  @DisplayName("Reabertura do 4o mes retroativo (2026-03) fora do prazo: 422, nao persiste")
+  void reaberturaQuartoMesRetroativoNegada() {
+    ApuracaoMensal apuracao = fechada("2026-03");
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(apuracaoRepository.findByIdAndProdutorId(apuracao.getId(), produtor.getId()))
+        .thenReturn(Optional.of(apuracao));
+
+    assertThatThrownBy(() -> service.reabrir(apuracao.getId()))
+        .isInstanceOf(ReaberturaForaPrazoException.class);
+
+    verify(apuracaoRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Reabertura de apuracao nao FECHADA (ABERTO) lanca 409, nao persiste")
+  void reaberturaStatusInvalidoLanca409() {
+    ApuracaoMensal aberta = fechada("2026-06");
+    aberta.setStatus(StatusApuracao.ABERTO);
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(apuracaoRepository.findByIdAndProdutorId(aberta.getId(), produtor.getId()))
+        .thenReturn(Optional.of(aberta));
+
+    assertThatThrownBy(() -> service.reabrir(aberta.getId()))
+        .isInstanceOf(ApuracaoNaoReabrivelException.class);
+
+    verify(apuracaoRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Reabertura de apuracao de outro produtor (ou inexistente) retorna 404")
+  void reaberturaDeOutroProdutorRetorna404() {
+    UUID id = UUID.randomUUID();
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(apuracaoRepository.findByIdAndProdutorId(id, produtor.getId()))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.reabrir(id))
+        .isInstanceOf(ResourceNotFoundException.class);
+
+    verify(apuracaoRepository, never()).save(any());
   }
 
   @Test
