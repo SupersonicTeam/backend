@@ -33,3 +33,7 @@ app:
     sefaz:
       sync:
         enabled: false
+  # Apuracao: job de fechamento automatico desativado nos testes (nao interferir nas assercoes).
+  apuracao:
+    fechamento:
+      enabled: false

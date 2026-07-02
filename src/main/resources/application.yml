@@ -75,6 +75,11 @@ app:
       sync:
         enabled: ${NFE_SEFAZ_SYNC_ENABLED:true}
         interval-ms: ${NFE_SEFAZ_SYNC_INTERVAL_MS:900000}   # 15 min
+  # Apuracao mensal de IBS/CBS (issue #41 — RN004).
+  apuracao:
+    # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").
+    fechamento:
+      enabled: ${APURACAO_FECHAMENTO_ENABLED:true}
 
 # Tributos — IBS/CBS (EC 132/2023 + LC 214/2025)
 # Alíquotas de referência para o ano-teste de 2026 (parametrizáveis sem recompilar).
