@@ -8,7 +8,6 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
@@ -79,24 +78,25 @@ public class TributacaoService {
   private static final BigDecimal DOIS = BigDecimal.valueOf(2);
 
   private final TributosProperties tributosProperties;
-  private final NcmReferenciaRepository ncmReferenciaRepository;
+  private final ReducaoNcmResolver reducaoNcmResolver;
   private final AliquotaIbsUfRepository aliquotaIbsUfRepository;
 
   /**
-   * Constrói o serviço injetando as alíquotas parametrizadas e os repositórios de referência.
+   * Constrói o serviço injetando as alíquotas parametrizadas, o resolver de redução e o repositório
+   * de alíquotas por UF.
    *
    * @param tributosProperties propriedades de alíquota do {@code application.yml}
-   * @param ncmReferenciaRepository repositório read-only da tabela {@code ncm_agropecuario},
-   *     usado para resolver a redução padrão por NCM
+   * @param reducaoNcmResolver resolver compartilhado da redução de base por NCM (issue #52), que
+   *     aplica a precedência item → NCM → zero — o mesmo consumido pelo cálculo de crédito
    * @param aliquotaIbsUfRepository repositório read-only da tabela {@code aliquota_ibs_uf}, usado
    *     para resolver as parcelas estadual/municipal da alíquota de IBS por UF (issue #31)
    */
   public TributacaoService(
       TributosProperties tributosProperties,
-      NcmReferenciaRepository ncmReferenciaRepository,
+      ReducaoNcmResolver reducaoNcmResolver,
       AliquotaIbsUfRepository aliquotaIbsUfRepository) {
     this.tributosProperties = tributosProperties;
-    this.ncmReferenciaRepository = ncmReferenciaRepository;
+    this.reducaoNcmResolver = reducaoNcmResolver;
     this.aliquotaIbsUfRepository = aliquotaIbsUfRepository;
   }
 
@@ -122,7 +122,7 @@ public class TributacaoService {
     BigDecimal totalCbs = BigDecimal.ZERO;
 
     for (NotaFiscalItem item : nota.getItens()) {
-      BigDecimal reducao = resolveReducao(item);
+      BigDecimal reducao = reducaoNcmResolver.resolver(item);
       BigDecimal fatorReducao = BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
       BigDecimal baseCalculo = item.getValorTotal()
           .multiply(fatorReducao)
@@ -231,30 +231,6 @@ public class TributacaoService {
     BigDecimal total() {
       return estadual.add(municipal);
     }
-  }
-
-  /**
-   * Resolve o percentual de redução aplicável ao item:
-   * <ol>
-   *   <li>se o item informa {@code percentualReducao} (não nulo), esse valor prevalece;</li>
-   *   <li>senão, usa a redução padrão do NCM (tabela {@code ncm_agropecuario});</li>
-   *   <li>se o NCM não for de referência ou não tiver redução, retorna {@link BigDecimal#ZERO}.</li>
-   * </ol>
-   *
-   * @param item item da nota fiscal
-   * @return percentual de redução efetivo (0–100), nunca nulo
-   */
-  private BigDecimal resolveReducao(NotaFiscalItem item) {
-    if (item.getPercentualReducao() != null) {
-      return item.getPercentualReducao();
-    }
-    String ncm = item.getNcm();
-    if (ncm == null || ncm.isBlank()) {
-      return BigDecimal.ZERO;
-    }
-    return ncmReferenciaRepository
-        .findPercentualReducaoPadraoByCodigo(ncm)
-        .orElse(BigDecimal.ZERO);
   }
 
   /**
