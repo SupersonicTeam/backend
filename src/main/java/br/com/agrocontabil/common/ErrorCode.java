@@ -45,6 +45,11 @@ public enum ErrorCode {
   APURACAO_NAO_REABRIVEL,
   /** Reabertura fora do limite de 3 meses retroativos (RN005). HTTP 422. */
   REABERTURA_FORA_PRAZO,
+  /**
+   * Consolidação tentou rebaixar um período FECHADO para ABERTO fora do fluxo de reabertura
+   * auditada (RN005). HTTP 409 (issue Agrocontabil#54).
+   */
+  CONSOLIDACAO_PERIODO_FECHADO,
   // Geração de NFA (Sprint 2 — issue #18)
   /** NFA exige produtor pessoa física; o produtor autenticado não é PF. HTTP 422. */
   NFA_PRODUTOR_NAO_PF,

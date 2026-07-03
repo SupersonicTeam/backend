@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -141,6 +142,22 @@ class ApuracaoIntegrationTest {
 
     assertThat(resposta.debitoIbs()).isEqualByComparingTo("150.00");
     assertThat(apuracaoRepository.findAll()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("Consolidar apos fechamento lanca 409 e nao rebaixa o periodo (issue #54)")
+  void consolidarSobreFechadoRejeitaSemRebaixar() {
+    OffsetDateTime julho = OffsetDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneOffset.ofHours(-3));
+    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, julho, "100.00", "100.00");
+    apuracaoService.fecharPeriodo("2026-07");
+
+    assertThatThrownBy(() -> apuracaoService.consolidar("2026-07"))
+        .isInstanceOf(ApuracaoPeriodoFechadoException.class);
+
+    // Periodo permanece FECHADO — consolidar nao pode rebaixar fora do fluxo de reabertura (RN005).
+    ApuracaoMensal a =
+        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07").orElseThrow();
+    assertThat(a.getStatus()).isEqualTo(StatusApuracao.FECHADO);
   }
 
   @Test
