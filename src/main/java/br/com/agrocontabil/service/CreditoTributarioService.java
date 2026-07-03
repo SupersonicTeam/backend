@@ -7,6 +7,7 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável pela identificação e cálculo do crédito tributário de IBS/CBS
@@ -14,8 +15,10 @@ import org.springframework.stereotype.Service;
  *
  * <p><strong>Regra de cálculo por item elegível:</strong>
  * <ol>
- *   <li>{@code baseCalculo = valorTotalItem × (1 − percentualReducao / 100)} — mesma base do
- *       débito calculado em {@link TributacaoService}, para simetria débito × crédito</li>
+ *   <li>{@code baseCalculo = valorTotalItem × (1 − reducao / 100)}, onde {@code reducao} é
+ *       resolvida pelo {@link ReducaoNcmResolver} (precedência item → NCM → zero) — o
+ *       <strong>mesmo</strong> resolver usado pelo débito em {@link TributacaoService}, garantindo
+ *       simetria débito × crédito de fato (issue Agrocontabil#52)</li>
  *   <li>{@code creditoIbs = baseCalculo × aliquotaIbs × percentualAproveitamento / 100} —
  *       arredondamento HALF_UP, 2 casas</li>
  *   <li>{@code creditoCbs = baseCalculo × aliquotaCbs × percentualAproveitamento / 100} —
@@ -53,9 +56,10 @@ import org.springframework.stereotype.Service;
  *       código.</li>
  * </ul>
  *
- * <p>Este serviço é <strong>puro</strong>: não acessa banco de dados. Recebe a entidade
- * {@link NotaFiscal} (já com itens carregados), calcula e escreve os campos de crédito
- * diretamente na entidade. Pode ser testado sem contexto Spring.
+ * <p>Recebe a entidade {@link NotaFiscal} (já com itens carregados), calcula e escreve os campos de
+ * crédito diretamente na entidade. Para resolver a redução de base por NCM (issue Agrocontabil#52)
+ * consulta a tabela de referência {@code ncm_agropecuario} através do {@link ReducaoNcmResolver},
+ * portanto opera em transação (read-only) — não é mais um serviço puro.
  */
 @Service
 public class CreditoTributarioService {
@@ -63,14 +67,19 @@ public class CreditoTributarioService {
   private static final BigDecimal CEM = new BigDecimal("100");
 
   private final TributosProperties tributosProperties;
+  private final ReducaoNcmResolver reducaoNcmResolver;
 
   /**
-   * Constrói o serviço injetando alíquotas e percentual de aproveitamento parametrizados.
+   * Constrói o serviço injetando alíquotas/percentual de aproveitamento parametrizados e o resolver
+   * de redução por NCM compartilhado com o débito.
    *
    * @param tributosProperties propriedades de tributos do {@code application.yml}
+   * @param reducaoNcmResolver resolver compartilhado da redução de base por NCM (issue #52)
    */
-  public CreditoTributarioService(TributosProperties tributosProperties) {
+  public CreditoTributarioService(
+      TributosProperties tributosProperties, ReducaoNcmResolver reducaoNcmResolver) {
     this.tributosProperties = tributosProperties;
+    this.reducaoNcmResolver = reducaoNcmResolver;
   }
 
   /**
@@ -88,6 +97,7 @@ public class CreditoTributarioService {
    * @param nota nota fiscal com itens já carregados; modificada in-place
    * @return a mesma {@code nota} com os campos de crédito preenchidos quando aplicável
    */
+  @Transactional(readOnly = true)
   public NotaFiscal calcular(NotaFiscal nota) {
     if (nota.getOrigem() != OrigemNotaFiscal.IMPORTADA) {
       return nota;
@@ -147,11 +157,12 @@ public class CreditoTributarioService {
 
   /**
    * Base de cálculo do crédito: mesma regra da base do débito em {@link TributacaoService}
-   * ({@code valorTotal × (1 − percentualReducao / 100)}), garantindo simetria débito × crédito.
+   * ({@code valorTotal × (1 − reducao / 100)}), com a {@code reducao} resolvida pelo
+   * {@link ReducaoNcmResolver} (precedência item → NCM → zero), garantindo simetria
+   * débito × crédito (issue Agrocontabil#52).
    */
   private BigDecimal baseCalculo(NotaFiscalItem item) {
-    BigDecimal reducao = item.getPercentualReducao() != null
-        ? item.getPercentualReducao() : BigDecimal.ZERO;
+    BigDecimal reducao = reducaoNcmResolver.resolver(item);
     BigDecimal fatorReducao = BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
     return item.getValorTotal().multiply(fatorReducao).setScale(2, RoundingMode.HALF_UP);
   }

@@ -16,6 +16,7 @@ import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import br.com.agrocontabil.service.GeracaoNotaFiscalService;
+import br.com.agrocontabil.service.ReducaoNcmResolver;
 import br.com.agrocontabil.service.TributacaoService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -154,7 +155,8 @@ public final class NfeImportTestFixtures {
     // Sem alíquota por UF nas fixtures: cai no fallback da alíquota parametrizada (issue #31).
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
-    return new TributacaoService(props, ncmRepo, aliquotaRepo);
+    return new TributacaoService(
+        props, new ReducaoNcmResolver(ncmRepo), aliquotaRepo);
   }
 
   private static String removerDeclaracao(String xml) {

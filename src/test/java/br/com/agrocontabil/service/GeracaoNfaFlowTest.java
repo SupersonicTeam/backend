@@ -69,7 +69,8 @@ class GeracaoNfaFlowTest {
     when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
-    tributacaoService = new TributacaoService(props, ncmRepo, aliquotaRepo);
+    tributacaoService = new TributacaoService(
+        props, new ReducaoNcmResolver(ncmRepo), aliquotaRepo);
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();

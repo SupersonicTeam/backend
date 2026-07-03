@@ -61,7 +61,8 @@ class TributacaoServiceTest {
     TributosProperties props = new TributosProperties();
     props.getIbs().setAliquota(ALIQUOTA_IBS);
     props.getCbs().setAliquota(ALIQUOTA_CBS);
-    service = new TributacaoService(props, ncmReferenciaRepository, aliquotaIbsUfRepository);
+    service = new TributacaoService(
+        props, new ReducaoNcmResolver(ncmReferenciaRepository), aliquotaIbsUfRepository);
     // Por padrão nenhum NCM tem redução de referência; casos específicos sobrescrevem.
     lenient()
         .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))

@@ -1,32 +1,47 @@
 package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.TributosProperties;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
+import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Testes unitários do {@link CreditoTributarioService} (issue Agrocontabil#30 — RN003).
+ * Testes unitários do {@link CreditoTributarioService} (issue Agrocontabil#30 — RN003; correção de
+ * simetria débito × crédito — issue Agrocontabil#52).
  *
- * <p>Serviço puro (sem banco): usa {@link TributosProperties} reais com as alíquotas de
- * referência do ano-teste 2026 (IBS 0,10 %, CBS 0,90 %) e aproveitamento integral (100 %),
- * sobrescritos por teste quando o cenário exige.
+ * <p>Usa {@link TributosProperties} reais com as alíquotas de referência do ano-teste 2026
+ * (IBS 0,10 %, CBS 0,90 %) e aproveitamento integral (100 %), sobrescritos por teste quando o
+ * cenário exige. A redução por NCM é resolvida pelo {@link ReducaoNcmResolver} sobre um
+ * {@link NcmReferenciaRepository} mockado que, por padrão, não devolve redução para nenhum NCM.
  */
 class CreditoTributarioServiceTest {
 
   private TributosProperties tributosProperties;
+  private NcmReferenciaRepository ncmReferenciaRepository;
   private CreditoTributarioService service;
 
   @BeforeEach
   void setUp() {
     tributosProperties = new TributosProperties();
-    service = new CreditoTributarioService(tributosProperties);
+    ncmReferenciaRepository = mock(NcmReferenciaRepository.class);
+    // Por padrão nenhum NCM tem redução de referência; casos específicos sobrescrevem.
+    lenient()
+        .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
+        .thenReturn(Optional.empty());
+    service = new CreditoTributarioService(
+        tributosProperties, new ReducaoNcmResolver(ncmReferenciaRepository));
   }
 
   @Test
@@ -154,6 +169,41 @@ class CreditoTributarioServiceTest {
     assertThat(item.getValorCreditoCbs()).isNull();
     assertThat(nota.getValorTotalCreditoIbs()).isEqualByComparingTo("0.00");
     assertThat(nota.getValorTotalCreditoCbs()).isEqualByComparingTo("0.00");
+  }
+
+  @Test
+  @DisplayName("Credito aplica a reducao padrao do NCM quando o item omite percentualReducao (#52)")
+  void creditoAplicaReducaoPadraoPorNcm() {
+    // NCM com reducao padrao de 60% na tabela de referencia; item nao informa percentualReducao.
+    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+        .thenReturn(Optional.of(new BigDecimal("60")));
+    NotaFiscalItem item = item("6101", "1000.00");
+    item.setNcm("12010090");
+    NotaFiscal nota = notaImportada(item);
+
+    service.calcular(nota);
+
+    // base = 1000 × (1 − 0,60) = 400.00 → IBS 0.40; CBS 3.60 — simetrico ao debito (issue #52).
+    assertThat(nota.getItens().get(0).getValorCreditoIbs()).isEqualByComparingTo("0.40");
+    assertThat(nota.getItens().get(0).getValorCreditoCbs()).isEqualByComparingTo("3.60");
+  }
+
+  @Test
+  @DisplayName("percentualReducao informado no item prevalece sobre a reducao padrao do NCM (#52)")
+  void percentualReducaoDoItemPrevaleceSobreNcm() {
+    // Mesmo com o NCM tendo reducao padrao de 30%, o valor informado no item (60%) prevalece.
+    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+        .thenReturn(Optional.of(new BigDecimal("30")));
+    NotaFiscalItem item = item("6101", "1000.00");
+    item.setNcm("12010090");
+    item.setPercentualReducao(new BigDecimal("60"));
+    NotaFiscal nota = notaImportada(item);
+
+    service.calcular(nota);
+
+    // base = 1000 × (1 − 0,60) = 400.00 → IBS 0.40; CBS 3.60 (usa 60% do item, nao 30% do NCM).
+    assertThat(nota.getItens().get(0).getValorCreditoIbs()).isEqualByComparingTo("0.40");
+    assertThat(nota.getItens().get(0).getValorCreditoCbs()).isEqualByComparingTo("3.60");
   }
 
   // ---------------------------------------------------------------------------------------
