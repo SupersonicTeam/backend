@@ -438,4 +438,24 @@ class ApuracaoServiceTest {
     // O job nao usa o produtor autenticado (roda sem contexto de seguranca).
     verifyNoInteractions(produtorProvider);
   }
+
+  @Test
+  @DisplayName("Fechamento carimba dataFechamento a partir do Clock injetado (determinismo — issue #56)")
+  void fechamentoUsaClockInjetado() {
+    when(produtorRepository.findAll()).thenReturn(List.of(produtor));
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+        .thenReturn(Optional.empty());
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    service.fecharPeriodo("2026-07");
+
+    verify(apuracaoRepository).save(apuracaoCaptor.capture());
+    // CLOCK_FIXO = 2026-07-15T12:00:00Z; em America/Sao_Paulo (-03:00) => 2026-07-15T09:00:00-03:00.
+    assertThat(apuracaoCaptor.getValue().getDataFechamento())
+        .isEqualTo(OffsetDateTime.parse("2026-07-15T09:00:00-03:00"));
+  }
 }
