@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
+import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.ApuracaoMensal;
@@ -276,6 +277,42 @@ class ApuracaoServiceTest {
     verify(notaFiscalRepository).somarCreditosPorPeriodo(creditoId.capture(), any(), any());
     assertThat(debitoId.getValue()).isEqualTo(produtor.getId());
     assertThat(creditoId.getValue()).isEqualTo(produtor.getId());
+  }
+
+  @Test
+  @DisplayName("Consolidar (ABERTO) sobre periodo FECHADO lanca 409 sem agregar nem persistir (issue #54)")
+  void consolidarSobreFechadoLanca409() {
+    ApuracaoMensal fechada = fechada("2026-07");
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.of(fechada));
+
+    assertThatThrownBy(() -> service.consolidar("2026-07"))
+        .isInstanceOf(ApuracaoPeriodoFechadoException.class);
+
+    // Rejeicao precoce: nao rebaixa status, nao persiste e nem sequer agrega notas.
+    verify(apuracaoRepository, never()).save(any());
+    verifyNoInteractions(notaFiscalRepository);
+  }
+
+  @Test
+  @DisplayName("Job re-fecha periodo ja FECHADO (alvo FECHADO) sem lancar 409 (issue #54)")
+  void jobRefechaPeriodoJaFechado() {
+    ApuracaoMensal fechada = fechada("2026-07");
+    when(produtorRepository.findAll()).thenReturn(List.of(produtor));
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.of(fechada));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    int fechadas = service.fecharPeriodo("2026-07");
+
+    assertThat(fechadas).isEqualTo(1);
+    verify(apuracaoRepository).save(apuracaoCaptor.capture());
+    assertThat(apuracaoCaptor.getValue().getStatus()).isEqualTo(StatusApuracao.FECHADO);
   }
 
   @Test

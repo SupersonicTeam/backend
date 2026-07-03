@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
+import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.ApuracaoMensal;
@@ -195,17 +196,28 @@ public class ApuracaoService {
   /**
    * Núcleo da consolidação: agrega débito/crédito do produtor no mês, calcula o saldo e faz o
    * upsert da {@link ApuracaoMensal} com o status informado.
+   *
+   * <p><strong>Guarda da RN005 (issue Agrocontabil#54):</strong> se o período já está
+   * {@link StatusApuracao#FECHADO} e o status alvo é {@link StatusApuracao#ABERTO}, rejeita com
+   * {@link ApuracaoPeriodoFechadoException} (409) <em>antes</em> de agregar ou persistir. Assim a
+   * consolidação nunca rebaixa um período fechado por vias transversas — a transição FECHADO →
+   * ABERTO só ocorre pela reabertura auditada ({@link #reabrir(UUID)}). O fechamento pelo job (alvo
+   * FECHADO) segue permitido, inclusive re-fechando um período já FECHADO.
    */
   private ApuracaoMensal consolidarParaProdutor(
       UUID produtorId, YearMonth mes, StatusApuracao status, OffsetDateTime dataFechamento) {
-    Totais totais = agregarTotais(produtorId, mes);
-
     ApuracaoMensal apuracao = apuracaoRepository
         .findByProdutorIdAndPeriodo(produtorId, mes.toString())
         .orElseGet(() -> ApuracaoMensal.builder()
             .produtor(produtorRepository.getReferenceById(produtorId))
             .periodo(mes.toString())
             .build());
+
+    if (apuracao.getStatus() == StatusApuracao.FECHADO && status == StatusApuracao.ABERTO) {
+      throw new ApuracaoPeriodoFechadoException(mes.toString());
+    }
+
+    Totais totais = agregarTotais(produtorId, mes);
 
     apuracao.setStatus(status);
     apuracao.setDebitoIbs(totais.debitoIbs());
