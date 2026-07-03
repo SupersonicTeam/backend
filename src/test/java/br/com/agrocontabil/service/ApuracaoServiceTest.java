@@ -324,7 +324,7 @@ class ApuracaoServiceTest {
     ApuracaoResponse resposta = service.consultar("2026-07");
 
     assertThat(resposta.periodo()).isEqualTo("2026-07");
-    // Projecao ao vivo nunca e persistida: fica sempre ABERTA e sem data de fechamento.
+    // Projecao ao vivo nunca e persistida: fica sempre em ABERTO e sem data de fechamento.
     assertThat(resposta.status()).isEqualTo("ABERTO");
     assertThat(resposta.dataFechamento()).isNull();
     assertThat(resposta.debitoIbs()).isEqualByComparingTo("150.00");

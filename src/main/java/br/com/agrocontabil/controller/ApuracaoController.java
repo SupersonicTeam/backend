@@ -45,7 +45,7 @@ public class ApuracaoController {
    *
    * @param periodo período no formato {@code YYYY-MM} (mês 01–12)
    * @return apuração do período — persistida quando já consolidada; projeção ao vivo das notas
-   *     (ABERTA, não persistida) quando o período ainda não foi consolidado
+   *     (status ABERTO, não persistida) quando o período ainda não foi consolidado
    */
   @GetMapping
   @Operation(
@@ -55,7 +55,7 @@ public class ApuracaoController {
           + "(debito - credito). O periodo usa o formato YYYY-MM (ex.: 2026-07). Se o periodo ja "
           + "foi consolidado, devolve os valores persistidos (com status e data de fechamento). Se "
           + "ainda nao foi consolidado (mes corrente, antes do fechamento), projeta os valores ao "
-          + "vivo a partir das notas, sempre ABERTA e sem persistir.")
+          + "vivo a partir das notas, sempre em ABERTO e sem persistir.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Apuracao consultada com sucesso"),
       @ApiResponse(responseCode = "400",
