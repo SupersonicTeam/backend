@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0016-apuracao-status-periodo-index.xml
+         Sprint 4 — issue Agrocontabil#57 (RN005): refechamento automatico
+         de periodos reabertos.
+
+         O job de fechamento passou a varrer as apuracoes ABERTAS de meses
+         anteriores dentro da janela da RN005 via
+         findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan
+         (status = ? AND periodo >= ? AND periodo < ?). A unica constraint
+         existente (produtor_id, periodo) nao cobre esse predicado, o que
+         levaria a full scan conforme a tabela cresce (produtores x meses).
+
+         Cria um indice composto (status, periodo): igualdade em status +
+         range em periodo, cobrindo exatamente a query do job. NAO editamos
+         changeSets anteriores. O perfil de teste desabilita o Liquibase; o
+         mesmo indice esta replicado em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0016-index-apuracao-status-periodo" author="supersonic-team">
+        <comment>
+            Indice composto (status, periodo) em apuracao_mensal para a
+            varredura do refechamento de periodos reabertos (issue #57).
+        </comment>
+
+        <createIndex tableName="apuracao_mensal" indexName="idx_apuracao_status_periodo">
+            <column name="status"/>
+            <column name="periodo"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="apuracao_mensal" indexName="idx_apuracao_status_periodo"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

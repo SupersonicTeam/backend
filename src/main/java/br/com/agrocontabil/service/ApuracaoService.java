@@ -146,6 +146,42 @@ public class ApuracaoService {
   }
 
   /**
+   * Refecha as apurações {@link StatusApuracao#ABERTO} de meses anteriores dentro da janela da
+   * RN005 (3 meses retroativos), reconsolidando cada uma e marcando-a como
+   * {@link StatusApuracao#FECHADO} (issue Agrocontabil#57).
+   *
+   * <p><strong>Motivação:</strong> o fechamento agendado ({@link #fecharPeriodo(String)}) cobre
+   * apenas o mês corrente. Uma apuração <em>reaberta</em> (RN005) de um mês anterior transita para
+   * ABERTO e, sem esta varredura, permaneceria ABERTA indefinidamente. Aqui o job revisita os meses
+   * anteriores ainda dentro da janela de reabertura e os refecha automaticamente, reaplicando a
+   * mesma consolidação (idempotente) usada no fechamento normal.
+   *
+   * <p>A faixa varrida é {@code [mesCorrente − 3, mesCorrente)} — exatamente os meses reabríveis
+   * pela RN005, excluído o mês corrente (já coberto pelo fechamento normal). Fora dessa janela as
+   * apurações não são tocadas. Roda sem contexto de segurança (por produtor da própria apuração),
+   * como o demais fechamento agendado.
+   *
+   * @return quantidade de apurações refechadas
+   */
+  public int refecharPeriodosReabertos() {
+    YearMonth mesCorrente = YearMonth.now(clock);
+    YearMonth limiteInferior = mesCorrente.minusMonths(MESES_MAX_REABERTURA);
+    OffsetDateTime agora = OffsetDateTime.now(clock);
+    List<ApuracaoMensal> reabertas =
+        apuracaoRepository.findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
+            StatusApuracao.ABERTO, limiteInferior.toString(), mesCorrente.toString());
+    for (ApuracaoMensal apuracao : reabertas) {
+      // A apuração já veio carregada da query acima; reaproveita a instância em vez de refazer
+      // findByProdutorIdAndPeriodo (evita um round-trip por item no job).
+      aplicarConsolidacao(apuracao, apuracao.getProdutor().getId(),
+          YearMonth.parse(apuracao.getPeriodo()), StatusApuracao.FECHADO, agora);
+    }
+    log.info("Refechamento de periodos reabertos concluido: janela=[{},{}) apuracoes={}",
+        limiteInferior, mesCorrente, reabertas.size());
+    return reabertas.size();
+  }
+
+  /**
    * Reabre uma apuração FECHADA do produtor autenticado, transitando-a para
    * {@link StatusApuracao#ABERTO} e registrando quem reabriu e quando (auditoria — RN005).
    *
@@ -212,7 +248,19 @@ public class ApuracaoService {
             .produtor(produtorRepository.getReferenceById(produtorId))
             .periodo(mes.toString())
             .build());
+    return aplicarConsolidacao(apuracao, produtorId, mes, status, dataFechamento);
+  }
 
+  /**
+   * Aplica a consolidação sobre uma {@link ApuracaoMensal} já resolvida (existente ou nova):
+   * valida a guarda da RN005, agrega os totais do mês e persiste com o status informado. Extraído
+   * para permitir que o refechamento em lote ({@link #refecharPeriodosReabertos()}) reaproveite a
+   * entidade já carregada pela consulta, sem um {@code findByProdutorIdAndPeriodo} redundante por
+   * apuração.
+   */
+  private ApuracaoMensal aplicarConsolidacao(
+      ApuracaoMensal apuracao, UUID produtorId, YearMonth mes, StatusApuracao status,
+      OffsetDateTime dataFechamento) {
     if (apuracao.getStatus() == StatusApuracao.FECHADO && status == StatusApuracao.ABERTO) {
       throw new ApuracaoPeriodoFechadoException(mes.toString());
     }
