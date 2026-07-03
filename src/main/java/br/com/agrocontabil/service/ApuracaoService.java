@@ -136,7 +136,7 @@ public class ApuracaoService {
    */
   public int fecharPeriodo(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
-    OffsetDateTime agora = OffsetDateTime.now(ZONE);
+    OffsetDateTime agora = OffsetDateTime.now(clock);
     List<Produtor> produtores = produtorRepository.findAll();
     for (Produtor produtor : produtores) {
       consolidarParaProdutor(produtor.getId(), mes, StatusApuracao.FECHADO, agora);
