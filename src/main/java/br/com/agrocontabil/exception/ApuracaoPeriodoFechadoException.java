@@ -25,8 +25,8 @@ public class ApuracaoPeriodoFechadoException extends DomainException {
   public ApuracaoPeriodoFechadoException(String periodo) {
     super(
         HttpStatus.CONFLICT,
-        "Periodo '%s' esta FECHADO e nao pode ser consolidado. ".formatted(periodo)
-            + "Use a reabertura auditada para reabri-lo antes de recalcular.",
+        "Periodo '%s' esta FECHADO e nao pode ser consolidado.".formatted(periodo)
+            + " Use a reabertura auditada para reabri-lo antes de recalcular.",
         List.of(ErrorDetail.of(ErrorCode.CONSOLIDACAO_PERIODO_FECHADO,
             "Periodo FECHADO so pode voltar a ABERTO pela reabertura auditada (RN005).")));
   }
