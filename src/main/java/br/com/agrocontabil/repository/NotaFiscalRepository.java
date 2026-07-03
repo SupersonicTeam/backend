@@ -71,7 +71,11 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * parte da própria query — um produtor nunca soma créditos de notas de outro produtor.
    *
    * <p>Considera apenas notas {@link br.com.agrocontabil.model.OrigemNotaFiscal#IMPORTADA}
-   * (as únicas que geram crédito de entrada) com {@code dataEmissao} em {@code [inicio, fim)}.
+   * (as únicas que geram crédito de entrada) e {@link br.com.agrocontabil.model.StatusNotaFiscal#AUTORIZADA}
+   * (o XML de origem foi autorizado na SEFAZ, cStat=100), com {@code dataEmissao} em
+   * {@code [inicio, fim)}. O filtro de status espelha o de {@link #somarDebitosPorPeriodo}
+   * (simetria débito × crédito — issue Agrocontabil#51): uma nota importada não autorizada
+   * (ex.: {@link br.com.agrocontabil.model.StatusNotaFiscal#XML_GERADO}) não gera crédito.
    * O {@code SUM} retorna nulo quando não há notas no intervalo — o serviço trata como
    * {@code 0.00}.
    *
@@ -88,6 +92,7 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       FROM NotaFiscal n
       WHERE n.produtor.id = :produtorId
         AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
         AND n.dataEmissao >= :inicio
         AND n.dataEmissao < :fim
       """)

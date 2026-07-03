@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import java.math.BigDecimal;
@@ -186,9 +187,56 @@ class NotaFiscalRepositoryTest {
     assertThat(result.get().getId()).isEqualTo(nota.getId());
   }
 
+  /**
+   * Regressão da issue #51: {@link NotaFiscalRepository#somarCreditosPorPeriodo} deve considerar
+   * apenas notas importadas <strong>AUTORIZADAS</strong>. Uma nota importada em
+   * {@link StatusNotaFiscal#XML_GERADO} (XML de origem não autorizado) não pode gerar crédito —
+   * simetria com o débito, que já exige AUTORIZADA.
+   */
+  @Test
+  @DisplayName("somarCreditosPorPeriodo deve ignorar nota importada nao AUTORIZADA (issue #51)")
+  void somarCreditosPorPeriodoShouldIgnoreNaoAutorizada() {
+    OffsetDateTime emissao = OffsetDateTime.parse("2026-07-10T09:00:00-03:00");
+    OffsetDateTime inicio = OffsetDateTime.parse("2026-07-01T00:00:00-03:00");
+    OffsetDateTime fim = OffsetDateTime.parse("2026-08-01T00:00:00-03:00");
+
+    // Importada AUTORIZADA — deve creditar.
+    notaFiscalRepository.saveAndFlush(buildImportada(
+        10L, StatusNotaFiscal.AUTORIZADA, emissao,
+        new BigDecimal("100.00"), new BigDecimal("40.00")));
+    // Importada XML_GERADO (nao autorizada) — NAO deve creditar.
+    notaFiscalRepository.saveAndFlush(buildImportada(
+        11L, StatusNotaFiscal.XML_GERADO, emissao,
+        new BigDecimal("999.00"), new BigDecimal("999.00")));
+
+    CreditoSaldoAgregado agregado =
+        notaFiscalRepository.somarCreditosPorPeriodo(produtor.getId(), inicio, fim);
+
+    assertThat(agregado.creditoIbs()).isEqualByComparingTo("100.00");
+    assertThat(agregado.creditoCbs()).isEqualByComparingTo("40.00");
+    assertThat(agregado.quantidadeNotas()).isEqualTo(1L);
+  }
+
   // -------------------------------------------------------------------------
   // Helpers de construção
   // -------------------------------------------------------------------------
+
+  private NotaFiscal buildImportada(
+      Long numero,
+      StatusNotaFiscal status,
+      OffsetDateTime dataEmissao,
+      BigDecimal creditoIbs,
+      BigDecimal creditoCbs) {
+    NotaFiscal nota = buildNotaFiscalForProdutor(this.produtor, numero);
+    nota.setDataEmissao(dataEmissao);
+    nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
+    nota.setStatus(status);
+    nota.setEmitenteNome("Fornecedor Agro Ltda");
+    nota.setEmitenteCpfCnpj("11222333000181");
+    nota.setValorTotalCreditoIbs(creditoIbs);
+    nota.setValorTotalCreditoCbs(creditoCbs);
+    return nota;
+  }
 
   private NotaFiscal buildNotaFiscal() {
     return buildNotaFiscalForProdutor(this.produtor, 1L);
