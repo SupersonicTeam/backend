@@ -103,13 +103,18 @@ public class ApuracaoService {
   }
 
   /**
-   * Retorna a apuração persistida do produtor autenticado no período, <strong>sem recalcular</strong>.
+   * Retorna a apuração do produtor autenticado no período.
    *
-   * <p>Se o período ainda não foi consolidado, devolve uma apuração zerada em
-   * {@link StatusApuracao#ABERTO} (projeção transitória, não persistida).
+   * <p>Se o período <strong>já foi consolidado</strong> (existe {@link ApuracaoMensal} persistida),
+   * devolve os valores persistidos <strong>sem recalcular</strong>, preservando status e data de
+   * fechamento. Se o período <strong>ainda não foi consolidado</strong> (típico do mês corrente,
+   * antes do job de fechamento), projeta os valores <strong>ao vivo</strong> a partir das notas do
+   * mês — mesma agregação da consolidação, porém <strong>sem persistir</strong> e sempre em
+   * {@link StatusApuracao#ABERTO} (issue Agrocontabil#53 — RN004). Assim o produtor/contador enxerga
+   * o débito × crédito parcial do mês em andamento, em vez de zeros.
    *
    * @param periodo período no formato {@code YYYY-MM}
-   * @return apuração do período (persistida ou projeção zerada)
+   * @return apuração do período (persistida ou projeção ao vivo, não persistida)
    * @throws IllegalArgumentException se o período não estiver no formato {@code YYYY-MM} (HTTP 400)
    */
   @Transactional(readOnly = true)
@@ -118,7 +123,7 @@ public class ApuracaoService {
     Produtor produtor = produtorProvider.get();
     return apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), mes.toString())
         .map(this::toResponse)
-        .orElseGet(() -> vaziaAberta(mes));
+        .orElseGet(() -> projetarAoVivo(produtor.getId(), mes));
   }
 
   /**
@@ -193,18 +198,7 @@ public class ApuracaoService {
    */
   private ApuracaoMensal consolidarParaProdutor(
       UUID produtorId, YearMonth mes, StatusApuracao status, OffsetDateTime dataFechamento) {
-    OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
-    OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
-
-    DebitoSaldoAgregado debito =
-        notaFiscalRepository.somarDebitosPorPeriodo(produtorId, inicio, fim);
-    CreditoSaldoAgregado credito =
-        notaFiscalRepository.somarCreditosPorPeriodo(produtorId, inicio, fim);
-
-    BigDecimal debitoIbs = coalesce(debito.debitoIbs());
-    BigDecimal debitoCbs = coalesce(debito.debitoCbs());
-    BigDecimal creditoIbs = coalesce(credito.creditoIbs());
-    BigDecimal creditoCbs = coalesce(credito.creditoCbs());
+    Totais totais = agregarTotais(produtorId, mes);
 
     ApuracaoMensal apuracao = apuracaoRepository
         .findByProdutorIdAndPeriodo(produtorId, mes.toString())
@@ -214,23 +208,70 @@ public class ApuracaoService {
             .build());
 
     apuracao.setStatus(status);
-    apuracao.setDebitoIbs(debitoIbs);
-    apuracao.setDebitoCbs(debitoCbs);
-    apuracao.setCreditoIbs(creditoIbs);
-    apuracao.setCreditoCbs(creditoCbs);
-    apuracao.setSaldoIbs(debitoIbs.subtract(creditoIbs));
-    apuracao.setSaldoCbs(debitoCbs.subtract(creditoCbs));
-    apuracao.setTotalNotas(debito.quantidadeNotas() + credito.quantidadeNotas());
+    apuracao.setDebitoIbs(totais.debitoIbs());
+    apuracao.setDebitoCbs(totais.debitoCbs());
+    apuracao.setCreditoIbs(totais.creditoIbs());
+    apuracao.setCreditoCbs(totais.creditoCbs());
+    apuracao.setSaldoIbs(totais.saldoIbs());
+    apuracao.setSaldoCbs(totais.saldoCbs());
+    apuracao.setTotalNotas(totais.totalNotas());
     apuracao.setDataFechamento(dataFechamento);
 
     return apuracaoRepository.save(apuracao);
   }
 
-  /** Projeção transitória (não persistida) de apuração zerada e aberta para período sem notas. */
-  private ApuracaoResponse vaziaAberta(YearMonth mes) {
-    BigDecimal zero = coalesce(null);
-    return new ApuracaoResponse(mes.toString(), StatusApuracao.ABERTO.name(),
-        zero, zero, zero, zero, zero, zero, 0L, null);
+  /**
+   * Projeção ao vivo (não persistida) da apuração do produtor no mês: agrega as notas e devolve o
+   * débito × crédito × saldo do período em {@link StatusApuracao#ABERTO}, sem data de fechamento.
+   * Usa exatamente a mesma agregação da consolidação ({@link #agregarTotais}), garantindo que a
+   * consulta do mês em andamento coincida com o que o fechamento persistiria (issue Agrocontabil#53).
+   */
+  private ApuracaoResponse projetarAoVivo(UUID produtorId, YearMonth mes) {
+    Totais totais = agregarTotais(produtorId, mes);
+    return new ApuracaoResponse(
+        mes.toString(), StatusApuracao.ABERTO.name(),
+        totais.debitoIbs(), totais.debitoCbs(),
+        totais.creditoIbs(), totais.creditoCbs(),
+        totais.saldoIbs(), totais.saldoCbs(),
+        totais.totalNotas(), null);
+  }
+
+  /**
+   * Agrega os somatórios de débito (saídas AUTORIZADAS) e crédito (entradas IMPORTADAS) do produtor
+   * na janela {@code [início, fim)} do mês ({@code America/Sao_Paulo}), tratando os nulos do
+   * {@code SUM} como {@code 0.00}. Fonte única consumida tanto pela consolidação persistida quanto
+   * pela projeção ao vivo, preservando a simetria débito × crédito.
+   */
+  private Totais agregarTotais(UUID produtorId, YearMonth mes) {
+    OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
+    OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
+
+    DebitoSaldoAgregado debito =
+        notaFiscalRepository.somarDebitosPorPeriodo(produtorId, inicio, fim);
+    CreditoSaldoAgregado credito =
+        notaFiscalRepository.somarCreditosPorPeriodo(produtorId, inicio, fim);
+
+    return new Totais(
+        coalesce(debito.debitoIbs()), coalesce(debito.debitoCbs()),
+        coalesce(credito.creditoIbs()), coalesce(credito.creditoCbs()),
+        debito.quantidadeNotas() + credito.quantidadeNotas());
+  }
+
+  /**
+   * Somatórios agregados de um período: débito/crédito de IBS e CBS (já com nulos tratados) e total
+   * de notas. O saldo por tributo é derivado ({@code débito − crédito}).
+   */
+  private record Totais(
+      BigDecimal debitoIbs, BigDecimal debitoCbs,
+      BigDecimal creditoIbs, BigDecimal creditoCbs, long totalNotas) {
+
+    BigDecimal saldoIbs() {
+      return debitoIbs.subtract(creditoIbs);
+    }
+
+    BigDecimal saldoCbs() {
+      return debitoCbs.subtract(creditoCbs);
+    }
   }
 
   private ApuracaoResponse toResponse(ApuracaoMensal a) {

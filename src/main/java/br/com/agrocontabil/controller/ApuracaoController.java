@@ -44,15 +44,18 @@ public class ApuracaoController {
    * Retorna a apuração mensal do produtor autenticado no período informado.
    *
    * @param periodo período no formato {@code YYYY-MM} (mês 01–12)
-   * @return apuração consolidada do período (zerada e aberta quando ainda não consolidada)
+   * @return apuração do período — persistida quando já consolidada; projeção ao vivo das notas
+   *     (ABERTA, não persistida) quando o período ainda não foi consolidado
    */
   @GetMapping
   @Operation(
       summary = "Consulta a apuracao mensal por periodo",
-      description = "Retorna a apuracao consolidada de IBS/CBS do produtor autenticado no mes "
-          + "informado: debito das saidas AUTORIZADAS, credito das entradas IMPORTADAS e o saldo "
-          + "(debito - credito). O periodo usa o formato YYYY-MM (ex.: 2026-07). Retorna apuracao "
-          + "zerada e ABERTA quando o periodo ainda nao foi consolidado.")
+      description = "Retorna a apuracao de IBS/CBS do produtor autenticado no mes informado: "
+          + "debito das saidas AUTORIZADAS, credito das entradas IMPORTADAS e o saldo "
+          + "(debito - credito). O periodo usa o formato YYYY-MM (ex.: 2026-07). Se o periodo ja "
+          + "foi consolidado, devolve os valores persistidos (com status e data de fechamento). Se "
+          + "ainda nao foi consolidado (mes corrente, antes do fechamento), projeta os valores ao "
+          + "vivo a partir das notas, sempre ABERTA e sem persistir.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Apuracao consultada com sucesso"),
       @ApiResponse(responseCode = "400",

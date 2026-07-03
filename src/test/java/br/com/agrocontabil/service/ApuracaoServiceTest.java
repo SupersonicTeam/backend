@@ -308,19 +308,59 @@ class ApuracaoServiceTest {
   }
 
   @Test
-  @DisplayName("Consultar periodo ainda nao consolidado retorna apuracao zerada ABERTA")
-  void consultarPeriodoNaoConsolidadoRetornaZeradoAberto() {
+  @DisplayName("Consultar periodo nao consolidado projeta ao vivo das notas, sem persistir (issue #53)")
+  void consultarPeriodoNaoConsolidadoProjetaAoVivo() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.empty());
+    when(notaFiscalRepository.somarDebitosPorPeriodo(eq(produtor.getId()), inicioCaptor.capture(),
+        fimCaptor.capture()))
+        .thenReturn(new DebitoSaldoAgregado(new BigDecimal("150.00"), new BigDecimal("1350.00"),
+            5L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(eq(produtor.getId()), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(new BigDecimal("30.00"), new BigDecimal("270.00"),
+            3L));
+
+    ApuracaoResponse resposta = service.consultar("2026-07");
+
+    assertThat(resposta.periodo()).isEqualTo("2026-07");
+    // Projecao ao vivo nunca e persistida: fica sempre ABERTA e sem data de fechamento.
+    assertThat(resposta.status()).isEqualTo("ABERTO");
+    assertThat(resposta.dataFechamento()).isNull();
+    assertThat(resposta.debitoIbs()).isEqualByComparingTo("150.00");
+    assertThat(resposta.debitoCbs()).isEqualByComparingTo("1350.00");
+    assertThat(resposta.creditoIbs()).isEqualByComparingTo("30.00");
+    assertThat(resposta.creditoCbs()).isEqualByComparingTo("270.00");
+    assertThat(resposta.saldoIbs()).isEqualByComparingTo("120.00");
+    assertThat(resposta.saldoCbs()).isEqualByComparingTo("1080.00");
+    assertThat(resposta.totalNotas()).isEqualTo(8L);
+
+    // Janela [inicio, fim) do mes em America/Sao_Paulo (-03:00), igual a consolidacao.
+    assertThat(inicioCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-07-01T00:00:00-03:00"));
+    assertThat(fimCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-08-01T00:00:00-03:00"));
+    // Consulta jamais persiste (nao cria/atualiza ApuracaoMensal).
+    verify(apuracaoRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Consultar periodo nao consolidado e sem notas projeta saldo zerado ABERTO (issue #53)")
+  void consultarPeriodoNaoConsolidadoSemNotasProjetaZerado() {
     when(produtorProvider.get()).thenReturn(produtor);
     when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-05"))
         .thenReturn(Optional.empty());
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(null, null, 0L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(null, null, 0L));
 
     ApuracaoResponse resposta = service.consultar("2026-05");
 
     assertThat(resposta.periodo()).isEqualTo("2026-05");
     assertThat(resposta.status()).isEqualTo("ABERTO");
     assertThat(resposta.saldoIbs()).isEqualByComparingTo("0.00");
+    assertThat(resposta.saldoCbs()).isEqualByComparingTo("0.00");
     assertThat(resposta.totalNotas()).isZero();
-    verifyNoInteractions(notaFiscalRepository);
+    verify(apuracaoRepository, never()).save(any());
   }
 
   @Test

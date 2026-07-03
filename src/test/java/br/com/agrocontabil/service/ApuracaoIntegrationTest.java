@@ -108,6 +108,28 @@ class ApuracaoIntegrationTest {
   }
 
   @Test
+  @DisplayName("Consultar periodo nao consolidado projeta ao vivo das notas sem persistir (issue #53)")
+  void consultarProjetaAoVivoSemPersistir() {
+    OffsetDateTime julho = OffsetDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneOffset.ofHours(-3));
+    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, julho, "150.00", "1350.00");
+    salvarEntradaImportada(julho, "30.00", "270.00");
+
+    var resposta = apuracaoService.consultar("2026-07");
+
+    // Reflete as notas do mes mesmo sem o job de fechamento ter rodado.
+    assertThat(resposta.debitoIbs()).isEqualByComparingTo("150.00");
+    assertThat(resposta.creditoIbs()).isEqualByComparingTo("30.00");
+    assertThat(resposta.saldoIbs()).isEqualByComparingTo("120.00");
+    assertThat(resposta.saldoCbs()).isEqualByComparingTo("1080.00");
+    assertThat(resposta.totalNotas()).isEqualTo(2L);
+    assertThat(resposta.status()).isEqualTo("ABERTO");
+
+    // Projecao transitoria: nao cria nenhuma ApuracaoMensal.
+    assertThat(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("Reconsolidar o mesmo periodo atualiza a apuracao existente (upsert, sem duplicar)")
   void reconsolidarAtualizaSemDuplicar() {
     OffsetDateTime julho = OffsetDateTime.of(2026, 7, 10, 9, 0, 0, 0, ZoneOffset.ofHours(-3));
