@@ -146,6 +146,41 @@ public class ApuracaoService {
   }
 
   /**
+   * Refecha as apurações {@link StatusApuracao#ABERTO} de meses anteriores dentro da janela da
+   * RN005 (3 meses retroativos), reconsolidando cada uma e marcando-a como
+   * {@link StatusApuracao#FECHADO} (issue Agrocontabil#57).
+   *
+   * <p><strong>Motivação:</strong> o fechamento agendado ({@link #fecharPeriodo(String)}) cobre
+   * apenas o mês corrente. Uma apuração <em>reaberta</em> (RN005) de um mês anterior transita para
+   * ABERTO e, sem esta varredura, permaneceria ABERTA indefinidamente. Aqui o job revisita os meses
+   * anteriores ainda dentro da janela de reabertura e os refecha automaticamente, reaplicando a
+   * mesma consolidação (idempotente) usada no fechamento normal.
+   *
+   * <p>A faixa varrida é {@code [mesCorrente − 3, mesCorrente)} — exatamente os meses reabríveis
+   * pela RN005, excluído o mês corrente (já coberto pelo fechamento normal). Fora dessa janela as
+   * apurações não são tocadas. Roda sem contexto de segurança (por produtor da própria apuração),
+   * como o demais fechamento agendado.
+   *
+   * @return quantidade de apurações refechadas
+   */
+  public int refecharPeriodosReabertos() {
+    YearMonth mesCorrente = YearMonth.now(clock);
+    YearMonth limiteInferior = mesCorrente.minusMonths(MESES_MAX_REABERTURA);
+    OffsetDateTime agora = OffsetDateTime.now(clock);
+    List<ApuracaoMensal> reabertas =
+        apuracaoRepository.findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
+            StatusApuracao.ABERTO, limiteInferior.toString(), mesCorrente.toString());
+    for (ApuracaoMensal apuracao : reabertas) {
+      consolidarParaProdutor(
+          apuracao.getProdutor().getId(), YearMonth.parse(apuracao.getPeriodo()),
+          StatusApuracao.FECHADO, agora);
+    }
+    log.info("Refechamento de periodos reabertos concluido: janela=[{},{}) apuracoes={}",
+        limiteInferior, mesCorrente, reabertas.size());
+    return reabertas.size();
+  }
+
+  /**
    * Reabre uma apuração FECHADA do produtor autenticado, transitando-a para
    * {@link StatusApuracao#ABERTO} e registrando quem reabriu e quando (auditoria — RN005).
    *

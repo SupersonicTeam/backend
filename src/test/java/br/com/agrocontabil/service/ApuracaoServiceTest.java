@@ -98,6 +98,15 @@ class ApuracaoServiceTest {
         .build();
   }
 
+  private ApuracaoMensal aberta(String periodo) {
+    return ApuracaoMensal.builder()
+        .id(UUID.randomUUID())
+        .produtor(produtor)
+        .periodo(periodo)
+        .status(StatusApuracao.ABERTO)
+        .build();
+  }
+
   @Test
   @DisplayName("Reabre apuracao FECHADA dentro de 3 meses: volta a ABERTO com auditoria preenchida")
   void reabreDentroDoPrazo() {
@@ -313,6 +322,52 @@ class ApuracaoServiceTest {
     assertThat(fechadas).isEqualTo(1);
     verify(apuracaoRepository).save(apuracaoCaptor.capture());
     assertThat(apuracaoCaptor.getValue().getStatus()).isEqualTo(StatusApuracao.FECHADO);
+  }
+
+  @Test
+  @DisplayName("Refecha apuracoes ABERTAS de meses anteriores na janela RN005 (issue #57)")
+  void refechaAbertasDeMesesAnterioresNaJanela() {
+    ApuracaoMensal abril = aberta("2026-04");
+    ApuracaoMensal maio = aberta("2026-05");
+    when(apuracaoRepository.findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
+        StatusApuracao.ABERTO, "2026-04", "2026-07"))
+        .thenReturn(List.of(abril, maio));
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-04"))
+        .thenReturn(Optional.of(abril));
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-05"))
+        .thenReturn(Optional.of(maio));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    int refechadas = service.refecharPeriodosReabertos();
+
+    assertThat(refechadas).isEqualTo(2);
+    verify(apuracaoRepository, org.mockito.Mockito.times(2)).save(apuracaoCaptor.capture());
+    assertThat(apuracaoCaptor.getAllValues()).allSatisfy(a -> {
+      assertThat(a.getStatus()).isEqualTo(StatusApuracao.FECHADO);
+      // CLOCK_FIXO = 2026-07-15T12:00:00Z; em America/Sao_Paulo (-03:00) => 2026-07-15T09:00:00-03:00.
+      assertThat(a.getDataFechamento())
+          .isEqualTo(OffsetDateTime.parse("2026-07-15T09:00:00-03:00"));
+    });
+  }
+
+  @Test
+  @DisplayName("Refechamento consulta a janela RN005 [mesCorrente-3, mesCorrente) por ABERTO (issue #57)")
+  void refecharConsultaJanelaRn005SemAbertasRetornaZero() {
+    when(apuracaoRepository.findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
+        any(), any(), any())).thenReturn(List.of());
+
+    int refechadas = service.refecharPeriodosReabertos();
+
+    assertThat(refechadas).isZero();
+    // Janela de refechamento = mesma janela da reabertura (RN005): [2026-04, 2026-07).
+    verify(apuracaoRepository).findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
+        StatusApuracao.ABERTO, "2026-04", "2026-07");
+    verify(apuracaoRepository, never()).save(any());
+    verifyNoInteractions(notaFiscalRepository);
   }
 
   @Test

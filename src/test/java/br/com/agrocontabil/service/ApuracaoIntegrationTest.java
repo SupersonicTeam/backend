@@ -200,6 +200,27 @@ class ApuracaoIntegrationTest {
   }
 
   @Test
+  @DisplayName("Refecha apuracao ABERTA de mes anterior na janela RN005; ignora fora da janela (issue #57)")
+  void refechaReabertaDeMesAnteriorDentroDaJanela() {
+    YearMonth mesCorrente = YearMonth.now(ZONE);
+    YearMonth dentroDaJanela = mesCorrente.minusMonths(1); // reaberta -> deve refechar
+    YearMonth foraDaJanela = mesCorrente.minusMonths(4);    // antiga -> nao deve ser tocada
+
+    ApuracaoMensal reaberta = abertaEm(dentroDaJanela.toString());
+    ApuracaoMensal antiga = abertaEm(foraDaJanela.toString());
+
+    int refechadas = apuracaoService.refecharPeriodosReabertos();
+
+    assertThat(refechadas).isEqualTo(1);
+    ApuracaoMensal refechada = apuracaoRepository.findById(reaberta.getId()).orElseThrow();
+    assertThat(refechada.getStatus()).isEqualTo(StatusApuracao.FECHADO);
+    assertThat(refechada.getDataFechamento()).isNotNull();
+    // Fora da janela de reabertura (RN005): permanece ABERTO — o job nao revisita meses tao antigos.
+    assertThat(apuracaoRepository.findById(antiga.getId()).orElseThrow().getStatus())
+        .isEqualTo(StatusApuracao.ABERTO);
+  }
+
+  @Test
   @DisplayName("Reabrir apuracao de outro produtor retorna 404 (anti-IDOR)")
   void reabrirDeOutroProdutorRetorna404() {
     Produtor outro = produtorRepository.save(
@@ -224,6 +245,18 @@ class ApuracaoIntegrationTest {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  private ApuracaoMensal abertaEm(String periodo) {
+    return apuracaoRepository.save(ApuracaoMensal.builder()
+        .produtor(produtor)
+        .periodo(periodo)
+        .status(StatusApuracao.ABERTO)
+        .debitoIbs(BigDecimal.ZERO).debitoCbs(BigDecimal.ZERO)
+        .creditoIbs(BigDecimal.ZERO).creditoCbs(BigDecimal.ZERO)
+        .saldoIbs(BigDecimal.ZERO).saldoCbs(BigDecimal.ZERO)
+        .totalNotas(0L)
+        .build());
+  }
 
   private void salvarSaida(
       long numero, StatusNotaFiscal status, OffsetDateTime dataEmissao,

@@ -41,4 +41,12 @@ class ApuracaoFechamentoJobTest {
     String esperado = YearMonth.now(ZoneId.of("America/Sao_Paulo")).toString();
     org.assertj.core.api.Assertions.assertThat(periodoCaptor.getValue()).isEqualTo(esperado);
   }
+
+  @Test
+  @DisplayName("Job tambem refecha periodos reabertos de meses anteriores (issue #57)")
+  void refechaPeriodosReabertos() {
+    job.fecharApuracaoDoMes();
+
+    verify(apuracaoService).refecharPeriodosReabertos();
+  }
 }

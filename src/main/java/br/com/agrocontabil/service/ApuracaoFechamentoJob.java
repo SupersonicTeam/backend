@@ -38,16 +38,20 @@ public class ApuracaoFechamentoJob {
   }
 
   /**
-   * Fecha a apuração do mês corrente de todos os produtores.
+   * Fecha a apuração do mês corrente de todos os produtores e refecha os períodos reabertos.
    *
    * <p>Disparado às 23h do último dia do mês ({@code L} do cron). O horário do cron respeita o fuso
-   * configurado ({@code America/Sao_Paulo}).
+   * configurado ({@code America/Sao_Paulo}). Após fechar o mês corrente, varre e refecha as
+   * apurações reabertas de meses anteriores ainda dentro da janela da RN005 (issue
+   * Agrocontabil#57), que de outra forma permaneceriam ABERTAS indefinidamente.
    */
   @Scheduled(cron = "0 0 23 L * *", zone = "America/Sao_Paulo")
   public void fecharApuracaoDoMes() {
     String periodo = YearMonth.now(ZONE).toString();
     log.info("Iniciando fechamento automatico de apuracao: periodo={}", periodo);
     int fechadas = apuracaoService.fecharPeriodo(periodo);
-    log.info("Fechamento automatico concluido: periodo={} apuracoes={}", periodo, fechadas);
+    int refechadas = apuracaoService.refecharPeriodosReabertos();
+    log.info("Fechamento automatico concluido: periodo={} apuracoes={} reabertas_refechadas={}",
+        periodo, fechadas, refechadas);
   }
 }
