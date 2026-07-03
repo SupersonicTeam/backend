@@ -171,9 +171,10 @@ public class ApuracaoService {
         apuracaoRepository.findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
             StatusApuracao.ABERTO, limiteInferior.toString(), mesCorrente.toString());
     for (ApuracaoMensal apuracao : reabertas) {
-      consolidarParaProdutor(
-          apuracao.getProdutor().getId(), YearMonth.parse(apuracao.getPeriodo()),
-          StatusApuracao.FECHADO, agora);
+      // A apuração já veio carregada da query acima; reaproveita a instância em vez de refazer
+      // findByProdutorIdAndPeriodo (evita um round-trip por item no job).
+      aplicarConsolidacao(apuracao, apuracao.getProdutor().getId(),
+          YearMonth.parse(apuracao.getPeriodo()), StatusApuracao.FECHADO, agora);
     }
     log.info("Refechamento de periodos reabertos concluido: janela=[{},{}) apuracoes={}",
         limiteInferior, mesCorrente, reabertas.size());
@@ -247,7 +248,19 @@ public class ApuracaoService {
             .produtor(produtorRepository.getReferenceById(produtorId))
             .periodo(mes.toString())
             .build());
+    return aplicarConsolidacao(apuracao, produtorId, mes, status, dataFechamento);
+  }
 
+  /**
+   * Aplica a consolidação sobre uma {@link ApuracaoMensal} já resolvida (existente ou nova):
+   * valida a guarda da RN005, agrega os totais do mês e persiste com o status informado. Extraído
+   * para permitir que o refechamento em lote ({@link #refecharPeriodosReabertos()}) reaproveite a
+   * entidade já carregada pela consulta, sem um {@code findByProdutorIdAndPeriodo} redundante por
+   * apuração.
+   */
+  private ApuracaoMensal aplicarConsolidacao(
+      ApuracaoMensal apuracao, UUID produtorId, YearMonth mes, StatusApuracao status,
+      OffsetDateTime dataFechamento) {
     if (apuracao.getStatus() == StatusApuracao.FECHADO && status == StatusApuracao.ABERTO) {
       throw new ApuracaoPeriodoFechadoException(mes.toString());
     }

@@ -155,6 +155,10 @@ CREATE TABLE IF NOT EXISTS apuracao_mensal (
     CONSTRAINT uk_apuracao_produtor_periodo UNIQUE (produtor_id, periodo)
 );
 
+-- Indice composto (status, periodo) — Sprint 4 issue #57 (migration 0016).
+-- Cobre a varredura do refechamento de periodos reabertos (status = ? AND periodo range).
+CREATE INDEX IF NOT EXISTS idx_apuracao_status_periodo ON apuracao_mensal (status, periodo);
+
 -- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).
 -- O perfil de teste desabilita o Liquibase (liquibase.enabled=false), entao o

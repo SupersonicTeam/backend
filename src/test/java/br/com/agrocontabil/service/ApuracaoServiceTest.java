@@ -336,10 +336,6 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-04"))
-        .thenReturn(Optional.of(abril));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-05"))
-        .thenReturn(Optional.of(maio));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
     int refechadas = service.refecharPeriodosReabertos();
@@ -352,6 +348,8 @@ class ApuracaoServiceTest {
       assertThat(a.getDataFechamento())
           .isEqualTo(OffsetDateTime.parse("2026-07-15T09:00:00-03:00"));
     });
+    // Reaproveita a apuracao ja carregada pela varredura: nao refaz find por (produtor, periodo).
+    verify(apuracaoRepository, never()).findByProdutorIdAndPeriodo(any(), any());
   }
 
   @Test
