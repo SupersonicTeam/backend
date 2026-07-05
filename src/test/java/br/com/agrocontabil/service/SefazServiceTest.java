@@ -6,12 +6,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.event.NotaCanceladaEvent;
+import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
@@ -28,6 +31,8 @@ import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Testes unitarios do {@link SefazService} (issue #15 — envio SEFAZ).
@@ -60,12 +66,16 @@ class SefazServiceTest {
   @Mock
   private SefazClient sefazClient;
 
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
+
   /** Instancia real — default HOMOLOGACAO; evita UnnecessaryStubbing nos early returns. */
   private final SefazProperties sefazProperties = new SefazProperties();
 
   private SefazService sefazService;
 
   private static final String CHAVE = "41262612345678000195550010000000011000000012";
+  private static final ZoneId FUSO_BRASIL = ZoneId.of("America/Sao_Paulo");
 
   private Produtor produtor;
   private UUID produtorId;
@@ -79,7 +89,7 @@ class SefazServiceTest {
         .cpfCnpj("12345678901")
         .build();
     sefazService = new SefazService(
-        notaFiscalRepository, produtorProvider, sefazClient, sefazProperties);
+        notaFiscalRepository, produtorProvider, sefazClient, sefazProperties, eventPublisher);
   }
 
   @Test
@@ -108,6 +118,9 @@ class SefazServiceTest {
     assertThat(nota.getProtocoloAutorizacao()).isEqualTo("141260000000017");
     assertThat(nota.getSefazAmbiente()).isEqualTo(SefazAmbiente.HOMOLOGACAO);
     verify(notaFiscalRepository).save(nota);
+    // issue Agrocontabil#64: autorizacao publica evento para recalculo da apuracao (debito).
+    verify(eventPublisher).publishEvent(new NotaEmitidaEvent(
+        produtorId, YearMonth.from(nota.getDataEmissao().atZoneSameInstant(FUSO_BRASIL))));
   }
 
   @Test
@@ -131,6 +144,8 @@ class SefazServiceTest {
     assertThat(response.protocolo()).isNull();
     assertThat(nota.getProtocoloAutorizacao()).isNull();
     assertThat(nota.getDataAutorizacao()).isNull();
+    // Rejeicao nao afeta debito/credito da apuracao: nenhum evento de dominio e publicado.
+    verifyNoInteractions(eventPublisher);
   }
 
   @Test
@@ -300,6 +315,10 @@ class SefazServiceTest {
     assertThat(nota.getMotivoCancelamento()).isEqualTo(MOTIVO_VALIDO);
     assertThat(nota.getProtocoloCancelamento()).isEqualTo("141260000000099");
     verify(notaFiscalRepository).save(nota);
+    // issue Agrocontabil#64: cancelamento publica evento para recalculo da apuracao (retira o
+    // debito do periodo original de emissao, nao o da data do cancelamento).
+    verify(eventPublisher).publishEvent(new NotaCanceladaEvent(
+        produtorId, YearMonth.from(nota.getDataEmissao().atZoneSameInstant(FUSO_BRASIL))));
   }
 
   @Test

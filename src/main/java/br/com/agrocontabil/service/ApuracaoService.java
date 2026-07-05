@@ -1,6 +1,9 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
+import br.com.agrocontabil.event.NotaCanceladaEvent;
+import br.com.agrocontabil.event.NotaEmitidaEvent;
+import br.com.agrocontabil.event.NotaImportadaEvent;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
 import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
@@ -21,12 +24,16 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * Serviço de apuração mensal de IBS/CBS do produtor (issue Agrocontabil#41 — RN004).
@@ -42,6 +49,13 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code somarCreditosPorPeriodo} — entradas IMPORTADAS). Este serviço <em>não</em> recomputa
  * somas — apenas as consome, seguindo a mesma convenção de recorte mensal do
  * {@link CreditoService}.
+ *
+ * <p><strong>Recálculo por evento de domínio (issue Agrocontabil#64):</strong> os listeners
+ * {@code aoNotaEmitida}/{@code aoNotaCancelada}/{@code aoNotaImportada} reconsolidam o período
+ * automaticamente quando uma nota que afeta débito/crédito muda de status (autorização,
+ * cancelamento, importação já autorizada), mantendo um período {@code ABERTO} já consolidado
+ * sincronizado sem exigir consolidação manual. Um período {@code FECHADO} nunca é recalculado por
+ * evento — a correção só ocorre pela reabertura auditada (RN005).
  *
  * <p><strong>Recorte de segurança (anti-IDOR):</strong> a consolidação/consulta sob demanda usa
  * sempre o ID do produtor autenticado ({@link AuthenticatedProdutorProvider}); as agregações
@@ -227,6 +241,68 @@ public class ApuracaoService {
     log.info("Apuracao reaberta: id={} periodo={} reabertoPor={}",
         salva.getId(), salva.getPeriodo(), salva.getReabertoPor());
     return toResponse(salva);
+  }
+
+  /**
+   * Recalcula a apuração do produtor quando uma NF-e própria é autorizada (issue Agrocontabil#64).
+   *
+   * @param evento produtor e período (mês da {@code dataEmissao}) da nota autorizada
+   */
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void aoNotaEmitida(NotaEmitidaEvent evento) {
+    recalcularSeConsolidado(evento.produtorId(), evento.periodo());
+  }
+
+  /**
+   * Recalcula a apuração do produtor quando uma NF-e autorizada é cancelada (issue
+   * Agrocontabil#64).
+   *
+   * @param evento produtor e período (mês da {@code dataEmissao} original) da nota cancelada
+   */
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void aoNotaCancelada(NotaCanceladaEvent evento) {
+    recalcularSeConsolidado(evento.produtorId(), evento.periodo());
+  }
+
+  /**
+   * Recalcula a apuração do produtor quando um XML de NF-e importado é persistido já autorizado
+   * (issue Agrocontabil#64).
+   *
+   * @param evento produtor e período (mês da {@code dataEmissao}) da nota importada
+   */
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void aoNotaImportada(NotaImportadaEvent evento) {
+    recalcularSeConsolidado(evento.produtorId(), evento.periodo());
+  }
+
+  /**
+   * Núcleo comum dos listeners de evento de domínio: se o período já foi consolidado, reconsolida
+   * (via {@link #aplicarConsolidacao}, cuja guarda da issue #54 preserva um período já
+   * {@link StatusApuracao#FECHADO} sem rebaixá-lo). Se o período ainda não foi consolidado, é
+   * no-op — a projeção ao vivo ({@link #consultar(String)}) já reflete o evento a partir das
+   * próprias notas, sem necessidade de persistir nada.
+   */
+  private void recalcularSeConsolidado(UUID produtorId, YearMonth periodo) {
+    Optional<ApuracaoMensal> existente =
+        apuracaoRepository.findByProdutorIdAndPeriodo(produtorId, periodo.toString());
+    if (existente.isEmpty()) {
+      log.debug("Periodo {} nao consolidado; projecao ao vivo ja reflete o evento (produtorId={})",
+          periodo, produtorId);
+      return;
+    }
+    try {
+      aplicarConsolidacao(existente.get(), produtorId, periodo, StatusApuracao.ABERTO, null);
+      log.info("Apuracao recalculada por evento de dominio: periodo={} produtorId={}",
+          periodo, produtorId);
+    } catch (ApuracaoPeriodoFechadoException e) {
+      log.info(
+          "Apuracao FECHADO preservada (nao recalculada) por evento de dominio: "
+              + "periodo={} produtorId={}",
+          periodo, produtorId);
+    }
   }
 
   /**
