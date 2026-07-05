@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Orquestra a importacao de XMLs de nota fiscal (issue #19 — UC002).
@@ -29,8 +30,16 @@ import org.springframework.stereotype.Service;
  * <p><strong>Resiliencia do lote:</strong> {@link #importar(List)} nunca propaga excecao por
  * arquivo ruim — cada arquivo produz um {@link ImportacaoNotaResultado} (sucesso, duplicada ou
  * invalida). Assim, 1 arquivo valido + 1 invalido resultam em sucesso parcial, sem HTTP 500.
- * O metodo do lote nao e {@code @Transactional}: cada {@code save} do repositorio roda em sua
- * propria transacao, de modo que a falha de um arquivo nao faz rollback dos ja importados.
+ * O metodo do lote nao e {@code @Transactional}: o calculo do credito + persistencia de cada
+ * arquivo roda em sua propria transacao (via {@link TransactionTemplate}), de modo que a falha de
+ * um arquivo nao faz rollback dos ja importados.
+ *
+ * <p><strong>Publicacao do evento dentro da transacao (issue Agrocontabil#64):</strong> o
+ * {@link br.com.agrocontabil.event.NotaImportadaEvent} e publicado <em>dentro</em> da mesma
+ * transacao do {@code save} (via {@link TransactionTemplate}, nao apos ele) — o listener em
+ * {@link ApuracaoService} e {@code @TransactionalEventListener(AFTER_COMMIT)}, que so registra a
+ * sincronizacao se houver transacao ativa no momento da publicacao; publicar fora de uma
+ * transacao faria o evento ser descartado silenciosamente.
  *
  * <p><strong>LGPD:</strong> nunca loga CPF/CNPJ completo — usa {@link #mascarar(String)}.
  */
@@ -48,6 +57,7 @@ public class ImportacaoNotaFiscalService {
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CreditoTributarioService creditoTributarioService;
   private final ApplicationEventPublisher eventPublisher;
+  private final TransactionTemplate transactionTemplate;
 
   /** Constroi o servico com as dependencias de parse, mapeamento, credito, evento e persistencia. */
   public ImportacaoNotaFiscalService(
@@ -56,13 +66,15 @@ public class ImportacaoNotaFiscalService {
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
       CreditoTributarioService creditoTributarioService,
-      ApplicationEventPublisher eventPublisher) {
+      ApplicationEventPublisher eventPublisher,
+      TransactionTemplate transactionTemplate) {
     this.nfeXmlImporter = nfeXmlImporter;
     this.nfeToNotaFiscalMapper = nfeToNotaFiscalMapper;
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.creditoTributarioService = creditoTributarioService;
     this.eventPublisher = eventPublisher;
+    this.transactionTemplate = transactionTemplate;
   }
 
   /**
@@ -98,19 +110,22 @@ public class ImportacaoNotaFiscalService {
       }
 
       // RN003 (issue Agrocontabil#30): credito de IBS/CBS aproveitavel da nota de entrada,
-      // calculado por item elegivel antes da persistencia.
-      creditoTributarioService.calcular(nota);
+      // calculado por item elegivel antes da persistencia. issue Agrocontabil#64: o publishEvent
+      // roda DENTRO da transacao (nao depois do save) para que o listener AFTER_COMMIT em
+      // ApuracaoService registre a sincronizacao — fora de transacao o evento seria descartado.
+      NotaFiscal salva = transactionTemplate.execute(status -> {
+        creditoTributarioService.calcular(nota);
+        NotaFiscal notaSalva = notaFiscalRepository.save(nota);
+        if (notaSalva.getStatus() == StatusNotaFiscal.AUTORIZADA) {
+          YearMonth periodo =
+              YearMonth.from(notaSalva.getDataEmissao().atZoneSameInstant(FUSO_BRASIL));
+          eventPublisher.publishEvent(new NotaImportadaEvent(produtor.getId(), periodo));
+        }
+        return notaSalva;
+      });
 
-      NotaFiscal salva = notaFiscalRepository.save(nota);
       log.info("XML importado com sucesso: arquivo={} notaId={} produtor={} emitente={}",
           nome, salva.getId(), produtor.getId(), mascarar(salva.getEmitenteCpfCnpj()));
-
-      // issue Agrocontabil#64: so a entrada ja AUTORIZADA (nfeProc) afeta o credito da apuracao
-      // (RN004) — nfeProc nao autorizado (RASCUNHO/XML_GERADO) nao publica evento.
-      if (salva.getStatus() == StatusNotaFiscal.AUTORIZADA) {
-        YearMonth periodo = YearMonth.from(salva.getDataEmissao().atZoneSameInstant(FUSO_BRASIL));
-        eventPublisher.publishEvent(new NotaImportadaEvent(produtor.getId(), periodo));
-      }
 
       return ImportacaoNotaResultado.importada(nome, salva.getId(), chave);
 

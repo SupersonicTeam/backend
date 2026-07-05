@@ -37,6 +37,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Testes unitarios do {@link ImportacaoNotaFiscalService} (issue #19) — resiliencia do lote,
@@ -51,6 +54,7 @@ class ImportacaoNotaFiscalServiceTest {
   @Mock private AuthenticatedProdutorProvider produtorProvider;
   @Mock private CreditoTributarioService creditoTributarioService;
   @Mock private ApplicationEventPublisher eventPublisher;
+  @Mock private TransactionTemplate transactionTemplate;
 
   @InjectMocks private ImportacaoNotaFiscalService service;
 
@@ -62,6 +66,19 @@ class ImportacaoNotaFiscalServiceTest {
   void setUp() {
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Produtor").build();
     when(produtorProvider.get()).thenReturn(produtor);
+  }
+
+  /**
+   * Faz o {@code transactionTemplate} mockado executar o callback de fato (sincronamente, na
+   * mesma thread), simulando a transacao real que o {@code publishEvent} do issue #64 depende.
+   * Estubado so nos testes que efetivamente chegam a persistir (evita UnnecessaryStubbingException
+   * nos testes de dedup/erro, que retornam antes de tocar o {@code transactionTemplate}).
+   */
+  private void stubTransactionTemplateExecutaCallback() {
+    when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+      TransactionCallback<?> callback = invocation.getArgument(0);
+      return callback.doInTransaction(new SimpleTransactionStatus());
+    });
   }
 
   @Test
@@ -81,6 +98,7 @@ class ImportacaoNotaFiscalServiceTest {
         .thenReturn(nota);
     when(notaFiscalRepository.existsByChaveAcesso(nota.getChaveAcesso())).thenReturn(false);
     when(notaFiscalRepository.save(nota)).thenReturn(nota);
+    stubTransactionTemplateExecutaCallback();
 
     List<ImportacaoNotaResultado> resultados =
         service.importar(List.of(valido, invalido));
@@ -113,6 +131,7 @@ class ImportacaoNotaFiscalServiceTest {
         .thenReturn(nota);
     when(notaFiscalRepository.existsByChaveAcesso(nota.getChaveAcesso())).thenReturn(false);
     when(notaFiscalRepository.save(nota)).thenReturn(nota);
+    stubTransactionTemplateExecutaCallback();
 
     service.importar(List.of(arquivo));
 

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -116,13 +117,22 @@ class ApuracaoEventoDominioIntegrationTest {
     assertThat(apuracao.getDebitoIbs()).isEqualByComparingTo("150.00");
   }
 
+  /**
+   * Contador determinístico para {@code numero}/{@code chaveAcesso} das notas de teste — evita a
+   * fragilidade de derivar esses valores de {@code System.nanoTime()}, que pode ser negativo (a
+   * JVM só garante monotonicidade, não um sinal), quebrando o contrato de {@code numero} positivo
+   * e de {@code chaveAcesso} com 44 dígitos puramente numéricos.
+   */
+  private static final AtomicLong SEQUENCIA_NOTA = new AtomicLong(1);
+
   private NotaFiscal salvarSaidaAutorizada(OffsetDateTime dataEmissao, String ibs, String cbs) {
     EnderecoDestinatario endereco = EnderecoDestinatario.builder()
         .logradouro("Rua A").numero("1").municipio("Cuiaba")
         .codigoMunicipioIbge("5103403").uf("MT").cep("78000000").build();
+    long sequencia = SEQUENCIA_NOTA.getAndIncrement();
     return transactionTemplate.execute(status -> {
       NotaFiscal nota = NotaFiscal.builder()
-          .numero(System.nanoTime() % 1_000_000)
+          .numero(sequencia)
           .serie(1).modelo("55")
           .naturezaOperacao("Venda de producao rural")
           .dataEmissao(dataEmissao)
@@ -132,7 +142,7 @@ class ApuracaoEventoDominioIntegrationTest {
           .valorTotalProdutos(new BigDecimal("1000.00"))
           .valorTotalNota(new BigDecimal("1000.00"))
           .status(StatusNotaFiscal.AUTORIZADA)
-          .chaveAcesso(String.format("%044d", System.nanoTime()))
+          .chaveAcesso(String.format("%044d", sequencia))
           .protocoloAutorizacao("141260000000017")
           .dataAutorizacao(dataEmissao)
           .sefazCstat("100")
