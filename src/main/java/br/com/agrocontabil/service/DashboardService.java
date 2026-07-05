@@ -99,7 +99,7 @@ public class DashboardService {
     OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
 
     List<NotasPorMesAgregado> agregados =
-        notaFiscalRepository.contarNotasPorMesEorigem(produtorId, inicio, fim);
+        notaFiscalRepository.contarNotasPorMesEOrigem(produtorId, inicio, fim);
 
     Map<YearMonth, long[]> porMes = new HashMap<>();
     for (NotasPorMesAgregado a : agregados) {

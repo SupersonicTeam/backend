@@ -62,6 +62,12 @@ class DashboardIntegrationTest {
         new UsernamePasswordAuthenticationToken(produtor, null, List.of()));
   }
 
+  @org.junit.jupiter.api.AfterEach
+  void tearDown() {
+    // Limpa a autenticacao para nao vazar contexto entre testes (evita flakiness).
+    SecurityContextHolder.clearContext();
+  }
+
   @Test
   @DisplayName("Serie mensal agrega por mes/origem (year/month portavel) com zero-fill e exclusoes")
   void serieMensalAgregaPorMesEorigem() {

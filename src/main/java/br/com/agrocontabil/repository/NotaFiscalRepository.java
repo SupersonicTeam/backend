@@ -168,7 +168,7 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
         AND n.dataEmissao < :fim
       GROUP BY year(n.dataEmissao), month(n.dataEmissao), n.origem
       """)
-  List<NotasPorMesAgregado> contarNotasPorMesEorigem(
+  List<NotasPorMesAgregado> contarNotasPorMesEOrigem(
       @Param("produtorId") UUID produtorId,
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim);

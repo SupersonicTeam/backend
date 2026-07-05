@@ -136,7 +136,7 @@ class DashboardServiceTest {
     produtorAutenticado();
     when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
     // Notas so em maio (2 saidas) e julho (3 saidas + 1 entrada); demais meses zerados.
-    when(notaFiscalRepository.contarNotasPorMesEorigem(
+    when(notaFiscalRepository.contarNotasPorMesEOrigem(
             eq(produtor.getId()), any(), any()))
         .thenReturn(List.of(
             new NotasPorMesAgregado(2026, 5, OrigemNotaFiscal.PROPRIA, 2L),
@@ -162,13 +162,13 @@ class DashboardServiceTest {
   void janelaDaSerieNoFusoBrasilia() {
     produtorAutenticado();
     when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
-    when(notaFiscalRepository.contarNotasPorMesEorigem(any(), any(), any()))
+    when(notaFiscalRepository.contarNotasPorMesEOrigem(any(), any(), any()))
         .thenReturn(List.of());
 
     service.montar("2026-07");
 
     verify(notaFiscalRepository)
-        .contarNotasPorMesEorigem(eq(produtor.getId()), inicioCaptor.capture(), fimCaptor.capture());
+        .contarNotasPorMesEOrigem(eq(produtor.getId()), inicioCaptor.capture(), fimCaptor.capture());
     assertThat(inicioCaptor.getValue())
         .isEqualTo(OffsetDateTime.parse("2026-02-01T00:00-03:00"));
     assertThat(fimCaptor.getValue())

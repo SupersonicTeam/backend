@@ -5,7 +5,7 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 /**
  * Projeção de agregação do volume de notas autorizadas de um produtor por mês e origem
  * (issue Agrocontabil#65 — Sprint 5). Preenchida pela query
- * {@link NotaFiscalRepository#contarNotasPorMesEorigem}.
+ * {@link NotaFiscalRepository#contarNotasPorMesEOrigem}.
  *
  * <p>O recorte por mês vem da extração {@code year()/month()} do HQL (portável entre H2 e
  * PostgreSQL) sobre a {@code dataEmissao}. Cada linha representa a contagem de notas de uma
