@@ -31,6 +31,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 |--------|-----------|
 | `HealthController` | `GET /api/v1/health` |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
+| `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
+| `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
 
 ### `service/`
 | Classe | Responsabilidade |
@@ -44,6 +46,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `CalculoIbsCbsService` | Cálculo puro de IBS/CBS por item |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext` |
+| `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository` |
+| `DashboardService` | Agrega o painel do produtor (issue #65): reúsa `ApuracaoService` (KPIs) + `NotaFiscalRepository` (série mensal, últimas notas); zero-fill de 6 meses; anti-IDOR |
 
 ### `nfe/`
 | Classe | Responsabilidade |

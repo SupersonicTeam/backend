@@ -135,4 +135,54 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("produtorId") UUID produtorId,
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Conta as notas <strong>autorizadas</strong> de um produtor por mês e origem, dentro de um
+   * intervalo de tempo, para a série mensal do dashboard (issue Agrocontabil#65 — Sprint 5).
+   *
+   * <p><strong>Recorte de segurança (anti-IDOR):</strong> o filtro por {@code produtorId} é parte
+   * da própria query — um produtor nunca vê o volume de notas de outro.
+   *
+   * <p>Considera apenas notas {@link br.com.agrocontabil.model.StatusNotaFiscal#AUTORIZADA} com
+   * {@code dataEmissao} em {@code [inicio, fim)}, agrupando por ano/mês (extração {@code year()}/
+   * {@code month()} do HQL, portável entre H2 e PostgreSQL) e por {@code origem}
+   * (PROPRIA = saída, IMPORTADA = entrada). Meses sem notas simplesmente não retornam linha — o
+   * serviço preenche a lacuna com zero. Notas em rascunho, rejeitadas ou canceladas não entram,
+   * mantendo a série coerente com os KPIs de apuração.
+   *
+   * @param produtorId identificador do produtor autenticado
+   * @param inicio     início do intervalo (inclusivo)
+   * @param fim        fim do intervalo (exclusivo)
+   * @return contagens por (ano, mês, origem) das notas autorizadas no intervalo
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.NotasPorMesAgregado(
+          year(n.dataEmissao),
+          month(n.dataEmissao),
+          n.origem,
+          COUNT(n))
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      GROUP BY year(n.dataEmissao), month(n.dataEmissao), n.origem
+      """)
+  List<NotasPorMesAgregado> contarNotasPorMesEOrigem(
+      @Param("produtorId") UUID produtorId,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Retorna as cinco notas mais recentes de um produtor (por {@code dataEmissao} decrescente), para
+   * a lista de últimas notas do dashboard (issue Agrocontabil#65 — Sprint 5).
+   *
+   * <p><strong>Recorte de segurança (anti-IDOR):</strong> o filtro por {@code produtorId} está no
+   * nome do método derivado — um produtor nunca lê notas de outro. Considera todas as origens e
+   * status (a lista reflete a atividade recente do produtor, não apenas as autorizadas).
+   *
+   * @param produtorId identificador do produtor autenticado
+   * @return até cinco notas do produtor, da mais recente para a mais antiga
+   */
+  List<NotaFiscal> findTop5ByProdutorIdOrderByDataEmissaoDesc(UUID produtorId);
 }
