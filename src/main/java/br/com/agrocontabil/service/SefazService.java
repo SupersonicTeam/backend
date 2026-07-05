@@ -4,6 +4,8 @@ import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
+import br.com.agrocontabil.event.NotaCanceladaEvent;
+import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
@@ -19,12 +21,14 @@ import br.com.agrocontabil.sefaz.SefazClient;
 import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,17 +77,20 @@ public class SefazService {
   private final AuthenticatedProdutorProvider produtorProvider;
   private final SefazClient sefazClient;
   private final SefazProperties sefazProperties;
+  private final ApplicationEventPublisher eventPublisher;
 
-  /** Constrói o serviço com as dependências de persistência, transporte e configuração. */
+  /** Constrói o serviço com as dependências de persistência, transporte, configuração e eventos. */
   public SefazService(
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
       SefazClient sefazClient,
-      SefazProperties sefazProperties) {
+      SefazProperties sefazProperties,
+      ApplicationEventPublisher eventPublisher) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.sefazClient = sefazClient;
     this.sefazProperties = sefazProperties;
+    this.eventPublisher = eventPublisher;
   }
 
   /**
@@ -122,6 +129,12 @@ public class SefazService {
         retorno.cStat(),
         retorno.situacao(),
         retorno.protocolo());
+
+    // issue Agrocontabil#64: so a autorizacao afeta o debito da apuracao (RN004) — rejeicao e
+    // pendencia nao publicam evento.
+    if (retorno.situacao() == SituacaoSefaz.AUTORIZADA) {
+      eventPublisher.publishEvent(new NotaEmitidaEvent(produtor.getId(), periodoEmissao(salva)));
+    }
 
     return toResponse(salva);
   }
@@ -230,6 +243,10 @@ public class SefazService {
         retorno.cStat(),
         retorno.protocolo());
 
+    // issue Agrocontabil#64: cancelamento retira a nota do debito — recalcula o periodo original
+    // de emissao (nao o da data do cancelamento).
+    eventPublisher.publishEvent(new NotaCanceladaEvent(produtor.getId(), periodoEmissao(salva)));
+
     return toCancelamentoResponse(salva);
   }
 
@@ -285,6 +302,11 @@ public class SefazService {
       nota.setProtocoloAutorizacao(retorno.protocolo());
       nota.setDataAutorizacao(retorno.dataAutorizacao());
     }
+  }
+
+  /** Mês ({@code America/Sao_Paulo}) da {@code dataEmissao} — período afetado na apuração. */
+  private YearMonth periodoEmissao(NotaFiscal nota) {
+    return YearMonth.from(nota.getDataEmissao().atZoneSameInstant(FUSO_BRASIL));
   }
 
   /** Mapeia a situação retornada pela SEFAZ para o status de domínio da nota. */

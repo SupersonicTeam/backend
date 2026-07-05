@@ -1,16 +1,21 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.ImportacaoNotaResultado;
+import br.com.agrocontabil.event.NotaImportadaEvent;
 import br.com.agrocontabil.exception.XmlImportacaoInvalidaException;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.nfe.NfeToNotaFiscalMapper;
 import br.com.agrocontabil.nfe.NfeXmlImporter;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -34,24 +39,30 @@ public class ImportacaoNotaFiscalService {
 
   private static final Logger log = LoggerFactory.getLogger(ImportacaoNotaFiscalService.class);
 
+  /** Fuso de referência do projeto para o período (mês) afetado na apuração. */
+  private static final ZoneId FUSO_BRASIL = ZoneId.of("America/Sao_Paulo");
+
   private final NfeXmlImporter nfeXmlImporter;
   private final NfeToNotaFiscalMapper nfeToNotaFiscalMapper;
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final CreditoTributarioService creditoTributarioService;
+  private final ApplicationEventPublisher eventPublisher;
 
-  /** Constroi o servico com as dependencias de parse, mapeamento, credito e persistencia. */
+  /** Constroi o servico com as dependencias de parse, mapeamento, credito, evento e persistencia. */
   public ImportacaoNotaFiscalService(
       NfeXmlImporter nfeXmlImporter,
       NfeToNotaFiscalMapper nfeToNotaFiscalMapper,
       NotaFiscalRepository notaFiscalRepository,
       AuthenticatedProdutorProvider produtorProvider,
-      CreditoTributarioService creditoTributarioService) {
+      CreditoTributarioService creditoTributarioService,
+      ApplicationEventPublisher eventPublisher) {
     this.nfeXmlImporter = nfeXmlImporter;
     this.nfeToNotaFiscalMapper = nfeToNotaFiscalMapper;
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.creditoTributarioService = creditoTributarioService;
+    this.eventPublisher = eventPublisher;
   }
 
   /**
@@ -93,6 +104,14 @@ public class ImportacaoNotaFiscalService {
       NotaFiscal salva = notaFiscalRepository.save(nota);
       log.info("XML importado com sucesso: arquivo={} notaId={} produtor={} emitente={}",
           nome, salva.getId(), produtor.getId(), mascarar(salva.getEmitenteCpfCnpj()));
+
+      // issue Agrocontabil#64: so a entrada ja AUTORIZADA (nfeProc) afeta o credito da apuracao
+      // (RN004) — nfeProc nao autorizado (RASCUNHO/XML_GERADO) nao publica evento.
+      if (salva.getStatus() == StatusNotaFiscal.AUTORIZADA) {
+        YearMonth periodo = YearMonth.from(salva.getDataEmissao().atZoneSameInstant(FUSO_BRASIL));
+        eventPublisher.publishEvent(new NotaImportadaEvent(produtor.getId(), periodo));
+      }
+
       return ImportacaoNotaResultado.importada(nome, salva.getId(), chave);
 
     } catch (XmlImportacaoInvalidaException e) {

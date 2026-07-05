@@ -10,6 +10,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
+import br.com.agrocontabil.event.NotaCanceladaEvent;
+import br.com.agrocontabil.event.NotaEmitidaEvent;
+import br.com.agrocontabil.event.NotaImportadaEvent;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
 import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
@@ -26,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -510,5 +514,90 @@ class ApuracaoServiceTest {
     // CLOCK_FIXO = 2026-07-15T12:00:00Z; em America/Sao_Paulo (-03:00) => 2026-07-15T09:00:00-03:00.
     assertThat(apuracaoCaptor.getValue().getDataFechamento())
         .isEqualTo(OffsetDateTime.parse("2026-07-15T09:00:00-03:00"));
+  }
+
+  // -------------------------------------------------------------------------
+  // Listeners de evento de dominio (issue Agrocontabil#64 — recalculo ao cancelar/emitir/importar)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("Evento de nota cancelada recalcula apuracao ABERTO ja consolidada (issue #64)")
+  void eventoNotaCanceladaRecalculaApuracaoAberta() {
+    ApuracaoMensal existente = aberta("2026-07");
+    existente.setDebitoIbs(new BigDecimal("100.00"));
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.of(existente));
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(new BigDecimal("60.00"), new BigDecimal("30.00"), 1L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    service.aoNotaCancelada(new NotaCanceladaEvent(produtor.getId(), YearMonth.of(2026, 7)));
+
+    verify(apuracaoRepository).save(apuracaoCaptor.capture());
+    assertThat(apuracaoCaptor.getValue().getDebitoIbs()).isEqualByComparingTo("60.00");
+    assertThat(apuracaoCaptor.getValue().getStatus()).isEqualTo(StatusApuracao.ABERTO);
+  }
+
+  @Test
+  @DisplayName("Evento de nota emitida recalcula apuracao ABERTO ja consolidada (issue #64)")
+  void eventoNotaEmitidaRecalculaApuracaoAberta() {
+    ApuracaoMensal existente = aberta("2026-07");
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.of(existente));
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(new BigDecimal("60.00"), new BigDecimal("30.00"), 1L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    service.aoNotaEmitida(new NotaEmitidaEvent(produtor.getId(), YearMonth.of(2026, 7)));
+
+    verify(apuracaoRepository).save(apuracaoCaptor.capture());
+    assertThat(apuracaoCaptor.getValue().getDebitoIbs()).isEqualByComparingTo("60.00");
+  }
+
+  @Test
+  @DisplayName("Evento de nota importada recalcula apuracao ABERTO ja consolidada (issue #64)")
+  void eventoNotaImportadaRecalculaApuracaoAberta() {
+    ApuracaoMensal existente = aberta("2026-07");
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.of(existente));
+    when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
+        .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
+    when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
+        .thenReturn(new CreditoSaldoAgregado(new BigDecimal("20.00"), new BigDecimal("10.00"), 1L));
+    when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    service.aoNotaImportada(new NotaImportadaEvent(produtor.getId(), YearMonth.of(2026, 7)));
+
+    verify(apuracaoRepository).save(apuracaoCaptor.capture());
+    assertThat(apuracaoCaptor.getValue().getCreditoIbs()).isEqualByComparingTo("20.00");
+  }
+
+  @Test
+  @DisplayName("Evento sobre periodo FECHADO nao recalcula: preserva o saldo consolidado (issue #64)")
+  void eventoSobrePeriodoFechadoNaoRecalcula() {
+    ApuracaoMensal fechada = fechada("2026-07");
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.of(fechada));
+
+    service.aoNotaCancelada(new NotaCanceladaEvent(produtor.getId(), YearMonth.of(2026, 7)));
+
+    verify(apuracaoRepository, never()).save(any());
+    verifyNoInteractions(notaFiscalRepository);
+  }
+
+  @Test
+  @DisplayName("Evento sobre periodo nao consolidado e no-op: projecao ao vivo ja reflete (issue #64)")
+  void eventoSobrePeriodoNaoConsolidadoNaoOp() {
+    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+        .thenReturn(Optional.empty());
+
+    service.aoNotaCancelada(new NotaCanceladaEvent(produtor.getId(), YearMonth.of(2026, 7)));
+
+    verify(apuracaoRepository, never()).save(any());
+    verifyNoInteractions(notaFiscalRepository);
   }
 }
