@@ -57,7 +57,14 @@ public enum ErrorCode {
   DOCUMENTO_INVALIDO,
   // Importacao de XML (Sprint 2 — issue #19)
   /** XML importado invalido: nao parseavel, sem NFe ou reprovado no XSD. HTTP 422. */
-  XML_IMPORTACAO_INVALIDA;
+  XML_IMPORTACAO_INVALIDA,
+  // Infraestrutura HTTP (Sprint 5 — issue Agrocontabil#66)
+  /** Método HTTP não suportado pela rota. HTTP 405. */
+  METHOD_NOT_ALLOWED,
+  /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
+  MEDIA_TYPE_NOT_SUPPORTED,
+  /** Upload excede o tamanho máximo permitido. HTTP 413. */
+  PAYLOAD_TOO_LARGE;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
