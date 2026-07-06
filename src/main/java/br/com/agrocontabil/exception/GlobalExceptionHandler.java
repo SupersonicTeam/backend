@@ -9,7 +9,9 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -181,7 +183,13 @@ public class GlobalExceptionHandler {
         "Metodo HTTP nao suportado para esta rota.",
         request.getRequestURI(),
         List.of(detail));
-    return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
+    // RFC 7231 §6.5.5: resposta 405 deve informar os metodos permitidos no header Allow
+    // (paridade com o DefaultHandlerExceptionResolver do Spring, que setava este header).
+    ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+    if (suportados != null) {
+      response.header(HttpHeaders.ALLOW, suportados);
+    }
+    return response.body(body);
   }
 
   /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
@@ -201,7 +209,14 @@ public class GlobalExceptionHandler {
         "Content-Type nao suportado por este endpoint.",
         request.getRequestURI(),
         List.of(detail));
-    return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(body);
+    // RFC 7231 §6.5.13: resposta 415 deve informar os media types aceitos no header Accept
+    // (paridade com o DefaultHandlerExceptionResolver do Spring, que setava este header).
+    ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    List<MediaType> aceitos = ex.getSupportedMediaTypes();
+    if (!aceitos.isEmpty()) {
+      response.header(HttpHeaders.ACCEPT, MediaType.toString(aceitos));
+    }
+    return response.body(body);
   }
 
   /** Upload multipart acima do tamanho máximo configurado. HTTP 413. */

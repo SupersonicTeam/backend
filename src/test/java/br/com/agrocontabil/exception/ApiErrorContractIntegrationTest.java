@@ -3,9 +3,11 @@ package br.com.agrocontabil.exception;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +78,9 @@ class ApiErrorContractIntegrationTest {
     mockMvc.perform(patch("/api/notas"))
         .andExpect(status().isMethodNotAllowed())
         .andExpect(jsonPath("$.status").value(405))
-        .andExpect(jsonPath("$.errors[0].code").value("METHOD_NOT_ALLOWED"));
+        .andExpect(jsonPath("$.errors[0].code").value("METHOD_NOT_ALLOWED"))
+        // RFC 7231 §6.5.5: o 405 deve manter o header Allow com os metodos suportados.
+        .andExpect(header().string("Allow", Matchers.containsString("POST")));
   }
 
   @Test
@@ -87,6 +91,8 @@ class ApiErrorContractIntegrationTest {
             .content("nao sou json"))
         .andExpect(status().isUnsupportedMediaType())
         .andExpect(jsonPath("$.status").value(415))
-        .andExpect(jsonPath("$.errors[0].code").value("MEDIA_TYPE_NOT_SUPPORTED"));
+        .andExpect(jsonPath("$.errors[0].code").value("MEDIA_TYPE_NOT_SUPPORTED"))
+        // RFC 7231 §6.5.13: o 415 deve manter o header Accept com os media types aceitos.
+        .andExpect(header().string("Accept", Matchers.containsString(MediaType.APPLICATION_JSON_VALUE)));
   }
 }
