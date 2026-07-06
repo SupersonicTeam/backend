@@ -11,11 +11,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Tratamento global de exceções da API. Converte exceções em {@link ApiError}
@@ -104,6 +110,113 @@ public class GlobalExceptionHandler {
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.ILLEGAL_ARGUMENT, ex.getMessage())));
     return ResponseEntity.badRequest().body(body);
+  }
+
+  /** Corpo da requisição ilegível (JSON malformado ou tipo incompatível no payload). HTTP 400. */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ApiError> handleNotReadable(
+      HttpMessageNotReadableException ex, HttpServletRequest request) {
+    log.warn("Corpo de requisicao ilegivel em {}: {}", request.getRequestURI(), ex.getMessage());
+    ApiError body = ApiError.of(
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        "Corpo da requisicao invalido ou malformado.",
+        request.getRequestURI(),
+        List.of(ErrorDetail.of(ErrorCode.VALIDATION_ERROR,
+            "Corpo da requisicao invalido ou malformado. Verifique a sintaxe do JSON enviado.")));
+    return ResponseEntity.badRequest().body(body);
+  }
+
+  /** Path variable ou request param com tipo inválido (ex.: id que não é UUID). HTTP 400. */
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ApiError> handleTypeMismatch(
+      MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+    String expected = ex.getRequiredType() == null ? null : ex.getRequiredType().getSimpleName();
+    ErrorDetail detail = new ErrorDetail(
+        ErrorCode.VALIDATION_ERROR.code(),
+        ex.getName(),
+        "Valor invalido para o parametro '" + ex.getName() + "'.",
+        null,
+        ex.getValue() == null ? null : String.valueOf(ex.getValue()),
+        expected);
+    ApiError body = ApiError.of(
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        "Um ou mais parametros sao invalidos.",
+        request.getRequestURI(),
+        List.of(detail));
+    return ResponseEntity.badRequest().body(body);
+  }
+
+  /** Rota inexistente (nenhum handler ou recurso estático atende o path). HTTP 404. */
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ApiError> handleNoResourceFound(
+      NoResourceFoundException ex, HttpServletRequest request) {
+    ApiError body = ApiError.of(
+        HttpStatus.NOT_FOUND.value(),
+        HttpStatus.NOT_FOUND.getReasonPhrase(),
+        "Recurso nao encontrado.",
+        request.getRequestURI(),
+        List.of(ErrorDetail.of(ErrorCode.RESOURCE_NOT_FOUND, "Recurso nao encontrado.")));
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+  }
+
+  /** Método HTTP não suportado pela rota. HTTP 405. */
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<ApiError> handleMethodNotSupported(
+      HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+    String suportados = ex.getSupportedMethods() == null
+        ? null
+        : String.join(", ", ex.getSupportedMethods());
+    ErrorDetail detail = new ErrorDetail(
+        ErrorCode.METHOD_NOT_ALLOWED.code(),
+        null,
+        "Metodo " + ex.getMethod() + " nao suportado para esta rota.",
+        null,
+        ex.getMethod(),
+        suportados);
+    ApiError body = ApiError.of(
+        HttpStatus.METHOD_NOT_ALLOWED.value(),
+        HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase(),
+        "Metodo HTTP nao suportado para esta rota.",
+        request.getRequestURI(),
+        List.of(detail));
+    return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
+  }
+
+  /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
+  @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+  public ResponseEntity<ApiError> handleMediaTypeNotSupported(
+      HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+    ErrorDetail detail = new ErrorDetail(
+        ErrorCode.MEDIA_TYPE_NOT_SUPPORTED.code(),
+        null,
+        "Content-Type nao suportado por este endpoint.",
+        null,
+        ex.getContentType() == null ? null : ex.getContentType().toString(),
+        null);
+    ApiError body = ApiError.of(
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE.getReasonPhrase(),
+        "Content-Type nao suportado por este endpoint.",
+        request.getRequestURI(),
+        List.of(detail));
+    return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(body);
+  }
+
+  /** Upload multipart acima do tamanho máximo configurado. HTTP 413. */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiError> handleMaxUploadSize(
+      MaxUploadSizeExceededException ex, HttpServletRequest request) {
+    log.warn("Upload acima do limite em {}: {}", request.getRequestURI(), ex.getMessage());
+    ApiError body = ApiError.of(
+        HttpStatus.PAYLOAD_TOO_LARGE.value(),
+        HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase(),
+        "Arquivo excede o tamanho maximo permitido.",
+        request.getRequestURI(),
+        List.of(ErrorDetail.of(ErrorCode.PAYLOAD_TOO_LARGE,
+            "Arquivo excede o tamanho maximo permitido. Envie um arquivo menor.")));
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
   }
 
   /** Rede de segurança: qualquer exceção não mapeada vira 500 sem vazar detalhes. */
