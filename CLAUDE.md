@@ -132,9 +132,11 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 228 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 327 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
-## Estado atual — Sprint 3 concluída (2026-06-24)
+## Estado atual — Sprint 5 concluída (2026-07-06)
+
+> Histórico das sprints anteriores abaixo (Sprint 0 → Sprint 3); Sprints 4 e 5 no fim desta seção.
 
 **Sprint 0** (fundação): pom fixado, estrutura de pacotes, `SecurityConfig`/`CorsConfig`/`OpenApiConfig`, `GlobalExceptionHandler` + `ApiError`, `HealthController`, configs por profile, Docker Compose, baseline do Liquibase, `MockProdutorFilter` (auth mockada por produtor até a Sprint 8) e `DataLoader` (seed).
 
@@ -161,13 +163,24 @@ Cobertura: **228 testes** (JUnit + Mockito). Cada PR passou por code review (Git
 - **#19** Importação de XML de NF-e (UC002) — `ImportacaoNotaFiscalService`, `NfeXmlImporter` (XXE-safe), `NfeToNotaFiscalMapper`, `OrigemNotaFiscal` (PROPRIA/IMPORTADA); endpoint `POST /api/notas/importar`.
 - **#21** Cancelamento de NF-e (RN006 — limite 30 dias) — `SefazService` cancelamento, `CancelamentoRequest/Response`, `CancelamentoForaPrazoException`; endpoint `POST /api/notas/{id}/cancelar`.
 
-### Próxima sprint — Sprint 4 (créditos e conformidade, issues abertas)
+### Sprint 4 — créditos e conformidade (concluída)
 
-- **#30** Cálculo automático de IBS e CBS por operação (EC 132/2023 + LC 214/2025)
-- **#31** Alíquota IBS por estado (RN002)
-- **#41** Apuração mensal com fechamento automático (RN004)
-- **#42** Reabertura de período pelo contador — máx. 3 meses (RN005)
-- **#40** Relatório de conformidade tributária (UC004)
+- **#30/#31** Cálculo automático de IBS/CBS por operação e alíquota por estado (EC 132/2023 + LC 214/2025, RN002) — `CalculoIbsCbsService` + `TributosProperties`.
+- **#41** Apuração mensal com fechamento automático (RN004) — `ApuracaoService`, `ApuracaoMensal`, job agendado; projeção ao vivo do mês corrente antes da consolidação (#53).
+- **#42** Reabertura de período pelo contador — máx. 3 meses (RN005) — `ApuracaoNaoReabrivelException`/`ApuracaoPeriodoFechadoException`; guarda contra rebaixar período FECHADO fora do fluxo auditado (#54).
+- **#40** Relatório de conformidade tributária (UC004) — `RelatorioConformidadeController` + PDF débito×crédito.
+- Créditos por CFOP desacoplados de `ApuracaoMensal`; filtro de status AUTORIZADA no crédito (#51); `ReducaoNcmResolver` compartilhado débito×crédito corrige crédito superestimado (#52).
+
+### Sprint 5 — dashboard real + integração com o Angular (concluída em 2026-07-06)
+
+Épico Agrocontabil#34. Três sub-issues de backend, todas fechadas; PR final #69 mergeado.
+
+- **#64** Recálculo de apuração por evento de domínio ao emitir/cancelar/importar nota — `ApuracaoService` recalcula **apenas períodos em ABERTO** (não reabre FECHADO); testes de integração de evento de domínio.
+- **#65** Endpoint agregador `GET /api/dashboard` — `DashboardController`/`DashboardService` consolidam totais, distribuição de impostos e notas por mês para o frontend.
+- **#66** Integração CORS + contrato de erro para o Angular (`:8080` → `:4200`):
+  - `GlobalExceptionHandler` estendido — erros de infraestrutura HTTP (JSON malformado, tipo inválido no path, rota inexistente, método/Content-Type não suportado, upload acima do limite) respondem o envelope `ApiError.errors[]` com status **400/404/405/415/413** em vez de 500 genérico. Novos `ErrorCode`: `METHOD_NOT_ALLOWED`, `MEDIA_TYPE_NOT_SUPPORTED`, `PAYLOAD_TOO_LARGE`. Headers HTTP `Allow` (405) e `Accept` (415) preservados (RFC 7231 — regressão apontada pelo Copilot e corrigida).
+  - `CorsConfig` validado e travado por `CorsIntegrationTest` (origem `localhost:4200`, métodos, credenciais, `Content-Disposition` exposto para downloads).
+  - **Decisão do Calendário:** vencimentos fiscais não têm fonte no backend Java → derivar **client-side no Angular** nesta sprint; endpoint `/api/calendario-fiscal` fica como evolução futura se os prazos da LC 214/2025 forem parametrizados no backend.
 
 ### Débitos técnicos abertos
 
