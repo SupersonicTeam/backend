@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0017-fix-produtores-estado-varchar.xml
+         A 0001-initial-schema.xml criou produtores.estado como CHAR(2),
+         mas a entidade Produtor (e o schema H2 de teste) sempre esperaram
+         VARCHAR(2) — sem columnDefinition explicito, o Hibernate mapeia
+         String para VARCHAR por padrao. Com ddl-auto=validate, o
+         EntityManagerFactory falha ao subir contra um Postgres real:
+
+           Schema-validation: wrong column type encountered in column
+           [estado] in table [produtores]; found [bpchar (Types#CHAR)],
+           but expecting [varchar(2) (Types#VARCHAR)]
+
+         NAO editamos a 0001 (changeSet ja aplicado). Corrige o tipo aqui.
+         ================================================================ -->
+
+    <changeSet id="0017-fix-produtores-estado-varchar" author="supersonic-team">
+        <comment>
+            Corrige produtores.estado de CHAR(2) para VARCHAR(2), alinhando
+            com o mapeamento padrao do Hibernate para String (entidade
+            Produtor) e com o schema H2 de teste.
+        </comment>
+
+        <modifyDataType tableName="produtores" columnName="estado" newDataType="VARCHAR(2)"/>
+
+        <rollback>
+            <modifyDataType tableName="produtores" columnName="estado" newDataType="CHAR(2)"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
