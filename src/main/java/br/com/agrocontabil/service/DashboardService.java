@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.dto.DashboardResponse;
+import br.com.agrocontabil.dto.DashboardResponse.FinanceiroResumo;
 import br.com.agrocontabil.dto.DashboardResponse.NotaPorMes;
 import br.com.agrocontabil.dto.DashboardResponse.NotaResumo;
 import br.com.agrocontabil.mapper.DashboardMapper;
@@ -10,6 +11,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotasPorMesAgregado;
 import br.com.agrocontabil.repository.ValorNotasAgregado;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -84,22 +86,44 @@ public class DashboardService {
         DashboardMapper.toProdutorResumo(produtor),
         mes.toString(),
         DashboardMapper.toKpis(apuracao),
-        DashboardMapper.toFinanceiroResumo(montarValoresDoPeriodo(produtor.getId(), mes), apuracao),
+        montarFinanceiro(produtor.getId(), mes, apuracao),
         montarSerieMensal(produtor.getId(), mes),
         DashboardMapper.toDistribuicaoImpostos(apuracao),
         montarUltimasNotas(produtor.getId()));
   }
 
   /**
-   * Agrega o valor total (R$) das notas autorizadas do produtor no mês, por origem, para o fluxo
-   * de caixa do dashboard (issue Agrocontabil#71). Usa a mesma janela {@code [início do mês, início
-   * do mês seguinte)} do {@code ApuracaoService.agregarTotais}, garantindo que o valor em R$ se
-   * refira exatamente ao mesmo recorte de notas dos KPIs de IBS/CBS.
+   * Deriva o fluxo de caixa em R$ do período (issue Agrocontabil#71): agrega o valor total das
+   * notas autorizadas do produtor no mês por origem (mesma janela {@code [início do mês, início do
+   * mês seguinte)} usada pelo {@code ApuracaoService.agregarTotais}, garantindo que o valor em R$
+   * se refira exatamente ao mesmo recorte de notas dos KPIs de IBS/CBS) e calcula saldo bruto e
+   * lucro estimado.
+   *
+   * <p><strong>Regra de negócio (não pertence ao mapper):</strong> entrada de caixa = venda
+   * (nota {@code PROPRIA}); saída de caixa = compra (nota {@code IMPORTADA}) — o inverso do fluxo
+   * de mercadoria já usado na série mensal. O saldo bruto é {@code entradas − saídas}; o lucro
+   * estimado desconta desse saldo o IBS/CBS a recolher do mesmo período (já apurado, sem
+   * recomputar).
    */
-  private ValorNotasAgregado montarValoresDoPeriodo(java.util.UUID produtorId, YearMonth mes) {
+  private FinanceiroResumo montarFinanceiro(
+      java.util.UUID produtorId, YearMonth mes, ApuracaoResponse apuracao) {
     OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
     OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
-    return notaFiscalRepository.somarValorNotasPorOrigem(produtorId, inicio, fim);
+    ValorNotasAgregado valores =
+        notaFiscalRepository.somarValorNotasPorOrigem(produtorId, inicio, fim);
+
+    BigDecimal totalEntradas = coalesce(valores.valorPropria());
+    BigDecimal totalSaidas = coalesce(valores.valorImportada());
+    BigDecimal saldo = totalEntradas.subtract(totalSaidas);
+    BigDecimal tributosARecolher = apuracao.saldoIbs().add(apuracao.saldoCbs());
+    BigDecimal lucroEstimado = saldo.subtract(tributosARecolher);
+
+    return DashboardMapper.toFinanceiroResumo(totalEntradas, totalSaidas, saldo, lucroEstimado);
+  }
+
+  /** Trata nulo do {@code SUM} (nenhuma nota autorizada no período) como {@code 0.00}. */
+  private BigDecimal coalesce(BigDecimal valor) {
+    return valor != null ? valor : BigDecimal.ZERO;
   }
 
   /**
