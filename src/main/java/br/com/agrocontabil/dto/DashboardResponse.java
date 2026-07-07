@@ -10,10 +10,11 @@ import java.util.UUID;
  * DTO agregador do dashboard financeiro do produtor (issue Agrocontabil#65 — Sprint 5).
  *
  * <p>Consolida, para o produtor autenticado e um período mensal, os indicadores já apurados de
- * IBS/CBS ({@link ApuracaoResponse} via {@code ApuracaoService}), a série de volume de notas dos
- * últimos meses (entradas × saídas), a distribuição da carga tributária (apenas IBS/CBS — os
- * demais tributos não são modelados) e as últimas notas. É <strong>somente leitura</strong> e
- * <strong>reúsa</strong> as agregações existentes — não recomputa somas de tributo.
+ * IBS/CBS ({@link ApuracaoResponse} via {@code ApuracaoService}), o fluxo de caixa em R$ do
+ * período (issue Agrocontabil#71), a série de volume de notas dos últimos meses (entradas ×
+ * saídas), a distribuição da carga tributária (apenas IBS/CBS — os demais tributos não são
+ * modelados) e as últimas notas. É <strong>somente leitura</strong> e <strong>reúsa</strong> as
+ * agregações existentes — não recomputa somas de tributo.
  *
  * <p><strong>Privacidade (LGPD):</strong> o resumo do produtor expõe apenas nome, tipo e UF —
  * nunca o CPF/CNPJ completo. Nenhuma entidade JPA é exposta.
@@ -21,6 +22,7 @@ import java.util.UUID;
  * @param produtor              resumo do produtor autenticado (sem documento)
  * @param periodo              período de referência dos KPIs no formato {@code YYYY-MM}
  * @param kpis                 indicadores consolidados de IBS/CBS do período
+ * @param financeiro           fluxo de caixa em R$ do período (entradas/saidas/saldo/lucro)
  * @param notasPorMes          série mensal de volume de notas (entradas × saídas), 6 meses
  * @param distribuicaoImpostos composição da carga tributária do período (IBS × CBS)
  * @param ultimasNotas         últimas notas do produtor, mais recentes primeiro
@@ -36,6 +38,9 @@ public record DashboardResponse(
 
     @Schema(description = "Indicadores consolidados de IBS/CBS do periodo")
     DashboardKpis kpis,
+
+    @Schema(description = "Fluxo de caixa em R$ do periodo (entradas x saidas)")
+    FinanceiroResumo financeiro,
 
     @Schema(description = "Volume de notas por mes (entradas x saidas), ultimos 6 meses")
     List<NotaPorMes> notasPorMes,
@@ -100,6 +105,42 @@ public record DashboardResponse(
 
       @Schema(description = "Quantidade de notas consideradas no periodo", example = "8")
       long totalNotas) {}
+
+  /**
+   * Fluxo de caixa em R$ do período, consolidado a partir do valor total das notas autorizadas
+   * (issue Agrocontabil#71). Reintroduz o resumo financeiro em reais do produtor, hoje ausente do
+   * {@link DashboardKpis} (que modela apenas IBS/CBS).
+   *
+   * <p><strong>Semântica entradas/saídas de caixa:</strong> uma nota {@code PROPRIA} (o produtor
+   * vende) representa dinheiro <em>entrando</em> no caixa; uma nota {@code IMPORTADA} (o produtor
+   * compra) representa dinheiro <em>saindo</em> do caixa — o inverso do fluxo de mercadoria usado
+   * na série mensal de {@link NotaPorMes}.
+   *
+   * @param totalEntradas  soma do valor total das notas próprias (vendas) autorizadas no período
+   * @param totalSaidas    soma do valor total das notas importadas (compras) autorizadas no
+   *                       período
+   * @param saldo          fluxo de caixa bruto do período ({@code totalEntradas − totalSaidas})
+   * @param lucroEstimado  saldo líquido dos tributos de IBS/CBS a recolher no período
+   *                       ({@code saldo − (saldoIbs + saldoCbs)})
+   */
+  @Schema(description = "Fluxo de caixa em R$ do periodo, a partir do valor total das notas")
+  public record FinanceiroResumo(
+
+      @Schema(description = "Total de entradas de caixa (vendas/notas proprias)",
+          example = "12500.00")
+      BigDecimal totalEntradas,
+
+      @Schema(description = "Total de saidas de caixa (compras/notas importadas)",
+          example = "3200.00")
+      BigDecimal totalSaidas,
+
+      @Schema(description = "Saldo de caixa bruto do periodo (entradas - saidas)",
+          example = "9300.00")
+      BigDecimal saldo,
+
+      @Schema(description = "Lucro estimado apos provisionar o IBS/CBS a recolher do periodo",
+          example = "8100.00")
+      BigDecimal lucroEstimado) {}
 
   /**
    * Ponto da série mensal de volume de notas: quantidade de entradas (importadas) e saídas

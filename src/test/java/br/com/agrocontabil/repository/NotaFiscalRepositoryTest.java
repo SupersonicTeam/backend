@@ -217,6 +217,45 @@ class NotaFiscalRepositoryTest {
     assertThat(agregado.quantidadeNotas()).isEqualTo(1L);
   }
 
+  /**
+   * Issue Agrocontabil#71: {@link NotaFiscalRepository#somarValorNotasPorOrigem} deve somar o
+   * valor total por origem (PROPRIA/IMPORTADA), considerando apenas notas AUTORIZADAS no período
+   * — mesmo recorte de {@link #somarCreditosPorPeriodoShouldIgnoreNaoAutorizada}.
+   */
+  @Test
+  @DisplayName("somarValorNotasPorOrigem soma o valor total por origem, so notas AUTORIZADAS")
+  void somarValorNotasPorOrigemShouldSumByOrigemOnlyAutorizada() {
+    OffsetDateTime emissao = OffsetDateTime.parse("2026-07-10T09:00:00-03:00");
+    OffsetDateTime inicio = OffsetDateTime.parse("2026-07-01T00:00:00-03:00");
+    OffsetDateTime fim = OffsetDateTime.parse("2026-08-01T00:00:00-03:00");
+
+    // Saida (PROPRIA) autorizada — entra na soma.
+    NotaFiscal saida = buildNotaFiscalForProdutor(produtor, 20L);
+    saida.setDataEmissao(emissao);
+    saida.setOrigem(OrigemNotaFiscal.PROPRIA);
+    saida.setStatus(StatusNotaFiscal.AUTORIZADA);
+    saida.setValorTotalNota(new BigDecimal("12500.00"));
+    notaFiscalRepository.saveAndFlush(saida);
+
+    // Entrada (IMPORTADA) autorizada — entra na soma.
+    NotaFiscal entrada = buildImportada(
+        21L, StatusNotaFiscal.AUTORIZADA, emissao, new BigDecimal("30.00"), new BigDecimal("270.00"));
+    entrada.setValorTotalNota(new BigDecimal("3200.00"));
+    notaFiscalRepository.saveAndFlush(entrada);
+
+    // Entrada (IMPORTADA) nao autorizada — NAO deve entrar na soma.
+    NotaFiscal entradaNaoAutorizada = buildImportada(
+        22L, StatusNotaFiscal.XML_GERADO, emissao, new BigDecimal("1.00"), new BigDecimal("1.00"));
+    entradaNaoAutorizada.setValorTotalNota(new BigDecimal("999.00"));
+    notaFiscalRepository.saveAndFlush(entradaNaoAutorizada);
+
+    ValorNotasAgregado agregado =
+        notaFiscalRepository.somarValorNotasPorOrigem(produtor.getId(), inicio, fim);
+
+    assertThat(agregado.valorPropria()).isEqualByComparingTo("12500.00");
+    assertThat(agregado.valorImportada()).isEqualByComparingTo("3200.00");
+  }
+
   // -------------------------------------------------------------------------
   // Helpers de construção
   // -------------------------------------------------------------------------

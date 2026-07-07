@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.agrocontabil.dto.DashboardResponse;
 import br.com.agrocontabil.dto.DashboardResponse.DashboardKpis;
 import br.com.agrocontabil.dto.DashboardResponse.DistribuicaoImpostos;
+import br.com.agrocontabil.dto.DashboardResponse.FinanceiroResumo;
 import br.com.agrocontabil.dto.DashboardResponse.NotaPorMes;
 import br.com.agrocontabil.dto.DashboardResponse.ProdutorResumo;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
@@ -56,6 +57,9 @@ class DashboardControllerTest {
             new BigDecimal("150.00"), new BigDecimal("1350.00"),
             new BigDecimal("30.00"), new BigDecimal("270.00"),
             new BigDecimal("120.00"), new BigDecimal("1080.00"), 8L),
+        new FinanceiroResumo(
+            new BigDecimal("12500.00"), new BigDecimal("3200.00"),
+            new BigDecimal("9300.00"), new BigDecimal("8100.00")),
         List.of(new NotaPorMes(periodo, 1L, 3L)),
         new DistribuicaoImpostos(new BigDecimal("150.00"), new BigDecimal("1350.00")),
         List.of());
@@ -73,6 +77,10 @@ class DashboardControllerTest {
         .andExpect(jsonPath("$.produtor.uf").value("PR"))
         .andExpect(jsonPath("$.kpis.saldoIbs").value(120.00))
         .andExpect(jsonPath("$.kpis.totalNotas").value(8))
+        .andExpect(jsonPath("$.financeiro.totalEntradas").value(12500.00))
+        .andExpect(jsonPath("$.financeiro.totalSaidas").value(3200.00))
+        .andExpect(jsonPath("$.financeiro.saldo").value(9300.00))
+        .andExpect(jsonPath("$.financeiro.lucroEstimado").value(8100.00))
         .andExpect(jsonPath("$.notasPorMes[0].saidas").value(3))
         .andExpect(jsonPath("$.distribuicaoImpostos.cbs").value(1350.00))
         // O CPF/CNPJ nunca aparece no payload (privacidade).

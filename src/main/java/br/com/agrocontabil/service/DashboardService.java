@@ -9,6 +9,7 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotasPorMesAgregado;
+import br.com.agrocontabil.repository.ValorNotasAgregado;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -83,9 +84,22 @@ public class DashboardService {
         DashboardMapper.toProdutorResumo(produtor),
         mes.toString(),
         DashboardMapper.toKpis(apuracao),
+        DashboardMapper.toFinanceiroResumo(montarValoresDoPeriodo(produtor.getId(), mes), apuracao),
         montarSerieMensal(produtor.getId(), mes),
         DashboardMapper.toDistribuicaoImpostos(apuracao),
         montarUltimasNotas(produtor.getId()));
+  }
+
+  /**
+   * Agrega o valor total (R$) das notas autorizadas do produtor no mês, por origem, para o fluxo
+   * de caixa do dashboard (issue Agrocontabil#71). Usa a mesma janela {@code [início do mês, início
+   * do mês seguinte)} do {@code ApuracaoService.agregarTotais}, garantindo que o valor em R$ se
+   * refira exatamente ao mesmo recorte de notas dos KPIs de IBS/CBS.
+   */
+  private ValorNotasAgregado montarValoresDoPeriodo(java.util.UUID produtorId, YearMonth mes) {
+    OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
+    OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
+    return notaFiscalRepository.somarValorNotasPorOrigem(produtorId, inicio, fim);
   }
 
   /**

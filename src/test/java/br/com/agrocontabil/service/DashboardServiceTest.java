@@ -16,6 +16,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotasPorMesAgregado;
+import br.com.agrocontabil.repository.ValorNotasAgregado;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -80,9 +81,21 @@ class DashboardServiceTest {
   }
 
   /** Stub do produtor autenticado; fora do {@code setUp} para respeitar strict stubs no
-   *  teste de early return (período inválido nunca alcança o provider). */
+   *  teste de early return (período inválido nunca alcança o provider). Também stuba o valor
+   *  total das notas por origem com zero — todo teste que chega ao {@code montar} aciona essa
+   *  query para montar o {@code financeiro}; os testes específicos do fluxo de caixa sobrescrevem
+   *  este stub. */
   private void produtorAutenticado() {
+    produtorAutenticadoComValores(BigDecimal.ZERO, BigDecimal.ZERO);
+  }
+
+  /** Variante de {@link #produtorAutenticado()} com valores por origem customizados, para os
+   *  testes do fluxo de caixa — evita stubar {@code somarValorNotasPorOrigem} duas vezes (strict
+   *  stubs marcaria o stub zerado como nao usado). */
+  private void produtorAutenticadoComValores(BigDecimal valorPropria, BigDecimal valorImportada) {
     when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.somarValorNotasPorOrigem(eq(produtor.getId()), any(), any()))
+        .thenReturn(new ValorNotasAgregado(valorPropria, valorImportada));
   }
 
   @Test
@@ -203,6 +216,35 @@ class DashboardServiceTest {
     assertThat(dash.ultimasNotas().get(0).origem()).isEqualTo("PROPRIA");
     assertThat(dash.ultimasNotas().get(1).contraparte()).isEqualTo("Insumos do Campo SA");
     assertThat(dash.ultimasNotas().get(1).origem()).isEqualTo("IMPORTADA");
+  }
+
+  @Test
+  @DisplayName("Financeiro: entradas/saidas vem do valor total por origem; saldo e lucro derivados")
+  void financeiroDerivaSaldoELucroDoValorPorOrigem() {
+    produtorAutenticadoComValores(new BigDecimal("12500.00"), new BigDecimal("3200.00"));
+    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+
+    DashboardResponse dash = service.montar("2026-07");
+
+    // saldoIbs + saldoCbs da apuracao de julho = 120.00 + 1080.00 = 1200.00
+    assertThat(dash.financeiro().totalEntradas()).isEqualByComparingTo("12500.00");
+    assertThat(dash.financeiro().totalSaidas()).isEqualByComparingTo("3200.00");
+    assertThat(dash.financeiro().saldo()).isEqualByComparingTo("9300.00");
+    assertThat(dash.financeiro().lucroEstimado()).isEqualByComparingTo("8100.00");
+  }
+
+  @Test
+  @DisplayName("Financeiro: origem sem notas no periodo trata SUM nulo como zero")
+  void financeiroTrataSumNuloComoZero() {
+    produtorAutenticadoComValores(null, null);
+    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+
+    DashboardResponse dash = service.montar("2026-07");
+
+    assertThat(dash.financeiro().totalEntradas()).isEqualByComparingTo("0");
+    assertThat(dash.financeiro().totalSaidas()).isEqualByComparingTo("0");
+    assertThat(dash.financeiro().saldo()).isEqualByComparingTo("0");
+    assertThat(dash.financeiro().lucroEstimado()).isEqualByComparingTo("-1200.00");
   }
 
   @Test

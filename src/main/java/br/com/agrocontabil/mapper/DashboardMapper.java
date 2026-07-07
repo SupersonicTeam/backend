@@ -3,11 +3,14 @@ package br.com.agrocontabil.mapper;
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.dto.DashboardResponse.DashboardKpis;
 import br.com.agrocontabil.dto.DashboardResponse.DistribuicaoImpostos;
+import br.com.agrocontabil.dto.DashboardResponse.FinanceiroResumo;
 import br.com.agrocontabil.dto.DashboardResponse.NotaResumo;
 import br.com.agrocontabil.dto.DashboardResponse.ProdutorResumo;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.ValorNotasAgregado;
+import java.math.BigDecimal;
 
 /**
  * Converte entidades e DTOs de domínio nas partes do {@link br.com.agrocontabil.dto.DashboardResponse}
@@ -47,6 +50,31 @@ public final class DashboardMapper {
         apuracao.creditoIbs(), apuracao.creditoCbs(),
         apuracao.saldoIbs(), apuracao.saldoCbs(),
         apuracao.totalNotas());
+  }
+
+  /**
+   * Monta o fluxo de caixa em R$ do período (issue Agrocontabil#71): entradas de caixa vêm do
+   * valor total das notas próprias (vendas), saídas de caixa do valor total das importadas
+   * (compras). O saldo bruto é {@code entradas − saídas}; o lucro estimado desconta desse saldo o
+   * IBS/CBS a recolher do mesmo período (já apurado, sem recomputar).
+   *
+   * @param valores  agregação de valor total por origem, já com nulos tratados como zero
+   * @param apuracao apuração do período (fonte do saldo de IBS/CBS a descontar)
+   * @return resumo financeiro do dashboard
+   */
+  public static FinanceiroResumo toFinanceiroResumo(
+      ValorNotasAgregado valores, ApuracaoResponse apuracao) {
+    BigDecimal totalEntradas = coalesce(valores.valorPropria());
+    BigDecimal totalSaidas = coalesce(valores.valorImportada());
+    BigDecimal saldo = totalEntradas.subtract(totalSaidas);
+    BigDecimal tributosARecolher = apuracao.saldoIbs().add(apuracao.saldoCbs());
+    BigDecimal lucroEstimado = saldo.subtract(tributosARecolher);
+    return new FinanceiroResumo(totalEntradas, totalSaidas, saldo, lucroEstimado);
+  }
+
+  /** Trata nulo do {@code SUM} (origem sem notas no período) como {@code 0.00}. */
+  private static BigDecimal coalesce(BigDecimal valor) {
+    return valor != null ? valor : BigDecimal.ZERO;
   }
 
   /**
