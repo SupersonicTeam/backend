@@ -80,6 +80,12 @@ app:
     # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").
     fechamento:
       enabled: ${APURACAO_FECHAMENTO_ENABLED:true}
+  # Guias fiscais do Contador (issue #74).
+  guia-fiscal:
+    # Job diario que marca como VENCIDA toda guia PENDENTE com vencimento passado.
+    sync:
+      enabled: ${GUIA_FISCAL_SYNC_ENABLED:true}
+      cron: ${GUIA_FISCAL_SYNC_CRON:0 0 1 * * *}
 
 # Tributos — IBS/CBS (EC 132/2023 + LC 214/2025)
 # Alíquotas de referência para o ano-teste de 2026 (parametrizáveis sem recompilar).
