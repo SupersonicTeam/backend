@@ -135,6 +135,37 @@ class DashboardIntegrationTest {
     assertThat(dash.distribuicaoImpostos().cbs()).isEqualByComparingTo("1350.00");
   }
 
+  @Test
+  @DisplayName("Financeiro consolida entradas (vendas) x saidas (compras) e desconta IBS/CBS do lucro")
+  void financeiroConsolidaFluxoDeCaixaDoPeriodo() {
+    OffsetDateTime julho = OffsetDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneOffset.ofHours(-3));
+    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, julho);    // venda: valor total 1000.00
+    salvarEntradaImportada(2L, julho);                       // compra: valor total 1000.00
+
+    DashboardResponse dash = dashboardService.montar("2026-07");
+
+    // saldoIbs (120.00) + saldoCbs (1080.00) = 1200.00 a recolher no periodo.
+    assertThat(dash.financeiro().totalEntradas()).isEqualByComparingTo("1000.00");
+    assertThat(dash.financeiro().totalSaidas()).isEqualByComparingTo("1000.00");
+    assertThat(dash.financeiro().saldo()).isEqualByComparingTo("0.00");
+    assertThat(dash.financeiro().lucroEstimado()).isEqualByComparingTo("-1200.00");
+  }
+
+  @Test
+  @DisplayName("Financeiro ignora nota nao autorizada e nota fora da janela do periodo")
+  void financeiroIgnoraNaoAutorizadaEForaDaJanela() {
+    OffsetDateTime julho = OffsetDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneOffset.ofHours(-3));
+    OffsetDateTime junho = OffsetDateTime.of(2026, 6, 20, 9, 0, 0, 0, ZoneOffset.ofHours(-3));
+    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, julho);
+    salvarSaida(2L, StatusNotaFiscal.RASCUNHO, julho);      // nao autorizada -> ignorada
+    salvarSaida(3L, StatusNotaFiscal.AUTORIZADA, junho);    // fora do periodo (julho) -> ignorada
+
+    DashboardResponse dash = dashboardService.montar("2026-07");
+
+    assertThat(dash.financeiro().totalEntradas()).isEqualByComparingTo("1000.00");
+    assertThat(dash.financeiro().totalSaidas()).isEqualByComparingTo("0.00");
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------

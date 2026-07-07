@@ -174,6 +174,42 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("fim") OffsetDateTime fim);
 
   /**
+   * Agrega o valor total (R$) das notas <strong>autorizadas</strong> de um produtor por origem,
+   * dentro de um intervalo de tempo, para os KPIs financeiros do dashboard (issue
+   * Agrocontabil#71).
+   *
+   * <p><strong>Recorte de segurança (anti-IDOR):</strong> o filtro por {@code produtorId} é parte
+   * da própria query — um produtor nunca soma o valor de notas de outro produtor.
+   *
+   * <p>Considera apenas notas {@link br.com.agrocontabil.model.StatusNotaFiscal#AUTORIZADA} com
+   * {@code dataEmissao} em {@code [inicio, fim)}, mesmo recorte usado por
+   * {@link #somarDebitosPorPeriodo} e {@link #somarCreditosPorPeriodo} (débito/crédito de
+   * IBS/CBS), garantindo que o valor em R$ e os tributos apurados no dashboard se refiram
+   * exatamente às mesmas notas.
+   *
+   * @param produtorId identificador do produtor autenticado
+   * @param inicio     início do intervalo (inclusivo)
+   * @param fim        fim do intervalo (exclusivo)
+   * @return projeção com o valor total autorizado por origem (PROPRIA/IMPORTADA) do período
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.ValorNotasAgregado(
+          SUM(CASE WHEN n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+              THEN n.valorTotalNota ELSE 0 END),
+          SUM(CASE WHEN n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+              THEN n.valorTotalNota ELSE 0 END))
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      """)
+  ValorNotasAgregado somarValorNotasPorOrigem(
+      @Param("produtorId") UUID produtorId,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
    * Retorna as cinco notas mais recentes de um produtor (por {@code dataEmissao} decrescente), para
    * a lista de últimas notas do dashboard (issue Agrocontabil#65 — Sprint 5).
    *

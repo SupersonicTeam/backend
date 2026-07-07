@@ -3,11 +3,13 @@ package br.com.agrocontabil.mapper;
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.dto.DashboardResponse.DashboardKpis;
 import br.com.agrocontabil.dto.DashboardResponse.DistribuicaoImpostos;
+import br.com.agrocontabil.dto.DashboardResponse.FinanceiroResumo;
 import br.com.agrocontabil.dto.DashboardResponse.NotaResumo;
 import br.com.agrocontabil.dto.DashboardResponse.ProdutorResumo;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import java.math.BigDecimal;
 
 /**
  * Converte entidades e DTOs de domínio nas partes do {@link br.com.agrocontabil.dto.DashboardResponse}
@@ -47,6 +49,23 @@ public final class DashboardMapper {
         apuracao.creditoIbs(), apuracao.creditoCbs(),
         apuracao.saldoIbs(), apuracao.saldoCbs(),
         apuracao.totalNotas());
+  }
+
+  /**
+   * Monta o DTO do fluxo de caixa em R$ do período (issue Agrocontabil#71) a partir dos valores
+   * <strong>já calculados</strong> pelo {@code DashboardService} — este método só empacota, sem
+   * derivar saldo/lucro (regra de negócio pertence à camada de serviço).
+   *
+   * @param totalEntradas soma do valor total das notas próprias (vendas) autorizadas no período
+   * @param totalSaidas   soma do valor total das notas importadas (compras) autorizadas no período
+   * @param saldo         fluxo de caixa bruto do período ({@code totalEntradas − totalSaidas})
+   * @param lucroEstimado saldo líquido do IBS/CBS a recolher no período
+   * @return resumo financeiro do dashboard
+   */
+  public static FinanceiroResumo toFinanceiroResumo(
+      BigDecimal totalEntradas, BigDecimal totalSaidas, BigDecimal saldo,
+      BigDecimal lucroEstimado) {
+    return new FinanceiroResumo(totalEntradas, totalSaidas, saldo, lucroEstimado);
   }
 
   /**
