@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.VencimentoFiscalResponse;
+import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.GuiaFiscalMapper;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import java.util.List;
@@ -18,28 +19,40 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link GuiaFiscalRepository}, sem nova tabela. Outras fontes de prazo fiscal (obrigações,
  * declarações) ficam para quando o backend as modelar.
  *
- * <p><strong>Sem ownership por autenticação:</strong> assim como {@code GuiaFiscalService}, este
- * endpoint recebe o {@code produtorId} explícito na URL — não há Contador autenticado ainda para
- * restringir o acesso, e o produtor consultado pode não ser o mesmo do
- * {@code MockProdutorFilter} (o calendário é consultado pelo próprio produtor no seu painel).
+ * <p><strong>Anti-IDOR:</strong> diferente do {@code GuiaFiscalController} (ação do Contador, sem
+ * autenticação própria ainda), o calendário é uma tela do <strong>produtor</strong> — mesmo grupo
+ * do Dashboard e da Apuração, onde o produtor já tem autenticação mockada real
+ * ({@link AuthenticatedProdutorProvider}). O {@code produtorId} do path precisa bater com o
+ * produtor autenticado; caso contrário, 404 (nunca 403 — não revela existência), mesmo padrão
+ * usado em toda a API.
  */
 @Service
 @Transactional(readOnly = true)
 public class CalendarioFiscalService {
 
   private final GuiaFiscalRepository guiaFiscalRepository;
+  private final AuthenticatedProdutorProvider produtorProvider;
 
-  public CalendarioFiscalService(GuiaFiscalRepository guiaFiscalRepository) {
+  public CalendarioFiscalService(
+      GuiaFiscalRepository guiaFiscalRepository, AuthenticatedProdutorProvider produtorProvider) {
     this.guiaFiscalRepository = guiaFiscalRepository;
+    this.produtorProvider = produtorProvider;
   }
 
   /**
    * Retorna os vencimentos fiscais do produtor, mapeados a partir das guias fiscais.
    *
-   * @param produtorId identificador do produtor
-   * @return vencimentos do produtor (vazia se nenhuma guia ou produtor inexistente)
+   * @param produtorId identificador do produtor; deve bater com o produtor autenticado
+   * @return vencimentos do produtor (vazia se nenhuma guia)
+   * @throws ResourceNotFoundException se o produtorId não bater com o produtor autenticado
+   *     (anti-IDOR — 404, nunca 403)
    */
   public List<VencimentoFiscalResponse> listarVencimentos(UUID produtorId) {
+    UUID autenticadoId = produtorProvider.get().getId();
+    if (!autenticadoId.equals(produtorId)) {
+      throw new ResourceNotFoundException("Produtor", produtorId);
+    }
+
     return guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtorId).stream()
         .map(GuiaFiscalMapper::toVencimento)
         .toList();

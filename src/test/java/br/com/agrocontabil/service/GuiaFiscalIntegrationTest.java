@@ -91,12 +91,13 @@ class GuiaFiscalIntegrationTest {
     List<GuiaFiscalResponse> guias = guiaFiscalService.listar(produtor.getId());
     assertThat(guias).hasSize(1);
 
+    // Calendario e Dashboard/Apuracao: tela do proprio produtor, exige autenticacao (anti-IDOR).
+    autenticarComo(produtor);
     List<VencimentoFiscalResponse> vencimentos =
         calendarioFiscalService.listarVencimentos(produtor.getId());
     assertThat(vencimentos).hasSize(1);
     assertThat(vencimentos.get(0).status()).isEqualTo("pendente");
 
-    autenticarComo(produtor);
     GuiaFiscalResponse paga = guiaFiscalService.marcarComoPaga(criada.id());
     assertThat(paga.status()).isEqualTo("PAGA");
     assertThat(paga.dataPagamento()).isNotNull();
@@ -119,6 +120,24 @@ class GuiaFiscalIntegrationTest {
     autenticarComo(outroProdutor);
 
     assertThatThrownBy(() -> guiaFiscalService.marcarComoPaga(guia.getId()))
+        .isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  @Test
+  @DisplayName("listarVencimentos() respeita o anti-IDOR real: outro produtor autenticado nao "
+      + "consulta o calendario de outrem (PR #75, revisao Copilot)")
+  void listarVencimentosRespeitaAntiIdor() {
+    guiaFiscalRepository.save(GuiaFiscal.builder()
+        .produtor(produtor)
+        .tipoGuia(TipoGuiaFiscal.ICMS)
+        .dataVencimento(LocalDate.of(2026, 8, 20))
+        .valor(new BigDecimal("300.00"))
+        .status(StatusGuiaFiscal.PENDENTE)
+        .build());
+
+    autenticarComo(outroProdutor);
+
+    assertThatThrownBy(() -> calendarioFiscalService.listarVencimentos(produtor.getId()))
         .isInstanceOf(ResourceNotFoundException.class);
   }
 

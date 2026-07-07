@@ -1,8 +1,11 @@
 package br.com.agrocontabil.controller;
 
+import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.VencimentoFiscalResponse;
 import br.com.agrocontabil.service.CalendarioFiscalService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
  * frontend chama {@code GET /calendario-fiscal/:produtorId/vencimentos} sem fallback mock. O
  * controller apenas delega ao {@link CalendarioFiscalService}, que hoje reúsa as guias fiscais
  * do produtor como única fonte de vencimento.
+ *
+ * <p>Restrito ao produtor autenticado — o {@code produtorId} do path precisa bater com o produtor
+ * autenticado (anti-IDOR, verificado na camada de serviço); caso contrário, 404.
  */
 @RestController
 @RequestMapping("/api/calendario-fiscal")
@@ -39,10 +45,14 @@ public class CalendarioFiscalController {
   @GetMapping("/{produtorId}/vencimentos")
   @Operation(
       summary = "Lista os vencimentos fiscais do produtor",
-      description = "Retorna os vencimentos do produtor a partir das guias fiscais anexadas "
-          + "pelo Contador. Lista vazia se nenhuma guia ou produtor inexistente.")
+      description = "Retorna os vencimentos do produtor autenticado a partir das guias fiscais "
+          + "anexadas pelo Contador. O produtorId do path precisa ser o do produtor autenticado; "
+          + "retorna 404 caso contrario (anti-IDOR). Lista vazia se nenhuma guia.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Vencimentos retornados com sucesso")
+      @ApiResponse(responseCode = "200", description = "Vencimentos retornados com sucesso"),
+      @ApiResponse(responseCode = "404",
+          description = "produtorId nao corresponde ao produtor autenticado",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<List<VencimentoFiscalResponse>> vencimentos(
       @PathVariable UUID produtorId) {
