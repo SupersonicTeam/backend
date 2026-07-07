@@ -182,10 +182,15 @@ public class NotaFiscalService {
       nota.setDestinatarioEndereco(null);
     }
 
-    // Substitui itens — orphanRemoval remove os anteriores automaticamente
+    // Substitui itens — orphanRemoval remove os anteriores automaticamente.
+    // O flush apos o clear() e obrigatorio: a ActionQueue do Hibernate executa INSERTs
+    // antes de DELETEs dentro do mesmo flush, entao sem forcar a exclusao dos itens antigos
+    // primeiro, um item novo que reaproveita o mesmo numero_item viola a constraint unica
+    // uk_nota_fiscal_item_nota_numero antes do DELETE do item antigo rodar.
     List<NotaFiscalItem> novosItens = NotaFiscalMapper.toItemEntityList(request.itens());
 
     nota.getItens().clear();
+    notaFiscalRepository.flush();
     novosItens.forEach(nota::addItem);
 
     BigDecimal totalProdutos = nota.getItens().stream()
