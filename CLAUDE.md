@@ -98,6 +98,10 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
+| POST | `/api/contador/guias` | Cria guia fiscal do Contador (produtorId explícito; sem auth de Contador) |
+| GET | `/api/contador/guias?produtorId=` | Lista guias fiscais de um produtor |
+| PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (ação do produtor autenticado, anti-IDOR) |
+| GET | `/api/calendario-fiscal/{produtorId}/vencimentos` | Vencimentos fiscais do produtor (guias fiscais) |
 
 ## Segurança
 
@@ -132,7 +136,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 327 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 367 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -180,12 +184,23 @@ Cobertura: **228 testes** (JUnit + Mockito). Cada PR passou por code review (Git
 - **#66** Integração CORS + contrato de erro para o Angular (`:8080` → `:4200`):
   - `GlobalExceptionHandler` estendido — erros de infraestrutura HTTP (JSON malformado, tipo inválido no path, rota inexistente, método/Content-Type não suportado, upload acima do limite) respondem o envelope `ApiError.errors[]` com status **400/404/405/415/413** em vez de 500 genérico. Novos `ErrorCode`: `METHOD_NOT_ALLOWED`, `MEDIA_TYPE_NOT_SUPPORTED`, `PAYLOAD_TOO_LARGE`. Headers HTTP `Allow` (405) e `Accept` (415) preservados (RFC 7231 — regressão apontada pelo Copilot e corrigida).
   - `CorsConfig` validado e travado por `CorsIntegrationTest` (origem `localhost:4200`, métodos, credenciais, `Content-Disposition` exposto para downloads).
-  - **Decisão do Calendário:** vencimentos fiscais não têm fonte no backend Java → derivar **client-side no Angular** nesta sprint; endpoint `/api/calendario-fiscal` fica como evolução futura se os prazos da LC 214/2025 forem parametrizados no backend.
+  - **Decisão do Calendário (revista pela issue #74):** a decisão original desta sprint era derivar o calendário **client-side no Angular**. Na prática o frontend (`CalendarioApi`) já chama `GET /calendario-fiscal/:produtorId/vencimentos` **sem fallback mock** (erro direto se 404) — a decisão não chegou a ser implementada no frontend. A issue #74 fecha essa lacuna no backend (ver abaixo).
+
+### Issue #74 — guias fiscais do Contador + calendário fiscal (concluída)
+
+Epico do painel do Contador (frontend#28). Cobre o registro de guias fiscais (ICMS/FUNRURAL/DARF/GPS/OUTRO) com vencimento e valor, e fecha a lacuna do `/api/calendario-fiscal` deixada em aberto na Sprint 5.
+
+- **`GuiaFiscal`** (model) + migration `0018-guias-fiscais.xml`: tipo, vencimento, valor, status (PENDENTE/PAGA/VENCIDA, persistido) e data de pagamento.
+- **`POST`/`GET /api/contador/guias`:** sem autenticação de Contador (entidade não existe no backend ainda) — `produtorId` explícito no payload/query; 404 se o produtor não existir. Débito técnico registrado para a Sprint 8 (RBAC produtor/contador).
+- **`PATCH /api/contador/guias/{id}/pagar`:** ação do produtor autenticado — usa `AuthenticatedProdutorProvider` + `findByIdAndProdutorId` (anti-IDOR real, 404 para guia de outro produtor), reaproveitando a infraestrutura de auth mockada já existente. 409 se já paga.
+- **`GuiaFiscalStatusSyncJob`:** job diário (`@Scheduled`, 1h, `America/Sao_Paulo`) que transiciona guias PENDENTE vencidas para VENCIDA — mesmo padrão do `SefazStatusSyncJob`/`ApuracaoFechamentoJob`.
+- **`GET /api/calendario-fiscal/{produtorId}/vencimentos`:** endpoint que faltava e já quebrava a tela de Calendário do Angular. Reúsa `GuiaFiscalRepository` como única fonte de vencimento (`tipo="imposto"`); outras fontes (obrigações/declarações) ficam para quando o backend as modelar.
+- **Nota de integração para o frontend:** `calendario.service.ts` hoje só reconhece `status === 'vencido'`; uma guia `pago` aparece como `pendente` no calendário até o frontend ajustar esse mapeamento — não é um bug do backend.
 
 ### Débitos técnicos abertos
 
 - **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico para teste). Substituir `MockSefazTransport` por transporte SOAP real + certificado **ICP-Brasil** em produção.
-- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.)
+- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador — `POST`/`GET /api/contador/guias` (issue #74) aceitam `produtorId` explícito sem checagem de ownership até lá.
 - **Modelo:** `Produtor` sem endereço completo nem IE (placeholders no `NotaFiscalNfeMapper`); divisão IBS UF/Município hoje 50/50 (parametrização real pendente).
 - **Modelos pré-criados (consultoria AI — sprint não definida):** entidades `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback` e respectivos repositories existem no código mas **não têm controller nem service** — são scaffolding de feature futura. Não criar lógica sobre elas sem decisão explícita do Murillo.
 
