@@ -1,0 +1,119 @@
+package br.com.agrocontabil.controller;
+
+import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.dto.GuiaFiscalRequest;
+import br.com.agrocontabil.dto.GuiaFiscalResponse;
+import br.com.agrocontabil.service.GuiaFiscalService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+/**
+ * Endpoints REST para o Contador anexar guias fiscais a um produtor (issue #74).
+ *
+ * <p>Criação e listagem ainda não têm autenticação de Contador (não existe essa entidade no
+ * backend) — recebem o {@code produtorId} explícito. Já o pagamento é ação do produtor
+ * autenticado e segue o padrão anti-IDOR do restante da API.
+ *
+ * <p>O controller não contém regra de negócio: apenas recebe o DTO validado, delega ao
+ * {@link GuiaFiscalService} e mapeia o resultado para a resposta HTTP.
+ */
+@RestController
+@RequestMapping("/api/contador/guias")
+@Tag(name = "Guias Fiscais",
+    description = "Guias fiscais (ICMS/FUNRURAL/DARF/GPS) anexadas pelo Contador a um produtor")
+public class GuiaFiscalController {
+
+  private final GuiaFiscalService guiaFiscalService;
+
+  public GuiaFiscalController(GuiaFiscalService guiaFiscalService) {
+    this.guiaFiscalService = guiaFiscalService;
+  }
+
+  /**
+   * Cria uma guia fiscal para o produtor informado no request.
+   */
+  @PostMapping
+  @Operation(
+      summary = "Cria uma guia fiscal",
+      description = "Cria a guia com status PENDENTE para o produtorId informado no corpo. "
+          + "Retorna 201 com header Location apontando para a listagem do produtor.")
+  @ApiResponses({
+      @ApiResponse(
+          responseCode = "201",
+          description = "Guia criada com sucesso",
+          headers = @Header(
+              name = "Location",
+              description = "URI da listagem de guias do produtor",
+              schema = @Schema(type = "string", format = "uri"))),
+      @ApiResponse(responseCode = "400", description = "Dados invalidos",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "404", description = "Produtor nao encontrado",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<GuiaFiscalResponse> criar(
+      @RequestBody @Valid GuiaFiscalRequest request) {
+    GuiaFiscalResponse response = guiaFiscalService.criar(request);
+    URI location = ServletUriComponentsBuilder
+        .fromCurrentContextPath()
+        .path("/api/contador/guias")
+        .queryParam("produtorId", response.produtorId())
+        .build()
+        .toUri();
+    return ResponseEntity.created(location).body(response);
+  }
+
+  /**
+   * Lista as guias fiscais do produtor informado.
+   */
+  @GetMapping
+  @Operation(
+      summary = "Lista guias fiscais de um produtor",
+      description = "Retorna as guias fiscais do produtorId informado, mais recentes primeiro. "
+          + "Lista vazia se nenhuma guia ou produtor inexistente.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+  })
+  public ResponseEntity<List<GuiaFiscalResponse>> listar(
+      @RequestParam UUID produtorId) {
+    return ResponseEntity.ok(guiaFiscalService.listar(produtorId));
+  }
+
+  /**
+   * Marca como paga a guia fiscal indicada, para o produtor autenticado.
+   */
+  @PatchMapping("/{id}/pagar")
+  @Operation(
+      summary = "Marca uma guia fiscal como paga",
+      description = "Acao do produtor autenticado. Retorna 404 se a guia nao existir ou nao "
+          + "pertencer ao produtor autenticado (anti-IDOR) e 409 se ja estiver paga.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Guia marcada como paga"),
+      @ApiResponse(responseCode = "404",
+          description = "Guia nao encontrada ou nao pertence ao produtor autenticado",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409", description = "Guia ja esta paga",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<GuiaFiscalResponse> pagar(@PathVariable UUID id) {
+    return ResponseEntity.ok(guiaFiscalService.marcarComoPaga(id));
+  }
+}
