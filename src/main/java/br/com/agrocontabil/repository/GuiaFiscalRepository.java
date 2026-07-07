@@ -1,0 +1,50 @@
+package br.com.agrocontabil.repository;
+
+import br.com.agrocontabil.model.GuiaFiscal;
+import br.com.agrocontabil.model.StatusGuiaFiscal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+/**
+ * Repositório Spring Data JPA para {@link GuiaFiscal}.
+ *
+ * <p>Fornece a listagem por produtor (usada tanto pelo painel do Contador quanto pelo
+ * calendário fiscal), a busca segura por ID vinculada ao produtor (anti-IDOR, usada no
+ * pagamento) e a consulta do {@code GuiaFiscalStatusSyncJob}.
+ */
+public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
+
+  /**
+   * Retorna todas as guias fiscais de um produtor, mais recentes primeiro.
+   *
+   * @param produtorId identificador do {@link br.com.agrocontabil.model.Produtor}
+   * @return guias fiscais do produtor
+   */
+  List<GuiaFiscal> findByProdutorIdOrderByDataVencimentoDesc(UUID produtorId);
+
+  /**
+   * Busca uma guia fiscal pelo seu ID e pelo ID do produtor proprietário.
+   *
+   * <p>Retorna {@link Optional#empty()} se a guia não existir ou pertencer a um produtor
+   * diferente do informado, impedindo acesso cruzado (anti-IDOR) — usado por
+   * {@code GuiaFiscalService#marcarComoPaga}, que opera sobre o produtor autenticado.
+   *
+   * @param id         identificador da guia fiscal
+   * @param produtorId identificador do produtor esperado como destinatário
+   * @return {@link Optional} com a guia fiscal, ou vazio se não encontrada
+   */
+  Optional<GuiaFiscal> findByIdAndProdutorId(UUID id, UUID produtorId);
+
+  /**
+   * Retorna as guias {@link StatusGuiaFiscal#PENDENTE} cujo vencimento já passou, para o job
+   * agendado de sincronização de status transicioná-las para {@link StatusGuiaFiscal#VENCIDA}.
+   *
+   * @param status  status a filtrar (sempre {@code PENDENTE} na prática)
+   * @param hoje    data de referência (vencimento estritamente anterior é considerado vencido)
+   * @return guias pendentes com vencimento anterior a {@code hoje}
+   */
+  List<GuiaFiscal> findByStatusAndDataVencimentoBefore(StatusGuiaFiscal status, LocalDate hoje);
+}
