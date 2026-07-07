@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0018-guias-fiscais.xml
+         Issue #74 (backend): persistencia de guias fiscais anexadas pelo
+         Contador no painel do Contador (ICMS/FUNRURAL/DARF/GPS/OUTRO),
+         com data de vencimento e valor. A guia alimenta o calendario
+         fiscal do produtor (GET /api/calendario-fiscal/{produtorId}/vencimentos)
+         e pode ser marcada como paga pelo proprio produtor.
+
+         Sem autenticacao de Contador ainda (nao existe essa entidade no
+         backend) — o produtorId e recebido explicito no payload de
+         criacao. O status (PENDENTE/PAGA/VENCIDA) e persistido e mantido
+         pelo GuiaFiscalStatusSyncJob (job agendado, mesmo padrao do
+         SefazStatusSyncJob/ApuracaoFechamentoJob).
+         ================================================================ -->
+
+    <changeSet id="0018-create-guias-fiscais" author="supersonic-team">
+        <comment>
+            Cria a tabela guias_fiscais (tipo, vencimento, valor, status e
+            data de pagamento de guias fiscais anexadas pelo Contador).
+        </comment>
+
+        <createTable tableName="guias_fiscais">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo_guia" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_vencimento" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valor" type="NUMERIC(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="observacoes" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_pagamento" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="guias_fiscais"
+                baseColumnNames="produtor_id"
+                constraintName="fk_guia_fiscal_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"/>
+
+        <createIndex tableName="guias_fiscais" indexName="idx_guia_fiscal_produtor_id">
+            <column name="produtor_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="guias_fiscais"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
