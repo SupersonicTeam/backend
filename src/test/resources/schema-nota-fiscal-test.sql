@@ -155,6 +155,26 @@ CREATE TABLE IF NOT EXISTS apuracao_mensal (
     CONSTRAINT uk_apuracao_produtor_periodo UNIQUE (produtor_id, periodo)
 );
 
+-- ============================================================================
+-- Guias fiscais do Contador — issue #74 (migration 0018).
+-- Manter sincronizado com 0018-guias-fiscais.xml.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS guias_fiscais (
+    id               UUID           NOT NULL,
+    produtor_id      UUID           NOT NULL,
+    tipo_guia        VARCHAR(20)    NOT NULL,
+    data_vencimento  DATE           NOT NULL,
+    valor            NUMERIC(15,2)  NOT NULL,
+    observacoes      VARCHAR(255),
+    status           VARCHAR(20)    NOT NULL,
+    data_pagamento   TIMESTAMP WITH TIME ZONE,
+    created_at       TIMESTAMP WITH TIME ZONE,
+    updated_at       TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_guia_fiscal_produtor_id ON guias_fiscais (produtor_id);
+
 -- Indice composto (status, periodo) — Sprint 4 issue #57 (migration 0016).
 -- Cobre a varredura do refechamento de periodos reabertos (status = ? AND periodo range).
 CREATE INDEX IF NOT EXISTS idx_apuracao_status_periodo ON apuracao_mensal (status, periodo);

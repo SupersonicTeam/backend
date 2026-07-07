@@ -33,6 +33,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
+| `GuiaFiscalController` | `/api/contador/guias` — CRUD de guias fiscais do Contador (issue #74) |
+| `CalendarioFiscalController` | `GET /api/calendario-fiscal/{produtorId}/vencimentos` — calendário fiscal do produtor (issue #74) |
 
 ### `service/`
 | Classe | Responsabilidade |
@@ -48,6 +50,9 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext` |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository` |
 | `DashboardService` | Agrega o painel do produtor (issue #65): reúsa `ApuracaoService` (KPIs) + `NotaFiscalRepository` (série mensal, últimas notas); zero-fill de 6 meses; anti-IDOR |
+| `GuiaFiscalService` | CRUD de guias fiscais do Contador (issue #74): criar/listar sem auth de Contador (produtorId explícito no request); `marcarComoPaga` usa `AuthenticatedProdutorProvider` + anti-IDOR real |
+| `GuiaFiscalStatusSyncJob` | `@Scheduled` diário — marca `PENDENTE` vencida como `VENCIDA` (issue #74) |
+| `CalendarioFiscalService` | Monta o calendário fiscal do produtor (issue #74): reúsa `GuiaFiscalRepository` como única fonte de vencimento nesta entrega |
 
 ### `nfe/`
 | Classe | Responsabilidade |
@@ -90,7 +95,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `Produtor` | Produtor rural autenticado |
 | `NotaFiscalValidacao` | Histórico de inconsistências de validação (issue #22) |
 | `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20) |
-| **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` |
+| `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
+| **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` · `TipoGuiaFiscal` (ICMS/FUNRURAL/DARF/GPS/OUTRO) · `StatusGuiaFiscal` (PENDENTE/PAGA/VENCIDA) |
 | `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback`, `RegimeTributario` | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
 
 ### `dto/`
@@ -100,9 +106,12 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 - `ImportacaoNotaResultado` — resultado da importação de XML (issue #19)
 - `NotaFiscalValidacaoResponse` — histórico de inconsistências
 - `SefazEnvioResponse` / `SefazStatusResponse` — retornos SEFAZ
+- `GuiaFiscalRequest/Response` — guia fiscal do Contador (issue #74)
+- `VencimentoFiscalResponse` — item do calendário fiscal do produtor (issue #74)
 
 ### `mapper/`
 - `NotaFiscalMapper` — entidade ↔ DTO (request/response)
+- `GuiaFiscalMapper` — entidade ↔ DTO de guia fiscal e item do calendário (issue #74)
 
 ### `validation/`
 Bean Validation customizada (anotação + validator):
@@ -129,6 +138,7 @@ Bean Validation customizada (anotação + validator):
 | `AssinaturaDigitalException` | 500 (genérico) | Falha na assinatura/cert |
 | `SefazComunicacaoException` | 502 | Timeout/falha após retry |
 | `XmlGenerationException` | 422/500 | Falha na geração ou validação XSD |
+| `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |
 
@@ -139,7 +149,7 @@ Bean Validation customizada (anotação + validator):
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
-`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository` · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
 
 ## Endpoints REST (`/api/notas`)
 | Método | Path | Descrição |
@@ -158,6 +168,14 @@ Bean Validation customizada (anotação + validator):
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências (anti-IDOR 404) |
 
+## Endpoints REST (`/api/contador/guias`, `/api/calendario-fiscal` — issue #74)
+| Método | Path | Descrição |
+|--------|------|-----------|
+| POST | `/api/contador/guias` | Cria guia fiscal (produtorId explícito, sem auth de Contador) |
+| GET | `/api/contador/guias?produtorId=` | Lista guias fiscais do produtor |
+| PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (produtor autenticado, anti-IDOR real) |
+| GET | `/api/calendario-fiscal/{produtorId}/vencimentos` | Vencimentos do produtor (hoje: guias fiscais mapeadas) |
+
 ## Recursos em `src/main/resources/`
 - `xsd/` — XSD oficial NF-e layout 4.00
 - `reports/` — templates `.jrxml` do JasperReports (DANFE)
@@ -169,5 +187,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0010-nota-fiscal-cancelamento`
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0018-guias-fiscais` (próximo número livre: **0019**)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

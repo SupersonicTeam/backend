@@ -37,3 +37,7 @@ app:
   apuracao:
     fechamento:
       enabled: false
+  # Guias fiscais: job de sincronizacao de vencidas desativado nos testes (mesmo motivo).
+  guia-fiscal:
+    sync:
+      enabled: false

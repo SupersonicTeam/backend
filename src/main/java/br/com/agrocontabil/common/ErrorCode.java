@@ -64,7 +64,10 @@ public enum ErrorCode {
   /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
   MEDIA_TYPE_NOT_SUPPORTED,
   /** Upload excede o tamanho máximo permitido. HTTP 413. */
-  PAYLOAD_TOO_LARGE;
+  PAYLOAD_TOO_LARGE,
+  // Guias fiscais do Contador (issue #74)
+  /** Guia fiscal já está no status PAGA. HTTP 409. */
+  GUIA_JA_PAGA;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
