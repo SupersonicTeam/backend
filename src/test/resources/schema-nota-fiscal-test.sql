@@ -110,7 +110,10 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     valor_ibs_mun           NUMERIC(15,2),
     created_at              TIMESTAMP WITH TIME ZONE,
     updated_at              TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    -- Espelha o changeset 0002-nota-fiscal-item-unique-numero-item (migration 0002):
+    -- um numero_item nao pode se repetir dentro da mesma nota fiscal.
+    CONSTRAINT uk_nota_fiscal_item_nota_numero UNIQUE (nota_fiscal_id, numero_item)
 );
 
 -- Inconsistencias de validacao da NF-e — Sprint 3 issue #22 (migration 0006)
