@@ -13,6 +13,7 @@ import br.com.agrocontabil.nfe.model.NFe;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -80,6 +81,30 @@ class NotaFiscalNfeMapperTest {
     IbsCbsTot tot = nfe.getInfNFe().getTotal().getIbsCbsTot();
     assertThat(tot.getGIBS().getGIBSUF().getVIBSUF()).isEqualTo("0.30");
     assertThat(tot.getGIBS().getGIBSMun().getVIBSMun()).isEqualTo("0.10");
+  }
+
+  @Test
+  @DisplayName(
+      "dhEmi/dhSaiEnt com offset UTC devem serializar offset numerico, nunca o literal 'Z' — "
+          + "XSD da NF-e (TDateTimeUTC) rejeita 'Z'")
+  void shouldFormatUtcOffsetAsNumericNeverAsZLiteral() {
+    // Simula o round-trip do timestamptz do Postgres, que sempre devolve OffsetDateTime
+    // em UTC (offset zero) independente do offset gravado originalmente.
+    NotaFiscalItem item = itemBase();
+    NotaFiscal nota = notaCom(item);
+    nota.setDataEmissao(OffsetDateTime.of(2026, 3, 10, 13, 0, 0, 0, ZoneOffset.UTC));
+    nota.setDataSaida(OffsetDateTime.of(2026, 3, 10, 17, 0, 0, 0, ZoneOffset.UTC));
+
+    NFe nfe = mapper.toNfe(nota);
+
+    assertThat(nfe.getInfNFe().getIde().getDhEmi())
+        .as("dhEmi nao pode conter o literal 'Z' — XSD exige offset numerico explicito")
+        .doesNotContain("Z")
+        .endsWith("+00:00");
+    assertThat(nfe.getInfNFe().getIde().getDhSaiEnt())
+        .as("dhSaiEnt nao pode conter o literal 'Z' — XSD exige offset numerico explicito")
+        .doesNotContain("Z")
+        .endsWith("+00:00");
   }
 
   // -------------------------------------------------------------------------

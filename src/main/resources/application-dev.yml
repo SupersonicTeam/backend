@@ -28,6 +28,13 @@ app:
   nfe:
     # Certificado autoassinado de teste (src/test/resources/certs) — apenas para permitir
     # assinar/autorizar NF-e em dev local (SEFAZ ja e mock). NUNCA usar em prod.
+    #
+    # O path default abaixo e relativo ao working directory do processo e so resolve
+    # rodando a partir da raiz do checkout (./mvnw spring-boot:run) — se o backend for
+    # iniciado de outro diretorio ou via JAR empacotado (target/*.jar fora do checkout),
+    # o arquivo nao sera encontrado e a assinatura falhara com "Arquivo de certificado
+    # nao encontrado". Nesses casos, sobrescreva com um caminho absoluto via
+    # NFE_CERT_PATH=file:/caminho/absoluto/para/nfe-teste.p12.
     certificado:
       path: ${NFE_CERT_PATH:file:src/test/resources/certs/nfe-teste.p12}
       password: ${NFE_CERT_PASSWORD:changeit}
