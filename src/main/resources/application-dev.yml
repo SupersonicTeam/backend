@@ -23,3 +23,12 @@ logging:
   level:
     br.com.agrocontabil: DEBUG
     org.hibernate.SQL: DEBUG
+
+app:
+  nfe:
+    # Certificado autoassinado de teste (src/test/resources/certs) — apenas para permitir
+    # assinar/autorizar NF-e em dev local (SEFAZ ja e mock). NUNCA usar em prod.
+    certificado:
+      path: ${NFE_CERT_PATH:file:src/test/resources/certs/nfe-teste.p12}
+      password: ${NFE_CERT_PASSWORD:changeit}
+      alias: ${NFE_CERT_ALIAS:nfe-teste}

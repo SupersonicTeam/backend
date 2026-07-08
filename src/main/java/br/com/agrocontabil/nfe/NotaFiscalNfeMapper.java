@@ -75,8 +75,12 @@ public class NotaFiscalNfeMapper {
   private static final String MOD_NF_E = "55";
   private static final String PROC_EMI = "0";
   private static final String VER_PROC = "1.0";
+  // "xxx" (minusculo) em vez de "XXX": XXX imprime "Z" para offset zero (UTC), mas o XSD
+  // da NF-e (TDateTimeUTC) exige offset numerico explicito e rejeita "Z" como literal.
+  // Isso importa porque timestamptz do Postgres normaliza qualquer OffsetDateTime para UTC
+  // no round-trip, entao uma nota emitida as 10h em -03:00 volta do banco como 13h em Z.
   private static final DateTimeFormatter DFE_DT_FMT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssxxx");
 
   /**
    * Tabela de UF → código IBGE (cUF).
