@@ -28,6 +28,11 @@ spring:
       hibernate:
         jdbc:
           time_zone: America/Sao_Paulo
+        # Batch fetching: transforma o N+1 de colecoes/proxies LAZY (ex.: os itens e o produtor
+        # de cada nota na listagem paginada de /api/notas) em poucas queries com IN(...),
+        # em vez de 1 query por nota. Mitiga o N+1 sem quebrar a paginacao (ao contrario de
+        # JOIN FETCH com Pageable, que pagina em memoria — HHH000104).
+        default_batch_fetch_size: 25
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
