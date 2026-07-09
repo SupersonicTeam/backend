@@ -74,7 +74,12 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     valor_total_credito_cbs     NUMERIC(15,2),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    -- Espelha o changeset 0002 (producao): nota unica por (produtor, numero, serie, modelo)
+    -- e chave de acesso globalmente unica. Sem estas constraints o H2 dava falso verde para
+    -- nota/chave duplicada (mesma classe do incidente uk_nota_fiscal_item_nota_numero).
+    CONSTRAINT uk_nota_fiscal_produtor_numero_serie_modelo UNIQUE (produtor_id, numero, serie, modelo),
+    CONSTRAINT uk_nota_fiscal_chave_acesso UNIQUE (chave_acesso)
 );
 
 CREATE TABLE IF NOT EXISTS nota_fiscal_item (

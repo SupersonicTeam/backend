@@ -1,6 +1,7 @@
 package br.com.agrocontabil.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -254,6 +256,23 @@ class NotaFiscalRepositoryTest {
 
     assertThat(agregado.valorPropria()).isEqualByComparingTo("12500.00");
     assertThat(agregado.valorImportada()).isEqualByComparingTo("3200.00");
+  }
+
+  /**
+   * A unique {@code uk_nota_fiscal_produtor_numero_serie_modelo} (changeset 0002) é a única linha
+   * de defesa contra nota duplicada — {@code NotaFiscalService.create} não checa duplicidade em
+   * código. Antes de o schema de teste replicar esta constraint, dois inserts de mesma
+   * {@code (produtor, numero, serie, modelo)} passavam em verde no H2 enquanto o PostgreSQL os
+   * rejeitava (falso verde). Este teste guarda essa regra.
+   */
+  @Test
+  @DisplayName("deve rejeitar nota duplicada por (produtor, numero, serie, modelo)")
+  void shouldRejectDuplicateNotaByProdutorNumeroSerieModelo() {
+    notaFiscalRepository.saveAndFlush(buildNotaFiscal()); // numero=1, serie=1, modelo=55
+
+    NotaFiscal duplicada = buildNotaFiscal(); // mesmo (produtor, numero, serie, modelo)
+    assertThatThrownBy(() -> notaFiscalRepository.saveAndFlush(duplicada))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   // -------------------------------------------------------------------------
