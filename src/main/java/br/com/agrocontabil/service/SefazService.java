@@ -154,12 +154,21 @@ public class SefazService {
         .findByIdAndProdutorId(notaId, produtor.getId())
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
 
-    if (nota.getChaveAcesso() == null || nota.getStatus() == StatusNotaFiscal.RASCUNHO) {
+    // Só é seguro sincronizar a partir de PENDENTE_SEFAZ — o único estado "aguardando desfecho".
+    // Estados terminais (AUTORIZADA/REJEITADA/CANCELADA) e pré-transmissao
+    // (RASCUNHO/XML_GERADO/COM_INCONSISTENCIAS) nunca podem ser sobrescritos por uma consulta:
+    // como o transporte de consulta responde a situacao atual da chave, sincronizar uma nota
+    // CANCELADA a ressuscitaria para AUTORIZADA (a nota voltaria a compor o debito da apuracao),
+    // e sincronizar uma XML_GERADO nunca transmitida a autorizaria sem envio.
+    // A chave nula tambem barra (defesa contra dado corrompido): consultar a SEFAZ exige a chave.
+    if (nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ || nota.getChaveAcesso() == null) {
       throw new NotaFiscalNaoConsultavelException(notaId, nota.getStatus());
     }
 
+    StatusNotaFiscal statusAnterior = nota.getStatus();
     consultarEAtualizar(nota);
     NotaFiscal salva = notaFiscalRepository.save(nota);
+    publicarSeAutorizou(statusAnterior, salva);
 
     log.info(
         "Status sincronizado com a SEFAZ: notaId={} chave={} cStat={} situacao={}",
@@ -270,6 +279,7 @@ public class SefazService {
         notaFiscalRepository.save(nota);
         if (nota.getStatus() != anterior) {
           atualizadas++;
+          publicarSeAutorizou(anterior, nota);
         }
       } catch (SefazComunicacaoException e) {
         // Falha numa nota não interrompe o lote — sera reprocessada na proxima execucao.
@@ -278,6 +288,22 @@ public class SefazService {
       }
     }
     return atualizadas;
+  }
+
+  /**
+   * Publica {@link NotaEmitidaEvent} quando a sincronização com a SEFAZ confirma a autorização de
+   * uma nota que ainda não constava como AUTORIZADA — espelhando a publicação feita por
+   * {@link #enviar(UUID)}. Sem isso, uma nota que ficou {@link StatusNotaFiscal#PENDENTE_SEFAZ} no
+   * envio e só foi autorizada na sincronização (endpoint manual ou job) nunca dispararia o
+   * recálculo da apuração (issue Agrocontabil#64): se o período já estivesse consolidado, o débito
+   * de IBS/CBS dessa nota ficaria de fora — guia fiscal apurada a menor.
+   */
+  private void publicarSeAutorizou(StatusNotaFiscal statusAnterior, NotaFiscal nota) {
+    if (statusAnterior != StatusNotaFiscal.AUTORIZADA
+        && nota.getStatus() == StatusNotaFiscal.AUTORIZADA) {
+      eventPublisher.publishEvent(
+          new NotaEmitidaEvent(nota.getProdutor().getId(), periodoEmissao(nota)));
+    }
   }
 
   /** Consulta a SEFAZ pela chave de acesso e aplica o retorno à nota. */

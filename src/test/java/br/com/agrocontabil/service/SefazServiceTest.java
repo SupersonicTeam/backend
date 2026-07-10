@@ -248,6 +248,57 @@ class SefazServiceTest {
   }
 
   @Test
+  @DisplayName("sincronizarStatus NAO deve ressuscitar nota CANCELADA (estado terminal) para AUTORIZADA")
+  void sincronizarStatusShouldNotResurrectTerminalNote() {
+    // Regressao: a guarda antiga so barrava RASCUNHO/chave nula, entao uma nota CANCELADA
+    // (chave != null, status != RASCUNHO) passava e o transporte de consulta — que sempre
+    // responde AUTORIZADA — sobrescrevia o status, ressuscitando juridicamente a nota e
+    // recolocando-a no debito da apuracao. Uma nota em estado terminal nao e sincronizavel.
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(3));
+    nota.setStatus(StatusNotaFiscal.CANCELADA);
+    nota.setDataCancelamento(OffsetDateTime.now().minusDays(1));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> sefazService.sincronizarStatus(notaId))
+        .isInstanceOf(NotaFiscalNaoConsultavelException.class);
+
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.CANCELADA);
+    // A guarda barra antes de qualquer I/O: a SEFAZ nao chega a ser consultada nem a nota salva.
+    verify(sefazClient, never()).consultarStatus(any(), any());
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("sincronizarStatus deve publicar NotaEmitidaEvent ao confirmar AUTORIZADA (recalculo da apuracao)")
+  void sincronizarStatusShouldPublishEventWhenBecomesAuthorized() {
+    // Regressao: enviar() publica NotaEmitidaEvent na transicao para AUTORIZADA, mas a
+    // sincronizacao (endpoint manual e job) fazia a MESMA transicao PENDENTE_SEFAZ -> AUTORIZADA
+    // sem publicar — deixando a apuracao ja consolidada com o debito de IBS/CBS subestimado.
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaXmlGerado(notaId);
+    nota.setStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
+    nota.setSefazAmbiente(SefazAmbiente.HOMOLOGACAO);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(sefazClient.consultarStatus(eq(CHAVE), eq(SefazAmbiente.HOMOLOGACAO)))
+        .thenReturn(new SefazRetorno(
+            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
+            OffsetDateTime.now()));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    sefazService.sincronizarStatus(notaId);
+
+    verify(eventPublisher).publishEvent(new NotaEmitidaEvent(
+        produtorId, YearMonth.from(nota.getDataEmissao().atZoneSameInstant(FUSO_BRASIL))));
+  }
+
+  @Test
   @DisplayName("sincronizarStatus deve lancar ResourceNotFoundException quando nao encontrada")
   void sincronizarStatusShouldThrowWhenNotFound() {
     UUID notaId = UUID.randomUUID();
@@ -279,6 +330,10 @@ class SefazServiceTest {
 
     assertThat(atualizadas).isEqualTo(1);
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    // O job tambem deve publicar o evento na transicao PENDENTE_SEFAZ -> AUTORIZADA, para que a
+    // apuracao ja consolidada seja recalculada (issue Agrocontabil#64) — caminho do job agendado.
+    verify(eventPublisher).publishEvent(new NotaEmitidaEvent(
+        produtorId, YearMonth.from(nota.getDataEmissao().atZoneSameInstant(FUSO_BRASIL))));
   }
 
   // -------------------------------------------------------------------------
