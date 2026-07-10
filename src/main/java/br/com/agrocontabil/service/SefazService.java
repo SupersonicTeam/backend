@@ -160,7 +160,8 @@ public class SefazService {
     // como o transporte de consulta responde a situacao atual da chave, sincronizar uma nota
     // CANCELADA a ressuscitaria para AUTORIZADA (a nota voltaria a compor o debito da apuracao),
     // e sincronizar uma XML_GERADO nunca transmitida a autorizaria sem envio.
-    if (nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ) {
+    // A chave nula tambem barra (defesa contra dado corrompido): consultar a SEFAZ exige a chave.
+    if (nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ || nota.getChaveAcesso() == null) {
       throw new NotaFiscalNaoConsultavelException(notaId, nota.getStatus());
     }
 

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -263,16 +262,13 @@ class SefazServiceTest {
     when(produtorProvider.get()).thenReturn(produtor);
     when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
         .thenReturn(Optional.of(nota));
-    // Mesmo que a SEFAZ responda AUTORIZADA, a nota cancelada nao pode ser sobrescrita.
-    lenient().when(sefazClient.consultarStatus(any(), any()))
-        .thenReturn(new SefazRetorno(
-            SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
-            OffsetDateTime.now()));
 
     assertThatThrownBy(() -> sefazService.sincronizarStatus(notaId))
         .isInstanceOf(NotaFiscalNaoConsultavelException.class);
 
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.CANCELADA);
+    // A guarda barra antes de qualquer I/O: a SEFAZ nao chega a ser consultada nem a nota salva.
+    verify(sefazClient, never()).consultarStatus(any(), any());
     verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
   }
 
@@ -334,6 +330,10 @@ class SefazServiceTest {
 
     assertThat(atualizadas).isEqualTo(1);
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    // O job tambem deve publicar o evento na transicao PENDENTE_SEFAZ -> AUTORIZADA, para que a
+    // apuracao ja consolidada seja recalculada (issue Agrocontabil#64) — caminho do job agendado.
+    verify(eventPublisher).publishEvent(new NotaEmitidaEvent(
+        produtorId, YearMonth.from(nota.getDataEmissao().atZoneSameInstant(FUSO_BRASIL))));
   }
 
   // -------------------------------------------------------------------------
