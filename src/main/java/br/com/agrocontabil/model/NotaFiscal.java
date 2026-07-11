@@ -19,7 +19,6 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -45,15 +44,14 @@ import lombok.ToString;
  * futura com a SEFAZ.
  */
 @Entity
-// A unique composta espelha o changeset 0002 (produção). Declarada aqui para que o schema
-// derivado da entidade (ddl-auto=create-drop no profile test) TAMBÉM a crie — sem isso, a
-// proteção contra nota duplicada por (produtor, numero, serie, modelo) não existia nos testes
-// @SpringBootTest, apenas em produção via Liquibase. A unique de chave_acesso já vem do
-// @Column(unique=true) abaixo. Em produção o Hibernate roda com ddl-auto=validate e não altera
-// o schema.
-@Table(name = "nota_fiscal", uniqueConstraints = @UniqueConstraint(
-    name = "uk_nota_fiscal_produtor_numero_serie_modelo",
-    columnNames = {"produtor_id", "numero", "serie", "modelo"}))
+// NAO declarar uniqueConstraints de (produtor, numero, serie, modelo) aqui: o changeset 0009
+// REMOVEU a unique total e a substituiu por um INDICE UNICO PARCIAL (WHERE origem='PROPRIA'),
+// porque notas IMPORTADAS de terceiros podem colidir em numero/serie (numero e do emitente).
+// Uma @UniqueConstraint global (todas as origens) via ddl-auto=create-drop rejeitaria importadas
+// validas nos testes e divergiria do schema real. A unicidade parcial vive no Liquibase (0009) e,
+// no perfil de teste, no schema-nota-fiscal-test.sql. A unique de chave_acesso vem do
+// @Column(unique=true) abaixo (essa e global e continua valida).
+@Table(name = "nota_fiscal")
 @Data
 @EqualsAndHashCode(exclude = {"itens", "produtor"})
 @ToString(exclude = {"itens", "produtor"})
