@@ -67,7 +67,14 @@ public enum ErrorCode {
   PAYLOAD_TOO_LARGE,
   // Guias fiscais do Contador (issue #74)
   /** Guia fiscal já está no status PAGA. HTTP 409. */
-  GUIA_JA_PAGA;
+  GUIA_JA_PAGA,
+  // Persistência / integridade de dados
+  /**
+   * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:
+   * nota com {@code (produtor, numero, serie, modelo)} ou {@code chave_acesso} já existente.
+   * HTTP 409.
+   */
+  VIOLACAO_INTEGRIDADE;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

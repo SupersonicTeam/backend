@@ -9,6 +9,7 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -232,6 +233,29 @@ public class GlobalExceptionHandler {
         List.of(ErrorDetail.of(ErrorCode.PAYLOAD_TOO_LARGE,
             "Arquivo excede o tamanho maximo permitido. Envie um arquivo menor.")));
     return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
+  }
+
+  /**
+   * Violação de restrição de integridade do banco (unique, FK, not-null) — ex.: criar nota com
+   * {@code (produtor, numero, serie, modelo)} já existente ou {@code chave_acesso} duplicada.
+   * Responde 409 com mensagem genérica; o detalhe técnico (nome da constraint, SQL) fica só no
+   * log, nunca é vazado ao cliente. Sem este handler a violação cairia no 500 genérico.
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ApiError> handleDataIntegrityViolation(
+      DataIntegrityViolationException ex, HttpServletRequest request) {
+    log.warn("Violacao de integridade em {} {}: {}",
+        request.getMethod(), request.getRequestURI(),
+        ex.getMostSpecificCause().getMessage());
+    String message =
+        "A operacao conflita com um registro existente ou viola uma restricao de integridade.";
+    ApiError body = ApiError.of(
+        HttpStatus.CONFLICT.value(),
+        HttpStatus.CONFLICT.getReasonPhrase(),
+        message,
+        request.getRequestURI(),
+        List.of(ErrorDetail.of(ErrorCode.VIOLACAO_INTEGRIDADE, message)));
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
   }
 
   /** Rede de segurança: qualquer exceção não mapeada vira 500 sem vazar detalhes. */
