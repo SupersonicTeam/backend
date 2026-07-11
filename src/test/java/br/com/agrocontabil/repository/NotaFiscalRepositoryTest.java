@@ -1,6 +1,7 @@
 package br.com.agrocontabil.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -254,6 +256,32 @@ class NotaFiscalRepositoryTest {
 
     assertThat(agregado.valorPropria()).isEqualByComparingTo("12500.00");
     assertThat(agregado.valorImportada()).isEqualByComparingTo("3200.00");
+  }
+
+  /**
+   * A unique {@code uk_nota_fiscal_chave_acesso} (changeset 0002, global e nunca removida) é a
+   * defesa contra chave de acesso duplicada — a rede de segurança do banco para a dedup de notas
+   * (inclusive importadas), complementando a checagem de aplicação em
+   * {@code ImportacaoNotaFiscalService.existsByChaveAcesso}. O schema de teste não replicava esta
+   * unique (o comentário afirmava, falsamente, que ela existia); este teste guarda a regra.
+   *
+   * <p>A unicidade de {@code (numero, serie, modelo)} por produtor NÃO é testada aqui: ela é um
+   * índice único <em>parcial</em> ({@code WHERE origem='PROPRIA'}, changeset 0009) que o H2 não
+   * suporta — regra deliberadamente mantida só no Liquibase.
+   */
+  @Test
+  @DisplayName("deve rejeitar nota com chave_acesso duplicada (unique global)")
+  void shouldRejectDuplicateChaveAcesso() {
+    String chave = "41260000000000000000000000000000000000000001";
+    NotaFiscal primeira = buildNotaFiscal();
+    primeira.setChaveAcesso(chave);
+    notaFiscalRepository.saveAndFlush(primeira);
+
+    // Outra nota (numero diferente, para isolar a chave) com a MESMA chave de acesso.
+    NotaFiscal outra = buildNotaFiscalForProdutor(produtor, 2L);
+    outra.setChaveAcesso(chave);
+    assertThatThrownBy(() -> notaFiscalRepository.saveAndFlush(outra))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   // -------------------------------------------------------------------------

@@ -74,8 +74,16 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     valor_total_credito_cbs     NUMERIC(15,2),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    -- chave_acesso e globalmente unica (changeset 0002, nunca removida). Espelha producao e
+    -- cobre a dedup de notas (inclusive importadas) por chave.
+    CONSTRAINT uk_nota_fiscal_chave_acesso UNIQUE (chave_acesso)
 );
+-- Nota: a unicidade de (produtor, numero, serie, modelo) restrita a origem='PROPRIA' e um
+-- INDICE UNICO PARCIAL no PostgreSQL (changeset 0009; a unique total de 0002 foi REMOVIDA la
+-- para permitir notas IMPORTADAS de terceiros com numero/serie colidentes). O H2 NAO suporta
+-- indice parcial (WHERE em CREATE INDEX), entao essa regra fica so no Liquibase e nao e
+-- replicada aqui — decisao consciente do projeto.
 
 CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     id              UUID           NOT NULL,

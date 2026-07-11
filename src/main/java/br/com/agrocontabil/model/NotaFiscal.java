@@ -44,6 +44,13 @@ import lombok.ToString;
  * futura com a SEFAZ.
  */
 @Entity
+// NAO declarar uniqueConstraints de (produtor, numero, serie, modelo) aqui: o changeset 0009
+// REMOVEU a unique total e a substituiu por um INDICE UNICO PARCIAL (WHERE origem='PROPRIA'),
+// porque notas IMPORTADAS de terceiros podem colidir em numero/serie (numero e do emitente).
+// Uma @UniqueConstraint global (todas as origens) via ddl-auto=create-drop rejeitaria importadas
+// validas nos testes e divergiria do schema real. A unicidade parcial vive no Liquibase (0009) e,
+// no perfil de teste, no schema-nota-fiscal-test.sql. A unique de chave_acesso vem do
+// @Column(unique=true) abaixo (essa e global e continua valida).
 @Table(name = "nota_fiscal")
 @Data
 @EqualsAndHashCode(exclude = {"itens", "produtor"})
