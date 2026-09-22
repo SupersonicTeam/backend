@@ -137,7 +137,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 393 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: CONTAGEM_PENDENTE testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -203,7 +203,7 @@ Epico do painel do Contador (frontend#28). Cobre o registro de guias fiscais (IC
 Ordem obrigatória #86 → #85 → #88, um PR por issue.
 
 - **#86 Simetria débito×crédito (PR 1):** o crédito (`CreditoTributarioService`) usava a alíquota fixa do yml enquanto o débito (`TributacaoService`) resolvia por UF em `aliquota_ibs_uf` — coincidiam só pelo seed uniforme. Novo `AliquotaIbsCbsResolver` (`@Component`, padrão do `ReducaoNcmResolver`) é o **único** ponto de resolução de alíquota IBS (por UF, RN002) e CBS, consumido pelos dois serviços; devolve `AliquotasVigentes` (parcelas estadual/municipal, CBS, origem TABELA_UF/FALLBACK_YML). Nota importada usa a UF do destinatário (= produtor, princípio do destino — EC 132 art. 156-A §1.º VII); `TributosProperties` passa a ser apenas fallback conservador (+ `credito.percentualAproveitamento`). Teste de simetria `creditoUsaAliquotaPorUfDivergenteDoYml` foi escrito vermelho antes da correção.
-- **#85 Vigência temporal das alíquotas (PR 2):** pendente — `data_inicio`/`data_fim` em `aliquota_ibs_uf` (PK composta) + tabela `aliquota_cbs`; seleção pela `dataEmissao` em BRT.
+- **#85 Vigência temporal das alíquotas (PR 2):** changeSet `0020-aliquota-vigencia.xml` — `aliquota_ibs_uf` ganha `data_inicio`/`data_fim` (NULL = aberta) com PK composta `(uf, data_inicio)` (`AliquotaIbsUfId`); as 27 linhas da 0013 migram via `defaultValueDate=2026-01-01` (0013 intacta). Nova tabela/entidade `AliquotaCbs` (`aliquota_cbs`, vigência 2026 = 0,0090) substitui o valor fixo do yml como fonte primária. `AliquotaIbsCbsResolver` seleciona a vigência pela `dataEmissao` em `America/Sao_Paulo` (`findVigente(uf, data)` / `findVigente(data)`, `ORDER BY data_inicio DESC` — sobreposição acidental → mais recente vence); data fora de vigência → fallback yml + WARN, sem lançar. `TributacaoService`/`CreditoTributarioService`/`ApuracaoService` sem diff (vigência entrou só no resolvedor; apuração soma valores persistidos). Espelho H2 em `schema-nota-fiscal-test.sql`.
 - **#88 Emitente real + limites de nNF/série (PR 3):** pendente — endereço/IE no `Produtor`, mapper sem placeholders, `cMunFG` do emitente, `@Max` em `numero`/`serie`, `zeroPad` lança em overflow.
 
 ### Onda 1 — Fundação de escalabilidade (concluída em 2026-09-22)
@@ -228,7 +228,8 @@ Cobertura ao fim da onda: **393 testes**, todos verdes (inclui os PRs da Onda 2 
   - Lock distribuído dos jobs (`ShedLock`) é a issue **#87** (Onda 5): hoje a coordenação é por instância.
 - **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico para teste). Substituir `MockSefazTransport` por transporte SOAP real + certificado **ICP-Brasil** em produção.
 - **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador — `POST`/`GET /api/contador/guias` (issue #74) aceitam `produtorId` explícito sem checagem de ownership até lá.
-- **Modelo:** `Produtor` sem endereço completo nem IE (placeholders no `NotaFiscalNfeMapper`); divisão IBS UF/Município hoje 50/50 (parametrização real pendente).
+- **Modelo:** `Produtor` sem endereço completo nem IE (placeholders no `NotaFiscalNfeMapper`) — resolvido na #88 (PR 3 da Onda 2).
+- **Alíquotas 2027–2033 (Onda 2, #85):** só a vigência de 2026 está semeada em `aliquota_ibs_uf`/`aliquota_cbs`. Quando RFB/CONFAZ/Comitê Gestor publicarem as alíquotas da transição (LC 214/2025, arts. 87–92), inserir vigências por **novo changeSet com `insert`** (fechando a anterior com `data_fim`); nunca `update` em linha existente. Parcela municipal de IBS continua por UF (não por município).
 - **Modelos pré-criados (consultoria AI — sprint não definida):** entidades `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback` e respectivos repositories existem no código mas **não têm controller nem service** — são scaffolding de feature futura. Não criar lógica sobre elas sem decisão explícita do Murillo.
 
 ## Roadmap pós-básico (não implementado)
