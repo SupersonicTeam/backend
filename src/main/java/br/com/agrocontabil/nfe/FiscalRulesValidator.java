@@ -1,5 +1,8 @@
 package br.com.agrocontabil.nfe;
 
+import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.model.EnderecoProdutor;
+import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -36,6 +39,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class FiscalRulesValidator {
 
+  /** UF convencional de destinatário no exterior (exportação) — layout NF-e. */
+  private static final String UF_EXTERIOR = "EX";
+
   /**
    * Valida a nota fiscal para emissão, agregando todas as violações encontradas.
    *
@@ -46,7 +52,7 @@ public class FiscalRulesValidator {
     List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations = new ArrayList<>();
 
     validarCamposDaNota(nota, violations);
-    validarEmitente(nota.getProdutor(), violations);
+    validarEmitente(nota, violations);
     validarDestinatario(nota, violations);
     validarItens(nota, violations);
 
@@ -83,8 +89,10 @@ public class FiscalRulesValidator {
   }
 
   private void validarEmitente(
-      Produtor produtor,
+      NotaFiscal nota,
       List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+
+    Produtor produtor = nota.getProdutor();
 
     if (produtor == null) {
       violations.add(
@@ -100,16 +108,74 @@ public class FiscalRulesValidator {
               "CPF/CNPJ do emitente e obrigatorio para emissao da NF-e"));
     }
 
-    // A Inscrição Estadual é obrigatória para o emitente no layout da NF-e.
-    // Nota: o campo IE não está persistido no Produtor neste sprint (débito técnico).
-    // O validador aceita IE nula/vazia e o mapper usa placeholder "ISENTO" para satisfazer
-    // o XSD — comportamento documentado e aceitável para homologação.
+    // A IE e obrigatoria para a NF-e modelo 55. Na NFA (produtor rural pessoa fisica), a ausencia
+    // e legitima e o mapper emite "ISENTO" — e justamente o caso de uso do documento (issue #18).
+    if (isBlank(produtor.getInscricaoEstadual())
+        && nota.getTipoDocumento() != TipoDocumentoFiscal.NFA) {
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "produtor.inscricaoEstadual",
+              "Inscricao Estadual do emitente e obrigatoria para emissao da NF-e modelo 55"));
+    }
 
     if (isBlank(produtor.getEstado())) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.estado",
               "UF do emitente e obrigatoria para determinar o codigo IBGE da UF na chave de acesso"));
+    }
+
+    validarEnderecoEmitente(produtor, violations);
+  }
+
+  /**
+   * Valida o endereço do emitente (issue #88): antes desta issue o mapper preenchia o grupo
+   * {@code <enderEmit>} com placeholders, e o XML — válido no XSD — seria rejeitado pela SEFAZ.
+   */
+  private void validarEnderecoEmitente(
+      Produtor produtor,
+      List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+
+    EnderecoProdutor endereco = produtor.getEndereco();
+    if (endereco == null) {
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "produtor.endereco",
+              "Endereco do emitente e obrigatorio para emissao da NF-e"));
+      return;
+    }
+
+    exigir(endereco.getLogradouro(), "produtor.endereco.logradouro", "Logradouro", violations);
+    exigir(endereco.getNumero(), "produtor.endereco.numero",
+        "Numero (use S/N quando nao houver)", violations);
+    exigir(endereco.getBairro(), "produtor.endereco.bairro", "Bairro", violations);
+    exigir(endereco.getMunicipio(), "produtor.endereco.municipio", "Municipio", violations);
+    exigir(endereco.getCep(), "produtor.endereco.cep", "CEP", violations);
+
+    if (isBlank(endereco.getCodigoMunicipioIbge())) {
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "produtor.endereco.codigoMunicipioIbge",
+              "Codigo IBGE do municipio do emitente e obrigatorio para o layout da NF-e"));
+    } else if (!isBlank(produtor.getEstado())
+        && !UfIbge.prefixoCoerente(endereco.getCodigoMunicipioIbge(), produtor.getEstado())) {
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "produtor.endereco.codigoMunicipioIbge",
+              "Codigo IBGE do municipio do emitente nao pertence a UF "
+                  + produtor.getEstado().toUpperCase()));
+    }
+  }
+
+  private void exigir(
+      String valor,
+      String campo,
+      String rotulo,
+      List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+    if (isBlank(valor)) {
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              campo, rotulo + " do emitente e obrigatorio para emissao da NF-e"));
     }
   }
 
@@ -150,6 +216,16 @@ public class FiscalRulesValidator {
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 "destinatarioEndereco.codigoMunicipioIbge",
                 "Codigo IBGE do municipio do destinatario e obrigatorio para o layout da NF-e"));
+      } else if (!isBlank(end.getUf())
+          && !UF_EXTERIOR.equalsIgnoreCase(end.getUf().trim())
+          && !UfIbge.prefixoCoerente(end.getCodigoMunicipioIbge(), end.getUf())) {
+        // UF "EX" identifica destinatario no exterior (exportacao): o codigo de municipio nao
+        // pertence a nenhuma UF brasileira, entao a coerencia de prefixo nao se aplica.
+        violations.add(
+            new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+                "destinatarioEndereco.codigoMunicipioIbge",
+                "Codigo IBGE do municipio do destinatario nao pertence a UF "
+                    + end.getUf().toUpperCase()));
       }
     }
   }
