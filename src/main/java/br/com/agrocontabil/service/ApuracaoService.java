@@ -148,6 +148,7 @@ public class ApuracaoService {
    * @param periodo período no formato {@code YYYY-MM}
    * @return quantidade de apurações fechadas
    */
+  @Transactional(timeoutString = "${app.apuracao.fechamento.transaction-timeout:600}")
   public int fecharPeriodo(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
     OffsetDateTime agora = OffsetDateTime.now(clock);
@@ -177,6 +178,7 @@ public class ApuracaoService {
    *
    * @return quantidade de apurações refechadas
    */
+  @Transactional(timeoutString = "${app.apuracao.fechamento.transaction-timeout:600}")
   public int refecharPeriodosReabertos() {
     YearMonth mesCorrente = YearMonth.now(clock);
     YearMonth limiteInferior = mesCorrente.minusMonths(MESES_MAX_REABERTURA);

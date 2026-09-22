@@ -44,7 +44,7 @@ public class GuiaFiscalStatusSyncJob {
    * {@code "0 0 1 * * *"}).
    */
   @Scheduled(cron = "${app.guia-fiscal.sync.cron:0 0 1 * * *}", zone = "America/Sao_Paulo")
-  @Transactional
+  @Transactional(timeoutString = "${app.guia-fiscal.sync.transaction-timeout:600}")
   public void sincronizarVencidas() {
     LocalDate hoje = LocalDate.now(clock);
     List<GuiaFiscal> vencidas =
