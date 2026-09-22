@@ -2,6 +2,7 @@ package br.com.agrocontabil.nfe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -10,6 +11,8 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.nfe.model.IbsCbs;
 import br.com.agrocontabil.nfe.model.IbsCbsTot;
 import br.com.agrocontabil.nfe.model.NFe;
+import br.com.agrocontabil.nfe.model.Emit;
+import br.com.agrocontabil.nfe.model.EnderEmit;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -105,6 +108,43 @@ class NotaFiscalNfeMapperTest {
         .as("dhSaiEnt nao pode conter o literal 'Z' — XSD exige offset numerico explicito")
         .doesNotContain("Z")
         .endsWith("+00:00");
+  }
+
+
+  @Test
+  @DisplayName("XML carrega IE e endereco reais do emitente, com cMunFG do emitente (#88)")
+  void xmlComEmitenteRealValidaXsdSemPlaceholders() throws Exception {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.setProdutor(ProdutorTestFixtures.produtorCompleto());
+
+    NFe nfe = mapper.toNfe(nota);
+
+    Emit emit = nfe.getInfNFe().getEmit();
+    EnderEmit end = emit.getEnderEmit();
+    assertThat(emit.getIe()).isEqualTo(ProdutorTestFixtures.INSCRICAO_ESTADUAL);
+    assertThat(end.getXLgr()).isEqualTo("Avenida Historiador Rubens de Mendonca");
+    assertThat(end.getNro()).isEqualTo("1894");
+    assertThat(end.getXBairro()).isEqualTo("Bosque da Saude");
+    assertThat(end.getCMun()).isEqualTo(ProdutorTestFixtures.CODIGO_MUNICIPIO_IBGE);
+    assertThat(end.getXMun()).isEqualTo("Cuiaba");
+    assertThat(end.getUf()).isEqualTo("MT");
+    assertThat(end.getCep()).isEqualTo("78050000");
+
+    // cMunFG e o municipio do FATO GERADOR = o do EMITENTE, nao o do destinatario (MG).
+    assertThat(nfe.getInfNFe().getIde().getCMunFG())
+        .isEqualTo(ProdutorTestFixtures.CODIGO_MUNICIPIO_IBGE);
+
+    // Nenhum placeholder pode sobrar no XML serializado.
+    String xml = new XmlGenerator().marshal(nfe);
+    assertThat(xml)
+        .doesNotContain("SEM ENDERECO")
+        .doesNotContain("MUNICIPIO NAO INFORMADO")
+        .doesNotContain("ISENTO")
+        .doesNotContain("99999")
+        .doesNotContain("0000000");
+
+    // E o XML continua valido contra o XSD oficial do layout 4.00.
+    new XsdValidator().validar(xml);
   }
 
   // -------------------------------------------------------------------------
