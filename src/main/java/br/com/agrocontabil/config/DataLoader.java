@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -38,6 +39,17 @@ public class DataLoader implements CommandLineRunner {
             .culturas(new String[]{"soja", "milho", "algodao"})
             .faturamentoAnual(new BigDecimal("2500000.00"))
             .estado("MT")
+            // Endereco e IE reais sao pre-condicao da emissao desde a issue #88: sem eles o
+            // seed geraria XML com placeholders, rejeitado pela SEFAZ. Cuiaba/MT (IBGE 5103403).
+            .inscricaoEstadual("1234567890")
+            .endereco(EnderecoProdutor.builder()
+                .logradouro("Avenida Historiador Rubens de Mendonca")
+                .numero("1894")
+                .bairro("Bosque da Saude")
+                .codigoMunicipioIbge("5103403")
+                .municipio("Cuiaba")
+                .cep("78050000")
+                .build())
             .email("joao.produtor@example.com")
             .telefone("(65) 99999-0001")
             .build();
