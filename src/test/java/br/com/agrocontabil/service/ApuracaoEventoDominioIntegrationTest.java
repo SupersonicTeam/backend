@@ -13,6 +13,7 @@ import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -79,13 +80,14 @@ class ApuracaoEventoDominioIntegrationTest {
   @DisplayName(
       "Cancelar NF-e autorizada de periodo ABERTO consolidado dispara evento e recalcula (issue #64)")
   void cancelarNotaEmPeriodoAbertoRecalculaApuracaoAutomaticamente() {
-    OffsetDateTime emissao = OffsetDateTime.of(2026, 7, 15, 10, 0, 0, 0, FUSO_BRASIL);
+    OffsetDateTime emissao = emissaoDentroDoPrazoDeCancelamento();
+    String periodo = periodoDe(emissao);
     NotaFiscal nota = salvarSaidaAutorizada(emissao, "150.00", "1350.00");
     transactionTemplate.executeWithoutResult(
-        status -> apuracaoService.consolidar("2026-07"));
+        status -> apuracaoService.consolidar(periodo));
 
     ApuracaoMensal antes =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07").orElseThrow();
+        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), periodo).orElseThrow();
     assertThat(antes.getDebitoIbs()).isEqualByComparingTo("150.00");
 
     // Cancela via o fluxo real SefazService -> evento -> listener (AFTER_COMMIT, sincrono).
@@ -93,7 +95,7 @@ class ApuracaoEventoDominioIntegrationTest {
         sefazService.cancelar(nota.getId(), "Erro na quantidade dos produtos vendidos"));
 
     ApuracaoMensal depois =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07").orElseThrow();
+        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), periodo).orElseThrow();
     // A nota cancelada some do debito (StatusNotaFiscal.CANCELADA nao conta mais).
     assertThat(depois.getDebitoIbs()).isEqualByComparingTo("0.00");
     assertThat(depois.getStatus()).isEqualTo(StatusApuracao.ABERTO);
@@ -102,19 +104,35 @@ class ApuracaoEventoDominioIntegrationTest {
   @Test
   @DisplayName("Cancelar NF-e de periodo FECHADO nao recalcula: saldo consolidado preservado (issue #64)")
   void cancelarNotaEmPeriodoFechadoNaoRecalcula() {
-    OffsetDateTime emissao = OffsetDateTime.of(2026, 7, 15, 10, 0, 0, 0, FUSO_BRASIL);
+    OffsetDateTime emissao = emissaoDentroDoPrazoDeCancelamento();
+    String periodo = periodoDe(emissao);
     NotaFiscal nota = salvarSaidaAutorizada(emissao, "150.00", "1350.00");
     transactionTemplate.executeWithoutResult(
-        status -> apuracaoService.fecharPeriodo("2026-07"));
+        status -> apuracaoService.fecharPeriodo(periodo));
 
     transactionTemplate.executeWithoutResult(status ->
         sefazService.cancelar(nota.getId(), "Erro na quantidade dos produtos vendidos"));
 
     ApuracaoMensal apuracao =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07").orElseThrow();
+        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), periodo).orElseThrow();
     assertThat(apuracao.getStatus()).isEqualTo(StatusApuracao.FECHADO);
     // Saldo do fechamento preservado — a correcao so ocorre via reabertura auditada (RN005).
     assertThat(apuracao.getDebitoIbs()).isEqualByComparingTo("150.00");
+  }
+
+  /**
+   * Data de emissão relativa ao "agora": a RN006 limita o cancelamento a 30 dias da emissão, então
+   * uma data fixa quebraria o teste assim que o calendário avançasse. O período da apuração deve
+   * sempre ser derivado desta mesma data (ver {@link #periodoDe}) para permanecer coerente na
+   * virada de mês.
+   */
+  private static OffsetDateTime emissaoDentroDoPrazoDeCancelamento() {
+    return OffsetDateTime.now(FUSO_BRASIL).minusDays(5);
+  }
+
+  /** Período {@code YYYY-MM} da apuração correspondente à data de emissão informada. */
+  private static String periodoDe(OffsetDateTime emissao) {
+    return YearMonth.from(emissao).toString();
   }
 
   /**
