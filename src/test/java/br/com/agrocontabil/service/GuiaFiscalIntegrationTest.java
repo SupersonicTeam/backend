@@ -14,6 +14,7 @@ import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
@@ -41,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
  * calendário fiscal do produtor.
  */
 @SpringBootTest
+@Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
@@ -51,14 +54,14 @@ class GuiaFiscalIntegrationTest {
   @Autowired private CalendarioFiscalService calendarioFiscalService;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private ProdutorRepository produtorRepository;
+  @Autowired private TestDatabaseCleaner cleaner;
 
   private Produtor produtor;
   private Produtor outroProdutor;
 
   @BeforeEach
   void setUp() {
-    guiaFiscalRepository.deleteAll();
-    produtorRepository.deleteAll();
+    cleaner.limparTudo();
 
     produtor = produtorRepository.save(
         Produtor.builder().nomeCompleto("Fazenda Boa Vista").cpfCnpj("98765432100")
