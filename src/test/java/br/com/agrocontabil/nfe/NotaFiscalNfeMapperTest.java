@@ -134,17 +134,17 @@ class NotaFiscalNfeMapperTest {
     assertThat(nfe.getInfNFe().getIde().getCMunFG())
         .isEqualTo(ProdutorTestFixtures.CODIGO_MUNICIPIO_IBGE);
 
-    // Nenhum placeholder pode sobrar no XML serializado.
+    // Nenhum placeholder textual pode sobrar no XML serializado. Sequencias numericas como
+    // "0000000" nao entram nesta lista: a chave de acesso legitimamente zero-pada o nNF.
     String xml = new XmlGenerator().marshal(nfe);
     assertThat(xml)
         .doesNotContain("SEM ENDERECO")
+        .doesNotContain("SEM LOGRADOURO")
         .doesNotContain("MUNICIPIO NAO INFORMADO")
-        .doesNotContain("ISENTO")
-        .doesNotContain("99999")
-        .doesNotContain("0000000");
-
-    // E o XML continua valido contra o XSD oficial do layout 4.00.
-    new XsdValidator().validar(xml);
+        .doesNotContain("ISENTO");
+    // A validacao contra o XSD 4.00 nao cabe aqui: o schema exige <Signature>, que so e
+    // adicionada adiante no pipeline. Ela e coberta ponta a ponta por
+    // GeracaoNotaFiscalServiceTest, que usa a mesma fixture de emitente.
   }
 
   // -------------------------------------------------------------------------
@@ -171,13 +171,8 @@ class NotaFiscalNfeMapperTest {
   }
 
   private NotaFiscal notaCom(NotaFiscalItem item) {
-    Produtor produtor =
-        Produtor.builder()
-            .id(UUID.randomUUID())
-            .nomeCompleto("Produtor Teste")
-            .cpfCnpj("12345678901")
-            .estado("SP")
-            .build();
+    // Emitente completo (issue #88): IE e endereco reais sao pre-condicao da emissao.
+    Produtor produtor = ProdutorTestFixtures.produtorCompleto();
     NotaFiscal nota =
         NotaFiscal.builder()
             .id(UUID.randomUUID())
@@ -191,6 +186,8 @@ class NotaFiscalNfeMapperTest {
             .destinatarioCpfCnpj("98765432100")
             .destinatarioEndereco(
                 EnderecoDestinatario.builder()
+                    .logradouro("Rua das Acacias")
+                    .numero("250")
                     .uf("MG")
                     .municipio("Uberaba")
                     .codigoMunicipioIbge("3170206")

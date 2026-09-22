@@ -1,5 +1,6 @@
 package br.com.agrocontabil.nfe;
 
+import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import java.util.List;
 import java.time.LocalDate;
@@ -67,6 +68,7 @@ public final class NfeImportTestFixtures {
    * O produtor que importa sera o destinatario — mas o XML em si e o do emitente.
    */
   public static String gerarNfeAssinada() {
+    // Emitente completo (issue #88): IE e endereco reais sao pre-condicao da emissao.
     Produtor emitente = Produtor.builder()
         .id(UUID.randomUUID())
         .nomeCompleto(EMITENTE_NOME)
@@ -74,6 +76,8 @@ public final class NfeImportTestFixtures {
         .tipoProdutor(TipoProdutor.PESSOA_JURIDICA)
         .regimeTributario(RegimeTributario.SIMPLES)
         .estado("PR")
+        .inscricaoEstadual(ProdutorTestFixtures.INSCRICAO_ESTADUAL)
+        .endereco(ProdutorTestFixtures.enderecoCuritibaPr())
         .build();
 
     NotaFiscalItem item = NotaFiscalItem.builder()

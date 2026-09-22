@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import java.util.List;
 import java.time.LocalDate;
@@ -280,6 +281,7 @@ class GeracaoNotaFiscalServiceTest {
    * Simula o que o DataLoader criaria em ambiente real.
    */
   private NotaFiscal buildNotaCompleta() {
+    // Emitente completo (issue #88): IE e endereco reais sao pre-condicao da emissao.
     Produtor produtor = Produtor.builder()
         .id(UUID.randomUUID())
         .nomeCompleto("JOAO DA SILVA AGRICULTOR")
@@ -287,6 +289,8 @@ class GeracaoNotaFiscalServiceTest {
         .tipoProdutor(TipoProdutor.PESSOA_FISICA)
         .regimeTributario(RegimeTributario.SIMPLES)
         .estado("PR")
+        .inscricaoEstadual(ProdutorTestFixtures.INSCRICAO_ESTADUAL)
+        .endereco(ProdutorTestFixtures.enderecoCuritibaPr())
         .build();
 
     NotaFiscalItem item = NotaFiscalItem.builder()

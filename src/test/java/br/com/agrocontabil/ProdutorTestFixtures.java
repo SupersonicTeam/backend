@@ -52,6 +52,21 @@ public final class ProdutorTestFixtures {
         .build();
   }
 
+  /**
+   * Endereço completo em Curitiba/PR (IBGE {@code 4106902}) — para os testes cuja operação já
+   * era modelada com emitente no PR, preservando o âmbito do CFOP.
+   */
+  public static EnderecoProdutor enderecoCuritibaPr() {
+    return EnderecoProdutor.builder()
+        .logradouro("Rua Barao do Rio Branco")
+        .numero("370")
+        .bairro("Centro")
+        .codigoMunicipioIbge("4106902")
+        .municipio("Curitiba")
+        .cep("80010180")
+        .build();
+  }
+
   /** Produtor sem IE — inválido para NF-e modelo 55, válido para NFA (emite {@code ISENTO}). */
   public static Produtor produtorSemIe() {
     Produtor produtor = produtorCompleto();
