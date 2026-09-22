@@ -137,7 +137,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 382 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 393 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -206,8 +206,26 @@ Ordem obrigatória #86 → #85 → #88, um PR por issue.
 - **#85 Vigência temporal das alíquotas (PR 2):** pendente — `data_inicio`/`data_fim` em `aliquota_ibs_uf` (PK composta) + tabela `aliquota_cbs`; seleção pela `dataEmissao` em BRT.
 - **#88 Emitente real + limites de nNF/série (PR 3):** pendente — endereço/IE no `Produtor`, mapper sem placeholders, `cMunFG` do emitente, `@Max` em `numero`/`serie`, `zeroPad` lança em overflow.
 
+### Onda 1 — Fundação de escalabilidade (concluída em 2026-09-22)
+
+Primeira das 7 ondas do plano de 2026-09-21 (21 issues abertas). Só config, migration de índice, schema de teste e contrato de erro — nenhuma regra de negócio alterada. Spec e tasks em `.specs/features/onda-1-fundacao/`.
+
+- **#90 FKs de produção no schema H2 (PR #104):** `schema-nota-fiscal-test.sql` ganhou as 4 FKs do Liquibase com as mesmas ações `ON DELETE` (`fk_nota_fiscal_produtor` RESTRICT, `fk_nota_fiscal_item_nota` CASCADE, `fk_apuracao_produtor`, `fk_guia_fiscal_produtor`), via `ALTER TABLE … ADD CONSTRAINT IF NOT EXISTS` — idempotente e válido tanto no `@DataJpaTest` (`ddl-auto=none`) quanto nos `@SpringBootTest` (`create-drop`, onde os `CREATE TABLE IF NOT EXISTS` viram no-op). Entidades **não** mudaram (seguem com `@ForeignKey(NO_CONSTRAINT)`). As FKs expuseram 6 classes de integração que só quebravam na suíte completa (H2 compartilhado entre contextos por `DB_CLOSE_DELAY=-1`): nasceu o `@TestComponent` **`TestDatabaseCleaner`** (`src/test/java/br/com/agrocontabil/support/`), que limpa filho→pai (validações → apurações → guias → notas → produtores) e é importado com `@Import` pelos 8 testes que apagam `produtores`. **Todo teste novo que apague produtores deve usá-lo.**
+- **#102 Índices compostos (PR #108):** changeSet **0019** com `nota_fiscal (produtor_id, status, data_emissao)`, `guias_fiscais (status, data_vencimento)` e `guias_fiscais (produtor_id, data_vencimento)`, replicados no H2 e travados por `SchemaTestIndicesTest` (verifica nome **e ordem** das colunas via `INFORMATION_SCHEMA`). Medido com `EXPLAIN (ANALYZE, BUFFERS)` em Postgres com 200k notas/100k guias: dashboard 4265→605 buffers (7×), job de guias 1620→92 (17,6×).
+- **#98 HikariCP (PR #109):** pool, `connection-timeout`, `max-lifetime`, `validation-timeout` e **`leak-detection-threshold` de 30s** no `application.yml` base, todos por env; `spring.transaction.default-timeout` de **30s** (não 10s — importação de lote, DANFE e fechamento mensal podem passar disso); `statement_timeout` do Postgres apenas em `application-dev/prod.yml` (**o driver H2 rejeita propriedades JDBC desconhecidas — nunca colocar no base**). `TransactionTimedOutException` já caía na rede de segurança do `GlobalExceptionHandler`; só ganhou teste.
+- **#101 Scheduler e shutdown (PR #110):** `spring.task.scheduling` com pool de 3 (uma thread por job) e prefixo `agro-sched-`, `await-termination` de 30s, `server.shutdown: graceful` + `spring.lifecycle.timeout-per-shutdown-phase`, e `stop_grace_period: 35s` no compose (o default de 10s do Docker mataria o processo antes da janela). `SchedulingConfig` continua sem bean próprio — o `ThreadPoolTaskScheduler` é autoconfigurado pelas propriedades. Verificado com SIGTERM real via `docker stop`, com requisição em voo respondendo 200.
+- **#89 (parte rápida — PR #111):** `GET /api/notas/{id}/xml` responde **409** (`XmlIndisponivelException` / `ErrorCode.XML_INDISPONIVEL`) quando a nota existe mas o XML não foi gerado, simétrico ao `/pdf`; 404 fica só para nota inexistente ou de outro produtor. **Mudança de contrato para o Angular.** A issue segue aberta para o preview de DANFE de rascunho.
+
+Cobertura ao fim da onda: **393 testes**, todos verdes (inclui os PRs da Onda 2 ja mergeados em paralelo).
+
 ### Débitos técnicos abertos
 
+- **Onda 1 — pendências deixadas conscientemente:**
+  - `nota_fiscal_validacao.nota_fiscal_id` **não tem FK** — o changeSet 0006 não define nenhuma em produção; replicar no teste divergiria do schema real. Criar a FK é decisão em aberto.
+  - `idx_guia_fiscal_produtor_vencimento` (0019) **só é usado com `LIMIT`**: na listagem completa o planner prefere o índice antigo + sort. Ele entrega valor (55× menos I/O) quando a **#103** (paginação das guias) for implementada.
+  - `idx_nota_fiscal_produtor_id` (0002) ficou redundante para consultas por produtor; remover exigiria outro changeSet e outra decisão.
+  - O leak-detection vai emitir `Connection leak detection triggered` para os vazamentos das issues **#97/#99** (Onda 3) — é o efeito pretendido, não regressão.
+  - Lock distribuído dos jobs (`ShedLock`) é a issue **#87** (Onda 5): hoje a coordenação é por instância.
 - **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico para teste). Substituir `MockSefazTransport` por transporte SOAP real + certificado **ICP-Brasil** em produção.
 - **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador — `POST`/`GET /api/contador/guias` (issue #74) aceitam `produtorId` explícito sem checagem de ownership até lá.
 - **Modelo:** `Produtor` sem endereço completo nem IE (placeholders no `NotaFiscalNfeMapper`); divisão IBS UF/Município hoje 50/50 (parametrização real pendente).
