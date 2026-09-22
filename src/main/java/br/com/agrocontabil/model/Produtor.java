@@ -1,6 +1,7 @@
 package br.com.agrocontabil.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -60,6 +61,24 @@ public class Produtor {
 
   @Column(name = "estado", length = 2)
   private String estado;
+
+  /**
+   * Endereço completo do emitente (Onda 2, issue #88) — alimenta {@code <enderEmit>} e o
+   * {@code cMunFG} do XML da NF-e. Opcional no cadastro; obrigatório na emissão de NF-e/NFA
+   * (validado pelo {@code FiscalRulesValidator}). A UF fica em {@link #estado}, fora do embutido.
+   */
+  @Embedded
+  private EnderecoProdutor endereco;
+
+  /**
+   * Inscrição Estadual do emitente — {@code <emit><IE>} (Onda 2, issue #88).
+   *
+   * <p>Obrigatória para NF-e modelo 55; numa NFA de produtor rural pessoa física sem IE, o mapper
+   * emite {@code ISENTO}. Não há dígito verificador nacional padronizado (cada UF tem o seu
+   * algoritmo), por isso só o formato é validado — débito registrado no CLAUDE.md.
+   */
+  @Column(name = "inscricao_estadual", length = 14)
+  private String inscricaoEstadual;
 
   @Column(name = "email")
   private String email;
