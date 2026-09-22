@@ -28,9 +28,11 @@ import lombok.NoArgsConstructor;
  * alíquotas mudando a cada ano (LC 214/2025, arts. 87–92). Cada linha vale de {@code dataInicio}
  * (inclusive) até {@code dataFim} (inclusive; {@code null} = vigência aberta). A chave primária é
  * composta {@code (uf, dataInicio)} — ver {@link AliquotaIbsUfId} — e o
- * {@code AliquotaIbsCbsResolver} seleciona a linha vigente pela data de emissão da nota. Nova
- * vigência = novo changeset com {@code insert} (fechando a anterior com {@code dataFim}); nunca
- * {@code update} em linha existente.
+ * {@code AliquotaIbsCbsResolver} seleciona a linha vigente pela data de emissão da nota.
+ *
+ * <p><strong>Como cadastrar uma nova vigência:</strong> novo changeset com {@code insert} da linha
+ * nova e {@code update} da anterior <em>somente</em> para preencher {@code dataFim}. A coluna de
+ * alíquota de uma linha existente nunca é alterada — notas já calculadas dependem dela.
  *
  * <p>Populada por seed curado via Liquibase (changesets {@code 0013} e {@code 0019}).
  *

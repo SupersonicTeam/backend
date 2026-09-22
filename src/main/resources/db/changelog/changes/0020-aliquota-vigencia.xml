@@ -33,9 +33,15 @@
 
          PREMISSA/INCERTEZA: apenas a vigencia de 2026 e semeada. Os
          valores de 2027 em diante dependem de atos da RFB/CONFAZ/
-         Comite Gestor ainda nao publicados — entram por NOVO changeset
-         com <insert> (nunca <update> em linha existente), fechando a
-         vigencia anterior com data_fim.
+         Comite Gestor ainda nao publicados.
+
+         COMO CADASTRAR UMA NOVA VIGENCIA (regra unica do projeto):
+           1. novo changeset com <insert> da linha nova (data_inicio =
+              primeiro dia da nova vigencia, data_fim = NULL);
+           2. no MESMO changeset, <update> da vigencia anterior SOMENTE
+              para preencher data_fim (dia anterior ao novo inicio).
+         Nunca alterar a coluna aliquota_* de uma linha existente: notas
+         ja calculadas dependem do valor vigente a epoca.
 
          Tipos portaveis (H2 e PostgreSQL). O perfil de teste desabilita
          o Liquibase; o mesmo schema/seed esta replicado em
@@ -43,6 +49,19 @@
          ================================================================ -->
 
     <changeSet id="0020-aliquota-ibs-uf-add-vigencia" author="supersonic-team">
+        <!-- O dropPrimaryKey abaixo assume o nome que o Postgres da a uma PK
+             criada sem nome (<tabela>_pkey). Num banco que nao nasceu deste
+             changelog o nome pode divergir: a precondicao para a migracao com
+             mensagem acionavel em vez do erro cru do Postgres. -->
+        <preConditions onFail="HALT"
+                       onFailMessage="A PK de aliquota_ibs_uf nao se chama 'aliquota_ibs_uf_pkey' neste banco (ou o banco nao e PostgreSQL). Ajuste o constraintName do changeSet 0020 antes de migrar.">
+            <dbms type="postgresql"/>
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM pg_constraint
+                WHERE conname = 'aliquota_ibs_uf_pkey' AND contype = 'p'
+            </sqlCheck>
+        </preConditions>
+
         <comment>
             Adiciona vigencia (data_inicio/data_fim) a aliquota_ibs_uf e troca a
             PK de (uf) para (uf, data_inicio). Linhas existentes migram para a
@@ -57,6 +76,12 @@
                 <constraints nullable="true"/>
             </column>
         </addColumn>
+
+        <!-- O default existe apenas para o backfill atomico das 27 linhas da
+             0013 (PG 11+); removido em seguida para que producao e o espelho H2
+             (que nao tem default) se comportem igual num INSERT sem data_inicio. -->
+        <dropDefaultValue tableName="aliquota_ibs_uf" columnName="data_inicio"
+                          columnDataType="DATE"/>
 
         <!-- A PK original foi criada sem nome no 0013; o Postgres a nomeia
              <tabela>_pkey. Informamos o nome explicitamente: sem ele o Liquibase
@@ -74,6 +99,19 @@
         </sql>
 
         <rollback>
+            <!-- O rollback recria a PK (uf), que so e valida enquanto houver UMA
+                 vigencia por UF. Com duas ou mais, o addPrimaryKey falharia DEPOIS
+                 de a PK composta e o CHECK ja terem sido derrubados, deixando a
+                 tabela sem chave. Abortamos antes de qualquer operacao destrutiva:
+                 nesse cenario a via de volta e restore de backup, nao rollback. -->
+            <sql splitStatements="false">
+                DO $$
+                BEGIN
+                  IF EXISTS (SELECT uf FROM aliquota_ibs_uf GROUP BY uf HAVING COUNT(*) > 1) THEN
+                    RAISE EXCEPTION 'Rollback do changeSet 0020 abortado: existe mais de uma vigencia por UF em aliquota_ibs_uf. Restaure um backup anterior a migracao.';
+                  END IF;
+                END $$;
+            </sql>
             <sql>ALTER TABLE aliquota_ibs_uf DROP CONSTRAINT ck_aliquota_ibs_uf_vigencia</sql>
             <dropPrimaryKey tableName="aliquota_ibs_uf" constraintName="pk_aliquota_ibs_uf"/>
             <addPrimaryKey tableName="aliquota_ibs_uf" columnNames="uf"

@@ -92,10 +92,12 @@ class AliquotaVigenciaIntegrationTest {
 
   @AfterEach
   void tearDown() {
+    // A vigencia sai primeiro: o H2 em memoria sobrevive ao @DirtiesContext
+    // (DB_CLOSE_DELAY=-1), entao uma falha nos deleteAll nao pode deixa-la para tras.
+    aliquotaIbsUfRepository.deleteById(new AliquotaIbsUfId("MT", INICIO_2027));
     SecurityContextHolder.clearContext();
     notaFiscalRepository.deleteAll();
     produtorRepository.deleteAll();
-    aliquotaIbsUfRepository.deleteById(new AliquotaIbsUfId("MT", INICIO_2027));
   }
 
   @Test
