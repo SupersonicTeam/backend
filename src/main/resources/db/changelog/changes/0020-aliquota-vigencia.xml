@@ -58,9 +58,11 @@
             </column>
         </addColumn>
 
-        <!-- PK original criada sem nome no 0013: o Liquibase resolve o nome
-             pelo catalogo (Postgres: aliquota_ibs_uf_pkey). -->
-        <dropPrimaryKey tableName="aliquota_ibs_uf"/>
+        <!-- A PK original foi criada sem nome no 0013; o Postgres a nomeia
+             <tabela>_pkey. Informamos o nome explicitamente: sem ele o Liquibase
+             emite um bloco PL/pgSQL que introspecta o INFORMATION_SCHEMA e
+             depende do schema default resolvido em runtime. -->
+        <dropPrimaryKey tableName="aliquota_ibs_uf" constraintName="aliquota_ibs_uf_pkey"/>
         <addPrimaryKey tableName="aliquota_ibs_uf"
                        columnNames="uf, data_inicio"
                        constraintName="pk_aliquota_ibs_uf"/>
@@ -74,7 +76,8 @@
         <rollback>
             <sql>ALTER TABLE aliquota_ibs_uf DROP CONSTRAINT ck_aliquota_ibs_uf_vigencia</sql>
             <dropPrimaryKey tableName="aliquota_ibs_uf" constraintName="pk_aliquota_ibs_uf"/>
-            <addPrimaryKey tableName="aliquota_ibs_uf" columnNames="uf"/>
+            <addPrimaryKey tableName="aliquota_ibs_uf" columnNames="uf"
+                           constraintName="aliquota_ibs_uf_pkey"/>
             <dropColumn tableName="aliquota_ibs_uf" columnName="data_fim"/>
             <dropColumn tableName="aliquota_ibs_uf" columnName="data_inicio"/>
         </rollback>
