@@ -12,6 +12,33 @@ spring:
         max-page-size: 100
         default-page-size: 20
 
+  # Pool de conexoes JDBC (issue #98). Todos os valores sao parametrizaveis por env — ver
+  # .env.example. Nenhuma propriedade especifica do PostgreSQL entra aqui: o driver H2 usado nos
+  # testes rejeita propriedades JDBC desconhecidas. O statement_timeout vive em
+  # application-dev.yml / application-prod.yml.
+  datasource:
+    hikari:
+      pool-name: agrocontabil-pool
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      # Quanto uma thread espera por uma conexao livre antes de falhar rapido, em vez de
+      # enfileirar requisicoes indefinidamente.
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:5000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}          # 10 min
+      # Aposenta a conexao antes de qualquer timeout de infraestrutura (firewall/pgbouncer).
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}         # 30 min
+      # Loga (WARN, com stack trace) a conexao que ficou fora do pool tempo demais — e o que
+      # torna visivel um vazamento de conexao. Precisa ser MENOR que max-lifetime, senao o
+      # Hikari desativa a deteccao. Valores abaixo de 2000 ms sao ignorados.
+      leak-detection-threshold: ${DB_LEAK_DETECTION_MS:30000}   # 30 s
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:3000}
+
+  # Teto para qualquer transacao sem timeout explicito: impede que uma transacao presa segure
+  # uma conexao do pool indefinidamente. Generoso o bastante para importacao de lote de XML,
+  # geracao de DANFE e fechamento mensal.
+  transaction:
+    default-timeout: ${DB_TX_TIMEOUT:30s}
+
   # Upload de XML para importacao de notas (issue #19). Limites conservadores: um XML de
   # NF-e assinado costuma ter dezenas de KB; permitimos lotes de varios arquivos.
   servlet:

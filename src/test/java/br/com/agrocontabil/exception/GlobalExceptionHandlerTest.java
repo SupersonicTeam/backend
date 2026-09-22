@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.transaction.TransactionTimedOutException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
@@ -59,5 +60,30 @@ class GlobalExceptionHandlerTest {
     // Nunca vaza o nome da constraint / SQL ao cliente — detalhe tecnico fica so no log.
     assertThat(body.errors().get(0).message()).doesNotContain("uk_");
     assertThat(body.message()).doesNotContain("constraint");
+  }
+
+  @Test
+  @DisplayName("Timeout de transacao responde 500 com envelope errors[] e mensagem generica")
+  void timeoutDeTransacaoResponde500ComEnvelope() {
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/notas/importar");
+
+    // spring.transaction.default-timeout (issue #98) aborta a transacao presa; a excecao nao tem
+    // handler proprio e deve cair na rede de seguranca, nunca num 500 sem corpo.
+    ResponseEntity<ApiError> response = handler.handleUnexpected(
+        new TransactionTimedOutException(
+            "Transaction timed out: deadline was Tue Sep 22 10:00:00 BRT 2026"),
+        request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+    ApiError body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.status()).isEqualTo(500);
+    assertThat(body.path()).isEqualTo("/api/notas/importar");
+    assertThat(body.errors()).hasSize(1);
+    assertThat(body.errors().get(0).code()).isEqualTo("INTERNAL_ERROR");
+    // Detalhe tecnico (deadline, nome da excecao) fica so no log.
+    assertThat(body.message()).doesNotContain("deadline");
+    assertThat(body.errors().get(0).message()).doesNotContain("Transaction timed out");
   }
 }

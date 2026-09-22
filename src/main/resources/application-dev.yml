@@ -5,6 +5,12 @@ spring:
     url: jdbc:postgresql://localhost:5432/${DB_NAME:agrocontabil}
     username: ${DB_USER:agrocontabil}
     password: ${DB_PASSWORD:agrocontabil}
+    hikari:
+      # statement_timeout do PostgreSQL (issue #98): aborta no servidor a query que passar do
+      # limite, complementando o timeout de transacao do Spring. Fica fora do application.yml
+      # base porque o driver H2 usado nos testes rejeita propriedades JDBC desconhecidas.
+      data-source-properties:
+        options: -c statement_timeout=${DB_STATEMENT_TIMEOUT_MS:30000}
 
   docker:
     compose:
