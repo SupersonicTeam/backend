@@ -70,7 +70,7 @@ class GeracaoNotaFiscalServiceTest {
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
     tributacaoService = new TributacaoService(
-        props, new ReducaoNcmResolver(ncmRepo), aliquotaRepo);
+        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, props));
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();

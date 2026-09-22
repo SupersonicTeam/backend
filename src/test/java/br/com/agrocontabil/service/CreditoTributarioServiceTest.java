@@ -230,9 +230,8 @@ class CreditoTributarioServiceTest {
             .aliquotaMunicipal(new BigDecimal("0.0020"))
             .build()));
     TributacaoService debito = new TributacaoService(
-        tributosProperties,
         new ReducaoNcmResolver(ncmReferenciaRepository),
-        aliquotaIbsUfRepository);
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
 
     NotaFiscal nota = notaImportada(item("6101", "1000.00"));
     nota.setProdutor(Produtor.builder().estado("MT").build());
