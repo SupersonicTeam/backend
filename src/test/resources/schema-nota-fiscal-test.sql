@@ -271,28 +271,55 @@ MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (
     ('07020000', 'Tomates frescos ou refrigerados', 60);
 
 -- ============================================================================
--- Aliquota de IBS por UF — Sprint 4 issue #31 (migration 0013).
--- Parcela estadual + municipal por UF. Seed de referencia ano-teste replicado
--- do changeset 0013 (Liquibase desabilitado no perfil de teste).
--- Manter sincronizado com 0013-aliquota-ibs-uf.xml.
+-- Aliquota de IBS por UF — Sprint 4 issue #31 (migration 0013) + vigencia
+-- temporal — Onda 2 issue #85 (migration 0019).
+-- Parcela estadual + municipal por UF, com data_inicio/data_fim (NULL = aberta)
+-- e PK composta (uf, data_inicio). Seed de referencia ano-teste replicado dos
+-- changesets 0013 e 0019 (Liquibase desabilitado no perfil de teste).
+-- Manter sincronizado com 0013-aliquota-ibs-uf.xml e 0019-aliquota-vigencia.xml.
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS aliquota_ibs_uf (
     uf                 VARCHAR(2)    NOT NULL,
+    data_inicio        DATE          NOT NULL,
+    data_fim           DATE,
     aliquota_estadual  NUMERIC(7,4)  NOT NULL,
     aliquota_municipal NUMERIC(7,4)  NOT NULL,
-    PRIMARY KEY (uf)
+    CONSTRAINT pk_aliquota_ibs_uf PRIMARY KEY (uf, data_inicio),
+    CONSTRAINT ck_aliquota_ibs_uf_vigencia CHECK (data_fim IS NULL OR data_fim >= data_inicio)
 );
 
-MERGE INTO aliquota_ibs_uf (uf, aliquota_estadual, aliquota_municipal) KEY (uf) VALUES
-    ('AC', 0.0005, 0.0005), ('AL', 0.0005, 0.0005), ('AM', 0.0005, 0.0005),
-    ('AP', 0.0005, 0.0005), ('BA', 0.0005, 0.0005), ('CE', 0.0005, 0.0005),
-    ('DF', 0.0005, 0.0005), ('ES', 0.0005, 0.0005), ('GO', 0.0005, 0.0005),
-    ('MA', 0.0005, 0.0005), ('MG', 0.0005, 0.0005), ('MS', 0.0005, 0.0005),
-    ('MT', 0.0005, 0.0005), ('PA', 0.0005, 0.0005), ('PB', 0.0005, 0.0005),
-    ('PE', 0.0005, 0.0005), ('PI', 0.0005, 0.0005), ('PR', 0.0005, 0.0005),
-    ('RJ', 0.0005, 0.0005), ('RN', 0.0005, 0.0005), ('RO', 0.0005, 0.0005),
-    ('RR', 0.0005, 0.0005), ('RS', 0.0005, 0.0005), ('SC', 0.0005, 0.0005),
-    ('SE', 0.0005, 0.0005), ('SP', 0.0005, 0.0005), ('TO', 0.0005, 0.0005);
+MERGE INTO aliquota_ibs_uf (uf, data_inicio, data_fim, aliquota_estadual, aliquota_municipal)
+    KEY (uf, data_inicio) VALUES
+    ('AC', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('AL', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('AM', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('AP', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('BA', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('CE', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('DF', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('ES', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('GO', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('MA', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('MG', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('MS', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('MT', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('PA', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('PB', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('PE', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('PI', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('PR', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('RJ', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('RN', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('RO', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('RR', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('RS', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('SC', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('SE', DATE '2026-01-01', NULL, 0.0005, 0.0005), ('SP', DATE '2026-01-01', NULL, 0.0005, 0.0005),
+    ('TO', DATE '2026-01-01', NULL, 0.0005, 0.0005);
+
+-- ============================================================================
+-- Aliquota de CBS por vigencia — Onda 2 issue #85 (migration 0019).
+-- Vigencia aberta de 2026 (0,90%, ano-teste). Manter sincronizado com
+-- 0019-aliquota-vigencia.xml.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS aliquota_cbs (
+    data_inicio DATE         NOT NULL,
+    data_fim    DATE,
+    aliquota    NUMERIC(7,4) NOT NULL,
+    CONSTRAINT pk_aliquota_cbs PRIMARY KEY (data_inicio),
+    CONSTRAINT ck_aliquota_cbs_vigencia CHECK (data_fim IS NULL OR data_fim >= data_inicio)
+);
+
+MERGE INTO aliquota_cbs (data_inicio, data_fim, aliquota) KEY (data_inicio) VALUES
+    (DATE '2026-01-01', NULL, 0.0090);
 
 MERGE INTO cfop_referencia (codigo, descricao, tipo_operacao, ambito, aplicavel_produtor_rural) KEY (codigo) VALUES
     ('5101', 'Venda de producao do estabelecimento (operacao interna)', 'SAIDA', 'INTERNO', TRUE),
