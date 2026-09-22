@@ -106,6 +106,24 @@ class FiscalRulesValidatorTest {
     assertThat(violacoesDe(nota)).contains("destinatarioEndereco.codigoMunicipioIbge");
   }
 
+  @Test
+  @DisplayName("numero acima de 999.999.999 e rejeitado na emissao (defesa em profundidade)")
+  void rejeitaNumeroAcimaDoLimite() {
+    NotaFiscal nota = notaValida();
+    nota.setNumero(1_000_000_000L);
+
+    assertThat(violacoesDe(nota)).contains("numero");
+  }
+
+  @Test
+  @DisplayName("serie acima de 999 e rejeitada na emissao")
+  void rejeitaSerieAcimaDoLimite() {
+    NotaFiscal nota = notaValida();
+    nota.setSerie(1000);
+
+    assertThat(violacoesDe(nota)).contains("serie");
+  }
+
   // ---------------------------------------------------------------------------------------
 
   /** Campos das violações do 422; falha o teste se a validação passar. */

@@ -42,6 +42,12 @@ public class FiscalRulesValidator {
   /** UF convencional de destinatário no exterior (exportação) — layout NF-e. */
   private static final String UF_EXTERIOR = "EX";
 
+  /** Maior nNF representavel nos 9 digitos do layout e da chave de acesso (issue #88). */
+  private static final long NUMERO_MAXIMO = 999_999_999L;
+
+  /** Maior serie representavel nos 3 digitos do layout e da chave de acesso (issue #88). */
+  private static final int SERIE_MAXIMA = 999;
+
   /**
    * Valida a nota fiscal para emissão, agregando todas as violações encontradas.
    *
@@ -79,6 +85,20 @@ public class FiscalRulesValidator {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "numero", "Numero da NF-e deve ser maior que zero"));
+    } else if (nota.getNumero() > NUMERO_MAXIMO) {
+      // Defesa em profundidade: o DTO ja barra com 400, mas notas importadas/legadas nao passam
+      // pelo Bean Validation. Acima deste limite o nNF nao cabe nos 9 digitos da chave.
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "numero", "Numero da NF-e deve ser no maximo " + NUMERO_MAXIMO
+                  + " (9 digitos no layout e na chave de acesso)"));
+    }
+
+    if (nota.getSerie() != null && nota.getSerie() > SERIE_MAXIMA) {
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "serie", "Serie da NF-e deve ser no maximo " + SERIE_MAXIMA
+                  + " (3 digitos no layout e na chave de acesso)"));
     }
 
     if (nota.getDataEmissao() == null) {
