@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0020-aliquota-vigencia.xml
+         Onda 2 — issue #85: aliquotas de IBS/CBS com vigencia temporal
+         (transicao 2026-2033 da reforma tributaria — LC 214/2025,
+         arts. 87-92 e regime de transicao).
+
+         Antes, aliquota_ibs_uf (changeset 0013) tinha so (uf, estadual,
+         municipal) e a CBS era um valor fixo em application.yml. Sem
+         vigencia, apurar/reemitir uma nota fora de 2026 aplica aliquota
+         errada. Duas mudancas de schema:
+
+           1. aliquota_ibs_uf ganha data_inicio (NOT NULL) e data_fim
+              (NULL = vigencia aberta). A PK passa de (uf) para
+              (uf, data_inicio). As 27 linhas existentes recebem
+              data_inicio = 2026-01-01 e data_fim = NULL via default —
+              nenhuma linha e reinserida; o changeset 0013 fica intacto.
+           2. nova tabela aliquota_cbs (data_inicio PK, data_fim,
+              aliquota) com a vigencia de 2026 (0,0090), substituindo o
+              valor fixo do yml, que passa a ser apenas fallback.
+
+         O AliquotaIbsCbsResolver (issue #86) seleciona a linha vigente
+         pela data de emissao da nota (America/Sao_Paulo):
+           data_inicio <= data AND (data_fim IS NULL OR data_fim >= data)
+           ORDER BY data_inicio DESC  (sobreposicao acidental -> a mais
+           recente vence; a PK impede dois inicios iguais).
+
+         PREMISSA/INCERTEZA: apenas a vigencia de 2026 e semeada. Os
+         valores de 2027 em diante dependem de atos da RFB/CONFAZ/
+         Comite Gestor ainda nao publicados.
+
+         COMO CADASTRAR UMA NOVA VIGENCIA (regra unica do projeto):
+           1. novo changeset com <insert> da linha nova (data_inicio =
+              primeiro dia da nova vigencia, data_fim = NULL);
+           2. no MESMO changeset, <update> da vigencia anterior SOMENTE
+              para preencher data_fim (dia anterior ao novo inicio).
+         Nunca alterar a coluna aliquota_* de uma linha existente: notas
+         ja calculadas dependem do valor vigente a epoca.
+
+         Tipos portaveis (H2 e PostgreSQL). O perfil de teste desabilita
+         o Liquibase; o mesmo schema/seed esta replicado em
+         schema-nota-fiscal-test.sql — manter sincronizado.
+         ================================================================ -->
+
+    <changeSet id="0020-aliquota-ibs-uf-add-vigencia" author="supersonic-team">
+        <!-- O dropPrimaryKey abaixo assume o nome que o Postgres da a uma PK
+             criada sem nome (<tabela>_pkey). Num banco que nao nasceu deste
+             changelog o nome pode divergir: a precondicao para a migracao com
+             mensagem acionavel em vez do erro cru do Postgres. -->
+        <preConditions onFail="HALT"
+                       onFailMessage="A PK de aliquota_ibs_uf nao se chama 'aliquota_ibs_uf_pkey' neste banco (ou o banco nao e PostgreSQL). Ajuste o constraintName do changeSet 0020 antes de migrar.">
+            <dbms type="postgresql"/>
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM pg_constraint
+                WHERE conname = 'aliquota_ibs_uf_pkey' AND contype = 'p'
+            </sqlCheck>
+        </preConditions>
+
+        <comment>
+            Adiciona vigencia (data_inicio/data_fim) a aliquota_ibs_uf e troca a
+            PK de (uf) para (uf, data_inicio). Linhas existentes migram para a
+            vigencia aberta iniciada em 2026-01-01.
+        </comment>
+
+        <addColumn tableName="aliquota_ibs_uf">
+            <column name="data_inicio" type="DATE" defaultValueDate="2026-01-01">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_fim" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- O default existe apenas para o backfill atomico das 27 linhas da
+             0013 (PG 11+); removido em seguida para que producao e o espelho H2
+             (que nao tem default) se comportem igual num INSERT sem data_inicio. -->
+        <dropDefaultValue tableName="aliquota_ibs_uf" columnName="data_inicio"
+                          columnDataType="DATE"/>
+
+        <!-- A PK original foi criada sem nome no 0013; o Postgres a nomeia
+             <tabela>_pkey. Informamos o nome explicitamente: sem ele o Liquibase
+             emite um bloco PL/pgSQL que introspecta o INFORMATION_SCHEMA e
+             depende do schema default resolvido em runtime. -->
+        <dropPrimaryKey tableName="aliquota_ibs_uf" constraintName="aliquota_ibs_uf_pkey"/>
+        <addPrimaryKey tableName="aliquota_ibs_uf"
+                       columnNames="uf, data_inicio"
+                       constraintName="pk_aliquota_ibs_uf"/>
+
+        <sql>
+            ALTER TABLE aliquota_ibs_uf
+                ADD CONSTRAINT ck_aliquota_ibs_uf_vigencia
+                CHECK (data_fim IS NULL OR data_fim >= data_inicio)
+        </sql>
+
+        <rollback>
+            <!-- O rollback recria a PK (uf), que so e valida enquanto houver UMA
+                 vigencia por UF. Com duas ou mais, o addPrimaryKey falharia DEPOIS
+                 de a PK composta e o CHECK ja terem sido derrubados, deixando a
+                 tabela sem chave. Abortamos antes de qualquer operacao destrutiva:
+                 nesse cenario a via de volta e restore de backup, nao rollback. -->
+            <sql splitStatements="false">
+                DO $$
+                BEGIN
+                  IF EXISTS (SELECT uf FROM aliquota_ibs_uf GROUP BY uf HAVING COUNT(*) > 1) THEN
+                    RAISE EXCEPTION 'Rollback do changeSet 0020 abortado: existe mais de uma vigencia por UF em aliquota_ibs_uf. Restaure um backup anterior a migracao.';
+                  END IF;
+                END $$;
+            </sql>
+            <sql>ALTER TABLE aliquota_ibs_uf DROP CONSTRAINT ck_aliquota_ibs_uf_vigencia</sql>
+            <dropPrimaryKey tableName="aliquota_ibs_uf" constraintName="pk_aliquota_ibs_uf"/>
+            <addPrimaryKey tableName="aliquota_ibs_uf" columnNames="uf"
+                           constraintName="aliquota_ibs_uf_pkey"/>
+            <dropColumn tableName="aliquota_ibs_uf" columnName="data_fim"/>
+            <dropColumn tableName="aliquota_ibs_uf" columnName="data_inicio"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0020-create-aliquota-cbs" author="supersonic-team">
+        <comment>
+            Cria a tabela de referencia aliquota_cbs (aliquota federal de CBS por
+            vigencia) e semeia a vigencia aberta de 2026 (0,90%, ano-teste).
+        </comment>
+
+        <createTable tableName="aliquota_cbs">
+            <column name="data_inicio" type="DATE">
+                <constraints primaryKey="true" primaryKeyName="pk_aliquota_cbs" nullable="false"/>
+            </column>
+            <column name="data_fim" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="aliquota" type="NUMERIC(7,4)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>
+            ALTER TABLE aliquota_cbs
+                ADD CONSTRAINT ck_aliquota_cbs_vigencia
+                CHECK (data_fim IS NULL OR data_fim >= data_inicio)
+        </sql>
+
+        <insert tableName="aliquota_cbs">
+            <column name="data_inicio" valueDate="2026-01-01"/>
+            <column name="data_fim"/>
+            <column name="aliquota" valueNumeric="0.0090"/>
+        </insert>
+
+        <rollback>
+            <dropTable tableName="aliquota_cbs"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

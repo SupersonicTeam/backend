@@ -1,5 +1,10 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.repository.AliquotaCbsRepository;
+import java.util.List;
+import java.time.LocalDate;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
@@ -37,6 +42,7 @@ class CreditoTributarioServiceTest {
   private TributosProperties tributosProperties;
   private NcmReferenciaRepository ncmReferenciaRepository;
   private AliquotaIbsUfRepository aliquotaIbsUfRepository;
+  private AliquotaCbsRepository aliquotaCbsRepository;
   private CreditoTributarioService service;
 
   @BeforeEach
@@ -49,11 +55,15 @@ class CreditoTributarioServiceTest {
         .thenReturn(Optional.empty());
     aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
     // Por padrão nenhuma UF cadastrada: o resolver cai para a alíquota do yml (0,0010 / 0,0090).
-    lenient().when(aliquotaIbsUfRepository.findByUf(anyString())).thenReturn(Optional.empty());
+    lenient().when(aliquotaIbsUfRepository.findVigente(anyString(), any(LocalDate.class)))
+        .thenReturn(List.of());
+    // Sem vigência de CBS por padrão: cai no fallback do yml (0,0090) — issue #85.
+    aliquotaCbsRepository = mock(AliquotaCbsRepository.class);
+    lenient().when(aliquotaCbsRepository.findVigente(any(LocalDate.class))).thenReturn(List.of());
     service = new CreditoTributarioService(
         tributosProperties,
         new ReducaoNcmResolver(ncmReferenciaRepository),
-        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, tributosProperties));
   }
 
   @Test
@@ -223,7 +233,7 @@ class CreditoTributarioServiceTest {
   void creditoUsaAliquotaPorUfDivergenteDoYml() {
     // Debito: a UF aplicavel (MT) tem aliquota 0,0030 + 0,0020 = 0,0050 na tabela aliquota_ibs_uf,
     // divergente da aliquota fixa do yml (0,0010). O seed real e uniforme e mascara a diferenca.
-    when(aliquotaIbsUfRepository.findByUf("MT")).thenReturn(Optional.of(
+    when(aliquotaIbsUfRepository.findVigente(eq("MT"), any(LocalDate.class))).thenReturn(List.of(
         AliquotaIbsUf.builder()
             .uf("MT")
             .aliquotaEstadual(new BigDecimal("0.0030"))
@@ -231,7 +241,7 @@ class CreditoTributarioServiceTest {
             .build()));
     TributacaoService debito = new TributacaoService(
         new ReducaoNcmResolver(ncmReferenciaRepository),
-        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, tributosProperties));
 
     NotaFiscal nota = notaImportada(item("6101", "1000.00"));
     nota.setProdutor(Produtor.builder().estado("MT").build());

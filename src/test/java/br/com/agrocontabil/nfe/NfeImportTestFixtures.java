@@ -1,5 +1,9 @@
 package br.com.agrocontabil.nfe;
 
+import br.com.agrocontabil.repository.AliquotaCbsRepository;
+import java.util.List;
+import java.time.LocalDate;
+import static org.mockito.ArgumentMatchers.any;
 import br.com.agrocontabil.config.CertificadoDigitalProperties;
 import br.com.agrocontabil.config.TributosProperties;
 import br.com.agrocontabil.model.EnderecoDestinatario;
@@ -155,9 +159,12 @@ public final class NfeImportTestFixtures {
     when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
     // Sem alíquota por UF nas fixtures: cai no fallback da alíquota parametrizada (issue #31).
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
-    when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
+    when(aliquotaRepo.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
+    // Sem vigencia de CBS nas fixtures: cai no fallback da aliquota parametrizada (issue #85).
+    AliquotaCbsRepository cbsRepo = mock(AliquotaCbsRepository.class);
+    when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
     return new TributacaoService(
-        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, props));
+        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
   }
 
   private static String removerDeclaracao(String xml) {

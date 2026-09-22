@@ -53,6 +53,8 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 - Schema só via **Liquibase** (`db.changelog-master.yaml`). Hibernate em `ddl-auto: validate` — **proibido** `update`/`create`.
 - Uma mudança de schema = um changeSet novo. Nunca editar changeSet aplicado.
+- **Tabelas de vigência (`aliquota_ibs_uf`, `aliquota_cbs`):** nova alíquota = novo changeSet com `insert` (e `update` só para fechar `data_fim` da vigência anterior). Nunca alterar a alíquota de uma linha existente — notas já calculadas dependem dela.
+- Todo changeSet novo precisa do **espelho no `schema-nota-fiscal-test.sql`** (Liquibase é desligado no profile `test`).
 
 ## Testes
 

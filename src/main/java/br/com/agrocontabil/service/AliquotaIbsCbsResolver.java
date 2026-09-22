@@ -1,23 +1,29 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.config.TributosProperties;
+import br.com.agrocontabil.model.AliquotaCbs;
 import br.com.agrocontabil.model.AliquotaIbsUf;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.service.AliquotasVigentes.OrigemAliquota;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Resolve as alíquotas de IBS (por UF) e CBS aplicáveis a uma nota fiscal
- * (issue Agrocontabil#86 — simetria débito × crédito, RN002).
+ * Resolve as alíquotas de IBS (por UF) e CBS aplicáveis a uma nota fiscal, vigentes na data de
+ * emissão (issue Agrocontabil#86 — simetria débito × crédito, RN002; issue #85 — vigência
+ * temporal).
  *
  * <p>Componente <strong>único</strong> de resolução de alíquota, consumido tanto pelo cálculo de
  * <em>débito</em> ({@link TributacaoService}) quanto pelo de <em>crédito</em>
@@ -40,10 +46,22 @@ import org.springframework.stereotype.Component;
  *       {@code WARN}.</li>
  * </ul>
  *
- * <p><strong>Fallback conservador:</strong> quando a UF não é determinável ou não consta na
- * tabela, a alíquota de IBS de {@link TributosProperties} é dividida igualmente entre estado e
- * município (comportamento anterior à issue #31 preservado) e um {@code WARN} é registrado. A CBS
- * vem de {@link TributosProperties} até a tabela de vigência da issue #85.
+ * <p><strong>Vigência (issue #85):</strong> a data de referência é a {@code dataEmissao} da nota
+ * convertida para {@code America/Sao_Paulo} (uma nota {@code 2027-01-01T01:00Z} é 2026-12-31 em
+ * BRT). Sem {@code dataEmissao} (só possível em fixture — a API exige o campo), usa-se a data de
+ * hoje em BRT com {@code WARN}. IBS vem de {@code aliquota_ibs_uf} (UF + vigência) e CBS de
+ * {@code aliquota_cbs} (vigência). Em sobreposição acidental de vigências, vence a de início mais
+ * recente (query ordenada por {@code data_inicio DESC}).
+ *
+ * <p><strong>Fallback conservador:</strong> quando a UF não é determinável, não consta na tabela
+ * ou a data está fora de qualquer vigência (ex.: nota anterior a 2026-01-01 ou posterior à última
+ * vigência cadastrada), a alíquota de IBS de {@link TributosProperties} é dividida igualmente entre
+ * estado e município (comportamento anterior à issue #31 preservado) e um {@code WARN} é
+ * registrado; o mesmo vale para a CBS. Nunca lança — decisão do spec da Onda 2.
+ *
+ * <p><strong>Débito técnico documentado:</strong> apenas a vigência de 2026 é semeada (changeset
+ * {@code 0019}); as alíquotas de 2027–2033 (LC 214/2025, arts. 87–92 e regime de transição)
+ * entram por novo changeset quando RFB/CONFAZ/Comitê Gestor as publicarem.
  *
  * <p>Consulta a tabela de referência (leitura); deve ser chamado dentro de uma transação
  * read-only pelo serviço que o utiliza. Os logs não contêm CPF/CNPJ.
@@ -53,19 +71,25 @@ public class AliquotaIbsCbsResolver {
 
   private static final Logger log = LoggerFactory.getLogger(AliquotaIbsCbsResolver.class);
   private static final BigDecimal DOIS = BigDecimal.valueOf(2);
+  private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
   private final AliquotaIbsUfRepository aliquotaIbsUfRepository;
+  private final AliquotaCbsRepository aliquotaCbsRepository;
   private final TributosProperties tributosProperties;
 
   /**
    * Constrói o resolver.
    *
    * @param aliquotaIbsUfRepository repositório read-only da tabela {@code aliquota_ibs_uf}
+   * @param aliquotaCbsRepository repositório read-only da tabela {@code aliquota_cbs}
    * @param tributosProperties alíquotas parametrizadas do {@code application.yml} (fallback)
    */
   public AliquotaIbsCbsResolver(
-      AliquotaIbsUfRepository aliquotaIbsUfRepository, TributosProperties tributosProperties) {
+      AliquotaIbsUfRepository aliquotaIbsUfRepository,
+      AliquotaCbsRepository aliquotaCbsRepository,
+      TributosProperties tributosProperties) {
     this.aliquotaIbsUfRepository = aliquotaIbsUfRepository;
+    this.aliquotaCbsRepository = aliquotaCbsRepository;
     this.tributosProperties = tributosProperties;
   }
 
@@ -76,32 +100,67 @@ public class AliquotaIbsCbsResolver {
    * @return alíquotas aplicáveis, nunca nulas
    */
   public AliquotasVigentes resolver(NotaFiscal nota) {
+    LocalDate data = resolveDataReferencia(nota);
     String uf = resolveUfAplicavel(nota);
-    Optional<AliquotaIbsUf> referencia =
-        uf != null ? aliquotaIbsUfRepository.findByUf(uf) : Optional.empty();
 
-    BigDecimal cbs = tributosProperties.getCbs().getAliquota();
+    Optional<AliquotaIbsUf> ibs = uf != null
+        ? aliquotaIbsUfRepository.findVigente(uf, data).stream().findFirst()
+        : Optional.empty();
+    Optional<AliquotaCbs> cbs = aliquotaCbsRepository.findVigente(data).stream().findFirst();
 
-    if (referencia.isPresent()) {
-      AliquotaIbsUf a = referencia.get();
-      return new AliquotasVigentes(
-          a.getAliquotaEstadual(),
-          a.getAliquotaMunicipal(),
-          cbs,
-          OrigemAliquota.TABELA_UF,
-          OrigemAliquota.FALLBACK_YML);
+    BigDecimal ibsEstadual;
+    BigDecimal ibsMunicipal;
+    OrigemAliquota origemIbs;
+    if (ibs.isPresent()) {
+      ibsEstadual = ibs.get().getAliquotaEstadual();
+      ibsMunicipal = ibs.get().getAliquotaMunicipal();
+      origemIbs = OrigemAliquota.TABELA_UF;
+    } else {
+      // notaId e nulo no create (calculo roda antes do save); produtorId da contexto sem PII.
+      log.warn(
+          "Aliquota de IBS por UF indisponivel (uf={}, data={}, notaId={}, produtorId={});"
+              + " usando fallback do application.yml",
+          uf, data, nota.getId(), produtorId(nota));
+      BigDecimal configurada = tributosProperties.getIbs().getAliquota();
+      ibsEstadual = configurada.divide(DOIS, 4, RoundingMode.HALF_UP);
+      ibsMunicipal = configurada.subtract(ibsEstadual);
+      origemIbs = OrigemAliquota.FALLBACK_YML;
     }
 
-    // notaId e nulo no create (calculo roda antes do save); produtorId da contexto sem PII.
-    log.warn(
-        "Aliquota de IBS por UF indisponivel (uf={}, notaId={}, produtorId={});"
-            + " usando fallback do application.yml",
-        uf, nota.getId(), nota.getProdutor() != null ? nota.getProdutor().getId() : null);
-    BigDecimal configurada = tributosProperties.getIbs().getAliquota();
-    BigDecimal estadual = configurada.divide(DOIS, 4, RoundingMode.HALF_UP);
-    BigDecimal municipal = configurada.subtract(estadual);
-    return new AliquotasVigentes(
-        estadual, municipal, cbs, OrigemAliquota.FALLBACK_YML, OrigemAliquota.FALLBACK_YML);
+    BigDecimal aliquotaCbs;
+    OrigemAliquota origemCbs;
+    if (cbs.isPresent()) {
+      aliquotaCbs = cbs.get().getAliquota();
+      origemCbs = OrigemAliquota.TABELA_VIGENCIA;
+    } else {
+      log.warn(
+          "Aliquota de CBS sem vigencia para data={} (notaId={}, produtorId={});"
+              + " usando fallback do application.yml",
+          data, nota.getId(), produtorId(nota));
+      aliquotaCbs = tributosProperties.getCbs().getAliquota();
+      origemCbs = OrigemAliquota.FALLBACK_YML;
+    }
+
+    return new AliquotasVigentes(ibsEstadual, ibsMunicipal, aliquotaCbs, origemIbs, origemCbs);
+  }
+
+  /**
+   * Data de referência da vigência: {@code dataEmissao} em {@code America/Sao_Paulo}; sem data
+   * (fixture), hoje em BRT com {@code WARN}.
+   */
+  private LocalDate resolveDataReferencia(NotaFiscal nota) {
+    OffsetDateTime emissao = nota.getDataEmissao();
+    if (emissao == null) {
+      log.warn(
+          "Nota sem dataEmissao (notaId={}, produtorId={}); vigencia resolvida pela data de hoje",
+          nota.getId(), produtorId(nota));
+      return LocalDate.now(ZONE);
+    }
+    return emissao.atZoneSameInstant(ZONE).toLocalDate();
+  }
+
+  private static Object produtorId(NotaFiscal nota) {
+    return nota.getProdutor() != null ? nota.getProdutor().getId() : null;
   }
 
   /**

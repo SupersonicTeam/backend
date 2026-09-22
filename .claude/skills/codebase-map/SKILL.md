@@ -47,7 +47,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `SefazService` | Envio, consulta de status e cancelamento na SEFAZ |
 | `TributacaoService` | Débito: calcula IBS/CBS por item, classifica natureza (DEBITO/CREDITO) e agrega totais; alíquota via `AliquotaIbsCbsResolver`, redução via `ReducaoNcmResolver` |
 | `CreditoTributarioService` | Crédito nas notas IMPORTADAS (RN003): mesma base e mesma alíquota do débito (resolvedores compartilhados); só lê `credito.percentualAproveitamento` das properties |
-| `AliquotaIbsCbsResolver` | **Único** ponto de resolução de alíquota (issue #86): IBS por UF aplicável (RN002; nota importada = UF do destinatário) + CBS; devolve `AliquotasVigentes` com origem (TABELA_UF/FALLBACK_YML); fallback conservador para `TributosProperties` com WARN |
+| `AliquotaIbsCbsResolver` | **Único** ponto de resolução de alíquota (issues #86/#85): IBS por UF aplicável (RN002; nota importada = UF do destinatário) + CBS, ambos pela **vigência** na `dataEmissao` em BRT; devolve `AliquotasVigentes` com origem (TABELA_UF/TABELA_VIGENCIA/FALLBACK_YML); fallback conservador para `TributosProperties` com WARN |
 | `ReducaoNcmResolver` | **Único** ponto de resolução da redução de base por NCM (issue #52): item → NCM → zero |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext` |
@@ -98,6 +98,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `Produtor` | Produtor rural autenticado |
 | `NotaFiscalValidacao` | Histórico de inconsistências de validação (issue #22) |
 | `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20) |
+| `AliquotaIbsUf` (+ `AliquotaIbsUfId`) | Alíquota de IBS (estadual/municipal) por UF **e vigência** — PK composta `(uf, data_inicio)`; `data_fim` NULL = aberta (issues #31/#85) |
+| `AliquotaCbs` | Alíquota de CBS por vigência (`aliquota_cbs`, issue #85); substitui o valor fixo do yml como fonte primária |
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
 | **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` · `TipoGuiaFiscal` (ICMS/FUNRURAL/DARF/GPS/OUTRO) · `StatusGuiaFiscal` (PENDENTE/PAGA/VENCIDA) |
 | `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback`, `RegimeTributario` | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
@@ -153,7 +155,7 @@ Bean Validation customizada (anotação + validator):
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
-`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
 
 ## Endpoints REST (`/api/notas`)
 | Método | Path | Descrição |
@@ -191,5 +193,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0019-indices-compostos-escalabilidade` (próximo número livre: **0020**)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0020-aliquota-vigencia` (próximo número livre: **0021**)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.
