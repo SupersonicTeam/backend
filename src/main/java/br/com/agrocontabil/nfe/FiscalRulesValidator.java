@@ -336,7 +336,7 @@ public class FiscalRulesValidator {
     String emitente = ufEmitente.trim().toUpperCase();
     String destinatario = ufDestinatario.trim().toUpperCase();
 
-    boolean operacaoExterior = "EX".equals(destinatario);
+    boolean operacaoExterior = UfIbge.isExterior(destinatario);
     boolean mesmaUf = emitente.equals(destinatario);
 
     switch (primeiroDigito) {

@@ -77,10 +77,6 @@ public class NotaFiscalNfeMapper {
   private static final DateTimeFormatter DFE_DT_FMT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssxxx");
 
-  /**
-   * Tabela de UF → código IBGE (cUF).
-   * Fonte: Manual de Orientação do Contribuinte NF-e 4.00, Anexo IV.
-   */
   private final ChaveAcessoGenerator chaveAcessoGenerator;
 
   /** Constrói o mapper injetando o gerador de chave de acesso. */
@@ -233,9 +229,10 @@ public class NotaFiscalNfeMapper {
   }
 
   private EnderDest buildEnderDest(EnderecoDestinatario end) {
-    // Sem placeholders (issue #88): o FiscalRulesValidator exige municipio, codigo IBGE e UF do
-    // destinatario na emissao, e a coerencia IBGE x UF. Logradouro/numero seguem opcionais no
-    // dominio; o layout exige o elemento, entao um imovel sem numero vira "S/N" (uso legitimo).
+    // Sem placeholders (issue #88): o FiscalRulesValidator exige logradouro, municipio, codigo
+    // IBGE e UF do destinatario na emissao, alem da coerencia IBGE x UF. O numero segue opcional
+    // no dominio e o layout exige o elemento, entao um imovel sem numero vira "S/N" (convencao do
+    // layout, nao placeholder). O bairro nao e modelado — ver o debito no Javadoc da classe.
     EnderDest enderDest = new EnderDest();
     enderDest.setXLgr(truncate(end.getLogradouro(), 60));
     enderDest.setNro(end.getNumero() != null ? truncate(end.getNumero(), 60) : "S/N");
