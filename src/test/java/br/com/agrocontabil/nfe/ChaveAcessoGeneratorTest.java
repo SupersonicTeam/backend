@@ -203,7 +203,7 @@ class ChaveAcessoGeneratorTest {
   void zeroPadDeveAdicionarZeros() {
     assertThat(generator.zeroPad("5", 3)).isEqualTo("005");
     assertThat(generator.zeroPad("123", 3)).isEqualTo("123");
-    assertThat(generator.zeroPad("12345", 3)).isEqualTo("345"); // trunca pela direita
+    // O caso "valor maior que o limite" deixou de truncar na issue #88 — ver zeroPadLancaEmOverflow.
   }
 
   // -------------------------------------------------------------------------
