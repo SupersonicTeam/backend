@@ -15,6 +15,7 @@ import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -774,7 +775,7 @@ class NotaFiscalServiceTest {
   }
 
   @Test
-  @DisplayName("obterXml deve lancar ResourceNotFoundException quando XML ainda nao foi gerado")
+  @DisplayName("obterXml deve lancar XmlIndisponivelException (409) quando XML ainda nao foi gerado")
   void obterXmlShouldThrowWhenXmlNotYetGenerated() {
     UUID notaId = UUID.randomUUID();
     NotaFiscal nota = buildNotaSalva();
@@ -785,8 +786,10 @@ class NotaFiscalServiceTest {
     when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
         .thenReturn(Optional.of(nota));
 
+    // A nota EXISTE e e do produtor: o recurso e que ainda nao foi gerado -> 409, nao 404.
+    // 404 fica reservado para nota inexistente ou de outro produtor (anti-IDOR).
     assertThatThrownBy(() -> notaFiscalService.obterXml(notaId))
-        .isInstanceOf(ResourceNotFoundException.class)
+        .isInstanceOf(XmlIndisponivelException.class)
         .hasMessageContaining(notaId.toString());
   }
 

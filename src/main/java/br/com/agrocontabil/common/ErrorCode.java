@@ -25,6 +25,8 @@ public enum ErrorCode {
   DANFE_GENERATION_ERROR,
   /** DANFE indisponível: a nota ainda não gerou o XML. HTTP 409. */
   DANFE_INDISPONIVEL,
+  /** XML da NF-e indisponível: a nota existe, mas o XML ainda não foi gerado. HTTP 409. */
+  XML_INDISPONIVEL,
   // Relatório de conformidade (Sprint 4 — issue Agrocontabil#32)
   /** Falha técnica ao gerar o PDF do relatório de conformidade. HTTP 500. */
   RELATORIO_GENERATION_ERROR,
