@@ -191,6 +191,32 @@ CREATE INDEX IF NOT EXISTS idx_guia_fiscal_produtor_id ON guias_fiscais (produto
 CREATE INDEX IF NOT EXISTS idx_apuracao_status_periodo ON apuracao_mensal (status, periodo);
 
 -- ============================================================================
+-- Foreign keys — issue #90. Replicam as FKs do Liquibase com as MESMAS acoes ON DELETE,
+-- para que RESTRICT/CASCADE/filho orfao se comportem nos testes como em producao.
+-- Manter sincronizado com 0002-nota-fiscal.xml, 0014-apuracao-mensal.xml e
+-- 0018-guias-fiscais.xml.
+--
+-- Por que ALTER TABLE e nao dentro dos CREATE TABLE acima: a maioria dos testes
+-- @SpringBootTest roda com ddl-auto=create-drop — o Hibernate cria as tabelas (sem FK, pois as
+-- entidades usam @ForeignKey(NO_CONSTRAINT)) ANTES deste @Sql, e os CREATE TABLE IF NOT EXISTS
+-- viram no-op. O ALTER TABLE ... ADD CONSTRAINT IF NOT EXISTS e idempotente e vale nos dois
+-- caminhos (@DataJpaTest com ddl-auto=none e @SpringBootTest com create-drop).
+--
+-- nota_fiscal_validacao NAO recebe FK: o changeset 0006 nao define nenhuma em producao.
+-- ============================================================================
+ALTER TABLE nota_fiscal ADD CONSTRAINT IF NOT EXISTS fk_nota_fiscal_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE RESTRICT;
+
+ALTER TABLE nota_fiscal_item ADD CONSTRAINT IF NOT EXISTS fk_nota_fiscal_item_nota
+    FOREIGN KEY (nota_fiscal_id) REFERENCES nota_fiscal (id) ON DELETE CASCADE;
+
+ALTER TABLE apuracao_mensal ADD CONSTRAINT IF NOT EXISTS fk_apuracao_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id);
+
+ALTER TABLE guias_fiscais ADD CONSTRAINT IF NOT EXISTS fk_guia_fiscal_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id);
+
+-- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).
 -- O perfil de teste desabilita o Liquibase (liquibase.enabled=false), entao o
 -- seed via <insert> do changeset NAO roda nos testes. Replicamos as tabelas e o
