@@ -1,5 +1,6 @@
 package br.com.agrocontabil.nfe;
 
+import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -86,36 +87,6 @@ public class NotaFiscalNfeMapper {
    * Tabela de UF → código IBGE (cUF).
    * Fonte: Manual de Orientação do Contribuinte NF-e 4.00, Anexo IV.
    */
-  private static final Map<String, String> UF_CODE =
-      Map.ofEntries(
-          Map.entry("AC", "12"),
-          Map.entry("AL", "27"),
-          Map.entry("AM", "13"),
-          Map.entry("AP", "16"),
-          Map.entry("BA", "29"),
-          Map.entry("CE", "23"),
-          Map.entry("DF", "53"),
-          Map.entry("ES", "32"),
-          Map.entry("GO", "52"),
-          Map.entry("MA", "21"),
-          Map.entry("MG", "31"),
-          Map.entry("MS", "50"),
-          Map.entry("MT", "51"),
-          Map.entry("PA", "15"),
-          Map.entry("PB", "25"),
-          Map.entry("PE", "26"),
-          Map.entry("PI", "22"),
-          Map.entry("PR", "41"),
-          Map.entry("RJ", "33"),
-          Map.entry("RN", "24"),
-          Map.entry("RO", "11"),
-          Map.entry("RR", "14"),
-          Map.entry("RS", "43"),
-          Map.entry("SC", "42"),
-          Map.entry("SE", "28"),
-          Map.entry("SP", "35"),
-          Map.entry("TO", "17"));
-
   private final ChaveAcessoGenerator chaveAcessoGenerator;
 
   /** Constrói o mapper injetando o gerador de chave de acesso. */
@@ -131,8 +102,11 @@ public class NotaFiscalNfeMapper {
    */
   public NFe toNfe(NotaFiscal nota) {
     Produtor produtor = nota.getProdutor();
-    String uf = produtor.getEstado() != null ? produtor.getEstado().toUpperCase() : "SP";
-    String cUF = UF_CODE.getOrDefault(uf, "35");
+    // UF do emitente e obrigatoria na emissao (FiscalRulesValidator); o orElseThrow protege
+    // contra chamada fora do pipeline, em vez de gerar chave com cUF de outro estado.
+    String cUF = UfIbge.codigo(produtor.getEstado())
+        .orElseThrow(() -> new IllegalStateException(
+            "UF do emitente ausente ou desconhecida; nao e possivel determinar o cUF"));
 
     String aamm = nota.getDataEmissao().format(DateTimeFormatter.ofPattern("yyMM"));
 
@@ -592,8 +566,7 @@ public class NotaFiscalNfeMapper {
     }
     // Fallback: cUF + "9999" como código de município placeholder
     Produtor produtor = nota.getProdutor();
-    String uf = produtor.getEstado() != null ? produtor.getEstado().toUpperCase() : "SP";
-    String cUF = UF_CODE.getOrDefault(uf, "35");
+    String cUF = UfIbge.codigo(produtor.getEstado()).orElse("35");
     return cUF + "9999";
   }
 
