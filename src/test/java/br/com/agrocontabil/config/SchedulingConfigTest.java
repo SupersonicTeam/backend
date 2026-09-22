@@ -41,7 +41,9 @@ class SchedulingConfigTest {
   @DisplayName("scheduler deve ter pool dedicado de 3 threads com prefixo proprio")
   void schedulerDeveTerPoolDedicado() {
     // Uma thread por job: nenhum job espera o outro terminar.
-    assertThat(taskScheduler.getPoolSize()).isEqualTo(3);
+    // getPoolSize() conta as threads JA criadas (o pool as cria sob demanda, e no profile de
+    // teste os jobs estao desligados); o tamanho configurado esta no core pool size.
+    assertThat(taskScheduler.getScheduledThreadPoolExecutor().getCorePoolSize()).isEqualTo(3);
     // Prefixo proprio torna o job identificavel no log e num thread dump.
     assertThat(taskScheduler.getThreadNamePrefix()).isEqualTo("agro-sched-");
   }

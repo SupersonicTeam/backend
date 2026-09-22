@@ -39,6 +39,31 @@ spring:
   transaction:
     default-timeout: ${DB_TX_TIMEOUT:30s}
 
+  # Agendamento dos jobs (issue #101). Sem estas propriedades o Boot cria um scheduler de UMA
+  # thread e os tres jobs (SefazStatusSyncJob, ApuracaoFechamentoJob, GuiaFiscalStatusSyncJob)
+  # disputam entre si — um job lento atrasa os demais.
+  # Concorrencia entre INSTANCIAS (lock distribuido) e a issue #87, nao esta coberta aqui.
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULER_POOL_SIZE:3}          # uma thread por job; 1 volta ao comportamento serializado
+      thread-name-prefix: agro-sched-
+      shutdown:
+        # Espera o job em andamento terminar antes de encerrar — um fechamento mensal
+        # interrompido no meio deixaria a apuracao inconsistente.
+        await-termination: true
+        await-termination-period: ${SCHEDULER_SHUTDOWN_TIMEOUT:30s}
+
+  # Janela para cada fase do encerramento concluir (requisicoes em voo, jobs, pool).
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
+
+# Ao receber SIGTERM o Tomcat para de aceitar conexoes novas e espera as requisicoes ativas
+# terminarem, em vez de corta-las no meio (issue #101). O compose usa stop_grace_period: 35s
+# para nao matar o processo antes desta janela.
+server:
+  shutdown: graceful
+
   # Upload de XML para importacao de notas (issue #19). Limites conservadores: um XML de
   # NF-e assinado costuma ter dezenas de KB; permitimos lotes de varios arquivos.
   servlet:
