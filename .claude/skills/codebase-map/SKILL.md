@@ -45,7 +45,10 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ImportacaoNotaFiscalService` | Importa XML(s) de NF-e recebida (multipart; produtor=destinatário; issue #19) |
 | `NotaFiscalValidacaoService` | Persiste lote de inconsistências em `REQUIRES_NEW`; marca nota `COM_INCONSISTENCIAS` |
 | `SefazService` | Envio, consulta de status e cancelamento na SEFAZ |
-| `CalculoIbsCbsService` | Cálculo puro de IBS/CBS por item |
+| `TributacaoService` | Débito: calcula IBS/CBS por item, classifica natureza (DEBITO/CREDITO) e agrega totais; alíquota via `AliquotaIbsCbsResolver`, redução via `ReducaoNcmResolver` |
+| `CreditoTributarioService` | Crédito nas notas IMPORTADAS (RN003): mesma base e mesma alíquota do débito (resolvedores compartilhados); só lê `credito.percentualAproveitamento` das properties |
+| `AliquotaIbsCbsResolver` | **Único** ponto de resolução de alíquota (issue #86): IBS por UF aplicável (RN002; nota importada = UF do destinatário) + CBS; devolve `AliquotasVigentes` com origem (TABELA_UF/FALLBACK_YML); fallback conservador para `TributosProperties` com WARN |
+| `ReducaoNcmResolver` | **Único** ponto de resolução da redução de base por NCM (issue #52): item → NCM → zero |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext` |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository` |

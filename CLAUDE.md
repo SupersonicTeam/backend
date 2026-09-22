@@ -51,7 +51,8 @@ br.com.agrocontabil
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, GeracaoNotaFiscalService,
 │                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,
-│                  # CalculoIbsCbsService, ChaveAcessoGenerator,
+│                  # TributacaoService, CreditoTributarioService, ChaveAcessoGenerator,
+│                  # AliquotaIbsCbsResolver + ReducaoNcmResolver (resolvedores únicos débito×crédito),
 │                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider)
 ├── repository/    # Spring Data JPA (NotaFiscal, NotaFiscalValidacao, Produtor,
 │                  # CfopReferencia, NcmReferencia + repos do scaffolding AI)
@@ -136,7 +137,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 367 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 382 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -196,6 +197,14 @@ Epico do painel do Contador (frontend#28). Cobre o registro de guias fiscais (IC
 - **`GuiaFiscalStatusSyncJob`:** job diário (`@Scheduled`, 1h, `America/Sao_Paulo`) que transiciona guias PENDENTE vencidas para VENCIDA — mesmo padrão do `SefazStatusSyncJob`/`ApuracaoFechamentoJob`.
 - **`GET /api/calendario-fiscal/{produtorId}/vencimentos`:** endpoint que faltava e já quebrava a tela de Calendário do Angular. Reúsa `GuiaFiscalRepository` como única fonte de vencimento (`tipo="imposto"`); outras fontes (obrigações/declarações) ficam para quando o backend as modelar.
 - **Nota de integração para o frontend:** `calendario.service.ts` hoje só reconhece `status === 'vencido'`; uma guia `pago` aparece como `pendente` no calendário até o frontend ajustar esse mapeamento — não é um bug do backend.
+
+### Onda 2 — Correção fiscal (em andamento; spec em `.specs/features/onda-2-correcao-fiscal/`)
+
+Ordem obrigatória #86 → #85 → #88, um PR por issue.
+
+- **#86 Simetria débito×crédito (PR 1):** o crédito (`CreditoTributarioService`) usava a alíquota fixa do yml enquanto o débito (`TributacaoService`) resolvia por UF em `aliquota_ibs_uf` — coincidiam só pelo seed uniforme. Novo `AliquotaIbsCbsResolver` (`@Component`, padrão do `ReducaoNcmResolver`) é o **único** ponto de resolução de alíquota IBS (por UF, RN002) e CBS, consumido pelos dois serviços; devolve `AliquotasVigentes` (parcelas estadual/municipal, CBS, origem TABELA_UF/FALLBACK_YML). Nota importada usa a UF do destinatário (= produtor, princípio do destino — EC 132 art. 156-A §1.º VII); `TributosProperties` passa a ser apenas fallback conservador (+ `credito.percentualAproveitamento`). Teste de simetria `creditoUsaAliquotaPorUfDivergenteDoYml` foi escrito vermelho antes da correção.
+- **#85 Vigência temporal das alíquotas (PR 2):** pendente — `data_inicio`/`data_fim` em `aliquota_ibs_uf` (PK composta) + tabela `aliquota_cbs`; seleção pela `dataEmissao` em BRT.
+- **#88 Emitente real + limites de nNF/série (PR 3):** pendente — endereço/IE no `Produtor`, mapper sem placeholders, `cMunFG` do emitente, `@Max` em `numero`/`serie`, `zeroPad` lança em overflow.
 
 ### Débitos técnicos abertos
 

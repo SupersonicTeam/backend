@@ -16,6 +16,7 @@ import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import br.com.agrocontabil.service.GeracaoNotaFiscalService;
+import br.com.agrocontabil.service.AliquotaIbsCbsResolver;
 import br.com.agrocontabil.service.ReducaoNcmResolver;
 import br.com.agrocontabil.service.TributacaoService;
 import java.math.BigDecimal;
@@ -156,7 +157,7 @@ public final class NfeImportTestFixtures {
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
     return new TributacaoService(
-        props, new ReducaoNcmResolver(ncmRepo), aliquotaRepo);
+        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, props));
   }
 
   private static String removerDeclaracao(String xml) {

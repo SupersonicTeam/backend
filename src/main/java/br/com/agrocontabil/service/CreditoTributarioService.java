@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
  *       resolvida pelo {@link ReducaoNcmResolver} (precedência item → NCM → zero) — o
  *       <strong>mesmo</strong> resolver usado pelo débito em {@link TributacaoService}, garantindo
  *       simetria débito × crédito de fato (issue Agrocontabil#52)</li>
+ *   <li>{@code aliquotaIbs}/{@code aliquotaCbs} resolvidas pelo {@link AliquotaIbsCbsResolver}
+ *       — o <strong>mesmo</strong> componente usado pelo débito (issue Agrocontabil#86),
+ *       garantindo que crédito e débito apliquem a alíquota de IBS da mesma UF (RN002)</li>
  *   <li>{@code creditoIbs = baseCalculo × aliquotaIbs × percentualAproveitamento / 100} —
  *       arredondamento HALF_UP, 2 casas</li>
  *   <li>{@code creditoCbs = baseCalculo × aliquotaCbs × percentualAproveitamento / 100} —
@@ -44,8 +47,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       LC 214/2025, art. 47): o adquirente se credita do IBS/CBS incidente na aquisição.</li>
  *   <li><strong>Premissa de cálculo:</strong> o layout 4.00 dos XMLs importados ainda não traz
  *       o grupo IBS/CBS destacado (NT em elaboração pela SEFAZ); o crédito é portanto
- *       <em>estimado</em> pelas mesmas alíquotas de referência parametrizadas do ano-teste 2026
- *       ({@link TributosProperties}) aplicadas sobre a base do item. Quando o parser passar a
+ *       <em>estimado</em> pelas mesmas alíquotas de referência do débito (por UF, via
+ *       {@link AliquotaIbsCbsResolver}) aplicadas sobre a base do item. Quando o parser passar a
  *       ler o IBS/CBS destacado no XML, o valor destacado deverá prevalecer (débito técnico
  *       registrado para a sprint de SEFAZ real).</li>
  *   <li><strong>Incerteza regulatória documentada:</strong> aquisições de produtor rural não
@@ -68,18 +71,25 @@ public class CreditoTributarioService {
 
   private final TributosProperties tributosProperties;
   private final ReducaoNcmResolver reducaoNcmResolver;
+  private final AliquotaIbsCbsResolver aliquotaResolver;
 
   /**
-   * Constrói o serviço injetando alíquotas/percentual de aproveitamento parametrizados e o resolver
-   * de redução por NCM compartilhado com o débito.
+   * Constrói o serviço injetando o percentual de aproveitamento parametrizado e os resolvers
+   * compartilhados com o débito.
    *
-   * @param tributosProperties propriedades de tributos do {@code application.yml}
+   * @param tributosProperties propriedades de tributos do {@code application.yml} — usadas aqui
+   *     <strong>apenas</strong> para {@code credito.percentualAproveitamento}; alíquotas nunca são
+   *     lidas diretamente (issue #86)
    * @param reducaoNcmResolver resolver compartilhado da redução de base por NCM (issue #52)
+   * @param aliquotaResolver resolver compartilhado das alíquotas de IBS por UF e CBS (issue #86)
    */
   public CreditoTributarioService(
-      TributosProperties tributosProperties, ReducaoNcmResolver reducaoNcmResolver) {
+      TributosProperties tributosProperties,
+      ReducaoNcmResolver reducaoNcmResolver,
+      AliquotaIbsCbsResolver aliquotaResolver) {
     this.tributosProperties = tributosProperties;
     this.reducaoNcmResolver = reducaoNcmResolver;
+    this.aliquotaResolver = aliquotaResolver;
   }
 
   /**
@@ -103,8 +113,10 @@ public class CreditoTributarioService {
       return nota;
     }
 
-    BigDecimal aliquotaIbs = tributosProperties.getIbs().getAliquota();
-    BigDecimal aliquotaCbs = tributosProperties.getCbs().getAliquota();
+    // Mesma resolucao de aliquota do debito (RN002 / issue #86): UF do destinatario = produtor.
+    AliquotasVigentes vigentes = aliquotaResolver.resolver(nota);
+    BigDecimal aliquotaIbs = vigentes.ibsTotal();
+    BigDecimal aliquotaCbs = vigentes.cbs();
     BigDecimal fatorAproveitamento = tributosProperties.getCredito()
         .getPercentualAproveitamento()
         .divide(CEM, 10, RoundingMode.HALF_UP);

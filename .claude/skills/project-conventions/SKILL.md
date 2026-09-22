@@ -18,6 +18,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - **Regra de negócio** vive **só** no `service`.
 - **Repository** = Spring Data JPA. Queries de ownership sempre `findByIdAndProdutorId`.
 - **Entidade JPA nunca sai da API.** Sempre converter para DTO via `mapper`.
+- **Alíquota e redução de base têm um único resolvedor cada.** Nunca ler `TributosProperties.ibs/cbs` nem `AliquotaIbsUfRepository`/`NcmReferenciaRepository` direto num serviço de cálculo — sempre via `AliquotaIbsCbsResolver` (issue #86) e `ReducaoNcmResolver` (issue #52). Débito e crédito precisam sair do mesmo ponto para a apuração ser simétrica.
 
 ## Fluxo para adicionar um endpoint (checklist)
 

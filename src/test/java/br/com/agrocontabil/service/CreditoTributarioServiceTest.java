@@ -7,9 +7,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.config.TributosProperties;
+import br.com.agrocontabil.model.AliquotaIbsUf;
+import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
+import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -25,11 +29,14 @@ import org.junit.jupiter.api.Test;
  * (IBS 0,10 %, CBS 0,90 %) e aproveitamento integral (100 %), sobrescritos por teste quando o
  * cenário exige. A redução por NCM é resolvida pelo {@link ReducaoNcmResolver} sobre um
  * {@link NcmReferenciaRepository} mockado que, por padrão, não devolve redução para nenhum NCM.
+ * A alíquota vem do {@link AliquotaIbsCbsResolver} real sobre um {@link AliquotaIbsUfRepository}
+ * mockado que, por padrão, não tem UF cadastrada (fallback para o yml) — issue #86.
  */
 class CreditoTributarioServiceTest {
 
   private TributosProperties tributosProperties;
   private NcmReferenciaRepository ncmReferenciaRepository;
+  private AliquotaIbsUfRepository aliquotaIbsUfRepository;
   private CreditoTributarioService service;
 
   @BeforeEach
@@ -40,8 +47,13 @@ class CreditoTributarioServiceTest {
     lenient()
         .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
         .thenReturn(Optional.empty());
+    aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
+    // Por padrão nenhuma UF cadastrada: o resolver cai para a alíquota do yml (0,0010 / 0,0090).
+    lenient().when(aliquotaIbsUfRepository.findByUf(anyString())).thenReturn(Optional.empty());
     service = new CreditoTributarioService(
-        tributosProperties, new ReducaoNcmResolver(ncmReferenciaRepository));
+        tributosProperties,
+        new ReducaoNcmResolver(ncmReferenciaRepository),
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
   }
 
   @Test
@@ -204,6 +216,37 @@ class CreditoTributarioServiceTest {
     // base = 1000 × (1 − 0,60) = 400.00 → IBS 0.40; CBS 3.60 (usa 60% do item, nao 30% do NCM).
     assertThat(nota.getItens().get(0).getValorCreditoIbs()).isEqualByComparingTo("0.40");
     assertThat(nota.getItens().get(0).getValorCreditoCbs()).isEqualByComparingTo("3.60");
+  }
+
+  @Test
+  @DisplayName("Credito usa a mesma aliquota de IBS por UF que o debito, nao a fixa do yml (#86)")
+  void creditoUsaAliquotaPorUfDivergenteDoYml() {
+    // Debito: a UF aplicavel (MT) tem aliquota 0,0030 + 0,0020 = 0,0050 na tabela aliquota_ibs_uf,
+    // divergente da aliquota fixa do yml (0,0010). O seed real e uniforme e mascara a diferenca.
+    when(aliquotaIbsUfRepository.findByUf("MT")).thenReturn(Optional.of(
+        AliquotaIbsUf.builder()
+            .uf("MT")
+            .aliquotaEstadual(new BigDecimal("0.0030"))
+            .aliquotaMunicipal(new BigDecimal("0.0020"))
+            .build()));
+    TributacaoService debito = new TributacaoService(
+        new ReducaoNcmResolver(ncmReferenciaRepository),
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
+
+    NotaFiscal nota = notaImportada(item("6101", "1000.00"));
+    nota.setProdutor(Produtor.builder().estado("MT").build());
+    nota.setDestinatarioEndereco(EnderecoDestinatario.builder().uf("MT").build());
+
+    debito.calcular(nota);
+    service.calcular(nota);
+
+    NotaFiscalItem item = nota.getItens().get(0);
+    // Simetria (RN002): o credito deve ser base × aliquota efetivamente aplicada no debito.
+    BigDecimal esperado = item.getBaseCalculoIbsCbs()
+        .multiply(item.getAliquotaIbs())
+        .setScale(2, java.math.RoundingMode.HALF_UP);
+    assertThat(item.getAliquotaIbs()).isEqualByComparingTo("0.0050");
+    assertThat(item.getValorCreditoIbs()).isEqualByComparingTo(esperado); // 5.00, nao 1.00
   }
 
   // ---------------------------------------------------------------------------------------

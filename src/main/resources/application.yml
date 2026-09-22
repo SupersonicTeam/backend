@@ -95,6 +95,8 @@ app:
 # Tributos — IBS/CBS (EC 132/2023 + LC 214/2025)
 # Alíquotas de referência para o ano-teste de 2026 (parametrizáveis sem recompilar).
 # IBS: 0,10 % | CBS: 0,90 % — valores informativos; sem recolhimento efetivo em 2026.
+# Desde a issue #86 são FALLBACK do AliquotaIbsCbsResolver: a alíquota efetiva de IBS vem da
+# tabela aliquota_ibs_uf (por UF); estes valores só se aplicam quando a UF não consta lá.
 # Ajuste conforme regulamentação complementar futura da LC 214/2025.
 agrocontabil:
   tributos:
