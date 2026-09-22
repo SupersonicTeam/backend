@@ -1,6 +1,8 @@
 package br.com.agrocontabil.nfe;
 
+import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.model.EnderecoDestinatario;
+import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
@@ -47,24 +49,17 @@ import org.springframework.stereotype.Component;
  *
  * <p>As classes JAXB ({@code nfe/model/}) são <em>puras</em>: sem lógica, sem cálculo.
  *
- * <h3>Débito técnico — endereço do emitente:</h3>
- * <p>O {@link Produtor} armazena apenas a UF ({@code estado}). Os campos obrigatórios
- * do {@code enderEmit} no XSD (logradouro, número, bairro, cMun, xMun, CEP) são
- * preenchidos com placeholders ({@code "SEM ENDERECO"}, {@code "S/N"}, {@code "CENTRO"},
- * cMun derivado do cUF concatenado com {@code "9999"}, etc.).
- * Endereço completo do emitente deve ser adicionado ao Produtor em sprint futura.
+ * <h3>Emitente (issue #88):</h3>
+ * <p>IE e endereço vêm do {@code Produtor} — o {@code FiscalRulesValidator} garante a presença
+ * antes da emissão. A IE só assume {@code ISENTO} quando ausente, caso legítimo da NFA de
+ * produtor rural pessoa física. O {@code cMunFG} é o município do <strong>emitente</strong>
+ * (local do fato gerador), não o do destinatário.
  *
- * <h3>Débito técnico — IE do emitente:</h3>
- * <p>O Produtor não possui campo para Inscrição Estadual (Sprint 2). O mapper usa
- * {@code "ISENTO"} como placeholder para satisfazer o XSD — é um valor aceito pelo
- * layout para emitentes isentos ou produtor rural.
- *
- * <h3>Split IBS UF×Município (issue Agrocontabil#31, RN002):</h3>
- * <p>As parcelas estadual e municipal do IBS são resolvidas por UF no {@code TributacaoService}
- * (tabela {@code aliquota_ibs_uf}) e gravadas no item ({@code aliquotaIbsUf}/{@code aliquotaIbsMun},
- * {@code valorIbsUf}/{@code valorIbsMun}). O mapper consome essas parcelas reais em {@code pIBSUF}/
- * {@code pIBSMun} e {@code vIBSUF}/{@code vIBSMun}, dispensando a antiga divisão 50/50. Para itens
- * legados (gravados antes da issue #31, sem as parcelas) mantém-se o fallback 50/50.
+ * <h3>Débito técnico — bairro do destinatário:</h3>
+ * <p>{@code EnderecoDestinatario} não modela o bairro e o XSD exige {@code xBairro} no
+ * {@code enderDest}: por isso o literal {@code "CENTRO"} permanece nesse grupo. Resolver
+ * modelando o campo no domínio e no DTO. O {@code "S/N"} de {@code nro} não é placeholder — é a
+ * convenção do layout para imóvel sem número.
  */
 @Component
 public class NotaFiscalNfeMapper {
@@ -82,40 +77,6 @@ public class NotaFiscalNfeMapper {
   private static final DateTimeFormatter DFE_DT_FMT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssxxx");
 
-  /**
-   * Tabela de UF → código IBGE (cUF).
-   * Fonte: Manual de Orientação do Contribuinte NF-e 4.00, Anexo IV.
-   */
-  private static final Map<String, String> UF_CODE =
-      Map.ofEntries(
-          Map.entry("AC", "12"),
-          Map.entry("AL", "27"),
-          Map.entry("AM", "13"),
-          Map.entry("AP", "16"),
-          Map.entry("BA", "29"),
-          Map.entry("CE", "23"),
-          Map.entry("DF", "53"),
-          Map.entry("ES", "32"),
-          Map.entry("GO", "52"),
-          Map.entry("MA", "21"),
-          Map.entry("MG", "31"),
-          Map.entry("MS", "50"),
-          Map.entry("MT", "51"),
-          Map.entry("PA", "15"),
-          Map.entry("PB", "25"),
-          Map.entry("PE", "26"),
-          Map.entry("PI", "22"),
-          Map.entry("PR", "41"),
-          Map.entry("RJ", "33"),
-          Map.entry("RN", "24"),
-          Map.entry("RO", "11"),
-          Map.entry("RR", "14"),
-          Map.entry("RS", "43"),
-          Map.entry("SC", "42"),
-          Map.entry("SE", "28"),
-          Map.entry("SP", "35"),
-          Map.entry("TO", "17"));
-
   private final ChaveAcessoGenerator chaveAcessoGenerator;
 
   /** Constrói o mapper injetando o gerador de chave de acesso. */
@@ -131,8 +92,11 @@ public class NotaFiscalNfeMapper {
    */
   public NFe toNfe(NotaFiscal nota) {
     Produtor produtor = nota.getProdutor();
-    String uf = produtor.getEstado() != null ? produtor.getEstado().toUpperCase() : "SP";
-    String cUF = UF_CODE.getOrDefault(uf, "35");
+    // UF do emitente e obrigatoria na emissao (FiscalRulesValidator); o orElseThrow protege
+    // contra chamada fora do pipeline, em vez de gerar chave com cUF de outro estado.
+    String cUF = UfIbge.codigo(produtor.getEstado())
+        .orElseThrow(() -> new IllegalStateException(
+            "UF do emitente ausente ou desconhecida; nao e possivel determinar o cUF"));
 
     String aamm = nota.getDataEmissao().format(DateTimeFormatter.ofPattern("yyMM"));
 
@@ -207,26 +171,34 @@ public class NotaFiscalNfeMapper {
 
     String nome = produtor.getNomeCompleto();
     emit.setXNome(truncate(nome != null ? nome : "EMITENTE", 60));
-    emit.setEnderEmit(buildEnderEmit(produtor, cUF));
-    emit.setIe("ISENTO"); // Débito técnico: IE ausente no Produtor; placeholder aceitável no layout
+    emit.setEnderEmit(buildEnderEmit(produtor));
+    // IE real do emitente. "ISENTO" so e aceitavel na NFA (produtor rural PF sem IE); para a
+    // NF-e modelo 55 o FiscalRulesValidator ja exigiu a IE antes de chegar aqui (issue #88).
+    String ie = produtor.getInscricaoEstadual();
+    emit.setIe(ie != null && !ie.isBlank() ? ie.trim() : "ISENTO");
     emit.setCrt(resolveCrt(produtor.getRegimeTributario()));
     return emit;
   }
 
-  private EnderEmit buildEnderEmit(Produtor produtor, String cUF) {
-    // Débito técnico: Produtor não tem endereço completo (apenas estado).
-    // Placeholders para satisfazer o XSD enquanto endereço completo não está modelado.
+  private EnderEmit buildEnderEmit(Produtor produtor) {
+    // Endereco real do emitente (issue #88). A obrigatoriedade dos campos e garantida pelo
+    // FiscalRulesValidator antes da emissao; aqui apenas mapeamos, truncando ao limite do layout.
+    EnderecoProdutor endereco = produtor.getEndereco();
     EnderEmit end = new EnderEmit();
-    end.setXLgr("SEM ENDERECO");
-    end.setNro("S/N");
-    end.setXBairro("CENTRO");
-    // cMun: código IBGE do município (7 dígitos). Placeholder: cUF + "99999" (não real).
-    // Débito técnico: Produtor não armazena código IBGE do município.
-    end.setCMun(chaveAcessoGenerator.zeroPad(cUF + "99999", 7));
-    end.setXMun("MUNICIPIO NAO INFORMADO");
-    end.setUf(produtor.getEstado() != null
-        ? produtor.getEstado().toUpperCase() : "SP");
-    end.setCep("00000000");
+    if (endereco == null) {
+      throw new IllegalStateException(
+          "Endereco do emitente ausente; a emissao deveria ter sido barrada pela validacao fiscal");
+    }
+    end.setXLgr(truncate(endereco.getLogradouro(), 60));
+    end.setNro(truncate(endereco.getNumero(), 60));
+    if (endereco.getComplemento() != null && !endereco.getComplemento().isBlank()) {
+      end.setXCpl(truncate(endereco.getComplemento(), 60));
+    }
+    end.setXBairro(truncate(endereco.getBairro(), 60));
+    end.setCMun(endereco.getCodigoMunicipioIbge());
+    end.setXMun(truncate(endereco.getMunicipio(), 60));
+    end.setUf(produtor.getEstado().toUpperCase());
+    end.setCep(endereco.getCep() != null ? endereco.getCep().replaceAll("\\D", "") : null);
     return end;
   }
 
@@ -257,16 +229,17 @@ public class NotaFiscalNfeMapper {
   }
 
   private EnderDest buildEnderDest(EnderecoDestinatario end) {
+    // Sem placeholders (issue #88): o FiscalRulesValidator exige logradouro, municipio, codigo
+    // IBGE e UF do destinatario na emissao, alem da coerencia IBGE x UF. O numero segue opcional
+    // no dominio e o layout exige o elemento, entao um imovel sem numero vira "S/N" (convencao do
+    // layout, nao placeholder). O bairro nao e modelado — ver o debito no Javadoc da classe.
     EnderDest enderDest = new EnderDest();
-    enderDest.setXLgr(
-        end.getLogradouro() != null ? truncate(end.getLogradouro(), 60) : "SEM LOGRADOURO");
+    enderDest.setXLgr(truncate(end.getLogradouro(), 60));
     enderDest.setNro(end.getNumero() != null ? truncate(end.getNumero(), 60) : "S/N");
     enderDest.setXBairro("CENTRO");
-    enderDest.setCMun(
-        end.getCodigoMunicipioIbge() != null ? end.getCodigoMunicipioIbge() : "0000000");
-    enderDest.setXMun(
-        end.getMunicipio() != null ? truncate(end.getMunicipio(), 60) : "MUNICIPIO");
-    enderDest.setUf(end.getUf() != null ? end.getUf().toUpperCase() : "SP");
+    enderDest.setCMun(end.getCodigoMunicipioIbge());
+    enderDest.setXMun(truncate(end.getMunicipio(), 60));
+    enderDest.setUf(end.getUf().toUpperCase());
     if (end.getCep() != null && !end.getCep().isBlank()) {
       enderDest.setCep(end.getCep().replaceAll("\\D", ""));
     }
@@ -580,21 +553,18 @@ public class NotaFiscalNfeMapper {
   /**
    * Resolve o código do município do fato gerador ({@code cMunFG}).
    *
-   * <p>Usa o código IBGE do município do destinatário quando disponível;
-   * caso contrário, usa placeholder derivado do cUF.
+   * <p>É o município do <strong>emitente</strong> — o local onde a operação ocorre — e não o do
+   * destinatário, como estava antes da issue #88. A presença é garantida pelo
+   * {@code FiscalRulesValidator}.
    */
   private String resolveCMunFG(NotaFiscal nota) {
-    EnderecoDestinatario end = nota.getDestinatarioEndereco();
-    if (end != null
-        && end.getCodigoMunicipioIbge() != null
-        && !end.getCodigoMunicipioIbge().isBlank()) {
-      return end.getCodigoMunicipioIbge();
+    EnderecoProdutor endereco = nota.getProdutor().getEndereco();
+    if (endereco == null || endereco.getCodigoMunicipioIbge() == null) {
+      throw new IllegalStateException(
+          "Codigo IBGE do municipio do emitente ausente; a emissao deveria ter sido barrada"
+              + " pela validacao fiscal");
     }
-    // Fallback: cUF + "9999" como código de município placeholder
-    Produtor produtor = nota.getProdutor();
-    String uf = produtor.getEstado() != null ? produtor.getEstado().toUpperCase() : "SP";
-    String cUF = UF_CODE.getOrDefault(uf, "35");
-    return cUF + "9999";
+    return endereco.getCodigoMunicipioIbge();
   }
 
   /**

@@ -2,6 +2,7 @@ package br.com.agrocontabil.nfe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -10,6 +11,8 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.nfe.model.IbsCbs;
 import br.com.agrocontabil.nfe.model.IbsCbsTot;
 import br.com.agrocontabil.nfe.model.NFe;
+import br.com.agrocontabil.nfe.model.Emit;
+import br.com.agrocontabil.nfe.model.EnderEmit;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -107,6 +110,43 @@ class NotaFiscalNfeMapperTest {
         .endsWith("+00:00");
   }
 
+
+  @Test
+  @DisplayName("XML carrega IE e endereco reais do emitente, com cMunFG do emitente (#88)")
+  void xmlComEmitenteRealValidaXsdSemPlaceholders() throws Exception {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.setProdutor(ProdutorTestFixtures.produtorCompleto());
+
+    NFe nfe = mapper.toNfe(nota);
+
+    Emit emit = nfe.getInfNFe().getEmit();
+    EnderEmit end = emit.getEnderEmit();
+    assertThat(emit.getIe()).isEqualTo(ProdutorTestFixtures.INSCRICAO_ESTADUAL);
+    assertThat(end.getXLgr()).isEqualTo("Avenida Historiador Rubens de Mendonca");
+    assertThat(end.getNro()).isEqualTo("1894");
+    assertThat(end.getXBairro()).isEqualTo("Bosque da Saude");
+    assertThat(end.getCMun()).isEqualTo(ProdutorTestFixtures.CODIGO_MUNICIPIO_IBGE);
+    assertThat(end.getXMun()).isEqualTo("Cuiaba");
+    assertThat(end.getUf()).isEqualTo("MT");
+    assertThat(end.getCep()).isEqualTo("78050000");
+
+    // cMunFG e o municipio do FATO GERADOR = o do EMITENTE, nao o do destinatario (MG).
+    assertThat(nfe.getInfNFe().getIde().getCMunFG())
+        .isEqualTo(ProdutorTestFixtures.CODIGO_MUNICIPIO_IBGE);
+
+    // Nenhum placeholder textual pode sobrar no XML serializado. Sequencias numericas como
+    // "0000000" nao entram nesta lista: a chave de acesso legitimamente zero-pada o nNF.
+    String xml = new XmlGenerator().marshal(nfe);
+    assertThat(xml)
+        .doesNotContain("SEM ENDERECO")
+        .doesNotContain("SEM LOGRADOURO")
+        .doesNotContain("MUNICIPIO NAO INFORMADO")
+        .doesNotContain("ISENTO");
+    // A validacao contra o XSD 4.00 nao cabe aqui: o schema exige <Signature>, que so e
+    // adicionada adiante no pipeline. Ela e coberta ponta a ponta por
+    // GeracaoNotaFiscalServiceTest, que usa a mesma fixture de emitente.
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
@@ -131,13 +171,8 @@ class NotaFiscalNfeMapperTest {
   }
 
   private NotaFiscal notaCom(NotaFiscalItem item) {
-    Produtor produtor =
-        Produtor.builder()
-            .id(UUID.randomUUID())
-            .nomeCompleto("Produtor Teste")
-            .cpfCnpj("12345678901")
-            .estado("SP")
-            .build();
+    // Emitente completo (issue #88): IE e endereco reais sao pre-condicao da emissao.
+    Produtor produtor = ProdutorTestFixtures.produtorCompleto();
     NotaFiscal nota =
         NotaFiscal.builder()
             .id(UUID.randomUUID())
@@ -151,6 +186,8 @@ class NotaFiscalNfeMapperTest {
             .destinatarioCpfCnpj("98765432100")
             .destinatarioEndereco(
                 EnderecoDestinatario.builder()
+                    .logradouro("Rua das Acacias")
+                    .numero("250")
                     .uf("MG")
                     .municipio("Uberaba")
                     .codigoMunicipioIbge("3170206")

@@ -69,7 +69,9 @@ br.com.agrocontabil
 │                  # NotaFiscalValidacaoResponse
 ├── mapper/        # entidade <-> DTO (NotaFiscalMapper)
 ├── validation/    # Bean Validation customizada: @ValidCpfCnpj/@ValidNcm/@ValidCfop
-│                  # + validators (CpfCnpjValidator, NcmValidator, CfopValidator)
+│                  # + @CodigoIbgeCoerenteComUf (constraint de classe, issue #88)
+│                  # + validators (CpfCnpjValidator, NcmValidator, CfopValidator,
+│                  #   CodigoIbgeCoerenteComUfValidator)
 ├── nfe/           # geração/importação de NF-e: model/ (JAXB puras layout 4.00), FiscalRulesValidator,
 │                  # NotaFiscalNfeMapper, NfeToNotaFiscalMapper (reverso), NfeXmlImporter (XXE-safe),
 │                  # XmlGenerator, XsdValidator, SecureXmlFactories (XXE),
@@ -79,7 +81,8 @@ br.com.agrocontabil
 │                  # SefazClient, SefazRetorno, SituacaoSefaz, SefazAmbiente,
 │                  # SefazStatusSyncJob (job agendado de sincronização)
 ├── exception/     # GlobalExceptionHandler + DomainException (base) + exceções de domínio
-└── common/        # ApiError (envelope errors[]), ErrorCode, ErrorDetail, DocumentoFiscalValidator
+└── common/        # ApiError (envelope errors[]), ErrorCode, ErrorDetail, DocumentoFiscalValidator,
+                   # UfIbge (cUF por UF + coerencia codigo IBGE x UF)
 ```
 
 ### Endpoints REST ativos
@@ -137,7 +140,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 410 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 475 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -204,7 +207,7 @@ Ordem obrigatória #86 → #85 → #88, um PR por issue.
 
 - **#86 Simetria débito×crédito (PR 1):** o crédito (`CreditoTributarioService`) usava a alíquota fixa do yml enquanto o débito (`TributacaoService`) resolvia por UF em `aliquota_ibs_uf` — coincidiam só pelo seed uniforme. Novo `AliquotaIbsCbsResolver` (`@Component`, padrão do `ReducaoNcmResolver`) é o **único** ponto de resolução de alíquota IBS (por UF, RN002) e CBS, consumido pelos dois serviços; devolve `AliquotasVigentes` (parcelas estadual/municipal, CBS, origem TABELA_UF/FALLBACK_YML). Nota importada usa a UF do destinatário (= produtor, princípio do destino — EC 132 art. 156-A §1.º VII); `TributosProperties` passa a ser apenas fallback conservador (+ `credito.percentualAproveitamento`). Teste de simetria `creditoUsaAliquotaPorUfDivergenteDoYml` foi escrito vermelho antes da correção.
 - **#85 Vigência temporal das alíquotas (PR 2):** changeSet `0020-aliquota-vigencia.xml` — `aliquota_ibs_uf` ganha `data_inicio`/`data_fim` (NULL = aberta) com PK composta `(uf, data_inicio)` (`AliquotaIbsUfId`); as 27 linhas da 0013 migram via `defaultValueDate=2026-01-01` (0013 intacta). Nova tabela/entidade `AliquotaCbs` (`aliquota_cbs`, vigência 2026 = 0,0090) substitui o valor fixo do yml como fonte primária. `AliquotaIbsCbsResolver` seleciona a vigência pela `dataEmissao` em `America/Sao_Paulo` (`findVigente(uf, data)` / `findVigente(data)`, `ORDER BY data_inicio DESC` — sobreposição acidental → mais recente vence); data fora de vigência → fallback yml + WARN, sem lançar. `TributacaoService`/`CreditoTributarioService`/`ApuracaoService` sem diff (vigência entrou só no resolvedor; apuração soma valores persistidos). Espelho H2 em `schema-nota-fiscal-test.sql`.
-- **#88 Emitente real + limites de nNF/série (PR 3):** pendente — endereço/IE no `Produtor`, mapper sem placeholders, `cMunFG` do emitente, `@Max` em `numero`/`serie`, `zeroPad` lança em overflow.
+- **#88 Emitente real + limites de nNF/série (PR 3):** changeSet `0021-produtor-endereco-ie.xml` — `Produtor` ganha `EnderecoProdutor` (`@Embeddable`, 7 campos) e `inscricaoEstadual`, todos nullable (obrigatoriedade é regra de emissão). `NotaFiscalNfeMapper` perde os placeholders do **emitente** (`SEM ENDERECO`, `S/N`, `cUF+99999`, `MUNICIPIO NAO INFORMADO`) e o fallback `0000000` do destinatário e **`cMunFG` passa a ser o município do emitente** (era o do destinatário — bug encontrado no caminho). `UF_CODE` vira `common/UfIbge` (`codigo()` devolve `Optional`, sem o default silencioso `"35"`, + `prefixoCoerente()`). `FiscalRulesValidator` exige IE (só para NFE — NFA mantém `ISENTO`), os 6 campos de endereço do emitente, **logradouro do destinatário** (o XSD exige `xLgr` com 2+ caracteres) e coerência IBGE×UF de emitente e destinatário (UF `EX` do exterior isenta nas duas camadas). Limites do layout com defesa em profundidade: `@Max(999_999_999)` em `numero` e `@Max(999)` em `serie` (400) + regra no validador (422, alcança notas importadas/legadas); `ChaveAcessoGenerator.zeroPad` **lança** em overflow em vez de truncar — o truncamento fazia o `nNF` da chave divergir do XML. Nova constraint de classe `@CodigoIbgeCoerenteComUf` no endereço do destinatário. `DataLoader` semeia Cuiabá/MT com IE.
 
 ### Onda 1 — Fundação de escalabilidade (concluída em 2026-09-22)
 
@@ -228,7 +231,9 @@ Cobertura ao fim da onda: **393 testes**, todos verdes (inclui os PRs da Onda 2 
   - Lock distribuído dos jobs (`ShedLock`) é a issue **#87** (Onda 5): hoje a coordenação é por instância.
 - **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico para teste). Substituir `MockSefazTransport` por transporte SOAP real + certificado **ICP-Brasil** em produção.
 - **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador — `POST`/`GET /api/contador/guias` (issue #74) aceitam `produtorId` explícito sem checagem de ownership até lá.
-- **Modelo:** `Produtor` sem endereço completo nem IE (placeholders no `NotaFiscalNfeMapper`) — resolvido na #88 (PR 3 da Onda 2).
+- **IE de produtor sem dígito verificador (#88):** não há algoritmo nacional padronizado de DV de Inscrição Estadual (cada UF tem o seu). Só o formato é validado; validação por UF fica para quando houver necessidade real.
+- **Bairro do destinatário (#88):** `EnderecoDestinatario` não modela o bairro e o XSD exige `xBairro` no `enderDest` — o literal `"CENTRO"` permanece nesse grupo. Resolver modelando o campo no domínio e no DTO. (`"S/N"` em `nro` não é placeholder: é a convenção do layout para imóvel sem número.)
+- **Tabela IBGE de municípios (Sprint 7):** a coerência município×UF é verificada só pelo prefixo (2 primeiros dígitos = cUF). A tabela completa dos 5.570 municípios validaria a existência do código.
 - **Alíquotas 2027–2033 (Onda 2, #85):** só a vigência de 2026 está semeada em `aliquota_ibs_uf`/`aliquota_cbs`. Quando RFB/CONFAZ/Comitê Gestor publicarem as alíquotas da transição (LC 214/2025, arts. 87–92), inserir vigências por **novo changeSet com `insert`** (fechando a anterior com `data_fim`); nunca `update` em linha existente. Parcela municipal de IBS continua por UF (não por município).
 - **Modelos pré-criados (consultoria AI — sprint não definida):** entidades `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback` e respectivos repositories existem no código mas **não têm controller nem service** — são scaffolding de feature futura. Não criar lógica sobre elas sem decisão explícita do Murillo.
 

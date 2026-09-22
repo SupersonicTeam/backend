@@ -1,5 +1,7 @@
 package br.com.agrocontabil.nfe;
 
+import br.com.agrocontabil.common.UfIbge;
+import br.com.agrocontabil.ProdutorTestFixtures;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -91,16 +93,26 @@ class FiscalRulesValidatorCfopAmbitoTest {
   // =========================================================================
 
   private NotaFiscal notaCompleta(String ufEmitente, String ufDestinatario, String cfop) {
+    // Emitente completo (issue #88): IE e endereco coerente com a UF do cenario.
     Produtor produtor = Produtor.builder()
         .nomeCompleto("Produtor Teste")
         .cpfCnpj("12345678901")
         .estado(ufEmitente)
+        .inscricaoEstadual(ProdutorTestFixtures.INSCRICAO_ESTADUAL)
+        .endereco(ProdutorTestFixtures.enderecoParaUf(ufEmitente))
         .build();
 
+    // Destinatario no exterior (UF "EX") usa o codigo de municipio do exterior; nas demais UFs
+    // o codigo precisa comecar pelo cUF correspondente (issue #88).
+    String codigoMunicipio = "EX".equals(ufDestinatario)
+        ? "9999999"
+        : UfIbge.codigo(ufDestinatario).orElseThrow() + "00001";
     EnderecoDestinatario endereco = EnderecoDestinatario.builder()
+        .logradouro("Rua de Teste")
+        .numero("100")
         .uf(ufDestinatario)
         .municipio("Municipio Teste")
-        .codigoMunicipioIbge("4106902")
+        .codigoMunicipioIbge(codigoMunicipio)
         .build();
 
     NotaFiscalItem item = NotaFiscalItem.builder()

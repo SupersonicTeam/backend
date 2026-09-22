@@ -1,11 +1,13 @@
 package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.validation.CodigoIbgeCoerenteComUf;
 import br.com.agrocontabil.validation.ValidCpfCnpj;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -26,13 +28,15 @@ import java.util.List;
 @Schema(description = "Dados para emissao de uma nota fiscal eletronica (NF-e modelo 55)")
 public record NotaFiscalRequest(
 
-    @Schema(description = "Numero sequencial da NF-e", example = "1")
+    @Schema(description = "Numero sequencial da NF-e (1 a 999.999.999)", example = "1")
     @NotNull(message = "numero e obrigatorio")
     @Positive(message = "numero deve ser positivo")
+    @Max(value = 999_999_999, message = "numero deve ser no maximo 999999999 (layout da NF-e)")
     Long numero,
 
-    @Schema(description = "Serie da NF-e (padrao 1 quando omitido)", example = "1")
+    @Schema(description = "Serie da NF-e, 1 a 999 (padrao 1 quando omitido)", example = "1")
     @Positive(message = "serie deve ser positiva")
+    @Max(value = 999, message = "serie deve ser no maximo 999 (layout da NF-e)")
     Integer serie,
 
     @Schema(description = "Natureza da operacao", example = "Venda de producao rural")
@@ -90,6 +94,7 @@ public record NotaFiscalRequest(
    * <p>Todos os campos sao opcionais; quando presentes, sao validados por formato.
    */
   @Schema(description = "Endereco do destinatario da nota fiscal")
+  @CodigoIbgeCoerenteComUf
   public record EnderecoDestinatarioRequest(
 
       @Schema(description = "Logradouro (rua, avenida etc.)", example = "Rua das Flores")

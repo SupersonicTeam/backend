@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import java.util.List;
 import java.time.LocalDate;
@@ -135,6 +136,8 @@ class GeracaoNfaFlowTest {
    * Constroi uma NFA completa e valida para o pipeline, variando o tipo/documento do emitente.
    */
   private NotaFiscal buildNfaCompleta(TipoProdutor tipo, String cpfCnpjEmitente) {
+    // Emitente completo (issue #88): a NFA exige endereco real; a IE fica nula de proposito,
+    // pois o produtor rural PF sem IE e justamente o caso de uso da NFA (mapper emite ISENTO).
     Produtor produtor = Produtor.builder()
         .id(UUID.randomUUID())
         .nomeCompleto("JOAO DA SILVA AGRICULTOR")
@@ -142,6 +145,7 @@ class GeracaoNfaFlowTest {
         .tipoProdutor(tipo)
         .regimeTributario(RegimeTributario.SIMPLES)
         .estado("PR")
+        .endereco(ProdutorTestFixtures.enderecoCuritibaPr())
         .build();
 
     NotaFiscalItem item = NotaFiscalItem.builder()

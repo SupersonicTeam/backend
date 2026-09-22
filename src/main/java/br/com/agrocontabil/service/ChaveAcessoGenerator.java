@@ -149,13 +149,24 @@ public class ChaveAcessoGenerator {
    * @param value  string a ser padded
    * @param length comprimento alvo
    * @return string com zeros à esquerda
+   * @throws IllegalArgumentException se {@code value} for maior que {@code length} — truncar
+   *     produziria uma chave de acesso inconsistente com o XML (issue #88)
    */
   public String zeroPad(String value, int length) {
     if (value == null) {
       value = "";
     }
-    if (value.length() >= length) {
-      return value.substring(value.length() - length);
+    if (value.length() > length) {
+      // Truncar aqui (comportamento anterior a issue #88) fazia o nNF embutido na chave divergir
+      // do nNF do XML: chave aceita localmente e rejeitada pela SEFAZ. A mensagem carrega apenas
+      // contagens de digitos, nunca o valor: zeroPad tambem recebe CPF/CNPJ e o
+      // GlobalExceptionHandler devolve a mensagem de IllegalArgumentException ao cliente (LGPD).
+      throw new IllegalArgumentException(
+          String.format("Valor com %d digitos excede o limite de %d para o campo da chave de"
+              + " acesso", value.length(), length));
+    }
+    if (value.length() == length) {
+      return value;
     }
     return "0".repeat(length - value.length()) + value;
   }

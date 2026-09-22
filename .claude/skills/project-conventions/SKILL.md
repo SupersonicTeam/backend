@@ -34,6 +34,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 - **Sempre** Bean Validation (`@Valid` + anotações no DTO). **Nunca** validar manualmente o que a anotação resolve.
 - Regra fiscal/de-negócio (não expressável por anotação) → no service.
+- **Limites do layout NF-e = defesa em profundidade:** `@Max` no DTO (400) **e** regra no `FiscalRulesValidator` (422). O DTO não alcança notas importadas/legadas, que entram por XML.
 
 ## Contrato de erro (obrigatório)
 

@@ -14,6 +14,16 @@ CREATE TABLE IF NOT EXISTS produtores (
     estado              VARCHAR(2),
     email               VARCHAR(255),
     telefone            VARCHAR(20),
+    -- Endereco completo + IE do emitente — Onda 2 issue #88 (migration 0021).
+    -- Todas nullable: obrigatoriedade e regra de emissao (FiscalRulesValidator).
+    endereco_logradouro            VARCHAR(60),
+    endereco_numero                VARCHAR(60),
+    endereco_complemento           VARCHAR(60),
+    endereco_bairro                VARCHAR(60),
+    endereco_codigo_municipio_ibge VARCHAR(7),
+    endereco_municipio             VARCHAR(60),
+    endereco_cep                   VARCHAR(8),
+    inscricao_estadual             VARCHAR(14),
     created_at          TIMESTAMP WITH TIME ZONE,
     updated_at          TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
