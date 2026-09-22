@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.eq;
@@ -57,6 +58,7 @@ class TributacaoServiceTest {
 
   @Mock private NcmReferenciaRepository ncmReferenciaRepository;
   @Mock private AliquotaIbsUfRepository aliquotaIbsUfRepository;
+  @Mock private AliquotaCbsRepository aliquotaCbsRepository;
 
   private TributacaoService service;
 
@@ -67,7 +69,7 @@ class TributacaoServiceTest {
     props.getCbs().setAliquota(ALIQUOTA_CBS);
     service = new TributacaoService(
         new ReducaoNcmResolver(ncmReferenciaRepository),
-        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, props));
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, props));
     // Por padrão nenhum NCM tem redução de referência; casos específicos sobrescrevem.
     lenient()
         .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
@@ -77,6 +79,8 @@ class TributacaoServiceTest {
     lenient()
         .when(aliquotaIbsUfRepository.findVigente(anyString(), any(LocalDate.class)))
         .thenReturn(List.of());
+    // Sem vigência de CBS por padrão: cai no fallback das properties (issue #85).
+    lenient().when(aliquotaCbsRepository.findVigente(any(LocalDate.class))).thenReturn(List.of());
   }
 
   // -------------------------------------------------------------------------

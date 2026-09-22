@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.eq;
@@ -41,6 +42,7 @@ class CreditoTributarioServiceTest {
   private TributosProperties tributosProperties;
   private NcmReferenciaRepository ncmReferenciaRepository;
   private AliquotaIbsUfRepository aliquotaIbsUfRepository;
+  private AliquotaCbsRepository aliquotaCbsRepository;
   private CreditoTributarioService service;
 
   @BeforeEach
@@ -53,11 +55,15 @@ class CreditoTributarioServiceTest {
         .thenReturn(Optional.empty());
     aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
     // Por padrão nenhuma UF cadastrada: o resolver cai para a alíquota do yml (0,0010 / 0,0090).
-    lenient().when(aliquotaIbsUfRepository.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
+    lenient().when(aliquotaIbsUfRepository.findVigente(anyString(), any(LocalDate.class)))
+        .thenReturn(List.of());
+    // Sem vigência de CBS por padrão: cai no fallback do yml (0,0090) — issue #85.
+    aliquotaCbsRepository = mock(AliquotaCbsRepository.class);
+    lenient().when(aliquotaCbsRepository.findVigente(any(LocalDate.class))).thenReturn(List.of());
     service = new CreditoTributarioService(
         tributosProperties,
         new ReducaoNcmResolver(ncmReferenciaRepository),
-        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, tributosProperties));
   }
 
   @Test
@@ -235,7 +241,7 @@ class CreditoTributarioServiceTest {
             .build()));
     TributacaoService debito = new TributacaoService(
         new ReducaoNcmResolver(ncmReferenciaRepository),
-        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, tributosProperties));
 
     NotaFiscal nota = notaImportada(item("6101", "1000.00"));
     nota.setProdutor(Produtor.builder().estado("MT").build());

@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,8 +73,11 @@ class GeracaoNotaFiscalServiceTest {
     when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
+    // Sem vigencia de CBS nas fixtures: cai no fallback da aliquota parametrizada (issue #85).
+    AliquotaCbsRepository cbsRepo = mock(AliquotaCbsRepository.class);
+    when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
     tributacaoService = new TributacaoService(
-        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, props));
+        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();
