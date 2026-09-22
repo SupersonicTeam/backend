@@ -257,21 +257,29 @@ public class NotaFiscalController {
   /**
    * Retorna o XML da NF-e gerado e armazenado para a nota indicada.
    *
-   * <p>Retorna 404 se o XML ainda nao foi gerado (nota ainda em RASCUNHO).
-   * O Content-Type da resposta e {@code application/xml}.
+   * <p>Retorna 409 se a nota existe mas o XML ainda nao foi gerado, e 404 apenas se a nota nao
+   * existir ou for de outro produtor — simetrico ao {@code /pdf} (issue #89).
+   * O Content-Type da resposta de sucesso e {@code application/xml}.
+   *
+   * <p>O envelope {@link ApiError} acompanha o {@code Accept} do cliente: sai em XML para quem
+   * pede {@code application/xml} e em JSON para os demais — em ambos com o mesmo
+   * {@code errors[]}.
    */
   @GetMapping(value = "/{id}/xml", produces = MediaType.APPLICATION_XML_VALUE)
   @Operation(
       summary = "Obtem o XML da NF-e",
       description = "Retorna o XML da NF-e gerado e armazenado para a nota. "
-          + "Retorna 404 se a nota nao existir, nao pertencer ao produtor autenticado "
-          + "ou se o XML ainda nao tiver sido gerado (use POST /{id}/gerar-xml primeiro).")
+          + "Retorna 409 se o XML ainda nao tiver sido gerado (use POST /{id}/gerar-xml primeiro) "
+          + "e 404 se a nota nao existir ou nao pertencer ao produtor autenticado.")
   @ApiResponses({
       @ApiResponse(responseCode = "200",
           description = "XML retornado com sucesso",
           content = @Content(mediaType = MediaType.APPLICATION_XML_VALUE)),
+      @ApiResponse(responseCode = "409",
+          description = "XML ainda nao gerado para esta nota",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "404",
-          description = "Nota nao encontrada ou XML ainda nao gerado",
+          description = "Nota nao encontrada ou de outro produtor",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<String> obterXml(@PathVariable UUID id) {

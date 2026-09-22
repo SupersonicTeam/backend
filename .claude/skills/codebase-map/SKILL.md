@@ -137,6 +137,7 @@ Bean Validation customizada (anotação + validator):
 | `NfaInvalidaParaEmissaoException` | 422 | Dados inválidos para NFA |
 | `XmlImportacaoInvalidaException` | 422 | XML importado inválido/malformado |
 | `DanfeIndisponivelException` | 409 | PDF pedido antes do XML |
+| `XmlIndisponivelException` | 409 | XML pedido antes de ser gerado (issue #89) |
 | `DanfeGenerationException` | 500 (genérico) | Falha interna no JasperReports |
 | `AssinaturaDigitalException` | 500 (genérico) | Falha na assinatura/cert |
 | `SefazComunicacaoException` | 502 | Timeout/falha após retry |
@@ -164,7 +165,7 @@ Bean Validation customizada (anotação + validator):
 | PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS) |
 | DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS) |
 | POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
-| GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`) |
+| GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`; 409 se ainda nao gerado) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |

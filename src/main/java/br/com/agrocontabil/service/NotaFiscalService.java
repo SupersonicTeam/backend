@@ -9,6 +9,7 @@ import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlGenerationException;
+import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -303,8 +304,9 @@ public class NotaFiscalService {
    *
    * @param id identificador da nota fiscal
    * @return XML da NF-e como string UTF-8
-   * @throws ResourceNotFoundException se a nota nao existir, pertencer a outro produtor
-   *                                   ou o XML ainda nao tiver sido gerado
+   * @throws ResourceNotFoundException  se a nota nao existir ou pertencer a outro produtor
+   * @throws XmlIndisponivelException   se a nota existir mas o XML ainda nao tiver sido
+   *                                    gerado (HTTP 409, simetrico a DANFE)
    */
   @Transactional(readOnly = true)
   public String obterXml(UUID id) {
@@ -314,9 +316,7 @@ public class NotaFiscalService {
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
 
     if (nota.getXmlGerado() == null) {
-      throw new ResourceNotFoundException(
-          "XML da NF-e ainda nao gerado para a nota '" + id + "'. "
-              + "Chame POST /api/notas/{id}/gerar-xml primeiro.");
+      throw new XmlIndisponivelException(id, nota.getStatus());
     }
 
     return nota.getXmlGerado();

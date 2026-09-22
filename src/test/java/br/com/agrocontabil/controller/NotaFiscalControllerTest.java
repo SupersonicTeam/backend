@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.xpath;
 
 import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
@@ -25,6 +26,7 @@ import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.NotaFiscalService;
@@ -446,13 +448,44 @@ class NotaFiscalControllerTest {
   }
 
   @Test
-  @DisplayName("GET /api/notas/{id}/xml deve retornar 404 quando XML nao foi gerado")
-  void getXmlShouldReturn404WhenXmlNotYetGenerated() throws Exception {
+  @DisplayName("GET /api/notas/{id}/xml deve retornar 409 quando XML nao foi gerado")
+  void getXmlShouldReturn409WhenXmlNotYetGenerated() throws Exception {
     UUID notaId = UUID.randomUUID();
 
     when(notaFiscalService.obterXml(eq(notaId)))
-        .thenThrow(new ResourceNotFoundException(
-            "XML da NF-e ainda nao gerado para a nota '" + notaId + "'."));
+        .thenThrow(new XmlIndisponivelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    // Simetrico ao /pdf: recurso ainda nao gerado e conflito de estado, nao ausencia de nota.
+    // O envelope de erro e JSON (nao ha conversor XML no projeto), por isso o cliente precisa
+    // aceitar application/json para ler os detalhes — o Angular ja envia ambos.
+    mockMvc.perform(get("/api/notas/{id}/xml", notaId)
+            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON))
+        .andExpect(status().isConflict())
+        // O envelope acompanha o Accept: aqui sai em XML, com o mesmo errors[] do JSON.
+        .andExpect(xpath("/ApiError/errors/errors/code").string("XML_INDISPONIVEL"));
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/xml deve devolver o envelope errors[] em JSON quando o cliente pede JSON")
+  void getXmlShouldReturnJsonEnvelopeWhenClientAsksJson() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(notaFiscalService.obterXml(eq(notaId)))
+        .thenThrow(new XmlIndisponivelException(notaId, StatusNotaFiscal.RASCUNHO));
+
+    mockMvc.perform(get("/api/notas/{id}/xml", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.errors[?(@.code == 'XML_INDISPONIVEL')]").exists());
+  }
+
+  @Test
+  @DisplayName("GET /api/notas/{id}/xml deve retornar 404 quando a nota nao existe ou e de outro produtor")
+  void getXmlShouldReturn404WhenNotaNotFound() throws Exception {
+    UUID notaId = UUID.randomUUID();
+
+    when(notaFiscalService.obterXml(eq(notaId)))
+        .thenThrow(new ResourceNotFoundException("NotaFiscal", notaId));
 
     mockMvc.perform(get("/api/notas/{id}/xml", notaId)
             .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON))
