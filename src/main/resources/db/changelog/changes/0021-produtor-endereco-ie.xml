@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0021-produtor-endereco-ie.xml
+         Onda 2 — issue #88: endereco completo e Inscricao Estadual do
+         emitente (Produtor).
+
+         Ate aqui o Produtor so tinha 'estado' (UF), e o NotaFiscalNfeMapper
+         preenchia o grupo <enderEmit> com placeholders ("SEM ENDERECO",
+         "S/N", cMun = cUF + "99999" — codigo IBGE inexistente) e IE fixa
+         "ISENTO". O XML passava no XSD e na assinatura, mas seria
+         rejeitado pela SEFAZ real. Estas colunas permitem mapear os
+         campos reais (debito tecnico registrado desde a Sprint 2).
+
+         Tamanhos seguem o layout NF-e 4.00: xLgr/nro/xCpl/xBairro/xMun
+         ate 60 caracteres, cMun 7 digitos, CEP 8 digitos, IE ate 14.
+
+         TODAS as colunas sao NULLABLE: produtores ja cadastrados e
+         rascunhos continuam validos. A obrigatoriedade e regra de
+         EMISSAO, aplicada pelo FiscalRulesValidator (422), nao do schema.
+
+         Tipos portaveis (H2 e PostgreSQL). O perfil de teste desabilita
+         o Liquibase; as mesmas colunas estao replicadas em
+         schema-nota-fiscal-test.sql — manter sincronizado.
+         ================================================================ -->
+
+    <changeSet id="0021-produtores-add-endereco-ie" author="supersonic-team">
+        <comment>
+            Adiciona endereco completo (logradouro, numero, complemento, bairro,
+            codigo IBGE do municipio, municipio, CEP) e inscricao_estadual na
+            tabela produtores. Todas nullable.
+        </comment>
+
+        <addColumn tableName="produtores">
+            <column name="endereco_logradouro" type="VARCHAR(60)"/>
+            <column name="endereco_numero" type="VARCHAR(60)"/>
+            <column name="endereco_complemento" type="VARCHAR(60)"/>
+            <column name="endereco_bairro" type="VARCHAR(60)"/>
+            <column name="endereco_codigo_municipio_ibge" type="VARCHAR(7)"/>
+            <column name="endereco_municipio" type="VARCHAR(60)"/>
+            <column name="endereco_cep" type="VARCHAR(8)"/>
+            <column name="inscricao_estadual" type="VARCHAR(14)"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="produtores" columnName="inscricao_estadual"/>
+            <dropColumn tableName="produtores" columnName="endereco_cep"/>
+            <dropColumn tableName="produtores" columnName="endereco_municipio"/>
+            <dropColumn tableName="produtores" columnName="endereco_codigo_municipio_ibge"/>
+            <dropColumn tableName="produtores" columnName="endereco_bairro"/>
+            <dropColumn tableName="produtores" columnName="endereco_complemento"/>
+            <dropColumn tableName="produtores" columnName="endereco_numero"/>
+            <dropColumn tableName="produtores" columnName="endereco_logradouro"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
