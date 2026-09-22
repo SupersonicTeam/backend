@@ -5,7 +5,11 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:10}
+      # Tamanho e timeouts do pool vem do application.yml base (issue #98).
+      # Aqui fica apenas o que e especifico do PostgreSQL: o statement_timeout do servidor,
+      # que aborta a query presa no banco — o driver H2 dos testes rejeitaria esta propriedade.
+      data-source-properties:
+        options: -c statement_timeout=${DB_STATEMENT_TIMEOUT_MS:30000}
 
   docker:
     compose:
