@@ -8,6 +8,7 @@ import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -40,6 +42,7 @@ import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
  * {@code numeroItem}.
  */
 @SpringBootTest
+@Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=none")
@@ -57,6 +60,9 @@ class NotaFiscalUpdateItemFlowTest {
 
   @Autowired
   private ProdutorRepository produtorRepository;
+
+  @Autowired
+  private TestDatabaseCleaner cleaner;
 
   private Produtor produtor;
 
@@ -76,8 +82,7 @@ class NotaFiscalUpdateItemFlowTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
-    notaFiscalRepository.deleteAll();
-    produtorRepository.deleteAll();
+    cleaner.limparTudo();
   }
 
   @Test

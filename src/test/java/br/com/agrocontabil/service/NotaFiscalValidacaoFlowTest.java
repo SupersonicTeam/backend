@@ -12,6 +12,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -48,6 +50,7 @@ import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
  * mascararia o cenário. A limpeza é feita manualmente no {@link #tearDown()}.
  */
 @SpringBootTest
+@Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=none")
@@ -72,6 +75,9 @@ class NotaFiscalValidacaoFlowTest {
   @Autowired
   private ProdutorRepository produtorRepository;
 
+  @Autowired
+  private TestDatabaseCleaner cleaner;
+
   private Produtor produtor;
 
   @BeforeEach
@@ -90,9 +96,7 @@ class NotaFiscalValidacaoFlowTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
-    validacaoRepository.deleteAll();
-    notaFiscalRepository.deleteAll();
-    produtorRepository.deleteAll();
+    cleaner.limparTudo();
   }
 
   @Test

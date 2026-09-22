@@ -10,6 +10,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.nfe.NfeImportTestFixtures;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,6 +48,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * </ul>
  */
 @SpringBootTest
+@Import(TestDatabaseCleaner.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = Replace.NONE)
@@ -61,6 +64,9 @@ class ImportacaoNotaFiscalIntegrationTest {
 
   @Autowired
   private ProdutorRepository produtorRepository;
+
+  @Autowired
+  private TestDatabaseCleaner cleaner;
 
   @Autowired
   private NotaFiscalRepository notaFiscalRepository;
@@ -86,8 +92,7 @@ class ImportacaoNotaFiscalIntegrationTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
-    notaFiscalRepository.deleteAll();
-    produtorRepository.deleteAll();
+    cleaner.limparTudo();
   }
 
   @Test

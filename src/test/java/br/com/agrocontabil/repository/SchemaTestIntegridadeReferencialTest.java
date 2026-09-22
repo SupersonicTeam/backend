@@ -55,10 +55,15 @@ class SchemaTestIntegridadeReferencialTest {
   private static final String INSERT_PRODUTOR =
       "INSERT INTO produtores (id, nome_completo) VALUES (?, ?)";
 
+  // Os INSERTs listam TODAS as colunas NOT NULL: o H2 em memoria e compartilhado entre contextos
+  // (DB_CLOSE_DELAY=-1) e a tabela pode ter sido criada pelo Hibernate (create-drop) de outro
+  // teste, sem os DEFAULTs do script.
   private static final String INSERT_NOTA =
-      "INSERT INTO nota_fiscal (id, numero, natureza_operacao, data_emissao, produtor_id, "
-          + "destinatario_nome, destinatario_cpf_cnpj, valor_total_produtos, valor_total_nota) "
-          + "VALUES (?, 1, 'Venda', ?, ?, 'Jose', '12345678901', 10.00, 10.00)";
+      "INSERT INTO nota_fiscal (id, numero, serie, modelo, natureza_operacao, data_emissao, "
+          + "produtor_id, destinatario_nome, destinatario_cpf_cnpj, valor_total_produtos, "
+          + "valor_total_nota, status, tipo_documento, origem) "
+          + "VALUES (?, 1, 1, '55', 'Venda', ?, ?, 'Jose', '12345678901', 10.00, 10.00, "
+          + "'RASCUNHO', 'NFE', 'PROPRIA')";
 
   private static final String INSERT_ITEM =
       "INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, descricao, ncm, cfop, "
@@ -67,8 +72,8 @@ class SchemaTestIntegridadeReferencialTest {
 
   private static final String INSERT_APURACAO =
       "INSERT INTO apuracao_mensal (id, produtor_id, periodo, status, debito_ibs, debito_cbs, "
-          + "credito_ibs, credito_cbs, saldo_ibs, saldo_cbs) "
-          + "VALUES (?, ?, '2026-09', 'ABERTO', 0, 0, 0, 0, 0, 0)";
+          + "credito_ibs, credito_cbs, saldo_ibs, saldo_cbs, total_notas) "
+          + "VALUES (?, ?, '2026-09', 'ABERTO', 0, 0, 0, 0, 0, 0, 0)";
 
   private static final String INSERT_GUIA =
       "INSERT INTO guias_fiscais (id, produtor_id, tipo_guia, data_vencimento, valor, status) "

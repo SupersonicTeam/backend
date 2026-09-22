@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
@@ -42,6 +44,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * mesma thread, antes de {@link TransactionTemplate#executeWithoutResult} retornar.
  */
 @SpringBootTest
+@Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
@@ -54,6 +57,7 @@ class ApuracaoEventoDominioIntegrationTest {
   @Autowired private NotaFiscalRepository notaFiscalRepository;
   @Autowired private ApuracaoMensalRepository apuracaoRepository;
   @Autowired private ProdutorRepository produtorRepository;
+  @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private TransactionTemplate transactionTemplate;
 
   private Produtor produtor;
@@ -61,9 +65,7 @@ class ApuracaoEventoDominioIntegrationTest {
   @BeforeEach
   void setUp() {
     transactionTemplate.executeWithoutResult(status -> {
-      apuracaoRepository.deleteAll();
-      notaFiscalRepository.deleteAll();
-      produtorRepository.deleteAll();
+      cleaner.limparTudo();
       produtor = produtorRepository.save(
           Produtor.builder().nomeCompleto("Maria Agricultora").cpfCnpj("98765432100").build());
     });
