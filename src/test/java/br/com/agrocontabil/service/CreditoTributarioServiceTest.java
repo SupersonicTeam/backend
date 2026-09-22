@@ -29,11 +29,14 @@ import org.junit.jupiter.api.Test;
  * (IBS 0,10 %, CBS 0,90 %) e aproveitamento integral (100 %), sobrescritos por teste quando o
  * cenário exige. A redução por NCM é resolvida pelo {@link ReducaoNcmResolver} sobre um
  * {@link NcmReferenciaRepository} mockado que, por padrão, não devolve redução para nenhum NCM.
+ * A alíquota vem do {@link AliquotaIbsCbsResolver} real sobre um {@link AliquotaIbsUfRepository}
+ * mockado que, por padrão, não tem UF cadastrada (fallback para o yml) — issue #86.
  */
 class CreditoTributarioServiceTest {
 
   private TributosProperties tributosProperties;
   private NcmReferenciaRepository ncmReferenciaRepository;
+  private AliquotaIbsUfRepository aliquotaIbsUfRepository;
   private CreditoTributarioService service;
 
   @BeforeEach
@@ -44,8 +47,13 @@ class CreditoTributarioServiceTest {
     lenient()
         .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
         .thenReturn(Optional.empty());
+    aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
+    // Por padrão nenhuma UF cadastrada: o resolver cai para a alíquota do yml (0,0010 / 0,0090).
+    lenient().when(aliquotaIbsUfRepository.findByUf(anyString())).thenReturn(Optional.empty());
     service = new CreditoTributarioService(
-        tributosProperties, new ReducaoNcmResolver(ncmReferenciaRepository));
+        tributosProperties,
+        new ReducaoNcmResolver(ncmReferenciaRepository),
+        new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, tributosProperties));
   }
 
   @Test
@@ -215,7 +223,6 @@ class CreditoTributarioServiceTest {
   void creditoUsaAliquotaPorUfDivergenteDoYml() {
     // Debito: a UF aplicavel (MT) tem aliquota 0,0030 + 0,0020 = 0,0050 na tabela aliquota_ibs_uf,
     // divergente da aliquota fixa do yml (0,0010). O seed real e uniforme e mascara a diferenca.
-    AliquotaIbsUfRepository aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
     when(aliquotaIbsUfRepository.findByUf("MT")).thenReturn(Optional.of(
         AliquotaIbsUf.builder()
             .uf("MT")
