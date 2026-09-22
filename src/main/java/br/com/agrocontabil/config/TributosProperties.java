@@ -6,6 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Propriedades de alíquotas de IBS e CBS, parametrizadas via {@code application.yml}.
  *
+ * <p><strong>Papel a partir da issue Agrocontabil#86:</strong> as alíquotas aqui definidas são o
+ * <em>fallback conservador</em> do {@link br.com.agrocontabil.service.AliquotaIbsCbsResolver}
+ * — usadas apenas quando não há alíquota de IBS na tabela {@code aliquota_ibs_uf} para a UF
+ * aplicável (e, a partir da issue #85, quando não há vigência para a data de emissão). Nenhum
+ * serviço lê {@code ibs.aliquota}/{@code cbs.aliquota} diretamente; toda resolução de alíquota
+ * passa pelo resolvedor. O {@code credito.percentualAproveitamento} continua sendo lido pelo
+ * {@code CreditoTributarioService}.
+ *
  * <p>Prefix: {@code agrocontabil.tributos}. Configurado em {@code application.yml}:
  *
  * <pre>
@@ -79,7 +87,8 @@ public class TributosProperties {
     /**
      * Alíquota do IBS como proporção decimal (ex.: {@code 0.0010} = 0,10 %).
      *
-     * <p>Valor de referência para o ano-teste de 2026 conforme LC 214/2025.
+     * <p>Valor de referência para o ano-teste de 2026 conforme LC 214/2025. Fallback quando a
+     * UF não consta em {@code aliquota_ibs_uf} (dividido 50/50 entre estado e município).
      * Ajustável em {@code application.yml} sem recompilar.
      */
     private BigDecimal aliquota = new BigDecimal("0.0010");
@@ -105,8 +114,8 @@ public class TributosProperties {
     /**
      * Alíquota da CBS como proporção decimal (ex.: {@code 0.0090} = 0,90 %).
      *
-     * <p>Valor de referência para o ano-teste de 2026 conforme LC 214/2025.
-     * Ajustável em {@code application.yml} sem recompilar.
+     * <p>Valor de referência para o ano-teste de 2026 conforme LC 214/2025. Fallback do
+     * resolvedor de alíquota. Ajustável em {@code application.yml} sem recompilar.
      */
     private BigDecimal aliquota = new BigDecimal("0.0090");
 
