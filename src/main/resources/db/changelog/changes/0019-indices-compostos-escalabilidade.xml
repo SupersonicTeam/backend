@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0019-indices-compostos-escalabilidade.xml
+         Onda 1 — issue #102: indices compostos faltantes.
+
+         As tabelas nota_fiscal e guias_fiscais so tinham indice por
+         produtor_id (changesets 0002 e 0018). As consultas que cresceram
+         desde entao filtram por combinacoes que esse indice nao cobre,
+         levando a full scan conforme a base cresce (produtores x notas x
+         meses).
+
+         Em cada indice a ordem das colunas segue o predicado real:
+         igualdades primeiro, range/ordenacao por ultimo.
+
+         NAO editamos changeSets anteriores. O perfil de teste desabilita o
+         Liquibase; os mesmos indices estao replicados em
+         schema-nota-fiscal-test.sql e travados por SchemaTestIndicesTest.
+         ================================================================ -->
+
+    <changeSet id="0019-index-nota-fiscal-produtor-status-emissao" author="supersonic-team">
+        <comment>
+            Indice composto (produtor_id, status, data_emissao) em nota_fiscal para as
+            agregacoes de dashboard, apuracao e relatorio de conformidade (issue #102):
+            somarDebitosPorPeriodo, somarCreditosPorPeriodo, contarNotasPorMesEOrigem e
+            somarValorNotasPorOrigem — todas com produtor_id = ? AND status = ? AND
+            data_emissao >= ? AND data_emissao &lt; ?.
+        </comment>
+
+        <createIndex tableName="nota_fiscal" indexName="idx_nota_fiscal_produtor_status_emissao">
+            <column name="produtor_id"/>
+            <column name="status"/>
+            <column name="data_emissao"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="nota_fiscal" indexName="idx_nota_fiscal_produtor_status_emissao"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0019-index-guia-fiscal-status-vencimento" author="supersonic-team">
+        <comment>
+            Indice composto (status, data_vencimento) em guias_fiscais para a varredura diaria
+            do GuiaFiscalStatusSyncJob (findByStatusAndDataVencimentoBefore): status = 'PENDENTE'
+            AND data_vencimento &lt; hoje, hoje executada como full scan da tabela inteira.
+        </comment>
+
+        <createIndex tableName="guias_fiscais" indexName="idx_guia_fiscal_status_vencimento">
+            <column name="status"/>
+            <column name="data_vencimento"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="guias_fiscais" indexName="idx_guia_fiscal_status_vencimento"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0019-index-guia-fiscal-produtor-vencimento" author="supersonic-team">
+        <comment>
+            Indice composto (produtor_id, data_vencimento) em guias_fiscais para a listagem do
+            painel do Contador e o calendario fiscal (findByProdutorIdOrderByDataVencimentoDesc):
+            produtor_id = ? ORDER BY data_vencimento DESC — cobre filtro e ordenacao, evitando
+            sort em memoria. Base para a paginacao da issue #103.
+        </comment>
+
+        <createIndex tableName="guias_fiscais" indexName="idx_guia_fiscal_produtor_vencimento">
+            <column name="produtor_id"/>
+            <column name="data_vencimento"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="guias_fiscais" indexName="idx_guia_fiscal_produtor_vencimento"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
