@@ -190,6 +190,17 @@ CREATE INDEX IF NOT EXISTS idx_guia_fiscal_produtor_id ON guias_fiscais (produto
 -- Cobre a varredura do refechamento de periodos reabertos (status = ? AND periodo range).
 CREATE INDEX IF NOT EXISTS idx_apuracao_status_periodo ON apuracao_mensal (status, periodo);
 
+-- Indices compostos de escalabilidade — Onda 1 issue #102 (migration 0019).
+-- A ORDEM das colunas segue o predicado real (igualdades antes do range/ordenacao) e e
+-- verificada por SchemaTestIndicesTest. Manter sincronizado com
+-- 0019-indices-compostos-escalabilidade.xml.
+CREATE INDEX IF NOT EXISTS idx_nota_fiscal_produtor_status_emissao
+    ON nota_fiscal (produtor_id, status, data_emissao);
+CREATE INDEX IF NOT EXISTS idx_guia_fiscal_status_vencimento
+    ON guias_fiscais (status, data_vencimento);
+CREATE INDEX IF NOT EXISTS idx_guia_fiscal_produtor_vencimento
+    ON guias_fiscais (produtor_id, data_vencimento);
+
 -- ============================================================================
 -- Foreign keys — issue #90. Replicam as FKs do Liquibase com as MESMAS acoes ON DELETE,
 -- para que RESTRICT/CASCADE/filho orfao se comportem nos testes como em producao.
