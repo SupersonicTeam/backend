@@ -10,6 +10,8 @@ import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.service.AliquotasVigentes.OrigemAliquota;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +55,7 @@ public class AliquotaIbsCbsResolver {
 
   private static final Logger log = LoggerFactory.getLogger(AliquotaIbsCbsResolver.class);
   private static final BigDecimal DOIS = BigDecimal.valueOf(2);
+  private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
   private final AliquotaIbsUfRepository aliquotaIbsUfRepository;
   private final TributosProperties tributosProperties;
@@ -77,8 +80,10 @@ public class AliquotaIbsCbsResolver {
    */
   public AliquotasVigentes resolver(NotaFiscal nota) {
     String uf = resolveUfAplicavel(nota);
-    Optional<AliquotaIbsUf> referencia =
-        uf != null ? aliquotaIbsUfRepository.findByUf(uf) : Optional.empty();
+    // Passo intermediario (#85): a selecao pela data de emissao entra na proxima task.
+    Optional<AliquotaIbsUf> referencia = uf != null
+        ? aliquotaIbsUfRepository.findVigente(uf, LocalDate.now(ZONE)).stream().findFirst()
+        : Optional.empty();
 
     BigDecimal cbs = tributosProperties.getCbs().getAliquota();
 
