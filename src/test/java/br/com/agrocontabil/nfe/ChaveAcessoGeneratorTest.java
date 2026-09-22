@@ -205,4 +205,39 @@ class ChaveAcessoGeneratorTest {
     assertThat(generator.zeroPad("123", 3)).isEqualTo("123");
     assertThat(generator.zeroPad("12345", 3)).isEqualTo("345"); // trunca pela direita
   }
+
+  // -------------------------------------------------------------------------
+  // Overflow de nNF / serie (issue #88)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("zeroPad deve lancar quando o valor excede o tamanho, em vez de truncar (#88)")
+  void zeroPadLancaEmOverflow() {
+    // Antes da #88 isto devolvia "234567890" silenciosamente: o nNF embutido na chave divergia
+    // do nNF do XML, produzindo uma chave inconsistente aceita localmente e rejeitada na SEFAZ.
+    assertThatThrownBy(() -> generator.zeroPad("1234567890", 9))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("9");
+  }
+
+  @Test
+  @DisplayName("gerar com nNF acima de 999.999.999 lanca em vez de truncar (#88)")
+  void gerarComNumeroAcimaDoLimiteLanca() {
+    assertThatThrownBy(() -> generator.gerar("41", "2612", "00012345678901", 1, 1_000_000_000L))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  @DisplayName("nNF e serie no limite produzem chave consistente com o informado (#88)")
+  void chaveComNnfESerieNoLimite() {
+    ChaveAcessoGenerator.ChaveResult result =
+        generator.gerar("41", "2612", "00012345678901", 999, 999_999_999L);
+
+    String chave = result.chave();
+    assertThat(chave).hasSize(44);
+    // Posicoes do layout: modelo [20,22), serie [22,25), nNF [25,34).
+    assertThat(chave.substring(20, 22)).isEqualTo("55");
+    assertThat(chave.substring(22, 25)).isEqualTo("999");
+    assertThat(chave.substring(25, 34)).isEqualTo("999999999");
+  }
 }
