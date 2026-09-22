@@ -190,5 +190,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0018-guias-fiscais` (próximo número livre: **0019**)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0019-indices-compostos-escalabilidade` (próximo número livre: **0020**)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.
