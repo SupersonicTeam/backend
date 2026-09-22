@@ -100,6 +100,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20) |
 | `AliquotaIbsUf` (+ `AliquotaIbsUfId`) | Alíquota de IBS (estadual/municipal) por UF **e vigência** — PK composta `(uf, data_inicio)`; `data_fim` NULL = aberta (issues #31/#85) |
 | `AliquotaCbs` | Alíquota de CBS por vigência (`aliquota_cbs`, issue #85); substitui o valor fixo do yml como fonte primária |
+| `EnderecoProdutor` | `@Embeddable` com o endereço completo do emitente (issue #88) — alimenta `<enderEmit>` e o `cMunFG`; a UF fica em `Produtor.estado` |
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
 | **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ/CANCELADA; COM_INCONSISTENCIAS) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` · `TipoGuiaFiscal` (ICMS/FUNRURAL/DARF/GPS/OUTRO) · `StatusGuiaFiscal` (PENDENTE/PAGA/VENCIDA) |
 | `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback`, `RegimeTributario` | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
@@ -125,6 +126,7 @@ Bean Validation customizada (anotação + validator):
 | `@ValidCpfCnpj` | `CpfCnpjValidator` | Dígitos verificadores de CPF/CNPJ (issue #18) |
 | `@ValidNcm` | `NcmValidator` | NCM contra tabela de referência (issue #20) |
 | `@ValidCfop` | `CfopValidator` | CFOP contra tabela de referência (issue #20) |
+| `@CodigoIbgeCoerenteComUf` | `CodigoIbgeCoerenteComUfValidator` | Constraint de **classe** no endereço do destinatário: prefixo do código IBGE = cUF da UF (issue #88) |
 
 ### `exception/`
 | Classe | HTTP | Quando |
@@ -152,6 +154,7 @@ Bean Validation customizada (anotação + validator):
 - `ApiError` — envelope `{ errors: [] }` de resposta de erro
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
+- `UfIbge` — cUF das 27 UFs (`Optional`, sem default silencioso) + `prefixoCoerente(codigoIbge, uf)` (issue #88)
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
@@ -190,8 +193,9 @@ Bean Validation customizada (anotação + validator):
 ## Testes em `src/test/`
 - `resources/certs/` — certificado autoassinado para testes de assinatura
 - Padrão: `*Test.java` (unitário Mockito) + teste de integração (Spring + H2)
+- `ProdutorTestFixtures` — emitente com IE e endereço (`produtorCompleto`, `enderecoParaUf`, variantes inválidas) exigido pelos fluxos de emissão desde a issue #88
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0020-aliquota-vigencia` (próximo número livre: **0021**)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0021-produtor-endereco-ie` (próximo número livre: **0022**)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.
