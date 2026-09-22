@@ -1,5 +1,8 @@
 package br.com.agrocontabil.service;
 
+import java.util.List;
+import java.time.LocalDate;
+import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -68,7 +71,7 @@ class GeracaoNfaFlowTest {
     NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
     when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
-    when(aliquotaRepo.findByUf(anyString())).thenReturn(Optional.empty());
+    when(aliquotaRepo.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
     tributacaoService = new TributacaoService(
         new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, props));
 

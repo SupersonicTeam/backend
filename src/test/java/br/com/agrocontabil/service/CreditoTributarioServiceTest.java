@@ -1,5 +1,9 @@
 package br.com.agrocontabil.service;
 
+import java.util.List;
+import java.time.LocalDate;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
@@ -49,7 +53,7 @@ class CreditoTributarioServiceTest {
         .thenReturn(Optional.empty());
     aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
     // Por padrão nenhuma UF cadastrada: o resolver cai para a alíquota do yml (0,0010 / 0,0090).
-    lenient().when(aliquotaIbsUfRepository.findByUf(anyString())).thenReturn(Optional.empty());
+    lenient().when(aliquotaIbsUfRepository.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
     service = new CreditoTributarioService(
         tributosProperties,
         new ReducaoNcmResolver(ncmReferenciaRepository),
@@ -223,7 +227,7 @@ class CreditoTributarioServiceTest {
   void creditoUsaAliquotaPorUfDivergenteDoYml() {
     // Debito: a UF aplicavel (MT) tem aliquota 0,0030 + 0,0020 = 0,0050 na tabela aliquota_ibs_uf,
     // divergente da aliquota fixa do yml (0,0010). O seed real e uniforme e mascara a diferenca.
-    when(aliquotaIbsUfRepository.findByUf("MT")).thenReturn(Optional.of(
+    when(aliquotaIbsUfRepository.findVigente(eq("MT"), any(LocalDate.class))).thenReturn(List.of(
         AliquotaIbsUf.builder()
             .uf("MT")
             .aliquotaEstadual(new BigDecimal("0.0030"))

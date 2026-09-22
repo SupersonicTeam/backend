@@ -1,5 +1,9 @@
 package br.com.agrocontabil.service;
 
+import java.util.List;
+import java.time.LocalDate;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -47,8 +51,8 @@ class AliquotaIbsCbsResolverTest {
   @Test
   @DisplayName("debito e credito obtem a mesma aliquota por UF para a mesma nota (simetria #86)")
   void debitoECreditoObtemMesmaAliquota() {
-    when(aliquotaIbsUfRepository.findByUf("MT"))
-        .thenReturn(Optional.of(aliquota("MT", "0.0030", "0.0020")));
+    when(aliquotaIbsUfRepository.findVigente(eq("MT"), any(LocalDate.class)))
+        .thenReturn(List.of(aliquota("MT", "0.0030", "0.0020")));
     NotaFiscal notaPropria = nota(OrigemNotaFiscal.PROPRIA, "MT", "MT");
     NotaFiscal notaImportada = nota(OrigemNotaFiscal.IMPORTADA, "MT", "MT");
 
@@ -67,13 +71,13 @@ class AliquotaIbsCbsResolverTest {
   @Test
   @DisplayName("operacao interestadual usa a UF de destino (RN002)")
   void interestadualUsaUfDeDestino() {
-    when(aliquotaIbsUfRepository.findByUf("PR"))
-        .thenReturn(Optional.of(aliquota("PR", "0.0007", "0.0003")));
+    when(aliquotaIbsUfRepository.findVigente(eq("PR"), any(LocalDate.class)))
+        .thenReturn(List.of(aliquota("PR", "0.0007", "0.0003")));
 
     AliquotasVigentes vigentes = resolver.resolver(nota(OrigemNotaFiscal.PROPRIA, "MT", "PR"));
 
     assertThat(vigentes.ibsTotal()).isEqualByComparingTo("0.0010");
-    verify(aliquotaIbsUfRepository).findByUf("PR");
+    verify(aliquotaIbsUfRepository).findVigente(eq("PR"), any(LocalDate.class));
   }
 
   @Test
@@ -93,7 +97,7 @@ class AliquotaIbsCbsResolverTest {
   @Test
   @DisplayName("UF nao cadastrada na tabela cai para a aliquota do yml dividida 50/50")
   void fallbackYmlQuandoUfNaoCadastrada() {
-    when(aliquotaIbsUfRepository.findByUf("ZZ")).thenReturn(Optional.empty());
+    when(aliquotaIbsUfRepository.findVigente(eq("ZZ"), any(LocalDate.class))).thenReturn(List.of());
 
     AliquotasVigentes vigentes = resolver.resolver(nota(OrigemNotaFiscal.PROPRIA, "ZZ", "ZZ"));
 
@@ -104,8 +108,8 @@ class AliquotaIbsCbsResolverTest {
   @Test
   @DisplayName("nota IMPORTADA usa a UF do destinatario (produtor) — principio do destino")
   void notaImportadaUsaUfDoDestinatario() {
-    when(aliquotaIbsUfRepository.findByUf("PR"))
-        .thenReturn(Optional.of(aliquota("PR", "0.0007", "0.0003")));
+    when(aliquotaIbsUfRepository.findVigente(eq("PR"), any(LocalDate.class)))
+        .thenReturn(List.of(aliquota("PR", "0.0007", "0.0003")));
     // Cadastro do produtor diz MT, mas o XML importado traz o destinatario em PR: o dado do XML
     // prevalece e nenhuma consulta e feita para MT.
     NotaFiscal importada = nota(OrigemNotaFiscal.IMPORTADA, "MT", "PR");
@@ -113,14 +117,14 @@ class AliquotaIbsCbsResolverTest {
     AliquotasVigentes vigentes = resolver.resolver(importada);
 
     assertThat(vigentes.ibsTotal()).isEqualByComparingTo("0.0010");
-    verify(aliquotaIbsUfRepository).findByUf("PR");
+    verify(aliquotaIbsUfRepository).findVigente(eq("PR"), any(LocalDate.class));
   }
 
   @Test
   @DisplayName("nota IMPORTADA sem endereco no XML cai para a UF do cadastro do produtor")
   void notaImportadaSemEnderecoUsaUfDoProdutor() {
-    when(aliquotaIbsUfRepository.findByUf("MT"))
-        .thenReturn(Optional.of(aliquota("MT", "0.0030", "0.0020")));
+    when(aliquotaIbsUfRepository.findVigente(eq("MT"), any(LocalDate.class)))
+        .thenReturn(List.of(aliquota("MT", "0.0030", "0.0020")));
     NotaFiscal importada = NotaFiscal.builder()
         .origem(OrigemNotaFiscal.IMPORTADA)
         .produtor(Produtor.builder().estado("mt").build())
@@ -129,7 +133,7 @@ class AliquotaIbsCbsResolverTest {
     AliquotasVigentes vigentes = resolver.resolver(importada);
 
     assertThat(vigentes.ibsTotal()).isEqualByComparingTo("0.0050");
-    verify(aliquotaIbsUfRepository).findByUf("MT");
+    verify(aliquotaIbsUfRepository).findVigente(eq("MT"), any(LocalDate.class));
   }
 
   // ---------------------------------------------------------------------------------------
