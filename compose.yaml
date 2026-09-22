@@ -23,6 +23,10 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: agrocontabil-backend
+    # O default do Docker e 10s, que mataria o processo antes da janela de 30s do graceful
+    # shutdown (issue #101). 35s da folga para o Tomcat drenar as requisicoes e os jobs
+    # agendados terminarem.
+    stop_grace_period: 35s
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-agrocontabil}
