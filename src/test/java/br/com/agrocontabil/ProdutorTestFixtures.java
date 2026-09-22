@@ -1,5 +1,6 @@
 package br.com.agrocontabil;
 
+import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.TipoProdutor;
@@ -64,6 +65,22 @@ public final class ProdutorTestFixtures {
         .codigoMunicipioIbge("4106902")
         .municipio("Curitiba")
         .cep("80010180")
+        .build();
+  }
+
+  /**
+   * Endereço sintético coerente com a UF informada — o código IBGE recebe o cUF da UF como
+   * prefixo, satisfazendo a validação de coerência sem depender da tabela real de municípios.
+   */
+  public static EnderecoProdutor enderecoParaUf(String uf) {
+    String cuf = UfIbge.codigo(uf).orElseThrow(() -> new IllegalArgumentException("UF: " + uf));
+    return EnderecoProdutor.builder()
+        .logradouro("Rua de Teste")
+        .numero("100")
+        .bairro("Centro")
+        .codigoMunicipioIbge(cuf + "00001")
+        .municipio("Municipio Teste")
+        .cep("00000001")
         .build();
   }
 
