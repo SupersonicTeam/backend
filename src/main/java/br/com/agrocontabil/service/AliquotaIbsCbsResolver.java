@@ -92,9 +92,11 @@ public class AliquotaIbsCbsResolver {
           OrigemAliquota.FALLBACK_YML);
     }
 
+    // notaId e nulo no create (calculo roda antes do save); produtorId da contexto sem PII.
     log.warn(
-        "Aliquota de IBS por UF indisponivel (uf={}, notaId={}); usando fallback do application.yml",
-        uf, nota.getId());
+        "Aliquota de IBS por UF indisponivel (uf={}, notaId={}, produtorId={});"
+            + " usando fallback do application.yml",
+        uf, nota.getId(), nota.getProdutor() != null ? nota.getProdutor().getId() : null);
     BigDecimal configurada = tributosProperties.getIbs().getAliquota();
     BigDecimal estadual = configurada.divide(DOIS, 4, RoundingMode.HALF_UP);
     BigDecimal municipal = configurada.subtract(estadual);
