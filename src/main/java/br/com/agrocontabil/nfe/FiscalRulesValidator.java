@@ -39,9 +39,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class FiscalRulesValidator {
 
-  /** UF convencional de destinatário no exterior (exportação) — layout NF-e. */
-  private static final String UF_EXTERIOR = "EX";
-
   /** Maior nNF representavel nos 9 digitos do layout e da chave de acesso (issue #88). */
   private static final long NUMERO_MAXIMO = 999_999_999L;
 
@@ -143,6 +140,14 @@ public class FiscalRulesValidator {
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.estado",
               "UF do emitente e obrigatoria para determinar o codigo IBGE da UF na chave de acesso"));
+    } else if (UfIbge.codigo(produtor.getEstado()).isEmpty()) {
+      // Sem cUF nao ha como montar a chave de acesso: barrar aqui (422) em vez de deixar o mapper
+      // lancar IllegalStateException, que viraria 500 generico sem registro de inconsistencia.
+      violations.add(
+          new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              "produtor.estado",
+              "UF do emitente invalida: '" + produtor.getEstado()
+                  + "' nao corresponde a nenhuma das 27 unidades federativas"));
     }
 
     validarEnderecoEmitente(produtor, violations);
@@ -231,13 +236,20 @@ public class FiscalRulesValidator {
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 "destinatarioEndereco.municipio", "Municipio do destinatario e obrigatorio"));
       }
+      if (isBlank(end.getLogradouro())) {
+        // O XSD exige xLgr com 2 a 60 caracteres; sem o fallback removido na issue #88, a
+        // ausencia geraria XML invalido com mensagem opaca em vez de um erro por campo.
+        violations.add(
+            new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+                "destinatarioEndereco.logradouro", "Logradouro do destinatario e obrigatorio"));
+      }
       if (isBlank(end.getCodigoMunicipioIbge())) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 "destinatarioEndereco.codigoMunicipioIbge",
                 "Codigo IBGE do municipio do destinatario e obrigatorio para o layout da NF-e"));
       } else if (!isBlank(end.getUf())
-          && !UF_EXTERIOR.equalsIgnoreCase(end.getUf().trim())
+          && !UfIbge.isExterior(end.getUf())
           && !UfIbge.prefixoCoerente(end.getCodigoMunicipioIbge(), end.getUf())) {
         // UF "EX" identifica destinatario no exterior (exportacao): o codigo de municipio nao
         // pertence a nenhuma UF brasileira, entao a coerencia de prefixo nao se aplica.

@@ -158,8 +158,9 @@ public class ChaveAcessoGenerator {
     }
     if (value.length() > length) {
       // Truncar aqui (comportamento anterior a issue #88) fazia o nNF embutido na chave divergir
-      // do nNF do XML: chave aceita localmente e rejeitada pela SEFAZ. A mensagem contem o valor
-      // e nunca deve ser logada nem devolvida ao cliente (pode ser CPF/CNPJ — LGPD).
+      // do nNF do XML: chave aceita localmente e rejeitada pela SEFAZ. A mensagem carrega apenas
+      // contagens de digitos, nunca o valor: zeroPad tambem recebe CPF/CNPJ e o
+      // GlobalExceptionHandler devolve a mensagem de IllegalArgumentException ao cliente (LGPD).
       throw new IllegalArgumentException(
           String.format("Valor com %d digitos excede o limite de %d para o campo da chave de"
               + " acesso", value.length(), length));

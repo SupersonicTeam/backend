@@ -49,24 +49,17 @@ import org.springframework.stereotype.Component;
  *
  * <p>As classes JAXB ({@code nfe/model/}) são <em>puras</em>: sem lógica, sem cálculo.
  *
- * <h3>Débito técnico — endereço do emitente:</h3>
- * <p>O {@link Produtor} armazena apenas a UF ({@code estado}). Os campos obrigatórios
- * do {@code enderEmit} no XSD (logradouro, número, bairro, cMun, xMun, CEP) são
- * preenchidos com placeholders ({@code "SEM ENDERECO"}, {@code "S/N"}, {@code "CENTRO"},
- * cMun derivado do cUF concatenado com {@code "9999"}, etc.).
- * Endereço completo do emitente deve ser adicionado ao Produtor em sprint futura.
+ * <h3>Emitente (issue #88):</h3>
+ * <p>IE e endereço vêm do {@code Produtor} — o {@code FiscalRulesValidator} garante a presença
+ * antes da emissão. A IE só assume {@code ISENTO} quando ausente, caso legítimo da NFA de
+ * produtor rural pessoa física. O {@code cMunFG} é o município do <strong>emitente</strong>
+ * (local do fato gerador), não o do destinatário.
  *
- * <h3>Débito técnico — IE do emitente:</h3>
- * <p>O Produtor não possui campo para Inscrição Estadual (Sprint 2). O mapper usa
- * {@code "ISENTO"} como placeholder para satisfazer o XSD — é um valor aceito pelo
- * layout para emitentes isentos ou produtor rural.
- *
- * <h3>Split IBS UF×Município (issue Agrocontabil#31, RN002):</h3>
- * <p>As parcelas estadual e municipal do IBS são resolvidas por UF no {@code TributacaoService}
- * (tabela {@code aliquota_ibs_uf}) e gravadas no item ({@code aliquotaIbsUf}/{@code aliquotaIbsMun},
- * {@code valorIbsUf}/{@code valorIbsMun}). O mapper consome essas parcelas reais em {@code pIBSUF}/
- * {@code pIBSMun} e {@code vIBSUF}/{@code vIBSMun}, dispensando a antiga divisão 50/50. Para itens
- * legados (gravados antes da issue #31, sem as parcelas) mantém-se o fallback 50/50.
+ * <h3>Débito técnico — bairro do destinatário:</h3>
+ * <p>{@code EnderecoDestinatario} não modela o bairro e o XSD exige {@code xBairro} no
+ * {@code enderDest}: por isso o literal {@code "CENTRO"} permanece nesse grupo. Resolver
+ * modelando o campo no domínio e no DTO. O {@code "S/N"} de {@code nro} não é placeholder — é a
+ * convenção do layout para imóvel sem número.
  */
 @Component
 public class NotaFiscalNfeMapper {
@@ -182,7 +175,7 @@ public class NotaFiscalNfeMapper {
 
     String nome = produtor.getNomeCompleto();
     emit.setXNome(truncate(nome != null ? nome : "EMITENTE", 60));
-    emit.setEnderEmit(buildEnderEmit(produtor, cUF));
+    emit.setEnderEmit(buildEnderEmit(produtor));
     // IE real do emitente. "ISENTO" so e aceitavel na NFA (produtor rural PF sem IE); para a
     // NF-e modelo 55 o FiscalRulesValidator ja exigiu a IE antes de chegar aqui (issue #88).
     String ie = produtor.getInscricaoEstadual();
@@ -191,7 +184,7 @@ public class NotaFiscalNfeMapper {
     return emit;
   }
 
-  private EnderEmit buildEnderEmit(Produtor produtor, String cUF) {
+  private EnderEmit buildEnderEmit(Produtor produtor) {
     // Endereco real do emitente (issue #88). A obrigatoriedade dos campos e garantida pelo
     // FiscalRulesValidator antes da emissao; aqui apenas mapeamos, truncando ao limite do layout.
     EnderecoProdutor endereco = produtor.getEndereco();

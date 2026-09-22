@@ -66,6 +66,12 @@ class CodigoIbgeCoerenteComUfValidatorTest {
     assertThat(validar(endereco("5103403", null))).isEmpty();
   }
 
+  @Test
+  @DisplayName("destinatario no exterior (UF EX) e valido — codigo de municipio do exterior")
+  void ufExteriorEValida() {
+    assertThat(validar(endereco("9999999", "EX"))).isEmpty();
+  }
+
   private Set<ConstraintViolation<EnderecoDestinatarioRequest>> validar(
       EnderecoDestinatarioRequest endereco) {
     return validator.validate(endereco);

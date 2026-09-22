@@ -26,6 +26,11 @@ public class CodigoIbgeCoerenteComUfValidator
       // Campos opcionais no rascunho; a emissao exige ambos via FiscalRulesValidator.
       return true;
     }
+    if (UfIbge.isExterior(uf)) {
+      // Exportacao: o codigo de municipio do exterior nao pertence a UF brasileira. A mesma
+      // isencao existe no FiscalRulesValidator — as duas camadas precisam concordar.
+      return true;
+    }
     if (UfIbge.prefixoCoerente(codigo, uf)) {
       return true;
     }

@@ -88,7 +88,7 @@ class NotaFiscalControllerValidationTest {
             .content(payload("1", "1", enderecoJson("3550308", "MT"))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath(
-            "$.errors[?(@.field =~ /.*codigoMunicipioIbge.*/)]").exists());
+            "$.errors[?(@.field == 'destinatarioEndereco.codigoMunicipioIbge')]").exists());
   }
 
   @Test
@@ -99,6 +99,17 @@ class NotaFiscalControllerValidationTest {
     mockMvc.perform(post("/api/notas")
             .contentType(MediaType.APPLICATION_JSON)
             .content(payload("1", "1", "{\"uf\": \"MT\", \"municipio\": \"Cuiaba\"}")))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  @DisplayName("destinatario no exterior (UF EX) continua aceito — exportacao")
+  void destinatarioNoExteriorAceito() throws Exception {
+    when(notaFiscalService.create(any())).thenReturn(respostaMinima());
+
+    mockMvc.perform(post("/api/notas")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload("1", "1", enderecoJson("9999999", "EX"))))
         .andExpect(status().isCreated());
   }
 

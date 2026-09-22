@@ -108,6 +108,8 @@ class FiscalRulesValidatorCfopAmbitoTest {
         ? "9999999"
         : UfIbge.codigo(ufDestinatario).orElseThrow() + "00001";
     EnderecoDestinatario endereco = EnderecoDestinatario.builder()
+        .logradouro("Rua de Teste")
+        .numero("100")
         .uf(ufDestinatario)
         .municipio("Municipio Teste")
         .codigoMunicipioIbge(codigoMunicipio)

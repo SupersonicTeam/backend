@@ -21,6 +21,19 @@ import java.util.Optional;
  */
 public final class UfIbge {
 
+  /**
+   * UF convencional de destinatário no exterior (exportação), conforme o layout da NF-e. Não tem
+   * cUF: o código de município do exterior ({@code 9999999}) não pertence a UF brasileira, então
+   * a coerência de prefixo não se aplica a ela.
+   */
+  public static final String UF_EXTERIOR = "EX";
+
+  /** Verifica se a UF informada é a do exterior (exportação). */
+  public static boolean isExterior(String uf) {
+    return uf != null && UF_EXTERIOR.equalsIgnoreCase(uf.trim());
+  }
+
+  /** Tabela UF → cUF. Fonte: Manual de Orientação do Contribuinte (MOC) NF-e 4.00, Anexo IV. */
   private static final Map<String, String> CODIGO_POR_UF =
       Map.ofEntries(
           Map.entry("AC", "12"),

@@ -124,6 +124,26 @@ class FiscalRulesValidatorTest {
     assertThat(violacoesDe(nota)).contains("serie");
   }
 
+  @Test
+  @DisplayName("UF do emitente fora das 27 e rejeitada na validacao, nao no mapper")
+  void rejeitaUfEmitenteDesconhecida() {
+    NotaFiscal nota = notaValida();
+    Produtor ufInvalida = ProdutorTestFixtures.produtorCompleto();
+    ufInvalida.setEstado("XX");
+    nota.setProdutor(ufInvalida);
+
+    assertThat(violacoesDe(nota)).contains("produtor.estado");
+  }
+
+  @Test
+  @DisplayName("destinatario sem logradouro e rejeitado (o XSD exige xLgr com 2+ caracteres)")
+  void rejeitaDestinatarioSemLogradouro() {
+    NotaFiscal nota = notaValida();
+    nota.getDestinatarioEndereco().setLogradouro(null);
+
+    assertThat(violacoesDe(nota)).contains("destinatarioEndereco.logradouro");
+  }
+
   // ---------------------------------------------------------------------------------------
 
   /** Campos das violações do 422; falha o teste se a validação passar. */
