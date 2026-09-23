@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     -- Crédito tributário de entrada — Sprint 4 issue Agrocontabil#30 (migration 0011)
     valor_total_credito_ibs     NUMERIC(15,2),
     valor_total_credito_cbs     NUMERIC(15,2),
+    -- Lock otimista — Onda 3 issue #95 (migration 0022)
+    version                     BIGINT         NOT NULL DEFAULT 0,
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),

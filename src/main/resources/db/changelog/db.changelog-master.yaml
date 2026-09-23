@@ -48,3 +48,5 @@ databaseChangeLog:
       file: db/changelog/changes/0020-aliquota-vigencia.xml
   - include:
       file: db/changelog/changes/0021-produtor-endereco-ie.xml
+  - include:
+      file: db/changelog/changes/0022-nota-fiscal-version.xml
