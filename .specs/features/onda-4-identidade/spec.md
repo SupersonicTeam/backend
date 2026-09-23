@@ -106,11 +106,13 @@ responde normalmente mesmo com header inválido — correto, já que não há id
 - **RF13** `application-homolog.yml` criado (banco por env, sem docker-compose, CORS por env, logs INFO).
 - **RF14** `DataLoader` semeia **dois** produtores: A (`123.456.789-00`, o semente/fallback) e
   B (`987.654.321-00`). Idempotente, como hoje. A permanece o fallback, para não mudar o
-  comportamento de quem não manda header.
+  comportamento de quem não manda header. B recebe **inscrição estadual e `EnderecoProdutor`
+  completos** — desde a issue #88 (Onda 2) isso é pré-condição da emissão; um B sem endereço geraria
+  XML com placeholder e o cenário multi-usuário não chegaria a emitir nota.
 
 ### RNF
 
-- **RNF01** Zero regressão: os 367 testes atuais continuam verdes.
+- **RNF01** Zero regressão: os 393 testes atuais continuam verdes.
 - **RNF02** Nenhum segredo novo no repositório; `homolog` lê tudo de env var.
 - **RNF03** O valor bruto do header não é logado em nível INFO (evita ruído e PII em log).
 - **RNF04** `prod` não ganha mecanismo de identidade declarativo — o header é ignorado por ausência do filtro.
@@ -130,7 +132,7 @@ task correspondente entra (ver `tasks.md`).
 8. `X-Usuario-Id: <uuid inexistente>` → **401**, mesma resposta do item 7.
 9. Em contexto **sem** filtro (simulando prod), endpoint autenticado → **401**, nunca 500.
 10. Duas requisições consecutivas na mesma thread, a segunda sem header, não herdam a identidade da primeira.
-11. `./mvnw test` verde, com os novos testes somados aos 367.
+11. `./mvnw test` verde, com os novos testes somados aos 393.
 
 ## 7. Riscos
 

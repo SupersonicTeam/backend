@@ -103,11 +103,20 @@ e B (`987.654.321-00`, "Maria Agricultora", MT, PF/SIMPLES). Idempotência por `
 produtor. Loga os UUIDs semeados em INFO para facilitar o uso do header no Swagger/Angular — id não
 é segredo e já viaja na URL de outros endpoints.
 
+**Pré-condição herdada da Onda 2 (#88):** o seed de A já carrega `inscricaoEstadual` e
+`EnderecoProdutor` completos (Cuiabá/MT, IBGE 5103403) porque sem eles a emissão sai com placeholder.
+B precisa do mesmo tratamento — outro município/IE, para que um erro de troca de produtor apareça no
+XML em vez de passar despercebido. A extração de `criarProdutor(...)` deve receber esses campos, não
+fixá-los.
+
 ### 2.6 `application-homolog.yml` — `resources/`
 
-Espelha `prod` (env vars, sem docker-compose, `show-sql: false`, `APP_CORS_ALLOWED_ORIGINS`
-obrigatória), com `logging.level.br.com.agrocontabil: DEBUG` e `show-details: when-authorized`.
-Nenhum segredo literal.
+Espelha `prod` **na forma em que a Onda 1 o deixou** (issue #98): pool e timeouts vêm do
+`application.yml` base, e o específico de PostgreSQL fica no profile —
+`spring.datasource.hikari.data-source-properties.options: -c statement_timeout=${DB_STATEMENT_TIMEOUT_MS:30000}`.
+Mais: env vars para banco, `docker.compose.enabled: false`, `show-sql: false`,
+`APP_CORS_ALLOWED_ORIGINS` obrigatória, `logging.level.br.com.agrocontabil: DEBUG` e
+`management.endpoint.health.show-details: when-authorized`. Nenhum segredo literal.
 
 ### 2.7 `SecurityConfig`
 

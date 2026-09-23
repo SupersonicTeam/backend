@@ -1,6 +1,6 @@
 # Tasks — Onda 4: Identidade multi-usuário sem JWT
 
-Gate de toda task: `./mvnw test` verde (367 + novos). Commit atômico por task, Conventional Commits.
+Gate de toda task: `./mvnw test` verde (393 + novos). Commit atômico por task, Conventional Commits.
 Ordem dos PRs: **#91 → #94 → #92** (a #94 só é testável de verdade com dois usuários).
 
 ---
@@ -10,7 +10,10 @@ Ordem dos PRs: **#91 → #94 → #92** (a #94 só é testável de verdade com do
 ### T1 — Seed de dois produtores no `DataLoader`
 - **Onde:** `config/DataLoader.java`
 - **O quê:** extrair `criarProdutor(...)`; semear A (`123.456.789-00`, fallback) e B (`987.654.321-00`,
-  "Maria Agricultora"); idempotente por CPF; log INFO com os UUIDs semeados.
+  "Maria Agricultora"); idempotente por CPF; log INFO com os UUIDs semeados. B leva
+  `inscricaoEstadual` e `EnderecoProdutor` próprios (município/IE diferentes dos de A) — desde a
+  issue #88 endereço e IE são pré-condição da emissão, e valores distintos fazem uma troca de
+  produtor aparecer no XML.
 - **Pronto quando:** subir em dev duas vezes não duplica produtor; log mostra os dois ids.
 - **Testes:** cobertura indireta pelo teste de integração de T4; sem teste unitário dedicado.
 
@@ -104,8 +107,12 @@ Ordem dos PRs: **#91 → #94 → #92** (a #94 só é testável de verdade com do
 
 ### T12 — `@Profile({"dev","homolog"})` + `application-homolog.yml`
 - **Onde:** `config/MockProdutorFilter.java`, `config/DataLoader.java`, `resources/application-homolog.yml` (novo)
-- **O quê:** ampliar os profiles; yml espelhando `prod` (env vars, sem docker-compose,
-  `APP_CORS_ALLOWED_ORIGINS` obrigatória, logs DEBUG do pacote da app). Nenhum segredo literal.
+- **O quê:** ampliar os profiles; yml espelhando `prod` **como a Onda 1 (#98) o deixou** — pool e
+  timeouts herdados do `application.yml` base e, no profile, só o
+  `hikari.data-source-properties.options: -c statement_timeout=${DB_STATEMENT_TIMEOUT_MS:30000}`
+  (específico do PostgreSQL; o H2 dos testes rejeitaria a propriedade). Mais env vars de banco,
+  `docker.compose.enabled: false`, `APP_CORS_ALLOWED_ORIGINS` obrigatória, logs DEBUG do pacote da
+  app. Nenhum segredo literal.
 - **Pronto quando:** RF12–RF13 atendidos; `./mvnw test` verde.
 
 ### T13 — Documentação
