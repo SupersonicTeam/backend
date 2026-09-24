@@ -29,9 +29,10 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 /**
  * Endpoints REST para o Contador anexar guias fiscais a um produtor (issue #74).
  *
- * <p>Criação e listagem ainda não têm autenticação de Contador (não existe essa entidade no
- * backend) — recebem o {@code produtorId} explícito. Já o pagamento é ação do produtor
- * autenticado e segue o padrão anti-IDOR do restante da API.
+ * <p>Ainda não existe entidade/login de Contador no backend (issue #93, Sprint 8), então as três
+ * operações são, na prática, do próprio produtor: o {@code produtorId} recebido no corpo ou na
+ * query precisa ser o do produtor autenticado, sob pena de 404 (issue #94). Todas seguem o padrão
+ * anti-IDOR do restante da API.
  *
  * <p>O controller não contém regra de negócio: apenas recebe o DTO validado, delega ao
  * {@link GuiaFiscalService} e mapeia o resultado para a resposta HTTP.
@@ -54,8 +55,9 @@ public class GuiaFiscalController {
   @PostMapping
   @Operation(
       summary = "Cria uma guia fiscal",
-      description = "Cria a guia com status PENDENTE para o produtorId informado no corpo. "
-          + "Retorna 201 com header Location apontando para a listagem do produtor.")
+      description = "Cria a guia com status PENDENTE para o produtorId informado no corpo, que "
+          + "precisa ser o do produtor autenticado (404 caso contrario). Retorna 201 com header "
+          + "Location apontando para a listagem do produtor.")
   @ApiResponses({
       @ApiResponse(
           responseCode = "201",
@@ -66,7 +68,8 @@ public class GuiaFiscalController {
               schema = @Schema(type = "string", format = "uri"))),
       @ApiResponse(responseCode = "400", description = "Dados invalidos",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
-      @ApiResponse(responseCode = "404", description = "Produtor nao encontrado",
+      @ApiResponse(responseCode = "404",
+          description = "Produtor nao encontrado ou nao pertence ao usuario autenticado",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<GuiaFiscalResponse> criar(
@@ -88,9 +91,13 @@ public class GuiaFiscalController {
   @Operation(
       summary = "Lista guias fiscais de um produtor",
       description = "Retorna as guias fiscais do produtorId informado, mais recentes primeiro. "
-          + "Lista vazia se nenhuma guia ou produtor inexistente.")
+          + "O produtorId precisa ser o do produtor autenticado (404 caso contrario). Lista vazia "
+          + "se ele nao tiver guias.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+      @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+      @ApiResponse(responseCode = "404",
+          description = "Produtor nao encontrado ou nao pertence ao usuario autenticado",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<List<GuiaFiscalResponse>> listar(
       @RequestParam UUID produtorId) {
