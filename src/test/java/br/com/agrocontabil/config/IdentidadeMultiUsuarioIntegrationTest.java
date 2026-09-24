@@ -127,12 +127,8 @@ class IdentidadeMultiUsuarioIntegrationTest {
   }
 
   @Test
-  @DisplayName("header invalido nao autentica: nao cai no fallback nem devolve dados de A")
-  void headerInvalidoNaoAutenticaComoSemente() throws Exception {
-    // O 401 so nasce no PR da issue #92, quando o AuthenticatedProdutorProvider passa a lancar
-    // NaoAutenticadoException (ate la o status e 500). A garantia verificada aqui e a que importa
-    // para a seguranca e vale nos dois casos: a requisicao nao tem sucesso e nao vaza os dados do
-    // produtor semente para quem declarou uma identidade que nao existe.
+  @DisplayName("header invalido responde 401 e nao vaza os dados do produtor semente (#92)")
+  void headerInvalidoResponde401() throws Exception {
     naoAutenticaNemVazaDados("nao-e-uuid");
     naoAutenticaNemVazaDados(UUID.randomUUID().toString());
   }
@@ -140,10 +136,26 @@ class IdentidadeMultiUsuarioIntegrationTest {
   private void naoAutenticaNemVazaDados(String headerInvalido) throws Exception {
     mockMvc
         .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, headerInvalido))
-        .andExpect(resultado -> assertThat(resultado.getResponse().getStatus()).isNotEqualTo(200))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
         .andExpect(
             resultado ->
                 assertThat(resultado.getResponse().getContentAsString()).doesNotContain("1001"));
+  }
+
+  @Test
+  @DisplayName("sem filtro de identidade (simula prod), endpoint autenticado responde 401, nao 500")
+  void semFiltroDeIdentidadeResponde401() throws Exception {
+    // Em prod o MockProdutorFilter nao e registrado: nenhuma requisicao carrega principal. Antes da
+    // issue #92 isso derrubava toda a API autenticada em 500 generico.
+    MockMvc semFiltro = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+
+    semFiltro
+        .perform(get("/api/notas"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
+        .andExpect(jsonPath("$.errors[0].suggestion").value(
+            org.hamcrest.Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)));
   }
 
   @Test

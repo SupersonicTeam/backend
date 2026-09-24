@@ -84,7 +84,13 @@ public enum ErrorCode {
    * (lock otimista via {@code @Version} — issue #95). O cliente resolve recarregando o recurso e
    * repetindo a operacao. HTTP 409.
    */
-  CONFLITO_CONCORRENCIA;
+  CONFLITO_CONCORRENCIA,
+  // Identidade / autenticacao (Onda 4 — issue #92)
+  /**
+   * Requisicao sem identidade de usuario valida: nenhum mecanismo de identidade ativo (fora dos
+   * profiles dev/homolog) ou header {@code X-Usuario-Id} que nao resolve. HTTP 401.
+   */
+  NAO_AUTENTICADO;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
