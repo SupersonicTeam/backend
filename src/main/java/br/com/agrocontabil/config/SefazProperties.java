@@ -41,6 +41,7 @@ public class SefazProperties {
 
   /** Configurações do job de sincronização de status (issue #16). */
   private Sync sync = new Sync();
+  private Transmissao transmissao = new Transmissao();
 
   /** Retorna o ambiente de comunicação com a SEFAZ. */
   public SefazAmbiente getAmbiente() {
@@ -80,6 +81,43 @@ public class SefazProperties {
   /** Define as configurações do job de sincronização. */
   public void setSync(Sync sync) {
     this.sync = sync;
+  }
+
+  /** Retorna as configuracoes de transmissao (issue #96). */
+  public Transmissao getTransmissao() {
+    return transmissao;
+  }
+
+  /** Define as configuracoes de transmissao (issue #96). */
+  public void setTransmissao(Transmissao transmissao) {
+    this.transmissao = transmissao;
+  }
+
+  /**
+   * Parametros da transmissao a SEFAZ (issue #96).
+   */
+  public static class Transmissao {
+
+    /**
+     * Tempo maximo que uma nota pode permanecer num estado transitorio de transmissao
+     * ({@code ENVIANDO}/{@code CANCELANDO}) antes de ser reconciliada pelo job.
+     *
+     * <p>Cobre a queda do processo entre a marcacao do estado transitorio e o desfecho: sem a
+     * reconciliacao a nota ficaria presa, e nenhuma operacao sobre ela seria possivel. O padrao
+     * de 10 minutos e folgado o bastante para uma transmissao com retry
+     * ({@code app.nfe.sefaz.retry}) nao ser reconciliada enquanto ainda esta em andamento.
+     */
+    private long timeoutMs = 600_000L;
+
+    /** Retorna o tempo, em ms, apos o qual uma transmissao presa e reconciliada. */
+    public long getTimeoutMs() {
+      return timeoutMs;
+    }
+
+    /** Define o tempo, em ms, apos o qual uma transmissao presa e reconciliada. */
+    public void setTimeoutMs(long timeoutMs) {
+      this.timeoutMs = timeoutMs;
+    }
   }
 
   /**

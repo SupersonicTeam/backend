@@ -128,6 +128,10 @@ app:
       retry:
         max-attempts: ${NFE_SEFAZ_RETRY_MAX_ATTEMPTS:3}
         backoff-ms: ${NFE_SEFAZ_RETRY_BACKOFF_MS:1000}
+      # Transmissao (issue #96): tempo apos o qual uma nota presa em ENVIANDO/CANCELANDO
+      # (processo derrubado no meio da transmissao) e reconciliada pelo job de sincronizacao.
+      transmissao:
+        timeout-ms: ${NFE_SEFAZ_TRANSMISSAO_TIMEOUT_MS:600000}   # 10 min
       # Job de sincronizacao de status de notas pendentes (issue #16).
       sync:
         enabled: ${NFE_SEFAZ_SYNC_ENABLED:true}

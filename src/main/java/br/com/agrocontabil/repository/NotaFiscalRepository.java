@@ -2,6 +2,7 @@ package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import jakarta.persistence.LockModeType;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +10,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -40,6 +42,54 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * @return {@link Optional} com a nota fiscal, ou vazio se não encontrada
    */
   Optional<NotaFiscal> findByIdAndProdutorId(UUID id, UUID produtorId);
+
+  /**
+   * Igual a {@link #findByIdAndProdutorId(UUID, UUID)}, porém adquirindo <strong>lock pessimista
+   * de escrita</strong> ({@code SELECT ... FOR UPDATE}) sobre a linha (issue #96).
+   *
+   * <p>Serve às transições de estado que disparam efeito externo irreversível — transmitir e
+   * cancelar NF-e na SEFAZ. Ler o status sem lock deixa uma janela entre a checagem da
+   * pré-condição e a gravação do novo status: duas requisições simultâneas passariam as duas pela
+   * checagem, transmitiriam duas vezes ao fisco e publicariam dois eventos de domínio, apurando o
+   * débito de IBS/CBS em dobro. Com o lock, a segunda requisição espera, encontra o status já
+   * transicionado e recebe 409.
+   *
+   * <p>O {@code @Version} da issue #95 protege contra <em>lost update</em>, mas só falha no
+   * commit — tarde demais aqui, porque a essa altura as duas já teriam falado com a SEFAZ. Por
+   * isso o lock, e não apenas o controle otimista.
+   *
+   * <p>O filtro por produtor faz parte da query, então o 404 anti-IDOR continua vindo antes de
+   * qualquer 409. <strong>Só pode ser usado dentro de uma transação de escrita</strong> — nunca
+   * combinar com {@code readOnly}. Mantenha a transação curta: o lock só é liberado no commit.
+   *
+   * @param id         identificador da nota fiscal
+   * @param produtorId identificador do produtor esperado como proprietário
+   * @return {@link Optional} com a nota fiscal bloqueada, ou vazio se não encontrada
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT n FROM NotaFiscal n WHERE n.id = :id AND n.produtor.id = :produtorId")
+  Optional<NotaFiscal> findByIdAndProdutorIdForUpdate(
+      @Param("id") UUID id, @Param("produtorId") UUID produtorId);
+
+  /**
+   * Retorna as notas presas num estado transitório de transmissão desde antes do instante
+   * informado (issue #96).
+   *
+   * <p>Uso restrito ao job de sistema ({@link br.com.agrocontabil.sefaz.SefazStatusSyncJob}), sem
+   * filtro de produtor: se o processo cair entre a marcação de
+   * {@link br.com.agrocontabil.model.StatusNotaFiscal#ENVIANDO}/{@code CANCELANDO} e o desfecho,
+   * a nota ficaria parada nesse estado para sempre, bloqueando toda operação sobre ela.
+   *
+   * <p>O corte usa {@code updatedAt}, já mantido pelo {@code @PreUpdate} da entidade — a
+   * transição para o estado transitório o atualiza, então ele marca o início da transmissão sem
+   * precisar de coluna nova.
+   *
+   * @param status  estados transitórios a varrer
+   * @param anteriorA instante limite: só notas paradas desde antes dele são reconciliadas
+   * @return notas presas em transmissão além do tempo tolerado
+   */
+  List<NotaFiscal> findByStatusInAndUpdatedAtBefore(
+      List<StatusNotaFiscal> status, OffsetDateTime anteriorA);
 
   /**
    * Retorna todas as notas em um determinado status, sem filtro de produtor.

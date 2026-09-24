@@ -15,6 +15,11 @@ import org.springframework.stereotype.Component;
  * {@link br.com.agrocontabil.model.StatusNotaFiscal#PENDENTE_SEFAZ} e atualiza o status
  * local conforme o retorno.
  *
+ * <p>Antes da sincronização, resgata notas presas em
+ * {@link br.com.agrocontabil.model.StatusNotaFiscal#ENVIANDO} ou
+ * {@code CANCELANDO} há mais que {@code app.nfe.sefaz.transmissao.timeout-ms} (issue #96) — o
+ * caso de o processo cair no meio de uma transmissão, que sem isso deixaria a nota inoperável.
+ *
  * <p>Ativo somente quando {@code app.nfe.sefaz.sync.enabled=true} (padrão). Desabilitado
  * no perfil de testes para não interferir nas asserções.
  */
@@ -44,6 +49,15 @@ public class SefazStatusSyncJob {
       initialDelayString = "${app.nfe.sefaz.sync.interval-ms:900000}")
   public void sincronizarPendentes() {
     log.debug("Iniciando sincronizacao agendada de status de NF-e pendentes com a SEFAZ");
+
+    // issue #96: primeiro resgata notas presas em ENVIANDO/CANCELANDO (processo derrubado no meio
+    // da transmissao) — as que viram PENDENTE_SEFAZ ja entram na sincronizacao logo abaixo,
+    // fechando o ciclo na mesma execucao.
+    int reconciliadas = sefazService.reconciliarTransmissoesPresas();
+    if (reconciliadas > 0) {
+      log.warn("Transmissoes presas reconciliadas: {} nota(s)", reconciliadas);
+    }
+
     int atualizadas = sefazService.sincronizarPendentes();
     if (atualizadas > 0) {
       log.info("Sincronizacao SEFAZ concluida: {} nota(s) tiveram o status atualizado",
