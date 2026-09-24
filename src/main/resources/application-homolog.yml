@@ -32,11 +32,17 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
 
-# Detalhes de health liberados para quem estiver autorizado (em prod e "never").
+# Health SEM detalhes, como em producao.
+#
+# O application.yml base usa "when-authorized", que em dev basta: dev e local. Aqui nao serve —
+# o MockProdutorFilter autentica TODA requisicao sem header como o produtor semente, entao
+# "autorizado" passa a significar "qualquer visitante" e o health detalhado (datasource, disco,
+# componentes) ficaria aberto a quem alcancar o ambiente. Diagnostico em homologacao sai pelo log,
+# que ja e DEBUG.
 management:
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never
 
 logging:
   level:
