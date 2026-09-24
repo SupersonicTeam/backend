@@ -110,6 +110,18 @@ class GuiaFiscalControllerTest {
   }
 
   @Test
+  @DisplayName("GET /api/contador/guias?produtorId= de outro produtor retorna 404 (#94)")
+  void listarDeOutroProdutorRetorna404() throws Exception {
+    UUID produtorDeOutroDono = UUID.randomUUID();
+    when(guiaFiscalService.listar(produtorDeOutroDono))
+        .thenThrow(new ResourceNotFoundException("Produtor", produtorDeOutroDono));
+
+    mockMvc.perform(get("/api/contador/guias").param("produtorId", produtorDeOutroDono.toString()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.errors[0].code").value("RESOURCE_NOT_FOUND"));
+  }
+
+  @Test
   @DisplayName("GET /api/contador/guias?produtorId= retorna 200 com a lista do produtor")
   void listarRetorna200ComListaDoProdutor() throws Exception {
     UUID produtorId = UUID.randomUUID();
