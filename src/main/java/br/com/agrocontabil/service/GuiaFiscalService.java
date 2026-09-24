@@ -20,12 +20,17 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Regras de negócio das guias fiscais anexadas pelo Contador (issue #74).
  *
- * <p><strong>Sem autenticação de Contador:</strong> a criação e a listagem recebem o
- * {@code produtorId} explícito (não há entidade/login de Contador no backend ainda — débito
- * técnico para a Sprint 8, RBAC produtor/contador). Já {@link #marcarComoPaga} usa o produtor
- * autenticado real ({@link AuthenticatedProdutorProvider}) com o padrão anti-IDOR já
- * consolidado no restante da API: {@code findByIdAndProdutorId} + 404 para guia de outro
- * produtor.
+ * <p><strong>Ownership em todas as operações (issue #94).</strong> O {@code produtorId} que chega
+ * no payload ou na query string é apenas uma <em>afirmação do cliente</em>: antes de qualquer
+ * leitura ou escrita ele precisa bater com o produtor autenticado
+ * ({@link AuthenticatedProdutorProvider}). Divergiu, responde <strong>404</strong> — nunca 403 —
+ * exatamente como o resto da API, para não revelar a existência do recurso alheio. Até a issue #94
+ * a criação e a listagem só verificavam existência, de modo que qualquer cliente lia e gravava
+ * guias de qualquer produtor informando o id.
+ *
+ * <p><strong>Ainda não há papel de Contador.</strong> A entidade {@code Contador}, o vínculo
+ * Contador↔Produtor e o RBAC são a issue #93 (Sprint 8). Enquanto isso, estes endpoints são
+ * efetivamente do próprio produtor: quem escreve a guia é quem a possui.
  */
 @Service
 @Transactional
@@ -52,9 +57,12 @@ public class GuiaFiscalService {
    *
    * @param request dados da guia, incluindo o {@code produtorId} destinatário
    * @return a guia criada, com status PENDENTE
-   * @throws ResourceNotFoundException se o produtorId informado não existir
+   * @throws ResourceNotFoundException se o produtorId não for o do produtor autenticado ou não
+   *     existir — 404 nos dois casos, para não distinguir um do outro (anti-IDOR)
    */
   public GuiaFiscalResponse criar(GuiaFiscalRequest request) {
+    exigirProdutorAutenticado(request.produtorId());
+
     Produtor produtor = produtorRepository.findById(request.produtorId())
         .orElseThrow(() -> new ResourceNotFoundException("Produtor", request.produtorId()));
 
@@ -64,16 +72,17 @@ public class GuiaFiscalService {
   }
 
   /**
-   * Lista as guias fiscais de um produtor, mais recentes primeiro.
+   * Lista as guias fiscais do produtor autenticado, mais recentes primeiro.
    *
-   * <p>Não valida a existência do produtor: um {@code produtorId} inexistente simplesmente
-   * retorna uma lista vazia (não há ownership a proteger aqui — sem autenticação de Contador).
-   *
-   * @param produtorId identificador do produtor
-   * @return guias fiscais do produtor (vazia se nenhuma ou produtor inexistente)
+   * @param produtorId identificador do produtor; precisa ser o do produtor autenticado
+   * @return guias fiscais do produtor (vazia se ele não tiver nenhuma)
+   * @throws ResourceNotFoundException se o produtorId não for o do produtor autenticado
+   *     (anti-IDOR — 404, nunca 403)
    */
   @Transactional(readOnly = true)
   public List<GuiaFiscalResponse> listar(UUID produtorId) {
+    exigirProdutorAutenticado(produtorId);
+
     return guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtorId).stream()
         .map(GuiaFiscalMapper::toResponse)
         .toList();
@@ -88,6 +97,21 @@ public class GuiaFiscalService {
    *     autenticado (anti-IDOR — 404, nunca 403)
    * @throws GuiaJaPagaException se a guia já estiver PAGA
    */
+  /**
+   * Garante que o {@code produtorId} afirmado pelo cliente é o do produtor autenticado.
+   *
+   * <p>Mesmo guard do {@code CalendarioFiscalService}: 404 (nunca 403) quando divergir, para não
+   * revelar que aquele produtor existe.
+   *
+   * @param produtorId identificador informado na requisição
+   * @throws ResourceNotFoundException se não for o produtor autenticado
+   */
+  private void exigirProdutorAutenticado(UUID produtorId) {
+    if (!produtorProvider.get().getId().equals(produtorId)) {
+      throw new ResourceNotFoundException("Produtor", produtorId);
+    }
+  }
+
   public GuiaFiscalResponse marcarComoPaga(UUID id) {
     UUID produtorId = produtorProvider.get().getId();
     GuiaFiscal guia = guiaFiscalRepository.findByIdAndProdutorId(id, produtorId)
