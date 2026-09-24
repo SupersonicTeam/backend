@@ -239,7 +239,10 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.12</version>
+				<!-- 0.8.15+: instrumenta class files ate Java 26. A 0.8.12 falhava com
+				     "Unsupported class file major version 70" nos mocks gerados em runtime
+				     pelo Byte Buddy quando o JDK de execucao e mais novo que o release 21. -->
+				<version>0.8.15</version>
 				<executions>
 					<!-- Instrumentação: gera a propriedade ${jacoco.agent.argLine} -->
 					<execution>
