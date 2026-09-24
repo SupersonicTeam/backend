@@ -18,13 +18,13 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `SecurityConfig` | `permitAll()` até Sprint 8; CSRF off, stateless |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
-| `MockProdutorFilter` | Injeta produtor fake no `SecurityContext` |
+| `MockProdutorFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (profiles dev/homolog); sem header usa o semente (#91) |
 | `TributosProperties/Config` | Alíquotas IBS/CBS do `application.yml` |
 | `CertificadoDigitalProperties/Config` | Caminho/senha do `.p12` via env `NFE_CERT_*` |
 | `SefazProperties/Config` | Ambiente (HOMOLOGACAO/PRODUCAO), timeouts |
 | `RetryConfig` | Spring Retry para chamadas SEFAZ |
 | `SchedulingConfig` | Habilita `@Scheduled` (job de sync SEFAZ) |
-| `DataLoader` | Seed de dados em dev/test (inclui referências NCM/CFOP) |
+| `DataLoader` | Seed em dev/homolog: **dois** produtores (A = semente/fallback, B = outro dono) + referências NCM/CFOP |
 
 ### `controller/`
 | Classe | Endpoints |
@@ -50,10 +50,10 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AliquotaIbsCbsResolver` | **Único** ponto de resolução de alíquota (issues #86/#85): IBS por UF aplicável (RN002; nota importada = UF do destinatário) + CBS, ambos pela **vigência** na `dataEmissao` em BRT; devolve `AliquotasVigentes` com origem (TABELA_UF/TABELA_VIGENCIA/FALLBACK_YML); fallback conservador para `TributosProperties` com WARN |
 | `ReducaoNcmResolver` | **Único** ponto de resolução da redução de base por NCM (issue #52): item → NCM → zero |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
-| `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext` |
+| `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext`; sem identidade lança `NaoAutenticadoException` (401) |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository` |
 | `DashboardService` | Agrega o painel do produtor (issue #65): reúsa `ApuracaoService` (KPIs) + `NotaFiscalRepository` (série mensal, últimas notas); zero-fill de 6 meses; anti-IDOR |
-| `GuiaFiscalService` | CRUD de guias fiscais do Contador (issue #74): criar/listar sem auth de Contador (produtorId explícito no request); `marcarComoPaga` usa `AuthenticatedProdutorProvider` + anti-IDOR real |
+| `GuiaFiscalService` | CRUD de guias fiscais (issues #74/#94): `criar`/`listar`/`marcarComoPaga` exigem que o `produtorId` seja o do produtor autenticado — 404 se divergir (anti-IDOR) |
 | `GuiaFiscalStatusSyncJob` | `@Scheduled` diário — marca `PENDENTE` vencida como `VENCIDA` (issue #74) |
 | `CalendarioFiscalService` | Monta o calendário fiscal do produtor (issue #74): reúsa `GuiaFiscalRepository` como única fonte de vencimento nesta entrega |
 
@@ -147,6 +147,7 @@ Bean Validation customizada (anotação + validator):
 | `SefazComunicacaoException` | 502 | Timeout/falha após retry |
 | `XmlGenerationException` | 422/500 | Falha na geração ou validação XSD |
 | `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
+| `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |
 
@@ -188,7 +189,7 @@ Bean Validation customizada (anotação + validator):
 ## Recursos em `src/main/resources/`
 - `xsd/` — XSD oficial NF-e layout 4.00
 - `reports/` — templates `.jrxml` do JasperReports (DANFE)
-- `application.yml` / `application-test.yml` / `application-prod.yml`
+- `application.yml` / `application-test.yml` / `application-dev.yml` / `application-homolog.yml` / `application-prod.yml`
 
 ## Testes em `src/test/`
 - `resources/certs/` — certificado autoassinado para testes de assinatura
