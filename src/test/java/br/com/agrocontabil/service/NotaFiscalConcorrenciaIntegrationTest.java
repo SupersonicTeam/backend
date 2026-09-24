@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
@@ -149,6 +150,36 @@ class NotaFiscalConcorrenciaIntegrationTest {
 
     // A versao saiu de 0: houve exatamente um UPDATE bem-sucedido sobre a nota.
     assertThat(recarregada.getVersion()).isNotNull().isPositive();
+  }
+
+  @Test
+  @DisplayName("lock otimista: o segundo save de uma versao obsoleta falha, sem depender de timing")
+  void lockOtimistaRejeitaSegundaEscritaComVersaoObsoleta() {
+    UUID notaId = notaFiscalRepository.save(buildNotaValida()).getId();
+
+    // Duas leituras independentes: a classe nao e @Transactional, entao cada findById abre e
+    // fecha a sua propria sessao e devolve instancias destacadas distintas — exatamente o que
+    // acontece com duas requisicoes HTTP simultaneas lendo a mesma nota.
+    NotaFiscal copiaA = notaFiscalRepository.findById(notaId).orElseThrow();
+    NotaFiscal copiaB = notaFiscalRepository.findById(notaId).orElseThrow();
+    assertThat(copiaA.getVersion()).isEqualTo(copiaB.getVersion());
+
+    // A primeira escrita vence e incrementa a versao.
+    copiaA.setNaturezaOperacao("Alterado pela requisicao A");
+    NotaFiscal salvaA = notaFiscalRepository.saveAndFlush(copiaA);
+    assertThat(salvaA.getVersion()).isGreaterThan(copiaB.getVersion());
+
+    // A segunda carrega a versao que ja ficou obsoleta: o UPDATE nao encontra linha e o commit
+    // falha. Este teste e deterministico de proposito — o teste concorrente acima prova o
+    // comportamento do fluxo, mas qual das duas excecoes de conflito ocorre lá depende do
+    // escalonamento das threads; aqui o mecanismo do @Version e exercitado sempre.
+    copiaB.setNaturezaOperacao("Alterado pela requisicao B");
+    assertThatThrownBy(() -> notaFiscalRepository.saveAndFlush(copiaB))
+        .isInstanceOf(OptimisticLockingFailureException.class);
+
+    // E a escrita perdedora nao deixou rastro: vale o que a requisicao A gravou.
+    NotaFiscal recarregada = notaFiscalRepository.findById(notaId).orElseThrow();
+    assertThat(recarregada.getNaturezaOperacao()).isEqualTo("Alterado pela requisicao A");
   }
 
   // -------------------------------------------------------------------------
