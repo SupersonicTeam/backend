@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0022-nota-fiscal-version.xml
+         Onda 3 — issue #95: coluna de versao para lock otimista na
+         nota_fiscal.
+
+         Ate aqui nenhuma entidade tinha @Version. Em gerar-xml o fluxo
+         era: le a nota RASCUNHO -> checa o status -> gera e assina o XML
+         -> seta XML_GERADO + chave de acesso -> save. Duas threads
+         intercaladas passavam as duas pela checagem de status, geravam
+         DUAS chaves de acesso e o ultimo save sobrescrevia o primeiro —
+         a nota terminava com uma chave que nao corresponde ao XML
+         persistido (lost update).
+
+         Com @Version o Hibernate passa a incluir a versao lida no WHERE
+         do UPDATE e a incrementa a cada gravacao: o segundo commit nao
+         afeta linha alguma e falha com OptimisticLockingFailureException,
+         que o GlobalExceptionHandler traduz em HTTP 409
+         (CONFLITO_CONCORRENCIA).
+
+         NOT NULL com default 0 preenche as linhas ja existentes na
+         propria adicao da coluna — nao quebra base com dados. O
+         Hibernate assume a manutencao do valor a partir dai; o default
+         serve para as linhas legadas e para INSERTs fora do ORM.
+
+         Tipo portavel (H2 e PostgreSQL). O perfil de teste desabilita o
+         Liquibase (ddl-auto: create-drop), mas a mesma coluna esta
+         replicada em schema-nota-fiscal-test.sql, usado via @Sql pelo
+         NotaFiscalRepositoryTest — manter sincronizado.
+         ================================================================ -->
+
+    <changeSet id="0022-nota-fiscal-add-version" author="supersonic-team">
+        <comment>
+            Adiciona a coluna version (BIGINT NOT NULL DEFAULT 0) na tabela nota_fiscal
+            para o controle de concorrencia otimista via @Version (issue #95).
+        </comment>
+
+        <addColumn tableName="nota_fiscal">
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="version"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

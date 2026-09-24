@@ -7,12 +7,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.service.NotaFiscalService;
+import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,7 +33,8 @@ import org.springframework.test.web.servlet.MockMvc;
  *   <li>path variable com tipo inválido (UUID) → 400;</li>
  *   <li>rota inexistente → 404;</li>
  *   <li>método HTTP não suportado → 405;</li>
- *   <li>Content-Type não suportado → 415.</li>
+ *   <li>Content-Type não suportado → 415;</li>
+ *   <li>conflito de lock otimista → 409 (Onda 3, issue #95).</li>
  * </ul>
  */
 @SpringBootTest
@@ -39,6 +44,15 @@ class ApiErrorContractIntegrationTest {
 
   @Autowired
   private MockMvc mockMvc;
+
+  /**
+   * O conflito de versão nasce de duas transações reais disputando a mesma linha, cenário que o
+   * MockMvc (uma requisição por vez) não reproduz — o {@code NotaFiscalConcorrenciaIntegrationTest}
+   * cobre esse lado. Aqui interessa o outro lado: que a exceção, vindo de onde vier, chegue ao
+   * cliente como 409 com o envelope certo. Por isso o serviço é dublado.
+   */
+  @MockBean
+  private NotaFiscalService notaFiscalService;
 
   @Test
   @DisplayName("POST com JSON malformado responde 400 com envelope errors[]")
@@ -94,5 +108,30 @@ class ApiErrorContractIntegrationTest {
         .andExpect(jsonPath("$.errors[0].code").value("MEDIA_TYPE_NOT_SUPPORTED"))
         // RFC 7231 §6.5.13: o 415 deve manter o header Accept com os media types aceitos.
         .andExpect(header().string("Accept", Matchers.containsString(MediaType.APPLICATION_JSON_VALUE)));
+  }
+
+  @Test
+  @DisplayName("Conflito de lock otimista responde 409 com envelope errors[] e sem detalhe tecnico")
+  void conflitoDeLockOtimistaResponde409ComEnvelope() throws Exception {
+    UUID notaId = UUID.randomUUID();
+    org.mockito.BDDMockito.given(notaFiscalService.gerarXml(notaId))
+        .willThrow(new OptimisticLockingFailureException(
+            "Row was updated or deleted by another transaction "
+                + "(or unsaved-value mapping was incorrect): "
+                + "[br.com.agrocontabil.model.NotaFiscal#" + notaId + "]"));
+
+    mockMvc.perform(post("/api/notas/{id}/gerar-xml", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.path").value("/api/notas/" + notaId + "/gerar-xml"))
+        .andExpect(jsonPath("$.errors[0].code").value("CONFLITO_CONCORRENCIA"))
+        // A mensagem orienta a acao do cliente e a suggestion vem preenchida (o Angular a exibe).
+        .andExpect(jsonPath("$.errors[0].message").value(Matchers.containsString("recarregue")))
+        .andExpect(jsonPath("$.errors[0].suggestion").value(Matchers.not(Matchers.emptyString())))
+        // Nada do texto do ORM vaza no corpo: nem entidade, nem id, nem jargao de transacao.
+        .andExpect(jsonPath("$.errors[0].message").value(Matchers.not(
+            Matchers.containsString("NotaFiscal"))))
+        .andExpect(jsonPath("$.message").value(Matchers.not(
+            Matchers.containsString("unsaved-value"))));
   }
 }

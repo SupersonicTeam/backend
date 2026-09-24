@@ -10,6 +10,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -255,6 +256,36 @@ public class GlobalExceptionHandler {
         message,
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.VIOLACAO_INTEGRIDADE, message)));
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+  }
+
+  /**
+   * Conflito de lock otimista (issue #95): duas operações concorrentes alteraram o mesmo registro e
+   * a versão lida por esta ficou obsoleta — ex.: dois {@code POST /gerar-xml} simultâneos na mesma
+   * nota, onde o segundo commit encontraria a nota já transicionada.
+   *
+   * <p>Responde 409 com orientação de ação (recarregar e repetir), não com o que aconteceu no
+   * banco: o texto do ORM (nome da entidade, id, "unsaved-value mapping") fica só no log. Sem este
+   * handler o conflito cairia no 500 genérico e o cliente não saberia que basta recarregar.
+   *
+   * <p>Cobre também a {@code jakarta.persistence.OptimisticLockException}, que o Spring traduz para
+   * {@link OptimisticLockingFailureException} na camada de acesso a dados.
+   */
+  @ExceptionHandler(OptimisticLockingFailureException.class)
+  public ResponseEntity<ApiError> handleOptimisticLocking(
+      OptimisticLockingFailureException ex, HttpServletRequest request) {
+    log.warn("Conflito de concorrencia em {} {}: {}",
+        request.getMethod(), request.getRequestURI(), ex.getMostSpecificCause().getMessage());
+    String message = "A nota foi modificada em outra operacao; recarregue e tente de novo.";
+    String suggestion =
+        "Recarregue a nota (GET /api/notas/{id}) e repita a operacao com os dados atualizados.";
+    ApiError body = ApiError.of(
+        HttpStatus.CONFLICT.value(),
+        HttpStatus.CONFLICT.getReasonPhrase(),
+        message,
+        request.getRequestURI(),
+        List.of(new ErrorDetail(
+            ErrorCode.CONFLITO_CONCORRENCIA.code(), null, message, suggestion, null, null)));
     return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
   }
 

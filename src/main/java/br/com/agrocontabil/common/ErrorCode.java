@@ -76,7 +76,13 @@ public enum ErrorCode {
    * nota com {@code (produtor, numero, serie, modelo)} ou {@code chave_acesso} já existente.
    * HTTP 409.
    */
-  VIOLACAO_INTEGRIDADE;
+  VIOLACAO_INTEGRIDADE,
+  /**
+   * Duas operacoes concorrentes tentaram alterar o mesmo registro e a versao lida ficou obsoleta
+   * (lock otimista via {@code @Version} — issue #95). O cliente resolve recarregando o recurso e
+   * repetindo a operacao. HTTP 409.
+   */
+  CONFLITO_CONCORRENCIA;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

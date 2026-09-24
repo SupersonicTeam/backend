@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -302,6 +303,28 @@ public class NotaFiscal {
    */
   @Column(name = "protocolo_cancelamento", length = 20)
   private String protocoloCancelamento;
+
+  /**
+   * Contador de versao para <strong>lock otimista</strong> (issue #95).
+   *
+   * <p>O Hibernate incrementa este campo em cada UPDATE e inclui a versao lida na cláusula WHERE.
+   * Se outra transacao alterou a nota nesse intervalo, o UPDATE nao afeta linha alguma e o commit
+   * falha com {@code OptimisticLockingFailureException} — mapeada para HTTP 409 pelo
+   * {@code GlobalExceptionHandler}.
+   *
+   * <p>O que isso impede: duas transicoes de estado concorrentes na mesma nota (ex.: dois
+   * {@code POST /gerar-xml} simultaneos) gerarem duas chaves de acesso, com o ultimo {@code save}
+   * sobrescrevendo o primeiro — a nota ficaria com uma chave que nao corresponde ao XML gravado.
+   *
+   * <p><strong>Por que so aqui:</strong> {@code NotaFiscal} e a unica entidade com transicoes de
+   * estado disparadas concorrentemente por requisicao HTTP. {@code ApuracaoMensal} e protegida pelo
+   * fluxo auditado de fechamento/reabertura e por job serializado; {@code GuiaFiscal} so muda pelo
+   * {@code PATCH /pagar}, ja guardado por {@code GuiaJaPagaException}. Avaliado na issue #95 e
+   * considerado desnecessario nas duas (decisao D-4 do spec da Onda 3).
+   */
+  @Version
+  @Column(name = "version", nullable = false)
+  private Long version;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;

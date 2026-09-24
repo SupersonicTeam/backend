@@ -6,6 +6,7 @@ import br.com.agrocontabil.common.ApiError;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -85,5 +86,39 @@ class GlobalExceptionHandlerTest {
     // Detalhe tecnico (deadline, nome da excecao) fica so no log.
     assertThat(body.message()).doesNotContain("deadline");
     assertThat(body.errors().get(0).message()).doesNotContain("Transaction timed out");
+  }
+
+  @Test
+  @DisplayName("Conflito de lock otimista responde 409 orientando o recarregamento")
+  void conflitoDeLockOtimistaResponde409() {
+    MockHttpServletRequest request =
+        new MockHttpServletRequest("POST", "/api/notas/abc/gerar-xml");
+
+    // issue #95: duas transicoes concorrentes na mesma nota — o @Version faz o segundo commit
+    // falhar. Sem handler proprio isso cairia no 500 genérico, escondendo um conflito que o
+    // cliente resolve recarregando a nota.
+    ResponseEntity<ApiError> response = handler.handleOptimisticLocking(
+        new OptimisticLockingFailureException(
+            "Row was updated or deleted by another transaction "
+                + "(or unsaved-value mapping was incorrect): "
+                + "[br.com.agrocontabil.model.NotaFiscal#8f1e...]"),
+        request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+    ApiError body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.status()).isEqualTo(409);
+    assertThat(body.path()).isEqualTo("/api/notas/abc/gerar-xml");
+    assertThat(body.errors()).hasSize(1);
+    assertThat(body.errors().get(0).code()).isEqualTo("CONFLITO_CONCORRENCIA");
+    // A mensagem diz ao cliente o que fazer, nao o que aconteceu no banco.
+    assertThat(body.errors().get(0).message()).contains("recarregue");
+    assertThat(body.errors().get(0).suggestion()).isNotBlank();
+    // Nunca vaza nome de entidade, tabela ou texto de excecao do ORM.
+    assertThat(body.message()).doesNotContain("NotaFiscal");
+    assertThat(body.errors().get(0).message())
+        .doesNotContain("transaction")
+        .doesNotContain("unsaved-value");
   }
 }
