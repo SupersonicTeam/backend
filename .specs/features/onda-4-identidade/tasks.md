@@ -1,6 +1,6 @@
 # Tasks — Onda 4: Identidade multi-usuário sem JWT
 
-Gate de toda task: `./mvnw test` verde (393 + novos). Commit atômico por task, Conventional Commits.
+Gate de toda task: `./mvnw test` verde (478 + novos). Commit atômico por task, Conventional Commits.
 Ordem dos PRs: **#91 → #94 → #92** (a #94 só é testável de verdade com dois usuários).
 
 ---

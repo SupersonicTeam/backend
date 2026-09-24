@@ -110,7 +110,7 @@ Vale para **cada** PR (checklist global do projeto + específicos desta onda):
 - [ ] **1 PR = 1 responsabilidade lógica**, deployável sozinho; Conventional Commits; branch `feature/`/`fix:` em worktree isolado (nunca commit em `main`/`dev`/`prod`).
 - [ ] **Code review** aprovado (GitHub Copilot + revisão humana) e CI verde.
 - [ ] **Testes:** unitários de service/filtro (Mockito, strict stubs respeitados) + integração do fluxo crítico; `./mvnw test` verde.
-- [ ] **RNF01 — os 393 testes atuais continuam verdes**, zero regressão; os novos testes somam a esse total (critério de aceite 11).
+- [ ] **RNF01 — os 478 testes da base continuam verdes**, zero regressão; os novos testes somam a esse total (critério de aceite 11).
 - [ ] **RNF02 — nenhum segredo novo no repositório**: `application-homolog.yml` lê 100% de env var (banco, `APP_CORS_ALLOWED_ORIGINS`), nenhum literal.
 - [ ] **Segurança / OWASP:** anti-IDOR responde **404** (nunca 403/200) para recurso de outro produtor; 401 não reflete o valor bruto do header em `rejectedValue`; valor do header não logado em INFO (RNF03); `prod` continua sem mecanismo declarativo de identidade (RNF04).
 - [ ] **Arquitetura:** `Controller → Service → Repository` preservada; entidade JPA não exposta; erro só pelo `GlobalExceptionHandler` com envelope `errors[]`.

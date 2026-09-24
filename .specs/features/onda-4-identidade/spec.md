@@ -112,7 +112,7 @@ responde normalmente mesmo com header inválido — correto, já que não há id
 
 ### RNF
 
-- **RNF01** Zero regressão: os 393 testes atuais continuam verdes.
+- **RNF01** Zero regressão: os 478 testes da base continuam verdes.
 - **RNF02** Nenhum segredo novo no repositório; `homolog` lê tudo de env var.
 - **RNF03** O valor bruto do header não é logado em nível INFO (evita ruído e PII em log).
 - **RNF04** `prod` não ganha mecanismo de identidade declarativo — o header é ignorado por ausência do filtro.
@@ -132,7 +132,7 @@ task correspondente entra (ver `tasks.md`).
 8. `X-Usuario-Id: <uuid inexistente>` → **401**, mesma resposta do item 7.
 9. Em contexto **sem** filtro (simulando prod), endpoint autenticado → **401**, nunca 500.
 10. Duas requisições consecutivas na mesma thread, a segunda sem header, não herdam a identidade da primeira.
-11. `./mvnw test` verde, com os novos testes somados aos 393.
+11. `./mvnw test` verde, com os novos testes somados aos 478.
 
 ## 7. Riscos
 
