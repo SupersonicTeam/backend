@@ -1,6 +1,7 @@
 package br.com.agrocontabil.config;
 
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
@@ -61,6 +62,22 @@ class CorsIntegrationTest {
         .andExpect(header().string(ACCESS_CONTROL_ALLOW_ORIGIN, ORIGEM_ANGULAR))
         .andExpect(header().string(ACCESS_CONTROL_EXPOSE_HEADERS,
             Matchers.containsString("Content-Disposition")));
+  }
+
+  @Test
+  @DisplayName("Preflight libera o header de identidade X-Usuario-Id (#91)")
+  void preflightLiberaHeaderDeIdentidade() throws Exception {
+    // A CorsConfig aceita qualquer header de requisicao hoje, entao o X-Usuario-Id ja passa. Este
+    // teste existe para que um aperto futuro dessa lista quebre aqui, e nao no navegador do
+    // frontend: sem o header no preflight, o Angular perde a identidade sem erro de backend.
+    mockMvc.perform(options("/api/notas")
+            .header(ORIGIN, ORIGEM_ANGULAR)
+            .header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
+            .header(ACCESS_CONTROL_REQUEST_HEADERS, MockProdutorFilter.HEADER_USUARIO_ID))
+        .andExpect(status().isOk())
+        .andExpect(header().string(ACCESS_CONTROL_ALLOW_ORIGIN, ORIGEM_ANGULAR))
+        .andExpect(header().string(ACCESS_CONTROL_ALLOW_HEADERS,
+            Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)));
   }
 
   @Test
