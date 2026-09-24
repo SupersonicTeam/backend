@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
  * despercebida.
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "homolog"})
 public class DataLoader implements CommandLineRunner {
 
   private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
