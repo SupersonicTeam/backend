@@ -51,7 +51,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ReducaoNcmResolver` | **Único** ponto de resolução da redução de base por NCM (issue #52): item → NCM → zero |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext`; sem identidade lança `NaoAutenticadoException` (401) |
-| `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository` |
+| `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository`; fechamento do job por produtor em transação própria, lendo IDs em lotes por keyset (issue #100) |
+| `ResumoLoteApuracao` | Record interno com o resultado do lote do job de fechamento: concluídas + IDs com falha (issue #100) |
 | `DashboardService` | Agrega o painel do produtor (issue #65): reúsa `ApuracaoService` (KPIs) + `NotaFiscalRepository` (série mensal, últimas notas); zero-fill de 6 meses; anti-IDOR |
 | `GuiaFiscalService` | CRUD de guias fiscais (issues #74/#94): `criar`/`listar`/`marcarComoPaga` exigem que o `produtorId` seja o do produtor autenticado — 404 se divergir (anti-IDOR) |
 | `GuiaFiscalStatusSyncJob` | `@Scheduled` diário — marca `PENDENTE` vencida como `VENCIDA` (issue #74) |

@@ -258,6 +258,12 @@ Quarta das 7 ondas do plano de 2026-09-21. Spec, design, tasks e sprint em `.spe
 - Ao adotar, enviar em **todas** as chamadas (interceptor HTTP) — inclusive nas de `/api/contador/guias`, onde o `produtorId` do payload/query precisa **bater** com o do header, sob pena de 404.
 - Novo status possível: **401** com `errors[0].code == "NAO_AUTENTICADO"` (header presente e inválido, ou ambiente sem identidade). Tratar como sessão inválida — é o mesmo 401 que o JWT devolverá na Sprint 8.
 
+### Onda 5 — Jobs e volume (em andamento; spec em `.specs/features/onda-5-jobs-volume/`)
+
+Quinta das 7 ondas. Ordem #100 → #87 → #103, um PR por issue.
+
+- **#100 Fechamento da apuração por produtor (PR 1):** `fecharPeriodo` fazia `findAll()` de todos os produtores e consolidava tudo numa **única** transação, de modo que um produtor inconsistente desfazia o fechamento de todos. Agora `fecharPeriodo` e `refecharPeriodosReabertos` são `NOT_SUPPORTED`: leem só IDs (produtores em lotes por **keyset**, `app.apuracao.fechamento.lote-tamanho`, padrão 100) e fecham cada item num `TransactionTemplate` **`REQUIRES_NEW`** com o timeout padrão. A falha de um item faz rollback só dele, é logada em `ERROR` e entra no `ResumoLoteApuracao` (concluídas + IDs com falha), que o `ApuracaoFechamentoJob` loga. A propriedade `app.apuracao.fechamento.transaction-timeout` saiu: não há mais transação de lote. RN004/RN005/#54/#64 inalterados. Os testes que passam pelo fechamento vivem em `ApuracaoFechamentoIntegrationTest`, **sem** `@Transactional` de classe: numa transação de teste o `REQUIRES_NEW` não enxergaria os dados do teste e o rollback esconderia justamente os commits que o teste precisa provar. A falha é injetada com `@MockitoSpyBean` no `NotaFiscalRepository`. Consolidação por SQL agregado (item 3 da issue) ficou de fora de propósito; ver o spec.
+
 ### Débitos técnicos abertos
 
 - **Onda 1 — pendências deixadas conscientemente:**
