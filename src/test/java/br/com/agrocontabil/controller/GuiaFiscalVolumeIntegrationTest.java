@@ -18,6 +18,7 @@ import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,6 +66,16 @@ class GuiaFiscalVolumeIntegrationTest {
     mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
         .addFilters(new MockProdutorFilter(produtorRepository))
         .build();
+  }
+
+  /**
+   * O teste nao e transacional e o H2 e compartilhado entre contextos: sem esta limpeza as guias
+   * commitadas aqui sobrevivem e barram, pela FK, o {@code deleteAll} de produtores da classe
+   * seguinte.
+   */
+  @AfterEach
+  void tearDown() {
+    cleaner.limparTudo();
   }
 
   // -------------------------------------------------------------------------

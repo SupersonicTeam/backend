@@ -9,6 +9,7 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.annotation.DirtiesContext;
@@ -48,6 +50,7 @@ import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
  * </ul>
  */
 @DataJpaTest
+@Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=none")
@@ -64,12 +67,14 @@ class NotaFiscalRepositoryTest {
   @Autowired
   private ProdutorRepository produtorRepository;
 
+  @Autowired
+  private TestDatabaseCleaner cleaner;
+
   private Produtor produtor;
 
   @BeforeEach
   void setUp() {
-    notaFiscalRepository.deleteAll();
-    produtorRepository.deleteAll();
+    cleaner.limparTudo();
 
     produtor = Produtor.builder()
         .nomeCompleto("Maria Agricultora")

@@ -8,8 +8,8 @@ import br.com.agrocontabil.model.AliquotaIbsUf;
 import br.com.agrocontabil.model.AliquotaIbsUfId;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
-import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,6 +53,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=none")
@@ -65,13 +67,16 @@ class AliquotaVigenciaIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ProdutorRepository produtorRepository;
-  @Autowired private NotaFiscalRepository notaFiscalRepository;
+  @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private AliquotaIbsUfRepository aliquotaIbsUfRepository;
 
   private Produtor produtor;
 
   @BeforeEach
   void setUp() {
+    // O H2 e compartilhado entre contextos: outra classe pode ter deixado guias/apuracoes do
+    // proprio produtor dela, e o tearDown so consegue apagar produtores na ordem das FKs.
+    cleaner.limparTudo();
     produtor = produtorRepository.save(Produtor.builder()
         .nomeCompleto("Joao Produtor")
         .cpfCnpj("52998224725")
@@ -96,8 +101,7 @@ class AliquotaVigenciaIntegrationTest {
     // (DB_CLOSE_DELAY=-1), entao uma falha nos deleteAll nao pode deixa-la para tras.
     aliquotaIbsUfRepository.deleteById(new AliquotaIbsUfId("MT", INICIO_2027));
     SecurityContextHolder.clearContext();
-    notaFiscalRepository.deleteAll();
-    produtorRepository.deleteAll();
+    cleaner.limparTudo();
   }
 
   @Test
