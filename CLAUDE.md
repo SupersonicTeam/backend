@@ -148,7 +148,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 622 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes do Liquibase contra PostgreSQL 16 (Testcontainers) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 624 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes do Liquibase contra PostgreSQL 16 (Testcontainers) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
@@ -276,7 +276,7 @@ Quinta das 7 ondas. Ordem #100 → #87 → #103, um PR por issue.
 
 ### Onda 6 — Sprint 7, SEFAZ real (spec em `.specs/features/onda-6-sefaz-real/`)
 
-Prepara o `SefazService` para o transporte SOAP real. Issues **#84** (PR #124), **#125** (PR #126, achado da onda) e **#83** (PRs #127 e seguinte).
+Prepara o `SefazService` para o transporte SOAP real. Issues **#84** (PR #124), **#125** (PR #126, achado da onda), **#83** (PRs #127 e #130) e **#129**. Concluída em 2026-09-25; o transporte SOAP real ficou fora (issue #128).
 
 - **Cancelamento recusado (#84):** `CancelamentoRejeitadoException` responde **422** `CANCELAMENTO_REJEITADO` com `rejectedValue` = cStat e `message` = xMotivo do fisco, sem prefixo.
 - **Retry pela idempotência (#83):** `SefazComunicacaoException` ganhou `SefazConexaoException` (a requisição não saiu → retry seguro) e `SefazRespostaIndeterminadaException` (pode ter sido processada → nunca re-tentar). `SefazClient.enviar`/`cancelar` só re-tentam conexão; `consultarStatus` re-tenta qualquer falha. Instância direta da base conta como indeterminada.
@@ -284,6 +284,7 @@ Prepara o `SefazService` para o transporte SOAP real. Issues **#84** (PR #124), 
 - **Sync paginado com disjuntor (#83):** `sincronizarPendentes` lê só IDs por keyset (`app.nfe.sefaz.sync.lote-tamanho`), processa cada nota isolada e para após `max-falhas-consecutivas` falhas de comunicação seguidas.
 - **Timeouts e invariante (#83):** `app.nfe.sefaz.timeout.connect-ms`/`read-ms`. A aplicação **não sobe** se `transmissao.timeout-ms` não superar o pior caso de uma transmissão (envio + consulta de reconciliação, com retry).
 - **`application.yml` (#125):** o bloco `server:` (PR #110) estava no meio de `spring:` e desligava em silêncio `open-in-view: false`, `ddl-auto: validate`, `default_batch_fetch_size` (#81), `jdbc.time_zone` e os limites de multipart. Corrigido e travado por `ApplicationYamlEstruturaTest`, que varre todos os `application*.yml`.
+- **`cNF` aleatório (#129):** `ChaveAcessoGenerator` sorteia o `cNF` com `SecureRandom` (antes derivado de número/série, o que permitia deduzir a chave de acesso) e evita as formas que a SEFAZ recusa (rejeição 897: igual ao `nNF`, dígitos iguais, sequências triviais).
 - **Testes de referência:** `SefazEntregaIncertaIntegrationTest` (HTTP ponta a ponta com o transporte espiado; inclui a prova de que nenhuma chamada à SEFAZ acontece com transação ativa ou conexão do pool presa), `SefazClientRetryTest`, `SefazServiceReconciliacaoTest`, `SefazServiceSincronizacaoTest`, `SefazPropertiesTest`.
 
 ### Débitos técnicos abertos
@@ -293,7 +294,7 @@ Prepara o `SefazService` para o transporte SOAP real. Issues **#84** (PR #124), 
   - `idx_guia_fiscal_produtor_vencimento` (0019) **só é usado com `LIMIT`**: na listagem completa o planner prefere o índice antigo + sort. Ele entrega valor (55× menos I/O) quando a **#103** (paginação das guias) for implementada.
   - `idx_nota_fiscal_produtor_id` (0002) ficou redundante para consultas por produtor; remover exigiria outro changeSet e outra decisão.
   - Lock distribuído dos jobs (`ShedLock`) entregue na Onda 5, issue **#87**.
-- **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico) — issue **#129**. Transporte SOAP + mTLS real com certificado **ICP-Brasil** — issue **#128**; o contrato que ele deve cumprir (classificação de falhas, mapeamento de cStat da consulta, timeouts) está no javadoc de `SefazTransport` e de `SefazRetorno`.
+- **Sprint 7 (SEFAZ real):** Transporte SOAP + mTLS real com certificado **ICP-Brasil** — issue **#128**; o contrato que ele deve cumprir (classificação de falhas, mapeamento de cStat da consulta, timeouts) está no javadoc de `SefazTransport` e de `SefazRetorno`.
 - **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente. (Validação de dígitos verificadores de CPF/CNPJ entregue na #18 via `DocumentoFiscalValidator`; `IllegalStateException`→401 no `AuthenticatedProdutorProvider` entregue na Onda 4, issue #92.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador (issue **#93**) — até lá `POST`/`GET /api/contador/guias` exigem que o `produtorId` seja o do **próprio produtor autenticado** (issue #94), ou seja, são na prática endpoints do produtor, não do contador.
 - **Identidade declarada, não provada (Onda 4):** o header `X-Usuario-Id` não é verificado — qualquer cliente pode afirmar ser qualquer produtor. É aceitável porque só existe em `dev`/`homolog`, **nunca em prod**, e some quando o JWT entrar (#93). Homologação, portanto, não deve receber dados reais de produtor.
 - **IE de produtor sem dígito verificador (#88):** não há algoritmo nacional padronizado de DV de Inscrição Estadual (cada UF tem o seu). Só o formato é validado; validação por UF fica para quando houver necessidade real.

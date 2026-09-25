@@ -1,5 +1,8 @@
 package br.com.agrocontabil.service;
 
+import java.security.SecureRandom;
+import java.util.Set;
+import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Service;
 
 /**
@@ -18,7 +21,7 @@ import org.springframework.stereotype.Service;
  *  serie    |    3    | Série (zero-padded)
  *  nNF      |    9    | Número da NF-e (zero-padded)
  *  tpEmis   |    1    | Forma de emissão: 1 = normal
- *  cNF      |    8    | Código numérico determinístico (derivado de número/série)
+ *  cNF      |    8    | Código numérico aleatório (SecureRandom — issue #129)
  *  cDV      |    1    | Dígito verificador (módulo 11)
  * ----------+---------+------------------------------------------------------------
  *  Total    |   44    |
@@ -35,10 +38,16 @@ import org.springframework.stereotype.Service;
  *       DV = {@code 11 - resto}.</li>
  * </ol>
  *
- * <h3>cNF determinístico:</h3>
- * <p>Para garantir reprodutibilidade em testes, o {@code cNF} é derivado de
- * {@code (numero * 31L + serie * 7L) % 100_000_000L}, zero-padded para 8 dígitos.
- * Isso elimina aleatoriedade e permite que o teste valide o DV calculado manualmente.
+ * <h3>cNF aleatório (issue #129):</h3>
+ * <p>O {@code cNF} existe para que terceiros não consigam deduzir a chave de acesso de uma NF-e a
+ * partir de dados públicos (UF, mês, CNPJ do emitente, série, número) e, com ela, consultar a nota
+ * na SEFAZ. Até a issue #129 ele era derivado de número e série — qualquer um que conhecesse o
+ * emitente enumerava as chaves. Agora vem de {@link SecureRandom}, respeitando as regras de
+ * formato da SEFAZ (ver {@link #gerarCNF(long)}).
+ *
+ * <p>A chave só é gerada em {@code gerar-xml}, que só roda antes da transmissão
+ * ({@code RASCUNHO}/{@code COM_INCONSISTENCIAS}): um reenvio reusa o XML e a chave já gravados, então
+ * a aleatoriedade nunca muda a chave de uma nota que o fisco já viu.
  *
  * @see <a href="https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=BMPFMBoln3w=">
  *      Manual de Orientação do Contribuinte — NF-e Layout 4.00</a>
@@ -48,6 +57,34 @@ public class ChaveAcessoGenerator {
 
   /** Tamanho esperado do CPF/CNPJ na chave (zero-padded). */
   private static final int CPFCNPJ_LENGTH = 14;
+
+  /** Limite exclusivo do {@code cNF}: 8 dígitos, de 00000000 a 99999999. */
+  private static final int CNF_LIMITE = 100_000_000;
+
+  /**
+   * Sequências triviais que a SEFAZ recusa como {@code cNF} (rejeição 897 — código numérico em
+   * formato inválido), além dos dígitos todos iguais, tratados à parte.
+   */
+  private static final Set<String> CNF_SEQUENCIAS_INVALIDAS = Set.of(
+      "12345678", "23456789", "34567890", "45678901", "56789012",
+      "67890123", "78901234", "89012345", "90123456", "01234567");
+
+  private final RandomGenerator random;
+
+  /** Construtor usado pelo Spring: {@code cNF} imprevisível via {@link SecureRandom}. */
+  public ChaveAcessoGenerator() {
+    this(new SecureRandom());
+  }
+
+  /**
+   * Construtor com a fonte de aleatoriedade explícita, para testes que precisam controlar o
+   * {@code cNF} sorteado.
+   *
+   * @param random fonte de aleatoriedade do {@code cNF}
+   */
+  public ChaveAcessoGenerator(RandomGenerator random) {
+    this.random = random;
+  }
 
   /**
    * Resultado da geração da chave de acesso.
@@ -75,7 +112,7 @@ public class ChaveAcessoGenerator {
     String cnpjCpfFormatado = zeroPad(cpfCnpj.replaceAll("\\D", ""), CPFCNPJ_LENGTH);
     String serieStr = zeroPad(String.valueOf(serie), 3);
     String numeroStr = zeroPad(String.valueOf(numero), 9);
-    String cNF = gerarCNF(numero, serie);
+    String cNF = gerarCNF(numero);
 
     // Compõe os 43 primeiros dígitos (sem DV)
     String base =
@@ -128,19 +165,29 @@ public class ChaveAcessoGenerator {
   }
 
   /**
-   * Gera o {@code cNF} de 8 dígitos de forma determinística a partir do número e série.
+   * Sorteia o {@code cNF} de 8 dígitos (issue #129).
    *
-   * <p>Fórmula: {@code (numero * 31 + serie * 7) % 100_000_000}, zero-padded para 8 posições.
-   * O valor mínimo é {@code 1} (para evitar cNF = "00000000" que pode gerar confusão).
+   * <p>Sorteia de novo enquanto o valor cair numa das formas que a SEFAZ recusa (rejeição 897):
+   * igual ao {@code nNF}, todos os dígitos iguais ou uma das sequências triviais de
+   * {@link #CNF_SEQUENCIAS_INVALIDAS}. São 20 valores inválidos em 100 milhões, então na prática o
+   * primeiro sorteio já serve.
    *
-   * @param numero número da NF-e
-   * @param serie  série da NF-e
+   * @param numero número da NF-e ({@code nNF}), que o {@code cNF} não pode repetir
    * @return string de 8 dígitos
    */
-  public String gerarCNF(long numero, int serie) {
-    long raw = (numero * 31L + serie * 7L) % 100_000_000L;
-    long cNF = Math.max(raw, 1L); // garante mínimo 1
-    return zeroPad(String.valueOf(cNF), 8);
+  public String gerarCNF(long numero) {
+    String cNF;
+    do {
+      cNF = zeroPad(String.valueOf(random.nextInt(CNF_LIMITE)), 8);
+    } while (!cnfValido(cNF, numero));
+    return cNF;
+  }
+
+  /** Indica se o {@code cNF} escapa das formas que a SEFAZ recusa. */
+  private static boolean cnfValido(String cNF, long numero) {
+    return Long.parseLong(cNF) != numero
+        && cNF.chars().distinct().count() > 1
+        && !CNF_SEQUENCIAS_INVALIDAS.contains(cNF);
   }
 
   /**
