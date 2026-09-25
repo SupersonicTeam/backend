@@ -2,15 +2,21 @@ package br.com.agrocontabil.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
- * Trava a estrutura do {@code application.yml} base (issue #125).
+ * Trava a estrutura do {@code application.yml} e dos YAMLs de profile (issue #125).
  *
  * <p>O defeito: o bloco {@code server:} foi inserido na coluna 0 no meio do bloco {@code spring:},
  * e tudo o que vinha depois dele virou {@code server.jpa.*}, {@code server.servlet.multipart.*},
@@ -22,6 +28,16 @@ import org.springframework.core.io.ClassPathResource;
  * ninguém lê {@code server.jpa}. Daí ler o YAML e exigir cada chave no namespace certo.
  */
 class ApplicationYamlEstruturaTest {
+
+  /**
+   * Sub-namespaces que só existem dentro de {@code spring.*}. Encontrados como segundo segmento
+   * de uma chave que não começa com {@code spring}, denunciam um bloco de topo inserido no meio de
+   * {@code spring:} — exatamente o defeito da issue #125. Nomes genéricos que o namespace
+   * {@code app} também usa (ex.: {@code app.security}) ficam de fora para não dar falso positivo.
+   */
+  private static final Set<String> SUBNAMESPACES_DO_SPRING = Set.of(
+      "application", "profiles", "data", "datasource", "jpa", "liquibase", "transaction",
+      "task", "lifecycle", "servlet");
 
   private static Properties propriedades;
 
@@ -69,11 +85,34 @@ class ApplicationYamlEstruturaTest {
   }
 
   @Test
-  @DisplayName("nenhuma chave de spring.* escondida embaixo de server.*")
-  void nadaDeSpringEmbaixoDeServer() {
-    assertThat(propriedades.stringPropertyNames())
-        .noneMatch(chave -> chave.startsWith("server.jpa.")
-            || chave.startsWith("server.liquibase.")
-            || chave.startsWith("server.servlet.multipart."));
+  @DisplayName("nenhum YAML de profile esconde chave de spring.* embaixo de outro bloco de topo")
+  void nenhumYamlEscondeChavesDoSpring() throws IOException {
+    Resource[] yamls = new PathMatchingResourcePatternResolver()
+        .getResources("classpath*:application*.yml");
+    // application.yml, -dev, -homolog, -prod (main) e -test (test): se o padrao nao achar os
+    // arquivos, o teste passaria sem verificar nada.
+    assertThat(yamls).hasSizeGreaterThanOrEqualTo(5);
+
+    List<String> escondidas = new ArrayList<>();
+    for (Resource yaml : yamls) {
+      YamlPropertiesFactoryBean fabrica = new YamlPropertiesFactoryBean();
+      fabrica.setResources(yaml);
+      for (String chave : fabrica.getObject().stringPropertyNames()) {
+        String[] segmentos = chave.split("\\.");
+        // server.servlet.* legitimo (context-path, session) tambem existe; so o multipart e do
+        // spring.servlet.
+        boolean servletLegitimo = segmentos[0].equals("server")
+            && segmentos.length > 2
+            && segmentos[1].equals("servlet")
+            && !segmentos[2].equals("multipart");
+        if (!segmentos[0].equals("spring")
+            && segmentos.length > 1
+            && SUBNAMESPACES_DO_SPRING.contains(segmentos[1])
+            && !servletLegitimo) {
+          escondidas.add(yaml.getFilename() + ": " + chave);
+        }
+      }
+    }
+    assertThat(escondidas).isEmpty();
   }
 }
