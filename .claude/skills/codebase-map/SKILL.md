@@ -83,10 +83,10 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `SefazTransport` | Interface plugável de transmissão |
-| `MockSefazTransport` | Mock determinístico (substituto até Sprint 7) |
-| `SefazClient` | Orquestra retry + chama `SefazTransport` |
+| `MockSefazTransport` | Mock fiel à SEFAZ nos casos da reconciliação: 204 no reenvio, 573 no evento repetido, 217 → `NAO_ENCONTRADA`, 101 → `CANCELADA` (issue #83) |
+| `SefazClient` | Retry pela idempotência: `enviar`/`cancelar` só re-tentam `SefazConexaoException`; `consultarStatus` re-tenta qualquer falha de comunicação (issue #83) |
 | `SefazRetorno` | Record com cStat, motivo, protocolo, situação |
-| `SituacaoSefaz` | Enum: AUTORIZADA, REJEITADA, PENDENTE |
+| `SituacaoSefaz` | Enum: AUTORIZADA, REJEITADA, PENDENTE, DENEGADA; só na consulta: NAO_ENCONTRADA, CANCELADA (issue #83) |
 | `SefazAmbiente` | Enum: HOMOLOGACAO, PRODUCAO |
 | `SefazStatusSyncJob` | `@Scheduled` — sincroniza notas PENDENTE_SEFAZ |
 
@@ -146,7 +146,9 @@ Bean Validation customizada (anotação + validator):
 | `XmlIndisponivelException` | 409 | XML pedido antes de ser gerado (issue #89) |
 | `DanfeGenerationException` | 500 (genérico) | Falha interna no JasperReports |
 | `AssinaturaDigitalException` | 500 (genérico) | Falha na assinatura/cert |
-| `SefazComunicacaoException` | 502 | Timeout/falha após retry |
+| `SefazComunicacaoException` | 502 | Base das falhas de comunicação; instância direta = indeterminada |
+| `SefazConexaoException` | 502 | Requisição comprovadamente não chegou (conexão/DNS/TLS) — retry seguro (issue #83) |
+| `SefazRespostaIndeterminadaException` | 502 | Requisição pode ter sido processada (read-timeout etc.) — nunca re-tentar; consultar pela chave (issue #83) |
 | `XmlGenerationException` | 422/500 | Falha na geração ou validação XSD |
 | `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
 | `JanelaCalendarioInvalidaException` | 400 | `de > ate` ou janela > 36 meses no calendário fiscal (issue #103) |

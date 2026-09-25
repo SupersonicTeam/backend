@@ -256,9 +256,10 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
     int atualizadas = sefazService.sincronizarPendentes();
 
     assertThat(atualizadas).isEqualTo(1);
-    // cStat 217 (nao consta na base da SEFAZ) -> REJEITADA, nunca AUTORIZADA.
+    // cStat 217 (nao consta na base da SEFAZ) -> XML_GERADO (issue #83): nunca AUTORIZADA, e
+    // tambem nao REJEITADA — o fisco nao recusou nada, so nao recebeu. Reenviar e seguro.
     assertThat(notaFiscalRepository.findById(notaId).orElseThrow().getStatus())
-        .isEqualTo(StatusNotaFiscal.REJEITADA);
+        .isEqualTo(StatusNotaFiscal.XML_GERADO);
     // E, sobretudo, nenhum evento de debito para uma nota inexistente no fisco.
     assertThat(contador.emitidas()).isZero();
   }

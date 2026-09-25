@@ -41,15 +41,16 @@ class MockSefazTransportTest {
   }
 
   @Test
-  @DisplayName("consultarStatus recusa chave nunca transmitida com cStat 217")
+  @DisplayName("consultarStatus responde NAO_ENCONTRADA (cStat 217) para chave nunca transmitida")
   void consultarStatusShouldRejectUnknownChave() {
     // issue #96: o mock respondia AUTORIZADA para QUALQUER chave. Combinado com a compensacao
     // que deixa a nota em PENDENTE_SEFAZ quando o envio falha, isso fazia o job "autorizar" uma
     // NF-e que nunca saiu e publicar NotaEmitidaEvent — debito de IBS/CBS apurado sobre nota
-    // inexistente no fisco. A SEFAZ real responde cStat 217 para chave desconhecida.
+    // inexistente no fisco. A SEFAZ real responde cStat 217 para chave desconhecida, e desde a
+    // issue #83 isso e NAO_ENCONTRADA, nao REJEITADA: a nota nunca chegou, nao foi recusada.
     SefazRetorno retorno = transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
 
-    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.REJEITADA);
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.NAO_ENCONTRADA);
     assertThat(retorno.cStat()).isEqualTo("217");
     assertThat(retorno.protocolo()).isNull();
   }
@@ -74,5 +75,43 @@ class MockSefazTransportTest {
     assertThat(retorno.xMotivo()).isEqualTo("Evento registrado e vinculado a NF-e");
     assertThat(retorno.protocolo()).isEqualTo("1" + CHAVE.substring(0, 14));
     assertThat(retorno.dataAutorizacao()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("enviar de chave ja transmitida responde duplicidade (cStat 204), como a SEFAZ")
+  void enviarShouldAnswerDuplicityForRetransmittedChave() {
+    transport.enviar("<xml/>", CHAVE, SefazAmbiente.HOMOLOGACAO);
+
+    SefazRetorno retorno = transport.enviar("<xml/>", CHAVE, SefazAmbiente.HOMOLOGACAO);
+
+    // issue #83: e o retorno que a reconciliacao pela chave precisa tratar como "ja autorizada".
+    assertThat(retorno.cStat()).isEqualTo("204");
+    assertThat(retorno.protocolo()).isNull();
+  }
+
+  @Test
+  @DisplayName("cancelar de chave ja cancelada responde duplicidade de evento (cStat 573)")
+  void cancelarShouldAnswerDuplicityForRecancelledChave() {
+    transport.cancelar(CHAVE, "Erro na quantidade dos produtos vendidos", "1",
+        SefazAmbiente.HOMOLOGACAO);
+
+    SefazRetorno retorno = transport.cancelar(
+        CHAVE, "Erro na quantidade dos produtos vendidos", "1", SefazAmbiente.HOMOLOGACAO);
+
+    assertThat(retorno.cStat()).isEqualTo("573");
+  }
+
+  @Test
+  @DisplayName("consultarStatus de chave cancelada responde CANCELADA (cStat 101)")
+  void consultarStatusShouldReturnCancelledForCancelledChave() {
+    transport.enviar("<xml/>", CHAVE, SefazAmbiente.HOMOLOGACAO);
+    transport.cancelar(CHAVE, "Erro na quantidade dos produtos vendidos", "1",
+        SefazAmbiente.HOMOLOGACAO);
+
+    SefazRetorno retorno = transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
+
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.CANCELADA);
+    assertThat(retorno.cStat()).isEqualTo("101");
+    assertThat(retorno.protocolo()).isNotNull();
   }
 }

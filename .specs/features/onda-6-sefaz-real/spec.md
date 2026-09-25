@@ -156,11 +156,21 @@ As chaves órfãs `transaction-timeout` de `sefaz.sync` e `sefaz.transmissao` no
    apuração exatamente uma vez por autorização/cancelamento (#64/#96), lock pessimista (#96).
 6. Suíte inteira verde.
 
-## 11. Sequência de PRs
+## 11. Achado durante a execução: #125
+
+O T5 falhou na primeira execução: sem transação ativa, havia 1 conexão Hikari presa e um
+`EntityManagerHolder` preso à thread. A causa não estava no `SefazService`, e sim no
+`application.yml`: o PR #110 inseriu `server:` no meio de `spring:`, e `spring.jpa.open-in-view`,
+`ddl-auto: validate`, `default_batch_fetch_size` (#81), `jdbc.time_zone` e os limites de multipart
+viraram `server.*`, ignorados em silêncio. Corrigido no PR #126 (issue #125), mergeado antes do
+PR B. Sem ele, o critério de aceite 2 era inatingível com qualquer código de serviço.
+
+## 12. Sequência de PRs
 
 | PR | Branch | Escopo | Fecha |
 |---|---|---|---|
 | A | `onda6/84-cancelamento-rejeitado` | 422 + contrato do `ErrorDetail` + OpenAPI + T9 | #84 |
+| — | `fix/config-yaml-spring-jpa` | #125: bloco `server:` fora do lugar (achado do T5), PR #126 | #125 |
 | B | `onda6/83-retry-idempotente` | exceções, retry por tipo, reconciliação pela chave, 204/573, `NAO_ENCONTRADA`/`CANCELADA`, mock fiel; T1–T5, T8, T10 | — |
 | C | `onda6/83-sync-paginado` | keyset + disjuntor + timeouts + invariante + limpeza do yml; T6, T7, T11 | #83 |
 | D | `onda6/cnf-secure-random` | `cNF` via `SecureRandom`; T12 | issue nova |

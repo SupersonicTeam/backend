@@ -11,23 +11,29 @@ import org.springframework.stereotype.Component;
 /**
  * Implementação mock do transporte SEFAZ para desenvolvimento e testes.
  *
- * <p>Ativo quando {@code app.nfe.sefaz.mock.enabled=true} (padrão). Simula retorno
- * determinístico de autorização sem qualquer conexão real com a SEFAZ.
+ * <p>Ativo quando {@code app.nfe.sefaz.mock.enabled=true} (padrão). Simula os retornos da SEFAZ
+ * sem qualquer conexão real.
  *
  * <p><strong>Atenção:</strong> este componente não realiza comunicação SOAP/HTTPS.
- * O transporte real (SOAP+mTLS com certificado ICP-Brasil) será implementado na
- * <em>Sprint 7</em> como uma nova classe que implemente {@link SefazTransport},
- * ativada por {@code app.nfe.sefaz.mock.enabled=false}. Nenhum serviço precisa
- * ser alterado para fazer o switch.
+ * O transporte real (SOAP+mTLS com certificado ICP-Brasil) será uma nova classe que implemente
+ * {@link SefazTransport}, ativada por {@code app.nfe.sefaz.mock.enabled=false}. Nenhum serviço
+ * precisa ser alterado para fazer o switch.
  *
- * <p>Retorno simulado:
+ * <p>Retornos simulados (issue #83: fiéis à SEFAZ nos casos de que a reconciliação depende):
  * <ul>
- *   <li>{@code cStat = "100"} — Autorizado o uso da NF-e</li>
- *   <li>{@code xMotivo = "Autorizado o uso da NF-e"}</li>
- *   <li>{@code situacao = AUTORIZADA}</li>
- *   <li>{@code protocolo} derivado da chave de acesso (prefixo "1" + primeiros 14 dígitos)</li>
- *   <li>{@code dataAutorizacao = OffsetDateTime.now()}</li>
+ *   <li>{@code enviar}: cStat 100 (autorizada) na primeira vez; cStat 204 (duplicidade de NF-e)
+ *       se a chave já foi transmitida.</li>
+ *   <li>{@code cancelar}: cStat 135 (evento vinculado) na primeira vez; cStat 573 (duplicidade de
+ *       evento) se a chave já foi cancelada.</li>
+ *   <li>{@code consultarStatus}: {@link SituacaoSefaz#CANCELADA} (101) para chave cancelada,
+ *       {@link SituacaoSefaz#AUTORIZADA} (100) para chave transmitida e
+ *       {@link SituacaoSefaz#NAO_ENCONTRADA} (217) para chave desconhecida.</li>
+ *   <li>{@code protocolo} derivado da chave de acesso (prefixo "1" + primeiros 14 dígitos).</li>
  * </ul>
+ *
+ * <p>Estado só em memória do processo (o transporte real consulta o fisco): ao reiniciar a
+ * aplicação, as chaves transmitidas e canceladas antes do restart são esquecidas. Aceitável em dev
+ * e teste, que é o único escopo deste componente.
  */
 @Component
 @ConditionalOnProperty(name = "app.nfe.sefaz.mock.enabled", havingValue = "true",
@@ -38,8 +44,15 @@ public class MockSefazTransport implements SefazTransport {
 
   private static final String CSTAT_AUTORIZADO = "100";
   private static final String XMOTIVO_AUTORIZADO = "Autorizado o uso da NF-e";
+  private static final String CSTAT_CANCELAMENTO_HOMOLOGADO = "101";
+  private static final String XMOTIVO_CANCELAMENTO_HOMOLOGADO =
+      "Cancelamento de NF-e homologado";
+  private static final String CSTAT_DUPLICIDADE_NFE = "204";
+  private static final String XMOTIVO_DUPLICIDADE_NFE = "Rejeicao: Duplicidade de NF-e";
   private static final String CSTAT_EVENTO_VINCULADO = "135";
   private static final String XMOTIVO_EVENTO_VINCULADO = "Evento registrado e vinculado a NF-e";
+  private static final String CSTAT_DUPLICIDADE_EVENTO = "573";
+  private static final String XMOTIVO_DUPLICIDADE_EVENTO = "Rejeicao: Duplicidade de evento";
   private static final String CSTAT_NAO_CONSTA = "217";
   private static final String XMOTIVO_NAO_CONSTA =
       "NF-e nao consta na base de dados da SEFAZ";
@@ -48,30 +61,32 @@ public class MockSefazTransport implements SefazTransport {
    * Chaves efetivamente transmitidas por este mock.
    *
    * <p><strong>Por que existe:</strong> antes, {@code consultarStatus} respondia AUTORIZADA para
-   * qualquer chave, inclusive de nota que nunca foi transmitida. Combinado com a compensacao da
-   * issue #96 (uma falha no envio deixa a nota em {@code PENDENTE_SEFAZ}), isso fazia o
+   * qualquer chave, inclusive de nota que nunca foi transmitida. Combinado com a compensação
+   * da issue #96 (uma falha no envio deixa a nota em {@code PENDENTE_SEFAZ}), isso fazia o
    * {@code SefazStatusSyncJob} "autorizar" uma NF-e inexistente no fisco e publicar
-   * {@code NotaEmitidaEvent} — o debito de IBS/CBS entrava na apuracao de uma nota que nunca saiu.
-   * A SEFAZ real responde cStat 217 para chave desconhecida; o mock passa a fazer o mesmo.
-   *
-   * <p>Memoria do processo apenas (o transporte real consulta o fisco): ao reiniciar a aplicacao,
-   * uma nota transmitida antes do restart passa a ser vista como desconhecida. Aceitavel em dev e
-   * teste, que e o unico escopo deste componente.
+   * {@code NotaEmitidaEvent} — o débito de IBS/CBS entrava na apuração de uma nota que nunca saiu.
+   * Também é o que permite simular a duplicidade (cStat 204) de um reenvio.
    */
   private final Set<String> chavesTransmitidas = ConcurrentHashMap.newKeySet();
+
+  /** Chaves com evento de cancelamento registrado — base do 573 e da situação CANCELADA. */
+  private final Set<String> chavesCanceladas = ConcurrentHashMap.newKeySet();
 
   /**
    * {@inheritDoc}
    *
-   * <p>Simula autorização imediata e determinística. O protocolo é derivado da chave
-   * de acesso para facilitar rastreabilidade em testes.
+   * <p>Simula autorização imediata. Reenviar uma chave já transmitida responde cStat 204, como a
+   * SEFAZ real: é o cenário que a reconciliação pela chave precisa resolver (issue #83).
    */
   @Override
   public SefazRetorno enviar(String xmlAssinado, String chaveAcesso, SefazAmbiente ambiente) {
     log.info("[MOCK SEFAZ] Simulando envio de NF-e: chave={} ambiente={}", chaveAcesso, ambiente);
     // O Set nao aceita null; uma chave nula ja e tratada mais abaixo pelo buildProtocolo.
-    if (chaveAcesso != null) {
-      chavesTransmitidas.add(chaveAcesso);
+    if (chaveAcesso != null && !chavesTransmitidas.add(chaveAcesso)) {
+      log.info("[MOCK SEFAZ] Chave ja transmitida: chave={} -> cStat={}",
+          chaveAcesso, CSTAT_DUPLICIDADE_NFE);
+      return new SefazRetorno(
+          SituacaoSefaz.REJEITADA, CSTAT_DUPLICIDADE_NFE, XMOTIVO_DUPLICIDADE_NFE, null, null);
     }
     String protocolo = buildProtocolo(chaveAcesso);
     SefazRetorno retorno = new SefazRetorno(
@@ -87,45 +102,50 @@ public class MockSefazTransport implements SefazTransport {
   /**
    * {@inheritDoc}
    *
-   * <p>Responde AUTORIZADA apenas para chave que <strong>passou por
-   * {@link #enviar(String, String, SefazAmbiente)}</strong> nesta execucao. Chave desconhecida
-   * recebe cStat 217 ({@code REJEITADA}), como a SEFAZ real — ver {@link #chavesTransmitidas}
-   * para o defeito que isso evita. Implementacao real na Sprint 7 (NfeConsultaProtocolo).
+   * <p>Chave cancelada responde {@link SituacaoSefaz#CANCELADA}; chave que passou por
+   * {@link #enviar(String, String, SefazAmbiente)} nesta execução responde AUTORIZADA; chave
+   * desconhecida responde {@link SituacaoSefaz#NAO_ENCONTRADA} (cStat 217), como a SEFAZ real.
    */
   @Override
   public SefazRetorno consultarStatus(String chaveAcesso, SefazAmbiente ambiente) {
     log.info("[MOCK SEFAZ] Simulando consulta de status: chave={} ambiente={}", chaveAcesso,
         ambiente);
 
-    if (!chavesTransmitidas.contains(chaveAcesso)) {
+    if (chaveAcesso != null && chavesCanceladas.contains(chaveAcesso)) {
+      return new SefazRetorno(
+          SituacaoSefaz.CANCELADA,
+          CSTAT_CANCELAMENTO_HOMOLOGADO,
+          XMOTIVO_CANCELAMENTO_HOMOLOGADO,
+          buildProtocolo(chaveAcesso),
+          OffsetDateTime.now());
+    }
+
+    if (chaveAcesso == null || !chavesTransmitidas.contains(chaveAcesso)) {
       log.warn("[MOCK SEFAZ] Chave nunca transmitida por este mock: chave={} -> cStat={}",
           chaveAcesso, CSTAT_NAO_CONSTA);
       return new SefazRetorno(
-          SituacaoSefaz.REJEITADA,
+          SituacaoSefaz.NAO_ENCONTRADA,
           CSTAT_NAO_CONSTA,
           XMOTIVO_NAO_CONSTA,
           null,
           null);
     }
 
-    String protocolo = buildProtocolo(chaveAcesso);
     return new SefazRetorno(
         SituacaoSefaz.AUTORIZADA,
         CSTAT_AUTORIZADO,
         XMOTIVO_AUTORIZADO,
-        protocolo,
+        buildProtocolo(chaveAcesso),
         OffsetDateTime.now());
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>Simula o cancelamento com sucesso determinístico: retorna o evento de cancelamento
-   * homologado (cStat 135 — "Evento registrado e vinculado a NF-e"), com protocolo derivado
-   * da chave. A {@link SituacaoSefaz} não recebe um valor específico de cancelamento — o
-   * sucesso é interpretado pelo serviço via cStat de evento vinculado (∈ {135, 155}); aqui
-   * usamos {@link SituacaoSefaz#AUTORIZADA} apenas como marcador semântico de sucesso
-   * técnico da comunicação. O evento SOAP real (110111) é débito da Sprint 7.
+   * <p>Registra o evento de cancelamento (cStat 135, evento vinculado), com protocolo derivado da
+   * chave. Um segundo cancelamento da mesma chave responde cStat 573 (duplicidade de evento).
+   * O sucesso é interpretado pelo serviço via cStat de evento vinculado (∈ {135, 155}); a
+   * {@link SituacaoSefaz#AUTORIZADA} aqui só marca sucesso técnico da comunicação.
    */
   @Override
   public SefazRetorno cancelar(
@@ -134,6 +154,16 @@ public class MockSefazTransport implements SefazTransport {
     // Nunca logar a justificativa completa (pode conter dados sensiveis) — LGPD.
     log.info("[MOCK SEFAZ] Simulando cancelamento de NF-e: chave={} ambiente={}",
         chaveAcesso, ambiente);
+    if (chaveAcesso != null && !chavesCanceladas.add(chaveAcesso)) {
+      log.info("[MOCK SEFAZ] Evento de cancelamento ja registrado: chave={} -> cStat={}",
+          chaveAcesso, CSTAT_DUPLICIDADE_EVENTO);
+      return new SefazRetorno(
+          SituacaoSefaz.REJEITADA,
+          CSTAT_DUPLICIDADE_EVENTO,
+          XMOTIVO_DUPLICIDADE_EVENTO,
+          null,
+          null);
+    }
     String protocolo = buildProtocolo(chaveAcesso);
     SefazRetorno retorno = new SefazRetorno(
         SituacaoSefaz.AUTORIZADA,
