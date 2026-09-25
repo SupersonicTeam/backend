@@ -5,9 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.dto.VencimentoFiscalResponse;
+import br.com.agrocontabil.exception.JanelaCalendarioInvalidaException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
@@ -15,7 +18,10 @@ import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,47 +32,42 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Testes unitários do {@link CalendarioFiscalService} (issue #74).
+ * Testes unitários do {@link CalendarioFiscalService} (issues #74 e #103).
  *
- * <p>Verifica o mapeamento das guias fiscais do produtor para o item do calendário — em
- * particular a conversão de {@link StatusGuiaFiscal} para o status em minúsculas esperado pelo
- * frontend (pendente/pago/vencido) e o {@code tipo} fixo {@code "imposto"} — e o anti-IDOR: o
- * {@code produtorId} do path precisa bater com o produtor autenticado (PR #75, revisão Copilot).
+ * <p>Relógio fixo em 2026-09-25 ({@code America/Sao_Paulo}): a janela padrão é então
+ * {@code [2025-09-01, 2027-09-30]} — do 1º dia de 12 meses atrás ao último dia de 12 meses à
+ * frente.
  */
 @ExtendWith(MockitoExtension.class)
 class CalendarioFiscalServiceTest {
+
+  private static final Clock CLOCK_FIXO = Clock.fixed(
+      Instant.parse("2026-09-25T15:00:00Z"), ZoneId.of("America/Sao_Paulo"));
+  private static final LocalDate INICIO_PADRAO = LocalDate.of(2025, 9, 1);
+  private static final LocalDate FIM_PADRAO = LocalDate.of(2027, 9, 30);
 
   @Mock private GuiaFiscalRepository guiaFiscalRepository;
   @Mock private AuthenticatedProdutorProvider produtorProvider;
 
   private CalendarioFiscalService service;
+  private Produtor produtor;
 
   @BeforeEach
   void setUp() {
-    service = new CalendarioFiscalService(guiaFiscalRepository, produtorProvider);
-  }
-
-  private Produtor produtor() {
-    return Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
+    service = new CalendarioFiscalService(guiaFiscalRepository, produtorProvider, CLOCK_FIXO);
+    produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
   }
 
   @Test
   @DisplayName("listarVencimentos() mapeia guia PAGA para status 'pago' e tipo 'imposto'")
   void mapeiaGuiaPagaParaVencimentoPago() {
-    Produtor produtor = produtor();
     when(produtorProvider.get()).thenReturn(produtor);
-    GuiaFiscal guia = GuiaFiscal.builder()
-        .id(UUID.randomUUID())
-        .produtor(produtor)
-        .tipoGuia(TipoGuiaFiscal.ICMS)
-        .dataVencimento(LocalDate.of(2026, 8, 20))
-        .valor(new BigDecimal("1250.00"))
-        .status(StatusGuiaFiscal.PAGA)
-        .build();
-    when(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
-        .thenReturn(List.of(guia));
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
+        .thenReturn(List.of(guia(TipoGuiaFiscal.ICMS, StatusGuiaFiscal.PAGA, "1250.00")));
 
-    List<VencimentoFiscalResponse> vencimentos = service.listarVencimentos(produtor.getId());
+    List<VencimentoFiscalResponse> vencimentos =
+        service.listarVencimentos(produtor.getId(), null, null);
 
     assertThat(vencimentos).hasSize(1);
     VencimentoFiscalResponse v = vencimentos.get(0);
@@ -79,44 +80,148 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("listarVencimentos() mapeia guia VENCIDA para status 'vencido'")
   void mapeiaGuiaVencidaParaVencimentoVencido() {
-    Produtor produtor = produtor();
     when(produtorProvider.get()).thenReturn(produtor);
-    GuiaFiscal guia = GuiaFiscal.builder()
-        .id(UUID.randomUUID())
-        .produtor(produtor)
-        .tipoGuia(TipoGuiaFiscal.DARF)
-        .dataVencimento(LocalDate.of(2026, 6, 10))
-        .valor(new BigDecimal("300.00"))
-        .status(StatusGuiaFiscal.VENCIDA)
-        .build();
-    when(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
-        .thenReturn(List.of(guia));
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
+        .thenReturn(List.of(guia(TipoGuiaFiscal.DARF, StatusGuiaFiscal.VENCIDA, "300.00")));
 
-    assertThat(service.listarVencimentos(produtor.getId()).get(0).status()).isEqualTo("vencido");
+    assertThat(service.listarVencimentos(produtor.getId(), null, null).get(0).status())
+        .isEqualTo("vencido");
   }
 
   @Test
   @DisplayName("listarVencimentos() retorna lista vazia para produtor autenticado sem guias")
   void listarVencimentosRetornaVazio() {
-    Produtor produtor = produtor();
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of());
 
-    assertThat(service.listarVencimentos(produtor.getId())).isEmpty();
+    assertThat(service.listarVencimentos(produtor.getId(), null, null)).isEmpty();
   }
 
   @Test
   @DisplayName("listarVencimentos() lanca 404 quando o produtorId do path nao bate com o "
       + "produtor autenticado (anti-IDOR)")
   void listarVencimentosLancaNotFoundParaProdutorDiferenteDoAutenticado() {
-    Produtor autenticado = produtor();
     UUID produtorIdSolicitado = UUID.randomUUID();
-    when(produtorProvider.get()).thenReturn(autenticado);
+    when(produtorProvider.get()).thenReturn(produtor);
 
-    assertThatThrownBy(() -> service.listarVencimentos(produtorIdSolicitado))
+    assertThatThrownBy(() -> service.listarVencimentos(produtorIdSolicitado, null, null))
         .isInstanceOf(ResourceNotFoundException.class);
 
-    verify(guiaFiscalRepository, never()).findByProdutorIdOrderByDataVencimentoDesc(any());
+    verifyNoInteractions(guiaFiscalRepository);
+  }
+
+  // -------------------------------------------------------------------------
+  // Janela do calendario (issue #103)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("Sem de/ate usa a janela padrao: mes corrente -12 a +12 meses (issue #103)")
+  void semParametrosUsaJanelaPadrao() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        any(), any(), any()))
+        .thenReturn(List.of());
+
+    service.listarVencimentos(produtor.getId(), null, null);
+
+    verify(guiaFiscalRepository)
+        .findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+            produtor.getId(), INICIO_PADRAO, FIM_PADRAO);
+  }
+
+  @Test
+  @DisplayName("de/ate informados sao repassados como janela inclusiva (issue #103)")
+  void janelaInformadaERepassada() {
+    LocalDate de = LocalDate.of(2026, 7, 1);
+    LocalDate ate = LocalDate.of(2026, 9, 30);
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        produtor.getId(), de, ate))
+        .thenReturn(List.of());
+
+    assertThat(service.listarVencimentos(produtor.getId(), de, ate)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("So de informado: ate usa o padrao (issue #103)")
+  void soDeInformadoUsaAtePadrao() {
+    LocalDate de = LocalDate.of(2026, 1, 1);
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        produtor.getId(), de, FIM_PADRAO))
+        .thenReturn(List.of());
+
+    assertThat(service.listarVencimentos(produtor.getId(), de, null)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("de posterior a ate e rejeitado com 400 no campo 'de' (issue #103)")
+  void dePosteriorAAteRejeitado() {
+    when(produtorProvider.get()).thenReturn(produtor);
+
+    assertThatThrownBy(() -> service.listarVencimentos(
+        produtor.getId(), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 9, 30)))
+        .isInstanceOfSatisfying(JanelaCalendarioInvalidaException.class, e -> {
+          assertThat(e.getErrors()).singleElement().satisfies(erro -> {
+            assertThat(erro.code()).isEqualTo(ErrorCode.JANELA_CALENDARIO_INVALIDA.code());
+            assertThat(erro.field()).isEqualTo("de");
+          });
+        });
+    verifyNoInteractions(guiaFiscalRepository);
+  }
+
+  @Test
+  @DisplayName("Janela de exatamente 36 meses e aceita (borda inclusiva, issue #103)")
+  void janelaDe36MesesAceita() {
+    LocalDate de = LocalDate.of(2024, 1, 1);
+    LocalDate ate = LocalDate.of(2026, 12, 31);
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+        produtor.getId(), de, ate))
+        .thenReturn(List.of());
+
+    assertThat(service.listarVencimentos(produtor.getId(), de, ate)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Janela acima de 36 meses e rejeitada com 400 no campo 'ate' (issue #103)")
+  void janelaAcimaDoMaximoRejeitada() {
+    when(produtorProvider.get()).thenReturn(produtor);
+
+    assertThatThrownBy(() -> service.listarVencimentos(
+        produtor.getId(), LocalDate.of(2024, 1, 1), LocalDate.of(2027, 1, 1)))
+        .isInstanceOfSatisfying(JanelaCalendarioInvalidaException.class, e -> {
+          assertThat(e.getErrors()).singleElement().satisfies(erro -> {
+            assertThat(erro.field()).isEqualTo("ate");
+            assertThat(erro.expectedValue()).isEqualTo("ate 2026-12-31");
+          });
+        });
+    verify(guiaFiscalRepository, never())
+        .findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+            any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("So de muito antigo estoura o maximo com o ate padrao: 400 pede o ate (issue #103)")
+  void soDeAntigoEstouraMaximo() {
+    when(produtorProvider.get()).thenReturn(produtor);
+
+    assertThatThrownBy(() -> service.listarVencimentos(
+        produtor.getId(), LocalDate.of(2020, 1, 1), null))
+        .isInstanceOf(JanelaCalendarioInvalidaException.class);
+  }
+
+  private GuiaFiscal guia(TipoGuiaFiscal tipo, StatusGuiaFiscal status, String valor) {
+    return GuiaFiscal.builder()
+        .id(UUID.randomUUID())
+        .produtor(produtor)
+        .tipoGuia(tipo)
+        .dataVencimento(LocalDate.of(2026, 8, 20))
+        .valor(new BigDecimal(valor))
+        .status(status)
+        .build();
   }
 }

@@ -38,7 +38,9 @@ public class CorsConfig {
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Content-Disposition"));
+        // Content-Disposition: nome do arquivo nos downloads de XML/PDF.
+        // X-Total-Count: total da listagem paginada de guias (issue #103), cujo corpo segue array.
+        config.setExposedHeaders(List.of("Content-Disposition", "X-Total-Count"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

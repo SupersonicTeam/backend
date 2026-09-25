@@ -6,6 +6,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -18,12 +20,31 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
 
   /**
-   * Retorna todas as guias fiscais de um produtor, mais recentes primeiro.
+   * Página das guias fiscais de um produtor, para a listagem do Contador (issue #103).
+   *
+   * <p>Substitui a antiga listagem sem limite, que carregava todas as guias do produtor e crescia
+   * indefinidamente com o tempo de uso. A ordenação vem no {@link Pageable}; a consulta e a
+   * contagem filtram por {@code produtor_id} e usam o índice
+   * {@code idx_guia_fiscal_produtor_vencimento} (issue #102).
    *
    * @param produtorId identificador do {@link br.com.agrocontabil.model.Produtor}
-   * @return guias fiscais do produtor
+   * @param pagina     página, tamanho e ordenação
+   * @return página de guias do produtor, com o total de elementos
    */
-  List<GuiaFiscal> findByProdutorIdOrderByDataVencimentoDesc(UUID produtorId);
+  Page<GuiaFiscal> findByProdutorId(UUID produtorId, Pageable pagina);
+
+  /**
+   * Guias de um produtor com vencimento na janela {@code [de, ate]} (ambos inclusivos), para o
+   * calendário fiscal (issue #103). Mais recentes primeiro, com desempate por ID para a ordem ser
+   * estável entre chamadas.
+   *
+   * @param produtorId identificador do {@link br.com.agrocontabil.model.Produtor}
+   * @param de         primeiro dia da janela (inclusivo)
+   * @param ate        último dia da janela (inclusivo)
+   * @return guias com vencimento na janela
+   */
+  List<GuiaFiscal> findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+      UUID produtorId, LocalDate de, LocalDate ate);
 
   /**
    * Busca uma guia fiscal pelo seu ID e pelo ID do produtor proprietário.

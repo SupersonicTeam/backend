@@ -12,8 +12,10 @@ import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class GuiaFiscalService {
+
+  /**
+   * Tamanho padrão da página da listagem de guias (issue #103). Com cerca de 12 guias por ano,
+   * cobre anos de histórico: o Angular, que ainda não pagina, continua vendo tudo na prática.
+   */
+  public static final int TAMANHO_PAGINA_PADRAO = 100;
+
+  /** Tamanho máximo da página da listagem de guias (issue #103). */
+  public static final int TAMANHO_PAGINA_MAXIMO = 200;
+
+  /**
+   * Ordem fixa da listagem: vencimento mais recente primeiro, com desempate por ID para que uma
+   * guia não pule nem se repita entre páginas quando duas vencem no mesmo dia.
+   */
+  private static final Sort ORDEM_LISTAGEM =
+      Sort.by(Sort.Direction.DESC, "dataVencimento").and(Sort.by(Sort.Direction.DESC, "id"));
 
   private final GuiaFiscalRepository guiaFiscalRepository;
   private final ProdutorRepository produtorRepository;
@@ -72,20 +90,26 @@ public class GuiaFiscalService {
   }
 
   /**
-   * Lista as guias fiscais do produtor autenticado, mais recentes primeiro.
+   * Lista uma página das guias fiscais do produtor autenticado, mais recentes primeiro
+   * (issue #103 — antes devolvia todas, sem limite).
+   *
+   * <p>Os limites de {@code pagina}/{@code tamanho} são validados no controller (Bean Validation);
+   * {@link #TAMANHO_PAGINA_MAXIMO} impede que um cliente peça o histórico inteiro de uma vez.
    *
    * @param produtorId identificador do produtor; precisa ser o do produtor autenticado
-   * @return guias fiscais do produtor (vazia se ele não tiver nenhuma)
+   * @param pagina     página, a partir de 0
+   * @param tamanho    itens por página, de 1 a {@link #TAMANHO_PAGINA_MAXIMO}
+   * @return página de guias do produtor, com o total (vazia se ele não tiver nenhuma)
    * @throws ResourceNotFoundException se o produtorId não for o do produtor autenticado
    *     (anti-IDOR — 404, nunca 403)
    */
   @Transactional(readOnly = true)
-  public List<GuiaFiscalResponse> listar(UUID produtorId) {
+  public Page<GuiaFiscalResponse> listar(UUID produtorId, int pagina, int tamanho) {
     exigirProdutorAutenticado(produtorId);
 
-    return guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtorId).stream()
-        .map(GuiaFiscalMapper::toResponse)
-        .toList();
+    return guiaFiscalRepository
+        .findByProdutorId(produtorId, PageRequest.of(pagina, tamanho, ORDEM_LISTAGEM))
+        .map(GuiaFiscalMapper::toResponse);
   }
 
   /**
