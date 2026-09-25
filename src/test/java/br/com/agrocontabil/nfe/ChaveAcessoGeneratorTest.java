@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.random.RandomGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -150,25 +155,59 @@ class ChaveAcessoGeneratorTest {
   }
 
   @Test
-  @DisplayName("deve gerar cNF determinisitco e reprodutivel")
-  void deveTerCnfDeterministico() {
-    String cNF1 = generator.gerarCNF(1L, 1);
-    String cNF2 = generator.gerarCNF(1L, 1);
+  @DisplayName("cNF tem 8 digitos e o DV da chave continua correto")
+  void cnfTemOitoDigitosEDvCorreto() {
+    for (int i = 0; i < 50; i++) {
+      ChaveAcessoGenerator.ChaveResult result =
+          generator.gerar("41", "2612", "12345678000195", 1, 1L);
 
-    assertThat(cNF1).isEqualTo(cNF2);
-    assertThat(cNF1).hasSize(8);
-    assertThat(cNF1).matches("\\d{8}");
+      assertThat(result.cNF()).matches("\\d{8}");
+      assertThat(result.chave().substring(35, 43)).isEqualTo(result.cNF());
+      assertThat(result.cDV()).isEqualTo(generator.calcularDv(result.chave().substring(0, 43)));
+    }
   }
 
   @Test
-  @DisplayName("cNF deve variar com numero e serie diferentes")
-  void cnfDeveVariarComParametros() {
-    String cNF1 = generator.gerarCNF(1L, 1);
-    String cNF2 = generator.gerarCNF(2L, 1);
-    String cNF3 = generator.gerarCNF(1L, 2);
+  @DisplayName("cNF e imprevisivel: a mesma nota gerada de novo recebe outro cNF (issue #129)")
+  void cnfImprevisivel() {
+    // Antes o cNF era derivado de numero e serie: a mesma nota gerava sempre a mesma chave, e
+    // qualquer um que conhecesse o emitente deduzia a chave de acesso das notas dele.
+    Set<String> sorteados = new HashSet<>();
+    for (int i = 0; i < 20; i++) {
+      sorteados.add(generator.gerar("41", "2612", "12345678000195", 1, 1L).cNF());
+    }
+    // 20 sorteios em 100 milhoes: repetir todos seria impossivel na pratica.
+    assertThat(sorteados).hasSizeGreaterThan(1);
+  }
 
-    assertThat(cNF1).isNotEqualTo(cNF2);
-    assertThat(cNF1).isNotEqualTo(cNF3);
+  @Test
+  @DisplayName("cNF nunca e igual ao nNF, digitos repetidos ou sequencia trivial (rejeicao 897)")
+  void cnfEvitaFormasRecusadasPelaSefaz() {
+    // Fonte roteirizada: os quatro primeiros sorteios caem nas formas que a SEFAZ recusa.
+    ChaveAcessoGenerator roteirizado = new ChaveAcessoGenerator(
+        sorteios(123, 11111111, 12345678, 1234567, 48151623));
+
+    ChaveAcessoGenerator.ChaveResult result =
+        roteirizado.gerar("41", "2612", "12345678000195", 1, 123L);
+
+    // 00000123 = nNF; 11111111 = digitos iguais; 12345678 e 01234567 = sequencias triviais.
+    assertThat(result.cNF()).isEqualTo("48151623");
+  }
+
+  /** Fonte de aleatoriedade que devolve os valores na ordem dada. */
+  private static RandomGenerator sorteios(int... valores) {
+    Iterator<Integer> proximo = Arrays.stream(valores).iterator();
+    return new RandomGenerator() {
+      @Override
+      public long nextLong() {
+        throw new UnsupportedOperationException("so nextInt(bound) e usado");
+      }
+
+      @Override
+      public int nextInt(int bound) {
+        return proximo.next();
+      }
+    };
   }
 
   @Test
