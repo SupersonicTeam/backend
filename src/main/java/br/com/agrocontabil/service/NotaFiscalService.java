@@ -21,11 +21,13 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -309,17 +311,32 @@ public class NotaFiscalService {
     // bem-sucedida — fazemos a extracao direto do XML para nao expor o grafo JAXB.
     String chaveAcesso = extrairChaveAcessoDoXml(xml);
 
-    // Fase 3 (transacao curta de escrita): recarrega sob lock, RECHECA o status e persiste.
-    // A recheca fecha a janela entre a leitura da fase 1 e esta gravacao: duas geracoes
-    // concorrentes nao podem persistir duas chaves de acesso para a mesma nota. Se a outra
-    // requisicao venceu, esta encontra XML_GERADO e recebe 409; se as duas chegarem juntas aqui,
-    // o @Version (issue #95) barra a segunda no commit.
+    // Fase 3 (transacao curta de escrita): recarrega sob lock, RECHECA status E versao, e persiste.
+    // Duas checagens, porque a janela aberta pela fase 2 tem dois riscos distintos:
+    //
+    //  - outra GERACAO venceu a corrida -> o status ja e XML_GERADO -> 409;
+    //  - outra EDICAO alterou a nota (update e permitido em RASCUNHO/COM_INCONSISTENCIAS) -> o
+    //    status continua editavel, mas o XML assinado na fase 2 descreve dados que nao existem
+    //    mais. Persistir aqui gravaria um XML divergente da propria linha — inclusive uma chave
+    //    de acesso cujo nNF nao corresponde ao numero atual —, e a nota ficaria imutavel nesse
+    //    estado, pronta para ser transmitida assim a SEFAZ.
+    //
+    // Comparar a versao lida na fase 1 com a atual detecta a segunda situacao: e para isso que o
+    // @Version (issue #95) existe. Nao da para confiar no lock otimista do save, porque a
+    // entidade gravada aqui e uma instancia recem-carregada, com a versao ja atualizada.
+    Long versaoLida = nota.getVersion();
     return emTransacao(() -> {
       NotaFiscal atual = notaFiscalRepository
           .findByIdAndProdutorIdForUpdate(id, produtor.getId())
           .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
       if (!STATUS_EDITAVEIS.contains(atual.getStatus())) {
         throw new NotaFiscalNaoEditavelException(id, atual.getStatus());
+      }
+      if (!Objects.equals(versaoLida, atual.getVersion())) {
+        log.warn("Nota alterada durante a geracao do XML: id={} versaoLida={} versaoAtual={}",
+            id, versaoLida, atual.getVersion());
+        throw new OptimisticLockingFailureException(
+            "NotaFiscal " + id + " foi alterada durante a geracao do XML");
       }
 
       atual.setXmlGerado(xml);

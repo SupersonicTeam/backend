@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doAnswer;
 
 import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
@@ -33,7 +34,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -93,6 +96,9 @@ class NotaFiscalEscopoTransacionalIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private TransactionTemplate transactionTemplate;
+
+  /** Espiao usado apenas para editar a nota no meio da fase 2 (janela da issue #99). */
+  @SpyBean private GeracaoNotaFiscalService geracaoNotaFiscalService;
 
   private Produtor produtor;
 
@@ -216,6 +222,38 @@ class NotaFiscalEscopoTransacionalIntegrationTest {
     assertThat(pdf).isNotEmpty();
     // Assinatura de arquivo PDF: garante que o Jasper rodou até o fim, não que só não lançou.
     assertThat(new String(pdf, 0, 4)).isEqualTo("%PDF");
+  }
+
+  @Test
+  @DisplayName("edicao concorrente durante a geracao: o XML divergente NAO e persistido")
+  void edicaoConcorrenteDuranteGeracaoNaoPersisteXmlDivergente() {
+    UUID notaId = persistir(buildNotaValida(3));
+
+    // Reproduz a janela que a fase 2 abre: a edicao acontece DURANTE a assinatura, nao antes dela.
+    // Interceptar a geracao e a unica forma deterministica de cair nesse intervalo — com a edicao
+    // feita antes da chamada, as fases 1 e 3 leem a MESMA versao e nada e detectado (foi assim que
+    // a primeira versao deste teste passou sem provar nada).
+    doAnswer(invocacao -> {
+      transactionTemplate.executeWithoutResult(status -> {
+        NotaFiscal emEdicao = notaFiscalRepository.findById(notaId).orElseThrow();
+        emEdicao.setNumero(emEdicao.getNumero() + 1);
+        notaFiscalRepository.saveAndFlush(emEdicao);
+      });
+      return invocacao.callRealMethod();
+    }).when(geracaoNotaFiscalService).gerarXml(org.mockito.ArgumentMatchers.any(NotaFiscal.class));
+
+    // update e permitido em RASCUNHO, entao a recheca de STATUS da fase 3 passaria: o XML assinado
+    // sobre o estado antigo seria gravado sobre a linha ja alterada, com uma chave de acesso cujo
+    // nNF nao corresponde ao numero atual — e a nota ficaria imutavel assim, pronta para ir a
+    // SEFAZ. A comparacao de VERSAO entre as fases e o que recusa a gravacao.
+    assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
+        .isInstanceOf(OptimisticLockingFailureException.class);
+
+    // A nota permanece intacta e emitivel: nada de XML, chave ou XML_GERADO pela metade.
+    NotaFiscal depois = notaFiscalRepository.findById(notaId).orElseThrow();
+    assertThat(depois.getStatus()).isEqualTo(StatusNotaFiscal.RASCUNHO);
+    assertThat(depois.getXmlGerado()).isNull();
+    assertThat(depois.getChaveAcesso()).isNull();
   }
 
   // -------------------------------------------------------------------------
