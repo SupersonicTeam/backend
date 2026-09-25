@@ -2,6 +2,7 @@ package br.com.agrocontabil.db;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.config.SchedulingConfig;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -152,7 +153,8 @@ class LiquibaseChangelogIntegrationTest {
         """);
 
     assertThat(colunas)
-        .extracting(c -> c.get("column_name") + ":" + c.get("data_type") + ":" + c.get("is_nullable"))
+        .extracting(c ->
+            c.get("column_name") + ":" + c.get("data_type") + ":" + c.get("is_nullable"))
         .containsExactly(
             "lock_until:timestamp without time zone:NO",
             "locked_at:timestamp without time zone:NO",
@@ -175,5 +177,26 @@ class LiquibaseChangelogIntegrationTest {
     Optional<SimpleLock> depoisDeLiberar = lockProvider.lock(config);
     assertThat(depoisDeLiberar).isPresent();
     depoisDeLiberar.get().unlock();
+  }
+
+  @Test
+  @DisplayName("keep-alive: extensao do lock com relogio do banco funciona no PostgreSQL (#87)")
+  void extensaoDoLockFuncionaNoPostgres() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    LockConfiguration config = new LockConfiguration(
+        Instant.now(), "migration-test-extensao", Duration.ofMinutes(1), Duration.ZERO);
+    SimpleLock lock = SchedulingConfig.jdbcLockProvider(jdbc).lock(config).orElseThrow();
+    java.sql.Timestamp antes = jdbc.queryForObject(
+        "SELECT lock_until FROM shedlock WHERE name = 'migration-test-extensao'",
+        java.sql.Timestamp.class);
+
+    Optional<SimpleLock> estendido = lock.extend(Duration.ofMinutes(10), Duration.ZERO);
+
+    assertThat(estendido).isPresent();
+    java.sql.Timestamp depois = jdbc.queryForObject(
+        "SELECT lock_until FROM shedlock WHERE name = 'migration-test-extensao'",
+        java.sql.Timestamp.class);
+    assertThat(depois).isAfter(antes);
+    estendido.get().unlock();
   }
 }

@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.config.SchedulingConfig;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.core.SimpleLock;
+import net.javacrumbs.shedlock.support.KeepAliveLockProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -112,8 +114,14 @@ class JobLockDistribuidoIntegrationTest {
     assertThat(linhas).isEqualTo(1);
   }
 
+  /**
+   * Confere a ordem real dos advisors no proxy hoje. Não prova, sozinho, a necessidade do
+   * {@code order = HIGHEST_PRECEDENCE}: sem ele os dois empatam e a ordem de registro calha de
+   * dar o mesmo resultado (falsificado na issue #87). Quem trava a configuração é o
+   * {@code SchedulerLockConfigTest}.
+   */
   @Test
-  @DisplayName("O advice do lock vem antes do transacional: o lock so e liberado apos o commit")
+  @DisplayName("No proxy do job, o advisor do lock vem antes do transacional")
   void lockEnvolveATransacaoDoJob() {
     assertThat(job).isInstanceOf(Advised.class);
     List<String> advisors = Arrays.stream(((Advised) job).getAdvisors())
@@ -127,6 +135,24 @@ class JobLockDistribuidoIntegrationTest {
     assertThat(posicaoLock)
         .as("advisors do proxy: %s", advisors)
         .isLessThan(posicaoTransacao);
+  }
+
+  @Test
+  @DisplayName("Provider renova o lock enquanto o job roda (keep-alive) e estende no H2")
+  void providerRenovaOLockEnquantoOJobRoda() {
+    assertThat(lockProvider).isInstanceOf(KeepAliveLockProvider.class);
+
+    // O keep-alive estende o lock pelo SQL do provider JDBC; confere esse SQL no dialeto do H2.
+    LockConfiguration config = new LockConfiguration(
+        Instant.now(), "teste-extensao", Duration.ofMinutes(1), Duration.ZERO);
+    SimpleLock lock = SchedulingConfig.jdbcLockProvider(jdbcTemplate).lock(config).orElseThrow();
+    Instant antes = lockUntil("teste-extensao");
+
+    Optional<SimpleLock> estendido = lock.extend(Duration.ofMinutes(10), Duration.ZERO);
+
+    assertThat(estendido).isPresent();
+    assertThat(lockUntil("teste-extensao")).isAfter(antes);
+    estendido.get().unlock();
   }
 
   // -------------------------------------------------------------------------
@@ -152,6 +178,12 @@ class JobLockDistribuidoIntegrationTest {
 
   private StatusGuiaFiscal statusDe(GuiaFiscal guia) {
     return guiaFiscalRepository.findById(guia.getId()).orElseThrow().getStatus();
+  }
+
+  private Instant lockUntil(String nome) {
+    return jdbcTemplate.queryForObject(
+        "SELECT lock_until FROM shedlock WHERE name = ?", java.sql.Timestamp.class, nome)
+        .toInstant();
   }
 
   private static int indiceDe(List<String> nomes, String prefixo) {
