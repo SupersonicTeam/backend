@@ -48,8 +48,8 @@ import org.springframework.web.context.WebApplicationContext;
 @DisplayName("Identidade multi-usuario via X-Usuario-Id (#91)")
 class IdentidadeMultiUsuarioIntegrationTest {
 
-  /** CPF do produtor semente — o mesmo que o filtro usa como fallback quando nao ha header. */
-  private static final String CPF_SEMENTE = "123.456.789-00";
+  /** CPF do produtor semente — vem do DataLoader, fonte unica do valor que o filtro procura. */
+  private static final String CPF_SEMENTE = DataLoader.CPF_PRODUTOR_SEMENTE;
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private ProdutorRepository produtorRepository;

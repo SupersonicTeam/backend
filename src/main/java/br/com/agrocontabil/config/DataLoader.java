@@ -32,8 +32,15 @@ public class DataLoader implements CommandLineRunner {
 
   private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
 
-  /** Produtor A — o semente, injetado quando nao ha {@code X-Usuario-Id} na requisicao. */
-  private static final String CPF_PRODUTOR_A = "123.456.789-00";
+  /**
+   * Produtor A — o semente, injetado pelo {@link MockProdutorFilter} quando a requisicao nao
+   * declara {@code X-Usuario-Id}.
+   *
+   * <p>Publica de proposito: o filtro procura o semente por este CPF, e duas constantes iguais em
+   * arquivos diferentes se separam no primeiro refactor — o build ficaria verde e o fallback
+   * silenciosamente pararia de resolver.
+   */
+  public static final String CPF_PRODUTOR_SEMENTE = "123.456.789-00";
 
   /** Produtor B — existe para dar um "outro dono" aos cenarios de ownership. */
   private static final String CPF_PRODUTOR_B = "987.654.321-00";
@@ -66,7 +73,7 @@ public class DataLoader implements CommandLineRunner {
   private Produtor produtorA() {
     return Produtor.builder()
         .nomeCompleto("João da Silva Produtor")
-        .cpfCnpj(CPF_PRODUTOR_A)
+        .cpfCnpj(CPF_PRODUTOR_SEMENTE)
         .tipoProdutor(TipoProdutor.PESSOA_FISICA)
         .regimeTributario(RegimeTributario.SIMPLES)
         .porteEmpresa(PorteEmpresa.ME)

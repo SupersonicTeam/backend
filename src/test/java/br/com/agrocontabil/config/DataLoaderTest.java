@@ -24,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("DataLoader — seed dos produtores de dev/homolog")
 class DataLoaderTest {
 
-  private static final String CPF_A = "123.456.789-00";
+  private static final String CPF_A = DataLoader.CPF_PRODUTOR_SEMENTE;
   private static final String CPF_B = "987.654.321-00";
 
   @Mock ProdutorRepository produtorRepository;

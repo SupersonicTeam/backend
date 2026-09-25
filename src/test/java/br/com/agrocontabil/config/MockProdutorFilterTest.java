@@ -35,7 +35,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @DisplayName("MockProdutorFilter — identidade por requisicao (X-Usuario-Id)")
 class MockProdutorFilterTest {
 
-  private static final String CPF_SEMENTE = "123.456.789-00";
+  private static final String CPF_SEMENTE = DataLoader.CPF_PRODUTOR_SEMENTE;
 
   @Mock private ProdutorRepository produtorRepository;
 

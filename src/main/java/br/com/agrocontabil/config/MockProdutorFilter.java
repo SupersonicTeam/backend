@@ -55,8 +55,12 @@ public class MockProdutorFilter extends OncePerRequestFilter {
 
   private static final Logger log = LoggerFactory.getLogger(MockProdutorFilter.class);
 
-  /** CPF do produtor semente, usado quando a requisicao nao declara identidade. */
-  private static final String CPF_SEMENTE = "123.456.789-00";
+  /**
+   * CPF do produtor semente, usado quando a requisicao nao declara identidade.
+   *
+   * <p>Vem do {@link DataLoader} para que filtro e seed nao possam divergir.
+   */
+  private static final String CPF_SEMENTE = DataLoader.CPF_PRODUTOR_SEMENTE;
 
   private final ProdutorRepository produtorRepository;
 
