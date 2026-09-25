@@ -637,8 +637,8 @@ class SefazServiceTest {
     // cStat fora de {135, 155}: o evento nao foi vinculado a NF-e.
     when(sefazClient.cancelar(any(), any(), any(), any()))
         .thenReturn(new SefazRetorno(
-            SituacaoSefaz.REJEITADA, "420",
-            "Rejeicao: Cancelamento para NF-e ja cancelada", null, null));
+            SituacaoSefaz.REJEITADA, "501",
+            "Rejeicao: Pedido de Cancelamento intempestivo", null, null));
 
     // Antes esta recusa reaproveitava NotaFiscalNaoCancelavelException, que diz "o status atual
     // nao permite cancelar" apontando AUTORIZADA — justamente o status que permite. A excecao
@@ -649,8 +649,8 @@ class SefazServiceTest {
           assertThat(e.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
           assertThat(e.getErrors()).singleElement().satisfies(d -> {
             assertThat(d.code()).isEqualTo("CANCELAMENTO_REJEITADO");
-            assertThat(d.rejectedValue()).isEqualTo("420");
-            assertThat(d.message()).isEqualTo("Rejeicao: Cancelamento para NF-e ja cancelada");
+            assertThat(d.rejectedValue()).isEqualTo("501");
+            assertThat(d.message()).isEqualTo("Rejeicao: Pedido de Cancelamento intempestivo");
           });
         });
 
