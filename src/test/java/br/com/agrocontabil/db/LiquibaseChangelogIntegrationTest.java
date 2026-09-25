@@ -2,8 +2,15 @@ package br.com.agrocontabil.db;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.sql.DataSource;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.core.SimpleLock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +44,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  *       {@code ddl-auto: validate} concordar que o schema resultante corresponde às entidades JPA —
  *       ou seja, qualquer divergência entidade ↔ migration falha o teste;</li>
  *   <li>as asserções abaixo conferem, no {@code information_schema}, o contrato exato da coluna
- *       {@code version} criada pelo changeSet {@code 0022}.</li>
+ *       {@code version} criada pelo changeSet {@code 0022} e da tabela {@code shedlock} do
+ *       changeSet {@code 0023} (issue #87) — esta última também com um ciclo de lock real, porque o
+ *       {@code usingDbTime()} do ShedLock gera SQL específico de cada banco e o H2 dos demais
+ *       testes não prova o dialeto do PostgreSQL.</li>
  * </ol>
  *
  * <p><strong>Docker:</strong> {@code disabledWithoutDocker = true} faz o teste ser <em>ignorado</em>
@@ -77,6 +87,9 @@ class LiquibaseChangelogIntegrationTest {
 
   @Autowired
   private DataSource dataSource;
+
+  @Autowired
+  private LockProvider lockProvider;
 
   @Test
   @DisplayName("changeSet 0022 cria nota_fiscal.version como BIGINT NOT NULL com default 0")
@@ -124,5 +137,43 @@ class LiquibaseChangelogIntegrationTest {
 
     jdbc.update("DELETE FROM nota_fiscal WHERE id = ?::uuid", notaId);
     jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
+  @DisplayName("changeSet 0023 cria a tabela shedlock com o contrato do ShedLock (issue #87)")
+  void changeSet0023CriaTabelaShedlock() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    List<Map<String, Object>> colunas = jdbc.queryForList("""
+        SELECT column_name, data_type, is_nullable
+          FROM information_schema.columns
+         WHERE table_name = 'shedlock'
+         ORDER BY column_name
+        """);
+
+    assertThat(colunas)
+        .extracting(c -> c.get("column_name") + ":" + c.get("data_type") + ":" + c.get("is_nullable"))
+        .containsExactly(
+            "lock_until:timestamp without time zone:NO",
+            "locked_at:timestamp without time zone:NO",
+            "locked_by:character varying:NO",
+            "name:character varying:NO");
+  }
+
+  @Test
+  @DisplayName("lock com relogio do banco no PostgreSQL: exclusivo ate liberar (issue #87)")
+  void lockComRelogioDoBancoEhExclusivoNoPostgres() {
+    LockConfiguration config = new LockConfiguration(
+        Instant.now(), "migration-test-lock", Duration.ofMinutes(5), Duration.ZERO);
+
+    Optional<SimpleLock> primeira = lockProvider.lock(config);
+    assertThat(primeira).as("lock livre deveria ser adquirido").isPresent();
+    // Segunda "replica" tentando o mesmo lock enquanto a primeira o segura.
+    assertThat(lockProvider.lock(config)).isEmpty();
+
+    primeira.get().unlock();
+    Optional<SimpleLock> depoisDeLiberar = lockProvider.lock(config);
+    assertThat(depoisDeLiberar).isPresent();
+    depoisDeLiberar.get().unlock();
   }
 }

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.sefaz;
 
 import br.com.agrocontabil.service.SefazService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,6 +31,15 @@ public class SefazStatusSyncJob {
 
   private static final Logger log = LoggerFactory.getLogger(SefazStatusSyncJob.class);
 
+  /**
+   * Nome do lock distribuído deste job (issue #87). Com 2+ instâncias só uma sincroniza por vez.
+   *
+   * <p>Teto de 14 min (abaixo do intervalo de 15) e piso de 10 min: como cada réplica agenda o
+   * próprio {@code fixedDelay}, sem o piso a outra réplica rodaria de novo logo depois de esta
+   * terminar, e a SEFAZ seria consultada a cada poucos minutos em vez de a cada ~15.
+   */
+  public static final String LOCK = "sefaz-status-sync";
+
   private final SefazService sefazService;
 
   /** Constrói o job com o serviço de transmissão/consulta SEFAZ. */
@@ -47,6 +57,10 @@ public class SefazStatusSyncJob {
   @Scheduled(
       fixedDelayString = "${app.nfe.sefaz.sync.interval-ms:900000}",
       initialDelayString = "${app.nfe.sefaz.sync.interval-ms:900000}")
+  @SchedulerLock(
+      name = LOCK,
+      lockAtMostFor = "${app.nfe.sefaz.sync.lock.at-most-for:PT14M}",
+      lockAtLeastFor = "${app.nfe.sefaz.sync.lock.at-least-for:PT10M}")
   public void sincronizarPendentes() {
     log.debug("Iniciando sincronizacao agendada de status de NF-e pendentes com a SEFAZ");
 

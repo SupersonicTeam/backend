@@ -6,6 +6,7 @@ import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,6 +29,16 @@ public class GuiaFiscalStatusSyncJob {
 
   private static final Logger log = LoggerFactory.getLogger(GuiaFiscalStatusSyncJob.class);
 
+  /**
+   * Nome do lock distribuído deste job (issue #87): a marcação diária roda numa réplica só.
+   *
+   * <p>Teto de 30 min para um {@code UPDATE} em lote curto; piso de 5 min pelo mesmo motivo do
+   * fechamento — desvio de relógio entre réplicas que disparam o mesmo cron. O lock envolve o
+   * {@code @Transactional} deste método (ver {@code SchedulingConfig}): só é liberado depois do
+   * commit.
+   */
+  public static final String LOCK = "guia-fiscal-status-sync";
+
   private final GuiaFiscalRepository guiaFiscalRepository;
   private final Clock clock;
 
@@ -44,6 +55,10 @@ public class GuiaFiscalStatusSyncJob {
    * {@code "0 0 1 * * *"}).
    */
   @Scheduled(cron = "${app.guia-fiscal.sync.cron:0 0 1 * * *}", zone = "America/Sao_Paulo")
+  @SchedulerLock(
+      name = LOCK,
+      lockAtMostFor = "${app.guia-fiscal.sync.lock.at-most-for:PT30M}",
+      lockAtLeastFor = "${app.guia-fiscal.sync.lock.at-least-for:PT5M}")
   @Transactional(timeoutString = "${app.guia-fiscal.sync.transaction-timeout:600}")
   public void sincronizarVencidas() {
     LocalDate hoje = LocalDate.now(clock);
