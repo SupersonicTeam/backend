@@ -3,7 +3,7 @@
 - **Data:** 2026-09-23
 - **Issues:** #95, #96, #99, #97 (nesta ordem de execução)
 - **Épico:** planejamento das 21 issues abertas em 7 ondas (2026-09-21)
-- **Status:** aguardando aprovação do Murillo
+- **Status:** aprovado em 2026-09-23. PR 1 (#95) mergeado em #115; PR 2 (#96) em revisão.
 - **Escopo TLC:** Large (multi-componente, 3 PRs, mudança de schema, novos estados de domínio)
 
 ## 1. Objetivo
@@ -65,11 +65,16 @@ O que delas sustenta esta onda:
 | RF-96.4 | `cancelar` segue o mesmo desenho, com `AUTORIZADA → CANCELANDO → CANCELADA`. A validação de prazo (RN006, 30 dias) e o ownership permanecem na tx 1. |
 | RF-96.5 | Um segundo request concorrente bloqueia no lock, e ao obtê-lo vê `ENVIANDO`/`CANCELANDO` e responde **409** (`NotaFiscalNaoEnviavelException` / `NotaFiscalNaoCancelavelException`). Nenhuma segunda transmissão à SEFAZ. |
 | RF-96.6 | `NotaEmitidaEvent` / `NotaCanceladaEvent` são publicados **exatamente uma vez** por transmissão bem-sucedida, na tx 2 (mantendo `@TransactionalEventListener(AFTER_COMMIT)`). |
+| RF-96.7b | **Pré-condição de RF-96.7, descoberta no code review:** compensar para `PENDENTE_SEFAZ` só é seguro se a consulta de status distinguir chave conhecida de desconhecida. O `MockSefazTransport` respondia AUTORIZADA para qualquer chave, então uma nota que falhou **antes** de chegar ao fisco era "autorizada" pelo job, com protocolo fictício e `NotaEmitidaEvent` publicado — débito de IBS/CBS sobre NF-e inexistente. O mock passa a registrar as chaves transmitidas e a responder **cStat 217** para chave desconhecida, como a SEFAZ real. |
 | RF-96.7 | **Falha de comunicação no envio** (`SefazComunicacaoException`): tx curta de compensação marca `ENVIANDO → PENDENTE_SEFAZ` e o 502 é propagado. Reúsa o `SefazStatusSyncJob` já existente, que reconcilia `PENDENTE_SEFAZ` pela chave — estado semanticamente correto para "transmiti, não sei o desfecho". Nunca volta a `XML_GERADO` (permitiria reenvio duplicado). |
 | RF-96.8 | **Falha de comunicação no cancelamento**: tx curta de compensação devolve `CANCELANDO → AUTORIZADA` e propaga o 502. Não usa `PENDENTE_SEFAZ`, porque `consultarEAtualizar`/`mapStatus` não reconhecem cancelamento e o job ressuscitaria a nota como `AUTORIZADA` — exatamente a regressão fechada pela #79. Reenviar o cancelamento é idempotente do lado do fisco (cStat 135/155 de evento já vinculado). |
 | RF-96.9 | **Reconciliação de nota presa** (processo derrubado entre tx 1 e tx 2): o `SefazStatusSyncJob` passa a varrer, antes da sincronização normal, notas em `ENVIANDO`/`CANCELANDO` com `updatedAt` mais antigo que `app.nfe.sefaz.transmissao.timeout-ms` (default 10 min) e aplica a mesma compensação de RF-96.7/RF-96.8. Usa o `updatedAt` já existente (atualizado pelo `@PreUpdate`) — **sem coluna nova**. |
 | RF-96.10 | `ENVIANDO`/`CANCELANDO` são estados **não-editáveis e não-operáveis**: `update`, `delete`, `gerar-xml`, `enviar`, `cancelar` e `status-sefaz` respondem 409. Não entram em `STATUS_EDITAVEIS`. |
 | RF-96.11 | **Nenhuma mudança de schema para os novos status.** Verificado em `0002-nota-fiscal.xml`: a coluna é `VARCHAR(20) NOT NULL DEFAULT 'RASCUNHO'`, **sem CHECK constraint**, e o enum é `EnumType.STRING`. `ENVIANDO` (8) e `CANCELANDO` (10) caberiam mesmo se houvesse limite mais estreito. O PR de #96 não tem changeSet. |
+
+| RF-96.12 | **Reconciliação isolada por nota:** o lote roda uma transação curta por nota, com `try/catch` individual (mesmo padrão de `sincronizarPendentes`). Uma colisão de versão — corrida com a tx2 de uma transmissão que finalmente respondeu — não pode desfazer as demais nem abortar o job. A nota é recarregada dentro da transação: se já saiu do estado transitório, o desfecho real prevalece e ela não entra na contagem. |
+| RF-96.13 | **A I/O sai da transação também na sincronização:** `sincronizarStatus` e `sincronizarPendentes` adotam o mesmo desenho de três fases (lê e valida → consulta fora de transação → aplica em tx curta). Sem isso, N consultas com retry correriam numa transação só, prendendo conexão do pool — o mesmo defeito que a issue remove do envio. |
+| RF-96.14 | **Recusa do fisco tem exceção própria:** `CancelamentoRejeitadoException` (409, `ErrorCode.CANCELAMENTO_REJEITADO`) repassa cStat e `xMotivo`. Reaproveitar `NotaFiscalNaoCancelavelException` produzia mensagem contraditória — "status AUTORIZADA não permite cancelar", sendo AUTORIZADA o status cancelável. |
 
 ### RF-99 — Transação curta em gerarXml e gerarPdf (issue #99)
 
@@ -110,11 +115,15 @@ O que delas sustenta esta onda:
 | CA-10 | `update`, `delete`, `gerar-xml`, `enviar`, `cancelar` e `status-sefaz` sobre nota em `ENVIANDO`/`CANCELANDO` respondem 409. |
 | CA-11 | Anti-IDOR intacto: toda operação continua respondendo **404** (não 403, não 409) para nota de outro produtor — inclusive nos novos caminhos com lock. |
 
+| CA-16 | Nota em `PENDENTE_SEFAZ` cuja chave nunca foi transmitida **não** é autorizada pela sincronização e **não** publica evento de débito; nota efetivamente transmitida continua sendo autorizada e publicando (contraponto, guarda da #79). |
+| CA-17 | Uma falha isolada no lote de reconciliação não desfaz as demais; nota que saiu do estado transitório entre a leitura e a gravação não é sobrescrita nem contada. |
+| CA-18 | Recusa de cancelamento pelo fisco responde 409 com `CANCELAMENTO_REJEITADO` e o motivo da SEFAZ; a nota volta a `AUTORIZADA` e segue cancelável. |
+
 ### Qualidade
 
 | ID | Critério |
 |----|----------|
-| CA-12 | `./mvnw test` verde. Baseline de **478 testes**; a onda adiciona testes, nenhum removido. |
+| CA-12 | `./mvnw test` verde. Baseline de **478 testes** na abertura da onda (500 ao fim do PR 2); a onda adiciona testes, nenhum removido. |
 | CA-13 | Nenhum aviso de connection leak do Hikari (`leak-detection-threshold`, #98) durante a suíte. |
 | CA-14 | Nenhuma `LazyInitializationException` em nenhum teste — prova de que o snapshot cobre todo o grafo consumido. |
 | CA-15 | Contrato de erro, camadas, ownership e migrations seguem `project-conventions`. Nenhum changeSet existente editado. |
