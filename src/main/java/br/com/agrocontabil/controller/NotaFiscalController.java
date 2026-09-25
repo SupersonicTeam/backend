@@ -395,7 +395,9 @@ public class NotaFiscalController {
       description = "Cancela uma NF-e AUTORIZADA dentro do prazo legal de 30 dias corridos da "
           + "emissao (RN006), transmitindo o evento de cancelamento a SEFAZ e persistindo o "
           + "resultado (status CANCELADA, data, motivo e protocolo). Retorna 409 se a nota nao "
-          + "estiver AUTORIZADA, 422 se o prazo de 30 dias expirou, 400 se o motivo for invalido "
+          + "estiver AUTORIZADA, 422 se o prazo de 30 dias expirou ou se a SEFAZ recusar o evento "
+          + "(CANCELAMENTO_REJEITADO, com o cStat em rejectedValue e o xMotivo em message), "
+          + "400 se o motivo for invalido "
           + "e 404 se a nota nao existir ou nao pertencer ao produtor. Na Sprint 3 o transporte "
           + "e mock/sandbox (evento SOAP real e debito da Sprint 7).")
   @ApiResponses({
@@ -411,7 +413,8 @@ public class NotaFiscalController {
           description = "Nota nao esta em status AUTORIZADA",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "422",
-          description = "Cancelamento fora do prazo de 30 dias da emissao (RN006)",
+          description = "Cancelamento fora do prazo de 30 dias da emissao (RN006) ou recusado "
+              + "pela SEFAZ (CANCELAMENTO_REJEITADO: rejectedValue = cStat, message = xMotivo)",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "502",
           description = "Falha de comunicacao com a SEFAZ apos esgotar as tentativas",

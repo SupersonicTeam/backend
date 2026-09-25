@@ -40,7 +40,7 @@ public enum ErrorCode {
   // Cancelamento de NF-e (Sprint 3 — issue #21, RN006)
   /** Nota fiscal não está em status AUTORIZADA para cancelamento. HTTP 409. */
   NOTA_NAO_CANCELAVEL,
-  /** A SEFAZ recusou o evento de cancelamento (cStat fora de 135/155 — issue #96). HTTP 409. */
+  /** A SEFAZ recusou o evento de cancelamento (cStat fora de 135/155 — issues #84/#96). HTTP 422. */
   CANCELAMENTO_REJEITADO,
   /** Cancelamento fora do prazo legal de 30 dias corridos da emissão (RN006). HTTP 422. */
   CANCELAMENTO_FORA_PRAZO,

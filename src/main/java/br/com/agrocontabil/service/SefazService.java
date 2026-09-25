@@ -249,6 +249,7 @@ public class SefazService {
    * @throws ResourceNotFoundException           se a nota não existir ou pertencer a outro produtor
    * @throws NotaFiscalNaoCancelavelException     se o status não for AUTORIZADA (HTTP 409)
    * @throws CancelamentoForaPrazoException       se fora do prazo de 30 dias (HTTP 422)
+   * @throws CancelamentoRejeitadoException       se a SEFAZ recusar o evento (HTTP 422, issue #84)
    * @throws SefazComunicacaoException            se a comunicação falhar após o retry (HTTP 502)
    */
   public CancelamentoResponse cancelar(UUID notaId, String motivo) {

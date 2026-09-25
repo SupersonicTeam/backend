@@ -6,8 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import br.com.agrocontabil.event.NotaCanceladaEvent;
-import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
@@ -18,6 +16,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.sefaz.SefazTransport;
+import br.com.agrocontabil.support.ContadorDeEventos;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -39,15 +38,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.event.EventListener;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ActiveProfiles;
@@ -78,8 +74,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * thread-local, então cada thread autentica o produtor por conta própria.
  */
 @SpringBootTest
-@Import({TestDatabaseCleaner.class,
-    SefazTransmissaoConcorrenciaIntegrationTest.ContadorDeEventosConfig.class})
+@Import({TestDatabaseCleaner.class, ContadorDeEventos.class})
 @ActiveProfiles("test")
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
@@ -361,52 +356,5 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
 
   /** Resultado agregado das duas threads. */
   private record Resultado(List<Object> sucessos, List<Throwable> falhas) {
-  }
-
-  /**
-   * Conta os eventos de domínio efetivamente publicados.
-   *
-   * <p>É a prova que mais importa para a apuração: o {@code ApuracaoService} escuta estes eventos
-   * para recalcular débito e crédito do período, então um evento duplicado vira imposto apurado em
-   * duplicidade.
-   */
-  @Component
-  static class ContadorDeEventos {
-
-    private final AtomicInteger emitidas = new AtomicInteger();
-    private final AtomicInteger canceladas = new AtomicInteger();
-
-    @EventListener
-    void aoEmitir(NotaEmitidaEvent evento) {
-      emitidas.incrementAndGet();
-    }
-
-    @EventListener
-    void aoCancelar(NotaCanceladaEvent evento) {
-      canceladas.incrementAndGet();
-    }
-
-    void zerar() {
-      emitidas.set(0);
-      canceladas.set(0);
-    }
-
-    int emitidas() {
-      return emitidas.get();
-    }
-
-    int canceladas() {
-      return canceladas.get();
-    }
-  }
-
-  /** Registra o contador de eventos no contexto de teste. */
-  @TestConfiguration
-  static class ContadorDeEventosConfig {
-
-    @org.springframework.context.annotation.Bean
-    ContadorDeEventos contadorDeEventos() {
-      return new ContadorDeEventos();
-    }
   }
 }
