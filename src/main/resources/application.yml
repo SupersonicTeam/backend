@@ -59,12 +59,6 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
 
-# Ao receber SIGTERM o Tomcat para de aceitar conexoes novas e espera as requisicoes ativas
-# terminarem, em vez de corta-las no meio (issue #101). O compose usa stop_grace_period: 35s
-# para nao matar o processo antes desta janela.
-server:
-  shutdown: graceful
-
   # Upload de XML para importacao de notas (issue #19). Limites conservadores: um XML de
   # NF-e assinado costuma ter dezenas de KB; permitimos lotes de varios arquivos.
   servlet:
@@ -89,6 +83,15 @@ server:
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+
+# Ao receber SIGTERM o Tomcat para de aceitar conexoes novas e espera as requisicoes ativas
+# terminarem, em vez de corta-las no meio (issue #101). O compose usa stop_grace_period: 35s
+# para nao matar o processo antes desta janela.
+# ATENCAO (issue #125): este bloco fica DEPOIS de todo o spring:. Inserido no meio dele, na
+# coluna 0, ele prende as chaves seguintes (jpa, servlet, liquibase) como server.* — que o Spring
+# ignora em silencio. ApplicationYamlEstruturaTest trava isso.
+server:
+  shutdown: graceful
 
 # Documentacao OpenAPI / Swagger UI
 springdoc:
