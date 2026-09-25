@@ -159,7 +159,7 @@ class GuiaFiscalControllerTest {
   }
 
   @ParameterizedTest(name = "{0}={1}")
-  @CsvSource({"size,201", "size,0", "page,-1"})
+  @CsvSource({"size,201", "size,0", "page,-1", "page,10001"})
   @DisplayName("GET /api/contador/guias com page/size fora da faixa retorna 400 no envelope (#103)")
   void listarComPaginacaoForaDaFaixaRetorna400(String parametro, String valor) throws Exception {
     mockMvc.perform(get("/api/contador/guias")

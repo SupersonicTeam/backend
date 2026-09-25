@@ -48,6 +48,14 @@ public class GuiaFiscalService {
   public static final int TAMANHO_PAGINA_MAXIMO = 200;
 
   /**
+   * Maior página aceita (issue #103). Sem teto, {@code pagina × tamanho} passa de
+   * {@code Integer.MAX_VALUE} e o Spring Data falha ao converter o offset para o
+   * {@code setFirstResult(int)} do JPA — erro de entrada do cliente virando 500. Dez mil páginas
+   * de 200 são dois milhões de guias, muito além de qualquer produtor.
+   */
+  public static final int PAGINA_MAXIMA = 10_000;
+
+  /**
    * Ordem fixa da listagem: vencimento mais recente primeiro, com desempate por ID para que uma
    * guia não pule nem se repita entre páginas quando duas vencem no mesmo dia.
    */

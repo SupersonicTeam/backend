@@ -62,7 +62,7 @@ class CalendarioFiscalServiceTest {
   @DisplayName("listarVencimentos() mapeia guia PAGA para status 'pago' e tipo 'imposto'")
   void mapeiaGuiaPagaParaVencimentoPago() {
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of(guia(TipoGuiaFiscal.ICMS, StatusGuiaFiscal.PAGA, "1250.00")));
 
@@ -81,7 +81,7 @@ class CalendarioFiscalServiceTest {
   @DisplayName("listarVencimentos() mapeia guia VENCIDA para status 'vencido'")
   void mapeiaGuiaVencidaParaVencimentoVencido() {
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of(guia(TipoGuiaFiscal.DARF, StatusGuiaFiscal.VENCIDA, "300.00")));
 
@@ -93,7 +93,7 @@ class CalendarioFiscalServiceTest {
   @DisplayName("listarVencimentos() retorna lista vazia para produtor autenticado sem guias")
   void listarVencimentosRetornaVazio() {
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of());
 
@@ -121,15 +121,14 @@ class CalendarioFiscalServiceTest {
   @DisplayName("Sem de/ate usa a janela padrao: mes corrente -12 a +12 meses (issue #103)")
   void semParametrosUsaJanelaPadrao() {
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         any(), any(), any()))
         .thenReturn(List.of());
 
     service.listarVencimentos(produtor.getId(), null, null);
 
-    verify(guiaFiscalRepository)
-        .findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
-            produtor.getId(), INICIO_PADRAO, FIM_PADRAO);
+    verify(guiaFiscalRepository).findVencimentosNaJanela(
+        produtor.getId(), INICIO_PADRAO, FIM_PADRAO);
   }
 
   @Test
@@ -138,7 +137,7 @@ class CalendarioFiscalServiceTest {
     LocalDate de = LocalDate.of(2026, 7, 1);
     LocalDate ate = LocalDate.of(2026, 9, 30);
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), de, ate))
         .thenReturn(List.of());
 
@@ -150,7 +149,7 @@ class CalendarioFiscalServiceTest {
   void soDeInformadoUsaAtePadrao() {
     LocalDate de = LocalDate.of(2026, 1, 1);
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), de, FIM_PADRAO))
         .thenReturn(List.of());
 
@@ -179,7 +178,7 @@ class CalendarioFiscalServiceTest {
     LocalDate de = LocalDate.of(2024, 1, 1);
     LocalDate ate = LocalDate.of(2026, 12, 31);
     when(produtorProvider.get()).thenReturn(produtor);
-    when(guiaFiscalRepository.findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
+    when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), de, ate))
         .thenReturn(List.of());
 
@@ -199,9 +198,31 @@ class CalendarioFiscalServiceTest {
             assertThat(erro.expectedValue()).isEqualTo("ate 2026-12-31");
           });
         });
-    verify(guiaFiscalRepository, never())
-        .findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
-            any(), any(), any());
+    verify(guiaFiscalRepository, never()).findVencimentosNaJanela(any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("Janela de 36 meses iniciada em 29/02 cabe no maximo (fim de mes, issue #103)")
+  void janelaIniciadaEm29DeFevereiroCabe() {
+    LocalDate de = LocalDate.of(2024, 2, 29);
+    LocalDate ate = LocalDate.of(2027, 2, 28);
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findVencimentosNaJanela(produtor.getId(), de, ate))
+        .thenReturn(List.of());
+
+    assertThat(service.listarVencimentos(produtor.getId(), de, ate)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Datas extremas nao estouram o calculo da janela (sem 500, issue #103)")
+  void datasExtremasNaoEstouram() {
+    LocalDate de = LocalDate.of(999_999_999, 1, 1);
+    LocalDate ate = LocalDate.MAX;
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findVencimentosNaJanela(produtor.getId(), de, ate))
+        .thenReturn(List.of());
+
+    assertThat(service.listarVencimentos(produtor.getId(), de, ate)).isEmpty();
   }
 
   @Test

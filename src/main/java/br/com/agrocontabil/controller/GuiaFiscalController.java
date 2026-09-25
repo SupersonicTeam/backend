@@ -123,8 +123,8 @@ public class GuiaFiscalController {
   })
   public ResponseEntity<List<GuiaFiscalResponse>> listar(
       @RequestParam UUID produtorId,
-      @Parameter(description = "Pagina, a partir de 0")
-      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "Pagina, a partir de 0 (maximo 10000)")
+      @RequestParam(defaultValue = "0") @Min(0) @Max(GuiaFiscalService.PAGINA_MAXIMA) int page,
       @Parameter(description = "Guias por pagina (1 a 200)")
       @RequestParam(defaultValue = "" + GuiaFiscalService.TAMANHO_PAGINA_PADRAO)
       @Min(1) @Max(GuiaFiscalService.TAMANHO_PAGINA_MAXIMO) int size) {

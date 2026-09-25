@@ -8,6 +8,7 @@ import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -91,14 +92,13 @@ public class CalendarioFiscalService {
     if (inicio.isAfter(fim)) {
       throw JanelaCalendarioInvalidaException.inicioDepoisDoFim(inicio, fim);
     }
-    if (fim.isAfter(inicio.plusMonths(MESES_JANELA_MAXIMA).minusDays(1))) {
+    // until(MONTHS) conta meses completos: nao estoura em datas extremas (plusMonths estouraria) e
+    // segue a semantica de fim de mes (29/02 -> 28/02 de 3 anos depois ainda cabe em 36 meses).
+    if (inicio.until(fim, ChronoUnit.MONTHS) >= MESES_JANELA_MAXIMA) {
       throw JanelaCalendarioInvalidaException.excedeMaximo(inicio, fim, MESES_JANELA_MAXIMA);
     }
 
-    return guiaFiscalRepository
-        .findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
-            produtorId, inicio, fim)
-        .stream()
+    return guiaFiscalRepository.findVencimentosNaJanela(produtorId, inicio, fim).stream()
         .map(GuiaFiscalMapper::toVencimento)
         .toList();
   }

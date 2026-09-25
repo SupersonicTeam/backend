@@ -98,7 +98,7 @@ class GuiaFiscalVolumeIntegrationTest {
   }
 
   @Test
-  @DisplayName("Guias sem page/size: primeira pagina de 100, corpo array (compativel com o Angular)")
+  @DisplayName("Guias sem page/size: 1a pagina de 100, corpo array (compativel com o Angular)")
   void guiasSemParametrosDevolvemPaginaPadrao() throws Exception {
     for (int i = 0; i < 101; i++) {
       guia(LocalDate.of(2020, 1, 1).plusDays(i));
@@ -128,7 +128,7 @@ class GuiaFiscalVolumeIntegrationTest {
   // -------------------------------------------------------------------------
 
   @Test
-  @DisplayName("Calendario sem de/ate recorta mes corrente +-12 meses: guia de 2 anos atras fica fora")
+  @DisplayName("Calendario sem de/ate recorta mes corrente +-12 meses: guia de 2 anos fica fora")
   void calendarioSemParametrosUsaJanelaPadrao() throws Exception {
     LocalDate dentro = HOJE.minusMonths(11);
     guia(dentro);

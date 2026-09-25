@@ -149,7 +149,8 @@ class GuiaFiscalIntegrationTest {
 
     autenticarComo(outroProdutor);
 
-    assertThatThrownBy(() -> calendarioFiscalService.listarVencimentos(produtor.getId(), null, null))
+    assertThatThrownBy(
+        () -> calendarioFiscalService.listarVencimentos(produtor.getId(), null, null))
         .isInstanceOf(ResourceNotFoundException.class);
   }
 

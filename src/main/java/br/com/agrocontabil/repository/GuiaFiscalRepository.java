@@ -9,6 +9,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repositório Spring Data JPA para {@link GuiaFiscal}.
@@ -43,8 +45,15 @@ public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
    * @param ate        último dia da janela (inclusivo)
    * @return guias com vencimento na janela
    */
-  List<GuiaFiscal> findByProdutorIdAndDataVencimentoBetweenOrderByDataVencimentoDescIdDesc(
-      UUID produtorId, LocalDate de, LocalDate ate);
+  @Query("""
+      SELECT g FROM GuiaFiscal g
+      WHERE g.produtor.id = :produtorId AND g.dataVencimento BETWEEN :de AND :ate
+      ORDER BY g.dataVencimento DESC, g.id DESC
+      """)
+  List<GuiaFiscal> findVencimentosNaJanela(
+      @Param("produtorId") UUID produtorId,
+      @Param("de") LocalDate de,
+      @Param("ate") LocalDate ate);
 
   /**
    * Busca uma guia fiscal pelo seu ID e pelo ID do produtor proprietário.
