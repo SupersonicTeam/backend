@@ -23,12 +23,14 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Servico de regras de negocio para {@link NotaFiscal}.
@@ -50,7 +52,6 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  */
 @Service
-@Transactional
 public class NotaFiscalService {
 
   /** Versao do layout NF-e gerado por esta implementacao. */
@@ -73,6 +74,8 @@ public class NotaFiscalService {
   private final GeracaoNfaService geracaoNfaService;
   private final DanfePdfService danfePdfService;
   private final NotaFiscalValidacaoService validacaoService;
+  private final TransactionTemplate transactionTemplate;
+  private final TransactionTemplate readOnlyTransactionTemplate;
 
   public NotaFiscalService(
       NotaFiscalRepository notaFiscalRepository,
@@ -81,7 +84,8 @@ public class NotaFiscalService {
       GeracaoNotaFiscalService geracaoNotaFiscalService,
       GeracaoNfaService geracaoNfaService,
       DanfePdfService danfePdfService,
-      NotaFiscalValidacaoService validacaoService) {
+      NotaFiscalValidacaoService validacaoService,
+      TransactionTemplate transactionTemplate) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.tributacaoService = tributacaoService;
@@ -89,6 +93,14 @@ public class NotaFiscalService {
     this.geracaoNfaService = geracaoNfaService;
     this.danfePdfService = danfePdfService;
     this.validacaoService = validacaoService;
+    this.transactionTemplate = transactionTemplate;
+    // Variante somente-leitura derivada do template autoconfigurado: a fase de leitura
+    // nao escreve nada, e marca-la readOnly permite ao Hibernate dispensar dirty checking.
+    // Nunca usar esta variante junto de lock pessimista de escrita.
+    TransactionTemplate somenteLeitura = new TransactionTemplate(
+        transactionTemplate.getTransactionManager(), transactionTemplate);
+    somenteLeitura.setReadOnly(true);
+    this.readOnlyTransactionTemplate = somenteLeitura;
   }
 
   /**
@@ -97,6 +109,7 @@ public class NotaFiscalService {
    * @param request dados validados da nota fiscal
    * @return DTO de resposta com ID gerado e totais calculados
    */
+  @Transactional
   public NotaFiscalResponse create(NotaFiscalRequest request) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
@@ -155,6 +168,7 @@ public class NotaFiscalService {
    * @throws ResourceNotFoundException        se nao encontrada ou pertencer a outro produtor
    * @throws NotaFiscalNaoEditavelException   se o status nao for editavel (409 Conflict)
    */
+  @Transactional
   public NotaFiscalResponse update(UUID id, NotaFiscalRequest request) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = notaFiscalRepository
@@ -217,6 +231,7 @@ public class NotaFiscalService {
    * @throws ResourceNotFoundException      se nao encontrada ou pertencer a outro produtor
    * @throws NotaFiscalNaoEditavelException se o status nao for editavel (409 Conflict)
    */
+  @Transactional
   public void delete(UUID id) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = notaFiscalRepository
@@ -269,14 +284,24 @@ public class NotaFiscalService {
    */
   public NotaFiscalResponse gerarXml(UUID id) {
     Produtor produtor = produtorProvider.get();
-    NotaFiscal nota = notaFiscalRepository
-        .findByIdAndProdutorId(id, produtor.getId())
-        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
 
-    if (!STATUS_EDITAVEIS.contains(nota.getStatus())) {
-      throw new NotaFiscalNaoEditavelException(id, nota.getStatus());
-    }
+    // Fase 1 (transacao curta, somente leitura): valida a pre-condicao e materializa o grafo de
+    // emissao (itens + produtor) via JOIN FETCH. A entidade sai daqui destacada, mas completa —
+    // o pipeline a percorre sem tocar em proxy nenhum.
+    NotaFiscal nota = emTransacaoDeLeitura(() -> {
+      NotaFiscal encontrada = notaFiscalRepository
+          .findByIdAndProdutorIdComGrafoDeEmissao(id, produtor.getId())
+          .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+      if (!STATUS_EDITAVEIS.contains(encontrada.getStatus())) {
+        throw new NotaFiscalNaoEditavelException(id, encontrada.getStatus());
+      }
+      return encontrada;
+    });
 
+    // Fase 2: FORA de transacao. Validacao fiscal, JAXB, assinatura RSA e XSD custam CPU e tempo;
+    // dentro da transacao prendiam uma conexao do pool do inicio ao fim (issue #99). O registro de
+    // inconsistencias tambem acontece aqui, e e o que permite trocar o REQUIRES_NEW por uma
+    // transacao unica e independente (issue #97).
     String xml = gerarXmlRegistrandoInconsistencias(nota);
 
     // Extrai a chave de acesso do atributo Id da infNFe: "NFe" + 44 digitos numericos.
@@ -284,16 +309,30 @@ public class NotaFiscalService {
     // bem-sucedida — fazemos a extracao direto do XML para nao expor o grafo JAXB.
     String chaveAcesso = extrairChaveAcessoDoXml(xml);
 
-    nota.setXmlGerado(xml);
-    nota.setVersaoLayoutNfe(VERSAO_LAYOUT_NFE);
-    nota.setDataGeracaoXml(OffsetDateTime.now());
-    nota.setStatus(StatusNotaFiscal.XML_GERADO);
-    nota.setChaveAcesso(chaveAcesso);
+    // Fase 3 (transacao curta de escrita): recarrega sob lock, RECHECA o status e persiste.
+    // A recheca fecha a janela entre a leitura da fase 1 e esta gravacao: duas geracoes
+    // concorrentes nao podem persistir duas chaves de acesso para a mesma nota. Se a outra
+    // requisicao venceu, esta encontra XML_GERADO e recebe 409; se as duas chegarem juntas aqui,
+    // o @Version (issue #95) barra a segunda no commit.
+    return emTransacao(() -> {
+      NotaFiscal atual = notaFiscalRepository
+          .findByIdAndProdutorIdForUpdate(id, produtor.getId())
+          .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+      if (!STATUS_EDITAVEIS.contains(atual.getStatus())) {
+        throw new NotaFiscalNaoEditavelException(id, atual.getStatus());
+      }
 
-    NotaFiscal saved = notaFiscalRepository.save(nota);
-    log.info("XML da NF-e gerado e persistido: id={} produtor={} chave={}",
-        saved.getId(), produtor.getId(), chaveAcesso);
-    return NotaFiscalMapper.toResponse(saved);
+      atual.setXmlGerado(xml);
+      atual.setVersaoLayoutNfe(VERSAO_LAYOUT_NFE);
+      atual.setDataGeracaoXml(OffsetDateTime.now());
+      atual.setStatus(StatusNotaFiscal.XML_GERADO);
+      atual.setChaveAcesso(chaveAcesso);
+
+      NotaFiscal saved = notaFiscalRepository.save(atual);
+      log.info("XML da NF-e gerado e persistido: id={} produtor={} chave={}",
+          saved.getId(), produtor.getId(), chaveAcesso);
+      return NotaFiscalMapper.toResponse(saved);
+    });
   }
 
   /**
@@ -337,18 +376,48 @@ public class NotaFiscalService {
    * @throws br.com.agrocontabil.exception.DanfeGenerationException
    *         se a geração do PDF falhar (HTTP 500)
    */
-  @Transactional(readOnly = true)
   public byte[] gerarPdf(UUID id) {
     Produtor produtor = produtorProvider.get();
-    NotaFiscal nota = notaFiscalRepository
-        .findByIdAndProdutorId(id, produtor.getId())
-        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
 
-    if (nota.getXmlGerado() == null) {
-      throw new DanfeIndisponivelException(id, nota.getStatus());
-    }
+    // Fase 1 (transacao curta, somente leitura): ownership, pre-condicao e materializacao do grafo
+    // que o relatorio percorre (itens + produtor; os enderecos sao @Embedded).
+    NotaFiscal nota = emTransacaoDeLeitura(() -> {
+      NotaFiscal encontrada = notaFiscalRepository
+          .findByIdAndProdutorIdComGrafoDeEmissao(id, produtor.getId())
+          .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+      if (encontrada.getXmlGerado() == null) {
+        throw new DanfeIndisponivelException(id, encontrada.getStatus());
+      }
+      return encontrada;
+    });
 
+    // Fase 2: FORA de transacao. A renderizacao do JasperReports e a operacao mais longa do fluxo
+    // de leitura; dentro da transacao, N downloads concorrentes ocupavam o pool inteiro enquanto
+    // montavam PDF (issue #99). Nao ha fase de escrita: gerar DANFE nao altera a nota.
     return danfePdfService.gerarPdf(nota);
+  }
+
+  // -------------------------------------------------------------------------
+  // Suporte transacional das fases de emissao (issue #99)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Executa um bloco numa transação curta de escrita.
+   *
+   * <p>Usa {@link TransactionTemplate} em vez de {@code @Transactional} por método porque as fases
+   * de {@link #gerarXml(UUID)} são chamadas de dentro do próprio serviço: uma chamada direta entre
+   * métodos da mesma classe <strong>não passa pelo proxy do Spring</strong> e a anotação seria
+   * ignorada <em>em silêncio</em> — a assinatura RSA e o XSD voltariam a rodar dentro da transação,
+   * exatamente o defeito que esta issue remove, e sem nenhum sintoma visível. Mesmo desenho já
+   * usado em {@link ImportacaoNotaFiscalService} e {@link SefazService}.
+   */
+  private <T> T emTransacao(Supplier<T> acao) {
+    return transactionTemplate.execute(status -> acao.get());
+  }
+
+  /** Executa um bloco numa transação curta somente-leitura. Ver {@link #emTransacao(Supplier)}. */
+  private <T> T emTransacaoDeLeitura(Supplier<T> acao) {
+    return readOnlyTransactionTemplate.execute(status -> acao.get());
   }
 
   // -------------------------------------------------------------------------

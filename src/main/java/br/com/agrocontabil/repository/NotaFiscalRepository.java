@@ -44,6 +44,40 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
   Optional<NotaFiscal> findByIdAndProdutorId(UUID id, UUID produtorId);
 
   /**
+   * Igual a {@link #findByIdAndProdutorId(UUID, UUID)}, porém carregando de uma vez o grafo que os
+   * pipelines de NF-e e DANFE consomem: os <strong>itens</strong> e o <strong>produtor</strong>
+   * (issue #99).
+   *
+   * <p>Serve às operações que rodam <strong>fora de transação</strong> — assinatura digital,
+   * validação XSD e renderização da DANFE. Elas custam CPU e tempo, e mantê-las dentro da transação
+   * prendia uma conexão do pool durante todo o processamento. A entidade devolvida por esta query
+   * sai da transação <em>detached</em>, mas com {@code itens} e {@code produtor} já materializados,
+   * então o pipeline a percorre sem tocar em nenhum proxy: nada de
+   * {@code LazyInitializationException} com {@code open-in-view: false}.
+   *
+   * <p>Os endereços não aparecem no {@code JOIN FETCH} porque são {@code @Embedded} — vêm nas
+   * colunas da própria linha, sempre carregados.
+   *
+   * <p><strong>Ao acrescentar acesso a uma relação LAZY no pipeline de emissão ou de DANFE,
+   * inclua-a aqui.</strong> Fora da sessão o acesso falha de forma explícita, e o teste de
+   * integração que cobre a nota completa existe para pegar exatamente isso (issue #99).
+   *
+   * <p>{@code LEFT JOIN} nos dois: uma nota sem itens (rascunho recém-criado) continua sendo
+   * encontrada — quem recusa a emissão é o {@code FiscalRulesValidator}, com 422 e mensagem de
+   * negócio, não uma query que devolveria vazio e viraria 404 enganoso.
+   *
+   * @param id         identificador da nota fiscal
+   * @param produtorId identificador do produtor esperado como proprietário
+   * @return {@link Optional} com a nota e seu grafo de emissão, ou vazio se não encontrada
+   */
+  @Query("SELECT DISTINCT n FROM NotaFiscal n "
+      + "LEFT JOIN FETCH n.itens "
+      + "LEFT JOIN FETCH n.produtor "
+      + "WHERE n.id = :id AND n.produtor.id = :produtorId")
+  Optional<NotaFiscal> findByIdAndProdutorIdComGrafoDeEmissao(
+      @Param("id") UUID id, @Param("produtorId") UUID produtorId);
+
+  /**
    * Igual a {@link #findByIdAndProdutorId(UUID, UUID)}, porém adquirindo <strong>lock pessimista
    * de escrita</strong> ({@code SELECT ... FOR UPDATE}) sobre a linha (issue #96).
    *

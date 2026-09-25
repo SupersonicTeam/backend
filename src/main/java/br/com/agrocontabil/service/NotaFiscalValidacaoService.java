@@ -54,19 +54,33 @@ public class NotaFiscalValidacaoService {
    * Registra um lote de inconsistências para a nota e a marca como
    * {@link StatusNotaFiscal#COM_INCONSISTENCIAS}.
    *
-   * <p><strong>Transação independente ({@link Propagation#REQUIRES_NEW}):</strong> este método
-   * é chamado de dentro do fluxo de geração de XML, que relança a exceção de validação (HTTP
-   * 422) e, portanto, faz rollback da sua própria transação. Persistir o histórico numa
-   * transação separada garante que o registro das inconsistências sobreviva a esse rollback.
+   * <p><strong>INVARIANTE: este método só pode ser chamado fora de transação</strong> (issue #97).
+   *
+   * <p>Ele era {@link Propagation#REQUIRES_NEW} porque o fluxo de geração de XML o chamava de
+   * dentro da sua própria transação e depois relançava o 422, fazendo rollback — e o histórico
+   * precisava sobreviver a esse rollback. O preço era uma <strong>segunda conexão</strong> exigida
+   * enquanto a primeira seguia presa: dez requisições concorrentes de nota inválida travavam o pool
+   * inteiro, cada uma esperando por uma conexão que as outras não soltavam.
+   *
+   * <p>Desde a issue #99, a validação e a geração rodam <strong>fora</strong> de qualquer transação
+   * — não existe mais rollback a sobreviver, e {@code REQUIRED} abre uma transação própria, única,
+   * que commita normalmente. A garantia da issue #22 (o histórico e o status
+   * {@link StatusNotaFiscal#COM_INCONSISTENCIAS} persistem apesar do 422 devolvido ao cliente)
+   * continua valendo, só que por um caminho mais simples.
+   *
+   * <p>Se um chamador futuro invocar este método de <em>dentro</em> de uma transação, o
+   * {@code REQUIRED} se juntará a ela e o histórico voltará a morrer no rollback — regressão
+   * silenciosa da #22, sem erro nem log. Nesse caso, extraia a chamada para fora da transação (como
+   * {@code NotaFiscalService.gerarXml} faz) em vez de reintroduzir {@code REQUIRES_NEW}.
    *
    * <p>Não verifica propriedade: a checagem anti-IDOR já ocorreu no chamador, que carregou a
    * nota via {@code findByIdAndProdutorId}. Aqui a nota é recarregada pelo ID para ser
-   * gerenciada na nova transação.
+   * gerenciada nesta transação.
    *
    * @param notaId identificador da nota fiscal cujas inconsistências serão registradas
    * @param errors inconsistências encontradas (ErrorDetail da camada A); se vazio, nada é feito
    */
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  @Transactional
   public void registrarInconsistencias(UUID notaId, List<ErrorDetail> errors) {
     if (errors == null || errors.isEmpty()) {
       return;
