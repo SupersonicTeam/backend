@@ -108,7 +108,13 @@ tiraria do débito da apuração uma nota que segue autorizada no fisco.
     `PENDENTE_SEFAZ`;
   - qualquer `RuntimeException` de uma nota é logada e não afeta as demais;
   - **disjuntor**: `app.nfe.sefaz.sync.max-falhas-consecutivas` (padrão 5) falhas de comunicação
-    seguidas encerram a execução (SEFAZ fora do ar); as notas restantes ficam para o próximo ciclo;
+    seguidas encerram a execução (SEFAZ fora do ar); a execução seguinte **retoma depois da última
+    nota tentada** (cursor em memória), para que falhas persistentes no começo da ordenação não
+    deixem as demais sem sincronizar para sempre (achado do review do PR C);
+  - limites conhecidos, aceitos: a duração de uma execução com a SEFAZ saudável e lenta não é
+    limitada pelo `lockAtMostFor` (14 min) — uma segunda réplica pode consultar as mesmas notas, o
+    que é inofensivo (leitura idempotente + recheck antes de gravar); `reconciliarTransmissoesPresas`
+    segue sem paginação, limitado ao número de transmissões presas, não ao volume total;
   - guarda da #79 preservada: só `PENDENTE_SEFAZ` é sobrescrita; evento publicado quando autoriza.
 
 ## 8. Propriedades novas em `SefazProperties`

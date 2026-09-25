@@ -140,6 +140,41 @@ class SefazServiceSincronizacaoTest {
   }
 
   @Test
+  @DisplayName("disjuntor: a execucao seguinte retoma depois da ultima nota tentada")
+  void execucaoSeguinteRetomaDepoisDoDisjuntor() {
+    sefazProperties.getSync().setMaxFalhasConsecutivas(2);
+    List<UUID> ids = pendentes(4);
+    // As duas primeiras falham sempre (ex.: resposta ilegivel so para aquelas chaves).
+    when(notaFiscalRepository.findIdsPorStatus(eq(StatusNotaFiscal.PENDENTE_SEFAZ), any()))
+        .thenReturn(ids);
+    when(notaFiscalRepository.findIdsPorStatusApos(
+        eq(StatusNotaFiscal.PENDENTE_SEFAZ), eq(ids.get(1)), any()))
+        .thenReturn(ids.subList(2, 4));
+    when(sefazClient.consultarStatus(any(), any())).thenAnswer(inv -> {
+      String chave = inv.getArgument(0);
+      if (chave.equals(banco.get(ids.get(0)).getChaveAcesso())
+          || chave.equals(banco.get(ids.get(1)).getChaveAcesso())) {
+        throw new SefazRespostaIndeterminadaException("resposta ilegivel");
+      }
+      return autorizada();
+    });
+    permitirGravacao();
+
+    // 1a execucao: dispara o disjuntor nas duas primeiras.
+    assertThat(sefazService.sincronizarPendentes()).isZero();
+    // 2a execucao: retoma depois da segunda. Recomecando do inicio, dispararia de novo no mesmo
+    // ponto e as notas 3 e 4 nunca seriam sincronizadas.
+    assertThat(sefazService.sincronizarPendentes()).isEqualTo(2);
+    assertThat(banco.get(ids.get(2)).getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(banco.get(ids.get(3)).getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+
+    // 3a execucao: a 2a chegou ao fim sem disparar, entao volta ao inicio.
+    sefazService.sincronizarPendentes();
+    verify(notaFiscalRepository, times(2))
+        .findIdsPorStatus(eq(StatusNotaFiscal.PENDENTE_SEFAZ), any());
+  }
+
+  @Test
   @DisplayName("disjuntor: um sucesso zera a contagem de falhas seguidas")
   void sucessoZeraAsFalhasSeguidas() {
     sefazProperties.getSync().setMaxFalhasConsecutivas(2);

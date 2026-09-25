@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,6 +116,18 @@ public class SefazService {
   private final SefazProperties sefazProperties;
   private final ApplicationEventPublisher eventPublisher;
   private final TransactionTemplate transactionTemplate;
+
+  /**
+   * Onde a última sincronização parou por causa do disjuntor; a próxima retoma logo depois
+   * (issue #83). Nulo = começar do início do keyset.
+   *
+   * <p>Sem isso, cada execução recomeçaria do menor ID: notas que falham de forma persistente no
+   * começo da ordenação disparariam o disjuntor sempre no mesmo ponto e as demais nunca seriam
+   * sincronizadas. Com a retomada, cada execução avança; quando uma chega ao fim sem disparar, a
+   * seguinte volta ao início. Estado só em memória, por instância: basta para garantir progresso,
+   * e um restart apenas recomeça do início.
+   */
+  private final AtomicReference<UUID> retomarSincronizacaoApos = new AtomicReference<>();
 
   /** Constrói o serviço com as dependências de persistência, transporte, configuração e eventos. */
   public SefazService(
@@ -349,7 +362,9 @@ public class SefazService {
    *       logada e não afeta as demais.</li>
    *   <li><strong>Disjuntor:</strong> {@code app.nfe.sefaz.sync.max-falhas-consecutivas} falhas de
    *       comunicação seguidas encerram a execução — a SEFAZ está fora, e insistir só prenderia o
-   *       job pelo pior caso de cada nota. As restantes ficam para o próximo ciclo.</li>
+   *       job pelo pior caso de cada nota. A execução seguinte retoma depois da última nota tentada
+   *       ({@link #retomarSincronizacaoApos}), para que falhas persistentes no começo da ordenação
+   *       não impeçam para sempre a sincronização das demais.</li>
    * </ul>
    *
    * @return quantidade de notas cujo status mudou após a consulta
@@ -359,7 +374,7 @@ public class SefazService {
     int limiteFalhas = sefazProperties.getSync().getMaxFalhasConsecutivas();
     int atualizadas = 0;
     int falhasSeguidas = 0;
-    UUID ultimo = null;
+    UUID ultimo = retomarSincronizacaoApos.getAndSet(null);
 
     while (true) {
       UUID apos = ultimo;
@@ -379,8 +394,9 @@ public class SefazService {
           case FALHA_COMUNICACAO -> {
             falhasSeguidas++;
             if (falhasSeguidas >= limiteFalhas) {
+              retomarSincronizacaoApos.set(notaId);
               log.warn("Sincronizacao SEFAZ interrompida apos {} falhas de comunicacao seguidas; "
-                  + "as notas restantes ficam para o proximo ciclo", falhasSeguidas);
+                  + "a proxima execucao retoma depois da nota {}", falhasSeguidas, notaId);
               return atualizadas;
             }
           }
