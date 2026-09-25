@@ -36,6 +36,25 @@ public enum StatusNotaFiscal {
   XML_GERADO,
 
   /**
+   * <strong>Estado transitório</strong>: a transmissão à SEFAZ foi iniciada e o desfecho ainda
+   * não é conhecido (issue #96).
+   *
+   * <p>Existe para que a chamada de rede à SEFAZ aconteça <em>fora</em> de transação sem abrir
+   * janela para transmissão dupla: a nota é marcada como {@code ENVIANDO} sob lock pessimista,
+   * numa transação curta que commita antes da rede. Uma segunda requisição concorrente espera o
+   * lock, encontra este status e recebe 409 — o XML chega à SEFAZ uma única vez.
+   *
+   * <p>Nenhuma operação é permitida neste estado (edição, exclusão, geração de XML, envio,
+   * cancelamento ou consulta respondem 409). Ele dura o tempo da transmissão.
+   *
+   * <p>Se o processo cair entre a marcação e o desfecho, a nota fica presa aqui; o
+   * {@link br.com.agrocontabil.sefaz.SefazStatusSyncJob} a move para {@link #PENDENTE_SEFAZ}
+   * após {@code app.nfe.sefaz.transmissao.timeout-ms}, e a consulta pela chave estabelece a
+   * verdade junto ao fisco.
+   */
+  ENVIANDO,
+
+  /**
    * Nota transmitida e autorizada pela SEFAZ (cStat 100).
    * Protocolo de autorização e data de autorização estão preenchidos na entidade.
    */
@@ -59,6 +78,22 @@ public enum StatusNotaFiscal {
    * Adicionado na Sprint 3 (issue #15 — integração SEFAZ sandbox).
    */
   PENDENTE_SEFAZ,
+
+  /**
+   * <strong>Estado transitório</strong>: o evento de cancelamento foi enviado à SEFAZ e o
+   * desfecho ainda não é conhecido (issue #96). Simétrico a {@link #ENVIANDO}.
+   *
+   * <p>Uma segunda requisição de cancelamento concorrente espera o lock, encontra este status e
+   * recebe 409 — o evento é transmitido uma única vez e o {@code NotaCanceladaEvent} é publicado
+   * uma única vez (do contrário a apuração seria recalculada em duplicidade).
+   *
+   * <p>Numa falha de comunicação, a nota volta para {@link #AUTORIZADA} — e <strong>não</strong>
+   * para {@link #PENDENTE_SEFAZ}: a consulta de status não sabe reconhecer cancelamento
+   * ({@code mapStatus} não mapeia {@link #CANCELADA}), então o job a reautorizaria, a regressão
+   * fechada pela issue #79. Repetir o cancelamento é seguro: o fisco responde cStat de evento já
+   * vinculado (135/155).
+   */
+  CANCELANDO,
 
   /**
    * Nota cancelada junto à SEFAZ (issue #21, RN006). <strong>Estado terminal</strong>:
