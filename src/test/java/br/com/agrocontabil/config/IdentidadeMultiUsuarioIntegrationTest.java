@@ -139,9 +139,13 @@ class IdentidadeMultiUsuarioIntegrationTest {
         .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, headerInvalido))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
+        // Nenhum dado de nota no corpo: nem a pagina, nem o ID da nota de A. Antes a checagem era
+        // doesNotContain("1001") (o numero da nota), que falhava ao acaso quando os nanossegundos
+        // do timestamp do ApiError continham essa sequencia.
+        .andExpect(jsonPath("$.content").doesNotExist())
         .andExpect(
-            resultado ->
-                assertThat(resultado.getResponse().getContentAsString()).doesNotContain("1001"));
+            resultado -> assertThat(resultado.getResponse().getContentAsString())
+                .doesNotContain(notaDeA.getId().toString()));
   }
 
   @Test
