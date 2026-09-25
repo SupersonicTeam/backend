@@ -3,7 +3,7 @@
 - **Data:** 2026-09-23
 - **Issues:** #95, #96, #99, #97 (nesta ordem de execução)
 - **Épico:** planejamento das 21 issues abertas em 7 ondas (2026-09-21)
-- **Status:** aprovado em 2026-09-23. PR 1 (#95) mergeado em #115; PR 2 (#96) em revisão.
+- **Status:** aprovado em 2026-09-23. PR 1 (#95) mergeado em #115; PR 2 (#96) mergeado em #119; PR 3 (#99 + #97) em revisão.
 - **Escopo TLC:** Large (multi-componente, 3 PRs, mudança de schema, novos estados de domínio)
 
 ## 1. Objetivo
@@ -80,7 +80,8 @@ O que delas sustenta esta onda:
 
 | ID | Requisito |
 |----|-----------|
-| RF-99.1 | Novo DTO interno de snapshot (`NotaFiscalSnapshot`, `record`, pacote `service` ou `dto`) materializando tudo que os pipelines de XML e DANFE consomem: dados escalares da nota, itens (`List`), `EnderecoDestinatario` e o emitente completo — `Produtor` com **`endereco` (`EnderecoProdutor`) e `inscricaoEstadual`**, entregues pela Onda 2 (#88/#114) e agora lidos pelo `NotaFiscalNfeMapper` para `<enderEmit>` e `cMunFG`. Nada de proxy Hibernate cruza a fronteira. |
+| RF-99.1 | **REVISTO na implementação (2026-09-25), com aprovação do Murillo:** em vez do DTO `NotaFiscalSnapshot`, a materialização é por `JOIN FETCH` de itens e produtor (`findByIdAndProdutorIdComGrafoDeEmissao`); a entidade sai da transação destacada mas completa. Motivo: trocar a assinatura de `FiscalRulesValidator` e `NotaFiscalNfeMapper` — onde vivem a regra fiscal e o layout do XML — arriscaria regressão fiscal no maior PR da onda, e os 32 testes que cobrem esse pipeline seguem valendo como rede de segurança. Contrapartida aceita: um acesso LAZY novo no pipeline precisa ser somado ao `JOIN FETCH`, e é o teste de nota completa que pega a omissão. |
+| ~~RF-99.1 (original)~~ | Novo DTO interno de snapshot (`NotaFiscalSnapshot`, `record`, pacote `service` ou `dto`) materializando tudo que os pipelines de XML e DANFE consomem: dados escalares da nota, itens (`List`), `EnderecoDestinatario` e o emitente completo — `Produtor` com **`endereco` (`EnderecoProdutor`) e `inscricaoEstadual`**, entregues pela Onda 2 (#88/#114) e agora lidos pelo `NotaFiscalNfeMapper` para `<enderEmit>` e `cMunFG`. Nada de proxy Hibernate cruza a fronteira. |
 | RF-99.2 | `gerarXml` passa a: **tx curta readOnly** (ownership 404 + checa `STATUS_EDITAVEIS` + materializa snapshot) → **geração/assinatura/XSD fora de transação** → **tx curta de escrita** (lock, recheca status, persiste `xmlGerado`/`versaoLayoutNfe`/`dataGeracaoXml`/`chaveAcesso`/`status = XML_GERADO`). |
 | RF-99.3 | `gerarPdf` passa a: **tx curta readOnly** (ownership 404 + checa XML gerado + materializa snapshot) → **renderização JasperReports fora de transação**. |
 | RF-99.4 | `NotaFiscalService` deixa de ser `@Transactional` **na classe**; a anotação passa a ser por método, para que os trechos de I/O pesado fiquem comprovadamente fora de transação. Os métodos CRUD mantêm o comportamento atual. |
