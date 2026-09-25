@@ -7,6 +7,7 @@ import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.event.NotaCanceladaEvent;
 import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
+import br.com.agrocontabil.exception.CancelamentoRejeitadoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
@@ -181,37 +182,48 @@ public class SefazService {
    * @throws NotaFiscalNaoConsultavelException  se a nota ainda não foi transmitida (HTTP 409)
    * @throws SefazComunicacaoException          se a comunicação falhar após o retry (HTTP 502)
    */
-  @Transactional
   public SefazStatusResponse sincronizarStatus(UUID notaId) {
     Produtor produtor = produtorProvider.get();
-    NotaFiscal nota = notaFiscalRepository
-        .findByIdAndProdutorId(notaId, produtor.getId())
-        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
 
-    // Só é seguro sincronizar a partir de PENDENTE_SEFAZ — o único estado "aguardando desfecho".
-    // Estados terminais (AUTORIZADA/REJEITADA/CANCELADA) e pré-transmissao
-    // (RASCUNHO/XML_GERADO/COM_INCONSISTENCIAS) nunca podem ser sobrescritos por uma consulta:
-    // como o transporte de consulta responde a situacao atual da chave, sincronizar uma nota
-    // CANCELADA a ressuscitaria para AUTORIZADA (a nota voltaria a compor o debito da apuracao),
-    // e sincronizar uma XML_GERADO nunca transmitida a autorizaria sem envio.
-    // A chave nula tambem barra (defesa contra dado corrompido): consultar a SEFAZ exige a chave.
-    if (nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ || nota.getChaveAcesso() == null) {
-      throw new NotaFiscalNaoConsultavelException(notaId, nota.getStatus());
-    }
+    // Transacao 1 (curta): valida a pre-condicao e materializa o que a consulta precisa.
+    DadosConsulta dados = emTransacao(() -> {
+      NotaFiscal nota = notaFiscalRepository
+          .findByIdAndProdutorId(notaId, produtor.getId())
+          .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
 
-    StatusNotaFiscal statusAnterior = nota.getStatus();
-    consultarEAtualizar(nota);
-    NotaFiscal salva = notaFiscalRepository.save(nota);
-    publicarSeAutorizou(statusAnterior, salva);
+      // Só é seguro sincronizar a partir de PENDENTE_SEFAZ — o único estado "aguardando desfecho".
+      // Estados terminais (AUTORIZADA/REJEITADA/CANCELADA) e pré-transmissao
+      // (RASCUNHO/XML_GERADO/COM_INCONSISTENCIAS) nunca podem ser sobrescritos por uma consulta:
+      // como o transporte de consulta responde a situacao atual da chave, sincronizar uma nota
+      // CANCELADA a ressuscitaria para AUTORIZADA (a nota voltaria a compor o debito da apuracao),
+      // e sincronizar uma XML_GERADO nunca transmitida a autorizaria sem envio.
+      // A chave nula tambem barra (defesa contra dado corrompido): consultar a SEFAZ exige a chave.
+      if (nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ || nota.getChaveAcesso() == null) {
+        throw new NotaFiscalNaoConsultavelException(notaId, nota.getStatus());
+      }
+      return new DadosConsulta(nota.getChaveAcesso(), ambienteDe(nota));
+    });
 
-    log.info(
-        "Status sincronizado com a SEFAZ: notaId={} chave={} cStat={} situacao={}",
-        salva.getId(),
-        salva.getChaveAcesso(),
-        salva.getSefazCstat(),
-        salva.getStatus());
+    // Fora de transacao: a consulta a SEFAZ nao segura conexao do pool (issue #96).
+    SefazRetorno retorno = sefazClient.consultarStatus(dados.chaveAcesso(), dados.ambiente());
 
-    return toStatusResponse(salva);
+    // Transacao 2 (curta): aplica o retorno e publica o evento, se a nota foi autorizada.
+    return emTransacao(() -> {
+      NotaFiscal nota = carregarComLock(notaId, produtor);
+      StatusNotaFiscal statusAnterior = nota.getStatus();
+      aplicarRetorno(nota, retorno, dados.ambiente());
+      NotaFiscal salva = notaFiscalRepository.save(nota);
+      publicarSeAutorizou(statusAnterior, salva);
+
+      log.info(
+          "Status sincronizado com a SEFAZ: notaId={} chave={} cStat={} situacao={}",
+          salva.getId(),
+          salva.getChaveAcesso(),
+          salva.getSefazCstat(),
+          salva.getStatus());
+
+      return toStatusResponse(salva);
+    });
   }
 
   /**
@@ -256,9 +268,7 @@ public class SefazService {
         throw new CancelamentoForaPrazoException(notaId, limite);
       }
 
-      SefazAmbiente ambienteNota = nota.getSefazAmbiente() != null
-          ? nota.getSefazAmbiente()
-          : sefazProperties.getAmbiente();
+      SefazAmbiente ambienteNota = ambienteDe(nota);
 
       nota.setStatus(StatusNotaFiscal.CANCELANDO);
       notaFiscalRepository.save(nota);
@@ -281,11 +291,12 @@ public class SefazService {
     }
 
     if (!CSTAT_CANCELAMENTO_ACEITO.contains(retorno.cStat())) {
-      // Cancelamento rejeitado pelo fisco (cStat de evento nao vinculado). Na Sprint 3 o mock
-      // sempre aceita; o tratamento fino da rejeicao de cancelamento e debito da Sprint 7.
-      // A nota volta a AUTORIZADA: a rejeicao nao a cancelou, e ela segue cancelavel.
+      // Cancelamento recusado pelo fisco (cStat de evento nao vinculado). A nota volta a
+      // AUTORIZADA: a recusa nao a cancelou, e ela segue cancelavel. A excecao e especifica
+      // (nao NotaFiscalNaoCancelavelException, que diria "status AUTORIZADA nao permite
+      // cancelar" — contraditorio) e repassa o cStat/xMotivo do fisco ao produtor.
       compensar(notaId, produtor, StatusNotaFiscal.AUTORIZADA, "cancelamento");
-      throw new NotaFiscalNaoCancelavelException(notaId, StatusNotaFiscal.AUTORIZADA);
+      throw new CancelamentoRejeitadoException(notaId, retorno.cStat(), retorno.xMotivo());
     }
 
     // Transacao 2 (curta): aplica o desfecho e publica o evento de dominio.
@@ -327,24 +338,48 @@ public class SefazService {
    *
    * @return quantidade de notas cujo status mudou após a consulta
    */
-  @Transactional(timeoutString = "${app.nfe.sefaz.sync.transaction-timeout:600}")
   public int sincronizarPendentes() {
-    List<NotaFiscal> pendentes =
-        notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
+    // A leitura da lista tem a sua propria transacao curta; o lote NAO roda numa transacao unica.
+    // Antes, com @Transactional no metodo, N consultas de rede (cada uma com retry) corriam com a
+    // transacao aberta: uma conexao do pool ficava presa por dezenas de segundos e o
+    // leak-detection (#109) acusava a cada execucao do job.
+    List<NotaFiscal> pendentes = emTransacao(
+        () -> notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ));
+
     int atualizadas = 0;
-    for (NotaFiscal nota : pendentes) {
+    for (NotaFiscal pendente : pendentes) {
+      UUID notaId = pendente.getId();
       try {
-        StatusNotaFiscal anterior = nota.getStatus();
-        consultarEAtualizar(nota);
-        notaFiscalRepository.save(nota);
-        if (nota.getStatus() != anterior) {
+        SefazAmbiente ambiente = ambienteDe(pendente);
+        // Consulta fora de transacao.
+        SefazRetorno retorno = sefazClient.consultarStatus(pendente.getChaveAcesso(), ambiente);
+
+        // Transacao curta por nota: recarrega, aplica e publica. Isola tambem a colisao de
+        // versao de uma nota, que nao pode desfazer as demais do lote.
+        boolean mudou = Boolean.TRUE.equals(emTransacao(() -> {
+          NotaFiscal nota = notaFiscalRepository.findById(notaId).orElse(null);
+          if (nota == null || nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ) {
+            // Saiu de PENDENTE_SEFAZ entre a leitura e agora: nao sobrescreve.
+            return false;
+          }
+          StatusNotaFiscal anterior = nota.getStatus();
+          aplicarRetorno(nota, retorno, ambiente);
+          NotaFiscal salva = notaFiscalRepository.save(nota);
+          if (salva.getStatus() != anterior) {
+            publicarSeAutorizou(anterior, salva);
+            return true;
+          }
+          return false;
+        }));
+        if (mudou) {
           atualizadas++;
-          publicarSeAutorizou(anterior, nota);
         }
       } catch (SefazComunicacaoException e) {
         // Falha numa nota não interrompe o lote — sera reprocessada na proxima execucao.
         log.warn("Falha ao sincronizar status da nota {} com a SEFAZ: {}",
-            nota.getId(), e.getMessage());
+            notaId, e.getMessage());
+      } catch (RuntimeException e) {
+        log.warn("Falha ao aplicar o status consultado da nota {}; sera retentada", notaId, e);
       }
     }
     return atualizadas;
@@ -385,34 +420,54 @@ public class SefazService {
    *
    * @return quantidade de notas reconciliadas
    */
-  @Transactional(timeoutString = "${app.nfe.sefaz.transmissao.transaction-timeout:600}")
   public int reconciliarTransmissoesPresas() {
     OffsetDateTime limite = OffsetDateTime.now()
         .minus(sefazProperties.getTransmissao().getTimeoutMs(), ChronoUnit.MILLIS);
     List<NotaFiscal> presas = notaFiscalRepository.findByStatusInAndUpdatedAtBefore(
         List.of(StatusNotaFiscal.ENVIANDO, StatusNotaFiscal.CANCELANDO), limite);
 
+    int reconciliadas = 0;
     for (NotaFiscal nota : presas) {
       StatusNotaFiscal anterior = nota.getStatus();
       StatusNotaFiscal destino = anterior == StatusNotaFiscal.ENVIANDO
           ? StatusNotaFiscal.PENDENTE_SEFAZ
           : StatusNotaFiscal.AUTORIZADA;
-      nota.setStatus(destino);
-      notaFiscalRepository.save(nota);
-      log.warn(
-          "Transmissao presa reconciliada: notaId={} chave={} de={} para={} parada desde={}",
-          nota.getId(), nota.getChaveAcesso(), anterior, destino, nota.getUpdatedAt());
+      try {
+        // Uma transacao por nota: a colisao de versao de UMA nota nao pode desfazer as demais.
+        // O caso concreto e a corrida com a tx2 de uma transmissao que finalmente respondeu — ela
+        // incrementa a versao e faz este save falhar; sem o isolamento, o lote inteiro seria
+        // revertido e a excecao subiria para o job, abortando tambem a sincronizacao seguinte.
+        boolean mudou = Boolean.TRUE.equals(emTransacao(() -> {
+          NotaFiscal atual = notaFiscalRepository.findById(nota.getId()).orElse(null);
+          if (atual == null || atual.getStatus() != anterior) {
+            // A nota saiu do estado transitorio entre a leitura e agora (a transmissao respondeu):
+            // nao ha o que reconciliar, e contar isso mentiria no total devolvido ao job.
+            return false;
+          }
+          atual.setStatus(destino);
+          notaFiscalRepository.save(atual);
+          return true;
+        }));
+        if (!mudou) {
+          continue;
+        }
+        reconciliadas++;
+        log.warn(
+            "Transmissao presa reconciliada: notaId={} chave={} de={} para={} parada desde={}",
+            nota.getId(), nota.getChaveAcesso(), anterior, destino, nota.getUpdatedAt());
+      } catch (RuntimeException e) {
+        log.warn("Falha ao reconciliar a nota {} (de {} para {}); sera retentada no proximo ciclo",
+            nota.getId(), anterior, destino, e);
+      }
     }
-    return presas.size();
+    return reconciliadas;
   }
 
-  /** Consulta a SEFAZ pela chave de acesso e aplica o retorno à nota. */
-  private void consultarEAtualizar(NotaFiscal nota) {
-    SefazAmbiente ambiente = nota.getSefazAmbiente() != null
+  /** Ambiente em que a nota foi transmitida, ou o configurado quando ela ainda nao tem um. */
+  private SefazAmbiente ambienteDe(NotaFiscal nota) {
+    return nota.getSefazAmbiente() != null
         ? nota.getSefazAmbiente()
         : sefazProperties.getAmbiente();
-    SefazRetorno retorno = sefazClient.consultarStatus(nota.getChaveAcesso(), ambiente);
-    aplicarRetorno(nota, retorno, ambiente);
   }
 
   /**
@@ -482,6 +537,10 @@ public class SefazService {
 
   /** Dados necessários à transmissão, materializados antes de sair da transação. */
   private record DadosTransmissao(String xml, String chaveAcesso) {
+  }
+
+  /** Dados necessários à consulta de status, materializados antes de sair da transação. */
+  private record DadosConsulta(String chaveAcesso, SefazAmbiente ambiente) {
   }
 
   /** Dados necessários ao cancelamento, materializados antes de sair da transação. */

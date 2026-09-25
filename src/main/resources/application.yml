@@ -132,10 +132,14 @@ app:
       # (processo derrubado no meio da transmissao) e reconciliada pelo job de sincronizacao.
       transmissao:
         timeout-ms: ${NFE_SEFAZ_TRANSMISSAO_TIMEOUT_MS:600000}   # 10 min
+        # Timeout da transacao do lote de reconciliacao — bem acima do
+        # spring.transaction.default-timeout (30s), no mesmo padrao dos outros jobs.
+        transaction-timeout: ${NFE_SEFAZ_TRANSMISSAO_TX_TIMEOUT:600}
       # Job de sincronizacao de status de notas pendentes (issue #16).
       sync:
         enabled: ${NFE_SEFAZ_SYNC_ENABLED:true}
         interval-ms: ${NFE_SEFAZ_SYNC_INTERVAL_MS:900000}   # 15 min
+        transaction-timeout: ${NFE_SEFAZ_SYNC_TX_TIMEOUT:600}
   # Apuracao mensal de IBS/CBS (issue #41 — RN004).
   apuracao:
     # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").

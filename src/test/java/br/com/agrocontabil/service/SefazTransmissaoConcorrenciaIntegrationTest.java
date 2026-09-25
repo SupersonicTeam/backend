@@ -87,7 +87,21 @@ import org.springframework.transaction.support.TransactionTemplate;
 class SefazTransmissaoConcorrenciaIntegrationTest {
 
   private static final int TIMEOUT_SEGUNDOS = 30;
-  private static final String CHAVE = "41262612345678000195550010000000011000000012";
+  /** Prefixo de 38 digitos; os 6 finais vem do contador, dando uma chave unica por nota. */
+  private static final String CHAVE_PREFIXO = "41262612345678000195550010000000011000";
+
+  /**
+   * O {@code MockSefazTransport} e singleton e lembra as chaves que ja transmitiu (issue #96),
+   * para nao autorizar na consulta uma NF-e que nunca saiu. Uma chave fixa compartilhada entre os
+   * testes desta classe vazaria esse estado de um teste para o outro — o de "nota nunca
+   * transmitida" passaria a ver a chave como conhecida. Daí uma chave nova por nota, o que tambem
+   * respeita a unique de {@code chave_acesso}.
+   */
+  private static final AtomicInteger SEQUENCIA_CHAVE = new AtomicInteger();
+
+  private static String chaveUnica() {
+    return CHAVE_PREFIXO + String.format("%06d", SEQUENCIA_CHAVE.incrementAndGet());
+  }
   private static final String MOTIVO =
       "Cancelamento por erro de digitacao nos dados do destinatario";
 
@@ -235,6 +249,47 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
         .isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
   }
 
+  @Test
+  @DisplayName("nota nunca transmitida nao e autorizada pela sincronizacao nem gera evento")
+  void notaNuncaTransmitidaNaoEhAutorizadaPelaSincronizacao() {
+    // Cenario do code review deste PR: o envio falha ANTES de chegar ao fisco, a compensacao
+    // deixa a nota em PENDENTE_SEFAZ e o job a sincroniza. Como o mock respondia AUTORIZADA para
+    // qualquer chave, a nota virava AUTORIZADA com protocolo ficticio e publicava
+    // NotaEmitidaEvent — o debito de IBS/CBS de uma NF-e que nunca saiu entrava na apuracao.
+    UUID notaId = persistir(buildNota(StatusNotaFiscal.PENDENTE_SEFAZ, OffsetDateTime.now()));
+
+    int atualizadas = sefazService.sincronizarPendentes();
+
+    assertThat(atualizadas).isEqualTo(1);
+    // cStat 217 (nao consta na base da SEFAZ) -> REJEITADA, nunca AUTORIZADA.
+    assertThat(notaFiscalRepository.findById(notaId).orElseThrow().getStatus())
+        .isEqualTo(StatusNotaFiscal.REJEITADA);
+    // E, sobretudo, nenhum evento de debito para uma nota inexistente no fisco.
+    assertThat(contador.emitidas()).isZero();
+  }
+
+  @Test
+  @DisplayName("nota efetivamente transmitida e autorizada pela sincronizacao e publica o evento")
+  void notaTransmitidaEhAutorizadaPelaSincronizacao() {
+    UUID notaId = persistir(buildNota(StatusNotaFiscal.XML_GERADO, OffsetDateTime.now()));
+    autenticar();
+
+    // Transmite de verdade (o mock passa a conhecer a chave) e devolve a nota a PENDENTE_SEFAZ,
+    // como se o desfecho tivesse ficado indefinido.
+    sefazService.enviar(notaId);
+    jdbcTemplate.update(
+        "UPDATE nota_fiscal SET status = 'PENDENTE_SEFAZ' WHERE id = ?", notaId);
+    contador.zerar();
+
+    assertThat(sefazService.sincronizarPendentes()).isEqualTo(1);
+
+    assertThat(notaFiscalRepository.findById(notaId).orElseThrow().getStatus())
+        .isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    // O contraponto do teste acima: aqui a nota existe no fisco, entao o evento DEVE sair — do
+    // contrario a apuracao ficaria a menor (a guarda da issue #79).
+    assertThat(contador.emitidas()).isEqualTo(1);
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
@@ -284,6 +339,7 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
   }
 
   private NotaFiscal buildNota(StatusNotaFiscal status, OffsetDateTime dataEmissao) {
+    String chave = chaveUnica();
     return NotaFiscal.builder()
         .numero(1L)
         .serie(1)
@@ -296,8 +352,8 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
         .valorTotalProdutos(new BigDecimal("1000.00"))
         .valorTotalNota(new BigDecimal("1000.00"))
         .status(status)
-        .chaveAcesso(CHAVE)
-        .xmlGerado("<NFe><infNFe Id=\"NFe" + CHAVE + "\"/></NFe>")
+        .chaveAcesso(chave)
+        .xmlGerado("<NFe><infNFe Id=\"NFe" + chave + "\"/></NFe>")
         .versaoLayoutNfe("4.00")
         .protocoloAutorizacao("141260000000017")
         .build();

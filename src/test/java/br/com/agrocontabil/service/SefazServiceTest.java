@@ -19,6 +19,7 @@ import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.event.NotaCanceladaEvent;
 import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
+import br.com.agrocontabil.exception.CancelamentoRejeitadoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
@@ -251,6 +252,9 @@ class SefazServiceTest {
     when(produtorProvider.get()).thenReturn(produtor);
     when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
         .thenReturn(Optional.of(nota));
+    // issue #96: a consulta a SEFAZ saiu da transacao — a tx de escrita recarrega com lock.
+    when(notaFiscalRepository.findByIdAndProdutorIdForUpdate(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
     when(sefazClient.consultarStatus(eq(CHAVE), eq(SefazAmbiente.HOMOLOGACAO)))
         .thenReturn(new SefazRetorno(
             SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
@@ -321,6 +325,9 @@ class SefazServiceTest {
     when(produtorProvider.get()).thenReturn(produtor);
     when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
         .thenReturn(Optional.of(nota));
+    // issue #96: a consulta a SEFAZ saiu da transacao — a tx de escrita recarrega com lock.
+    when(notaFiscalRepository.findByIdAndProdutorIdForUpdate(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
     when(sefazClient.consultarStatus(eq(CHAVE), eq(SefazAmbiente.HOMOLOGACAO)))
         .thenReturn(new SefazRetorno(
             SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",
@@ -353,6 +360,9 @@ class SefazServiceTest {
     NotaFiscal nota = buildNotaXmlGerado(UUID.randomUUID());
     nota.setStatus(StatusNotaFiscal.PENDENTE_SEFAZ);
 
+    // issue #96: a consulta saiu da transacao e cada nota e aplicada na sua propria tx curta,
+    // que recarrega pelo id antes de gravar.
+    when(notaFiscalRepository.findById(nota.getId())).thenReturn(Optional.of(nota));
     when(notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ))
         .thenReturn(List.of(nota));
     when(sefazClient.consultarStatus(eq(CHAVE), any()))
@@ -552,6 +562,8 @@ class SefazServiceTest {
     when(notaFiscalRepository.findByStatusInAndUpdatedAtBefore(
         eq(List.of(StatusNotaFiscal.ENVIANDO, StatusNotaFiscal.CANCELANDO)), any()))
         .thenReturn(List.of(presa));
+    // Cada nota e reconciliada na sua propria transacao, que recarrega a nota pelo id.
+    when(notaFiscalRepository.findById(presa.getId())).thenReturn(Optional.of(presa));
 
     int reconciliadas = sefazService.reconciliarTransmissoesPresas();
 
@@ -570,6 +582,7 @@ class SefazServiceTest {
 
     when(notaFiscalRepository.findByStatusInAndUpdatedAtBefore(any(), any()))
         .thenReturn(List.of(presa));
+    when(notaFiscalRepository.findById(presa.getId())).thenReturn(Optional.of(presa));
 
     int reconciliadas = sefazService.reconciliarTransmissoesPresas();
 
@@ -608,6 +621,55 @@ class SefazServiceTest {
 
     verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
     verifyNoInteractions(sefazClient);
+  }
+
+  @Test
+  @DisplayName("cancelar recusado pelo fisco lanca CancelamentoRejeitadoException e volta a AUTORIZADA")
+  void cancelarRecusadoPeloFiscoDevolveNotaParaAutorizada() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaAutorizada(notaId, OffsetDateTime.now().minusDays(2));
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorIdForUpdate(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+    // cStat fora de {135, 155}: o evento nao foi vinculado a NF-e.
+    when(sefazClient.cancelar(any(), any(), any(), any()))
+        .thenReturn(new SefazRetorno(
+            SituacaoSefaz.REJEITADA, "573", "Duplicidade de evento", null, null));
+
+    // Antes esta recusa reaproveitava NotaFiscalNaoCancelavelException, que diz "o status atual
+    // nao permite cancelar" apontando AUTORIZADA — justamente o status que permite. A excecao
+    // propria diz a verdade e repassa o motivo do fisco.
+    assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
+        .isInstanceOf(CancelamentoRejeitadoException.class)
+        .hasMessageContaining("573");
+
+    // A recusa nao cancelou a nota: ela volta a AUTORIZADA e segue cancelavel.
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    // Nenhum evento de dominio: o debito do periodo nao muda.
+    verify(eventPublisher, never()).publishEvent(any());
+  }
+
+  @Test
+  @DisplayName("reconciliar ignora nota que saiu do estado transitorio entre a leitura e a gravacao")
+  void reconciliarIgnoraNotaQueJaSaiuDoEstadoTransitorio() {
+    NotaFiscal presa = buildNotaXmlGerado(UUID.randomUUID());
+    presa.setStatus(StatusNotaFiscal.ENVIANDO);
+
+    when(notaFiscalRepository.findByStatusInAndUpdatedAtBefore(any(), any()))
+        .thenReturn(List.of(presa));
+
+    // Simula a corrida com a tx2 da propria transmissao: ao recarregar, a nota ja foi autorizada.
+    NotaFiscal jaAutorizada = buildNotaXmlGerado(presa.getId());
+    jaAutorizada.setStatus(StatusNotaFiscal.AUTORIZADA);
+    when(notaFiscalRepository.findById(presa.getId())).thenReturn(Optional.of(jaAutorizada));
+
+    assertThat(sefazService.reconciliarTransmissoesPresas()).isZero();
+
+    // Nada e sobrescrito: o desfecho real da transmissao prevalece sobre a reconciliacao.
+    assertThat(jaAutorizada.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    verify(notaFiscalRepository, never()).save(any(NotaFiscal.class));
   }
 
   private NotaFiscal buildNotaXmlGerado(UUID notaId) {

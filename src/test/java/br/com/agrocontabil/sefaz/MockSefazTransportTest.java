@@ -30,12 +30,28 @@ class MockSefazTransportTest {
   }
 
   @Test
-  @DisplayName("consultarStatus deve retornar AUTORIZADA de forma deterministica")
-  void consultarStatusShouldReturnAuthorized() {
+  @DisplayName("consultarStatus retorna AUTORIZADA para chave ja transmitida")
+  void consultarStatusShouldReturnAuthorizedForTransmittedChave() {
+    transport.enviar("<xml/>", CHAVE, SefazAmbiente.HOMOLOGACAO);
+
     SefazRetorno retorno = transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
 
     assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
     assertThat(retorno.cStat()).isEqualTo("100");
+  }
+
+  @Test
+  @DisplayName("consultarStatus recusa chave nunca transmitida com cStat 217")
+  void consultarStatusShouldRejectUnknownChave() {
+    // issue #96: o mock respondia AUTORIZADA para QUALQUER chave. Combinado com a compensacao
+    // que deixa a nota em PENDENTE_SEFAZ quando o envio falha, isso fazia o job "autorizar" uma
+    // NF-e que nunca saiu e publicar NotaEmitidaEvent — debito de IBS/CBS apurado sobre nota
+    // inexistente no fisco. A SEFAZ real responde cStat 217 para chave desconhecida.
+    SefazRetorno retorno = transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
+
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.REJEITADA);
+    assertThat(retorno.cStat()).isEqualTo("217");
+    assertThat(retorno.protocolo()).isNull();
   }
 
   @Test
