@@ -23,17 +23,23 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Serviço de apuração mensal de IBS/CBS do produtor (issue Agrocontabil#41 — RN004).
@@ -61,6 +67,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * sempre o ID do produtor autenticado ({@link AuthenticatedProdutorProvider}); as agregações
  * filtram por esse ID, de modo que um produtor nunca apura notas de outro. O fechamento agendado
  * roda sem contexto de segurança e opera por ID de produtor do {@link ProdutorRepository}.
+ *
+ * <p><strong>Fechamento em lote (issue #100):</strong> {@link #fecharPeriodo(String)} e
+ * {@link #refecharPeriodosReabertos()} não abrem transação de lote. Leem só IDs, em lotes, e
+ * processam cada item numa transação própria ({@code REQUIRES_NEW}): a falha de um produtor faz
+ * rollback só dele, é logada e entra no {@link ResumoLoteApuracao}, sem abortar os demais.
  */
 @Service
 @Transactional
@@ -82,9 +93,20 @@ public class ApuracaoService {
   private final Clock clock;
 
   /**
+   * Transação própria por item do lote do job (issue #100). {@code REQUIRES_NEW} deixa explícito
+   * que cada produtor/apuração commita ou faz rollback sozinho; o timeout é o padrão
+   * ({@code spring.transaction.default-timeout}), suficiente para um único produtor.
+   */
+  private final TransactionTemplate transacaoPorItem;
+
+  /** Quantidade de IDs de produtor lidos por vez no fechamento (issue #100). */
+  private final int loteTamanho;
+
+  /**
    * Constrói o serviço com os repositórios de notas/apuração/produtor, o provedor autenticado, o
-   * {@link AuditorAware} (identidade de quem reabre) e o {@link Clock} (mês de referência da RN005;
-   * injetável para tornar determinística a borda de 3 meses nos testes).
+   * {@link AuditorAware} (identidade de quem reabre), o {@link Clock} (mês de referência da RN005;
+   * injetável para tornar determinística a borda de 3 meses nos testes), o gerenciador de
+   * transações (transação por item do job) e o tamanho do lote de leitura do fechamento.
    */
   public ApuracaoService(
       NotaFiscalRepository notaFiscalRepository,
@@ -92,13 +114,22 @@ public class ApuracaoService {
       ProdutorRepository produtorRepository,
       AuthenticatedProdutorProvider produtorProvider,
       AuditorAware<String> auditorAware,
-      Clock clock) {
+      Clock clock,
+      PlatformTransactionManager transactionManager,
+      @Value("${app.apuracao.fechamento.lote-tamanho:100}") int loteTamanho) {
+    if (loteTamanho < 1) {
+      throw new IllegalArgumentException(
+          "app.apuracao.fechamento.lote-tamanho deve ser >= 1, recebido: " + loteTamanho);
+    }
     this.notaFiscalRepository = notaFiscalRepository;
     this.apuracaoRepository = apuracaoRepository;
     this.produtorRepository = produtorRepository;
     this.produtorProvider = produtorProvider;
     this.auditorAware = auditorAware;
     this.clock = clock;
+    this.transacaoPorItem = new TransactionTemplate(transactionManager);
+    this.transacaoPorItem.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    this.loteTamanho = loteTamanho;
   }
 
   /**
@@ -145,19 +176,47 @@ public class ApuracaoService {
    * Fecha o período de todos os produtores: consolida cada apuração e a marca como
    * {@link StatusApuracao#FECHADO} com {@code dataFechamento}. Usado pelo job agendado.
    *
+   * <p><strong>Um produtor por transação (issue #100):</strong> este método não abre transação
+   * ({@code NOT_SUPPORTED}). Lê os IDs de produtor em lotes de {@code loteTamanho}, por keyset, e
+   * fecha cada produtor numa transação própria. Uma falha (na agregação, na gravação ou no commit)
+   * faz rollback só daquele produtor, é logada em {@code ERROR} e entra no resumo; os demais
+   * produtores seguem sendo fechados.
+   *
    * @param periodo período no formato {@code YYYY-MM}
-   * @return quantidade de apurações fechadas
+   * @return resumo do lote: apurações fechadas e IDs dos produtores cujo fechamento falhou
+   * @throws IllegalArgumentException se o período não estiver no formato {@code YYYY-MM}
    */
-  @Transactional(timeoutString = "${app.apuracao.fechamento.transaction-timeout:600}")
-  public int fecharPeriodo(String periodo) {
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  public ResumoLoteApuracao fecharPeriodo(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
     OffsetDateTime agora = OffsetDateTime.now(clock);
-    List<Produtor> produtores = produtorRepository.findAll();
-    for (Produtor produtor : produtores) {
-      consolidarParaProdutor(produtor.getId(), mes, StatusApuracao.FECHADO, agora);
+    PageRequest lote = PageRequest.ofSize(loteTamanho);
+    int concluidas = 0;
+    List<UUID> falhas = new ArrayList<>();
+
+    List<UUID> ids = produtorRepository.findIdsOrdenados(lote);
+    while (!ids.isEmpty()) {
+      for (UUID produtorId : ids) {
+        try {
+          transacaoPorItem.executeWithoutResult(status ->
+              consolidarParaProdutor(produtorId, mes, StatusApuracao.FECHADO, agora));
+          concluidas++;
+        } catch (RuntimeException e) {
+          falhas.add(produtorId);
+          log.error("Falha ao fechar apuracao do produtor; demais produtores seguem: "
+              + "periodo={} produtorId={}", mes, produtorId, e);
+        }
+      }
+      if (ids.size() < loteTamanho) {
+        break;
+      }
+      ids = produtorRepository.findIdsOrdenadosApos(ids.get(ids.size() - 1), lote);
     }
-    log.info("Fechamento de apuracao concluido: periodo={} produtores={}", mes, produtores.size());
-    return produtores.size();
+
+    ResumoLoteApuracao resumo = new ResumoLoteApuracao(concluidas, falhas);
+    log.info("Fechamento de apuracao concluido: periodo={} fechadas={} falhas={}",
+        mes, resumo.concluidas(), resumo.falhas().size());
+    return resumo;
   }
 
   /**
@@ -176,25 +235,47 @@ public class ApuracaoService {
    * apurações não são tocadas. Roda sem contexto de segurança (por produtor da própria apuração),
    * como o demais fechamento agendado.
    *
-   * @return quantidade de apurações refechadas
+   * <p><strong>Uma apuração por transação (issue #100):</strong> lê só os IDs e refecha cada
+   * apuração numa transação própria, com o mesmo tratamento de falha de
+   * {@link #fecharPeriodo(String)}. Uma apuração removida entre a leitura dos IDs e a transação
+   * dela é ignorada.
+   *
+   * @return resumo do lote: apurações refechadas e IDs das apurações cujo refechamento falhou
    */
-  @Transactional(timeoutString = "${app.apuracao.fechamento.transaction-timeout:600}")
-  public int refecharPeriodosReabertos() {
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  public ResumoLoteApuracao refecharPeriodosReabertos() {
     YearMonth mesCorrente = YearMonth.now(clock);
     YearMonth limiteInferior = mesCorrente.minusMonths(MESES_MAX_REABERTURA);
     OffsetDateTime agora = OffsetDateTime.now(clock);
-    List<ApuracaoMensal> reabertas =
-        apuracaoRepository.findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
-            StatusApuracao.ABERTO, limiteInferior.toString(), mesCorrente.toString());
-    for (ApuracaoMensal apuracao : reabertas) {
-      // A apuração já veio carregada da query acima; reaproveita a instância em vez de refazer
-      // findByProdutorIdAndPeriodo (evita um round-trip por item no job).
-      aplicarConsolidacao(apuracao, apuracao.getProdutor().getId(),
-          YearMonth.parse(apuracao.getPeriodo()), StatusApuracao.FECHADO, agora);
+    List<UUID> ids = apuracaoRepository.findIdsByStatusAndPeriodoEntre(
+        StatusApuracao.ABERTO, limiteInferior.toString(), mesCorrente.toString());
+
+    int concluidas = 0;
+    List<UUID> falhas = new ArrayList<>();
+    for (UUID apuracaoId : ids) {
+      try {
+        Boolean refechada = transacaoPorItem.execute(status -> apuracaoRepository
+            .findById(apuracaoId)
+            .map(apuracao -> {
+              aplicarConsolidacao(apuracao, apuracao.getProdutor().getId(),
+                  YearMonth.parse(apuracao.getPeriodo()), StatusApuracao.FECHADO, agora);
+              return true;
+            })
+            .orElse(false));
+        if (Boolean.TRUE.equals(refechada)) {
+          concluidas++;
+        }
+      } catch (RuntimeException e) {
+        falhas.add(apuracaoId);
+        log.error("Falha ao refechar apuracao reaberta; demais seguem: apuracaoId={}",
+            apuracaoId, e);
+      }
     }
-    log.info("Refechamento de periodos reabertos concluido: janela=[{},{}) apuracoes={}",
-        limiteInferior, mesCorrente, reabertas.size());
-    return reabertas.size();
+
+    ResumoLoteApuracao resumo = new ResumoLoteApuracao(concluidas, falhas);
+    log.info("Refechamento de periodos reabertos concluido: janela=[{},{}) refechadas={} falhas={}",
+        limiteInferior, mesCorrente, resumo.concluidas(), resumo.falhas().size());
+    return resumo;
   }
 
   /**
@@ -333,8 +414,7 @@ public class ApuracaoService {
    * Aplica a consolidação sobre uma {@link ApuracaoMensal} já resolvida (existente ou nova):
    * valida a guarda da RN005, agrega os totais do mês e persiste com o status informado. Extraído
    * para permitir que o refechamento em lote ({@link #refecharPeriodosReabertos()}) reaproveite a
-   * entidade já carregada pela consulta, sem um {@code findByProdutorIdAndPeriodo} redundante por
-   * apuração.
+   * entidade carregada por ID, sem um {@code findByProdutorIdAndPeriodo} redundante por apuração.
    */
   private ApuracaoMensal aplicarConsolidacao(
       ApuracaoMensal apuracao, UUID produtorId, YearMonth mes, StatusApuracao status,

@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
  * <p>Ativo somente quando {@code app.apuracao.fechamento.enabled=true} (padrão). Desabilitado no
  * perfil de testes ({@code application-test.yml}) para não interferir nas asserções — mesmo padrão
  * do {@code SefazStatusSyncJob}.
+ *
+ * <p>Desde a issue #100 cada produtor é fechado em transação própria: a falha de um não desfaz o
+ * fechamento dos demais. O job loga o resumo e sobe para {@code ERROR} listando os IDs que falharam.
  */
 @Component
 @ConditionalOnProperty(name = "app.apuracao.fechamento.enabled", havingValue = "true",
@@ -49,9 +52,16 @@ public class ApuracaoFechamentoJob {
   public void fecharApuracaoDoMes() {
     String periodo = YearMonth.now(ZONE).toString();
     log.info("Iniciando fechamento automatico de apuracao: periodo={}", periodo);
-    int fechadas = apuracaoService.fecharPeriodo(periodo);
-    int refechadas = apuracaoService.refecharPeriodosReabertos();
+    ResumoLoteApuracao fechamento = apuracaoService.fecharPeriodo(periodo);
+    ResumoLoteApuracao refechamento = apuracaoService.refecharPeriodosReabertos();
     log.info("Fechamento automatico concluido: periodo={} apuracoes={} reabertas_refechadas={}",
-        periodo, fechadas, refechadas);
+        periodo, fechamento.concluidas(), refechamento.concluidas());
+    // issue #100: cada produtor fecha em transacao propria; uma falha nao aborta o lote, mas
+    // precisa aparecer no log de forma agregada para alguem reprocessar o produtor afetado.
+    if (fechamento.houveFalha() || refechamento.houveFalha()) {
+      log.error("Fechamento automatico com falhas: periodo={} produtores_com_falha={} "
+              + "apuracoes_reabertas_com_falha={}",
+          periodo, fechamento.falhas(), refechamento.falhas());
+    }
   }
 }

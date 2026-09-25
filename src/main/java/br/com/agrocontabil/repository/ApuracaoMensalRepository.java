@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repositório Spring Data JPA para {@link ApuracaoMensal} (issue Agrocontabil#41 — RN004).
@@ -41,20 +43,30 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
   Optional<ApuracaoMensal> findByIdAndProdutorId(UUID id, UUID produtorId);
 
   /**
-   * Busca as apurações em um dado status cujo período esteja na faixa {@code [inicio, fim)}.
+   * IDs das apurações em um dado status cujo período esteja na faixa {@code [inicio, fim)}.
    *
-   * <p>Usada pelo refechamento automático de períodos reabertos (issue Agrocontabil#57 — RN005): o
-   * job varre as apurações {@link StatusApuracao#ABERTO} dos meses anteriores dentro da janela de 3
-   * meses e as refecha. Como o período é armazenado no formato {@code YYYY-MM}, a comparação
-   * lexicográfica de {@code String} coincide com a ordem cronológica, dispensando conversão. A faixa
-   * é meio-aberta: {@code inicio} inclusivo, {@code fim} exclusivo (tipicamente o mês corrente, já
-   * coberto pelo fechamento normal).
+   * <p>Usada pelo refechamento automático de períodos reabertos (issues Agrocontabil#57 e #100 —
+   * RN005): o job varre as apurações {@link StatusApuracao#ABERTO} dos meses anteriores dentro da
+   * janela de 3 meses e refecha cada uma em transação própria. Devolve só os IDs para que cada
+   * apuração seja carregada dentro da transação que a refecha, e não numa transação de lote.
+   *
+   * <p>Como o período é armazenado no formato {@code YYYY-MM}, a comparação lexicográfica de
+   * {@code String} coincide com a ordem cronológica. A faixa é meio-aberta: {@code inicio}
+   * inclusivo, {@code fim} exclusivo (tipicamente o mês corrente, já coberto pelo fechamento
+   * normal). Coberta pelo índice {@code (status, periodo)} da migration {@code 0016}.
    *
    * @param status status alvo (ex.: {@link StatusApuracao#ABERTO})
    * @param inicio período inicial inclusivo no formato {@code YYYY-MM}
    * @param fim    período final exclusivo no formato {@code YYYY-MM}
-   * @return apurações no status e faixa informados (vazia se nenhuma)
+   * @return IDs das apurações no status e faixa informados, em ordem de ID (vazia se nenhuma)
    */
-  List<ApuracaoMensal> findByStatusAndPeriodoGreaterThanEqualAndPeriodoLessThan(
-      StatusApuracao status, String inicio, String fim);
+  @Query("""
+      SELECT a.id FROM ApuracaoMensal a
+      WHERE a.status = :status AND a.periodo >= :inicio AND a.periodo < :fim
+      ORDER BY a.id
+      """)
+  List<UUID> findIdsByStatusAndPeriodoEntre(
+      @Param("status") StatusApuracao status,
+      @Param("inicio") String inicio,
+      @Param("fim") String fim);
 }

@@ -145,17 +145,17 @@ app:
     # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").
     fechamento:
       enabled: ${APURACAO_FECHAMENTO_ENABLED:true}
-      # O fechamento varre TODOS os produtores numa unica transacao: precisa de um teto proprio,
-      # bem acima do spring.transaction.default-timeout (30s), senao o lote inteiro sofreria
-      # rollback conforme a base cresce. Em segundos.
-      transaction-timeout: ${APURACAO_FECHAMENTO_TX_TIMEOUT:600}
+      # Desde a issue #100 cada produtor fecha em transacao propria (timeout padrao de 30s) e os
+      # produtores sao lidos em lotes por keyset: nao ha mais transacao de lote para limitar.
+      lote-tamanho: ${APURACAO_FECHAMENTO_LOTE_TAMANHO:100}
   # Guias fiscais do Contador (issue #74).
   guia-fiscal:
     # Job diario que marca como VENCIDA toda guia PENDENTE com vencimento passado.
     sync:
       enabled: ${GUIA_FISCAL_SYNC_ENABLED:true}
       cron: ${GUIA_FISCAL_SYNC_CRON:0 0 1 * * *}
-      # Mesmo motivo do fechamento: o job atualiza todas as guias vencidas numa transacao.
+      # O job atualiza todas as guias vencidas numa transacao: precisa de um teto proprio,
+      # acima do spring.transaction.default-timeout (30s). Em segundos.
       transaction-timeout: ${GUIA_FISCAL_SYNC_TX_TIMEOUT:600}
 
 # Tributos — IBS/CBS (EC 132/2023 + LC 214/2025)
