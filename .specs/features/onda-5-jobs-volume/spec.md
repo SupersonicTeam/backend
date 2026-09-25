@@ -47,7 +47,7 @@ compensa agora.
 
 | ID | Requisito |
 |----|-----------|
-| R87-1 | Dependências `net.javacrumbs.shedlock:shedlock-spring` e `shedlock-provider-jdbc-template` na versão **7.10.1** (fixada no `pom.xml`). |
+| R87-1 | Dependências `net.javacrumbs.shedlock:shedlock-spring` e `shedlock-provider-jdbc-template` na versão **6.10.0** (propriedade `shedlock.version` no `pom.xml`). A linha 7.x compila contra Spring 7 / Boot 4; a 6.10.0 compila contra Spring 6.2.10 / Boot 3.5.4, a linha do projeto. |
 | R87-2 | `@EnableSchedulerLock` em `SchedulingConfig`, com o advice do lock **por fora** do `@Transactional` do job: o lock só é liberado depois do commit. |
 | R87-3 | `LockProvider` = `JdbcTemplateLockProvider` com `usingDbTime()` (relógio do banco, imune a skew entre instâncias). |
 | R87-4 | Tabela `shedlock` via changeSet Liquibase `0023-shedlock.xml` (com rollback) e DDL equivalente no H2 de teste. |
@@ -55,7 +55,7 @@ compensa agora.
 
 | Job | Nome do lock | Cadência | `lockAtMostFor` | `lockAtLeastFor` | Justificativa |
 |-----|--------------|----------|-----------------|------------------|---------------|
-| `SefazStatusSyncJob` | `sefaz-status-sync` | `fixedDelay` 15 min | `PT14M` | `PT5M` | Teto abaixo do intervalo; o piso impede que a outra réplica rode logo em seguida, já que cada instância agenda o seu próprio `fixedDelay`. |
+| `SefazStatusSyncJob` | `sefaz-status-sync` | `fixedDelay` 15 min | `PT14M` | `PT10M` | Teto abaixo do intervalo; o piso impede que a outra réplica rode logo em seguida, já que cada instância agenda o seu próprio `fixedDelay`. |
 | `ApuracaoFechamentoJob` | `apuracao-fechamento` | cron `0 0 23 L * *` | `PT50M` | `PT5M` | Roda uma vez por mês; o teto cobre a varredura em lotes com folga e libera o lock se o nó morrer; o piso cobre skew entre réplicas que disparam o mesmo cron. |
 | `GuiaFiscalStatusSyncJob` | `guia-fiscal-status-sync` | cron diário 1h | `PT30M` | `PT5M` | Um `UPDATE` em lote curto; mesmo raciocínio de skew. |
 
@@ -111,9 +111,12 @@ ApuracaoFechamentoJob.fecharApuracaoDoMes()                      [sem transaçã
 ### 3.2 ShedLock (#87)
 
 - `SchedulingConfig`: `@EnableSchedulerLock(defaultLockAtMostFor = "PT30M", order = HIGHEST_PRECEDENCE)`
-  e o bean `LockProvider`. O `order` põe o advice do lock por fora do advice transacional (que tem
-  precedência mínima), então no `GuiaFiscalStatusSyncJob` o lock envolve o commit.
+  e o bean `LockProvider`. O `order` padrão do ShedLock é `LOWEST_PRECEDENCE`, o mesmo do advice
+  transacional; com empate a ordem fica indefinida. Precedência máxima põe o lock por fora, então
+  no `GuiaFiscalStatusSyncJob` o lock envolve o commit.
 - Durações em propriedades `app.<job>.lock.at-most-for` / `at-least-for`, com os padrões da tabela.
+- Tabela `shedlock` no changeSet **`0023-shedlock.xml`** (o `0023` ficou livre porque a #100 resolveu a
+  corrida da apuração com lock pessimista, sem changeSet).
 - No profile `test` os jobs continuam desligados; o teste de lock liga só o job de guias com cron
   desativado (`-`) e chama o método pelo proxy.
 
