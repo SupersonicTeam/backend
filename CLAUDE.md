@@ -141,7 +141,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 475 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 500 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -221,6 +221,15 @@ Primeira das 7 ondas do plano de 2026-09-21 (21 issues abertas). Só config, mig
 - **#89 (parte rápida — PR #111):** `GET /api/notas/{id}/xml` responde **409** (`XmlIndisponivelException` / `ErrorCode.XML_INDISPONIVEL`) quando a nota existe mas o XML não foi gerado, simétrico ao `/pdf`; 404 fica só para nota inexistente ou de outro produtor. **Mudança de contrato para o Angular.** A issue segue aberta para o preview de DANFE de rascunho.
 
 Cobertura ao fim da onda: **393 testes**, todos verdes (inclui os PRs da Onda 2 ja mergeados em paralelo).
+
+### Onda 3 — Concorrência e escopo transacional (em andamento; spec em `.specs/features/onda-3-concorrencia/`)
+
+Ordem obrigatória #95 → #96 → #99 + #97. Spec aprovado em 2026-09-23.
+
+- **#95 Lock otimista (PR #115, mergeado):** `NotaFiscal` ganha `@Version` (changeSet **0022**, `BIGINT NOT NULL DEFAULT 0`). `OptimisticLockingFailureException` → **409** com `ErrorCode.CONFLITO_CONCORRENCIA`, mensagem de ação ("recarregue e tente de novo") sem detalhe do ORM. Só `NotaFiscal` recebe `@Version`: é a única entidade com transições concorrentes por requisição HTTP (decisão D-4 do spec, justificada no Javadoc do campo). Nasceu aqui o **`LiquibaseChangelogIntegrationTest`** — sobe PostgreSQL 16 via Testcontainers, aplica o changelog inteiro e valida com `ddl-auto: validate`. **Era a primeira vez que uma migration era executada por teste** (o profile `test` desabilita o Liquibase); é ignorado sem Docker e roda na CI. **Toda migration nova deve ganhar asserção nesse arquivo.**
+- **#96 Lock e escopo transacional na transmissão (PR #119):** `SefazService` **deixa de ser `@Transactional` na classe**. `enviar`/`cancelar` rodam em **três transações curtas** via `TransactionTemplate` (padrão do `ImportacaoNotaFiscalService` — `@Transactional` por método seria ignorado em silêncio na autoinvocação): reserva sob lock pessimista (`findByIdAndProdutorIdForUpdate`), I/O da SEFAZ **fora de transação**, desfecho + evento. Novos estados transitórios **`ENVIANDO`/`CANCELANDO`** (sem changeSet — `status` é `VARCHAR(20)` sem CHECK). Compensação assimétrica: falha no envio → `PENDENTE_SEFAZ` (a consulta pela chave estabelece a verdade); falha no cancelamento → `AUTORIZADA` (`mapStatus` não conhece `CANCELADA` e o job reautorizaria a nota — regressão da #79). `SefazStatusSyncJob` reconcilia notas presas além de `app.nfe.sefaz.transmissao.timeout-ms` (10 min, corte pelo `updatedAt` do `@PreUpdate`). `sincronizarStatus`/`sincronizarPendentes` adotam o mesmo desenho de três fases. **`MockSefazTransport` passa a lembrar as chaves transmitidas** e responde cStat **217** para chave desconhecida: antes autorizava qualquer chave, e uma nota que falhou antes de chegar ao fisco era "autorizada" pelo job, publicando evento de débito sobre NF-e inexistente. Nova `CancelamentoRejeitadoException` (409, `CANCELAMENTO_REJEITADO`) com cStat/`xMotivo` do fisco.
+  - **Achado que vale lembrar:** com a I/O fora da transação, o `@Version` da #95 já impede a transmissão dupla (barra a segunda thread no commit da **reserva**, antes da rede). O lock pessimista agrega a **semântica do erro** — `NotaFiscalNaoEnviavelException` em vez do 409 genérico de concorrência. Os testes fixam esse tipo de propósito; aceitar o genérico fazia a falsificação passar.
+  - **Nota de integração para o frontend (decidida com o Murillo em 2026-09-24):** `ENVIANDO` e `CANCELANDO` são estados **curtos e não-operáveis** (toda operação responde 409 enquanto duram). O Angular deve tratar **status desconhecido como "em processamento"** e desabilitar as ações da nota — abordagem genérica, que já cobre estados transitórios futuros sem precisar de novo deploy do frontend. Sem isso, uma tela que receba esses valores mostra estado vazio.
 
 ### Débitos técnicos abertos
 
