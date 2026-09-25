@@ -148,7 +148,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 542 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 545 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
@@ -263,6 +263,7 @@ Quarta das 7 ondas do plano de 2026-09-21. Spec, design, tasks e sprint em `.spe
 Quinta das 7 ondas. Ordem #100 → #87 → #103, um PR por issue.
 
 - **#100 Fechamento da apuração por produtor (PR 1):** `fecharPeriodo` fazia `findAll()` de todos os produtores e consolidava tudo numa **única** transação, de modo que um produtor inconsistente desfazia o fechamento de todos. Agora `fecharPeriodo` e `refecharPeriodosReabertos` são `NOT_SUPPORTED`: leem só IDs (produtores em lotes por **keyset**, `app.apuracao.fechamento.lote-tamanho`, padrão 100) e fecham cada item num `TransactionTemplate` **`REQUIRES_NEW`** com o timeout padrão. A falha de um item faz rollback só dele, é logada em `ERROR` e entra no `ResumoLoteApuracao` (concluídas + IDs com falha), que o `ApuracaoFechamentoJob` loga. A propriedade `app.apuracao.fechamento.transaction-timeout` saiu: não há mais transação de lote. RN004/RN005/#54/#64 inalterados. Os testes que passam pelo fechamento vivem em `ApuracaoFechamentoIntegrationTest`, **sem** `@Transactional` de classe: numa transação de teste o `REQUIRES_NEW` não enxergaria os dados do teste e o rollback esconderia justamente os commits que o teste precisa provar. A falha é injetada com `@MockitoSpyBean` no `NotaFiscalRepository`. Consolidação por SQL agregado (item 3 da issue) ficou de fora de propósito; ver o spec.
+  - **Achado do review:** a corrida listener de evento (#64) × fechamento podia regravar `ABERTO` por cima de um período recém-`FECHADO` (a guarda da #54 via a cópia velha). Todo caminho que **grava** `ApuracaoMensal` (consolidar/fechar, listener, refechar, reabrir) agora lê a linha com **lock pessimista** (`...ForUpdate`). Não é `@Version` de propósito: com lock otimista, dois listeners concorrentes do mesmo produtor fariam um recálculo falhar e se perder; com o lock eles se serializam e o segundo relê o estado commitado. O refechamento reconfere `ABERTO` sob lock, e os dois laços param entre itens se a thread for interrompida (shutdown, #101).
 
 ### Débitos técnicos abertos
 
