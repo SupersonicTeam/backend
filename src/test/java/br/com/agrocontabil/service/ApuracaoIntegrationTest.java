@@ -11,7 +11,6 @@ import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -24,7 +23,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,7 +43,12 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link ApuracaoMensal}) contra H2 (profile {@code test}, schema via {@code @Sql}). Confirma a
  * regra de negócio da DoD: <strong>só saídas AUTORIZADAS</strong> compõem o débito e
  * <strong>só entradas IMPORTADAS</strong> compõem o crédito; RASCUNHO/REJEITADA/CANCELADA e outros
- * meses são excluídos. Verifica também o cálculo do saldo e o fechamento pelo job.
+ * meses são excluídos. Verifica também o cálculo do saldo.
+ *
+ * <p>Os cenários que passam pelo fechamento do job ({@code fecharPeriodo} /
+ * {@code refecharPeriodosReabertos}) vivem em {@link ApuracaoFechamentoIntegrationTest}: desde a
+ * issue #100 cada produtor fecha numa transação {@code REQUIRES_NEW}, que não enxerga os dados não
+ * commitados da transação de teste desta classe.
  */
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
@@ -147,82 +150,6 @@ class ApuracaoIntegrationTest {
   }
 
   @Test
-  @DisplayName("Consolidar apos fechamento lanca 409 e nao rebaixa o periodo (issue #54)")
-  void consolidarSobreFechadoRejeitaSemRebaixar() {
-    OffsetDateTime julho = OffsetDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneOffset.ofHours(-3));
-    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, julho, "100.00", "100.00");
-    apuracaoService.fecharPeriodo("2026-07");
-
-    assertThatThrownBy(() -> apuracaoService.consolidar("2026-07"))
-        .isInstanceOf(ApuracaoPeriodoFechadoException.class);
-
-    // Periodo permanece FECHADO — consolidar nao pode rebaixar fora do fluxo de reabertura (RN005).
-    ApuracaoMensal a =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07").orElseThrow();
-    assertThat(a.getStatus()).isEqualTo(StatusApuracao.FECHADO);
-  }
-
-  @Test
-  @DisplayName("Job fecha o periodo do produtor (FECHADO) com data de fechamento")
-  void jobFechaPeriodo() {
-    OffsetDateTime julho = OffsetDateTime.of(2026, 7, 20, 8, 0, 0, 0, ZoneOffset.ofHours(-3));
-    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, julho, "80.00", "80.00");
-
-    int fechadas = apuracaoService.fecharPeriodo("2026-07");
-
-    assertThat(fechadas).isEqualTo(1);
-    ApuracaoMensal a =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07").orElseThrow();
-    assertThat(a.getStatus()).isEqualTo(StatusApuracao.FECHADO);
-    assertThat(a.getDataFechamento()).isNotNull();
-    assertThat(a.getSaldoIbs()).isEqualByComparingTo("80.00");
-  }
-
-  @Test
-  @DisplayName("Reabre apuracao FECHADA do mes atual: volta a ABERTO com auditoria (quem/quando)")
-  void reabreApuracaoFechadaComAuditoria() {
-    // Periodo do mes corrente -> sempre dentro da janela de 3 meses (RN005), independe da data.
-    String periodo = YearMonth.now(ZONE).toString();
-    OffsetDateTime emissao = OffsetDateTime.now(ZONE);
-    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, emissao, "80.00", "80.00");
-    apuracaoService.fecharPeriodo(periodo);
-    ApuracaoMensal fechada =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), periodo).orElseThrow();
-    assertThat(fechada.getStatus()).isEqualTo(StatusApuracao.FECHADO);
-
-    var resposta = apuracaoService.reabrir(fechada.getId());
-
-    assertThat(resposta.status()).isEqualTo("ABERTO");
-    ApuracaoMensal reaberta = apuracaoRepository.findById(fechada.getId()).orElseThrow();
-    assertThat(reaberta.getStatus()).isEqualTo(StatusApuracao.ABERTO);
-    assertThat(reaberta.getDataReabertura()).isNotNull();
-    // Auditoria registra o ID do produtor autenticado (identidade mock; nunca CPF/CNPJ — LGPD).
-    assertThat(reaberta.getReabertoPor()).isEqualTo(produtor.getId().toString());
-    assertThat(reaberta.getReabertoPor()).doesNotContain(produtor.getCpfCnpj());
-  }
-
-  @Test
-  @DisplayName("Refecha apuracao ABERTA de mes anterior na janela RN005; ignora fora da janela (issue #57)")
-  void refechaReabertaDeMesAnteriorDentroDaJanela() {
-    YearMonth mesCorrente = YearMonth.now(ZONE);
-    YearMonth dentroDaJanela = mesCorrente.minusMonths(1); // reaberta -> deve refechar
-    YearMonth foraDaJanela = mesCorrente.minusMonths(4);    // antiga -> nao deve ser tocada
-
-    ApuracaoMensal reaberta = abertaEm(dentroDaJanela.toString());
-    ApuracaoMensal antiga = abertaEm(foraDaJanela.toString());
-
-    int refechadas = apuracaoService.refecharPeriodosReabertos();
-
-    assertThat(refechadas).isEqualTo(1);
-    ApuracaoMensal refechada = apuracaoRepository.findById(reaberta.getId()).orElseThrow();
-    assertThat(refechada.getStatus()).isEqualTo(StatusApuracao.FECHADO);
-    assertThat(refechada.getDataFechamento()).isNotNull();
-    // Fora da janela de reabertura (RN005): permanece ABERTO — o job nao revisita meses tao antigos.
-    assertThat(apuracaoRepository.findById(antiga.getId()).orElseThrow().getStatus())
-        .isEqualTo(StatusApuracao.ABERTO);
-  }
-
-  @Test
   @DisplayName("Reabrir apuracao de outro produtor retorna 404 (anti-IDOR)")
   void reabrirDeOutroProdutorRetorna404() {
     Produtor outro = produtorRepository.save(
@@ -247,18 +174,6 @@ class ApuracaoIntegrationTest {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
-
-  private ApuracaoMensal abertaEm(String periodo) {
-    return apuracaoRepository.save(ApuracaoMensal.builder()
-        .produtor(produtor)
-        .periodo(periodo)
-        .status(StatusApuracao.ABERTO)
-        .debitoIbs(BigDecimal.ZERO).debitoCbs(BigDecimal.ZERO)
-        .creditoIbs(BigDecimal.ZERO).creditoCbs(BigDecimal.ZERO)
-        .saldoIbs(BigDecimal.ZERO).saldoCbs(BigDecimal.ZERO)
-        .totalNotas(0L)
-        .build());
-  }
 
   private void salvarSaida(
       long numero, StatusNotaFiscal status, OffsetDateTime dataEmissao,

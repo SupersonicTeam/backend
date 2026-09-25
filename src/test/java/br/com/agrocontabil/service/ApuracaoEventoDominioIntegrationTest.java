@@ -109,8 +109,9 @@ class ApuracaoEventoDominioIntegrationTest {
     OffsetDateTime emissao = emissaoDentroDoPrazoDeCancelamento();
     String periodo = periodoDe(emissao);
     NotaFiscal nota = salvarSaidaAutorizada(emissao, "150.00", "1350.00");
-    transactionTemplate.executeWithoutResult(
-        status -> apuracaoService.fecharPeriodo(periodo));
+    // fecharPeriodo nao abre transacao de lote (NOT_SUPPORTED, issue #100): cada produtor ja
+    // commita na propria transacao, entao dispensa o TransactionTemplate.
+    apuracaoService.fecharPeriodo(periodo);
 
     transactionTemplate.executeWithoutResult(status ->
         sefazService.cancelar(nota.getId(), "Erro na quantidade dos produtos vendidos"));

@@ -11,6 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.interceptor.TransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionAttributeSource;
 
@@ -19,11 +20,14 @@ import org.springframework.transaction.interceptor.TransactionAttributeSource;
  * maior que o {@code spring.transaction.default-timeout} de 30s introduzido pela issue #98.
  *
  * <p><strong>Por que isto existe:</strong> o default de 30s protege requisições HTTP, mas os jobs
- * varrem a base inteira dentro de <em>uma única</em> transação — {@code fecharPeriodo} itera todos
- * os produtores, {@code refecharPeriodosReabertos} todas as apurações da janela da RN005 e o job
- * de guias carrega e salva todas as vencidas. Conforme a base cresce, essas transações passam dos
- * 30s e o lote inteiro sofre rollback com {@code TransactionTimedOutException} — o fechamento
- * mensal falharia por completo, uma vez por mês, sem ninguém pedir nada.
+ * que varrem a base inteira dentro de <em>uma única</em> transação — hoje o job de guias, que
+ * carrega e salva todas as vencidas — passariam dos 30s conforme a base cresce, e o lote inteiro
+ * sofreria rollback com {@code TransactionTimedOutException}.
+ *
+ * <p>O fechamento da apuração saiu dessa lista na issue #100: {@code fecharPeriodo} e
+ * {@code refecharPeriodosReabertos} não abrem mais transação de lote ({@code NOT_SUPPORTED}) e
+ * processam cada item numa transação curta, que herda o timeout padrão. O segundo teste trava isso:
+ * se alguém voltar a anotá-los com uma transação de lote, o isolamento de falha por produtor some.
  *
  * <p>O timeout continua existindo (transação zumbi ainda é cortada), só que na ordem de grandeza
  * de um job de lote e ajustável por propriedade.
@@ -40,8 +44,6 @@ class JobTransacaoTimeoutTest {
 
   static Stream<Arguments> operacoesDeLote() {
     return Stream.of(
-        Arguments.of(ApuracaoService.class, "fecharPeriodo", new Class<?>[] {String.class}),
-        Arguments.of(ApuracaoService.class, "refecharPeriodosReabertos", new Class<?>[] {}),
         Arguments.of(GuiaFiscalStatusSyncJob.class, "sincronizarVencidas",
             new Class<?>[] {}));
   }
@@ -64,5 +66,28 @@ class JobTransacaoTimeoutTest {
             + "senao o lote todo sofre rollback ao passar do default de %ds",
             tipo.getSimpleName(), metodo, TIMEOUT_PADRAO_SEGUNDOS)
         .isGreaterThan(TIMEOUT_PADRAO_SEGUNDOS);
+  }
+
+  static Stream<Arguments> operacoesPorItem() {
+    return Stream.of(
+        Arguments.of(ApuracaoService.class, "fecharPeriodo", new Class<?>[] {String.class}),
+        Arguments.of(ApuracaoService.class, "refecharPeriodosReabertos", new Class<?>[] {}));
+  }
+
+  @ParameterizedTest(name = "{0}#{1}")
+  @MethodSource("operacoesPorItem")
+  @DisplayName("lote da apuracao nao abre transacao propria: cada item commita sozinho (issue #100)")
+  void loteDaApuracaoNaoAbreTransacaoDeLote(
+      Class<?> tipo, String metodo, Class<?>[] parametros) throws NoSuchMethodException {
+    Method alvo = tipo.getMethod(metodo, parametros);
+
+    TransactionAttribute atributo =
+        transactionAttributeSource.getTransactionAttribute(alvo, tipo);
+
+    assertThat(atributo).isNotNull();
+    assertThat(atributo.getPropagationBehavior())
+        .as("%s#%s precisa ser NOT_SUPPORTED: uma transacao de lote faria a falha de um produtor "
+            + "desfazer o fechamento de todos", tipo.getSimpleName(), metodo)
+        .isEqualTo(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
   }
 }
