@@ -2,6 +2,7 @@ package br.com.agrocontabil.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -22,11 +23,13 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SefazTransport;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
+import br.com.agrocontabil.service.SefazService;
 import br.com.agrocontabil.support.ContadorDeEventos;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.zaxxer.hikari.HikariDataSource;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -82,7 +85,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = {
     "spring.jpa.hibernate.ddl-auto=none",
     // Retry real (3 tentativas), sem esperar 1s entre elas.
-    "app.nfe.sefaz.retry.backoff-ms=1"})
+    "app.nfe.sefaz.retry.backoff-ms=1",
+    // Lote pequeno para o T6 atravessar varios lotes do keyset com poucas notas.
+    "app.nfe.sefaz.sync.lote-tamanho=2"})
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
@@ -103,6 +108,7 @@ class SefazEntregaIncertaIntegrationTest {
   @Autowired private TransactionTemplate transactionTemplate;
   @Autowired private ContadorDeEventos contador;
   @Autowired private DataSource dataSource;
+  @Autowired private SefazService sefazService;
 
   @SpyBean private SefazTransport sefazTransport;
 
@@ -229,6 +235,37 @@ class SefazEntregaIncertaIntegrationTest {
     // da SEFAZ: com a SEFAZ fora, o pool esgota e o backend inteiro para (issue #83). A checagem
     // do pool pega tambem o open-in-view: foi este teste que achou o OSIV religado pela #125.
     assertThat(violacoes).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // Sincronizacao em lote (issue #83)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("T6: sync atravessa varios lotes e um erro numa nota nao impede as outras")
+  void syncProgrideApesarDeErroEmUmaNota() {
+    // Cinco notas pendentes que a SEFAZ autorizou (o mock conhece as chaves). Com lote de 2, o
+    // keyset percorre tres lotes.
+    List<UUID> notas = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      UUID notaId = persistir(StatusNotaFiscal.PENDENTE_SEFAZ);
+      sefazTransport.enviar("<NFe/>", chaveDe(notaId), null);
+      notas.add(notaId);
+    }
+    // Uma delas quebra com erro que nao e de comunicacao (dado inconsistente, por exemplo).
+    UUID quebrada = notas.get(1);
+    doThrow(new IllegalStateException("dado inconsistente simulado"))
+        .when(sefazTransport).consultarStatus(eq(chaveDe(quebrada)), any());
+
+    int atualizadas = sefazService.sincronizarPendentes();
+
+    // Antes, uma excecao fora de SefazComunicacaoException revertia o lote inteiro e o job nunca
+    // progredia. Agora cada nota tem a sua transacao.
+    assertThat(atualizadas).isEqualTo(4);
+    assertThat(statusDe(quebrada)).isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
+    notas.stream().filter(id -> !id.equals(quebrada)).forEach(id ->
+        assertThat(statusDe(id)).isEqualTo(StatusNotaFiscal.AUTORIZADA));
+    assertThat(contador.emitidas()).isEqualTo(4);
   }
 
   // -------------------------------------------------------------------------

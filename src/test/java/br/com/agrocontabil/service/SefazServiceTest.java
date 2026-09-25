@@ -369,8 +369,9 @@ class SefazServiceTest {
     // issue #96: a consulta saiu da transacao e cada nota e aplicada na sua propria tx curta,
     // que recarrega pelo id antes de gravar.
     when(notaFiscalRepository.findById(nota.getId())).thenReturn(Optional.of(nota));
-    when(notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ))
-        .thenReturn(List.of(nota));
+    // issue #83: o job le so IDs, em lotes por keyset.
+    when(notaFiscalRepository.findIdsPorStatus(eq(StatusNotaFiscal.PENDENTE_SEFAZ), any()))
+        .thenReturn(List.of(nota.getId()));
     when(sefazClient.consultarStatus(eq(CHAVE), any()))
         .thenReturn(new SefazRetorno(
             SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e", "141260000000017",

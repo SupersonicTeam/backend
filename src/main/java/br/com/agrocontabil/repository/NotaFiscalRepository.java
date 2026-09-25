@@ -126,15 +126,34 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       List<StatusNotaFiscal> status, OffsetDateTime anteriorA);
 
   /**
-   * Retorna todas as notas em um determinado status, sem filtro de produtor.
+   * Primeiro lote de IDs de notas num status, sem filtro de produtor (issue #83).
    *
-   * <p>Uso restrito a jobs de sistema (ex.: sincronização agendada de status com a SEFAZ —
-   * issue #16), que operam sobre todas as notas pendentes independentemente do produtor.
+   * <p>Uso restrito ao job de sincronização com a SEFAZ. Devolve só os IDs, sem materializar as
+   * entidades: antes, {@code findByStatus} carregava todas as notas pendentes de uma vez. Use
+   * {@code PageRequest.ofSize(n)}: o {@link Pageable} aqui só limita o lote, sem contagem.
    *
-   * @param status status do ciclo de vida a filtrar
-   * @return lista de notas no status informado
+   * @param status status a filtrar
+   * @param lote   tamanho do lote
+   * @return até {@code lote} IDs, em ordem crescente
    */
-  List<NotaFiscal> findByStatus(StatusNotaFiscal status);
+  @Query("SELECT n.id FROM NotaFiscal n WHERE n.status = :status ORDER BY n.id")
+  List<UUID> findIdsPorStatus(@Param("status") StatusNotaFiscal status, Pageable lote);
+
+  /**
+   * Lote seguinte de IDs de notas num status, estritamente depois de {@code apos} (paginação por
+   * keyset, issue #83 — mesmo desenho de {@code ProdutorRepository.findIdsOrdenadosApos}).
+   *
+   * <p>Keyset em vez de offset: as notas sincronizadas saem do status durante a varredura, e com
+   * offset as páginas seguintes se deslocariam e pulariam notas.
+   *
+   * @param status status a filtrar
+   * @param apos   último ID do lote anterior
+   * @param lote   tamanho do lote
+   * @return até {@code lote} IDs maiores que {@code apos}, em ordem crescente
+   */
+  @Query("SELECT n.id FROM NotaFiscal n WHERE n.status = :status AND n.id > :apos ORDER BY n.id")
+  List<UUID> findIdsPorStatusApos(
+      @Param("status") StatusNotaFiscal status, @Param("apos") UUID apos, Pageable lote);
 
   /**
    * Indica se ja existe uma nota com a chave de acesso informada (issue #19).

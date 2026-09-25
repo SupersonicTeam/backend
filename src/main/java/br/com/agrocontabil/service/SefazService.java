@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -338,56 +339,115 @@ public class SefazService {
    * Sincroniza o status de todas as notas em {@link StatusNotaFiscal#PENDENTE_SEFAZ}.
    *
    * <p>Operação de sistema (sem produtor autenticado), executada pelo job agendado
-   * {@link br.com.agrocontabil.sefaz.SefazStatusSyncJob}. Uma falha de comunicação numa
-   * nota é registrada e não interrompe o processamento das demais.
+   * {@link br.com.agrocontabil.sefaz.SefazStatusSyncJob}. Desenho (issue #83):
+   * <ul>
+   *   <li>Lê <strong>só IDs</strong>, em lotes por keyset ({@code app.nfe.sefaz.sync.lote-tamanho}),
+   *       cada lote numa transação curta de leitura. Antes, {@code findByStatus} materializava todas
+   *       as notas pendentes de uma vez.</li>
+   *   <li>Cada nota é processada isoladamente ({@link #sincronizarPendente(UUID)}): leitura curta,
+   *       consulta fora de transação, aplicação curta com recheck. Qualquer falha de uma nota é
+   *       logada e não afeta as demais.</li>
+   *   <li><strong>Disjuntor:</strong> {@code app.nfe.sefaz.sync.max-falhas-consecutivas} falhas de
+   *       comunicação seguidas encerram a execução — a SEFAZ está fora, e insistir só prenderia o
+   *       job pelo pior caso de cada nota. As restantes ficam para o próximo ciclo.</li>
+   * </ul>
    *
    * @return quantidade de notas cujo status mudou após a consulta
    */
   public int sincronizarPendentes() {
-    // A leitura da lista tem a sua propria transacao curta; o lote NAO roda numa transacao unica.
-    // Antes, com @Transactional no metodo, N consultas de rede (cada uma com retry) corriam com a
-    // transacao aberta: uma conexao do pool ficava presa por dezenas de segundos e o
-    // leak-detection (#109) acusava a cada execucao do job.
-    List<NotaFiscal> pendentes = emTransacao(
-        () -> notaFiscalRepository.findByStatus(StatusNotaFiscal.PENDENTE_SEFAZ));
-
+    int loteTamanho = sefazProperties.getSync().getLoteTamanho();
+    int limiteFalhas = sefazProperties.getSync().getMaxFalhasConsecutivas();
     int atualizadas = 0;
-    for (NotaFiscal pendente : pendentes) {
-      UUID notaId = pendente.getId();
-      try {
-        SefazAmbiente ambiente = ambienteDe(pendente);
-        // Consulta fora de transacao.
-        SefazRetorno retorno = sefazClient.consultarStatus(pendente.getChaveAcesso(), ambiente);
+    int falhasSeguidas = 0;
+    UUID ultimo = null;
 
-        // Transacao curta por nota: recarrega, aplica e publica. Isola tambem a colisao de
-        // versao de uma nota, que nao pode desfazer as demais do lote.
-        boolean mudou = Boolean.TRUE.equals(emTransacao(() -> {
-          NotaFiscal nota = notaFiscalRepository.findById(notaId).orElse(null);
-          if (nota == null || nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ) {
-            // Saiu de PENDENTE_SEFAZ entre a leitura e agora: nao sobrescreve.
-            return false;
+    while (true) {
+      UUID apos = ultimo;
+      List<UUID> lote = emTransacao(() -> apos == null
+          ? notaFiscalRepository.findIdsPorStatus(
+              StatusNotaFiscal.PENDENTE_SEFAZ, PageRequest.ofSize(loteTamanho))
+          : notaFiscalRepository.findIdsPorStatusApos(
+              StatusNotaFiscal.PENDENTE_SEFAZ, apos, PageRequest.ofSize(loteTamanho)));
+
+      for (UUID notaId : lote) {
+        switch (sincronizarPendente(notaId)) {
+          case ATUALIZADA -> {
+            atualizadas++;
+            falhasSeguidas = 0;
           }
-          StatusNotaFiscal anterior = nota.getStatus();
-          aplicarRetorno(nota, retorno, ambiente);
-          NotaFiscal salva = notaFiscalRepository.save(nota);
-          if (salva.getStatus() != anterior) {
-            publicarSeAutorizou(anterior, salva);
-            return true;
+          case INALTERADA -> falhasSeguidas = 0;
+          case FALHA_COMUNICACAO -> {
+            falhasSeguidas++;
+            if (falhasSeguidas >= limiteFalhas) {
+              log.warn("Sincronizacao SEFAZ interrompida apos {} falhas de comunicacao seguidas; "
+                  + "as notas restantes ficam para o proximo ciclo", falhasSeguidas);
+              return atualizadas;
+            }
           }
-          return false;
-        }));
-        if (mudou) {
-          atualizadas++;
+          // Falha que nao e de comunicacao (dado inconsistente, colisao de versao): diz respeito
+          // a nota, nao a SEFAZ, entao nao conta para o disjuntor nem o zera.
+          case FALHA -> { }
+          default -> throw new IllegalStateException("Resultado nao tratado");
         }
-      } catch (SefazComunicacaoException e) {
-        // Falha numa nota não interrompe o lote — sera reprocessada na proxima execucao.
-        log.warn("Falha ao sincronizar status da nota {} com a SEFAZ: {}",
-            notaId, e.getMessage());
-      } catch (RuntimeException e) {
-        log.warn("Falha ao aplicar o status consultado da nota {}; sera retentada", notaId, e);
       }
+
+      if (lote.size() < loteTamanho) {
+        return atualizadas;
+      }
+      ultimo = lote.get(lote.size() - 1);
     }
-    return atualizadas;
+  }
+
+  /** Desfecho da sincronização de uma nota, para a contagem e o disjuntor do lote. */
+  private enum ResultadoSincronizacao { ATUALIZADA, INALTERADA, FALHA_COMUNICACAO, FALHA }
+
+  /**
+   * Sincroniza uma única nota pendente com a SEFAZ, isolada das demais (issue #83).
+   *
+   * <p>Três passos, só os de banco em transação: lê chave e ambiente (a nota pode ter saído de
+   * {@code PENDENTE_SEFAZ} desde que o ID foi listado), consulta a SEFAZ fora de transação e aplica
+   * o retorno numa transação curta que confere o status de novo antes de gravar — a guarda da
+   * issue #79 contra sobrescrever nota que já chegou a um estado terminal.
+   *
+   * @param notaId nota listada como pendente
+   * @return o desfecho; nunca lança
+   */
+  private ResultadoSincronizacao sincronizarPendente(UUID notaId) {
+    try {
+      DadosConsulta dados = emTransacao(() -> notaFiscalRepository.findById(notaId)
+          .filter(nota -> nota.getStatus() == StatusNotaFiscal.PENDENTE_SEFAZ)
+          .filter(nota -> nota.getChaveAcesso() != null)
+          .map(nota -> new DadosConsulta(nota.getChaveAcesso(), ambienteDe(nota)))
+          .orElse(null));
+      if (dados == null) {
+        return ResultadoSincronizacao.INALTERADA;
+      }
+
+      SefazRetorno retorno = sefazClient.consultarStatus(dados.chaveAcesso(), dados.ambiente());
+
+      boolean mudou = Boolean.TRUE.equals(emTransacao(() -> {
+        NotaFiscal nota = notaFiscalRepository.findById(notaId).orElse(null);
+        if (nota == null || nota.getStatus() != StatusNotaFiscal.PENDENTE_SEFAZ) {
+          // Saiu de PENDENTE_SEFAZ entre a leitura e agora: nao sobrescreve.
+          return false;
+        }
+        aplicarRetorno(nota, retorno, dados.ambiente());
+        NotaFiscal salva = notaFiscalRepository.save(nota);
+        if (salva.getStatus() == StatusNotaFiscal.PENDENTE_SEFAZ) {
+          return false;
+        }
+        publicarSeAutorizou(StatusNotaFiscal.PENDENTE_SEFAZ, salva);
+        return true;
+      }));
+      return mudou ? ResultadoSincronizacao.ATUALIZADA : ResultadoSincronizacao.INALTERADA;
+    } catch (SefazComunicacaoException e) {
+      // Sera reprocessada na proxima execucao.
+      log.warn("Falha ao sincronizar status da nota {} com a SEFAZ: {}", notaId, e.getMessage());
+      return ResultadoSincronizacao.FALHA_COMUNICACAO;
+    } catch (RuntimeException e) {
+      log.warn("Falha ao sincronizar a nota {}; sera retentada no proximo ciclo", notaId, e);
+      return ResultadoSincronizacao.FALHA;
+    }
   }
 
   /**
