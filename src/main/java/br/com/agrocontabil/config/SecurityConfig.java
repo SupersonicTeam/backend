@@ -21,8 +21,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * <p>Mesmo liberado, mantemos: CSRF desabilitado (API stateless), sessao stateless e CORS
  * controlado por configuracao.
  *
- * <p>Em perfil {@code dev}, o {@link MockProdutorFilter} e registrado automaticamente para simular
- * um usuario autenticado sem necessidade de credenciais reais.
+ * <p>Em perfil {@code dev}, o {@link MockProdutorFilter} e registrado automaticamente e resolve, a
+ * cada requisicao, qual produtor esta "autenticado" a partir do header {@code X-Usuario-Id} (UUID do
+ * produtor); sem o header, cai no produtor semente. O header <strong>declara</strong> a identidade,
+ * nao a prova — nao e autenticacao, e sim o mock multi-usuario que permite exercitar o anti-IDOR ate
+ * a Sprint 8 (issue #93).
+ *
+ * <p>Fora desse perfil o filtro nao existe (dai o {@code required = false} na injecao): nenhuma
+ * requisicao carrega principal e o {@code AuthenticatedProdutorProvider} responde <strong>401</strong>
+ * nos endpoints que dependem de identidade.
  */
 @Configuration
 public class SecurityConfig {
