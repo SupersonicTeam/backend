@@ -1,0 +1,50 @@
+# Profile HOMOLOG — ambiente de validacao antes de producao.
+#
+# Espelha o PROD na infraestrutura (banco por env, sem docker-compose, nenhum segredo literal) e
+# difere em dois pontos deliberados:
+#   1. o MockProdutorFilter e o DataLoader ficam ativos (@Profile({"dev","homolog"})), para que o
+#      cenario multi-usuario da issue #91 seja exercitavel com dois produtores semeados. A
+#      identidade vem declarada no header X-Usuario-Id — e mock, nao autenticacao: por isso este
+#      profile NUNCA deve ser usado com dados reais de produtor;
+#   2. logs e health mais verbosos, porque homologacao existe para diagnosticar.
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      # Tamanho e timeouts do pool vem do application.yml base (issue #98).
+      # Aqui fica apenas o que e especifico do PostgreSQL: o statement_timeout do servidor,
+      # que aborta a query presa no banco — o driver H2 dos testes rejeitaria esta propriedade.
+      data-source-properties:
+        options: -c statement_timeout=${DB_STATEMENT_TIMEOUT_MS:30000}
+
+  docker:
+    compose:
+      # Banco gerenciado externamente, como em producao.
+      enabled: false
+
+  jpa:
+    show-sql: false
+
+# CORS restrito as origens de homologacao (env obrigatoria — nunca "*").
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+
+# Health SEM detalhes, como em producao.
+#
+# O application.yml base usa "when-authorized", que em dev basta: dev e local. Aqui nao serve —
+# o MockProdutorFilter autentica TODA requisicao sem header como o produtor semente, entao
+# "autorizado" passa a significar "qualquer visitante" e o health detalhado (datasource, disco,
+# componentes) ficaria aberto a quem alcancar o ambiente. Diagnostico em homologacao sai pelo log,
+# que ja e DEBUG.
+management:
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: WARN
+    br.com.agrocontabil: DEBUG

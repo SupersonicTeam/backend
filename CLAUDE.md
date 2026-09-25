@@ -103,14 +103,21 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
-| POST | `/api/contador/guias` | Cria guia fiscal do Contador (produtorId explícito; sem auth de Contador) |
-| GET | `/api/contador/guias?produtorId=` | Lista guias fiscais de um produtor |
+| POST | `/api/contador/guias` | Cria guia fiscal (produtorId deve ser o do usuário autenticado; 404 se divergir) |
+| GET | `/api/contador/guias?produtorId=` | Lista guias fiscais do usuário autenticado (404 se o id for de outro) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (ação do produtor autenticado, anti-IDOR) |
 | GET | `/api/calendario-fiscal/{produtorId}/vencimentos` | Vencimentos fiscais do produtor (guias fiscais) |
 
 ## Segurança
 
 - **Auth em stand-by até a Sprint 8.** O `SecurityConfig` está com `permitAll()` em todos os endpoints, mas com CSRF off, sessão stateless e CORS controlado. A estrutura permite plugar JWT sem refatorar controllers — basta trocar o `permitAll()` por regras reais e adicionar o filtro JWT. O produtor "autenticado" vem do `MockProdutorFilter` via `AuthenticatedProdutorProvider`.
+- **Identidade por requisição via header `X-Usuario-Id` (Onda 4, issue #91).** O `MockProdutorFilter` (profiles **`dev` e `homolog`**, nunca `prod`) resolve a cada requisição o produtor cujo **UUID** vem nesse header. O header **declara** a identidade, não a prova — é mock multi-usuário, não autenticação; serve para exercitar o anti-IDOR até a Sprint 8. Contrato:
+  - **sem header** → produtor semente (o produtor A do `DataLoader`), para o Angular atual não quebrar;
+  - **UUID de produtor existente** → esse produtor;
+  - **UUID malformado ou inexistente** → **401 `NAO_AUTENTICADO`** (não 404: não confirma quais ids existem);
+  - **fora de `dev`/`homolog`** → filtro ausente, nenhuma identidade, **401** em todo endpoint que dependa dela (antes da issue #92 era 500).
+  - O 401 nasce no `AuthenticatedProdutorProvider`, não no filtro: exceção lançada em filtro não passa pelo `@RestControllerAdvice` e escaparia do envelope `errors[]`. Efeito colateral aceito: endpoint sem identidade (health, Swagger) responde normal mesmo com header inválido.
+- **Ownership nas guias fiscais (issue #94).** `POST`/`GET /api/contador/guias` tratam o `produtorId` do payload/query como afirmação do cliente e o confrontam com o produtor autenticado antes de ler ou gravar; divergiu, **404**. No `POST` o guard vem antes da consulta, então nada é gravado.
 - **Ownership (anti-IDOR) já aplicado.** Toda operação sobre nota fiscal usa `findByIdAndProdutorId` e responde **404** (não 403) para nota de outro produtor — não revela existência. Mensagens de erro de geração de XML são genéricas ao cliente (detalhe técnico só no log).
 - **Nenhum segredo no repositório.** Senha de banco e JWT secret vêm de env var (`${DB_PASSWORD}`, `${JWT_SECRET}`). Ver `.env.example`.
 - **CORS** controlado por `app.cors.allowed-origins` (env `APP_CORS_ALLOWED_ORIGINS`). Nunca usar `*` em prod.
@@ -141,7 +148,8 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 500 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 525 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
 
@@ -230,6 +238,20 @@ Ordem obrigatória #95 → #96 → #99 + #97. Spec aprovado em 2026-09-23.
 - **#96 Lock e escopo transacional na transmissão (PR #119):** `SefazService` **deixa de ser `@Transactional` na classe**. `enviar`/`cancelar` rodam em **três transações curtas** via `TransactionTemplate` (padrão do `ImportacaoNotaFiscalService` — `@Transactional` por método seria ignorado em silêncio na autoinvocação): reserva sob lock pessimista (`findByIdAndProdutorIdForUpdate`), I/O da SEFAZ **fora de transação**, desfecho + evento. Novos estados transitórios **`ENVIANDO`/`CANCELANDO`** (sem changeSet — `status` é `VARCHAR(20)` sem CHECK). Compensação assimétrica: falha no envio → `PENDENTE_SEFAZ` (a consulta pela chave estabelece a verdade); falha no cancelamento → `AUTORIZADA` (`mapStatus` não conhece `CANCELADA` e o job reautorizaria a nota — regressão da #79). `SefazStatusSyncJob` reconcilia notas presas além de `app.nfe.sefaz.transmissao.timeout-ms` (10 min, corte pelo `updatedAt` do `@PreUpdate`). `sincronizarStatus`/`sincronizarPendentes` adotam o mesmo desenho de três fases. **`MockSefazTransport` passa a lembrar as chaves transmitidas** e responde cStat **217** para chave desconhecida: antes autorizava qualquer chave, e uma nota que falhou antes de chegar ao fisco era "autorizada" pelo job, publicando evento de débito sobre NF-e inexistente. Nova `CancelamentoRejeitadoException` (409, `CANCELAMENTO_REJEITADO`) com cStat/`xMotivo` do fisco.
   - **Achado que vale lembrar:** com a I/O fora da transação, o `@Version` da #95 já impede a transmissão dupla (barra a segunda thread no commit da **reserva**, antes da rede). O lock pessimista agrega a **semântica do erro** — `NotaFiscalNaoEnviavelException` em vez do 409 genérico de concorrência. Os testes fixam esse tipo de propósito; aceitar o genérico fazia a falsificação passar.
   - **Nota de integração para o frontend (decidida com o Murillo em 2026-09-24):** `ENVIANDO` e `CANCELANDO` são estados **curtos e não-operáveis** (toda operação responde 409 enquanto duram). O Angular deve tratar **status desconhecido como "em processamento"** e desabilitar as ações da nota — abordagem genérica, que já cobre estados transitórios futuros sem precisar de novo deploy do frontend. Sem isso, uma tela que receba esses valores mostra estado vazio.
+### Onda 4 — Identidade multi-usuário sem JWT (concluída em 2026-09-24)
+
+Quarta das 7 ondas do plano de 2026-09-21. Spec, design, tasks e sprint em `.specs/features/onda-4-identidade/`. Ordem obrigatória #91 → #94 → #92, um PR por issue.
+
+- **#91 Identidade por requisição (PR 1):** o `MockProdutorFilter` deixou de injetar sempre o mesmo produtor cacheado (`volatile cachedProdutor`, removido) e passou a resolver o UUID declarado em **`X-Usuario-Id`** a cada requisição; sem header, cai no produtor semente. Header malformado ou de produtor inexistente **não** cai no fallback — mascarar isso esconderia bug de integração do cliente. O contexto de segurança é limpo em `finally`: o Tomcat reusa threads do pool e a identidade vazaria para a requisição seguinte (tem teste). O `DataLoader` passou a semear **dois** produtores (A = semente, B = "o outro dono"), ambos com IE e endereço próprios de municípios diferentes — desde a #88 isso é pré-condição da emissão, e valores distintos fazem uma troca de produtor aparecer no XML. `CorsIntegrationTest` trava o preflight do header (a `CorsConfig` usa `allowedHeaders("*")`, então já passava; o teste impede que um aperto futuro quebre o Angular em silêncio).
+- **#94 Ownership nas guias fiscais (PR 2):** `POST`/`GET /api/contador/guias` aceitavam **qualquer** `produtorId` — a criação só checava existência e a listagem devolvia as guias de quem fosse informado. Novo guard `exigirProdutorAutenticado` (mesmo do `CalendarioFiscalService`) confronta o id com o produtor autenticado antes de qualquer leitura/escrita → **404**, nunca 403. No `POST` o guard vem antes da consulta, então nada é gravado. Dois testes antigos mudaram de significado e foram reescritos: o `fluxoCompleto` chamava `criar`/`listar` **sem autenticar ninguém** (passava por não haver ownership) e o `criarLancaNotFoundParaProdutorInexistente` testava o 404 com id aleatório — caminho que agora morre no guard, antes do banco; foi reapontado para o único cenário que ainda exercita o 404 real (produtor autenticado apagado do banco).
+- **#92 401 honesto + profile `homolog` (PR 3):** `NaoAutenticadoException extends DomainException` (401) + `ErrorCode.NAO_AUTENTICADO`; o `AuthenticatedProdutorProvider` troca `IllegalStateException` por ela e o `GlobalExceptionHandler` **não** ganhou handler novo (`DomainException` já era tratado). O 401 nasce no provider, não no filtro — exceção lançada em filtro roda antes do `DispatcherServlet` e escaparia do envelope `errors[]`. Filtro e `DataLoader` passam a `@Profile({"dev","homolog"})` e nasce o `application-homolog.yml`, espelhando o prod pós-#98 (pool no base, `statement_timeout` no profile) e diferindo só no seed e na verbosidade de log. **`health.show-details: never` em homolog** (achado do security review): o base usa `when-authorized`, que ali não protege nada — o filtro autentica toda requisição sem header como o produtor semente, então "autorizado" viraria "qualquer visitante" e o health detalhado ficaria aberto.
+- **Build:** JaCoCo 0.8.12 → **0.8.15**, que destrava `./mvnw test` em JDK 26 (ver seção Testes).
+
+**Nota de integração para o frontend Angular:**
+- Header **`X-Usuario-Id`** = UUID do produtor — o **mesmo** id que o frontend já passa em `/api/calendario-fiscal/:produtorId/vencimentos` e no payload de `/api/contador/guias`.
+- **Nada quebra hoje:** sem o header, o backend responde como o produtor semente. A adoção é opt-in.
+- Ao adotar, enviar em **todas** as chamadas (interceptor HTTP) — inclusive nas de `/api/contador/guias`, onde o `produtorId` do payload/query precisa **bater** com o do header, sob pena de 404.
+- Novo status possível: **401** com `errors[0].code == "NAO_AUTENTICADO"` (header presente e inválido, ou ambiente sem identidade). Tratar como sessão inválida — é o mesmo 401 que o JWT devolverá na Sprint 8.
 
 ### Débitos técnicos abertos
 
@@ -240,7 +262,8 @@ Ordem obrigatória #95 → #96 → #99 + #97. Spec aprovado em 2026-09-23.
   - O leak-detection vai emitir `Connection leak detection triggered` para os vazamentos das issues **#97/#99** (Onda 3) — é o efeito pretendido, não regressão.
   - Lock distribuído dos jobs (`ShedLock`) é a issue **#87** (Onda 5): hoje a coordenação é por instância.
 - **Sprint 7 (SEFAZ real):** `cNF` da chave via `SecureRandom` (hoje determinístico para teste). Substituir `MockSefazTransport` por transporte SOAP real + certificado **ICP-Brasil** em produção.
-- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente; `IllegalStateException`→401 no `AuthenticatedProdutorProvider`. (Validação de dígitos verificadores de CPF/CNPJ já entregue na #18 via `DocumentoFiscalValidator`.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador — `POST`/`GET /api/contador/guias` (issue #74) aceitam `produtorId` explícito sem checagem de ownership até lá.
+- **Sprint 8 (segurança/auth real):** mascarar CPF/CNPJ em logs (LGPD); lock pessimista contra geração concorrente. (Validação de dígitos verificadores de CPF/CNPJ entregue na #18 via `DocumentoFiscalValidator`; `IllegalStateException`→401 no `AuthenticatedProdutorProvider` entregue na Onda 4, issue #92.) Inclui a entidade `Contador` (hoje inexistente) + vínculo Contador↔Produtor + RBAC produtor/contador (issue **#93**) — até lá `POST`/`GET /api/contador/guias` exigem que o `produtorId` seja o do **próprio produtor autenticado** (issue #94), ou seja, são na prática endpoints do produtor, não do contador.
+- **Identidade declarada, não provada (Onda 4):** o header `X-Usuario-Id` não é verificado — qualquer cliente pode afirmar ser qualquer produtor. É aceitável porque só existe em `dev`/`homolog`, **nunca em prod**, e some quando o JWT entrar (#93). Homologação, portanto, não deve receber dados reais de produtor.
 - **IE de produtor sem dígito verificador (#88):** não há algoritmo nacional padronizado de DV de Inscrição Estadual (cada UF tem o seu). Só o formato é validado; validação por UF fica para quando houver necessidade real.
 - **Bairro do destinatário (#88):** `EnderecoDestinatario` não modela o bairro e o XSD exige `xBairro` no `enderDest` — o literal `"CENTRO"` permanece nesse grupo. Resolver modelando o campo no domínio e no DTO. (`"S/N"` em `nro` não é placeholder: é a convenção do layout para imóvel sem número.)
 - **Tabela IBGE de municípios (Sprint 7):** a coerência município×UF é verificada só pelo prefixo (2 primeiros dígitos = cUF). A tabela completa dos 5.570 municípios validaria a existência do código.

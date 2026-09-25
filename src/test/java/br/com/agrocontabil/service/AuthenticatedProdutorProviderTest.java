@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.com.agrocontabil.exception.NaoAutenticadoException;
 import br.com.agrocontabil.model.Produtor;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -21,8 +22,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <p>Cenarios cobertos:
  * <ul>
  *   <li>Produtor valido no SecurityContext retorna o produtor corretamente</li>
- *   <li>Sem Authentication no SecurityContext lanca IllegalStateException</li>
- *   <li>Principal diferente de Produtor lanca IllegalStateException</li>
+ *   <li>Sem Authentication no SecurityContext lanca NaoAutenticadoException (401)</li>
+ *   <li>Principal diferente de Produtor lanca NaoAutenticadoException (401)</li>
  * </ul>
  */
 class AuthenticatedProdutorProviderTest {
@@ -65,46 +66,46 @@ class AuthenticatedProdutorProviderTest {
   }
 
   // -------------------------------------------------------------------------
-  // Sem autenticacao — IllegalStateException
+  // Sem autenticacao — NaoAutenticadoException (401)
   // -------------------------------------------------------------------------
 
   @Test
-  @DisplayName("get deve lancar IllegalStateException quando nao ha Authentication no contexto")
-  void getShouldThrowIllegalStateExceptionWhenNoAuthentication() {
+  @DisplayName("get deve lancar NaoAutenticadoException quando nao ha Authentication no contexto")
+  void getShouldThrowNaoAutenticadoWhenNoAuthentication() {
     // SecurityContextHolder foi limpo no setUp — nao ha Authentication
     assertThatThrownBy(() -> provider.get())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Nenhum produtor autenticado");
+        .isInstanceOf(NaoAutenticadoException.class)
+        .hasMessageContaining("identidade de usuario");
   }
 
   @Test
-  @DisplayName("get deve lancar IllegalStateException quando Authentication e null explicitamente")
+  @DisplayName("get deve lancar NaoAutenticadoException quando Authentication e null explicitamente")
   void getShouldThrowWhenAuthenticationIsNull() {
     SecurityContextHolder.getContext().setAuthentication(null);
 
     assertThatThrownBy(() -> provider.get())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Nenhum produtor autenticado");
+        .isInstanceOf(NaoAutenticadoException.class)
+        .hasMessageContaining("identidade de usuario");
   }
 
   // -------------------------------------------------------------------------
-  // Principal nao e Produtor — IllegalStateException
+  // Principal nao e Produtor — NaoAutenticadoException (401)
   // -------------------------------------------------------------------------
 
   @Test
-  @DisplayName("get deve lancar IllegalStateException quando principal nao e Produtor (String)")
+  @DisplayName("get deve lancar NaoAutenticadoException quando principal nao e Produtor (String)")
   void getShouldThrowWhenPrincipalIsNotProdutor() {
     UsernamePasswordAuthenticationToken auth =
         new UsernamePasswordAuthenticationToken("usuario-nao-produtor", null, java.util.List.of());
     SecurityContextHolder.getContext().setAuthentication(auth);
 
     assertThatThrownBy(() -> provider.get())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Nenhum produtor autenticado");
+        .isInstanceOf(NaoAutenticadoException.class)
+        .hasMessageContaining("identidade de usuario");
   }
 
   @Test
-  @DisplayName("get deve lancar IllegalStateException quando principal e um objeto arbitrario")
+  @DisplayName("get deve lancar NaoAutenticadoException quando principal e um objeto arbitrario")
   void getShouldThrowWhenPrincipalIsArbitraryObject() {
     UsernamePasswordAuthenticationToken auth =
         new UsernamePasswordAuthenticationToken(
@@ -112,7 +113,7 @@ class AuthenticatedProdutorProviderTest {
     SecurityContextHolder.getContext().setAuthentication(auth);
 
     assertThatThrownBy(() -> provider.get())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Nenhum produtor autenticado");
+        .isInstanceOf(NaoAutenticadoException.class)
+        .hasMessageContaining("identidade de usuario");
   }
 }

@@ -45,8 +45,10 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 ## Segurança (já aplicada, manter)
 
-- **Anti-IDOR:** toda operação sobre nota usa `findByIdAndProdutorId` e responde **404** (não 403) para nota de outro produtor — não revela existência.
-- Produtor "autenticado" vem do `MockProdutorFilter` via `AuthenticatedProdutorProvider` (auth real só na Sprint 8).
+- **Anti-IDOR:** toda operação sobre recurso de produtor usa `findByIdAndProdutorId` e responde **404** (não 403) para recurso de outro produtor — não revela existência.
+- **`produtorId` vindo do cliente é afirmação, não identidade.** Quando um endpoint recebe `produtorId` no path/query/payload (calendário, guias fiscais), confrontar com `produtorProvider.get().getId()` **antes** de ler ou gravar; divergiu, `ResourceNotFoundException` (404). Foi o que faltava nas guias até a issue #94.
+- Produtor "autenticado" vem do `MockProdutorFilter` via `AuthenticatedProdutorProvider`. O filtro resolve o UUID do header **`X-Usuario-Id`** por requisição (profiles `dev`/`homolog`); sem header, produtor semente. O header **declara** identidade, não prova — auth real só na Sprint 8 (#93).
+- **Sem identidade válida → 401** `NaoAutenticadoException` (`ErrorCode.NAO_AUTENTICADO`), nunca 500. Vale tanto para header que não resolve quanto para profile sem filtro (prod).
 - **Nenhum segredo no repo** — env vars (`${DB_PASSWORD}`, `${JWT_SECRET}`, `NFE_CERT_*`). CORS por env, nunca `*`.
 - **Logs sem senha/token/credencial.**
 

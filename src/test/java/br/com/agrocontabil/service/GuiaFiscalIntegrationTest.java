@@ -84,6 +84,7 @@ class GuiaFiscalIntegrationTest {
   @Test
   @DisplayName("Fluxo completo: cria guia, aparece na listagem e no calendario, produtor paga")
   void fluxoCompletoCriarListarPagar() {
+    autenticarComo(produtor);
     GuiaFiscalRequest request = new GuiaFiscalRequest(
         produtor.getId(), TipoGuiaFiscal.ICMS, LocalDate.of(2026, 8, 20),
         new BigDecimal("1250.00"), "Referente a agosto/2026");
@@ -94,8 +95,6 @@ class GuiaFiscalIntegrationTest {
     List<GuiaFiscalResponse> guias = guiaFiscalService.listar(produtor.getId());
     assertThat(guias).hasSize(1);
 
-    // Calendario e Dashboard/Apuracao: tela do proprio produtor, exige autenticacao (anti-IDOR).
-    autenticarComo(produtor);
     List<VencimentoFiscalResponse> vencimentos =
         calendarioFiscalService.listarVencimentos(produtor.getId());
     assertThat(vencimentos).hasSize(1);
@@ -162,13 +161,51 @@ class GuiaFiscalIntegrationTest {
   }
 
   @Test
-  @DisplayName("criar() lanca 404 real quando o produtorId nao existe no banco")
+  @DisplayName("criar() lanca 404 quando o produtorId nao existe no banco")
   void criarLancaNotFoundParaProdutorInexistente() {
+    // Produtor autenticado apagado do banco: passa pelo guard de ownership e cai no 404 real da
+    // consulta — o unico caminho que ainda exercita esse trecho depois da #94.
+    autenticarComo(produtor);
+    guiaFiscalRepository.deleteAll();
+    produtorRepository.delete(produtor);
+
     GuiaFiscalRequest request = new GuiaFiscalRequest(
-        UUID.randomUUID(), TipoGuiaFiscal.OUTRO, LocalDate.of(2026, 8, 20),
+        produtor.getId(), TipoGuiaFiscal.OUTRO, LocalDate.of(2026, 8, 20),
         new BigDecimal("50.00"), null);
 
     assertThatThrownBy(() -> guiaFiscalService.criar(request))
+        .isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  @Test
+  @DisplayName("criar() lanca 404 para guia destinada a outro produtor e nao grava nada (#94)")
+  void criarParaOutroProdutorRespeitaAntiIdor() {
+    autenticarComo(outroProdutor);
+    GuiaFiscalRequest requestParaOProdutor = new GuiaFiscalRequest(
+        produtor.getId(), TipoGuiaFiscal.ICMS, LocalDate.of(2026, 8, 20),
+        new BigDecimal("1250.00"), null);
+
+    assertThatThrownBy(() -> guiaFiscalService.criar(requestParaOProdutor))
+        .isInstanceOf(ResourceNotFoundException.class);
+
+    assertThat(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("listar() lanca 404 ao pedir as guias de outro produtor (#94)")
+  void listarDeOutroProdutorRespeitaAntiIdor() {
+    guiaFiscalRepository.save(GuiaFiscal.builder()
+        .produtor(produtor)
+        .tipoGuia(TipoGuiaFiscal.ICMS)
+        .dataVencimento(LocalDate.of(2026, 8, 20))
+        .valor(new BigDecimal("300.00"))
+        .status(StatusGuiaFiscal.PENDENTE)
+        .build());
+
+    autenticarComo(outroProdutor);
+
+    assertThatThrownBy(() -> guiaFiscalService.listar(produtor.getId()))
         .isInstanceOf(ResourceNotFoundException.class);
   }
 }

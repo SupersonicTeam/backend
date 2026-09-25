@@ -47,7 +47,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * </ul>
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "homolog"})
 public class MockProdutorFilter extends OncePerRequestFilter {
 
   /** Header que declara qual usuario esta fazendo a requisicao. Valor: UUID do produtor. */

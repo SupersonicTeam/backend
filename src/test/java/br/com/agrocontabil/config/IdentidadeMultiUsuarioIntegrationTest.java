@@ -2,16 +2,22 @@ package br.com.agrocontabil.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.agrocontabil.model.EnderecoDestinatario;
+import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.StatusGuiaFiscal;
+import br.com.agrocontabil.model.TipoGuiaFiscal;
+import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -21,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
@@ -54,6 +61,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
+  @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private TestDatabaseCleaner cleaner;
 
   private MockMvc mockMvc;
@@ -119,12 +127,8 @@ class IdentidadeMultiUsuarioIntegrationTest {
   }
 
   @Test
-  @DisplayName("header invalido nao autentica: nao cai no fallback nem devolve dados de A")
-  void headerInvalidoNaoAutenticaComoSemente() throws Exception {
-    // O 401 so nasce no PR da issue #92, quando o AuthenticatedProdutorProvider passa a lancar
-    // NaoAutenticadoException (ate la o status e 500). A garantia verificada aqui e a que importa
-    // para a seguranca e vale nos dois casos: a requisicao nao tem sucesso e nao vaza os dados do
-    // produtor semente para quem declarou uma identidade que nao existe.
+  @DisplayName("header invalido responde 401 e nao vaza os dados do produtor semente (#92)")
+  void headerInvalidoResponde401() throws Exception {
     naoAutenticaNemVazaDados("nao-e-uuid");
     naoAutenticaNemVazaDados(UUID.randomUUID().toString());
   }
@@ -132,10 +136,78 @@ class IdentidadeMultiUsuarioIntegrationTest {
   private void naoAutenticaNemVazaDados(String headerInvalido) throws Exception {
     mockMvc
         .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, headerInvalido))
-        .andExpect(resultado -> assertThat(resultado.getResponse().getStatus()).isNotEqualTo(200))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
         .andExpect(
             resultado ->
                 assertThat(resultado.getResponse().getContentAsString()).doesNotContain("1001"));
+  }
+
+  @Test
+  @DisplayName("sem filtro de identidade (simula prod), endpoint autenticado responde 401, nao 500")
+  void semFiltroDeIdentidadeResponde401() throws Exception {
+    // Em prod o MockProdutorFilter nao e registrado: nenhuma requisicao carrega principal. Antes da
+    // issue #92 isso derrubava toda a API autenticada em 500 generico.
+    MockMvc semFiltro = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+
+    semFiltro
+        .perform(get("/api/notas"))
+        .andExpect(status().isUnauthorized())
+        // RFC 9110 exige o desafio no 401 — mesmo cuidado que a #66 teve com Allow/Accept.
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+            .header().string("WWW-Authenticate",
+                org.hamcrest.Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)))
+        .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
+        .andExpect(jsonPath("$.errors[0].suggestion").value(
+            org.hamcrest.Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)));
+  }
+
+  @Test
+  @DisplayName("guias fiscais: B nao le nem cria guias de A pelo header (#94)")
+  void guiasFiscaisRespeitamOwnershipPorHeader() throws Exception {
+    guiaFiscalRepository.save(
+        GuiaFiscal.builder()
+            .produtor(produtorA)
+            .tipoGuia(TipoGuiaFiscal.ICMS)
+            .dataVencimento(LocalDate.of(2026, 8, 20))
+            .valor(new BigDecimal("1250.00"))
+            .status(StatusGuiaFiscal.PENDENTE)
+            .build());
+
+    // A enxerga a propria guia.
+    mockMvc
+        .perform(
+            get("/api/contador/guias")
+                .param("produtorId", produtorA.getId().toString())
+                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorA.getId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1));
+
+    // B pedindo as guias de A: 404, sem revelar que elas existem.
+    mockMvc
+        .perform(
+            get("/api/contador/guias")
+                .param("produtorId", produtorA.getId().toString())
+                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.errors[0].code").value("RESOURCE_NOT_FOUND"));
+
+    // B criando guia em nome de A: 404 e nada gravado.
+    String payload =
+        """
+        {"produtorId":"%s","tipoGuia":"DARF","dataVencimento":"2026-09-20","valor":500.00}
+        """
+            .formatted(produtorA.getId());
+    mockMvc
+        .perform(
+            post("/api/contador/guias")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload)
+                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+        .andExpect(status().isNotFound());
+
+    assertThat(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtorA.getId()))
+        .hasSize(1);
   }
 
   @Test
