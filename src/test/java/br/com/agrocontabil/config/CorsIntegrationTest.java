@@ -65,6 +65,16 @@ class CorsIntegrationTest {
   }
 
   @Test
+  @DisplayName("Resposta expoe X-Total-Count (total da listagem paginada de guias, #103)")
+  void respostaExpoeTotalDaListagemPaginada() throws Exception {
+    // Sem o header na lista de expostos, o navegador esconde o total do Angular mesmo com 200.
+    mockMvc.perform(get("/api/v1/health").header(ORIGIN, ORIGEM_ANGULAR))
+        .andExpect(status().isOk())
+        .andExpect(header().string(ACCESS_CONTROL_EXPOSE_HEADERS,
+            Matchers.containsString("X-Total-Count")));
+  }
+
+  @Test
   @DisplayName("Preflight libera o header de identidade X-Usuario-Id (#91)")
   void preflightLiberaHeaderDeIdentidade() throws Exception {
     // A CorsConfig aceita qualquer header de requisicao hoje, entao o X-Usuario-Id ja passa. Este

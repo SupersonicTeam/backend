@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -206,7 +207,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
                 .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
         .andExpect(status().isNotFound());
 
-    assertThat(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtorA.getId()))
+    assertThat(guiaFiscalRepository.findByProdutorId(produtorA.getId(), Pageable.unpaged()))
         .hasSize(1);
   }
 

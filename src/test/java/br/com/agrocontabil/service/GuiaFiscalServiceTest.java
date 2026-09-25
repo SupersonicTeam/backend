@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,8 +31,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 /**
  * Testes unitários do {@link GuiaFiscalService} (issue #74).
@@ -116,10 +123,10 @@ class GuiaFiscalServiceTest {
     autenticarProdutor();
     UUID outroProdutorId = UUID.randomUUID();
 
-    assertThatThrownBy(() -> service.listar(outroProdutorId))
+    assertThatThrownBy(() -> service.listar(outroProdutorId, 0, 100))
         .isInstanceOf(ResourceNotFoundException.class);
 
-    verify(guiaFiscalRepository, never()).findByProdutorIdOrderByDataVencimentoDesc(any());
+    verify(guiaFiscalRepository, never()).findByProdutorId(any(), any());
   }
 
   @Test
@@ -127,23 +134,42 @@ class GuiaFiscalServiceTest {
   void listarRetornaGuiasDoProdutor() {
     autenticarProdutor();
     GuiaFiscal guia = guiaPendente();
-    when(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
-        .thenReturn(List.of(guia));
+    when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any()))
+        .thenReturn(new PageImpl<>(List.of(guia), PageRequest.of(0, 100), 1));
 
-    List<GuiaFiscalResponse> guias = service.listar(produtor.getId());
+    Page<GuiaFiscalResponse> guias = service.listar(produtor.getId(), 0, 100);
 
-    assertThat(guias).hasSize(1);
-    assertThat(guias.get(0).id()).isEqualTo(guia.getId());
+    assertThat(guias.getContent()).hasSize(1);
+    assertThat(guias.getContent().get(0).id()).isEqualTo(guia.getId());
+    assertThat(guias.getTotalElements()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("listar() pagina com a pagina e o tamanho pedidos e ordem fixa (issue #103)")
+  void listarPaginaComOrdemFixa() {
+    autenticarProdutor();
+    when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any()))
+        .thenReturn(Page.empty());
+
+    service.listar(produtor.getId(), 2, 50);
+
+    ArgumentCaptor<Pageable> pagina = ArgumentCaptor.forClass(Pageable.class);
+    verify(guiaFiscalRepository).findByProdutorId(eq(produtor.getId()), pagina.capture());
+    assertThat(pagina.getValue().getPageNumber()).isEqualTo(2);
+    assertThat(pagina.getValue().getPageSize()).isEqualTo(50);
+    // Vencimento desc com desempate por id: guias do mesmo dia nao pulam nem repetem entre paginas.
+    assertThat(pagina.getValue().getSort()).isEqualTo(
+        Sort.by(Sort.Direction.DESC, "dataVencimento").and(Sort.by(Sort.Direction.DESC, "id")));
   }
 
   @Test
   @DisplayName("listar() retorna lista vazia quando o proprio produtor nao tem guias")
   void listarRetornaVazioQuandoNaoHaGuias() {
     autenticarProdutor();
-    when(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
-        .thenReturn(List.of());
+    when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any()))
+        .thenReturn(Page.empty());
 
-    assertThat(service.listar(produtor.getId())).isEmpty();
+    assertThat(service.listar(produtor.getId(), 0, 100)).isEmpty();
     verify(produtorRepository, never()).findById(any());
   }
 

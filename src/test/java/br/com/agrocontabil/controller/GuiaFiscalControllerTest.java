@@ -1,6 +1,7 @@
 package br.com.agrocontabil.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -25,10 +26,15 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -113,7 +119,7 @@ class GuiaFiscalControllerTest {
   @DisplayName("GET /api/contador/guias?produtorId= de outro produtor retorna 404 (#94)")
   void listarDeOutroProdutorRetorna404() throws Exception {
     UUID produtorDeOutroDono = UUID.randomUUID();
-    when(guiaFiscalService.listar(produtorDeOutroDono))
+    when(guiaFiscalService.listar(produtorDeOutroDono, 0, 100))
         .thenThrow(new ResourceNotFoundException("Produtor", produtorDeOutroDono));
 
     mockMvc.perform(get("/api/contador/guias").param("produtorId", produtorDeOutroDono.toString()))
@@ -122,14 +128,47 @@ class GuiaFiscalControllerTest {
   }
 
   @Test
-  @DisplayName("GET /api/contador/guias?produtorId= retorna 200 com a lista do produtor")
+  @DisplayName("GET /api/contador/guias?produtorId= retorna 200 com array e X-Total-Count (#103)")
   void listarRetorna200ComListaDoProdutor() throws Exception {
     UUID produtorId = UUID.randomUUID();
-    when(guiaFiscalService.listar(produtorId)).thenReturn(List.of(respostaExemplo(produtorId)));
+    // Pagina padrao (0, 100) com 1 guia de um total de 150 do produtor.
+    when(guiaFiscalService.listar(produtorId, 0, 100)).thenReturn(
+        new PageImpl<>(List.of(respostaExemplo(produtorId)), PageRequest.of(0, 100), 150));
 
     mockMvc.perform(get("/api/contador/guias").param("produtorId", produtorId.toString()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].produtorId").value(produtorId.toString()));
+        // Corpo continua sendo array: o Angular atual le GuiaFiscal[] (compatibilidade).
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$[0].produtorId").value(produtorId.toString()))
+        .andExpect(header().string(GuiaFiscalController.HEADER_TOTAL, "150"));
+  }
+
+  @Test
+  @DisplayName("GET /api/contador/guias repassa page e size informados (#103)")
+  void listarRepassaPaginaETamanho() throws Exception {
+    UUID produtorId = UUID.randomUUID();
+    when(guiaFiscalService.listar(produtorId, 3, 20)).thenReturn(Page.empty());
+
+    mockMvc.perform(get("/api/contador/guias")
+            .param("produtorId", produtorId.toString())
+            .param("page", "3")
+            .param("size", "20"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty())
+        .andExpect(header().string(GuiaFiscalController.HEADER_TOTAL, "0"));
+  }
+
+  @ParameterizedTest(name = "{0}={1}")
+  @CsvSource({"size,201", "size,0", "page,-1", "page,10001"})
+  @DisplayName("GET /api/contador/guias com page/size fora da faixa retorna 400 no envelope (#103)")
+  void listarComPaginacaoForaDaFaixaRetorna400(String parametro, String valor) throws Exception {
+    mockMvc.perform(get("/api/contador/guias")
+            .param("produtorId", UUID.randomUUID().toString())
+            .param(parametro, valor))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value(parametro));
+    verifyNoInteractions(guiaFiscalService);
   }
 
   @Test

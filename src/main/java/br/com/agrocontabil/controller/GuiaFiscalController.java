@@ -5,6 +5,7 @@ import br.com.agrocontabil.dto.GuiaFiscalRequest;
 import br.com.agrocontabil.dto.GuiaFiscalResponse;
 import br.com.agrocontabil.service.GuiaFiscalService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,10 +13,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,10 +43,17 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
  * {@link GuiaFiscalService} e mapeia o resultado para a resposta HTTP.
  */
 @RestController
+@Validated
 @RequestMapping("/api/contador/guias")
 @Tag(name = "Guias Fiscais",
     description = "Guias fiscais (ICMS/FUNRURAL/DARF/GPS) anexadas pelo Contador a um produtor")
 public class GuiaFiscalController {
+
+  /**
+   * Header com o total de guias do produtor (issue #103). O corpo da listagem segue sendo um
+   * array para não quebrar o Angular; o total fica aqui, exposto no CORS ({@code CorsConfig}).
+   */
+  public static final String HEADER_TOTAL = "X-Total-Count";
 
   private final GuiaFiscalService guiaFiscalService;
 
@@ -89,19 +101,37 @@ public class GuiaFiscalController {
    */
   @GetMapping
   @Operation(
-      summary = "Lista guias fiscais de um produtor",
-      description = "Retorna as guias fiscais do produtorId informado, mais recentes primeiro. "
-          + "O produtorId precisa ser o do produtor autenticado (404 caso contrario). Lista vazia "
-          + "se ele nao tiver guias.")
+      summary = "Lista guias fiscais de um produtor, paginadas",
+      description = "Retorna uma pagina das guias fiscais do produtorId informado, mais recentes "
+          + "primeiro (vencimento desc, id desc). O corpo continua sendo um array, compativel com "
+          + "o cliente que nao pagina; o total de guias vai no header X-Total-Count. Padrao: "
+          + "page=0, size=100 (maximo 200). O produtorId precisa ser o do produtor autenticado "
+          + "(404 caso contrario). Array vazio se ele nao tiver guias.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+      @ApiResponse(
+          responseCode = "200",
+          description = "Pagina retornada com sucesso",
+          headers = @Header(
+              name = HEADER_TOTAL,
+              description = "Total de guias do produtor, somando todas as paginas",
+              schema = @Schema(type = "integer"))),
+      @ApiResponse(responseCode = "400", description = "page ou size fora da faixa",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "404",
           description = "Produtor nao encontrado ou nao pertence ao usuario autenticado",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<List<GuiaFiscalResponse>> listar(
-      @RequestParam UUID produtorId) {
-    return ResponseEntity.ok(guiaFiscalService.listar(produtorId));
+      @RequestParam UUID produtorId,
+      @Parameter(description = "Pagina, a partir de 0 (maximo 10000)")
+      @RequestParam(defaultValue = "0") @Min(0) @Max(GuiaFiscalService.PAGINA_MAXIMA) int page,
+      @Parameter(description = "Guias por pagina (1 a 200)")
+      @RequestParam(defaultValue = "" + GuiaFiscalService.TAMANHO_PAGINA_PADRAO)
+      @Min(1) @Max(GuiaFiscalService.TAMANHO_PAGINA_MAXIMO) int size) {
+    Page<GuiaFiscalResponse> pagina = guiaFiscalService.listar(produtorId, page, size);
+    return ResponseEntity.ok()
+        .header(HEADER_TOTAL, String.valueOf(pagina.getTotalElements()))
+        .body(pagina.getContent());
   }
 
   /**

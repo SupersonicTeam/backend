@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
@@ -49,6 +50,13 @@ import org.springframework.transaction.annotation.Transactional;
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
 @Transactional
 class GuiaFiscalIntegrationTest {
+
+  /**
+   * Janela explicita no calendario: a padrao e relativa ao mes corrente e deixaria de cobrir as
+   * guias de 2026 com o passar do tempo (issue #103).
+   */
+  private static final LocalDate INICIO_2026 = LocalDate.of(2026, 1, 1);
+  private static final LocalDate FIM_2026 = LocalDate.of(2026, 12, 31);
 
   @Autowired private GuiaFiscalService guiaFiscalService;
   @Autowired private CalendarioFiscalService calendarioFiscalService;
@@ -92,11 +100,12 @@ class GuiaFiscalIntegrationTest {
     GuiaFiscalResponse criada = guiaFiscalService.criar(request);
     assertThat(criada.status()).isEqualTo("PENDENTE");
 
-    List<GuiaFiscalResponse> guias = guiaFiscalService.listar(produtor.getId());
+    List<GuiaFiscalResponse> guias =
+        guiaFiscalService.listar(produtor.getId(), 0, 100).getContent();
     assertThat(guias).hasSize(1);
 
     List<VencimentoFiscalResponse> vencimentos =
-        calendarioFiscalService.listarVencimentos(produtor.getId());
+        calendarioFiscalService.listarVencimentos(produtor.getId(), INICIO_2026, FIM_2026);
     assertThat(vencimentos).hasSize(1);
     assertThat(vencimentos.get(0).status()).isEqualTo("pendente");
 
@@ -104,7 +113,8 @@ class GuiaFiscalIntegrationTest {
     assertThat(paga.status()).isEqualTo("PAGA");
     assertThat(paga.dataPagamento()).isNotNull();
 
-    assertThat(calendarioFiscalService.listarVencimentos(produtor.getId()).get(0).status())
+    assertThat(calendarioFiscalService.listarVencimentos(produtor.getId(), INICIO_2026, FIM_2026)
+        .get(0).status())
         .isEqualTo("pago");
   }
 
@@ -139,7 +149,8 @@ class GuiaFiscalIntegrationTest {
 
     autenticarComo(outroProdutor);
 
-    assertThatThrownBy(() -> calendarioFiscalService.listarVencimentos(produtor.getId()))
+    assertThatThrownBy(
+        () -> calendarioFiscalService.listarVencimentos(produtor.getId(), null, null))
         .isInstanceOf(ResourceNotFoundException.class);
   }
 
@@ -188,7 +199,7 @@ class GuiaFiscalIntegrationTest {
     assertThatThrownBy(() -> guiaFiscalService.criar(requestParaOProdutor))
         .isInstanceOf(ResourceNotFoundException.class);
 
-    assertThat(guiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc(produtor.getId()))
+    assertThat(guiaFiscalRepository.findByProdutorId(produtor.getId(), Pageable.unpaged()))
         .isEmpty();
   }
 
@@ -205,7 +216,7 @@ class GuiaFiscalIntegrationTest {
 
     autenticarComo(outroProdutor);
 
-    assertThatThrownBy(() -> guiaFiscalService.listar(produtor.getId()))
+    assertThatThrownBy(() -> guiaFiscalService.listar(produtor.getId(), 0, 100))
         .isInstanceOf(ResourceNotFoundException.class);
   }
 }

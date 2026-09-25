@@ -72,6 +72,11 @@ public enum ErrorCode {
   // Guias fiscais do Contador (issue #74)
   /** Guia fiscal já está no status PAGA. HTTP 409. */
   GUIA_JA_PAGA,
+  /**
+   * Janela {@code de}/{@code ate} do calendário fiscal inválida: início depois do fim ou maior que
+   * o máximo permitido (issue #103). HTTP 400.
+   */
+  JANELA_CALENDARIO_INVALIDA,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:
