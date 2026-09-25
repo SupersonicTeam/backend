@@ -164,13 +164,13 @@ class SefazServiceTest {
         .thenReturn(Optional.of(nota));
     when(sefazClient.enviar(any(), any(), any()))
         .thenReturn(new SefazRetorno(
-            SituacaoSefaz.REJEITADA, "204", "Duplicidade de NF-e", null, null));
+            SituacaoSefaz.REJEITADA, "225", "Rejeicao: Falha no Schema XML da NF-e", null, null));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
 
     SefazEnvioResponse response = sefazService.enviar(notaId);
 
     assertThat(response.status()).isEqualTo(StatusNotaFiscal.REJEITADA);
-    assertThat(response.cStat()).isEqualTo("204");
+    assertThat(response.cStat()).isEqualTo("225");
     assertThat(response.protocolo()).isNull();
     assertThat(nota.getProtocoloAutorizacao()).isNull();
     assertThat(nota.getDataAutorizacao()).isNull();
@@ -223,6 +223,11 @@ class SefazServiceTest {
         .thenReturn(Optional.of(nota));
     when(sefazClient.enviar(any(), any(), any()))
         .thenThrow(new SefazComunicacaoException("timeout simulado"));
+    // issue #83: falha nao classificada e indeterminada — o servico consulta pela chave antes de
+    // decidir. Aqui o fisco ainda nao tem desfecho.
+    when(sefazClient.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO))
+        .thenReturn(new SefazRetorno(SituacaoSefaz.PENDENTE, "105", "Lote em processamento",
+            null, null));
 
     assertThatThrownBy(() -> sefazService.enviar(notaId))
         .isInstanceOf(SefazComunicacaoException.class);
@@ -523,14 +528,18 @@ class SefazServiceTest {
         .thenReturn(Optional.of(nota));
     when(sefazClient.cancelar(any(), any(), any(), any()))
         .thenThrow(new SefazComunicacaoException("timeout simulado"));
+    // issue #83: resposta indeterminada — a consulta pela chave mostra que o fisco nao registrou
+    // o cancelamento.
+    when(sefazClient.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO))
+        .thenReturn(new SefazRetorno(SituacaoSefaz.AUTORIZADA, "100", "Autorizado o uso da NF-e",
+            "141260000000017", OffsetDateTime.now()));
 
     assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
         .isInstanceOf(SefazComunicacaoException.class);
 
-    // issue #96: volta para AUTORIZADA, e NAO para PENDENTE_SEFAZ. A consulta de status nao
-    // reconhece cancelamento (mapStatus nao mapeia CANCELADA), entao o job reautorizaria a nota —
-    // a regressao fechada pela issue #79. Repetir o cancelamento e seguro: o fisco responde
-    // cStat de evento ja vinculado.
+    // issue #96: volta para AUTORIZADA, e NAO para PENDENTE_SEFAZ: a nota segue autorizada no
+    // fisco, e PENDENTE_SEFAZ a tiraria do debito da apuracao. Repetir o cancelamento e seguro:
+    // se o evento tiver sido registrado depois, o fisco responde 573 e a consulta confirma.
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
     // Duas gravacoes: a reserva (CANCELANDO) e a compensacao (AUTORIZADA).
     verify(notaFiscalRepository, times(2)).save(nota);

@@ -8,14 +8,22 @@ package br.com.agrocontabil.sefaz;
  * retorno determinístico sem conexão real. O transporte SOAP real será plugado na Sprint 7
  * implementando esta interface sem alterar os serviços que a consomem.
  *
- * <p>Contratos de exceção:
+ * <p>Contratos de exceção (issue #83):
  * <ul>
- *   <li>Falha de comunicação (timeout, conexão recusada, I/O) →
- *       {@link br.com.agrocontabil.exception.SefazComunicacaoException} (HTTP 502).
- *       O {@link br.com.agrocontabil.service.SefazService} aplica retry automático.</li>
+ *   <li>Falha <strong>antes</strong> de a requisição sair (conexão recusada, DNS, timeout de
+ *       conexão, handshake TLS) → {@link br.com.agrocontabil.exception.SefazConexaoException}.
+ *       Reenviar é seguro, e o {@link SefazClient} re-tenta.</li>
+ *   <li>Falha <strong>depois</strong> de enviar (timeout de leitura, conexão resetada, resposta
+ *       ilegível, HTTP 5xx) →
+ *       {@link br.com.agrocontabil.exception.SefazRespostaIndeterminadaException}. O fisco pode
+ *       ter processado; o serviço consulta pela chave em vez de reenviar.</li>
+ *   <li>Sem como classificar → a indeterminada. Classificar como conexão uma falha pós-envio
+ *       reabre a duplicidade de NF-e (cStat 204).</li>
  *   <li>Rejeição pelo fisco (dados inválidos) → <em>não é exceção</em>: retornar
  *       {@link SefazRetorno} com {@link SituacaoSefaz#REJEITADA}.</li>
  * </ul>
+ *
+ * <p>Os timeouts do transporte real vêm de {@code app.nfe.sefaz.timeout.*}.
  */
 public interface SefazTransport {
 
@@ -33,10 +41,11 @@ public interface SefazTransport {
   /**
    * Consulta o status de uma NF-e previamente enviada.
    *
-   * <p>Declarado aqui para suportar a issue #16 (consulta de status) sem alterar a interface.
-   * O {@link MockSefazTransport} retorna {@link SituacaoSefaz#AUTORIZADA} de forma
-   * determinística. O transporte SOAP real implementará a consulta NfeConsultaProtocolo
-   * na Sprint 7.
+   * <p>Mapeamento esperado do transporte real (NfeConsultaProtocolo): cStat 100 →
+   * {@link SituacaoSefaz#AUTORIZADA}; 101/151 → {@link SituacaoSefaz#CANCELADA}; 110/301/302 →
+   * {@link SituacaoSefaz#DENEGADA}; 217 → {@link SituacaoSefaz#NAO_ENCONTRADA}; lote em
+   * processamento → {@link SituacaoSefaz#PENDENTE}. Mapear 217 como {@code REJEITADA} marcaria
+   * como rejeitada uma nota que apenas nunca chegou ao fisco.
    *
    * @param chaveAcesso chave de acesso de 44 dígitos
    * @param ambiente    ambiente de destino
