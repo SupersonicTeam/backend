@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -92,7 +95,6 @@ class NotaFiscalServiceTest {
   @Mock
   private NotaFiscalValidacaoService validacaoService;
 
-  @InjectMocks
   private NotaFiscalService notaFiscalService;
 
   private Produtor produtor;
@@ -100,6 +102,19 @@ class NotaFiscalServiceTest {
 
   @BeforeEach
   void setUp() {
+    // issue #99: gerarXml/gerarPdf orquestram transacoes curtas via TransactionTemplate, entao o
+    // servico deixa de ser montavel por @InjectMocks — um template dublado devolveria null em
+    // execute() e todo metodo retornaria null. Um TransactionTemplate real sobre um gerenciador
+    // dublado executa o callback de verdade, que e o que o teste precisa exercitar.
+    notaFiscalService = new NotaFiscalService(
+        notaFiscalRepository,
+        produtorProvider,
+        tributacaoService,
+        geracaoNotaFiscalService,
+        geracaoNfaService,
+        danfePdfService,
+        validacaoService,
+        new TransactionTemplate(mock(PlatformTransactionManager.class)));
     produtorId = UUID.randomUUID();
     produtor = Produtor.builder()
         .id(produtorId)
@@ -584,7 +599,10 @@ class NotaFiscalServiceTest {
     nota.setId(notaId);
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    // issue #99: a fase de escrita recarrega a nota sob lock e RECHECA o status.
+    when(notaFiscalRepository.findByIdAndProdutorIdForUpdate(notaId, produtorId))
         .thenReturn(Optional.of(nota));
     when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(XML_FAKE);
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -611,7 +629,7 @@ class NotaFiscalServiceTest {
     nota.setStatus(StatusNotaFiscal.XML_GERADO);
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.of(nota));
 
     assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
@@ -627,7 +645,7 @@ class NotaFiscalServiceTest {
     UUID notaId = UUID.randomUUID();
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> notaFiscalService.gerarXml(notaId))
@@ -650,7 +668,7 @@ class NotaFiscalServiceTest {
             + "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\"><infNFe versao=\"4.00\"></infNFe></NFe>";
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.of(nota));
     when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(xmlSemChave);
 
@@ -679,7 +697,7 @@ class NotaFiscalServiceTest {
         .NotaFiscalInvalidaParaEmissaoException(List.of(violation));
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.of(nota));
     when(geracaoNotaFiscalService.gerarXml(nota)).thenThrow(emissaoException);
 
@@ -702,7 +720,7 @@ class NotaFiscalServiceTest {
         "XML invalido segundo o XSD");
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.of(nota));
     when(geracaoNotaFiscalService.gerarXml(nota)).thenThrow(xmlException);
 
@@ -722,7 +740,10 @@ class NotaFiscalServiceTest {
     nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    // issue #99: a fase de escrita recarrega a nota sob lock e RECHECA o status.
+    when(notaFiscalRepository.findByIdAndProdutorIdForUpdate(notaId, produtorId))
         .thenReturn(Optional.of(nota));
     when(geracaoNotaFiscalService.gerarXml(nota)).thenReturn(XML_FAKE);
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -808,7 +829,7 @@ class NotaFiscalServiceTest {
     byte[] pdfFake = new byte[] {'%', 'P', 'D', 'F'};
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.of(nota));
     when(danfePdfService.gerarPdf(nota)).thenReturn(pdfFake);
 
@@ -825,7 +846,7 @@ class NotaFiscalServiceTest {
     nota.setId(notaId);
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.of(nota));
 
     assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))
@@ -839,7 +860,7 @@ class NotaFiscalServiceTest {
     UUID notaId = UUID.randomUUID();
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))

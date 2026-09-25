@@ -39,11 +39,11 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 ### `service/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `NotaFiscalService` | CRUD de notas + orquestra geração XML, DANFE, envio, cancelamento (anti-IDOR 404) |
+| `NotaFiscalService` | CRUD de notas + orquestra geração XML, DANFE, envio, cancelamento (anti-IDOR 404). **Não é `@Transactional` na classe** (issue #99): `gerarXml` roda em 3 fases via `TransactionTemplate` (lê e carrega o grafo → assina/XSD **fora de transação** → recarrega sob lock, recheca e persiste); `gerarPdf` só na fase de leitura. CRUD segue declarativo |
 | `GeracaoNotaFiscalService` | Pipeline NF-e mod. 55: validar → mapear → gerar XML → assinar → validar XSD |
 | `GeracaoNfaService` | Geração de NFA (Nota Fiscal Avulsa do produtor rural — issue #18) |
 | `ImportacaoNotaFiscalService` | Importa XML(s) de NF-e recebida (multipart; produtor=destinatário; issue #19) |
-| `NotaFiscalValidacaoService` | Persiste lote de inconsistências em `REQUIRES_NEW`; marca nota `COM_INCONSISTENCIAS` |
+| `NotaFiscalValidacaoService` | Persiste lote de inconsistências em transação **única** (`REQUIRED` desde a issue #97 — era `REQUIRES_NEW` e exigia 2 conexões); marca nota `COM_INCONSISTENCIAS`. **Só pode ser chamado fora de transação** |
 | `SefazService` | Envio, consulta de status e cancelamento na SEFAZ. **Nao e `@Transactional` na classe** (issue #96): cada transmissao roda em 3 transacoes curtas via `TransactionTemplate` — reserva sob lock pessimista, I/O fora de transacao, desfecho — mais a compensacao e `reconciliarTransmissoesPresas` |
 | `TributacaoService` | Débito: calcula IBS/CBS por item, classifica natureza (DEBITO/CREDITO) e agrega totais; alíquota via `AliquotaIbsCbsResolver`, redução via `ReducaoNcmResolver` |
 | `CreditoTributarioService` | Crédito nas notas IMPORTADAS (RN003): mesma base e mesma alíquota do débito (resolvedores compartilhados); só lê `credito.percentualAproveitamento` das properties |
