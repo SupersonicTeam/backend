@@ -137,6 +137,9 @@ class SefazServiceReconciliacaoTest {
     // Logo apos o timeout, "nao encontrada" nao prova que o XML nao chegou: a SEFAZ pode estar
     // processando. XML_GERADO liberaria um reenvio; a nota fica pendente para o job.
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
+    // E fica pendente sabendo a qual ambiente perguntar: o job consulta o mesmo que recebeu o XML,
+    // nao o que estiver configurado quando ele rodar.
+    assertThat(nota.getSefazAmbiente()).isEqualTo(SefazAmbiente.HOMOLOGACAO);
     verify(eventPublisher, never()).publishEvent(any());
   }
 
@@ -323,6 +326,22 @@ class SefazServiceReconciliacaoTest {
     assertThat(response.status()).isEqualTo(StatusNotaFiscal.XML_GERADO);
     assertThat(nota.getSefazCstat()).isEqualTo("217");
     verify(eventPublisher, never()).publishEvent(any());
+  }
+
+  @Test
+  @DisplayName("sincronizar: NAO_ENCONTRADA depois de um 204 mantem a nota pendente")
+  void sincronizarNaoEncontradaAposDuplicidadeFicaPendente() {
+    NotaFiscal nota = prepararSincronizacao();
+    nota.setSefazCstat("204");
+    when(sefazClient.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO))
+        .thenReturn(naoEncontrada());
+
+    SefazStatusResponse response = sefazService.sincronizarStatus(notaId);
+
+    // O fisco ja disse que a chave existe. Voltar a XML_GERADO levaria a reenvio -> 204 ->
+    // pendente -> nao encontrada -> reenvio, sem nunca convergir.
+    assertThat(response.status()).isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
+    assertThat(nota.getSefazCstat()).isEqualTo("204");
   }
 
   @Test

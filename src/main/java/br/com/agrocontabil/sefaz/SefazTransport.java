@@ -45,7 +45,8 @@ public interface SefazTransport {
    * {@link SituacaoSefaz#AUTORIZADA}; 101/151 → {@link SituacaoSefaz#CANCELADA}; 110/301/302 →
    * {@link SituacaoSefaz#DENEGADA}; 217 → {@link SituacaoSefaz#NAO_ENCONTRADA}; lote em
    * processamento → {@link SituacaoSefaz#PENDENTE}. Mapear 217 como {@code REJEITADA} marcaria
-   * como rejeitada uma nota que apenas nunca chegou ao fisco.
+   * como rejeitada uma nota que apenas nunca chegou ao fisco. Para {@code CANCELADA}, protocolo e
+   * data são os do evento de cancelamento (ver {@link SefazRetorno}).
    *
    * @param chaveAcesso chave de acesso de 44 dígitos
    * @param ambiente    ambiente de destino

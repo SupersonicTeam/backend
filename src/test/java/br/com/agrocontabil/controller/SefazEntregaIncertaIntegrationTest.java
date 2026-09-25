@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -167,7 +168,7 @@ class SefazEntregaIncertaIntegrationTest {
     // Retry seguro: nada saiu. As 3 tentativas padrao de app.nfe.sefaz.retry.max-attempts.
     verify(sefazTransport, times(3)).enviar(any(), any(), any());
     // Sem consulta: nao ha desfecho a descobrir.
-    verify(sefazTransport, times(0)).consultarStatus(any(), any());
+    verify(sefazTransport, never()).consultarStatus(any(), any());
     // E a nota volta a ser enviavel, em vez de ficar pendente esperando o job.
     assertThat(statusDe(notaId)).isEqualTo(StatusNotaFiscal.XML_GERADO);
     assertThat(contador.emitidas()).isZero();

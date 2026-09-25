@@ -154,6 +154,11 @@ public class SefazService {
         throw new NotaFiscalNaoEnviavelException(notaId, nota.getStatus());
       }
       nota.setStatus(StatusNotaFiscal.ENVIANDO);
+      // O ambiente vai junto na reserva, antes da rede: se o desfecho ficar incerto, toda consulta
+      // posterior (reconciliacao, job, endpoint) precisa perguntar ao MESMO ambiente que recebeu o
+      // XML. Sem isso a nota pendente herdaria o ambiente configurado no momento da consulta, e um
+      // "nao encontrada" no ambiente errado a devolveria a XML_GERADO (issue #83).
+      nota.setSefazAmbiente(ambiente);
       notaFiscalRepository.save(nota);
       return new DadosTransmissao(nota.getXmlGerado(), nota.getChaveAcesso());
     });
@@ -621,6 +626,16 @@ public class SefazService {
    * protocolo e data de autorização; se a consulta revelou cancelamento, protocolo e data dele.
    */
   private void aplicarRetorno(NotaFiscal nota, SefazRetorno retorno, SefazAmbiente ambiente) {
+    if (retorno.situacao() == SituacaoSefaz.NAO_ENCONTRADA
+        && CSTAT_DUPLICIDADE_NFE.equals(nota.getSefazCstat())) {
+      // O fisco ja acusou esta chave como existente (204). Um "nao encontrada" depois disso e
+      // atraso entre as bases da SEFAZ, nao prova de que o XML nao chegou: devolver a XML_GERADO
+      // levaria a um reenvio, outro 204, e o ciclo nao convergiria. A nota fica pendente com o 204
+      // registrado ate a consulta confirmar o desfecho.
+      log.warn("Chave {} nao encontrada apos duplicidade (204); nota {} segue pendente",
+          nota.getChaveAcesso(), nota.getId());
+      return;
+    }
     nota.setStatus(mapStatus(retorno.situacao()));
     nota.setSefazCstat(retorno.cStat());
     nota.setSefazMotivo(retorno.xMotivo());
