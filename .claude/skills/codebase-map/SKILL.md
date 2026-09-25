@@ -23,7 +23,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `CertificadoDigitalProperties/Config` | Caminho/senha do `.p12` via env `NFE_CERT_*` |
 | `SefazProperties/Config` | Ambiente (HOMOLOGACAO/PRODUCAO), timeouts |
 | `RetryConfig` | Spring Retry para chamadas SEFAZ |
-| `SchedulingConfig` | Habilita `@Scheduled` (job de sync SEFAZ) |
+| `SchedulingConfig` | Habilita `@Scheduled` e o lock distribuído ShedLock (`@EnableSchedulerLock`, `JdbcTemplateLockProvider` na tabela `shedlock`, relógio do banco — issue #87) |
 | `DataLoader` | Seed em dev/homolog: **dois** produtores (A = semente/fallback, B = outro dono) + referências NCM/CFOP |
 
 ### `controller/`
@@ -199,5 +199,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0021-produtor-endereco-ie` (próximo número livre: **0022**)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0023-shedlock` (próximo número livre: **0024**)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

@@ -50,3 +50,5 @@ databaseChangeLog:
       file: db/changelog/changes/0021-produtor-endereco-ie.xml
   - include:
       file: db/changelog/changes/0022-nota-fiscal-version.xml
+  - include:
+      file: db/changelog/changes/0023-shedlock.xml

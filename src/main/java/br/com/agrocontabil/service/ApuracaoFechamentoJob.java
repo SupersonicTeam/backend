@@ -4,6 +4,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,6 +36,16 @@ public class ApuracaoFechamentoJob {
   /** Fuso de referência do projeto para determinar o mês corrente. */
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
+  /**
+   * Nome do lock distribuído deste job (issue #87): o fechamento mensal roda numa réplica só.
+   *
+   * <p>Teto de 50 min: cobre a varredura em lotes com folga e libera o lock se o nó morrer no
+   * meio. Piso de 5 min: as réplicas disparam o mesmo cron ao mesmo tempo, e o piso cobre o
+   * desvio de relógio entre elas — uma réplica atrasada não refaz o fechamento que a outra acabou
+   * de concluir.
+   */
+  public static final String LOCK = "apuracao-fechamento";
+
   /** Quantos IDs com falha o resumo do job lista no log (issue #100). */
   private static final int MAX_IDS_NO_LOG = 20;
 
@@ -54,6 +65,10 @@ public class ApuracaoFechamentoJob {
    * Agrocontabil#57), que de outra forma permaneceriam ABERTAS indefinidamente.
    */
   @Scheduled(cron = "0 0 23 L * *", zone = "America/Sao_Paulo")
+  @SchedulerLock(
+      name = LOCK,
+      lockAtMostFor = "${app.apuracao.fechamento.lock.at-most-for:PT50M}",
+      lockAtLeastFor = "${app.apuracao.fechamento.lock.at-least-for:PT5M}")
   public void fecharApuracaoDoMes() {
     String periodo = YearMonth.now(ZONE).toString();
     log.info("Iniciando fechamento automatico de apuracao: periodo={}", periodo);

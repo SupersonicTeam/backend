@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0023-shedlock.xml
+         Onda 5 — issue #87: tabela do lock distribuido dos jobs @Scheduled.
+
+         Com 2+ instancias, cada replica disparava os tres jobs
+         (SefazStatusSyncJob, ApuracaoFechamentoJob e
+         GuiaFiscalStatusSyncJob) e todos rodavam em dobro. O ShedLock
+         (JdbcTemplateLockProvider) grava aqui uma linha por job:
+
+         - name       nome do lock (@SchedulerLock#name), chave primaria;
+         - lock_until ate quando o lock vale; a replica que chega antes
+                      disso pula a execucao;
+         - locked_at  quando foi adquirido;
+         - locked_by  hostname da replica que adquiriu (diagnostico).
+
+         Esquema e tamanhos do README do ShedLock para PostgreSQL. As datas
+         sao TIMESTAMP sem fuso porque o provider usa o relogio do banco
+         (usingDbTime) e grava em UTC. A tabela nao e entidade JPA: o
+         Hibernate (ddl-auto: validate) nao a conhece nem a valida.
+
+         O perfil de teste desabilita o Liquibase; a mesma tabela esta em
+         src/test/resources/schema-shedlock-test.sql, usado via @Sql pelos
+         testes de lock — manter sincronizado.
+         ================================================================ -->
+
+    <changeSet id="0023-shedlock" author="supersonic-team">
+        <comment>
+            Cria a tabela shedlock do lock distribuido dos jobs agendados (issue #87).
+        </comment>
+
+        <createTable tableName="shedlock">
+            <column name="name" type="VARCHAR(64)">
+                <constraints primaryKey="true" primaryKeyName="pk_shedlock" nullable="false"/>
+            </column>
+            <column name="lock_until" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="shedlock"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
