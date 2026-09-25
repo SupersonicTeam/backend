@@ -180,7 +180,8 @@ public class ApuracaoService {
    * ({@code NOT_SUPPORTED}). Lê os IDs de produtor em lotes de {@code loteTamanho}, por keyset, e
    * fecha cada produtor numa transação própria. Uma falha (na agregação, na gravação ou no commit)
    * faz rollback só daquele produtor, é logada em {@code ERROR} e entra no resumo; os demais
-   * produtores seguem sendo fechados.
+   * produtores seguem sendo fechados. Se a thread for interrompida (shutdown), para entre dois
+   * produtores e devolve o resumo parcial.
    *
    * @param periodo período no formato {@code YYYY-MM}
    * @return resumo do lote: apurações fechadas e IDs dos produtores cujo fechamento falhou
@@ -195,8 +196,15 @@ public class ApuracaoService {
     List<UUID> falhas = new ArrayList<>();
 
     List<UUID> ids = produtorRepository.findIdsOrdenados(lote);
+    lotes:
     while (!ids.isEmpty()) {
       for (UUID produtorId : ids) {
+        if (Thread.currentThread().isInterrupted()) {
+          // Shutdown da aplicacao (issue #101): cada produtor ja fechado esta commitado; os
+          // restantes ficam ABERTOS e o proximo disparo do job os fecha.
+          log.warn("Fechamento interrompido: periodo={} fechadas_ate_aqui={}", mes, concluidas);
+          break lotes;
+        }
         try {
           transacaoPorItem.executeWithoutResult(status ->
               consolidarParaProdutor(produtorId, mes, StatusApuracao.FECHADO, agora));
@@ -237,8 +245,8 @@ public class ApuracaoService {
    *
    * <p><strong>Uma apuração por transação (issue #100):</strong> lê só os IDs e refecha cada
    * apuração numa transação própria, com o mesmo tratamento de falha de
-   * {@link #fecharPeriodo(String)}. Uma apuração removida entre a leitura dos IDs e a transação
-   * dela é ignorada.
+   * {@link #fecharPeriodo(String)}. Cada apuração é relida com lock na própria transação; se foi
+   * removida ou já não está ABERTA desde a leitura dos IDs, é ignorada.
    *
    * @return resumo do lote: apurações refechadas e IDs das apurações cujo refechamento falhou
    */
@@ -253,9 +261,16 @@ public class ApuracaoService {
     int concluidas = 0;
     List<UUID> falhas = new ArrayList<>();
     for (UUID apuracaoId : ids) {
+      if (Thread.currentThread().isInterrupted()) {
+        log.warn("Refechamento interrompido: refechadas_ate_aqui={}", concluidas);
+        break;
+      }
       try {
         Boolean refechada = transacaoPorItem.execute(status -> apuracaoRepository
-            .findById(apuracaoId)
+            .findByIdForUpdate(apuracaoId)
+            // Reconfere sob lock: se outra via fechou a apuracao depois da leitura dos IDs, nao
+            // reconsolida nem troca a dataFechamento original.
+            .filter(apuracao -> apuracao.getStatus() == StatusApuracao.ABERTO)
             .map(apuracao -> {
               aplicarConsolidacao(apuracao, apuracao.getProdutor().getId(),
                   YearMonth.parse(apuracao.getPeriodo()), StatusApuracao.FECHADO, agora);
@@ -303,7 +318,7 @@ public class ApuracaoService {
   public ApuracaoResponse reabrir(UUID id) {
     Produtor produtor = produtorProvider.get();
     ApuracaoMensal apuracao = apuracaoRepository
-        .findByIdAndProdutorId(id, produtor.getId())
+        .findByIdAndProdutorIdForUpdate(id, produtor.getId())
         .orElseThrow(() -> new ResourceNotFoundException("Apuracao", id));
 
     if (apuracao.getStatus() != StatusApuracao.FECHADO) {
@@ -370,7 +385,7 @@ public class ApuracaoService {
    */
   private void recalcularSeConsolidado(UUID produtorId, YearMonth periodo) {
     Optional<ApuracaoMensal> existente =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtorId, periodo.toString());
+        apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtorId, periodo.toString());
     if (existente.isEmpty()) {
       log.debug("Periodo {} nao consolidado; projecao ao vivo ja reflete o evento (produtorId={})",
           periodo, produtorId);
@@ -402,7 +417,7 @@ public class ApuracaoService {
   private ApuracaoMensal consolidarParaProdutor(
       UUID produtorId, YearMonth mes, StatusApuracao status, OffsetDateTime dataFechamento) {
     ApuracaoMensal apuracao = apuracaoRepository
-        .findByProdutorIdAndPeriodo(produtorId, mes.toString())
+        .findByProdutorIdAndPeriodoForUpdate(produtorId, mes.toString())
         .orElseGet(() -> ApuracaoMensal.builder()
             .produtor(produtorRepository.getReferenceById(produtorId))
             .periodo(mes.toString())

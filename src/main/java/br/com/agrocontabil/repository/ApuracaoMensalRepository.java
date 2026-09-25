@@ -2,10 +2,12 @@ package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.StatusApuracao;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -41,6 +43,51 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
    * @return {@link Optional} com a apuração, ou vazio se inexistente ou de outro produtor
    */
   Optional<ApuracaoMensal> findByIdAndProdutorId(UUID id, UUID produtorId);
+
+  /**
+   * Mesma busca de {@link #findByProdutorIdAndPeriodo}, com lock pessimista de escrita na linha
+   * ({@code SELECT ... FOR UPDATE}).
+   *
+   * <p>Usada por todo caminho que <em>grava</em> a apuração (consolidação, fechamento do job e
+   * recálculo por evento — issues #100 e #64). Serializa escritas concorrentes na mesma apuração:
+   * sem o lock, um recálculo por evento que leu a linha ABERTA antes de o job commitar o
+   * fechamento regravaria {@code status = ABERTO} por cima do FECHADO, burlando a guarda da #54.
+   * Com o lock, o segundo a chegar espera o commit do primeiro e relê o estado já fechado.
+   *
+   * @param produtorId identificador do produtor
+   * @param periodo    período no formato {@code YYYY-MM}
+   * @return a apuração travada até o fim da transação, ou vazio se ainda não consolidada
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      SELECT a FROM ApuracaoMensal a
+      WHERE a.produtor.id = :produtorId AND a.periodo = :periodo
+      """)
+  Optional<ApuracaoMensal> findByProdutorIdAndPeriodoForUpdate(
+      @Param("produtorId") UUID produtorId, @Param("periodo") String periodo);
+
+  /**
+   * Busca por ID com lock pessimista de escrita, para o refechamento do job (issue #100).
+   *
+   * @param id identificador da apuração
+   * @return a apuração travada até o fim da transação, ou vazio se removida
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT a FROM ApuracaoMensal a WHERE a.id = :id")
+  Optional<ApuracaoMensal> findByIdForUpdate(@Param("id") UUID id);
+
+  /**
+   * Mesma busca de {@link #findByIdAndProdutorId} (recorte anti-IDOR), com lock pessimista de
+   * escrita: a reabertura (RN005) não pode se intercalar com o refechamento do job.
+   *
+   * @param id         identificador da apuração
+   * @param produtorId identificador do produtor autenticado
+   * @return a apuração travada até o fim da transação, ou vazio se inexistente ou de outro produtor
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT a FROM ApuracaoMensal a WHERE a.id = :id AND a.produtor.id = :produtorId")
+  Optional<ApuracaoMensal> findByIdAndProdutorIdForUpdate(
+      @Param("id") UUID id, @Param("produtorId") UUID produtorId);
 
   /**
    * IDs das apurações em um dado status cujo período esteja na faixa {@code [inicio, fim)}.

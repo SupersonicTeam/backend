@@ -317,8 +317,8 @@ public class NotaFiscal {
    * sobrescrevendo o primeiro — a nota ficaria com uma chave que nao corresponde ao XML gravado.
    *
    * <p><strong>Por que so aqui:</strong> {@code NotaFiscal} e a unica entidade com transicoes de
-   * estado disparadas concorrentemente por requisicao HTTP. {@code ApuracaoMensal} e protegida pelo
-   * fluxo auditado de fechamento/reabertura e por job serializado; {@code GuiaFiscal} so muda pelo
+   * estado disparadas concorrentemente por requisicao HTTP. {@code ApuracaoMensal} e protegida por
+   * lock pessimista em todo caminho de escrita (issue #100); {@code GuiaFiscal} so muda pelo
    * {@code PATCH /pagar}, ja guardado por {@code GuiaJaPagaException}. Avaliado na issue #95 e
    * considerado desnecessario nas duas (decisao D-4 do spec da Onda 3).
    */

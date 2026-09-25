@@ -16,7 +16,8 @@ public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
   Optional<Produtor> findByCpfCnpj(String cpfCnpj);
 
   /**
-   * Primeiro lote de IDs de produtor, em ordem de ID, para varreduras em lote dos jobs (issue #100).
+   * Primeiro lote de IDs de produtor, em ordem de ID, para varreduras em lote dos jobs
+   * (issue #100).
    *
    * <p>Devolve só os IDs, sem materializar as entidades. Use {@code PageRequest.ofSize(n)}: o
    * {@link Pageable} aqui só limita o lote, sem contagem.

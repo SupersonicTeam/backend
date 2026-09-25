@@ -131,7 +131,7 @@ class ApuracaoServiceTest {
     ApuracaoMensal apuracao = fechada("2026-06");
     when(produtorProvider.get()).thenReturn(produtor);
     when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(produtor.getId().toString()));
-    when(apuracaoRepository.findByIdAndProdutorId(apuracao.getId(), produtor.getId()))
+    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(apuracao.getId(), produtor.getId()))
         .thenReturn(Optional.of(apuracao));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -150,7 +150,7 @@ class ApuracaoServiceTest {
   void reabreTerceiroMesRetroativoPermitido() {
     ApuracaoMensal apuracao = fechada("2026-04");
     when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorId(apuracao.getId(), produtor.getId()))
+    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(apuracao.getId(), produtor.getId()))
         .thenReturn(Optional.of(apuracao));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -164,7 +164,7 @@ class ApuracaoServiceTest {
   void reaberturaQuartoMesRetroativoNegada() {
     ApuracaoMensal apuracao = fechada("2026-03");
     when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorId(apuracao.getId(), produtor.getId()))
+    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(apuracao.getId(), produtor.getId()))
         .thenReturn(Optional.of(apuracao));
 
     assertThatThrownBy(() -> service.reabrir(apuracao.getId()))
@@ -179,7 +179,7 @@ class ApuracaoServiceTest {
     ApuracaoMensal aberta = fechada("2026-06");
     aberta.setStatus(StatusApuracao.ABERTO);
     when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorId(aberta.getId(), produtor.getId()))
+    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(aberta.getId(), produtor.getId()))
         .thenReturn(Optional.of(aberta));
 
     assertThatThrownBy(() -> service.reabrir(aberta.getId()))
@@ -193,7 +193,7 @@ class ApuracaoServiceTest {
   void reaberturaDeOutroProdutorRetorna404() {
     UUID id = UUID.randomUUID();
     when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorId(id, produtor.getId()))
+    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(id, produtor.getId()))
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.reabrir(id))
@@ -213,7 +213,7 @@ class ApuracaoServiceTest {
     when(notaFiscalRepository.somarCreditosPorPeriodo(eq(produtor.getId()), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(new BigDecimal("30.00"), new BigDecimal("270.00"),
             3L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.empty());
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -243,7 +243,7 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(null, null, 0L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(null, null, 0L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-01")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-01")))
         .thenReturn(Optional.empty());
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -271,7 +271,7 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("200.00"), new BigDecimal("100.00"), 4L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(new BigDecimal("50.00"), new BigDecimal("20.00"), 2L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(existente));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -293,7 +293,7 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), any())).thenReturn(Optional.empty());
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), any())).thenReturn(Optional.empty());
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
     service.consolidar("2026-07");
@@ -311,7 +311,7 @@ class ApuracaoServiceTest {
   void consolidarSobreFechadoLanca409() {
     ApuracaoMensal fechada = fechada("2026-07");
     when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(fechada));
 
     assertThatThrownBy(() -> service.consolidar("2026-07"))
@@ -331,7 +331,7 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(fechada));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -351,8 +351,8 @@ class ApuracaoServiceTest {
     when(apuracaoRepository.findIdsByStatusAndPeriodoEntre(
         StatusApuracao.ABERTO, "2026-04", "2026-07"))
         .thenReturn(List.of(abril.getId(), maio.getId()));
-    when(apuracaoRepository.findById(abril.getId())).thenReturn(Optional.of(abril));
-    when(apuracaoRepository.findById(maio.getId())).thenReturn(Optional.of(maio));
+    when(apuracaoRepository.findByIdForUpdate(abril.getId())).thenReturn(Optional.of(abril));
+    when(apuracaoRepository.findByIdForUpdate(maio.getId())).thenReturn(Optional.of(maio));
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
@@ -371,7 +371,7 @@ class ApuracaoServiceTest {
           .isEqualTo(OffsetDateTime.parse("2026-07-15T09:00:00-03:00"));
     });
     // Carrega cada apuracao por ID na propria transacao: nao refaz find por (produtor, periodo).
-    verify(apuracaoRepository, never()).findByProdutorIdAndPeriodo(any(), any());
+    verify(apuracaoRepository, never()).findByProdutorIdAndPeriodoForUpdate(any(), any());
     // Uma transacao por apuracao (issue #100).
     verify(transactionManager, times(2)).commit(any());
   }
@@ -500,7 +500,7 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-07")))
         .thenReturn(Optional.empty());
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -529,7 +529,7 @@ class ApuracaoServiceTest {
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
         .thenReturn(new CreditoSaldoAgregado(new BigDecimal("10.00"), new BigDecimal("5.00"), 1L));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-07")))
         .thenReturn(Optional.empty());
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -552,7 +552,7 @@ class ApuracaoServiceTest {
     UUID quebrado = UUID.randomUUID();
     UUID ok2 = UUID.randomUUID();
     when(produtorRepository.findIdsOrdenados(any())).thenReturn(List.of(ok1, quebrado, ok2));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-07")))
         .thenReturn(Optional.empty());
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("100.00"), new BigDecimal("50.00"), 2L));
@@ -580,7 +580,7 @@ class ApuracaoServiceTest {
     UUID primeiro = UUID.randomUUID();
     UUID segundo = UUID.randomUUID();
     when(produtorRepository.findIdsOrdenados(any())).thenReturn(List.of(primeiro, segundo));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-07")))
         .thenReturn(Optional.empty());
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
@@ -607,7 +607,7 @@ class ApuracaoServiceTest {
     UUID c = UUID.randomUUID();
     when(produtorRepository.findIdsOrdenados(any())).thenReturn(List.of(a, b));
     when(produtorRepository.findIdsOrdenadosApos(eq(b), any())).thenReturn(List.of(c));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-07")))
         .thenReturn(Optional.empty());
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
@@ -633,7 +633,7 @@ class ApuracaoServiceTest {
     when(produtorRepository.findIdsOrdenados(any())).thenReturn(List.of(produtor.getId()));
     when(produtorRepository.findIdsOrdenadosApos(eq(produtor.getId()), any()))
         .thenReturn(List.of());
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(any(), eq("2026-07")))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(any(), eq("2026-07")))
         .thenReturn(Optional.empty());
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
@@ -665,9 +665,9 @@ class ApuracaoServiceTest {
     when(apuracaoRepository.findIdsByStatusAndPeriodoEntre(
         StatusApuracao.ABERTO, "2026-04", "2026-07"))
         .thenReturn(List.of(abril.getId(), maio.getId()));
-    when(apuracaoRepository.findById(abril.getId()))
+    when(apuracaoRepository.findByIdForUpdate(abril.getId()))
         .thenThrow(new IllegalStateException("falha ao carregar"));
-    when(apuracaoRepository.findById(maio.getId())).thenReturn(Optional.of(maio));
+    when(apuracaoRepository.findByIdForUpdate(maio.getId())).thenReturn(Optional.of(maio));
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
     when(notaFiscalRepository.somarCreditosPorPeriodo(any(), any(), any()))
@@ -687,12 +687,66 @@ class ApuracaoServiceTest {
     UUID sumiu = UUID.randomUUID();
     when(apuracaoRepository.findIdsByStatusAndPeriodoEntre(any(), any(), any()))
         .thenReturn(List.of(sumiu));
-    when(apuracaoRepository.findById(sumiu)).thenReturn(Optional.empty());
+    when(apuracaoRepository.findByIdForUpdate(sumiu)).thenReturn(Optional.empty());
 
     ResumoLoteApuracao resumo = service.refecharPeriodosReabertos();
 
     assertThat(resumo.total()).isZero();
     verify(apuracaoRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Refechamento ignora apuracao que ja nao esta ABERTA sob lock (issue #100)")
+  void refechamentoIgnoraApuracaoQueJaFoiFechada() {
+    ApuracaoMensal jaFechada = fechada("2026-05");
+    OffsetDateTime fechamentoOriginal = jaFechada.getDataFechamento();
+    when(apuracaoRepository.findIdsByStatusAndPeriodoEntre(any(), any(), any()))
+        .thenReturn(List.of(jaFechada.getId()));
+    when(apuracaoRepository.findByIdForUpdate(jaFechada.getId()))
+        .thenReturn(Optional.of(jaFechada));
+
+    ResumoLoteApuracao resumo = service.refecharPeriodosReabertos();
+
+    // Foi fechada por outra via entre a leitura dos IDs e a transacao dela: nao reconsolida,
+    // nao conta como refechada e preserva a dataFechamento original.
+    assertThat(resumo.total()).isZero();
+    assertThat(jaFechada.getDataFechamento()).isEqualTo(fechamentoOriginal);
+    verify(apuracaoRepository, never()).save(any());
+    verifyNoInteractions(notaFiscalRepository);
+  }
+
+  @Test
+  @DisplayName("Fechamento interrompido (shutdown) para entre produtores sem abrir transacao (#100)")
+  void fechamentoInterrompidoParaEntreProdutores() {
+    when(produtorRepository.findIdsOrdenados(any())).thenReturn(List.of(produtor.getId()));
+
+    Thread.currentThread().interrupt();
+    try {
+      ResumoLoteApuracao resumo = service.fecharPeriodo("2026-07");
+
+      assertThat(resumo.total()).isZero();
+      verifyNoInteractions(transactionManager, notaFiscalRepository);
+    } finally {
+      // Limpa o flag para nao vazar a interrupcao para os proximos testes da mesma thread.
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  @DisplayName("Refechamento interrompido (shutdown) para sem abrir transacao (issue #100)")
+  void refechamentoInterrompidoPara() {
+    when(apuracaoRepository.findIdsByStatusAndPeriodoEntre(any(), any(), any()))
+        .thenReturn(List.of(UUID.randomUUID()));
+
+    Thread.currentThread().interrupt();
+    try {
+      ResumoLoteApuracao resumo = service.refecharPeriodosReabertos();
+
+      assertThat(resumo.total()).isZero();
+      verifyNoInteractions(transactionManager);
+    } finally {
+      Thread.interrupted();
+    }
   }
 
   @Test
@@ -712,7 +766,7 @@ class ApuracaoServiceTest {
   void eventoNotaCanceladaRecalculaApuracaoAberta() {
     ApuracaoMensal existente = aberta("2026-07");
     existente.setDebitoIbs(new BigDecimal("100.00"));
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(existente));
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("60.00"), new BigDecimal("30.00"), 1L));
@@ -731,7 +785,7 @@ class ApuracaoServiceTest {
   @DisplayName("Evento de nota emitida recalcula apuracao ABERTO ja consolidada (issue #64)")
   void eventoNotaEmitidaRecalculaApuracaoAberta() {
     ApuracaoMensal existente = aberta("2026-07");
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(existente));
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(new BigDecimal("60.00"), new BigDecimal("30.00"), 1L));
@@ -749,7 +803,7 @@ class ApuracaoServiceTest {
   @DisplayName("Evento de nota importada recalcula apuracao ABERTO ja consolidada (issue #64)")
   void eventoNotaImportadaRecalculaApuracaoAberta() {
     ApuracaoMensal existente = aberta("2026-07");
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(existente));
     when(notaFiscalRepository.somarDebitosPorPeriodo(any(), any(), any()))
         .thenReturn(new DebitoSaldoAgregado(BigDecimal.ZERO, BigDecimal.ZERO, 0L));
@@ -767,7 +821,7 @@ class ApuracaoServiceTest {
   @DisplayName("Evento sobre periodo FECHADO nao recalcula: preserva o saldo consolidado (issue #64)")
   void eventoSobrePeriodoFechadoNaoRecalcula() {
     ApuracaoMensal fechada = fechada("2026-07");
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.of(fechada));
 
     service.aoNotaCancelada(new NotaCanceladaEvent(produtor.getId(), YearMonth.of(2026, 7)));
@@ -779,7 +833,7 @@ class ApuracaoServiceTest {
   @Test
   @DisplayName("Evento sobre periodo nao consolidado e no-op: projecao ao vivo ja reflete (issue #64)")
   void eventoSobrePeriodoNaoConsolidadoNaoOp() {
-    when(apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), "2026-07"))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-07"))
         .thenReturn(Optional.empty());
 
     service.aoNotaCancelada(new NotaCanceladaEvent(produtor.getId(), YearMonth.of(2026, 7)));
