@@ -28,8 +28,8 @@ A #96 resolveu parte do que a #83 pedia; esta onda parte dela.
 
 | Débito da Sprint 7 | Decisão | Motivo |
 |---|---|---|
-| Transporte SOAP + mTLS real (ICP-Brasil, WSDL por UF) | **Fora desta onda, issue nova.** | Exige certificado ICP-Brasil do emitente, acesso à homologação de cada UF e a escolha da biblioteca SOAP. Esta onda deixa o `SefazService` pronto para ele (contrato de exceções, timeouts, reconciliação), que é o pré-requisito. |
-| `cNF` via `SecureRandom` | **Dentro, PR D, issue nova.** | Mudança contida em `ChaveAcessoGenerator`. O `cNF` existe para impedir que terceiros deduzam a chave de acesso; o valor derivado de número/série anula isso. |
+| Transporte SOAP + mTLS real (ICP-Brasil, WSDL por UF) | **Fora desta onda, issue #128.** | Exige certificado ICP-Brasil do emitente, acesso à homologação de cada UF e a escolha da biblioteca SOAP. Esta onda deixa o `SefazService` pronto para ele (contrato de exceções, timeouts, reconciliação), que é o pré-requisito. |
+| `cNF` via `SecureRandom` | **Dentro, PR D, issue #129.** | Mudança contida em `ChaveAcessoGenerator`. O `cNF` existe para impedir que terceiros deduzam a chave de acesso; o valor derivado de número/série anula isso. |
 
 ## 3. Hierarquia de exceções de comunicação e política de retry
 
@@ -108,7 +108,13 @@ tiraria do débito da apuração uma nota que segue autorizada no fisco.
     `PENDENTE_SEFAZ`;
   - qualquer `RuntimeException` de uma nota é logada e não afeta as demais;
   - **disjuntor**: `app.nfe.sefaz.sync.max-falhas-consecutivas` (padrão 5) falhas de comunicação
-    seguidas encerram a execução (SEFAZ fora do ar); as notas restantes ficam para o próximo ciclo;
+    seguidas encerram a execução (SEFAZ fora do ar); a execução seguinte **retoma depois da última
+    nota tentada** (cursor em memória), para que falhas persistentes no começo da ordenação não
+    deixem as demais sem sincronizar para sempre (achado do review do PR C);
+  - limites conhecidos, aceitos: a duração de uma execução com a SEFAZ saudável e lenta não é
+    limitada pelo `lockAtMostFor` (14 min) — uma segunda réplica pode consultar as mesmas notas, o
+    que é inofensivo (leitura idempotente + recheck antes de gravar); `reconciliarTransmissoesPresas`
+    segue sem paginação, limitado ao número de transmissões presas, não ao volume total;
   - guarda da #79 preservada: só `PENDENTE_SEFAZ` é sobrescrita; evento publicado quando autoriza.
 
 ## 8. Propriedades novas em `SefazProperties`
@@ -173,6 +179,6 @@ PR B. Sem ele, o critério de aceite 2 era inatingível com qualquer código de 
 | — | `fix/config-yaml-spring-jpa` | #125: bloco `server:` fora do lugar (achado do T5), PR #126 | #125 |
 | B | `onda6/83-retry-idempotente` | exceções, retry por tipo, reconciliação pela chave, 204/573, `NAO_ENCONTRADA`/`CANCELADA`, mock fiel; T1–T5, T8, T10 | — |
 | C | `onda6/83-sync-paginado` | keyset + disjuntor + timeouts + invariante + limpeza do yml; T6, T7, T11 | #83 |
-| D | `onda6/cnf-secure-random` | `cNF` via `SecureRandom`; T12 | issue nova |
+| D | `onda6/cnf-secure-random` | `cNF` via `SecureRandom`; T12 | #129 |
 
-Issue nova registrada para o transporte SOAP real (Sprint 7, fora desta onda).
+Transporte SOAP real registrado na issue #128 (Sprint 7, fora desta onda).

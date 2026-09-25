@@ -88,7 +88,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `SefazRetorno` | Record com cStat, motivo, protocolo, situação |
 | `SituacaoSefaz` | Enum: AUTORIZADA, REJEITADA, PENDENTE, DENEGADA; só na consulta: NAO_ENCONTRADA, CANCELADA (issue #83) |
 | `SefazAmbiente` | Enum: HOMOLOGACAO, PRODUCAO |
-| `SefazStatusSyncJob` | `@Scheduled` — sincroniza notas PENDENTE_SEFAZ |
+| `SefazStatusSyncJob` | `@Scheduled` — reconcilia transmissões presas e sincroniza notas PENDENTE_SEFAZ (keyset por IDs + disjuntor — issue #83) |
 
 ### `model/`
 | Classe | Responsabilidade |
