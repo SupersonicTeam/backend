@@ -138,6 +138,7 @@ Bean Validation customizada (anotação + validator):
 | `NotaFiscalNaoConsultavelException` | 409 | Consulta sem chave de acesso |
 | `NotaFiscalNaoCancelavelException` | 409 | Cancelamento em status inválido |
 | `CancelamentoForaPrazoException` | 422 | Cancelamento após 30 dias (RN006) |
+| `CancelamentoRejeitadoException` | 422 | SEFAZ recusou o evento de cancelamento (`rejectedValue`=cStat, `message`=xMotivo — issue #84) |
 | `NotaFiscalInvalidaParaEmissaoException` | 422 | Dados inválidos para emissão |
 | `NfaInvalidaParaEmissaoException` | 422 | Dados inválidos para NFA |
 | `XmlImportacaoInvalidaException` | 422 | XML importado inválido/malformado |

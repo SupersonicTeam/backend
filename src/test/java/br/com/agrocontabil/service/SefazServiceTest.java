@@ -49,6 +49,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -636,14 +637,22 @@ class SefazServiceTest {
     // cStat fora de {135, 155}: o evento nao foi vinculado a NF-e.
     when(sefazClient.cancelar(any(), any(), any(), any()))
         .thenReturn(new SefazRetorno(
-            SituacaoSefaz.REJEITADA, "573", "Duplicidade de evento", null, null));
+            SituacaoSefaz.REJEITADA, "420",
+            "Rejeicao: Cancelamento para NF-e ja cancelada", null, null));
 
     // Antes esta recusa reaproveitava NotaFiscalNaoCancelavelException, que diz "o status atual
     // nao permite cancelar" apontando AUTORIZADA — justamente o status que permite. A excecao
     // propria diz a verdade e repassa o motivo do fisco.
     assertThatThrownBy(() -> sefazService.cancelar(notaId, MOTIVO_VALIDO))
-        .isInstanceOf(CancelamentoRejeitadoException.class)
-        .hasMessageContaining("573");
+        .isInstanceOfSatisfying(CancelamentoRejeitadoException.class, e -> {
+          // issue #84: 422 com o cStat em rejectedValue e o xMotivo do fisco, sem prefixo.
+          assertThat(e.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+          assertThat(e.getErrors()).singleElement().satisfies(d -> {
+            assertThat(d.code()).isEqualTo("CANCELAMENTO_REJEITADO");
+            assertThat(d.rejectedValue()).isEqualTo("420");
+            assertThat(d.message()).isEqualTo("Rejeicao: Cancelamento para NF-e ja cancelada");
+          });
+        });
 
     // A recusa nao cancelou a nota: ela volta a AUTORIZADA e segue cancelavel.
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
