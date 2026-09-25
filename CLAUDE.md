@@ -104,9 +104,9 @@ br.com.agrocontabil
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
 | POST | `/api/contador/guias` | Cria guia fiscal (produtorId deve ser o do usuário autenticado; 404 se divergir) |
-| GET | `/api/contador/guias?produtorId=` | Lista guias fiscais do usuário autenticado (404 se o id for de outro) |
+| GET | `/api/contador/guias?produtorId=&page=&size=` | Lista paginada (padrão 100, máx. 200) das guias do usuário autenticado (404 se o id for de outro); corpo array + total em `X-Total-Count` (#103) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (ação do produtor autenticado, anti-IDOR) |
-| GET | `/api/calendario-fiscal/{produtorId}/vencimentos` | Vencimentos fiscais do produtor (guias fiscais) |
+| GET | `/api/calendario-fiscal/{produtorId}/vencimentos?de=&ate=` | Vencimentos fiscais do produtor na janela `de`/`ate` (padrão: mês corrente ±12 meses; máx. 36 meses) (#103) |
 
 ## Segurança
 
@@ -148,7 +148,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 555 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
+- **Cobertura atual: 577 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`).
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
@@ -258,13 +258,20 @@ Quarta das 7 ondas do plano de 2026-09-21. Spec, design, tasks e sprint em `.spe
 - Ao adotar, enviar em **todas** as chamadas (interceptor HTTP) — inclusive nas de `/api/contador/guias`, onde o `produtorId` do payload/query precisa **bater** com o do header, sob pena de 404.
 - Novo status possível: **401** com `errors[0].code == "NAO_AUTENTICADO"` (header presente e inválido, ou ambiente sem identidade). Tratar como sessão inválida — é o mesmo 401 que o JWT devolverá na Sprint 8.
 
-### Onda 5 — Jobs e volume (em andamento; spec em `.specs/features/onda-5-jobs-volume/`)
+### Onda 5 — Jobs e volume (concluída em 2026-09-25; spec em `.specs/features/onda-5-jobs-volume/`)
 
 Quinta das 7 ondas. Ordem #100 → #87 → #103, um PR por issue.
 
 - **#100 Fechamento da apuração por produtor (PR 1):** `fecharPeriodo` fazia `findAll()` de todos os produtores e consolidava tudo numa **única** transação, de modo que um produtor inconsistente desfazia o fechamento de todos. Agora `fecharPeriodo` e `refecharPeriodosReabertos` são `NOT_SUPPORTED`: leem só IDs (produtores em lotes por **keyset**, `app.apuracao.fechamento.lote-tamanho`, padrão 100) e fecham cada item num `TransactionTemplate` **`REQUIRES_NEW`** com o timeout padrão. A falha de um item faz rollback só dele, é logada em `ERROR` e entra no `ResumoLoteApuracao` (concluídas + IDs com falha), que o `ApuracaoFechamentoJob` loga. A propriedade `app.apuracao.fechamento.transaction-timeout` saiu: não há mais transação de lote. RN004/RN005/#54/#64 inalterados. Os testes que passam pelo fechamento vivem em `ApuracaoFechamentoIntegrationTest`, **sem** `@Transactional` de classe: numa transação de teste o `REQUIRES_NEW` não enxergaria os dados do teste e o rollback esconderia justamente os commits que o teste precisa provar. A falha é injetada com `@MockitoSpyBean` no `NotaFiscalRepository`. Consolidação por SQL agregado (item 3 da issue) ficou de fora de propósito; ver o spec.
   - **Achado do review:** a corrida listener de evento (#64) × fechamento podia regravar `ABERTO` por cima de um período recém-`FECHADO` (a guarda da #54 via a cópia velha). Todo caminho que **grava** `ApuracaoMensal` (consolidar/fechar, listener, refechar, reabrir) agora lê a linha com **lock pessimista** (`...ForUpdate`). Não é `@Version` de propósito: com lock otimista, dois listeners concorrentes do mesmo produtor fariam um recálculo falhar e se perder; com o lock eles se serializam e o segundo relê o estado commitado. O refechamento reconfere `ABERTO` sob lock, e os dois laços param entre itens se a thread for interrompida (shutdown, #101).
 - **#87 Lock distribuído com ShedLock (PR 2):** com 2+ instâncias os três jobs rodavam em dobro. `shedlock-spring` + `shedlock-provider-jdbc-template` **6.10.0** (a 7.x compila contra Spring 7 / Boot 4). `SchedulingConfig` ganhou `@EnableSchedulerLock(order = HIGHEST_PRECEDENCE)` e o bean `LockProvider`: `JdbcTemplateLockProvider` com `usingDbTime()` (relógio do banco, imune a desvio entre réplicas) e `withThrowUnexpectedException(true)` (erro de storage sobe ao scheduler em vez de pular o job em silêncio), envolvido num **`KeepAliveLockProvider`** que renova o lock enquanto o job roda — a duração não é previsível (a sincronização SEFAZ faz uma chamada com retry por nota), e um `lockAtMostFor` fixo expiraria no meio, deixando outra réplica consultar as mesmas chaves (risco de cStat 656). O teto passa a valer só para réplica morta. **O executor do keep-alive não é bean de propósito:** um `ScheduledExecutorService` no contexto viraria o scheduler do `@EnableScheduling` e desligaria o pool da #101 (o `SchedulingConfigTest` pega isso). O `order` importa: o default do ShedLock empata com o advice transacional e a ordem fica indefinida; com o lock por dentro, ele seria liberado antes do commit do `GuiaFiscalStatusSyncJob`. Cada job tem `@SchedulerLock` com nome na constante `LOCK` e durações por propriedade (`app.<job>.lock.at-most-for`/`at-least-for`): SEFAZ `PT14M`/`PT10M` (cada réplica agenda o próprio `fixedDelay`, o piso impede sincronizar de novo logo depois da outra), fechamento `PT50M`/`PT5M`, guias `PT30M`/`PT5M` (o piso cobre o desvio de relógio entre réplicas que disparam o mesmo cron). Tabela `shedlock` no changeSet `0023` e em `schema-shedlock-test.sql` (não é entidade: o `create-drop` do H2 não a cria). `SchedulerLockConfigTest` exige `@SchedulerLock` em **todo** `@Scheduled` dos jobs — um job novo sem lock quebra o teste. **Armadilha de teste:** o `StorageBasedLockProvider` guarda em memória os nomes que já inseriu e, para eles, só tenta `UPDATE`; apagar a linha da `shedlock` no meio da suíte torna o lock impossível. Para resetar, expire (`UPDATE ... SET lock_until = <passado>`), nunca `DELETE`.
+- **#103 Guias paginadas e calendário por janela (PR 3):** `GuiaFiscalRepository.findByProdutorIdOrderByDataVencimentoDesc` devolvia **todas** as guias do produtor e foi removido. `GET /api/contador/guias` aceita `page` (padrão 0) e `size` (padrão 100, 1..200, Bean Validation com `@Validated` no controller) e ordena por `dataVencimento DESC, id DESC` (o desempate impede guia pulada ou repetida entre páginas). `GET /vencimentos` aceita `de`/`ate` (`YYYY-MM-DD`, inclusivos): ausentes, a janela é do 1º dia do mês corrente −12 meses ao último dia do mês corrente +12 meses (`Clock` do projeto); `de > ate` ou janela acima de 36 meses → **400 `JANELA_CALENDARIO_INVALIDA`** (`JanelaCalendarioInvalidaException`). Sem changeSet: o índice `(produtor_id, data_vencimento)` já existia (#102). **Decisão de compatibilidade:** o corpo dos dois endpoints **continua array**, porque o Angular lê `GuiaFiscal[]`/`CalendarioVencimento[]` e navega os meses do calendário no cliente depois de uma carga só; trocar para `Page` quebraria as duas telas. O total vai no header **`X-Total-Count`**, exposto no `CorsConfig`. Testes de calendário com data fixa usam janela explícita: a padrão é relativa a hoje e viraria bomba-relógio.
+
+**Nota de integração para o frontend Angular (Onda 5):**
+- **Nada quebra:** os dois endpoints seguem devolvendo array.
+- `ContadorApi.getGuias`: no máximo 100 guias por chamada, das mais recentes para as mais antigas. Para paginar, envie `page`/`size` (máx. 200) e leia o total em `X-Total-Count`.
+- `CalendarioApi.getVencimentos`: sem parâmetros vêm os vencimentos do mês corrente −12 a +12 meses. Ao navegar para fora dessa faixa, envie `de`/`ate` (janela máxima de 36 meses).
+- Novos 400 no envelope `errors[]`: `JANELA_CALENDARIO_INVALIDA` (campos `de`/`ate`) e `VALIDATION_ERROR` para `page`/`size` fora da faixa.
 
 ### Débitos técnicos abertos
 

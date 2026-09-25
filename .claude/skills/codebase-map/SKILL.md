@@ -148,6 +148,7 @@ Bean Validation customizada (anotação + validator):
 | `SefazComunicacaoException` | 502 | Timeout/falha após retry |
 | `XmlGenerationException` | 422/500 | Falha na geração ou validação XSD |
 | `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
+| `JanelaCalendarioInvalidaException` | 400 | `de > ate` ou janela > 36 meses no calendário fiscal (issue #103) |
 | `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |
@@ -160,7 +161,7 @@ Bean Validation customizada (anotação + validator):
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
-`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
 
 ## Endpoints REST (`/api/notas`)
 | Método | Path | Descrição |
@@ -183,9 +184,9 @@ Bean Validation customizada (anotação + validator):
 | Método | Path | Descrição |
 |--------|------|-----------|
 | POST | `/api/contador/guias` | Cria guia fiscal (produtorId explícito, sem auth de Contador) |
-| GET | `/api/contador/guias?produtorId=` | Lista guias fiscais do produtor |
+| GET | `/api/contador/guias?produtorId=&page=&size=` | Lista paginada das guias do produtor (corpo array + `X-Total-Count`; padrão 100, máx. 200 — issue #103) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (produtor autenticado, anti-IDOR real) |
-| GET | `/api/calendario-fiscal/{produtorId}/vencimentos` | Vencimentos do produtor (hoje: guias fiscais mapeadas) |
+| GET | `/api/calendario-fiscal/{produtorId}/vencimentos?de=&ate=` | Vencimentos do produtor na janela (padrão mês corrente ±12 meses; máx. 36 — issue #103) |
 
 ## Recursos em `src/main/resources/`
 - `xsd/` — XSD oficial NF-e layout 4.00
