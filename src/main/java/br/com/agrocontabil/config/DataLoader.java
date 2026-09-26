@@ -1,12 +1,15 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.math.BigDecimal;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -20,6 +23,10 @@ import org.springframework.stereotype.Component;
  * a API ({@code findByIdAndProdutorId} → 404) nao tem como ser exercido — nao existe "o outro
  * produtor" cujo recurso deva ser negado. O produtor A e tambem o <em>semente</em>: e ele que o
  * {@link MockProdutorFilter} injeta quando a requisicao nao declara {@code X-Usuario-Id}.
+ *
+ * <p>Desde a issue #93 semeia tambem <strong>um contador</strong>, vinculado apenas ao produtor A —
+ * o vinculo parcial e o que permite exercitar, em dev e na homologacao, tanto o acesso autorizado
+ * (produtor A) quanto a negativa por falta de vinculo (produtor B).
  *
  * <p>Ambos carregam inscricao estadual e endereco completos: desde a issue #88 isso e pre-condicao
  * da emissao, e um produtor sem esses dados geraria XML com placeholder. Os municipios sao
@@ -45,22 +52,41 @@ public class DataLoader implements CommandLineRunner {
   /** Produtor B — existe para dar um "outro dono" aos cenarios de ownership. */
   private static final String CPF_PRODUTOR_B = "987.654.321-00";
 
-  private final ProdutorRepository produtorRepository;
+  /**
+   * Contador semente (issue #93) — vinculado <strong>apenas</strong> ao produtor A.
+   *
+   * <p>O vinculo parcial e o ponto: com o contador atendendo os dois produtores, nao existiria
+   * "produtor que este contador nao atende" e a negativa de acesso por falta de vinculo nao teria
+   * como ser exercida em dev nem na homologacao.
+   */
+  private static final String CNPJ_CONTADOR = "12.345.678/0001-95";
 
-  public DataLoader(ProdutorRepository produtorRepository) {
+  private final ProdutorRepository produtorRepository;
+  private final ContadorRepository contadorRepository;
+
+  public DataLoader(
+      ProdutorRepository produtorRepository, ContadorRepository contadorRepository) {
     this.produtorRepository = produtorRepository;
+    this.contadorRepository = contadorRepository;
   }
 
   @Override
   public void run(String... args) {
-    semear(produtorA());
+    Produtor produtorA = semear(produtorA());
     semear(produtorB());
+    semearContador(produtorA);
   }
 
-  /** Persiste o produtor se ainda nao existir, e loga o id para uso no header {@code X-Usuario-Id}. */
-  private void semear(Produtor produtor) {
-    if (produtorRepository.existsByCpfCnpj(produtor.getCpfCnpj())) {
-      return;
+  /**
+   * Persiste o produtor se ainda nao existir, e loga o id para uso no header {@code X-Usuario-Id}.
+   *
+   * @param produtor produtor a semear
+   * @return o produtor persistido, ou o que ja estava no banco com o mesmo CPF/CNPJ
+   */
+  private Produtor semear(Produtor produtor) {
+    Optional<Produtor> existente = produtorRepository.findByCpfCnpj(produtor.getCpfCnpj());
+    if (existente.isPresent()) {
+      return existente.get();
     }
 
     Produtor salvo = produtorRepository.save(produtor);
@@ -68,6 +94,39 @@ public class DataLoader implements CommandLineRunner {
     // desenvolvedor precisa ter em maos para simular este usuario via header.
     log.info(
         "Produtor semeado: {} (X-Usuario-Id: {})", salvo.getNomeCompleto(), salvo.getId());
+    return salvo;
+  }
+
+  /**
+   * Semeia o contador de dev/homolog vinculado ao produtor A (issue #93).
+   *
+   * <p>Idempotente pelo CNPJ, como o seed dos produtores. O vinculo e criado junto do contador: se
+   * o contador ja existe, nada e alterado — inclusive porque mexer na carteira de um contador ja
+   * semeado apagaria vinculos criados a mao durante o desenvolvimento.
+   *
+   * @param produtorA produtor que este contador atende
+   */
+  private void semearContador(Produtor produtorA) {
+    if (contadorRepository.existsByCpfCnpj(CNPJ_CONTADOR)) {
+      return;
+    }
+
+    Contador contador =
+        Contador.builder()
+            .nomeCompleto("Escritorio Contabil Campo Certo")
+            .cpfCnpj(CNPJ_CONTADOR)
+            .crc("MT-012345/O")
+            .email("contato@campocerto.example.com")
+            .telefone("(65) 3333-0001")
+            .build();
+    contador.vincular(produtorA);
+
+    Contador salvo = contadorRepository.save(contador);
+    log.info(
+        "Contador semeado: {} (X-Usuario-Id: {}) — atende o produtor {}",
+        salvo.getNomeCompleto(),
+        salvo.getId(),
+        produtorA.getId());
   }
 
   private Produtor produtorA() {
