@@ -18,6 +18,7 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.sefaz.SefazTransport;
 import br.com.agrocontabil.support.ContadorDeEventos;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -42,7 +43,6 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -327,7 +327,7 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
 
   private void autenticar() {
     SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(produtor, null, List.of()));
+        AutenticacaoTestSupport.tokenDe(produtor));
   }
 
   private UUID persistir(NotaFiscal nota) {

@@ -15,7 +15,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  *
  * <p>O {@link AuditorAware} resolve <em>quem</em> está agindo a partir da identidade autenticada
  * atual ({@link AuthenticatedProdutorProvider}). Hoje essa identidade é o produtor mockado
- * ({@code MockProdutorFilter}); quando a autenticação real (com papel de contador) chegar na
+ * ({@code MockIdentidadeFilter}); quando a autenticação real (com papel de contador) chegar na
  * Sprint 8, este componente passa a devolver o usuário real <strong>sem alterar</strong> os
  * serviços que o consomem.
  *

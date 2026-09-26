@@ -13,6 +13,7 @@ import br.com.agrocontabil.dto.DashboardResponse.FinanceiroResumo;
 import br.com.agrocontabil.dto.DashboardResponse.NotaPorMes;
 import br.com.agrocontabil.dto.DashboardResponse.ProdutorResumo;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.DashboardService;
 import java.math.BigDecimal;
@@ -45,9 +46,13 @@ class DashboardControllerTest {
   @MockBean
   private DashboardService dashboardService;
 
-  /** MockProdutorFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
+  /** MockIdentidadeFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
   @MockBean
   private ProdutorRepository produtorRepository;
+
+  /** O filtro tambem resolve contador (issue #93) — mockado junto no @WebMvcTest. */
+  @MockBean
+  private ContadorRepository contadorRepository;
 
   private DashboardResponse dashboardExemplo(String periodo) {
     return new DashboardResponse(

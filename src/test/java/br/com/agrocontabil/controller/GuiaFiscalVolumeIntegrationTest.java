@@ -7,12 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import br.com.agrocontabil.config.MockProdutorFilter;
+import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
@@ -36,7 +37,7 @@ import org.springframework.web.context.WebApplicationContext;
 /**
  * Teste de integração HTTP da listagem paginada de guias e da janela do calendário (issue #103).
  *
- * <p>Pilha real (controller → service → repositório → H2) com o {@link MockProdutorFilter}
+ * <p>Pilha real (controller → service → repositório → H2) com o {@link MockIdentidadeFilter}
  * registrado à mão, como no {@code IdentidadeMultiUsuarioIntegrationTest}: cada requisição
  * declara o produtor pelo header {@code X-Usuario-Id}. O que se prova aqui é o contrato que o
  * Angular vê: corpo array, total no header, recorte temporal e os 400 no envelope.
@@ -52,6 +53,7 @@ class GuiaFiscalVolumeIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private ProdutorRepository produtorRepository;
+  @Autowired private ContadorRepository contadorRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private TestDatabaseCleaner cleaner;
 
@@ -64,7 +66,7 @@ class GuiaFiscalVolumeIntegrationTest {
     produtor = produtorRepository.save(
         Produtor.builder().nomeCompleto("Maria Agricultora").cpfCnpj("98765432100").build());
     mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-        .addFilters(new MockProdutorFilter(produtorRepository))
+        .addFilters(new MockIdentidadeFilter(produtorRepository, contadorRepository))
         .build();
   }
 
@@ -187,7 +189,7 @@ class GuiaFiscalVolumeIntegrationTest {
   }
 
   private MockHttpServletRequestBuilder comoProdutor(MockHttpServletRequestBuilder requisicao) {
-    return requisicao.header(MockProdutorFilter.HEADER_USUARIO_ID, produtor.getId());
+    return requisicao.header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId());
   }
 
   private void guia(LocalDate vencimento) {

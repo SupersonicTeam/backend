@@ -14,6 +14,8 @@ import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
@@ -43,7 +45,7 @@ import org.springframework.web.context.WebApplicationContext;
  * {@code findByIdAndProdutorId} espalhado pelos services nunca chegava a negar nada. Com dois
  * produtores e o header {@code X-Usuario-Id}, o 404 cross-tenant passa a ser verificavel.
  *
- * <p>O {@link MockProdutorFilter} e {@code @Profile("dev")} e o profile daqui e {@code test}: em vez
+ * <p>O {@link MockIdentidadeFilter} e {@code @Profile("dev")} e o profile daqui e {@code test}: em vez
  * de ligar o profile dev na suite (o que traria junto o {@code DataLoader} e o docker-compose), o
  * filtro e instanciado e registrado a mao no {@link MockMvc} — fica explicito que o teste exercita
  * exatamente o filtro de producao, nao uma imitacao.
@@ -61,6 +63,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
 
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private ProdutorRepository produtorRepository;
+  @Autowired private ContadorRepository contadorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private TestDatabaseCleaner cleaner;
@@ -81,7 +84,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
 
     mockMvc =
         MockMvcBuilders.webAppContextSetup(webApplicationContext)
-            .addFilters(new MockProdutorFilter(produtorRepository))
+            .addFilters(new MockIdentidadeFilter(produtorRepository, contadorRepository))
             .build();
   }
 
@@ -89,13 +92,13 @@ class IdentidadeMultiUsuarioIntegrationTest {
   @DisplayName("cada usuario ve apenas as proprias notas")
   void cadaUsuarioVeApenasAsProprias() throws Exception {
     mockMvc
-        .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, produtorA.getId()))
+        .perform(get("/api/notas").header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorA.getId()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content.length()").value(1))
         .andExpect(jsonPath("$.content[0].numero").value(1001));
 
     mockMvc
-        .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+        .perform(get("/api/notas").header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorB.getId()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content.length()").value(1))
         .andExpect(jsonPath("$.content[0].numero").value(2001));
@@ -107,13 +110,13 @@ class IdentidadeMultiUsuarioIntegrationTest {
     mockMvc
         .perform(
             get("/api/notas/{id}", notaDeA.getId())
-                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorA.getId()))
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorA.getId()))
         .andExpect(status().isOk());
 
     mockMvc
         .perform(
             get("/api/notas/{id}", notaDeA.getId())
-                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorB.getId()))
         .andExpect(status().isNotFound());
   }
 
@@ -136,7 +139,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
 
   private void naoAutenticaNemVazaDados(String headerInvalido) throws Exception {
     mockMvc
-        .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, headerInvalido))
+        .perform(get("/api/notas").header(MockIdentidadeFilter.HEADER_USUARIO_ID, headerInvalido))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
         // Nenhum dado de nota no corpo: nem a pagina, nem o ID da nota de A. Antes a checagem era
@@ -151,7 +154,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
   @Test
   @DisplayName("sem filtro de identidade (simula prod), endpoint autenticado responde 401, nao 500")
   void semFiltroDeIdentidadeResponde401() throws Exception {
-    // Em prod o MockProdutorFilter nao e registrado: nenhuma requisicao carrega principal. Antes da
+    // Em prod o MockIdentidadeFilter nao e registrado: nenhuma requisicao carrega principal. Antes da
     // issue #92 isso derrubava toda a API autenticada em 500 generico.
     MockMvc semFiltro = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
 
@@ -161,10 +164,10 @@ class IdentidadeMultiUsuarioIntegrationTest {
         // RFC 9110 exige o desafio no 401 — mesmo cuidado que a #66 teve com Allow/Accept.
         .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
             .header().string("WWW-Authenticate",
-                org.hamcrest.Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)))
+                org.hamcrest.Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)))
         .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
         .andExpect(jsonPath("$.errors[0].suggestion").value(
-            org.hamcrest.Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)));
+            org.hamcrest.Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)));
   }
 
   @Test
@@ -184,7 +187,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
         .perform(
             get("/api/contador/guias")
                 .param("produtorId", produtorA.getId().toString())
-                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorA.getId()))
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorA.getId()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1));
 
@@ -193,7 +196,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
         .perform(
             get("/api/contador/guias")
                 .param("produtorId", produtorA.getId().toString())
-                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorB.getId()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.errors[0].code").value("RESOURCE_NOT_FOUND"));
 
@@ -208,7 +211,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
             post("/api/contador/guias")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
-                .header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorB.getId()))
         .andExpect(status().isNotFound());
 
     assertThat(guiaFiscalRepository.findByProdutorId(produtorA.getId(), Pageable.unpaged()))
@@ -221,7 +224,7 @@ class IdentidadeMultiUsuarioIntegrationTest {
     // O MockMvc executa as duas requisicoes na thread do teste: se o filtro nao limpasse o
     // SecurityContext, a segunda herdaria o produtor B da primeira em vez de cair no semente.
     mockMvc
-        .perform(get("/api/notas").header(MockProdutorFilter.HEADER_USUARIO_ID, produtorB.getId()))
+        .perform(get("/api/notas").header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorB.getId()))
         .andExpect(jsonPath("$.content[0].numero").value(2001));
 
     mockMvc
@@ -249,5 +252,23 @@ class IdentidadeMultiUsuarioIntegrationTest {
         .valorTotalProdutos(new BigDecimal("1000.00"))
         .valorTotalNota(new BigDecimal("1000.00"))
         .build();
+  }
+
+  @Test
+  @DisplayName("contador autenticado em endpoint de produtor responde 403, nao 401 nem 500 (#93)")
+  void contadorEmEndpointDeProdutorResponde403() throws Exception {
+    Contador contador = contadorRepository.save(
+        Contador.builder().nomeCompleto("Escritorio Campo Certo").cpfCnpj("12.345.678/0001-95")
+            .build());
+
+    // O contador ESTA autenticado — o que falta e o produtor-alvo. 401 diria "sem identidade"
+    // (falso) e 500 era o que acontecia antes da #93, quando o principal so podia ser Produtor.
+    mockMvc
+        .perform(get("/api/notas").header(MockIdentidadeFilter.HEADER_USUARIO_ID, contador.getId()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.errors[0].code").value("PAPEL_NAO_AUTORIZADO"))
+        .andExpect(
+            resultado -> assertThat(resultado.getResponse().getContentAsString())
+                .doesNotContain(notaDeA.getId().toString()));
   }
 }

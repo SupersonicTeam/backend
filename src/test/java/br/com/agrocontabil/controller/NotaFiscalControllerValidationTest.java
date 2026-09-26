@@ -12,6 +12,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.CfopReferenciaRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.ImportacaoNotaFiscalService;
 import br.com.agrocontabil.service.NotaFiscalService;
@@ -56,6 +57,7 @@ class NotaFiscalControllerValidationTest {
   @MockBean private NotaFiscalValidacaoService validacaoService;
   @MockBean private ImportacaoNotaFiscalService importacaoService;
   @MockBean private ProdutorRepository produtorRepository;
+  @MockBean private ContadorRepository contadorRepository;
   @MockBean private NcmReferenciaRepository ncmReferenciaRepository;
   @MockBean private CfopReferenciaRepository cfopReferenciaRepository;
 

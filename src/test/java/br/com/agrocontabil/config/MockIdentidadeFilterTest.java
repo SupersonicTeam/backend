@@ -6,8 +6,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.security.UsuarioAutenticado;
 import jakarta.servlet.FilterChain;
 import java.util.List;
 import java.util.Optional;
@@ -25,21 +29,22 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * Testes do resolvedor de identidade por requisicao (issue #91).
+ * Testes do resolvedor de identidade por requisicao (issues #91 e #93).
  *
  * <p>Cada cenario verifica o principal que o filtro deixou no {@code SecurityContext}
  * <strong>durante</strong> a cadeia — o filtro limpa o contexto ao terminar (RF06), entao inspecionar
  * depois da chamada nao diria nada. Por isso o {@link FilterChain} mockado captura o principal.
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("MockProdutorFilter — identidade por requisicao (X-Usuario-Id)")
-class MockProdutorFilterTest {
+@DisplayName("MockIdentidadeFilter — identidade por requisicao (X-Usuario-Id)")
+class MockIdentidadeFilterTest {
 
   private static final String CPF_SEMENTE = DataLoader.CPF_PRODUTOR_SEMENTE;
 
   @Mock private ProdutorRepository produtorRepository;
+  @Mock private ContadorRepository contadorRepository;
 
-  @InjectMocks private MockProdutorFilter filter;
+  @InjectMocks private MockIdentidadeFilter filter;
 
   private final MockHttpServletRequest request = new MockHttpServletRequest();
   private final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -52,6 +57,7 @@ class MockProdutorFilterTest {
   /** Cadeia que captura o principal autenticado no momento em que a requisicao seria processada. */
   private static final class CapturingChain implements FilterChain {
     private Object principal;
+    private java.util.Collection<String> authorities;
     private boolean chamada;
 
     @Override
@@ -59,7 +65,27 @@ class MockProdutorFilterTest {
       chamada = true;
       var auth = SecurityContextHolder.getContext().getAuthentication();
       principal = auth == null ? null : auth.getPrincipal();
+      authorities =
+          auth == null
+              ? null
+              : auth.getAuthorities().stream()
+                  .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                  .toList();
     }
+  }
+
+  private static Contador contador() {
+    return Contador.builder()
+        .id(UUID.randomUUID())
+        .nomeCompleto("Escritorio Teste")
+        .cpfCnpj("12.345.678/0001-95")
+        .build();
+  }
+
+  /** Produtor que o filtro deixou no contexto, ja desembrulhado do principal. */
+  private static Produtor produtorDe(CapturingChain chain) {
+    assertThat(chain.principal).isInstanceOf(UsuarioAutenticado.class);
+    return ((UsuarioAutenticado) chain.principal).produtor();
   }
 
   private static Produtor produtor(String cpf) {
@@ -76,7 +102,8 @@ class MockProdutorFilterTest {
 
     filter.doFilter(request, response, chain);
 
-    assertThat(chain.principal).isSameAs(semente);
+    assertThat(produtorDe(chain)).isSameAs(semente);
+    assertThat(chain.authorities).containsExactly(PapelUsuario.PRODUTOR.authority());
   }
 
   @Test
@@ -84,19 +111,20 @@ class MockProdutorFilterTest {
   void headerResolveProdutorInformado() throws Exception {
     Produtor outro = produtor("987.654.321-00");
     when(produtorRepository.findById(outro.getId())).thenReturn(Optional.of(outro));
-    request.addHeader(MockProdutorFilter.HEADER_USUARIO_ID, outro.getId().toString());
+    request.addHeader(MockIdentidadeFilter.HEADER_USUARIO_ID, outro.getId().toString());
     CapturingChain chain = new CapturingChain();
 
     filter.doFilter(request, response, chain);
 
-    assertThat(chain.principal).isSameAs(outro);
+    assertThat(produtorDe(chain)).isSameAs(outro);
     verify(produtorRepository, never()).findByCpfCnpj(any());
+    verify(contadorRepository, never()).findById(any());
   }
 
   @Test
   @DisplayName("header malformado nao autentica e nao cai no fallback do semente")
   void headerMalformadoNaoAutentica() throws Exception {
-    request.addHeader(MockProdutorFilter.HEADER_USUARIO_ID, "nao-e-uuid");
+    request.addHeader(MockIdentidadeFilter.HEADER_USUARIO_ID, "nao-e-uuid");
     CapturingChain chain = new CapturingChain();
 
     filter.doFilter(request, response, chain);
@@ -111,7 +139,8 @@ class MockProdutorFilterTest {
   void headerInexistenteNaoAutentica() throws Exception {
     UUID desconhecido = UUID.randomUUID();
     when(produtorRepository.findById(desconhecido)).thenReturn(Optional.empty());
-    request.addHeader(MockProdutorFilter.HEADER_USUARIO_ID, desconhecido.toString());
+    when(contadorRepository.findById(desconhecido)).thenReturn(Optional.empty());
+    request.addHeader(MockIdentidadeFilter.HEADER_USUARIO_ID, desconhecido.toString());
     CapturingChain chain = new CapturingChain();
 
     filter.doFilter(request, response, chain);
@@ -139,7 +168,7 @@ class MockProdutorFilterTest {
     Produtor jaAutenticado = produtor("111.222.333-44");
     SecurityContextHolder.getContext()
         .setAuthentication(new UsernamePasswordAuthenticationToken(jaAutenticado, null, List.of()));
-    request.addHeader(MockProdutorFilter.HEADER_USUARIO_ID, UUID.randomUUID().toString());
+    request.addHeader(MockIdentidadeFilter.HEADER_USUARIO_ID, UUID.randomUUID().toString());
     CapturingChain chain = new CapturingChain();
 
     filter.doFilter(request, response, chain);
@@ -170,5 +199,37 @@ class MockProdutorFilterTest {
     filter.doFilter(request, response, new CapturingChain());
 
     assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("header com UUID de contador autentica com papel CONTADOR (#93)")
+  void headerResolveContador() throws Exception {
+    Contador contador = contador();
+    when(produtorRepository.findById(contador.getId())).thenReturn(Optional.empty());
+    when(contadorRepository.findById(contador.getId())).thenReturn(Optional.of(contador));
+    request.addHeader(MockIdentidadeFilter.HEADER_USUARIO_ID, contador.getId().toString());
+    CapturingChain chain = new CapturingChain();
+
+    filter.doFilter(request, response, chain);
+
+    assertThat(chain.principal).isInstanceOf(UsuarioAutenticado.class);
+    UsuarioAutenticado usuario = (UsuarioAutenticado) chain.principal;
+    assertThat(usuario.papel()).isEqualTo(PapelUsuario.CONTADOR);
+    assertThat(usuario.contador()).isSameAs(contador);
+    assertThat(chain.authorities).containsExactly(PapelUsuario.CONTADOR.authority());
+  }
+
+  @Test
+  @DisplayName("sem header o fallback e sempre o produtor semente, nunca um contador (#93)")
+  void fallbackNuncaEhContador() throws Exception {
+    Produtor semente = produtor(CPF_SEMENTE);
+    when(produtorRepository.findByCpfCnpj(CPF_SEMENTE)).thenReturn(Optional.of(semente));
+    CapturingChain chain = new CapturingChain();
+
+    filter.doFilter(request, response, chain);
+
+    // Cair no papel de contador por omissao trocaria silenciosamente as permissoes da requisicao.
+    assertThat(((UsuarioAutenticado) chain.principal).papel()).isEqualTo(PapelUsuario.PRODUTOR);
+    verify(contadorRepository, never()).findById(any());
   }
 }

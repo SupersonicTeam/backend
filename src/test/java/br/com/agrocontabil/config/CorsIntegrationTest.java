@@ -83,11 +83,11 @@ class CorsIntegrationTest {
     mockMvc.perform(options("/api/notas")
             .header(ORIGIN, ORIGEM_ANGULAR)
             .header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
-            .header(ACCESS_CONTROL_REQUEST_HEADERS, MockProdutorFilter.HEADER_USUARIO_ID))
+            .header(ACCESS_CONTROL_REQUEST_HEADERS, MockIdentidadeFilter.HEADER_USUARIO_ID))
         .andExpect(status().isOk())
         .andExpect(header().string(ACCESS_CONTROL_ALLOW_ORIGIN, ORIGEM_ANGULAR))
         .andExpect(header().string(ACCESS_CONTROL_ALLOW_HEADERS,
-            Matchers.containsString(MockProdutorFilter.HEADER_USUARIO_ID)));
+            Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)));
   }
 
   @Test

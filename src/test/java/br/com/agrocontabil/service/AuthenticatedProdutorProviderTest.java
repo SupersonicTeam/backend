@@ -4,7 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.exception.NaoAutenticadoException;
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.security.UsuarioAutenticado;
+import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +28,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <ul>
  *   <li>Produtor valido no SecurityContext retorna o produtor corretamente</li>
  *   <li>Sem Authentication no SecurityContext lanca NaoAutenticadoException (401)</li>
- *   <li>Principal diferente de Produtor lanca NaoAutenticadoException (401)</li>
+ *   <li>Principal que nao e UsuarioAutenticado lanca NaoAutenticadoException (401)</li>
+ *   <li>Contador autenticado lanca PapelNaoAutorizadoException (403) — issue #93</li>
  * </ul>
  */
 class AuthenticatedProdutorProviderTest {
@@ -32,7 +38,7 @@ class AuthenticatedProdutorProviderTest {
 
   @BeforeEach
   void setUp() {
-    provider = new AuthenticatedProdutorProvider();
+    provider = new AuthenticatedProdutorProvider(new UsuarioAutenticadoProvider());
     SecurityContextHolder.clearContext();
   }
 
@@ -54,9 +60,7 @@ class AuthenticatedProdutorProviderTest {
         .cpfCnpj("12345678901")
         .build();
 
-    UsernamePasswordAuthenticationToken auth =
-        new UsernamePasswordAuthenticationToken(produtor, null, java.util.List.of());
-    SecurityContextHolder.getContext().setAuthentication(auth);
+    AutenticacaoTestSupport.autenticarComo(produtor);
 
     Produtor result = provider.get();
 
@@ -93,7 +97,7 @@ class AuthenticatedProdutorProviderTest {
   // -------------------------------------------------------------------------
 
   @Test
-  @DisplayName("get deve lancar NaoAutenticadoException quando principal nao e Produtor (String)")
+  @DisplayName("get deve lancar NaoAutenticadoException quando principal nao e UsuarioAutenticado")
   void getShouldThrowWhenPrincipalIsNotProdutor() {
     UsernamePasswordAuthenticationToken auth =
         new UsernamePasswordAuthenticationToken("usuario-nao-produtor", null, java.util.List.of());
@@ -115,5 +119,32 @@ class AuthenticatedProdutorProviderTest {
     assertThatThrownBy(() -> provider.get())
         .isInstanceOf(NaoAutenticadoException.class)
         .hasMessageContaining("identidade de usuario");
+  }
+
+  // -------------------------------------------------------------------------
+  // Contador autenticado — PapelNaoAutorizadoException (403), issue #93
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("get deve lancar 403 (e nao 401) quando quem esta autenticado e um contador")
+  void getShouldThrowPapelNaoAutorizadoParaContador() {
+    Contador contador =
+        Contador.builder().id(UUID.randomUUID()).nomeCompleto("Escritorio Teste").build();
+    AutenticacaoTestSupport.autenticarComo(contador);
+
+    // 401 diria "sem identidade", o que e falso: o contador esta autenticado, so nao e produtor.
+    assertThatThrownBy(() -> provider.get())
+        .isInstanceOf(PapelNaoAutorizadoException.class)
+        .hasMessageContaining("PRODUTOR");
+  }
+
+  @Test
+  @DisplayName("get devolve o produtor quando o principal e um UsuarioAutenticado de papel PRODUTOR")
+  void getShouldReturnProdutorDeUsuarioAutenticado() {
+    Produtor produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Produtor").build();
+    SecurityContextHolder.getContext()
+        .setAuthentication(AutenticacaoTestSupport.tokenDe(UsuarioAutenticado.deProdutor(produtor)));
+
+    assertThat(provider.get()).isSameAs(produtor);
   }
 }

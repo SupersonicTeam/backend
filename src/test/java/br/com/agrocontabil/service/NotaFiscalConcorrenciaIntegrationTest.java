@@ -15,6 +15,7 @@ import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -36,7 +37,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -60,7 +60,7 @@ import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
  *
  * <p>O {@code SecurityContextHolder} é <em>thread-local</em>, então cada thread do
  * {@link ExecutorService} autentica o produtor por conta própria — o que o
- * {@code MockProdutorFilter} faz por requisição em runtime.
+ * {@code MockIdentidadeFilter} faz por requisição em runtime.
  */
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
@@ -197,7 +197,7 @@ class NotaFiscalConcorrenciaIntegrationTest {
       Callable<NotaFiscalResponse> tarefa = () -> {
         // Cada thread tem o seu SecurityContext (thread-local).
         SecurityContextHolder.getContext().setAuthentication(
-            new UsernamePasswordAuthenticationToken(produtor, null, List.of()));
+            AutenticacaoTestSupport.tokenDe(produtor));
         largada.await(TIMEOUT_SEGUNDOS, TimeUnit.SECONDS);
         try {
           return notaFiscalService.gerarXml(notaId);

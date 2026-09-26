@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.CreditoSaldoResponse;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.CreditoService;
 import java.math.BigDecimal;
@@ -40,9 +41,13 @@ class CreditoControllerTest {
   @MockBean
   private CreditoService creditoService;
 
-  /** MockProdutorFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
+  /** MockIdentidadeFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
   @MockBean
   private ProdutorRepository produtorRepository;
+
+  /** O filtro tambem resolve contador (issue #93) — mockado junto no @WebMvcTest. */
+  @MockBean
+  private ContadorRepository contadorRepository;
 
   @Test
   @DisplayName("GET /api/creditos com periodo valido retorna 200 com o saldo")

@@ -28,6 +28,7 @@ import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.NotaFiscalService;
 import br.com.agrocontabil.service.NotaFiscalValidacaoService;
@@ -89,12 +90,16 @@ class NotaFiscalControllerTest {
   private br.com.agrocontabil.service.ImportacaoNotaFiscalService importacaoService;
 
   /**
-   * MockProdutorFilter e um @Component que depende de ProdutorRepository.
+   * MockIdentidadeFilter e um @Component que depende de ProdutorRepository.
    * @WebMvcTest nao sobe JPA, entao o ProdutorRepository precisa ser mockado
    * para satisfazer a dependencia do filtro durante a inicializacao do contexto.
    */
   @MockBean
   private ProdutorRepository produtorRepository;
+
+  /** O filtro tambem resolve contador (issue #93) — mockado junto no @WebMvcTest. */
+  @MockBean
+  private ContadorRepository contadorRepository;
 
   /**
    * Os validadores @ValidNcm/@ValidCfop (issue #20) sao @Component instanciados pela fabrica de

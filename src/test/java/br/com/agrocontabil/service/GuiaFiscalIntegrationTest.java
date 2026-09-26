@@ -15,6 +15,7 @@ import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -86,7 +86,7 @@ class GuiaFiscalIntegrationTest {
 
   private void autenticarComo(Produtor p) {
     SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(p, null, List.of()));
+        AutenticacaoTestSupport.tokenDe(p));
   }
 
   @Test

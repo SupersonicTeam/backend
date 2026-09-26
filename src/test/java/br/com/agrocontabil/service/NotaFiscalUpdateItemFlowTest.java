@@ -9,6 +9,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -22,7 +23,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -74,9 +74,9 @@ class NotaFiscalUpdateItemFlowTest {
         .estado("MT")
         .build());
 
-    // Simula o produtor autenticado (papel do MockProdutorFilter em runtime).
+    // Simula o produtor autenticado (papel do MockIdentidadeFilter em runtime).
     SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(produtor, null, List.of()));
+        AutenticacaoTestSupport.tokenDe(produtor));
   }
 
   @AfterEach
