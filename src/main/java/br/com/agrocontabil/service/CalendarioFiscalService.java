@@ -5,6 +5,7 @@ import br.com.agrocontabil.exception.JanelaCalendarioInvalidaException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.GuiaFiscalMapper;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -24,12 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link GuiaFiscalRepository}, sem nova tabela. Outras fontes de prazo fiscal (obrigações,
  * declarações) ficam para quando o backend as modelar.
  *
- * <p><strong>Anti-IDOR:</strong> diferente do {@code GuiaFiscalController} (ação do Contador, sem
- * autenticação própria ainda), o calendário é uma tela do <strong>produtor</strong> — mesmo grupo
- * do Dashboard e da Apuração, onde o produtor já tem autenticação mockada real
- * ({@link AuthenticatedProdutorProvider}). O {@code produtorId} do path precisa bater com o
- * produtor autenticado; caso contrário, 404 (nunca 403 — não revela existência), mesmo padrão
- * usado em toda a API.
+ * <p><strong>Anti-IDOR:</strong> o {@code produtorId} do path precisa ser acessível pela identidade
+ * autenticada — o próprio produtor, ou um produtor da carteira do contador (issue #93). Quem decide
+ * é o {@link ProdutorEmContextoResolver}; caso contrário, 404 (nunca 403 — não revela existência),
+ * mesmo padrão usado em toda a API.
  */
 @Service
 @Transactional(readOnly = true)
@@ -46,7 +45,7 @@ public class CalendarioFiscalService {
   public static final int MESES_JANELA_MAXIMA = 36;
 
   private final GuiaFiscalRepository guiaFiscalRepository;
-  private final AuthenticatedProdutorProvider produtorProvider;
+  private final ProdutorEmContextoResolver produtorEmContexto;
   private final Clock clock;
 
   /**
@@ -55,10 +54,10 @@ public class CalendarioFiscalService {
    */
   public CalendarioFiscalService(
       GuiaFiscalRepository guiaFiscalRepository,
-      AuthenticatedProdutorProvider produtorProvider,
+      ProdutorEmContextoResolver produtorEmContexto,
       Clock clock) {
     this.guiaFiscalRepository = guiaFiscalRepository;
-    this.produtorProvider = produtorProvider;
+    this.produtorEmContexto = produtorEmContexto;
     this.clock = clock;
   }
 
@@ -70,21 +69,18 @@ public class CalendarioFiscalService {
    * {@code ate} ausente vira o último dia do mês corrente + {@value #MESES_JANELA_PADRAO} meses
    * (fuso {@code America/Sao_Paulo}). Os dois extremos são inclusivos.
    *
-   * @param produtorId identificador do produtor; deve bater com o produtor autenticado
+   * @param produtorId identificador do produtor; deve ser acessivel pela identidade autenticada
    * @param de         primeiro dia da janela, ou {@code null} para o padrão
    * @param ate        último dia da janela, ou {@code null} para o padrão
    * @return vencimentos do produtor na janela, mais recentes primeiro (vazia se nenhum)
-   * @throws ResourceNotFoundException se o produtorId não bater com o produtor autenticado
-   *     (anti-IDOR — 404, nunca 403)
+   * @throws ResourceNotFoundException se o produtorId não for acessível pela identidade
+   *     autenticada (anti-IDOR — 404, nunca 403)
    * @throws JanelaCalendarioInvalidaException se {@code de} for posterior a {@code ate} ou a
    *     janela passar de {@value #MESES_JANELA_MAXIMA} meses (400)
    */
   public List<VencimentoFiscalResponse> listarVencimentos(
       UUID produtorId, LocalDate de, LocalDate ate) {
-    UUID autenticadoId = produtorProvider.get().getId();
-    if (!autenticadoId.equals(produtorId)) {
-      throw new ResourceNotFoundException("Produtor", produtorId);
-    }
+    produtorEmContexto.exigirAcesso(produtorId);
 
     YearMonth mesCorrente = YearMonth.now(clock);
     LocalDate inicio = de != null ? de : mesCorrente.minusMonths(MESES_JANELA_PADRAO).atDay(1);

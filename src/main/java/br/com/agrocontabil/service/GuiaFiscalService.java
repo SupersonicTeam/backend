@@ -9,7 +9,7 @@ import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
-import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -22,17 +22,21 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Regras de negócio das guias fiscais anexadas pelo Contador (issue #74).
  *
- * <p><strong>Ownership em todas as operações (issue #94).</strong> O {@code produtorId} que chega
- * no payload ou na query string é apenas uma <em>afirmação do cliente</em>: antes de qualquer
- * leitura ou escrita ele precisa bater com o produtor autenticado
- * ({@link AuthenticatedProdutorProvider}). Divergiu, responde <strong>404</strong> — nunca 403 —
- * exatamente como o resto da API, para não revelar a existência do recurso alheio. Até a issue #94
- * a criação e a listagem só verificavam existência, de modo que qualquer cliente lia e gravava
- * guias de qualquer produtor informando o id.
+ * <p><strong>Ownership em todas as operações.</strong> O {@code produtorId} que chega no payload ou
+ * na query string é apenas uma <em>afirmação do cliente</em>: antes de qualquer leitura ou escrita,
+ * o {@link ProdutorEmContextoResolver} decide se a identidade autenticada pode agir sobre aquele
+ * produtor — ele mesmo, se for produtor; um produtor da carteira, se for contador (issue #93).
+ * Divergiu, responde <strong>404</strong> — nunca 403 — exatamente como o resto da API, para não
+ * revelar a existência do recurso alheio.
  *
- * <p><strong>Ainda não há papel de Contador.</strong> A entidade {@code Contador}, o vínculo
- * Contador↔Produtor e o RBAC são a issue #93 (Sprint 8). Enquanto isso, estes endpoints são
- * efetivamente do próprio produtor: quem escreve a guia é quem a possui.
+ * <p>Até a issue #94 a criação e a listagem só verificavam existência, de modo que qualquer cliente
+ * lia e gravava guias de qualquer produtor informando o id. O guard provisório que a #94 colocou
+ * aqui dentro (exigir que o alvo fosse o próprio autenticado) saiu para o resolver, agora que o
+ * contador existe e tem carteira.
+ *
+ * <p>O pagamento continua sendo ação <strong>do produtor</strong>: é ele quem quita a guia que o
+ * escritório anexou. Um contador autenticado recebe 403 ali — o papel é que não faz essa operação,
+ * e dizer isso não revela dado de terceiro.
  */
 @Service
 @Transactional
@@ -63,17 +67,17 @@ public class GuiaFiscalService {
       Sort.by(Sort.Direction.DESC, "dataVencimento").and(Sort.by(Sort.Direction.DESC, "id"));
 
   private final GuiaFiscalRepository guiaFiscalRepository;
-  private final ProdutorRepository produtorRepository;
+  private final ProdutorEmContextoResolver produtorEmContexto;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final Clock clock;
 
   public GuiaFiscalService(
       GuiaFiscalRepository guiaFiscalRepository,
-      ProdutorRepository produtorRepository,
+      ProdutorEmContextoResolver produtorEmContexto,
       AuthenticatedProdutorProvider produtorProvider,
       Clock clock) {
     this.guiaFiscalRepository = guiaFiscalRepository;
-    this.produtorRepository = produtorRepository;
+    this.produtorEmContexto = produtorEmContexto;
     this.produtorProvider = produtorProvider;
     this.clock = clock;
   }
@@ -83,14 +87,11 @@ public class GuiaFiscalService {
    *
    * @param request dados da guia, incluindo o {@code produtorId} destinatário
    * @return a guia criada, com status PENDENTE
-   * @throws ResourceNotFoundException se o produtorId não for o do produtor autenticado ou não
-   *     existir — 404 nos dois casos, para não distinguir um do outro (anti-IDOR)
+   * @throws ResourceNotFoundException se o produtorId não for acessível pela identidade autenticada
+   *     ou não existir — 404 nos dois casos, para não distinguir um do outro (anti-IDOR)
    */
   public GuiaFiscalResponse criar(GuiaFiscalRequest request) {
-    exigirProdutorAutenticado(request.produtorId());
-
-    Produtor produtor = produtorRepository.findById(request.produtorId())
-        .orElseThrow(() -> new ResourceNotFoundException("Produtor", request.produtorId()));
+    Produtor produtor = produtorEmContexto.resolver(request.produtorId());
 
     GuiaFiscal guia = GuiaFiscalMapper.toEntity(request, produtor);
     GuiaFiscal salva = guiaFiscalRepository.save(guia);
@@ -104,16 +105,16 @@ public class GuiaFiscalService {
    * <p>Os limites de {@code pagina}/{@code tamanho} são validados no controller (Bean Validation);
    * {@link #TAMANHO_PAGINA_MAXIMO} impede que um cliente peça o histórico inteiro de uma vez.
    *
-   * @param produtorId identificador do produtor; precisa ser o do produtor autenticado
+   * @param produtorId identificador do produtor; precisa ser acessível pela identidade autenticada
    * @param pagina     página, a partir de 0
    * @param tamanho    itens por página, de 1 a {@link #TAMANHO_PAGINA_MAXIMO}
    * @return página de guias do produtor, com o total (vazia se ele não tiver nenhuma)
-   * @throws ResourceNotFoundException se o produtorId não for o do produtor autenticado
+   * @throws ResourceNotFoundException se o produtorId não for acessível pela identidade autenticada
    *     (anti-IDOR — 404, nunca 403)
    */
   @Transactional(readOnly = true)
   public Page<GuiaFiscalResponse> listar(UUID produtorId, int pagina, int tamanho) {
-    exigirProdutorAutenticado(produtorId);
+    produtorEmContexto.exigirAcesso(produtorId);
 
     return guiaFiscalRepository
         .findByProdutorId(produtorId, PageRequest.of(pagina, tamanho, ORDEM_LISTAGEM))
@@ -129,21 +130,6 @@ public class GuiaFiscalService {
    *     autenticado (anti-IDOR — 404, nunca 403)
    * @throws GuiaJaPagaException se a guia já estiver PAGA
    */
-  /**
-   * Garante que o {@code produtorId} afirmado pelo cliente é o do produtor autenticado.
-   *
-   * <p>Mesmo guard do {@code CalendarioFiscalService}: 404 (nunca 403) quando divergir, para não
-   * revelar que aquele produtor existe.
-   *
-   * @param produtorId identificador informado na requisição
-   * @throws ResourceNotFoundException se não for o produtor autenticado
-   */
-  private void exigirProdutorAutenticado(UUID produtorId) {
-    if (!produtorProvider.get().getId().equals(produtorId)) {
-      throw new ResourceNotFoundException("Produtor", produtorId);
-    }
-  }
-
   public GuiaFiscalResponse marcarComoPaga(UUID id) {
     UUID produtorId = produtorProvider.get().getId();
     GuiaFiscal guia = guiaFiscalRepository.findByIdAndProdutorId(id, produtorId)
