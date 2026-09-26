@@ -45,7 +45,6 @@ class ContadorVinculoIntegrationTest {
 
   @BeforeEach
   void semear() {
-    contadorRepository.deleteAll();
     cleaner.limparTudo();
 
     atendido = produtorRepository.save(

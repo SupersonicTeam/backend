@@ -1,8 +1,10 @@
 package br.com.agrocontabil.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -89,11 +91,17 @@ public class Contador {
    */
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  // NO_CONSTRAINT nos dois lados: as FKs reais sao criadas e gerenciadas pelo Liquibase
+  // (changeSet 0024) e replicadas no schema H2 de teste. Mesma convencao de NotaFiscal,
+  // GuiaFiscal e ApuracaoMensal — sem ela o ddl-auto=create-drop dos testes criaria FKs que
+  // producao nao tem, e um deleteAll() de produtores falharia por integridade referencial.
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(
       name = "contador_produtor",
       joinColumns = @JoinColumn(name = "contador_id"),
-      inverseJoinColumns = @JoinColumn(name = "produtor_id"))
+      inverseJoinColumns = @JoinColumn(name = "produtor_id"),
+      foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT),
+      inverseForeignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
   @Builder.Default
   private Set<Produtor> produtores = new LinkedHashSet<>();
 
