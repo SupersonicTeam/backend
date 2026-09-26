@@ -1,6 +1,7 @@
 package br.com.agrocontabil.security;
 
 import br.com.agrocontabil.exception.NaoAutenticadoException;
+import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -26,10 +27,23 @@ public class UsuarioAutenticadoProvider {
    *     {@link UsuarioAutenticado} — HTTP 401 pelo {@code GlobalExceptionHandler}
    */
   public UsuarioAutenticado get() {
+    return tentar().orElseThrow(NaoAutenticadoException::new);
+  }
+
+  /**
+   * Retorna a identidade autenticada, se houver, sem lançar.
+   *
+   * <p>Para quem roda <em>dentro e fora</em> de uma requisição — o auditor do JPA é o caso: num job
+   * agendado não existe contexto de segurança, e ausência de identidade ali é normal, não erro.
+   * Usar {@link #get()} nesse cenário transformaria o caminho feliz do job numa exceção.
+   *
+   * @return a identidade autenticada, ou vazio quando não há
+   */
+  public Optional<UsuarioAutenticado> tentar() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !(auth.getPrincipal() instanceof UsuarioAutenticado usuario)) {
-      throw new NaoAutenticadoException();
+      return Optional.empty();
     }
-    return usuario;
+    return Optional.of(usuario);
   }
 }
