@@ -34,10 +34,14 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 /**
  * Endpoints REST para o Contador anexar guias fiscais a um produtor (issue #74).
  *
- * <p>Ainda não existe entidade/login de Contador no backend (issue #93, Sprint 8), então as três
- * operações são, na prática, do próprio produtor: o {@code produtorId} recebido no corpo ou na
- * query precisa ser o do produtor autenticado, sob pena de 404 (issue #94). Todas seguem o padrão
- * anti-IDOR do restante da API.
+ * <p>Desde a issue #93 o contador é uma identidade de verdade: o {@code produtorId} recebido no
+ * corpo ou na query precisa ser acessível por quem está autenticado — o próprio produtor, ou um
+ * produtor da carteira do contador ({@code contador_produtor}). Não sendo, responde 404, seguindo o
+ * padrão anti-IDOR do restante da API (403 confirmaria que aquele produtor existe).
+ *
+ * <p>O pagamento é a exceção: quitar a guia é ação do <strong>produtor</strong>, e um contador
+ * autenticado recebe 403 ali — o papel é que não faz a operação, e dizer isso não revela dado de
+ * terceiro.
  *
  * <p>O controller não contém regra de negócio: apenas recebe o DTO validado, delega ao
  * {@link GuiaFiscalService} e mapeia o resultado para a resposta HTTP.

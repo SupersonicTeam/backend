@@ -6,8 +6,6 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Responde quem é o <strong>produtor em contexto</strong> de uma requisição que nomeia um
@@ -24,6 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
  *       ({@code contador_produtor}). O vínculo é a única autorização que o contador tem sobre os
  *       dados de um produtor.
  * </ul>
+ *
+ * <p>Sem transação própria: é sempre chamado de dentro de um serviço transacional e participa da
+ * transação dele. Declarar {@code readOnly} aqui seria decorativo — Spring só aplica esse flag ao
+ * <em>iniciar</em> uma transação, não ao entrar numa já aberta.
  *
  * <p><strong>Sempre 404, nunca 403.</strong> Aqui a pergunta é "este produtor é acessível por
  * você?", e responder 403 confirmaria que aquele produtor existe — mesmo raciocínio que o resto da
@@ -56,7 +58,6 @@ public class ProdutorEmContextoResolver {
    * @throws ResourceNotFoundException se o alvo não for o próprio produtor autenticado, ou não
    *     estiver na carteira do contador autenticado (404, nunca 403)
    */
-  @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
   public void exigirAcesso(UUID produtorId) {
     UsuarioAutenticado usuario = usuarioProvider.get();
 
@@ -86,7 +87,6 @@ public class ProdutorEmContextoResolver {
    * @throws ResourceNotFoundException se o acesso não for autorizado <em>ou</em> se o produtor não
    *     existir — 404 nos dois casos, para não distinguir um do outro
    */
-  @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
   public Produtor resolver(UUID produtorId) {
     exigirAcesso(produtorId);
     return produtorRepository
