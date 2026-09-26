@@ -11,8 +11,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
 
-  boolean existsByCpfCnpj(String cpfCnpj);
-
   Optional<Produtor> findByCpfCnpj(String cpfCnpj);
 
   /**

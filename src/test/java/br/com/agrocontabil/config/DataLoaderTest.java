@@ -8,9 +8,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.common.UfIbge;
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +30,10 @@ class DataLoaderTest {
   private static final String CPF_A = DataLoader.CPF_PRODUTOR_SEMENTE;
   private static final String CPF_B = "987.654.321-00";
 
+  private static final String CNPJ_CONTADOR = "12.345.678/0001-95";
+
   @Mock ProdutorRepository produtorRepository;
+  @Mock ContadorRepository contadorRepository;
 
   @InjectMocks DataLoader dataLoader;
 
@@ -47,6 +53,33 @@ class DataLoaderTest {
             });
   }
 
+  /**
+   * Devolve o contador com id, como o JPA faz — o loader loga o retorno do save.
+   *
+   * <p>Separado de {@link #stubarSave()} por causa dos strict stubs: o cenario em que o contador ja
+   * existe nao chega a salvar, e um stub nao usado falharia o teste.
+   */
+  private void stubarSaveContador() {
+    when(contadorRepository.save(any(Contador.class)))
+        .thenAnswer(
+            invocacao -> {
+              Contador contador = invocacao.getArgument(0);
+              contador.setId(UUID.randomUUID());
+              return contador;
+            });
+  }
+
+  /** Produtor como o banco devolveria: mesmo CPF e com id, para o vinculo do contador. */
+  private Produtor produtorExistente(String cpfCnpj) {
+    return Produtor.builder().id(UUID.randomUUID()).cpfCnpj(cpfCnpj).build();
+  }
+
+  private Contador capturarContadorSemeado() {
+    ArgumentCaptor<Contador> captor = ArgumentCaptor.forClass(Contador.class);
+    verify(contadorRepository).save(captor.capture());
+    return captor.getValue();
+  }
+
   private List<Produtor> capturarSemeados(int quantidade) {
     ArgumentCaptor<Produtor> captor = ArgumentCaptor.forClass(Produtor.class);
     verify(produtorRepository, times(quantidade)).save(captor.capture());
@@ -57,8 +90,9 @@ class DataLoaderTest {
   @DisplayName("semeia dois produtores distintos quando nenhum existe (#91)")
   void semeiaDoisProdutores() {
     stubarSave();
-    when(produtorRepository.existsByCpfCnpj(CPF_A)).thenReturn(false);
-    when(produtorRepository.existsByCpfCnpj(CPF_B)).thenReturn(false);
+    stubarSaveContador();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
 
     dataLoader.run();
 
@@ -71,8 +105,9 @@ class DataLoaderTest {
   @DisplayName("semeia apenas o produtor que ainda nao existe (idempotencia por CPF)")
   void semeiaApenasOFaltante() {
     stubarSave();
-    when(produtorRepository.existsByCpfCnpj(CPF_A)).thenReturn(true);
-    when(produtorRepository.existsByCpfCnpj(CPF_B)).thenReturn(false);
+    stubarSaveContador();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.of(produtorExistente(CPF_A)));
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
 
     dataLoader.run();
 
@@ -83,8 +118,9 @@ class DataLoaderTest {
   @DisplayName("produtores semeados tem dados fiscais distintos — troca de produtor aparece no XML")
   void produtoresTemDadosFiscaisDistintos() {
     stubarSave();
-    when(produtorRepository.existsByCpfCnpj(CPF_A)).thenReturn(false);
-    when(produtorRepository.existsByCpfCnpj(CPF_B)).thenReturn(false);
+    stubarSaveContador();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
 
     dataLoader.run();
 
@@ -99,8 +135,9 @@ class DataLoaderTest {
   @DisplayName("todo produtor semeado passa na validacao de emitente do FiscalRulesValidator (#88)")
   void produtoresSemeadosSaoValidosParaEmissao() {
     stubarSave();
-    when(produtorRepository.existsByCpfCnpj(CPF_A)).thenReturn(false);
-    when(produtorRepository.existsByCpfCnpj(CPF_B)).thenReturn(false);
+    stubarSaveContador();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
 
     dataLoader.run();
 
@@ -125,11 +162,59 @@ class DataLoaderTest {
   @Test
   @DisplayName("nao semeia nada quando os dois produtores ja existem")
   void naoSemeiaQuandoAmbosExistem() {
-    when(produtorRepository.existsByCpfCnpj(CPF_A)).thenReturn(true);
-    when(produtorRepository.existsByCpfCnpj(CPF_B)).thenReturn(true);
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.of(produtorExistente(CPF_A)));
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.of(produtorExistente(CPF_B)));
+    when(contadorRepository.existsByCpfCnpj(CNPJ_CONTADOR)).thenReturn(true);
 
     dataLoader.run();
 
-    verify(produtorRepository, never()).save(any());
+    verify(produtorRepository, never()).save(any(Produtor.class));
+    verify(contadorRepository, never()).save(any(Contador.class));
+  }
+
+  @Test
+  @DisplayName("semeia um contador vinculado apenas ao produtor A (#93)")
+  void semeiaContadorVinculadoAoProdutorA() {
+    stubarSave();
+    stubarSaveContador();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
+
+    dataLoader.run();
+
+    Produtor produtorA = capturarSemeados(2).get(0);
+    Contador contador = capturarContadorSemeado();
+    assertThat(contador.getCpfCnpj()).isEqualTo(CNPJ_CONTADOR);
+    assertThat(contador.getCrc()).isNotBlank();
+    // Vinculo parcial de proposito: o produtor B fica de fora para dar um "produtor que este
+    // contador nao atende" aos cenarios de acesso negado.
+    assertThat(contador.getProdutores()).containsExactly(produtorA);
+  }
+
+  @Test
+  @DisplayName("vincula o contador ao produtor A que ja estava no banco, sem duplicar o produtor")
+  void vinculaContadorAoProdutorAJaExistente() {
+    Produtor produtorAExistente = produtorExistente(CPF_A);
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.of(produtorAExistente));
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.of(produtorExistente(CPF_B)));
+    stubarSaveContador();
+
+    dataLoader.run();
+
+    verify(produtorRepository, never()).save(any(Produtor.class));
+    assertThat(capturarContadorSemeado().getProdutores()).containsExactly(produtorAExistente);
+  }
+
+  @Test
+  @DisplayName("nao ressemeia o contador existente — vinculos criados a mao sobrevivem")
+  void naoRessemeiaContadorExistente() {
+    stubarSave();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
+    when(contadorRepository.existsByCpfCnpj(CNPJ_CONTADOR)).thenReturn(true);
+
+    dataLoader.run();
+
+    verify(contadorRepository, never()).save(any(Contador.class));
   }
 }

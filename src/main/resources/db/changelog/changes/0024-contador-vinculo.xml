@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0024-contador-vinculo.xml
+         Onda 7 — issue #93, parte 1 de 4 (dominio).
+
+         Cria a segunda identidade do sistema: o Contador (escritorio de
+         contabilidade) e o vinculo N:N com o Produtor.
+
+         Ate aqui o backend so modelava Produtor. Os endpoints
+         /api/contador/** (issue #74) existiam sem entidade de contador e,
+         por isso, eram efetivamente do proprio produtor — com um guard
+         provisorio de ownership (issue #94) exigindo que o produtorId
+         informado fosse o do produtor autenticado.
+
+         O vinculo e N:N de proposito: um escritorio atende varios
+         produtores e um produtor pode manter mais de um escritorio (ou
+         troca-lo, preservando o historico). A linha em contador_produtor
+         e a UNICA autorizacao do contador sobre os dados daquele
+         produtor.
+
+         Esta migration nao muda comportamento de nenhum endpoint: papel,
+         principal e regras de autorizacao vem nos changeSets/PRs
+         seguintes da mesma issue.
+
+         Tipos portaveis (H2 e PostgreSQL). O profile de teste desabilita
+         o Liquibase e deriva o schema das entidades (ddl-auto), mas o
+         LiquibaseChangelogIntegrationTest aplica este changelog em um
+         PostgreSQL 16 real com ddl-auto: validate — divergencia entre
+         entidade e migration falha aquele teste.
+         ================================================================ -->
+
+    <changeSet id="0024-create-contadores" author="supersonic-team">
+        <comment>
+            Cria a tabela contadores (nome, CPF/CNPJ unico, registro no CRC,
+            contato). Sem coluna de senha: credenciais entram na issue de
+            login/JWT, nao nesta.
+        </comment>
+
+        <createTable tableName="contadores">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nome_completo" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cpf_cnpj" type="VARCHAR(20)">
+                <constraints unique="true" uniqueConstraintName="uk_contador_cpf_cnpj"/>
+            </column>
+            <column name="crc" type="VARCHAR(20)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="telefone" type="VARCHAR(20)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="contadores"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0024-create-contador-produtor" author="supersonic-team">
+        <comment>
+            Cria a tabela de vinculo contador_produtor (N:N). Chave primaria
+            composta garante um unico vinculo por par; o indice em
+            produtor_id serve a consulta inversa ("quais contadores atendem
+            este produtor?"), que o indice da PK (contador_id, produtor_id)
+            nao cobre.
+        </comment>
+
+        <createTable tableName="contador_produtor">
+            <column name="contador_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="contador_produtor"
+                columnNames="contador_id, produtor_id"
+                constraintName="pk_contador_produtor"/>
+
+        <addForeignKeyConstraint
+                baseTableName="contador_produtor"
+                baseColumnNames="contador_id"
+                constraintName="fk_contador_produtor_contador"
+                referencedTableName="contadores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="contador_produtor"
+                baseColumnNames="produtor_id"
+                constraintName="fk_contador_produtor_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="contador_produtor" indexName="idx_contador_produtor_produtor_id">
+            <column name="produtor_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="contador_produtor"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.support;
 
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -27,6 +28,7 @@ public class TestDatabaseCleaner {
   private final ApuracaoMensalRepository apuracaoRepository;
   private final GuiaFiscalRepository guiaFiscalRepository;
   private final NotaFiscalRepository notaFiscalRepository;
+  private final ContadorRepository contadorRepository;
   private final ProdutorRepository produtorRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
@@ -35,23 +37,30 @@ public class TestDatabaseCleaner {
       ApuracaoMensalRepository apuracaoRepository,
       GuiaFiscalRepository guiaFiscalRepository,
       NotaFiscalRepository notaFiscalRepository,
+      ContadorRepository contadorRepository,
       ProdutorRepository produtorRepository) {
     this.validacaoRepository = validacaoRepository;
     this.apuracaoRepository = apuracaoRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.notaFiscalRepository = notaFiscalRepository;
+    this.contadorRepository = contadorRepository;
     this.produtorRepository = produtorRepository;
   }
 
   /**
    * Apaga filhos antes dos pais: validações e itens (cascade da entidade) → apurações → guias →
-   * notas → produtores.
+   * notas → contadores (que levam o vínculo {@code contador_produtor}) → produtores.
+   *
+   * <p>Os contadores (issue #93) entram antes dos produtores porque o vínculo N:N referencia os
+   * dois: deixá-los para trás faria o {@code produtorRepository.deleteAll()} falhar por integridade
+   * referencial no schema de teste, que replica as FKs de produção.
    */
   public void limparTudo() {
     validacaoRepository.deleteAll();
     apuracaoRepository.deleteAll();
     guiaFiscalRepository.deleteAll();
     notaFiscalRepository.deleteAll();
+    contadorRepository.deleteAll();
     produtorRepository.deleteAll();
   }
 }

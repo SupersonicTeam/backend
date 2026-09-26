@@ -103,6 +103,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AliquotaCbs` | Alíquota de CBS por vigência (`aliquota_cbs`, issue #85); substitui o valor fixo do yml como fonte primária |
 | `EnderecoProdutor` | `@Embeddable` com o endereço completo do emitente (issue #88) — alimenta `<enderEmit>` e o `cMunFG`; a UF fica em `Produtor.estado` |
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
+| `Contador` | Escritório de contabilidade — 2ª identidade do sistema; vínculo N:N com `Produtor` via `contador_produtor` (issue #93) |
 | **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ; AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS — `ENVIANDO`/`CANCELANDO` sao transitorios e bloqueiam toda operacao, issue #96) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` · `TipoGuiaFiscal` (ICMS/FUNRURAL/DARF/GPS/OUTRO) · `StatusGuiaFiscal` (PENDENTE/PAGA/VENCIDA) |
 | `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback`, `RegimeTributario` | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
 
@@ -164,7 +165,7 @@ Bean Validation customizada (anotação + validator):
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
-`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `ContadorRepository` (`findByCpfCnpj` + `existsByIdAndProdutoresId` — vínculo Contador↔Produtor, issue #93), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
 
 ## Endpoints REST (`/api/notas`)
 | Método | Path | Descrição |
