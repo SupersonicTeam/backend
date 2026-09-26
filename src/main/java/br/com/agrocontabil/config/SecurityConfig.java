@@ -1,8 +1,11 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.security.SecurityErrorResponder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,38 +16,64 @@ import org.springframework.web.cors.CorsConfigurationSource;
 /**
  * Configuracao de seguranca da aplicacao.
  *
- * <p><strong>Estado atual (auth em stand-by ate a Sprint 8):</strong> todos os endpoints estao
- * liberados via {@code permitAll()}. A estrutura ja esta pronta para receber autenticacao JWT sem
- * refatorar controllers — quando a Sprint de autenticacao chegar, basta trocar o {@code
- * permitAll()} por regras de autorizacao e plugar o filtro JWT.
+ * <p><strong>Fim do {@code permitAll()} (issue #93).</strong> Ate aqui todos os endpoints estavam
+ * liberados na cadeia de filtros e a unica barreira real era o 401/404 que cada service produzia.
+ * Agora a cadeia exige identidade e, onde faz sentido, papel — com o {@link SecurityErrorResponder}
+ * devolvendo o mesmo envelope {@code ApiError} que o {@code GlobalExceptionHandler} usa, porque
+ * negativa de filtro acontece antes do controller e nao passaria pelo
+ * {@code @RestControllerAdvice}.
  *
- * <p>Mesmo liberado, mantemos: CSRF desabilitado (API stateless), sessao stateless e CORS
- * controlado por configuracao.
+ * <p>Regras:
  *
- * <p>Em perfil {@code dev}, o {@link MockIdentidadeFilter} e registrado automaticamente e resolve, a
- * cada requisicao, qual identidade esta "autenticada" a partir do header {@code X-Usuario-Id} (UUID
- * de produtor ou de contador); sem o header, cai no produtor semente. O header
- * <strong>declara</strong> a identidade, nao a prova — nao e autenticacao, e sim o mock
- * multi-usuario que permite exercitar o anti-IDOR e o escopo por papel ate o login real chegar.
+ * <table border="1">
+ *   <caption>Endpoint x papel</caption>
+ *   <tr><th>Rota</th><th>Quem acessa</th></tr>
+ *   <tr><td>{@code /api/v1/health}, Swagger, Actuator</td><td>publico</td></tr>
+ *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}</td><td>somente PRODUTOR</td></tr>
+ *   <tr><td>demais {@code /api/**}</td><td>PRODUTOR ou CONTADOR</td></tr>
+ * </table>
  *
- * <p>Desde a issue #93 o token carrega a authority do papel ({@code ROLE_PRODUTOR} /
- * {@code ROLE_CONTADOR}) — e o que torna possivel escrever regra por papel aqui, no lugar do
- * {@code permitAll()}.
+ * <p>Por que as guias e o calendario nao sao exclusivos do contador: o produtor consulta as
+ * proprias guias e o proprio calendario nas telas dele. O recorte fino — <em>qual</em> produtor
+ * cada identidade alcanca — e do {@code ProdutorEmContextoResolver}, que responde 404 (nunca 403)
+ * para nao revelar a existencia do produtor alheio. A cadeia so responde a pergunta grossa: "tem
+ * identidade?" e "o papel faz este tipo de operacao?".
  *
- * <p>Fora desse perfil o filtro nao existe (dai o {@code required = false} na injecao): nenhuma
- * requisicao carrega principal e o {@code AuthenticatedProdutorProvider} responde <strong>401</strong>
- * nos endpoints que dependem de identidade.
+ * <p>Mantemos CSRF desabilitado (API stateless), sessao stateless e CORS controlado por
+ * configuracao.
+ *
+ * <p>Em {@code dev} e {@code homolog}, o {@link MockIdentidadeFilter} resolve a identidade a partir
+ * do header {@code X-Usuario-Id} (UUID de produtor ou de contador) e preenche a authority do papel;
+ * sem o header, cai no produtor semente. O header <strong>declara</strong> a identidade, nao a
+ * prova — nao e autenticacao, e sim o mock multi-usuario que permite exercitar anti-IDOR e escopo
+ * por papel ate o login real chegar.
+ *
+ * <p>Fora desses profiles o filtro nao existe (dai o {@code required = false} na injecao): nenhuma
+ * requisicao carrega principal e a cadeia responde <strong>401</strong> com o envelope padrao.
  */
 @Configuration
 public class SecurityConfig {
 
+  /** Rotas publicas: health, documentacao e actuator. */
+  private static final String[] ROTAS_PUBLICAS = {
+      "/api/v1/health/**",
+      "/v3/api-docs/**",
+      "/swagger-ui/**",
+      "/swagger-ui.html",
+      "/actuator/**",
+      "/error"
+  };
+
   private final CorsConfigurationSource corsConfigurationSource;
+  private final SecurityErrorResponder errorResponder;
   private final MockIdentidadeFilter mockIdentidadeFilter;
 
   public SecurityConfig(
       CorsConfigurationSource corsConfigurationSource,
+      SecurityErrorResponder errorResponder,
       @Autowired(required = false) MockIdentidadeFilter mockIdentidadeFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
+    this.errorResponder = errorResponder;
     this.mockIdentidadeFilter = mockIdentidadeFilter;
   }
 
@@ -54,12 +83,21 @@ public class SecurityConfig {
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .exceptionHandling(
+            excecoes ->
+                excecoes
+                    .authenticationEntryPoint(errorResponder)
+                    .accessDeniedHandler(errorResponder))
         .authorizeHttpRequests(
             auth ->
-                auth
-                    // TODO[Sprint 8 - Auth]: substituir por regras reais (.authenticated())
-                    // e adicionar o filtro JWT antes do UsernamePasswordAuthenticationFilter.
-                    .anyRequest().permitAll());
+                auth.requestMatchers(ROTAS_PUBLICAS).permitAll()
+                    // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
+                    .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
+                    .hasRole(PapelUsuario.PRODUTOR.name())
+                    .requestMatchers("/api/**")
+                    .hasAnyRole(PapelUsuario.PRODUTOR.name(), PapelUsuario.CONTADOR.name())
+                    .anyRequest()
+                    .authenticated());
 
     if (mockIdentidadeFilter != null) {
       http.addFilterBefore(mockIdentidadeFilter, UsernamePasswordAuthenticationFilter.class);

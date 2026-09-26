@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -36,10 +37,16 @@ import org.springframework.test.web.servlet.MockMvc;
  *   <li>Content-Type não suportado → 415;</li>
  *   <li>conflito de lock otimista → 409 (Onda 3, issue #95).</li>
  * </ul>
+ *
+ * <p>As requisições autenticam com {@code @WithMockUser} desde a issue #93: a cadeia de filtros
+ * deixou de ser {@code permitAll()} e uma requisição sem identidade agora responde 401 — correto,
+ * mas não é o que estes testes medem. Em produção esses erros de infraestrutura também acontecem
+ * dentro de uma sessão autenticada.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@WithMockUser(roles = "PRODUTOR")
 class ApiErrorContractIntegrationTest {
 
   @Autowired
