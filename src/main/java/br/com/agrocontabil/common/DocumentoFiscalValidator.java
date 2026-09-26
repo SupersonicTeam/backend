@@ -8,7 +8,7 @@ package br.com.agrocontabil.common;
  *   <li>Pelo {@code CpfCnpjValidator} (Bean Validation) no campo
  *       {@code destinatarioCpfCnpj} do request — violacao vira HTTP 400.</li>
  *   <li>Programaticamente pelo {@code GeracaoNfaService} para validar o documento do
- *       <strong>emitente</strong> (o produtor vem do {@code MockProdutorFilter}, nao do DTO) —
+ *       <strong>emitente</strong> (o produtor vem do {@code MockIdentidadeFilter}, nao do DTO) —
  *       violacao vira HTTP 422.</li>
  * </ul>
  *

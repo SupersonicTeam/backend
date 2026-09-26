@@ -95,7 +95,14 @@ public enum ErrorCode {
    * Requisicao sem identidade de usuario valida: nenhum mecanismo de identidade ativo (fora dos
    * profiles dev/homolog) ou header {@code X-Usuario-Id} que nao resolve. HTTP 401.
    */
-  NAO_AUTENTICADO;
+  NAO_AUTENTICADO,
+  // Autorizacao por papel (Onda 7 — issue #93)
+  /**
+   * Identidade autenticada, mas com papel que nao pode executar a operacao (ex.: produtor em
+   * endpoint exclusivo do contador). HTTP 403 — distinto do anti-IDOR, que responde 404 para nao
+   * revelar a existencia do recurso alheio.
+   */
+  PAPEL_NAO_AUTORIZADO;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

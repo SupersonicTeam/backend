@@ -10,6 +10,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,7 +25,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -83,7 +83,7 @@ class AliquotaVigenciaIntegrationTest {
         .estado("MT")
         .build());
     SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(produtor, null, List.of()));
+        AutenticacaoTestSupport.tokenDe(produtor));
 
     // Segunda vigência de MT: 2027 em diante, aliquota dobrada (0,0010 + 0,0010).
     aliquotaIbsUfRepository.save(AliquotaIbsUf.builder()

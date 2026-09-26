@@ -1,13 +1,15 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.UsuarioAutenticado;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -20,26 +22,32 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Resolve, a cada requisicao, qual {@link Produtor} esta "autenticado" (issue #91).
+ * Resolve, a cada requisicao, qual identidade esta "autenticada" — produtor ou contador
+ * (issues #91 e #93).
  *
  * <p><strong>Isto nao e autenticacao.</strong> O header {@code X-Usuario-Id} <em>declara</em> uma
  * identidade; nada a prova. E o mesmo nivel de confianca do mock de usuario unico que existia antes,
- * com a diferenca de permitir N usuarios — o suficiente para exercitar ponta a ponta o anti-IDOR que
- * os services ja aplicam. Autenticacao de verdade (JWT + RBAC) e a Sprint 8, issue #93.
+ * com a diferenca de permitir N usuarios — o suficiente para exercitar ponta a ponta o anti-IDOR e,
+ * desde a #93, o escopo por papel. Autenticacao de verdade (login + JWT) e issue propria.
  *
  * <p>Por isso o filtro so e registrado nos profiles {@code dev} e {@code homolog}. Em producao ele
- * nao existe: nenhuma requisicao carrega principal e o {@code AuthenticatedProdutorProvider} responde
+ * nao existe: nenhuma requisicao carrega principal e o {@code UsuarioAutenticadoProvider} responde
  * 401.
  *
  * <p>Contrato:
  *
  * <ul>
- *   <li>header ausente ou em branco → produtor semente (o primeiro do {@code DataLoader}), para nao
- *       quebrar o frontend Angular nem o uso via Swagger/curl;
- *   <li>header com UUID de produtor existente → aquele produtor;
- *   <li>header malformado ou de produtor inexistente → <strong>nao autentica</strong> (e nao cai no
- *       fallback: mascarar o erro esconderia bug de integracao do cliente). O 401 nasce no
- *       {@code AuthenticatedProdutorProvider}, ja dentro do {@code GlobalExceptionHandler} — excecao
+ *   <li>header ausente ou em branco → produtor semente (o primeiro do {@link DataLoader}), para nao
+ *       quebrar o frontend Angular nem o uso via Swagger/curl. O fallback e sempre <em>produtor</em>:
+ *       cair no papel de contador por omissao trocaria silenciosamente o conjunto de permissoes da
+ *       requisicao;
+ *   <li>header com UUID de produtor existente → aquele produtor, papel {@code PRODUTOR};
+ *   <li>header com UUID de contador existente → aquele contador, papel {@code CONTADOR}. Produtor e
+ *       contador vivem em tabelas diferentes, com UUIDs distintos: a busca tenta produtor primeiro e
+ *       so entao contador, sem ambiguidade possivel;
+ *   <li>header malformado ou id que nao existe em nenhuma das duas tabelas → <strong>nao
+ *       autentica</strong> (e nao cai no fallback: mascarar o erro esconderia bug de integracao do
+ *       cliente). O 401 nasce no provider, ja dentro do {@code GlobalExceptionHandler} — excecao
  *       lancada aqui no filtro nao passaria pelo {@code @RestControllerAdvice} e escaparia ao
  *       envelope de erro padrao;
  *   <li>contexto de seguranca ja preenchido → preservado (e o que permite testes de integracao
@@ -48,12 +56,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 @Profile({"dev", "homolog"})
-public class MockProdutorFilter extends OncePerRequestFilter {
+public class MockIdentidadeFilter extends OncePerRequestFilter {
 
-  /** Header que declara qual usuario esta fazendo a requisicao. Valor: UUID do produtor. */
+  /** Header que declara qual usuario esta fazendo a requisicao. Valor: UUID do produtor ou contador. */
   public static final String HEADER_USUARIO_ID = "X-Usuario-Id";
 
-  private static final Logger log = LoggerFactory.getLogger(MockProdutorFilter.class);
+  private static final Logger log = LoggerFactory.getLogger(MockIdentidadeFilter.class);
 
   /**
    * CPF do produtor semente, usado quando a requisicao nao declara identidade.
@@ -63,9 +71,12 @@ public class MockProdutorFilter extends OncePerRequestFilter {
   private static final String CPF_SEMENTE = DataLoader.CPF_PRODUTOR_SEMENTE;
 
   private final ProdutorRepository produtorRepository;
+  private final ContadorRepository contadorRepository;
 
-  public MockProdutorFilter(ProdutorRepository produtorRepository) {
+  public MockIdentidadeFilter(
+      ProdutorRepository produtorRepository, ContadorRepository contadorRepository) {
     this.produtorRepository = produtorRepository;
+    this.contadorRepository = contadorRepository;
   }
 
   @Override
@@ -79,12 +90,13 @@ public class MockProdutorFilter extends OncePerRequestFilter {
       return;
     }
 
-    resolverProdutor(request.getHeader(HEADER_USUARIO_ID))
+    resolverUsuario(request.getHeader(HEADER_USUARIO_ID))
         .ifPresent(
-            produtor ->
+            usuario ->
                 SecurityContextHolder.getContext()
                     .setAuthentication(
-                        new UsernamePasswordAuthenticationToken(produtor, null, List.of())));
+                        new UsernamePasswordAuthenticationToken(
+                            usuario, null, usuario.authorities())));
 
     try {
       filterChain.doFilter(request, response);
@@ -96,18 +108,18 @@ public class MockProdutorFilter extends OncePerRequestFilter {
   }
 
   /**
-   * Resolve o produtor declarado no header, ou o produtor semente quando nao ha header.
+   * Resolve a identidade declarada no header, ou o produtor semente quando nao ha header.
    *
    * @param usuarioId valor bruto do header {@code X-Usuario-Id}; pode ser nulo ou em branco
-   * @return o produtor resolvido, ou vazio quando a identidade declarada nao existe
+   * @return a identidade resolvida, ou vazio quando a identidade declarada nao existe
    */
-  private Optional<Produtor> resolverProdutor(String usuarioId) {
+  private Optional<UsuarioAutenticado> resolverUsuario(String usuarioId) {
     if (!StringUtils.hasText(usuarioId)) {
       Optional<Produtor> semente = produtorRepository.findByCpfCnpj(CPF_SEMENTE);
       if (semente.isEmpty()) {
         log.debug("Requisicao sem {} e sem produtor semente no banco.", HEADER_USUARIO_ID);
       }
-      return semente;
+      return semente.map(UsuarioAutenticado::deProdutor);
     }
 
     UUID id;
@@ -118,10 +130,16 @@ public class MockProdutorFilter extends OncePerRequestFilter {
       return Optional.empty();
     }
 
-    Optional<Produtor> produtor = produtorRepository.findById(id);
-    if (produtor.isEmpty()) {
-      log.debug("Header {} referencia produtor inexistente.", HEADER_USUARIO_ID);
+    Optional<UsuarioAutenticado> produtor =
+        produtorRepository.findById(id).map(UsuarioAutenticado::deProdutor);
+    if (produtor.isPresent()) {
+      return produtor;
     }
-    return produtor;
+
+    Optional<Contador> contador = contadorRepository.findById(id);
+    if (contador.isEmpty()) {
+      log.debug("Header {} nao referencia produtor nem contador existente.", HEADER_USUARIO_ID);
+    }
+    return contador.map(UsuarioAutenticado::deContador);
   }
 }

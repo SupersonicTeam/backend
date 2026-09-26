@@ -22,9 +22,9 @@ import org.springframework.context.annotation.Profile;
 class ProfilesDeIdentidadeTest {
 
   @Test
-  @DisplayName("MockProdutorFilter existe em dev e homolog, e em nenhum outro profile")
+  @DisplayName("MockIdentidadeFilter existe em dev e homolog, e em nenhum outro profile")
   void filtroSoExisteEmDevEHomolog() {
-    assertThat(profilesDe(MockProdutorFilter.class)).containsExactlyInAnyOrder("dev", "homolog");
+    assertThat(profilesDe(MockIdentidadeFilter.class)).containsExactlyInAnyOrder("dev", "homolog");
   }
 
   @Test

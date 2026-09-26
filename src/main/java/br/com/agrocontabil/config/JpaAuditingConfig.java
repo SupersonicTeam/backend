@@ -1,6 +1,7 @@
 package br.com.agrocontabil.config;
 
-import br.com.agrocontabil.service.AuthenticatedProdutorProvider;
+import br.com.agrocontabil.security.UsuarioAutenticado;
+import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.Optional;
@@ -14,10 +15,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  * (issue Agrocontabil#42 — RN005).
  *
  * <p>O {@link AuditorAware} resolve <em>quem</em> está agindo a partir da identidade autenticada
- * atual ({@link AuthenticatedProdutorProvider}). Hoje essa identidade é o produtor mockado
- * ({@code MockProdutorFilter}); quando a autenticação real (com papel de contador) chegar na
- * Sprint 8, este componente passa a devolver o usuário real <strong>sem alterar</strong> os
- * serviços que o consomem.
+ * atual ({@link UsuarioAutenticadoProvider}) — produtor <em>ou</em> contador, desde a issue #93.
+ * Registrar o contador importa justamente na RN005: a reabertura de período é ação dele, e um
+ * rastro que só soubesse gravar produtor apontaria para a pessoa errada.
  *
  * <p><strong>Coexistência com {@code @PrePersist}/{@code @PreUpdate}:</strong> as entidades já
  * preenchem {@code createdAt}/{@code updatedAt} por callbacks manuais. Para não conflitar com esse
@@ -36,23 +36,22 @@ public class JpaAuditingConfig {
   /**
    * {@link AuditorAware} baseado na identidade autenticada atual.
    *
-   * <p>Devolve o ID do produtor autenticado como {@code String}; devolve {@link Optional#empty()}
-   * quando não há contexto de segurança (ex.: jobs agendados), caso em que o Spring registra o
-   * auditor como nulo.
+   * <p>Devolve o ID da identidade autenticada como {@code String}; devolve
+   * {@link Optional#empty()} quando não há contexto de segurança (ex.: jobs agendados), caso em que
+   * o Spring registra o auditor como nulo.
    *
-   * @param produtorProvider provedor do produtor autenticado (identidade mock até a Sprint 8)
-   * @return o auditor atual (ID do produtor), ou vazio fora de um contexto autenticado
+   * <p>Consulta {@link UsuarioAutenticadoProvider#tentar()}, que não lança: o {@code catch} que
+   * existia aqui pegava {@code IllegalStateException} e ficou inerte quando a issue #92 trocou essa
+   * exceção por {@code NaoAutenticadoException} — um job agendado que gravasse entidade auditada
+   * propagaria a exceção em vez de gravar sem auditor.
+   *
+   * @param usuarioProvider provedor da identidade autenticada (mock até o login real)
+   * @return o auditor atual (ID do produtor ou do contador), ou vazio fora de um contexto
+   *     autenticado
    */
   @Bean
-  public AuditorAware<String> auditorAware(AuthenticatedProdutorProvider produtorProvider) {
-    return () -> {
-      try {
-        return Optional.of(produtorProvider.get().getId().toString());
-      } catch (IllegalStateException semAuth) {
-        // Sem contexto autenticado (ex.: job agendado) — sem auditor.
-        return Optional.empty();
-      }
-    };
+  public AuditorAware<String> auditorAware(UsuarioAutenticadoProvider usuarioProvider) {
+    return () -> usuarioProvider.tentar().map(UsuarioAutenticado::id).map(Object::toString);
   }
 
   /**

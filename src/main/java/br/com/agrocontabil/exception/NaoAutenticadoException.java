@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus;
  *
  * <ul>
  *   <li>nenhum mecanismo de identidade está ativo — é o que acontece fora dos profiles
- *       {@code dev}/{@code homolog}, onde o {@code MockProdutorFilter} não é registrado. Antes
+ *       {@code dev}/{@code homolog}, onde o {@code MockIdentidadeFilter} não é registrado. Antes
  *       disso a API respondia <strong>500</strong> em todo endpoint autenticado, porque a
  *       {@code IllegalStateException} do provider caía na rede de segurança do handler genérico;
  *   <li>a identidade declarada no header {@code X-Usuario-Id} não resolve (UUID malformado ou

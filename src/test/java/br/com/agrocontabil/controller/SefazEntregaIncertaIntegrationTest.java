@@ -26,6 +26,7 @@ import br.com.agrocontabil.sefaz.SituacaoSefaz;
 import br.com.agrocontabil.service.SefazService;
 import br.com.agrocontabil.support.ContadorDeEventos;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import com.zaxxer.hikari.HikariDataSource;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -48,7 +49,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -124,7 +124,7 @@ class SefazEntregaIncertaIntegrationTest {
           .build());
     });
     SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(produtor, null, List.of()));
+        AutenticacaoTestSupport.tokenDe(produtor));
     contador.zerar();
   }
 

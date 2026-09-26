@@ -1,43 +1,51 @@
 package br.com.agrocontabil.service;
 
-import br.com.agrocontabil.exception.NaoAutenticadoException;
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.model.Produtor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.security.UsuarioAutenticado;
+import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * Fornece o {@link Produtor} autenticado a partir do {@link SecurityContextHolder}.
+ * Fornece o {@link Produtor} autenticado — atalho sobre o {@link UsuarioAutenticadoProvider}.
  *
- * <p>O mecanismo de identidade atual e o {@code MockProdutorFilter}, ativo apenas nos profiles
- * {@code dev} e {@code homolog}, que resolve o {@link Produtor} declarado no header
- * {@code X-Usuario-Id} e o coloca como principal de um
- * {@code UsernamePasswordAuthenticationToken} no contexto de seguranca.
+ * <p>Desde a issue #93 o principal da requisição é um {@link UsuarioAutenticado}, que pode ser um
+ * produtor ou um contador. Este componente continua existindo porque a maioria dos serviços
+ * (nota fiscal, apuração, dashboard, crédito, SEFAZ…) só faz sentido no contexto de <em>um</em>
+ * produtor — eles perguntam "quem é o produtor desta requisição?" e não deveriam saber que existe
+ * um segundo papel.
  *
- * <p>Quando a Sprint 8 implementar JWT real, basta ajustar este componente para
- * extrair o {@link Produtor} do token JWT — os services que dependem deste provider
- * nao precisarao ser alterados.
+ * <p><strong>Contador cai em 403, não em 401.</strong> O contador está autenticado; o que falta é
+ * o produtor-alvo. Enquanto o escopo por papel não chega a estes serviços, responder 403 com
+ * {@link PapelNaoAutorizadoException} diz exatamente isso — antes da #93 um contador autenticado
+ * viraria 401 ("sem identidade"), que é falso e manda o cliente depurar o lugar errado.
  *
- * <p>Em testes unitarios de service (Mockito puro), este componente e mockado,
- * evitando dependencia do contexto Spring Security.
+ * <p>Em testes unitários de service (Mockito puro), este componente é mockado, evitando dependência
+ * do contexto Spring Security.
  */
 @Component
 public class AuthenticatedProdutorProvider {
 
+  private final UsuarioAutenticadoProvider usuarioProvider;
+
+  public AuthenticatedProdutorProvider(UsuarioAutenticadoProvider usuarioProvider) {
+    this.usuarioProvider = usuarioProvider;
+  }
+
   /**
-   * Retorna o produtor autenticado na requisicao atual.
+   * Retorna o produtor autenticado na requisição atual.
    *
    * @return produtor autenticado
-   * @throws NaoAutenticadoException se nao houver identidade valida no contexto — HTTP 401 pelo
-   *     {@code GlobalExceptionHandler}, que ja trata {@code DomainException}
+   * @throws br.com.agrocontabil.exception.NaoAutenticadoException se não houver identidade válida
+   *     no contexto (HTTP 401)
+   * @throws PapelNaoAutorizadoException se quem está autenticado for um contador (HTTP 403)
    */
   public Produtor get() {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    if (auth == null || !(auth.getPrincipal() instanceof Produtor produtor)) {
-      // 401, nao 500: a ausencia de identidade e erro do cliente (ou profile sem filtro de
-      // identidade), nao falha interna do servidor.
-      throw new NaoAutenticadoException();
+    UsuarioAutenticado usuario = usuarioProvider.get();
+    if (usuario.isContador()) {
+      throw new PapelNaoAutorizadoException(usuario.papel(), PapelUsuario.PRODUTOR);
     }
-    return produtor;
+    return usuario.produtor();
   }
 }

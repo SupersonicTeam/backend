@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.agrocontabil.dto.VencimentoFiscalResponse;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
 import br.com.agrocontabil.exception.JanelaCalendarioInvalidaException;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.CalendarioFiscalService;
 import java.math.BigDecimal;
@@ -42,8 +43,11 @@ class CalendarioFiscalControllerTest {
 
   @MockBean private CalendarioFiscalService calendarioFiscalService;
 
-  /** MockProdutorFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
+  /** MockIdentidadeFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
   @MockBean private ProdutorRepository produtorRepository;
+
+  /** O filtro tambem resolve contador (issue #93) — mockado junto no @WebMvcTest. */
+  @MockBean private ContadorRepository contadorRepository;
 
   @Test
   @DisplayName("GET /api/calendario-fiscal/{produtorId}/vencimentos retorna 200 com os vencimentos")

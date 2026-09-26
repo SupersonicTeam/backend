@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.RelatorioConformidadeResponse;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.RelatorioConformidadeService;
 import java.math.BigDecimal;
@@ -44,9 +45,13 @@ class RelatorioConformidadeControllerTest {
   @MockBean
   private RelatorioConformidadeService relatorioService;
 
-  /** MockProdutorFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
+  /** MockIdentidadeFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
   @MockBean
   private ProdutorRepository produtorRepository;
+
+  /** O filtro tambem resolve contador (issue #93) — mockado junto no @WebMvcTest. */
+  @MockBean
+  private ContadorRepository contadorRepository;
 
   private RelatorioConformidadeResponse exemplo() {
     return new RelatorioConformidadeResponse(

@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
  * <p>Sao <strong>dois</strong> produtores desde a issue #91: com um so, o anti-IDOR aplicado em toda
  * a API ({@code findByIdAndProdutorId} → 404) nao tem como ser exercido — nao existe "o outro
  * produtor" cujo recurso deva ser negado. O produtor A e tambem o <em>semente</em>: e ele que o
- * {@link MockProdutorFilter} injeta quando a requisicao nao declara {@code X-Usuario-Id}.
+ * {@link MockIdentidadeFilter} injeta quando a requisicao nao declara {@code X-Usuario-Id}.
  *
  * <p>Desde a issue #93 semeia tambem <strong>um contador</strong>, vinculado apenas ao produtor A —
  * o vinculo parcial e o que permite exercitar, em dev e na homologacao, tanto o acesso autorizado
@@ -40,7 +40,7 @@ public class DataLoader implements CommandLineRunner {
   private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
 
   /**
-   * Produtor A — o semente, injetado pelo {@link MockProdutorFilter} quando a requisicao nao
+   * Produtor A — o semente, injetado pelo {@link MockIdentidadeFilter} quando a requisicao nao
    * declara {@code X-Usuario-Id}.
    *
    * <p>Publica de proposito: o filtro procura o semente por este CPF, e duas constantes iguais em

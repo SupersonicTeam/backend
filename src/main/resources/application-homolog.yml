@@ -2,7 +2,7 @@
 #
 # Espelha o PROD na infraestrutura (banco por env, sem docker-compose, nenhum segredo literal) e
 # difere em dois pontos deliberados:
-#   1. o MockProdutorFilter e o DataLoader ficam ativos (@Profile({"dev","homolog"})), para que o
+#   1. o MockIdentidadeFilter e o DataLoader ficam ativos (@Profile({"dev","homolog"})), para que o
 #      cenario multi-usuario da issue #91 seja exercitavel com dois produtores semeados. A
 #      identidade vem declarada no header X-Usuario-Id — e mock, nao autenticacao: por isso este
 #      profile NUNCA deve ser usado com dados reais de produtor;
@@ -35,7 +35,7 @@ app:
 # Health SEM detalhes, como em producao.
 #
 # O application.yml base usa "when-authorized", que em dev basta: dev e local. Aqui nao serve —
-# o MockProdutorFilter autentica TODA requisicao sem header como o produtor semente, entao
+# o MockIdentidadeFilter autentica TODA requisicao sem header como o produtor semente, entao
 # "autorizado" passa a significar "qualquer visitante" e o health detalhado (datasource, disco,
 # componentes) ficaria aberto a quem alcancar o ambiente. Diagnostico em homologacao sai pelo log,
 # que ja e DEBUG.
