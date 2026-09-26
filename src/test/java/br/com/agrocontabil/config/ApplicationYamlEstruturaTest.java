@@ -115,4 +115,28 @@ class ApplicationYamlEstruturaTest {
     }
     assertThat(escondidas).isEmpty();
   }
+
+  @Test
+  @DisplayName("producao nao publica a documentacao OpenAPI (issue #93)")
+  void producaoFechaOpenApi() {
+    YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
+    yaml.setResources(new ClassPathResource("application-prod.yml"));
+    Properties prod = yaml.getObject();
+
+    // O SecurityConfig lista /v3/api-docs e /swagger-ui como rotas publicas — desejavel em dev e
+    // homolog, indesejavel em prod: publicar o contrato inteiro amplia a superficie de ataque sem
+    // ganho, porque quem consome em prod e o proprio frontend.
+    assertThat(prod.getProperty("springdoc.api-docs.enabled")).isEqualTo("false");
+    assertThat(prod.getProperty("springdoc.swagger-ui.enabled")).isEqualTo("false");
+  }
+
+  @Test
+  @DisplayName("producao nao expoe detalhes de health")
+  void producaoNaoExpoeDetalhesDeHealth() {
+    YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
+    yaml.setResources(new ClassPathResource("application-prod.yml"));
+
+    assertThat(yaml.getObject().getProperty("management.endpoint.health.show-details"))
+        .isEqualTo("never");
+  }
 }

@@ -54,13 +54,23 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
-  /** Rotas publicas: health, documentacao e actuator. */
+  /**
+   * Rotas publicas: health, documentacao e os dois endpoints de Actuator realmente expostos.
+   *
+   * <p>Deliberadamente <strong>nao</strong> e {@code /actuator/**}: se amanha alguem ampliar
+   * {@code management.endpoints.web.exposure.include} (env, beans, heapdump, threaddump), o novo
+   * endpoint nao nasce publico por tabela — precisa passar por aqui e ser decidido.
+   *
+   * <p>{@code /error} e o forward interno do container; barra-lo transformaria erro em erro.
+   */
   private static final String[] ROTAS_PUBLICAS = {
       "/api/v1/health/**",
       "/v3/api-docs/**",
       "/swagger-ui/**",
       "/swagger-ui.html",
-      "/actuator/**",
+      "/actuator/health",
+      "/actuator/health/**",
+      "/actuator/info",
       "/error"
   };
 
