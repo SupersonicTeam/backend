@@ -17,6 +17,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -47,21 +48,20 @@ class CalendarioFiscalServiceTest {
   private static final LocalDate FIM_PADRAO = LocalDate.of(2027, 9, 30);
 
   @Mock private GuiaFiscalRepository guiaFiscalRepository;
-  @Mock private AuthenticatedProdutorProvider produtorProvider;
+  @Mock private ProdutorEmContextoResolver produtorEmContexto;
 
   private CalendarioFiscalService service;
   private Produtor produtor;
 
   @BeforeEach
   void setUp() {
-    service = new CalendarioFiscalService(guiaFiscalRepository, produtorProvider, CLOCK_FIXO);
+    service = new CalendarioFiscalService(guiaFiscalRepository, produtorEmContexto, CLOCK_FIXO);
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
   }
 
   @Test
   @DisplayName("listarVencimentos() mapeia guia PAGA para status 'pago' e tipo 'imposto'")
   void mapeiaGuiaPagaParaVencimentoPago() {
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of(guia(TipoGuiaFiscal.ICMS, StatusGuiaFiscal.PAGA, "1250.00")));
@@ -80,7 +80,6 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("listarVencimentos() mapeia guia VENCIDA para status 'vencido'")
   void mapeiaGuiaVencidaParaVencimentoVencido() {
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of(guia(TipoGuiaFiscal.DARF, StatusGuiaFiscal.VENCIDA, "300.00")));
@@ -92,7 +91,6 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("listarVencimentos() retorna lista vazia para produtor autenticado sem guias")
   void listarVencimentosRetornaVazio() {
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), INICIO_PADRAO, FIM_PADRAO))
         .thenReturn(List.of());
@@ -105,7 +103,10 @@ class CalendarioFiscalServiceTest {
       + "produtor autenticado (anti-IDOR)")
   void listarVencimentosLancaNotFoundParaProdutorDiferenteDoAutenticado() {
     UUID produtorIdSolicitado = UUID.randomUUID();
-    when(produtorProvider.get()).thenReturn(produtor);
+    // O resolver e quem decide o acesso desde a #93; aqui ele nega, como faria para um produtorId
+    // que nao e o do autenticado nem esta na carteira do contador.
+    org.mockito.Mockito.doThrow(new ResourceNotFoundException("Produtor", produtorIdSolicitado))
+        .when(produtorEmContexto).exigirAcesso(produtorIdSolicitado);
 
     assertThatThrownBy(() -> service.listarVencimentos(produtorIdSolicitado, null, null))
         .isInstanceOf(ResourceNotFoundException.class);
@@ -120,7 +121,6 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("Sem de/ate usa a janela padrao: mes corrente -12 a +12 meses (issue #103)")
   void semParametrosUsaJanelaPadrao() {
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         any(), any(), any()))
         .thenReturn(List.of());
@@ -136,7 +136,6 @@ class CalendarioFiscalServiceTest {
   void janelaInformadaERepassada() {
     LocalDate de = LocalDate.of(2026, 7, 1);
     LocalDate ate = LocalDate.of(2026, 9, 30);
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), de, ate))
         .thenReturn(List.of());
@@ -148,7 +147,6 @@ class CalendarioFiscalServiceTest {
   @DisplayName("So de informado: ate usa o padrao (issue #103)")
   void soDeInformadoUsaAtePadrao() {
     LocalDate de = LocalDate.of(2026, 1, 1);
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), de, FIM_PADRAO))
         .thenReturn(List.of());
@@ -159,7 +157,6 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("de posterior a ate e rejeitado com 400 no campo 'de' (issue #103)")
   void dePosteriorAAteRejeitado() {
-    when(produtorProvider.get()).thenReturn(produtor);
 
     assertThatThrownBy(() -> service.listarVencimentos(
         produtor.getId(), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 9, 30)))
@@ -177,7 +174,6 @@ class CalendarioFiscalServiceTest {
   void janelaDe36MesesAceita() {
     LocalDate de = LocalDate.of(2024, 1, 1);
     LocalDate ate = LocalDate.of(2026, 12, 31);
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(
         produtor.getId(), de, ate))
         .thenReturn(List.of());
@@ -188,7 +184,6 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("Janela acima de 36 meses e rejeitada com 400 no campo 'ate' (issue #103)")
   void janelaAcimaDoMaximoRejeitada() {
-    when(produtorProvider.get()).thenReturn(produtor);
 
     assertThatThrownBy(() -> service.listarVencimentos(
         produtor.getId(), LocalDate.of(2024, 1, 1), LocalDate.of(2027, 1, 1)))
@@ -206,7 +201,6 @@ class CalendarioFiscalServiceTest {
   void janelaIniciadaEm29DeFevereiroCabe() {
     LocalDate de = LocalDate.of(2024, 2, 29);
     LocalDate ate = LocalDate.of(2027, 2, 28);
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(produtor.getId(), de, ate))
         .thenReturn(List.of());
 
@@ -218,7 +212,6 @@ class CalendarioFiscalServiceTest {
   void datasExtremasNaoEstouram() {
     LocalDate de = LocalDate.of(999_999_999, 1, 1);
     LocalDate ate = LocalDate.MAX;
-    when(produtorProvider.get()).thenReturn(produtor);
     when(guiaFiscalRepository.findVencimentosNaJanela(produtor.getId(), de, ate))
         .thenReturn(List.of());
 
@@ -228,7 +221,6 @@ class CalendarioFiscalServiceTest {
   @Test
   @DisplayName("So de muito antigo estoura o maximo com o ate padrao: 400 pede o ate (issue #103)")
   void soDeAntigoEstouraMaximo() {
-    when(produtorProvider.get()).thenReturn(produtor);
 
     assertThatThrownBy(() -> service.listarVencimentos(
         produtor.getId(), LocalDate.of(2020, 1, 1), null))

@@ -17,7 +17,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
-import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -43,15 +43,15 @@ import org.springframework.data.domain.Sort;
 /**
  * Testes unitários do {@link GuiaFiscalService} (issue #74).
  *
- * <p>Cobre a criação sem autenticação de Contador (produtorId explícito, 404 se inexistente), a
- * listagem tolerante a produtor inexistente e o pagamento com o padrão anti-IDOR real
+ * <p>Cobre a criação e a listagem escopadas pelo {@code ProdutorEmContextoResolver} (produtorId
+ * explícito, 404 quando inacessível ou inexistente) e o pagamento com o padrão anti-IDOR real
  * ({@code AuthenticatedProdutorProvider} + {@code findByIdAndProdutorId}).
  */
 @ExtendWith(MockitoExtension.class)
 class GuiaFiscalServiceTest {
 
   @Mock private GuiaFiscalRepository guiaFiscalRepository;
-  @Mock private ProdutorRepository produtorRepository;
+  @Mock private ProdutorEmContextoResolver produtorEmContexto;
   @Mock private AuthenticatedProdutorProvider produtorProvider;
 
   private GuiaFiscalService service;
@@ -62,7 +62,7 @@ class GuiaFiscalServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new GuiaFiscalService(guiaFiscalRepository, produtorRepository, produtorProvider,
+    service = new GuiaFiscalService(guiaFiscalRepository, produtorEmContexto, produtorProvider,
         CLOCK_FIXO);
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
   }
@@ -76,8 +76,7 @@ class GuiaFiscalServiceTest {
   @Test
   @DisplayName("criar() persiste a guia PENDENTE para o produtorId informado no request")
   void criarPersisteGuiaPendente() {
-    autenticarProdutor();
-    when(produtorRepository.findById(produtor.getId())).thenReturn(Optional.of(produtor));
+    when(produtorEmContexto.resolver(produtor.getId())).thenReturn(produtor);
     when(guiaFiscalRepository.save(any(GuiaFiscal.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
@@ -92,8 +91,8 @@ class GuiaFiscalServiceTest {
   @Test
   @DisplayName("criar() lanca 404 quando o produtorId informado nao existe")
   void criarLancaNotFoundParaProdutorInexistente() {
-    autenticarProdutor();
-    when(produtorRepository.findById(produtor.getId())).thenReturn(Optional.empty());
+    when(produtorEmContexto.resolver(produtor.getId()))
+        .thenThrow(new ResourceNotFoundException("Produtor", produtor.getId()));
 
     assertThatThrownBy(() -> service.criar(requestValido()))
         .isInstanceOf(ResourceNotFoundException.class);
@@ -104,24 +103,26 @@ class GuiaFiscalServiceTest {
   @Test
   @DisplayName("criar() lanca 404 para produtorId de outro produtor e nao grava nada (#94)")
   void criarLancaNotFoundParaProdutorDeOutroDono() {
-    autenticarProdutor();
+    UUID outroProdutorId = UUID.randomUUID();
     GuiaFiscalRequest requestDeOutroDono = new GuiaFiscalRequest(
-        UUID.randomUUID(), TipoGuiaFiscal.DARF, LocalDate.of(2026, 8, 20),
+        outroProdutorId, TipoGuiaFiscal.DARF, LocalDate.of(2026, 8, 20),
         new BigDecimal("500.00"), null);
+    when(produtorEmContexto.resolver(outroProdutorId))
+        .thenThrow(new ResourceNotFoundException("Produtor", outroProdutorId));
 
     assertThatThrownBy(() -> service.criar(requestDeOutroDono))
         .isInstanceOf(ResourceNotFoundException.class);
 
-    // O guard vem antes da consulta: nada e lido nem gravado para o produtor alheio.
-    verify(produtorRepository, never()).findById(any());
+    // O resolver decide antes de qualquer escrita: nada e gravado para o produtor alheio.
     verify(guiaFiscalRepository, never()).save(any());
   }
 
   @Test
   @DisplayName("listar() lanca 404 para produtorId de outro produtor, sem consultar as guias (#94)")
   void listarLancaNotFoundParaProdutorDeOutroDono() {
-    autenticarProdutor();
     UUID outroProdutorId = UUID.randomUUID();
+    org.mockito.Mockito.doThrow(new ResourceNotFoundException("Produtor", outroProdutorId))
+        .when(produtorEmContexto).exigirAcesso(outroProdutorId);
 
     assertThatThrownBy(() -> service.listar(outroProdutorId, 0, 100))
         .isInstanceOf(ResourceNotFoundException.class);
@@ -132,7 +133,6 @@ class GuiaFiscalServiceTest {
   @Test
   @DisplayName("listar() retorna as guias do produtor mapeadas, sem expor a entidade")
   void listarRetornaGuiasDoProdutor() {
-    autenticarProdutor();
     GuiaFiscal guia = guiaPendente();
     when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any()))
         .thenReturn(new PageImpl<>(List.of(guia), PageRequest.of(0, 100), 1));
@@ -147,7 +147,6 @@ class GuiaFiscalServiceTest {
   @Test
   @DisplayName("listar() pagina com a pagina e o tamanho pedidos e ordem fixa (issue #103)")
   void listarPaginaComOrdemFixa() {
-    autenticarProdutor();
     when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any()))
         .thenReturn(Page.empty());
 
@@ -165,12 +164,10 @@ class GuiaFiscalServiceTest {
   @Test
   @DisplayName("listar() retorna lista vazia quando o proprio produtor nao tem guias")
   void listarRetornaVazioQuandoNaoHaGuias() {
-    autenticarProdutor();
     when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any()))
         .thenReturn(Page.empty());
 
     assertThat(service.listar(produtor.getId(), 0, 100)).isEmpty();
-    verify(produtorRepository, never()).findById(any());
   }
 
   @Test
