@@ -15,10 +15,10 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 ### `config/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `SecurityConfig` | `permitAll()` até Sprint 8; CSRF off, stateless |
+| `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
-| `MockProdutorFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (profiles dev/homolog); sem header usa o semente (#91) |
+| `MockIdentidadeFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (profiles dev/homolog); sem header usa o semente (#91) |
 | `TributosProperties/Config` | Alíquotas IBS/CBS do `application.yml` |
 | `CertificadoDigitalProperties/Config` | Caminho/senha do `.p12` via env `NFE_CERT_*` |
 | `SefazProperties/Config` | Ambiente (HOMOLOGACAO/PRODUCAO), timeouts |
@@ -72,6 +72,15 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AssinaturaValidator` | Verifica assinatura + tamper detection |
 | `KeyStoreCertificadoProvider` | Carrega `.p12` PKCS#12; lazy + validação |
 | `nfe/model/` | Classes JAXB puras do layout NF-e 4.00 (NFe, InfNFe, Emit, Dest…) |
+
+### `security/` (issue #93)
+| Classe | Responsabilidade |
+|--------|-----------------|
+| `PapelUsuario` | Enum PRODUTOR/CONTADOR + authority `ROLE_*` |
+| `UsuarioAutenticado` | Principal da requisição: papel + produtor **ou** contador (invariante na construção) |
+| `UsuarioAutenticadoProvider` | Porta única para a identidade autenticada (`get()` → 401; `tentar()` → `Optional`) |
+| `ProdutorEmContextoResolver` | Autoriza o `produtorId` alvo: produtor só a si, contador só a carteira → 404 |
+| `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate`, 403) |
 
 ### `danfe/`
 | Classe | Responsabilidade |
