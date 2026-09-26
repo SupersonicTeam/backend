@@ -148,7 +148,7 @@ br.com.agrocontabil
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 624 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes do Liquibase contra PostgreSQL 16 (Testcontainers) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 634 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes do Liquibase contra PostgreSQL 16 (Testcontainers) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 5 concluída (2026-07-06)
