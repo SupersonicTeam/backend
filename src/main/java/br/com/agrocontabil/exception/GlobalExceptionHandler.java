@@ -42,7 +42,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiError> handleDomain(DomainException ex, HttpServletRequest request) {
     HttpStatus status = ex.getStatus();
     String clientMessage = clientMessageFor(ex);
-    if (status.is5xxServerError()) {
+    if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+      // 503 = dependencia opcional fora do ar (ex.: o modelo da Ceres). Estado operacional
+      // esperado, que se repete a cada requisicao enquanto durar: WARN sem stack trace, para nao
+      // inundar o log. Quem lanca registra a causa (ModeloLinguagem, em DEBUG).
+      log.warn("Dependencia indisponivel (503) em {}: {}", request.getRequestURI(), ex.getMessage());
+    } else if (status.is5xxServerError()) {
       log.error("Erro de dominio (5xx) em {}: {}", request.getRequestURI(), ex.getMessage(), ex);
     } else {
       log.warn("Erro de dominio em {}: {}", request.getRequestURI(), ex.getMessage());

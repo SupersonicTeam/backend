@@ -96,6 +96,19 @@ class ModeloLinguagemTest {
   }
 
   @Test
+  @DisplayName("Dois ChatModel no contexto viram 503, nao 500 generico de NF-e")
+  void chatModelAmbiguoResponde503() {
+    StaticListableBeanFactory beans = new StaticListableBeanFactory();
+    beans.addBean("um", new ChatModelSimulado());
+    beans.addBean("outro", new ChatModelSimulado());
+    ModeloLinguagem ambiguo = new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama");
+
+    assertThatThrownBy(() -> ambiguo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(ambiguo.identificacao()).isEqualTo("ollama");
+  }
+
+  @Test
   @DisplayName("Identificacao para auditoria: provedor/modelo")
   void identificacaoProvedorEModelo() {
     assertThat(modelo.identificacao()).isEqualTo("ollama/simulado");

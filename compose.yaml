@@ -56,9 +56,17 @@ services:
     container_name: agrocontabil-ollama-init
     environment:
       OLLAMA_HOST: http://ollama:11434
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b}
-    # $$ escapa a interpolacao do compose: a variavel e lida pelo shell do container.
-    entrypoint: ['/bin/sh', '-c', 'ollama pull "$$AI_CHAT_MODEL" && ollama pull bge-m3']
+    # O embedding vem primeiro e sempre: e obrigatorio qualquer que seja o provedor de chat. O modelo
+    # de chat so e baixado quando o chat e local — com provedor por API, AI_CHAT_MODEL e um nome da
+    # API (ex.: gpt-4o-mini), que o Ollama nao tem. $$ escapa a interpolacao do compose.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        ollama pull bge-m3 &&
+        if [ "$$AI_CHAT_PROVIDER" = "ollama" ]; then ollama pull "$$AI_CHAT_MODEL"; fi
     depends_on:
       ollama:
         condition: service_healthy

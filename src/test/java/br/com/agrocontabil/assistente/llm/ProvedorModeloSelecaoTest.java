@@ -2,9 +2,14 @@ package br.com.agrocontabil.assistente.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import br.com.agrocontabil.config.AssistenteConfig;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.SocketTimeoutException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ChatModel;
@@ -23,6 +28,7 @@ import org.springframework.ai.model.tool.autoconfigure.ToolCallingAutoConfigurat
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.ollama.api.ThinkOption;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.retry.autoconfigure.SpringAiRetryAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -34,6 +40,8 @@ import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Trava a DoD "trocar para um provedor por API sem alterar código" (issue #141) contra o
@@ -47,6 +55,7 @@ class ProvedorModeloSelecaoTest {
   private final ApplicationContextRunner contexto = new ApplicationContextRunner()
       .withInitializer(ctx -> ctx.getEnvironment().getPropertySources()
           .addLast(applicationYml()))
+      .withUserConfiguration(AssistenteConfig.class)
       .withConfiguration(AutoConfigurations.of(
           JacksonAutoConfiguration.class,
           HttpMessageConvertersAutoConfiguration.class,
@@ -78,6 +87,15 @@ class ProvedorModeloSelecaoTest {
           .getDefaultOptions();
       assertThat(opcoes.getNumCtx()).isEqualTo(8192);
       assertThat(opcoes.getNumPredict()).isEqualTo(1024);
+      // Raciocinio desligado: os tokens de thinking consumiriam o num-predict.
+      assertThat(opcoes.getThinkOption()).isEqualTo(ThinkOption.ThinkBoolean.DISABLED);
+      // O RetryTemplate do projeto substitui o do Spring AI: read-timeout nao e re-tentado.
+      AtomicInteger tentativas = new AtomicInteger();
+      assertThatThrownBy(() -> ctx.getBean(RetryTemplate.class).execute(c -> {
+        tentativas.incrementAndGet();
+        throw new ResourceAccessException("I/O", new SocketTimeoutException("Read timed out"));
+      })).isInstanceOf(ResourceAccessException.class);
+      assertThat(tentativas).hasValue(1);
       assertThat(ctx).hasSingleBean(EmbeddingModel.class);
       assertThat(ctx.getBean(EmbeddingModel.class)).isInstanceOf(OllamaEmbeddingModel.class);
       // Imagem, audio e moderacao do starter da OpenAI desligados: exigiriam chave na subida.
@@ -107,7 +125,11 @@ class ProvedorModeloSelecaoTest {
   void provedorPorApiSemChaveFalhaNaSubida() {
     contexto
         .withPropertyValues("AI_CHAT_PROVIDER=openai")
-        .run(ctx -> assertThat(ctx).hasFailed());
+        .run(ctx -> {
+          assertThat(ctx).hasFailed();
+          // A falha tem de ser a chave ausente, nao qualquer outra quebra de contexto.
+          assertThat(ctx.getStartupFailure()).rootCause().hasMessageContaining("API key");
+        });
   }
 
   private static PropertySource<?> applicationYml() {
