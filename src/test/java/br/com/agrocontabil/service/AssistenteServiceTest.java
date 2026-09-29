@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
@@ -59,7 +60,7 @@ class AssistenteServiceTest {
     AtomicReference<ContextoAssistente> recebido = new AtomicReference<>();
     when(rotaDados.responder(anyString(), any())).thenAnswer(inv -> {
       recebido.set(inv.getArgument(1));
-      return "ok";
+      return ResultadoRota.aceita("ok");
     });
 
     AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("oi"));
@@ -67,6 +68,21 @@ class AssistenteServiceTest {
     assertThat(resposta.rota()).isEqualTo("DADOS");
     assertThat(recebido.get().produtorId()).isEqualTo(produtor.getId());
     assertThat(recebido.get().hoje()).isEqualTo(LocalDate.of(2026, 9, 28));
+  }
+
+  @Test
+  @DisplayName("Resposta descartada nao exibe fontesDados (nada dela veio das funcoes)")
+  void descartadaSemFontes() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(rotaDados.responder(anyString(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      contexto.registrarFonte("consultarApuracao", java.util.Map.of("mes", "2026-07"));
+      return ResultadoRota.descartada("Nao consegui confirmar os valores.");
+    });
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("oi"));
+
+    assertThat(resposta.fontesDados()).isEmpty();
   }
 
   @Test
@@ -89,7 +105,7 @@ class AssistenteServiceTest {
     when(rotaDados.responder(anyString(), any())).thenAnswer(inv -> {
       dentro.countDown();
       liberar.await(5, TimeUnit.SECONDS);
-      return "ok";
+      return ResultadoRota.aceita("ok");
     });
 
     CompletableFuture<AssistenteChatResponse> primeira =
@@ -110,7 +126,7 @@ class AssistenteServiceTest {
     when(produtorProvider.get()).thenReturn(produtor);
     when(rotaDados.responder(anyString(), any()))
         .thenThrow(new AssistenteIndisponivelException("fora", null))
-        .thenReturn("ok");
+        .thenReturn(ResultadoRota.aceita("ok"));
 
     assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("1")))
         .isInstanceOf(AssistenteIndisponivelException.class);

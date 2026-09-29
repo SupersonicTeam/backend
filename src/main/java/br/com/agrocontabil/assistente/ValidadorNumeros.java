@@ -60,12 +60,28 @@ public class ValidadorNumeros {
    * @return se todos os números têm fonte e quantos não têm
    */
   public Resultado verificar(String resposta, Collection<String> fontes) {
+    return verificar(resposta, fontes, List.of());
+  }
+
+  /**
+   * Verifica a resposta contra as fontes e datas de referência.
+   *
+   * @param resposta       texto final do modelo
+   * @param fontes         resultados das funções e pergunta do usuário — de onde números podem vir
+   * @param datasConhecidas datas que a resposta pode citar sem estarem nas fontes (ex.: hoje). Só
+   *                       valem como data (e o ano); dia e mês não viram números "com fonte" —
+   *                       senão "hoje é 29/09" liberaria um "29" inventado
+   * @return se todos os números têm fonte e quantos não têm
+   */
+  public Resultado verificar(
+      String resposta, Collection<String> fontes, Collection<LocalDate> datasConhecidas) {
     Conhecidos conhecidos = new Conhecidos();
     for (String fonte : fontes) {
       if (fonte != null) {
         conhecidos.aprender(fonte);
       }
     }
+    datasConhecidas.forEach(conhecidos::aprenderData);
     int semFonte = conhecidos.contarSemFonte(resposta == null ? "" : resposta);
     return new Resultado(semFonte == 0, semFonte);
   }
@@ -109,6 +125,12 @@ public class ValidadorNumeros {
       while (m.find()) {
         numeros.addAll(candidatos(m.group()));
       }
+    }
+
+    void aprenderData(LocalDate data) {
+      datas.add(data);
+      meses.add(YearMonth.from(data));
+      numeros.add(normalizar(new BigDecimal(data.getYear())));
     }
 
     int contarSemFonte(String resposta) {

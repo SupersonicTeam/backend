@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
@@ -74,11 +75,15 @@ public class AssistenteService {
     try {
       ContextoAssistente contexto =
           new ContextoAssistente(produtor.getId(), LocalDate.now(clock.withZone(ZONE)));
-      String resposta = rotaDados.responder(request.pergunta(), contexto);
-      List<AssistenteChatResponse.FonteDado> fontes = contexto.fontes().stream()
-          .map(f -> new AssistenteChatResponse.FonteDado(f.funcao(), f.parametros()))
-          .toList();
-      return new AssistenteChatResponse(resposta, "DADOS", List.of(), fontes, false);
+      ResultadoRota resultado = rotaDados.responder(request.pergunta(), contexto);
+      // Resposta descartada = texto fixo do backend: nada dele veio das funcoes, entao o selo
+      // "calculado a partir das suas notas" nao pode aparecer ao lado.
+      List<AssistenteChatResponse.FonteDado> fontes = resultado.aceita()
+          ? contexto.fontes().stream()
+              .map(f -> new AssistenteChatResponse.FonteDado(f.funcao(), f.parametros()))
+              .toList()
+          : List.of();
+      return new AssistenteChatResponse(resultado.texto(), "DADOS", List.of(), fontes, false);
     } finally {
       vagas.release();
     }

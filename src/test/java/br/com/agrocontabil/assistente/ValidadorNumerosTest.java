@@ -78,6 +78,19 @@ class ValidadorNumerosTest {
   }
 
   @Test
+  @DisplayName("Data de hoje vale como data e ano, mas dia e mes nao viram numeros 'com fonte'")
+  void dataDeHojeNaoLiberaNumerosSoltos() {
+    List<java.time.LocalDate> hoje = List.of(java.time.LocalDate.of(2026, 9, 29));
+
+    assertThat(validador.verificar("Hoje, 29/09/2026, nao ha guias.", List.of(), hoje)
+        .rastreavel()).isTrue();
+    assertThat(validador.verificar("Em 2026 nao ha guias.", List.of(), hoje).rastreavel())
+        .isTrue();
+    assertThat(validador.verificar("Voce tem 9 guias, total R$ 29,00.", List.of(), hoje)
+        .rastreavel()).isFalse();
+  }
+
+  @Test
   @DisplayName("Resposta sem numero passa")
   void semNumeroPassa() {
     assertThat(validador.verificar("Nao tenho essa informacao.", List.of()).rastreavel()).isTrue();

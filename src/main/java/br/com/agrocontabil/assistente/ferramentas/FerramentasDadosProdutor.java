@@ -64,6 +64,20 @@ public class FerramentasDadosProdutor {
   /** Janela máxima de {@code proximosVencimentos}. */
   static final int MAXIMO_DIAS_VENCIMENTO = 90;
 
+  /**
+   * Zero por grafia nao e o mesmo que "nao comprou": a busca e por trecho exato da descricao. Sem
+   * digitos de proposito, para nao virar numero "com fonte" no ValidadorNumeros.
+   */
+  static final String NADA_POR_DESCRICAO =
+      "Nenhuma compra encontrada com esse termo no periodo. A busca procura o trecho exato na "
+          + "descricao dos itens (acentos e grafia contam): diga isso ao usuario e sugira outro "
+          + "termo ou o codigo NCM, em vez de afirmar que ele nao comprou.";
+
+  /** Mesmo cuidado para a busca por NCM. */
+  static final String NADA_POR_NCM =
+      "Nenhuma compra encontrada com esse codigo NCM no periodo. Diga isso ao usuario e sugira "
+          + "conferir o codigo ou buscar pelo nome do insumo.";
+
   private static final Pattern MES = Pattern.compile("\\d{4}-(0[1-9]|1[0-2])");
   private static final Pattern NCM = Pattern.compile("\\d{2,8}");
   private static final int TERMO_MINIMO = 3;
@@ -123,7 +137,8 @@ public class FerramentasDadosProdutor {
         resultado.porUnidade().stream()
             .map(u -> new CompraPorUnidade(
                 u.unidade(), FormatoBr.quantidade(u.quantidade()), FormatoBr.moeda(u.valorTotal())))
-            .toList());
+            .toList(),
+        resultado.quantidadeNotas() == 0 ? (porNcm ? NADA_POR_NCM : NADA_POR_DESCRICAO) : null);
   }
 
   /** Apuração mensal de IBS/CBS. */

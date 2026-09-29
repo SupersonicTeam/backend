@@ -88,6 +88,7 @@ class FerramentasDadosProdutorTest {
     assertThat(compras.valorTotal()).isEqualTo("R$ 12.345,67");
     assertThat(compras.quantidadeNotas()).isEqualTo(3);
     assertThat(compras.criterio()).isEqualTo("DESCRICAO");
+    assertThat(compras.observacao()).isNull();
     assertThat(compras.porUnidade()).singleElement()
         .satisfies(u -> assertThat(u.quantidade()).isEqualTo("1.500"));
     assertThat(contexto.fontes()).containsExactly(new FonteDado("totalComprasPorInsumo", Map.of(
@@ -105,6 +106,8 @@ class FerramentasDadosProdutorTest {
 
     assertThat(compras.criterio()).isEqualTo("NCM");
     assertThat(compras.valorTotal()).isEqualTo("R$ 0,00");
+    // Zero nao e "nao comprou": a observacao orienta o modelo a dizer que nada foi encontrado.
+    assertThat(compras.observacao()).isEqualTo(FerramentasDadosProdutor.NADA_POR_NCM);
   }
 
   @Test

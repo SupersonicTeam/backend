@@ -24,10 +24,11 @@ public final class RespostasFerramentas {
    * @param valorTotal      soma do valor dos itens comprados
    * @param quantidadeNotas notas de entrada em que o insumo aparece
    * @param porUnidade      quantidade e valor por unidade de medida
+   * @param observacao      orientacao ao usuario quando nada foi encontrado; nulo caso contrario
    */
   public record ComprasInsumo(
       String insumo, String criterio, String dataInicio, String dataFim, String valorTotal,
-      long quantidadeNotas, List<CompraPorUnidade> porUnidade) {}
+      long quantidadeNotas, List<CompraPorUnidade> porUnidade, String observacao) {}
 
   /**
    * Compras de um insumo numa unidade de medida.
