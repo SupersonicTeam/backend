@@ -85,7 +85,9 @@ br.com.agrocontabil
 │                  # SefazStatusSyncJob (job agendado de sincronização)
 ├── assistente/    # Ceres, a assistente fiscal (Sprint 6): llm/ (ModeloLinguagem = porta única
 │                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
-│                  # → DEGRADED, nunca DOWN)
+│                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
+│                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
+│                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros
 ├── security/      # papéis e principal: PapelUsuario, UsuarioAutenticado(+Provider),
 │                  # ProdutorEmContextoResolver, SecurityErrorResponder [#93]
 ├── exception/     # GlobalExceptionHandler + DomainException (base) + exceções de domínio
@@ -114,6 +116,7 @@ br.com.agrocontabil
 | GET | `/api/contador/guias?produtorId=&page=&size=` | Lista paginada (padrão 100, máx. 200) das guias do usuário autenticado (404 se o id for de outro); corpo array + total em `X-Total-Count` (#103) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (só papel PRODUTOR; contador recebe 403) |
 | GET | `/api/calendario-fiscal/{produtorId}/vencimentos?de=&ate=` | Vencimentos fiscais do produtor na janela `de`/`ate` (padrão: mês corrente ±12 meses; máx. 36 meses) (#103) |
+| POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[], modoFallback}`. Hoje só a rota de dados, síncrona (#142); só produtor (contador 403); 429 acima do limite de perguntas simultâneas; 503 com o modelo fora |
 
 ## Segurança
 
@@ -126,7 +129,7 @@ br.com.agrocontabil
   | Rota | Produtor | Contador |
   |------|----------|----------|
   | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator` | público | público |
-  | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
+  | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
   | `GET /api/calendario-fiscal/{produtorId}/vencimentos` | próprio calendário | calendário dos produtores da carteira |

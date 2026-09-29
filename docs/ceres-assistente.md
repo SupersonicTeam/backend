@@ -65,3 +65,32 @@ O profile `test` desliga os modelos reais (`spring.ai.model.chat/embedding: none
 `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável: texto fixo, sequência
 de respostas, falha) e `EmbeddingModelSimulado` (determinístico, 1024 dimensões). A CI não depende
 do Ollama nem de chave de API.
+
+## Rota de dados — Tool Calling (issues #142 e #143)
+
+`POST /api/assistente/chat` com `{"pergunta": "..."}` (1 a 1000 caracteres, só produtor).
+
+| Função | Responde | Reaproveita |
+|---|---|---|
+| `totalComprasPorInsumo(descricaoOuNcm, dataInicio, dataFim)` | "quanto comprei de fertilizante no semestre?" | recorte do crédito: entradas `IMPORTADA` + `AUTORIZADA` |
+| `consultarApuracao(mes)` | "quanto de IBS eu devo em julho?" | `ApuracaoService` |
+| `consultarCreditos(dataInicio, dataFim)` | "quanto tenho de crédito?" | `CreditoService` |
+| `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10) | consulta fixa top-N |
+| `proximosVencimentos(dias)` | "o que vence este mês?" (máx. 90 dias) | guias não pagas |
+
+Garantias, todas em código:
+
+- **Isolamento (RN007):** nenhuma função tem parâmetro de produtor. O produtor é resolvido do
+  usuário autenticado **antes** de chamar o modelo e chega às funções pelo `ToolContext`
+  (`ContextoAssistente`), que o modelo não vê. Sem contexto, a função falha fechado. Testado com
+  prompt injection pedindo dados de outro produtor.
+- **Nenhum número inventado:** o laço de funções é do backend e guarda os resultados; o
+  `ValidadorNumeros` descarta a resposta que tiver número ou data que não veio das funções, da
+  pergunta ou do prompt de sistema.
+- **Sem text-to-SQL:** consultas fixas e parametrizadas; texto digitado vira `LIKE` escapado.
+- **Minimização:** as funções devolvem totais, datas, contagens e listas curtas — nenhum nome,
+  CPF/CNPJ, endereço, chave de acesso ou observação.
+- **Custo limitado:** no máximo `AI_MAX_RODADAS_FERRAMENTAS` (3) rodadas de funções por pergunta e
+  `AI_MAX_CONVERSAS_SIMULTANEAS` (4) perguntas ao mesmo tempo (acima disso, 429).
+- **Erro de função:** o modelo recebe só a orientação de parâmetro inválido (escrita por nós) ou
+  uma mensagem genérica — nunca a mensagem do banco.

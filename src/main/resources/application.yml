@@ -255,6 +255,11 @@ app:
       timeout: ${AI_HEALTH_TIMEOUT:2s}
       # O /actuator/health e publico: sem cache, cada visitante dispararia uma chamada ao Ollama.
       cache: ${AI_HEALTH_CACHE:10s}
+    # Teto do laco modelo -> funcao -> modelo numa mesma pergunta (issue #142).
+    max-rodadas-ferramentas: ${AI_MAX_RODADAS_FERRAMENTAS:3}
+    # Perguntas processadas ao mesmo tempo; acima disso 429 (cada uma prende uma thread pelo tempo
+    # de geracao do modelo).
+    max-conversas-simultaneas: ${AI_MAX_CONVERSAS_SIMULTANEAS:4}
   # Apuracao mensal de IBS/CBS (issue #41 — RN004).
   apuracao:
     # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").

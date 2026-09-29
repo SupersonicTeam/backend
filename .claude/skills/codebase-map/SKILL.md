@@ -79,7 +79,16 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `llm/ModeloLinguagem` | **Porta única** para o `ChatModel` (Ollama ou API compatível com a da OpenAI, por `spring.ai.model.chat`). Falha do provedor → `AssistenteIndisponivelException` (503); `identificacao()` = `provedor/modelo` para auditoria (issue #141) |
 | `llm/OllamaHealthIndicator` | Health `ollama`: modelos baixados? Inacessível/ausente → `DEGRADED` (HTTP 200), nunca `DOWN`; cliente próprio com timeout curto + cache (issue #141) |
 
-`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health).
+| `ContextoAssistente` | Produtor + "hoje" + fontes da pergunta, entregue às funções pelo `ToolContext` (nunca visto pelo modelo). `de(toolContext)` **falha fechado** (issue #143) |
+| `RotaDados` | Laço modelo → função → modelo **do backend** (`internalToolExecutionEnabled=false` + `ToolCallingManager`), teto `max-rodadas-ferramentas`; resposta passa pelo `ValidadorNumeros` (issue #142) |
+| `ValidadorNumeros` | Todo número/data da resposta tem de aparecer nos resultados das funções, na pergunta ou no prompt de sistema; senão a resposta é descartada (issue #142) |
+| `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
+| `ferramentas/FerramentasDadosProdutor` | 5 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
+| `ferramentas/ProcessadorErroFerramenta` | O que volta ao modelo quando a função falha: mensagem de parâmetro (nossa) ou genérica; contexto ausente aborta |
+
+`service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `service/AssistenteService`: identidade → vaga (semáforo, 429) → rota. `controller/AssistenteController`: `POST /api/assistente/chat`.
+
+`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-rodadas-ferramentas`, `max-conversas-simultaneas`).
 Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.
 
 ### `security/` (issue #93)
@@ -172,6 +181,7 @@ Bean Validation customizada (anotação + validator):
 | `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
 | `JanelaCalendarioInvalidaException` | 400 | `de > ate` ou janela > 36 meses no calendário fiscal (issue #103) |
 | `AssistenteIndisponivelException` | 503 | Modelo da Ceres não respondeu / não configurado (issue #141) |
+| `AssistenteOcupadoException` | 429 | Acima de `app.assistente.max-conversas-simultaneas` (issue #142) |
 | `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |

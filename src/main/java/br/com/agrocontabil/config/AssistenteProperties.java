@@ -16,6 +16,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     saude:
  *       timeout: 2s     # timeout do health do Ollama
  *       cache: 10s      # por quanto tempo o último resultado do health é reaproveitado
+ *     max-rodadas-ferramentas: 3     # teto do laço modelo → função → modelo (issue #142)
+ *     max-conversas-simultaneas: 4   # perguntas em andamento ao mesmo tempo (issue #142)
  * </pre>
  *
  * <p>Registrada via {@link org.springframework.boot.context.properties.EnableConfigurationProperties}
@@ -28,6 +30,20 @@ public class AssistenteProperties implements InitializingBean {
   private Saude saude = new Saude();
 
   /**
+   * Quantas vezes, numa mesma pergunta, o modelo pode pedir funções antes de o backend desistir
+   * (issue #142). O laço de ferramentas é do backend justamente para ter este teto: sem ele, um
+   * modelo confuso (ou induzido por prompt injection) chamaria funções indefinidamente.
+   */
+  private int maxRodadasFerramentas = 3;
+
+  /**
+   * Perguntas processadas ao mesmo tempo (issue #142). Cada uma prende uma thread do Tomcat pelo
+   * tempo de geração do modelo — dezenas de segundos em CPU. Acima do teto a resposta é 429,
+   * em vez de esgotar as threads do servidor inteiro.
+   */
+  private int maxConversasSimultaneas = 4;
+
+  /**
    * Recusa valores fora de faixa na subida, em vez de descobrir o problema no primeiro health.
    *
    * @throws IllegalStateException se algum valor for nulo, zero ou negativo
@@ -36,12 +52,38 @@ public class AssistenteProperties implements InitializingBean {
   public void afterPropertiesSet() {
     exigirPositivo(saude.getTimeout(), "app.assistente.saude.timeout");
     exigirPositivo(saude.getCache(), "app.assistente.saude.cache");
+    if (maxRodadasFerramentas < 1 || maxRodadasFerramentas > 10) {
+      throw new IllegalStateException(
+          "app.assistente.max-rodadas-ferramentas deve estar entre 1 e 10, recebido: "
+              + maxRodadasFerramentas);
+    }
+    if (maxConversasSimultaneas < 1) {
+      throw new IllegalStateException(
+          "app.assistente.max-conversas-simultaneas deve ser >= 1, recebido: "
+              + maxConversasSimultaneas);
+    }
   }
 
   private static void exigirPositivo(Duration valor, String nome) {
     if (valor == null || valor.isNegative() || valor.isZero()) {
       throw new IllegalStateException(nome + " deve ser maior que zero, recebido: " + valor);
     }
+  }
+
+  public int getMaxRodadasFerramentas() {
+    return maxRodadasFerramentas;
+  }
+
+  public void setMaxRodadasFerramentas(int maxRodadasFerramentas) {
+    this.maxRodadasFerramentas = maxRodadasFerramentas;
+  }
+
+  public int getMaxConversasSimultaneas() {
+    return maxConversasSimultaneas;
+  }
+
+  public void setMaxConversasSimultaneas(int maxConversasSimultaneas) {
+    this.maxConversasSimultaneas = maxConversasSimultaneas;
   }
 
   public Saude getSaude() {
