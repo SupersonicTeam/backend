@@ -20,7 +20,9 @@ Backend do **AgroContabil** — software de auxílio ao produtor rural e ao escr
 
 ## Stack fixada
 
-Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 · Liquibase · Spring Security · Bean Validation · Spring Actuator · springdoc-openapi 2.8.x · JUnit 5 + Mockito · Docker Compose.
+Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 (+ pgvector) · Liquibase · Spring Security · Bean Validation · Spring Actuator · springdoc-openapi 2.8.x · Spring AI 1.1.8 (Ollama local + API compatível com a da OpenAI) · JUnit 5 + Mockito · Docker Compose.
+
+> Spring AI **fixado na linha 1.1.x** (a 2.x exige Boot 4). Detalhes da Ceres em `docs/ceres-assistente.md`.
 
 > Versão do Spring Boot **fixada em 3.5.14** (não usar SNAPSHOT). Linha 3.5 com EOL OSS em 30/06/2026 — aceitável para o escopo do TCC. Migração para 4.x exigiria revisar springdoc e Spring Cloud; só fazer com decisão explícita do Murillo.
 
@@ -81,6 +83,9 @@ br.com.agrocontabil
 ├── sefaz/         # transmissão SEFAZ: SefazTransport (interface plugável), MockSefazTransport,
 │                  # SefazClient, SefazRetorno, SituacaoSefaz, SefazAmbiente,
 │                  # SefazStatusSyncJob (job agendado de sincronização)
+├── assistente/    # Ceres, a assistente fiscal (Sprint 6): llm/ (ModeloLinguagem = porta única
+│                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
+│                  # → DEGRADED, nunca DOWN)
 ├── security/      # papéis e principal: PapelUsuario, UsuarioAutenticado(+Provider),
 │                  # ProdutorEmContextoResolver, SecurityErrorResponder [#93]
 ├── exception/     # GlobalExceptionHandler + DomainException (base) + exceções de domínio

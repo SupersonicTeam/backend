@@ -1,6 +1,10 @@
 services:
   postgres:
-    image: 'postgres:16-alpine'
+    # PostgreSQL 16 com a extensao pgvector: a base de legislacao da Ceres (issue #156) mora no
+    # mesmo banco. Trocar de postgres:16-alpine (musl) para esta imagem (Debian/glibc) muda a
+    # collation: num volume de dev ja existente, recrie o volume (docker compose down -v; o seed do
+    # DataLoader recompoe os dados) ou rode REINDEX DATABASE antes de confiar em indices de texto.
+    image: 'pgvector/pgvector:0.8.6-pg16'
     container_name: agrocontabil-postgres
     environment:
       POSTGRES_DB: ${DB_NAME:-agrocontabil}
@@ -15,6 +19,58 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Ceres — modelo de linguagem local (issue #141). Fora do compose padrao de dev: so sobe com o
+  # profile "ia" (ou "full"), para quem trabalha em NF-e nao baixar ~4 GB de modelos. Sem ele o
+  # backend sobe normal, a Ceres responde 503 e o health fica DEGRADED.
+  #   docker compose --profile ia up -d            # so Postgres + Ollama (backend pelo mvnw)
+  #   docker compose --profile full up -d --build  # tudo, inclusive o backend
+  ollama:
+    profiles:
+      - ia
+      - full
+    image: 'ollama/ollama:0.35.0'
+    container_name: agrocontabil-ollama
+    # Somente loopback: o Ollama nao tem autenticacao, e publicar a porta em 0.0.0.0 entregaria o
+    # modelo (e a CPU/GPU da maquina) a qualquer um na rede. O backend do compose chega pela rede
+    # interna (http://ollama:11434).
+    ports:
+      - '127.0.0.1:${AI_OLLAMA_PORT:-11434}:11434'
+    volumes:
+      - agrocontabil_ollama:/root/.ollama
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Baixa os modelos na primeira subida e termina (idempotente: modelo ja baixado e so conferido).
+  # Substitui o pull-model-strategy do Spring AI, que bloquearia a subida do backend por minutos e o
+  # impediria de subir com o Ollama fora do ar. O embedding (bge-m3) e fixo: trocar o modelo
+  # obriga a reindexar a legislacao.
+  ollama-init:
+    profiles:
+      - ia
+      - full
+    image: 'ollama/ollama:0.35.0'
+    container_name: agrocontabil-ollama-init
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b}
+    # O embedding vem primeiro e sempre: e obrigatorio qualquer que seja o provedor de chat. O modelo
+    # de chat so e baixado quando o chat e local — com provedor por API, AI_CHAT_MODEL e um nome da
+    # API (ex.: gpt-4o-mini), que o Ollama nao tem. $$ escapa a interpolacao do compose.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        ollama pull bge-m3 &&
+        if [ "$$AI_CHAT_PROVIDER" = "ollama" ]; then ollama pull "$$AI_CHAT_MODEL"; fi
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: 'no'
 
   backend:
     profiles:
@@ -33,6 +89,12 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-agrocontabil}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      AI_OLLAMA_BASE_URL: http://ollama:11434
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.openai.com}
+      AI_API_COMPLETIONS_PATH: ${AI_API_COMPLETIONS_PATH:-/v1/chat/completions}
     ports:
       - '8080:8080'
     depends_on:
@@ -47,3 +109,4 @@ services:
 
 volumes:
   agrocontabil_pgdata:
+  agrocontabil_ollama:

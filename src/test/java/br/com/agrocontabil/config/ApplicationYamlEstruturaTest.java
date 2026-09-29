@@ -37,7 +37,7 @@ class ApplicationYamlEstruturaTest {
    */
   private static final Set<String> SUBNAMESPACES_DO_SPRING = Set.of(
       "application", "profiles", "data", "datasource", "jpa", "liquibase", "transaction",
-      "task", "lifecycle", "servlet");
+      "task", "lifecycle", "servlet", "ai", "http");
 
   private static Properties propriedades;
 
@@ -76,6 +76,28 @@ class ApplicationYamlEstruturaTest {
         .isEqualTo("2MB");
     assertThat(propriedades.getProperty("spring.servlet.multipart.max-request-size"))
         .isEqualTo("20MB");
+  }
+
+  @Test
+  @DisplayName("Ceres: provedor por env, embedding fixo local e chave so por env (issue #141)")
+  void ceresConfiguradaNoNamespaceSpringAi() {
+    assertThat(propriedades.getProperty("spring.ai.model.chat"))
+        .isEqualTo("${AI_CHAT_PROVIDER:ollama}");
+    // Fixo de proposito: trocar o modelo de embedding obriga a reindexar a legislacao.
+    assertThat(propriedades.getProperty("spring.ai.model.embedding")).isEqualTo("ollama");
+    assertThat(propriedades.getProperty("spring.ai.ollama.embedding.options.model"))
+        .isEqualTo("bge-m3");
+    // Nenhuma chave literal no repositorio.
+    assertThat(propriedades.getProperty("spring.ai.openai.api-key")).isEqualTo("${AI_API_KEY:}");
+    // Puxar modelo na subida bloquearia o backend; quem baixa e o ollama-init do compose.
+    assertThat(propriedades.getProperty("spring.ai.ollama.init.pull-model-strategy"))
+        .isEqualTo("${AI_OLLAMA_PULL_STRATEGY:never}");
+    // Prompt e resposta carregam dados do produtor: nunca em log.
+    assertThat(propriedades.getProperty("spring.ai.chat.observations.log-prompt"))
+        .isEqualTo("false");
+    assertThat(propriedades.getProperty("spring.ai.chat.observations.log-completion"))
+        .isEqualTo("false");
+    assertThat(propriedades.getProperty("spring.http.client.read-timeout")).isNotBlank();
   }
 
   @Test

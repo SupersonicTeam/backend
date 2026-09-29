@@ -20,6 +20,13 @@ spring:
   liquibase:
     enabled: false
 
+  # Ceres (issue #141): a CI nao depende do Ollama. Os modelos reais ficam desligados e
+  # ModelosSimuladosConfig (src/test) registra ChatModel/EmbeddingModel simulados.
+  ai:
+    model:
+      chat: none
+      embedding: none
+
 app:
   cors:
     allowed-origins: http://localhost:4200

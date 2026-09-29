@@ -73,6 +73,15 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `KeyStoreCertificadoProvider` | Carrega `.p12` PKCS#12; lazy + validação |
 | `nfe/model/` | Classes JAXB puras do layout NF-e 4.00 (NFe, InfNFe, Emit, Dest…) |
 
+### `assistente/` — Ceres, a assistente fiscal (Sprint 6)
+| Classe | Responsabilidade |
+|--------|-----------------|
+| `llm/ModeloLinguagem` | **Porta única** para o `ChatModel` (Ollama ou API compatível com a da OpenAI, por `spring.ai.model.chat`). Falha do provedor → `AssistenteIndisponivelException` (503); `identificacao()` = `provedor/modelo` para auditoria (issue #141) |
+| `llm/OllamaHealthIndicator` | Health `ollama`: modelos baixados? Inacessível/ausente → `DEGRADED` (HTTP 200), nunca `DOWN`; cliente próprio com timeout curto + cache (issue #141) |
+
+`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health).
+Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.
+
 ### `security/` (issue #93)
 | Classe | Responsabilidade |
 |--------|-----------------|
@@ -162,6 +171,7 @@ Bean Validation customizada (anotação + validator):
 | `XmlGenerationException` | 422/500 | Falha na geração ou validação XSD |
 | `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
 | `JanelaCalendarioInvalidaException` | 400 | `de > ate` ou janela > 36 meses no calendário fiscal (issue #103) |
+| `AssistenteIndisponivelException` | 503 | Modelo da Ceres não respondeu / não configurado (issue #141) |
 | `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |

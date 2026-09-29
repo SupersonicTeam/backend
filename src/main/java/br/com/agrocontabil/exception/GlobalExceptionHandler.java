@@ -42,7 +42,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiError> handleDomain(DomainException ex, HttpServletRequest request) {
     HttpStatus status = ex.getStatus();
     String clientMessage = clientMessageFor(ex);
-    if (status.is5xxServerError()) {
+    if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+      // 503 = dependencia opcional fora do ar (ex.: o modelo da Ceres). Estado operacional
+      // esperado, que se repete a cada requisicao enquanto durar: WARN sem stack trace, para nao
+      // inundar o log. Quem lanca registra a causa (ModeloLinguagem, em DEBUG).
+      log.warn("Dependencia indisponivel (503) em {}: {}", request.getRequestURI(), ex.getMessage());
+    } else if (status.is5xxServerError()) {
       log.error("Erro de dominio (5xx) em {}: {}", request.getRequestURI(), ex.getMessage(), ex);
     } else {
       log.warn("Erro de dominio em {}: {}", request.getRequestURI(), ex.getMessage());
@@ -321,6 +326,10 @@ public class GlobalExceptionHandler {
   private String clientMessageFor(DomainException ex) {
     if (ex instanceof XmlGenerationException xml) {
       return xml.clientMessage();
+    }
+    if (ex instanceof AssistenteIndisponivelException assistente) {
+      // 503 da Ceres: a mensagem generica de 5xx fala em NF-e, o que confundiria o chat.
+      return assistente.clientMessage();
     }
     if (ex.getStatus().is5xxServerError()) {
       return "Erro interno ao processar a NF-e. Tente novamente mais tarde.";

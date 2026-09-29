@@ -1,0 +1,122 @@
+package br.com.agrocontabil.assistente.llm;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import br.com.agrocontabil.common.ErrorCode;
+import br.com.agrocontabil.exception.AssistenteIndisponivelException;
+import br.com.agrocontabil.support.ChatModelSimulado;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.retry.NonTransientAiException;
+import org.springframework.ai.retry.TransientAiException;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.ResourceAccessException;
+
+/** Testes do gateway {@link ModeloLinguagem} (issue #141). */
+class ModeloLinguagemTest {
+
+  private ChatModelSimulado chatModel;
+  private ModeloLinguagem modelo;
+
+  @BeforeEach
+  void setUp() {
+    chatModel = new ChatModelSimulado();
+    modelo = gatewayCom(chatModel);
+  }
+
+  @Test
+  @DisplayName("Repassa o prompt ao modelo e devolve a resposta")
+  void repassaPromptEDevolveResposta() {
+    chatModel.responderTexto("ola");
+
+    ChatResponse resposta = modelo.chamar(new Prompt("pergunta"));
+
+    assertThat(resposta.getResult().getOutput().getText()).isEqualTo("ola");
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("Ollama fora do ar (conexao recusada) vira 503 ASSISTENTE_INDISPONIVEL")
+  void conexaoRecusadaVira503() {
+    chatModel.falharCom(new ResourceAccessException("Connection refused: localhost/127.0.0.1:11434"));
+
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOfSatisfying(AssistenteIndisponivelException.class, e -> {
+          assertThat(e.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+          assertThat(e.getErrors()).singleElement().satisfies(detalhe -> {
+            assertThat(detalhe.code()).isEqualTo(ErrorCode.ASSISTENTE_INDISPONIVEL.code());
+            // Nada do erro tecnico chega ao cliente: nem host, nem porta, nem provedor.
+            assertThat(detalhe.message()).doesNotContain("11434", "localhost", "ollama");
+          });
+          assertThat(e.getCause()).isInstanceOf(ResourceAccessException.class);
+        });
+  }
+
+  @Test
+  @DisplayName("Erros transitorio e permanente do Spring AI viram 503")
+  void errosDoSpringAiViram503() {
+    for (RuntimeException falha : List.of(
+        new TransientAiException("HTTP 503 do provedor"),
+        new NonTransientAiException("HTTP 401 - Incorrect API key provided: sk-abc***"))) {
+      chatModel.falharCom(falha);
+
+      assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+          .isInstanceOf(AssistenteIndisponivelException.class)
+          // A mensagem tecnica (que vai ao log) leva so o tipo da falha, nunca a mensagem do
+          // provedor — ela pode ecoar a requisicao ou um pedaco da chave.
+          .satisfies(e -> assertThat(e.getMessage()).doesNotContain("sk-abc", "HTTP"));
+    }
+  }
+
+  @Test
+  @DisplayName("Resposta vazia do modelo vira 503, nao NullPointerException adiante")
+  void respostaVaziaVira503() {
+    chatModel.responderCom(prompt -> new ChatResponse(List.of()));
+
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+  }
+
+  @Test
+  @DisplayName("Sem ChatModel configurado (spring.ai.model.chat=none) responde 503")
+  void semModeloConfiguradoResponde503() {
+    ModeloLinguagem semModelo = new ModeloLinguagem(
+        new StaticListableBeanFactory().getBeanProvider(ChatModel.class), "none");
+
+    assertThatThrownBy(() -> semModelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(semModelo.identificacao()).isEqualTo("none");
+  }
+
+  @Test
+  @DisplayName("Dois ChatModel no contexto viram 503, nao 500 generico de NF-e")
+  void chatModelAmbiguoResponde503() {
+    StaticListableBeanFactory beans = new StaticListableBeanFactory();
+    beans.addBean("um", new ChatModelSimulado());
+    beans.addBean("outro", new ChatModelSimulado());
+    ModeloLinguagem ambiguo = new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama");
+
+    assertThatThrownBy(() -> ambiguo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(ambiguo.identificacao()).isEqualTo("ollama");
+  }
+
+  @Test
+  @DisplayName("Identificacao para auditoria: provedor/modelo")
+  void identificacaoProvedorEModelo() {
+    assertThat(modelo.identificacao()).isEqualTo("ollama/simulado");
+  }
+
+  private static ModeloLinguagem gatewayCom(ChatModel chatModel) {
+    StaticListableBeanFactory beans = new StaticListableBeanFactory();
+    beans.addBean("chatModel", chatModel);
+    return new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama");
+  }
+}

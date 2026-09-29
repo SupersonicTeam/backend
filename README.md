@@ -20,6 +20,7 @@ Backend do **AgroContabil**, software de auxílio ao produtor rural e ao escrit�
 | springdoc-openapi | Documentação Swagger |
 | JUnit 5 + Mockito | Testes |
 | Docker Compose | Infra local |
+| Spring AI 1.1.8 + Ollama + pgvector | Ceres, a assistente fiscal (ver `docs/ceres-assistente.md`) |
 
 ## Pré-requisitos
 
@@ -46,6 +47,8 @@ A API sobe em `http://localhost:8080`.
 | OpenAPI JSON | http://localhost:8080/v3/api-docs |
 
 > No profile `dev`, o `spring-boot-docker-compose` sobe e derruba o container do Postgres junto com a aplicação. Para subir o banco isolado: `docker compose up -d postgres`.
+
+> **Ceres (assistente fiscal):** o Ollama fica no profile `ia` do compose e não sobe por padrão. Para usar a Ceres em dev: `docker compose --profile ia up -d` (a primeira subida baixa ~4 GB de modelos). Sem ele, o resto do backend funciona normalmente. Detalhes em [`docs/ceres-assistente.md`](docs/ceres-assistente.md).
 
 ## Testes
 

@@ -121,4 +121,24 @@ class GlobalExceptionHandlerTest {
         .doesNotContain("transaction")
         .doesNotContain("unsaved-value");
   }
+
+  @Test
+  @DisplayName("Ceres indisponivel responde 503 com mensagem propria, sem detalhe do provedor")
+  void assistenteIndisponivelResponde503() {
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/assistente/chat");
+
+    ResponseEntity<ApiError> response = handler.handleDomain(
+        new AssistenteIndisponivelException(
+            "Falha ao chamar o modelo ollama: ResourceAccessException", null),
+        request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    ApiError body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.errors()).singleElement()
+        .satisfies(e -> assertThat(e.code()).isEqualTo("ASSISTENTE_INDISPONIVEL"));
+    // Nem a mensagem generica de NF-e (que confundiria o chat) nem o detalhe tecnico.
+    assertThat(body.message()).isEqualTo(AssistenteIndisponivelException.MENSAGEM_CLIENTE);
+    assertThat(body.message()).doesNotContain("NF-e", "ollama", "ResourceAccess");
+  }
 }

@@ -84,6 +84,90 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
+  # Timeouts dos clientes HTTP criados pelo Boot (issue #141). Hoje os unicos consumidores sao os
+  # clientes do Spring AI (Ollama / API compativel com a da OpenAI): o projeto nao tinha nenhum
+  # RestClient/WebClient antes. O read-timeout e generoso porque um modelo local em CPU pode levar
+  # dezenas de segundos para responder; o connect-timeout e curto para falhar rapido com o Ollama
+  # fora do ar.
+  http:
+    client:
+      connect-timeout: ${AI_CONNECT_TIMEOUT:5s}
+      read-timeout: ${AI_READ_TIMEOUT:120s}
+    reactiveclient:
+      connect-timeout: ${AI_CONNECT_TIMEOUT:5s}
+      read-timeout: ${AI_READ_TIMEOUT:120s}
+
+  # Ceres — assistente fiscal (issue #141). Arquitetura: Tool Calling + RAG + orquestracao.
+  ai:
+    model:
+      # Provedor do modelo de chat: "ollama" (local, padrao) ou "openai" (qualquer API compativel
+      # com a da OpenAI: OpenAI, Maritaca...). Trocar e so configuracao, nenhum codigo muda.
+      chat: ${AI_CHAT_PROVIDER:ollama}
+      # Embedding e SEMPRE local (bge-m3, 1024 dimensoes). Nao e env var de proposito: trocar o
+      # modelo de embedding obriga a reindexar toda a legislacao (issue #156).
+      embedding: ollama
+      # O starter da OpenAI tambem autoconfigura imagem, audio e moderacao, cada um exigindo chave
+      # de API na subida. Desligados: a Ceres so usa chat.
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    ollama:
+      base-url: ${AI_OLLAMA_BASE_URL:http://localhost:11434}
+      # Os modelos sao baixados pelo servico ollama-init do compose. Puxar na subida do backend
+      # (when_missing) bloquearia a aplicacao por minutos na primeira vez e a impediria de subir
+      # com o Ollama fora do ar — e o resto do sistema nao depende do modelo.
+      init:
+        pull-model-strategy: ${AI_OLLAMA_PULL_STRATEGY:never}
+      chat:
+        options:
+          model: ${AI_CHAT_MODEL:qwen3:4b}
+          # Temperatura baixa: a Ceres redige a partir de dados e trechos de lei, nao cria.
+          temperature: 0.2
+          # Janela de contexto explicita. Estourada, o Ollama descarta o INICIO do prompt — onde
+          # fica a instrucao de sistema com as regras da Ceres. O qwen3 suporta 32k.
+          num-ctx: ${AI_OLLAMA_NUM_CTX:8192}
+          # Teto de tokens gerados por chamada: limita latencia e custo de uma pergunta.
+          num-predict: ${AI_MAX_TOKENS:1024}
+          # O qwen3 raciocina por padrao; os tokens de raciocinio consomem o num-predict (resposta
+          # cortada) e multiplicam a latencia em CPU. Os numeros da Ceres vem das funcoes, nao do
+          # raciocinio do modelo. Vazio = nao enviar (modelo sem suporte). Ver ThinkOptionConverter.
+          think-option: ${AI_OLLAMA_THINK:false}
+      embedding:
+        options:
+          model: bge-m3
+    openai:
+      # Chave SOMENTE por variavel de ambiente — nunca no repositorio.
+      api-key: ${AI_API_KEY:}
+      base-url: ${AI_API_BASE_URL:https://api.openai.com}
+      chat:
+        # Provedores compativeis nem sempre usam o prefixo /v1 da OpenAI (ex.: a Maritaca expoe
+        # <base>/chat/completions).
+        completions-path: ${AI_API_COMPLETIONS_PATH:/v1/chat/completions}
+        options:
+          model: ${AI_CHAT_MODEL:gpt-4o-mini}
+          temperature: 0.2
+          max-tokens: ${AI_MAX_TOKENS:1024}
+    # Retry curto: a pergunta do usuario esta esperando. Erro 4xx (chave invalida, requisicao
+    # malformada) nao melhora repetindo.
+    retry:
+      max-attempts: ${AI_RETRY_MAX_ATTEMPTS:2}
+      on-client-errors: false
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 5s
+    # Nunca registrar prompt, resposta ou conteudo de ferramenta em log/observacao: carregam dados
+    # do produtor (issue #144). Os padroes ja sao false; explicitos para nao depender deles.
+    chat:
+      observations:
+        log-prompt: false
+        log-completion: false
+    tools:
+      observations:
+        include-content: false
+
 # Ao receber SIGTERM o Tomcat para de aceitar conexoes novas e espera as requisicoes ativas
 # terminarem, em vez de corta-las no meio (issue #101). O compose usa stop_grace_period: 35s
 # para nao matar o processo antes desta janela.
@@ -109,6 +193,11 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      # DEGRADED (issue #141): o Ollama fora do ar ou sem o modelo nao derruba o health. O resto do
+      # sistema funciona sem a Ceres; DOWN faria o healthcheck do compose reiniciar um backend
+      # saudavel. Status fora do http-mapping respondem 200.
+      status:
+        order: DOWN, OUT_OF_SERVICE, DEGRADED, UP, UNKNOWN
 
 # Configuracoes da aplicacao (namespace proprio)
 app:
@@ -158,6 +247,14 @@ app:
         lock:
           at-most-for: ${NFE_SEFAZ_SYNC_LOCK_AT_MOST_FOR:PT14M}
           at-least-for: ${NFE_SEFAZ_SYNC_LOCK_AT_LEAST_FOR:PT10M}
+  # Ceres — assistente fiscal (issues #141+).
+  assistente:
+    saude:
+      # Timeout do health do Ollama. Proprio e curto: o health nao pode herdar o read-timeout de
+      # geracao (120s) e pendurar o /actuator/health do compose.
+      timeout: ${AI_HEALTH_TIMEOUT:2s}
+      # O /actuator/health e publico: sem cache, cada visitante dispararia uma chamada ao Ollama.
+      cache: ${AI_HEALTH_CACHE:10s}
   # Apuracao mensal de IBS/CBS (issue #41 — RN004).
   apuracao:
     # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").
