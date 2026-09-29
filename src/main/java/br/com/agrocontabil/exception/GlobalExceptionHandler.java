@@ -322,6 +322,10 @@ public class GlobalExceptionHandler {
     if (ex instanceof XmlGenerationException xml) {
       return xml.clientMessage();
     }
+    if (ex instanceof AssistenteIndisponivelException assistente) {
+      // 503 da Ceres: a mensagem generica de 5xx fala em NF-e, o que confundiria o chat.
+      return assistente.clientMessage();
+    }
     if (ex.getStatus().is5xxServerError()) {
       return "Erro interno ao processar a NF-e. Tente novamente mais tarde.";
     }

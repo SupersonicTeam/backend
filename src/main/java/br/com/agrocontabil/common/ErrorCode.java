@@ -102,7 +102,13 @@ public enum ErrorCode {
    * endpoint exclusivo do contador). HTTP 403 — distinto do anti-IDOR, que responde 404 para nao
    * revelar a existencia do recurso alheio.
    */
-  PAPEL_NAO_AUTORIZADO;
+  PAPEL_NAO_AUTORIZADO,
+  // Ceres — assistente fiscal (issue #141)
+  /**
+   * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).
+   * O restante do sistema segue funcionando; o cliente pode tentar de novo depois. HTTP 503.
+   */
+  ASSISTENTE_INDISPONIVEL;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
