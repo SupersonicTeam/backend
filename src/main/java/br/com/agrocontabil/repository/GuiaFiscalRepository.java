@@ -77,4 +77,31 @@ public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
    * @return guias pendentes com vencimento anterior a {@code hoje}
    */
   List<GuiaFiscal> findByStatusAndDataVencimentoBefore(StatusGuiaFiscal status, LocalDate hoje);
+
+  /**
+   * Guias ainda não pagas do produtor com vencimento na janela {@code [de, ate]}, da mais próxima
+   * para a mais distante (issue #142 — Ceres, função {@code proximosVencimentos}).
+   *
+   * @param pagina limite (top-N): a Ceres nunca lista tudo
+   */
+  @Query(value = """
+      SELECT new br.com.agrocontabil.repository.VencimentoGuiaResumo(
+          g.tipoGuia, g.dataVencimento, g.valor, g.status)
+      FROM GuiaFiscal g
+      WHERE g.produtor.id = :produtorId
+        AND g.status <> br.com.agrocontabil.model.StatusGuiaFiscal.PAGA
+        AND g.dataVencimento BETWEEN :de AND :ate
+      ORDER BY g.dataVencimento ASC, g.id ASC
+      """,
+      countQuery = """
+      SELECT COUNT(g) FROM GuiaFiscal g
+      WHERE g.produtor.id = :produtorId
+        AND g.status <> br.com.agrocontabil.model.StatusGuiaFiscal.PAGA
+        AND g.dataVencimento BETWEEN :de AND :ate
+      """)
+  Page<VencimentoGuiaResumo> listarNaoPagasNaJanela(
+      @Param("produtorId") UUID produtorId,
+      @Param("de") LocalDate de,
+      @Param("ate") LocalDate ate,
+      Pageable pagina);
 }

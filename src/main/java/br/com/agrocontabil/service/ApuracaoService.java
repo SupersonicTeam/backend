@@ -167,9 +167,29 @@ public class ApuracaoService {
   public ApuracaoResponse consultar(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
     Produtor produtor = produtorProvider.get();
-    return apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), mes.toString())
+    return consultarParaProdutor(produtor.getId(), mes.toString());
+  }
+
+  /**
+   * Mesma consulta de {@link #consultar(String)}, para um produtor já identificado (issue #142 —
+   * função {@code consultarApuracao} da Ceres). Existe porque as funções da Ceres não podem ler o
+   * {@code SecurityContext}: com streaming elas rodam em outra thread, onde ele chega vazio (#143).
+   *
+   * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de vir de identidade já
+   * resolvida no servidor (o {@code ContextoAssistente} montado a partir do produtor autenticado),
+   * nunca de entrada do cliente ou do modelo.
+   *
+   * @param produtorId produtor da sessão
+   * @param periodo    período no formato {@code YYYY-MM}
+   * @return apuração do período (persistida ou projeção ao vivo, não persistida)
+   * @throws IllegalArgumentException se o período não estiver no formato {@code YYYY-MM}
+   */
+  @Transactional(readOnly = true)
+  public ApuracaoResponse consultarParaProdutor(UUID produtorId, String periodo) {
+    YearMonth mes = parsePeriodo(periodo);
+    return apuracaoRepository.findByProdutorIdAndPeriodo(produtorId, mes.toString())
         .map(this::toResponse)
-        .orElseGet(() -> projetarAoVivo(produtor.getId(), mes));
+        .orElseGet(() -> projetarAoVivo(produtorId, mes));
   }
 
   /**

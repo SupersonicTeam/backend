@@ -108,7 +108,13 @@ public enum ErrorCode {
    * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).
    * O restante do sistema segue funcionando; o cliente pode tentar de novo depois. HTTP 503.
    */
-  ASSISTENTE_INDISPONIVEL;
+  ASSISTENTE_INDISPONIVEL,
+  /**
+   * A Ceres ja esta processando o maximo de perguntas simultaneas
+   * ({@code app.assistente.max-conversas-simultaneas}). O cliente tenta de novo em instantes.
+   * HTTP 429.
+   */
+  ASSISTENTE_OCUPADO;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

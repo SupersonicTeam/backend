@@ -1,0 +1,98 @@
+package br.com.agrocontabil.assistente;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import org.springframework.ai.chat.model.ToolContext;
+
+/**
+ * Contexto de uma pergunta à Ceres, entregue às funções pelo {@link ToolContext} (issue #143).
+ *
+ * <p><strong>É daqui, e só daqui, que as funções tiram o produtor.</strong> O {@code produtorId}
+ * é resolvido a partir do produtor autenticado, na thread da requisição, <em>antes</em> de o
+ * modelo ser chamado. As funções não têm parâmetro de produtor (o modelo não tem como pedir dados
+ * de outro, nem sob prompt injection: não se contorna um parâmetro que não existe) e não leem o
+ * {@code SecurityContext} (com streaming elas rodam em outra thread, onde ele chega vazio).
+ *
+ * <p>O {@link ToolContext} não é enviado ao modelo: fica no backend.
+ *
+ * <p>Também coleta as {@link FonteDado fontes de dados} usadas na resposta — a lista que o
+ * frontend mostra como "calculado a partir das suas notas". Vive só durante a pergunta.
+ */
+public final class ContextoAssistente {
+
+  /** Chave do contexto dentro do {@link ToolContext}. */
+  public static final String CHAVE = "agrocontabil.contextoAssistente";
+
+  private final UUID produtorId;
+  private final LocalDate hoje;
+  private final List<FonteDado> fontes = Collections.synchronizedList(new ArrayList<>());
+
+  /**
+   * Cria o contexto de uma pergunta.
+   *
+   * @param produtorId produtor autenticado (nunca vindo do cliente nem do modelo)
+   * @param hoje       data de referência da pergunta em {@code America/Sao_Paulo}
+   */
+  public ContextoAssistente(UUID produtorId, LocalDate hoje) {
+    this.produtorId = Objects.requireNonNull(produtorId, "produtorId");
+    this.hoje = Objects.requireNonNull(hoje, "hoje");
+  }
+
+  /**
+   * Recupera o contexto do {@link ToolContext} de uma função. <strong>Falha fechado:</strong> sem
+   * contexto a função não consulta nada — nunca cai num produtor padrão.
+   *
+   * @param toolContext contexto recebido pela função
+   * @return o contexto da pergunta
+   * @throws ContextoAssistenteAusenteException se o contexto não estiver presente
+   */
+  public static ContextoAssistente de(ToolContext toolContext) {
+    Object contexto = toolContext == null ? null : toolContext.getContext().get(CHAVE);
+    if (contexto instanceof ContextoAssistente assistente) {
+      return assistente;
+    }
+    throw new ContextoAssistenteAusenteException();
+  }
+
+  /** O {@link ToolContext} a passar nas opções da chamada ao modelo. */
+  public Map<String, Object> comoToolContext() {
+    return Map.of(CHAVE, this);
+  }
+
+  /**
+   * Registra que uma função foi usada, com os parâmetros já validados e normalizados.
+   *
+   * @param funcao     nome da função
+   * @param parametros parâmetros efetivamente usados na consulta
+   */
+  public void registrarFonte(String funcao, Map<String, String> parametros) {
+    fontes.add(new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros))));
+  }
+
+  public UUID produtorId() {
+    return produtorId;
+  }
+
+  public LocalDate hoje() {
+    return hoje;
+  }
+
+  /** Fontes registradas até agora, na ordem das chamadas. */
+  public List<FonteDado> fontes() {
+    synchronized (fontes) {
+      return List.copyOf(fontes);
+    }
+  }
+
+  /** Não expõe o produtor: o contexto pode acabar em log por engano. */
+  @Override
+  public String toString() {
+    return "ContextoAssistente[hoje=" + hoje + ", fontes=" + fontes.size() + "]";
+  }
+}

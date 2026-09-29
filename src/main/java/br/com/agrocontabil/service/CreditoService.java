@@ -6,10 +6,12 @@ import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -78,6 +80,32 @@ public class CreditoService {
 
     return new CreditoSaldoResponse(
         mes.toString(), creditoIbs, creditoCbs, total, agregado.quantidadeNotas());
+  }
+
+  /**
+   * Créditos de IBS/CBS das notas de entrada de um produtor já identificado num intervalo de datas
+   * (issue #142 — função {@code consultarCreditos} da Ceres). Mesma agregação e mesmo recorte de
+   * {@link #consultarSaldo(String)} (entradas IMPORTADAS e AUTORIZADAS, competência da emissão em
+   * {@code America/Sao_Paulo}); só a janela deixa de ser um mês fechado.
+   *
+   * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de vir de identidade já
+   * resolvida no servidor, nunca de entrada do cliente ou do modelo (issue #143).
+   *
+   * @param produtorId produtor da sessão
+   * @param inicio     primeiro dia (inclusivo)
+   * @param fim        último dia (inclusivo)
+   * @return créditos somados (nunca nulos, 2 casas) e quantidade de notas
+   */
+  public CreditoSaldoAgregado somarCreditosNoIntervalo(
+      UUID produtorId, LocalDate inicio, LocalDate fim) {
+    CreditoSaldoAgregado agregado = notaFiscalRepository.somarCreditosPorPeriodo(
+        produtorId,
+        inicio.atStartOfDay(ZONE).toOffsetDateTime(),
+        fim.plusDays(1).atStartOfDay(ZONE).toOffsetDateTime());
+    return new CreditoSaldoAgregado(
+        coalesce(agregado.creditoIbs()),
+        coalesce(agregado.creditoCbs()),
+        agregado.quantidadeNotas());
   }
 
   /**

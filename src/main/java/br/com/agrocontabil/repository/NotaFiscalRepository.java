@@ -1,9 +1,11 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import jakarta.persistence.LockModeType;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -324,4 +326,137 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * @return até cinco notas do produtor, da mais recente para a mais antiga
    */
   List<NotaFiscal> findTop5ByProdutorIdOrderByDataEmissaoDesc(UUID produtorId);
+
+  // --- Consultas da Ceres (issue #142). Fixas e parametrizadas: o modelo só escolhe a função e
+  // preenche os parâmetros, nunca escreve SQL. Todas exigem o produtor (anti-IDOR, RN007).
+
+  /**
+   * Compras de um insumo por NCM (código completo ou prefixo): itens de notas de
+   * <strong>entrada</strong> ({@code IMPORTADA}, o produtor é o destinatário) autorizadas no
+   * período, agregados por unidade. Mesmo recorte do crédito ({@link #somarCreditosPorPeriodo}).
+   *
+   * @param produtorId produtor da sessão
+   * @param prefixoNcm prefixo do NCM já com o curinga final (ex.: {@code 3808%})
+   * @param inicio     início do período (inclusivo)
+   * @param fim        fim do período (exclusivo)
+   * @return uma linha por unidade de medida, maior valor primeiro
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoAgregado(
+          i.unidade, SUM(i.quantidade), SUM(i.valorTotal))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND i.ncm LIKE :prefixoNcm
+      GROUP BY i.unidade
+      ORDER BY SUM(i.valorTotal) DESC
+      """)
+  List<CompraInsumoAgregado> somarComprasPorNcm(
+      @Param("produtorId") UUID produtorId,
+      @Param("prefixoNcm") String prefixoNcm,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /** Valor total e notas distintas das compras por NCM — mesmo recorte de {@link #somarComprasPorNcm}. */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoTotal(
+          SUM(i.valorTotal), COUNT(DISTINCT n.id))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND i.ncm LIKE :prefixoNcm
+      """)
+  CompraInsumoTotal totalizarComprasPorNcm(
+      @Param("produtorId") UUID produtorId,
+      @Param("prefixoNcm") String prefixoNcm,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Compras de um insumo pela descrição do item (contém, sem diferenciar maiúsculas). O padrão
+   * chega pronto e escapado com {@code !}: {@code %} e {@code _} digitados pelo usuário são
+   * literais, não curingas.
+   *
+   * @param padraoDescricao padrão {@code LIKE} em minúsculas, já escapado (ex.: {@code %adubo%})
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoAgregado(
+          i.unidade, SUM(i.quantidade), SUM(i.valorTotal))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
+      GROUP BY i.unidade
+      ORDER BY SUM(i.valorTotal) DESC
+      """)
+  List<CompraInsumoAgregado> somarComprasPorDescricao(
+      @Param("produtorId") UUID produtorId,
+      @Param("padraoDescricao") String padraoDescricao,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Valor total e notas distintas das compras pela descrição — mesmo recorte de
+   * {@link #somarComprasPorDescricao}.
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoTotal(
+          SUM(i.valorTotal), COUNT(DISTINCT n.id))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
+      """)
+  CompraInsumoTotal totalizarComprasPorDescricao(
+      @Param("produtorId") UUID produtorId,
+      @Param("padraoDescricao") String padraoDescricao,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Notas do produtor no período, filtradas por origem e status, mais recentes primeiro. Os
+   * filtros são coleções nunca vazias: "qualquer origem" é a coleção com todas, o que evita o
+   * {@code :param IS NULL} que o PostgreSQL não consegue tipar.
+   *
+   * @param pagina limite (top-N): a Ceres nunca lista tudo
+   */
+  @Query(value = """
+      SELECT new br.com.agrocontabil.repository.NotaResumo(
+          n.numero, n.serie, n.dataEmissao, n.origem, n.status,
+          n.valorTotalNota, n.valorTotalIbs, n.valorTotalCbs)
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem IN :origens
+        AND n.status IN :status
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      ORDER BY n.dataEmissao DESC, n.id DESC
+      """,
+      countQuery = """
+      SELECT COUNT(n) FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem IN :origens
+        AND n.status IN :status
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      """)
+  Page<NotaResumo> listarResumos(
+      @Param("produtorId") UUID produtorId,
+      @Param("origens") Collection<OrigemNotaFiscal> origens,
+      @Param("status") Collection<StatusNotaFiscal> status,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim,
+      Pageable pagina);
 }
