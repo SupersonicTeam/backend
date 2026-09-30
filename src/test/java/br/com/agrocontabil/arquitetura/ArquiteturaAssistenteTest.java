@@ -11,8 +11,16 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityManager;
+import javax.sql.DataSource;
 import org.springframework.data.repository.Repository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Fronteira do módulo da Ceres (issue #141; decisão de 2026-09-29).
@@ -37,7 +45,13 @@ class ArquiteturaAssistenteTest {
       .that().resideInAPackage(MODULO)
       .and().resideOutsideOfPackage(ADAPTADOR)
       .should().dependOnClassesThat().resideInAnyPackage(
-          "br.com.agrocontabil.service..", "br.com.agrocontabil.repository..")
+          // Lista do que o modulo NAO enxerga: todo o dominio e a infraestrutura de negocio. O que
+          // sobra (dto, exception, common, config, enums de model) e contrato ou suporte.
+          "br.com.agrocontabil.service..", "br.com.agrocontabil.repository..",
+          "br.com.agrocontabil.security..", "br.com.agrocontabil.controller..",
+          "br.com.agrocontabil.nfe..", "br.com.agrocontabil.sefaz..",
+          "br.com.agrocontabil.danfe..", "br.com.agrocontabil.mapper..",
+          "br.com.agrocontabil.event..", "br.com.agrocontabil.validation..")
       .orShould().dependOnClassesThat(ENTIDADE)
       .because("a Ceres so fala com o resto do backend pelas interfaces de assistente.porta; "
           + "assim ela pode virar um servico separado trocando so os adaptadores");
@@ -63,13 +77,31 @@ class ArquiteturaAssistenteTest {
       .that().resideInAPackage(MODULO)
       .and().resideOutsideOfPackage(ADAPTADOR)
       .should().beAnnotatedWith(Transactional.class)
+      .orShould().beAnnotatedWith(jakarta.transaction.Transactional.class)
+      // Transacao programatica tambem conta: um TransactionTemplate em volta da chamada ao modelo
+      // prenderia a conexao do mesmo jeito.
+      .orShould().dependOnClassesThat().belongToAnyOf(
+          TransactionTemplate.class, TransactionOperations.class,
+          PlatformTransactionManager.class)
       .because("a chamada ao modelo nunca roda dentro de transacao: uma pergunta lenta prenderia "
           + "uma conexao do pool e derrubaria a emissao (licao das issues #96 e #99)");
+
+  @ArchTest
+  static final ArchRule acessoDiretoAoBancoSoNoRag = noClasses()
+      .that().resideInAPackage(MODULO)
+      .and().resideOutsideOfPackage("br.com.agrocontabil.assistente.rag..")
+      .should().dependOnClassesThat().belongToAnyOf(
+          JdbcTemplate.class, NamedParameterJdbcTemplate.class, JdbcClient.class,
+          DataSource.class, EntityManager.class)
+      .because("so o rag/ acessa o banco direto, e so a propria tabela (legislacao_trecho, "
+          + "legislacao publica, sem dono). Dado de produtor passa pela porta e pelo service, "
+          + "onde esta o filtro por produtor: SQL direto do modulo pularia o anti-IDOR");
 
   @ArchTest
   static final ArchRule metodosDoModuloNaoAbremTransacao = methods()
       .that().areDeclaredInClassesThat().resideInAPackage(MODULO)
       .and().areDeclaredInClassesThat().resideOutsideOfPackage(ADAPTADOR)
       .should().notBeAnnotatedWith(Transactional.class)
+      .andShould().notBeAnnotatedWith(jakarta.transaction.Transactional.class)
       .because("mesma razao: transacao so nos services, chamados pelos adaptadores, e curta");
 }
