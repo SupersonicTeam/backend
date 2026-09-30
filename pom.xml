@@ -215,6 +215,14 @@
 			<version>${jasperreports.version}</version>
 		</dependency>
 
+		<!-- ArchUnit (issue #141): fronteira do modulo da Ceres e camadas do projeto travadas em teste -->
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>1.5.1</version>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Testcontainers -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>

@@ -11,25 +11,18 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ContextoAssistenteAusenteException;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Apuracao;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
-import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
-import br.com.agrocontabil.repository.CompraInsumoAgregado;
-import br.com.agrocontabil.repository.CreditoSaldoAgregado;
-import br.com.agrocontabil.repository.NotaResumo;
-import br.com.agrocontabil.repository.VencimentoGuiaResumo;
-import br.com.agrocontabil.service.ApuracaoService;
-import br.com.agrocontabil.service.ComprasInsumoResultado;
-import br.com.agrocontabil.service.ConsultaDadosProdutorService;
-import br.com.agrocontabil.service.CreditoService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -45,8 +38,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 /**
  * Testes unitários das funções da Ceres (issues #142 e #143): produtor sempre do contexto,
@@ -58,9 +49,7 @@ class FerramentasDadosProdutorTest {
   private static final UUID PRODUTOR = UUID.randomUUID();
   private static final LocalDate HOJE = LocalDate.of(2026, 9, 29);
 
-  @Mock private ConsultaDadosProdutorService consultaService;
-  @Mock private ApuracaoService apuracaoService;
-  @Mock private CreditoService creditoService;
+  @Mock private DadosProdutorPorta dados;
 
   private FerramentasDadosProdutor ferramentas;
   private ContextoAssistente contexto;
@@ -68,7 +57,7 @@ class FerramentasDadosProdutorTest {
 
   @BeforeEach
   void setUp() {
-    ferramentas = new FerramentasDadosProdutor(consultaService, apuracaoService, creditoService);
+    ferramentas = new FerramentasDadosProdutor(dados);
     contexto = new ContextoAssistente(PRODUTOR, HOJE);
     toolContext = new ToolContext(contexto.comoToolContext());
   }
@@ -76,10 +65,10 @@ class FerramentasDadosProdutorTest {
   @Test
   @DisplayName("Compras por descricao: produtor do contexto, valores formatados, fonte registrada")
   void comprasPorDescricao() {
-    when(consultaService.comprasPorDescricao(
+    when(dados.comprasPorDescricao(
         PRODUTOR, "fertilizante", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30)))
-        .thenReturn(new ComprasInsumoResultado(new BigDecimal("12345.67"), 3, List.of(
-            new CompraInsumoAgregado("KG", new BigDecimal("1500.0000"),
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(new BigDecimal("12345.67"), 3, List.of(
+            new DadosProdutorPorta.CompraUnidade("KG", new BigDecimal("1500.0000"),
                 new BigDecimal("12345.67")))));
 
     ComprasInsumo compras = ferramentas.totalComprasPorInsumo(
@@ -98,8 +87,8 @@ class FerramentasDadosProdutorTest {
   @Test
   @DisplayName("NCM com pontos vira prefixo so de digitos")
   void comprasPorNcmComPontos() {
-    when(consultaService.comprasPorNcm(eq(PRODUTOR), eq("38089324"), any(), any()))
-        .thenReturn(new ComprasInsumoResultado(BigDecimal.ZERO, 0, List.of()));
+    when(dados.comprasPorNcm(eq(PRODUTOR), eq("38089324"), any(), any()))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(BigDecimal.ZERO, 0, List.of()));
 
     ComprasInsumo compras = ferramentas.totalComprasPorInsumo(
         "3808.93.24", "2026-01-01", "2026-01-31", toolContext);
@@ -136,7 +125,7 @@ class FerramentasDadosProdutorTest {
     assertThatThrownBy(() -> ferramentas.proximosVencimentos(365, toolContext))
         .isInstanceOf(ParametroFerramentaInvalidoException.class);
 
-    verifyNoInteractions(consultaService, apuracaoService, creditoService);
+    verifyNoInteractions(dados);
     assertThat(contexto.fontes()).isEmpty();
   }
 
@@ -155,16 +144,16 @@ class FerramentasDadosProdutorTest {
     assertThatThrownBy(() -> ferramentas.proximosVencimentos(30, null))
         .isInstanceOf(ContextoAssistenteAusenteException.class);
 
-    verifyNoInteractions(consultaService, apuracaoService, creditoService);
+    verifyNoInteractions(dados);
   }
 
   @Test
-  @DisplayName("Apuracao reaproveita o ApuracaoService com o produtor do contexto")
-  void apuracaoReaproveitaService() {
-    when(apuracaoService.consultarParaProdutor(PRODUTOR, "2026-07")).thenReturn(
-        new ApuracaoResponse("2026-07", "ABERTO", new BigDecimal("150.00"),
+  @DisplayName("Apuracao pela porta, com o produtor do contexto")
+  void apuracaoPelaPorta() {
+    when(dados.apuracao(PRODUTOR, "2026-07")).thenReturn(
+        new DadosProdutorPorta.Apuracao("2026-07", "ABERTO", new BigDecimal("150.00"),
             new BigDecimal("1350.00"), new BigDecimal("30.00"), new BigDecimal("270.00"),
-            new BigDecimal("120.00"), new BigDecimal("1080.00"), 2, null));
+            new BigDecimal("120.00"), new BigDecimal("1080.00"), 2));
 
     Apuracao apuracao = ferramentas.consultarApuracao(" 2026-07 ", toolContext);
 
@@ -176,9 +165,9 @@ class FerramentasDadosProdutorTest {
   @Test
   @DisplayName("Creditos: total e a soma feita no backend, nao pelo modelo")
   void creditos() {
-    when(creditoService.somarCreditosNoIntervalo(
-        PRODUTOR, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 29)))
-        .thenReturn(new CreditoSaldoAgregado(new BigDecimal("30.00"), new BigDecimal("270.00"), 4));
+    when(dados.creditos(PRODUTOR, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 29)))
+        .thenReturn(new DadosProdutorPorta.Creditos(
+            new BigDecimal("30.00"), new BigDecimal("270.00"), 4));
 
     Creditos creditos = ferramentas.consultarCreditos("2026-01-01", "2026-09-29", toolContext);
 
@@ -190,11 +179,11 @@ class FerramentasDadosProdutorTest {
   @DisplayName("Listar notas: padroes (90 dias, 5 notas), SAIDA = notas proprias, sem PII")
   void listarNotasComPadroes() {
     OffsetDateTime emissao = OffsetDateTime.of(2026, 9, 10, 10, 0, 0, 0, ZoneOffset.ofHours(-3));
-    when(consultaService.listarNotas(PRODUTOR, EnumSet.of(OrigemNotaFiscal.PROPRIA),
+    when(dados.notas(PRODUTOR, EnumSet.of(OrigemNotaFiscal.PROPRIA),
         EnumSet.allOf(StatusNotaFiscal.class), HOJE.minusDays(90), HOJE, 5))
-        .thenReturn(new PageImpl<>(List.of(new NotaResumo(12L, 1, emissao,
+        .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Nota(12L, 1, emissao,
             OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.AUTORIZADA, new BigDecimal("1000.00"),
-            new BigDecimal("1.00"), new BigDecimal("9.00"))), PageRequest.of(0, 5), 7));
+            new BigDecimal("1.00"), new BigDecimal("9.00"))), 7));
 
     Notas notas = ferramentas.listarNotas("saida", null, null, null, null, toolContext);
 
@@ -209,16 +198,16 @@ class FerramentasDadosProdutorTest {
   @Test
   @DisplayName("Proximos vencimentos: janela a partir de hoje do contexto, padrao 30 dias")
   void proximosVencimentos() {
-    when(consultaService.vencimentosNaoPagos(eq(PRODUTOR), eq(HOJE), eq(HOJE.plusDays(30)),
-        anyInt()))
-        .thenReturn(new PageImpl<>(List.of(new VencimentoGuiaResumo(TipoGuiaFiscal.ICMS,
-            LocalDate.of(2026, 10, 10), new BigDecimal("1250.00"), StatusGuiaFiscal.PENDENTE))));
+    when(dados.vencimentosNaoPagos(eq(PRODUTOR), eq(HOJE), eq(HOJE.plusDays(30)), anyInt()))
+        .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Vencimento(TipoGuiaFiscal.ICMS,
+            LocalDate.of(2026, 10, 10), new BigDecimal("1250.00"), StatusGuiaFiscal.PENDENTE)),
+            1));
 
     Vencimentos vencimentos = ferramentas.proximosVencimentos(null, toolContext);
 
     assertThat(vencimentos.guias()).singleElement()
         .satisfies(g -> assertThat(g.vencimento()).isEqualTo("10/10/2026"));
-    verify(consultaService).vencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(30),
-        ConsultaDadosProdutorService.LIMITE_MAXIMO);
+    verify(dados).vencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(30),
+        DadosProdutorPorta.LIMITE_MAXIMO);
   }
 }

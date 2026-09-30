@@ -74,6 +74,18 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `nfe/model/` | Classes JAXB puras do layout NF-e 4.00 (NFe, InfNFe, Emit, Dest…) |
 
 ### `assistente/` — Ceres, a assistente fiscal (Sprint 6)
+
+**Módulo isolado (issue #141, `ArquiteturaAssistenteTest`):** o módulo só enxerga o backend por `porta/`; só `adaptador/` chama services (nunca repository); fora do módulo só `controller`/`config` dependem dele; nada no módulo é `@Transactional`.
+
+| Classe | Responsabilidade |
+|--------|-----------------|
+| `AssistenteService` | Entrada da Ceres: identidade (porta) → vaga (semáforo) → rota → auditoria |
+| `porta/DadosProdutorPorta` | Leitura dos dados do produtor (compras, apuração, créditos, notas, vencimentos) com records próprios, sem entidade nem projeção de repository |
+| `porta/IdentidadePorta` | Produtor autenticado, resolvido uma vez na thread da requisição |
+| `porta/AuditoriaPorta` | Gravação do `RegistroInteracao` (sem texto da pergunta/resposta) |
+| `adaptador/*Adaptador` | Implementam as portas sobre `ConsultaDadosProdutorService`, `ApuracaoService`, `CreditoService`, `AuthenticatedProdutorProvider` e `service/AssistenteInteracaoService` |
+| `auditoria/AuditoriaAssistente` | Monta o registro de auditoria (parâmetros mascarados) e o entrega à porta |
+
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `llm/ModeloLinguagem` | **Porta única** para o `ChatModel` (Ollama ou API compatível com a da OpenAI, por `spring.ai.model.chat`). Falha do provedor → `AssistenteIndisponivelException` (503); `identificacao()` = `provedor/modelo` para auditoria (issue #141) |
@@ -93,9 +105,9 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ferramentas/FerramentasDadosProdutor` | 5 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
 | `ferramentas/ProcessadorErroFerramenta` | O que volta ao modelo quando a função falha: mensagem de parâmetro (nossa) ou genérica; contexto ausente aborta |
 
-`service/AuditoriaAssistenteService`: grava `AssistenteInteracao` (tabela `assistente_interacao`, changeSet 0025) — rota, desfecho, funções mascaradas, modelo, latência, tokens, tamanho da pergunta; **nunca o texto** (issue #144). `config/LimiteCorpoAssistenteFilter`: 413 acima de 16 KB em `/api/assistente/**`, antes do Jackson.
+`service/AssistenteInteracaoService` (chamado pelo `AuditoriaAdaptador`): grava `AssistenteInteracao` (tabela `assistente_interacao`, changeSet 0025) — rota, desfecho, funções mascaradas, modelo, latência, tokens, tamanho da pergunta; **nunca o texto** (issue #144). `config/LimiteCorpoAssistenteFilter`: 413 acima de 16 KB em `/api/assistente/**`, antes do Jackson.
 
-`service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `service/AssistenteService`: identidade → vaga (semáforo, 429) → rota. `controller/AssistenteController`: `POST /api/assistente/chat`.
+`service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `controller/AssistenteController`: `POST /api/assistente/chat` → `assistente/AssistenteService`.
 
 `config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-rodadas-ferramentas`, `max-conversas-simultaneas`).
 Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.

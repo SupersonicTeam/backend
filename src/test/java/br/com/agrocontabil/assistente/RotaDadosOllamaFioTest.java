@@ -7,11 +7,8 @@ import static org.mockito.Mockito.when;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.ferramentas.ProcessadorErroFerramenta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.config.AssistenteProperties;
-import br.com.agrocontabil.dto.ApuracaoResponse;
-import br.com.agrocontabil.service.ApuracaoService;
-import br.com.agrocontabil.service.ConsultaDadosProdutorService;
-import br.com.agrocontabil.service.CreditoService;
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.observation.ObservationRegistry;
 import java.io.IOException;
@@ -79,17 +76,16 @@ class RotaDadosOllamaFioTest {
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
     beans.addBean("ollama", ollama);
 
-    ApuracaoService apuracao = mock(ApuracaoService.class);
-    when(apuracao.consultarParaProdutor(PRODUTOR, "2026-07")).thenReturn(new ApuracaoResponse(
+    DadosProdutorPorta dados = mock(DadosProdutorPorta.class);
+    when(dados.apuracao(PRODUTOR, "2026-07")).thenReturn(new DadosProdutorPorta.Apuracao(
         "2026-07", "ABERTO", new BigDecimal("150.00"), new BigDecimal("1350.00"),
         new BigDecimal("30.00"), new BigDecimal("270.00"), new BigDecimal("120.00"),
-        new BigDecimal("1080.00"), 2, null));
+        new BigDecimal("1080.00"), 2));
 
     rota = new RotaDados(
         new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama"),
         new ValidadorNumeros(),
-        new FerramentasDadosProdutor(mock(ConsultaDadosProdutorService.class), apuracao,
-            mock(CreditoService.class)),
+        new FerramentasDadosProdutor(dados),
         new ProcessadorErroFerramenta(),
         new AssistenteProperties(),
         new StaticListableBeanFactory().getBeanProvider(ObservationRegistry.class));
