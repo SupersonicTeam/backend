@@ -17,6 +17,10 @@ public enum DesfechoInteracao {
   FUNCAO_NAO_PERMITIDA,
   /** O modelo não redigiu texto. */
   SEM_RESPOSTA,
+  /** Nenhum trecho de lei vigente acima do limiar de similaridade: o modelo nem é chamado. */
+  SEM_FUNDAMENTO_LEGAL,
+  /** Resposta de legislação sem marca de citação ou com marca inexistente: descartada. */
+  CITACAO_INVALIDA,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */
   MODELO_INDISPONIVEL,
   /** Falha inesperada do backend. */

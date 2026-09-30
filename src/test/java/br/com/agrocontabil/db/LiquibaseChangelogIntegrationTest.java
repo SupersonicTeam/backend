@@ -27,6 +27,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 /**
  * Executa o changelog do Liquibase contra um PostgreSQL 16 real (Onda 3, issue #95).
@@ -65,7 +66,10 @@ class LiquibaseChangelogIntegrationTest {
   @Container
   @SuppressWarnings("resource") // ciclo de vida gerenciado pela extensao @Testcontainers
   static final PostgreSQLContainer<?> POSTGRES =
-      new PostgreSQLContainer<>("postgres:16-alpine")
+      // Mesma imagem do compose: a partir do changeSet 0026 o changelog exige a extensao vector
+      // (issue #156), que o postgres:16-alpine nao tem.
+      new PostgreSQLContainer<>(DockerImageName.parse("pgvector/pgvector:0.8.6-pg16")
+          .asCompatibleSubstituteFor("postgres"))
           .withDatabaseName("agrocontabil_migration_test")
           .withUsername("agrocontabil")
           .withPassword("test");
@@ -164,6 +168,36 @@ class LiquibaseChangelogIntegrationTest {
             + " AND constraint_name = 'fk_assistente_interacao_produtor'",
         Integer.class);
     assertThat(fks).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("changeSet 0026 cria legislacao_trecho no formato do PgVectorStore (#156)")
+  void changeSet0026CriaBaseDeLegislacao() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForObject(
+        "SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'", Integer.class)).isEqualTo(1);
+    List<String> colunas = jdbc.queryForList(
+        "SELECT column_name FROM information_schema.columns"
+            + " WHERE table_name = 'legislacao_trecho' ORDER BY column_name",
+        String.class);
+    assertThat(colunas).containsExactly("content", "conteudo_tsv", "dispositivo", "embedding",
+        "hash", "id", "metadata", "norma", "vigencia_fim", "vigencia_inicio");
+    List<String> indices = jdbc.queryForList(
+        "SELECT indexname FROM pg_indexes WHERE tablename = 'legislacao_trecho'", String.class);
+    assertThat(indices).contains("uk_legislacao_trecho_hash", "idx_legislacao_trecho_embedding",
+        "idx_legislacao_trecho_tsv", "idx_legislacao_trecho_dispositivo");
+    // As colunas geradas leem o metadata que o PgVectorStore grava.
+    jdbc.update("INSERT INTO legislacao_trecho (id, content, metadata, embedding) VALUES"
+        + " ('33333333-3333-3333-3333-333333333333'::uuid, 'Ficam reduzidas as aliquotas',"
+        + " ?::json, array_fill(0.1::real, ARRAY[1024])::vector)",
+        "{\"hash\":\"h1\",\"norma\":\"LC 214/2025\",\"dispositivo\":\"art. 1\","
+            + "\"vigenciaInicio\":\"2025-01-16\",\"vigenciaFim\":\"9999-12-31\"}");
+    Map<String, Object> linha = jdbc.queryForMap("SELECT hash, norma, vigencia_fim,"
+        + " conteudo_tsv @@ to_tsquery('portuguese', 'reduzir') AS achou FROM legislacao_trecho");
+    assertThat(linha).containsEntry("hash", "h1").containsEntry("norma", "LC 214/2025")
+        .containsEntry("vigencia_fim", "9999-12-31").containsEntry("achou", true);
+    jdbc.update("DELETE FROM legislacao_trecho");
   }
 
   @Test

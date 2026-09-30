@@ -43,6 +43,9 @@ public class AssistenteProperties implements InitializingBean {
    */
   private int maxConversasSimultaneas = 4;
 
+  /** Recuperação de legislação (issue #156). */
+  private Rag rag = new Rag();
+
   /**
    * Recusa valores fora de faixa na subida, em vez de descobrir o problema no primeiro health.
    *
@@ -56,6 +59,15 @@ public class AssistenteProperties implements InitializingBean {
       throw new IllegalStateException(
           "app.assistente.max-rodadas-ferramentas deve estar entre 1 e 10, recebido: "
               + maxRodadasFerramentas);
+    }
+    if (rag.getTopK() < 1 || rag.getTopK() > 10) {
+      throw new IllegalStateException(
+          "app.assistente.rag.top-k deve estar entre 1 e 10, recebido: " + rag.getTopK());
+    }
+    if (rag.getSimilaridadeMinima() < 0 || rag.getSimilaridadeMinima() >= 1) {
+      throw new IllegalStateException(
+          "app.assistente.rag.similaridade-minima deve estar em [0, 1), recebido: "
+              + rag.getSimilaridadeMinima());
     }
     if (maxConversasSimultaneas < 1) {
       throw new IllegalStateException(
@@ -86,12 +98,50 @@ public class AssistenteProperties implements InitializingBean {
     this.maxConversasSimultaneas = maxConversasSimultaneas;
   }
 
+  public Rag getRag() {
+    return rag;
+  }
+
+  public void setRag(Rag rag) {
+    this.rag = rag;
+  }
+
   public Saude getSaude() {
     return saude;
   }
 
   public void setSaude(Saude saude) {
     this.saude = saude;
+  }
+
+  /** Recuperação de trechos de lei (issue #156). */
+  public static class Rag {
+
+    /** Quantos trechos recuperar por pergunta (as marcas vão de [T1] a [Tn]). */
+    private int topK = 5;
+
+    /**
+     * Similaridade de cosseno mínima para um trecho entrar. Abaixo dela, o trecho provavelmente não
+     * trata do assunto — e a Ceres responde "não encontrei fundamento legal", em vez de citar lei
+     * sem relação.
+     */
+    private double similaridadeMinima = 0.55;
+
+    public int getTopK() {
+      return topK;
+    }
+
+    public void setTopK(int topK) {
+      this.topK = topK;
+    }
+
+    public double getSimilaridadeMinima() {
+      return similaridadeMinima;
+    }
+
+    public void setSimilaridadeMinima(double similaridadeMinima) {
+      this.similaridadeMinima = similaridadeMinima;
+    }
   }
 
   /** Configuração do health indicator do Ollama. */

@@ -87,7 +87,9 @@ br.com.agrocontabil
 │                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
-│                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros
+│                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros;
+│                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
+│                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao); RotaLegislacao
 ├── security/      # papéis e principal: PapelUsuario, UsuarioAutenticado(+Provider),
 │                  # ProdutorEmContextoResolver, SecurityErrorResponder [#93]
 ├── exception/     # GlobalExceptionHandler + DomainException (base) + exceções de domínio

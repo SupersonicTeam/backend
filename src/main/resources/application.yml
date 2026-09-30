@@ -167,6 +167,18 @@ spring:
     tools:
       observations:
         include-content: false
+    # Base de legislacao da Ceres (issue #156). O schema e do Liquibase (changeSet 0026): o Spring AI
+    # nao cria nem valida nada. Dimensao fixa: sem ela o PgVectorStore pergunta ao modelo de
+    # embedding na subida (rede) e, falhando, assume 1536 — incompativel com o bge-m3 (1024).
+    vectorstore:
+      pgvector:
+        initialize-schema: false
+        schema-validation: false
+        table-name: legislacao_trecho
+        dimensions: 1024
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
+        max-document-batch-size: 100
 
 # Ao receber SIGTERM o Tomcat para de aceitar conexoes novas e espera as requisicoes ativas
 # terminarem, em vez de corta-las no meio (issue #101). O compose usa stop_grace_period: 35s
@@ -260,6 +272,12 @@ app:
     # Perguntas processadas ao mesmo tempo; acima disso 429 (cada uma prende uma thread pelo tempo
     # de geracao do modelo).
     max-conversas-simultaneas: ${AI_MAX_CONVERSAS_SIMULTANEAS:4}
+    # RAG (issue #156): quantos trechos de lei recuperar e a similaridade minima (cosseno, 0 a 1).
+    # Abaixo do limiar o trecho nao entra: melhor "nao encontrei fundamento" do que citar lei que nao
+    # trata do assunto.
+    rag:
+      top-k: ${AI_RAG_TOP_K:5}
+      similaridade-minima: ${AI_RAG_SIMILARIDADE_MINIMA:0.55}
   # Apuracao mensal de IBS/CBS (issue #41 — RN004).
   apuracao:
     # Job de fechamento automatico no ultimo dia do mes as 23h (cron "0 0 23 L * *").

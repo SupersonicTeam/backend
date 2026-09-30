@@ -40,6 +40,7 @@ public final class ContextoAssistente {
   private final AtomicInteger tokensSaida = new AtomicInteger();
   private final AtomicBoolean usoInformado = new AtomicBoolean();
   private final AtomicInteger chamadasDeFuncao = new AtomicInteger();
+  private final List<String> trechosCitados = Collections.synchronizedList(new ArrayList<>());
 
   /**
    * Cria o contexto de uma pergunta.
@@ -122,6 +123,22 @@ public final class ContextoAssistente {
   /** Tokens de saída somados; nulo se o provedor não informou uso. */
   public Integer tokensSaida() {
     return usoInformado.get() ? tokensSaida.get() : null;
+  }
+
+  /**
+   * Registra os ids dos trechos de lei citados na resposta (issue #156), para a auditoria.
+   *
+   * @param ids ids em {@code legislacao_trecho}
+   */
+  public void registrarTrechosCitados(List<String> ids) {
+    trechosCitados.addAll(ids);
+  }
+
+  /** Ids dos trechos de lei citados, na ordem da citação. */
+  public List<String> trechosCitados() {
+    synchronized (trechosCitados) {
+      return List.copyOf(trechosCitados);
+    }
   }
 
   /** Funções pedidas pelo modelo nesta pergunta. */

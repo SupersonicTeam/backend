@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0026-legislacao-trecho.xml
+         Sprint 6 — issue #156 (RAG da Ceres).
+
+         Base de legislacao vetorizada: um trecho por dispositivo (artigo,
+         paragrafo, inciso, alinea) da LC 214/2025 e da EC 132/2023, com
+         embedding bge-m3 (1024 dimensoes).
+
+         SO LEGISLACAO PUBLICA. Nunca indexar notas nem dados de produtor
+         aqui (issue #143): esta tabela nao tem dono e e buscada por
+         similaridade, sem filtro de produtor.
+
+         Formato do PgVectorStore do Spring AI (id, content, metadata json,
+         embedding) — o initialize-schema do Spring AI fica desligado: o
+         schema e deste changeSet. As demais colunas sao GERADAS a partir
+         do metadata (o PgVectorStore so escreve as quatro dele):
+           - hash (unico): idempotencia da ingestao;
+           - norma/dispositivo/vigencia_*: consulta e fechamento de vigencia
+             sem abrir o JSON; vigencia_fim '9999-12-31' = vigente;
+           - conteudo_tsv: busca textual em portugues para o modo fallback
+             (issue #146), quando o Ollama — e portanto o embedding — cai.
+
+         Indices: HNSW com distancia de cosseno (a do PgVectorStore com
+         COSINE_DISTANCE) e GIN no tsvector.
+
+         Somente PostgreSQL (extensao vector). O profile de teste (H2) nao
+         roda Liquibase e nao tem entidade JPA para esta tabela; os testes
+         de RAG usam Testcontainers com pgvector/pgvector:pg16.
+         Em banco gerenciado, CREATE EXTENSION vector pode exigir um
+         administrador — ver docs/ceres-assistente.md.
+         ================================================================ -->
+
+    <changeSet id="0026-extensao-vector" author="supersonic-team" dbms="postgresql">
+        <comment>Habilita a extensao pgvector (tipo vector e indices HNSW).</comment>
+        <sql>CREATE EXTENSION IF NOT EXISTS vector</sql>
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="0026-create-legislacao-trecho" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Cria legislacao_trecho no formato do PgVectorStore, com colunas
+            geradas de hash, norma, dispositivo, vigencia e tsvector.
+        </comment>
+        <sql splitStatements="true" stripComments="true">
+            CREATE TABLE legislacao_trecho (
+                id              UUID          PRIMARY KEY,
+                content         TEXT          NOT NULL,
+                metadata        JSON          NOT NULL,
+                embedding       vector(1024)  NOT NULL,
+                hash            TEXT GENERATED ALWAYS AS (metadata ->> 'hash') STORED,
+                norma           TEXT GENERATED ALWAYS AS (metadata ->> 'norma') STORED,
+                dispositivo     TEXT GENERATED ALWAYS AS (metadata ->> 'dispositivo') STORED,
+                vigencia_inicio TEXT GENERATED ALWAYS AS (metadata ->> 'vigenciaInicio') STORED,
+                vigencia_fim    TEXT GENERATED ALWAYS AS (metadata ->> 'vigenciaFim') STORED,
+                conteudo_tsv    TSVECTOR GENERATED ALWAYS AS
+                                    (to_tsvector('portuguese', content)) STORED
+            );
+            CREATE UNIQUE INDEX uk_legislacao_trecho_hash ON legislacao_trecho (hash);
+            CREATE INDEX idx_legislacao_trecho_embedding
+                ON legislacao_trecho USING hnsw (embedding vector_cosine_ops);
+            CREATE INDEX idx_legislacao_trecho_tsv ON legislacao_trecho USING gin (conteudo_tsv);
+            CREATE INDEX idx_legislacao_trecho_dispositivo
+                ON legislacao_trecho (norma, dispositivo, vigencia_fim);
+        </sql>
+        <rollback>
+            <sql>DROP TABLE legislacao_trecho</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

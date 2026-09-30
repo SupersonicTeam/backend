@@ -1,0 +1,18 @@
+# Profile INGESTAO — comando de ingestao da legislacao da Ceres (issue #156).
+# Usar junto com o profile do banco (ex.: dev,ingestao). Sobe sem servidor web e sem os jobs,
+# roda o IngestaoLegislacaoRunner e encerra. Nunca exposto como endpoint.
+spring:
+  main:
+    web-application-type: none
+
+app:
+  nfe:
+    sefaz:
+      sync:
+        enabled: false
+  apuracao:
+    fechamento:
+      enabled: false
+  guia-fiscal:
+    sync:
+      enabled: false

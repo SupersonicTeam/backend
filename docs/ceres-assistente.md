@@ -120,3 +120,52 @@ trocável por configuração).
   Não há denylist de frases: ela daria falsa sensação de segurança.
 - **Logs sem PII:** nenhum log registra a pergunta, a resposta ou valores das funções (teste com
   captura da saída).
+
+## Rota de legislação — RAG com citação obrigatória (issue #156)
+
+Perguntas sobre a lei ("qual a redução de alíquota para insumos?") são respondidas **somente** com
+trechos oficiais da EC 132/2023 e da LC 214/2025, e a citação é garantida em código.
+
+### Base (`legislacao_trecho`, changeSet 0026)
+
+- **Um trecho por dispositivo** (artigo, parágrafo, inciso, alínea), nunca por número de
+  caracteres — a citação é o dispositivo. Cada trecho leva o texto de quem o contém (o caput antes
+  do inciso). Texto tachado (revogado) e anotações do Planalto ficam de fora. Em emenda
+  constitucional, a nova redação entre aspas vira "art. 1º (redação do art. 156-A, § 1º)".
+- Formato do `PgVectorStore` (id, content, metadata, embedding 1024) + colunas geradas (`hash`
+  único, norma, dispositivo, vigência) e `tsvector` em português para o modo fallback (#146).
+- **Só legislação pública.** Nunca notas nem dados de produtor (#143): a base não tem dono.
+- Requer a extensão `vector` (já presente na imagem `pgvector/pgvector` do compose). Em banco
+  gerenciado, `CREATE EXTENSION vector` pode exigir um administrador.
+
+### Ingestão (comando manual, nunca endpoint)
+
+1. Salve o **texto compilado** da norma a partir do Planalto (ex.:
+   `https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm` e
+   `https://www.planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc132.htm`) e anote a data de
+   captura.
+2. Com Postgres e Ollama no ar (`docker compose --profile ia up -d`):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ingestao -Dspring-boot.run.arguments="--ingestao.arquivo=/caminho/lcp214.htm --ingestao.norma='LC 214/2025' --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm --ingestao.data-captura=2026-09-29 --ingestao.vigencia-inicio=2025-01-16"
+```
+
+- **Idempotente:** rodar de novo com o mesmo texto não insere nada (hash por norma + dispositivo +
+  texto).
+- **Nova redação = nova vigência:** o trecho novo entra com `vigencia-inicio`; a redação anterior do
+  mesmo dispositivo tem só o fim fechado na véspera (mesma regra das alíquotas, #85). A pergunta
+  recebe a redação vigente na data em que é feita.
+- A URL precisa ser `https://www.planalto.gov.br/...`: é o link oficial exibido na citação.
+
+### Resposta
+
+1. Busca os trechos **vigentes hoje** mais próximos da pergunta (top `AI_RAG_TOP_K`, padrão 5) acima
+   da similaridade mínima (`AI_RAG_SIMILARIDADE_MINIMA`, padrão 0,55). Sem trecho: "não encontrei
+   fundamento legal para isso" **sem chamar o modelo**.
+2. O modelo vê os trechos só como `[T1] texto…` — **sem** a referência legal — e responde marcando
+   a fonte de cada afirmação.
+3. `ValidadorCitacao`: exige ao menos uma marca e que toda marca exista; troca cada marca pela
+   referência montada dos metadados ("LC 214/2025, art. 138, § 1º") e devolve `citacoes[]` com o
+   link oficial. Marca inventada derruba a resposta.
+4. `ValidadorNumeros`: percentuais, prazos e números de artigo da resposta têm de estar nos
+   trechos — "redução de 70%" que a lei não diz não passa.
