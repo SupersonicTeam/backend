@@ -169,11 +169,21 @@ public class AssistenteService implements DisposableBean {
     UUID produtorId = identidade.produtorAutenticado();
     Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta());
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
+    AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
+    AtomicReference<Throwable> falha = new AtomicReference<>();
+    // A resposta so e entregue depois de a vaga voltar: o cliente pode perguntar de novo assim
+    // que recebe, e nao pode levar 503 da propria pergunta anterior.
     iniciar(produtorId, () -> {
       try {
-        resultado.complete(responder(execucao, rota -> { }));
+        resposta.set(responder(execucao, rota -> { }));
       } catch (Throwable t) {
-        resultado.completeExceptionally(t);
+        falha.set(t);
+      }
+    }, () -> {
+      if (falha.get() != null) {
+        resultado.completeExceptionally(falha.get());
+      } else {
+        resultado.complete(resposta.get());
       }
     });
     try {
@@ -221,7 +231,7 @@ public class AssistenteService implements DisposableBean {
       throw AssistenteOcupadoException.limiteGlobal();
     }
     try {
-      iniciar(produtorId, () -> transmitir(emissor, execucao, caminho));
+      iniciar(produtorId, () -> transmitir(emissor, execucao, caminho), () -> { });
     } catch (RuntimeException e) {
       prazo.cancel(false);
       throw e;
@@ -246,9 +256,9 @@ public class AssistenteService implements DisposableBean {
   /**
    * Reserva a vaga do produtor e a global e entrega a tarefa ao pool. As duas vagas são devolvidas
    * no {@code finally} da própria tarefa — só quando a thread realmente terminou —, ou aqui, se o
-   * pool recusar.
+   * pool recusar. {@code aoLiberar} roda depois de devolvidas.
    */
-  private void iniciar(UUID produtorId, Runnable tarefa) {
+  private void iniciar(UUID produtorId, Runnable tarefa, Runnable aoLiberar) {
     if (!produtoresComPergunta.add(produtorId)) {
       throw AssistenteOcupadoException.perguntaEmAndamento();
     }
@@ -262,6 +272,7 @@ public class AssistenteService implements DisposableBean {
           tarefa.run();
         } finally {
           liberar(produtorId);
+          aoLiberar.run();
         }
       });
     } catch (RejectedExecutionException e) {
