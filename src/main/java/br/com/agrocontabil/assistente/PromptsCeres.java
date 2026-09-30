@@ -39,6 +39,29 @@ public final class PromptsCeres {
         """.formatted(hoje);
   }
 
+  /**
+   * Prompt do classificador de intenção (issue #157). Saída só em JSON, para o orquestrador ler com
+   * segurança.
+   */
+  public static final String CLASSIFICACAO = """
+      Classifique a pergunta de um produtor rural ao AgroContabil em UMA intencao:
+      - DADOS: pede os dados dele no sistema - valores, compras, vendas, notas fiscais, IBS/CBS \
+      apurados, creditos, guias e vencimentos.
+      - LEGISLACAO: pergunta sobre a lei da reforma tributaria (IBS, CBS, EC 132/2023, \
+      LC 214/2025): regras, aliquotas, reducoes, isencoes, creditos, obrigacoes.
+      - MISTO: precisa dos dados dele E da regra legal (ex.: "tenho direito a credito nessas \
+      compras?", "minha apuracao esta de acordo com a reducao para insumos?").
+      - FORA_DE_ESCOPO: qualquer outro assunto.
+      Responda SOMENTE com JSON, sem texto em volta: {"intencao": "DADOS", "confianca": 0.9}
+      A confianca vai de 0 a 1.
+      """;
+
+  /** Resposta fixa para pergunta fora de escopo ou de intenção incerta (sem chamar o modelo). */
+  public static final String FORA_DE_ESCOPO =
+      "Sou a Ceres, assistente fiscal do AgroContabil. Respondo sobre as suas notas, a apuracao "
+          + "de IBS e CBS, creditos, vencimentos e a legislacao da reforma tributaria do "
+          + "agronegocio. Essa pergunta esta fora do que consigo responder.";
+
   /** Resposta fixa que o modelo deve dar quando os trechos não respondem a pergunta. */
   public static final String NAO_ENCONTREI = "NAO_ENCONTREI";
 

@@ -14,6 +14,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -31,6 +34,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /**
  * Tratamento global de exceções da API. Converte exceções em {@link ApiError}
  * com lista de erros estruturados. Detalhe técnico fica só no log.
+ *
+ * <p>O envelope acompanha o {@code Accept} (JSON ou XML), exceto para o cliente de streaming que
+ * pede {@code text/event-stream} (Ceres, issue #157): para ele sai em JSON — ver
+ * {@link #tipoDoErro()}.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -41,7 +48,6 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(DomainException.class)
   public ResponseEntity<ApiError> handleDomain(DomainException ex, HttpServletRequest request) {
     HttpStatus status = ex.getStatus();
-    String clientMessage = clientMessageFor(ex);
     if (status == HttpStatus.SERVICE_UNAVAILABLE) {
       // 503 = dependencia opcional fora do ar (ex.: o modelo da Ceres). Estado operacional
       // esperado, que se repete a cada requisicao enquanto durar: WARN sem stack trace, para nao
@@ -52,8 +58,7 @@ public class GlobalExceptionHandler {
     } else {
       log.warn("Erro de dominio em {}: {}", request.getRequestURI(), ex.getMessage());
     }
-    ApiError body = ApiError.of(status.value(), status.getReasonPhrase(), clientMessage,
-        request.getRequestURI(), ex.getErrors());
+    ApiError body = corpoDe(ex, request.getRequestURI());
 
     ResponseEntity.BodyBuilder resposta = ResponseEntity.status(status);
     if (status == HttpStatus.UNAUTHORIZED) {
@@ -62,7 +67,11 @@ public class GlobalExceptionHandler {
       resposta.header(HttpHeaders.WWW_AUTHENTICATE,
           "Header realm=\"agrocontabil\", header=\"" + MockIdentidadeFilter.HEADER_USUARIO_ID + "\"");
     }
-    return resposta.body(body);
+    if (ex instanceof AssistenteOcupadoException ocupado) {
+      // RFC 9110 §10.2.3: em 503, diz ao cliente quando vale tentar de novo (issue #157).
+      resposta.header(HttpHeaders.RETRY_AFTER, String.valueOf(ocupado.retryAfterSegundos()));
+    }
+    return resposta.contentType(tipoDoErro()).body(body);
   }
 
   /** Bean Validation (@Valid). Cada FieldError vira um ErrorDetail com rejectedValue. */
@@ -78,7 +87,7 @@ public class GlobalExceptionHandler {
         "Um ou mais campos sao invalidos.",
         request.getRequestURI(),
         errors);
-    return ResponseEntity.badRequest().body(body);
+    return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
   /**
@@ -97,7 +106,7 @@ public class GlobalExceptionHandler {
         "Um ou mais parametros sao invalidos.",
         request.getRequestURI(),
         errors);
-    return ResponseEntity.badRequest().body(body);
+    return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
   /** Parâmetro de requisição obrigatório ausente (ex.: {@code @RequestParam} sem valor). HTTP 400. */
@@ -114,7 +123,7 @@ public class GlobalExceptionHandler {
         "Parametro obrigatorio ausente.",
         request.getRequestURI(),
         List.of(detail));
-    return ResponseEntity.badRequest().body(body);
+    return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
   /** Argumento ilegal vindo da camada de serviço. HTTP 400. */
@@ -127,7 +136,7 @@ public class GlobalExceptionHandler {
         ex.getMessage(),
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.ILLEGAL_ARGUMENT, ex.getMessage())));
-    return ResponseEntity.badRequest().body(body);
+    return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
   /** Corpo da requisição ilegível (JSON malformado ou tipo incompatível no payload). HTTP 400. */
@@ -142,7 +151,7 @@ public class GlobalExceptionHandler {
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.VALIDATION_ERROR,
             "Corpo da requisicao invalido ou malformado. Verifique a sintaxe do JSON enviado.")));
-    return ResponseEntity.badRequest().body(body);
+    return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
   /** Path variable ou request param com tipo inválido (ex.: id que não é UUID). HTTP 400. */
@@ -163,7 +172,7 @@ public class GlobalExceptionHandler {
         "Um ou mais parametros sao invalidos.",
         request.getRequestURI(),
         List.of(detail));
-    return ResponseEntity.badRequest().body(body);
+    return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
   /** Rota inexistente (nenhum handler ou recurso estático atende o path). HTTP 404. */
@@ -176,7 +185,7 @@ public class GlobalExceptionHandler {
         "Recurso nao encontrado.",
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.RESOURCE_NOT_FOUND, "Recurso nao encontrado.")));
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).contentType(tipoDoErro()).body(body);
   }
 
   /** Método HTTP não suportado pela rota. HTTP 405. */
@@ -205,7 +214,7 @@ public class GlobalExceptionHandler {
     if (suportados != null) {
       response.header(HttpHeaders.ALLOW, suportados);
     }
-    return response.body(body);
+    return response.contentType(tipoDoErro()).body(body);
   }
 
   /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
@@ -232,7 +241,7 @@ public class GlobalExceptionHandler {
     if (!aceitos.isEmpty()) {
       response.header(HttpHeaders.ACCEPT, MediaType.toString(aceitos));
     }
-    return response.body(body);
+    return response.contentType(tipoDoErro()).body(body);
   }
 
   /** Upload multipart acima do tamanho máximo configurado. HTTP 413. */
@@ -247,7 +256,7 @@ public class GlobalExceptionHandler {
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.PAYLOAD_TOO_LARGE,
             "Arquivo excede o tamanho maximo permitido. Envie um arquivo menor.")));
-    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).contentType(tipoDoErro()).body(body);
   }
 
   /**
@@ -270,7 +279,7 @@ public class GlobalExceptionHandler {
         message,
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.VIOLACAO_INTEGRIDADE, message)));
-    return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    return ResponseEntity.status(HttpStatus.CONFLICT).contentType(tipoDoErro()).body(body);
   }
 
   /**
@@ -300,21 +309,76 @@ public class GlobalExceptionHandler {
         request.getRequestURI(),
         List.of(new ErrorDetail(
             ErrorCode.CONFLITO_CONCORRENCIA.code(), null, message, suggestion, null, null)));
-    return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    return ResponseEntity.status(HttpStatus.CONFLICT).contentType(tipoDoErro()).body(body);
   }
 
   /** Rede de segurança: qualquer exceção não mapeada vira 500 sem vazar detalhes. */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
     log.error("Erro nao tratado em {} {}", request.getMethod(), request.getRequestURI(), ex);
-    ApiError body = ApiError.of(
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .contentType(tipoDoErro()).body(corpoErroInterno(request.getRequestURI()));
+  }
+
+  /**
+   * Tipo fixo da resposta de erro, ou {@code null} para negociar pelo {@code Accept}.
+   *
+   * <p>O cliente de streaming (SSE) pede {@code Accept: text/event-stream}, tipo em que o envelope
+   * não se escreve: a negociação falharia dentro do próprio handler e o cliente receberia 500 no
+   * lugar do 400/403/503 (o erro nasce antes de o stream abrir). Para ele o erro sai em JSON. Os
+   * demais seguem negociando (o {@code /xml} devolve o envelope em XML a quem pede XML).
+   *
+   * @return {@code application/json} para cliente de streaming; {@code null} nos demais
+   */
+  static MediaType tipoDoErro() {
+    if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes atributos)) {
+      return null;
+    }
+    String accept = atributos.getRequest().getHeader(HttpHeaders.ACCEPT);
+    if (accept == null) {
+      return null;
+    }
+    try {
+      return MediaType.parseMediaTypes(accept).stream()
+          .anyMatch(tipo -> tipo.isCompatibleWith(MediaType.TEXT_EVENT_STREAM)
+              && !tipo.isWildcardType())
+          ? MediaType.APPLICATION_JSON
+          : null;
+    } catch (InvalidMediaTypeException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Envelope {@code ApiError} de uma {@link DomainException}, com a mesma mensagem segura do
+   * {@link #handleDomain}. Público para quem responde fora do fluxo do
+   * {@code @RestControllerAdvice} — o evento {@code erro} do streaming da Ceres (issue #157), que
+   * nasce depois de a resposta HTTP já ter começado.
+   *
+   * @param ex   exceção de domínio
+   * @param path caminho da requisição
+   * @return envelope com {@code errors[]}
+   */
+  public static ApiError corpoDe(DomainException ex, String path) {
+    HttpStatus status = ex.getStatus();
+    return ApiError.of(status.value(), status.getReasonPhrase(), clientMessageFor(ex), path,
+        ex.getErrors());
+  }
+
+  /**
+   * Envelope genérico de 500, sem nenhum detalhe técnico (mesmo do {@link #handleUnexpected}).
+   *
+   * @param path caminho da requisição
+   * @return envelope com {@code errors[]}
+   */
+  public static ApiError corpoErroInterno(String path) {
+    return ApiError.of(
         HttpStatus.INTERNAL_SERVER_ERROR.value(),
         HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
         "Erro interno inesperado. Tente novamente mais tarde.",
-        request.getRequestURI(),
+        path,
         List.of(ErrorDetail.of(ErrorCode.INTERNAL_ERROR,
             "Erro interno inesperado. Tente novamente mais tarde.")));
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
   }
 
   /**
@@ -323,7 +387,7 @@ public class GlobalExceptionHandler {
    * cujo {@code getMessage()} carrega detalhe técnico) recebe texto genérico; demais
    * exceções (4xx) usam {@code getMessage()}, que já é seguro.
    */
-  private String clientMessageFor(DomainException ex) {
+  private static String clientMessageFor(DomainException ex) {
     if (ex instanceof XmlGenerationException xml) {
       return xml.clientMessage();
     }

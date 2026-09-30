@@ -2,6 +2,7 @@ package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.SecurityErrorResponder;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -100,7 +101,11 @@ public class SecurityConfig {
                     .accessDeniedHandler(errorResponder))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers(ROTAS_PUBLICAS).permitAll()
+                // Dispatch ASYNC (fim de uma resposta em streaming da Ceres, issue #157): a
+                // requisicao ja foi autorizada no dispatch REQUEST. Sem isto, o dispatch que fecha
+                // o SseEmitter rodaria sem SecurityContext e seria negado com a resposta ja enviada.
+                auth.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+                    .requestMatchers(ROTAS_PUBLICAS).permitAll()
                     // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
                     .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
                     .hasRole(PapelUsuario.PRODUTOR.name())

@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,9 +8,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ToolContext;
@@ -27,6 +30,10 @@ import org.springframework.ai.chat.model.ToolContext;
  *
  * <p>Também coleta as {@link FonteDado fontes de dados} usadas na resposta — a lista que o
  * frontend mostra como "calculado a partir das suas notas". Vive só durante a pergunta.
+ *
+ * <p>Carrega ainda o sinal de <strong>interrupção</strong> (issue #157): quando a pergunta estoura
+ * o tempo total ou o cliente do streaming desconecta, quem espera marca o contexto e as rotas param
+ * antes da próxima chamada ao modelo ou às funções ({@link #verificarAtiva()}).
  */
 public final class ContextoAssistente {
 
@@ -41,6 +48,7 @@ public final class ContextoAssistente {
   private final AtomicBoolean usoInformado = new AtomicBoolean();
   private final AtomicInteger chamadasDeFuncao = new AtomicInteger();
   private final List<String> trechosCitados = Collections.synchronizedList(new ArrayList<>());
+  private final AtomicReference<DesfechoInteracao> interrupcao = new AtomicReference<>();
 
   /**
    * Cria o contexto de uma pergunta.
@@ -158,6 +166,33 @@ public final class ContextoAssistente {
   public List<FonteDado> fontes() {
     synchronized (fontes) {
       return List.copyOf(fontes);
+    }
+  }
+
+  /**
+   * Marca a pergunta como interrompida. Só o primeiro motivo vale: um timeout seguido da
+   * desconexão do cliente continua registrado como timeout.
+   *
+   * @param motivo {@link DesfechoInteracao#TEMPO_ESGOTADO} ou {@link DesfechoInteracao#CANCELADA}
+   */
+  public void interromper(DesfechoInteracao motivo) {
+    interrupcao.compareAndSet(null, Objects.requireNonNull(motivo, "motivo"));
+  }
+
+  /** Motivo da interrupção, se a pergunta foi interrompida. */
+  public Optional<DesfechoInteracao> interrupcao() {
+    return Optional.ofNullable(interrupcao.get());
+  }
+
+  /**
+   * Chamado antes de cada chamada ao modelo e de cada rodada de funções: pergunta interrompida
+   * não gasta mais modelo nem banco.
+   *
+   * @throws PerguntaInterrompidaException se a pergunta foi interrompida
+   */
+  public void verificarAtiva() {
+    if (interrupcao.get() != null) {
+      throw new PerguntaInterrompidaException();
     }
   }
 
