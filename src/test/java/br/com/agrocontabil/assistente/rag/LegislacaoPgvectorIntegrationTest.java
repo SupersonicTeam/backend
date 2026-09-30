@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.rag;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.config.AssistenteProperties;
 import java.io.IOException;
@@ -116,6 +117,24 @@ class LegislacaoPgvectorIntegrationTest {
   }
 
   @Test
+  @DisplayName("Texto alterado sem vigencia posterior e recusado antes de inserir qualquer trecho")
+  void vigenciaNaoPosteriorRecusada() {
+    FonteLegislacao original = new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO);
+    ingestao.ingerir(original, dispositivos);
+    List<DispositivoLegal> alterados = dispositivos.stream()
+        .map(d -> d.dispositivo().equals("art. 1º")
+            ? new DispositivoLegal(d.dispositivo(), d.texto() + " Alterado.")
+            : d)
+        .toList();
+
+    // Recaptura com a vigencia-inicio esquecida (igual a da redacao vigente).
+    assertThatThrownBy(() -> ingestao.ingerir(original, alterados))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("art. 1º");
+    assertThat(contar()).isEqualTo(dispositivos.size());
+  }
+
+  @Test
   @DisplayName("Busca devolve so a redacao vigente na data da pergunta, com metadados")
   void buscaPorVigencia() {
     ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
@@ -143,7 +162,10 @@ class LegislacaoPgvectorIntegrationTest {
     ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
         dispositivos);
 
-    assertThat(busca.buscar("receita de bolo de chocolate", LocalDate.of(2026, 9, 29))).isEmpty();
+    // Sem nenhuma palavra em comum com a norma: o embedding simulado e de saco de palavras, e uma
+    // preposicao compartilhada ("de") ja o aproximaria.
+    assertThat(busca.buscar("futebol campeonato brasileiro final", LocalDate.of(2026, 9, 29)))
+        .isEmpty();
   }
 
   private String textoDoArt1(List<TrechoRecuperado> trechos) {

@@ -43,8 +43,9 @@ public class FatiadorDispositivos {
       "^Par[áa]grafo\\s+[úu]nico\\s*\\.?\\s*[-–—]?\\s*(.*)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern PARAGRAFO = Pattern.compile(
       "^§\\s*(\\d+)\\s*[º°]?\\s*(-\\s*[A-Z](?![a-z]))?\\s*\\.?\\s*(.*)$");
+  /** Só numeral romano válido: "CIVIL - ..." ou "MIL - ..." não são incisos. */
   private static final Pattern INCISO = Pattern.compile(
-      "^([IVXLCDM]+)(-[A-Z])?\\s*[-–—]\\s*(.*)$");
+      "^(M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(-[A-Z])?\\s*[-–—]\\s*(.*)$");
   private static final Pattern ALINEA = Pattern.compile("^([a-z])\\)\\s*(.*)$");
   private static final Pattern TITULO = Pattern.compile(
       "^(T[ÍI]TULO|CAP[ÍI]TULO|SE[ÇC][ÃA]O|Se[çc][ãa]o|SUBSE[ÇC][ÃA]O|Subse[çc][ãa]o|LIVRO|PARTE)\\b.*");
@@ -52,7 +53,14 @@ public class FatiadorDispositivos {
       "\\((?:Reda[çc][ãa]o dada|Inclu[íi]d[oa]|Vide|Revogad[oa]|Produ[çc][ãa]o de efeito"
           + "|Vig[êe]ncia|Regulamento|Promulga[çc][ãa]o)[^)]*\\)",
       Pattern.CASE_INSENSITIVE);
-  private static final Pattern MARCA_ALTERACAO = Pattern.compile("\\((?:NR|AC)\\)\\s*$");
+  /**
+   * Anotações entre parênteses depois do fechamento das aspas: "(NR)", "(AC)" e qualquer outra que
+   * o Planalto acrescente. Removidas antes de conferir se a linha fecha a citação — sem isso uma
+   * anotação não prevista deixaria a citação aberta e o resto da norma seria rotulado como
+   * redação citada.
+   */
+  private static final Pattern MARCA_ALTERACAO =
+      Pattern.compile("([\"”’'])(?:\\s*\\([^()]*\\))+\\s*[.;]?\\s*$");
   private static final Pattern SO_PONTOS = Pattern.compile("^[.…\\s\"“”]*$");
   private static final String ABRE_ASPAS = "\"“‘'";
   private static final String FECHA_ASPAS = "\"”’'";
@@ -172,7 +180,8 @@ public class FatiadorDispositivos {
         return;
       }
       boolean abre = ABRE_ASPAS.indexOf(linha.charAt(0)) >= 0;
-      String semMarca = MARCA_ALTERACAO.matcher(linha).replaceAll("").trim();
+      // So parenteses DEPOIS das aspas saem: "... 60% (sessenta por cento)." e texto de lei.
+      String semMarca = MARCA_ALTERACAO.matcher(linha).replaceAll("$1").trim();
       boolean fecha = !semMarca.isEmpty()
           && FECHA_ASPAS.indexOf(semMarca.charAt(semMarca.length() - 1)) >= 0;
       String texto = semMarca;

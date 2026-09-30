@@ -66,8 +66,13 @@ public class IngestaoLegislacaoRunner implements ApplicationRunner {
     this.vigenciaInicio = vigenciaInicio;
   }
 
+  /**
+   * Ingere e encerra a aplicação. O código de saída é 0 só com sucesso: um script de deploy precisa
+   * distinguir "base carregada" de "arquivo errado".
+   */
   @Override
   public void run(ApplicationArguments args) throws IOException {
+    int codigo = 1;
     try {
       FonteLegislacao fonte = new FonteLegislacao(
           norma, url, LocalDate.parse(dataCaptura), LocalDate.parse(vigenciaInicio));
@@ -78,8 +83,12 @@ public class IngestaoLegislacaoRunner implements ApplicationRunner {
       }
       ResumoIngestao resumo = ingestao.ingerir(fonte, dispositivos);
       log.info("Ingestao concluida: {}", resumo);
+      codigo = 0;
+    } catch (RuntimeException e) {
+      log.error("Ingestao de legislacao falhou: {}", e.getMessage(), e);
     } finally {
-      SpringApplication.exit(contexto);
+      int saida = codigo;
+      System.exit(SpringApplication.exit(contexto, () -> saida));
     }
   }
 }

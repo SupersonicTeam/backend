@@ -38,6 +38,14 @@
          ================================================================ -->
 
     <changeSet id="0026-extensao-vector" author="supersonic-team" dbms="postgresql">
+        <!-- Sem pgvector instalado no servidor o CREATE EXTENSION falharia com erro generico do
+             driver. A precondicao para a subida com uma mensagem que diz o que fazer. -->
+        <preConditions onFail="HALT"
+                       onFailMessage="Extensao pgvector indisponivel neste PostgreSQL. Use a imagem pgvector/pgvector:pg16 (compose) ou instale a extensao 'vector' no servidor antes de subir o backend (issue #156).">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM pg_available_extensions WHERE name = 'vector'
+            </sqlCheck>
+        </preConditions>
         <comment>Habilita a extensao pgvector (tipo vector e indices HNSW).</comment>
         <sql>CREATE EXTENSION IF NOT EXISTS vector</sql>
         <rollback/>

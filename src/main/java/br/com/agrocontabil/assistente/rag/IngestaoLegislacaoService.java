@@ -67,6 +67,7 @@ public class IngestaoLegislacaoService {
    * @return quantos entraram, quantos já estavam e quantas vigências foram fechadas
    */
   public ResumoIngestao ingerir(FonteLegislacao fonte, List<DispositivoLegal> dispositivos) {
+    exigirVigenciaPosterior(fonte, dispositivos);
     int novos = 0;
     int inalterados = 0;
     int fechadas = 0;
@@ -90,9 +91,7 @@ public class IngestaoLegislacaoService {
         vectorStore.add(documentos);
         novos += documentos.size();
       }
-      for (Map.Entry<String, DispositivoLegal> e : porHash.entrySet()) {
-        fechadas += fecharRedacaoAnterior(fonte, e.getValue(), e.getKey());
-      }
+      fechadas += fecharRedacoesAnteriores(fonte, porHash);
     }
     log.info("Ingestao de {}: {} dispositivos, {} novos, {} inalterados, {} vigencias fechadas",
         fonte.norma(), dispositivos.size(), novos, inalterados, fechadas);
@@ -100,11 +99,58 @@ public class IngestaoLegislacaoService {
   }
 
   /**
-   * Fecha, na véspera da vigência nova, a redação ainda aberta do mesmo dispositivo que tenha outro
-   * texto e tenha começado antes. Só o {@code vigenciaFim} muda — nunca o texto.
+   * Recusa a ingestão, <strong>antes de inserir qualquer trecho</strong>, se algum dispositivo com
+   * texto diferente já tiver redação aberta que começa na mesma data ou depois da nova. Sem isso,
+   * uma recaptura com {@code vigencia-inicio} esquecida deixaria duas redações vigentes do mesmo
+   * dispositivo — e a Ceres citaria textos contraditórios.
    */
-  private int fecharRedacaoAnterior(FonteLegislacao fonte, DispositivoLegal d, String hashAtual) {
-    return jdbc.update("""
+  private void exigirVigenciaPosterior(FonteLegislacao fonte, List<DispositivoLegal> dispositivos) {
+    for (int i = 0; i < dispositivos.size(); i += LOTE) {
+      List<DispositivoLegal> lote = dispositivos.subList(i, Math.min(i + LOTE, dispositivos.size()));
+      List<String> conflitos = new ArrayList<>();
+      for (DispositivoLegal d : lote) {
+        conflitos.addAll(jdbc.queryForList("""
+            SELECT dispositivo || ' (vigente desde ' || vigencia_inicio || ')'
+              FROM legislacao_trecho
+             WHERE norma = :norma
+               AND dispositivo = :dispositivo
+               AND vigencia_fim = :aberta
+               AND hash <> :hash
+               AND vigencia_inicio >= :inicio
+            """, new MapSqlParameterSource()
+            .addValue("norma", fonte.norma())
+            .addValue("dispositivo", d.dispositivo())
+            .addValue("aberta", MetadadosTrecho.VIGENCIA_ABERTA)
+            .addValue("hash", hash(fonte.norma(), d))
+            .addValue("inicio", fonte.vigenciaInicio().toString()), String.class));
+      }
+      if (!conflitos.isEmpty()) {
+        throw new IllegalStateException("Texto alterado com vigencia-inicio "
+            + fonte.vigenciaInicio() + " nao posterior a redacao vigente de "
+            + conflitos.subList(0, Math.min(5, conflitos.size()))
+            + ": informe a data em que a nova redacao passa a valer. Nada foi ingerido.");
+      }
+    }
+  }
+
+  /**
+   * Fecha, na véspera da vigência nova, as redações ainda abertas dos dispositivos do lote que
+   * tenham outro texto e tenham começado antes. Só o {@code vigenciaFim} muda — nunca o texto. Um
+   * único batch JDBC por lote.
+   */
+  private int fecharRedacoesAnteriores(
+      FonteLegislacao fonte, Map<String, DispositivoLegal> porHash) {
+    MapSqlParameterSource[] parametros = porHash.entrySet().stream()
+        .map(e -> new MapSqlParameterSource()
+            .addValue("fim", fonte.vigenciaInicio().minusDays(1).toString())
+            .addValue("norma", fonte.norma())
+            .addValue("dispositivo", e.getValue().dispositivo())
+            .addValue("aberta", MetadadosTrecho.VIGENCIA_ABERTA)
+            .addValue("hash", e.getKey())
+            .addValue("inicio", fonte.vigenciaInicio().toString()))
+        .toArray(MapSqlParameterSource[]::new);
+    int total = 0;
+    for (int alteradas : jdbc.batchUpdate("""
         UPDATE legislacao_trecho
            SET metadata = jsonb_set(metadata::jsonb, '{vigenciaFim}', to_jsonb(:fim::text))::json
          WHERE norma = :norma
@@ -112,13 +158,10 @@ public class IngestaoLegislacaoService {
            AND vigencia_fim = :aberta
            AND hash <> :hash
            AND vigencia_inicio < :inicio
-        """, new MapSqlParameterSource()
-        .addValue("fim", fonte.vigenciaInicio().minusDays(1).toString())
-        .addValue("norma", fonte.norma())
-        .addValue("dispositivo", d.dispositivo())
-        .addValue("aberta", MetadadosTrecho.VIGENCIA_ABERTA)
-        .addValue("hash", hashAtual)
-        .addValue("inicio", fonte.vigenciaInicio().toString()));
+        """, parametros)) {
+      total += Math.max(alteradas, 0);
+    }
+    return total;
   }
 
   private Set<String> hashesExistentes(Set<String> hashes) {
