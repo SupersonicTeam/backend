@@ -157,6 +157,9 @@ trechos oficiais da EC 132/2023 e da LC 214/2025, e a citação é garantida em 
   mesmo dispositivo tem só o fim fechado na véspera (mesma regra das alíquotas, #85). A pergunta
   recebe a redação vigente na data em que é feita.
 - A URL precisa ser `https://www.planalto.gov.br/...`: é o link oficial exibido na citação.
+- **Charset:** salve o arquivo como veio (sem converter). O Planalto usa windows-1252 e a LC 214
+  nem declara o charset; o `LeitorHtmlLegislacao` detecta pelos bytes (UTF-8 válido → UTF-8; senão
+  windows-1252). Lido como UTF-8, "º" e "§" se perdiam e ~1.500 parágrafos da LC 214 sumiam.
 
 ### Resposta
 
