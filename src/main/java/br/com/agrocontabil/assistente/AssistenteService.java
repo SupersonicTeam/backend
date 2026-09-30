@@ -1,20 +1,19 @@
-package br.com.agrocontabil.service;
+package br.com.agrocontabil.assistente;
 
-import br.com.agrocontabil.assistente.ContextoAssistente;
-import br.com.agrocontabil.assistente.ResultadoRota;
-import br.com.agrocontabil.assistente.RotaDados;
+import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.porta.IdentidadePorta;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.exception.AssistenteOcupadoException;
 import br.com.agrocontabil.model.DesfechoInteracao;
-import br.com.agrocontabil.model.Produtor;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -22,16 +21,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Entrada da Ceres, a assistente fiscal (issues #142 e #144).
+ * Entrada da Ceres, a assistente fiscal (issues #142 e #144; dentro do módulo desde a #141).
  *
  * <p>Nesta entrega responde só pela rota de dados (Tool Calling); o roteamento entre dados,
  * legislação e as duas vem na issue #157.
  *
  * <p>A ordem importa:
  * <ol>
- *   <li><strong>identidade primeiro</strong> ({@link AuthenticatedProdutorProvider}): sem produtor
- *       autenticado a resposta é 401/403 antes de qualquer chamada ao modelo. Resolvida aqui, na
- *       thread da requisição, e entregue às funções pelo {@link ContextoAssistente} (issue #143);</li>
+ *   <li><strong>identidade primeiro</strong> ({@link IdentidadePorta}): sem produtor autenticado
+ *       a resposta é 401/403 antes de qualquer chamada ao modelo. Resolvida aqui, na thread da
+ *       requisição, e entregue às funções pelo {@link ContextoAssistente} (issue #143);</li>
  *   <li><strong>vaga</strong>: no máximo {@code app.assistente.max-conversas-simultaneas} perguntas
  *       em andamento; acima disso 429, sem fila — cada pergunta prende uma thread pelo tempo de
  *       geração do modelo;</li>
@@ -41,7 +40,8 @@ import org.springframework.stereotype.Service;
  *       é entregue.</li>
  * </ol>
  *
- * <p>Não é transacional: nenhuma conexão do pool fica presa enquanto o modelo gera.
+ * <p>Não é transacional (o {@code ArquiteturaAssistenteTest} trava isso): nenhuma conexão do pool
+ * fica presa enquanto o modelo gera.
  */
 @Service
 public class AssistenteService {
@@ -54,22 +54,22 @@ public class AssistenteService {
   /** Fuso de referência do projeto: "hoje" para a Ceres é a data em Brasília. */
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
-  private final AuthenticatedProdutorProvider produtorProvider;
+  private final IdentidadePorta identidade;
   private final RotaDados rotaDados;
-  private final AuditoriaAssistenteService auditoria;
+  private final AuditoriaAssistente auditoria;
   private final ModeloLinguagem modeloLinguagem;
   private final Clock clock;
   private final Semaphore vagas;
 
   /** Constrói o serviço. */
   public AssistenteService(
-      AuthenticatedProdutorProvider produtorProvider,
+      IdentidadePorta identidade,
       RotaDados rotaDados,
-      AuditoriaAssistenteService auditoria,
+      AuditoriaAssistente auditoria,
       ModeloLinguagem modeloLinguagem,
       Clock clock,
       AssistenteProperties propriedades) {
-    this.produtorProvider = produtorProvider;
+    this.identidade = identidade;
     this.rotaDados = rotaDados;
     this.auditoria = auditoria;
     this.modeloLinguagem = modeloLinguagem;
@@ -88,20 +88,20 @@ public class AssistenteService {
    * @throws AssistenteIndisponivelException modelo fora ou auditoria não gravada (503)
    */
   public AssistenteChatResponse conversar(AssistenteChatRequest request) {
-    Produtor produtor = produtorProvider.get();
+    UUID produtorId = identidade.produtorAutenticado();
     if (!vagas.tryAcquire()) {
       throw new AssistenteOcupadoException();
     }
     try {
-      return responder(produtor, request.pergunta());
+      return responder(produtorId, request.pergunta());
     } finally {
       vagas.release();
     }
   }
 
-  private AssistenteChatResponse responder(Produtor produtor, String pergunta) {
+  private AssistenteChatResponse responder(UUID produtorId, String pergunta) {
     ContextoAssistente contexto =
-        new ContextoAssistente(produtor.getId(), LocalDate.now(clock.withZone(ZONE)));
+        new ContextoAssistente(produtorId, LocalDate.now(clock.withZone(ZONE)));
     long inicio = System.nanoTime();
     ResultadoRota resultado;
     try {

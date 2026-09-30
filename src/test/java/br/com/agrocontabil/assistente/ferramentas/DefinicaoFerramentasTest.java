@@ -3,9 +3,7 @@ package br.com.agrocontabil.assistente.ferramentas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import br.com.agrocontabil.service.ApuracaoService;
-import br.com.agrocontabil.service.ConsultaDadosProdutorService;
-import br.com.agrocontabil.service.CreditoService;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
@@ -28,8 +26,7 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 class DefinicaoFerramentasTest {
 
   private final List<ToolDefinition> definicoes = Arrays.stream(ToolCallbacks.from(
-          new FerramentasDadosProdutor(mock(ConsultaDadosProdutorService.class),
-              mock(ApuracaoService.class), mock(CreditoService.class))))
+          new FerramentasDadosProdutor(mock(DadosProdutorPorta.class))))
       .map(callback -> callback.getToolDefinition())
       .toList();
 

@@ -3,7 +3,7 @@ package br.com.agrocontabil.controller;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
-import br.com.agrocontabil.service.AssistenteService;
+import br.com.agrocontabil.assistente.AssistenteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

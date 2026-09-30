@@ -1,0 +1,5 @@
+#
+#Wed Sep 30 08:34:36 GMT-03:00 2026
+Layered\ architecture\ considering\ only\ dependencies\ in\ layers,\ consisting\ of\nlayer\ 'Controller'\ ('br.com.agrocontabil.controller..')\nlayer\ 'Service'\ ('br.com.agrocontabil.service..')\nlayer\ 'Repository'\ ('br.com.agrocontabil.repository..')\nwhere\ layer\ 'Controller'\ may\ not\ be\ accessed\ by\ any\ layer\nwhere\ layer\ 'Service'\ may\ only\ be\ accessed\ by\ layers\ ['Controller']\nwhere\ layer\ 'Repository'\ may\ only\ be\ accessed\ by\ layers\ ['Service']=044d855e-2fb7-49d7-a9b2-9313bf64c0bd
+no\ classes\ that\ reside\ in\ a\ package\ 'br.com.agrocontabil.controller..'\ should\ depend\ on\ classes\ that\ are\ annotated\ with\ @Entity,\ because\ entidades\ JPA\ nunca\ sao\ expostas\ na\ API\:\ request\ e\ response\ sao\ DTOs=4dacf594-b48e-47f8-b342-83df15ee1e1c
+no\ classes\ that\ reside\ in\ a\ package\ 'br.com.agrocontabil.controller..'\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ 'br.com.agrocontabil.repository..',\ because\ controller\ so\ orquestra\:\ recebe\ DTO,\ chama\ service,\ devolve\ resposta=0ba226fe-edb6-4b08-a6e5-a7494372a8bd

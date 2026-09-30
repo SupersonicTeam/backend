@@ -83,7 +83,13 @@ br.com.agrocontabil
 ├── sefaz/         # transmissão SEFAZ: SefazTransport (interface plugável), MockSefazTransport,
 │                  # SefazClient, SefazRetorno, SituacaoSefaz, SefazAmbiente,
 │                  # SefazStatusSyncJob (job agendado de sincronização)
-├── assistente/    # Ceres, a assistente fiscal (Sprint 6): llm/ (ModeloLinguagem = porta única
+├── assistente/    # Ceres, a assistente fiscal (Sprint 6). MÓDULO ISOLADO (issue #141, ArchUnit):
+│                  # fala com o backend só pelas interfaces de porta/ (DadosProdutorPorta,
+│                  # IdentidadePorta, AuditoriaPorta), implementadas em adaptador/ (os únicos que
+│                  # chamam services; nunca repository). Nada fora do módulo depende dele, exceto
+│                  # controller e config; nada nele é @Transactional. AssistenteService (entrada),
+│                  # auditoria/ (AuditoriaAssistente), orquestracao/ e memoria/ (esqueletos).
+│                  # llm/ (ModeloLinguagem = porta única
 │                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
@@ -183,6 +189,7 @@ br.com.agrocontabil
 
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
+- **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
 - **Cobertura atual: 684 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes do Liquibase contra PostgreSQL 16 (Testcontainers) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.

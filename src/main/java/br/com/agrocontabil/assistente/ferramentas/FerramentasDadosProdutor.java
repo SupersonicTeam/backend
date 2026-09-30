@@ -9,16 +9,10 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Guia;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Nota;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
-import br.com.agrocontabil.dto.ApuracaoResponse;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
-import br.com.agrocontabil.repository.CreditoSaldoAgregado;
-import br.com.agrocontabil.repository.NotaResumo;
-import br.com.agrocontabil.repository.VencimentoGuiaResumo;
-import br.com.agrocontabil.service.ApuracaoService;
-import br.com.agrocontabil.service.ComprasInsumoResultado;
-import br.com.agrocontabil.service.ConsultaDadosProdutorService;
-import br.com.agrocontabil.service.CreditoService;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -31,7 +25,6 @@ import java.util.regex.Pattern;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,8 +32,8 @@ import org.springframework.stereotype.Component;
  *
  * <p><strong>Nenhum número é gerado pelo modelo:</strong> ele só escolhe a função, preenche os
  * parâmetros e redige a resposta com o resultado. Cada função é uma consulta <em>fixa e
- * parametrizada</em> dos services existentes — proibido text-to-SQL, e nenhuma regra fiscal é
- * reescrita aqui (apuração e crédito vêm do {@link ApuracaoService} e do {@link CreditoService}).
+ * parametrizada</em> feita pela {@link DadosProdutorPorta} — proibido text-to-SQL, e nenhuma regra
+ * fiscal é reescrita aqui (o adaptador da porta usa os services de apuração, crédito e consulta).
  *
  * <p><strong>Isolamento por construção (issue #143, RN007):</strong>
  * <ul>
@@ -86,18 +79,14 @@ public class FerramentasDadosProdutor {
   private static final int DIAS_VENCIMENTO_PADRAO = 30;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
 
-  private final ConsultaDadosProdutorService consultaService;
-  private final ApuracaoService apuracaoService;
-  private final CreditoService creditoService;
+  private final DadosProdutorPorta dados;
 
-  /** Constrói as funções sobre os services existentes. */
-  public FerramentasDadosProdutor(
-      ConsultaDadosProdutorService consultaService,
-      ApuracaoService apuracaoService,
-      CreditoService creditoService) {
-    this.consultaService = consultaService;
-    this.apuracaoService = apuracaoService;
-    this.creditoService = creditoService;
+  /**
+   * Constrói as funções sobre a porta de dados do produtor (issue #141: o módulo não enxerga
+   * services nem repositories).
+   */
+  public FerramentasDadosProdutor(DadosProdutorPorta dados) {
+    this.dados = dados;
   }
 
   /** Soma das compras de um insumo no período. */
@@ -122,9 +111,9 @@ public class FerramentasDadosProdutor {
     String ncm = descricaoOuNcm == null ? "" : descricaoOuNcm.replaceAll("[.\\s-]", "");
     boolean porNcm = NCM.matcher(ncm).matches();
     String termo = porNcm ? ncm : termoDescricao(descricaoOuNcm);
-    ComprasInsumoResultado resultado = porNcm
-        ? consultaService.comprasPorNcm(contexto.produtorId(), termo, inicio, fim)
-        : consultaService.comprasPorDescricao(contexto.produtorId(), termo, inicio, fim);
+    DadosProdutorPorta.ComprasInsumo resultado = porNcm
+        ? dados.comprasPorNcm(contexto.produtorId(), termo, inicio, fim)
+        : dados.comprasPorDescricao(contexto.produtorId(), termo, inicio, fim);
 
     contexto.registrarFonte("totalComprasPorInsumo", parametros(
         "descricaoOuNcm", termo, "dataInicio", inicio.toString(), "dataFim", fim.toString()));
@@ -157,7 +146,7 @@ public class FerramentasDadosProdutor {
           "mes deve estar no formato AAAA-MM com mes de 01 a 12 (ex.: 2026-07).");
     }
     String periodo = mes.trim();
-    ApuracaoResponse apuracao = apuracaoService.consultarParaProdutor(contexto.produtorId(), periodo);
+    DadosProdutorPorta.Apuracao apuracao = dados.apuracao(contexto.produtorId(), periodo);
 
     contexto.registrarFonte("consultarApuracao", parametros("mes", periodo));
     return new Apuracao(
@@ -186,8 +175,7 @@ public class FerramentasDadosProdutor {
     LocalDate fim = data(dataFim, "dataFim");
     exigirPeriodo(inicio, fim);
 
-    CreditoSaldoAgregado creditos =
-        creditoService.somarCreditosNoIntervalo(contexto.produtorId(), inicio, fim);
+    DadosProdutorPorta.Creditos creditos = dados.creditos(contexto.produtorId(), inicio, fim);
 
     contexto.registrarFonte("consultarCreditos",
         parametros("dataInicio", inicio.toString(), "dataFim", fim.toString()));
@@ -233,12 +221,12 @@ public class FerramentasDadosProdutor {
         : data(dataInicio, "dataInicio");
     exigirPeriodo(inicio, fim);
     int quantidade = limite == null ? LIMITE_PADRAO : limite;
-    if (quantidade < 1 || quantidade > ConsultaDadosProdutorService.LIMITE_MAXIMO) {
+    if (quantidade < 1 || quantidade > DadosProdutorPorta.LIMITE_MAXIMO) {
       throw new ParametroFerramentaInvalidoException("limite deve estar entre 1 e 10.");
     }
 
-    Page<NotaResumo> pagina = consultaService.listarNotas(
-        contexto.produtorId(), origens, status, inicio, fim, quantidade);
+    Pagina<DadosProdutorPorta.Nota> pagina =
+        dados.notas(contexto.produtorId(), origens, status, inicio, fim, quantidade);
 
     Map<String, String> usados = parametros(
         "dataInicio", inicio.toString(), "dataFim", fim.toString(),
@@ -251,8 +239,8 @@ public class FerramentasDadosProdutor {
     }
     contexto.registrarFonte("listarNotas", usados);
     return new Notas(
-        pagina.getTotalElements(),
-        pagina.getContent().stream()
+        pagina.total(),
+        pagina.itens().stream()
             .map(n -> new Nota(
                 n.numero(),
                 n.serie(),
@@ -284,15 +272,15 @@ public class FerramentasDadosProdutor {
     LocalDate de = contexto.hoje();
     LocalDate ate = de.plusDays(janela);
 
-    Page<VencimentoGuiaResumo> pagina = consultaService.vencimentosNaoPagos(
-        contexto.produtorId(), de, ate, ConsultaDadosProdutorService.LIMITE_MAXIMO);
+    Pagina<DadosProdutorPorta.Vencimento> pagina = dados.vencimentosNaoPagos(
+        contexto.produtorId(), de, ate, DadosProdutorPorta.LIMITE_MAXIMO);
 
     contexto.registrarFonte("proximosVencimentos", parametros("dias", String.valueOf(janela)));
     return new Vencimentos(
         FormatoBr.data(de),
         FormatoBr.data(ate),
-        pagina.getTotalElements(),
-        pagina.getContent().stream()
+        pagina.total(),
+        pagina.itens().stream()
             .map(g -> new Guia(
                 g.tipo().name(),
                 FormatoBr.data(g.dataVencimento()),

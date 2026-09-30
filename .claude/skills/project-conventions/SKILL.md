@@ -20,6 +20,14 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - **Entidade JPA nunca sai da API.** Sempre converter para DTO via `mapper`.
 - **Alíquota e redução de base têm um único resolvedor cada.** Nunca ler `TributosProperties.ibs/cbs` nem `AliquotaIbsUfRepository`/`NcmReferenciaRepository` direto num serviço de cálculo — sempre via `AliquotaIbsCbsResolver` (issue #86) e `ReducaoNcmResolver` (issue #52). Débito e crédito precisam sair do mesmo ponto para a apuração ser simétrica.
 
+## Módulo da Ceres (`assistente`) — fronteira travada por ArchUnit (issue #141)
+
+- O módulo fala com o resto do backend **só** pelas interfaces de `assistente.porta`; os records das portas não expõem entidade nem projeção de repository.
+- Só `assistente.adaptador` chama services — e **nunca** repository (é no service que vivem o anti-IDOR e a regra fiscal).
+- Fora do módulo, só `controller` e `config` dependem dele. Nada no módulo é `@Transactional`: a chamada ao modelo nunca roda dentro de transação.
+- Nova necessidade de dado na Ceres = método novo na porta + adaptador chamando um service. Nunca injetar service/repository numa classe do módulo.
+- Extrair a Ceres como serviço (só quando um critério de `memory: ceres-extracao-microsservico-futuro` aparecer) = trocar os adaptadores por clientes HTTP.
+
 ## Fluxo para adicionar um endpoint (checklist)
 
 1. **DTO** `record` em `dto/` — `XxxRequest` (entrada) e `XxxResponse` (saída). Validação Bean Validation nas anotações do request.
