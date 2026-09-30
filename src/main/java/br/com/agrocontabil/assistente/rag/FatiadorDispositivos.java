@@ -107,8 +107,17 @@ public class FatiadorDispositivos {
         linhas.add(linha);
       }
     } else {
+      // Anexos so depois da assinatura: um "ANEXO I" antes dela e texto citado (ex.: emenda que
+      // altera o anexo de outra lei), e cortar ali descartaria o resto da norma. Sem assinatura,
+      // vale o primeiro cabecalho.
+      int assinatura = -1;
+      for (int i = 0; i < paragrafos.size() && assinatura < 0; i++) {
+        if (ASSINATURA.matcher(limpar(paragrafos.get(i).text())).matches()) {
+          assinatura = i;
+        }
+      }
       for (int i = 0; i < paragrafos.size(); i++) {
-        if (ANEXO.matcher(limpar(paragrafos.get(i).text())).matches()) {
+        if (i > assinatura && ANEXO.matcher(limpar(paragrafos.get(i).text())).matches()) {
           inicioAnexos = i;
           break;
         }

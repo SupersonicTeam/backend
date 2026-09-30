@@ -58,6 +58,22 @@ class FatiadorAnexosTest {
   }
 
   @Test
+  @DisplayName("ANEXO citado antes da assinatura nao corta a norma: o resto continua sendo fatiado")
+  void anexoCitadoAntesDaAssinatura() {
+    List<DispositivoLegal> emenda = new FatiadorDispositivos().fatiar("""
+        <html><body>
+        <p>Art. 1º O Anexo da Lei nº 1.000 passa a vigorar com a seguinte redação:</p>
+        <p>ANEXO I</p>
+        <p>Art. 2º Esta Emenda entra em vigor na data de sua publicação.</p>
+        <p>Brasília, 20 de dezembro de 2023.</p>
+        </body></html>
+        """);
+
+    assertThat(emenda).extracting(DispositivoLegal::dispositivo)
+        .containsExactly("art. 1º", "art. 2º");
+  }
+
+  @Test
   @DisplayName("Linha sem numero continua o item anterior; o cabecalho da tabela e descartado")
   void continuacaoECabecalho() {
     assertThat(dispositivos.get(2).texto())
