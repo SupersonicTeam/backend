@@ -76,6 +76,12 @@ public class FatiadorDispositivos {
   /** Local e data da assinatura: fim do texto articulado. */
   private static final Pattern ASSINATURA = Pattern.compile(
       "^Bras[íi]lia\\s*,\\s*\\d{1,2}[ºo°]?\\s+de\\s+\\p{L}+\\s+de\\s+\\d{4}.*");
+  /**
+   * Maior salto aceito entre dois artigos da própria norma. Acima disso (ou numeração voltando) o
+   * artigo é texto citado sem aspa de abertura: na LC 227/2026, um "Art. 493-A" inserido na LC 214
+   * logo depois do art. 174 da própria LC 227 virava artigo dela e rotulava errado 48 trechos.
+   */
+  private static final int SALTO_MAXIMO_ARTIGO = 30;
   /** Número de item de anexo ("5", "1.2"). */
   private static final Pattern NUMERO_ITEM = Pattern.compile("^\\d+(?:\\.\\d+)*$");
   private static final String ABRE_ASPAS = "\"“‘'";
@@ -260,6 +266,8 @@ public class FatiadorDispositivos {
     boolean citando;
     /** Passou da assinatura: o resto (até os anexos) não é texto articulado. */
     boolean encerrado;
+    /** Número do último artigo da própria norma (0 antes do primeiro). */
+    int ultimoArtigo;
 
     void processar(String linha) {
       if (encerrado || linha.isEmpty() || SO_PONTOS.matcher(linha).matches()) {
@@ -306,6 +314,16 @@ public class FatiadorDispositivos {
     private void processarNorma(String texto) {
       Matcher m = ARTIGO.matcher(texto);
       if (m.matches()) {
+        int numero = Integer.parseInt(m.group(1));
+        if (norma.artigo != null
+            && (numero < ultimoArtigo || numero > ultimoArtigo + SALTO_MAXIMO_ARTIGO)) {
+          // Artigo citado sem a aspa de abertura (o Planalto a omite as vezes logo depois de um
+          // "(NR)"): os artigos da propria norma so crescem, e de pouco em pouco.
+          citando = true;
+          processarCitado(texto);
+          return;
+        }
+        ultimoArtigo = numero;
         if (m.group(3).isBlank()) {
           return; // artigo inteiramente revogado (so texto tachado)
         }
