@@ -40,7 +40,9 @@ public class CorsConfig {
         config.setAllowedHeaders(List.of("*"));
         // Content-Disposition: nome do arquivo nos downloads de XML/PDF.
         // X-Total-Count: total da listagem paginada de guias (issue #103), cujo corpo segue array.
-        config.setExposedHeaders(List.of("Content-Disposition", "X-Total-Count"));
+        // Retry-After: quando tentar de novo apos o 503 ASSISTENTE_OCUPADO da Ceres (issue #157);
+        // nao e header "safelisted", sem expor o Angular le null.
+        config.setExposedHeaders(List.of("Content-Disposition", "X-Total-Count", "Retry-After"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
