@@ -8,6 +8,8 @@ import br.com.agrocontabil.service.ConsultaDadosProdutorService;
 import br.com.agrocontabil.service.CreditoService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Method;
+import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +17,7 @@ import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.definition.ToolDefinition;
 
 /**
@@ -51,6 +54,36 @@ class DefinicaoFerramentasTest {
               || nome.contains("contador") || nome.contains("cpf") || nome.contains("cnpj")
               || nome.equals("id") || nome.endsWith("id") || nome.contains("uuid")
               || nome.contains("context"));
+    }
+  }
+
+  @Test
+  @DisplayName("#144: todo resultado de funcao passa pelo DataSanitizer antes de ir ao modelo")
+  void todaFuncaoUsaConversorSanitizado() {
+    List<Method> funcoes = Arrays.stream(FerramentasDadosProdutor.class.getDeclaredMethods())
+        .filter(m -> m.isAnnotationPresent(Tool.class))
+        .toList();
+
+    assertThat(funcoes).hasSize(5).allSatisfy(m ->
+        assertThat(m.getAnnotation(Tool.class).resultConverter())
+            .as("resultConverter de %s", m.getName())
+            .isEqualTo(ResultadoSanitizadoConverter.class));
+  }
+
+  @Test
+  @DisplayName("#144: minimizacao por construcao - nenhum DTO ao modelo tem campo de dado pessoal")
+  void dtosSemCamposPessoais() {
+    List<Class<?>> dtos = Arrays.stream(RespostasFerramentas.class.getDeclaredClasses())
+        .filter(Class::isRecord)
+        .toList();
+    assertThat(dtos).isNotEmpty();
+    for (Class<?> dto : dtos) {
+      for (RecordComponent campo : dto.getRecordComponents()) {
+        assertThat(campo.getName().toLowerCase(Locale.ROOT))
+            .as("%s.%s", dto.getSimpleName(), campo.getName())
+            .doesNotContain("nome", "cpf", "cnpj", "endereco", "logradouro", "email",
+                "telefone", "chave", "observacoes", "destinatario", "emitente", "produtor");
+      }
     }
   }
 

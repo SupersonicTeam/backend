@@ -7,7 +7,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.config.LimiteCorpoAssistenteFilter;
 import br.com.agrocontabil.config.MockIdentidadeFilter;
+import br.com.agrocontabil.model.AssistenteInteracao;
+import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
@@ -34,6 +39,8 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -53,6 +60,7 @@ import org.springframework.web.context.WebApplicationContext;
  * pedir dados de outro produtor), que é o que interessa testar.
  */
 @SpringBootTest
+@ExtendWith(OutputCaptureExtension.class)
 @Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
@@ -68,6 +76,8 @@ class AssistenteChatIntegrationTest {
   @Autowired private NotaFiscalRepository notaFiscalRepository;
   @Autowired private ChatModelSimulado modelo;
   @Autowired private TestDatabaseCleaner cleaner;
+  @Autowired private AssistenteInteracaoRepository interacaoRepository;
+  @Autowired private LimiteCorpoAssistenteFilter limiteCorpoFilter;
 
   private MockMvc mockMvc;
   private Produtor produtorA;
@@ -90,7 +100,8 @@ class AssistenteChatIntegrationTest {
         "FERTILIZANTE NPK", "31052000", "KG", "9999", "98765.43"));
 
     mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-        .addFilters(new MockIdentidadeFilter(produtorRepository, contadorRepository))
+        .addFilters(limiteCorpoFilter,
+            new MockIdentidadeFilter(produtorRepository, contadorRepository))
         .build();
   }
 
@@ -222,6 +233,99 @@ class AssistenteChatIntegrationTest {
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.errors[0].code").value("PAPEL_NAO_AUTORIZADO"));
     assertThat(modelo.promptsRecebidos()).isEmpty();
+  }
+
+  // --- sanitizacao, auditoria e limites (issue #144) ---
+
+  @Test
+  @DisplayName("#144: toda pergunta gera auditoria com rota, funcoes e desfecho, sem o texto")
+  void auditoriaSemConteudo() throws Exception {
+    modelo.responderCom(modeloFiel(Map.of(
+        "descricaoOuNcm", "fertilizante", "dataInicio", "2026-01-01", "dataFim", "2026-06-30")));
+    String pergunta = "Quanto comprei de fertilizante no primeiro semestre de 2026?";
+
+    perguntar(produtorA, pergunta).andExpect(status().isOk());
+
+    List<AssistenteInteracao> interacoes =
+        interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId());
+    assertThat(interacoes).singleElement().satisfies(i -> {
+      assertThat(i.getRota()).isEqualTo("DADOS");
+      assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+      assertThat(i.getFuncoes()).contains("totalComprasPorInsumo", "fertilizante");
+      assertThat(i.getChamadasFuncao()).isEqualTo(1);
+      // Profile test: spring.ai.model.chat=none + ChatModelSimulado.
+      assertThat(i.getModelo()).isEqualTo("none/simulado");
+      assertThat(i.getTamanhoPergunta()).isEqualTo(pergunta.length());
+      assertThat(i.getLatenciaMs()).isNotNegative();
+      // Nenhum campo guarda a pergunta nem a resposta.
+      assertThat(String.valueOf(i.getFuncoes()) + i.getTrechosCitados() + i.getModelo())
+          .doesNotContain("primeiro semestre", "Voce comprou", "3.734,56");
+    });
+  }
+
+  @Test
+  @DisplayName("#144: modelo fora do ar tambem e auditado (MODELO_INDISPONIVEL)")
+  void modeloForaAuditado() throws Exception {
+    modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
+
+    perguntar(produtorA, "Quanto comprei?").andExpect(status().isServiceUnavailable());
+
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho())
+            .isEqualTo(DesfechoInteracao.MODELO_INDISPONIVEL));
+  }
+
+  @Test
+  @DisplayName("#144: CPF, e-mail e telefone da pergunta chegam mascarados ao modelo")
+  void perguntaMascaradaAoModelo() throws Exception {
+    modelo.responderTexto("Nao tenho essa informacao.");
+
+    perguntar(produtorA, "Meu CPF e 123.456.789-09, email ana@fazenda.com.br, tel (65) 99876-5432")
+        .andExpect(status().isOk());
+
+    String enviada = modelo.promptsRecebidos().get(0).getUserMessage().getText();
+    assertThat(enviada).contains("[CPF]", "[EMAIL]", "[TELEFONE]")
+        .doesNotContain("123.456.789-09", "ana@fazenda.com.br", "99876-5432");
+  }
+
+  @Test
+  @DisplayName("#144: nem a pergunta nem os valores do produtor aparecem nos logs")
+  void logsSemPii(CapturedOutput saida) throws Exception {
+    modelo.responderCom(modeloFiel(Map.of(
+        "descricaoOuNcm", "fertilizante", "dataInicio", "2026-01-01", "dataFim", "2026-06-30")));
+
+    perguntar(produtorA, "Pergunta-marcadora-XYZ sobre fertilizante, CPF 123.456.789-09")
+        .andExpect(status().isOk());
+    modelo.responderTexto("Voce comprou R$ 999,99.");
+    perguntar(produtorA, "Pergunta-marcadora-XYZ de novo").andExpect(status().isOk());
+
+    assertThat(saida.getAll())
+        .doesNotContain("Pergunta-marcadora-XYZ", "123.456.789-09", "3.734,56", "999,99");
+  }
+
+  @Test
+  @DisplayName("#144: corpo acima do limite e recusado com 413 antes de ser lido")
+  void corpoAcimaDoLimite() throws Exception {
+    String enorme = "{\"pergunta\":\"" + "a".repeat(LimiteCorpoAssistenteFilter.LIMITE_BYTES)
+        + "\"}";
+
+    mockMvc.perform(post("/api/assistente/chat")
+            .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtorA.getId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(enorme))
+        .andExpect(status().isPayloadTooLarge())
+        .andExpect(jsonPath("$.errors[0].code").value("PAYLOAD_TOO_LARGE"));
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#144: pergunta longa demais volta 400 sem ecoar o texto inteiro")
+  void rejectedValueTruncado() throws Exception {
+    perguntar(produtorA, "a".repeat(1001))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("pergunta"))
+        .andExpect(jsonPath("$.errors[0].rejectedValue").value("a".repeat(100) + "..."));
   }
 
   // --- modelo simulado ---

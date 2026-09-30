@@ -4,6 +4,7 @@ import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.ferramentas.ProcessadorErroFerramenta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.model.DesfechoInteracao;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.List;
@@ -109,6 +110,8 @@ public class RotaDados {
    * @throws br.com.agrocontabil.exception.AssistenteIndisponivelException se o modelo falhar
    */
   public ResultadoRota responder(String pergunta, ContextoAssistente contexto) {
+    // A pergunta vai ao provedor do modelo: CPF, CNPJ, e-mail, telefone... saem mascarados (#144).
+    String perguntaAoModelo = DataSanitizer.mascarar(pergunta);
     ToolCallingChatOptions opcoes = ToolCallingChatOptions.builder()
         .toolCallbacks(ferramentas)
         .internalToolExecutionEnabled(false)
@@ -116,46 +119,55 @@ public class RotaDados {
         .build();
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.sistemaDados(contexto.hoje())),
-        new UserMessage(pergunta)), opcoes);
+        new UserMessage(perguntaAoModelo)), opcoes);
 
     List<String> resultados = new ArrayList<>();
     ChatResponse resposta = modelo.chamar(prompt);
+    contexto.registrarUso(resposta);
     int rodadas = 0;
     while (resposta.hasToolCalls()) {
       if (rodadas >= maxRodadas) {
         log.warn("Ceres: teto de {} rodadas de funcoes atingido", maxRodadas);
-        return ResultadoRota.descartada(MENSAGEM_SEM_CONCLUSAO);
+        return ResultadoRota.descartada(MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.SEM_CONCLUSAO);
       }
+      contexto.registrarChamadasDeFuncao(quantidadeDeChamadas(resposta));
       if (!somenteFuncoesPermitidas(resposta)) {
         // Nome alucinado ou injetado: nada e executado. O nome nao vai ao log (vem do modelo).
         log.warn("Ceres: modelo pediu funcao fora da lista de funcoes de dados");
-        return ResultadoRota.descartada(MENSAGEM_SEM_CONCLUSAO);
+        return ResultadoRota.descartada(
+            MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
       }
       ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, resposta);
       coletarResultados(execucao.conversationHistory(), resultados);
       prompt = new Prompt(execucao.conversationHistory(), opcoes);
       resposta = modelo.chamar(prompt);
+      contexto.registrarUso(resposta);
       rodadas++;
     }
 
     String texto = limpar(resposta.getResult().getOutput().getText());
     if (texto.isBlank()) {
-      return ResultadoRota.descartada(MENSAGEM_SEM_RESPOSTA);
+      return ResultadoRota.descartada(MENSAGEM_SEM_RESPOSTA, DesfechoInteracao.SEM_RESPOSTA);
     }
     // Fontes de numeros: so os resultados das funcoes e a pergunta. O prompt de sistema NAO entra
     // (a data de hoje e as referencias legais liberariam 29, 2026, 214... como "com fonte"); dele
     // vale apenas a data de hoje, como data.
     List<String> fontes = new ArrayList<>(resultados);
-    fontes.add(pergunta);
+    fontes.add(perguntaAoModelo);
     ValidadorNumeros.Resultado verificacao =
         validadorNumeros.verificar(texto, fontes, List.of(contexto.hoje()));
     if (!verificacao.rastreavel()) {
       // So a contagem: os numeros em si podem ser dados do produtor.
       log.warn("Ceres: resposta descartada com {} numero(s) sem fonte",
           verificacao.quantidadeSemFonte());
-      return ResultadoRota.descartada(MENSAGEM_NUMERO_SEM_FONTE);
+      return ResultadoRota.descartada(
+          MENSAGEM_NUMERO_SEM_FONTE, DesfechoInteracao.NUMERO_SEM_FONTE);
     }
     return ResultadoRota.aceita(texto);
+  }
+
+  private static int quantidadeDeChamadas(ChatResponse resposta) {
+    return resposta.getResults().stream().mapToInt(g -> g.getOutput().getToolCalls().size()).sum();
   }
 
   private boolean somenteFuncoesPermitidas(ChatResponse resposta) {

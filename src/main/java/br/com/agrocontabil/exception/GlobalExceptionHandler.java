@@ -339,9 +339,7 @@ public class GlobalExceptionHandler {
 
   private ErrorDetail toErrorDetail(ConstraintViolation<?> violation) {
     String field = lastNode(violation);
-    String rejected = violation.getInvalidValue() == null
-        ? null
-        : String.valueOf(violation.getInvalidValue());
+    String rejected = resumirValorRejeitado(violation.getInvalidValue());
     return new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         field,
@@ -349,6 +347,25 @@ public class GlobalExceptionHandler {
         null,
         rejected,
         null);
+  }
+
+  /**
+   * Tamanho máximo do {@code rejectedValue} ecoado (issue #144). O valor rejeitado volta ao
+   * cliente: sem teto, uma pergunta de 1 MB à Ceres voltaria inteira no corpo do 400 (reflexão de
+   * conteúdo e memória desperdiçada). 100 caracteres bastam para o cliente reconhecer o campo.
+   */
+  static final int MAXIMO_VALOR_REJEITADO = 100;
+
+  static String resumirValorRejeitado(Object valor) {
+    if (valor == null) {
+      return null;
+    }
+    String texto = String.valueOf(valor);
+    if (texto.codePointCount(0, texto.length()) <= MAXIMO_VALOR_REJEITADO) {
+      return texto;
+    }
+    // Corte por code point: por indice de char, um emoji na borda viraria surrogate solto.
+    return texto.substring(0, texto.offsetByCodePoints(0, MAXIMO_VALOR_REJEITADO)) + "...";
   }
 
   /** Extrai o último nó do property path (nome do parâmetro), ex.: {@code saldo.periodo → periodo}. */
@@ -359,9 +376,7 @@ public class GlobalExceptionHandler {
   }
 
   private ErrorDetail toErrorDetail(FieldError error) {
-    String rejected = error.getRejectedValue() == null
-        ? null
-        : String.valueOf(error.getRejectedValue());
+    String rejected = resumirValorRejeitado(error.getRejectedValue());
     return new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         error.getField(),

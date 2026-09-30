@@ -94,3 +94,29 @@ Garantias, todas em código:
   `AI_MAX_CONVERSAS_SIMULTANEAS` (4) perguntas ao mesmo tempo (acima disso, 429).
 - **Erro de função:** o modelo recebe só a orientação de parâmetro inválido (escrita por nós) ou
   uma mensagem genérica — nunca a mensagem do banco.
+
+## Sanitização e auditoria (issue #144)
+
+Tudo que vai ao modelo passa pela mesma regra, seja o provedor local ou por API (o provedor é
+trocável por configuração).
+
+- **Minimização por construção:** os DTOs das funções não têm campo de nome, CPF/CNPJ, endereço,
+  e-mail, telefone, chave de acesso nem observação livre (`DefinicaoFerramentasTest` trava isso).
+  Nome e endereço não se detectam com confiança por regex; por isso simplesmente não entram.
+- **Máscara (`DataSanitizer`):** CPF, CNPJ, chave de acesso, e-mail, telefone e CEP viram
+  marcadores (`[CPF]`...) na **pergunta** e em **todo resultado de função**
+  (`ResultadoSanitizadoConverter`, declarado em cada `@Tool`). Valores, datas e NCM ficam intactos.
+- **Auditoria (`assistente_interacao`, changeSet 0025):** uma linha por pergunta — produtor, rota,
+  desfecho (`RESPONDIDA`, `NUMERO_SEM_FONTE`, `SEM_CONCLUSAO`, `SEM_RESPOSTA`,
+  `MODELO_INDISPONIVEL`, `ERRO`), funções com parâmetros mascarados, quantas funções o modelo
+  pediu, modelo, latência, tokens e o **tamanho** da pergunta. **Sem o texto da pergunta nem da
+  resposta** — a entidade nem tem onde guardá-los. Se a auditoria não gravar, a resposta não é
+  entregue (503). Alimenta também a avaliação do TCC (#158).
+- **Tamanho:** pergunta de no máximo 1000 caracteres (`@Size`) e corpo de no máximo 16 KB
+  (`LimiteCorpoAssistenteFilter`, antes de o Jackson ler — 413). O `rejectedValue` dos erros de
+  validação é truncado em 100 caracteres, em toda a API.
+- **Prompt injection:** a defesa é estrutural (funções sem parâmetro de produtor, lista fechada de
+  funções, números conferidos em código); instrução de sistema fixa e limite de tamanho completam.
+  Não há denylist de frases: ela daria falsa sensação de segurança.
+- **Logs sem PII:** nenhum log registra a pergunta, a resposta ou valores das funções (teste com
+  captura da saída).

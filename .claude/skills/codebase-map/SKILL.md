@@ -82,9 +82,13 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ContextoAssistente` | Produtor + "hoje" + fontes da pergunta, entregue às funções pelo `ToolContext` (nunca visto pelo modelo). `de(toolContext)` **falha fechado** (issue #143) |
 | `RotaDados` | Laço modelo → função → modelo **do backend** (`internalToolExecutionEnabled=false` + `ToolCallingManager`), teto `max-rodadas-ferramentas`; resposta passa pelo `ValidadorNumeros` (issue #142) |
 | `ValidadorNumeros` | Todo número/data da resposta tem de aparecer nos resultados das funções, na pergunta ou no prompt de sistema; senão a resposta é descartada (issue #142) |
+| `DataSanitizer` | Máscara de CPF/CNPJ/chave/e-mail/telefone/CEP em tudo que vai ao modelo (pergunta + resultados). Aplicado nos resultados por `ferramentas/ResultadoSanitizadoConverter`, declarado em cada `@Tool` (issue #144) |
+| `ResultadoRota` | Texto + `DesfechoInteracao` da rota; fora de `RESPONDIDA` a resposta foi descartada |
 | `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
 | `ferramentas/FerramentasDadosProdutor` | 5 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
 | `ferramentas/ProcessadorErroFerramenta` | O que volta ao modelo quando a função falha: mensagem de parâmetro (nossa) ou genérica; contexto ausente aborta |
+
+`service/AuditoriaAssistenteService`: grava `AssistenteInteracao` (tabela `assistente_interacao`, changeSet 0025) — rota, desfecho, funções mascaradas, modelo, latência, tokens, tamanho da pergunta; **nunca o texto** (issue #144). `config/LimiteCorpoAssistenteFilter`: 413 acima de 16 KB em `/api/assistente/**`, antes do Jackson.
 
 `service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `service/AssistenteService`: identidade → vaga (semáforo, 429) → rota. `controller/AssistenteController`: `POST /api/assistente/chat`.
 
@@ -233,5 +237,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0023-shedlock` (próximo número livre: **0024**)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0025-assistente-interacao` (próximo número livre: **0026**)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

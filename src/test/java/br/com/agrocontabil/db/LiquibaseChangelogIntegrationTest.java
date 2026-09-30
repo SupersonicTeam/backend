@@ -141,6 +141,32 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0025 cria assistente_interacao sem coluna para pergunta ou resposta (#144)")
+  void changeSet0025CriaAuditoriaSemConteudo() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    List<String> colunas = jdbc.queryForList(
+        "SELECT column_name FROM information_schema.columns"
+            + " WHERE table_name = 'assistente_interacao' ORDER BY column_name",
+        String.class);
+
+    assertThat(colunas).containsExactly(
+        "chamadas_funcao", "criado_em", "desfecho", "funcoes", "id", "latencia_ms", "modelo",
+        "produtor_id", "rota", "tamanho_pergunta", "tokens_entrada", "tokens_saida",
+        "trechos_citados");
+    // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
+    assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")
+        || c.equals("texto"));
+
+    Integer fks = jdbc.queryForObject(
+        "SELECT COUNT(*) FROM information_schema.table_constraints"
+            + " WHERE table_name = 'assistente_interacao' AND constraint_type = 'FOREIGN KEY'"
+            + " AND constraint_name = 'fk_assistente_interacao_produtor'",
+        Integer.class);
+    assertThat(fks).isEqualTo(1);
+  }
+
+  @Test
   @DisplayName("changeSet 0023 cria a tabela shedlock com o contrato do ShedLock (issue #87)")
   void changeSet0023CriaTabelaShedlock() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

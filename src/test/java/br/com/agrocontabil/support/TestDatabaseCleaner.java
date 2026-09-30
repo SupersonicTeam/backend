@@ -1,6 +1,7 @@
 package br.com.agrocontabil.support;
 
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
+import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.context.TestComponent;
 @TestComponent
 public class TestDatabaseCleaner {
 
+  private final AssistenteInteracaoRepository interacaoRepository;
   private final NotaFiscalValidacaoRepository validacaoRepository;
   private final ApuracaoMensalRepository apuracaoRepository;
   private final GuiaFiscalRepository guiaFiscalRepository;
@@ -33,12 +35,14 @@ public class TestDatabaseCleaner {
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
+      AssistenteInteracaoRepository interacaoRepository,
       NotaFiscalValidacaoRepository validacaoRepository,
       ApuracaoMensalRepository apuracaoRepository,
       GuiaFiscalRepository guiaFiscalRepository,
       NotaFiscalRepository notaFiscalRepository,
       ContadorRepository contadorRepository,
       ProdutorRepository produtorRepository) {
+    this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
     this.apuracaoRepository = apuracaoRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
@@ -48,14 +52,17 @@ public class TestDatabaseCleaner {
   }
 
   /**
-   * Apaga filhos antes dos pais: validações e itens (cascade da entidade) → apurações → guias →
-   * notas → contadores (que levam o vínculo {@code contador_produtor}) → produtores.
+   * Apaga filhos antes dos pais: auditoria da Ceres → validações e itens (cascade da entidade) →
+   * apurações → guias → notas → contadores (que levam o vínculo {@code contador_produtor}) →
+   * produtores.
    *
    * <p>Os contadores (issue #93) entram antes dos produtores porque o vínculo N:N referencia os
    * dois: deixá-los para trás faria o {@code produtorRepository.deleteAll()} falhar por integridade
-   * referencial no schema de teste, que replica as FKs de produção.
+   * referencial no schema de teste, que replica as FKs de produção. A auditoria da Ceres (issue
+   * #144) referencia o produtor com {@code RESTRICT} pelo mesmo motivo.
    */
   public void limparTudo() {
+    interacaoRepository.deleteAll();
     validacaoRepository.deleteAll();
     apuracaoRepository.deleteAll();
     guiaFiscalRepository.deleteAll();
