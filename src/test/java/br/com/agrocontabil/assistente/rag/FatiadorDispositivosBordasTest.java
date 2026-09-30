@@ -48,4 +48,41 @@ class FatiadorDispositivosBordasTest {
         .containsExactly("art. 1º", "art. 1º, inciso IV");
     assertThat(d.get(0).texto()).contains("CIVIL - disposição");
   }
+
+  @Test
+  @DisplayName("Artigo citado sem aspa de abertura (salto na numeracao) continua sendo citacao")
+  void artigoCitadoSemAspaDeAbertura() {
+    // Formato da LC 227/2026: o Planalto omite a aspa antes do "Art. 493-A" inserido na LC 214.
+    List<DispositivoLegal> dispositivos = new FatiadorDispositivos().fatiar("""
+        <html><body>
+        <p>Art. 174. A Lei Complementar nº 214, de 2025, passa a vigorar com as alterações:</p>
+        <p>“Art. 26. O regime aplica-se às cooperativas.” (NR)</p>
+        <p>Art. 493-A. É instituída associação pública especial.</p>
+        <p>§ 1º A associação tem sede no Distrito Federal.” (NR)</p>
+        <p>Art. 175. Esta Lei Complementar entra em vigor na data de sua publicação.</p>
+        </body></html>
+        """);
+
+    assertThat(dispositivos).extracting(DispositivoLegal::dispositivo).containsExactly(
+        "art. 174",
+        "art. 174 (redação do art. 26)",
+        "art. 174 (redação do art. 493-A)",
+        "art. 174 (redação do art. 493-A, § 1º)",
+        "art. 175");
+  }
+
+  @Test
+  @DisplayName("Salto na numeracao fora de citacao (artigos revogados que sumiram) e artigo da norma")
+  void saltoForaDeCitacao() {
+    List<DispositivoLegal> dispositivos = new FatiadorDispositivos().fatiar("""
+        <html><body>
+        <p>Art. 10. Primeira regra.</p>
+        <p>Art. 80. Regra depois de artigos revogados.</p>
+        <p>Art. 81. Outra regra.</p>
+        </body></html>
+        """);
+
+    assertThat(dispositivos).extracting(DispositivoLegal::dispositivo)
+        .containsExactly("art. 10", "art. 80", "art. 81");
+  }
 }
