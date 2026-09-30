@@ -222,6 +222,28 @@ CREATE TABLE IF NOT EXISTS contador_produtor (
 CREATE INDEX IF NOT EXISTS idx_contador_produtor_produtor_id
     ON contador_produtor (produtor_id);
 
+-- Auditoria das interacoes com a Ceres — Sprint 6 issue #144 (migration 0025).
+-- Sem o texto da pergunta nem da resposta. Manter sincronizado com 0025-assistente-interacao.xml.
+CREATE TABLE IF NOT EXISTS assistente_interacao (
+    id                UUID                      NOT NULL,
+    produtor_id       UUID                      NOT NULL,
+    rota              VARCHAR(20)               NOT NULL,
+    desfecho          VARCHAR(40)               NOT NULL,
+    funcoes           TEXT,
+    chamadas_funcao   INTEGER                   NOT NULL,
+    trechos_citados   TEXT,
+    modelo            VARCHAR(120),
+    latencia_ms       BIGINT                    NOT NULL,
+    tokens_entrada    INTEGER,
+    tokens_saida      INTEGER,
+    tamanho_pergunta  INTEGER                   NOT NULL,
+    criado_em         TIMESTAMP WITH TIME ZONE  NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assistente_interacao_produtor_criado
+    ON assistente_interacao (produtor_id, criado_em);
+
 -- Indice composto (status, periodo) — Sprint 4 issue #57 (migration 0016).
 -- Cobre a varredura do refechamento de periodos reabertos (status = ? AND periodo range).
 CREATE INDEX IF NOT EXISTS idx_apuracao_status_periodo ON apuracao_mensal (status, periodo);
@@ -270,6 +292,11 @@ ALTER TABLE contador_produtor ADD CONSTRAINT IF NOT EXISTS fk_contador_produtor_
 
 ALTER TABLE contador_produtor ADD CONSTRAINT IF NOT EXISTS fk_contador_produtor_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
+
+-- Auditoria da Ceres: RESTRICT, como nota_fiscal (migration 0025). O TestDatabaseCleaner apaga as
+-- interacoes antes dos produtores.
+ALTER TABLE assistente_interacao ADD CONSTRAINT IF NOT EXISTS fk_assistente_interacao_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE RESTRICT;
 
 -- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).

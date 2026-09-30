@@ -101,7 +101,8 @@ public class FerramentasDadosProdutor {
   }
 
   /** Soma das compras de um insumo no período. */
-  @Tool(name = "totalComprasPorInsumo", description = """
+  @Tool(name = "totalComprasPorInsumo", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
       Soma as COMPRAS do produtor (notas de entrada autorizadas, em que ele e o destinatario) de \
       um insumo num periodo: valor total, numero de notas e quantidade por unidade de medida. Use \
       para perguntas como "quanto comprei de fertilizante no semestre?". O insumo pode ser um \
@@ -142,7 +143,8 @@ public class FerramentasDadosProdutor {
   }
 
   /** Apuração mensal de IBS/CBS. */
-  @Tool(name = "consultarApuracao", description = """
+  @Tool(name = "consultarApuracao", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
       Consulta a apuracao mensal de IBS e CBS do produtor: debito das vendas, credito das compras \
       e saldo a recolher de cada tributo. Use para perguntas como "quanto de IBS eu devo em \
       julho?" ou "qual o saldo de CBS do mes passado?". Mes em aberto traz valores parciais.""")
@@ -171,7 +173,8 @@ public class FerramentasDadosProdutor {
   }
 
   /** Créditos de IBS/CBS das compras no período. */
-  @Tool(name = "consultarCreditos", description = """
+  @Tool(name = "consultarCreditos", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
       Soma os creditos de IBS e de CBS das compras do produtor (notas de entrada autorizadas) num \
       periodo. Use para perguntas como "quanto tenho de credito de IBS este ano?".""")
   public Creditos consultarCreditos(
@@ -198,7 +201,8 @@ public class FerramentasDadosProdutor {
   }
 
   /** As notas mais recentes, com filtro opcional. */
-  @Tool(name = "listarNotas", description = """
+  @Tool(name = "listarNotas", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
       Lista as notas fiscais mais recentes do produtor (no maximo 10) com numero, data, tipo, \
       situacao e valores, e informa quantas existem no filtro. Use para perguntas como "quais \
       foram minhas ultimas vendas?" ou "tenho nota rejeitada?". Nao use para somar valores: a \
@@ -262,7 +266,8 @@ public class FerramentasDadosProdutor {
   }
 
   /** Guias não pagas que vencem nos próximos dias. */
-  @Tool(name = "proximosVencimentos", description = """
+  @Tool(name = "proximosVencimentos", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
       Lista as guias fiscais ainda nao pagas do produtor (ICMS, FUNRURAL, DARF, GPS...) que vencem \
       a partir de hoje, da mais proxima para a mais distante, no maximo 10. Use para perguntas \
       como "o que vence este mes?" ou "tenho imposto para pagar na semana que vem?".""")

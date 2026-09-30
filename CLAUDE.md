@@ -145,6 +145,10 @@ br.com.agrocontabil
 - **Nenhum segredo no repositório.** Senha de banco e JWT secret vêm de env var (`${DB_PASSWORD}`, `${JWT_SECRET}`). Ver `.env.example`.
 - **CORS** controlado por `app.cors.allowed-origins` (env `APP_CORS_ALLOWED_ORIGINS`). Nunca usar `*` em prod.
 - **Logs nunca contêm senha/token.** Ao logar requisições ou erros, não incluir credenciais.
+- **Ceres (assistente fiscal, Sprint 6):** tudo que vai ao modelo passa pelo `DataSanitizer`
+  (pergunta e resultado de toda função); DTOs das funções sem campo pessoal; auditoria em
+  `assistente_interacao` **sem o texto da pergunta nem da resposta** (changeSet 0025). Detalhes em
+  `docs/ceres-assistente.md`.
 
 ### Nota de integração para o frontend (papéis — issue #93)
 

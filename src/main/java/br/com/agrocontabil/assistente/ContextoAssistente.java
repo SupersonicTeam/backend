@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ToolContext;
 
 /**
@@ -32,6 +36,10 @@ public final class ContextoAssistente {
   private final UUID produtorId;
   private final LocalDate hoje;
   private final List<FonteDado> fontes = Collections.synchronizedList(new ArrayList<>());
+  private final AtomicInteger tokensEntrada = new AtomicInteger();
+  private final AtomicInteger tokensSaida = new AtomicInteger();
+  private final AtomicBoolean usoInformado = new AtomicBoolean();
+  private final AtomicInteger chamadasDeFuncao = new AtomicInteger();
 
   /**
    * Cria o contexto de uma pergunta.
@@ -73,6 +81,52 @@ public final class ContextoAssistente {
    */
   public void registrarFonte(String funcao, Map<String, String> parametros) {
     fontes.add(new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros))));
+  }
+
+  /**
+   * Soma o uso de tokens de uma resposta do modelo, para a auditoria (issue #144). Provedor que
+   * não informa uso é ignorado.
+   *
+   * @param resposta resposta do modelo
+   */
+  public void registrarUso(ChatResponse resposta) {
+    if (resposta == null || resposta.getMetadata() == null) {
+      return;
+    }
+    Usage uso = resposta.getMetadata().getUsage();
+    if (uso == null) {
+      return;
+    }
+    Integer entrada = uso.getPromptTokens();
+    Integer saida = uso.getCompletionTokens();
+    if (entrada != null && entrada > 0) {
+      tokensEntrada.addAndGet(entrada);
+      usoInformado.set(true);
+    }
+    if (saida != null && saida > 0) {
+      tokensSaida.addAndGet(saida);
+      usoInformado.set(true);
+    }
+  }
+
+  /** Conta as funções que o modelo pediu, inclusive as que falharem (issue #144). */
+  public void registrarChamadasDeFuncao(int quantidade) {
+    chamadasDeFuncao.addAndGet(quantidade);
+  }
+
+  /** Tokens de entrada somados; nulo se o provedor não informou uso. */
+  public Integer tokensEntrada() {
+    return usoInformado.get() ? tokensEntrada.get() : null;
+  }
+
+  /** Tokens de saída somados; nulo se o provedor não informou uso. */
+  public Integer tokensSaida() {
+    return usoInformado.get() ? tokensSaida.get() : null;
+  }
+
+  /** Funções pedidas pelo modelo nesta pergunta. */
+  public int chamadasDeFuncao() {
+    return chamadasDeFuncao.get();
   }
 
   public UUID produtorId() {

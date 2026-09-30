@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0025-assistente-interacao.xml
+         Sprint 6 — issue #144 (RF020).
+
+         Auditoria das interacoes com a Ceres, a assistente fiscal. Uma
+         linha por pergunta: quem perguntou, qual rota respondeu, quais
+         funcoes (com parametros ja sanitizados) e quais trechos de lei
+         foram usados, modelo, latencia, tokens e desfecho.
+
+         SEM o texto da pergunta e SEM o texto da resposta, de proposito:
+         os dois carregam dados do produtor, e a auditoria precisa provar
+         o que o sistema fez, nao guardar o que o usuario disse. A mesma
+         tabela alimenta a avaliacao do TCC (#158).
+
+         FK para produtores com RESTRICT, como nota_fiscal: a auditoria
+         nao some junto com o produtor. A retencao/expurgo fica com a
+         issue de logs de auditoria (#149).
+
+         Tipos portaveis (H2 e PostgreSQL). O profile de teste desabilita
+         o Liquibase; o espelho esta em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0025-create-assistente-interacao" author="supersonic-team">
+        <comment>
+            Cria assistente_interacao: auditoria das perguntas a Ceres, sem
+            o texto da pergunta nem da resposta.
+        </comment>
+
+        <createTable tableName="assistente_interacao">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rota" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="desfecho" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="funcoes" type="TEXT"/>
+            <column name="chamadas_funcao" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="trechos_citados" type="TEXT"/>
+            <column name="modelo" type="VARCHAR(120)"/>
+            <column name="latencia_ms" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tokens_entrada" type="INTEGER"/>
+            <column name="tokens_saida" type="INTEGER"/>
+            <column name="tamanho_pergunta" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="assistente_interacao"
+                baseColumnNames="produtor_id"
+                constraintName="fk_assistente_interacao_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="RESTRICT"/>
+
+        <createIndex tableName="assistente_interacao"
+                     indexName="idx_assistente_interacao_produtor_criado">
+            <column name="produtor_id"/>
+            <column name="criado_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="assistente_interacao"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

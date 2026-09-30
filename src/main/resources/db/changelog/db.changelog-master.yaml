@@ -54,3 +54,5 @@ databaseChangeLog:
       file: db/changelog/changes/0023-shedlock.xml
   - include:
       file: db/changelog/changes/0024-contador-vinculo.xml
+  - include:
+      file: db/changelog/changes/0025-assistente-interacao.xml
