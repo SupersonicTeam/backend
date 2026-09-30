@@ -17,7 +17,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       timeout: 2s     # timeout do health do Ollama
  *       cache: 10s      # por quanto tempo o último resultado do health é reaproveitado
  *     max-rodadas-ferramentas: 3     # teto do laço modelo → função → modelo (issue #142)
- *     max-conversas-simultaneas: 4   # perguntas em andamento ao mesmo tempo (issue #142)
+ *     max-conversas-simultaneas: 4   # perguntas em andamento ao mesmo tempo (issues #142, #157)
+ *     timeout-pergunta: 5m           # tempo total de uma pergunta (issue #157)
+ *     timeout-funcao: 10s            # tempo de cada consulta aos dados do produtor (issue #157)
  * </pre>
  *
  * <p>Registrada via {@link org.springframework.boot.context.properties.EnableConfigurationProperties}
@@ -37,14 +39,31 @@ public class AssistenteProperties implements InitializingBean {
   private int maxRodadasFerramentas = 3;
 
   /**
-   * Perguntas processadas ao mesmo tempo (issue #142). Cada uma prende uma thread do Tomcat pelo
-   * tempo de geração do modelo — dezenas de segundos em CPU. Acima do teto a resposta é 429,
-   * em vez de esgotar as threads do servidor inteiro.
+   * Perguntas processadas ao mesmo tempo (issues #142 e #157); é também o tamanho do pool de
+   * threads da Ceres. Cada pergunta ocupa uma thread pelo tempo de geração do modelo — dezenas de
+   * segundos em CPU. Acima do teto a resposta é 503 {@code ASSISTENTE_OCUPADO}, sem fila.
    */
   private int maxConversasSimultaneas = 4;
 
+  /**
+   * Tempo total de uma pergunta: classificação, funções e geração (issue #157). Passou disso, a
+   * pergunta é interrompida e o cliente recebe 503 {@code ASSISTENTE_TEMPO_ESGOTADO}. Vale também
+   * como timeout do streaming (SSE).
+   */
+  private Duration timeoutPergunta = Duration.ofMinutes(5);
+
+  /**
+   * Tempo de cada consulta de uma função aos dados do produtor (issue #157), aplicado como timeout
+   * de transação — e, por ela, como timeout das queries no banco. Resolução de segundos (a do
+   * timeout de transação do Spring).
+   */
+  private Duration timeoutFuncao = Duration.ofSeconds(10);
+
   /** Recuperação de legislação (issue #156). */
   private Rag rag = new Rag();
+
+  /** Orquestração (issue #157). */
+  private Orquestracao orquestracao = new Orquestracao();
 
   /**
    * Recusa valores fora de faixa na subida, em vez de descobrir o problema no primeiro health.
@@ -68,6 +87,23 @@ public class AssistenteProperties implements InitializingBean {
       throw new IllegalStateException(
           "app.assistente.rag.similaridade-minima deve estar em [0, 1), recebido: "
               + rag.getSimilaridadeMinima());
+    }
+    if (orquestracao.getConfiancaMinima() < 0 || orquestracao.getConfiancaMinima() > 1) {
+      throw new IllegalStateException(
+          "app.assistente.orquestracao.confianca-minima deve estar em [0, 1], recebido: "
+              + orquestracao.getConfiancaMinima());
+    }
+    exigirPositivo(timeoutPergunta, "app.assistente.timeout-pergunta");
+    exigirPositivo(timeoutFuncao, "app.assistente.timeout-funcao");
+    if (timeoutFuncao.toSeconds() < 1) {
+      throw new IllegalStateException(
+          "app.assistente.timeout-funcao deve ser de pelo menos 1s (resolucao do timeout de "
+              + "transacao), recebido: " + timeoutFuncao);
+    }
+    if (timeoutFuncao.compareTo(timeoutPergunta) >= 0) {
+      throw new IllegalStateException(
+          "app.assistente.timeout-funcao (" + timeoutFuncao + ") deve ser menor que "
+              + "app.assistente.timeout-pergunta (" + timeoutPergunta + ")");
     }
     if (maxConversasSimultaneas < 1) {
       throw new IllegalStateException(
@@ -98,6 +134,30 @@ public class AssistenteProperties implements InitializingBean {
     this.maxConversasSimultaneas = maxConversasSimultaneas;
   }
 
+  public Duration getTimeoutPergunta() {
+    return timeoutPergunta;
+  }
+
+  public void setTimeoutPergunta(Duration timeoutPergunta) {
+    this.timeoutPergunta = timeoutPergunta;
+  }
+
+  public Duration getTimeoutFuncao() {
+    return timeoutFuncao;
+  }
+
+  public void setTimeoutFuncao(Duration timeoutFuncao) {
+    this.timeoutFuncao = timeoutFuncao;
+  }
+
+  public Orquestracao getOrquestracao() {
+    return orquestracao;
+  }
+
+  public void setOrquestracao(Orquestracao orquestracao) {
+    this.orquestracao = orquestracao;
+  }
+
   public Rag getRag() {
     return rag;
   }
@@ -112,6 +172,24 @@ public class AssistenteProperties implements InitializingBean {
 
   public void setSaude(Saude saude) {
     this.saude = saude;
+  }
+
+  /** Orquestração (issue #157). */
+  public static class Orquestracao {
+
+    /**
+     * Confiança mínima do classificador de intenção. Abaixo dela a pergunta é tratada como fora de
+     * escopo: na dúvida, a Ceres não responde.
+     */
+    private double confiancaMinima = 0.5;
+
+    public double getConfiancaMinima() {
+      return confiancaMinima;
+    }
+
+    public void setConfiancaMinima(double confiancaMinima) {
+      this.confiancaMinima = confiancaMinima;
+    }
   }
 
   /** Recuperação de trechos de lei (issue #156). */

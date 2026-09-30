@@ -87,8 +87,10 @@ br.com.agrocontabil
 │                  # fala com o backend só pelas interfaces de porta/ (DadosProdutorPorta,
 │                  # IdentidadePorta, AuditoriaPorta), implementadas em adaptador/ (os únicos que
 │                  # chamam services; nunca repository). Nada fora do módulo depende dele, exceto
-│                  # controller e config; nada nele é @Transactional. AssistenteService (entrada),
-│                  # auditoria/ (AuditoriaAssistente), orquestracao/ e memoria/ (esqueletos).
+│                  # controller e config; nada nele é @Transactional. AssistenteService (entrada:
+│                  # bulkhead global + 1 por produtor, pool agro-ceres-, timeout, SSE — #157),
+│                  # auditoria/ (AuditoriaAssistente), orquestracao/ (ClassificadorIntencao +
+│                  # OrquestradorService: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO), memoria/ (esqueleto).
 │                  # llm/ (ModeloLinguagem = porta única
 │                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
@@ -124,7 +126,8 @@ br.com.agrocontabil
 | GET | `/api/contador/guias?produtorId=&page=&size=` | Lista paginada (padrão 100, máx. 200) das guias do usuário autenticado (404 se o id for de outro); corpo array + total em `X-Total-Count` (#103) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (só papel PRODUTOR; contador recebe 403) |
 | GET | `/api/calendario-fiscal/{produtorId}/vencimentos?de=&ate=` | Vencimentos fiscais do produtor na janela `de`/`ate` (padrão: mês corrente ±12 meses; máx. 36 meses) (#103) |
-| POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[], modoFallback}`. Hoje só a rota de dados, síncrona (#142); só produtor (contador 403); 429 acima do limite de perguntas simultâneas; 503 com o modelo fora |
+| POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[], modoFallback}`; rota decidida pelo orquestrador: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO (#157); só produtor (contador 403); 503 `ASSISTENTE_OCUPADO` + `Retry-After` sem vaga (limite global ou pergunta anterior do mesmo produtor em andamento), 503 `ASSISTENTE_TEMPO_ESGOTADO`, 503 `ASSISTENTE_INDISPONIVEL` com o modelo fora |
+| POST | `/api/assistente/chat/stream` | Mesma pergunta em SSE (#157): eventos `rota` → `resposta` → `fim`, ou `erro` (envelope `errors[]`); sem tokens parciais (só a resposta já validada) |
 
 ## Segurança
 
@@ -155,8 +158,13 @@ br.com.agrocontabil
 - **Logs nunca contêm senha/token.** Ao logar requisições ou erros, não incluir credenciais.
 - **Ceres (assistente fiscal, Sprint 6):** tudo que vai ao modelo passa pelo `DataSanitizer`
   (pergunta e resultado de toda função); DTOs das funções sem campo pessoal; auditoria em
-  `assistente_interacao` **sem o texto da pergunta nem da resposta** (changeSet 0025). Detalhes em
-  `docs/ceres-assistente.md`.
+  `assistente_interacao` **sem o texto da pergunta nem da resposta** (changeSet 0025). Isolamento
+  de recursos (#157): nenhuma transação durante a chamada ao modelo, bulkhead (503
+  `ASSISTENTE_OCUPADO` + `Retry-After`), pool próprio e timeouts por pergunta e por função.
+  Detalhes em `docs/ceres-assistente.md`.
+- **Erro para cliente SSE sai em JSON:** o envelope acompanha o `Accept` (JSON ou XML), mas para
+  cliente que pede `Accept: text/event-stream` a negociação falhava dentro do próprio handler e
+  virava 500; para ele o `GlobalExceptionHandler.tipoDoErro()` fixa `application/json` (#157).
 
 ### Nota de integração para o frontend (papéis — issue #93)
 

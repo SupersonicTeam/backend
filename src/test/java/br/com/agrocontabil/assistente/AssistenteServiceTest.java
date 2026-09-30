@@ -7,33 +7,45 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.orquestracao.Intencao;
+import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
+import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
 import br.com.agrocontabil.assistente.porta.IdentidadePorta;
+import br.com.agrocontabil.assistente.rag.CitacaoLegal;
+import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.exception.AssistenteOcupadoException;
+import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
 import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.security.PapelUsuario;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,74 +53,117 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Testes do {@link AssistenteService} (issues #142 e #144): identidade primeiro, vagas limitadas,
- * auditoria de toda pergunta e resposta retida se a auditoria falhar.
+ * Testes do {@link AssistenteService} (issues #142, #144 e #157): identidade primeiro, bulkhead
+ * (global e por produtor), tempo total, auditoria de toda pergunta e resposta retida se a
+ * auditoria falhar.
  */
 @ExtendWith(MockitoExtension.class)
 class AssistenteServiceTest {
 
+  private static final String URL = "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm";
+
   @Mock private IdentidadePorta identidade;
-  @Mock private RotaDados rotaDados;
+  @Mock private OrquestradorService orquestrador;
   @Mock private AuditoriaAssistente auditoria;
   @Mock private ModeloLinguagem modeloLinguagem;
 
   private final UUID produtorId = UUID.randomUUID();
   private AssistenteService service;
 
-  @BeforeEach
-  void setUp() {
+  private AssistenteService criar(int maxConversas, Duration timeoutPergunta) {
     AssistenteProperties propriedades = new AssistenteProperties();
-    propriedades.setMaxConversasSimultaneas(1);
+    propriedades.setMaxConversasSimultaneas(maxConversas);
+    propriedades.setTimeoutPergunta(timeoutPergunta);
     // 29/09/2026 02:00 UTC = 28/09 23:00 em Brasilia: "hoje" da Ceres e o dia de Brasilia.
     Clock clock = Clock.fixed(Instant.parse("2026-09-29T02:00:00Z"), ZoneOffset.UTC);
     service = new AssistenteService(
-        identidade, rotaDados, auditoria, modeloLinguagem, clock, propriedades);
+        identidade, orquestrador, auditoria, modeloLinguagem, clock, propriedades);
+    return service;
+  }
+
+  private AssistenteService criar() {
+    return criar(1, Duration.ofSeconds(10));
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (service != null) {
+      service.destroy();
+    }
+  }
+
+  private static ResultadoOrquestracao ok() {
+    return new ResultadoOrquestracao(
+        Intencao.DADOS, "ok", DesfechoInteracao.RESPONDIDA, List.of(), true);
   }
 
   @Test
-  @DisplayName("Contexto com o produtor autenticado e 'hoje' em Brasilia; auditoria RESPONDIDA")
-  void contextoDoProdutorAutenticado() {
+  @DisplayName("Contexto do produtor autenticado; rota, citacoes e fontes no contrato; auditoria")
+  void contratoCompleto() {
+    criar();
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
     when(modeloLinguagem.identificacao()).thenReturn("ollama/qwen3:4b");
     AtomicReference<ContextoAssistente> recebido = new AtomicReference<>();
-    when(rotaDados.responder(anyString(), any())).thenAnswer(inv -> {
-      recebido.set(inv.getArgument(1));
-      return ResultadoRota.aceita("ok");
+    when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      recebido.set(contexto);
+      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"));
+      return new ResultadoOrquestracao(Intencao.MISTO, "texto", DesfechoInteracao.RESPONDIDA,
+          List.of(new CitacaoLegal("LC 214/2025", "art. 138", URL, "trecho")), true);
     });
 
     AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("oi Ceres"));
 
-    assertThat(resposta.rota()).isEqualTo("DADOS");
+    assertThat(resposta.rota()).isEqualTo("MISTO");
+    assertThat(resposta.citacoes()).singleElement()
+        .satisfies(c -> assertThat(c.url()).isEqualTo(URL));
+    assertThat(resposta.fontesDados()).extracting(AssistenteChatResponse.FonteDado::funcao)
+        .containsExactly("consultarApuracao");
     assertThat(recebido.get().produtorId()).isEqualTo(produtorId);
     assertThat(recebido.get().hoje()).isEqualTo(LocalDate.of(2026, 9, 28));
     // So o tamanho da pergunta vai a auditoria, nunca o texto.
-    verify(auditoria).registrar(eq(recebido.get()), eq("DADOS"),
+    verify(auditoria).registrar(eq(recebido.get()), eq("MISTO"),
         eq(DesfechoInteracao.RESPONDIDA), eq("ollama/qwen3:4b"), anyLong(), eq(8));
   }
 
   @Test
-  @DisplayName("Resposta descartada nao exibe fontesDados e e auditada com o motivo")
-  void descartadaSemFontes() {
+  @DisplayName("A pergunta roda no pool proprio da Ceres, nao na thread da requisicao")
+  void rodaNoPoolProprio() {
+    criar();
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
-    when(rotaDados.responder(anyString(), any())).thenAnswer(inv -> {
-      ContextoAssistente contexto = inv.getArgument(1);
-      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"));
-      return ResultadoRota.descartada("Nao consegui confirmar os valores.",
-          DesfechoInteracao.NUMERO_SEM_FONTE);
+    AtomicReference<String> thread = new AtomicReference<>();
+    when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
+      thread.set(Thread.currentThread().getName());
+      return ok();
     });
 
-    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("oi"));
+    service.conversar(new AssistenteChatRequest("oi"));
 
-    assertThat(resposta.fontesDados()).isEmpty();
-    verify(auditoria).registrar(any(), eq("DADOS"), eq(DesfechoInteracao.NUMERO_SEM_FONTE),
-        any(), anyLong(), anyInt());
+    assertThat(thread.get()).startsWith(AssistenteService.PREFIXO_THREADS);
+  }
+
+  @Test
+  @DisplayName("Parte de dados descartada: fontesDados nao aparece")
+  void semFontesQuandoDadosDescartados() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"));
+      return new ResultadoOrquestracao(Intencao.DADOS, "Nao consegui confirmar os valores.",
+          DesfechoInteracao.NUMERO_SEM_FONTE, List.of(), false);
+    });
+
+    assertThat(service.conversar(new AssistenteChatRequest("oi")).fontesDados()).isEmpty();
   }
 
   @Test
   @DisplayName("RF020: se a auditoria nao grava, a resposta nao e entregue (503)")
   void auditoriaFalhaRetemResposta() {
+    criar();
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
-    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("R$ 10,00"));
+    when(orquestrador.responder(anyString(), any(), any())).thenReturn(new ResultadoOrquestracao(
+        Intencao.DADOS, "R$ 10,00", DesfechoInteracao.RESPONDIDA, List.of(), true));
     doThrow(new IllegalStateException("banco fora")).when(auditoria)
         .registrar(any(), any(), any(), any(), anyLong(), anyInt());
 
@@ -117,23 +172,42 @@ class AssistenteServiceTest {
   }
 
   @Test
-  @DisplayName("Modelo fora: auditado como MODELO_INDISPONIVEL e o 503 original sobe")
-  void modeloForaAuditado() {
+  @DisplayName("Modelo fora antes da classificacao: auditado com rota INDEFINIDA")
+  void modeloForaAntesDaRota() {
+    criar();
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
     AssistenteIndisponivelException fora = new AssistenteIndisponivelException("fora", null);
-    when(rotaDados.responder(anyString(), any())).thenThrow(fora);
+    when(orquestrador.responder(anyString(), any(), any())).thenThrow(fora);
 
     assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("oi"))).isSameAs(fora);
-    verify(auditoria).registrar(any(), eq("DADOS"), eq(DesfechoInteracao.MODELO_INDISPONIVEL),
-        any(), anyLong(), anyInt());
+    verify(auditoria).registrar(any(), eq(AssistenteService.ROTA_INDEFINIDA),
+        eq(DesfechoInteracao.MODELO_INDISPONIVEL), any(), anyLong(), anyInt());
+  }
+
+  @Test
+  @DisplayName("Modelo fora depois da classificacao: auditado com a rota decidida")
+  @SuppressWarnings("unchecked")
+  void modeloForaDepoisDaRota() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
+      ((Consumer<Intencao>) inv.getArgument(2)).accept(Intencao.LEGISLACAO);
+      throw new AssistenteIndisponivelException("fora", null);
+    });
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("oi")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    verify(auditoria).registrar(any(), eq("LEGISLACAO"),
+        eq(DesfechoInteracao.MODELO_INDISPONIVEL), any(), anyLong(), anyInt());
   }
 
   @Test
   @DisplayName("Falha da auditoria de uma pergunta que ja falhou nao esconde a falha original")
   void auditoriaDeFalhaNaoMascaraErro() {
+    criar();
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
     IllegalStateException bug = new IllegalStateException("bug");
-    when(rotaDados.responder(anyString(), any())).thenThrow(bug);
+    when(orquestrador.responder(anyString(), any(), any())).thenThrow(bug);
     doThrow(new IllegalStateException("banco fora")).when(auditoria)
         .registrar(any(), any(), any(), any(), anyLong(), anyInt());
 
@@ -141,26 +215,64 @@ class AssistenteServiceTest {
   }
 
   @Test
-  @DisplayName("Contador: 403 antes de ocupar vaga, chamar a rota ou auditar")
+  @DisplayName("Contador: 403 antes de ocupar vaga, orquestrar ou auditar (sincrono e streaming)")
   void contadorBarradoAntes() {
+    criar();
     when(identidade.produtorAutenticado()).thenThrow(
         new PapelNaoAutorizadoException(PapelUsuario.CONTADOR, PapelUsuario.PRODUTOR));
 
     assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("oi")))
         .isInstanceOf(PapelNaoAutorizadoException.class);
-    verifyNoInteractions(rotaDados, auditoria);
+    assertThatThrownBy(() -> service.conversarEmStream(new AssistenteChatRequest("oi"), "/x"))
+        .isInstanceOf(PapelNaoAutorizadoException.class);
+    verifyNoInteractions(orquestrador, auditoria);
   }
 
   @Test
-  @DisplayName("Acima do limite de perguntas simultaneas: 429; a vaga volta depois")
-  void limiteDeConcorrencia() throws Exception {
-    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+  @DisplayName("Limite global vale para sincrono e streaming somados, e a vaga volta ao terminar")
+  void limiteGlobal() throws Exception {
+    criar(1, Duration.ofSeconds(10));
+    UUID outroProdutor = UUID.randomUUID();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId, outroProdutor, outroProdutor,
+        outroProdutor);
     CountDownLatch dentro = new CountDownLatch(1);
     CountDownLatch liberar = new CountDownLatch(1);
-    when(rotaDados.responder(anyString(), any())).thenAnswer(inv -> {
+    when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
       dentro.countDown();
       liberar.await(5, TimeUnit.SECONDS);
-      return ResultadoRota.aceita("ok");
+      return ok();
+    });
+
+    CompletableFuture<AssistenteChatResponse> primeira =
+        CompletableFuture.supplyAsync(() -> service.conversar(new AssistenteChatRequest("1")));
+    assertThat(dentro.await(5, TimeUnit.SECONDS)).isTrue();
+
+    // Outro produtor, sem vaga global.
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("2")))
+        .isInstanceOfSatisfying(AssistenteOcupadoException.class,
+            e -> assertThat(e.getErrors().get(0).code())
+                .isEqualTo(ErrorCode.ASSISTENTE_OCUPADO.name()));
+    assertThatThrownBy(() -> service.conversarEmStream(new AssistenteChatRequest("3"), "/x"))
+        .isInstanceOf(AssistenteOcupadoException.class);
+
+    liberar.countDown();
+    assertThat(primeira.get(5, TimeUnit.SECONDS).resposta()).isEqualTo("ok");
+    assertThat(service.conversar(new AssistenteChatRequest("4")).resposta()).isEqualTo("ok");
+  }
+
+  @Test
+  @DisplayName("Uma pergunta por produtor: a segunda do mesmo produtor recebe 503 mesmo com vaga")
+  void umaPerguntaPorProdutor() throws Exception {
+    criar(4, Duration.ofSeconds(10));
+    UUID outroProdutor = UUID.randomUUID();
+    when(identidade.produtorAutenticado())
+        .thenReturn(produtorId, produtorId, outroProdutor, produtorId);
+    CountDownLatch dentro = new CountDownLatch(1);
+    CountDownLatch liberar = new CountDownLatch(1);
+    when(orquestrador.responder(eq("1"), any(), any())).thenAnswer(inv -> {
+      dentro.countDown();
+      liberar.await(5, TimeUnit.SECONDS);
+      return ok();
     });
 
     CompletableFuture<AssistenteChatResponse> primeira =
@@ -168,23 +280,67 @@ class AssistenteServiceTest {
     assertThat(dentro.await(5, TimeUnit.SECONDS)).isTrue();
 
     assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("2")))
-        .isInstanceOf(AssistenteOcupadoException.class);
+        .isInstanceOf(AssistenteOcupadoException.class)
+        .hasMessageContaining("pergunta em andamento");
+    // Outro produtor tem vaga.
+    when(orquestrador.responder(eq("3"), any(), any())).thenReturn(ok());
+    assertThat(service.conversar(new AssistenteChatRequest("3")).resposta()).isEqualTo("ok");
 
     liberar.countDown();
-    assertThat(primeira.get(5, TimeUnit.SECONDS).resposta()).isEqualTo("ok");
-    assertThat(service.conversar(new AssistenteChatRequest("3")).resposta()).isEqualTo("ok");
+    primeira.get(5, TimeUnit.SECONDS);
+    // Terminada a primeira, o produtor volta a poder perguntar.
+    when(orquestrador.responder(eq("4"), any(), any())).thenReturn(ok());
+    assertThat(service.conversar(new AssistenteChatRequest("4")).resposta()).isEqualTo("ok");
   }
 
   @Test
-  @DisplayName("Falha do modelo devolve a vaga (sem vazamento de permissoes do semaforo)")
-  void falhaDevolveVaga() {
+  @DisplayName("Tempo total esgotado: 503, thread interrompida, auditoria TEMPO_ESGOTADO fora da "
+      + "interrupcao e vaga devolvida")
+  void tempoEsgotado() {
+    criar(1, Duration.ofMillis(300));
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
-    when(rotaDados.responder(anyString(), any()))
-        .thenThrow(new AssistenteIndisponivelException("fora", null))
-        .thenReturn(ResultadoRota.aceita("ok"));
+    AtomicBoolean interrompida = new AtomicBoolean();
+    when(orquestrador.responder(eq("lenta"), any(), any())).thenAnswer(inv -> {
+      try {
+        new CountDownLatch(1).await(10, TimeUnit.SECONDS);
+        return ok();
+      } catch (InterruptedException e) {
+        interrompida.set(true);
+        // Como o cliente HTTP do modelo reage a interrupcao.
+        throw new AssistenteIndisponivelException("interrompida", e);
+      }
+    });
+    AtomicBoolean auditoriaEmThreadInterrompida = new AtomicBoolean(true);
+    doAnswer(inv -> {
+      auditoriaEmThreadInterrompida.set(Thread.currentThread().isInterrupted());
+      return null;
+    }).when(auditoria).registrar(any(), any(), eq(DesfechoInteracao.TEMPO_ESGOTADO), any(),
+        anyLong(), anyInt());
 
-    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("1")))
-        .isInstanceOf(AssistenteIndisponivelException.class);
-    assertThat(service.conversar(new AssistenteChatRequest("2")).resposta()).isEqualTo("ok");
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("lenta")))
+        .isInstanceOf(AssistenteTempoEsgotadoException.class);
+
+    verify(auditoria, timeout(5000)).registrar(any(), any(),
+        eq(DesfechoInteracao.TEMPO_ESGOTADO), any(), anyLong(), anyInt());
+    assertThat(interrompida).isTrue();
+    assertThat(auditoriaEmThreadInterrompida).isFalse();
+    // A vaga (global e do produtor) volta: a proxima pergunta e atendida.
+    when(orquestrador.responder(eq("rapida"), any(), any())).thenReturn(ok());
+    assertThat(perguntarQuandoHouverVaga("rapida").resposta()).isEqualTo("ok");
+  }
+
+  /** A vaga volta no finally da thread, logo depois da auditoria: espera esse instante. */
+  private AssistenteChatResponse perguntarQuandoHouverVaga(String pergunta) {
+    long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+    while (true) {
+      try {
+        return service.conversar(new AssistenteChatRequest(pergunta));
+      } catch (AssistenteOcupadoException e) {
+        if (System.nanoTime() > limite) {
+          throw e;
+        }
+        Thread.onSpinWait();
+      }
+    }
   }
 }

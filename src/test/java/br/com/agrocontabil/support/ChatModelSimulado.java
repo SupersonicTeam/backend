@@ -1,5 +1,6 @@
 package br.com.agrocontabil.support;
 
+import br.com.agrocontabil.assistente.PromptsCeres;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -31,12 +32,16 @@ public class ChatModelSimulado implements ChatModel {
   public static final String RESPOSTA_PADRAO = "resposta simulada";
 
   private final List<Prompt> prompts = new CopyOnWriteArrayList<>();
+  private final List<Prompt> classificacoes = new CopyOnWriteArrayList<>();
+  private volatile String classificacao;
   private final Deque<ChatResponse> fila = new ArrayDeque<>();
   private Function<Prompt, ChatResponse> responder = prompt -> texto(RESPOSTA_PADRAO);
 
   /** Volta ao comportamento padrão e esquece os prompts recebidos. */
   public synchronized void reiniciar() {
     prompts.clear();
+    classificacoes.clear();
+    classificacao = null;
     fila.clear();
     responder = prompt -> texto(RESPOSTA_PADRAO);
   }
@@ -68,6 +73,22 @@ public class ChatModelSimulado implements ChatModel {
     };
   }
 
+  /**
+   * Responde o prompt do classificador de intenção (issue #157) com esta intenção e confiança
+   * 0,95, sem consumir o comportamento programado para as rotas. As chamadas de classificação vão
+   * para {@link #classificacoesRecebidas()}, não para {@link #promptsRecebidos()}.
+   *
+   * @param intencao nome da intenção (DADOS, LEGISLACAO, MISTO, FORA_DE_ESCOPO)
+   */
+  public void classificarComo(String intencao) {
+    this.classificacao = intencao;
+  }
+
+  /** Prompts de classificação recebidos (só quando {@link #classificarComo} está ativo). */
+  public List<Prompt> classificacoesRecebidas() {
+    return List.copyOf(classificacoes);
+  }
+
   /** Prompts recebidos, na ordem das chamadas. */
   public List<Prompt> promptsRecebidos() {
     return List.copyOf(prompts);
@@ -75,11 +96,22 @@ public class ChatModelSimulado implements ChatModel {
 
   @Override
   public ChatResponse call(Prompt prompt) {
+    String intencao = classificacao;
+    if (intencao != null && ehClassificacao(prompt)) {
+      classificacoes.add(prompt);
+      return texto("{\"intencao\": \"" + intencao + "\", \"confianca\": 0.95}");
+    }
     prompts.add(prompt);
+    Function<Prompt, ChatResponse> comportamento;
     synchronized (this) {
       ChatResponse proxima = fila.poll();
-      return proxima != null ? proxima : responder.apply(prompt);
+      if (proxima != null) {
+        return proxima;
+      }
+      comportamento = responder;
     }
+    // Fora do lock: um comportamento que bloqueia (modelo "pensando") nao trava outras chamadas.
+    return comportamento.apply(prompt);
   }
 
   @Override
@@ -90,6 +122,11 @@ public class ChatModelSimulado implements ChatModel {
   @Override
   public ChatOptions getDefaultOptions() {
     return ChatOptions.builder().model("simulado").build();
+  }
+
+  private static boolean ehClassificacao(Prompt prompt) {
+    return prompt.getSystemMessage() != null
+        && PromptsCeres.CLASSIFICACAO.equals(prompt.getSystemMessage().getText());
   }
 
   /** Resposta de texto simples do modelo. */

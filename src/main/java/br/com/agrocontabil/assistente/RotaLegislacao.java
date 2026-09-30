@@ -64,6 +64,7 @@ public class RotaLegislacao {
    *         falharem
    */
   public ResultadoRota responder(String pergunta, ContextoAssistente contexto) {
+    contexto.verificarAtiva();
     List<TrechoRecuperado> trechos = busca.buscar(pergunta, contexto.hoje());
     if (trechos.isEmpty()) {
       return ResultadoRota.descartada(
@@ -74,6 +75,7 @@ public class RotaLegislacao {
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos))),
         new UserMessage(perguntaAoModelo)));
+    contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(resposta);
     String texto = limpar(resposta.getResult().getOutput().getText());
