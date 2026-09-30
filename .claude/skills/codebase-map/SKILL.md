@@ -79,7 +79,9 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `AssistenteService` | Entrada da Ceres: identidade (porta) → vaga (semáforo) → rota → auditoria |
+| `AssistenteService` | Entrada da Ceres: identidade (porta) → vaga (global + 1 por produtor, 503 `ASSISTENTE_OCUPADO`) → orquestração no pool `agro-ceres-` com timeout total → auditoria; SSE (`conversarEmStream`) com prazo próprio |
+| `orquestracao/OrquestradorService` | Classifica (`ClassificadorIntencao`, Fase 1 `LlmClassificadorIntencao`) e despacha: DADOS→`RotaDados`, LEGISLACAO→`RotaLegislacao`, MISTO→as duas, FORA_DE_ESCOPO/confiança baixa→texto fixo |
+| `PerguntaInterrompidaException` | Pergunta interrompida (tempo esgotado/cliente saiu): as rotas param via `ContextoAssistente.verificarAtiva()` |
 | `porta/DadosProdutorPorta` | Leitura dos dados do produtor (compras, apuração, créditos, notas, vencimentos) com records próprios, sem entidade nem projeção de repository |
 | `porta/IdentidadePorta` | Produtor autenticado, resolvido uma vez na thread da requisição |
 | `porta/AuditoriaPorta` | Gravação do `RegistroInteracao` (sem texto da pergunta/resposta) |
@@ -107,7 +109,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 
 `service/AssistenteInteracaoService` (chamado pelo `AuditoriaAdaptador`): grava `AssistenteInteracao` (tabela `assistente_interacao`, changeSet 0025) — rota, desfecho, funções mascaradas, modelo, latência, tokens, tamanho da pergunta; **nunca o texto** (issue #144). `config/LimiteCorpoAssistenteFilter`: 413 acima de 16 KB em `/api/assistente/**`, antes do Jackson.
 
-`service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `controller/AssistenteController`: `POST /api/assistente/chat` → `assistente/AssistenteService`.
+`service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `controller/AssistenteController`: `POST /api/assistente/chat` e `POST /api/assistente/chat/stream` (SSE) → `assistente/AssistenteService`. `DadosProdutorAdaptador` roda cada consulta numa transação curta com timeout `app.assistente.timeout-funcao`.
 
 `config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-rodadas-ferramentas`, `max-conversas-simultaneas`).
 Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.
@@ -202,7 +204,8 @@ Bean Validation customizada (anotação + validator):
 | `GuiaJaPagaException` | 409 | Guia fiscal já está PAGA (issue #74) |
 | `JanelaCalendarioInvalidaException` | 400 | `de > ate` ou janela > 36 meses no calendário fiscal (issue #103) |
 | `AssistenteIndisponivelException` | 503 | Modelo da Ceres não respondeu / não configurado (issue #141) |
-| `AssistenteOcupadoException` | 429 | Acima de `app.assistente.max-conversas-simultaneas` (issue #142) |
+| `AssistenteOcupadoException` | 503 + `Retry-After` | Sem vaga: limite `app.assistente.max-conversas-simultaneas` ou pergunta do mesmo produtor em andamento (#142, #157) |
+| `AssistenteTempoEsgotadoException` | 503 | Pergunta além de `app.assistente.timeout-pergunta` (#157) |
 | `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |

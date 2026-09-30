@@ -122,6 +122,7 @@ public class RotaDados {
         new UserMessage(perguntaAoModelo)), opcoes);
 
     List<String> resultados = new ArrayList<>();
+    contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(resposta);
     int rodadas = 0;
@@ -137,9 +138,11 @@ public class RotaDados {
         return ResultadoRota.descartada(
             MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
       }
+      contexto.verificarAtiva();
       ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, resposta);
       coletarResultados(execucao.conversationHistory(), resultados);
       prompt = new Prompt(execucao.conversationHistory(), opcoes);
+      contexto.verificarAtiva();
       resposta = modelo.chamar(prompt);
       contexto.registrarUso(resposta);
       rodadas++;

@@ -111,10 +111,15 @@ public enum ErrorCode {
   ASSISTENTE_INDISPONIVEL,
   /**
    * A Ceres ja esta processando o maximo de perguntas simultaneas
-   * ({@code app.assistente.max-conversas-simultaneas}). O cliente tenta de novo em instantes.
-   * HTTP 429.
+   * ({@code app.assistente.max-conversas-simultaneas}), ou o produtor ja tem uma pergunta em
+   * andamento. HTTP 503 com header {@code Retry-After} (issue #157).
    */
-  ASSISTENTE_OCUPADO;
+  ASSISTENTE_OCUPADO,
+  /**
+   * A pergunta passou do tempo maximo ({@code app.assistente.timeout-pergunta}) e foi interrompida.
+   * O cliente pode reformular a pergunta ou tentar mais tarde. HTTP 503 (issue #157).
+   */
+  ASSISTENTE_TEMPO_ESGOTADO;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

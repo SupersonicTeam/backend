@@ -21,8 +21,17 @@ public enum DesfechoInteracao {
   SEM_FUNDAMENTO_LEGAL,
   /** Resposta de legislação sem marca de citação ou com marca inexistente: descartada. */
   CITACAO_INVALIDA,
+  /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
+  FORA_DE_ESCOPO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */
   MODELO_INDISPONIVEL,
+  /** O cliente do streaming desconectou antes da resposta; o restante foi abandonado (#157). */
+  CANCELADA,
+  /**
+   * A pergunta passou de {@code app.assistente.timeout-pergunta} e foi interrompida (#157). O
+   * cliente recebeu 503 {@code ASSISTENTE_TEMPO_ESGOTADO}.
+   */
+  TEMPO_ESGOTADO,
   /** Falha inesperada do backend. */
   ERRO
 }

@@ -87,6 +87,8 @@ class AssistenteChatIntegrationTest {
   void setUp() {
     cleaner.limparTudo();
     modelo.reiniciar();
+    // Estes testes exercitam a rota de dados; a classificacao (#157) tem testes proprios.
+    modelo.classificarComo("DADOS");
     produtorA = produtorRepository.save(Produtor.builder()
         .nomeCompleto("Fazenda A").cpfCnpj("98765432100").estado("MT").build());
     produtorB = produtorRepository.save(Produtor.builder()

@@ -90,8 +90,8 @@ Garantias, todas em código:
 - **Sem text-to-SQL:** consultas fixas e parametrizadas; texto digitado vira `LIKE` escapado.
 - **Minimização:** as funções devolvem totais, datas, contagens e listas curtas — nenhum nome,
   CPF/CNPJ, endereço, chave de acesso ou observação.
-- **Custo limitado:** no máximo `AI_MAX_RODADAS_FERRAMENTAS` (3) rodadas de funções por pergunta e
-  `AI_MAX_CONVERSAS_SIMULTANEAS` (4) perguntas ao mesmo tempo (acima disso, 429).
+- **Custo limitado:** no máximo `AI_MAX_RODADAS_FERRAMENTAS` (3) rodadas de funções por pergunta;
+  concorrência e tempos na seção de orquestração (#157).
 - **Erro de função:** o modelo recebe só a orientação de parâmetro inválido (escrita por nós) ou
   uma mensagem genérica — nunca a mensagem do banco.
 
@@ -107,8 +107,9 @@ trocável por configuração).
   marcadores (`[CPF]`...) na **pergunta** e em **todo resultado de função**
   (`ResultadoSanitizadoConverter`, declarado em cada `@Tool`). Valores, datas e NCM ficam intactos.
 - **Auditoria (`assistente_interacao`, changeSet 0025):** uma linha por pergunta — produtor, rota,
-  desfecho (`RESPONDIDA`, `NUMERO_SEM_FONTE`, `SEM_CONCLUSAO`, `SEM_RESPOSTA`,
-  `MODELO_INDISPONIVEL`, `ERRO`), funções com parâmetros mascarados, quantas funções o modelo
+  desfecho (`RESPONDIDA`, `NUMERO_SEM_FONTE`, `SEM_CONCLUSAO`, `FUNCAO_NAO_PERMITIDA`,
+  `SEM_RESPOSTA`, `SEM_FUNDAMENTO_LEGAL`, `CITACAO_INVALIDA`, `FORA_DE_ESCOPO`,
+  `MODELO_INDISPONIVEL`, `TEMPO_ESGOTADO`, `CANCELADA`, `ERRO`), funções com parâmetros mascarados, quantas funções o modelo
   pediu, modelo, latência, tokens e o **tamanho** da pergunta. **Sem o texto da pergunta nem da
   resposta** — a entidade nem tem onde guardá-los. Se a auditoria não gravar, a resposta não é
   entregue (503). Alimenta também a avaliação do TCC (#158).
@@ -172,3 +173,59 @@ trechos oficiais da EC 132/2023 e da LC 214/2025, e a citação é garantida em 
    link oficial. Marca inventada derruba a resposta.
 4. `ValidadorNumeros`: percentuais, prazos e números de artigo da resposta têm de estar nos
    trechos — "redução de 70%" que a lei não diz não passa.
+
+## Orquestração, streaming e isolamento de recursos (issue #157)
+
+### Rotas
+
+O `ClassificadorIntencao` (Fase 1: `LlmClassificadorIntencao`, saída JSON do próprio modelo; a
+Fase 2 troca a implementação sem mexer no orquestrador) devolve a intenção e a confiança. O
+`OrquestradorService` decide:
+
+| Intenção | Camada |
+|---|---|
+| `DADOS` | modelo + **só** as funções de dados |
+| `LEGISLACAO` | RAG + `ValidadorCitacao` |
+| `MISTO` | as duas, geradas e validadas **separadamente** e depois juntadas |
+| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo |
+
+No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com
+números da lei, e nenhum validador saberia de onde cada um veio.
+
+### Contrato
+
+Síncrono: `POST /api/assistente/chat`. Streaming (SSE): `POST /api/assistente/chat/stream`, path
+próprio (no mesmo path, o `Accept: */*` dos navegadores cairia no streaming).
+
+```json
+{ "resposta": "...", "rota": "MISTO", "citacoes": [], "fontesDados": [], "modoFallback": false }
+```
+
+Eventos do SSE, nesta ordem: `rota` (`{"rota":"DADOS"}`), `resposta` (o contrato acima) e `fim`;
+em caso de falha, `erro` com o envelope `errors[]`. **Não há tokens parciais:** números e citações
+só saem depois de conferidos pelos validadores. 400/401/403 e `ASSISTENTE_OCUPADO` são respondidos
+antes de o stream abrir, como JSON comum.
+
+### Isolamento de recursos: o chat não derruba a emissão
+
+- **Nenhuma transação durante a chamada ao modelo.** Nada no módulo é `@Transactional` nem usa
+  transação programática (`ArquiteturaAssistenteTest`). Cada função roda numa transação curta no
+  adaptador, que termina antes da próxima chamada ao modelo. Provado pelo
+  `AssistenteEscopoTransacionalIntegrationTest`, com **pool de 1 conexão**: com o modelo "pensando",
+  outra requisição consegue a conexão. Falsificado repondo `@Transactional` no orquestrador.
+- **Bulkhead:** no máximo `AI_MAX_CONVERSAS_SIMULTANEAS` (4) perguntas ao mesmo tempo, síncronas e
+  em streaming somadas, e **uma por produtor**. Sem vaga, **503 `ASSISTENTE_OCUPADO`** com
+  `Retry-After: 5`, sem fila.
+- **Pool próprio** (`agro-ceres-*`), do tamanho do limite, separado das threads do Tomcat e do
+  scheduler. Não é bean (um `Executor` no contexto desligaria o executor padrão do Boot, mesma
+  armadilha da #87).
+- **Timeouts:** `AI_TIMEOUT_PERGUNTA` (5 min) para a pergunta inteira: 503
+  `ASSISTENTE_TEMPO_ESGOTADO` no síncrono e evento `erro` no streaming. A thread da Ceres é
+  interrompida e a vaga volta. `AI_TIMEOUT_FUNCAO` (10 s) para cada consulta de função: vira
+  timeout de transação e, por ela, timeout das queries. O modelo recebe a mensagem genérica de
+  falha. A interrupção só alcança a thread durante a orquestração, nunca durante a auditoria.
+- **Cliente que desconecta** do streaming interrompe a pergunta (desfecho `CANCELADA`).
+
+> **Spring 6.2:** quando o `onTimeout` de um `SseEmitter` roda, o emissor já está encerrado e não
+> aceita eventos. Por isso o prazo da pergunta em streaming é um agendamento próprio, que dispara
+> antes do timeout do container (que fica 10 s depois, como rede de segurança).
