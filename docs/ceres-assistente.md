@@ -11,7 +11,7 @@ página cobre a base de infraestrutura (issue #141); o desenho completo está em
 | Peça | Escolha | Por quê |
 |---|---|---|
 | Integração | Spring AI **1.1.8** | Linha compatível com o Boot 3.5.14 (a 2.x exige Boot 4) |
-| Modelo de chat | `qwen3:4b` no **Ollama** (local) | Orientação do prof. Luan: arquitetura completa com modelo simples, escalar depois |
+| Modelo de chat | `qwen3:4b-instruct` no **Ollama** (local) | Orientação do prof. Luan: arquitetura completa com modelo simples, escalar depois. Variante *instruct* (Qwen3-4B-Instruct-2507): a tag `qwen3:4b` virou a variante *thinking*, que ignora `think=false` e levava 80–120 s só para classificar uma pergunta em CPU |
 | Provedor por API | qualquer API compatível com a da OpenAI (OpenAI, Maritaca) | Só configuração: `AI_CHAT_PROVIDER=openai` + `AI_API_KEY` |
 | Embedding | `bge-m3` no Ollama, 1024 dimensões | **Sempre local.** Trocar o modelo obriga a reindexar a legislação |
 | Vector store | pgvector no mesmo PostgreSQL 16 | Imagem `pgvector/pgvector:0.8.6-pg16`; schema pelo Liquibase (#156) |

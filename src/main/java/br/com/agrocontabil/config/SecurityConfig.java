@@ -4,6 +4,7 @@ import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.SecurityErrorResponder;
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -51,8 +52,12 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *
  * <p>Fora desses profiles o filtro nao existe (dai o {@code required = false} na injecao): nenhuma
  * requisicao carrega principal e a cadeia responde <strong>401</strong> com o envelope padrao.
+ *
+ * <p>So existe em aplicacao web: o {@code HttpSecurity} nao e criado sem servlet, e o comando de
+ * ingestao da Ceres (profile {@code ingestao}, issue #156) sobe sem servidor web.
  */
 @Configuration
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class SecurityConfig {
 
   /**

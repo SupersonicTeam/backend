@@ -122,7 +122,11 @@ spring:
         pull-model-strategy: ${AI_OLLAMA_PULL_STRATEGY:never}
       chat:
         options:
-          model: ${AI_CHAT_MODEL:qwen3:4b}
+          # qwen3:4b-instruct (Qwen3-4B-Instruct-2507), NAO qwen3:4b: desde a versao 2507 a tag
+          # qwen3:4b e a variante "thinking", que raciocina sempre e ignora think=false — despeja o
+          # raciocinio no texto (500-1000 tokens, 80-120 s em CPU so para classificar). A instruct
+          # classifica em ~20 tokens.
+          model: ${AI_CHAT_MODEL:qwen3:4b-instruct}
           # Temperatura baixa: a Ceres redige a partir de dados e trechos de lei, nao cria.
           temperature: 0.2
           # Janela de contexto explicita. Estourada, o Ollama descarta o INICIO do prompt — onde
