@@ -356,14 +356,16 @@ public class GlobalExceptionHandler {
    */
   static final int MAXIMO_VALOR_REJEITADO = 100;
 
-  private static String resumirValorRejeitado(Object valor) {
+  static String resumirValorRejeitado(Object valor) {
     if (valor == null) {
       return null;
     }
     String texto = String.valueOf(valor);
-    return texto.length() <= MAXIMO_VALOR_REJEITADO
-        ? texto
-        : texto.substring(0, MAXIMO_VALOR_REJEITADO) + "...";
+    if (texto.codePointCount(0, texto.length()) <= MAXIMO_VALOR_REJEITADO) {
+      return texto;
+    }
+    // Corte por code point: por indice de char, um emoji na borda viraria surrogate solto.
+    return texto.substring(0, texto.offsetByCodePoints(0, MAXIMO_VALOR_REJEITADO)) + "...";
   }
 
   /** Extrai o último nó do property path (nome do parâmetro), ex.: {@code saldo.periodo → periodo}. */

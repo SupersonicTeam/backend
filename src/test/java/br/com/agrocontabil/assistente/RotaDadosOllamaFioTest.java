@@ -135,6 +135,9 @@ class RotaDadosOllamaFioTest {
 
     assertThat(resultado.aceita()).isFalse();
     assertThat(resultado.texto()).isEqualTo(RotaDados.MENSAGEM_SEM_CONCLUSAO);
+    // Desfecho proprio: um pedido fora da lista e o sinal de injection que a auditoria precisa.
+    assertThat(resultado.desfecho()).isEqualTo(
+        br.com.agrocontabil.model.DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
     assertThat(corpos).hasSize(1);
   }
 

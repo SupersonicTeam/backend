@@ -130,12 +130,13 @@ public class RotaDados {
         log.warn("Ceres: teto de {} rodadas de funcoes atingido", maxRodadas);
         return ResultadoRota.descartada(MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.SEM_CONCLUSAO);
       }
+      contexto.registrarChamadasDeFuncao(quantidadeDeChamadas(resposta));
       if (!somenteFuncoesPermitidas(resposta)) {
         // Nome alucinado ou injetado: nada e executado. O nome nao vai ao log (vem do modelo).
         log.warn("Ceres: modelo pediu funcao fora da lista de funcoes de dados");
-        return ResultadoRota.descartada(MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.SEM_CONCLUSAO);
+        return ResultadoRota.descartada(
+            MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
       }
-      contexto.registrarChamadasDeFuncao(quantidadeDeChamadas(resposta));
       ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, resposta);
       coletarResultados(execucao.conversationHistory(), resultados);
       prompt = new Prompt(execucao.conversationHistory(), opcoes);

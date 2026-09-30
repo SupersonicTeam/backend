@@ -11,12 +11,15 @@ import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 /**
  * Limita o tamanho do corpo das requisições da Ceres ({@code /api/assistente/**}) antes de o
@@ -48,9 +51,14 @@ public class LimiteCorpoAssistenteFilter extends OncePerRequestFilter {
     this.objectMapper = objectMapper;
   }
 
+  /**
+   * Compara o caminho <strong>decodificado</strong>, sem parâmetros de matriz ({@code ;x=1}) e sem
+   * context path — o mesmo que o {@code DispatcherServlet} usa para achar o handler. Com a URI
+   * bruta, {@code /api/%61ssistente/chat} chegaria ao controller sem passar pelo limite.
+   */
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
-    return !request.getRequestURI().startsWith(PREFIXO);
+    return !UrlPathHelper.defaultInstance.getPathWithinApplication(request).startsWith(PREFIXO);
   }
 
   @Override
@@ -86,6 +94,13 @@ public class LimiteCorpoAssistenteFilter extends OncePerRequestFilter {
     }
 
     @Override
+    public BufferedReader getReader() throws IOException {
+      // O reader tambem passa pelo stream limitado: nenhum caminho le o corpo sem teto.
+      String charset = getCharacterEncoding() == null ? "UTF-8" : getCharacterEncoding();
+      return new BufferedReader(new InputStreamReader(getInputStream(), charset));
+    }
+
+    @Override
     public ServletInputStream getInputStream() throws IOException {
       ServletInputStream original = super.getInputStream();
       return new ServletInputStream() {
@@ -101,6 +116,19 @@ public class LimiteCorpoAssistenteFilter extends OncePerRequestFilter {
             lidos++;
           }
           return b;
+        }
+
+        @Override
+        public int read(byte[] destino, int inicio, int tamanho) throws IOException {
+          int restante = LIMITE_BYTES - lidos;
+          if (restante <= 0) {
+            return -1;
+          }
+          int n = original.read(destino, inicio, Math.min(tamanho, restante));
+          if (n > 0) {
+            lidos += n;
+          }
+          return n;
         }
 
         @Override
