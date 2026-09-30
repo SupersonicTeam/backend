@@ -199,7 +199,7 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 854 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 856 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 6 concluída (2026-09-30)
@@ -340,14 +340,14 @@ Prepara o `SefazService` para o transporte SOAP real. Issues **#84** (PR #124), 
 
 ### Sprint 6 — Ceres, a assistente fiscal, Fase 1 (concluída em 2026-09-30)
 
-Issues #141–#144, #156 e #157; PRs #159–#165 e #168. Desenho completo em `docs/ceres-assistente.md`.
+Issues #141–#144, #156 e #157; PRs #159–#165, #168 e #171. Desenho completo em `docs/ceres-assistente.md`.
 
 - **Infra (#141):** Spring AI 1.1.8, Ollama local (`qwen3:4b-instruct` + embedding `bge-m3`) ou provedor por API compatível com a OpenAI. Falha do modelo é sempre 503 `ASSISTENTE_INDISPONIVEL`; health do Ollama `DEGRADED`, nunca `DOWN`. **Módulo isolado** travado por ArchUnit (portas e adaptadores, nada `@Transactional`).
 - **Tool Calling (#142, #143):** cinco funções de dados sem parâmetro de produtor (o produtor vem do `ContextoAssistente` no `ToolContext`); laço de funções do backend com teto; `ValidadorNumeros` descarta resposta com número sem fonte.
 - **Sanitização e auditoria (#144):** `DataSanitizer` na pergunta e em todo resultado de função; `assistente_interacao` sem o texto da pergunta nem da resposta.
-- **RAG (#156):** `legislacao_trecho` (pgvector), um trecho por dispositivo, citação obrigatória validada em código. **Base ingerida:** LC 214/2025 compilada (5.615 trechos, 907 itens de anexo), EC 132/2023 (538) e LC 227/2026. Comando de ingestão só pelo profile `ingestao` (nunca endpoint).
+- **RAG (#156):** `legislacao_trecho` (pgvector), um trecho por dispositivo, citação obrigatória validada em código. **Base ingerida:** LC 214/2025 compilada (5.615 trechos, 907 itens de anexo), EC 132/2023 (538) e LC 227/2026 (2.211) — 8.364 trechos, textos compilados capturados do Planalto em 2026-09-30. Comando de ingestão só pelo profile `ingestao` (nunca endpoint).
 - **Orquestração e streaming (#157):** classificador de intenção → DADOS / LEGISLACAO / MISTO / FORA_DE_ESCOPO; `POST /api/assistente/chat` e `/chat/stream` (SSE, sem tokens parciais). Bulkhead (global + 1 por produtor, 503 `ASSISTENTE_OCUPADO` + `Retry-After`), pool `agro-ceres-`, timeouts por pergunta e por função, provado sem conexão presa por teste com pool de 1 conexão.
-- **Achados da execução real (#165, #168):** a LC 214 não declara charset (windows-1252); o comando de ingestão não subia sem servidor web (`SecurityConfig` agora `@ConditionalOnWebApplication`); o último artigo engolia os anexos (91.820 caracteres); a tag `qwen3:4b` virou a variante *thinking* (ignora `think=false`, 80–120 s por classificação) — padrão trocado para `qwen3:4b-instruct`.
+- **Achados da execução real (#165, #168):** a LC 214 não declara charset (windows-1252); o comando de ingestão não subia sem servidor web (`SecurityConfig` agora `@ConditionalOnWebApplication`); o último artigo engolia os anexos (91.820 caracteres); na LC 227 o Planalto omite a aspa antes de um artigo citado e 48 trechos saíam como artigos dela (#171); a tag `qwen3:4b` virou a variante *thinking* (ignora `think=false`, 80–120 s por classificação) — padrão trocado para `qwen3:4b-instruct`.
 - **Teste de ponta a ponta (2026-09-30, CPU):** fora de escopo 4 s, dados 24 s, legislação 45 s, misto 41 s. Qualidade do MISTO e perguntas de soma viraram #169 e #170 (Sprint 7).
 
 ### Débitos técnicos abertos
