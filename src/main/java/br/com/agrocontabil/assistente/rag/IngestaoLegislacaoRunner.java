@@ -1,10 +1,9 @@
 package br.com.agrocontabil.assistente.rag;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
-import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,8 +27,9 @@ import org.springframework.stereotype.Component;
  *   --ingestao.vigencia-inicio=2025-01-16"
  * </pre>
  *
- * <p>O arquivo é o HTML do texto compilado, salvo do Planalto; o charset vem do próprio documento
- * (o Planalto usa windows-1252). Ao terminar, fecha o contexto e a aplicação encerra.
+ * <p>O arquivo é o HTML do texto compilado, salvo do Planalto. O charset é detectado pelos bytes
+ * ({@link LeitorHtmlLegislacao}): a LC 214/2025 não o declara. Ao terminar, fecha o contexto e a
+ * aplicação encerra.
  */
 @Component
 @Profile("ingestao")
@@ -76,7 +76,7 @@ public class IngestaoLegislacaoRunner implements ApplicationRunner {
     try {
       FonteLegislacao fonte = new FonteLegislacao(
           norma, url, LocalDate.parse(dataCaptura), LocalDate.parse(vigenciaInicio));
-      List<DispositivoLegal> dispositivos = fatiador.fatiar(Jsoup.parse(new File(arquivo)));
+      List<DispositivoLegal> dispositivos = fatiador.fatiar(LeitorHtmlLegislacao.ler(Path.of(arquivo)));
       if (dispositivos.isEmpty()) {
         throw new IllegalStateException(
             "Nenhum dispositivo encontrado em " + arquivo + ": confira se e o texto compilado");
