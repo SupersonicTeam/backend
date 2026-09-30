@@ -84,6 +84,11 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ValidadorNumeros` | Todo número/data da resposta tem de aparecer nos resultados das funções, na pergunta ou no prompt de sistema; senão a resposta é descartada (issue #142) |
 | `DataSanitizer` | Máscara de CPF/CNPJ/chave/e-mail/telefone/CEP em tudo que vai ao modelo (pergunta + resultados). Aplicado nos resultados por `ferramentas/ResultadoSanitizadoConverter`, declarado em cada `@Tool` (issue #144) |
 | `ResultadoRota` | Texto + `DesfechoInteracao` da rota; fora de `RESPONDIDA` a resposta foi descartada |
+| `RotaLegislacao` | RAG (issue #156): trechos vigentes → modelo sem funções, trechos só com marca `[Tn]` → `ValidadorCitacao` + `ValidadorNumeros` contra os trechos. Sem trecho: "não encontrei fundamento legal" sem chamar o modelo |
+| `rag/FatiadorDispositivos` | HTML do Planalto (jsoup) → um `DispositivoLegal` por artigo/§/inciso/alínea, com o texto do caput; descarta tachado e anotações; nova redação de emenda vira "art. 1º (redação do art. 156-A, § 1º)" |
+| `rag/IngestaoLegislacaoService` | `PgVectorStore.add` idempotente pelo hash; nova redação = nova vigência (fecha só o `vigenciaFim` da anterior, ordem que se repara sozinha). `IngestaoLegislacaoRunner` = comando no profile `ingestao` |
+| `rag/BuscaLegislacaoService` | Top-k vigentes na data, com limiar de similaridade (`app.assistente.rag.*`); filtro de vigência via `FilterExpressionBuilder` |
+| `rag/ValidadorCitacao` | Marca `[Tn]` inexistente ou ausente → "não encontrei fundamento legal"; senão troca a marca pela referência dos metadados e devolve `CitacaoLegal` com link |
 | `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
 | `ferramentas/FerramentasDadosProdutor` | 5 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
 | `ferramentas/ProcessadorErroFerramenta` | O que volta ao modelo quando a função falha: mensagem de parâmetro (nossa) ou genérica; contexto ausente aborta |
@@ -237,5 +242,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0025-assistente-interacao` (próximo número livre: **0026**)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0026-legislacao-trecho` (próximo número livre: **0027**; a 0026 é só PostgreSQL — extensão `vector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

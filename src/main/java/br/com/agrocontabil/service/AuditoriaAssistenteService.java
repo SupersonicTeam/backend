@@ -63,6 +63,9 @@ public class AuditoriaAssistenteService {
         .desfecho(desfecho)
         .funcoes(funcoesJson(contexto.fontes()))
         .chamadasFuncao(contexto.chamadasDeFuncao())
+        .trechosCitados(contexto.trechosCitados().isEmpty()
+            ? null
+            : json(contexto.trechosCitados()))
         .modelo(modelo)
         .latenciaMs(latenciaMs)
         .tokensEntrada(contexto.tokensEntrada())
@@ -83,10 +86,14 @@ public class AuditoriaAssistenteService {
           return item;
         })
         .toList();
+    return json(funcoes);
+  }
+
+  private String json(Object valor) {
     try {
-      return objectMapper.writeValueAsString(funcoes);
+      return objectMapper.writeValueAsString(valor);
     } catch (JsonProcessingException e) {
-      throw new IllegalStateException("Falha ao serializar as funcoes da auditoria", e);
+      throw new IllegalStateException("Falha ao serializar a auditoria", e);
     }
   }
 }
