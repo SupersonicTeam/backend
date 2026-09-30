@@ -70,4 +70,19 @@ class FatiadorDispositivosBordasTest {
         "art. 174 (redação do art. 493-A, § 1º)",
         "art. 175");
   }
+
+  @Test
+  @DisplayName("Salto na numeracao fora de citacao (artigos revogados que sumiram) e artigo da norma")
+  void saltoForaDeCitacao() {
+    List<DispositivoLegal> dispositivos = new FatiadorDispositivos().fatiar("""
+        <html><body>
+        <p>Art. 10. Primeira regra.</p>
+        <p>Art. 80. Regra depois de artigos revogados.</p>
+        <p>Art. 81. Outra regra.</p>
+        </body></html>
+        """);
+
+    assertThat(dispositivos).extracting(DispositivoLegal::dispositivo)
+        .containsExactly("art. 10", "art. 80", "art. 81");
+  }
 }
