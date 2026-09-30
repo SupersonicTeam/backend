@@ -194,6 +194,8 @@ números da lei, e nenhum validador saberia de onde cada um veio.
 
 ### Contrato
 
+Contrato completo para o frontend (erros, SSE, regras de exibição, tipos TypeScript): [`contrato-frontend-ceres.md`](contrato-frontend-ceres.md).
+
 Síncrono: `POST /api/assistente/chat`. Streaming (SSE): `POST /api/assistente/chat/stream`, path
 próprio (no mesmo path, o `Accept: */*` dos navegadores cairia no streaming).
 

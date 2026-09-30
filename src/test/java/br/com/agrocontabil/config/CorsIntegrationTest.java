@@ -75,6 +75,16 @@ class CorsIntegrationTest {
   }
 
   @Test
+  @DisplayName("Resposta expoe Retry-After (503 ASSISTENTE_OCUPADO da Ceres, #157)")
+  void respostaExpoeRetryAfterDaCeres() throws Exception {
+    // Retry-After nao esta entre os headers que o navegador libera por padrao.
+    mockMvc.perform(get("/api/v1/health").header(ORIGIN, ORIGEM_ANGULAR))
+        .andExpect(status().isOk())
+        .andExpect(header().string(ACCESS_CONTROL_EXPOSE_HEADERS,
+            Matchers.containsString("Retry-After")));
+  }
+
+  @Test
   @DisplayName("Preflight libera o header de identidade X-Usuario-Id (#91)")
   void preflightLiberaHeaderDeIdentidade() throws Exception {
     // A CorsConfig aceita qualquer header de requisicao hoje, entao o X-Usuario-Id ja passa. Este
