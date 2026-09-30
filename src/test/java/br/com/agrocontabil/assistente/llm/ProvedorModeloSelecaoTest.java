@@ -81,7 +81,7 @@ class ProvedorModeloSelecaoTest {
       assertThat(ctx).hasSingleBean(ChatModel.class);
       assertThat(ctx.getBean(ChatModel.class)).isInstanceOf(OllamaChatModel.class);
       assertThat(ctx.getBean(ChatModel.class).getDefaultOptions().getModel())
-          .isEqualTo("qwen3:4b");
+          .isEqualTo("qwen3:4b-instruct");
       // Contexto explicito: estourado, o Ollama descartaria o inicio do prompt (as regras).
       OllamaChatOptions opcoes = (OllamaChatOptions) ctx.getBean(ChatModel.class)
           .getDefaultOptions();

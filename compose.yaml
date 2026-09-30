@@ -57,7 +57,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
-      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
     # O embedding vem primeiro e sempre: e obrigatorio qualquer que seja o provedor de chat. O modelo
     # de chat so e baixado quando o chat e local — com provedor por API, AI_CHAT_MODEL e um nome da
     # API (ex.: gpt-4o-mini), que o Ollama nao tem. $$ escapa a interpolacao do compose.
@@ -91,7 +91,7 @@ services:
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       AI_OLLAMA_BASE_URL: http://ollama:11434
       AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
-      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
       AI_API_KEY: ${AI_API_KEY:-}
       AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.openai.com}
       AI_API_COMPLETIONS_PATH: ${AI_API_COMPLETIONS_PATH:-/v1/chat/completions}

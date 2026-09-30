@@ -4,6 +4,11 @@
 spring:
   main:
     web-application-type: none
+  # Um lote de embeddings do bge-m3 em CPU passa dos 120s do read-timeout do chat (a LC 214 falhou
+  # no trecho 2.150). A ingestao e offline: timeout proprio, generoso.
+  http:
+    client:
+      read-timeout: ${AI_INGESTAO_READ_TIMEOUT:10m}
 
 app:
   nfe:

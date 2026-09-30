@@ -2,8 +2,11 @@ package br.com.agrocontabil.assistente.rag;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -31,7 +34,13 @@ import org.springframework.stereotype.Component;
  *       referência fica "art. 1º (redação do art. 156-A, § 1º)" — o artigo da emenda que a deu e o
  *       dispositivo que ela alterou;</li>
  *   <li>títulos, capítulos e seções não viram trecho; texto antes do primeiro artigo (ementa,
- *       preâmbulo) é ignorado.</li>
+ *       preâmbulo) é ignorado;</li>
+ *   <li>o texto articulado termina na assinatura ("Brasília, 16 de janeiro de 2025; ..."):
+ *       assinaturas e a nota "Este texto não substitui o publicado no DOU" não são lei;</li>
+ *   <li><strong>anexos</strong> (cabeçalho "ANEXO IX" num parágrafo próprio, título e tabela): cada
+ *       linha numerada da tabela vira um trecho "Anexo IX, item 5", com o título do anexo, e a
+ *       Ceres cita o item exato — é nos anexos que estão os produtos e os NCM de cada redução. Sem
+ *       isso o último artigo engolia todos os anexos (mais de 90 mil caracteres na LC 214).</li>
  * </ul>
  */
 @Component
@@ -62,6 +71,13 @@ public class FatiadorDispositivos {
   private static final Pattern MARCA_ALTERACAO =
       Pattern.compile("([\"”’'])(?:\\s*\\([^()]*\\))+\\s*[.;]?\\s*$");
   private static final Pattern SO_PONTOS = Pattern.compile("^[.…\\s\"“”]*$");
+  /** Cabeçalho de anexo: o parágrafo inteiro é "ANEXO" + numeral romano. */
+  private static final Pattern ANEXO = Pattern.compile("^ANEXO\\s+([IVXLC]+)$");
+  /** Local e data da assinatura: fim do texto articulado. */
+  private static final Pattern ASSINATURA = Pattern.compile(
+      "^Bras[íi]lia\\s*,\\s*\\d{1,2}[ºo°]?\\s+de\\s+\\p{L}+\\s+de\\s+\\d{4}.*");
+  /** Número de item de anexo ("5", "1.2"). */
+  private static final Pattern NUMERO_ITEM = Pattern.compile("^\\d+(?:\\.\\d+)*$");
   private static final String ABRE_ASPAS = "\"“‘'";
   private static final String FECHA_ASPAS = "\"”’'";
 
@@ -85,20 +101,79 @@ public class FatiadorDispositivos {
     documento.select("strike, s, del, script, style").remove();
     List<String> linhas = new ArrayList<>();
     List<Element> paragrafos = documento.select("p");
+    int inicioAnexos = paragrafos.size();
     if (paragrafos.isEmpty()) {
       for (String linha : documento.body().wholeText().split("\\R")) {
         linhas.add(linha);
       }
     } else {
-      for (Element p : paragrafos) {
-        linhas.add(p.text());
+      for (int i = 0; i < paragrafos.size(); i++) {
+        if (ANEXO.matcher(limpar(paragrafos.get(i).text())).matches()) {
+          inicioAnexos = i;
+          break;
+        }
+        linhas.add(paragrafos.get(i).text());
       }
     }
     Estado estado = new Estado();
     for (String bruta : linhas) {
       estado.processar(limpar(bruta));
     }
+    fatiarAnexos(paragrafos.subList(inicioAnexos, paragrafos.size()), estado);
     return estado.resultado;
+  }
+
+  /**
+   * Anexos: cabeçalho ("ANEXO IX"), título (parágrafos fora de tabela até a tabela) e uma linha de
+   * tabela por item. Linha cuja primeira célula não é número (cabeçalho "ITEM | DESCRIÇÃO" ou
+   * continuação) não abre item: a continuação vai para o item anterior, o cabeçalho é descartado.
+   */
+  private static void fatiarAnexos(List<Element> paragrafos, Estado estado) {
+    String anexo = null;
+    StringBuilder titulo = new StringBuilder();
+    boolean temItem = false;
+    Set<Element> linhasVistas = new HashSet<>();
+    for (Element p : paragrafos) {
+      String texto = limpar(p.text());
+      Matcher m = ANEXO.matcher(texto);
+      if (m.matches()) {
+        anexo = "Anexo " + m.group(1);
+        titulo.setLength(0);
+        temItem = false;
+        continue;
+      }
+      if (anexo == null || texto.isEmpty()) {
+        continue;
+      }
+      Element linha = p.closest("tr");
+      if (linha == null) {
+        if (temItem) {
+          estado.anexarAoUltimo(texto); // nota depois da tabela
+        } else {
+          titulo.append(titulo.isEmpty() ? "" : " ").append(texto);
+        }
+        continue;
+      }
+      if (!linhasVistas.add(linha)) {
+        continue; // outra celula da mesma linha
+      }
+      List<String> celulas = new ArrayList<>();
+      for (Element celula : linha.select("td, th")) {
+        String conteudo = limpar(celula.text());
+        if (!conteudo.isEmpty()) {
+          celulas.add(conteudo);
+        }
+      }
+      if (celulas.size() >= 2 && NUMERO_ITEM.matcher(celulas.get(0)).matches()) {
+        String cabecalho = anexo.toUpperCase(Locale.ROOT)
+            + (titulo.isEmpty() ? "" : " - " + titulo);
+        estado.emitir(anexo + ", item " + celulas.get(0), cabecalho + ". Item " + celulas.get(0)
+            + ": " + String.join(" - ", celulas.subList(1, celulas.size())));
+        temItem = true;
+      } else if (temItem && !celulas.isEmpty()) {
+        estado.anexarAoUltimo(String.join(" - ", celulas));
+      }
+    }
   }
 
   private static String limpar(String linha) {
@@ -174,9 +249,15 @@ public class FatiadorDispositivos {
     final Quadro norma = new Quadro();
     final Quadro citado = new Quadro();
     boolean citando;
+    /** Passou da assinatura: o resto (até os anexos) não é texto articulado. */
+    boolean encerrado;
 
     void processar(String linha) {
-      if (linha.isEmpty() || SO_PONTOS.matcher(linha).matches()) {
+      if (encerrado || linha.isEmpty() || SO_PONTOS.matcher(linha).matches()) {
+        return;
+      }
+      if (!citando && norma.artigo != null && ASSINATURA.matcher(linha).matches()) {
+        encerrado = true;
         return;
       }
       boolean abre = ABRE_ASPAS.indexOf(linha.charAt(0)) >= 0;
@@ -309,7 +390,7 @@ public class FatiadorDispositivos {
       return prefixo == null ? texto : prefixo + " " + texto;
     }
 
-    private void emitir(String rotulo, String texto) {
+    void emitir(String rotulo, String texto) {
       int vez = ocorrencias.merge(rotulo, 1, Integer::sum);
       // Rotulo repetido no mesmo texto (ex.: o mesmo dispositivo citado em duas partes da emenda):
       // cada trecho precisa de referencia propria para a vigencia e a citacao nao se confundirem.
@@ -317,7 +398,7 @@ public class FatiadorDispositivos {
       resultado.add(new DispositivoLegal(unico, texto));
     }
 
-    private void anexarAoUltimo(String texto) {
+    void anexarAoUltimo(String texto) {
       if (resultado.isEmpty()) {
         return;
       }
