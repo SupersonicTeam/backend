@@ -7,6 +7,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -72,22 +73,12 @@ public class ModeloLinguagem {
       disponibilidade.registrarFalha();
       throw e;
     }
+    ChatResponse resposta;
     try {
-      ChatResponse resposta = modelo.call(prompt);
-      if (resposta == null || resposta.getResult() == null) {
-        throw new AssistenteIndisponivelException(
-            "Modelo " + provedor + " devolveu resposta vazia", null);
-      }
-      disponibilidade.registrarSucesso();
-      return resposta;
+      resposta = modelo.call(prompt);
     } catch (RuntimeException e) {
-      // Thread interrompida (pergunta com tempo esgotado ou cliente que saiu): a falha e nossa, nao
-      // do modelo, e nao abre o disjuntor para as perguntas dos outros produtores.
-      if (!Thread.currentThread().isInterrupted()) {
+      if (abreDisjuntor(e)) {
         disponibilidade.registrarFalha();
-      }
-      if (e instanceof AssistenteIndisponivelException indisponivel) {
-        throw indisponivel;
       }
       // So o tipo da falha em WARN: a mensagem de erro de um provedor por API pode ecoar a
       // requisicao, que carrega dados do produtor. O stack trace fica em DEBUG — com o Ollama fora
@@ -98,6 +89,26 @@ public class ModeloLinguagem {
       throw new AssistenteIndisponivelException(
           "Falha ao chamar o modelo " + provedor + ": " + e.getClass().getSimpleName(), e);
     }
+    if (resposta == null || resposta.getResult() == null) {
+      // Resposta vazia e um tropeco desta pergunta, nao queda do modelo: nao abre o disjuntor.
+      throw new AssistenteIndisponivelException(
+          "Modelo " + provedor + " devolveu resposta vazia", null);
+    }
+    disponibilidade.registrarSucesso();
+    return resposta;
+  }
+
+  /**
+   * Só indisponibilidade de verdade abre o disjuntor (issue #146), porque ele vale para todos os
+   * produtores. Recusa do provedor a <em>esta</em> requisição ({@link NonTransientAiException}:
+   * 4xx como filtro de conteúdo ou contexto grande demais) não abre: senão qualquer produtor, com
+   * uma pergunta feita para ser recusada, deixaria a Ceres em fallback para todo mundo. Chave de
+   * API inválida também é 4xx e também não abre — mas falha rápido, sem esperar timeout.
+   *
+   * <p>Thread interrompida (tempo esgotado ou cliente que saiu) também não: a falha é da pergunta.
+   */
+  static boolean abreDisjuntor(RuntimeException falha) {
+    return !(falha instanceof NonTransientAiException) && !Thread.currentThread().isInterrupted();
   }
 
   /**

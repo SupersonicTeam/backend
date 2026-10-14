@@ -89,7 +89,6 @@ class ModeloLinguagemTest {
 
     assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
         .isInstanceOf(AssistenteIndisponivelException.class);
-    assertThat(disponibilidade.disponivel()).isFalse();
   }
 
   @Test
@@ -142,6 +141,27 @@ class ModeloLinguagemTest {
     chatModel.responderTexto("voltei");
     modelo.chamar(new Prompt("pergunta"));
     assertThat(disponibilidade.disponivel()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#146: recusa do provedor a esta pergunta (4xx) e resposta vazia nao abrem o disjuntor")
+  void falhaDaPerguntaNaoAbreDisjuntor() {
+    // Uma pergunta feita para ser recusada nao pode mandar todos os produtores ao fallback.
+    chatModel.falharCom(new NonTransientAiException("HTTP 400 - content_policy_violation"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    chatModel.responderCom(prompt -> new ChatResponse(List.of()));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    // Queda de verdade (transitoria) abre.
+    chatModel.falharCom(new TransientAiException("HTTP 503 do provedor"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isFalse();
   }
 
   @Test

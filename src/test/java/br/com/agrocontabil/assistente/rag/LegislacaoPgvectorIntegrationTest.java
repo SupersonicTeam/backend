@@ -218,6 +218,22 @@ class LegislacaoPgvectorIntegrationTest {
   }
 
   @Test
+  @DisplayName("#146: pergunta no limite de tamanho, com dezenas de palavras, nao quebra a busca")
+  void buscaTextualPerguntaLonga() {
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
+        dispositivos);
+    StringBuilder pergunta = new StringBuilder("fertilizantes defensivos agricolas");
+    for (int i = 0; pergunta.length() < 990; i++) {
+      pergunta.append(" palavra").append((char) ('a' + i % 26)).append(i);
+    }
+
+    // So os primeiros lexemas (ordem alfabetica do tsvector) entram: "agricol", "defens" e
+    // "fertiliz" estao entre eles e casam com o paragrafo 2.
+    assertThat(buscaTextual.buscar(pergunta.toString(), LocalDate.of(2026, 9, 29), 3))
+        .isNotEmpty();
+  }
+
+  @Test
   @DisplayName("#146: um lexema so em comum (de dois ou mais) nao traz trecho")
   void buscaTextualExigeDoisLexemas() {
     ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),

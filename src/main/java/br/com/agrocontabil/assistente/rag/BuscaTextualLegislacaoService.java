@@ -46,6 +46,13 @@ public class BuscaTextualLegislacaoService {
   /** Mínimo de lexemas da pergunta que o trecho precisa conter (limitado aos da pergunta). */
   static final int LEXEMAS_MINIMOS = 2;
 
+  /**
+   * Teto de lexemas da pergunta. A contagem de lexemas casados roda por trecho candidato, e
+   * "ibs"/"cbs" casam com quase toda a base: sem teto, uma pergunta longa (até 1000 caracteres,
+   * ~150 lexemas) custaria milhões de comparações no banco compartilhado com a emissão.
+   */
+  static final int MAX_LEXEMAS = 20;
+
   /** Letras acentuadas que a coluna e a pergunta perdem (mesmo mapa do changeSet 0027). */
   static final String COM_ACENTO = "áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ";
 
@@ -54,9 +61,10 @@ public class BuscaTextualLegislacaoService {
 
   private static final String SQL = """
       WITH termos AS (
-        SELECT DISTINCT lexema
+        SELECT lexema
         FROM unnest(tsvector_to_array(to_tsvector('portuguese',
             translate(:pergunta, :comAcento, :semAcento)))) AS lexema
+        LIMIT :maxLexemas
       ),
       consulta AS (
         SELECT string_agg(quote_literal(lexema), ' | ')::tsquery AS q, COUNT(*) AS n FROM termos
@@ -104,6 +112,7 @@ public class BuscaTextualLegislacaoService {
         .addValue("semAcento", SEM_ACENTO)
         .addValue("data", data.toString())
         .addValue("minimo", LEXEMAS_MINIMOS)
+        .addValue("maxLexemas", MAX_LEXEMAS)
         .addValue("limite", Math.max(1, Math.min(limite, 10)));
     try {
       List<TrechoRecuperado> trechos = new ArrayList<>();
