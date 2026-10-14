@@ -68,6 +68,7 @@ class AssistenteServiceTest {
   @Mock private ModeloLinguagem modeloLinguagem;
 
   private final UUID produtorId = UUID.randomUUID();
+  private final CotaFalsa cota = new CotaFalsa();
   private AssistenteService service;
 
   private AssistenteService criar(int maxConversas, Duration timeoutPergunta) {
@@ -77,7 +78,7 @@ class AssistenteServiceTest {
     // 29/09/2026 02:00 UTC = 28/09 23:00 em Brasilia: "hoje" da Ceres e o dia de Brasilia.
     Clock clock = Clock.fixed(Instant.parse("2026-09-29T02:00:00Z"), ZoneOffset.UTC);
     service = new AssistenteService(
-        identidade, orquestrador, auditoria, modeloLinguagem, clock, propriedades);
+        identidade, cota, orquestrador, auditoria, modeloLinguagem, clock, propriedades);
     return service;
   }
 
@@ -327,6 +328,126 @@ class AssistenteServiceTest {
     // A vaga (global e do produtor) volta: a proxima pergunta e atendida.
     when(orquestrador.responder(eq("rapida"), any(), any())).thenReturn(ok());
     assertThat(perguntarQuandoHouverVaga("rapida").resposta()).isEqualTo("ok");
+  }
+
+  // --- cota semanal (#166) ---
+
+  @Test
+  @DisplayName("#166: pergunta concluida acerta pelos tokens do contexto, uma vez so")
+  void perguntaConcluidaAcerta() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(modeloLinguagem.identificacao()).thenReturn("ollama/qwen3");
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(invocacao -> {
+      ContextoAssistente contexto = invocacao.getArgument(1);
+      contexto.registrarUso(null, new org.springframework.ai.chat.model.ChatResponse(List.of()));
+      return ok();
+    });
+
+    service.conversar(new AssistenteChatRequest("pergunta"));
+
+    assertThat(cota.reservas).isEqualTo(1);
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.estornos).isZero();
+    assertThat(cota.ultimoModelo).isEqualTo("ollama/qwen3");
+    // Sem uso informado, os tokens foram estimados (minimo de 1 cada) e ainda assim cobrados.
+    assertThat(cota.ultimaEntrada).isPositive();
+    assertThat(cota.ultimaSaida).isPositive();
+  }
+
+  @Test
+  @DisplayName("#166: falha na pergunta estorna a reserva inteira")
+  void falhaEstorna() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(any(), any(), any()))
+        .thenThrow(new AssistenteIndisponivelException("banco fora", null));
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+
+    assertThat(cota.estornos).isEqualTo(1);
+    assertThat(cota.acertos).isZero();
+  }
+
+  @Test
+  @DisplayName("#166: sem credito, 429 antes de qualquer vaga ou chamada ao modelo")
+  void semCreditoNemComeca() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    cota.recusar = true;
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("pergunta")))
+        .isInstanceOf(br.com.agrocontabil.exception.LimiteUsoAssistenteException.class);
+
+    verifyNoInteractions(orquestrador, auditoria);
+    assertThat(cota.acertos + cota.estornos).isZero();
+  }
+
+  @Test
+  @DisplayName("#166: sem vaga (pergunta anterior em andamento) a reserva volta na hora")
+  void semVagaEstorna() throws Exception {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    CountDownLatch dentro = new CountDownLatch(1);
+    CountDownLatch solta = new CountDownLatch(1);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(invocacao -> {
+      dentro.countDown();
+      solta.await(5, TimeUnit.SECONDS);
+      return ok();
+    });
+    CompletableFuture<AssistenteChatResponse> primeira = CompletableFuture.supplyAsync(
+        () -> service.conversar(new AssistenteChatRequest("primeira")));
+    assertThat(dentro.await(5, TimeUnit.SECONDS)).isTrue();
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("segunda")))
+        .isInstanceOf(AssistenteOcupadoException.class);
+    assertThat(cota.estornos).isEqualTo(1);
+
+    solta.countDown();
+    primeira.get(5, TimeUnit.SECONDS);
+    assertThat(cota.acertos).isEqualTo(1);
+  }
+
+  /** Porta da cota em memória: conta as chamadas (estornar e acertar nunca ambos por pergunta). */
+  private static final class CotaFalsa implements br.com.agrocontabil.assistente.porta.CotaUsoPorta {
+
+    volatile boolean recusar;
+    volatile int reservas;
+    volatile int acertos;
+    volatile int estornos;
+    volatile long ultimaEntrada;
+    volatile long ultimaSaida;
+    volatile String ultimoModelo;
+
+    @Override
+    public synchronized ReservaCota reservar(UUID produtorId, String modelo) {
+      if (recusar) {
+        throw new br.com.agrocontabil.exception.LimiteUsoAssistenteException(60);
+      }
+      reservas++;
+      return new ReservaCota(produtorId, java.time.LocalDate.of(2026, 9, 28), 73, true);
+    }
+
+    @Override
+    public synchronized long acertar(
+        ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo) {
+      acertos++;
+      ultimaEntrada = tokensEntrada;
+      ultimaSaida = tokensSaida;
+      ultimoModelo = modelo;
+      return 1;
+    }
+
+    @Override
+    public synchronized void estornar(ReservaCota reserva) {
+      estornos++;
+    }
+
+    @Override
+    public UsoCota consultar(UUID produtorId) {
+      return new UsoCota("padrao", true, 1000, 0, 1000, java.time.OffsetDateTime.now());
+    }
   }
 
   /** A vaga volta no finally da thread, logo depois da auditoria: espera esse instante. */

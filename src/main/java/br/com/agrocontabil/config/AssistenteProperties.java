@@ -1,6 +1,8 @@
 package br.com.agrocontabil.config;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -68,6 +70,9 @@ public class AssistenteProperties implements InitializingBean {
   /** Modo fallback, sem modelo (issue #146). */
   private Fallback fallback = new Fallback();
 
+  /** Cota semanal de créditos (issue #166). */
+  private Cota cota = new Cota();
+
   /**
    * Recusa valores fora de faixa na subida, em vez de descobrir o problema no primeiro health.
    *
@@ -106,6 +111,27 @@ public class AssistenteProperties implements InitializingBean {
       throw new IllegalStateException(
           "app.assistente.fallback.tamanho-maximo-trecho deve ser >= 100, recebido: "
               + fallback.getTamanhoMaximoTrecho());
+    }
+    if (cota.getCreditosPorSemanaProdutor() < 1 || cota.getCreditosPorSemanaEscritorio() < 1
+        || cota.getTokensPorCredito() < 1 || cota.getTetoTokensEntradaPorChamada() < 1
+        || cota.getTetoTokensSaidaPorChamada() < 1) {
+      throw new IllegalStateException(
+          "app.assistente.cota: creditos por semana, tokens-por-credito e tetos de tokens devem "
+              + "ser >= 1");
+    }
+    if (cota.getPesoEntrada() < 0 || cota.getPesoSaida() <= 0 || cota.getFatorPadrao() <= 0
+        || cota.getFatorPorModelo().values().stream().anyMatch(f -> f == null || f <= 0)) {
+      throw new IllegalStateException(
+          "app.assistente.cota: peso-saida e fatores devem ser > 0 e peso-entrada >= 0");
+    }
+    long teto = cota.tetoDaPergunta(maxRodadasFerramentas, cota.maiorFator());
+    long menorPlano = Math.min(
+        cota.getCreditosPorSemanaProdutor(), cota.getCreditosPorSemanaEscritorio());
+    if (cota.isHabilitada() && teto > menorPlano) {
+      // Sem isto a aplicacao sobe e toda pergunta recebe 429 "creditos esgotados".
+      throw new IllegalStateException("app.assistente.cota: o teto de uma pergunta (" + teto
+          + " creditos, com o maior fator) passa do menor plano (" + menorPlano + "). Aumente os "
+          + "creditos por semana ou reduza os tetos de tokens (AI_MAX_TOKENS).");
     }
     exigirPositivo(timeoutPergunta, "app.assistente.timeout-pergunta");
     exigirPositivo(timeoutFuncao, "app.assistente.timeout-funcao");
@@ -170,6 +196,14 @@ public class AssistenteProperties implements InitializingBean {
 
   public void setOrquestracao(Orquestracao orquestracao) {
     this.orquestracao = orquestracao;
+  }
+
+  public Cota getCota() {
+    return cota;
+  }
+
+  public void setCota(Cota cota) {
+    this.cota = cota;
   }
 
   public Fallback getFallback() {
@@ -241,6 +275,187 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setSimilaridadeMinima(double similaridadeMinima) {
       this.similaridadeMinima = similaridadeMinima;
+    }
+  }
+
+  /**
+   * Cota semanal de créditos da Ceres por titular (issue #166, etapa A do épico de planos).
+   *
+   * <pre>
+   * créditos = ⌈(tokens_entrada × pesoEntrada + tokens_saída × pesoSaida) × fator_do_modelo
+   *             ÷ tokensPorCredito⌉
+   * </pre>
+   *
+   * <p>A semana vai de segunda 00:00 a domingo 23:59 em {@code America/Sao_Paulo}; sobra não
+   * acumula. Antes de cada pergunta é reservado o teto possível dela, derivado dos limites da
+   * própria pergunta (classificação + rodadas de função + legislação, cada uma com o teto de
+   * entrada e de saída); no fim, o consumo real é acertado e a diferença volta.
+   */
+  public static class Cota {
+
+    /** Chamadas ao modelo fora do laço de funções: a classificação e a parte de legislação. */
+    public static final int CHAMADAS_FORA_DO_LACO = 2;
+
+    /** Desliga a cota (demonstração do TCC): nada é reservado nem bloqueado. */
+    private boolean habilitada = true;
+
+    /**
+     * Créditos de um consumo — a fórmula única da cota:
+     * {@code ⌈(entrada × pesoEntrada + saída × pesoSaida) × fator ÷ tokensPorCredito⌉}. Consumo
+     * zero (modo fallback, sem modelo) custa zero.
+     */
+    public long creditos(long tokensEntrada, long tokensSaida, double fator) {
+      double ponderado = Math.max(0, tokensEntrada) * pesoEntrada
+          + Math.max(0, tokensSaida) * pesoSaida;
+      if (ponderado <= 0) {
+        return 0;
+      }
+      return (long) Math.ceil(ponderado * fator / tokensPorCredito);
+    }
+
+    /**
+     * Custo máximo possível de uma pergunta: classificação + parte de legislação + o laço de
+     * funções (a primeira chamada e uma por rodada), cada chamada com os tetos de entrada e saída.
+     */
+    public long tetoDaPergunta(int maxRodadasFerramentas, double fator) {
+      long chamadas = CHAMADAS_FORA_DO_LACO + 1L + maxRodadasFerramentas;
+      return creditos(chamadas * tetoTokensEntradaPorChamada,
+          chamadas * tetoTokensSaidaPorChamada, fator);
+    }
+
+    /** Maior fator configurado (o padrão ou o de algum modelo). */
+    public double maiorFator() {
+      double maior = fatorPadrao;
+      for (Double fator : fatorPorModelo.values()) {
+        if (fator != null && fator > maior) {
+          maior = fator;
+        }
+      }
+      return maior;
+    }
+
+    /** Nome do plano padrão mostrado ao usuário até as assinaturas existirem. */
+    private String plano = "padrao";
+
+    /** Créditos por semana do produtor no plano padrão. */
+    private long creditosPorSemanaProdutor = 1000;
+
+    /** Créditos por semana do escritório de contabilidade (quando o contador puder perguntar). */
+    private long creditosPorSemanaEscritorio = 5000;
+
+    /** Peso do token de entrada. */
+    private double pesoEntrada = 1.0;
+
+    /** Peso do token de saída: custa mais nas APIs e é a parte lenta rodando local. */
+    private double pesoSaida = 4.0;
+
+    /** Tokens ponderados que valem um crédito. */
+    private long tokensPorCredito = 1000;
+
+    /** Fator do modelo quando ele não está em {@link #fatorPorModelo}. */
+    private double fatorPadrao = 1.0;
+
+    /**
+     * Fator por modelo, pela identificação da auditoria ({@code provedor/modelo}, ex.:
+     * {@code openai/gpt-4o}). Trocar de modelo ajusta o fator, não os planos.
+     */
+    private Map<String, Double> fatorPorModelo = new HashMap<>();
+
+    /** Teto de tokens de entrada de uma chamada ao modelo, para a reserva. */
+    private long tetoTokensEntradaPorChamada = 8000;
+
+    /**
+     * Teto de tokens de saída de uma chamada — o mesmo {@code AI_MAX_TOKENS} que limita o modelo
+     * ({@code num-predict} / {@code max-tokens}), obrigatório para a reserva ser um teto de verdade.
+     */
+    private long tetoTokensSaidaPorChamada = 1024;
+
+    public boolean isHabilitada() {
+      return habilitada;
+    }
+
+    public void setHabilitada(boolean habilitada) {
+      this.habilitada = habilitada;
+    }
+
+    public String getPlano() {
+      return plano;
+    }
+
+    public void setPlano(String plano) {
+      this.plano = plano;
+    }
+
+    public long getCreditosPorSemanaProdutor() {
+      return creditosPorSemanaProdutor;
+    }
+
+    public void setCreditosPorSemanaProdutor(long creditosPorSemanaProdutor) {
+      this.creditosPorSemanaProdutor = creditosPorSemanaProdutor;
+    }
+
+    public long getCreditosPorSemanaEscritorio() {
+      return creditosPorSemanaEscritorio;
+    }
+
+    public void setCreditosPorSemanaEscritorio(long creditosPorSemanaEscritorio) {
+      this.creditosPorSemanaEscritorio = creditosPorSemanaEscritorio;
+    }
+
+    public double getPesoEntrada() {
+      return pesoEntrada;
+    }
+
+    public void setPesoEntrada(double pesoEntrada) {
+      this.pesoEntrada = pesoEntrada;
+    }
+
+    public double getPesoSaida() {
+      return pesoSaida;
+    }
+
+    public void setPesoSaida(double pesoSaida) {
+      this.pesoSaida = pesoSaida;
+    }
+
+    public long getTokensPorCredito() {
+      return tokensPorCredito;
+    }
+
+    public void setTokensPorCredito(long tokensPorCredito) {
+      this.tokensPorCredito = tokensPorCredito;
+    }
+
+    public double getFatorPadrao() {
+      return fatorPadrao;
+    }
+
+    public void setFatorPadrao(double fatorPadrao) {
+      this.fatorPadrao = fatorPadrao;
+    }
+
+    public Map<String, Double> getFatorPorModelo() {
+      return fatorPorModelo;
+    }
+
+    public void setFatorPorModelo(Map<String, Double> fatorPorModelo) {
+      this.fatorPorModelo = fatorPorModelo;
+    }
+
+    public long getTetoTokensEntradaPorChamada() {
+      return tetoTokensEntradaPorChamada;
+    }
+
+    public void setTetoTokensEntradaPorChamada(long tetoTokensEntradaPorChamada) {
+      this.tetoTokensEntradaPorChamada = tetoTokensEntradaPorChamada;
+    }
+
+    public long getTetoTokensSaidaPorChamada() {
+      return tetoTokensSaidaPorChamada;
+    }
+
+    public void setTetoTokensSaidaPorChamada(long tetoTokensSaidaPorChamada) {
+      this.tetoTokensSaidaPorChamada = tetoTokensSaidaPorChamada;
     }
   }
 

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0029-assistente-uso-semanal.xml
+         Sprint 7 — issue #166 (cota semanal de creditos da Ceres, etapa A).
+
+         assistente_uso_semanal: uma linha por titular e semana. A chave e a
+         data da segunda-feira (America/Sao_Paulo): nao ha job de reset, a
+         semana nova e outra linha e a sobra nao acumula.
+         - titular_tipo/titular_id: PRODUTOR hoje; ESCRITORIO quando o
+           contador puder perguntar (cota compartilhada). Sem FK: o titular
+           aponta para tabelas diferentes conforme o tipo.
+         - creditos_reservados: teto das perguntas em andamento. A reserva e
+           um UPDATE condicional (reservados + consumidos + teto <= limite),
+           atomico na linha: perguntas simultaneas nao passam do limite.
+         - creditos_consumidos / tokens / perguntas: o acerto pelo consumo
+           real de cada pergunta.
+         - CHECKs: nenhum contador fica negativo (estorno duplicado vira erro
+           em vez de credito de graca).
+
+         assistente_interacao.tokens_estimados: o provedor nao informou o uso
+         e os tokens foram estimados por caracteres.
+         ================================================================ -->
+
+    <changeSet id="0029-create-assistente-uso-semanal" author="supersonic-team">
+        <comment>Cria assistente_uso_semanal (issue #166).</comment>
+        <createTable tableName="assistente_uso_semanal">
+            <column name="titular_tipo" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="titular_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="semana_inicio" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creditos_reservados" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creditos_consumidos" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tokens_entrada" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tokens_saida" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="perguntas" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="atualizado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="assistente_uso_semanal"
+                       columnNames="titular_tipo, titular_id, semana_inicio"
+                       constraintName="pk_assistente_uso_semanal"/>
+        <sql>
+            ALTER TABLE assistente_uso_semanal ADD CONSTRAINT ck_assistente_uso_nao_negativo
+                CHECK (creditos_reservados >= 0 AND creditos_consumidos >= 0
+                    AND tokens_entrada >= 0 AND tokens_saida >= 0 AND perguntas >= 0)
+        </sql>
+    </changeSet>
+
+    <changeSet id="0029-add-tokens-estimados" author="supersonic-team">
+        <comment>Marca de tokens estimados na auditoria da Ceres (issue #166).</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="tokens_estimados" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

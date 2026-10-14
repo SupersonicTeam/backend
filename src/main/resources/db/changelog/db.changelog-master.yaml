@@ -62,3 +62,5 @@ databaseChangeLog:
       file: db/changelog/changes/0027-legislacao-tsv-sem-acento.xml
   - include:
       file: db/changelog/changes/0028-alerta-tributario.xml
+  - include:
+      file: db/changelog/changes/0029-assistente-uso-semanal.xml

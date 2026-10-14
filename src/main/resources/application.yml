@@ -286,6 +286,22 @@ app:
     # escopo" (resposta fixa, sem nova chamada ao modelo).
     orquestracao:
       confianca-minima: ${AI_CONFIANCA_MINIMA:0.5}
+    # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
+    # peso-saida) x fator do modelo / tokens-por-credito). Semana de segunda a domingo (Brasilia),
+    # sem acumulo. Antes de cada pergunta reserva-se o teto dela; no fim, o consumo real.
+    cota:
+      habilitada: ${AI_COTA_HABILITADA:true}
+      plano: ${AI_COTA_PLANO:padrao}
+      creditos-por-semana-produtor: ${AI_COTA_CREDITOS_PRODUTOR:1000}
+      creditos-por-semana-escritorio: ${AI_COTA_CREDITOS_ESCRITORIO:5000}
+      peso-entrada: ${AI_COTA_PESO_ENTRADA:1.0}
+      peso-saida: ${AI_COTA_PESO_SAIDA:4.0}
+      tokens-por-credito: ${AI_COTA_TOKENS_POR_CREDITO:1000}
+      fator-padrao: ${AI_COTA_FATOR_PADRAO:1.0}
+      teto-tokens-entrada-por-chamada: ${AI_COTA_TETO_ENTRADA:8000}
+      # O mesmo teto que limita o modelo (num-predict / max-tokens): a reserva so e um teto de
+      # verdade se a saida do modelo tambem for limitada.
+      teto-tokens-saida-por-chamada: ${AI_MAX_TOKENS:1024}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
     # atalhos para as telas. Depois de uma falha, as perguntas pulam o modelo durante a pausa.
     fallback:

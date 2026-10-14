@@ -67,9 +67,10 @@ public class GlobalExceptionHandler {
       resposta.header(HttpHeaders.WWW_AUTHENTICATE,
           "Header realm=\"agrocontabil\", header=\"" + MockIdentidadeFilter.HEADER_USUARIO_ID + "\"");
     }
-    if (ex instanceof AssistenteOcupadoException ocupado) {
-      // RFC 9110 §10.2.3: em 503, diz ao cliente quando vale tentar de novo (issue #157).
-      resposta.header(HttpHeaders.RETRY_AFTER, String.valueOf(ocupado.retryAfterSegundos()));
+    if (ex instanceof ComRetryAfter espera) {
+      // RFC 9110 §10.2.3: em 503 (Ceres ocupada, #157) e 429 (cota semanal, #166), diz ao
+      // cliente quando vale tentar de novo.
+      resposta.header(HttpHeaders.RETRY_AFTER, String.valueOf(espera.retryAfterSegundos()));
     }
     return resposta.contentType(tipoDoErro()).body(body);
   }

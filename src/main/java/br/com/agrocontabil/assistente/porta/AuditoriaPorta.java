@@ -33,11 +33,14 @@ public interface AuditoriaPorta {
    * @param latenciaMs       duração total
    * @param tokensEntrada    tokens de entrada, se o provedor informou
    * @param tokensSaida      tokens de saída, se o provedor informou
+   * @param tokensEstimados  {@code true} se o provedor não informou e os tokens foram estimados
+   *                         por caracteres (issue #166)
    * @param tamanhoPergunta  tamanho da pergunta em caracteres (métrica, não conteúdo)
    * @param criadoEm         instante do registro
    */
   record RegistroInteracao(
       UUID produtorId, String rota, DesfechoInteracao desfecho, String funcoesJson,
       int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
-      Integer tokensEntrada, Integer tokensSaida, int tamanhoPergunta, OffsetDateTime criadoEm) {}
+      Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
+      OffsetDateTime criadoEm) {}
 }

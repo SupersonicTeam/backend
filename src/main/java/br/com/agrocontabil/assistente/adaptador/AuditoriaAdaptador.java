@@ -31,6 +31,7 @@ public class AuditoriaAdaptador implements AuditoriaPorta {
         .latenciaMs(r.latenciaMs())
         .tokensEntrada(r.tokensEntrada())
         .tokensSaida(r.tokensSaida())
+        .tokensEstimados(r.tokensEstimados())
         .tamanhoPergunta(r.tamanhoPergunta())
         .criadoEm(r.criadoEm())
         .build());

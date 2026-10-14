@@ -6,10 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import br.com.agrocontabil.config.SchedulingConfig;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
@@ -147,6 +153,50 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0029: uso semanal sem negativos e reserva concorrente no PostgreSQL (#166)")
+  void changeSet0029UsoSemanalEReservaConcorrente() throws Exception {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns"
+        + " WHERE table_name = 'assistente_interacao' AND column_name = 'tokens_estimados'",
+        Integer.class)).isEqualTo(1);
+
+    String titular = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO assistente_uso_semanal (titular_tipo, titular_id, semana_inicio,"
+        + " atualizado_em) VALUES ('PRODUTOR', ?::uuid, DATE '2026-10-12', now())", titular);
+    // Estorno duplicado nunca vira credito de graca: o banco recusa contador negativo.
+    assertThatThrownBy(() -> jdbc.update("UPDATE assistente_uso_semanal"
+        + " SET creditos_reservados = creditos_reservados - 1 WHERE titular_id = ?::uuid", titular))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    // A reserva do service: UPDATE condicional. 12 perguntas simultaneas, limite para 4.
+    String reservar = "UPDATE assistente_uso_semanal SET creditos_reservados ="
+        + " creditos_reservados + 73 WHERE titular_id = ?::uuid"
+        + " AND creditos_reservados + creditos_consumidos + 73 <= 300";
+    ExecutorService pool = Executors.newFixedThreadPool(12);
+    CountDownLatch largada = new CountDownLatch(1);
+    List<Future<Integer>> resultados = new ArrayList<>();
+    try {
+      for (int i = 0; i < 12; i++) {
+        resultados.add(pool.submit(() -> {
+          largada.await();
+          return jdbc.update(reservar, titular);
+        }));
+      }
+      largada.countDown();
+      int aceitas = 0;
+      for (Future<Integer> r : resultados) {
+        aceitas += r.get(30, TimeUnit.SECONDS);
+      }
+      assertThat(aceitas).isEqualTo(4);
+      assertThat(jdbc.queryForObject("SELECT creditos_reservados FROM assistente_uso_semanal"
+          + " WHERE titular_id = ?::uuid", Long.class, titular)).isEqualTo(292L);
+    } finally {
+      pool.shutdownNow();
+      jdbc.update("DELETE FROM assistente_uso_semanal WHERE titular_id = ?::uuid", titular);
+    }
+  }
+
+  @Test
   @DisplayName("changeSet 0028 cria alerta_tributario com chave unica e CASCADE do produtor (#140)")
   void changeSet0028CriaAlertaTributario() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -190,7 +240,8 @@ class LiquibaseChangelogIntegrationTest {
 
     assertThat(colunas).containsExactly(
         "chamadas_funcao", "criado_em", "desfecho", "funcoes", "id", "latencia_ms", "modelo",
-        "produtor_id", "rota", "tamanho_pergunta", "tokens_entrada", "tokens_saida",
+        "produtor_id", "rota", "tamanho_pergunta", "tokens_entrada", "tokens_estimados",
+        "tokens_saida",
         "trechos_citados");
     // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
     assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")

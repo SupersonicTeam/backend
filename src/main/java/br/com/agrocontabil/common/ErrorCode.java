@@ -119,7 +119,12 @@ public enum ErrorCode {
    * A pergunta passou do tempo maximo ({@code app.assistente.timeout-pergunta}) e foi interrompida.
    * O cliente pode reformular a pergunta ou tentar mais tarde. HTTP 503 (issue #157).
    */
-  ASSISTENTE_TEMPO_ESGOTADO;
+  ASSISTENTE_TEMPO_ESGOTADO,
+  /**
+   * O titular gastou os créditos da semana da Ceres (issue #166). 429 com {@code Retry-After}
+   * até a virada da semana (segunda 00:00, {@code America/Sao_Paulo}).
+   */
+  LIMITE_USO_ASSISTENTE;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

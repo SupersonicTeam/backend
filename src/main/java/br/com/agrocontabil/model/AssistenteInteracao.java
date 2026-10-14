@@ -77,6 +77,10 @@ public class AssistenteInteracao {
   @Column(name = "tokens_saida", updatable = false)
   private Integer tokensSaida;
 
+  /** Tokens estimados por caracteres: o provedor não informou o uso (issue #166). */
+  @Column(name = "tokens_estimados", nullable = false, updatable = false)
+  private boolean tokensEstimados;
+
   /** Tamanho da pergunta em caracteres — métrica, não conteúdo. */
   @Column(name = "tamanho_pergunta", nullable = false, updatable = false)
   private int tamanhoPergunta;

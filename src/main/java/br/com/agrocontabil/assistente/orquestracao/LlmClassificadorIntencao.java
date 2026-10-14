@@ -52,7 +52,7 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
         new UserMessage(DataSanitizer.mascarar(pergunta))));
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(resposta);
+    contexto.registrarUso(prompt, resposta);
     return interpretar(resposta.getResult().getOutput().getText());
   }
 
