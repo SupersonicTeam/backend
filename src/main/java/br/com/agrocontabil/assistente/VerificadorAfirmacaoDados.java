@@ -31,6 +31,9 @@ public class VerificadorAfirmacaoDados {
           + "insumos?|fertilizantes?|defensivos?|sementes?|produtos?|operacao|operacoes|"
           + "creditos?|guias?|aquisicao|aquisicoes|mercadorias?|dados|apuracao|fazenda|"
           + "propriedade|empresa|impostos?|tributos?|saldo|debitos?|caso|situacao)\\b"),
+      // Resposta de sim ou não à pergunta sobre o caso dele ("Sim, têm direito..."): uma regra geral
+      // não começa assim. "Não incide" passa; "Não, ..." não.
+      Pattern.compile("^\\W*(sim\\b|nao\\s*[,.;:!])"),
       // Ações do usuário no passado, que só os dados poderiam confirmar.
       Pattern.compile("\\b(comprou|vendeu|adquiriu|pagou|emitiu|recebeu|comprados por|vendidos por)"
           + "\\b"));

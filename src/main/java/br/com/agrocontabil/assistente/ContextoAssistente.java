@@ -86,11 +86,19 @@ public final class ContextoAssistente {
   /**
    * Registra que uma função foi usada, com os parâmetros já validados e normalizados.
    *
+   * <p>{@code vazio} é obrigatório de propósito (issue #170): no MISTO, a parte de dados sem nada
+   * encontrado vira frase fixa do backend ("não encontrei..."). Se o sinal fosse opcional, uma
+   * função nova que esquecesse de informá-lo teria o resultado real trocado por essa frase falsa.
+   *
    * @param funcao     nome da função
    * @param parametros parâmetros efetivamente usados na consulta
+   * @param vazio      {@code true} se a consulta não encontrou nada (sem nota, guia ou compra)
    */
-  public void registrarFonte(String funcao, Map<String, String> parametros) {
+  public void registrarFonte(String funcao, Map<String, String> parametros, boolean vazio) {
     fontes.add(new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros))));
+    if (!vazio) {
+      consultasComResultado.incrementAndGet();
+    }
   }
 
   /**
@@ -116,18 +124,6 @@ public final class ContextoAssistente {
     if (saida != null && saida > 0) {
       tokensSaida.addAndGet(saida);
       usoInformado.set(true);
-    }
-  }
-
-  /**
-   * Registra se uma consulta aos dados voltou vazia (sem nota, sem guia, sem compra). No MISTO, a
-   * parte de dados com todas as consultas vazias vira frase fixa do backend (issue #170).
-   *
-   * @param vazio {@code true} se a consulta não encontrou nada
-   */
-  public void registrarResultado(boolean vazio) {
-    if (!vazio) {
-      consultasComResultado.incrementAndGet();
     }
   }
 

@@ -96,6 +96,7 @@ br.com.agrocontabil
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
 │                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros;
+│                  # VerificadorAfirmacaoDados (lei do MISTO não fala dos dados, #170);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;

@@ -18,7 +18,9 @@ class VerificadorAfirmacaoDadosTest {
       "No seu caso, a aliquota e reduzida.",
       "O produtor que adquiriu fertilizantes tem reducao.",
       "O senhor pode aproveitar o credito.",
-      "Os insumos comprados por voce tem reducao."
+      "Os insumos comprados por voce tem reducao.",
+      "Sim, têm direito à redução de 60% (LC 214/2025, art. 138).",
+      "  Não, não há redução para esse caso."
   })
   void detectaReferenciaAoUsuario(String texto) {
     assertThat(verificador.afirmaSobreDados(texto)).as(texto).isTrue();
@@ -29,7 +31,9 @@ class VerificadorAfirmacaoDadosTest {
       "Os insumos agropecuarios do Anexo IX tem reducao de 60% (LC 214/2025, art. 138).",
       "A pessoa juridica e suas filiais respondem solidariamente.",
       "O contribuinte pode optar pelo regime em sua escrituracao.",
-      "Ficam reduzidas as aliquotas do IBS e da CBS para fertilizantes."
+      "Ficam reduzidas as aliquotas do IBS e da CBS para fertilizantes.",
+      "Não incide IBS sobre exportações (EC 132/2023, art. 1º).",
+      "Os bens adquiridos por produtor rural nao contribuinte geram credito presumido."
   })
   void regraImpessoalPassa(String texto) {
     assertThat(verificador.afirmaSobreDados(texto)).as(texto).isFalse();

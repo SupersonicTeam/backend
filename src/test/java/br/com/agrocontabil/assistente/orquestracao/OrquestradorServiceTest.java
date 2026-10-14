@@ -141,8 +141,8 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.MISTO, 0.9);
     // O modelo consultou, nada voltou, e ele ainda assim redigiu algo.
     when(rotaDados.responder(anyString(), any())).thenAnswer(invocacao -> {
-      contexto.registrarFonte("totalComprasPorInsumo", java.util.Map.of("descricaoOuNcm", "adubo"));
-      contexto.registrarResultado(true);
+      contexto.registrarFonte(
+          "totalComprasPorInsumo", java.util.Map.of("descricaoOuNcm", "adubo"), true);
       return ResultadoRota.aceita("Nao tem essa informacao.");
     });
     when(rotaLegislacao.responderRegraGeral(anyString(), any()))
@@ -191,11 +191,27 @@ class OrquestradorServiceTest {
     assertThat(r.exibirFontes()).isTrue();
   }
 
+  @Test
+  @DisplayName("#170: so a parte de dados caiu e a lei veio do modelo: texto sem contradicao")
+  void mistoDadosEmFallbackLeiDoModelo() {
+    classificarComo(Intencao.MISTO, 0.9);
+    when(rotaDados.responder(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("timeout no laco de funcoes", null));
+    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).startsWith(ModoFallback.SEM_MODELO_DADOS)
+        .contains(OrquestradorService.LIGACAO_REGRA + "Ha reducao")
+        .doesNotContain("sem o modelo");
+    assertThat(r.modoFallback()).isTrue();
+  }
+
   /** Rota de dados que consultou e encontrou dados. */
   private void dadosEncontrados(String texto) {
     when(rotaDados.responder(anyString(), any())).thenAnswer(invocacao -> {
-      contexto.registrarFonte("listarNotas", java.util.Map.of());
-      contexto.registrarResultado(false);
+      contexto.registrarFonte("listarNotas", java.util.Map.of(), false);
       return ResultadoRota.aceita(texto);
     });
   }

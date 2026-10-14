@@ -107,7 +107,7 @@ class AssistenteServiceTest {
     when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
       ContextoAssistente contexto = inv.getArgument(1);
       recebido.set(contexto);
-      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"));
+      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"), false);
       return new ResultadoOrquestracao(Intencao.MISTO, "texto", DesfechoInteracao.RESPONDIDA,
           List.of(new CitacaoLegal("LC 214/2025", "art. 138", URL, "trecho")), true);
     });
@@ -149,7 +149,7 @@ class AssistenteServiceTest {
     when(identidade.produtorAutenticado()).thenReturn(produtorId);
     when(orquestrador.responder(anyString(), any(), any())).thenAnswer(inv -> {
       ContextoAssistente contexto = inv.getArgument(1);
-      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"));
+      contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"), false);
       return new ResultadoOrquestracao(Intencao.DADOS, "Nao consegui confirmar os valores.",
           DesfechoInteracao.NUMERO_SEM_FONTE, List.of(), false);
     });
