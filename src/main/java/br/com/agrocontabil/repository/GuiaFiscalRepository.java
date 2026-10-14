@@ -104,4 +104,23 @@ public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
       @Param("de") LocalDate de,
       @Param("ate") LocalDate ate,
       Pageable pagina);
+
+  /**
+   * Quantidade e soma do valor de <em>todas</em> as guias não pagas da janela — mesmo recorte de
+   * {@link #listarNaoPagasNaJanela}, sem o limite da página (issue #169: a Ceres não soma, o
+   * backend soma).
+   *
+   * @return quantidade e soma (soma {@code null} quando não há guia na janela)
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.TotalAgregado(COUNT(g), SUM(g.valor))
+      FROM GuiaFiscal g
+      WHERE g.produtor.id = :produtorId
+        AND g.status <> br.com.agrocontabil.model.StatusGuiaFiscal.PAGA
+        AND g.dataVencimento BETWEEN :de AND :ate
+      """)
+  TotalAgregado totalizarNaoPagasNaJanela(
+      @Param("produtorId") UUID produtorId,
+      @Param("de") LocalDate de,
+      @Param("ate") LocalDate ate);
 }
