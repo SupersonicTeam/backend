@@ -21,6 +21,11 @@ public enum DesfechoInteracao {
   SEM_FUNDAMENTO_LEGAL,
   /** Resposta de legislação sem marca de citação ou com marca inexistente: descartada. */
   CITACAO_INVALIDA,
+  /**
+   * MISTO: a parte de legislação falou dos dados do produtor (que ela não vê) e o texto dela foi
+   * trocado pelos trechos citados (#170). Desfecho próprio para medir o problema na avaliação.
+   */
+  AFIRMACAO_SOBRE_DADOS,
   /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
   FORA_DE_ESCOPO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */

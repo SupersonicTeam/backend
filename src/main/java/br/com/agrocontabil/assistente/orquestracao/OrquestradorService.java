@@ -13,6 +13,8 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +47,25 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class OrquestradorService {
+
+  /** Ligação entre a parte de dados e a regra legal no MISTO (issue #170). */
+  public static final String LIGACAO_REGRA = "Sobre a regra legal: ";
+
+  /** Ligação quando a parte de dados não encontrou nada: a regra vale em tese, não "para você". */
+  public static final String LIGACAO_SEM_DADOS = "De forma geral, a legislacao preve: ";
+
+  /** Parte de dados do MISTO sem nada encontrado, pela primeira função consultada (#170). */
+  static final Map<String, String> SEM_DADOS_POR_FUNCAO = Map.of(
+      "totalComprasPorInsumo",
+      "Nao encontrei compras desse tipo nas suas notas no periodo consultado.",
+      "listarNotas", "Nao encontrei notas com esse filtro no periodo consultado.",
+      "proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado.",
+      "consultarCreditos", "Nao encontrei compras com credito no periodo consultado.",
+      "consultarApuracao", "Nao encontrei notas na apuracao do mes consultado.");
+
+  /** Parte de dados do MISTO sem consulta nenhuma: o modelo não buscou dado algum. */
+  public static final String SEM_DADOS =
+      "Nao encontrei nos seus dados do sistema informacao para essa pergunta.";
 
   private static final Logger log = LoggerFactory.getLogger(OrquestradorService.class);
 
@@ -85,7 +106,8 @@ public class OrquestradorService {
     return switch (rota) {
       case DADOS -> deRota(rota, dados(pergunta, contexto));
       case LEGISLACAO -> deRota(rota, lei(pergunta, contexto));
-      case MISTO -> combinar(dados(pergunta, contexto), lei(pergunta, contexto));
+      case MISTO -> combinar(
+          dados(pergunta, contexto), leiRegraGeral(pergunta, contexto), contexto);
       case FORA_DE_ESCOPO -> new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO,
           PromptsCeres.FORA_DE_ESCOPO, DesfechoInteracao.FORA_DE_ESCOPO, List.of(), false);
     };
@@ -128,6 +150,18 @@ public class OrquestradorService {
     return fallback.parteLei(pergunta, contexto);
   }
 
+  /** Parte de lei do MISTO: só a regra geral, sem falar dos dados (issue #170). */
+  private ResultadoRota leiRegraGeral(String pergunta, ContextoAssistente contexto) {
+    if (disponibilidade.disponivel()) {
+      try {
+        return rotaLegislacao.responderRegraGeral(pergunta, contexto);
+      } catch (AssistenteIndisponivelException e) {
+        semModelo(contexto, "legislacao");
+      }
+    }
+    return fallback.parteLei(pergunta, contexto);
+  }
+
   /** Falha durante uma pergunta interrompida não é indisponibilidade: a pergunta acabou. */
   private static void semModelo(ContextoAssistente contexto, String etapa) {
     contexto.verificarAtiva();
@@ -142,22 +176,42 @@ public class OrquestradorService {
   }
 
   /**
-   * Junta as duas partes do MISTO. Parte descartada não entra com texto do modelo: no lugar vai a
-   * mensagem fixa da rota. Parte em fallback entra com o texto dela (trechos verbatim ou atalhos).
-   * O desfecho é {@code MODO_FALLBACK} se alguma parte veio sem modelo; senão {@code RESPONDIDA}
-   * se ao menos uma parte foi aceita.
+   * Junta as duas partes do MISTO com texto de ligação fixo (issue #170):
+   * <ul>
+   *   <li>parte de dados aceita mas sem nada encontrado nas consultas (ou sem consulta nenhuma)
+   *       vira {@link #fraseSemDados frase fixa do backend}, e a lei entra como "de forma geral" —
+   *       nunca "não tenho a informação" seguido de "sim, as suas compras têm direito";</li>
+   *   <li>parte descartada não entra com texto do modelo: no lugar vai a mensagem fixa da rota;</li>
+   *   <li>parte em fallback entra com o texto dela (trechos verbatim ou atalhos);</li>
+   *   <li>lei que falou dos dados entra só como "veja os trechos citados".</li>
+   * </ul>
+   * Desfecho: {@code MODO_FALLBACK} se alguma parte veio sem modelo; {@code AFIRMACAO_SOBRE_DADOS}
+   * se a lei foi trocada pelos trechos; senão {@code RESPONDIDA} se ao menos uma parte foi aceita.
    */
-  private static ResultadoOrquestracao combinar(ResultadoRota dados, ResultadoRota lei) {
+  private static ResultadoOrquestracao combinar(
+      ResultadoRota dados, ResultadoRota lei, ContextoAssistente contexto) {
+    boolean semDados = dados.aceita() && contexto.nenhumDadoEncontrado();
+    String parteDados = semDados ? fraseSemDados(contexto) : dados.texto();
+    boolean leiSoTrechos = lei.desfecho() == DesfechoInteracao.AFIRMACAO_SOBRE_DADOS;
+    String parteLei;
+    if (lei.aceita()) {
+      parteLei = (semDados ? LIGACAO_SEM_DADOS : LIGACAO_REGRA) + lei.texto();
+    } else if (lei.emFallback() || leiSoTrechos) {
+      parteLei = lei.texto();
+    } else {
+      parteLei = ValidadorCitacao.SEM_FUNDAMENTO;
+    }
     boolean dadosUtil = dados.aceita() || dados.emFallback();
-    boolean leiUtil = lei.aceita() || lei.emFallback();
-    String parteLei = leiUtil ? lei.texto() : ValidadorCitacao.SEM_FUNDAMENTO;
+    boolean leiUtil = lei.aceita() || lei.emFallback() || leiSoTrechos;
     String texto = dadosUtil || leiUtil
-        ? dados.texto() + "\n\n" + parteLei
-        : dados.texto();
+        ? parteDados + "\n\n" + parteLei
+        : parteDados;
     boolean emFallback = dados.emFallback() || lei.emFallback();
     DesfechoInteracao desfecho;
     if (emFallback) {
       desfecho = DesfechoInteracao.MODO_FALLBACK;
+    } else if (leiSoTrechos) {
+      desfecho = DesfechoInteracao.AFIRMACAO_SOBRE_DADOS;
     } else if (dados.aceita() || lei.aceita()) {
       desfecho = DesfechoInteracao.RESPONDIDA;
     } else {
@@ -166,5 +220,17 @@ public class OrquestradorService {
     List<TelaAtalho> atalhos = dados.atalhos();
     return new ResultadoOrquestracao(Intencao.MISTO, texto, desfecho, lei.citacoes(),
         dados.aceita(), emFallback, atalhos);
+  }
+
+  /**
+   * Frase fixa da parte de dados sem nada encontrado. Texto do modelo não entra: sem dado, ele só
+   * poderia afirmar o que não viu.
+   */
+  static String fraseSemDados(ContextoAssistente contexto) {
+    return contexto.fontes().stream()
+        .map(fonte -> SEM_DADOS_POR_FUNCAO.get(fonte.funcao()))
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(SEM_DADOS);
   }
 }

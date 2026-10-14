@@ -40,18 +40,28 @@ public class RotaLegislacao {
   /** Raciocínio que alguns modelos (qwen3) escrevem no texto quando o thinking não é separado. */
   private static final Pattern RACIOCINIO = Pattern.compile("(?s)<think>.*?</think>");
 
+  /**
+   * Texto da parte de lei do MISTO quando o modelo falou dos dados do produtor (issue #170). As
+   * citações validadas seguem na resposta; sem dígitos, para não virar fonte de número.
+   */
+  public static final String SO_TRECHOS =
+      "A regra legal que trata do assunto esta nos trechos de lei citados.";
+
   private final ModeloLinguagem modelo;
   private final BuscaLegislacaoService busca;
   private final ValidadorCitacao validadorCitacao;
   private final ValidadorNumeros validadorNumeros;
+  private final VerificadorAfirmacaoDados verificadorDados;
 
   /** Constrói a rota. */
   public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
-      ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros) {
+      ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
+      VerificadorAfirmacaoDados verificadorDados) {
     this.modelo = modelo;
     this.busca = busca;
     this.validadorCitacao = validadorCitacao;
     this.validadorNumeros = validadorNumeros;
+    this.verificadorDados = verificadorDados;
   }
 
   /**
@@ -64,6 +74,25 @@ public class RotaLegislacao {
    *         falharem
    */
   public ResultadoRota responder(String pergunta, ContextoAssistente contexto) {
+    return responder(pergunta, contexto, false);
+  }
+
+  /**
+   * Parte de legislação do MISTO (issue #170): só a regra geral, sem falar dos dados do produtor.
+   * Se o texto do modelo se referir ao usuário ou ao que ele tem, comprou ou vendeu, o texto é
+   * trocado por {@link #SO_TRECHOS} e as citações validadas ficam — a regra continua acessível,
+   * a afirmação sobre dados que esta rota não viu, não.
+   *
+   * @param pergunta pergunta do usuário
+   * @param contexto contexto da pergunta
+   * @return regra geral com citações, ou só as citações
+   */
+  public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto) {
+    return responder(pergunta, contexto, true);
+  }
+
+  private ResultadoRota responder(
+      String pergunta, ContextoAssistente contexto, boolean soRegraGeral) {
     contexto.verificarAtiva();
     List<TrechoRecuperado> trechos = busca.buscar(pergunta, contexto.hoje());
     if (trechos.isEmpty()) {
@@ -72,9 +101,11 @@ public class RotaLegislacao {
     }
 
     String perguntaAoModelo = DataSanitizer.mascarar(pergunta);
+    String sistema = soRegraGeral
+        ? PromptsCeres.sistemaLegislacaoRegraGeral(contexto.hoje(), formatar(trechos))
+        : PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos));
     Prompt prompt = new Prompt(List.<Message>of(
-        new SystemMessage(PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos))),
-        new UserMessage(perguntaAoModelo)));
+        new SystemMessage(sistema), new UserMessage(perguntaAoModelo)));
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(resposta);
@@ -103,6 +134,11 @@ public class RotaLegislacao {
     }
 
     contexto.registrarTrechosCitados(citacao.idsCitados());
+    if (soRegraGeral && verificadorDados.afirmaSobreDados(citacao.texto())) {
+      log.info("Ceres: parte de legislacao do MISTO falou dos dados do produtor; so trechos");
+      return new ResultadoRota(
+          SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
+    }
     return ResultadoRota.aceita(citacao.texto(), citacao.citacoes());
   }
 

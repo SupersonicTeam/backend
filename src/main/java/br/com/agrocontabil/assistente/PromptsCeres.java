@@ -78,11 +78,30 @@ public final class PromptsCeres {
    * @return instrução de sistema
    */
   public static String sistemaLegislacao(LocalDate hoje, String trechos) {
+    return sistemaLegislacao(hoje, trechos, "");
+  }
+
+  /**
+   * Prompt da parte de legislação do MISTO (issue #170): só a regra geral. Outra parte do sistema
+   * responde sobre os dados do produtor; esta não os vê e não pode falar deles. Quem garante é o
+   * {@link VerificadorAfirmacaoDados}.
+   */
+  public static String sistemaLegislacaoRegraGeral(LocalDate hoje, String trechos) {
+    return sistemaLegislacao(hoje, trechos, """
+        - Explique SOMENTE a regra geral da lei, em terceira pessoa (ex.: "os insumos do Anexo IX \
+        tem reducao de aliquota"). Voce NAO conhece as compras, vendas, notas nem a situacao do \
+        usuario: outra parte do sistema responde sobre isso. Nunca escreva "voce", "seu", "sua" \
+        nem diga o que o usuario comprou, vendeu ou tem direito.
+        """);
+  }
+
+  private static String sistemaLegislacao(LocalDate hoje, String trechos, String regraExtra) {
     return """
         Voce e a Ceres, assistente fiscal do AgroContabil. Explica a reforma tributaria do \
         agronegocio (IBS e CBS) ao produtor rural.
 
         Regras:
+        """ + regraExtra + """
         - Responda em portugues do Brasil, de forma curta e direta, usando SOMENTE os trechos de \
         lei abaixo. Nao use conhecimento proprio.
         - Termine cada afirmacao com a marca do trecho que a fundamenta, exatamente como aparece: \

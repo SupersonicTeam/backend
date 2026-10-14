@@ -47,6 +47,7 @@ public final class ContextoAssistente {
   private final AtomicInteger tokensSaida = new AtomicInteger();
   private final AtomicBoolean usoInformado = new AtomicBoolean();
   private final AtomicInteger chamadasDeFuncao = new AtomicInteger();
+  private final AtomicInteger consultasComResultado = new AtomicInteger();
   private final List<String> trechosCitados = Collections.synchronizedList(new ArrayList<>());
   private final AtomicReference<DesfechoInteracao> interrupcao = new AtomicReference<>();
 
@@ -85,11 +86,19 @@ public final class ContextoAssistente {
   /**
    * Registra que uma função foi usada, com os parâmetros já validados e normalizados.
    *
+   * <p>{@code vazio} é obrigatório de propósito (issue #170): no MISTO, a parte de dados sem nada
+   * encontrado vira frase fixa do backend ("não encontrei..."). Se o sinal fosse opcional, uma
+   * função nova que esquecesse de informá-lo teria o resultado real trocado por essa frase falsa.
+   *
    * @param funcao     nome da função
    * @param parametros parâmetros efetivamente usados na consulta
+   * @param vazio      {@code true} se a consulta não encontrou nada (sem nota, guia ou compra)
    */
-  public void registrarFonte(String funcao, Map<String, String> parametros) {
+  public void registrarFonte(String funcao, Map<String, String> parametros, boolean vazio) {
     fontes.add(new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros))));
+    if (!vazio) {
+      consultasComResultado.incrementAndGet();
+    }
   }
 
   /**
@@ -116,6 +125,11 @@ public final class ContextoAssistente {
       tokensSaida.addAndGet(saida);
       usoInformado.set(true);
     }
+  }
+
+  /** {@code true} se nenhuma consulta aos dados encontrou algo (inclusive se nenhuma rodou). */
+  public boolean nenhumDadoEncontrado() {
+    return consultasComResultado.get() == 0;
   }
 
   /** Conta as funções que o modelo pediu, inclusive as que falharem (issue #144). */
