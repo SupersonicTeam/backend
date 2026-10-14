@@ -244,6 +244,29 @@ CREATE TABLE IF NOT EXISTS assistente_interacao (
 CREATE INDEX IF NOT EXISTS idx_assistente_interacao_produtor_criado
     ON assistente_interacao (produtor_id, criado_em);
 
+-- Marca de tokens estimados — Sprint 7 issue #166 (migration 0029). Idempotente: nos testes com
+-- create-drop o Hibernate ja cria a coluna a partir da entidade.
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS
+    tokens_estimados BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- Cota semanal de creditos da Ceres — Sprint 7 issue #166 (migration 0029). Manter sincronizado
+-- com 0029-assistente-uso-semanal.xml.
+CREATE TABLE IF NOT EXISTS assistente_uso_semanal (
+    titular_tipo         VARCHAR(20)               NOT NULL,
+    titular_id           UUID                      NOT NULL,
+    semana_inicio        DATE                      NOT NULL,
+    creditos_reservados  BIGINT                    DEFAULT 0 NOT NULL,
+    creditos_consumidos  BIGINT                    DEFAULT 0 NOT NULL,
+    tokens_entrada       BIGINT                    DEFAULT 0 NOT NULL,
+    tokens_saida         BIGINT                    DEFAULT 0 NOT NULL,
+    perguntas            INTEGER                   DEFAULT 0 NOT NULL,
+    atualizado_em        TIMESTAMP WITH TIME ZONE  NOT NULL,
+    CONSTRAINT pk_assistente_uso_semanal PRIMARY KEY (titular_tipo, titular_id, semana_inicio),
+    CONSTRAINT ck_assistente_uso_nao_negativo CHECK (creditos_reservados >= 0
+        AND creditos_consumidos >= 0 AND tokens_entrada >= 0 AND tokens_saida >= 0
+        AND perguntas >= 0)
+);
+
 -- Alertas tributarios — Sprint 7 issue #140 (migration 0028). Manter sincronizado com
 -- 0028-alerta-tributario.xml (FK com CASCADE mais abaixo, junto das demais).
 CREATE TABLE IF NOT EXISTS alerta_tributario (

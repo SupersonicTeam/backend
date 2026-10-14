@@ -3,6 +3,7 @@ package br.com.agrocontabil.controller;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
+import br.com.agrocontabil.dto.AssistenteUsoResponse;
 import br.com.agrocontabil.assistente.AssistenteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,14 +61,31 @@ public class AssistenteController {
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "403", description = "Papel sem acesso (contador)",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "429", description = "LIMITE_USO_ASSISTENTE: creditos da "
+          + "semana esgotados; header Retry-After ate a segunda-feira (#166)",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "503", description = "ASSISTENTE_OCUPADO (sem vaga ou "
           + "pergunta anterior em andamento; header Retry-After), ASSISTENTE_TEMPO_ESGOTADO ou "
-          + "ASSISTENTE_INDISPONIVEL (modelo fora do ar)",
+          + "ASSISTENTE_INDISPONIVEL (modelo e banco fora do ar)",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<AssistenteChatResponse> chat(
       @Valid @RequestBody AssistenteChatRequest request) {
     return ResponseEntity.ok(assistenteService.conversar(request));
+  }
+
+  /**
+   * Uso da Ceres na semana, para a barra de uso do chat (issue #166).
+   *
+   * @return plano, créditos da semana, consumidos, restantes e quando renova
+   */
+  @GetMapping("/uso")
+  @Operation(summary = "Uso semanal da Ceres",
+      description = "Creditos da semana (segunda 00:00 a domingo 23:59, horario de Brasilia) do "
+          + "produtor autenticado: limite do plano, consumidos, restantes e quando renova. Em "
+          + "creditos, nunca tokens. So o produtor (contador 403).")
+  public ResponseEntity<AssistenteUsoResponse> uso() {
+    return ResponseEntity.ok(assistenteService.uso());
   }
 
   /**

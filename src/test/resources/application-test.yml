@@ -51,3 +51,8 @@ app:
   # Alertas tributarios (#140): job desativado; os testes chamam o service direto.
   alertas:
     enabled: false
+  # Cota semanal da Ceres (#166): desligada nos testes da Ceres em geral (dezenas de perguntas por
+  # produtor); os testes da cota a ligam com @TestPropertySource.
+  assistente:
+    cota:
+      habilitada: false

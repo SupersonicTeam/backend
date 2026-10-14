@@ -5,11 +5,13 @@ import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
+import br.com.agrocontabil.assistente.porta.CotaUsoPorta;
 import br.com.agrocontabil.assistente.porta.IdentidadePorta;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
+import br.com.agrocontabil.dto.AssistenteUsoResponse;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.exception.AssistenteOcupadoException;
 import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
@@ -35,6 +37,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
@@ -105,6 +108,7 @@ public class AssistenteService implements DisposableBean {
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
   private final IdentidadePorta identidade;
+  private final CotaUsoPorta cota;
   private final OrquestradorService orquestrador;
   private final AuditoriaAssistente auditoria;
   private final ModeloLinguagem modeloLinguagem;
@@ -118,12 +122,14 @@ public class AssistenteService implements DisposableBean {
   /** Constrói o serviço e o pool de threads da Ceres. */
   public AssistenteService(
       IdentidadePorta identidade,
+      CotaUsoPorta cota,
       OrquestradorService orquestrador,
       AuditoriaAssistente auditoria,
       ModeloLinguagem modeloLinguagem,
       Clock clock,
       AssistenteProperties propriedades) {
     this.identidade = identidade;
+    this.cota = cota;
     this.orquestrador = orquestrador;
     this.auditoria = auditoria;
     this.modeloLinguagem = modeloLinguagem;
@@ -167,25 +173,35 @@ public class AssistenteService implements DisposableBean {
    */
   public AssistenteChatResponse conversar(AssistenteChatRequest request) {
     UUID produtorId = identidade.produtorAutenticado();
-    Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta());
+    // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
+    // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
+    // estornada exatamente uma vez.
+    CotaUsoPorta.ReservaCota reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
+    Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
     AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
     AtomicReference<Throwable> falha = new AtomicReference<>();
     // A resposta so e entregue depois de a vaga voltar: o cliente pode perguntar de novo assim
     // que recebe, e nao pode levar 503 da propria pergunta anterior.
-    iniciar(produtorId, () -> {
-      try {
-        resposta.set(responder(execucao, rota -> { }));
-      } catch (Throwable t) {
-        falha.set(t);
-      }
-    }, () -> {
-      if (falha.get() != null) {
-        resultado.completeExceptionally(falha.get());
-      } else {
-        resultado.complete(resposta.get());
-      }
-    });
+    try {
+      iniciar(produtorId, () -> {
+        try {
+          resposta.set(responder(execucao, rota -> { }));
+        } catch (Throwable t) {
+          falha.set(t);
+        }
+      }, () -> {
+        if (falha.get() != null) {
+          resultado.completeExceptionally(falha.get());
+        } else {
+          resultado.complete(resposta.get());
+        }
+      });
+    } catch (RuntimeException e) {
+      // Sem vaga: a pergunta nem comecou, a reserva volta inteira.
+      encerrarCota(execucao, false);
+      throw e;
+    }
     try {
       return resultado.get(timeoutPergunta.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
@@ -216,7 +232,11 @@ public class AssistenteService implements DisposableBean {
    */
   public SseEmitter conversarEmStream(AssistenteChatRequest request, String caminho) {
     UUID produtorId = identidade.produtorAutenticado();
-    Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta());
+    // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
+    // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
+    // estornada exatamente uma vez.
+    CotaUsoPorta.ReservaCota reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
+    Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
     SseEmitter emissor = new SseEmitter(timeoutPergunta.plus(FOLGA_TIMEOUT_SSE).toMillis());
     // Rede de seguranca: o prazo proprio abaixo dispara antes.
     emissor.onTimeout(() -> execucao.interromper(DesfechoInteracao.TEMPO_ESGOTADO));
@@ -228,16 +248,31 @@ public class AssistenteService implements DisposableBean {
           timeoutPergunta.toMillis(), TimeUnit.MILLISECONDS);
     } catch (RejectedExecutionException e) {
       // Aplicacao desligando: nenhuma pergunta nova.
+      encerrarCota(execucao, false);
       throw AssistenteOcupadoException.limiteGlobal();
     }
     try {
       iniciar(produtorId, () -> transmitir(emissor, execucao, caminho), () -> { });
     } catch (RuntimeException e) {
       prazo.cancel(false);
+      encerrarCota(execucao, false);
       throw e;
     }
     emissor.onCompletion(() -> prazo.cancel(false));
     return emissor;
+  }
+
+  /**
+   * Uso da Ceres na semana do produtor autenticado (issue #166), para a barra de uso do chat. Só
+   * créditos: o usuário nunca vê tokens.
+   *
+   * @throws br.com.agrocontabil.exception.NaoAutenticadoException sem identidade (401)
+   * @throws br.com.agrocontabil.exception.PapelNaoAutorizadoException contador (403)
+   */
+  public AssistenteUsoResponse uso() {
+    CotaUsoPorta.UsoCota uso = cota.consultar(identidade.produtorAutenticado());
+    return new AssistenteUsoResponse(uso.plano(), uso.habilitada(), uso.creditosSemana(),
+        uso.consumidos(), uso.restantes(), uso.renovaEm());
   }
 
   /**
@@ -317,7 +352,47 @@ public class AssistenteService implements DisposableBean {
     }
   }
 
+  /**
+   * Responde e encerra a cota (issue #166): pergunta concluída e não interrompida é acertada pelo
+   * consumo real (no modo fallback, sem modelo, o consumo é zero); qualquer falha, timeout ou
+   * desconexão estorna a reserva inteira.
+   */
   private AssistenteChatResponse responder(Execucao execucao, Consumer<Intencao> aoDecidirRota) {
+    boolean concluida = false;
+    try {
+      AssistenteChatResponse resposta = responderEAuditar(execucao, aoDecidirRota);
+      concluida = true;
+      return resposta;
+    } finally {
+      encerrarCota(execucao, concluida);
+    }
+  }
+
+  /**
+   * Acerto ou estorno da reserva, uma vez só por pergunta. Falha aqui não muda a resposta já
+   * auditada: vai ao log, e a reserva presa fica limitada à semana (a linha da próxima é outra).
+   */
+  private void encerrarCota(Execucao execucao, boolean concluida) {
+    if (!execucao.cotaEncerrada.compareAndSet(false, true)) {
+      return;
+    }
+    ContextoAssistente contexto = execucao.contexto;
+    try {
+      if (concluida && contexto.interrupcao().isEmpty()) {
+        Integer entrada = contexto.tokensEntrada();
+        Integer saida = contexto.tokensSaida();
+        cota.acertar(execucao.reserva, entrada == null ? 0 : entrada, saida == null ? 0 : saida,
+            modeloLinguagem.identificacao());
+      } else {
+        cota.estornar(execucao.reserva);
+      }
+    } catch (RuntimeException e) {
+      log.error("Falha ao encerrar a cota da Ceres: {}", e.getClass().getName());
+    }
+  }
+
+  private AssistenteChatResponse responderEAuditar(
+      Execucao execucao, Consumer<Intencao> aoDecidirRota) {
     ContextoAssistente contexto = execucao.contexto;
     String pergunta = execucao.pergunta;
     long inicio = System.nanoTime();
@@ -442,11 +517,16 @@ public class AssistenteService implements DisposableBean {
 
     private final ContextoAssistente contexto;
     private final String pergunta;
+    private final CotaUsoPorta.ReservaCota reserva;
+    /** A reserva da cota é encerrada (acerto ou estorno) uma vez só, pelo primeiro que chegar. */
+    private final AtomicBoolean cotaEncerrada = new AtomicBoolean();
     private Thread trabalhador;
 
-    private Execucao(ContextoAssistente contexto, String pergunta) {
+    private Execucao(
+        ContextoAssistente contexto, String pergunta, CotaUsoPorta.ReservaCota reserva) {
       this.contexto = contexto;
       this.pergunta = pergunta;
+      this.reserva = reserva;
     }
 
     /** Interrompida antes de a thread começar: a primeira checagem das rotas já para. */

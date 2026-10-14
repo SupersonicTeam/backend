@@ -63,6 +63,7 @@ public class AuditoriaAssistente {
         latenciaMs,
         contexto.tokensEntrada(),
         contexto.tokensSaida(),
+        contexto.tokensEstimados(),
         tamanhoPergunta,
         OffsetDateTime.now(clock)));
   }

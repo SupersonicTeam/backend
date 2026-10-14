@@ -133,6 +133,7 @@ br.com.agrocontabil
 | GET | `/api/alertas` | Alertas tributários do produtor (RN010, #140): guia pendente, fechamento da apuração do mês e fim do prazo de cancelamento de NF-e (RN006) que vencem em **menos de 5 dias**; gerados por job diário às 9h, e o motivo é conferido na leitura (guia paga some na hora). Só produtor (contador 403) |
 | POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[], modoFallback, atalhos[]}`; rota decidida pelo orquestrador: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO (#157); só produtor (contador 403); 503 `ASSISTENTE_OCUPADO` + `Retry-After` sem vaga (limite global ou pergunta anterior do mesmo produtor em andamento), 503 `ASSISTENTE_TEMPO_ESGOTADO`; com o modelo fora, **200 com `modoFallback: true`** (trechos de lei verbatim ou `atalhos` de tela, #146) — 503 `ASSISTENTE_INDISPONIVEL` só com o banco também fora |
 | POST | `/api/assistente/chat/stream` | Mesma pergunta em SSE (#157): eventos `rota` → `resposta` → `fim`, ou `erro` (envelope `errors[]`); sem tokens parciais (só a resposta já validada) |
+| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm}`. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir |
 
 ## Segurança
 

@@ -247,6 +247,7 @@ Decida pelo **`errors[0].code`**, não pelo texto. As mensagens já são seguras
 | 401 | `NAO_AUTENTICADO` | `X-Usuario-Id` inválido ou sem identidade | Sessão inválida (o mesmo 401 do JWT na Sprint 8) |
 | 403 | `PAPEL_NAO_AUTORIZADO` | Usuário contador | Esconder o chat para contador |
 | 413 | `PAYLOAD_TOO_LARGE` | Corpo acima de 16 KB | Não acontece com o limite de 1000 caracteres respeitado |
+| 429 | `LIMITE_USO_ASSISTENTE` | Créditos da semana acabaram (#166). Vem **antes** de o stream abrir, como JSON comum | Ler `Retry-After` (segundos até segunda 00:00, Brasília); mostrar "créditos da semana esgotados, renovam na segunda" e desabilitar o envio. A barra de uso (`GET /api/assistente/uso`) já avisa antes |
 | 503 | `ASSISTENTE_OCUPADO` | Sem vaga: a Ceres atende no máximo N perguntas ao mesmo tempo, **ou o usuário já tem uma pergunta em andamento** | Ler `Retry-After` (segundos, hoje `5`), mostrar "Ceres ocupada, tentando de novo em 5 s" e reenviar uma vez. Desabilitar o envio enquanto houver pergunta em andamento evita o segundo caso |
 | 503 | `ASSISTENTE_TEMPO_ESGOTADO` | Pergunta passou de 5 min | "A Ceres demorou demais. Tente uma pergunta mais específica." |
 | 503 | `ASSISTENTE_INDISPONIVEL` | Modelo fora do ar | "Ceres indisponível no momento"; o resto do sistema segue normal |
@@ -255,6 +256,21 @@ Decida pelo **`errors[0].code`**, não pelo texto. As mensagens já são seguras
 No streaming, os erros que acontecem depois de o stream abrir (`503 ASSISTENTE_TEMPO_ESGOTADO`,
 `503 ASSISTENTE_INDISPONIVEL` e `500 INTERNAL_ERROR`) chegam como **evento `erro`**, com o mesmo
 envelope.
+
+### Barra de uso: `GET /api/assistente/uso` (#166)
+
+```json
+{ "plano": "padrao", "habilitada": true, "creditosSemana": 1000, "consumidos": 120,
+  "restantes": 880, "renovaEm": "2026-10-19T00:00:00-03:00" }
+```
+
+- A semana vai de **segunda 00:00 a domingo 23:59** (Brasília) e a sobra **não acumula**.
+- Mostre **créditos**, nunca tokens. Uma pergunta simples custa poucos créditos; uma que consulta
+  várias funções e trechos de lei custa mais.
+- `restantes` já desconta as perguntas em andamento. Uma pergunta só começa se houver saldo para
+  o teto dela (hoje cerca de 73 créditos); o que sobra do teto volta no fim. Uma pergunta que
+  falha não custa nada, e no modo fallback (sem modelo) também não.
+- `habilitada: false`: a cota está desligada (demonstração) e nada é bloqueado.
 
 ---
 

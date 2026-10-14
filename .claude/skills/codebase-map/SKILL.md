@@ -57,6 +57,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `GuiaFiscalService` | CRUD de guias fiscais (issues #74/#94): `criar`/`listar`/`marcarComoPaga` exigem que o `produtorId` seja o do produtor autenticado — 404 se divergir (anti-IDOR) |
 | `GuiaFiscalStatusSyncJob` | `@Scheduled` diário — marca `PENDENTE` vencida como `VENCIDA` (issue #74) |
 | `AlertaTributarioService` | Alertas RN010 (issue #140): gera (guia pendente, fechamento do mês, prazo de cancelamento RN006 — a menos de 5 dias, BRT) e resolve os obsoletos; `listarAtivos(produtorId)` confere o motivo na consulta e o dono da referência. `AlertaTributarioJob` = `@Scheduled` 9h + ShedLock |
+| `CotaUsoAssistenteService` | Cota semanal da Ceres (issue #166): créditos = ⌈(entrada×peso + saída×peso)×fator÷tokensPorCredito⌉; reserva do teto por `UPDATE` condicional atômico, acerto pelo real, estorno integral; semana = segunda em BRT. `PlanoUsoProvider` (hoje `PlanoUsoPorConfiguracao`) é o ponto de troca para as assinaturas. Tabela `assistente_uso_semanal` (0029). Na Ceres: `porta/CotaUsoPorta` + `adaptador/CotaUsoAdaptador`; `AssistenteService` reserva na thread da requisição e encerra (acerto/estorno) uma vez só |
 | `CalendarioFiscalService` | Monta o calendário fiscal do produtor (issue #74): reúsa `GuiaFiscalRepository` como única fonte de vencimento nesta entrega |
 
 ### `nfe/`

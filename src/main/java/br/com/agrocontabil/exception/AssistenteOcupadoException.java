@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
  * {@code Retry-After} diz em quantos segundos vale tentar de novo; o
  * {@link GlobalExceptionHandler} o põe no header.
  */
-public class AssistenteOcupadoException extends DomainException {
+public class AssistenteOcupadoException extends DomainException implements ComRetryAfter {
 
   /** Segundos sugeridos no header {@code Retry-After}. */
   public static final int RETRY_AFTER_SEGUNDOS = 5;
@@ -44,7 +44,8 @@ public class AssistenteOcupadoException extends DomainException {
   }
 
   /** Valor do header {@code Retry-After}, em segundos. */
-  public int retryAfterSegundos() {
+  @Override
+  public long retryAfterSegundos() {
     return RETRY_AFTER_SEGUNDOS;
   }
 }
