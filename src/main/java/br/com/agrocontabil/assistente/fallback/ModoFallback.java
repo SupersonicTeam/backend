@@ -36,10 +36,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class ModoFallback {
 
-  /** Texto fixo da parte de dados sem modelo. Sem dígitos: nada aqui é dado do produtor. */
+  /**
+   * Texto fixo da parte de dados sem modelo. Sem dígitos: nada aqui é dado do produtor. Não diz
+   * "estou sem o modelo": num MISTO só a parte de dados pode ter falhado, e a lei ao lado ter sido
+   * redigida pelo modelo (issue #170 — sem contradição entre as partes).
+   */
   public static final String SEM_MODELO_DADOS =
-      "Estou sem o modelo de linguagem no momento e nao consigo interpretar perguntas sobre os "
-          + "seus dados. Voce encontra essas informacoes nas telas indicadas.";
+      "Nao consegui consultar os seus dados agora. Voce encontra essas informacoes nas telas "
+          + "indicadas.";
 
   /** Abertura da parte de legislação sem modelo. */
   public static final String SEM_MODELO_LEI =

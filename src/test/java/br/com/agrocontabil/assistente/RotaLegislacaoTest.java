@@ -48,8 +48,52 @@ class RotaLegislacaoTest {
         new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
             new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
                 java.time.Duration.ofSeconds(30), System::nanoTime)),
-        busca, new ValidadorCitacao(), new ValidadorNumeros());
+        busca, new ValidadorCitacao(), new ValidadorNumeros(), new VerificadorAfirmacaoDados());
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
+  }
+
+  @Test
+  @DisplayName("#170: MISTO, lei afirmando sobre as compras do produtor: so os trechos citados")
+  void regraGeralFalandoDosDadosViraTrechos() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    // O caso do PR #168: a parte de lei "viu" compras que so a parte de dados poderia ver.
+    chatModel.responderTexto("Sim, os fertilizantes que você comprou têm redução de 60% [T1].");
+
+    ResultadoRota r = rota.responderRegraGeral("Os fertilizantes que comprei tem reducao?",
+        contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.AFIRMACAO_SOBRE_DADOS);
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.SO_TRECHOS).doesNotContainPattern("\\d");
+    assertThat(r.citacoes()).singleElement()
+        .satisfies(c -> assertThat(c.dispositivo()).isEqualTo("art. 138, § 1º"));
+    String sistema = chatModel.promptsRecebidos().get(0).getSystemMessage().getText();
+    assertThat(sistema).contains("SOMENTE a regra geral");
+  }
+
+  @Test
+  @DisplayName("#170: MISTO com a regra em terceira pessoa passa inteira")
+  void regraGeralImpessoalPassa() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("Os insumos agropecuarios tem reducao de 60% [T1].");
+
+    ResultadoRota r = rota.responderRegraGeral("Os fertilizantes que comprei tem reducao?",
+        contexto);
+
+    assertThat(r.aceita()).isTrue();
+    assertThat(r.texto()).startsWith("Os insumos agropecuarios tem reducao de 60%");
+  }
+
+  @Test
+  @DisplayName("#170: a rota de legislacao pura nao usa o prompt nem o filtro do MISTO")
+  void legislacaoPuraNaoFiltraSegundaPessoa() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("Voce, como produtor, tem reducao de 60% nos insumos [T1].");
+
+    ResultadoRota r = rota.responder("Produtor tem reducao nos insumos?", contexto);
+
+    assertThat(r.aceita()).isTrue();
+    assertThat(chatModel.promptsRecebidos().get(0).getSystemMessage().getText())
+        .doesNotContain("SOMENTE a regra geral");
   }
 
   @Test

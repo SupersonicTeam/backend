@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -99,36 +100,120 @@ class OrquestradorServiceTest {
   }
 
   @Test
-  @DisplayName("MISTO aciona as duas camadas e junta dados + lei, fontes e citacoes")
+  @DisplayName("MISTO aciona as duas camadas e junta dados + regra geral com ligacao fixa")
   void misto() {
     classificarComo(Intencao.MISTO, 0.9);
-    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("Voce comprou X."));
-    when(rotaLegislacao.responder(anyString(), any()))
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
         .thenReturn(ResultadoRota.aceita("Ha credito (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
 
     assertThat(r.rota()).isEqualTo(Intencao.MISTO);
-    assertThat(r.texto()).isEqualTo("Voce comprou X.\n\nHa credito (LC 214/2025, art. 138).");
+    assertThat(r.texto()).isEqualTo("Voce comprou X.\n\n" + OrquestradorService.LIGACAO_REGRA
+        + "Ha credito (LC 214/2025, art. 138).");
     assertThat(r.citacoes()).containsExactly(CITACAO);
     assertThat(r.exibirFontes()).isTrue();
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
     verify(rotaDados).responder(anyString(), any());
-    verify(rotaLegislacao).responder(anyString(), any());
+    // #170: no MISTO a lei responde so a regra geral; o responder() puro nao e usado.
+    verify(rotaLegislacao).responderRegraGeral(anyString(), any());
+    verify(rotaLegislacao, never()).responder(anyString(), any());
   }
 
   @Test
   @DisplayName("MISTO com a parte de lei sem fundamento: dados + mensagem fixa, sem citacao")
   void mistoSemFundamento() {
     classificarComo(Intencao.MISTO, 0.9);
-    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("Voce comprou X."));
-    when(rotaLegislacao.responder(anyString(), any())).thenReturn(ResultadoRota.descartada(
-        ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA));
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any())).thenReturn(
+        ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA));
 
     ResultadoOrquestracao r = responder();
 
     assertThat(r.texto()).endsWith(ValidadorCitacao.SEM_FUNDAMENTO);
     assertThat(r.citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#170: MISTO sem compra encontrada: frase fixa do backend e regra 'de forma geral'")
+  void mistoSemDadosFraseFixaSemContradicao() {
+    classificarComo(Intencao.MISTO, 0.9);
+    // O modelo consultou, nada voltou, e ele ainda assim redigiu algo.
+    when(rotaDados.responder(anyString(), any())).thenAnswer(invocacao -> {
+      contexto.registrarFonte(
+          "totalComprasPorInsumo", java.util.Map.of("descricaoOuNcm", "adubo"), true);
+      return ResultadoRota.aceita("Nao tem essa informacao.");
+    });
+    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Fertilizantes tem reducao (LC 214/2025, art. 138).",
+            List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo(
+        "Nao encontrei compras desse tipo nas suas notas no periodo consultado.\n\n"
+            + OrquestradorService.LIGACAO_SEM_DADOS
+            + "Fertilizantes tem reducao (LC 214/2025, art. 138).");
+    assertThat(r.texto()).doesNotContain("Nao tem essa informacao");
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+  }
+
+  @Test
+  @DisplayName("#170: MISTO sem nenhuma consulta: o texto livre do modelo nao entra")
+  void mistoSemConsultaUsaFraseGenerica() {
+    classificarComo(Intencao.MISTO, 0.9);
+    // Sem consulta, um "voce comprou fertilizantes" sem numero passaria pelo ValidadorNumeros.
+    when(rotaDados.responder(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Voce comprou fertilizantes."));
+    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).startsWith(OrquestradorService.SEM_DADOS + "\n\n")
+        .doesNotContain("Voce comprou");
+  }
+
+  @Test
+  @DisplayName("#170: lei que falou dos dados entra so como 'veja os trechos', com desfecho proprio")
+  void mistoLeiFalandoDosDados() {
+    classificarComo(Intencao.MISTO, 0.9);
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any())).thenReturn(new ResultadoRota(
+        RotaLegislacao.SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo("Voce comprou X.\n\n" + RotaLegislacao.SO_TRECHOS);
+    assertThat(r.citacoes()).containsExactly(CITACAO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.AFIRMACAO_SOBRE_DADOS);
+    assertThat(r.exibirFontes()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#170: so a parte de dados caiu e a lei veio do modelo: texto sem contradicao")
+  void mistoDadosEmFallbackLeiDoModelo() {
+    classificarComo(Intencao.MISTO, 0.9);
+    when(rotaDados.responder(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("timeout no laco de funcoes", null));
+    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).startsWith(ModoFallback.SEM_MODELO_DADOS)
+        .contains(OrquestradorService.LIGACAO_REGRA + "Ha reducao")
+        .doesNotContain("sem o modelo");
+    assertThat(r.modoFallback()).isTrue();
+  }
+
+  /** Rota de dados que consultou e encontrou dados. */
+  private void dadosEncontrados(String texto) {
+    when(rotaDados.responder(anyString(), any())).thenAnswer(invocacao -> {
+      contexto.registrarFonte("listarNotas", java.util.Map.of(), false);
+      return ResultadoRota.aceita(texto);
+    });
   }
 
   @Test
@@ -216,8 +301,8 @@ class OrquestradorServiceTest {
   @DisplayName("#146: MISTO com dados respondidos e lei fora: dados ficam, lei da busca textual")
   void mistoComLeiForaMantemDados() {
     classificarComo(Intencao.MISTO, 0.9);
-    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("Voce comprou X."));
-    when(rotaLegislacao.responder(anyString(), any()))
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
         .thenThrow(new AssistenteIndisponivelException("embedding fora", null));
     when(buscaTextual.buscar(anyString(), any(), anyInt())).thenReturn(List.of(TRECHO_TEXTUAL));
 

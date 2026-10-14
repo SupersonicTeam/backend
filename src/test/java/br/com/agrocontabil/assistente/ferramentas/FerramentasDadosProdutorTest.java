@@ -78,6 +78,8 @@ class FerramentasDadosProdutorTest {
     assertThat(compras.quantidadeNotas()).isEqualTo(3);
     assertThat(compras.criterio()).isEqualTo("DESCRICAO");
     assertThat(compras.observacao()).isNull();
+    // #170: consulta com resultado conta para o MISTO.
+    assertThat(contexto.nenhumDadoEncontrado()).isFalse();
     assertThat(compras.porUnidade()).singleElement()
         .satisfies(u -> assertThat(u.quantidade()).isEqualTo("1.500"));
     assertThat(contexto.fontes()).containsExactly(new FonteDado("totalComprasPorInsumo", Map.of(
@@ -97,6 +99,8 @@ class FerramentasDadosProdutorTest {
     assertThat(compras.valorTotal()).isEqualTo("R$ 0,00");
     // Zero nao e "nao comprou": a observacao orienta o modelo a dizer que nada foi encontrado.
     assertThat(compras.observacao()).isEqualTo(FerramentasDadosProdutor.NADA_POR_NCM);
+    // #170: consulta vazia nao conta como dado encontrado.
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
   }
 
   @Test
