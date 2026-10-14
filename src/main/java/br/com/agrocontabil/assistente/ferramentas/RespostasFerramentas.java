@@ -118,6 +118,24 @@ public final class RespostasFerramentas {
       String de, String ate, long totalEncontrado, String valorTotal, List<Guia> guias) {}
 
   /**
+   * Resultado de {@code listarAlertas} (issue #140, RN010).
+   *
+   * @param totalEncontrado alertas ativos (pode ser mais que os listados)
+   * @param alertas         os mais urgentes, no máximo 10
+   */
+  public record Alertas(long totalEncontrado, List<Alerta> alertas) {}
+
+  /**
+   * Um alerta tributário.
+   *
+   * @param tipo          VENCIMENTO_GUIA, FECHAMENTO_APURACAO ou PRAZO_CANCELAMENTO_NFE
+   * @param descricao     o que vence ou fecha
+   * @param prazo         último dia para agir
+   * @param diasRestantes dias até o prazo (0 = hoje)
+   */
+  public record Alerta(String tipo, String descricao, String prazo, long diasRestantes) {}
+
+  /**
    * Uma guia a vencer.
    *
    * @param tipo       tipo da guia (ICMS, FUNRURAL...)

@@ -31,11 +31,11 @@ class DefinicaoFerramentasTest {
       .toList();
 
   @Test
-  @DisplayName("As cinco funcoes da issue #142 estao expostas")
+  @DisplayName("As cinco funcoes da issue #142 e a de alertas (#140) estao expostas")
   void cincoFuncoes() {
     assertThat(definicoes).extracting(ToolDefinition::name).containsExactlyInAnyOrder(
         "totalComprasPorInsumo", "consultarApuracao", "consultarCreditos", "listarNotas",
-        "proximosVencimentos");
+        "proximosVencimentos", "listarAlertas");
   }
 
   @Test
@@ -46,7 +46,11 @@ class DefinicaoFerramentasTest {
       List<String> nomes = new ArrayList<>();
       propriedades.fieldNames().forEachRemaining(nome -> nomes.add(nome.toLowerCase(Locale.ROOT)));
 
-      assertThat(nomes).as("parametros de %s", definicao.name()).isNotEmpty()
+      // listarAlertas nao tem parametro nenhum (#140): o schema existe, so nao ha propriedades.
+      if (!definicao.name().equals("listarAlertas")) {
+        assertThat(nomes).as("parametros de %s", definicao.name()).isNotEmpty();
+      }
+      assertThat(nomes).as("parametros de %s", definicao.name())
           .noneMatch(nome -> nome.contains("produtor") || nome.contains("usuario")
               || nome.contains("contador") || nome.contains("cpf") || nome.contains("cnpj")
               || nome.equals("id") || nome.endsWith("id") || nome.contains("uuid")
@@ -61,7 +65,7 @@ class DefinicaoFerramentasTest {
         .filter(m -> m.isAnnotationPresent(Tool.class))
         .toList();
 
-    assertThat(funcoes).hasSize(5).allSatisfy(m ->
+    assertThat(funcoes).hasSize(6).allSatisfy(m ->
         assertThat(m.getAnnotation(Tool.class).resultConverter())
             .as("resultConverter de %s", m.getName())
             .isEqualTo(ResultadoSanitizadoConverter.class));

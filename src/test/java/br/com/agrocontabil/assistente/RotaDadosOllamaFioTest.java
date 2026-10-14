@@ -99,7 +99,7 @@ class RotaDadosOllamaFioTest {
   }
 
   @Test
-  @DisplayName("Nada do produtor nem do ToolContext sai para o provedor; so as 5 funcoes vao")
+  @DisplayName("Nada do produtor nem do ToolContext sai para o provedor; so as 6 funcoes vao")
   void payloadNaoCarregaProdutor() {
     respostas.add(ollama("", "{\"function\":{\"name\":\"consultarApuracao\","
         + "\"arguments\":{\"mes\":\"2026-07\"}}}"));
@@ -114,9 +114,10 @@ class RotaDadosOllamaFioTest {
     for (String corpo : corpos) {
       assertThat(corpo).doesNotContain(PRODUTOR.toString(), "contextoAssistente", "produtorId");
     }
-    // As funcoes anunciadas ao modelo sao exatamente as cinco de dados.
+    // As funcoes anunciadas ao modelo sao exatamente as seis de dados (a de alertas e da #140).
     assertThat(corpos.get(0)).contains("\"totalComprasPorInsumo\"", "\"consultarApuracao\"",
-        "\"consultarCreditos\"", "\"listarNotas\"", "\"proximosVencimentos\"");
+        "\"consultarCreditos\"", "\"listarNotas\"", "\"proximosVencimentos\"",
+        "\"listarAlertas\"");
     // Opcoes padrao preservadas ao mesclar com as opcoes da chamada: modelo e thinking desligado.
     assertThat(corpos.get(0)).contains("\"model\":\"qwen3:4b\"", "\"think\":false");
     // O resultado da funcao foi devolvido ao modelo na segunda chamada.

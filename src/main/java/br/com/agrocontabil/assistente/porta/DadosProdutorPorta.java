@@ -72,6 +72,23 @@ public interface DadosProdutorPorta {
   Totais totalVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate);
 
   /**
+   * Alertas tributários ativos do produtor (issue #140, RN010), do mais urgente ao mais distante,
+   * no máximo {@link #LIMITE_MAXIMO}. O motivo de cada um já foi conferido na consulta.
+   */
+  Pagina<Alerta> alertas(UUID produtorId);
+
+  /**
+   * Um alerta, com a descrição montada pelo backend (sem observação livre nem dado pessoal).
+   *
+   * @param tipo          {@code VENCIMENTO_GUIA}, {@code FECHAMENTO_APURACAO} ou
+   *                      {@code PRAZO_CANCELAMENTO_NFE}
+   * @param descricao     texto curto
+   * @param dataLimite    último dia para agir
+   * @param diasRestantes dias até a data-limite (0 = hoje)
+   */
+  record Alerta(String tipo, String descricao, LocalDate dataLimite, long diasRestantes) {}
+
+  /**
    * Quantidade e soma de um mesmo conjunto, calculadas juntas (issue #169).
    *
    * @param quantidade itens somados

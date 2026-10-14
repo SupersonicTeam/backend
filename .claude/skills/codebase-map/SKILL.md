@@ -110,7 +110,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `rag/BuscaTextualLegislacaoService` | Busca textual do fallback (issue #146): OU dos lexemas (máx. 20, cada um com `quote_literal`), mínimo de 2 casados, mesma vigência; coluna `conteudo_tsv_sem_acento` (0027). Mapa de acentos travado pelo `BuscaTextualMapaAcentosTest` |
 | `rag/ValidadorCitacao` | Marca `[Tn]` inexistente ou ausente → "não encontrei fundamento legal"; senão troca a marca pela referência dos metadados e devolve `CitacaoLegal` com link |
 | `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
-| `ferramentas/FerramentasDadosProdutor` | 5 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
+| `ferramentas/FerramentasDadosProdutor` | 6 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`, `listarAlertas` — #140). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
 | `ferramentas/ProcessadorErroFerramenta` | O que volta ao modelo quando a função falha: mensagem de parâmetro (nossa) ou genérica; contexto ausente aborta |
 
 `service/AssistenteInteracaoService` (chamado pelo `AuditoriaAdaptador`): grava `AssistenteInteracao` (tabela `assistente_interacao`, changeSet 0025) — rota, desfecho, funções mascaradas, modelo, latência, tokens, tamanho da pergunta; **nunca o texto** (issue #144). `config/LimiteCorpoAssistenteFilter`: 413 acima de 16 KB em `/api/assistente/**`, antes do Jackson.

@@ -262,4 +262,38 @@ class FerramentasDadosProdutorTest {
     assertThat(vencimentos.totalEncontrado()).isZero();
     assertThat(vencimentos.valorTotal()).isEqualTo("R$ 0,00");
   }
+
+  @Test
+  @DisplayName("#140: listarAlertas usa o produtor do contexto e formata o prazo")
+  void listarAlertas() {
+    when(dados.alertas(PRODUTOR)).thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Alerta(
+        "VENCIMENTO_GUIA", "Guia de FUNRURAL de R$ 1.840,55", HOJE.plusDays(2), 2)), 1));
+
+    RespostasFerramentas.Alertas alertas = ferramentas.listarAlertas(toolContext);
+
+    assertThat(alertas.totalEncontrado()).isEqualTo(1);
+    assertThat(alertas.alertas()).singleElement().satisfies(a -> {
+      assertThat(a.prazo()).isEqualTo("01/10/2026");
+      assertThat(a.diasRestantes()).isEqualTo(2);
+    });
+    assertThat(contexto.fontes()).extracting(FonteDado::funcao).containsExactly("listarAlertas");
+    assertThat(contexto.nenhumDadoEncontrado()).isFalse();
+  }
+
+  @Test
+  @DisplayName("#140: sem alertas, a consulta conta como vazia (frase fixa no MISTO)")
+  void listarAlertasVazio() {
+    when(dados.alertas(PRODUTOR)).thenReturn(new Pagina<>(List.of(), 0));
+
+    assertThat(ferramentas.listarAlertas(toolContext).alertas()).isEmpty();
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#140: sem contexto, listarAlertas falha fechado e nao consulta nada")
+  void listarAlertasSemContexto() {
+    assertThatThrownBy(() -> ferramentas.listarAlertas(new ToolContext(Map.of())))
+        .isInstanceOf(ContextoAssistenteAusenteException.class);
+    verifyNoInteractions(dados);
+  }
 }

@@ -77,6 +77,7 @@ do Ollama nem de chave de API.
 | `consultarCreditos(dataInicio, dataFim)` | "quanto tenho de crédito?" | `CreditoService` |
 | `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10), "quanto somam?" | consulta fixa top-N + `valorTotal` do filtro inteiro (sem `situacao`, só as autorizadas — #169) |
 | `proximosVencimentos(dias)` | "o que vence este mês?", "quanto somam?" (máx. 90 dias) | guias não pagas + `valorTotal` da janela inteira (#169) |
+| `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
 
 Garantias, todas em código:
 
