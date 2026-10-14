@@ -78,6 +78,17 @@ do Ollama nem de chave de API.
 | `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10), "quanto somam?" | consulta fixa top-N + `valorTotal` do filtro inteiro (sem `situacao`, só as autorizadas — #169) |
 | `proximosVencimentos(dias)` | "o que vence este mês?", "quanto somam?" (máx. 90 dias) | guias não pagas + `valorTotal` da janela inteira (#169) |
 | `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
+| `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física ou no varejo (o produtor recolhe); venda ao exterior imune (Constituição, art. 149, § 2º, I); IBS/CBS separado pelo split payment |
+
+**Retenção (RN009, #145): as duas regras, sempre.** Decisão do Murillo de 2026-10-14: quando o
+assunto é retenção, a Ceres fala do Funrural retido pelo comprador **e** do split payment, com
+citação. Em código, não no prompt: o `FundamentoRetencao` acrescenta ao fim da resposta um
+parágrafo fixo com as duas regras e as citações da base (Lei 8.212/1991, art. 25, I e II, e art.
+30, IV; Lei 9.528/1997, art. 6º; LC 214/2025, arts. 31 e 32), em qualquer rota menos fora de
+escopo, quando a função foi usada ou a pergunta fala de retenção, Funrural, SENAR ou split payment.
+Um "não encontrei fundamento legal" da rota de lei sai, para não contradizer o parágrafo. A função
+devolve também avisos fixos do que o cálculo não sabe: a opção pela folha de salários (art. 25,
+§ 13) e a produção vendida para plantio ou reprodução (§ 12).
 
 Garantias, todas em código:
 
@@ -255,6 +266,18 @@ Fase 2 troca a implementação sem mexer no orquestrador) devolve a intenção e
 
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com
 números da lei, e nenhum validador saberia de onde cada um veio.
+
+**Antes do classificador, um filtro determinístico de prompt injection** (`FiltroInjecao`, #145):
+"ignore as instruções", "prompt de sistema", "agora você é um...", "sem restrições", "modo
+desenvolvedor" vão direto para `FORA_DE_ESCOPO`, sem chamar o modelo. Na avaliação de 2026-10-14 o
+classificador mandou um pedido do prompt de sistema para a rota de dados (sem vazamento, mas sem
+recusa). A segurança dos dados não depende do filtro (as funções não têm parâmetro de produtor), e
+um teste garante que nenhuma pergunta legítima do gabarito é barrada.
+
+**Prompt do classificador: mudança pequena, medida.** Na #145, um parágrafo de regras a mais no
+prompt tirou de rota duas perguntas que acertavam (alertas foi para MISTO, crédito presumido para
+fora de escopo), de forma repetível. O que ficou foi um exemplo curto na linha de `DADOS`. Toda
+mudança no prompt do classificador pede uma rodada do gabarito (`docs/avaliacao/`).
 
 **A parte de lei do MISTO não fala dos dados (#170).** Ela vê só trechos de lei, então:
 

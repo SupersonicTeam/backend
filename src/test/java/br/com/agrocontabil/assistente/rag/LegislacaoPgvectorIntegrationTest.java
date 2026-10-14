@@ -237,6 +237,27 @@ class LegislacaoPgvectorIntegrationTest {
   }
 
   @Test
+  @DisplayName("#145: dispositivos exatos, na ordem pedida; ausente e nao vigente ficam de fora")
+  void dispositivosExatos() {
+    ingestao.ingerir(new FonteLegislacao("Lei 8.212/1991", URL, PUBLICACAO, PUBLICACAO), List.of(
+        new DispositivoLegal("art. 25, inciso I", "Art. 25. ... I - 1,2% da receita bruta"),
+        new DispositivoLegal("art. 30, inciso IV", "Art. 30. ... IV - a empresa adquirente"),
+        new DispositivoLegal("art. 30, inciso IV-A", "Art. 30. ... IV-A - outro inciso")));
+
+    List<TrechoRecuperado> trechos = buscaTextual.buscarDispositivos(List.of(
+        "Lei 8.212/1991|art. 30, inciso IV", "Lei 8.212/1991|art. 25, inciso I",
+        "Lei 8.212/1991|art. 99", "LC 214/2025|art. 30, inciso IV' OR '1'='1"),
+        LocalDate.of(2026, 9, 29));
+
+    assertThat(trechos).extracting(TrechoRecuperado::dispositivo)
+        .containsExactly("art. 30, inciso IV", "art. 25, inciso I");
+    assertThat(trechos.get(0).comoCitacao().referencia())
+        .isEqualTo("Lei 8.212/1991, art. 30, inciso IV");
+    assertThat(buscaTextual.buscarDispositivos(
+        List.of("Lei 8.212/1991|art. 30, inciso IV"), LocalDate.of(2024, 1, 1))).isEmpty();
+  }
+
+  @Test
   @DisplayName("#170: itens de anexo pelo NCM: so o item certo, vigente, nunca artigo")
   void anexosPorNcm() {
     ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO), List.of(

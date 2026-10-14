@@ -38,6 +38,7 @@ class DadosProdutorAdaptadorTest {
   @Mock private ApuracaoService apuracaoService;
   @Mock private CreditoService creditoService;
   @Mock private br.com.agrocontabil.service.AlertaTributarioService alertaService;
+  @Mock private br.com.agrocontabil.service.RetencaoService retencaoService;
   @Mock private PlatformTransactionManager transactionManager;
   @Mock private TransactionStatus status;
 
@@ -48,7 +49,7 @@ class DadosProdutorAdaptadorTest {
     AssistenteProperties propriedades = new AssistenteProperties();
     propriedades.setTimeoutFuncao(Duration.ofSeconds(7));
     adaptador = new DadosProdutorAdaptador(consultaService, apuracaoService, creditoService,
-        alertaService,
+        alertaService, retencaoService,
         transactionManager, propriedades);
     when(transactionManager.getTransaction(any())).thenReturn(status);
   }

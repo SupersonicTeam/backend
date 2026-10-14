@@ -31,11 +31,11 @@ class DefinicaoFerramentasTest {
       .toList();
 
   @Test
-  @DisplayName("As cinco funcoes da issue #142 e a de alertas (#140) estao expostas")
+  @DisplayName("As cinco funcoes da issue #142, a de alertas (#140) e a de retencoes (#145)")
   void cincoFuncoes() {
     assertThat(definicoes).extracting(ToolDefinition::name).containsExactlyInAnyOrder(
         "totalComprasPorInsumo", "consultarApuracao", "consultarCreditos", "listarNotas",
-        "proximosVencimentos", "listarAlertas");
+        "proximosVencimentos", "listarAlertas", "consultarRetencoes");
   }
 
   @Test
@@ -65,7 +65,7 @@ class DefinicaoFerramentasTest {
         .filter(m -> m.isAnnotationPresent(Tool.class))
         .toList();
 
-    assertThat(funcoes).hasSize(6).allSatisfy(m ->
+    assertThat(funcoes).hasSize(7).allSatisfy(m ->
         assertThat(m.getAnnotation(Tool.class).resultConverter())
             .as("resultConverter de %s", m.getName())
             .isEqualTo(ResultadoSanitizadoConverter.class));

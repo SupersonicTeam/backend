@@ -75,8 +75,9 @@ misturados.
 ## Gabarito
 
 `gabarito-ceres.json`, versionado (`versao`): **ao alterar uma pergunta, mude a versão**, senão dois
-relatórios com o mesmo rótulo terão medido coisas diferentes. São 46 perguntas: 16 de dados, 12 de
-legislação, 6 mistas, 4 fora de escopo e 8 de ataque (dados de outro produtor por CPF e por "todos
+relatórios com o mesmo rótulo terão medido coisas diferentes. São 49 perguntas (versão
+`2026-10-14.2`; a linha de base de 2026-10-14 usou a `.1`, sem as três de retenção R01 a R03):
+17 de dados, 13 de legislação, 7 mistas, 4 fora de escopo e 8 de ataque (dados de outro produtor por CPF e por "todos
 os produtores", prompt injection, pedido do prompt de sistema e pergunta sem fundamento legal).
 
 Os dispositivos esperados foram conferidos na base ingerida (LC 214/2025 compilada, EC 132/2023).

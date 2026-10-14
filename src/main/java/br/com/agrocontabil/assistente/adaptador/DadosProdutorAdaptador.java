@@ -6,6 +6,7 @@ import br.com.agrocontabil.dto.AlertaTributarioResponse;
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.TotalAgregado;
@@ -15,6 +16,7 @@ import br.com.agrocontabil.service.ApuracaoService;
 import br.com.agrocontabil.service.ComprasInsumoResultado;
 import br.com.agrocontabil.service.ConsultaDadosProdutorService;
 import br.com.agrocontabil.service.CreditoService;
+import br.com.agrocontabil.service.RetencaoService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -48,17 +50,19 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   private final ApuracaoService apuracaoService;
   private final CreditoService creditoService;
   private final AlertaTributarioService alertaService;
+  private final RetencaoService retencaoService;
   private final TransactionTemplate transacao;
 
   /** Constrói o adaptador sobre os services existentes. */
   public DadosProdutorAdaptador(ConsultaDadosProdutorService consultaService,
       ApuracaoService apuracaoService, CreditoService creditoService,
-      AlertaTributarioService alertaService,
+      AlertaTributarioService alertaService, RetencaoService retencaoService,
       PlatformTransactionManager transactionManager, AssistenteProperties propriedades) {
     this.consultaService = consultaService;
     this.apuracaoService = apuracaoService;
     this.creditoService = creditoService;
     this.alertaService = alertaService;
+    this.retencaoService = retencaoService;
     this.transacao = new TransactionTemplate(transactionManager);
     this.transacao.setTimeout((int) propriedades.getTimeoutFuncao().toSeconds());
   }
@@ -100,6 +104,21 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
         comTimeout(() -> apuracaoService.consultarParaProdutor(produtorId, periodo));
     return new Apuracao(a.periodo(), a.status(), a.debitoIbs(), a.debitoCbs(), a.creditoIbs(),
         a.creditoCbs(), a.saldoIbs(), a.saldoCbs(), a.totalNotas());
+  }
+
+  @Override
+  public Retencoes retencoes(UUID produtorId, LocalDate inicio, LocalDate fim) {
+    RetencaoService.ResumoRetencoes r =
+        comTimeout(() -> retencaoService.resumir(produtorId, inicio, fim));
+    return new Retencoes(r.tipoProdutor() == TipoProdutor.PESSOA_FISICA,
+        funrural(r.retidoPeloAdquirente(), r.notasRetidas()),
+        funrural(r.recolhidoPeloProdutor(), r.notasSemRetencao()),
+        funrural(r.exportacao(), r.notasExportacao()),
+        r.ibsSplitPayment(), r.cbsSplitPayment(), r.notasVendidas());
+  }
+
+  private static Funrural funrural(RetencaoService.Funrural f, long notas) {
+    return new Funrural(notas, f.base(), f.previdencia(), f.rat(), f.senar(), f.total());
   }
 
   @Override

@@ -562,4 +562,31 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       """)
   List<UUID> findProdutoresComNotaAutorizadaEntre(
       @Param("inicio") OffsetDateTime inicio, @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Vendas próprias autorizadas do produtor em {@code [inicio, fim)}, somadas por tipo de
+   * comprador (RN009, issue #145): é o comprador que decide se o Funrural é retido. O documento do
+   * destinatário é guardado só com dígitos (14 = CNPJ); UF {@code EX} é venda ao exterior.
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.VendaPorAdquirenteAgregado(
+          CASE WHEN n.destinatarioEndereco.uf = 'EX' THEN 'EXTERIOR'
+               WHEN LENGTH(n.destinatarioCpfCnpj) = 14 THEN 'PESSOA_JURIDICA'
+               ELSE 'PESSOA_FISICA' END,
+          COUNT(n), SUM(n.valorTotalProdutos),
+          SUM(COALESCE(n.valorTotalIbs, 0)), SUM(COALESCE(n.valorTotalCbs, 0)))
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      GROUP BY CASE WHEN n.destinatarioEndereco.uf = 'EX' THEN 'EXTERIOR'
+               WHEN LENGTH(n.destinatarioCpfCnpj) = 14 THEN 'PESSOA_JURIDICA'
+               ELSE 'PESSOA_FISICA' END
+      """)
+  List<VendaPorAdquirenteAgregado> agregarVendasPorAdquirente(
+      @Param("produtorId") UUID produtorId,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
 }
