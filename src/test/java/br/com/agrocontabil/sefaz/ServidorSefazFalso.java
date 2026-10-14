@@ -35,6 +35,7 @@ final class ServidorSefazFalso implements AutoCloseable {
   private volatile int status = 200;
   private volatile String corpo = "";
   private volatile long atrasoMs;
+  private volatile long travaCorpoMs;
 
   ServidorSefazFalso() throws Exception {
     servidor = HttpsServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -76,7 +77,17 @@ final class ServidorSefazFalso implements AutoCloseable {
         troca.sendResponseHeaders(status, resposta.length == 0 ? -1 : resposta.length);
         if (resposta.length > 0) {
           try (OutputStream out = troca.getResponseBody()) {
-            out.write(resposta);
+            if (travaCorpoMs > 0) {
+              // Cabecalhos e metade do corpo saem; o resto trava (SEFAZ que para no meio).
+              out.write(resposta, 0, resposta.length / 2);
+              out.flush();
+              Thread.sleep(travaCorpoMs);
+              out.write(resposta, resposta.length / 2, resposta.length - resposta.length / 2);
+            } else {
+              out.write(resposta);
+            }
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
           }
         }
       } catch (IOException e) {
@@ -99,6 +110,12 @@ final class ServidorSefazFalso implements AutoCloseable {
   /** Atraso antes de responder (para estourar o tempo de leitura do cliente). */
   ServidorSefazFalso atrasar(long ms) {
     this.atrasoMs = ms;
+    return this;
+  }
+
+  /** Manda os cabeçalhos e metade do corpo, e trava antes do resto. */
+  ServidorSefazFalso travarNoCorpo(long ms) {
+    this.travaCorpoMs = ms;
     return this;
   }
 

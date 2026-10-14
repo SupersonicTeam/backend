@@ -229,6 +229,19 @@ class SoapSefazTransportTest {
     }
 
     @Test
+    @DisplayName("Cabecalhos chegam e o corpo trava: o prazo cobre a resposta inteira")
+    void corpoTravado() {
+      servidor.travarNoCorpo(10_000).responder(200, retEnviNFe("104", "<cStat>100</cStat>"));
+
+      long inicio = System.nanoTime();
+      assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
+          SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class);
+      // connect-ms (2 s) + read-ms (1 s) do teste, com folga; sem o prazo, esperaria os 10 s.
+      assertThat(java.time.Duration.ofNanos(System.nanoTime() - inicio).toMillis())
+          .isLessThan(6_000);
+    }
+
+    @Test
     @DisplayName("Servidor sem a cadeia confiavel: handshake falha antes de enviar, conexao")
     void servidorNaoConfiavel() {
       // Sem truststore configurado vale o da JVM, que nao conhece o certificado do servidor.

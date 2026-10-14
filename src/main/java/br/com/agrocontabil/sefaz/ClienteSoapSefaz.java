@@ -4,8 +4,8 @@ import br.com.agrocontabil.exception.SefazConexaoException;
 import br.com.agrocontabil.exception.SefazRespostaIndeterminadaException;
 import br.com.agrocontabil.nfe.SecureXmlFactories;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -13,11 +13,15 @@ import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.net.ssl.SSLContext;
@@ -87,9 +91,11 @@ final class ClienteSoapSefaz {
             "application/soap+xml; charset=utf-8; action=\"" + servico.acao() + "\"")
         .POST(HttpRequest.BodyPublishers.ofString(envelope, StandardCharsets.UTF_8))
         .build();
-    CompletableFuture<HttpResponse<InputStream>> futuro =
-        http.sendAsync(requisicao, HttpResponse.BodyHandlers.ofInputStream());
-    HttpResponse<InputStream> resposta;
+    // O corpo inteiro e lido dentro do futuro: o prazo cobre a resposta toda, nao so os
+    // cabecalhos (uma SEFAZ que travasse no meio do corpo prenderia a thread para sempre).
+    CompletableFuture<HttpResponse<byte[]>> futuro =
+        http.sendAsync(requisicao, info -> new CorpoLimitado(TAMANHO_MAXIMO_RESPOSTA));
+    HttpResponse<byte[]> resposta;
     try {
       resposta = futuro.get(timeoutTotal.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
@@ -101,19 +107,18 @@ final class ClienteSoapSefaz {
       Thread.currentThread().interrupt();
       throw new SefazRespostaIndeterminadaException("Envio a SEFAZ interrompido", e);
     } catch (ExecutionException e) {
+      if (e.getCause() instanceof RespostaGrandeDemaisException) {
+        throw new SefazRespostaIndeterminadaException(
+            "Resposta da SEFAZ acima do tamanho maximo", e.getCause());
+      }
       throw classificar(e.getCause());
     }
     return ler(resposta);
   }
 
-  private static Document ler(HttpResponse<InputStream> resposta) {
+  private static Document ler(HttpResponse<byte[]> resposta) {
     int status = resposta.statusCode();
-    byte[] corpo;
-    try (InputStream in = resposta.body()) {
-      corpo = in.readNBytes(TAMANHO_MAXIMO_RESPOSTA + 1);
-    } catch (IOException e) {
-      throw new SefazRespostaIndeterminadaException("Falha ao ler a resposta da SEFAZ", e);
-    }
+    byte[] corpo = resposta.body();
     if (status >= 400 && status < 500) {
       throw new SefazConexaoException("SEFAZ recusou a requisicao: HTTP " + status);
     }
@@ -123,14 +128,69 @@ final class ClienteSoapSefaz {
     if (status != 200) {
       throw new SefazRespostaIndeterminadaException("Resposta inesperada da SEFAZ: HTTP " + status);
     }
-    if (corpo.length > TAMANHO_MAXIMO_RESPOSTA) {
-      throw new SefazRespostaIndeterminadaException("Resposta da SEFAZ acima do tamanho maximo");
-    }
     try {
       return SecureXmlFactories.hardenedDocumentBuilderFactory().newDocumentBuilder()
           .parse(new ByteArrayInputStream(corpo));
     } catch (Exception e) {
       throw new SefazRespostaIndeterminadaException("Resposta da SEFAZ ilegivel", e);
+    }
+  }
+
+  /** O corpo passou do teto: a leitura para no meio, sem acumular o resto na memória. */
+  static final class RespostaGrandeDemaisException extends IOException {
+    RespostaGrandeDemaisException() {
+      super("Resposta acima de " + TAMANHO_MAXIMO_RESPOSTA + " bytes");
+    }
+  }
+
+  /** Acumula o corpo até o teto; acima dele cancela a leitura e falha. */
+  static final class CorpoLimitado implements HttpResponse.BodySubscriber<byte[]> {
+
+    private final int limite;
+    private final ByteArrayOutputStream acumulado = new ByteArrayOutputStream();
+    private final CompletableFuture<byte[]> resultado = new CompletableFuture<>();
+    private Flow.Subscription assinatura;
+
+    CorpoLimitado(int limite) {
+      this.limite = limite;
+    }
+
+    @Override
+    public CompletionStage<byte[]> getBody() {
+      return resultado;
+    }
+
+    @Override
+    public void onSubscribe(Flow.Subscription assinatura) {
+      this.assinatura = assinatura;
+      assinatura.request(Long.MAX_VALUE);
+    }
+
+    @Override
+    public void onNext(List<ByteBuffer> partes) {
+      if (resultado.isDone()) {
+        return;
+      }
+      for (ByteBuffer parte : partes) {
+        if (acumulado.size() + parte.remaining() > limite) {
+          assinatura.cancel();
+          resultado.completeExceptionally(new RespostaGrandeDemaisException());
+          return;
+        }
+        byte[] bytes = new byte[parte.remaining()];
+        parte.get(bytes);
+        acumulado.writeBytes(bytes);
+      }
+    }
+
+    @Override
+    public void onError(Throwable erro) {
+      resultado.completeExceptionally(erro);
+    }
+
+    @Override
+    public void onComplete() {
+      resultado.complete(acumulado.toByteArray());
     }
   }
 
