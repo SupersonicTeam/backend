@@ -7,6 +7,7 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaResumo;
+import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
 import br.com.agrocontabil.service.ApuracaoService;
 import br.com.agrocontabil.service.ComprasInsumoResultado;
@@ -94,6 +95,23 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
         .map(n -> new Nota(n.numero(), n.serie(), n.dataEmissao(), n.origem(), n.status(),
             n.valorTotal(), n.valorIbs(), n.valorCbs()))
         .toList(), pagina.getTotalElements());
+  }
+
+  @Override
+  public Totais totalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens,
+      Set<StatusNotaFiscal> status, LocalDate inicio, LocalDate fim) {
+    return totais(comTimeout(() ->
+        consultaService.totalizarNotas(produtorId, origens, status, inicio, fim)));
+  }
+
+  @Override
+  public Totais totalVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate) {
+    return totais(comTimeout(() ->
+        consultaService.totalizarVencimentosNaoPagos(produtorId, de, ate)));
+  }
+
+  private static Totais totais(TotalAgregado t) {
+    return new Totais(t.quantidade(), t.valor());
   }
 
   @Override
