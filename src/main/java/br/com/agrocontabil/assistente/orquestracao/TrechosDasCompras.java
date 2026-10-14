@@ -23,8 +23,11 @@ import org.springframework.stereotype.Component;
  * certo é o do NCM da compra. Então, quando a parte de dados consultou as compras de um insumo,
  * os NCMs dessas compras são buscados nos anexos e os itens entram junto com os outros trechos.
  *
- * <p><strong>Só o NCM sai dos dados:</strong> o modelo da parte de lei continua sem ver nenhum
- * dado do produtor — recebe apenas trechos de lei (públicos), agora mais certeiros. O termo e o
+ * <p><strong>O que sai dos dados:</strong> só o NCM, e só para escolher trechos. O modelo da parte
+ * de lei recebe apenas texto de lei (público), nenhum valor, nota ou dado pessoal. Mas a
+ * <em>escolha</em> dos itens revela ao provedor do modelo as categorias que o produtor comprou —
+ * o mesmo que a parte de dados já envia (ela manda os totais de compra) e nada além disso. Com
+ * provedor externo, é dado de negócio do produtor indo para fora (ver #148, LGPD). O termo e o
  * período vêm da {@link FonteDado} que a função já registrou, com os parâmetros validados por ela.
  *
  * <p>É um complemento: qualquer falha aqui é registrada e a parte de lei segue só com a busca por

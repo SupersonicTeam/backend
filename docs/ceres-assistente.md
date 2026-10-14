@@ -222,9 +222,11 @@ números da lei, e nenhum validador saberia de onde cada um veio.
 - **itens de anexo pelo NCM das compras** (`orquestracao/TrechosDasCompras`): se a parte de dados
   consultou as compras de um insumo, os NCMs comprados (até 3, maior valor) são buscados nos
   anexos da lei (`BuscaTextualLegislacaoService.buscarAnexosPorNcm`: código inteiro, subposição
-  ou posição, nunca outro item) e entram depois dos trechos da busca por similaridade. Só o NCM
-  sai dos dados; o modelo da lei continua vendo apenas texto de lei. Falha aqui é complemento
-  perdido, não erro;
+  ou posição, nunca outro item; o item com o código inteiro vem primeiro) e entram depois dos
+  trechos da busca por similaridade. Só o NCM sai dos dados, e só para escolher trechos: o modelo
+  da lei recebe apenas texto de lei. A *escolha* dos itens, porém, revela ao provedor do modelo
+  as categorias compradas — o mesmo que a parte de dados já envia, nada além (com provedor
+  externo, ver #148). Falha aqui é complemento perdido, não erro;
 - as partes são juntadas com ligação fixa: "Sobre a regra legal: ..." ou, sem dados, "De forma
   geral, a legislação prevê: ..." — sem o "não tenho a informação" seguido de "sim, as suas
   compras têm direito" do teste do PR #168.

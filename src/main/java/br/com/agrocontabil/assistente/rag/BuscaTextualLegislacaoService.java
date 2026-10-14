@@ -99,7 +99,7 @@ public class BuscaTextualLegislacaoService {
         AND vigencia_inicio <= :data
         AND vigencia_fim >= :data
         AND content ~ :padrao
-      ORDER BY norma, dispositivo
+      ORDER BY (content ~ :exato) DESC, norma, length(dispositivo), dispositivo
       LIMIT :limite
       """;
 
@@ -167,16 +167,21 @@ public class BuscaTextualLegislacaoService {
    */
   public List<TrechoRecuperado> buscarAnexosPorNcm(List<String> ncms, LocalDate data, int limite) {
     List<String> alternativas = new ArrayList<>();
+    List<String> exatos = new ArrayList<>();
     for (String ncm : ncms) {
       if (ncm != null && NCM_COMPLETO.matcher(ncm).matches()) {
         alternativas.add(alternativasDoNcm(ncm));
+        exatos.add(codigoInteiro(ncm));
       }
     }
     if (alternativas.isEmpty()) {
       return List.of();
     }
+    // O item com o codigo inteiro da compra vem antes dos que so citam a posicao: com mais
+    // itens que o limite, quem sai e o menos especifico. Itens na ordem numerica (2 antes de 10).
     MapSqlParameterSource parametros = new MapSqlParameterSource()
         .addValue("padrao", "(^|[^0-9.])(" + String.join("|", alternativas) + ")")
+        .addValue("exato", "(^|[^0-9.])(" + String.join("|", exatos) + ")([^0-9]|$)")
         .addValue("data", data.toString())
         .addValue("limite", Math.max(1, Math.min(limite, 10)));
     try {
@@ -197,6 +202,12 @@ public class BuscaTextualLegislacaoService {
       throw new AssistenteIndisponivelException(
           "Falha na busca de anexos por NCM: " + e.getClass().getSimpleName(), e);
     }
+  }
+
+  /** O código inteiro, com pontos ({@code 3105\.20\.00}) ou sem ({@code 31052000}). */
+  static String codigoInteiro(String ncm) {
+    return ncm.substring(0, 4) + "\\." + ncm.substring(4, 6) + "\\." + ncm.substring(6, 8)
+        + "|" + ncm;
   }
 
   /** Código inteiro, subposição e posição (com e sem ponto), cada um sem dígito ou ponto colado. */
