@@ -143,6 +143,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 |--------|-----------------|
 | `SefazTransport` | Interface plugável de transmissão |
 | `MockSefazTransport` | Mock fiel à SEFAZ nos casos da reconciliação: 204 no reenvio, 573 no evento repetido, 217 → `NAO_ENCONTRADA`, 101 → `CANCELADA` (issue #83) |
+| `SoapSefazTransport` | Transporte real (issue #128), com `mock.enabled=false`: SOAP 1.2 + mTLS (certificado A1 do emitente) nos webservices NF-e 4.00, endereço pela UF do cUF da chave ou `PADRAO` (`app.nfe.sefaz.webservices.*`), truststore ICP-Brasil configurável. `ClienteSoapSefaz` (HttpClient do JDK, teto de 1 MB, classificação conexão × indeterminada), `RetornoSefazParser` (cStat → `SituacaoSefaz`), `MensagensSefaz` (envelopes). Testado contra `HttpsServer` com mTLS. Cancelamento: próxima entrega. Ver `docs/sefaz-transporte-soap.md` |
 | `SefazClient` | Retry pela idempotência: `enviar`/`cancelar` só re-tentam `SefazConexaoException`; `consultarStatus` re-tenta qualquer falha de comunicação (issue #83) |
 | `SefazRetorno` | Record com cStat, motivo, protocolo, situação |
 | `SituacaoSefaz` | Enum: AUTORIZADA, REJEITADA, PENDENTE, DENEGADA; só na consulta: NAO_ENCONTRADA, CANCELADA (issue #83) |

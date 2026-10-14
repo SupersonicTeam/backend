@@ -234,6 +234,14 @@ app:
       ambiente: ${NFE_SEFAZ_AMBIENTE:HOMOLOGACAO}   # HOMOLOGACAO | PRODUCAO
       mock:
         enabled: ${NFE_SEFAZ_MOCK_ENABLED:true}
+      # Transporte real SOAP + mTLS (issue #128), ativo com mock.enabled=false. Enderecos por
+      # ambiente e UF autorizadora (ou PADRAO), so por env/config, nunca fixos no codigo:
+      #   app.nfe.sefaz.webservices.homologacao.PADRAO.autorizacao / consulta / evento
+      #   (env: APP_NFE_SEFAZ_WEBSERVICES_HOMOLOGACAO_PADRAO_AUTORIZACAO etc.)
+      # Ver docs/sefaz-transporte-soap.md. Cadeia ICP-Brasil dos servidores da SEFAZ:
+      truststore:
+        path: ${NFE_SEFAZ_TRUSTSTORE_PATH:}
+        password: ${NFE_SEFAZ_TRUSTSTORE_PASSWORD:}
       # Retry (issue #83): envio e cancelamento so re-tentam falha de CONEXAO (nada saiu); a
       # consulta de status, que e leitura, re-tenta qualquer falha de comunicacao.
       retry:

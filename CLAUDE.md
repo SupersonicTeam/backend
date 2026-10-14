@@ -88,7 +88,9 @@ br.com.agrocontabil
 ├── danfe/         # DANFE em PDF: DanfePdfService (JasperReports), DanfeItemRow
 ├── sefaz/         # transmissão SEFAZ: SefazTransport (interface plugável), MockSefazTransport,
 │                  # SefazClient, SefazRetorno, SituacaoSefaz, SefazAmbiente,
-│                  # SefazStatusSyncJob (job agendado de sincronização)
+│                  # SefazStatusSyncJob (job agendado de sincronização),
+│                  # SoapSefazTransport (real: SOAP 1.2 + mTLS NF-e 4.00, mock.enabled=false, #128;
+│                  #   ClienteSoapSefaz classifica falhas, RetornoSefazParser mapeia cStat)
 ├── assistente/    # Ceres, a assistente fiscal (Sprint 6). MÓDULO ISOLADO (issue #141, ArchUnit):
 │                  # fala com o backend só pelas interfaces de porta/ (DadosProdutorPorta,
 │                  # IdentidadePorta, AuditoriaPorta), implementadas em adaptador/ (os únicos que
