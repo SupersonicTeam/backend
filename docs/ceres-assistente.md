@@ -75,8 +75,8 @@ do Ollama nem de chave de API.
 | `totalComprasPorInsumo(descricaoOuNcm, dataInicio, dataFim)` | "quanto comprei de fertilizante no semestre?" | recorte do crédito: entradas `IMPORTADA` + `AUTORIZADA` |
 | `consultarApuracao(mes)` | "quanto de IBS eu devo em julho?" | `ApuracaoService` |
 | `consultarCreditos(dataInicio, dataFim)` | "quanto tenho de crédito?" | `CreditoService` |
-| `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10) | consulta fixa top-N |
-| `proximosVencimentos(dias)` | "o que vence este mês?" (máx. 90 dias) | guias não pagas |
+| `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10), "quanto somam?" | consulta fixa top-N + `valorTotal` do filtro inteiro (sem `situacao`, só as autorizadas — #169) |
+| `proximosVencimentos(dias)` | "o que vence este mês?", "quanto somam?" (máx. 90 dias) | guias não pagas + `valorTotal` da janela inteira (#169) |
 
 Garantias, todas em código:
 
@@ -86,7 +86,9 @@ Garantias, todas em código:
   prompt injection pedindo dados de outro produtor.
 - **Nenhum número inventado:** o laço de funções é do backend e guarda os resultados; o
   `ValidadorNumeros` descarta a resposta que tiver número ou data que não veio das funções, da
-  pergunta ou do prompt de sistema.
+  pergunta ou do prompt de sistema. **Soma é do backend:** as funções de lista devolvem
+  `valorTotal`, calculado por consulta agregada sobre o filtro inteiro, e o modelo só o repete;
+  somar a lista por conta própria continua sendo descartado (#169).
 - **Sem text-to-SQL:** consultas fixas e parametrizadas; texto digitado vira `LIKE` escapado.
 - **Minimização:** as funções devolvem totais, datas, contagens e listas curtas — nenhum nome,
   CPF/CNPJ, endereço, chave de acesso ou observação.

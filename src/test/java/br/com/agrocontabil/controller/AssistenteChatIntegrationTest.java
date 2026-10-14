@@ -2,6 +2,7 @@ package br.com.agrocontabil.controller;
 
 import static br.com.agrocontabil.support.DadosCeresFixture.em;
 import static br.com.agrocontabil.support.DadosCeresFixture.entrada;
+import static br.com.agrocontabil.support.DadosCeresFixture.guia;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,15 +15,18 @@ import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.ChatModelSimulado;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +78,7 @@ class AssistenteChatIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private ContadorRepository contadorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
+  @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private ChatModelSimulado modelo;
   @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private AssistenteInteracaoRepository interacaoRepository;
@@ -172,6 +177,66 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.not(
             org.hamcrest.Matchers.containsString("5.000"))))
         .andExpect(jsonPath("$.fontesDados.length()").value(0));
+  }
+
+  @Test
+  @DisplayName("#169: 'quanto somam?' repetindo o valorTotal da funcao e aceito, com fonte")
+  void somaDosVencimentosVemDaFuncao() throws Exception {
+    salvarGuiasDoAchadoDoPr168();
+    modelo.responderCom(prompt -> {
+      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
+        JsonNode resultado = lerJson(respostas.getResponses().get(0).responseData());
+        return ChatModelSimulado.texto("Voce tem " + resultado.get("totalEncontrado").asLong()
+            + " guias a pagar, que somam " + resultado.get("valorTotal").asText() + ".");
+      }
+      return pedirFuncao("proximosVencimentos", Map.of("dias", 30));
+    });
+
+    perguntar(produtorA, "Quais guias eu tenho para pagar nos proximos dias e quanto somam?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(
+            "Voce tem 2 guias a pagar, que somam R$ 5.050,55."))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("proximosVencimentos"));
+  }
+
+  @Test
+  @DisplayName("#169: o modelo somando a lista por conta propria continua descartado")
+  void somaFeitaPeloModeloDescartada() throws Exception {
+    salvarGuiasDoAchadoDoPr168();
+    // Soma "a mao" errada de proposito (arredondada): nao existe em nenhuma fonte.
+    modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
+        ? ChatModelSimulado.texto("Suas guias somam R$ 5.051,00.")
+        : pedirFuncao("proximosVencimentos", Map.of("dias", 30)));
+
+    perguntar(produtorA, "Quanto somam minhas guias?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.not(
+            org.hamcrest.Matchers.containsString("5.051"))))
+        // Descartada de fato: sem fontes exibidas e com o desfecho certo na auditoria.
+        .andExpect(jsonPath("$.fontesDados.length()").value(0));
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE));
+  }
+
+  /** As duas guias do teste de ponta a ponta do PR #168, mais uma paga e uma do B. */
+  private void salvarGuiasDoAchadoDoPr168() {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(3), "3210.00",
+        StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(20), "1840.55",
+        StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(5), "999.00", StatusGuiaFiscal.PAGA));
+    guiaFiscalRepository.save(guia(produtorB, hoje.plusDays(4), "777.00",
+        StatusGuiaFiscal.PENDENTE));
+  }
+
+  private static JsonNode lerJson(String json) {
+    try {
+      return JSON.readTree(json);
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   @Test
