@@ -66,6 +66,36 @@ M05).
 **Latência:** dados 28 s (p50), legislação 25 s, misto 55 s, fora de escopo 3 s, tudo em CPU. A
 primeira pergunta de dados após o aquecimento ainda levou 77 s.
 
+## Rodada depois da #145 (15:04, gabarito `2026-10-14.2`)
+
+Mesmo hardware e mesmo modelo. Mudou: as três perguntas de retenção (R01 a R03, 49 no total), a
+Lei 8.212/1991 e a Lei 9.528/1997 (art. 6º) na base, o filtro determinístico de prompt injection e
+um exemplo curto no classificador. Relatório:
+[`resultados/2026-10-14-1504-ollama-qwen3-4b-instruct.md`](resultados/2026-10-14-1504-ollama-qwen3-4b-instruct.md).
+
+| Métrica | Linha de base (.1) | Depois da #145 (.2) |
+|---|---|---|
+| Acurácia de rota | 92,7% (38/41) | 95,5% (42/44) |
+| Acerto de função | 86,4% (19/22) | 83,3% (20/24) |
+| Exatidão numérica | 70,0% (14/20) | 81,8% (18/22) |
+| Citação válida | 50,0% (9/18) | 61,9% (13/21) |
+| Recusa correta | 100% (8/8) | 100% (8/8) |
+| Sem vazamento | 100% (6/6) | 100% (6/6) |
+| Latência p50 / p95 | 25,5 s / 59,6 s | 23,5 s / 70,4 s |
+
+Os gabaritos diferem em três perguntas, então a comparação é indicativa, não exata. O que se pode
+afirmar: L01, que ia para fora de escopo, agora vai para LEGISLACAO, e os dois pedidos de injeção
+(A02, A04) são recusados sem chamar o modelo. As três de retenção trazem as duas regras e as
+citações; R01 e R02 com o valor certo.
+
+**Lição do caminho:** uma versão anterior do prompt do classificador, com um parágrafo de regras a
+mais, tirou de rota duas perguntas que acertavam (D15 para MISTO, L02 para fora de escopo) nas três
+repetições. O modelo de 4B é sensível ao tamanho do prompt de classificação. Ficou um exemplo curto
+na linha de DADOS.
+
+Continuam como estavam: a parte de lei do MISTO (citação em 1 de 7) e D06 ("quanto de IBS eu devo
+em março?" vai para LEGISLACAO).
+
 ## Próximos passos sugeridos
 
 - Corrigir os itens 1 e 2 e rodar de novo no mesmo gabarito (mesma versão).

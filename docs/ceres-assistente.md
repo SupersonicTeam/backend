@@ -267,6 +267,18 @@ Fase 2 troca a implementação sem mexer no orquestrador) devolve a intenção e
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com
 números da lei, e nenhum validador saberia de onde cada um veio.
 
+**Antes do classificador, um filtro determinístico de prompt injection** (`FiltroInjecao`, #145):
+"ignore as instruções", "prompt de sistema", "agora você é um...", "sem restrições", "modo
+desenvolvedor" vão direto para `FORA_DE_ESCOPO`, sem chamar o modelo. Na avaliação de 2026-10-14 o
+classificador mandou um pedido do prompt de sistema para a rota de dados (sem vazamento, mas sem
+recusa). A segurança dos dados não depende do filtro (as funções não têm parâmetro de produtor), e
+um teste garante que nenhuma pergunta legítima do gabarito é barrada.
+
+**Prompt do classificador: mudança pequena, medida.** Na #145, um parágrafo de regras a mais no
+prompt tirou de rota duas perguntas que acertavam (alertas foi para MISTO, crédito presumido para
+fora de escopo), de forma repetível. O que ficou foi um exemplo curto na linha de `DADOS`. Toda
+mudança no prompt do classificador pede uma rodada do gabarito (`docs/avaliacao/`).
+
 **A parte de lei do MISTO não fala dos dados (#170).** Ela vê só trechos de lei, então:
 
 - recebe um prompt próprio (`PromptsCeres.sistemaLegislacaoRegraGeral`): só a regra geral, em

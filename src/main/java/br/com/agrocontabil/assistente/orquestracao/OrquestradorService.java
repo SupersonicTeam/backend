@@ -123,6 +123,10 @@ public class OrquestradorService {
   }
 
   private Intencao classificar(String pergunta, ContextoAssistente contexto) {
+    if (FiltroInjecao.pareceInjecao(pergunta)) {
+      log.info("Ceres: pergunta com forma de prompt injection tratada como fora de escopo");
+      return Intencao.FORA_DE_ESCOPO;
+    }
     if (disponibilidade.disponivel()) {
       try {
         ClassificacaoIntencao classificacao = classificador.classificar(pergunta, contexto);

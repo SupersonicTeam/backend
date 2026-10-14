@@ -84,7 +84,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `AssistenteService` | Entrada da Ceres: identidade (porta) → vaga (global + 1 por produtor, 503 `ASSISTENTE_OCUPADO`) → orquestração no pool `agro-ceres-` com timeout total → auditoria; SSE (`conversarEmStream`) com prazo próprio |
-| `orquestracao/OrquestradorService` | Classifica (`ClassificadorIntencao`, Fase 1 `LlmClassificadorIntencao`) e despacha: DADOS→`RotaDados`, LEGISLACAO→`RotaLegislacao`, MISTO→as duas, FORA_DE_ESCOPO/confiança baixa→texto fixo |
+| `orquestracao/OrquestradorService` | Classifica (`ClassificadorIntencao`, Fase 1 `LlmClassificadorIntencao`) e despacha: DADOS→`RotaDados`, LEGISLACAO→`RotaLegislacao`, MISTO→as duas, FORA_DE_ESCOPO/confiança baixa→texto fixo. Antes do classificador, `FiltroInjecao` (determinístico) manda prompt injection direto para FORA_DE_ESCOPO; depois da rota, `FundamentoRetencao` (RN009) acrescenta as duas regras de retenção |
 | `PerguntaInterrompidaException` | Pergunta interrompida (tempo esgotado/cliente saiu): as rotas param via `ContextoAssistente.verificarAtiva()` |
 | `porta/DadosProdutorPorta` | Leitura dos dados do produtor (compras, apuração, créditos, notas, vencimentos) com records próprios, sem entidade nem projeção de repository |
 | `porta/IdentidadePorta` | Produtor autenticado, resolvido uma vez na thread da requisição |
