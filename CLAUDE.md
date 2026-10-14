@@ -215,12 +215,12 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 856 testes, todos passando** (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 1.056 testes, todos passando** (fim da Sprint 7, 2026-10-14) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
-## Estado atual — Sprint 6 concluída (2026-09-30)
+## Estado atual — Sprint 7 concluída (2026-10-14)
 
-> Histórico das sprints anteriores abaixo (Sprint 0 → Sprint 3); Sprints 4 e 5, as Ondas e a Sprint 6 (Ceres) no fim desta seção.
+> Histórico das sprints anteriores abaixo (Sprint 0 → Sprint 3); Sprints 4 e 5, as Ondas, a Sprint 6 (Ceres) e a Sprint 7 no fim desta seção.
 
 **Sprint 0** (fundação): pom fixado, estrutura de pacotes, `SecurityConfig`/`CorsConfig`/`OpenApiConfig`, `GlobalExceptionHandler` + `ApiError`, `HealthController`, configs por profile, Docker Compose, baseline do Liquibase, `MockIdentidadeFilter` (auth mockada por produtor até a Sprint 8) e `DataLoader` (seed).
 
@@ -361,10 +361,19 @@ Issues #141–#144, #156 e #157; PRs #159–#165, #168 e #171. Desenho completo 
 - **Infra (#141):** Spring AI 1.1.8, Ollama local (`qwen3:4b-instruct` + embedding `bge-m3`) ou provedor por API compatível com a OpenAI. Falha do modelo é sempre 503 `ASSISTENTE_INDISPONIVEL`; health do Ollama `DEGRADED`, nunca `DOWN`. **Módulo isolado** travado por ArchUnit (portas e adaptadores, nada `@Transactional`).
 - **Tool Calling (#142, #143):** seis funções de dados sem parâmetro de produtor (a sexta, `listarAlertas`, é da #140) (o produtor vem do `ContextoAssistente` no `ToolContext`); laço de funções do backend com teto; `ValidadorNumeros` descarta resposta com número sem fonte.
 - **Sanitização e auditoria (#144):** `DataSanitizer` na pergunta e em todo resultado de função; `assistente_interacao` sem o texto da pergunta nem da resposta.
-- **RAG (#156):** `legislacao_trecho` (pgvector), um trecho por dispositivo, citação obrigatória validada em código. **Base ingerida:** LC 214/2025 compilada (5.615 trechos, 907 itens de anexo), EC 132/2023 (538) e LC 227/2026 (2.211) — 8.364 trechos, textos compilados capturados do Planalto em 2026-09-30. Comando de ingestão só pelo profile `ingestao` (nunca endpoint).
+- **RAG (#156):** `legislacao_trecho` (pgvector), um trecho por dispositivo, citação obrigatória validada em código. **Base ingerida:** LC 214/2025 compilada (5.004 trechos, reingerida em 2026-10-14: a de 2026-09-30 tinha 151 redações revogadas e o Anexo XIV revogado como vigentes), EC 132/2023 (538), LC 227/2026 (2.211), Lei 8.212/1991 (547) e Lei 9.528/1997, só o art. 6º (4). Comando de ingestão só pelo profile `ingestao` (nunca endpoint).
 - **Orquestração e streaming (#157):** classificador de intenção → DADOS / LEGISLACAO / MISTO / FORA_DE_ESCOPO; `POST /api/assistente/chat` e `/chat/stream` (SSE, sem tokens parciais). Bulkhead (global + 1 por produtor, 503 `ASSISTENTE_OCUPADO` + `Retry-After`), pool `agro-ceres-`, timeouts por pergunta e por função, provado sem conexão presa por teste com pool de 1 conexão.
 - **Achados da execução real (#165, #168):** a LC 214 não declara charset (windows-1252); o comando de ingestão não subia sem servidor web (`SecurityConfig` agora `@ConditionalOnWebApplication`); o último artigo engolia os anexos (91.820 caracteres); na LC 227 o Planalto omite a aspa antes de um artigo citado e 48 trechos saíam como artigos dela (#171); a tag `qwen3:4b` virou a variante *thinking* (ignora `think=false`, 80–120 s por classificação) — padrão trocado para `qwen3:4b-instruct`.
 - **Teste de ponta a ponta (2026-09-30, CPU):** fora de escopo 4 s, dados 24 s, legislação 45 s, misto 41 s. Qualidade do MISTO e perguntas de soma viraram #169 e #170 (Sprint 7).
+
+### Sprint 7 — Ceres, Fase 1 completa, e SEFAZ real (concluída em 2026-10-14)
+
+Issues #169, #146, #170, #140, #166, #158, #145 e #128; PRs #183–#194. Plano em `.specs/features/sprint-7-ceres/plano.md`.
+
+- **Ceres:** totais calculados pelo backend (#169), modo fallback sem modelo (#146), MISTO sem falar dos dados na parte de lei (#170), função `listarAlertas` e alertas tributários RN010 (#140, `GET /api/alertas`), cota semanal de créditos (#166, `GET /api/assistente/uso`, 429 `LIMITE_USO_ASSISTENTE`), filtro determinístico de prompt injection antes do classificador.
+- **Avaliação com gabarito (#158):** comando `dev,avaliacao`, 49 perguntas, valor esperado calculado pelo backend, relatórios em `docs/avaliacao/`. Linha de base e rodada pós-#145 (rota 95,5%, número 81,8%, citação 61,9%, recusa 100%, sem vazamento) em `docs/avaliacao/linha-de-base-2026-10-14.md`.
+- **RN009 (#145), definida pelo Murillo em 2026-10-14:** Funrural retido pelo comprador (1,5% do produtor PF na venda a empresa ou cooperativa; exportação imune) **e** split payment do IBS/CBS; `RetencaoService`, função `consultarRetencoes` e `FundamentoRetencao` (as duas regras e as citações sempre, em código). Lei 8.212 e Lei 9.528 (art. 6º) entraram na base; o fatiador aprendeu as grafias do consolidado antigo (tachado por estilo, artigo sem hífen, assinatura com "em", "Vigência encerrada" solto).
+- **Transporte SOAP + mTLS da SEFAZ (#128):** `SoapSefazTransport` com `mock.enabled=false`, envio, consulta e cancelamento (evento 110111 assinado), testado contra servidor simulado com mTLS. Ver `docs/sefaz-transporte-soap.md`.
 
 ### Débitos técnicos abertos
 
@@ -378,7 +387,8 @@ Issues #141–#144, #156 e #157; PRs #159–#165, #168 e #171. Desenho completo 
   - `idx_guia_fiscal_produtor_vencimento` (0019) **só é usado com `LIMIT`**: na listagem completa o planner prefere o índice antigo + sort. Ele entrega valor (55× menos I/O) quando a **#103** (paginação das guias) for implementada.
   - `idx_nota_fiscal_produtor_id` (0002) ficou redundante para consultas por produtor; remover exigiria outro changeSet e outra decisão.
   - Lock distribuído dos jobs (`ShedLock`) entregue na Onda 5, issue **#87**.
-- **Sprint 7 (SEFAZ real):** Transporte SOAP + mTLS real com certificado **ICP-Brasil** — issue **#128**; o contrato que ele deve cumprir (classificação de falhas, mapeamento de cStat da consulta, timeouts) está no javadoc de `SefazTransport` e de `SefazRetorno`.
+- **Homologação real da SEFAZ (#128):** o transporte está pronto e testado contra servidor simulado; falta rodar envio, consulta e cancelamento na homologação com cStat reais, o que depende do certificado A1 ICP-Brasil de um emitente de teste, do credenciamento na UF e do truststore da cadeia ICP-Brasil (`docs/sefaz-transporte-soap.md`).
+- **Ceres:** a parte de lei do MISTO quase nunca acha fundamento (citação em 1 de 7 no gabarito), e "quanto de IBS eu devo em março?" vai para LEGISLACAO (D06).
 - **Sprint 8 — o que a #93 NÃO cobriu:** login e cadastro, **JWT**, recuperação de senha e rate limiting continuam abertos. A #93 entregou papéis, entidade `Contador`, vínculo e RBAC, mas a identidade ainda é *declarada* no header, não provada. Também abertos: mascarar CPF/CNPJ em logs (LGPD) e lock pessimista contra geração concorrente. (DV de CPF/CNPJ entregue na #18 via `DocumentoFiscalValidator`; `IllegalStateException`→401 entregue na #92.)
 - **Contador ainda não alcança dashboard/apuração/relatório (#93):** esses endpoints não recebem `produtorId` — derivam tudo do produtor autenticado, e um contador ali recebe 403. Liberá-los exige decidir *como* o produtor-alvo entra na requisição (padronizar `produtorId` no path, como no calendário) e ajustar o Angular; fica para a issue do painel do Contador.
 - **Identidade declarada, não provada (Onda 4):** o header `X-Usuario-Id` não é verificado — qualquer cliente pode afirmar ser qualquer produtor. É aceitável porque só existe em `dev`/`homolog`, **nunca em prod**, e some quando o JWT entrar (issue própria de login). Homologação, portanto, não deve receber dados reais de produtor.
