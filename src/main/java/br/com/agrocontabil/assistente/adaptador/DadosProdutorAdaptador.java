@@ -13,6 +13,7 @@ import br.com.agrocontabil.service.ComprasInsumoResultado;
 import br.com.agrocontabil.service.ConsultaDadosProdutorService;
 import br.com.agrocontabil.service.CreditoService;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -68,6 +69,13 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
       UUID produtorId, String termo, LocalDate inicio, LocalDate fim) {
     return comTimeout(() ->
         compras(consultaService.comprasPorDescricao(produtorId, termo, inicio, fim)));
+  }
+
+  @Override
+  public List<String> ncmsComprados(
+      UUID produtorId, String descricaoOuNcm, LocalDate inicio, LocalDate fim, int limite) {
+    return comTimeout(() ->
+        consultaService.ncmsComprados(produtorId, descricaoOuNcm, inicio, fim, limite));
   }
 
   @Override

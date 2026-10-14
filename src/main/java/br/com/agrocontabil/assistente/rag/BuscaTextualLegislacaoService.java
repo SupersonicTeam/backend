@@ -5,6 +5,7 @@ import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -88,6 +89,20 @@ public class BuscaTextualLegislacaoService {
       LIMIT :limite
       """;
 
+  private static final Pattern NCM_COMPLETO = Pattern.compile("\\d{8}");
+
+  /** Itens de anexo vigentes cujo texto cita um dos NCMs (issue #170). */
+  private static final String SQL_ANEXOS = """
+      SELECT id, content, norma, dispositivo, metadata ->> 'url' AS url
+      FROM legislacao_trecho
+      WHERE dispositivo LIKE 'Anexo %'
+        AND vigencia_inicio <= :data
+        AND vigencia_fim >= :data
+        AND content ~ :padrao
+      ORDER BY norma, dispositivo
+      LIMIT :limite
+      """;
+
   private final NamedParameterJdbcTemplate jdbc;
 
   /** Constrói a busca sobre o banco da aplicação. */
@@ -132,5 +147,68 @@ public class BuscaTextualLegislacaoService {
       throw new AssistenteIndisponivelException(
           "Falha na busca textual de legislacao: " + e.getClass().getSimpleName(), e);
     }
+  }
+
+  /**
+   * Itens de anexo vigentes que citam um dos NCMs (issue #170). É nos anexos que a LC 214 lista os
+   * produtos de cada redução, item a item e com o NCM; a busca por similaridade da pergunta acha o
+   * artigo, mas raramente o item exato da compra.
+   *
+   * <p>Para o NCM {@code 31052000} casam {@code 3105.20.00} (o código inteiro), {@code 3105.20}
+   * (subposição) e {@code 3105} / {@code 31.05} (posição) — sempre como código inteiro no texto, sem
+   * dígito ou ponto colado: {@code 3105.20} não casa com {@code 3105.20.10}, outro item. A expressão
+   * é montada só com os dígitos de NCMs validados e vai ao banco como parâmetro.
+   *
+   * @param ncms   NCMs de 8 dígitos (os de outro formato são ignorados)
+   * @param data   data de referência
+   * @param limite quantos trechos (1 a 10)
+   * @return itens de anexo, sem marca definitiva (quem junta aos outros trechos renumera)
+   * @throws AssistenteIndisponivelException se o banco falhar
+   */
+  public List<TrechoRecuperado> buscarAnexosPorNcm(List<String> ncms, LocalDate data, int limite) {
+    List<String> alternativas = new ArrayList<>();
+    for (String ncm : ncms) {
+      if (ncm != null && NCM_COMPLETO.matcher(ncm).matches()) {
+        alternativas.add(alternativasDoNcm(ncm));
+      }
+    }
+    if (alternativas.isEmpty()) {
+      return List.of();
+    }
+    MapSqlParameterSource parametros = new MapSqlParameterSource()
+        .addValue("padrao", "(^|[^0-9.])(" + String.join("|", alternativas) + ")")
+        .addValue("data", data.toString())
+        .addValue("limite", Math.max(1, Math.min(limite, 10)));
+    try {
+      List<TrechoRecuperado> trechos = new ArrayList<>();
+      jdbc.query(SQL_ANEXOS, parametros, rs -> {
+        trechos.add(new TrechoRecuperado(
+            "T" + (trechos.size() + 1),
+            rs.getString("id"),
+            rs.getString("norma"),
+            rs.getString("dispositivo"),
+            rs.getString("url"),
+            rs.getString("content"),
+            0));
+      });
+      return trechos;
+    } catch (DataAccessException e) {
+      log.warn("Falha na busca de anexos por NCM: {}", e.getClass().getName());
+      throw new AssistenteIndisponivelException(
+          "Falha na busca de anexos por NCM: " + e.getClass().getSimpleName(), e);
+    }
+  }
+
+  /** Código inteiro, subposição e posição (com e sem ponto), cada um sem dígito ou ponto colado. */
+  static String alternativasDoNcm(String ncm) {
+    String posicao = ncm.substring(0, 4);
+    String subposicao = ncm.substring(4, 6);
+    String item = ncm.substring(6, 8);
+    String fim = "([^.0-9]|$)";
+    return posicao + "\\." + subposicao + "\\." + item
+        + "|" + ncm + "([^0-9]|$)"
+        + "|" + posicao + "\\." + subposicao + fim
+        + "|" + posicao + fim
+        + "|" + ncm.substring(0, 2) + "\\." + ncm.substring(2, 4) + fim;
   }
 }

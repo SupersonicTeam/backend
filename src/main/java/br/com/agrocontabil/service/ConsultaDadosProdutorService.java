@@ -103,6 +103,30 @@ public class ConsultaDadosProdutorService {
   }
 
   /**
+   * NCMs comprados de um insumo, pelo mesmo critério de {@link #comprasPorNcm} (termo de 2 a 8
+   * dígitos) ou {@link #comprasPorDescricao} (texto), no mesmo recorte e maior valor primeiro.
+   * Issue #170: no MISTO, a busca na lei inclui os itens de anexo desses NCMs.
+   *
+   * @param produtorId     produtor da sessão
+   * @param descricaoOuNcm o termo já normalizado pela função {@code totalComprasPorInsumo}
+   * @param inicio         primeiro dia (inclusivo)
+   * @param fim            último dia (inclusivo)
+   * @param limite         quantos NCMs (1 a {@link #LIMITE_MAXIMO})
+   * @return NCMs de 8 dígitos, sem repetição
+   */
+  public List<String> ncmsComprados(
+      UUID produtorId, String descricaoOuNcm, LocalDate inicio, LocalDate fim, int limite) {
+    PageRequest pagina = PageRequest.of(0, limitar(limite));
+    if (PREFIXO_NCM.matcher(descricaoOuNcm).matches()) {
+      return notaFiscalRepository.listarNcmsCompradosPorNcm(produtorId, descricaoOuNcm + "%",
+          inicioDoDia(inicio), fimExclusivo(fim), pagina);
+    }
+    String padrao = "%" + escaparLike(descricaoOuNcm.trim().toLowerCase(Locale.ROOT)) + "%";
+    return notaFiscalRepository.listarNcmsCompradosPorDescricao(
+        produtorId, padrao, inicioDoDia(inicio), fimExclusivo(fim), pagina);
+  }
+
+  /**
    * Notas do produtor no período, mais recentes primeiro, limitadas a {@link #LIMITE_MAXIMO}.
    *
    * @param produtorId produtor da sessão

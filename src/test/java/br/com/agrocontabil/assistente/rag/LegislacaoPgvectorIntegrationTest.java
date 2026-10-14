@@ -237,6 +237,30 @@ class LegislacaoPgvectorIntegrationTest {
   }
 
   @Test
+  @DisplayName("#170: itens de anexo pelo NCM: so o item certo, vigente, nunca artigo")
+  void anexosPorNcm() {
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO), List.of(
+        new DispositivoLegal("Anexo IX, item 1",
+            "ANEXO IX. Item 1: Biofertilizantes - 3101.00.00"),
+        new DispositivoLegal("Anexo IX, item 4",
+            "ANEXO IX. Item 4: Adubos minerais ou quimicos - 3105.20.00"),
+        new DispositivoLegal("Anexo IX, item 5",
+            "ANEXO IX. Item 5: Outros adubos - 3105.20.10"),
+        new DispositivoLegal("art. 138",
+            "Art. 138. Ficam reduzidas as aliquotas dos insumos do NCM 3105.20.00.")));
+
+    List<TrechoRecuperado> trechos = buscaTextual.buscarAnexosPorNcm(
+        List.of("31052000", "invalido';--"), LocalDate.of(2026, 9, 29), 3);
+
+    assertThat(trechos).extracting(TrechoRecuperado::dispositivo)
+        .containsExactly("Anexo IX, item 4");
+    assertThat(buscaTextual.buscarAnexosPorNcm(List.of("31052000"), LocalDate.of(2024, 1, 1), 3))
+        .isEmpty();
+    assertThat(buscaTextual.buscarAnexosPorNcm(List.of("abc"), LocalDate.of(2026, 9, 29), 3))
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("#146: um lexema so em comum (de dois ou mais) nao traz trecho")
   void buscaTextualExigeDoisLexemas() {
     ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),

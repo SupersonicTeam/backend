@@ -34,6 +34,14 @@ public interface DadosProdutorPorta {
   ComprasInsumo comprasPorDescricao(UUID produtorId, String termo, LocalDate inicio, LocalDate fim);
 
   /**
+   * NCMs (8 dígitos) das compras de um insumo, pelo mesmo critério de {@link #comprasPorNcm} ou
+   * {@link #comprasPorDescricao}, maior valor primeiro, no máximo {@code limite} (issue #170). Só
+   * códigos de classificação: nenhum dado pessoal nem valor.
+   */
+  List<String> ncmsComprados(
+      UUID produtorId, String descricaoOuNcm, LocalDate inicio, LocalDate fim, int limite);
+
+  /**
    * Apuração mensal de IBS/CBS.
    *
    * @param periodo {@code AAAA-MM}
