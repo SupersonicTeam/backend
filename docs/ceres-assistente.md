@@ -209,6 +209,20 @@ Fase 2 troca a implementação sem mexer no orquestrador) devolve a intenção e
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com
 números da lei, e nenhum validador saberia de onde cada um veio.
 
+**A parte de lei do MISTO não fala dos dados (#170).** Ela vê só trechos de lei, então:
+
+- recebe um prompt próprio (`PromptsCeres.sistemaLegislacaoRegraGeral`): só a regra geral, em
+  terceira pessoa;
+- o `VerificadorAfirmacaoDados` confere em código: "você", posse de dado ("suas compras", "no seu
+  caso") ou ação do usuário ("comprou", "adquiriu") troca o texto por "a regra está nos trechos
+  citados" e mantém as citações (desfecho `AFIRMACAO_SOBRE_DADOS`);
+- parte de dados sem nada encontrado (ou sem consulta) vira frase fixa do backend pela função
+  consultada ("Não encontrei compras desse tipo nas suas notas no período consultado"), nunca
+  texto livre do modelo;
+- as partes são juntadas com ligação fixa: "Sobre a regra legal: ..." ou, sem dados, "De forma
+  geral, a legislação prevê: ..." — sem o "não tenho a informação" seguido de "sim, as suas
+  compras têm direito" do teste do PR #168.
+
 ### Contrato
 
 Contrato completo para o frontend (erros, SSE, regras de exibição, tipos TypeScript): [`contrato-frontend-ceres.md`](contrato-frontend-ceres.md).

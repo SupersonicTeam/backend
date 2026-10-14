@@ -47,6 +47,7 @@ public final class ContextoAssistente {
   private final AtomicInteger tokensSaida = new AtomicInteger();
   private final AtomicBoolean usoInformado = new AtomicBoolean();
   private final AtomicInteger chamadasDeFuncao = new AtomicInteger();
+  private final AtomicInteger consultasComResultado = new AtomicInteger();
   private final List<String> trechosCitados = Collections.synchronizedList(new ArrayList<>());
   private final AtomicReference<DesfechoInteracao> interrupcao = new AtomicReference<>();
 
@@ -116,6 +117,23 @@ public final class ContextoAssistente {
       tokensSaida.addAndGet(saida);
       usoInformado.set(true);
     }
+  }
+
+  /**
+   * Registra se uma consulta aos dados voltou vazia (sem nota, sem guia, sem compra). No MISTO, a
+   * parte de dados com todas as consultas vazias vira frase fixa do backend (issue #170).
+   *
+   * @param vazio {@code true} se a consulta não encontrou nada
+   */
+  public void registrarResultado(boolean vazio) {
+    if (!vazio) {
+      consultasComResultado.incrementAndGet();
+    }
+  }
+
+  /** {@code true} se nenhuma consulta aos dados encontrou algo (inclusive se nenhuma rodou). */
+  public boolean nenhumDadoEncontrado() {
+    return consultasComResultado.get() == 0;
   }
 
   /** Conta as funções que o modelo pediu, inclusive as que falharem (issue #144). */

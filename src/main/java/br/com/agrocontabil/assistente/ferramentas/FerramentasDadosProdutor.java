@@ -117,6 +117,7 @@ public class FerramentasDadosProdutor {
 
     contexto.registrarFonte("totalComprasPorInsumo", parametros(
         "descricaoOuNcm", termo, "dataInicio", inicio.toString(), "dataFim", fim.toString()));
+    contexto.registrarResultado(resultado.quantidadeNotas() == 0);
     return new ComprasInsumo(
         termo,
         porNcm ? "NCM" : "DESCRICAO",
@@ -149,6 +150,7 @@ public class FerramentasDadosProdutor {
     DadosProdutorPorta.Apuracao apuracao = dados.apuracao(contexto.produtorId(), periodo);
 
     contexto.registrarFonte("consultarApuracao", parametros("mes", periodo));
+    contexto.registrarResultado(apuracao.totalNotas() == 0);
     return new Apuracao(
         apuracao.periodo(),
         apuracao.status(),
@@ -179,6 +181,7 @@ public class FerramentasDadosProdutor {
 
     contexto.registrarFonte("consultarCreditos",
         parametros("dataInicio", inicio.toString(), "dataFim", fim.toString()));
+    contexto.registrarResultado(creditos.quantidadeNotas() == 0);
     return new Creditos(
         FormatoBr.data(inicio),
         FormatoBr.data(fim),
@@ -238,6 +241,7 @@ public class FerramentasDadosProdutor {
       usados.put("situacao", situacao.trim().toUpperCase(Locale.ROOT));
     }
     contexto.registrarFonte("listarNotas", usados);
+    contexto.registrarResultado(pagina.total() == 0);
     return new Notas(
         pagina.total(),
         pagina.itens().stream()
@@ -276,6 +280,7 @@ public class FerramentasDadosProdutor {
         contexto.produtorId(), de, ate, DadosProdutorPorta.LIMITE_MAXIMO);
 
     contexto.registrarFonte("proximosVencimentos", parametros("dias", String.valueOf(janela)));
+    contexto.registrarResultado(pagina.total() == 0);
     return new Vencimentos(
         FormatoBr.data(de),
         FormatoBr.data(ate),
