@@ -7,12 +7,12 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaResumo;
+import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
 import br.com.agrocontabil.service.ApuracaoService;
 import br.com.agrocontabil.service.ComprasInsumoResultado;
 import br.com.agrocontabil.service.ConsultaDadosProdutorService;
 import br.com.agrocontabil.service.CreditoService;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -98,14 +98,20 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   }
 
   @Override
-  public BigDecimal valorTotalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens,
+  public Totais totalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens,
       Set<StatusNotaFiscal> status, LocalDate inicio, LocalDate fim) {
-    return comTimeout(() -> consultaService.somarNotas(produtorId, origens, status, inicio, fim));
+    return totais(comTimeout(() ->
+        consultaService.totalizarNotas(produtorId, origens, status, inicio, fim)));
   }
 
   @Override
-  public BigDecimal valorTotalVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate) {
-    return comTimeout(() -> consultaService.somarVencimentosNaoPagos(produtorId, de, ate));
+  public Totais totalVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate) {
+    return totais(comTimeout(() ->
+        consultaService.totalizarVencimentosNaoPagos(produtorId, de, ate)));
+  }
+
+  private static Totais totais(TotalAgregado t) {
+    return new Totais(t.quantidade(), t.valor());
   }
 
   @Override

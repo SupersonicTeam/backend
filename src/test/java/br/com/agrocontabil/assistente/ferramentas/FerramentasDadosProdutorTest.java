@@ -184,15 +184,20 @@ class FerramentasDadosProdutorTest {
         .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Nota(12L, 1, emissao,
             OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.AUTORIZADA, new BigDecimal("1000.00"),
             new BigDecimal("1.00"), new BigDecimal("9.00"))), 7));
-    when(dados.valorTotalNotas(PRODUTOR, EnumSet.of(OrigemNotaFiscal.PROPRIA),
+    when(dados.totalNotas(PRODUTOR, EnumSet.of(OrigemNotaFiscal.PROPRIA),
         EnumSet.of(StatusNotaFiscal.AUTORIZADA), HOJE.minusDays(90), HOJE))
-        .thenReturn(new BigDecimal("8765.40"));
+        .thenReturn(new DadosProdutorPorta.Totais(4, new BigDecimal("8765.40")));
 
     Notas notas = ferramentas.listarNotas("saida", null, null, null, null, toolContext);
 
     assertThat(notas.totalEncontrado()).isEqualTo(7);
     // #169: sem filtro de situacao a soma fica nas autorizadas, e o modelo e avisado disso.
     assertThat(notas.valorTotal()).isEqualTo("R$ 8.765,40");
+    // Contagem do mesmo conjunto da soma (4 autorizadas), nao das 7 do filtro de listagem.
+    assertThat(notas.quantidadeNoTotal()).isEqualTo(4);
+    // Sem datas o periodo e dos ultimos 90 dias, e ele vai junto para a resposta dizer qual e.
+    assertThat(notas.dataInicio()).isEqualTo("01/07/2026");
+    assertThat(notas.dataFim()).isEqualTo("29/09/2026");
     assertThat(notas.abrangenciaTotal())
         .isEqualTo(FerramentasDadosProdutor.TOTAL_SO_AUTORIZADAS)
         .doesNotContainPattern("\\d");
@@ -210,8 +215,8 @@ class FerramentasDadosProdutorTest {
         .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Vencimento(TipoGuiaFiscal.ICMS,
             LocalDate.of(2026, 10, 10), new BigDecimal("1250.00"), StatusGuiaFiscal.PENDENTE)),
             12));
-    when(dados.valorTotalVencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(30)))
-        .thenReturn(new BigDecimal("15050.55"));
+    when(dados.totalVencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(30)))
+        .thenReturn(new DadosProdutorPorta.Totais(12, new BigDecimal("15050.55")));
 
     Vencimentos vencimentos = ferramentas.proximosVencimentos(null, toolContext);
 
@@ -230,9 +235,9 @@ class FerramentasDadosProdutorTest {
     when(dados.notas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
         EnumSet.of(StatusNotaFiscal.REJEITADA), HOJE.minusDays(90), HOJE, 5))
         .thenReturn(new Pagina<>(List.of(), 3));
-    when(dados.valorTotalNotas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
+    when(dados.totalNotas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
         EnumSet.of(StatusNotaFiscal.REJEITADA), HOJE.minusDays(90), HOJE))
-        .thenReturn(new BigDecimal("300.00"));
+        .thenReturn(new DadosProdutorPorta.Totais(3, new BigDecimal("300.00")));
 
     Notas notas = ferramentas.listarNotas(null, "rejeitada", null, null, null, toolContext);
 
@@ -245,8 +250,8 @@ class FerramentasDadosProdutorTest {
   void proximosVencimentosSemGuia() {
     when(dados.vencimentosNaoPagos(eq(PRODUTOR), eq(HOJE), eq(HOJE.plusDays(7)), anyInt()))
         .thenReturn(new Pagina<>(List.of(), 0));
-    when(dados.valorTotalVencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(7)))
-        .thenReturn(BigDecimal.ZERO.setScale(2));
+    when(dados.totalVencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(7)))
+        .thenReturn(new DadosProdutorPorta.Totais(0, BigDecimal.ZERO.setScale(2)));
 
     Vencimentos vencimentos = ferramentas.proximosVencimentos(7, toolContext);
 

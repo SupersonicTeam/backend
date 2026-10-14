@@ -211,7 +211,12 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "Quanto somam minhas guias?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.not(
-            org.hamcrest.Matchers.containsString("5.051"))));
+            org.hamcrest.Matchers.containsString("5.051"))))
+        // Descartada de fato: sem fontes exibidas e com o desfecho certo na auditoria.
+        .andExpect(jsonPath("$.fontesDados.length()").value(0));
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE));
   }
 
   /** As duas guias do teste de ponta a ponta do PR #168, mais uma paga e uma do B. */

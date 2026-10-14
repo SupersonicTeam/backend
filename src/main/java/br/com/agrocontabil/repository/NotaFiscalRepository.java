@@ -4,7 +4,6 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import jakarta.persistence.LockModeType;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -462,20 +461,21 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       Pageable pagina);
 
   /**
-   * Soma do valor total de <em>todas</em> as notas do filtro — mesmo recorte de
+   * Quantidade e soma do valor total de <em>todas</em> as notas do filtro — mesmo recorte de
    * {@link #listarResumos}, sem o limite da página (issue #169).
    *
-   * @return a soma; {@code null} quando nenhuma nota atende ao filtro
+   * @return quantidade e soma (soma {@code null} quando nenhuma nota atende ao filtro)
    */
   @Query("""
-      SELECT SUM(n.valorTotalNota) FROM NotaFiscal n
+      SELECT new br.com.agrocontabil.repository.TotalAgregado(COUNT(n), SUM(n.valorTotalNota))
+      FROM NotaFiscal n
       WHERE n.produtor.id = :produtorId
         AND n.origem IN :origens
         AND n.status IN :status
         AND n.dataEmissao >= :inicio
         AND n.dataEmissao < :fim
       """)
-  BigDecimal somarValorResumos(
+  TotalAgregado totalizarResumos(
       @Param("produtorId") UUID produtorId,
       @Param("origens") Collection<OrigemNotaFiscal> origens,
       @Param("status") Collection<StatusNotaFiscal> status,

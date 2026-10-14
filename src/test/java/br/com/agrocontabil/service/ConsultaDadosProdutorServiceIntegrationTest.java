@@ -14,6 +14,7 @@ import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.time.LocalDate;
@@ -164,8 +165,10 @@ class ConsultaDadosProdutorServiceIntegrationTest {
         .containsExactly(hoje.plusDays(2), hoje.plusDays(10));
     assertThat(pagina.getTotalElements()).isEqualTo(2);
     // #169: soma no mesmo recorte (sem a paga, sem a de fora da janela, sem a do B).
-    assertThat(service.somarVencimentosNaoPagos(produtorA.getId(), hoje, hoje.plusDays(30)))
-        .isEqualByComparingTo("400.00");
+    TotalAgregado total =
+        service.totalizarVencimentosNaoPagos(produtorA.getId(), hoje, hoje.plusDays(30));
+    assertThat(total.valor()).isEqualByComparingTo("400.00");
+    assertThat(total.quantidade()).isEqualTo(2);
   }
 
   @Test
@@ -179,10 +182,14 @@ class ConsultaDadosProdutorServiceIntegrationTest {
 
     assertThat(service.vencimentosNaoPagos(produtorA.getId(), hoje, hoje.plusDays(30), 10)
         .getContent()).hasSize(10);
-    assertThat(service.somarVencimentosNaoPagos(produtorA.getId(), hoje, hoje.plusDays(30)))
-        .isEqualByComparingTo("120.60");
-    assertThat(service.somarVencimentosNaoPagos(produtorB.getId(), hoje, hoje.plusDays(30)))
-        .isEqualByComparingTo("0.00").hasScaleOf(2);
+    TotalAgregado total =
+        service.totalizarVencimentosNaoPagos(produtorA.getId(), hoje, hoje.plusDays(30));
+    assertThat(total.valor()).isEqualByComparingTo("120.60");
+    assertThat(total.quantidade()).isEqualTo(12);
+    TotalAgregado doB =
+        service.totalizarVencimentosNaoPagos(produtorB.getId(), hoje, hoje.plusDays(30));
+    assertThat(doB.valor()).isEqualByComparingTo("0.00").hasScaleOf(2);
+    assertThat(doB.quantidade()).isZero();
   }
 
   @Test
@@ -190,16 +197,24 @@ class ConsultaDadosProdutorServiceIntegrationTest {
   void somaDasNotasNoFiltro() {
     LocalDate dez = LocalDate.of(2026, 12, 31);
 
-    assertThat(service.somarNotas(produtorA.getId(), EnumSet.allOf(OrigemNotaFiscal.class),
-        EnumSet.of(StatusNotaFiscal.AUTORIZADA), JAN, dez)).isEqualByComparingTo("5250.00");
-    assertThat(service.somarNotas(produtorA.getId(), EnumSet.allOf(OrigemNotaFiscal.class),
-        EnumSet.allOf(StatusNotaFiscal.class), JAN, dez)).isEqualByComparingTo("6150.00");
-    assertThat(service.somarNotas(produtorA.getId(), EnumSet.of(OrigemNotaFiscal.IMPORTADA),
-        EnumSet.of(StatusNotaFiscal.AUTORIZADA), JAN, JUN)).isEqualByComparingTo("4150.00");
-    assertThat(service.somarNotas(produtorB.getId(), EnumSet.allOf(OrigemNotaFiscal.class),
-        EnumSet.allOf(StatusNotaFiscal.class), JAN, dez)).isEqualByComparingTo("99999.00");
-    assertThat(service.somarNotas(produtorA.getId(), EnumSet.allOf(OrigemNotaFiscal.class),
-        EnumSet.allOf(StatusNotaFiscal.class), LocalDate.of(2027, 1, 1),
-        LocalDate.of(2027, 1, 31))).isEqualByComparingTo("0.00");
+    TotalAgregado autorizadas = service.totalizarNotas(produtorA.getId(),
+        EnumSet.allOf(OrigemNotaFiscal.class), EnumSet.of(StatusNotaFiscal.AUTORIZADA), JAN, dez);
+    assertThat(autorizadas.valor()).isEqualByComparingTo("5250.00");
+    assertThat(autorizadas.quantidade()).isEqualTo(5);
+    TotalAgregado todas = service.totalizarNotas(produtorA.getId(),
+        EnumSet.allOf(OrigemNotaFiscal.class), EnumSet.allOf(StatusNotaFiscal.class), JAN, dez);
+    assertThat(todas.valor()).isEqualByComparingTo("6150.00");
+    assertThat(todas.quantidade()).isEqualTo(6);
+    assertThat(service.totalizarNotas(produtorA.getId(), EnumSet.of(OrigemNotaFiscal.IMPORTADA),
+        EnumSet.of(StatusNotaFiscal.AUTORIZADA), JAN, JUN).valor())
+        .isEqualByComparingTo("4150.00");
+    assertThat(service.totalizarNotas(produtorB.getId(), EnumSet.allOf(OrigemNotaFiscal.class),
+        EnumSet.allOf(StatusNotaFiscal.class), JAN, dez).valor())
+        .isEqualByComparingTo("99999.00");
+    TotalAgregado vazio = service.totalizarNotas(produtorA.getId(),
+        EnumSet.allOf(OrigemNotaFiscal.class), EnumSet.allOf(StatusNotaFiscal.class),
+        LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 31));
+    assertThat(vazio.valor()).isEqualByComparingTo("0.00");
+    assertThat(vazio.quantidade()).isZero();
   }
 }

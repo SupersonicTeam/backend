@@ -13,7 +13,6 @@ import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -203,7 +202,9 @@ public class FerramentasDadosProdutor {
       description = """
       Lista as notas fiscais mais recentes do produtor (no maximo 10) com numero, data, tipo, \
       situacao e valores, informa quantas existem no filtro e traz em valorTotal a soma ja \
-      calculada pelo sistema (abrangenciaTotal diz quais notas entram nela). Use para perguntas \
+      calculada pelo sistema (abrangenciaTotal e quantidadeNoTotal dizem quais e quantas notas \
+      entram nela). Sem datas, o periodo e dos ultimos 90 dias: informe sempre o periodo \
+      (dataInicio a dataFim) junto com o total. Use para perguntas \
       como "quais foram minhas ultimas vendas?", "tenho nota rejeitada?" ou "quanto somam minhas \
       vendas do mes?". Para totais, repita o valorTotal: nunca some os valores da lista, que e \
       limitada.""")
@@ -252,13 +253,16 @@ public class FerramentasDadosProdutor {
     // Sem filtro de situacao, a soma fica nas autorizadas: rascunho, rejeitada e cancelada nao
     // sao venda nem compra, e "quanto vendi?" somando-as daria um total errado com fonte.
     boolean somenteAutorizadas = vazio(situacao);
-    BigDecimal valorTotal = dados.valorTotalNotas(contexto.produtorId(), origens,
+    DadosProdutorPorta.Totais totais = dados.totalNotas(contexto.produtorId(), origens,
         somenteAutorizadas ? EnumSet.of(StatusNotaFiscal.AUTORIZADA) : status, inicio, fim);
 
     contexto.registrarFonte("listarNotas", usados);
     return new Notas(
+        FormatoBr.data(inicio),
+        FormatoBr.data(fim),
         pagina.total(),
-        FormatoBr.moeda(valorTotal),
+        FormatoBr.moeda(totais.valor()),
+        totais.quantidade(),
         somenteAutorizadas ? TOTAL_SO_AUTORIZADAS : TOTAL_DO_FILTRO,
         pagina.itens().stream()
             .map(n -> new Nota(
@@ -296,14 +300,15 @@ public class FerramentasDadosProdutor {
 
     Pagina<DadosProdutorPorta.Vencimento> pagina = dados.vencimentosNaoPagos(
         contexto.produtorId(), de, ate, DadosProdutorPorta.LIMITE_MAXIMO);
-    BigDecimal valorTotal = dados.valorTotalVencimentosNaoPagos(contexto.produtorId(), de, ate);
+    DadosProdutorPorta.Totais totais =
+        dados.totalVencimentosNaoPagos(contexto.produtorId(), de, ate);
 
     contexto.registrarFonte("proximosVencimentos", parametros("dias", String.valueOf(janela)));
     return new Vencimentos(
         FormatoBr.data(de),
         FormatoBr.data(ate),
         pagina.total(),
-        FormatoBr.moeda(valorTotal),
+        FormatoBr.moeda(totais.valor()),
         pagina.itens().stream()
             .map(g -> new Guia(
                 g.tipo().name(),
