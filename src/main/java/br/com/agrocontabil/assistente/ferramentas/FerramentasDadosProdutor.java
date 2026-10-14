@@ -71,7 +71,16 @@ public class FerramentasDadosProdutor {
       "Nenhuma compra encontrada com esse codigo NCM no periodo. Diga isso ao usuario e sugira "
           + "conferir o codigo ou buscar pelo nome do insumo.";
 
-  private static final Pattern MES = Pattern.compile("\\d{4}-(0[1-9]|1[0-2])");
+  /** Abrangencia do valorTotal de listarNotas sem filtro de situacao (sem digitos, ver acima). */
+  static final String TOTAL_SO_AUTORIZADAS =
+      "Soma apenas das notas AUTORIZADAS do periodo e tipo pedidos, inclusive as que nao aparecem "
+          + "na lista. Rascunhos, rejeitadas e canceladas ficam fora.";
+
+  /** Abrangencia do valorTotal de listarNotas com filtro de situacao. */
+  static final String TOTAL_DO_FILTRO =
+      "Soma de todas as notas do filtro pedido, inclusive as que nao aparecem na lista.";
+
+  private static final Pattern MES =Pattern.compile("\\d{4}-(0[1-9]|1[0-2])");
   private static final Pattern NCM = Pattern.compile("\\d{2,8}");
   private static final int TERMO_MINIMO = 3;
   private static final int TERMO_MAXIMO = 60;
@@ -192,9 +201,13 @@ public class FerramentasDadosProdutor {
   @Tool(name = "listarNotas", resultConverter = ResultadoSanitizadoConverter.class,
       description = """
       Lista as notas fiscais mais recentes do produtor (no maximo 10) com numero, data, tipo, \
-      situacao e valores, e informa quantas existem no filtro. Use para perguntas como "quais \
-      foram minhas ultimas vendas?" ou "tenho nota rejeitada?". Nao use para somar valores: a \
-      lista e limitada; para totais use as outras funcoes.""")
+      situacao e valores, informa quantas existem no filtro e traz em valorTotal a soma ja \
+      calculada pelo sistema (abrangenciaTotal e quantidadeNoTotal dizem quais e quantas notas \
+      entram nela). Sem datas, o periodo e dos ultimos 90 dias: informe sempre o periodo \
+      (dataInicio a dataFim) junto com o total. Use para perguntas \
+      como "quais foram minhas ultimas vendas?", "tenho nota rejeitada?" ou "quanto somam minhas \
+      vendas do mes?". Para totais, repita o valorTotal: nunca some os valores da lista, que e \
+      limitada.""")
   public Notas listarNotas(
       @ToolParam(required = false,
           description = "SAIDA (vendas, notas emitidas pelo produtor) ou ENTRADA (compras "
@@ -237,9 +250,20 @@ public class FerramentasDadosProdutor {
     if (!vazio(situacao)) {
       usados.put("situacao", situacao.trim().toUpperCase(Locale.ROOT));
     }
+    // Sem filtro de situacao, a soma fica nas autorizadas: rascunho, rejeitada e cancelada nao
+    // sao venda nem compra, e "quanto vendi?" somando-as daria um total errado com fonte.
+    boolean somenteAutorizadas = vazio(situacao);
+    DadosProdutorPorta.Totais totais = dados.totalNotas(contexto.produtorId(), origens,
+        somenteAutorizadas ? EnumSet.of(StatusNotaFiscal.AUTORIZADA) : status, inicio, fim);
+
     contexto.registrarFonte("listarNotas", usados);
     return new Notas(
+        FormatoBr.data(inicio),
+        FormatoBr.data(fim),
         pagina.total(),
+        FormatoBr.moeda(totais.valor()),
+        totais.quantidade(),
+        somenteAutorizadas ? TOTAL_SO_AUTORIZADAS : TOTAL_DO_FILTRO,
         pagina.itens().stream()
             .map(n -> new Nota(
                 n.numero(),
@@ -257,8 +281,10 @@ public class FerramentasDadosProdutor {
   @Tool(name = "proximosVencimentos", resultConverter = ResultadoSanitizadoConverter.class,
       description = """
       Lista as guias fiscais ainda nao pagas do produtor (ICMS, FUNRURAL, DARF, GPS...) que vencem \
-      a partir de hoje, da mais proxima para a mais distante, no maximo 10. Use para perguntas \
-      como "o que vence este mes?" ou "tenho imposto para pagar na semana que vem?".""")
+      a partir de hoje, da mais proxima para a mais distante, no maximo 10. Traz em valorTotal a \
+      soma de todas as guias nao pagas da janela, ja calculada pelo sistema. Use para perguntas \
+      como "o que vence este mes?", "tenho imposto para pagar na semana que vem?" ou "quanto \
+      somam minhas guias?". Para o total, repita o valorTotal: nunca some os valores da lista.""")
   public Vencimentos proximosVencimentos(
       @ToolParam(required = false,
           description = "Quantos dias a frente olhar, de 1 a 90. Omitido: 30.")
@@ -274,12 +300,15 @@ public class FerramentasDadosProdutor {
 
     Pagina<DadosProdutorPorta.Vencimento> pagina = dados.vencimentosNaoPagos(
         contexto.produtorId(), de, ate, DadosProdutorPorta.LIMITE_MAXIMO);
+    DadosProdutorPorta.Totais totais =
+        dados.totalVencimentosNaoPagos(contexto.produtorId(), de, ate);
 
     contexto.registrarFonte("proximosVencimentos", parametros("dias", String.valueOf(janela)));
     return new Vencimentos(
         FormatoBr.data(de),
         FormatoBr.data(ate),
         pagina.total(),
+        FormatoBr.moeda(totais.valor()),
         pagina.itens().stream()
             .map(g -> new Guia(
                 g.tipo().name(),

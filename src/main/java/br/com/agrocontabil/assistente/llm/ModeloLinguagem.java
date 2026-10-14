@@ -7,6 +7,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,18 +40,22 @@ public class ModeloLinguagem {
 
   private final ObjectProvider<ChatModel> chatModel;
   private final String provedor;
+  private final DisponibilidadeModelo disponibilidade;
 
   /**
    * Constrói o gateway.
    *
-   * @param chatModel provedor do {@link ChatModel} ativo (pode não existir)
-   * @param provedor  valor de {@code spring.ai.model.chat} ({@code ollama}, {@code openai}...)
+   * @param chatModel       provedor do {@link ChatModel} ativo (pode não existir)
+   * @param provedor        valor de {@code spring.ai.model.chat} ({@code ollama}, {@code openai}...)
+   * @param disponibilidade disjuntor do modo fallback (issue #146): toda chamada informa o desfecho
    */
   public ModeloLinguagem(
       ObjectProvider<ChatModel> chatModel,
-      @Value("${spring.ai.model.chat:ollama}") String provedor) {
+      @Value("${spring.ai.model.chat:ollama}") String provedor,
+      DisponibilidadeModelo disponibilidade) {
     this.chatModel = chatModel;
     this.provedor = provedor;
+    this.disponibilidade = disponibilidade;
   }
 
   /**
@@ -61,17 +66,20 @@ public class ModeloLinguagem {
    * @throws AssistenteIndisponivelException se não houver modelo configurado ou a chamada falhar
    */
   public ChatResponse chamar(Prompt prompt) {
-    ChatModel modelo = modeloAtivo();
+    ChatModel modelo;
     try {
-      ChatResponse resposta = modelo.call(prompt);
-      if (resposta == null || resposta.getResult() == null) {
-        throw new AssistenteIndisponivelException(
-            "Modelo " + provedor + " devolveu resposta vazia", null);
-      }
-      return resposta;
+      modelo = modeloAtivo();
     } catch (AssistenteIndisponivelException e) {
+      disponibilidade.registrarFalha();
       throw e;
+    }
+    ChatResponse resposta;
+    try {
+      resposta = modelo.call(prompt);
     } catch (RuntimeException e) {
+      if (abreDisjuntor(e)) {
+        disponibilidade.registrarFalha();
+      }
       // So o tipo da falha em WARN: a mensagem de erro de um provedor por API pode ecoar a
       // requisicao, que carrega dados do produtor. O stack trace fica em DEBUG — com o Ollama fora
       // do ar isto acontece a cada pergunta, e em ERROR inundaria o log.
@@ -81,6 +89,26 @@ public class ModeloLinguagem {
       throw new AssistenteIndisponivelException(
           "Falha ao chamar o modelo " + provedor + ": " + e.getClass().getSimpleName(), e);
     }
+    if (resposta == null || resposta.getResult() == null) {
+      // Resposta vazia e um tropeco desta pergunta, nao queda do modelo: nao abre o disjuntor.
+      throw new AssistenteIndisponivelException(
+          "Modelo " + provedor + " devolveu resposta vazia", null);
+    }
+    disponibilidade.registrarSucesso();
+    return resposta;
+  }
+
+  /**
+   * Só indisponibilidade de verdade abre o disjuntor (issue #146), porque ele vale para todos os
+   * produtores. Recusa do provedor a <em>esta</em> requisição ({@link NonTransientAiException}:
+   * 4xx como filtro de conteúdo ou contexto grande demais) não abre: senão qualquer produtor, com
+   * uma pergunta feita para ser recusada, deixaria a Ceres em fallback para todo mundo. Chave de
+   * API inválida também é 4xx e também não abre — mas falha rápido, sem esperar timeout.
+   *
+   * <p>Thread interrompida (tempo esgotado ou cliente que saiu) também não: a falha é da pergunta.
+   */
+  static boolean abreDisjuntor(RuntimeException falha) {
+    return !(falha instanceof NonTransientAiException) && !Thread.currentThread().isInterrupted();
   }
 
   /**

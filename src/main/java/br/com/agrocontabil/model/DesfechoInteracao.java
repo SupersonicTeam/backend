@@ -25,6 +25,11 @@ public enum DesfechoInteracao {
   FORA_DE_ESCOPO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */
   MODELO_INDISPONIVEL,
+  /**
+   * Modelo indisponível e resposta montada sem ele (#146): trechos de lei por busca textual e/ou
+   * atalhos para as telas. Nenhum texto gerado; a resposta sai com {@code modoFallback: true}.
+   */
+  MODO_FALLBACK,
   /** O cliente do streaming desconectou antes da resposta; o restante foi abandonado (#157). */
   CANCELADA,
   /**

@@ -215,20 +215,24 @@ class LiquibaseChangelogIntegrationTest {
         "SELECT column_name FROM information_schema.columns"
             + " WHERE table_name = 'legislacao_trecho' ORDER BY column_name",
         String.class);
-    assertThat(colunas).containsExactly("content", "conteudo_tsv", "dispositivo", "embedding",
-        "hash", "id", "metadata", "norma", "vigencia_fim", "vigencia_inicio");
+    // conteudo_tsv (0026) foi trocada por conteudo_tsv_sem_acento na 0027 (#146).
+    assertThat(colunas).containsExactly("content", "conteudo_tsv_sem_acento", "dispositivo",
+        "embedding", "hash", "id", "metadata", "norma", "vigencia_fim", "vigencia_inicio");
     List<String> indices = jdbc.queryForList(
         "SELECT indexname FROM pg_indexes WHERE tablename = 'legislacao_trecho'", String.class);
     assertThat(indices).contains("uk_legislacao_trecho_hash", "idx_legislacao_trecho_embedding",
-        "idx_legislacao_trecho_tsv", "idx_legislacao_trecho_dispositivo");
+        "idx_legislacao_trecho_tsv_sem_acento", "idx_legislacao_trecho_dispositivo")
+        .doesNotContain("idx_legislacao_trecho_tsv");
     // As colunas geradas leem o metadata que o PgVectorStore grava.
     jdbc.update("INSERT INTO legislacao_trecho (id, content, metadata, embedding) VALUES"
-        + " ('33333333-3333-3333-3333-333333333333'::uuid, 'Ficam reduzidas as aliquotas',"
-        + " ?::json, array_fill(0.1::real, ARRAY[1024])::vector)",
+        + " ('33333333-3333-3333-3333-333333333333'::uuid, 'Ficam reduzidas as alíquotas da"
+        + " redução', ?::json, array_fill(0.1::real, ARRAY[1024])::vector)",
         "{\"hash\":\"h1\",\"norma\":\"LC 214/2025\",\"dispositivo\":\"art. 1\","
             + "\"vigenciaInicio\":\"2025-01-16\",\"vigenciaFim\":\"9999-12-31\"}");
+    // 0027: a busca textual ignora o acento dos dois lados ("aliquota" casa com "alíquotas").
     Map<String, Object> linha = jdbc.queryForMap("SELECT hash, norma, vigencia_fim,"
-        + " conteudo_tsv @@ to_tsquery('portuguese', 'reduzir') AS achou FROM legislacao_trecho");
+        + " conteudo_tsv_sem_acento @@ to_tsquery('portuguese', 'reduzir & aliquota & reducao')"
+        + " AS achou FROM legislacao_trecho");
     assertThat(linha).containsEntry("hash", "h1").containsEntry("norma", "LC 214/2025")
         .containsEntry("vigencia_fim", "9999-12-31").containsEntry("achou", true);
     jdbc.update("DELETE FROM legislacao_trecho");

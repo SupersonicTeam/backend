@@ -372,7 +372,8 @@ public class AssistenteService implements DisposableBean {
             c.norma(), c.dispositivo(), c.url(), c.trecho()))
         .toList();
     return new AssistenteChatResponse(
-        resultado.texto(), resultado.rota().name(), citacoes, fontes, false);
+        resultado.texto(), resultado.rota().name(), citacoes, fontes, resultado.modoFallback(),
+        resultado.atalhos().stream().map(Enum::name).toList());
   }
 
   private ContextoAssistente novoContexto(UUID produtorId) {

@@ -1,21 +1,32 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.PerguntaInterrompidaException;
 import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.fallback.ModoFallback;
+import br.com.agrocontabil.assistente.fallback.TelaAtalho;
+import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
+import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
+import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,18 +45,26 @@ class OrquestradorServiceTest {
   private static final CitacaoLegal CITACAO = new CitacaoLegal("LC 214/2025", "art. 138",
       "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm", "trecho");
 
+  private static final TrechoRecuperado TRECHO_TEXTUAL = new TrechoRecuperado("T1", "id-1",
+      "LC 214/2025", "art. 138", "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+      "Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os insumos.", 0.4);
+
   @Mock private ClassificadorIntencao classificador;
   @Mock private RotaDados rotaDados;
   @Mock private RotaLegislacao rotaLegislacao;
+  @Mock private BuscaTextualLegislacaoService buscaTextual;
 
   private OrquestradorService orquestrador;
+  private DisponibilidadeModelo disponibilidade;
   private ContextoAssistente contexto;
   private final List<Intencao> rotasAvisadas = new ArrayList<>();
 
   @BeforeEach
   void setUp() {
-    orquestrador = new OrquestradorService(
-        classificador, rotaDados, rotaLegislacao, new AssistenteProperties());
+    AssistenteProperties propriedades = new AssistenteProperties();
+    disponibilidade = new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L);
+    orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
+        new ModoFallback(buscaTextual, propriedades), disponibilidade, propriedades);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }
 
@@ -133,6 +152,118 @@ class OrquestradorServiceTest {
 
     assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
     verifyNoInteractions(rotaDados, rotaLegislacao);
+  }
+
+  // --- modo fallback (#146) ---
+
+  @Test
+  @DisplayName("#146: disjuntor aberto: nenhuma chamada ao modelo, trechos da busca textual")
+  void disjuntorAbertoVaiDiretoAoFallback() {
+    disponibilidade.registrarFalha();
+    when(buscaTextual.buscar(anyString(), eq(contexto.hoje()), anyInt()))
+        .thenReturn(List.of(TRECHO_TEXTUAL));
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Qual a reducao de aliquota para insumos agropecuarios?", contexto, rotasAvisadas::add);
+
+    verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+    assertThat(rotasAvisadas).containsExactly(Intencao.LEGISLACAO);
+    assertThat(r.modoFallback()).isTrue();
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
+    assertThat(r.texto()).startsWith(ModoFallback.SEM_MODELO_LEI)
+        .contains("LC 214/2025, art. 138: Ficam reduzidas em 60%");
+    assertThat(r.citacoes()).singleElement()
+        .satisfies(c -> assertThat(c.dispositivo()).isEqualTo("art. 138"));
+    assertThat(contexto.trechosCitados()).containsExactly("id-1");
+  }
+
+  @Test
+  @DisplayName("#146: classificador fora do ar: intencao por palavras-chave (dados -> atalhos)")
+  void classificadorForaUsaPalavrasChave() {
+    when(classificador.classificar(anyString(), any())).thenAnswer(invocacao -> {
+      disponibilidade.registrarFalha(); // o que o ModeloLinguagem real faz nessa falha
+      throw new AssistenteIndisponivelException("modelo fora", null);
+    });
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Quais guias eu tenho para pagar este mes?", contexto, rotasAvisadas::add);
+
+    assertThat(rotasAvisadas).containsExactly(Intencao.DADOS);
+    assertThat(r.texto()).isEqualTo(ModoFallback.SEM_MODELO_DADOS);
+    assertThat(r.atalhos()).containsExactly(TelaAtalho.CALENDARIO);
+    assertThat(r.exibirFontes()).isFalse();
+    assertThat(r.modoFallback()).isTrue();
+    verifyNoInteractions(rotaDados, rotaLegislacao, buscaTextual);
+  }
+
+  @Test
+  @DisplayName("#146: modelo cai na rota de dados: atalhos no lugar da resposta, sem fontes")
+  void rotaDadosForaVaiAoFallback() {
+    classificarComo(Intencao.DADOS, 0.9);
+    when(rotaDados.responder(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("modelo fora", null));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.rota()).isEqualTo(Intencao.DADOS);
+    assertThat(r.modoFallback()).isTrue();
+    assertThat(r.exibirFontes()).isFalse();
+    // "pergunta" nao menciona tela nenhuma: todas.
+    assertThat(r.atalhos()).containsExactly(TelaAtalho.values());
+  }
+
+  @Test
+  @DisplayName("#146: MISTO com dados respondidos e lei fora: dados ficam, lei da busca textual")
+  void mistoComLeiForaMantemDados() {
+    classificarComo(Intencao.MISTO, 0.9);
+    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("Voce comprou X."));
+    when(rotaLegislacao.responder(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("embedding fora", null));
+    when(buscaTextual.buscar(anyString(), any(), anyInt())).thenReturn(List.of(TRECHO_TEXTUAL));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).startsWith("Voce comprou X.\n\n" + ModoFallback.SEM_MODELO_LEI);
+    assertThat(r.exibirFontes()).isTrue();
+    assertThat(r.modoFallback()).isTrue();
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
+    assertThat(r.citacoes()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("#146: busca textual sem trecho: mensagem fixa, nada citado")
+  void fallbackSemTrecho() {
+    disponibilidade.registrarFalha();
+    when(buscaTextual.buscar(anyString(), any(), anyInt())).thenReturn(List.of());
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo(ModoFallback.SEM_MODELO_SEM_TRECHO);
+    assertThat(r.citacoes()).isEmpty();
+    assertThat(r.modoFallback()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#146: falha numa pergunta ja interrompida nao vira fallback")
+  void interrupcaoNaoViraFallback() {
+    classificarComo(Intencao.DADOS, 0.9);
+    when(rotaDados.responder(anyString(), any())).thenAnswer(invocacao -> {
+      contexto.interromper(DesfechoInteracao.TEMPO_ESGOTADO);
+      throw new AssistenteIndisponivelException("I/O interrompido", null);
+    });
+
+    assertThatThrownBy(this::responder).isInstanceOf(PerguntaInterrompidaException.class);
+    verifyNoInteractions(buscaTextual);
+  }
+
+  @Test
+  @DisplayName("#146: base fora junto com o modelo: 503, sem resposta inventada")
+  void baseForaPropaga503() {
+    disponibilidade.registrarFalha();
+    when(buscaTextual.buscar(anyString(), any(), anyInt()))
+        .thenThrow(new AssistenteIndisponivelException("banco fora", null));
+
+    assertThatThrownBy(this::responder).isInstanceOf(AssistenteIndisponivelException.class);
   }
 
   private void classificarComo(Intencao intencao, double confianca) {

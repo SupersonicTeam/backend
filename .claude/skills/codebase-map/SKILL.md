@@ -93,6 +93,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 |--------|-----------------|
 | `llm/ModeloLinguagem` | **Porta única** para o `ChatModel` (Ollama ou API compatível com a da OpenAI, por `spring.ai.model.chat`). Falha do provedor → `AssistenteIndisponivelException` (503); `identificacao()` = `provedor/modelo` para auditoria (issue #141) |
 | `llm/OllamaHealthIndicator` | Health `ollama`: modelos baixados? Inacessível/ausente → `DEGRADED` (HTTP 200), nunca `DOWN`; cliente próprio com timeout curto + cache (issue #141) |
+| `llm/DisponibilidadeModelo` | Disjuntor do modelo (issue #146): depois de uma queda real (I/O, timeout, 5xx, sem ChatModel), as perguntas pulam o modelo por `app.assistente.fallback.pausa-apos-falha`. Recusa 4xx da pergunta, resposta vazia e thread interrompida **não** abrem (senão um produtor derrubaria todos) |
+| `fallback/ModoFallback` | Resposta sem modelo (issue #146): intenção por palavras-chave, trechos de lei verbatim (busca textual) e `TelaAtalho` (NOTAS/APURACAO/CREDITOS/CALENDARIO) para perguntas de dados. Nunca um número do produtor |
 
 | `ContextoAssistente` | Produtor + "hoje" + fontes da pergunta, entregue às funções pelo `ToolContext` (nunca visto pelo modelo). `de(toolContext)` **falha fechado** (issue #143) |
 | `RotaDados` | Laço modelo → função → modelo **do backend** (`internalToolExecutionEnabled=false` + `ToolCallingManager`), teto `max-rodadas-ferramentas`; resposta passa pelo `ValidadorNumeros` (issue #142) |
@@ -103,6 +105,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `rag/FatiadorDispositivos` | HTML do Planalto (jsoup) → um `DispositivoLegal` por artigo/§/inciso/alínea, com o texto do caput; descarta tachado e anotações; nova redação de emenda vira "art. 1º (redação do art. 156-A, § 1º)" |
 | `rag/IngestaoLegislacaoService` | `PgVectorStore.add` idempotente pelo hash; nova redação = nova vigência (fecha só o `vigenciaFim` da anterior, ordem que se repara sozinha). `IngestaoLegislacaoRunner` = comando no profile `ingestao` |
 | `rag/BuscaLegislacaoService` | Top-k vigentes na data, com limiar de similaridade (`app.assistente.rag.*`); filtro de vigência via `FilterExpressionBuilder` |
+| `rag/BuscaTextualLegislacaoService` | Busca textual do fallback (issue #146): OU dos lexemas (máx. 20, cada um com `quote_literal`), mínimo de 2 casados, mesma vigência; coluna `conteudo_tsv_sem_acento` (0027). Mapa de acentos travado pelo `BuscaTextualMapaAcentosTest` |
 | `rag/ValidadorCitacao` | Marca `[Tn]` inexistente ou ausente → "não encontrei fundamento legal"; senão troca a marca pela referência dos metadados e devolve `CitacaoLegal` com link |
 | `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
 | `ferramentas/FerramentasDadosProdutor` | 5 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
@@ -259,5 +262,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0026-legislacao-trecho` (próximo número livre: **0027**; a 0026 é só PostgreSQL — extensão `vector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0027-legislacao-tsv-sem-acento` (próximo número livre: **0028**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

@@ -29,7 +29,9 @@ class LlmClassificadorIntencaoTest {
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
     beans.addBean("chatModel", chatModel);
     classificador = new LlmClassificadorIntencao(
-        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama"), new ObjectMapper());
+        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
+            new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
+                java.time.Duration.ofSeconds(30), System::nanoTime)), new ObjectMapper());
   }
 
   @Test

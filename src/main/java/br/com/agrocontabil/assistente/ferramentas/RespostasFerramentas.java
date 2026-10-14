@@ -73,10 +73,20 @@ public final class RespostasFerramentas {
   /**
    * Resultado de {@code listarNotas}.
    *
-   * @param totalEncontrado quantas notas atendem ao filtro (pode ser mais que as listadas)
-   * @param notas           as mais recentes, no máximo 10
+   * @param dataInicio        primeiro dia do período consultado (o padrão é 90 dias atrás: a
+   *                          resposta tem de dizer o período da soma, issue #169)
+   * @param dataFim           último dia do período consultado
+   * @param totalEncontrado   quantas notas atendem ao filtro (pode ser mais que as listadas)
+   * @param valorTotal        soma calculada pelo backend sobre as notas descritas em
+   *                          {@code abrangenciaTotal}, não sobre a lista (issue #169)
+   * @param quantidadeNoTotal quantas notas entram em {@code valorTotal} (pode diferir de
+   *                          {@code totalEncontrado}: sem filtro de situação só as autorizadas)
+   * @param abrangenciaTotal  quais notas entram em {@code valorTotal}, em texto para o modelo
+   * @param notas             as mais recentes, no máximo 10
    */
-  public record Notas(long totalEncontrado, List<Nota> notas) {}
+  public record Notas(
+      String dataInicio, String dataFim, long totalEncontrado, String valorTotal,
+      long quantidadeNoTotal, String abrangenciaTotal, List<Nota> notas) {}
 
   /**
    * Uma nota da lista.
@@ -100,9 +110,12 @@ public final class RespostasFerramentas {
    * @param de              primeiro dia da janela
    * @param ate             último dia da janela
    * @param totalEncontrado guias não pagas na janela (pode ser mais que as listadas)
+   * @param valorTotal      soma de todas as guias não pagas da janela, calculada pelo backend
+   *                        (issue #169) — inclusive as que não cabem na lista
    * @param guias           as mais próximas, no máximo 10
    */
-  public record Vencimentos(String de, String ate, long totalEncontrado, List<Guia> guias) {}
+  public record Vencimentos(
+      String de, String ate, long totalEncontrado, String valorTotal, List<Guia> guias) {}
 
   /**
    * Uma guia a vencer.

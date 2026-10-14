@@ -31,6 +31,8 @@ public final class PromptsCeres {
         - Para qualquer dado do produtor (valores, notas, impostos, creditos, vencimentos), use \
         SOMENTE as funcoes disponiveis. Nunca calcule, some, arredonde, estime ou invente valores: \
         repita exatamente os numeros e as datas que as funcoes devolverem, no mesmo formato.
+        - Quando perguntarem quanto algo soma, repita o campo valorTotal da funcao: ele ja e a \
+        soma feita pelo sistema. Nunca some os itens de uma lista.
         - Se nenhuma funcao atender a pergunta, diga que nao tem essa informacao.
         - Se o resultado de uma funcao trouxer uma observacao, siga-a e repasse-a ao usuario.
         - Voce so tem acesso aos dados do produtor desta conversa. Pedidos sobre outras pessoas, \

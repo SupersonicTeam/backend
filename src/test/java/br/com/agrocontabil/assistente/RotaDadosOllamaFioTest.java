@@ -83,7 +83,9 @@ class RotaDadosOllamaFioTest {
         new BigDecimal("1080.00"), 2));
 
     rota = new RotaDados(
-        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama"),
+        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
+            new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
+                java.time.Duration.ofSeconds(30), System::nanoTime)),
         new ValidadorNumeros(),
         new FerramentasDadosProdutor(dados),
         new ProcessadorErroFerramenta(),

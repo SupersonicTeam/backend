@@ -2,11 +2,13 @@ package br.com.agrocontabil.controller;
 
 import static br.com.agrocontabil.support.DadosCeresFixture.em;
 import static br.com.agrocontabil.support.DadosCeresFixture.entrada;
+import static br.com.agrocontabil.support.DadosCeresFixture.guia;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.config.LimiteCorpoAssistenteFilter;
 import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.model.AssistenteInteracao;
@@ -14,15 +16,18 @@ import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.ChatModelSimulado;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +79,7 @@ class AssistenteChatIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private ContadorRepository contadorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
+  @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private ChatModelSimulado modelo;
   @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private AssistenteInteracaoRepository interacaoRepository;
@@ -175,6 +181,66 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("#169: 'quanto somam?' repetindo o valorTotal da funcao e aceito, com fonte")
+  void somaDosVencimentosVemDaFuncao() throws Exception {
+    salvarGuiasDoAchadoDoPr168();
+    modelo.responderCom(prompt -> {
+      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
+        JsonNode resultado = lerJson(respostas.getResponses().get(0).responseData());
+        return ChatModelSimulado.texto("Voce tem " + resultado.get("totalEncontrado").asLong()
+            + " guias a pagar, que somam " + resultado.get("valorTotal").asText() + ".");
+      }
+      return pedirFuncao("proximosVencimentos", Map.of("dias", 30));
+    });
+
+    perguntar(produtorA, "Quais guias eu tenho para pagar nos proximos dias e quanto somam?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(
+            "Voce tem 2 guias a pagar, que somam R$ 5.050,55."))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("proximosVencimentos"));
+  }
+
+  @Test
+  @DisplayName("#169: o modelo somando a lista por conta propria continua descartado")
+  void somaFeitaPeloModeloDescartada() throws Exception {
+    salvarGuiasDoAchadoDoPr168();
+    // Soma "a mao" errada de proposito (arredondada): nao existe em nenhuma fonte.
+    modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
+        ? ChatModelSimulado.texto("Suas guias somam R$ 5.051,00.")
+        : pedirFuncao("proximosVencimentos", Map.of("dias", 30)));
+
+    perguntar(produtorA, "Quanto somam minhas guias?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.not(
+            org.hamcrest.Matchers.containsString("5.051"))))
+        // Descartada de fato: sem fontes exibidas e com o desfecho certo na auditoria.
+        .andExpect(jsonPath("$.fontesDados.length()").value(0));
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE));
+  }
+
+  /** As duas guias do teste de ponta a ponta do PR #168, mais uma paga e uma do B. */
+  private void salvarGuiasDoAchadoDoPr168() {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(3), "3210.00",
+        StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(20), "1840.55",
+        StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(5), "999.00", StatusGuiaFiscal.PAGA));
+    guiaFiscalRepository.save(guia(produtorB, hoje.plusDays(4), "777.00",
+        StatusGuiaFiscal.PENDENTE));
+  }
+
+  private static JsonNode lerJson(String json) {
+    try {
+      return JSON.readTree(json);
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  @Test
   @DisplayName("Modelo pedindo funcao sem parar: o backend para no teto de rodadas")
   void tetoDeRodadas() throws Exception {
     modelo.responderCom(prompt -> pedirFuncao("proximosVencimentos", Map.of("dias", 30)));
@@ -204,13 +270,37 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
-  @DisplayName("Modelo fora do ar: 503 ASSISTENTE_INDISPONIVEL")
+  @DisplayName("#146: modelo fora do ar na rota de dados: 200 em modo fallback, com atalhos")
   void modeloForaDoAr() throws Exception {
     modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
 
-    perguntar(produtorA, "Quanto comprei?")
-        .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.errors[0].code").value("ASSISTENTE_INDISPONIVEL"));
+    perguntar(produtorA, "Quanto comprei de fertilizante?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.modoFallback").value(true))
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.resposta").value(ModoFallback.SEM_MODELO_DADOS))
+        .andExpect(jsonPath("$.atalhos[0]").value("NOTAS"))
+        .andExpect(jsonPath("$.fontesDados.length()").value(0))
+        // Nenhum valor do produtor sai sem modelo: nem o do banco, nem um inventado.
+        .andExpect(jsonPath("$.resposta").value(
+            org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("3.734"))));
+  }
+
+  @Test
+  @DisplayName("#146: disjuntor aberto: a pergunta seguinte nem chama o modelo")
+  void disjuntorAbertoNaoChamaModelo() throws Exception {
+    modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
+    perguntar(produtorA, "Quanto comprei de fertilizante?").andExpect(status().isOk());
+    int chamadas = modelo.promptsRecebidos().size();
+    int classificacoes = modelo.classificacoesRecebidas().size();
+
+    perguntar(produtorA, "Minhas guias vencem quando?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.modoFallback").value(true))
+        .andExpect(jsonPath("$.atalhos[0]").value("CALENDARIO"));
+    // Nem a classificacao nem a rota chamaram o modelo na segunda pergunta.
+    assertThat(modelo.promptsRecebidos()).hasSize(chamadas);
+    assertThat(modelo.classificacoesRecebidas()).hasSize(classificacoes);
   }
 
   @Test
@@ -266,16 +356,18 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
-  @DisplayName("#144: modelo fora do ar tambem e auditado (MODELO_INDISPONIVEL)")
+  @DisplayName("#144/#146: modelo fora do ar tambem e auditado (MODO_FALLBACK)")
   void modeloForaAuditado() throws Exception {
     modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
 
-    perguntar(produtorA, "Quanto comprei?").andExpect(status().isServiceUnavailable());
+    perguntar(produtorA, "Quanto comprei?").andExpect(status().isOk());
 
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
-        .satisfies(i -> assertThat(i.getDesfecho())
-            .isEqualTo(DesfechoInteracao.MODELO_INDISPONIVEL));
+        .satisfies(i -> {
+          assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
+          assertThat(i.getRota()).isEqualTo("DADOS");
+        });
   }
 
   @Test
