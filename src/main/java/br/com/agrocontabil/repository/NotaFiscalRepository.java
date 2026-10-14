@@ -510,4 +510,26 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim,
       Pageable pagina);
+
+  /**
+   * Quantidade e soma do valor total de <em>todas</em> as notas do filtro — mesmo recorte de
+   * {@link #listarResumos}, sem o limite da página (issue #169).
+   *
+   * @return quantidade e soma (soma {@code null} quando nenhuma nota atende ao filtro)
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.TotalAgregado(COUNT(n), SUM(n.valorTotalNota))
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem IN :origens
+        AND n.status IN :status
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      """)
+  TotalAgregado totalizarResumos(
+      @Param("produtorId") UUID produtorId,
+      @Param("origens") Collection<OrigemNotaFiscal> origens,
+      @Param("status") Collection<StatusNotaFiscal> status,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
 }

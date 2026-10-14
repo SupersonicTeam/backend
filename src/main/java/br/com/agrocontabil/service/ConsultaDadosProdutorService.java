@@ -7,6 +7,7 @@ import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaResumo;
+import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -161,6 +162,30 @@ public class ConsultaDadosProdutorService {
   }
 
   /**
+   * Quantidade e soma do valor total das notas do filtro — todas, não só as
+   * {@link #LIMITE_MAXIMO} que {@link #listarNotas} devolve (issue #169). Mesmo recorte e mesmo
+   * filtro por produtor; contagem e soma saem da mesma consulta, sobre o mesmo conjunto.
+   *
+   * @return quantidade e soma com 2 casas (zero sem notas)
+   */
+  public TotalAgregado totalizarNotas(
+      UUID produtorId, Set<OrigemNotaFiscal> origens, Set<StatusNotaFiscal> status,
+      LocalDate inicio, LocalDate fim) {
+    return normalizado(notaFiscalRepository.totalizarResumos(
+        produtorId, origens, status, inicioDoDia(inicio), fimExclusivo(fim)));
+  }
+
+  /**
+   * Quantidade e soma do valor de todas as guias não pagas com vencimento em {@code [de, ate]} —
+   * inclusive as que não cabem na lista de {@link #vencimentosNaoPagos} (issue #169).
+   *
+   * @return quantidade e soma com 2 casas (zero sem guias)
+   */
+  public TotalAgregado totalizarVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate) {
+    return normalizado(guiaFiscalRepository.totalizarNaoPagasNaJanela(produtorId, de, ate));
+  }
+
+  /**
    * Escapa os curingas do {@code LIKE} com {@code !} (o {@code ESCAPE} das queries): o texto do
    * usuário é literal. O próprio {@code !} é escapado primeiro.
    */
@@ -170,11 +195,18 @@ public class ConsultaDadosProdutorService {
 
   private static ComprasInsumoResultado resultado(
       CompraInsumoTotal total, List<CompraInsumoAgregado> porUnidade) {
-    BigDecimal valor = total == null || total.valorTotal() == null
-        ? BigDecimal.ZERO
-        : total.valorTotal();
+    BigDecimal valor = total == null ? null : total.valorTotal();
     long notas = total == null || total.quantidadeNotas() == null ? 0 : total.quantidadeNotas();
-    return new ComprasInsumoResultado(valor.setScale(2, RoundingMode.HALF_UP), notas, porUnidade);
+    return new ComprasInsumoResultado(duasCasas(valor), notas, porUnidade);
+  }
+
+  private static TotalAgregado normalizado(TotalAgregado total) {
+    long quantidade = total == null || total.quantidade() == null ? 0 : total.quantidade();
+    return new TotalAgregado(quantidade, duasCasas(total == null ? null : total.valor()));
+  }
+
+  private static BigDecimal duasCasas(BigDecimal valor) {
+    return (valor == null ? BigDecimal.ZERO : valor).setScale(2, RoundingMode.HALF_UP);
   }
 
   private static int limitar(int limite) {
