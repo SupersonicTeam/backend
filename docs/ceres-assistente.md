@@ -135,6 +135,23 @@ trechos oficiais da EC 132/2023 e da LC 214/2025, e a citação é garantida em 
   constitucional, a nova redação entre aspas vira "art. 1º (redação do art. 156-A, § 1º)".
 - Formato do `PgVectorStore` (id, content, metadata, embedding 1024) + colunas geradas (`hash`
   único, norma, dispositivo, vigência) e `tsvector` em português para o modo fallback (#146).
+  A 0027 trocou essa coluna por `conteudo_tsv_sem_acento` (`translate` antes do dicionário): a
+  pergunta digitada sem acento casa com a lei acentuada.
+
+### Modo fallback (#146)
+
+Com o modelo fora, a Ceres responde **sem gerar texto**, parte por parte (`OrquestradorService`):
+
+- **Disjuntor** (`DisponibilidadeModelo`): toda chamada ao modelo informa o desfecho. Depois de
+  uma falha, as perguntas pulam o modelo por `app.assistente.fallback.pausa-apos-falha` (30 s); a
+  primeira depois da pausa tenta de novo. Falha de thread interrompida não abre o disjuntor. O
+  health do Ollama não decide: ele mistura chat e embedding.
+- **Intenção:** o classificador do modelo; sem ele, palavras-chave (`ModoFallback.classificar`).
+- **Legislação:** `BuscaTextualLegislacaoService` — OU dos lexemas da pergunta, cada um citado com
+  `quote_literal` (operador digitado é texto), no mínimo dois lexemas casados, mesmo filtro de
+  vigência da busca vetorial. Os trechos saem verbatim, com a citação dos metadados.
+- **Dados:** texto fixo + `atalhos` (telas). Nenhum número do produtor sem modelo.
+- **Auditoria:** desfecho `MODO_FALLBACK`. Banco fora junto com o modelo → 503, como antes.
 - **Só legislação pública.** Nunca notas nem dados de produtor (#143): a base não tem dono.
 - Requer a extensão `vector` (já presente na imagem `pgvector/pgvector` do compose). Em banco
   gerenciado, `CREATE EXTENSION vector` pode exigir um administrador.
@@ -200,7 +217,7 @@ Síncrono: `POST /api/assistente/chat`. Streaming (SSE): `POST /api/assistente/c
 próprio (no mesmo path, o `Accept: */*` dos navegadores cairia no streaming).
 
 ```json
-{ "resposta": "...", "rota": "MISTO", "citacoes": [], "fontesDados": [], "modoFallback": false }
+{ "resposta": "...", "rota": "MISTO", "citacoes": [], "fontesDados": [], "modoFallback": false, "atalhos": [] }
 ```
 
 Eventos do SSE, nesta ordem: `rota` (`{"rota":"DADOS"}`), `resposta` (o contrato acima) e `fim`;

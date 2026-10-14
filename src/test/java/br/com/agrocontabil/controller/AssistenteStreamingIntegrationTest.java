@@ -143,26 +143,51 @@ class AssistenteStreamingIntegrationTest {
   }
 
   @Test
-  @DisplayName("Modelo fora: evento erro com o envelope errors[], sem detalhe tecnico")
-  void eventoDeErro() throws Exception {
+  @DisplayName("#146: modelo fora na pergunta de dados: rota, resposta em fallback e fim")
+  void fallbackNoStreaming() throws Exception {
     modelo.falharCom(new IllegalStateException("connection refused: ollama:11434 segredo"));
 
     HttpResponse<String> resposta = stream(produtorA, "Qual o meu saldo de IBS?");
 
     assertThat(resposta.statusCode()).isEqualTo(200);
     List<Evento> eventos = eventos(resposta.body());
-    assertThat(eventos).extracting(Evento::nome).containsExactly("erro");
-    JsonNode erro = eventos.get(0).dados();
+    assertThat(eventos).extracting(Evento::nome).containsExactly("rota", "resposta", "fim");
+    // Sem o classificador, a intencao veio das palavras-chave ("meu" = dados do produtor).
+    assertThat(eventos.get(0).dados().path("rota").asText()).isEqualTo("DADOS");
+    JsonNode contrato = eventos.get(1).dados();
+    assertThat(contrato.path("modoFallback").asBoolean()).isTrue();
+    assertThat(contrato.path("atalhos").get(0).asText()).isEqualTo("APURACAO");
+    assertThat(resposta.body()).doesNotContain("ollama").doesNotContain("segredo");
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK));
+  }
+
+  @Test
+  @DisplayName("Modelo e base fora: evento erro com o envelope errors[], sem detalhe tecnico")
+  void eventoDeErro() throws Exception {
+    modelo.falharCom(new IllegalStateException("connection refused: ollama:11434 segredo"));
+
+    // Pergunta de lei: o fallback precisa da busca textual, e o H2 do profile test nao tem a
+    // tabela de legislacao — faz o papel da base fora do ar.
+    HttpResponse<String> resposta =
+        stream(produtorA, "O que diz a lei sobre a reducao de aliquota?");
+
+    assertThat(resposta.statusCode()).isEqualTo(200);
+    List<Evento> eventos = eventos(resposta.body());
+    // A rota sai antes (intencao por palavras-chave); a busca textual falha depois dela.
+    assertThat(eventos).extracting(Evento::nome).containsExactly("rota", "erro");
+    JsonNode erro = eventos.get(1).dados();
     assertThat(erro.path("status").asInt()).isEqualTo(503);
     assertThat(erro.path("path").asText()).isEqualTo("/api/assistente/chat/stream");
     assertThat(erro.path("errors").get(0).path("code").asText())
         .isEqualTo("ASSISTENTE_INDISPONIVEL");
     assertThat(resposta.body()).doesNotContain("ollama").doesNotContain("segredo")
-        .doesNotContain("IllegalStateException");
+        .doesNotContain("IllegalStateException").doesNotContain("legislacao_trecho");
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
         .satisfies(i -> {
-          assertThat(i.getRota()).isEqualTo("INDEFINIDA");
+          assertThat(i.getRota()).isEqualTo("LEGISLACAO");
           assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.MODELO_INDISPONIVEL);
         });
   }

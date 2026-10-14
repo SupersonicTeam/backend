@@ -39,18 +39,22 @@ public class ModeloLinguagem {
 
   private final ObjectProvider<ChatModel> chatModel;
   private final String provedor;
+  private final DisponibilidadeModelo disponibilidade;
 
   /**
    * Constrói o gateway.
    *
-   * @param chatModel provedor do {@link ChatModel} ativo (pode não existir)
-   * @param provedor  valor de {@code spring.ai.model.chat} ({@code ollama}, {@code openai}...)
+   * @param chatModel       provedor do {@link ChatModel} ativo (pode não existir)
+   * @param provedor        valor de {@code spring.ai.model.chat} ({@code ollama}, {@code openai}...)
+   * @param disponibilidade disjuntor do modo fallback (issue #146): toda chamada informa o desfecho
    */
   public ModeloLinguagem(
       ObjectProvider<ChatModel> chatModel,
-      @Value("${spring.ai.model.chat:ollama}") String provedor) {
+      @Value("${spring.ai.model.chat:ollama}") String provedor,
+      DisponibilidadeModelo disponibilidade) {
     this.chatModel = chatModel;
     this.provedor = provedor;
+    this.disponibilidade = disponibilidade;
   }
 
   /**
@@ -61,17 +65,30 @@ public class ModeloLinguagem {
    * @throws AssistenteIndisponivelException se não houver modelo configurado ou a chamada falhar
    */
   public ChatResponse chamar(Prompt prompt) {
-    ChatModel modelo = modeloAtivo();
+    ChatModel modelo;
+    try {
+      modelo = modeloAtivo();
+    } catch (AssistenteIndisponivelException e) {
+      disponibilidade.registrarFalha();
+      throw e;
+    }
     try {
       ChatResponse resposta = modelo.call(prompt);
       if (resposta == null || resposta.getResult() == null) {
         throw new AssistenteIndisponivelException(
             "Modelo " + provedor + " devolveu resposta vazia", null);
       }
+      disponibilidade.registrarSucesso();
       return resposta;
-    } catch (AssistenteIndisponivelException e) {
-      throw e;
     } catch (RuntimeException e) {
+      // Thread interrompida (pergunta com tempo esgotado ou cliente que saiu): a falha e nossa, nao
+      // do modelo, e nao abre o disjuntor para as perguntas dos outros produtores.
+      if (!Thread.currentThread().isInterrupted()) {
+        disponibilidade.registrarFalha();
+      }
+      if (e instanceof AssistenteIndisponivelException indisponivel) {
+        throw indisponivel;
+      }
       // So o tipo da falha em WARN: a mensagem de erro de um provedor por API pode ecoar a
       // requisicao, que carrega dados do produtor. O stack trace fica em DEBUG — com o Ollama fora
       // do ar isto acontece a cada pergunta, e em ERROR inundaria o log.

@@ -65,6 +65,9 @@ public class AssistenteProperties implements InitializingBean {
   /** Orquestração (issue #157). */
   private Orquestracao orquestracao = new Orquestracao();
 
+  /** Modo fallback, sem modelo (issue #146). */
+  private Fallback fallback = new Fallback();
+
   /**
    * Recusa valores fora de faixa na subida, em vez de descobrir o problema no primeiro health.
    *
@@ -92,6 +95,17 @@ public class AssistenteProperties implements InitializingBean {
       throw new IllegalStateException(
           "app.assistente.orquestracao.confianca-minima deve estar em [0, 1], recebido: "
               + orquestracao.getConfiancaMinima());
+    }
+    exigirPositivo(fallback.getPausaAposFalha(), "app.assistente.fallback.pausa-apos-falha");
+    if (fallback.getMaxTrechos() < 1 || fallback.getMaxTrechos() > 10) {
+      throw new IllegalStateException(
+          "app.assistente.fallback.max-trechos deve estar entre 1 e 10, recebido: "
+              + fallback.getMaxTrechos());
+    }
+    if (fallback.getTamanhoMaximoTrecho() < 100) {
+      throw new IllegalStateException(
+          "app.assistente.fallback.tamanho-maximo-trecho deve ser >= 100, recebido: "
+              + fallback.getTamanhoMaximoTrecho());
     }
     exigirPositivo(timeoutPergunta, "app.assistente.timeout-pergunta");
     exigirPositivo(timeoutFuncao, "app.assistente.timeout-funcao");
@@ -158,6 +172,14 @@ public class AssistenteProperties implements InitializingBean {
     this.orquestracao = orquestracao;
   }
 
+  public Fallback getFallback() {
+    return fallback;
+  }
+
+  public void setFallback(Fallback fallback) {
+    this.fallback = fallback;
+  }
+
   public Rag getRag() {
     return rag;
   }
@@ -219,6 +241,50 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setSimilaridadeMinima(double similaridadeMinima) {
       this.similaridadeMinima = similaridadeMinima;
+    }
+  }
+
+  /** Modo fallback, sem modelo (issue #146). */
+  public static class Fallback {
+
+    /**
+     * Depois de uma falha do modelo, por quanto tempo as perguntas vão direto ao fallback, sem
+     * tentar o modelo de novo. Sem a pausa, cada pergunta esperaria a mesma falha (um timeout de
+     * leitura leva até 2 minutos) antes de receber os trechos.
+     */
+    private Duration pausaAposFalha = Duration.ofSeconds(30);
+
+    /** Quantos trechos de lei a busca textual devolve. */
+    private int maxTrechos = 3;
+
+    /**
+     * Tamanho máximo de cada trecho no texto da resposta (o texto completo segue na citação). Um
+     * artigo longo inteiro no chat esconderia os outros trechos.
+     */
+    private int tamanhoMaximoTrecho = 600;
+
+    public Duration getPausaAposFalha() {
+      return pausaAposFalha;
+    }
+
+    public void setPausaAposFalha(Duration pausaAposFalha) {
+      this.pausaAposFalha = pausaAposFalha;
+    }
+
+    public int getMaxTrechos() {
+      return maxTrechos;
+    }
+
+    public void setMaxTrechos(int maxTrechos) {
+      this.maxTrechos = maxTrechos;
+    }
+
+    public int getTamanhoMaximoTrecho() {
+      return tamanhoMaximoTrecho;
+    }
+
+    public void setTamanhoMaximoTrecho(int tamanhoMaximoTrecho) {
+      this.tamanhoMaximoTrecho = tamanhoMaximoTrecho;
     }
   }
 

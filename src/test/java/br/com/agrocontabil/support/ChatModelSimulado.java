@@ -37,8 +37,16 @@ public class ChatModelSimulado implements ChatModel {
   private final Deque<ChatResponse> fila = new ArrayDeque<>();
   private Function<Prompt, ChatResponse> responder = prompt -> texto(RESPOSTA_PADRAO);
 
+  private volatile Runnable aoReiniciar = () -> { };
+
+  /** Ação extra do {@link #reiniciar()} (fecha o disjuntor do modo fallback no contexto, #146). */
+  public void aoReiniciar(Runnable acao) {
+    this.aoReiniciar = acao;
+  }
+
   /** Volta ao comportamento padrão e esquece os prompts recebidos. */
   public synchronized void reiniciar() {
+    aoReiniciar.run();
     prompts.clear();
     classificacoes.clear();
     classificacao = null;

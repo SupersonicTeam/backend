@@ -67,6 +67,7 @@ class LegislacaoPgvectorIntegrationTest {
   @Autowired private FatiadorDispositivos fatiador;
   @Autowired private IngestaoLegislacaoService ingestao;
   @Autowired private BuscaLegislacaoService busca;
+  @Autowired private BuscaTextualLegislacaoService buscaTextual;
   @Autowired private DataSource dataSource;
   @Autowired private AssistenteProperties propriedades;
 
@@ -166,6 +167,68 @@ class LegislacaoPgvectorIntegrationTest {
     // preposicao compartilhada ("de") ja o aproximaria.
     assertThat(busca.buscar("futebol campeonato brasileiro final", LocalDate.of(2026, 9, 29)))
         .isEmpty();
+  }
+
+  // --- busca textual do modo fallback (#146) ---
+
+  @Test
+  @DisplayName("#146: busca textual sem acento na pergunta acha o paragrafo da reducao")
+  void buscaTextualIgnoraAcento() {
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
+        dispositivos);
+
+    List<TrechoRecuperado> trechos = buscaTextual.buscar(
+        "Qual a reducao de aliquota para insumos agropecuarios?", LocalDate.of(2026, 9, 29), 3);
+
+    assertThat(trechos).isNotEmpty();
+    assertThat(trechos.get(0).texto()).contains("60%", "insumos agropecuários");
+    assertThat(trechos.get(0).marca()).isEqualTo("T1");
+    assertThat(trechos.get(0).url()).isEqualTo(URL);
+    assertThat(trechos).hasSizeLessThanOrEqualTo(3);
+  }
+
+  @Test
+  @DisplayName("#146: operadores de tsquery digitados sao texto, sem erro de sintaxe")
+  void buscaTextualOperadoresSaoTexto() {
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
+        dispositivos);
+
+    List<TrechoRecuperado> trechos = buscaTextual.buscar(
+        "fertilizantes & ! | :* ( defensivos ' agricolas <-> ", LocalDate.of(2026, 9, 29), 3);
+
+    assertThat(trechos).isNotEmpty();
+    assertThat(trechos.get(0).texto()).contains("fertilizantes");
+  }
+
+  @Test
+  @DisplayName("#146: busca textual respeita a vigencia, como a vetorial")
+  void buscaTextualPorVigencia() {
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
+        dispositivos);
+    LocalDate alteracao = LocalDate.of(2026, 7, 1);
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, alteracao, alteracao),
+        List.of(new DispositivoLegal("art. 1º",
+            "Art. 1º Esta norma institui o tributo de exemplo sobre operacoes com bens e servicos.")));
+
+    String pergunta = "tributo de exemplo sobre operacoes com bens e servicos";
+    assertThat(textoDoArt1(buscaTextual.buscar(pergunta, LocalDate.of(2026, 1, 10), 5)))
+        .doesNotContain("servicos");
+    assertThat(textoDoArt1(buscaTextual.buscar(pergunta, LocalDate.of(2026, 9, 29), 5)))
+        .contains("servicos");
+  }
+
+  @Test
+  @DisplayName("#146: um lexema so em comum (de dois ou mais) nao traz trecho")
+  void buscaTextualExigeDoisLexemas() {
+    ingestao.ingerir(new FonteLegislacao("LC 214/2025", URL, PUBLICACAO, PUBLICACAO),
+        dispositivos);
+
+    assertThat(buscaTextual.buscar("futebol campeonato brasileiro", LocalDate.of(2026, 9, 29), 3))
+        .isEmpty();
+    // "tributo" casa com o art. 1º e o art. 2º, mas "futebol" nao: um so de dois.
+    assertThat(buscaTextual.buscar("tributo futebol", LocalDate.of(2026, 9, 29), 3)).isEmpty();
+    // So stopwords: nenhum lexema, nenhuma consulta.
+    assertThat(buscaTextual.buscar("o que e de para com", LocalDate.of(2026, 9, 29), 3)).isEmpty();
   }
 
   private String textoDoArt1(List<TrechoRecuperado> trechos) {

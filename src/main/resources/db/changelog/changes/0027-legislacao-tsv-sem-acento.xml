@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0027-legislacao-tsv-sem-acento.xml
+         Sprint 7 — issue #146 (modo fallback da Ceres).
+
+         A busca textual do modo fallback compara a pergunta do usuario com
+         a lei. A coluna conteudo_tsv da 0026 guarda os radicais COM acento
+         ("reducao" digitado sem cedilha nao casa com "reducao" da lei, e o
+         celular costuma tirar o acento). Esta coluna remove os acentos dos
+         dois lados antes do dicionario portugues.
+
+         translate() em vez da extensao unaccent: translate e IMMUTABLE e pode
+         estar numa coluna gerada; unaccent() nao e (exigiria funcao propria
+         e a extensao, que banco gerenciado nem sempre libera). O mapa de
+         letras e o mesmo do BuscaTextualLegislacaoService — mudar um exige
+         mudar o outro.
+
+         conteudo_tsv (0026) sai: nunca foi lido por codigo e duas colunas
+         de busca textual divergiriam. Rollback a recria.
+
+         Somente PostgreSQL, como a 0026.
+         ================================================================ -->
+
+    <changeSet id="0027-legislacao-tsv-sem-acento" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Troca conteudo_tsv por conteudo_tsv_sem_acento (busca textual que
+            ignora acentos) com indice GIN.
+        </comment>
+        <sql splitStatements="true" stripComments="true">
+            ALTER TABLE legislacao_trecho ADD COLUMN conteudo_tsv_sem_acento TSVECTOR
+                GENERATED ALWAYS AS (to_tsvector('portuguese', translate(content,
+                    'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ',
+                    'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN'))) STORED;
+            CREATE INDEX idx_legislacao_trecho_tsv_sem_acento
+                ON legislacao_trecho USING gin (conteudo_tsv_sem_acento);
+            DROP INDEX idx_legislacao_trecho_tsv;
+            ALTER TABLE legislacao_trecho DROP COLUMN conteudo_tsv;
+        </sql>
+        <rollback>
+            <sql splitStatements="true">
+                ALTER TABLE legislacao_trecho ADD COLUMN conteudo_tsv TSVECTOR
+                    GENERATED ALWAYS AS (to_tsvector('portuguese', content)) STORED;
+                CREATE INDEX idx_legislacao_trecho_tsv ON legislacao_trecho USING gin (conteudo_tsv);
+                DROP INDEX idx_legislacao_trecho_tsv_sem_acento;
+                ALTER TABLE legislacao_trecho DROP COLUMN conteudo_tsv_sem_acento;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -67,7 +67,8 @@ X-Usuario-Id: <uuid do produtor>
   "fontesDados": [
     { "funcao": "proximosVencimentos", "parametros": { "dias": "30" } }
   ],
-  "modoFallback": false
+  "modoFallback": false,
+  "atalhos": []
 }
 ```
 
@@ -77,7 +78,24 @@ X-Usuario-Id: <uuid do produtor>
 | `rota` | `"DADOS" \| "LEGISLACAO" \| "MISTO" \| "FORA_DE_ESCOPO"` | Camada que respondeu |
 | `citacoes` | `Citacao[]` | Trechos de lei citados, na ordem da resposta. Vazio fora de `LEGISLACAO`/`MISTO` |
 | `fontesDados` | `FonteDado[]` | Consultas aos dados do produtor usadas. **Vazio quando a resposta foi descartada**: sem selo "calculado a partir das suas notas" |
-| `modoFallback` | `boolean` | Hoje sempre `false`. Reservado para a Sprint 7 (#146): trechos da lei sem geração quando o modelo estiver fora |
+| `modoFallback` | `boolean` | `true` quando o modelo estava fora e a resposta foi montada **sem ele** (#146). Exiba um aviso ("assistente em modo limitado") |
+| `atalhos` | `("NOTAS" \| "APURACAO" \| "CREDITOS" \| "CALENDARIO")[]` | Só no modo fallback, para perguntas de dados: telas onde o dado está. Mapeie cada valor para a rota do Angular e mostre como botões. Vazio fora do fallback |
+
+#### Modo fallback (#146)
+
+Com o modelo indisponível (Ollama fora, timeout, provedor sem resposta), a Ceres **não responde
+503**: responde `200` com `modoFallback: true` e nenhum texto gerado.
+
+- **Pergunta de legislação:** `resposta` traz os trechos mais próximos da pergunta, **verbatim**
+  (busca textual no PostgreSQL), um por linha `- LC 214/2025, art. 138: ...` (trecho longo
+  cortado com `...`); o texto inteiro de cada um vem em `citacoes`.
+- **Pergunta de dados:** sem modelo não há como interpretar a pergunta. `resposta` é um texto fixo
+  e `atalhos` lista as telas. Nenhum valor do produtor aparece.
+- **Mista:** as duas partes; se a parte de dados já tinha sido respondida pelo modelo antes de ele
+  cair, ela fica (com `fontesDados`) e só a lei vem da busca textual.
+- Sem o classificador, a `rota` sai de palavras-chave e pode errar (pior caso: trechos de lei para
+  uma pergunta de dados). Depois de uma falha, as perguntas seguintes pulam o modelo por 30 s.
+- `503 ASSISTENTE_INDISPONIVEL` continua existindo quando **o banco também** está fora.
 
 Exemplo real de `LEGISLACAO` (resumido):
 
@@ -297,6 +315,7 @@ export interface CeresResposta {
   citacoes: CeresCitacao[];
   fontesDados: CeresFonteDado[];
   modoFallback: boolean;
+  atalhos: ('NOTAS' | 'APURACAO' | 'CREDITOS' | 'CALENDARIO')[];  // só no modo fallback
 }
 
 export interface ApiErrorDetail {

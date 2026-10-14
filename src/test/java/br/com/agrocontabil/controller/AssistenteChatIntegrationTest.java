@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.config.LimiteCorpoAssistenteFilter;
 import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.model.AssistenteInteracao;
@@ -204,13 +205,37 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
-  @DisplayName("Modelo fora do ar: 503 ASSISTENTE_INDISPONIVEL")
+  @DisplayName("#146: modelo fora do ar na rota de dados: 200 em modo fallback, com atalhos")
   void modeloForaDoAr() throws Exception {
     modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
 
-    perguntar(produtorA, "Quanto comprei?")
-        .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.errors[0].code").value("ASSISTENTE_INDISPONIVEL"));
+    perguntar(produtorA, "Quanto comprei de fertilizante?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.modoFallback").value(true))
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.resposta").value(ModoFallback.SEM_MODELO_DADOS))
+        .andExpect(jsonPath("$.atalhos[0]").value("NOTAS"))
+        .andExpect(jsonPath("$.fontesDados.length()").value(0))
+        // Nenhum valor do produtor sai sem modelo: nem o do banco, nem um inventado.
+        .andExpect(jsonPath("$.resposta").value(
+            org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("3.734"))));
+  }
+
+  @Test
+  @DisplayName("#146: disjuntor aberto: a pergunta seguinte nem chama o modelo")
+  void disjuntorAbertoNaoChamaModelo() throws Exception {
+    modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
+    perguntar(produtorA, "Quanto comprei de fertilizante?").andExpect(status().isOk());
+    int chamadas = modelo.promptsRecebidos().size();
+    int classificacoes = modelo.classificacoesRecebidas().size();
+
+    perguntar(produtorA, "Minhas guias vencem quando?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.modoFallback").value(true))
+        .andExpect(jsonPath("$.atalhos[0]").value("CALENDARIO"));
+    // Nem a classificacao nem a rota chamaram o modelo na segunda pergunta.
+    assertThat(modelo.promptsRecebidos()).hasSize(chamadas);
+    assertThat(modelo.classificacoesRecebidas()).hasSize(classificacoes);
   }
 
   @Test
@@ -266,16 +291,18 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
-  @DisplayName("#144: modelo fora do ar tambem e auditado (MODELO_INDISPONIVEL)")
+  @DisplayName("#144/#146: modelo fora do ar tambem e auditado (MODO_FALLBACK)")
   void modeloForaAuditado() throws Exception {
     modelo.falharCom(new org.springframework.web.client.ResourceAccessException("recusada"));
 
-    perguntar(produtorA, "Quanto comprei?").andExpect(status().isServiceUnavailable());
+    perguntar(produtorA, "Quanto comprei?").andExpect(status().isOk());
 
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
-        .satisfies(i -> assertThat(i.getDesfecho())
-            .isEqualTo(DesfechoInteracao.MODELO_INDISPONIVEL));
+        .satisfies(i -> {
+          assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
+          assertThat(i.getRota()).isEqualTo("DADOS");
+        });
   }
 
   @Test
