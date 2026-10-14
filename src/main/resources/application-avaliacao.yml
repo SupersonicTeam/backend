@@ -1,0 +1,23 @@
+# Profile AVALIACAO — avaliacao da Ceres com gabarito (issue #158).
+# Usar junto com dev (dev,avaliacao): o comando grava um seed ficticio e se recusa a rodar sem o
+# dev. Sobe sem servidor web e sem os jobs, roda o AvaliacaoCeresRunner e encerra. Nunca exposto
+# como endpoint.
+spring:
+  main:
+    web-application-type: none
+
+# Sem jobs: o fechamento da apuracao e os alertas mudariam os dados no meio da medicao, e a
+# sincronizacao da SEFAZ disputaria o banco com as perguntas.
+app:
+  nfe:
+    sefaz:
+      sync:
+        enabled: false
+  apuracao:
+    fechamento:
+      enabled: false
+  guia-fiscal:
+    sync:
+      enabled: false
+  alertas:
+    enabled: false

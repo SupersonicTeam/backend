@@ -86,6 +86,31 @@ public class ValidadorNumeros {
     return new Resultado(semFonte == 0, semFonte);
   }
 
+  /**
+   * Valores que um texto menciona, lidos como na verificação: todas as leituras de cada número e
+   * as partes de cada data. Usado pela avaliação com gabarito (issue #158) para conferir se a
+   * resposta traz o valor calculado pelo backend.
+   *
+   * @param texto texto livre
+   * @return valores normalizados (sem zeros à direita)
+   */
+  public static Set<BigDecimal> valoresMencionados(String texto) {
+    Conhecidos conhecidos = new Conhecidos();
+    conhecidos.aprender(texto == null ? "" : texto);
+    return Set.copyOf(conhecidos.numeros);
+  }
+
+  /**
+   * Leituras possíveis de um valor escrito, ex.: {@code "R$ 12.500,00"} → {@code 12500}.
+   *
+   * @param valor texto com um número (prefixos como {@code R$} são ignorados)
+   * @return as leituras normalizadas; vazio se o texto não tem número
+   */
+  public static List<BigDecimal> leiturasDoValor(String valor) {
+    Matcher m = NUMERO.matcher(valor == null ? "" : valor);
+    return m.find() ? candidatos(m.group()) : List.of();
+  }
+
   /** Datas, meses e números que as fontes contêm. */
   private static final class Conhecidos {
 

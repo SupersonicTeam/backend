@@ -25,6 +25,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `RetryConfig` | Spring Retry para chamadas SEFAZ |
 | `SchedulingConfig` | Habilita `@Scheduled` e o lock distribuído ShedLock (`@EnableSchedulerLock`, `JdbcTemplateLockProvider` na tabela `shedlock`, relógio do banco — issue #87) |
 | `DataLoader` | Seed em dev/homolog: **dois** produtores (A = semente/fallback, B = outro dono) + referências NCM/CFOP |
+| `avaliacao/AvaliacaoCeresRunner` | Comando da avaliação da Ceres (issue #158, profiles `dev,avaliacao`, sem web): `SeedAvaliacao` (avaliado + vizinho fictícios), `ValoresEsperados` (valor esperado = função real com os parâmetros do gabarito), `AvaliadorResposta` (régua pura), `RelatorioAvaliacao` (.md + .json em `docs/avaliacao/resultados`). Gabarito em `docs/avaliacao/gabarito-ceres.json` |
 
 ### `controller/`
 | Classe | Endpoints |
