@@ -33,12 +33,6 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
   Optional<ApuracaoMensal> findByProdutorIdAndPeriodo(UUID produtorId, String periodo);
 
   /**
-   * Apurações de todos os produtores num período e status — as abertas do mês que vai fechar são
-   * candidatas a alerta (issue #140). Usa o índice {@code (status, periodo)} da 0016.
-   */
-  List<ApuracaoMensal> findByPeriodoAndStatus(String periodo, StatusApuracao status);
-
-  /**
    * Busca uma apuração por ID restringindo ao produtor dono (recorte anti-IDOR).
    *
    * <p>Usada na reabertura (issue Agrocontabil#42): retorna vazio — resultando em 404 — quando a

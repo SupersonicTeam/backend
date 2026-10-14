@@ -30,7 +30,11 @@ public interface AlertaTributarioRepository extends JpaRepository<AlertaTributar
    * Alertas ativos do produtor com prazo a partir de hoje e motivo ainda válido, do mais urgente
    * para o mais distante.
    *
-   * @param pagina limite (a tela e a Ceres nunca leem tudo)
+   * <p>O alerta de fechamento é do mês corrente ({@code periodo}): todo alerta ativo dele tem o
+   * último dia deste mês como prazo, e some quando a apuração do mês aparece {@code FECHADO}.
+   *
+   * @param periodo mês corrente, {@code AAAA-MM}
+   * @param pagina  limite (a tela e a Ceres nunca leem tudo)
    */
   @Query("""
       SELECT a FROM AlertaTributario a
@@ -46,13 +50,14 @@ public interface AlertaTributarioRepository extends JpaRepository<AlertaTributar
               WHERE n.id = a.referenciaId AND n.produtor.id = :produtorId
                 AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA))
         AND (a.tipo <> br.com.agrocontabil.model.TipoAlertaTributario.FECHAMENTO_APURACAO
-          OR EXISTS (SELECT m.id FROM ApuracaoMensal m
-              WHERE m.id = a.referenciaId AND m.produtor.id = :produtorId
-                AND m.status = br.com.agrocontabil.model.StatusApuracao.ABERTO))
+          OR (a.referenciaId = :produtorId AND NOT EXISTS (SELECT m.id FROM ApuracaoMensal m
+              WHERE m.produtor.id = :produtorId AND m.periodo = :periodo
+                AND m.status = br.com.agrocontabil.model.StatusApuracao.FECHADO)))
       ORDER BY a.dataLimite ASC, a.tipo ASC, a.id ASC
       """)
   List<AlertaTributario> listarAtivos(
-      @Param("produtorId") UUID produtorId, @Param("hoje") LocalDate hoje, Pageable pagina);
+      @Param("produtorId") UUID produtorId, @Param("hoje") LocalDate hoje,
+      @Param("periodo") String periodo, Pageable pagina);
 
   /**
    * Marca como resolvidos os alertas cujo prazo passou ou cujo motivo deixou de existir (limpeza
@@ -74,8 +79,10 @@ public interface AlertaTributarioRepository extends JpaRepository<AlertaTributar
             AND NOT EXISTS (SELECT n.id FROM NotaFiscal n WHERE n.id = a.referenciaId
                 AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA))
           OR (a.tipo = br.com.agrocontabil.model.TipoAlertaTributario.FECHAMENTO_APURACAO
-            AND NOT EXISTS (SELECT m.id FROM ApuracaoMensal m WHERE m.id = a.referenciaId
-                AND m.status = br.com.agrocontabil.model.StatusApuracao.ABERTO)))
+            AND EXISTS (SELECT m.id FROM ApuracaoMensal m WHERE m.produtor.id = a.referenciaId
+                AND m.periodo = :periodo
+                AND m.status = br.com.agrocontabil.model.StatusApuracao.FECHADO)))
       """)
-  int resolverObsoletos(@Param("hoje") LocalDate hoje, @Param("agora") OffsetDateTime agora);
+  int resolverObsoletos(@Param("hoje") LocalDate hoje, @Param("periodo") String periodo,
+      @Param("agora") OffsetDateTime agora);
 }

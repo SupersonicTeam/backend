@@ -11,12 +11,10 @@ import br.com.agrocontabil.model.AlertaTributario;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusAlertaTributario;
-import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoAlertaTributario;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.AlertaTributarioRepository;
-import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
@@ -45,7 +43,6 @@ class AlertaTributarioServiceTest {
   @Mock private AlertaTributarioRepository alertaRepository;
   @Mock private GuiaFiscalRepository guiaRepository;
   @Mock private NotaFiscalRepository notaRepository;
-  @Mock private ApuracaoMensalRepository apuracaoRepository;
   @Mock private AuthenticatedProdutorProvider produtorProvider;
   @Mock private br.com.agrocontabil.repository.ProdutorRepository produtorRepository;
 
@@ -56,7 +53,7 @@ class AlertaTributarioServiceTest {
     // 23h50 de Brasilia ja e dia 15 em UTC: "hoje" tem de ser o de Brasilia.
     Clock clock = Clock.fixed(ZonedDateTime.of(HOJE.atTime(23, 50), ZONE).toInstant(), ZONE);
     service = new AlertaTributarioService(alertaRepository, guiaRepository, notaRepository,
-        apuracaoRepository, produtorRepository, produtorProvider, new AlertaTributarioMapper(),
+        produtorRepository, produtorProvider, new AlertaTributarioMapper(),
         clock);
   }
 
@@ -72,7 +69,7 @@ class AlertaTributarioServiceTest {
         LocalDate.of(2026, 9, 14).atStartOfDay(ZONE).toOffsetDateTime(),
         LocalDate.of(2026, 9, 19).atStartOfDay(ZONE).toOffsetDateTime());
     // Dia 14: o mes fecha dia 31, fora da janela.
-    verify(apuracaoRepository, never()).findByPeriodoAndStatus(any(), any());
+    verify(notaRepository, never()).findProdutoresComNotaAutorizadaEntre(any(), any());
   }
 
   @Test
@@ -123,19 +120,23 @@ class AlertaTributarioServiceTest {
   }
 
   @Test
-  @DisplayName("Na semana do fechamento, as apuracoes abertas do mes entram")
+  @DisplayName("Na semana do fechamento, quem tem nota autorizada no mes entra")
   void semanaDoFechamento() {
     Clock dia28 = Clock.fixed(
         ZonedDateTime.of(LocalDate.of(2026, 10, 28).atTime(9, 0), ZONE).toInstant(), ZONE);
     AlertaTributarioService noDia28 = new AlertaTributarioService(alertaRepository,
-        guiaRepository, notaRepository, apuracaoRepository, produtorRepository, produtorProvider,
+        guiaRepository, notaRepository, produtorRepository, produtorProvider,
         new AlertaTributarioMapper(), dia28);
 
     noDia28.gerarAlertas();
 
-    verify(apuracaoRepository).findByPeriodoAndStatus("2026-10", StatusApuracao.ABERTO);
+    // Candidatos pelas notas autorizadas do mes: o mes corrente nao tem linha de apuracao (#53).
+    verify(notaRepository).findProdutoresComNotaAutorizadaEntre(
+        LocalDate.of(2026, 10, 1).atStartOfDay(ZONE).toOffsetDateTime(),
+        LocalDate.of(2026, 11, 1).atStartOfDay(ZONE).toOffsetDateTime());
     verify(alertaRepository).resolverObsoletos(
-        any(LocalDate.class), any(OffsetDateTime.class));
+        any(LocalDate.class), org.mockito.ArgumentMatchers.eq("2026-10"),
+        any(OffsetDateTime.class));
   }
 
   private static GuiaFiscal guia(Produtor produtor, LocalDate vencimento, String valor) {

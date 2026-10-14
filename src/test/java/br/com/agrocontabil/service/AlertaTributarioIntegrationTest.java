@@ -73,7 +73,7 @@ class AlertaTributarioIntegrationTest {
     cleaner.limparTudo();
     Clock clock = Clock.fixed(ZonedDateTime.of(HOJE.atTime(9, 0), ZONE).toInstant(), ZONE);
     service = new AlertaTributarioService(alertaRepository, guiaRepository, notaRepository,
-        apuracaoRepository, produtorRepository, produtorProvider, new AlertaTributarioMapper(),
+        produtorRepository, produtorProvider, new AlertaTributarioMapper(),
         clock);
 
     produtorA = produtorRepository.save(Produtor.builder()
@@ -203,12 +203,31 @@ class AlertaTributarioIntegrationTest {
   }
 
   @Test
+  @DisplayName("Review: fechamento alerta sem linha de apuracao (o mes corrente e projecao ao vivo)")
+  void fechamentoSemLinhaDeApuracao() {
+    Produtor produtorC = produtorRepository.save(Produtor.builder()
+        .nomeCompleto("Fazenda C").cpfCnpj("22233344455").estado("GO").build());
+    // Nota de outubro e nenhuma apuracao gravada: o caso normal antes do fechamento (#53).
+    notaRepository.save(saida(produtorC, em(2026, 10, 10), "Milho", "10059010", "800.00"));
+
+    service.gerarAlertas();
+
+    assertThat(service.listarAtivos(produtorC.getId()))
+        .singleElement()
+        .satisfies(a -> {
+          assertThat(a.tipo()).isEqualTo("FECHAMENTO_APURACAO");
+          assertThat(a.dataLimite()).isEqualTo(LocalDate.of(2026, 10, 31));
+          assertThat(a.referenciaId()).isEqualTo(produtorC.getId());
+        });
+  }
+
+  @Test
   @DisplayName("Fora da janela do fechamento (dia 20), a apuracao aberta nao alerta")
   void apuracaoSoNaSemanaDoFechamento() {
     Clock dia20 = Clock.fixed(
         ZonedDateTime.of(LocalDate.of(2026, 10, 20).atTime(9, 0), ZONE).toInstant(), ZONE);
     AlertaTributarioService noDia20 = new AlertaTributarioService(alertaRepository,
-        guiaRepository, notaRepository, apuracaoRepository, produtorRepository, produtorProvider,
+        guiaRepository, notaRepository, produtorRepository, produtorProvider,
         new AlertaTributarioMapper(), dia20);
 
     noDia20.gerarAlertas();

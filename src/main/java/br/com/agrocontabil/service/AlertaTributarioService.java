@@ -3,16 +3,13 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.dto.AlertaTributarioResponse;
 import br.com.agrocontabil.mapper.AlertaTributarioMapper;
 import br.com.agrocontabil.model.AlertaTributario;
-import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusAlertaTributario;
-import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoAlertaTributario;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.AlertaTributarioRepository;
-import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.PrazoCancelamentoCandidato;
@@ -41,7 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code America/Sao_Paulo} — para:
  * <ul>
  *   <li>o vencimento de uma guia fiscal pendente;</li>
- *   <li>o fechamento automático da apuração do mês (último dia, RN004), se ela estiver aberta;</li>
+ *   <li>o fechamento automático da apuração do mês (último dia, RN004), para quem tem nota
+ *       autorizada no mês;</li>
  *   <li>o fim do prazo de cancelamento de uma NF-e própria autorizada (emissão + 30 dias, RN006,
  *       a mesma constante do {@link SefazService}).</li>
  * </ul>
@@ -65,7 +63,6 @@ public class AlertaTributarioService {
   private final AlertaTributarioRepository alertaRepository;
   private final GuiaFiscalRepository guiaRepository;
   private final NotaFiscalRepository notaRepository;
-  private final ApuracaoMensalRepository apuracaoRepository;
   private final ProdutorRepository produtorRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final AlertaTributarioMapper mapper;
@@ -74,13 +71,12 @@ public class AlertaTributarioService {
   /** Constrói o serviço sobre os repositórios dos recursos que geram alerta. */
   public AlertaTributarioService(AlertaTributarioRepository alertaRepository,
       GuiaFiscalRepository guiaRepository, NotaFiscalRepository notaRepository,
-      ApuracaoMensalRepository apuracaoRepository, ProdutorRepository produtorRepository,
+      ProdutorRepository produtorRepository,
       AuthenticatedProdutorProvider produtorProvider,
       AlertaTributarioMapper mapper, Clock clock) {
     this.alertaRepository = alertaRepository;
     this.guiaRepository = guiaRepository;
     this.notaRepository = notaRepository;
-    this.apuracaoRepository = apuracaoRepository;
     this.produtorRepository = produtorRepository;
     this.produtorProvider = produtorProvider;
     this.mapper = mapper;
@@ -104,7 +100,8 @@ public class AlertaTributarioService {
     LocalDate ultimoDia = hoje.plusDays(DIAS_ANTECEDENCIA - 1);
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
 
-    int resolvidos = alertaRepository.resolverObsoletos(hoje, agora);
+    int resolvidos =
+        alertaRepository.resolverObsoletos(hoje, YearMonth.from(hoje).toString(), agora);
     int criados = 0;
 
     for (GuiaFiscal guia : guiaRepository.findByStatusAndDataVencimentoBetween(
@@ -132,14 +129,18 @@ public class AlertaTributarioService {
           agora);
     }
 
-    // RN004: a apuracao fecha no ultimo dia do mes.
+    // RN004: a apuracao fecha no ultimo dia do mes. Candidatos: quem tem nota autorizada no mes.
+    // Nao da para partir de apuracao_mensal: o mes corrente e projecao ao vivo (#53) e a linha so
+    // nasce no proprio fechamento. A referencia e o produtor (uma apuracao por produtor e mes).
     YearMonth mes = YearMonth.from(hoje);
     LocalDate fechamento = mes.atEndOfMonth();
     if (!fechamento.isAfter(ultimoDia)) {
-      for (ApuracaoMensal apuracao : apuracaoRepository.findByPeriodoAndStatus(
-          mes.toString(), StatusApuracao.ABERTO)) {
-        criados += criar(apuracao.getProdutor(), TipoAlertaTributario.FECHAMENTO_APURACAO,
-            apuracao.getId(), fechamento, "Fechamento da apuracao de " + mes, agora);
+      for (UUID produtorId : notaRepository.findProdutoresComNotaAutorizadaEntre(
+          mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime(),
+          fechamento.plusDays(1).atStartOfDay(ZONE).toOffsetDateTime())) {
+        criados += criar(produtorRepository.getReferenceById(produtorId),
+            TipoAlertaTributario.FECHAMENTO_APURACAO, produtorId, fechamento,
+            "Fechamento da apuracao de " + mes, agora);
       }
     }
 
@@ -168,7 +169,8 @@ public class AlertaTributarioService {
   @Transactional(readOnly = true)
   public List<AlertaTributarioResponse> listarAtivos(UUID produtorId) {
     LocalDate hoje = LocalDate.now(clock.withZone(ZONE));
-    return alertaRepository.listarAtivos(produtorId, hoje, PageRequest.of(0, LIMITE_LISTA))
+    return alertaRepository.listarAtivos(produtorId, hoje, YearMonth.from(hoje).toString(),
+            PageRequest.of(0, LIMITE_LISTA))
         .stream()
         .map(alerta -> mapper.toResponse(alerta, hoje))
         .toList();
