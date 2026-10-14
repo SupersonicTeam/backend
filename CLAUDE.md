@@ -34,6 +34,9 @@ Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 
 ./mvnw clean package          # gera o JAR em target/
 ```
 
+Avaliação da Ceres com gabarito (#158, modelo real, grava seed fictício; só com `dev`): ver
+`docs/avaliacao/README.md`. Linha de base em `docs/avaliacao/linha-de-base-2026-10-14.md`.
+
 ## Arquitetura — regras inegociáveis
 
 - **Camadas:** `Controller → Service → Repository`. Sempre nessa direção.
@@ -50,6 +53,8 @@ br.com.agrocontabil
 ├── config/        # SecurityConfig, CorsConfig, OpenApiConfig, MockIdentidadeFilter,
 │                  # TributosProperties/Config, CertificadoDigitalProperties/Config,
 │                  # SefazProperties/Config, RetryConfig, SchedulingConfig, DataLoader
+│                  # avaliacao/: comando de avaliacao da Ceres com gabarito (#158, profile
+│                  #   avaliacao + dev): SeedAvaliacao, ValoresEsperados, AvaliadorResposta
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, GeracaoNotaFiscalService,
 │                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,

@@ -86,6 +86,39 @@ public class ValidadorNumeros {
     return new Resultado(semFonte == 0, semFonte);
   }
 
+  /**
+   * Valores que um texto menciona <strong>fora de datas e de marcadores de lista</strong>, com
+   * todas as leituras de cada número. Usado pela avaliação com gabarito (issue #158) para conferir
+   * se a resposta traz o valor calculado pelo backend: o dia e o mês de "01/06/2026" não podem
+   * contar como a quantidade "6".
+   *
+   * @param texto texto livre
+   * @return valores normalizados (sem zeros à direita)
+   */
+  public static Set<BigDecimal> valoresMencionados(String texto) {
+    String resto = MARCADOR_LISTA.matcher(texto == null ? "" : texto).replaceAll(" ");
+    for (Pattern padrao : List.of(DATA_BR, DATA_ISO, MES_BR, MES_ISO)) {
+      resto = padrao.matcher(resto).replaceAll(" ");
+    }
+    Set<BigDecimal> valores = new HashSet<>();
+    Matcher m = NUMERO.matcher(resto);
+    while (m.find()) {
+      valores.addAll(candidatos(m.group()));
+    }
+    return Set.copyOf(valores);
+  }
+
+  /**
+   * Leituras possíveis de um valor escrito, ex.: {@code "R$ 12.500,00"} → {@code 12500}.
+   *
+   * @param valor texto com um número (prefixos como {@code R$} são ignorados)
+   * @return as leituras normalizadas; vazio se o texto não tem número
+   */
+  public static List<BigDecimal> leiturasDoValor(String valor) {
+    Matcher m = NUMERO.matcher(valor == null ? "" : valor);
+    return m.find() ? candidatos(m.group()) : List.of();
+  }
+
   /** Datas, meses e números que as fontes contêm. */
   private static final class Conhecidos {
 
