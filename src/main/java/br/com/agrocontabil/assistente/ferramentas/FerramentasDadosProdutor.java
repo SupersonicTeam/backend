@@ -19,6 +19,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -92,6 +93,10 @@ public class FerramentasDadosProdutor {
   /** 1,2% + 0,1% (Lei 8.212/1991, art. 25) + 0,2% SENAR (Lei 9.528/1997, art. 6º). */
   static final String ALIQUOTA_FUNRURAL = "1,5% (1,2% + 0,1% + 0,2% SENAR)";
   static final String FUNRURAL_NAO_SE_APLICA = "nao se aplica";
+  static final String FUNRURAL_EXPORTACAO = "imune (exportacao)";
+  /** Receita de exportação não paga Funrural (Constituição, art. 149, § 2º, I; STF, Tema 674). */
+  static final String AVISO_EXPORTACAO = "Venda ao exterior nao paga Funrural: a receita de"
+      + " exportacao e imune as contribuicoes sociais (Constituicao, art. 149, § 2º, I).";
   private static final String AVISO_SPLIT_PAYMENT = "O split payment separa o IBS e a CBS da nota"
       + " no pagamento da venda (LC 214/2025, arts. 31 e 32).";
   /** O que o cálculo não sabe e o produtor precisa ouvir (RN009, issue #145). */
@@ -225,7 +230,8 @@ public class FerramentasDadosProdutor {
       description = """
       Mostra as retencoes sobre as VENDAS autorizadas do produtor num periodo: o Funrural (1,5% \
       da receita, retido pelo comprador quando ele e empresa ou cooperativa; nas vendas a pessoa \
-      fisica, no varejo ou ao exterior nao ha retencao e o proprio produtor recolhe) e o IBS e a \
+      fisica ou no varejo nao ha retencao e o proprio produtor recolhe; venda ao exterior nao \
+      paga Funrural) e o IBS e a \
       CBS da nota, que o split payment separa no pagamento. Use para perguntas como "quanto foi \
       retido de Funrural nas minhas vendas?", "tenho retencao nas vendas de agosto?" ou "quanto \
       do pagamento fica retido?". Fale sempre das duas retencoes.""")
@@ -250,10 +256,21 @@ public class FerramentasDadosProdutor {
         r.notasVendidas(),
         funrural(r.retidoPeloComprador(), aliquota),
         funrural(r.semRetencao(), aliquota),
+        funrural(r.exportacao(), FUNRURAL_EXPORTACAO),
         FormatoBr.moeda(r.ibsSplitPayment()),
         FormatoBr.moeda(r.cbsSplitPayment()),
         FormatoBr.moeda(r.ibsSplitPayment().add(r.cbsSplitPayment())),
+        avisos(r));
+  }
+
+  /** Avisos fixos; o da exportação só quando houve venda ao exterior. */
+  private static List<String> avisos(DadosProdutorPorta.Retencoes r) {
+    List<String> avisos = new ArrayList<>(
         r.produtorPessoaFisica() ? AVISOS_PESSOA_FISICA : AVISOS_OUTROS);
+    if (r.exportacao().notas() > 0) {
+      avisos.add(0, AVISO_EXPORTACAO);
+    }
+    return List.copyOf(avisos);
   }
 
   private static RespostasFerramentas.Funrural funrural(

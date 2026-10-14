@@ -113,6 +113,7 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
     return new Retencoes(r.tipoProdutor() == TipoProdutor.PESSOA_FISICA,
         funrural(r.retidoPeloAdquirente(), r.notasRetidas()),
         funrural(r.recolhidoPeloProdutor(), r.notasSemRetencao()),
+        funrural(r.exportacao(), r.notasExportacao()),
         r.ibsSplitPayment(), r.cbsSplitPayment(), r.notasVendidas());
   }
 

@@ -77,8 +77,9 @@ public final class RespostasFerramentas {
    * @param dataFim                   último dia
    * @param vendasAutorizadas         vendas autorizadas do período
    * @param funruralRetidoPeloComprador vendas a empresa ou cooperativa, com o Funrural retido
-   * @param funruralSemRetencao       vendas a pessoa física, no varejo ou ao exterior: sem
-   *                                  retenção, o próprio produtor recolhe
+   * @param funruralSemRetencao       vendas a pessoa física ou no varejo: sem retenção, o próprio
+   *                                  produtor recolhe
+   * @param exportacao                vendas ao exterior: imunes, sem Funrural
    * @param splitPaymentIbs           IBS destacado, separado no pagamento
    * @param splitPaymentCbs           CBS destacada, separada no pagamento
    * @param splitPaymentTotal         soma dos dois
@@ -86,7 +87,7 @@ public final class RespostasFerramentas {
    */
   public record Retencoes(
       String dataInicio, String dataFim, long vendasAutorizadas,
-      Funrural funruralRetidoPeloComprador, Funrural funruralSemRetencao,
+      Funrural funruralRetidoPeloComprador, Funrural funruralSemRetencao, Funrural exportacao,
       String splitPaymentIbs, String splitPaymentCbs, String splitPaymentTotal,
       List<String> avisos) {}
 

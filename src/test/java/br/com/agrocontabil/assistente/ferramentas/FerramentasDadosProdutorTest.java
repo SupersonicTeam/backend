@@ -305,9 +305,11 @@ class FerramentasDadosProdutorTest {
             new DadosProdutorPorta.Funrural(1, new BigDecimal("144000.00"),
                 new BigDecimal("1728.00"), new BigDecimal("144.00"), new BigDecimal("288.00"),
                 new BigDecimal("2160.00")),
-            new DadosProdutorPorta.Funrural(2, new BigDecimal("15000.00"),
-                new BigDecimal("180.00"), new BigDecimal("15.00"), new BigDecimal("30.00"),
-                new BigDecimal("225.00")),
+            new DadosProdutorPorta.Funrural(1, new BigDecimal("10000.00"),
+                new BigDecimal("120.00"), new BigDecimal("10.00"), new BigDecimal("20.00"),
+                new BigDecimal("150.00")),
+            new DadosProdutorPorta.Funrural(1, new BigDecimal("5000.00"), BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO),
             new BigDecimal("159.00"), new BigDecimal("1431.00"), 3));
 
     RespostasFerramentas.Retencoes r =
@@ -317,10 +319,12 @@ class FerramentasDadosProdutorTest {
     assertThat(r.funruralRetidoPeloComprador().total()).isEqualTo("R$ 2.160,00");
     assertThat(r.funruralRetidoPeloComprador().aliquota())
         .isEqualTo(FerramentasDadosProdutor.ALIQUOTA_FUNRURAL);
-    assertThat(r.funruralSemRetencao().base()).isEqualTo("R$ 15.000,00");
+    assertThat(r.funruralSemRetencao().base()).isEqualTo("R$ 10.000,00");
+    assertThat(r.exportacao().aliquota()).isEqualTo(FerramentasDadosProdutor.FUNRURAL_EXPORTACAO);
     assertThat(r.splitPaymentTotal()).isEqualTo("R$ 1.590,00");
-    assertThat(r.avisos()).isEqualTo(FerramentasDadosProdutor.AVISOS_PESSOA_FISICA)
-        .anyMatch(a -> a.contains("folha de salarios"));
+    // Houve exportacao: o aviso da imunidade vem primeiro, depois os da pessoa fisica.
+    assertThat(r.avisos()).first().isEqualTo(FerramentasDadosProdutor.AVISO_EXPORTACAO);
+    assertThat(r.avisos()).containsAll(FerramentasDadosProdutor.AVISOS_PESSOA_FISICA);
     assertThat(contexto.fontes()).singleElement().satisfies(f -> {
       assertThat(f.funcao()).isEqualTo("consultarRetencoes");
       assertThat(f.parametros())
@@ -335,7 +339,7 @@ class FerramentasDadosProdutorTest {
     DadosProdutorPorta.Funrural zero = new DadosProdutorPorta.Funrural(0, BigDecimal.ZERO,
         BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
     when(dados.retencoes(PRODUTOR, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
-        .thenReturn(new DadosProdutorPorta.Retencoes(false, zero, zero, BigDecimal.ZERO,
+        .thenReturn(new DadosProdutorPorta.Retencoes(false, zero, zero, zero, BigDecimal.ZERO,
             BigDecimal.ZERO, 0));
 
     RespostasFerramentas.Retencoes r =

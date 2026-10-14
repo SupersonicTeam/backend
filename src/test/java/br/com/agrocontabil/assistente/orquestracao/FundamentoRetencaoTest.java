@@ -64,6 +64,8 @@ class FundamentoRetencaoTest {
     assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
         .containsExactly("Lei 8.212/1991, art. 30, inciso IV", "LC 214/2025, art. 31");
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    // Auditoria: os trechos citados pelo backend entram como os do RAG.
+    assertThat(contexto.trechosCitados()).hasSize(2);
   }
 
   @Test
@@ -82,8 +84,10 @@ class FundamentoRetencaoTest {
         "como funciona o split payment?", "quanto paguei de SENAR?", "valor retido em julho")) {
       assertThat(FundamentoRetencao.trataDeRetencao(pergunta, contexto)).as(pergunta).isTrue();
     }
+    // Outra retencao que a RN009 nao cobre nao recebe o paragrafo do Funrural.
     for (String pergunta : List.of("Quanto vendi em agosto?", "qual o credito de IBS?",
-        "posso retirar a nota?")) {
+        "posso retirar a nota?", "quanto de ICMS foi retido por substituicao?",
+        "tenho IR retido na fonte?")) {
       assertThat(FundamentoRetencao.trataDeRetencao(pergunta, contexto)).as(pergunta).isFalse();
     }
   }

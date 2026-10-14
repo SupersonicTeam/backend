@@ -51,8 +51,18 @@ public class FundamentoRetencao {
       "LC 214/2025|art. 31",
       "LC 214/2025|art. 32");
 
+  /** Fala de retenção; "retido" sozinho também vale (no agro, é o Funrural). */
   private static final Pattern ASSUNTO = Pattern.compile(
       "\\b(retenc|retid|reter|retem|funrural|senar|split\\s*payment)");
+  /** Nomeia uma das duas regras da RN009: aí não há dúvida de qual retenção é. */
+  private static final Pattern REGRA_DA_RN009 =
+      Pattern.compile("\\b(funrural|senar|split\\s*payment|ibs|cbs)\\b");
+  /**
+   * Outra retenção, que a RN009 não cobre ("ICMS retido por substituição", "IR retido na
+   * fonte"): sem nomear Funrural, SENAR, IBS/CBS ou split payment, o parágrafo não entra.
+   */
+  private static final Pattern OUTRA_RETENCAO = Pattern.compile(
+      "\\b(icms|irrf|irpj|imposto de renda|ir|iss|csll|pis|cofins)\\b");
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
   private static final Logger log = LoggerFactory.getLogger(FundamentoRetencao.class);
 
@@ -91,7 +101,11 @@ public class FundamentoRetencao {
     }
     String normalizada = ACENTOS.matcher(Normalizer.normalize(
         pergunta == null ? "" : pergunta, Normalizer.Form.NFD)).replaceAll("");
-    return ASSUNTO.matcher(normalizada.toLowerCase(Locale.ROOT)).find();
+    String texto = normalizada.toLowerCase(Locale.ROOT);
+    if (!ASSUNTO.matcher(texto).find()) {
+      return false;
+    }
+    return REGRA_DA_RN009.matcher(texto).find() || !OUTRA_RETENCAO.matcher(texto).find();
   }
 
   /** Citações com o texto da base; sem banco, o parágrafo segue sozinho (ele já nomeia a lei). */
@@ -99,6 +113,8 @@ public class FundamentoRetencao {
     contexto.verificarAtiva();
     try {
       List<TrechoRecuperado> trechos = busca.buscarDispositivos(DISPOSITIVOS, contexto.hoje());
+      // Auditoria (#144): os trechos citados entram como os do RAG, pelo id.
+      contexto.registrarTrechosCitados(trechos.stream().map(TrechoRecuperado::id).toList());
       if (trechos.size() < DISPOSITIVOS.size()) {
         log.warn("Fundamento de retencao: {} de {} dispositivos na base de legislacao",
             trechos.size(), DISPOSITIVOS.size());

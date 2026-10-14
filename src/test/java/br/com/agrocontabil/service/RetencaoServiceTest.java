@@ -57,7 +57,7 @@ class RetencaoServiceTest {
   }
 
   @Test
-  @DisplayName("Produtor PF vendendo a pessoa física ou ao exterior: sem retenção, ele recolhe")
+  @DisplayName("Produtor PF vendendo a PF: ele recolhe; ao exterior: imune, sem Funrural")
   void pfParaPfOuExteriorSemRetencao() {
     RetencaoInfo aPf = service.detectarRetencao(
         venda(TipoProdutor.PESSOA_FISICA, "52998224725", "PR", "1000.00")).orElseThrow();
@@ -69,7 +69,10 @@ class RetencaoServiceTest {
     assertThat(aPf.funrural().total()).isEqualByComparingTo("15.00");
     // Exterior pela UF, mesmo com CNPJ preenchido.
     assertThat(exterior.adquirente()).isEqualTo(Adquirente.EXTERIOR);
-    assertThat(exterior.funrural().situacao()).isEqualTo(SituacaoFunrural.RECOLHIDO_PELO_PRODUTOR);
+    assertThat(exterior.funrural().situacao()).isEqualTo(SituacaoFunrural.EXPORTACAO_IMUNE);
+    assertThat(exterior.funrural().total()).isZero();
+    // Exportacao nao paga Funrural, mas o IBS/CBS destacado segue para o split payment.
+    assertThat(exterior.splitPayment()).isEqualByComparingTo("1440.00");
   }
 
   @Test

@@ -102,14 +102,14 @@ public interface DadosProdutorPorta {
    * @param produtorPessoaFisica {@code false}: produtor PJ ou sem tipo cadastrado, fora da
    *                             retenção do Funrural
    * @param retidoPeloComprador  vendas a empresa ou cooperativa
-   * @param semRetencao          vendas a pessoa física, no varejo ou ao exterior (o produtor
-   *                             recolhe)
+   * @param semRetencao          vendas a pessoa física ou no varejo (o produtor recolhe)
+   * @param exportacao           vendas ao exterior: imunes, sem Funrural
    * @param ibsSplitPayment      IBS destacado nas vendas
    * @param cbsSplitPayment      CBS destacada nas vendas
    * @param notasVendidas        vendas autorizadas do período
    */
   record Retencoes(boolean produtorPessoaFisica, Funrural retidoPeloComprador,
-      Funrural semRetencao, BigDecimal ibsSplitPayment, BigDecimal cbsSplitPayment,
+      Funrural semRetencao, Funrural exportacao, BigDecimal ibsSplitPayment, BigDecimal cbsSplitPayment,
       long notasVendidas) {}
 
   /**

@@ -100,7 +100,7 @@ class RetencaoServiceIntegrationTest {
   }
 
   @Test
-  @DisplayName("Funrural retido só nas vendas a empresa; sem retenção nas vendas a PF e exterior")
+  @DisplayName("Funrural retido nas vendas a empresa, recolhido pelo produtor a PF, nada ao exterior")
   void resumoDoPeriodo() {
     ResumoRetencoes r = service.resumir(pf.getId(), JAN, AGO);
 
@@ -109,9 +109,14 @@ class RetencaoServiceIntegrationTest {
     assertThat(r.notasRetidas()).isEqualTo(1);
     assertThat(r.retidoPeloAdquirente().base()).isEqualByComparingTo("144000.00");
     assertThat(r.retidoPeloAdquirente().total()).isEqualByComparingTo("2160.00");
-    assertThat(r.notasSemRetencao()).isEqualTo(2);
-    assertThat(r.recolhidoPeloProdutor().base()).isEqualByComparingTo("15000.00");
-    assertThat(r.recolhidoPeloProdutor().total()).isEqualByComparingTo("225.00");
+    assertThat(r.notasSemRetencao()).isEqualTo(1);
+    assertThat(r.recolhidoPeloProdutor().base()).isEqualByComparingTo("10000.00");
+    assertThat(r.recolhidoPeloProdutor().total()).isEqualByComparingTo("150.00");
+    // Exportacao: imune (Constituicao, art. 149, par. 2, I), base informada e Funrural zero.
+    assertThat(r.notasExportacao()).isEqualTo(1);
+    assertThat(r.exportacao().situacao()).isEqualTo(SituacaoFunrural.EXPORTACAO_IMUNE);
+    assertThat(r.exportacao().base()).isEqualByComparingTo("5000.00");
+    assertThat(r.exportacao().total()).isZero();
     assertThat(r.notasVendidas()).isEqualTo(3);
     // Split payment: IBS 0,1% e CBS 0,9% de 159.000,00.
     assertThat(r.ibsSplitPayment()).isEqualByComparingTo("159.00");

@@ -78,7 +78,7 @@ do Ollama nem de chave de API.
 | `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10), "quanto somam?" | consulta fixa top-N + `valorTotal` do filtro inteiro (sem `situacao`, só as autorizadas — #169) |
 | `proximosVencimentos(dias)` | "o que vence este mês?", "quanto somam?" (máx. 90 dias) | guias não pagas + `valorTotal` da janela inteira (#169) |
 | `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
-| `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física, varejo ou exterior; IBS/CBS separado pelo split payment |
+| `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física ou no varejo (o produtor recolhe); venda ao exterior imune (Constituição, art. 149, § 2º, I); IBS/CBS separado pelo split payment |
 
 **Retenção (RN009, #145): as duas regras, sempre.** Decisão do Murillo de 2026-10-14: quando o
 assunto é retenção, a Ceres fala do Funrural retido pelo comprador **e** do split payment, com
