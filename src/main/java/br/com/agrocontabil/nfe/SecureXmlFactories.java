@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
  * {@code ACCESS_EXTERNAL_*} ou certas features (lançam {@code IllegalArgumentException}
  * ou {@code ParserConfigurationException}). Um downgrade é logado em WARN, nunca silencioso.
  */
-final class SecureXmlFactories {
+public final class SecureXmlFactories {
 
   private static final Logger log = LoggerFactory.getLogger(SecureXmlFactories.class);
 
@@ -31,8 +31,11 @@ final class SecureXmlFactories {
 
   private SecureXmlFactories() {}
 
-  /** Cria um {@link DocumentBuilderFactory} namespace-aware com hardening XXE completo. */
-  static DocumentBuilderFactory hardenedDocumentBuilderFactory() {
+  /**
+   * Cria um {@link DocumentBuilderFactory} namespace-aware com hardening XXE completo. Público
+   * para o transporte da SEFAZ (issue #128) ler as respostas com o mesmo endurecimento.
+   */
+  public static DocumentBuilderFactory hardenedDocumentBuilderFactory() {
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     dbf.setNamespaceAware(true);
     setFeature(dbf, XMLConstants.FEATURE_SECURE_PROCESSING, true);

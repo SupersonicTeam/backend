@@ -1,6 +1,8 @@
 package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.sefaz.SefazAmbiente;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -57,6 +59,12 @@ public class SefazProperties implements InitializingBean {
   /** Timeouts de rede do transporte real (issue #83). */
   private Timeout timeout = new Timeout();
 
+  /** Endereços dos webservices por ambiente e UF autorizadora (issue #128). */
+  private Webservices webservices = new Webservices();
+
+  /** Cadeia de confiança dos servidores da SEFAZ (ICP-Brasil), para o transporte real. */
+  private Truststore truststore = new Truststore();
+
   /**
    * Valida a configuração assim que o binder a preenche (issue #83). Uma configuração
    * inconsistente impede a aplicação de subir, em vez de falhar em produção na primeira queda da
@@ -80,12 +88,34 @@ public class SefazProperties implements InitializingBean {
     exigir(sync.getLoteTamanho() > 0, "app.nfe.sefaz.sync.lote-tamanho deve ser > 0");
     exigir(sync.getMaxFalhasConsecutivas() > 0,
         "app.nfe.sefaz.sync.max-falhas-consecutivas deve ser > 0");
+    if (!mock.isEnabled()) {
+      validarTransporteReal();
+    }
     long piorCaso = piorCasoTransmissaoMs();
     exigir(transmissao.getTimeoutMs() > piorCaso,
         "app.nfe.sefaz.transmissao.timeout-ms (" + transmissao.getTimeoutMs() + " ms) deve ser "
             + "maior que o pior caso de uma transmissao (" + piorCaso + " ms = envio + consulta de "
             + "reconciliacao, cada uma com max-attempts x (connect-ms + read-ms) + backoffs); "
             + "senao o job reconciliaria uma transmissao ainda em andamento");
+  }
+
+  /**
+   * Com o transporte real (issue #128): o ambiente configurado precisa de ao menos um conjunto de
+   * endereços (de uma UF ou o {@code PADRAO}), todos completos e em HTTPS. Endereço faltando
+   * descoberto só na primeira transmissão deixaria a nota presa; em HTTP, o XML assinado e o
+   * certificado iriam em claro.
+   */
+  private void validarTransporteReal() {
+    Map<String, Endpoints> doAmbiente = webservices.doAmbiente(ambiente);
+    exigir(!doAmbiente.isEmpty(), "app.nfe.sefaz.webservices." + ambiente.name().toLowerCase()
+        + " sem endereco: configure ao menos PADRAO ou a UF autorizadora");
+    doAmbiente.forEach((uf, e) -> {
+      for (String url : new String[] {e.getAutorizacao(), e.getConsulta(), e.getEvento()}) {
+        exigir(url != null && url.startsWith("https://"),
+            "app.nfe.sefaz.webservices." + ambiente.name().toLowerCase() + "." + uf
+                + ": autorizacao, consulta e evento sao obrigatorios e em https://");
+      }
+    });
   }
 
   /**
@@ -174,6 +204,142 @@ public class SefazProperties implements InitializingBean {
   /** Define os timeouts de rede do transporte (issue #83). */
   public void setTimeout(Timeout timeout) {
     this.timeout = timeout;
+  }
+
+  /** Endereços dos webservices (issue #128). */
+  public Webservices getWebservices() {
+    return webservices;
+  }
+
+  /** Define os endereços dos webservices. */
+  public void setWebservices(Webservices webservices) {
+    this.webservices = webservices;
+  }
+
+  /** Cadeia de confiança dos servidores da SEFAZ. */
+  public Truststore getTruststore() {
+    return truststore;
+  }
+
+  /** Define a cadeia de confiança. */
+  public void setTruststore(Truststore truststore) {
+    this.truststore = truststore;
+  }
+
+  /**
+   * Endereços dos webservices NF-e 4.00 por ambiente (issue #128). A chave do mapa é a sigla da
+   * UF autorizadora (pelo cUF da chave de acesso) ou {@code PADRAO}, usado quando a UF não tem
+   * entrada própria (ex.: as UFs atendidas pela SVRS).
+   */
+  public static class Webservices {
+
+    /** Chave do mapa usada quando a UF da nota não tem endereço próprio. */
+    public static final String PADRAO = "PADRAO";
+
+    private Map<String, Endpoints> homologacao = new HashMap<>();
+    private Map<String, Endpoints> producao = new HashMap<>();
+
+    /** Endereços do ambiente informado. */
+    public Map<String, Endpoints> doAmbiente(SefazAmbiente ambiente) {
+      return ambiente == SefazAmbiente.PRODUCAO ? producao : homologacao;
+    }
+
+    /**
+     * Endereços de uma UF (ou do {@code PADRAO}) sem diferenciar maiúsculas: vindo de variável de
+     * ambiente, o Spring entrega a chave do mapa em minúsculas ({@code pr}, {@code padrao}).
+     *
+     * @return os endereços, ou {@code null} se não houver entrada
+     */
+    public Endpoints buscar(SefazAmbiente ambiente, String chave) {
+      if (chave == null) {
+        return null;
+      }
+      return doAmbiente(ambiente).entrySet().stream()
+          .filter(e -> e.getKey().equalsIgnoreCase(chave))
+          .map(Map.Entry::getValue)
+          .findFirst()
+          .orElse(null);
+    }
+
+    public Map<String, Endpoints> getHomologacao() {
+      return homologacao;
+    }
+
+    public void setHomologacao(Map<String, Endpoints> homologacao) {
+      this.homologacao = homologacao;
+    }
+
+    public Map<String, Endpoints> getProducao() {
+      return producao;
+    }
+
+    public void setProducao(Map<String, Endpoints> producao) {
+      this.producao = producao;
+    }
+  }
+
+  /**
+   * Os três serviços usados de uma autorizadora.
+   *
+   * <p>{@code autorizacao} = NFeAutorizacao4, {@code consulta} = NFeConsultaProtocolo4,
+   * {@code evento} = NFeRecepcaoEvento4.
+   */
+  public static class Endpoints {
+
+    private String autorizacao;
+    private String consulta;
+    private String evento;
+
+    public String getAutorizacao() {
+      return autorizacao;
+    }
+
+    public void setAutorizacao(String autorizacao) {
+      this.autorizacao = autorizacao;
+    }
+
+    public String getConsulta() {
+      return consulta;
+    }
+
+    public void setConsulta(String consulta) {
+      this.consulta = consulta;
+    }
+
+    public String getEvento() {
+      return evento;
+    }
+
+    public void setEvento(String evento) {
+      this.evento = evento;
+    }
+  }
+
+  /**
+   * Truststore com a cadeia ICP-Brasil dos servidores da SEFAZ. Sem caminho, vale o truststore
+   * padrão da JVM, que <strong>não</strong> traz a AC raiz ICP-Brasil: em homologação real é
+   * preciso configurá-lo.
+   */
+  public static class Truststore {
+
+    private String path;
+    private String password;
+
+    public String getPath() {
+      return path;
+    }
+
+    public void setPath(String path) {
+      this.path = path;
+    }
+
+    public String getPassword() {
+      return password;
+    }
+
+    public void setPassword(String password) {
+      this.password = password;
+    }
   }
 
   /**

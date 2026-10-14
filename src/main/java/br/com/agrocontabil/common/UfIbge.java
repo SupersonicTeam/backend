@@ -81,6 +81,23 @@ public final class UfIbge {
   }
 
   /**
+   * Sigla da UF de um cUF (o inverso de {@link #codigo}). Usado para achar a autorizadora da
+   * SEFAZ pelos 2 primeiros dígitos da chave de acesso (issue #128).
+   *
+   * @param codigo cUF de 2 dígitos (pode ser nulo)
+   * @return a sigla, ou vazio se o código não é de nenhuma das 27 UFs
+   */
+  public static Optional<String> uf(String codigo) {
+    if (codigo == null) {
+      return Optional.empty();
+    }
+    return CODIGO_POR_UF.entrySet().stream()
+        .filter(e -> e.getValue().equals(codigo.trim()))
+        .map(Map.Entry::getKey)
+        .findFirst();
+  }
+
+  /**
    * Verifica se um código IBGE de município pertence à UF informada, comparando os 2 primeiros
    * dígitos do código com o cUF da UF.
    *

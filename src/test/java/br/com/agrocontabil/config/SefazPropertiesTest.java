@@ -36,6 +36,36 @@ class SefazPropertiesTest {
   }
 
   @Test
+  @DisplayName("#128: transporte real sem endereco do ambiente, ou em http, nao sobe")
+  void transporteRealExigeEnderecoHttps() {
+    contexto.withPropertyValues("app.nfe.sefaz.mock.enabled=false")
+        .run(ctx -> assertThat(ctx.getStartupFailure()).rootCause()
+            .hasMessageContaining("sem endereco"));
+    contexto.withPropertyValues("app.nfe.sefaz.mock.enabled=false",
+            "app.nfe.sefaz.webservices.homologacao.padrao.autorizacao=http://sefaz/aut",
+            "app.nfe.sefaz.webservices.homologacao.padrao.consulta=https://sefaz/con",
+            "app.nfe.sefaz.webservices.homologacao.padrao.evento=https://sefaz/evt")
+        .run(ctx -> assertThat(ctx.getStartupFailure()).rootCause()
+            .hasMessageContaining("https://"));
+  }
+
+  @Test
+  @DisplayName("#128: com endereco https sobe; a chave do mapa vale sem diferenciar maiusculas")
+  void transporteRealComEnderecoSobe() {
+    contexto.withPropertyValues("app.nfe.sefaz.mock.enabled=false",
+            "app.nfe.sefaz.webservices.homologacao.padrao.autorizacao=https://sefaz/aut",
+            "app.nfe.sefaz.webservices.homologacao.padrao.consulta=https://sefaz/con",
+            "app.nfe.sefaz.webservices.homologacao.padrao.evento=https://sefaz/evt")
+        .run(ctx -> {
+          assertThat(ctx).hasNotFailed();
+          SefazProperties p = ctx.getBean(SefazProperties.class);
+          assertThat(p.getWebservices().buscar(
+              br.com.agrocontabil.sefaz.SefazAmbiente.HOMOLOGACAO, "PADRAO").getConsulta())
+              .isEqualTo("https://sefaz/con");
+        });
+  }
+
+  @Test
   @DisplayName("nao sobe se a transmissao puder durar mais que o timeout de reconciliacao")
   void contextoFalhaQuandoInvarianteViolado() {
     contexto
