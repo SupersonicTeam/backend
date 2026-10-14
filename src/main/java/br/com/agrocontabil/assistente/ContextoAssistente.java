@@ -13,9 +13,13 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.chat.prompt.Prompt;
 
 /**
  * Contexto de uma pergunta à Ceres, entregue às funções pelo {@link ToolContext} (issue #143).
@@ -40,12 +44,16 @@ public final class ContextoAssistente {
   /** Chave do contexto dentro do {@link ToolContext}. */
   public static final String CHAVE = "agrocontabil.contextoAssistente";
 
+  /** Caracteres por token na estimativa, quando o provedor não informa o uso (issue #166). */
+  static final int CARACTERES_POR_TOKEN = 4;
+
   private final UUID produtorId;
   private final LocalDate hoje;
   private final List<FonteDado> fontes = Collections.synchronizedList(new ArrayList<>());
   private final AtomicInteger tokensEntrada = new AtomicInteger();
   private final AtomicInteger tokensSaida = new AtomicInteger();
   private final AtomicBoolean usoInformado = new AtomicBoolean();
+  private final AtomicBoolean tokensEstimados = new AtomicBoolean();
   private final AtomicInteger chamadasDeFuncao = new AtomicInteger();
   private final AtomicInteger consultasComResultado = new AtomicInteger();
   private final List<String> trechosCitados = Collections.synchronizedList(new ArrayList<>());
@@ -102,29 +110,76 @@ public final class ContextoAssistente {
   }
 
   /**
-   * Soma o uso de tokens de uma resposta do modelo, para a auditoria (issue #144). Provedor que
-   * não informa uso é ignorado.
+   * Soma o uso de tokens de uma chamada ao modelo, para a auditoria (issue #144) e a cota semanal
+   * (issue #166). Toda chamada conta, inclusive a classificação de intenção.
    *
+   * <p>Provedor que não informa o uso (alguns só no fim do streaming, outros nunca) tem os tokens
+   * <strong>estimados</strong> por caracteres ({@value #CARACTERES_POR_TOKEN} por token) a partir
+   * do prompt e da resposta, e a pergunta fica marcada como estimada na auditoria. Sem a
+   * estimativa, um provedor que não informa uso deixaria a cota sem efeito.
+   *
+   * @param prompt   o que foi enviado ao modelo
    * @param resposta resposta do modelo
    */
-  public void registrarUso(ChatResponse resposta) {
-    if (resposta == null || resposta.getMetadata() == null) {
-      return;
+  public void registrarUso(Prompt prompt, ChatResponse resposta) {
+    Usage uso = resposta == null || resposta.getMetadata() == null
+        ? null
+        : resposta.getMetadata().getUsage();
+    Integer entrada = uso == null ? null : uso.getPromptTokens();
+    Integer saida = uso == null ? null : uso.getCompletionTokens();
+    if (entrada == null || entrada <= 0) {
+      entrada = estimarTokens(caracteresDoPrompt(prompt));
+      tokensEstimados.set(true);
     }
-    Usage uso = resposta.getMetadata().getUsage();
-    if (uso == null) {
-      return;
+    if (saida == null || saida <= 0) {
+      saida = estimarTokens(caracteresDaResposta(resposta));
+      tokensEstimados.set(true);
     }
-    Integer entrada = uso.getPromptTokens();
-    Integer saida = uso.getCompletionTokens();
-    if (entrada != null && entrada > 0) {
-      tokensEntrada.addAndGet(entrada);
-      usoInformado.set(true);
+    tokensEntrada.addAndGet(entrada);
+    tokensSaida.addAndGet(saida);
+    usoInformado.set(true);
+  }
+
+  /** {@code true} se algum token desta pergunta foi estimado, não informado pelo provedor. */
+  public boolean tokensEstimados() {
+    return tokensEstimados.get();
+  }
+
+  /** Tokens para uma quantidade de caracteres, arredondando para cima (no mínimo 1). */
+  static int estimarTokens(long caracteres) {
+    return (int) Math.max(1, (caracteres + CARACTERES_POR_TOKEN - 1) / CARACTERES_POR_TOKEN);
+  }
+
+  private static long caracteresDoPrompt(Prompt prompt) {
+    if (prompt == null) {
+      return 0;
     }
-    if (saida != null && saida > 0) {
-      tokensSaida.addAndGet(saida);
-      usoInformado.set(true);
+    long total = 0;
+    for (Message mensagem : prompt.getInstructions()) {
+      if (mensagem instanceof ToolResponseMessage respostas) {
+        for (ToolResponseMessage.ToolResponse r : respostas.getResponses()) {
+          total += r.responseData() == null ? 0 : r.responseData().length();
+        }
+      } else if (mensagem.getText() != null) {
+        total += mensagem.getText().length();
+      }
     }
+    return total;
+  }
+
+  private static long caracteresDaResposta(ChatResponse resposta) {
+    if (resposta == null || resposta.getResult() == null) {
+      return 0;
+    }
+    AssistantMessage saida = resposta.getResult().getOutput();
+    long total = saida.getText() == null ? 0 : saida.getText().length();
+    if (saida.getToolCalls() != null) {
+      for (AssistantMessage.ToolCall chamada : saida.getToolCalls()) {
+        total += chamada.name().length()
+            + (chamada.arguments() == null ? 0 : chamada.arguments().length());
+      }
+    }
+    return total;
   }
 
   /** {@code true} se nenhuma consulta aos dados encontrou algo (inclusive se nenhuma rodou). */
@@ -137,12 +192,12 @@ public final class ContextoAssistente {
     chamadasDeFuncao.addAndGet(quantidade);
   }
 
-  /** Tokens de entrada somados; nulo se o provedor não informou uso. */
+  /** Tokens de entrada somados (informados ou estimados); nulo se o modelo não foi chamado. */
   public Integer tokensEntrada() {
     return usoInformado.get() ? tokensEntrada.get() : null;
   }
 
-  /** Tokens de saída somados; nulo se o provedor não informou uso. */
+  /** Tokens de saída somados (informados ou estimados); nulo se o modelo não foi chamado. */
   public Integer tokensSaida() {
     return usoInformado.get() ? tokensSaida.get() : null;
   }

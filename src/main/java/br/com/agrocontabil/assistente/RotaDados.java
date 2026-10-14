@@ -124,7 +124,7 @@ public class RotaDados {
     List<String> resultados = new ArrayList<>();
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(resposta);
+    contexto.registrarUso(prompt, resposta);
     int rodadas = 0;
     while (resposta.hasToolCalls()) {
       if (rodadas >= maxRodadas) {
@@ -144,7 +144,7 @@ public class RotaDados {
       prompt = new Prompt(execucao.conversationHistory(), opcoes);
       contexto.verificarAtiva();
       resposta = modelo.chamar(prompt);
-      contexto.registrarUso(resposta);
+      contexto.registrarUso(prompt, resposta);
       rodadas++;
     }
 

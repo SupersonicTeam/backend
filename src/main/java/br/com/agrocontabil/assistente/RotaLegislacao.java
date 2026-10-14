@@ -117,7 +117,7 @@ public class RotaLegislacao {
         new SystemMessage(sistema), new UserMessage(perguntaAoModelo)));
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(resposta);
+    contexto.registrarUso(prompt, resposta);
     String texto = limpar(resposta.getResult().getOutput().getText());
 
     ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
