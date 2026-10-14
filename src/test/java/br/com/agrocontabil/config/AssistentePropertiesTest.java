@@ -49,4 +49,20 @@ class AssistentePropertiesTest {
     assertThatThrownBy(zero::afterPropertiesSet).isInstanceOf(IllegalStateException.class);
     assertThatThrownBy(nulo::afterPropertiesSet).isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  @DisplayName("#166: teto de uma pergunta maior que o plano e recusado na subida")
+  void tetoMaiorQueOPlano() {
+    AssistenteProperties p = new AssistenteProperties();
+    // Modelo maior: AI_MAX_TOKENS 8192 -> teto de ~245 creditos, plano de 200.
+    p.getCota().setTetoTokensSaidaPorChamada(8192);
+    p.getCota().setCreditosPorSemanaProdutor(200);
+
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("teto de uma pergunta");
+
+    // Com a cota desligada (demonstracao), a mesma configuracao sobe.
+    p.getCota().setHabilitada(false);
+    p.afterPropertiesSet();
+  }
 }

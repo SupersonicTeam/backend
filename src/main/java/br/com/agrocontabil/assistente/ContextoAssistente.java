@@ -20,6 +20,9 @@ import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
 
 /**
  * Contexto de uma pergunta à Ceres, entregue às funções pelo {@link ToolContext} (issue #143).
@@ -155,6 +158,16 @@ public final class ContextoAssistente {
       return 0;
     }
     long total = 0;
+    // As definicoes das funcoes (nome, descricao, schema JSON) tambem vao ao modelo como entrada.
+    if (prompt.getOptions() instanceof ToolCallingChatOptions opcoes
+        && opcoes.getToolCallbacks() != null) {
+      for (ToolCallback funcao : opcoes.getToolCallbacks()) {
+        ToolDefinition definicao = funcao.getToolDefinition();
+        total += definicao.name().length()
+            + (definicao.description() == null ? 0 : definicao.description().length())
+            + (definicao.inputSchema() == null ? 0 : definicao.inputSchema().length());
+      }
+    }
     for (Message mensagem : prompt.getInstructions()) {
       if (mensagem instanceof ToolResponseMessage respostas) {
         for (ToolResponseMessage.ToolResponse r : respostas.getResponses()) {

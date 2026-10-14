@@ -183,6 +183,53 @@ class CotaUsoAssistenteServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("Review: a pergunta nunca custa mais que o teto reservado")
+  void consumoLimitadoAoTeto() {
+    CotaUsoAssistenteService service = service(QUARTA);
+    CotaUsoAssistenteService.Reserva r =
+        service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
+
+    // Muito acima dos tetos por chamada (prompt enorme): cobra o teto, nao passa do limite.
+    assertThat(service.acertar(r, 1_000_000, 50_000, "ollama/qwen3")).isEqualTo(73);
+    assertThat(uso().getCreditosConsumidos()).isEqualTo(73);
+  }
+
+  @Test
+  @DisplayName("Review: reserva presa (processo morto) volta ao saldo na proxima reserva")
+  void reservaPresaLiberada() {
+    propriedades.getCota().setCreditosPorSemanaProdutor(150);
+    // Duas reservas que nunca acertaram, numa linha parada ha 1 hora (timeout padrao: 5 min).
+    repository.save(UsoSemanalAssistente.builder()
+        .id(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
+            LocalDate.of(2026, 10, 12)))
+        .creditosReservados(146)
+        .atualizadoEm(QUARTA.minusHours(1).atZone(ZONE).toOffsetDateTime())
+        .build());
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    assertThat(service.consultar(TipoTitularCota.PRODUTOR, produtor).restantes()).isEqualTo(150);
+    service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
+    assertThat(uso().getCreditosReservados()).isEqualTo(73);
+  }
+
+  @Test
+  @DisplayName("Reserva recente nao e liberada: outra pergunta pode estar em andamento")
+  void reservaRecenteMantida() {
+    propriedades.getCota().setCreditosPorSemanaProdutor(150);
+    repository.save(UsoSemanalAssistente.builder()
+        .id(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
+            LocalDate.of(2026, 10, 12)))
+        .creditosReservados(146)
+        .atualizadoEm(QUARTA.minusMinutes(2).atZone(ZONE).toOffsetDateTime())
+        .build());
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    assertThatThrownBy(() -> service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3"))
+        .isInstanceOf(LimiteUsoAssistenteException.class);
+    assertThat(uso().getCreditosReservados()).isEqualTo(146);
+  }
+
+  @Test
   @DisplayName("Cota desligada: nada e reservado nem gravado")
   void cotaDesligada() {
     propriedades.getCota().setHabilitada(false);

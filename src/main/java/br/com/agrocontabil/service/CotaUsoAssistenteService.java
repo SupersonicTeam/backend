@@ -50,13 +50,11 @@ public class CotaUsoAssistenteService {
   private static final Logger log = LoggerFactory.getLogger(CotaUsoAssistenteService.class);
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
-  /** Chamadas ao modelo fora do laço de funções: a classificação e a parte de legislação. */
-  static final int CHAMADAS_FORA_DO_LACO = 2;
-
   private final UsoSemanalAssistenteRepository repository;
   private final PlanoUsoProvider planoProvider;
   private final AssistenteProperties.Cota cota;
   private final int maxRodadasFerramentas;
+  private final Duration timeoutPergunta;
   private final Clock clock;
   private final TransactionTemplate transacao;
   private final TransactionTemplate transacaoNova;
@@ -69,6 +67,7 @@ public class CotaUsoAssistenteService {
     this.planoProvider = planoProvider;
     this.cota = propriedades.getCota();
     this.maxRodadasFerramentas = propriedades.getMaxRodadasFerramentas();
+    this.timeoutPergunta = propriedades.getTimeoutPergunta();
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
     this.transacaoNova = new TransactionTemplate(transactionManager);
@@ -93,8 +92,14 @@ public class CotaUsoAssistenteService {
     long teto = tetoDaPergunta(modelo);
     long limite = planoProvider.planoDe(tipo, titularId).creditosPorSemana();
     garantirLinha(tipo, titularId, semana, agora);
-    Integer reservou = transacao.execute(status ->
-        repository.reservar(tipo, titularId, semana, teto, limite, agora));
+    Integer reservou = transacao.execute(status -> {
+      // Reserva presa (processo morto no meio da pergunta, sem chegar ao acerto): toda escrita
+      // atualiza atualizado_em, e nenhuma pergunta dura mais que timeout-pergunta. Linha parada ha
+      // mais que o dobro com reserva so pode ter reservas mortas; elas voltam ao saldo aqui.
+      repository.liberarReservasParadas(
+          tipo, titularId, semana, agora.minus(timeoutPergunta.multipliedBy(2)), agora);
+      return repository.reservar(tipo, titularId, semana, teto, limite, agora);
+    });
     if (reservou == null || reservou == 0) {
       if (teto > limite) {
         log.error("Cota da Ceres: teto de uma pergunta ({}) maior que o plano ({}); revise "
@@ -114,7 +119,14 @@ public class CotaUsoAssistenteService {
     if (!reserva.ativa()) {
       return 0;
     }
-    long consumidos = creditos(tokensEntrada, tokensSaida, modelo);
+    long real = creditos(tokensEntrada, tokensSaida, modelo);
+    // A pergunta nunca custa mais que o teto reservado: e o que garante que o titular nao passa
+    // do limite da semana. Passar dele quer dizer que os tetos por chamada estao baixos.
+    long consumidos = Math.min(real, reserva.creditos());
+    if (real > reserva.creditos()) {
+      log.warn("Cota da Ceres: consumo real ({}) passou do teto reservado ({}); cobrado o teto. "
+          + "Revise app.assistente.cota.teto-tokens-*", real, reserva.creditos());
+    }
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
     Integer acertou = transacao.execute(status -> repository.acertar(reserva.tipo(),
         reserva.titularId(), reserva.semana(), reserva.creditos(), consumidos,
@@ -152,7 +164,10 @@ public class CotaUsoAssistenteService {
     UsoSemanalAssistente uso = transacao.execute(status -> repository
         .findById(new UsoSemanalAssistenteId(tipo, titularId, semana)).orElse(null));
     long consumidos = uso == null ? 0 : uso.getCreditosConsumidos();
-    long reservados = uso == null ? 0 : uso.getCreditosReservados();
+    // Reserva de linha parada e reserva morta (ver liberarReservasParadas): nao desconta.
+    boolean parada = uso != null
+        && uso.getAtualizadoEm().isBefore(agora.minus(timeoutPergunta.multipliedBy(2)));
+    long reservados = uso == null || parada ? 0 : uso.getCreditosReservados();
     long restantes = Math.max(0, plano.creditosPorSemana() - consumidos - reservados);
     return new Uso(plano.nome(), cota.isHabilitada(), plano.creditosPorSemana(), consumidos,
         restantes, renovaEm);
@@ -164,23 +179,17 @@ public class CotaUsoAssistenteService {
    * zero (modo fallback, sem modelo) custa zero.
    */
   public long creditos(long tokensEntrada, long tokensSaida, String modelo) {
-    double ponderado = Math.max(0, tokensEntrada) * cota.getPesoEntrada()
-        + Math.max(0, tokensSaida) * cota.getPesoSaida();
-    if (ponderado <= 0) {
-      return 0;
-    }
-    return (long) Math.ceil(ponderado * fator(modelo) / cota.getTokensPorCredito());
+    return cota.creditos(tokensEntrada, tokensSaida, fator(modelo));
   }
 
   /**
    * Custo máximo possível de uma pergunta: classificação + parte de legislação + o laço de funções
    * (a primeira chamada e uma por rodada, até {@code max-rodadas-ferramentas}), cada uma com o
-   * teto de tokens de entrada e de saída.
+   * teto de tokens de entrada e de saída. A fórmula é a de {@link AssistenteProperties.Cota}, a
+   * mesma que a validação da subida usa.
    */
   public long tetoDaPergunta(String modelo) {
-    long chamadas = CHAMADAS_FORA_DO_LACO + 1L + maxRodadasFerramentas;
-    return creditos(chamadas * cota.getTetoTokensEntradaPorChamada(),
-        chamadas * cota.getTetoTokensSaidaPorChamada(), modelo);
+    return cota.tetoDaPergunta(maxRodadasFerramentas, fator(modelo));
   }
 
   private double fator(String modelo) {

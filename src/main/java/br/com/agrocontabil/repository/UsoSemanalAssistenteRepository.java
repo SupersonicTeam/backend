@@ -61,6 +61,26 @@ public interface UsoSemanalAssistenteRepository
       @Param("tokensSaida") long tokensSaida, @Param("agora") OffsetDateTime agora);
 
   /**
+   * Zera as reservas de uma linha parada desde {@code paradaDesde}: perguntas que reservaram e
+   * nunca acertaram nem estornaram (processo morto). Toda escrita da linha atualiza
+   * {@code atualizadoEm}, e nenhuma pergunta dura mais que o timeout dela — quem chama passa o
+   * dobro, folga que não alcança uma pergunta viva.
+   *
+   * @return 1 se havia reserva presa e ela foi liberada
+   */
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      UPDATE UsoSemanalAssistente u
+      SET u.creditosReservados = 0, u.atualizadoEm = :agora
+      WHERE u.id.titularTipo = :tipo AND u.id.titularId = :titularId
+        AND u.id.semanaInicio = :semana
+        AND u.creditosReservados > 0 AND u.atualizadoEm < :paradaDesde
+      """)
+  int liberarReservasParadas(@Param("tipo") TipoTitularCota tipo,
+      @Param("titularId") UUID titularId, @Param("semana") LocalDate semana,
+      @Param("paradaDesde") OffsetDateTime paradaDesde, @Param("agora") OffsetDateTime agora);
+
+  /**
    * Estorno integral da reserva (falha, timeout, interrupção).
    *
    * @return 1 se estornou; 0 se a reserva não estava lá

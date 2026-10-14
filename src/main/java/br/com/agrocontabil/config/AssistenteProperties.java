@@ -124,6 +124,15 @@ public class AssistenteProperties implements InitializingBean {
       throw new IllegalStateException(
           "app.assistente.cota: peso-saida e fatores devem ser > 0 e peso-entrada >= 0");
     }
+    long teto = cota.tetoDaPergunta(maxRodadasFerramentas, cota.maiorFator());
+    long menorPlano = Math.min(
+        cota.getCreditosPorSemanaProdutor(), cota.getCreditosPorSemanaEscritorio());
+    if (cota.isHabilitada() && teto > menorPlano) {
+      // Sem isto a aplicacao sobe e toda pergunta recebe 429 "creditos esgotados".
+      throw new IllegalStateException("app.assistente.cota: o teto de uma pergunta (" + teto
+          + " creditos, com o maior fator) passa do menor plano (" + menorPlano + "). Aumente os "
+          + "creditos por semana ou reduza os tetos de tokens (AI_MAX_TOKENS).");
+    }
     exigirPositivo(timeoutPergunta, "app.assistente.timeout-pergunta");
     exigirPositivo(timeoutFuncao, "app.assistente.timeout-funcao");
     if (timeoutFuncao.toSeconds() < 1) {
@@ -284,8 +293,46 @@ public class AssistenteProperties implements InitializingBean {
    */
   public static class Cota {
 
+    /** Chamadas ao modelo fora do laço de funções: a classificação e a parte de legislação. */
+    public static final int CHAMADAS_FORA_DO_LACO = 2;
+
     /** Desliga a cota (demonstração do TCC): nada é reservado nem bloqueado. */
     private boolean habilitada = true;
+
+    /**
+     * Créditos de um consumo — a fórmula única da cota:
+     * {@code ⌈(entrada × pesoEntrada + saída × pesoSaida) × fator ÷ tokensPorCredito⌉}. Consumo
+     * zero (modo fallback, sem modelo) custa zero.
+     */
+    public long creditos(long tokensEntrada, long tokensSaida, double fator) {
+      double ponderado = Math.max(0, tokensEntrada) * pesoEntrada
+          + Math.max(0, tokensSaida) * pesoSaida;
+      if (ponderado <= 0) {
+        return 0;
+      }
+      return (long) Math.ceil(ponderado * fator / tokensPorCredito);
+    }
+
+    /**
+     * Custo máximo possível de uma pergunta: classificação + parte de legislação + o laço de
+     * funções (a primeira chamada e uma por rodada), cada chamada com os tetos de entrada e saída.
+     */
+    public long tetoDaPergunta(int maxRodadasFerramentas, double fator) {
+      long chamadas = CHAMADAS_FORA_DO_LACO + 1L + maxRodadasFerramentas;
+      return creditos(chamadas * tetoTokensEntradaPorChamada,
+          chamadas * tetoTokensSaidaPorChamada, fator);
+    }
+
+    /** Maior fator configurado (o padrão ou o de algum modelo). */
+    public double maiorFator() {
+      double maior = fatorPadrao;
+      for (Double fator : fatorPorModelo.values()) {
+        if (fator != null && fator > maior) {
+          maior = fator;
+        }
+      }
+      return maior;
+    }
 
     /** Nome do plano padrão mostrado ao usuário até as assinaturas existirem. */
     private String plano = "padrao";
