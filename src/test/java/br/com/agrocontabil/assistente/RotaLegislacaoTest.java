@@ -45,7 +45,9 @@ class RotaLegislacaoTest {
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
     beans.addBean("chatModel", chatModel);
     rota = new RotaLegislacao(
-        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama"),
+        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
+            new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
+                java.time.Duration.ofSeconds(30), System::nanoTime)),
         busca, new ValidadorCitacao(), new ValidadorNumeros());
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }

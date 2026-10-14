@@ -13,8 +13,10 @@ import java.util.Map;
  *                     {@code FORA_DE_ESCOPO}
  * @param citacoes     trechos de lei que fundamentam a resposta (rota de legislação, #156)
  * @param fontesDados  funções consultadas — "calculado a partir das suas notas"
- * @param modoFallback {@code true} quando o modelo estava indisponível e a resposta é só texto de
- *                     lei recuperado (#146)
+ * @param modoFallback {@code true} quando o modelo estava indisponível e a resposta foi montada sem
+ *                     ele: trechos de lei verbatim e/ou atalhos para as telas (#146)
+ * @param atalhos      telas sugeridas no modo fallback ({@code NOTAS}, {@code APURACAO},
+ *                     {@code CREDITOS}, {@code CALENDARIO}); vazia fora dele (#146)
  */
 @Schema(description = "Resposta da Ceres, a assistente fiscal")
 public record AssistenteChatResponse(
@@ -22,7 +24,10 @@ public record AssistenteChatResponse(
     @Schema(description = "Camada acionada", example = "DADOS") String rota,
     @Schema(description = "Trechos de lei citados") List<Citacao> citacoes,
     @Schema(description = "Funcoes de dados consultadas") List<FonteDado> fontesDados,
-    @Schema(description = "Resposta sem geracao, so trechos de lei") boolean modoFallback) {
+    @Schema(description = "Resposta montada sem o modelo (trechos de lei e atalhos)")
+    boolean modoFallback,
+    @Schema(description = "Telas sugeridas no modo fallback", example = "[\"CALENDARIO\"]")
+    List<String> atalhos) {
 
   /**
    * Trecho de lei citado (issue #156). A referência é montada pelo backend a partir dos metadados

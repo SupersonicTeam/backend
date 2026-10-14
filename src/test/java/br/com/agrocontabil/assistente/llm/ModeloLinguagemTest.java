@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.support.ChatModelSimulado;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,16 +21,21 @@ import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.ResourceAccessException;
 
-/** Testes do gateway {@link ModeloLinguagem} (issue #141). */
+/** Testes do gateway {@link ModeloLinguagem} (issue #141) e do disjuntor (issue #146). */
 class ModeloLinguagemTest {
 
+  private static final Duration PAUSA = Duration.ofSeconds(30);
+
+  private final AtomicLong agora = new AtomicLong(1_000L);
   private ChatModelSimulado chatModel;
+  private DisponibilidadeModelo disponibilidade;
   private ModeloLinguagem modelo;
 
   @BeforeEach
   void setUp() {
     chatModel = new ChatModelSimulado();
-    modelo = gatewayCom(chatModel);
+    disponibilidade = new DisponibilidadeModelo(PAUSA, agora::get);
+    modelo = gatewayCom(chatModel, disponibilidade);
   }
 
   @Test
@@ -88,11 +95,13 @@ class ModeloLinguagemTest {
   @DisplayName("Sem ChatModel configurado (spring.ai.model.chat=none) responde 503")
   void semModeloConfiguradoResponde503() {
     ModeloLinguagem semModelo = new ModeloLinguagem(
-        new StaticListableBeanFactory().getBeanProvider(ChatModel.class), "none");
+        new StaticListableBeanFactory().getBeanProvider(ChatModel.class), "none",
+        disponibilidade);
 
     assertThatThrownBy(() -> semModelo.chamar(new Prompt("pergunta")))
         .isInstanceOf(AssistenteIndisponivelException.class);
     assertThat(semModelo.identificacao()).isEqualTo("none");
+    assertThat(disponibilidade.disponivel()).isFalse();
   }
 
   @Test
@@ -101,7 +110,8 @@ class ModeloLinguagemTest {
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
     beans.addBean("um", new ChatModelSimulado());
     beans.addBean("outro", new ChatModelSimulado());
-    ModeloLinguagem ambiguo = new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama");
+    ModeloLinguagem ambiguo =
+        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama", disponibilidade);
 
     assertThatThrownBy(() -> ambiguo.chamar(new Prompt("pergunta")))
         .isInstanceOf(AssistenteIndisponivelException.class);
@@ -114,9 +124,65 @@ class ModeloLinguagemTest {
     assertThat(modelo.identificacao()).isEqualTo("ollama/simulado");
   }
 
-  private static ModeloLinguagem gatewayCom(ChatModel chatModel) {
+  @Test
+  @DisplayName("#146: falha abre o disjuntor pela pausa; vencida, o modelo e tentado de novo")
+  void disjuntorAbreEFechaPelaPausa() {
+    chatModel.falharCom(new ResourceAccessException("Connection refused"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isFalse();
+
+    agora.addAndGet(PAUSA.toNanos() - 1);
+    assertThat(disponibilidade.disponivel()).isFalse();
+    agora.addAndGet(1);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    // Meia-abertura: a proxima chamada que responde fecha o disjuntor.
+    chatModel.responderTexto("voltei");
+    modelo.chamar(new Prompt("pergunta"));
+    assertThat(disponibilidade.disponivel()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#146: recusa do provedor a esta pergunta (4xx) e resposta vazia nao abrem o disjuntor")
+  void falhaDaPerguntaNaoAbreDisjuntor() {
+    // Uma pergunta feita para ser recusada nao pode mandar todos os produtores ao fallback.
+    chatModel.falharCom(new NonTransientAiException("HTTP 400 - content_policy_violation"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    chatModel.responderCom(prompt -> new ChatResponse(List.of()));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    // Queda de verdade (transitoria) abre.
+    chatModel.falharCom(new TransientAiException("HTTP 503 do provedor"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isFalse();
+  }
+
+  @Test
+  @DisplayName("#146: thread interrompida (pergunta cancelada) nao abre o disjuntor dos outros")
+  void interrupcaoNaoAbreDisjuntor() {
+    chatModel.falharCom(new ResourceAccessException("I/O interrompido"));
+    Thread.currentThread().interrupt();
+    try {
+      assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+          .isInstanceOf(AssistenteIndisponivelException.class);
+    } finally {
+      Thread.interrupted();
+    }
+
+    assertThat(disponibilidade.disponivel()).isTrue();
+  }
+
+  private static ModeloLinguagem gatewayCom(
+      ChatModel chatModel, DisponibilidadeModelo disponibilidade) {
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
     beans.addBean("chatModel", chatModel);
-    return new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama");
+    return new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama", disponibilidade);
   }
 }

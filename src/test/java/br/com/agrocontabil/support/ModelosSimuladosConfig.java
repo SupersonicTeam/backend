@@ -1,5 +1,6 @@
 package br.com.agrocontabil.support;
 
+import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -15,9 +16,16 @@ import org.springframework.context.annotation.Profile;
 @Profile("test")
 public class ModelosSimuladosConfig {
 
+  /**
+   * O disjuntor do modo fallback (#146) é singleton e o contexto é reaproveitado entre classes de
+   * teste: sem fechá-lo no {@link ChatModelSimulado#reiniciar()}, um teste que derruba o modelo
+   * mandaria ao fallback as perguntas dos testes seguintes.
+   */
   @Bean
-  ChatModelSimulado chatModelSimulado() {
-    return new ChatModelSimulado();
+  ChatModelSimulado chatModelSimulado(DisponibilidadeModelo disponibilidade) {
+    ChatModelSimulado modelo = new ChatModelSimulado();
+    modelo.aoReiniciar(disponibilidade::registrarSucesso);
+    return modelo;
   }
 
   @Bean
