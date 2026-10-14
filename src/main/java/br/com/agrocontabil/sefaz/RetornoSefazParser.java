@@ -121,6 +121,39 @@ final class RetornoSefazParser {
     return new SefazRetorno(SituacaoSefaz.PENDENTE, cStat, xMotivo, null, null);
   }
 
+  /** Lote de evento processado: o resultado de cada evento está no {@code retEvento}. */
+  static final String LOTE_EVENTO_PROCESSADO = "128";
+
+  /**
+   * Resposta do NFeRecepcaoEvento4 ({@code retEnvEvento}) para o cancelamento. Registrado
+   * (135/155) volta com protocolo e data do evento, como o mock: o {@code SefazService} decide
+   * pelo cStat. 573 (evento já registrado) e outras recusas voltam como rejeição com o cStat; o
+   * serviço reconcilia o 573 pela consulta.
+   *
+   * @param resposta envelope SOAP da resposta
+   * @return o resultado do evento
+   */
+  static SefazRetorno lerEvento(Document resposta) {
+    Element ret = retorno(resposta, "retEnvEvento");
+    String cStatLote = obrigatorio(ret, "cStat");
+    exigirProcessado(cStatLote, texto(ret, "xMotivo"));
+    if (!LOTE_EVENTO_PROCESSADO.equals(cStatLote)) {
+      return new SefazRetorno(SituacaoSefaz.REJEITADA, cStatLote, texto(ret, "xMotivo"), null, null);
+    }
+    NodeList eventos = ret.getElementsByTagNameNS(NS_NFE, "retEvento");
+    Element info = eventos.getLength() == 0 ? null : filho((Element) eventos.item(0), "infEvento");
+    if (info == null) {
+      throw new SefazRespostaIndeterminadaException("retEnvEvento 128 sem retEvento/infEvento");
+    }
+    String cStat = obrigatorio(info, "cStat");
+    String xMotivo = texto(info, "xMotivo");
+    if (EVENTO_REGISTRADO.contains(cStat)) {
+      return new SefazRetorno(SituacaoSefaz.AUTORIZADA, cStat, xMotivo, texto(info, "nProt"),
+          data(texto(info, "dhRegEvento")));
+    }
+    return new SefazRetorno(SituacaoSefaz.REJEITADA, cStat, xMotivo, null, null);
+  }
+
   /** {@code retEvento/infEvento} do cancelamento registrado, entre os eventos da NF-e. */
   private static Element eventoDeCancelamento(Element ret) {
     NodeList eventos = ret.getElementsByTagNameNS(NS_NFE, "retEvento");

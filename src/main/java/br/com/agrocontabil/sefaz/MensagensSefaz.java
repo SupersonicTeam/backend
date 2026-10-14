@@ -51,6 +51,68 @@ final class MensagensSefaz {
         + "<chNFe>" + chaveAcesso + "</chNFe></consSitNFe>");
   }
 
+  /** Id do {@code infEvento} de cancelamento: "ID" + tipo + chave + sequência de 2 dígitos. */
+  static String idEventoCancelamento(String chaveAcesso) {
+    exigirChave(chaveAcesso);
+    return "ID" + RetornoSefazParser.TIPO_EVENTO_CANCELAMENTO + chaveAcesso + "01";
+  }
+
+  /**
+   * Evento de cancelamento 110111 ainda <strong>sem assinatura</strong> ({@code evento} com o
+   * {@code infEvento}); quem chama assina o {@code infEvento} e o põe no lote com
+   * {@link #loteEvento}.
+   *
+   * @param chaveAcesso   chave da NF-e
+   * @param documento     CPF (11) ou CNPJ (14) do autor, o emitente
+   * @param protocolo     protocolo de autorização da NF-e
+   * @param justificativa motivo (15 a 255 caracteres, escapado aqui)
+   * @param dhEvento      instante do evento, com fuso
+   * @param ambiente      ambiente
+   * @return o elemento {@code evento}
+   */
+  static String eventoCancelamento(String chaveAcesso, String documento, String protocolo,
+      String justificativa, java.time.OffsetDateTime dhEvento, SefazAmbiente ambiente) {
+    String tagDocumento = documento.length() == 11 ? "CPF" : "CNPJ";
+    return "<evento xmlns=\"" + NS_NFE + "\" versao=\"1.00\"><infEvento Id=\""
+        + idEventoCancelamento(chaveAcesso) + "\">"
+        + "<cOrgao>" + cuf(chaveAcesso) + "</cOrgao><tpAmb>" + tpAmb(ambiente) + "</tpAmb>"
+        + "<" + tagDocumento + ">" + documento + "</" + tagDocumento + ">"
+        + "<chNFe>" + chaveAcesso + "</chNFe>"
+        + "<dhEvento>" + dhEvento.truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+            .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "</dhEvento>"
+        + "<tpEvento>" + RetornoSefazParser.TIPO_EVENTO_CANCELAMENTO + "</tpEvento>"
+        + "<nSeqEvento>1</nSeqEvento><verEvento>1.00</verEvento>"
+        + "<detEvento versao=\"1.00\"><descEvento>Cancelamento</descEvento>"
+        + "<nProt>" + escapar(protocolo) + "</nProt><xJust>" + escapar(justificativa) + "</xJust>"
+        + "</detEvento></infEvento></evento>";
+  }
+
+  /**
+   * Lote de um evento já assinado ({@code envEvento}).
+   *
+   * @param eventoAssinado elemento {@code evento} com a assinatura
+   * @param idLote         identificador do lote
+   * @return o envelope SOAP
+   */
+  static String loteEvento(String eventoAssinado, long idLote) {
+    String evento = DECLARACAO_XML.matcher(eventoAssinado).replaceFirst("");
+    return envelope(ServicoSefaz.EVENTO, "<envEvento xmlns=\"" + NS_NFE + "\" versao=\"1.00\">"
+        + "<idLote>" + idLote + "</idLote>" + evento + "</envEvento>");
+  }
+
+  /**
+   * Texto livre para dentro de um elemento XML: escapa os caracteres especiais e tira quebras de
+   * linha e espaços repetidos, que a SEFAZ recusa na justificativa.
+   */
+  static String escapar(String texto) {
+    if (texto == null) {
+      return "";
+    }
+    return texto.replaceAll("\\s+", " ").trim()
+        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("\"", "&quot;").replace("'", "&apos;");
+  }
+
   /** Código do ambiente no layout: 1 produção, 2 homologação. */
   static String tpAmb(SefazAmbiente ambiente) {
     return ambiente == SefazAmbiente.PRODUCAO ? "1" : "2";

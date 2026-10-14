@@ -42,9 +42,12 @@ public class AssinaturaValidator {
     try {
       Document doc = parseSeguro(xmlAssinado);
 
-      Element infNFe = (Element) doc.getElementsByTagNameNS(NFE_NS, "infNFe").item(0);
-      if (infNFe != null) {
-        infNFe.setIdAttributeNS(null, "Id", true);
+      // infNFe da nota ou infEvento de um evento (cancelamento, issue #128): o elemento assinado.
+      for (String assinado : new String[] {"infNFe", "infEvento"}) {
+        Element elemento = (Element) doc.getElementsByTagNameNS(NFE_NS, assinado).item(0);
+        if (elemento != null) {
+          elemento.setIdAttributeNS(null, "Id", true);
+        }
       }
 
       Element sigElement = (Element) doc

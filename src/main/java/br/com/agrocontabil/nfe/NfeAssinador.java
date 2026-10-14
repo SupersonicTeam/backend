@@ -50,13 +50,28 @@ public class NfeAssinador {
    * @return XML assinado (com o nó {@code Signature} dentro de {@code NFe})
    */
   public String assinar(String xml, String infNfeId) {
+    return assinarElemento(xml, "infNFe", infNfeId);
+  }
+
+  /**
+   * Assina um elemento com {@code Id} do layout da NF-e: o {@code infNFe} da nota ou o
+   * {@code infEvento} de um evento, como o cancelamento (issue #128). Mesma assinatura enveloped
+   * (C14N inclusiva, RSA-SHA1), com o {@code Signature} como irmão do elemento.
+   *
+   * @param xml      XML não assinado
+   * @param elemento nome local do elemento a assinar, no namespace da NF-e
+   * @param id       valor esperado do atributo {@code Id} (nulo ou vazio: usa o do XML)
+   * @return XML assinado
+   */
+  public String assinarElemento(String xml, String elemento, String id) {
+    String infNfeId = id;
     try {
       Document doc = parseSeguro(xml);
 
-      Element infNFe = (Element) doc.getElementsByTagNameNS(NFE_NS, "infNFe").item(0);
+      Element infNFe = (Element) doc.getElementsByTagNameNS(NFE_NS, elemento).item(0);
       if (infNFe == null) {
         throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
-            "Elemento infNFe nao encontrado no XML");
+            "Elemento " + elemento + " nao encontrado no XML");
       }
 
       // A Reference URI deve apontar para o Id real do infNFe no DOM. Derivamos do
@@ -65,11 +80,12 @@ public class NfeAssinador {
       String domId = infNFe.getAttribute("Id");
       if (domId == null || domId.isBlank()) {
         throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
-            "Elemento infNFe sem atributo Id");
+            "Elemento " + elemento + " sem atributo Id");
       }
       if (infNfeId != null && !infNfeId.isBlank() && !infNfeId.equals(domId)) {
         throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
-            "Id informado ('" + infNfeId + "') diverge do Id do infNFe no XML ('" + domId + "')");
+            "Id informado ('" + infNfeId + "') diverge do Id do " + elemento + " no XML ('"
+                + domId + "')");
       }
       infNFe.setIdAttributeNS(null, "Id", true);
 
@@ -96,7 +112,7 @@ public class NfeAssinador {
       throw e;
     } catch (Exception e) {
       throw new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU,
-          "Falha ao assinar o XML da NF-e: " + e.getMessage(), e);
+          "Falha ao assinar o XML (" + elemento + "): " + e.getMessage(), e);
     }
   }
 

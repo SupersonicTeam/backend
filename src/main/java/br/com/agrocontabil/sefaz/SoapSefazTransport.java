@@ -6,11 +6,15 @@ import br.com.agrocontabil.config.SefazProperties.Endpoints;
 import br.com.agrocontabil.config.SefazProperties.Webservices;
 import br.com.agrocontabil.exception.SefazConexaoException;
 import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
+import br.com.agrocontabil.nfe.NfeAssinador;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import javax.net.ssl.KeyManagerFactory;
@@ -37,6 +41,9 @@ import org.springframework.stereotype.Component;
  *       {@link RetornoSefazParser} no contrato do {@link SefazTransport}.</li>
  * </ul>
  *
+ * <p>Cancelamento: evento 110111 com o {@code infEvento} assinado ({@link NfeAssinador}) e o
+ * autor tirado do certificado ({@link DocumentoEmitente}).
+ *
  * <p>O cliente HTTP é montado na primeira transmissão, não na subida: o certificado é carregado
  * sob demanda. Sem certificado, a transmissão falha como conexão (nada saiu, a nota volta para
  * reenvio) em vez de derrubar a aplicação.
@@ -48,18 +55,24 @@ import org.springframework.stereotype.Component;
 public class SoapSefazTransport implements SefazTransport {
 
   private static final Logger log = LoggerFactory.getLogger(SoapSefazTransport.class);
+  /** "Hoje" do projeto: o {@code dhEvento} vai com o fuso de Brasília. */
+  private static final ZoneId ZONA = ZoneId.of("America/Sao_Paulo");
 
   private final SefazProperties propriedades;
   private final KeyStoreCertificadoProvider certificado;
+  private final NfeAssinador assinador;
+  private final Clock clock;
   private final Function<SSLContext, ClienteSoapSefaz> fabricaCliente;
   private final AtomicLong idLote = new AtomicLong(new SecureRandom().nextLong(1, 1_000_000_000L));
   private volatile ClienteSoapSefaz cliente;
 
   /** Transporte sobre o certificado do emitente e a configuração {@code app.nfe.sefaz}. */
   public SoapSefazTransport(SefazProperties propriedades,
-      KeyStoreCertificadoProvider certificado) {
+      KeyStoreCertificadoProvider certificado, NfeAssinador assinador, Clock clock) {
     this.propriedades = propriedades;
     this.certificado = certificado;
+    this.assinador = assinador;
+    this.clock = clock;
     this.fabricaCliente = ssl -> new ClienteSoapSefaz(ssl,
         Duration.ofMillis(propriedades.getTimeout().getConnectMs()),
         Duration.ofMillis(propriedades.getTimeout().getReadMs()));
@@ -86,9 +99,32 @@ public class SoapSefazTransport implements SefazTransport {
   @Override
   public SefazRetorno cancelar(String chaveAcesso, String justificativa,
       String protocoloAutorizacao, SefazAmbiente ambiente) {
-    // Evento 110111 assinado: proxima entrega da issue #128. Ate la, nada sai: reenviar e seguro.
-    throw new SefazConexaoException(
-        "Cancelamento pelo transporte SOAP ainda nao implementado (issue #128)");
+    String url = endereco(chaveAcesso, ambiente).getEvento();
+    String eventoAssinado = eventoAssinado(chaveAcesso, justificativa, protocoloAutorizacao,
+        ambiente);
+    SefazRetorno retorno = RetornoSefazParser.lerEvento(cliente().enviar(
+        url, ServicoSefaz.EVENTO, MensagensSefaz.loteEvento(eventoAssinado, proximoLote())));
+    log.info("SEFAZ evento de cancelamento: cStat={}", retorno.cStat());
+    return retorno;
+  }
+
+  /**
+   * Evento 110111 com o {@code infEvento} assinado pelo certificado do emitente, o mesmo do mTLS.
+   * Falha aqui é antes de qualquer envio: vira conexão, e a nota segue autorizada.
+   */
+  private String eventoAssinado(String chaveAcesso, String justificativa,
+      String protocoloAutorizacao, SefazAmbiente ambiente) {
+    try {
+      String documento = DocumentoEmitente.de(certificado.getCertificate(), chaveAcesso);
+      String evento = MensagensSefaz.eventoCancelamento(chaveAcesso, documento,
+          protocoloAutorizacao, justificativa, OffsetDateTime.now(clock.withZone(ZONA)),
+          ambiente);
+      return assinador.assinarElemento(evento, "infEvento",
+          MensagensSefaz.idEventoCancelamento(chaveAcesso));
+    } catch (RuntimeException e) {
+      throw new SefazConexaoException(
+          "Evento de cancelamento nao montado: " + e.getClass().getSimpleName(), e);
+    }
   }
 
   /** Endereços da UF autorizadora (cUF da chave) ou o padrão do ambiente. */
