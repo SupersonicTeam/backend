@@ -196,8 +196,11 @@ class LegislacaoPgvectorIntegrationTest {
     List<TrechoRecuperado> trechos = buscaTextual.buscar(
         "fertilizantes & ! | :* ( defensivos ' agricolas <-> ", LocalDate.of(2026, 9, 29), 3);
 
+    // Sem erro de sintaxe de tsquery. Os operadores viram espaco: casa o inciso dos defensivos
+    // agricolas (dois lexemas); o dos fertilizantes tem um so e fica fora (minimo de dois).
     assertThat(trechos).isNotEmpty();
-    assertThat(trechos.get(0).texto()).contains("fertilizantes");
+    assertThat(trechos.get(0).texto()).contains("defensivos agrícolas");
+    assertThat(trechos).noneSatisfy(t -> assertThat(t.texto()).endsWith("aos fertilizantes; e"));
   }
 
   @Test
