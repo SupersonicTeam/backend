@@ -47,8 +47,21 @@ public interface DadosProdutorPorta {
   Pagina<Nota> notas(UUID produtorId, Set<OrigemNotaFiscal> origens, Set<StatusNotaFiscal> status,
       LocalDate inicio, LocalDate fim, int limite);
 
+  /**
+   * Soma do valor de todas as notas do mesmo filtro de {@link #notas}, sem o limite da lista
+   * (issue #169: a soma é do backend, nunca do modelo). Zero sem notas, 2 casas.
+   */
+  BigDecimal valorTotalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens,
+      Set<StatusNotaFiscal> status, LocalDate inicio, LocalDate fim);
+
   /** Guias não pagas com vencimento em {@code [de, ate]}, da mais próxima para a mais distante. */
   Pagina<Vencimento> vencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate, int limite);
+
+  /**
+   * Soma do valor de todas as guias não pagas da janela {@code [de, ate]}, sem o limite da lista
+   * (issue #169). Zero sem guias, 2 casas.
+   */
+  BigDecimal valorTotalVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate);
 
   /**
    * Compras de um insumo.

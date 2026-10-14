@@ -184,10 +184,18 @@ class FerramentasDadosProdutorTest {
         .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Nota(12L, 1, emissao,
             OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.AUTORIZADA, new BigDecimal("1000.00"),
             new BigDecimal("1.00"), new BigDecimal("9.00"))), 7));
+    when(dados.valorTotalNotas(PRODUTOR, EnumSet.of(OrigemNotaFiscal.PROPRIA),
+        EnumSet.of(StatusNotaFiscal.AUTORIZADA), HOJE.minusDays(90), HOJE))
+        .thenReturn(new BigDecimal("8765.40"));
 
     Notas notas = ferramentas.listarNotas("saida", null, null, null, null, toolContext);
 
     assertThat(notas.totalEncontrado()).isEqualTo(7);
+    // #169: sem filtro de situacao a soma fica nas autorizadas, e o modelo e avisado disso.
+    assertThat(notas.valorTotal()).isEqualTo("R$ 8.765,40");
+    assertThat(notas.abrangenciaTotal())
+        .isEqualTo(FerramentasDadosProdutor.TOTAL_SO_AUTORIZADAS)
+        .doesNotContainPattern("\\d");
     assertThat(notas.notas()).singleElement().satisfies(n -> {
       assertThat(n.tipo()).isEqualTo("SAIDA");
       assertThat(n.dataEmissao()).isEqualTo("10/09/2026");
@@ -201,13 +209,48 @@ class FerramentasDadosProdutorTest {
     when(dados.vencimentosNaoPagos(eq(PRODUTOR), eq(HOJE), eq(HOJE.plusDays(30)), anyInt()))
         .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Vencimento(TipoGuiaFiscal.ICMS,
             LocalDate.of(2026, 10, 10), new BigDecimal("1250.00"), StatusGuiaFiscal.PENDENTE)),
-            1));
+            12));
+    when(dados.valorTotalVencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(30)))
+        .thenReturn(new BigDecimal("15050.55"));
 
     Vencimentos vencimentos = ferramentas.proximosVencimentos(null, toolContext);
 
     assertThat(vencimentos.guias()).singleElement()
         .satisfies(g -> assertThat(g.vencimento()).isEqualTo("10/10/2026"));
+    // #169: o total cobre as 12 guias da janela, nao so a que coube na lista.
+    assertThat(vencimentos.totalEncontrado()).isEqualTo(12);
+    assertThat(vencimentos.valorTotal()).isEqualTo("R$ 15.050,55");
     verify(dados).vencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(30),
         DadosProdutorPorta.LIMITE_MAXIMO);
+  }
+
+  @Test
+  @DisplayName("#169: com filtro de situacao, a soma e do proprio filtro")
+  void listarNotasComSituacaoSomaOFiltro() {
+    when(dados.notas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
+        EnumSet.of(StatusNotaFiscal.REJEITADA), HOJE.minusDays(90), HOJE, 5))
+        .thenReturn(new Pagina<>(List.of(), 3));
+    when(dados.valorTotalNotas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
+        EnumSet.of(StatusNotaFiscal.REJEITADA), HOJE.minusDays(90), HOJE))
+        .thenReturn(new BigDecimal("300.00"));
+
+    Notas notas = ferramentas.listarNotas(null, "rejeitada", null, null, null, toolContext);
+
+    assertThat(notas.valorTotal()).isEqualTo("R$ 300,00");
+    assertThat(notas.abrangenciaTotal()).isEqualTo(FerramentasDadosProdutor.TOTAL_DO_FILTRO);
+  }
+
+  @Test
+  @DisplayName("#169: janela sem guia devolve total zero, sem erro")
+  void proximosVencimentosSemGuia() {
+    when(dados.vencimentosNaoPagos(eq(PRODUTOR), eq(HOJE), eq(HOJE.plusDays(7)), anyInt()))
+        .thenReturn(new Pagina<>(List.of(), 0));
+    when(dados.valorTotalVencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusDays(7)))
+        .thenReturn(BigDecimal.ZERO.setScale(2));
+
+    Vencimentos vencimentos = ferramentas.proximosVencimentos(7, toolContext);
+
+    assertThat(vencimentos.totalEncontrado()).isZero();
+    assertThat(vencimentos.valorTotal()).isEqualTo("R$ 0,00");
   }
 }

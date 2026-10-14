@@ -73,10 +73,14 @@ public final class RespostasFerramentas {
   /**
    * Resultado de {@code listarNotas}.
    *
-   * @param totalEncontrado quantas notas atendem ao filtro (pode ser mais que as listadas)
-   * @param notas           as mais recentes, no máximo 10
+   * @param totalEncontrado  quantas notas atendem ao filtro (pode ser mais que as listadas)
+   * @param valorTotal       soma calculada pelo backend sobre as notas descritas em
+   *                         {@code abrangenciaTotal}, não sobre a lista (issue #169)
+   * @param abrangenciaTotal quais notas entram em {@code valorTotal}, em texto para o modelo
+   * @param notas            as mais recentes, no máximo 10
    */
-  public record Notas(long totalEncontrado, List<Nota> notas) {}
+  public record Notas(
+      long totalEncontrado, String valorTotal, String abrangenciaTotal, List<Nota> notas) {}
 
   /**
    * Uma nota da lista.
@@ -100,9 +104,12 @@ public final class RespostasFerramentas {
    * @param de              primeiro dia da janela
    * @param ate             último dia da janela
    * @param totalEncontrado guias não pagas na janela (pode ser mais que as listadas)
+   * @param valorTotal      soma de todas as guias não pagas da janela, calculada pelo backend
+   *                        (issue #169) — inclusive as que não cabem na lista
    * @param guias           as mais próximas, no máximo 10
    */
-  public record Vencimentos(String de, String ate, long totalEncontrado, List<Guia> guias) {}
+  public record Vencimentos(
+      String de, String ate, long totalEncontrado, String valorTotal, List<Guia> guias) {}
 
   /**
    * Uma guia a vencer.

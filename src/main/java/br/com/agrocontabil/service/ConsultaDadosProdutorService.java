@@ -137,6 +137,33 @@ public class ConsultaDadosProdutorService {
   }
 
   /**
+   * Soma do valor total das notas do filtro — todas, não só as {@link #LIMITE_MAXIMO} que
+   * {@link #listarNotas} devolve (issue #169). Mesmo recorte e mesmo filtro por produtor.
+   *
+   * @return soma com 2 casas; zero sem notas
+   */
+  public BigDecimal somarNotas(
+      UUID produtorId, Set<OrigemNotaFiscal> origens, Set<StatusNotaFiscal> status,
+      LocalDate inicio, LocalDate fim) {
+    return duasCasas(notaFiscalRepository.somarValorResumos(
+        produtorId, origens, status, inicioDoDia(inicio), fimExclusivo(fim)));
+  }
+
+  /**
+   * Soma do valor de todas as guias não pagas com vencimento em {@code [de, ate]} — inclusive as
+   * que não cabem na lista de {@link #vencimentosNaoPagos} (issue #169).
+   *
+   * @return soma com 2 casas; zero sem guias
+   */
+  public BigDecimal somarVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate) {
+    return duasCasas(guiaFiscalRepository.somarNaoPagasNaJanela(produtorId, de, ate));
+  }
+
+  private static BigDecimal duasCasas(BigDecimal valor) {
+    return (valor == null ? BigDecimal.ZERO : valor).setScale(2, RoundingMode.HALF_UP);
+  }
+
+  /**
    * Escapa os curingas do {@code LIKE} com {@code !} (o {@code ESCAPE} das queries): o texto do
    * usuário é literal. O próprio {@code !} é escapado primeiro.
    */

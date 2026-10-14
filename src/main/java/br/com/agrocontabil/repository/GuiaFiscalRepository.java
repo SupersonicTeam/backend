@@ -2,6 +2,7 @@ package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -104,4 +105,22 @@ public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
       @Param("de") LocalDate de,
       @Param("ate") LocalDate ate,
       Pageable pagina);
+
+  /**
+   * Soma do valor de <em>todas</em> as guias não pagas da janela — mesmo recorte de
+   * {@link #listarNaoPagasNaJanela}, sem o limite da página (issue #169: a Ceres não soma, o
+   * backend soma).
+   *
+   * @return a soma; {@code null} quando não há guia na janela
+   */
+  @Query("""
+      SELECT SUM(g.valor) FROM GuiaFiscal g
+      WHERE g.produtor.id = :produtorId
+        AND g.status <> br.com.agrocontabil.model.StatusGuiaFiscal.PAGA
+        AND g.dataVencimento BETWEEN :de AND :ate
+      """)
+  BigDecimal somarNaoPagasNaJanela(
+      @Param("produtorId") UUID produtorId,
+      @Param("de") LocalDate de,
+      @Param("ate") LocalDate ate);
 }

@@ -12,6 +12,7 @@ import br.com.agrocontabil.service.ApuracaoService;
 import br.com.agrocontabil.service.ComprasInsumoResultado;
 import br.com.agrocontabil.service.ConsultaDadosProdutorService;
 import br.com.agrocontabil.service.CreditoService;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -94,6 +95,17 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
         .map(n -> new Nota(n.numero(), n.serie(), n.dataEmissao(), n.origem(), n.status(),
             n.valorTotal(), n.valorIbs(), n.valorCbs()))
         .toList(), pagina.getTotalElements());
+  }
+
+  @Override
+  public BigDecimal valorTotalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens,
+      Set<StatusNotaFiscal> status, LocalDate inicio, LocalDate fim) {
+    return comTimeout(() -> consultaService.somarNotas(produtorId, origens, status, inicio, fim));
+  }
+
+  @Override
+  public BigDecimal valorTotalVencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate) {
+    return comTimeout(() -> consultaService.somarVencimentosNaoPagos(produtorId, de, ate));
   }
 
   @Override
