@@ -1,6 +1,7 @@
 package br.com.agrocontabil.sefaz;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.config.CertificadoDigitalProperties;
@@ -8,8 +9,13 @@ import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.config.SefazProperties.Endpoints;
 import br.com.agrocontabil.exception.SefazConexaoException;
 import br.com.agrocontabil.exception.SefazRespostaIndeterminadaException;
+import br.com.agrocontabil.nfe.AssinaturaValidator;
 import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
+import br.com.agrocontabil.nfe.NfeAssinador;
 import java.net.ServerSocket;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +49,9 @@ class SoapSefazTransportTest {
   private SefazProperties propriedades(String base, boolean comTruststore) {
     SefazProperties p = new SefazProperties();
     p.getMock().setEnabled(false);
-    p.getTimeout().setConnectMs(2_000);
+    // Folga para o handshake TLS com certificado de cliente numa JVM fria: estourar a conexao
+    // aqui e falha antes do envio (HttpConnectTimeoutException), o que mudaria a classificacao.
+    p.getTimeout().setConnectMs(5_000);
     p.getTimeout().setReadMs(1_000);
     Endpoints padrao = new Endpoints();
     padrao.setAutorizacao(base + "/autorizacao");
@@ -57,10 +65,22 @@ class SoapSefazTransportTest {
     return p;
   }
 
+  private static final KeyStoreCertificadoProvider CERTIFICADO = new KeyStoreCertificadoProvider(
+      new CertificadoDigitalProperties("classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"));
+
   private SoapSefazTransport transporte(SefazProperties p) {
-    return new SoapSefazTransport(p, new KeyStoreCertificadoProvider(
-        new CertificadoDigitalProperties("classpath:certs/nfe-teste.p12", "changeit",
-            "nfe-teste")));
+    return new SoapSefazTransport(p, CERTIFICADO, new NfeAssinador(CERTIFICADO),
+        Clock.fixed(Instant.parse("2026-10-14T13:00:00Z"), ZoneOffset.UTC));
+  }
+
+  private static String retEnvEvento(String cStatLote, String infEvento) {
+    return ServidorSefazFalso.envelope(ServicoSefaz.EVENTO.namespace(),
+        "<retEnvEvento xmlns=\"http://www.portalfiscal.inf.br/nfe\" versao=\"1.00\">"
+            + "<idLote>1</idLote><tpAmb>2</tpAmb><verAplic>SVRS</verAplic><cOrgao>41</cOrgao>"
+            + "<cStat>" + cStatLote + "</cStat><xMotivo>Lote de evento processado</xMotivo>"
+            + (infEvento == null ? "" : "<retEvento versao=\"1.00\"><infEvento>" + infEvento
+                + "</infEvento></retEvento>")
+            + "</retEnvEvento>");
   }
 
   private SoapSefazTransport transporte() {
@@ -202,6 +222,62 @@ class SoapSefazTransportTest {
   }
 
   @Nested
+  @DisplayName("Cancelamento (NFeRecepcaoEvento4)")
+  class Cancelamento {
+
+    private static final String JUSTIFICATIVA = "Erro no valor <unitario> & quantidade";
+
+    @Test
+    @DisplayName("Evento 110111 assinado e valido; registrado (135) volta com protocolo do evento")
+    void registrado() {
+      servidor.responder(200, retEnvEvento("128", "<tpAmb>2</tpAmb><cStat>135</cStat>"
+          + "<xMotivo>Evento registrado e vinculado a NF-e</xMotivo><chNFe>" + CHAVE + "</chNFe>"
+          + "<tpEvento>110111</tpEvento><nProt>141260000099999</nProt>"
+          + "<dhRegEvento>2026-10-14T10:00:05-03:00</dhRegEvento>"));
+
+      SefazRetorno r = transporte().cancelar(CHAVE, JUSTIFICATIVA, "141260000012345",
+          SefazAmbiente.HOMOLOGACAO);
+
+      assertThat(r.cStat()).isEqualTo("135");
+      assertThat(r.protocolo()).isEqualTo("141260000099999");
+      String corpo = servidor.recebidas().get(0).corpo();
+      assertThat(servidor.recebidas().get(0).caminho()).isEqualTo("/evento");
+      assertThat(corpo).contains("<envEvento", "<infEvento Id=\"ID110111" + CHAVE + "01\"",
+          "<cOrgao>41</cOrgao>", "<CNPJ>11444777000161</CNPJ>", "<tpEvento>110111</tpEvento>",
+          "<nProt>141260000012345</nProt>", "<dhEvento>2026-10-14T10:00:00-03:00</dhEvento>",
+          // Justificativa escapada: o texto do usuario nao vira XML.
+          "Erro no valor &lt;unitario&gt; &amp; quantidade");
+      String evento = corpo.substring(corpo.indexOf("<evento"), corpo.indexOf("</evento>") + 9);
+      assertThatCode(() -> new AssinaturaValidator().validar(evento)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("573 (evento ja registrado) volta como rejeicao com o cStat: o servico reconcilia")
+    void duplicidadeDeEvento() {
+      servidor.responder(200, retEnvEvento("128", "<cStat>573</cStat>"
+          + "<xMotivo>Rejeicao: Duplicidade de Evento</xMotivo>"));
+
+      SefazRetorno r = transporte().cancelar(CHAVE, "Erro de digitacao na nota", "1",
+          SefazAmbiente.HOMOLOGACAO);
+
+      assertThat(r.situacao()).isEqualTo(SituacaoSefaz.REJEITADA);
+      assertThat(r.cStat()).isEqualTo("573");
+    }
+
+    @Test
+    @DisplayName("Lote recusado (sem 128) e rejeicao; servico paralisado e conexao")
+    void loteRecusadoEParalisado() {
+      servidor.responder(200, retEnvEvento("215", null));
+      assertThat(transporte().cancelar(CHAVE, "Erro de digitacao na nota", "1",
+          SefazAmbiente.HOMOLOGACAO).cStat()).isEqualTo("215");
+
+      servidor.responder(200, retEnvEvento("109", null));
+      assertThatThrownBy(() -> transporte().cancelar(CHAVE, "Erro de digitacao na nota", "1",
+          SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazConexaoException.class);
+    }
+  }
+
+  @Nested
   @DisplayName("Classificacao de falhas")
   class Falhas {
 
@@ -236,9 +312,9 @@ class SoapSefazTransportTest {
       long inicio = System.nanoTime();
       assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
           SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class);
-      // connect-ms (2 s) + read-ms (1 s) do teste, com folga; sem o prazo, esperaria os 10 s.
+      // Abaixo dos 10 s do travamento: o prazo (read-ms, no maximo connect-ms + read-ms) cortou.
       assertThat(java.time.Duration.ofNanos(System.nanoTime() - inicio).toMillis())
-          .isLessThan(6_000);
+          .isLessThan(8_000);
     }
 
     @Test
