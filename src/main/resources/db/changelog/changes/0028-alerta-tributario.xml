@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0028-alerta-tributario.xml
+         Sprint 7 — issue #140 (RN010): alertas tributarios proativos.
+
+         O AlertaTributarioJob (diario, 9h) grava um alerta quando falta
+         menos de 5 dias para: vencimento de guia pendente, fechamento da
+         apuracao do mes, fim do prazo de cancelamento de NF-e (RN006).
+
+         - referencia_id: guia, nota ou apuracao do proprio produtor; sem FK
+           porque aponta para tres tabelas conforme o tipo. Quem le confere
+           o estado do recurso na consulta (guia paga nao alerta).
+         - descricao: texto montado pelo backend, sem observacao livre do
+           contador nem dado pessoal (pode chegar ao modelo pela Ceres).
+         - uk (tipo, referencia_id, data_limite): o job e idempotente.
+         - FK para produtores com CASCADE: alerta e derivado, nao historico
+           fiscal; apagar o produtor apaga os alertas.
+         - indice (produtor_id, status, data_limite): a leitura da tela.
+
+         O numero 0027 e do modo fallback da Ceres (#146), em PR paralelo.
+         ================================================================ -->
+
+    <changeSet id="0028-create-alerta-tributario" author="supersonic-team">
+        <comment>Cria alerta_tributario (issue #140, RN010).</comment>
+        <createTable tableName="alerta_tributario">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="referencia_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_limite" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(160)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resolvido_em" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="alerta_tributario"
+                baseColumnNames="produtor_id"
+                constraintName="fk_alerta_tributario_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <addUniqueConstraint
+                tableName="alerta_tributario"
+                columnNames="tipo, referencia_id, data_limite"
+                constraintName="uk_alerta_tributario_referencia"/>
+        <createIndex tableName="alerta_tributario" indexName="idx_alerta_tributario_produtor">
+            <column name="produtor_id"/>
+            <column name="status"/>
+            <column name="data_limite"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -79,6 +79,13 @@ public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
   List<GuiaFiscal> findByStatusAndDataVencimentoBefore(StatusGuiaFiscal status, LocalDate hoje);
 
   /**
+   * Guias de todos os produtores com o status e vencimento em {@code [de, ate]} — candidatas a
+   * alerta (issue #140). Usa o índice {@code (status, data_vencimento)} da issue #102.
+   */
+  List<GuiaFiscal> findByStatusAndDataVencimentoBetween(
+      StatusGuiaFiscal status, LocalDate de, LocalDate ate);
+
+  /**
    * Guias ainda não pagas do produtor com vencimento na janela {@code [de, ate]}, da mais próxima
    * para a mais distante (issue #142 — Ceres, função {@code proximosVencimentos}).
    *

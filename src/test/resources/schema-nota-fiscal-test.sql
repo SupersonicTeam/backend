@@ -244,6 +244,25 @@ CREATE TABLE IF NOT EXISTS assistente_interacao (
 CREATE INDEX IF NOT EXISTS idx_assistente_interacao_produtor_criado
     ON assistente_interacao (produtor_id, criado_em);
 
+-- Alertas tributarios — Sprint 7 issue #140 (migration 0028). Manter sincronizado com
+-- 0028-alerta-tributario.xml (FK com CASCADE mais abaixo, junto das demais).
+CREATE TABLE IF NOT EXISTS alerta_tributario (
+    id             UUID                      NOT NULL,
+    produtor_id    UUID                      NOT NULL,
+    tipo           VARCHAR(30)               NOT NULL,
+    referencia_id  UUID                      NOT NULL,
+    data_limite    DATE                      NOT NULL,
+    descricao      VARCHAR(160)              NOT NULL,
+    status         VARCHAR(20)               NOT NULL,
+    criado_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    resolvido_em   TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_alerta_tributario_referencia UNIQUE (tipo, referencia_id, data_limite)
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerta_tributario_produtor
+    ON alerta_tributario (produtor_id, status, data_limite);
+
 -- Indice composto (status, periodo) — Sprint 4 issue #57 (migration 0016).
 -- Cobre a varredura do refechamento de periodos reabertos (status = ? AND periodo range).
 CREATE INDEX IF NOT EXISTS idx_apuracao_status_periodo ON apuracao_mensal (status, periodo);
@@ -297,6 +316,10 @@ ALTER TABLE contador_produtor ADD CONSTRAINT IF NOT EXISTS fk_contador_produtor_
 -- interacoes antes dos produtores.
 ALTER TABLE assistente_interacao ADD CONSTRAINT IF NOT EXISTS fk_assistente_interacao_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE RESTRICT;
+
+-- Alertas tributarios: CASCADE, como na migration 0028 (alerta e derivado).
+ALTER TABLE alerta_tributario ADD CONSTRAINT IF NOT EXISTS fk_alerta_tributario_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
 
 -- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).

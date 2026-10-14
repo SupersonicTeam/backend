@@ -1,6 +1,7 @@
 package br.com.agrocontabil.db;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.config.SchedulingConfig;
 import java.time.Duration;
@@ -8,6 +9,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import javax.sql.DataSource;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
@@ -142,6 +144,38 @@ class LiquibaseChangelogIntegrationTest {
 
     jdbc.update("DELETE FROM nota_fiscal WHERE id = ?::uuid", notaId);
     jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
+  @DisplayName("changeSet 0028 cria alerta_tributario com chave unica e CASCADE do produtor (#140)")
+  void changeSet0028CriaAlertaTributario() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'alerta_tributario' ORDER BY column_name", String.class))
+        .containsExactly("criado_em", "data_limite", "descricao", "id", "produtor_id",
+            "referencia_id", "resolvido_em", "status", "tipo");
+    assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes"
+        + " WHERE tablename = 'alerta_tributario'", String.class))
+        .contains("idx_alerta_tributario_produtor", "uk_alerta_tributario_referencia");
+
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, ?)",
+        produtorId, "Produtor Alerta");
+    String insert = "INSERT INTO alerta_tributario (id, produtor_id, tipo, referencia_id,"
+        + " data_limite, descricao, status, criado_em) VALUES (?::uuid, ?::uuid,"
+        + " 'VENCIMENTO_GUIA', '44444444-4444-4444-4444-444444444444'::uuid, DATE '2026-10-30',"
+        + " 'Guia', 'ATIVO', now())";
+    jdbc.update(insert, UUID.randomUUID().toString(), produtorId);
+    // Mesmo tipo, referencia e prazo: o job nunca duplica, nem com duas replicas.
+    assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID().toString(), produtorId))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    // Alerta e derivado: apagar o produtor apaga os alertas.
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject(
+        "SELECT COUNT(*) FROM alerta_tributario WHERE produtor_id = ?::uuid",
+        Integer.class, produtorId)).isZero();
   }
 
   @Test

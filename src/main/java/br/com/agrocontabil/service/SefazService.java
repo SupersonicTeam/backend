@@ -87,7 +87,7 @@ public class SefazService {
   private static final ZoneId FUSO_BRASIL = ZoneId.of("America/Sao_Paulo");
 
   /** Prazo legal, em dias corridos, para cancelar uma NF-e após a emissão (RN006). */
-  private static final int PRAZO_CANCELAMENTO_DIAS = 30;
+  public static final int PRAZO_CANCELAMENTO_DIAS = 30;
 
   /**
    * Códigos cStat que indicam cancelamento aceito pela SEFAZ (evento vinculado à NF-e):

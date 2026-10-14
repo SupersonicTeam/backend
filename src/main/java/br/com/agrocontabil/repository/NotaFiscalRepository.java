@@ -459,4 +459,20 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim,
       Pageable pagina);
+
+  /**
+   * NF-e próprias autorizadas de todos os produtores emitidas em {@code [inicio, fim)} — as que
+   * terão o prazo de cancelamento (RN006) vencendo, candidatas a alerta (issue #140).
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.PrazoCancelamentoCandidato(
+          n.id, n.produtor.id, n.numero, n.serie, n.tipoDocumento, n.dataEmissao)
+      FROM NotaFiscal n
+      WHERE n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      """)
+  List<PrazoCancelamentoCandidato> findPropriasAutorizadasEmitidasEntre(
+      @Param("inicio") OffsetDateTime inicio, @Param("fim") OffsetDateTime fim);
 }
