@@ -54,10 +54,12 @@ public class FatiadorDispositivos {
   /**
    * "Vigência encerrada" de MP que caducou. Na Lei 8.212/1991 o texto da MP vem tachado, mas o
    * link da anotação fica fora do tachado e sobra sozinho num parágrafo, às vezes sem os
-   * parênteses: colado ao dispositivo anterior, diria que a regra vigente acabou.
+   * parênteses: colado ao dispositivo anterior, diria que a regra vigente acabou. Só a linha que
+   * é <em>apenas</em> essa anotação sai: a mesma frase no meio de um texto de lei fica.
    */
   private static final Pattern VIGENCIA_ENCERRADA =
-      Pattern.compile("\\(?\\s*Vig[êe]ncia\\s+encerrada\\s*\\)*", Pattern.CASE_INSENSITIVE);
+      Pattern.compile("^(?:\\(?\\s*Vig[êe]ncia\\s+encerrada\\s*\\)*\\s*)+$",
+          Pattern.CASE_INSENSITIVE);
   /** "Art. 25A." (letra colada ao número, seguida de ponto), grafia da Lei 8.212/1991. */
   private static final Pattern ARTIGO_SEM_HIFEN =
       Pattern.compile("^(Art\\.\\s*\\d+)([A-Z])(?=\\s*\\.)");
@@ -212,7 +214,7 @@ public class FatiadorDispositivos {
   private static String limpar(String linha) {
     String texto = linha.replace(' ', ' ');
     texto = ANOTACAO.matcher(texto).replaceAll("");
-    texto = VIGENCIA_ENCERRADA.matcher(texto).replaceAll("");
+    texto = VIGENCIA_ENCERRADA.matcher(texto.trim()).matches() ? "" : texto;
     texto = texto.replaceAll("\\s+", " ").trim();
     // Textos antigos escrevem o artigo acrescido sem hifen ("Art. 25A."): sem isto ele vira uma
     // segunda versao do art. 25 e a citacao sai errada.

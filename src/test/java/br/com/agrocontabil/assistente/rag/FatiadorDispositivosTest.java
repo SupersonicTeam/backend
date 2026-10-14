@@ -116,6 +116,7 @@ class FatiadorDispositivosTest {
         <p>Art. 25A. Equipara-se ao empregador rural pessoa física o consórcio simplificado.</p>
         <p>§ 1º O documento deverá conter a identificação de cada produtor.</p>
         <p><strike>II - texto de MP que caducou;</strike> <a href="x">Vigência encerrada</a></p>
+        <p>§ 2º O contrato com vigência encerrada não gera obrigação nova.</p>
         <p>Brasília, em 24 de julho de 1991; 170º da Independência e 103º da República.</p>
         <p>1 Artigo alterado pela Medida Provisória nº 1.663-12, de 27.7.98, como segue:</p>
         <p>Art. 21. A alíquota de contribuição dos segurados empresários é de vinte por cento.</p>
@@ -126,10 +127,12 @@ class FatiadorDispositivosTest {
         .collect(Collectors.toMap(DispositivoLegal::dispositivo, DispositivoLegal::texto));
 
     assertThat(textos).containsOnlyKeys(
-        "art. 25", "art. 25, inciso I", "art. 25-A", "art. 25-A, § 1º");
+        "art. 25", "art. 25, inciso I", "art. 25-A", "art. 25-A, § 1º", "art. 25-A, § 2º");
     assertThat(textos.get("art. 25-A")).startsWith("Art. 25-A. Equipara-se");
     // A anotacao solta da MP tachada nao gruda no dispositivo vigente anterior.
     assertThat(textos.get("art. 25-A, § 1º")).doesNotContainIgnoringCase("encerrada");
+    // A mesma frase dentro do texto de lei fica: so a linha que e apenas a anotacao sai.
+    assertThat(textos.get("art. 25-A, § 2º")).contains("vigência encerrada não gera");
   }
 
   @Test

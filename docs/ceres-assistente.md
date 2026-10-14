@@ -208,7 +208,22 @@ trechos). Comandos da #145:
 - assinatura com "em" ("Brasília, **em** 24 de julho de 1991"): sem reconhecê-la, as notas de
   rodapé com redações de uma MP de 1998 entravam como artigos;
 - "Vigência encerrada" solto, de MP que caducou, que grudava no dispositivo vigente anterior (o
-  art. 30, IV, citado pela Ceres, terminava assim).
+  art. 30, IV, citado pela Ceres, terminava assim). Só a linha que é apenas a anotação sai.
+
+**A LC 214 na base precisa ser reingerida (achado da #145).** O compilado da LC 214 também tacha
+por estilo as redações substituídas pela LC 227/2026. Na ingestão de 2026-09-30 elas entraram como
+vigentes: **151 dispositivos têm duas redações abertas**, e a revogada ficou com o rótulo limpo
+(`art. 10, § 3º`) enquanto a vigente virou `art. 10, § 3º [2]`. A ingestão não conserta isso
+sozinha, de propósito: ela recusa texto alterado com a mesma `vigencia-inicio`, e os rótulos `[2]`
+ficariam órfãos e abertos. O reparo é apagar as linhas da norma e reingerir com o fatiador atual:
+
+```sql
+DELETE FROM legislacao_trecho WHERE norma = 'LC 214/2025';
+```
+
+Depois, o comando de ingestão da LC 214 (texto compilado recapturado), com `--ingestao.simular=true`
+antes. Conferência: `SELECT count(*) FROM legislacao_trecho WHERE dispositivo ~ '\[[0-9]\]'` deve
+dar zero.
 
 ### Resposta
 
