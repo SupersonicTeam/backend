@@ -309,6 +309,17 @@ app:
       lock:
         at-most-for: ${APURACAO_FECHAMENTO_LOCK_AT_MOST_FOR:PT50M}
         at-least-for: ${APURACAO_FECHAMENTO_LOCK_AT_LEAST_FOR:PT5M}
+  # Alertas tributarios (issue #140, RN010): guia, apuracao e prazo de cancelamento de NF-e que
+  # vencem em menos de 5 dias. Cron de 6 campos (o do Spring), fuso de Brasilia.
+  alertas:
+    enabled: ${ALERTAS_ENABLED:true}
+    cron: ${ALERTAS_CRON:0 0 9 * * *}
+    # Lock distribuido (issue #87): uma replica gera; o piso cobre o desvio de relogio.
+    lock:
+      at-most-for: ${ALERTAS_LOCK_AT_MOST_FOR:PT30M}
+      at-least-for: ${ALERTAS_LOCK_AT_LEAST_FOR:PT5M}
+    # Uma transacao para a execucao inteira: teto proprio, acima do default de 30s. Em segundos.
+    transaction-timeout: ${ALERTAS_TX_TIMEOUT:600}
   # Guias fiscais do Contador (issue #74).
   guia-fiscal:
     # Job diario que marca como VENCIDA toda guia PENDENTE com vencimento passado.
