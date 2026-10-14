@@ -61,7 +61,7 @@ app:
 
 | O que aconteceu | Exceção | Por quê |
 |---|---|---|
-| DNS, conexão recusada ou estourada, handshake TLS | `SefazConexaoException` | a requisição não saiu: reenviar é seguro |
+| DNS, conexão recusada ou estourada (inclui o handshake TLS, que o JDK conta no `connectTimeout`) | `SefazConexaoException` | a requisição não saiu: reenviar é seguro |
 | HTTP 4xx | `SefazConexaoException` | o servidor recusou antes de processar |
 | cStat 108/109 (serviço paralisado), 656 (consumo indevido) | `SefazConexaoException` | o fisco disse que não processou |
 | tempo de resposta estourado, conexão caída, HTTP 5xx, SOAP Fault | `SefazRespostaIndeterminadaException` | o fisco pode ter processado: o serviço consulta pela chave |

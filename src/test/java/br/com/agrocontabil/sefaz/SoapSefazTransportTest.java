@@ -49,7 +49,9 @@ class SoapSefazTransportTest {
   private SefazProperties propriedades(String base, boolean comTruststore) {
     SefazProperties p = new SefazProperties();
     p.getMock().setEnabled(false);
-    p.getTimeout().setConnectMs(2_000);
+    // Folga para o handshake TLS com certificado de cliente numa JVM fria: estourar a conexao
+    // aqui e falha antes do envio (HttpConnectTimeoutException), o que mudaria a classificacao.
+    p.getTimeout().setConnectMs(5_000);
     p.getTimeout().setReadMs(1_000);
     Endpoints padrao = new Endpoints();
     padrao.setAutorizacao(base + "/autorizacao");
@@ -310,9 +312,9 @@ class SoapSefazTransportTest {
       long inicio = System.nanoTime();
       assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
           SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class);
-      // connect-ms (2 s) + read-ms (1 s) do teste, com folga; sem o prazo, esperaria os 10 s.
+      // Abaixo dos 10 s do travamento: o prazo (read-ms, no maximo connect-ms + read-ms) cortou.
       assertThat(java.time.Duration.ofNanos(System.nanoTime() - inicio).toMillis())
-          .isLessThan(6_000);
+          .isLessThan(8_000);
     }
 
     @Test

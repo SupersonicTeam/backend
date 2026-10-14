@@ -108,7 +108,9 @@ final class MensagensSefaz {
     if (texto == null) {
       return "";
     }
-    return texto.replaceAll("\\s+", " ").trim()
+    // Caractere de controle (colado de outro sistema) torna o XML 1.0 invalido: o evento nao
+    // montaria e o cancelamento falharia sempre. Sai, junto com quebras de linha.
+    return texto.replaceAll("[\\p{Cntrl}&&[^\\t\\n\\r]]", "").replaceAll("\\s+", " ").trim()
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         .replace("\"", "&quot;").replace("'", "&apos;");
   }
