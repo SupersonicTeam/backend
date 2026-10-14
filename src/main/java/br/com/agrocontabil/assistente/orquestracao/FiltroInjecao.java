@@ -19,13 +19,15 @@ import java.util.regex.Pattern;
 final class FiltroInjecao {
 
   private static final Pattern INJECAO = Pattern.compile(String.join("|",
-      "ignor\\w*\\s+(?:\\w+\\s+){0,3}(?:instruc|regras|orientac)",
-      "desconsider\\w*\\s+(?:\\w+\\s+){0,3}(?:instruc|regras)",
+      // "ignore as instrucoes anteriores", mas nao "se eu ignorar as regras do split payment"
+      "(?:ignor|desconsider|esquec)\\w*\\s+(?:\\w+\\s+){0,3}(?:instruc\\w*|regras|orientac\\w*)"
+          + "\\s+(?:anteriores|acima|previas|do\\s+sistema|que\\s+(?:voce\\s+)?recebeu)",
       "prompt\\s+(?:de|do)\\s+sistema",
       "system\\s+prompt",
       "suas\\s+instrucoes",
       "agora\\s+voce\\s+e\\s+(?:um|uma|o|a)\\b",
-      "sem\\s+restric",
+      // "assistente sem restricoes", mas nao "vender sem restricao de prazo"
+      "(?:assistente|ia|modelo|bot)\\s+sem\\s+(?:restric|limit|filtro)",
       "modo\\s+(?:desenvolvedor|dev|jailbreak)",
       "jailbreak"));
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
