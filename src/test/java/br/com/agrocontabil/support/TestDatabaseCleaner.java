@@ -1,5 +1,6 @@
 package br.com.agrocontabil.support;
 
+import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
@@ -25,6 +26,7 @@ import org.springframework.boot.test.context.TestComponent;
 @TestComponent
 public class TestDatabaseCleaner {
 
+  private final AlertaTributarioRepository alertaRepository;
   private final AssistenteInteracaoRepository interacaoRepository;
   private final NotaFiscalValidacaoRepository validacaoRepository;
   private final ApuracaoMensalRepository apuracaoRepository;
@@ -35,6 +37,7 @@ public class TestDatabaseCleaner {
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
+      AlertaTributarioRepository alertaRepository,
       AssistenteInteracaoRepository interacaoRepository,
       NotaFiscalValidacaoRepository validacaoRepository,
       ApuracaoMensalRepository apuracaoRepository,
@@ -42,6 +45,7 @@ public class TestDatabaseCleaner {
       NotaFiscalRepository notaFiscalRepository,
       ContadorRepository contadorRepository,
       ProdutorRepository produtorRepository) {
+    this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
     this.apuracaoRepository = apuracaoRepository;
@@ -52,9 +56,9 @@ public class TestDatabaseCleaner {
   }
 
   /**
-   * Apaga filhos antes dos pais: auditoria da Ceres → validações e itens (cascade da entidade) →
-   * apurações → guias → notas → contadores (que levam o vínculo {@code contador_produtor}) →
-   * produtores.
+   * Apaga filhos antes dos pais: alertas tributários → auditoria da Ceres → validações e itens
+   * (cascade da entidade) → apurações → guias → notas → contadores (que levam o vínculo
+   * {@code contador_produtor}) → produtores.
    *
    * <p>Os contadores (issue #93) entram antes dos produtores porque o vínculo N:N referencia os
    * dois: deixá-los para trás faria o {@code produtorRepository.deleteAll()} falhar por integridade
@@ -62,6 +66,9 @@ public class TestDatabaseCleaner {
    * #144) referencia o produtor com {@code RESTRICT} pelo mesmo motivo.
    */
   public void limparTudo() {
+    // Alertas (#140) antes de tudo: CASCADE no banco, mas no mesmo flush o Hibernate anularia a
+    // FK NOT NULL do alerta para remover o produtor.
+    alertaRepository.deleteAll();
     interacaoRepository.deleteAll();
     validacaoRepository.deleteAll();
     apuracaoRepository.deleteAll();

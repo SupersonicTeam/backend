@@ -48,3 +48,6 @@ app:
   guia-fiscal:
     sync:
       enabled: false
+  # Alertas tributarios (#140): job desativado; os testes chamam o service direto.
+  alertas:
+    enabled: false

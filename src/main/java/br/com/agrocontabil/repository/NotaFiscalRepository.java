@@ -532,4 +532,34 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("status") Collection<StatusNotaFiscal> status,
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim);
+
+  /**
+   * NF-e próprias autorizadas de todos os produtores emitidas em {@code [inicio, fim)} — as que
+   * terão o prazo de cancelamento (RN006) vencendo, candidatas a alerta (issue #140).
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.PrazoCancelamentoCandidato(
+          n.id, n.produtor.id, n.numero, n.serie, n.tipoDocumento, n.dataEmissao)
+      FROM NotaFiscal n
+      WHERE n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      """)
+  List<PrazoCancelamentoCandidato> findPropriasAutorizadasEmitidasEntre(
+      @Param("inicio") OffsetDateTime inicio, @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Produtores com nota autorizada (de entrada ou de saída) emitida em {@code [inicio, fim)} — os
+   * que têm apuração a fechar no mês (issue #140). O mês corrente não tem linha em
+   * {@code apuracao_mensal} (é projeção ao vivo, #53): a linha só nasce no fechamento.
+   */
+  @Query("""
+      SELECT DISTINCT n.produtor.id FROM NotaFiscal n
+      WHERE n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+      """)
+  List<UUID> findProdutoresComNotaAutorizadaEntre(
+      @Param("inicio") OffsetDateTime inicio, @Param("fim") OffsetDateTime fim);
 }
