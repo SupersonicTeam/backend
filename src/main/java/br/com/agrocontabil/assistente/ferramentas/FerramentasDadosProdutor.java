@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente.ferramentas;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Alerta;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Alertas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Apuracao;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.CompraPorUnidade;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
@@ -319,6 +321,26 @@ public class FerramentasDadosProdutor {
                 FormatoBr.data(g.dataVencimento()),
                 FormatoBr.moeda(g.valor()),
                 g.status().name()))
+            .toList());
+  }
+
+  /** Alertas tributários ativos: o que vence ou fecha em menos de 5 dias (issue #140, RN010). */
+  @Tool(name = "listarAlertas", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Lista os alertas tributarios do produtor: guias pendentes, fechamento da apuracao do mes e \
+      fim do prazo para cancelar NF-e que vencem em menos de 5 dias, do mais urgente ao mais \
+      distante, no maximo 10. Use para perguntas como "tenho algo vencendo?", "o que preciso \
+      resolver esta semana?" ou "tenho algum prazo perto?".""")
+  public Alertas listarAlertas(ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    Pagina<DadosProdutorPorta.Alerta> pagina = dados.alertas(contexto.produtorId());
+
+    contexto.registrarFonte("listarAlertas", Map.of(), pagina.total() == 0);
+    return new Alertas(
+        pagina.total(),
+        pagina.itens().stream()
+            .map(a -> new Alerta(
+                a.tipo(), a.descricao(), FormatoBr.data(a.dataLimite()), a.diasRestantes()))
             .toList());
   }
 

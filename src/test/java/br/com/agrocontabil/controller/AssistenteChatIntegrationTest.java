@@ -80,6 +80,7 @@ class AssistenteChatIntegrationTest {
   @Autowired private ContadorRepository contadorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
+  @Autowired private br.com.agrocontabil.repository.AlertaTributarioRepository alertaRepository;
   @Autowired private ChatModelSimulado modelo;
   @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private AssistenteInteracaoRepository interacaoRepository;
@@ -218,6 +219,50 @@ class AssistenteChatIntegrationTest {
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
         .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE));
+  }
+
+  @Test
+  @DisplayName("DoD #140: 'tenho algo vencendo?' traz so os alertas do produtor da sessao")
+  void alertasSoDoProdutorDaSessao() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    alertaRepository.save(alertaDeGuia(produtorA, hoje.plusDays(2), "Guia de R$ 1,00"));
+    alertaRepository.save(alertaDeGuia(produtorB, hoje.plusDays(1), "Guia de R$ 2,00"));
+    modelo.responderCom(prompt -> {
+      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
+        JsonNode resultado = lerJson(respostas.getResponses().get(0).responseData());
+        return ChatModelSimulado.texto("Atencao: "
+            + resultado.get("alertas").get(0).get("descricao").asText() + ".");
+      }
+      return pedirFuncao("listarAlertas", Map.of());
+    });
+
+    perguntar(produtorA, "Tenho algo vencendo?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value("Atencao: Guia de R$ 1,00."))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("listarAlertas"));
+    // O alerta do B nunca chegou ao modelo.
+    for (Prompt prompt : modelo.promptsRecebidos()) {
+      for (Message mensagem : prompt.getInstructions()) {
+        if (mensagem instanceof ToolResponseMessage respostas) {
+          assertThat(respostas.getResponses().toString()).doesNotContain("R$ 2,00");
+        }
+      }
+    }
+  }
+
+  private br.com.agrocontabil.model.AlertaTributario alertaDeGuia(
+      Produtor produtor, LocalDate vencimento, String descricao) {
+    br.com.agrocontabil.model.GuiaFiscal guia = guiaFiscalRepository.save(
+        guia(produtor, vencimento, "1.00", StatusGuiaFiscal.PENDENTE));
+    return br.com.agrocontabil.model.AlertaTributario.builder()
+        .produtor(produtor)
+        .tipo(br.com.agrocontabil.model.TipoAlertaTributario.VENCIMENTO_GUIA)
+        .referenciaId(guia.getId())
+        .dataLimite(vencimento)
+        .descricao(descricao)
+        .status(br.com.agrocontabil.model.StatusAlertaTributario.ATIVO)
+        .criadoEm(java.time.OffsetDateTime.now())
+        .build();
   }
 
   /** As duas guias do teste de ponta a ponta do PR #168, mais uma paga e uma do B. */

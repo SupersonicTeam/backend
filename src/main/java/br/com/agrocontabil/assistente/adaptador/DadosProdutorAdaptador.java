@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente.adaptador;
 
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.dto.AlertaTributarioResponse;
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -9,6 +10,7 @@ import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
+import br.com.agrocontabil.service.AlertaTributarioService;
 import br.com.agrocontabil.service.ApuracaoService;
 import br.com.agrocontabil.service.ComprasInsumoResultado;
 import br.com.agrocontabil.service.ConsultaDadosProdutorService;
@@ -45,15 +47,18 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   private final ConsultaDadosProdutorService consultaService;
   private final ApuracaoService apuracaoService;
   private final CreditoService creditoService;
+  private final AlertaTributarioService alertaService;
   private final TransactionTemplate transacao;
 
   /** Constrói o adaptador sobre os services existentes. */
   public DadosProdutorAdaptador(ConsultaDadosProdutorService consultaService,
       ApuracaoService apuracaoService, CreditoService creditoService,
+      AlertaTributarioService alertaService,
       PlatformTransactionManager transactionManager, AssistenteProperties propriedades) {
     this.consultaService = consultaService;
     this.apuracaoService = apuracaoService;
     this.creditoService = creditoService;
+    this.alertaService = alertaService;
     this.transacao = new TransactionTemplate(transactionManager);
     this.transacao.setTimeout((int) propriedades.getTimeoutFuncao().toSeconds());
   }
@@ -77,6 +82,16 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
       UUID produtorId, String descricaoOuNcm, LocalDate inicio, LocalDate fim, int limite) {
     return comTimeout(() ->
         consultaService.ncmsComprados(produtorId, descricaoOuNcm, inicio, fim, limite));
+  }
+
+  @Override
+  public Pagina<Alerta> alertas(UUID produtorId) {
+    List<AlertaTributarioResponse> todos =
+        comTimeout(() -> alertaService.listarAtivos(produtorId));
+    return new Pagina<>(todos.stream()
+        .limit(LIMITE_MAXIMO)
+        .map(a -> new Alerta(a.tipo(), a.descricao(), a.dataLimite(), a.diasRestantes()))
+        .toList(), todos.size());
   }
 
   @Override
