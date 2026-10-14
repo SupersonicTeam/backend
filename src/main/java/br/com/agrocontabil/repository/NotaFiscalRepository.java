@@ -426,6 +426,57 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("fim") OffsetDateTime fim);
 
   /**
+   * NCMs comprados de um insumo por prefixo de NCM — mesmo recorte de {@link #somarComprasPorNcm},
+   * maior valor primeiro (issue #170: a Ceres busca na lei os itens de anexo desses NCMs).
+   *
+   * @param pagina limite (top-N)
+   */
+  @Query("""
+      SELECT i.ncm
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND i.ncm LIKE :prefixoNcm
+      GROUP BY i.ncm
+      ORDER BY SUM(i.valorTotal) DESC, i.ncm
+      """)
+  List<String> listarNcmsCompradosPorNcm(
+      @Param("produtorId") UUID produtorId,
+      @Param("prefixoNcm") String prefixoNcm,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim,
+      Pageable pagina);
+
+  /**
+   * NCMs comprados de um insumo pela descrição — mesmo recorte de
+   * {@link #somarComprasPorDescricao}, maior valor primeiro (issue #170).
+   *
+   * @param padraoDescricao padrão {@code LIKE} em minúsculas, já escapado com {@code !}
+   * @param pagina          limite (top-N)
+   */
+  @Query("""
+      SELECT i.ncm
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
+      GROUP BY i.ncm
+      ORDER BY SUM(i.valorTotal) DESC, i.ncm
+      """)
+  List<String> listarNcmsCompradosPorDescricao(
+      @Param("produtorId") UUID produtorId,
+      @Param("padraoDescricao") String padraoDescricao,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim,
+      Pageable pagina);
+
+  /**
    * Notas do produtor no período, filtradas por origem e status, mais recentes primeiro. Os
    * filtros são coleções nunca vazias: "qualquer origem" é a coleção com todas, o que evita o
    * {@code :param IS NULL} que o PostgreSQL não consegue tipar.

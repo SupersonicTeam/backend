@@ -54,6 +54,7 @@ class OrquestradorServiceTest {
   @Mock private RotaDados rotaDados;
   @Mock private RotaLegislacao rotaLegislacao;
   @Mock private BuscaTextualLegislacaoService buscaTextual;
+  @Mock private TrechosDasCompras trechosDasCompras;
 
   private OrquestradorService orquestrador;
   private DisponibilidadeModelo disponibilidade;
@@ -65,6 +66,7 @@ class OrquestradorServiceTest {
     AssistenteProperties propriedades = new AssistenteProperties();
     disponibilidade = new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L);
     orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
+        trechosDasCompras,
         new ModoFallback(buscaTextual, propriedades), disponibilidade, propriedades);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }
@@ -104,7 +106,7 @@ class OrquestradorServiceTest {
   void misto() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
         .thenReturn(ResultadoRota.aceita("Ha credito (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -117,7 +119,7 @@ class OrquestradorServiceTest {
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
     verify(rotaDados).responder(anyString(), any());
     // #170: no MISTO a lei responde so a regra geral; o responder() puro nao e usado.
-    verify(rotaLegislacao).responderRegraGeral(anyString(), any());
+    verify(rotaLegislacao).responderRegraGeral(anyString(), any(), any());
     verify(rotaLegislacao, never()).responder(anyString(), any());
   }
 
@@ -126,7 +128,7 @@ class OrquestradorServiceTest {
   void mistoSemFundamento() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any())).thenReturn(
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any())).thenReturn(
         ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA));
 
     ResultadoOrquestracao r = responder();
@@ -145,7 +147,7 @@ class OrquestradorServiceTest {
           "totalComprasPorInsumo", java.util.Map.of("descricaoOuNcm", "adubo"), true);
       return ResultadoRota.aceita("Nao tem essa informacao.");
     });
-    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
         .thenReturn(ResultadoRota.aceita("Fertilizantes tem reducao (LC 214/2025, art. 138).",
             List.of(CITACAO)));
 
@@ -166,7 +168,7 @@ class OrquestradorServiceTest {
     // Sem consulta, um "voce comprou fertilizantes" sem numero passaria pelo ValidadorNumeros.
     when(rotaDados.responder(anyString(), any()))
         .thenReturn(ResultadoRota.aceita("Voce comprou fertilizantes."));
-    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
         .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -180,7 +182,7 @@ class OrquestradorServiceTest {
   void mistoLeiFalandoDosDados() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any())).thenReturn(new ResultadoRota(
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any())).thenReturn(new ResultadoRota(
         RotaLegislacao.SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -197,7 +199,7 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.MISTO, 0.9);
     when(rotaDados.responder(anyString(), any()))
         .thenThrow(new AssistenteIndisponivelException("timeout no laco de funcoes", null));
-    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
         .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -206,6 +208,24 @@ class OrquestradorServiceTest {
         .contains(OrquestradorService.LIGACAO_REGRA + "Ha reducao")
         .doesNotContain("sem o modelo");
     assertThat(r.modoFallback()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#170: itens de anexo das compras vao para a parte de lei, depois dos dados")
+  void mistoLevaItensDasComprasParaALei() {
+    classificarComo(Intencao.MISTO, 0.9);
+    dadosEncontrados("Voce comprou X.");
+    when(trechosDasCompras.buscar(contexto)).thenReturn(List.of(TRECHO_TEXTUAL));
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), eq(List.of(TRECHO_TEXTUAL))))
+        .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    // A ordem importa: os NCMs saem das fontes que a parte de dados registrou.
+    org.mockito.InOrder ordem = org.mockito.Mockito.inOrder(rotaDados, trechosDasCompras);
+    ordem.verify(rotaDados).responder(anyString(), any());
+    ordem.verify(trechosDasCompras).buscar(contexto);
   }
 
   /** Rota de dados que consultou e encontrou dados. */
@@ -302,7 +322,7 @@ class OrquestradorServiceTest {
   void mistoComLeiForaMantemDados() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
         .thenThrow(new AssistenteIndisponivelException("embedding fora", null));
     when(buscaTextual.buscar(anyString(), any(), anyInt())).thenReturn(List.of(TRECHO_TEXTUAL));
 

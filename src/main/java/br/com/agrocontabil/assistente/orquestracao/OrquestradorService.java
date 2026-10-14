@@ -74,17 +74,19 @@ public class OrquestradorService {
   private final RotaLegislacao rotaLegislacao;
   private final ModoFallback fallback;
   private final DisponibilidadeModelo disponibilidade;
+  private final TrechosDasCompras trechosDasCompras;
   private final double confiancaMinima;
 
   /** Constrói o orquestrador. */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
-      RotaLegislacao rotaLegislacao, ModoFallback fallback,
+      RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras, ModoFallback fallback,
       DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
     this.classificador = classificador;
     this.rotaDados = rotaDados;
     this.rotaLegislacao = rotaLegislacao;
     this.fallback = fallback;
     this.disponibilidade = disponibilidade;
+    this.trechosDasCompras = trechosDasCompras;
     this.confiancaMinima = propriedades.getOrquestracao().getConfiancaMinima();
   }
 
@@ -154,7 +156,8 @@ public class OrquestradorService {
   private ResultadoRota leiRegraGeral(String pergunta, ContextoAssistente contexto) {
     if (disponibilidade.disponivel()) {
       try {
-        return rotaLegislacao.responderRegraGeral(pergunta, contexto);
+        return rotaLegislacao.responderRegraGeral(
+            pergunta, contexto, trechosDasCompras.buscar(contexto));
       } catch (AssistenteIndisponivelException e) {
         semModelo(contexto, "legislacao");
       }

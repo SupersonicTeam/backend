@@ -28,4 +28,22 @@ class BuscaTextualMapaAcentosTest {
     assertThat(BuscaTextualLegislacaoService.COM_ACENTO)
         .hasSameSizeAs(BuscaTextualLegislacaoService.SEM_ACENTO);
   }
+
+  @Test
+  @DisplayName("#170: NCM casa como codigo inteiro, subposicao e posicao, nunca outro item")
+  void alternativasDoNcm() {
+    java.util.regex.Pattern padrao = java.util.regex.Pattern.compile("(^|[^0-9.])("
+        + BuscaTextualLegislacaoService.alternativasDoNcm("31052000") + ")");
+
+    assertThat(padrao.matcher("Item 4: Adubos - 3105.20.00").find()).isTrue();
+    assertThat(padrao.matcher("Adubos da subposicao 3105.20, exceto").find()).isTrue();
+    assertThat(padrao.matcher("Produtos da posicao 31.05").find()).isTrue();
+    assertThat(padrao.matcher("Produtos da posicao 3105 do capitulo").find()).isTrue();
+    assertThat(padrao.matcher("NCM 31052000").find()).isTrue();
+    // Outro item da mesma subposicao, outra posicao com prefixo parecido, numero maior.
+    assertThat(padrao.matcher("Item 5: Outros - 3105.20.10").find()).isFalse();
+    assertThat(padrao.matcher("Item 6: Outros - 3105.10.00").find()).isFalse();
+    assertThat(padrao.matcher("Item 7: Outros - 13105.20.00").find()).isFalse();
+    assertThat(padrao.matcher("valor de 3105.201").find()).isFalse();
+  }
 }

@@ -217,4 +217,20 @@ class ConsultaDadosProdutorServiceIntegrationTest {
     assertThat(vazio.valor()).isEqualByComparingTo("0.00");
     assertThat(vazio.quantidade()).isZero();
   }
+
+  @Test
+  @DisplayName("#170: NCMs comprados no mesmo recorte das compras, maior valor primeiro")
+  void ncmsComprados() {
+    // Cancelada, fora do periodo, saida e do produtor B nao entram.
+    assertThat(service.ncmsComprados(produtorA.getId(), "fertilizante", JAN, JUN, 3))
+        .containsExactly("31052000", "31059090");
+    assertThat(service.ncmsComprados(produtorA.getId(), "3105", JAN, JUN, 3))
+        .containsExactly("31052000", "31059090");
+    assertThat(service.ncmsComprados(produtorA.getId(), "fertilizante", JAN, JUN, 1))
+        .containsExactly("31052000");
+    assertThat(service.ncmsComprados(produtorB.getId(), "glifosato", JAN, JUN, 3)).isEmpty();
+    // Curinga digitado e texto, como nas compras.
+    assertThat(service.ncmsComprados(produtorA.getId(), "%", JAN, JUN, 3))
+        .containsExactly("38089324");
+  }
 }

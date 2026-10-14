@@ -6,7 +6,9 @@ import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +76,7 @@ public class RotaLegislacao {
    *         falharem
    */
   public ResultadoRota responder(String pergunta, ContextoAssistente contexto) {
-    return responder(pergunta, contexto, false);
+    return responder(pergunta, contexto, false, List.of());
   }
 
   /**
@@ -83,18 +85,25 @@ public class RotaLegislacao {
    * trocado por {@link #SO_TRECHOS} e as citações validadas ficam — a regra continua acessível,
    * a afirmação sobre dados que esta rota não viu, não.
    *
-   * @param pergunta pergunta do usuário
-   * @param contexto contexto da pergunta
+   * <p>{@code complementares} são trechos achados por outro caminho — os itens de anexo com o NCM
+   * das compras do produtor — e entram depois dos da busca por similaridade, sem repetição e
+   * renumerados ({@code [T1]}…{@code [Tn]} seguem a ordem que o modelo vê).
+   *
+   * @param pergunta       pergunta do usuário
+   * @param contexto       contexto da pergunta
+   * @param complementares trechos extras (podem ser vazios)
    * @return regra geral com citações, ou só as citações
    */
-  public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto) {
-    return responder(pergunta, contexto, true);
+  public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto,
+      List<TrechoRecuperado> complementares) {
+    return responder(pergunta, contexto, true, complementares);
   }
 
-  private ResultadoRota responder(
-      String pergunta, ContextoAssistente contexto, boolean soRegraGeral) {
+  private ResultadoRota responder(String pergunta, ContextoAssistente contexto,
+      boolean soRegraGeral, List<TrechoRecuperado> complementares) {
     contexto.verificarAtiva();
-    List<TrechoRecuperado> trechos = busca.buscar(pergunta, contexto.hoje());
+    List<TrechoRecuperado> trechos =
+        juntar(busca.buscar(pergunta, contexto.hoje()), complementares);
     if (trechos.isEmpty()) {
       return ResultadoRota.descartada(
           ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.SEM_FUNDAMENTO_LEGAL);
@@ -140,6 +149,27 @@ public class RotaLegislacao {
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
     return ResultadoRota.aceita(citacao.texto(), citacao.citacoes());
+  }
+
+  /**
+   * Trechos da busca seguidos dos complementares, sem repetir id, com as marcas refeitas na ordem
+   * final — a marca é a posição na lista que o {@link ValidadorCitacao} recebe.
+   */
+  static List<TrechoRecuperado> juntar(
+      List<TrechoRecuperado> principais, List<TrechoRecuperado> complementares) {
+    Map<String, TrechoRecuperado> porId = new LinkedHashMap<>();
+    for (TrechoRecuperado t : principais) {
+      porId.putIfAbsent(t.id(), t);
+    }
+    for (TrechoRecuperado t : complementares) {
+      porId.putIfAbsent(t.id(), t);
+    }
+    List<TrechoRecuperado> juntos = new ArrayList<>();
+    for (TrechoRecuperado t : porId.values()) {
+      juntos.add(new TrechoRecuperado("T" + (juntos.size() + 1), t.id(), t.norma(),
+          t.dispositivo(), t.url(), t.texto(), t.similaridade()));
+    }
+    return juntos;
   }
 
   /** Trechos como o modelo os vê: só a marca e o texto, sem a referência legal. */
