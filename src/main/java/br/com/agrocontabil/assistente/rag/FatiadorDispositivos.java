@@ -24,8 +24,9 @@ import org.springframework.stereotype.Component;
  *
  * <p>Regras:
  * <ul>
- *   <li>texto <strong>tachado</strong> ({@code strike}, {@code s}, {@code del}) é redação revogada
- *       no compilado do Planalto — descartado;</li>
+ *   <li>texto <strong>tachado</strong> ({@code strike}, {@code s}, {@code del} ou estilo
+ *       {@code text-decoration: line-through}) é redação revogada no compilado do Planalto —
+ *       descartado;</li>
  *   <li>anotações editoriais ("(Redação dada pela...)", "(Incluído pela...)", "(Vide...)") saem do
  *       texto: não são lei;</li>
  *   <li>cada dispositivo leva o texto de quem o contém (o caput antes do inciso), porque um inciso
@@ -35,7 +36,9 @@ import org.springframework.stereotype.Component;
  *       dispositivo que ela alterou;</li>
  *   <li>títulos, capítulos e seções não viram trecho; texto antes do primeiro artigo (ementa,
  *       preâmbulo) é ignorado;</li>
- *   <li>o texto articulado termina na assinatura ("Brasília, 16 de janeiro de 2025; ..."):
+ *   <li>o texto articulado termina na assinatura ("Brasília, 16 de janeiro de 2025; ...", ou
+ *       "Brasília, em 24 de julho de 1991" nos textos antigos; depois dela vêm notas de rodapé com
+ *       redações de MP antigas, que não são lei vigente):
  *       assinaturas e a nota "Este texto não substitui o publicado no DOU" não são lei;</li>
  *   <li><strong>anexos</strong> (cabeçalho "ANEXO IX" num parágrafo próprio, título e tabela): cada
  *       linha numerada da tabela vira um trecho "Anexo IX, item 5", com o título do anexo, e a
@@ -48,6 +51,18 @@ public class FatiadorDispositivos {
 
   private static final Pattern ARTIGO = Pattern.compile(
       "^Art\\.\\s*(\\d+)\\s*[º°]?\\s*(-\\s*[A-Z](?![a-z]))?\\s*\\.?\\s*(.*)$");
+  /**
+   * "Vigência encerrada" de MP que caducou. Na Lei 8.212/1991 o texto da MP vem tachado, mas o
+   * link da anotação fica fora do tachado e sobra sozinho num parágrafo, às vezes sem os
+   * parênteses: colado ao dispositivo anterior, diria que a regra vigente acabou. Só a linha que
+   * é <em>apenas</em> essa anotação sai: a mesma frase no meio de um texto de lei fica.
+   */
+  private static final Pattern VIGENCIA_ENCERRADA =
+      Pattern.compile("^(?:\\(?\\s*Vig[êe]ncia\\s+encerrada\\s*\\)*\\s*)+$",
+          Pattern.CASE_INSENSITIVE);
+  /** "Art. 25A." (letra colada ao número, seguida de ponto), grafia da Lei 8.212/1991. */
+  private static final Pattern ARTIGO_SEM_HIFEN =
+      Pattern.compile("^(Art\\.\\s*\\d+)([A-Z])(?=\\s*\\.)");
   private static final Pattern PARAGRAFO_UNICO = Pattern.compile(
       "^Par[áa]grafo\\s+[úu]nico\\s*\\.?\\s*[-–—]?\\s*(.*)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern PARAGRAFO = Pattern.compile(
@@ -75,7 +90,7 @@ public class FatiadorDispositivos {
   private static final Pattern ANEXO = Pattern.compile("^ANEXO\\s+([IVXLC]+)$");
   /** Local e data da assinatura: fim do texto articulado. */
   private static final Pattern ASSINATURA = Pattern.compile(
-      "^Bras[íi]lia\\s*,\\s*\\d{1,2}[ºo°]?\\s+de\\s+\\p{L}+\\s+de\\s+\\d{4}.*");
+      "^Bras[íi]lia\\s*,\\s*(?:em\\s+)?\\d{1,2}[ºo°]?\\s+de\\s+\\p{L}+\\s+de\\s+\\d{4}.*");
   /**
    * Maior salto aceito entre dois artigos da própria norma logo depois de uma citação fechada.
    * Acima disso (ou numeração voltando) o artigo é texto citado sem aspa de abertura: na LC
@@ -106,6 +121,10 @@ public class FatiadorDispositivos {
    */
   public List<DispositivoLegal> fatiar(Document documento) {
     documento.select("strike, s, del, script, style").remove();
+    // Nos textos consolidados mais antigos (ex.: Lei 8.212/1991) o Planalto tacha por estilo, num
+    // span com "text-decoration: line-through", sem <strike>. O seletor de atributo do jsoup nao
+    // diferencia maiusculas.
+    documento.select("[style*=line-through]").remove();
     List<String> linhas = new ArrayList<>();
     List<Element> paragrafos = documento.select("p");
     int inicioAnexos = paragrafos.size();
@@ -195,7 +214,11 @@ public class FatiadorDispositivos {
   private static String limpar(String linha) {
     String texto = linha.replace(' ', ' ');
     texto = ANOTACAO.matcher(texto).replaceAll("");
-    return texto.replaceAll("\\s+", " ").trim();
+    texto = VIGENCIA_ENCERRADA.matcher(texto.trim()).matches() ? "" : texto;
+    texto = texto.replaceAll("\\s+", " ").trim();
+    // Textos antigos escrevem o artigo acrescido sem hifen ("Art. 25A."): sem isto ele vira uma
+    // segunda versao do art. 25 e a citacao sai errada.
+    return ARTIGO_SEM_HIFEN.matcher(texto).replaceFirst("$1-$2");
   }
 
   /** Numeral ordinal de artigo/parágrafo: 1º a 9º, depois cardinal (convenção legislativa). */

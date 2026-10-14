@@ -79,6 +79,63 @@ class FatiadorDispositivosTest {
   }
 
   @Test
+  @DisplayName("Tachado por estilo (line-through), como na Lei 8.212 consolidada, tambem sai")
+  void tachadoPorEstilo() {
+    // Markup real do l8212cons.htm: a redacao revogada vem num span com text-decoration, sem
+    // <strike>. Sem isto o "Contribui com 3%" de 1991 entraria como texto vigente do art. 25.
+    String html = """
+        <html><body>
+        <p><span style="font-size: 10.0pt; text-decoration: line-through">
+        Art. 25. Contribui com 3% (três por cento) da receita bruta.</span></p>
+        <p>Art. 25. A contribuição do empregador rural pessoa física é de:
+        (Redação dada pela Lei nº 10.256, de 2001)</p>
+        <p><span style="TEXT-DECORATION:LINE-THROUGH">I - 2% (dois por cento) da receita
+        bruta;</span></p>
+        <p>I - 1,2% (um inteiro e dois décimos por cento) da receita bruta proveniente da
+        comercialização da sua produção; (Redação dada pela Lei nº 13.606, de 2018)</p>
+        <p>Brasília, 24 de julho de 1991; 170º da Independência.</p>
+        </body></html>
+        """;
+
+    Map<String, String> textos = new FatiadorDispositivos().fatiar(html).stream()
+        .collect(Collectors.toMap(DispositivoLegal::dispositivo, DispositivoLegal::texto));
+
+    assertThat(textos.get("art. 25")).startsWith("Art. 25. A contribuição do empregador rural")
+        .doesNotContain("3%");
+    assertThat(textos.get("art. 25, inciso I")).contains("1,2%").doesNotContain("2% (dois");
+    assertThat(textos).hasSize(2);
+  }
+
+  @Test
+  @DisplayName("Lei antiga: Art. 25A, Vigencia encerrada solta e notas apos a assinatura")
+  void grafiasDaLei8212() {
+    String html = """
+        <html><body>
+        <p>Art. 25. A contribuição do empregador rural pessoa física é de:</p>
+        <p>I - 1,2% da receita bruta;</p>
+        <p>Art. 25A. Equipara-se ao empregador rural pessoa física o consórcio simplificado.</p>
+        <p>§ 1º O documento deverá conter a identificação de cada produtor.</p>
+        <p><strike>II - texto de MP que caducou;</strike> <a href="x">Vigência encerrada</a></p>
+        <p>§ 2º O contrato com vigência encerrada não gera obrigação nova.</p>
+        <p>Brasília, em 24 de julho de 1991; 170º da Independência e 103º da República.</p>
+        <p>1 Artigo alterado pela Medida Provisória nº 1.663-12, de 27.7.98, como segue:</p>
+        <p>Art. 21. A alíquota de contribuição dos segurados empresários é de vinte por cento.</p>
+        </body></html>
+        """;
+
+    Map<String, String> textos = new FatiadorDispositivos().fatiar(html).stream()
+        .collect(Collectors.toMap(DispositivoLegal::dispositivo, DispositivoLegal::texto));
+
+    assertThat(textos).containsOnlyKeys(
+        "art. 25", "art. 25, inciso I", "art. 25-A", "art. 25-A, § 1º", "art. 25-A, § 2º");
+    assertThat(textos.get("art. 25-A")).startsWith("Art. 25-A. Equipara-se");
+    // A anotacao solta da MP tachada nao gruda no dispositivo vigente anterior.
+    assertThat(textos.get("art. 25-A, § 1º")).doesNotContainIgnoringCase("encerrada");
+    // A mesma frase dentro do texto de lei fica: so a linha que e apenas a anotacao sai.
+    assertThat(textos.get("art. 25-A, § 2º")).contains("vigência encerrada não gera");
+  }
+
+  @Test
   @DisplayName("Titulos, capitulos, ementa e preambulo nao viram trecho")
   void semTitulosNemEmenta() {
     assertThat(dispositivos).extracting(DispositivoLegal::texto)

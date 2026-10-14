@@ -180,6 +180,50 @@ Com o modelo fora, a Ceres responde **sem gerar texto**, parte por parte (`Orque
 - **Charset:** salve o arquivo como veio (sem converter). O Planalto usa windows-1252 e a LC 214
   nem declara o charset; o `LeitorHtmlLegislacao` detecta pelos bytes (UTF-8 válido → UTF-8; senão
   windows-1252). Lido como UTF-8, "º" e "§" se perdiam e ~1.500 parágrafos da LC 214 sumiam.
+- **Norma nova: simule antes** com `--ingestao.simular=true`. O comando mostra cada dispositivo
+  fatiado e os maiores trechos, sem gravar nem gerar embedding. Foi assim que apareceram os
+  problemas da Lei 8.212/1991 (abaixo).
+- **Lei de alteração: só o que é norma própria**, com `--ingestao.somente="art. 6º"` (vários
+  separados por `;`). O art. 1º da Lei 9.528/1997 traz entre aspas redações de 1997 da Lei 8.212
+  já substituídas; ingerido, ele poria alíquotas antigas do Funrural na base como se fossem vigentes.
+
+**Normas na base (2026-10-14):** LC 214/2025 (5.615 trechos), EC 132/2023 (538), LC 227/2026
+(2.211), **Lei 8.212/1991** (Funrural, issue #145) e **Lei 9.528/1997, só o art. 6º** (SENAR, 4
+trechos). Comandos da #145:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ingestao -Dspring-boot.run.arguments="--ingestao.arquivo=/caminho/l8212cons.htm --ingestao.norma='Lei 8.212/1991' --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/l8212cons.htm --ingestao.data-captura=2026-10-14 --ingestao.vigencia-inicio=1991-07-25"
+```
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ingestao -Dspring-boot.run.arguments="--ingestao.arquivo=/caminho/l9528.htm --ingestao.norma='Lei 9.528/1997' --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/l9528.htm --ingestao.data-captura=2026-10-14 --ingestao.vigencia-inicio=1997-12-11 --ingestao.somente='art. 6º'"
+```
+
+**Grafias dos textos consolidados antigos** (a Lei 8.212 é de 1991), tratadas pelo
+`FatiadorDispositivos`:
+
+- revogado tachado **por estilo** (`text-decoration: line-through`), sem `<strike>`: sem isto, o
+  "Contribui com 3%" original do art. 25 entrava como vigente;
+- artigo acrescido **sem hífen** ("Art. 25A."), que virava uma segunda versão do art. 25;
+- assinatura com "em" ("Brasília, **em** 24 de julho de 1991"): sem reconhecê-la, as notas de
+  rodapé com redações de uma MP de 1998 entravam como artigos;
+- "Vigência encerrada" solto, de MP que caducou, que grudava no dispositivo vigente anterior (o
+  art. 30, IV, citado pela Ceres, terminava assim). Só a linha que é apenas a anotação sai.
+
+**A LC 214 na base precisa ser reingerida (achado da #145).** O compilado da LC 214 também tacha
+por estilo as redações substituídas pela LC 227/2026. Na ingestão de 2026-09-30 elas entraram como
+vigentes: **151 dispositivos têm duas redações abertas**, e a revogada ficou com o rótulo limpo
+(`art. 10, § 3º`) enquanto a vigente virou `art. 10, § 3º [2]`. A ingestão não conserta isso
+sozinha, de propósito: ela recusa texto alterado com a mesma `vigencia-inicio`, e os rótulos `[2]`
+ficariam órfãos e abertos. O reparo é apagar as linhas da norma e reingerir com o fatiador atual:
+
+```sql
+DELETE FROM legislacao_trecho WHERE norma = 'LC 214/2025';
+```
+
+Depois, o comando de ingestão da LC 214 (texto compilado recapturado), com `--ingestao.simular=true`
+antes. Conferência: `SELECT count(*) FROM legislacao_trecho WHERE dispositivo ~ '\[[0-9]\]'` deve
+dar zero.
 
 ### Resposta
 
