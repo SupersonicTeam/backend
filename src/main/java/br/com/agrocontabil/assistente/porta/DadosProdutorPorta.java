@@ -78,6 +78,41 @@ public interface DadosProdutorPorta {
   Pagina<Alerta> alertas(UUID produtorId);
 
   /**
+   * Retenções sobre as vendas autorizadas do período (RN009, issue #145): Funrural retido pelo
+   * comprador e IBS/CBS separado no pagamento (split payment). Valores calculados pelo backend.
+   */
+  Retencoes retencoes(UUID produtorId, LocalDate inicio, LocalDate fim);
+
+  /**
+   * Funrural de um conjunto de vendas, por parcela (1,2% + 0,1% + 0,2% SENAR).
+   *
+   * @param notas       vendas no conjunto
+   * @param base        receita bruta (valor dos produtos)
+   * @param previdencia parcela de 1,2%
+   * @param rat         parcela de 0,1%
+   * @param senar       parcela de 0,2%
+   * @param total       soma das parcelas
+   */
+  record Funrural(long notas, BigDecimal base, BigDecimal previdencia, BigDecimal rat,
+      BigDecimal senar, BigDecimal total) {}
+
+  /**
+   * Retenções do período, sem dado do comprador (só a categoria entra no cálculo).
+   *
+   * @param produtorPessoaFisica {@code false}: produtor PJ ou sem tipo cadastrado, fora da
+   *                             retenção do Funrural
+   * @param retidoPeloComprador  vendas a empresa ou cooperativa
+   * @param semRetencao          vendas a pessoa física, no varejo ou ao exterior (o produtor
+   *                             recolhe)
+   * @param ibsSplitPayment      IBS destacado nas vendas
+   * @param cbsSplitPayment      CBS destacada nas vendas
+   * @param notasVendidas        vendas autorizadas do período
+   */
+  record Retencoes(boolean produtorPessoaFisica, Funrural retidoPeloComprador,
+      Funrural semRetencao, BigDecimal ibsSplitPayment, BigDecimal cbsSplitPayment,
+      long notasVendidas) {}
+
+  /**
    * Um alerta, com a descrição montada pelo backend (sem observação livre nem dado pessoal).
    *
    * @param tipo          {@code VENCIMENTO_GUIA}, {@code FECHAMENTO_APURACAO} ou

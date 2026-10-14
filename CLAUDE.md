@@ -60,7 +60,8 @@ br.com.agrocontabil
 │                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,
 │                  # TributacaoService, CreditoTributarioService, ChaveAcessoGenerator,
 │                  # AliquotaIbsCbsResolver + ReducaoNcmResolver (resolvedores únicos débito×crédito),
-│                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider)
+│                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider,
+│                  # RetencaoService (RN009: Funrural retido pelo comprador + split payment, #145))
 ├── repository/    # Spring Data JPA (NotaFiscal, NotaFiscalValidacao, Produtor,
 │                  # CfopReferencia, NcmReferencia + repos do scaffolding AI)
 ├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario,
@@ -102,6 +103,8 @@ br.com.agrocontabil
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
 │                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros;
 │                  # VerificadorAfirmacaoDados (lei do MISTO não fala dos dados, #170);
+│                  # orquestracao/FundamentoRetencao (RN009, #145: retenção sempre com as duas
+│                  #   regras e citações fixas — Funrural da Lei 8.212 e split payment da LC 214);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;

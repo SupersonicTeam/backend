@@ -62,7 +62,8 @@ public class OrquestradorService {
       "proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado.",
       "consultarCreditos", "Nao encontrei compras com credito no periodo consultado.",
       "consultarApuracao", "Nao encontrei notas na apuracao do mes consultado.",
-      "listarAlertas", "Nao encontrei prazos vencendo nos proximos dias.");
+      "listarAlertas", "Nao encontrei prazos vencendo nos proximos dias.",
+      "consultarRetencoes", "Nao encontrei vendas autorizadas no periodo consultado.");
 
   /** Parte de dados do MISTO sem consulta nenhuma: o modelo não buscou dado algum. */
   public static final String SEM_DADOS =
@@ -76,11 +77,13 @@ public class OrquestradorService {
   private final ModoFallback fallback;
   private final DisponibilidadeModelo disponibilidade;
   private final TrechosDasCompras trechosDasCompras;
+  private final FundamentoRetencao fundamentoRetencao;
   private final double confiancaMinima;
 
   /** Constrói o orquestrador. */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
-      RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras, ModoFallback fallback,
+      RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
+      FundamentoRetencao fundamentoRetencao, ModoFallback fallback,
       DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
     this.classificador = classificador;
     this.rotaDados = rotaDados;
@@ -88,6 +91,7 @@ public class OrquestradorService {
     this.fallback = fallback;
     this.disponibilidade = disponibilidade;
     this.trechosDasCompras = trechosDasCompras;
+    this.fundamentoRetencao = fundamentoRetencao;
     this.confiancaMinima = propriedades.getOrquestracao().getConfiancaMinima();
   }
 
@@ -106,7 +110,7 @@ public class OrquestradorService {
     aoDecidirRota.accept(rota);
     contexto.verificarAtiva();
 
-    return switch (rota) {
+    ResultadoOrquestracao resultado = switch (rota) {
       case DADOS -> deRota(rota, dados(pergunta, contexto));
       case LEGISLACAO -> deRota(rota, lei(pergunta, contexto));
       case MISTO -> combinar(
@@ -114,6 +118,8 @@ public class OrquestradorService {
       case FORA_DE_ESCOPO -> new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO,
           PromptsCeres.FORA_DE_ESCOPO, DesfechoInteracao.FORA_DE_ESCOPO, List.of(), false);
     };
+    // Retencao (RN009): as duas regras e as citacoes vem do backend, nao da memoria do modelo.
+    return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }
 
   private Intencao classificar(String pergunta, ContextoAssistente contexto) {

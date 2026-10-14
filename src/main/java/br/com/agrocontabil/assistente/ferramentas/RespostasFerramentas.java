@@ -71,6 +71,40 @@ public final class RespostasFerramentas {
       String creditoTotal, long quantidadeNotas) {}
 
   /**
+   * Resultado de {@code consultarRetencoes} (RN009, issue #145): as duas retenções sobre as vendas.
+   *
+   * @param dataInicio                primeiro dia
+   * @param dataFim                   último dia
+   * @param vendasAutorizadas         vendas autorizadas do período
+   * @param funruralRetidoPeloComprador vendas a empresa ou cooperativa, com o Funrural retido
+   * @param funruralSemRetencao       vendas a pessoa física, no varejo ou ao exterior: sem
+   *                                  retenção, o próprio produtor recolhe
+   * @param splitPaymentIbs           IBS destacado, separado no pagamento
+   * @param splitPaymentCbs           CBS destacada, separada no pagamento
+   * @param splitPaymentTotal         soma dos dois
+   * @param avisos                    avisos fixos do backend (o que o cálculo não sabe)
+   */
+  public record Retencoes(
+      String dataInicio, String dataFim, long vendasAutorizadas,
+      Funrural funruralRetidoPeloComprador, Funrural funruralSemRetencao,
+      String splitPaymentIbs, String splitPaymentCbs, String splitPaymentTotal,
+      List<String> avisos) {}
+
+  /**
+   * Funrural de um conjunto de vendas.
+   *
+   * @param notas       vendas no conjunto
+   * @param base        receita bruta (valor dos produtos)
+   * @param aliquota    alíquota total
+   * @param previdencia parcela de 1,2%
+   * @param rat         parcela de 0,1%
+   * @param senar       parcela de 0,2%
+   * @param total       soma das parcelas
+   */
+  public record Funrural(long notas, String base, String aliquota, String previdencia,
+      String rat, String senar, String total) {}
+
+  /**
    * Resultado de {@code listarNotas}.
    *
    * @param dataInicio        primeiro dia do período consultado (o padrão é 90 dias atrás: a

@@ -48,12 +48,16 @@ public final class PromptsCeres {
   public static final String CLASSIFICACAO = """
       Classifique a pergunta de um produtor rural ao AgroContabil em UMA intencao:
       - DADOS: pede os dados dele no sistema - valores, compras, vendas, notas fiscais, IBS/CBS \
-      apurados, creditos, guias e vencimentos.
+      apurados, creditos, retencoes nas vendas (Funrural, split payment), guias e vencimentos.
       - LEGISLACAO: pergunta sobre a lei da reforma tributaria (IBS, CBS, EC 132/2023, \
-      LC 214/2025): regras, aliquotas, reducoes, isencoes, creditos, obrigacoes.
+      LC 214/2025) e do Funrural (Lei 8.212/1991): regras, aliquotas, reducoes, isencoes, \
+      creditos, retencoes, obrigacoes.
       - MISTO: precisa dos dados dele E da regra legal (ex.: "tenho direito a credito nessas \
       compras?", "minha apuracao esta de acordo com a reducao para insumos?").
       - FORA_DE_ESCOPO: qualquer outro assunto.
+      Pergunta sobre valores DELE ("quanto foi retido nas minhas vendas?", "quanto paguei de \
+      Funrural?") e DADOS, mesmo citando um tributo ou uma lei; se pedir tambem a regra ("e por \
+      qual regra?"), e MISTO. "Quem deve reter o Funrural?" sem falar dos dados dele e LEGISLACAO.
       Responda SOMENTE com JSON, sem texto em volta: {"intencao": "DADOS", "confianca": 0.9}
       A confianca vai de 0 a 1.
       """;

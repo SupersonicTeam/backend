@@ -10,6 +10,7 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Guia;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Nota;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
@@ -20,6 +21,7 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -87,6 +89,22 @@ public class FerramentasDadosProdutor {
   private static final int TERMO_MINIMO = 3;
   private static final int TERMO_MAXIMO = 60;
   private static final int LIMITE_PADRAO = 5;
+  /** 1,2% + 0,1% (Lei 8.212/1991, art. 25) + 0,2% SENAR (Lei 9.528/1997, art. 6º). */
+  static final String ALIQUOTA_FUNRURAL = "1,5% (1,2% + 0,1% + 0,2% SENAR)";
+  static final String FUNRURAL_NAO_SE_APLICA = "nao se aplica";
+  private static final String AVISO_SPLIT_PAYMENT = "O split payment separa o IBS e a CBS da nota"
+      + " no pagamento da venda (LC 214/2025, arts. 31 e 32).";
+  /** O que o cálculo não sabe e o produtor precisa ouvir (RN009, issue #145). */
+  static final List<String> AVISOS_PESSOA_FISICA = List.of(
+      "Se o produtor optou por contribuir sobre a folha de salarios (Lei 8.212/1991, art. 25,"
+          + " § 13), o comprador nao retem o Funrural.",
+      "Venda de semente para plantio ou de animal para reproducao nao entra na base do Funrural"
+          + " (art. 25, § 12); o calculo considera todas as vendas.",
+      AVISO_SPLIT_PAYMENT);
+  static final List<String> AVISOS_OUTROS = List.of(
+      "Produtor pessoa juridica ou sem tipo cadastrado: nao ha retencao do Funrural pelo"
+          + " comprador.",
+      AVISO_SPLIT_PAYMENT);
   private static final int DIAS_VENCIMENTO_PADRAO = 30;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
 
@@ -200,6 +218,49 @@ public class FerramentasDadosProdutor {
         FormatoBr.moeda(creditos.creditoCbs()),
         FormatoBr.moeda(creditos.creditoIbs().add(creditos.creditoCbs())),
         creditos.quantidadeNotas());
+  }
+
+  /** Retenções sobre as vendas do período: Funrural e split payment (RN009, issue #145). */
+  @Tool(name = "consultarRetencoes", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Mostra as retencoes sobre as VENDAS autorizadas do produtor num periodo: o Funrural (1,5% \
+      da receita, retido pelo comprador quando ele e empresa ou cooperativa; nas vendas a pessoa \
+      fisica, no varejo ou ao exterior nao ha retencao e o proprio produtor recolhe) e o IBS e a \
+      CBS da nota, que o split payment separa no pagamento. Use para perguntas como "quanto foi \
+      retido de Funrural nas minhas vendas?", "tenho retencao nas vendas de agosto?" ou "quanto \
+      do pagamento fica retido?". Fale sempre das duas retencoes.""")
+  public Retencoes consultarRetencoes(
+      @ToolParam(description = "Primeiro dia do periodo, formato AAAA-MM-DD") String dataInicio,
+      @ToolParam(description = "Ultimo dia do periodo, formato AAAA-MM-DD") String dataFim,
+      ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    LocalDate inicio = data(dataInicio, "dataInicio");
+    LocalDate fim = data(dataFim, "dataFim");
+    exigirPeriodo(inicio, fim);
+
+    DadosProdutorPorta.Retencoes r = dados.retencoes(contexto.produtorId(), inicio, fim);
+
+    contexto.registrarFonte("consultarRetencoes",
+        parametros("dataInicio", inicio.toString(), "dataFim", fim.toString()),
+        r.notasVendidas() == 0);
+    String aliquota = r.produtorPessoaFisica() ? ALIQUOTA_FUNRURAL : FUNRURAL_NAO_SE_APLICA;
+    return new Retencoes(
+        FormatoBr.data(inicio),
+        FormatoBr.data(fim),
+        r.notasVendidas(),
+        funrural(r.retidoPeloComprador(), aliquota),
+        funrural(r.semRetencao(), aliquota),
+        FormatoBr.moeda(r.ibsSplitPayment()),
+        FormatoBr.moeda(r.cbsSplitPayment()),
+        FormatoBr.moeda(r.ibsSplitPayment().add(r.cbsSplitPayment())),
+        r.produtorPessoaFisica() ? AVISOS_PESSOA_FISICA : AVISOS_OUTROS);
+  }
+
+  private static RespostasFerramentas.Funrural funrural(
+      DadosProdutorPorta.Funrural f, String aliquota) {
+    return new RespostasFerramentas.Funrural(f.notas(), FormatoBr.moeda(f.base()), aliquota,
+        FormatoBr.moeda(f.previdencia()), FormatoBr.moeda(f.rat()), FormatoBr.moeda(f.senar()),
+        FormatoBr.moeda(f.total()));
   }
 
   /** As notas mais recentes, com filtro opcional. */

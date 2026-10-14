@@ -296,4 +296,62 @@ class FerramentasDadosProdutorTest {
         .isInstanceOf(ContextoAssistenteAusenteException.class);
     verifyNoInteractions(dados);
   }
+
+  @Test
+  @DisplayName("#145: retencoes do periodo - Funrural retido e sem retencao, split payment, avisos")
+  void retencoes() {
+    when(dados.retencoes(PRODUTOR, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 8, 31)))
+        .thenReturn(new DadosProdutorPorta.Retencoes(true,
+            new DadosProdutorPorta.Funrural(1, new BigDecimal("144000.00"),
+                new BigDecimal("1728.00"), new BigDecimal("144.00"), new BigDecimal("288.00"),
+                new BigDecimal("2160.00")),
+            new DadosProdutorPorta.Funrural(2, new BigDecimal("15000.00"),
+                new BigDecimal("180.00"), new BigDecimal("15.00"), new BigDecimal("30.00"),
+                new BigDecimal("225.00")),
+            new BigDecimal("159.00"), new BigDecimal("1431.00"), 3));
+
+    RespostasFerramentas.Retencoes r =
+        ferramentas.consultarRetencoes("2026-01-01", "2026-08-31", toolContext);
+
+    assertThat(r.vendasAutorizadas()).isEqualTo(3);
+    assertThat(r.funruralRetidoPeloComprador().total()).isEqualTo("R$ 2.160,00");
+    assertThat(r.funruralRetidoPeloComprador().aliquota())
+        .isEqualTo(FerramentasDadosProdutor.ALIQUOTA_FUNRURAL);
+    assertThat(r.funruralSemRetencao().base()).isEqualTo("R$ 15.000,00");
+    assertThat(r.splitPaymentTotal()).isEqualTo("R$ 1.590,00");
+    assertThat(r.avisos()).isEqualTo(FerramentasDadosProdutor.AVISOS_PESSOA_FISICA)
+        .anyMatch(a -> a.contains("folha de salarios"));
+    assertThat(contexto.fontes()).singleElement().satisfies(f -> {
+      assertThat(f.funcao()).isEqualTo("consultarRetencoes");
+      assertThat(f.parametros())
+          .containsEntry("dataInicio", "2026-01-01").containsEntry("dataFim", "2026-08-31");
+    });
+    assertThat(contexto.nenhumDadoEncontrado()).isFalse();
+  }
+
+  @Test
+  @DisplayName("#145: produtor PJ - Funrural 'nao se aplica', so o aviso do split payment segue")
+  void retencoesProdutorPj() {
+    DadosProdutorPorta.Funrural zero = new DadosProdutorPorta.Funrural(0, BigDecimal.ZERO,
+        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+    when(dados.retencoes(PRODUTOR, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+        .thenReturn(new DadosProdutorPorta.Retencoes(false, zero, zero, BigDecimal.ZERO,
+            BigDecimal.ZERO, 0));
+
+    RespostasFerramentas.Retencoes r =
+        ferramentas.consultarRetencoes("2026-08-01", "2026-08-31", toolContext);
+
+    assertThat(r.funruralRetidoPeloComprador().aliquota())
+        .isEqualTo(FerramentasDadosProdutor.FUNRURAL_NAO_SE_APLICA);
+    assertThat(r.avisos()).isEqualTo(FerramentasDadosProdutor.AVISOS_OUTROS);
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#145: periodo invalido nao consulta")
+  void retencoesPeriodoInvalido() {
+    assertThatThrownBy(() -> ferramentas.consultarRetencoes("2026-09-01", "2026-08-01",
+        toolContext)).isInstanceOf(ParametroFerramentaInvalidoException.class);
+    verifyNoInteractions(dados);
+  }
 }

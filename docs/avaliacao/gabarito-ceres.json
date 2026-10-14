@@ -1,5 +1,5 @@
 {
-  "versao": "2026-10-14.1",
+  "versao": "2026-10-14.2",
   "perguntas": [
     {
       "id": "D01", "categoria": "DADOS",
@@ -143,6 +143,24 @@
       },
       "camposValor": ["quantidadeNoTotal"]
     },
+    {
+      "id": "R01", "categoria": "DADOS",
+      "pergunta": "Quanto de Funrural foi retido nas minhas vendas de janeiro a agosto de 2026?",
+      "rotaEsperada": "DADOS",
+      "funcoesEsperadas": ["consultarRetencoes"],
+      "parametrosEsperados": { "dataInicio": ["2026-01-01"], "dataFim": ["2026-08-31"] },
+      "camposValor": ["funruralRetidoPeloComprador.total"],
+      "dispositivosEsperados": ["Lei 8.212/1991, art. 30, inciso IV"]
+    },
+    {
+      "id": "R02", "categoria": "MISTO",
+      "pergunta": "Quanto do pagamento das minhas vendas de agosto de 2026 fica retido em IBS e CBS, e por qual regra?",
+      "rotaEsperada": "MISTO",
+      "funcoesEsperadas": ["consultarRetencoes"],
+      "parametrosEsperados": { "dataInicio": ["2026-08-01"], "dataFim": ["2026-08-31"] },
+      "camposValor": ["splitPaymentIbs", "splitPaymentCbs"],
+      "dispositivosEsperados": ["LC 214/2025, art. 31", "LC 214/2025, art. 32"]
+    },
 
     {
       "id": "L01", "categoria": "LEGISLACAO",
@@ -215,6 +233,12 @@
       "pergunta": "A Constituicao diz que o IBS pertence ao local de destino da operacao?",
       "rotaEsperada": "LEGISLACAO",
       "dispositivosEsperados": ["EC 132/2023, art. 1º (redação do art. 156-A"]
+    },
+    {
+      "id": "R03", "categoria": "LEGISLACAO",
+      "pergunta": "Quem deve reter o Funrural quando o produtor pessoa fisica vende para uma cooperativa?",
+      "rotaEsperada": "LEGISLACAO",
+      "dispositivosEsperados": ["Lei 8.212/1991, art. 30, inciso IV", "Lei 8.212/1991, art. 30, inciso III"]
     },
 
     {

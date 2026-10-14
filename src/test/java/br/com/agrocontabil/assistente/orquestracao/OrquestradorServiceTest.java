@@ -66,7 +66,7 @@ class OrquestradorServiceTest {
     AssistenteProperties propriedades = new AssistenteProperties();
     disponibilidade = new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L);
     orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
-        trechosDasCompras,
+        trechosDasCompras, new FundamentoRetencao(buscaTextual),
         new ModoFallback(buscaTextual, propriedades), disponibilidade, propriedades);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }

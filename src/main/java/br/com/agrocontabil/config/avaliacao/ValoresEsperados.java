@@ -142,15 +142,24 @@ public final class ValoresEsperados {
         .orElseThrow(() -> new IllegalArgumentException(id + ": funcao inexistente: " + nome));
   }
 
+  /** Campo do resultado; caminho com ponto entra em record aninhado ({@code funrural.total}). */
   private static String lerCampo(Object resultado, String campo, String id) {
-    RecordComponent componente = Arrays.stream(resultado.getClass().getRecordComponents())
-        .filter(c -> c.getName().equals(campo)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(
-            id + ": campo inexistente no resultado da funcao: " + campo));
-    try {
-      return String.valueOf(componente.getAccessor().invoke(resultado));
-    } catch (ReflectiveOperationException e) {
-      throw new IllegalStateException(e);
+    Object atual = resultado;
+    for (String parte : campo.split("\\.")) {
+      if (atual == null || !atual.getClass().isRecord()) {
+        throw new IllegalArgumentException(
+            id + ": campo inexistente no resultado da funcao: " + campo);
+      }
+      RecordComponent componente = Arrays.stream(atual.getClass().getRecordComponents())
+          .filter(c -> c.getName().equals(parte)).findFirst()
+          .orElseThrow(() -> new IllegalArgumentException(
+              id + ": campo inexistente no resultado da funcao: " + campo));
+      try {
+        atual = componente.getAccessor().invoke(atual);
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException(e);
+      }
     }
+    return String.valueOf(atual);
   }
 }

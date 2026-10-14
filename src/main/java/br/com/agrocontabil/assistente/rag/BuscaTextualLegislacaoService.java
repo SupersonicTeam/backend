@@ -4,7 +4,10 @@ import br.com.agrocontabil.assistente.DataSanitizer;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +104,16 @@ public class BuscaTextualLegislacaoService {
         AND content ~ :padrao
       ORDER BY (content ~ :exato) DESC, norma, length(dispositivo), dispositivo
       LIMIT :limite
+      """;
+
+  /** Dispositivos exatos vigentes (issue #145); a mais recente vence se houver duas vigências. */
+  private static final String SQL_DISPOSITIVOS = """
+      SELECT id, content, norma, dispositivo, metadata ->> 'url' AS url
+      FROM legislacao_trecho
+      WHERE (norma || '|' || dispositivo) IN (:chaves)
+        AND vigencia_inicio <= :data
+        AND vigencia_fim >= :data
+      ORDER BY vigencia_inicio DESC
       """;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -201,6 +214,39 @@ public class BuscaTextualLegislacaoService {
       log.warn("Falha na busca de anexos por NCM: {}", e.getClass().getName());
       throw new AssistenteIndisponivelException(
           "Falha na busca de anexos por NCM: " + e.getClass().getSimpleName(), e);
+    }
+  }
+
+  /**
+   * Trechos vigentes na data de dispositivos exatos (issue #145): as citações que a Ceres dá
+   * sempre que o assunto é retenção. Dispositivo ausente da base é omitido (quem chama decide o
+   * que fazer); a ordem é a do pedido.
+   *
+   * @param referencias {@code "norma|dispositivo"}, ex.: {@code "Lei 8.212/1991|art. 30, inciso IV"}
+   * @param data        data de referência
+   * @return os trechos encontrados, na ordem pedida
+   * @throws AssistenteIndisponivelException se o banco falhar
+   */
+  public List<TrechoRecuperado> buscarDispositivos(List<String> referencias, LocalDate data) {
+    if (referencias.isEmpty()) {
+      return List.of();
+    }
+    MapSqlParameterSource parametros = new MapSqlParameterSource()
+        .addValue("chaves", referencias)
+        .addValue("data", data.toString());
+    try {
+      Map<String, TrechoRecuperado> porChave = new HashMap<>();
+      jdbc.query(SQL_DISPOSITIVOS, parametros, rs -> {
+        String chave = rs.getString("norma") + "|" + rs.getString("dispositivo");
+        porChave.putIfAbsent(chave, new TrechoRecuperado(null, rs.getString("id"),
+            rs.getString("norma"), rs.getString("dispositivo"), rs.getString("url"),
+            rs.getString("content"), 0));
+      });
+      return referencias.stream().map(porChave::get).filter(Objects::nonNull).toList();
+    } catch (DataAccessException e) {
+      log.warn("Falha na busca de dispositivos: {}", e.getClass().getName());
+      throw new AssistenteIndisponivelException(
+          "Falha na busca de dispositivos: " + e.getClass().getSimpleName(), e);
     }
   }
 
