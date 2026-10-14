@@ -3,13 +3,9 @@ package br.com.agrocontabil.config.avaliacao;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
-import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
-import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
-import br.com.agrocontabil.exception.AssistenteIndisponivelException;
-import br.com.agrocontabil.model.DesfechoInteracao;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -31,13 +27,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +44,8 @@ import org.springframework.web.client.RestClient;
 
 /**
  * Comando de avaliação da Ceres com gabarito (issue #158). Só existe no profile
- * {@code avaliacao}, e só roda junto com {@code dev}: grava um seed fictício no banco.
+ * {@code avaliacao}, e só roda junto com {@code dev} (nunca com {@code prod} ou {@code homolog}):
+ * grava um seed fictício no banco.
  *
  * <pre>
  * ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,avaliacao \
@@ -69,7 +59,8 @@ import org.springframework.web.client.RestClient;
  *
  * <p>Grava {@code <data>-<hora>-<modelo>.md} (tabela para o artigo) e {@code .json} (respostas completas,
  * para revisão manual) em {@code avaliacao.saida}. Encerra com código 0 se a avaliação rodou até o
- * fim, qualquer que seja o resultado; 1 se não rodou (gabarito inválido, seed, banco).
+ * fim, qualquer que seja o resultado; 1 se não rodou (gabarito inválido, seed, banco, ou modelo
+ * que não respondeu à pergunta de aquecimento).
  */
 @Component
 @Profile("avaliacao")
@@ -98,8 +89,6 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
   private final LocalDate hoje;
   private final String hardwareInformado;
   private final Set<String> idsSelecionados;
-  private ExecutorService executor;
-  private int execucoresCriados;
 
   /** Constrói o comando com os parâmetros {@code avaliacao.*}. */
   public AvaliacaoCeresRunner(
@@ -136,31 +125,28 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
   @Override
   public void run(ApplicationArguments args) {
     int codigo = 1;
-    executor = novoExecutor();
-    try {
-      if (!ambiente.acceptsProfiles(Profiles.of("dev"))) {
-        throw new IllegalStateException(
-            "A avaliacao grava um seed ficticio: so roda com o profile dev (dev,avaliacao)");
-      }
+    try (ExecucaoComPrazo execucao = new ExecucaoComPrazo(
+        orquestrador::responder, propriedades.getTimeoutPergunta().plus(FOLGA_TIMEOUT))) {
+      exigirAmbienteDeDesenvolvimento(ambiente);
       Gabarito gabarito = carregarGabarito();
       ProdutoresAvaliacao produtores = seed.semear();
       Map<String, List<String>> esperados =
           valoresEsperados.calcular(gabarito, produtores.avaliado(), hoje);
 
+      log.info("Aquecendo o modelo (pergunta descartada)");
+      exigirModeloNoAr(execucao.executar(PERGUNTA_AQUECIMENTO, contextoNovo(produtores)));
+
       OffsetDateTime inicio = OffsetDateTime.now(ZONE).truncatedTo(ChronoUnit.SECONDS);
       long inicioNs = System.nanoTime();
-      log.info("Aquecendo o modelo (pergunta descartada)");
-      executar(PERGUNTA_AQUECIMENTO, produtores);
-
       List<ResultadoPergunta> resultados = new ArrayList<>();
       for (PerguntaGabarito pergunta : gabarito.perguntas()) {
-        ExecucaoPergunta execucao = executar(pergunta.pergunta(), produtores);
-        ResultadoPergunta resultado = AvaliadorResposta.avaliar(
-            pergunta, execucao, esperados.getOrDefault(pergunta.id(), List.of()));
-        resultados.add(resultado);
-        log.info("{} rota={} desfecho={} {} ms", pergunta.id(), execucao.rota(),
-            execucao.erro() == null ? execucao.desfecho() : execucao.erro(),
-            execucao.latenciaMs());
+        ExecucaoPergunta resposta =
+            execucao.executar(pergunta.pergunta(), contextoNovo(produtores));
+        resultados.add(AvaliadorResposta.avaliar(
+            pergunta, resposta, esperados.getOrDefault(pergunta.id(), List.of())));
+        log.info("{} rota={} desfecho={} {} ms", pergunta.id(), resposta.rota(),
+            resposta.erro() == null ? resposta.desfecho() : resposta.erro(),
+            resposta.latenciaMs());
       }
 
       RelatorioAvaliacao relatorio = new RelatorioAvaliacao(new RelatorioAvaliacao.Ambiente(
@@ -171,10 +157,40 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
     } catch (IOException | RuntimeException e) {
       log.error("Avaliacao da Ceres falhou: {}", e.getMessage(), e);
     } finally {
-      executor.shutdownNow();
       int saida = codigo;
       System.exit(SpringApplication.exit(contexto, () -> saida));
     }
+  }
+
+  /**
+   * O seed fictício só vai para o banco de desenvolvimento: exige {@code dev} e recusa
+   * {@code prod} e {@code homolog}, mesmo que {@code dev} também esteja ativo.
+   *
+   * @throws IllegalStateException fora do ambiente de desenvolvimento
+   */
+  static void exigirAmbienteDeDesenvolvimento(Environment ambiente) {
+    if (!ambiente.acceptsProfiles(Profiles.of("dev"))
+        || ambiente.acceptsProfiles(Profiles.of("prod | homolog"))) {
+      throw new IllegalStateException("A avaliacao grava um seed ficticio: so roda com dev,avaliacao"
+          + " e nunca junto com prod ou homolog");
+    }
+  }
+
+  /**
+   * Sem o modelo, toda pergunta cairia no modo fallback e o comando gravaria um relatório com cara
+   * de linha de base. O aquecimento é a prova de vida: falhou, a avaliação para.
+   *
+   * @throws IllegalStateException se o aquecimento não foi respondido pelo modelo
+   */
+  static void exigirModeloNoAr(ExecucaoPergunta aquecimento) {
+    if (RelatorioAvaliacao.falhaTecnica(aquecimento)) {
+      throw new IllegalStateException("O modelo nao respondeu a pergunta de aquecimento (desfecho "
+          + aquecimento.desfecho() + "): suba o modelo antes de avaliar");
+    }
+  }
+
+  private ContextoAssistente contextoNovo(ProdutoresAvaliacao produtores) {
+    return new ContextoAssistente(produtores.avaliado(), hoje);
   }
 
   private Gabarito carregarGabarito() throws IOException {
@@ -189,55 +205,6 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
           "avaliacao.ids tem id fora do gabarito: " + idsSelecionados);
     }
     return new Gabarito(completo.versao(), selecionadas);
-  }
-
-  /** Uma pergunta, com o timeout da API; falha vira desfecho, nunca interrompe a avaliação. */
-  private ExecucaoPergunta executar(String pergunta, ProdutoresAvaliacao produtores) {
-    ContextoAssistente contextoPergunta = new ContextoAssistente(produtores.avaliado(), hoje);
-    AtomicReference<Intencao> rota = new AtomicReference<>();
-    long inicio = System.nanoTime();
-    Future<ResultadoOrquestracao> futuro = executor.submit(
-        () -> orquestrador.responder(pergunta, contextoPergunta, rota::set));
-    try {
-      ResultadoOrquestracao r = futuro.get(
-          propriedades.getTimeoutPergunta().plus(FOLGA_TIMEOUT).toMillis(), TimeUnit.MILLISECONDS);
-      return new ExecucaoPergunta(r.rota(), r.texto(), r.desfecho(), r.citacoes(),
-          contextoPergunta.fontes(), r.modoFallback(), decorrido(inicio), null);
-    } catch (TimeoutException e) {
-      contextoPergunta.interromper(DesfechoInteracao.TEMPO_ESGOTADO);
-      futuro.cancel(true);
-      // A thread pode seguir presa na leitura do modelo: a proxima pergunta nao espera por ela.
-      executor.shutdownNow();
-      executor = novoExecutor();
-      return falha(rota, contextoPergunta, DesfechoInteracao.TEMPO_ESGOTADO, inicio, e);
-    } catch (ExecutionException e) {
-      DesfechoInteracao desfecho = e.getCause() instanceof AssistenteIndisponivelException
-          ? DesfechoInteracao.MODELO_INDISPONIVEL
-          : DesfechoInteracao.ERRO;
-      return falha(rota, contextoPergunta, desfecho, inicio, e.getCause());
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException("Avaliacao interrompida", e);
-    }
-  }
-
-  private ExecutorService novoExecutor() {
-    int numero = ++execucoresCriados;
-    return Executors.newSingleThreadExecutor(r -> {
-      Thread thread = new Thread(r, "agro-avaliacao-" + numero);
-      thread.setDaemon(true);
-      return thread;
-    });
-  }
-
-  private static ExecucaoPergunta falha(AtomicReference<Intencao> rota,
-      ContextoAssistente contextoPergunta, DesfechoInteracao desfecho, long inicio, Throwable e) {
-    return new ExecucaoPergunta(rota.get(), null, desfecho, List.of(), contextoPergunta.fontes(),
-        false, decorrido(inicio), e.getClass().getSimpleName());
-  }
-
-  private static long decorrido(long inicioNs) {
-    return Duration.ofNanos(System.nanoTime() - inicioNs).toMillis();
   }
 
   private String modeloEmbedding() {

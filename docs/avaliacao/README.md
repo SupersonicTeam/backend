@@ -23,7 +23,9 @@ agrocontabil-ollama`) e desligue o docker-compose do Spring, que tentaria criar 
 | `avaliacao.ids` | todas | só algumas perguntas (`D01,L01`), para depurar |
 
 O comando grava `AAAA-MM-DD-HHmm-<modelo>.md` (a tabela do artigo) e `.json` (as respostas completas,
-para revisão manual) e encerra. Ele só roda junto com `dev`, porque grava um seed fictício. Não
+para revisão manual) e encerra. Ele só roda junto com `dev` (e se recusa com `prod` ou `homolog`
+ativos), porque grava um seed fictício. Se o modelo não responder à pergunta de aquecimento, o
+comando para sem gravar relatório: sem isso, tudo cairia no modo fallback. Não
 existe endpoint para isso.
 
 ## O que é medido

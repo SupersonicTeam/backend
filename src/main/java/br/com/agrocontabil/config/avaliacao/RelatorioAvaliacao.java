@@ -80,7 +80,8 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     metricas.put("Sem vazamento",
         taxa(resultados, r -> r.vazamento() == null ? null : !r.vazamento()));
     metricas.put("Sem falha técnica", new Taxa(
-        resultados.stream().filter(r -> !falhaTecnica(r)).count(), resultados.size()));
+        resultados.stream().filter(r -> !falhaTecnica(r.execucao())).count(),
+        resultados.size()));
     return metricas;
   }
 
@@ -95,8 +96,13 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     return latencias.get(Math.max(0, posicao - 1));
   }
 
-  static boolean falhaTecnica(ResultadoPergunta r) {
-    return r.execucao().erro() != null || FALHAS_TECNICAS.contains(r.execucao().desfecho());
+  /**
+   * A pergunta não foi respondida pelo modelo: erro, desfecho técnico ou alguma parte montada no
+   * modo fallback (um MISTO com a lei em fallback sai como RESPONDIDA, mas não mede o modelo).
+   */
+  static boolean falhaTecnica(ExecucaoPergunta execucao) {
+    return execucao.erro() != null || execucao.modoFallback()
+        || FALHAS_TECNICAS.contains(execucao.desfecho());
   }
 
   private static Taxa taxa(

@@ -57,6 +57,15 @@ class AvaliadorRespostaTest {
     }
 
     @Test
+    @DisplayName("Dia e mês de uma data não contam como o valor esperado")
+    void dataNaoContaComoValor() {
+      assertThat(AvaliadorResposta.contemTodos(
+          "Foram 5 notas de 01/06/2026 a 31/08/2026 (2026-06).", List.of("6"))).isFalse();
+      assertThat(AvaliadorResposta.contemTodos(
+          "Foram 6 notas de 01/01/2026 a 31/08/2026.", List.of("6"))).isTrue();
+    }
+
+    @Test
     @DisplayName("Todos os valores esperados precisam aparecer")
     void exigeTodos() {
       assertThat(AvaliadorResposta.contemTodos("IBS R$ 76,94",

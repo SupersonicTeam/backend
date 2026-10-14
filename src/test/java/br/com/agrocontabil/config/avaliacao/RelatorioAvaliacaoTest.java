@@ -71,6 +71,15 @@ class RelatorioAvaliacaoTest {
   }
 
   @Test
+  @DisplayName("Fallback parcial (MISTO com uma parte sem modelo) também é falha técnica")
+  void fallbackParcialEFalhaTecnica() {
+    ExecucaoPergunta parcial = new ExecucaoPergunta(Intencao.MISTO, "texto",
+        DesfechoInteracao.RESPONDIDA, List.of(), List.of(), true, 1, null);
+
+    assertThat(RelatorioAvaliacao.falhaTecnica(parcial)).isTrue();
+  }
+
+  @Test
   @DisplayName("Markdown traz condições, métricas e uma linha por pergunta")
   void markdown() {
     String md = relatorio(List.of(

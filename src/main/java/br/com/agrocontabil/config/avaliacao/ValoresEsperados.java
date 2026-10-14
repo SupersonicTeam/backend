@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.aop.support.AopUtils;
@@ -26,6 +27,10 @@ import org.springframework.core.ParameterNameDiscoverer;
  * para a avaliação aqui, em vez de virar "erro do modelo" no relatório.
  */
 public final class ValoresEsperados {
+
+  /** Tipos de parâmetro que a avaliação preenche; primitivo não aceita "ausente". */
+  private static final Set<Class<?>> TIPOS_SUPORTADOS =
+      Set.of(String.class, Integer.class, ToolContext.class);
 
   private final FerramentasDadosProdutor ferramentas;
   private final ParameterNameDiscoverer nomesDeParametro = new DefaultParameterNameDiscoverer();
@@ -72,6 +77,15 @@ public final class ValoresEsperados {
    */
   void validar(PerguntaGabarito pergunta) {
     pergunta.funcoesEsperadas().forEach(funcao -> metodo(funcao, pergunta.id()));
+    if (pergunta.funcaoReferencia() != null) {
+      for (Class<?> tipo : metodo(pergunta.funcaoReferencia(), pergunta.id()).getParameterTypes()) {
+        if (!TIPOS_SUPORTADOS.contains(tipo)) {
+          throw new IllegalArgumentException(pergunta.id() + ": " + pergunta.funcaoReferencia()
+              + " tem parametro do tipo " + tipo.getSimpleName()
+              + ", que a avaliacao nao sabe preencher (so String, Integer e ToolContext)");
+        }
+      }
+    }
     if (pergunta.parametrosEsperados().isEmpty()) {
       return;
     }
