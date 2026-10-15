@@ -65,16 +65,21 @@ public class FerramentasDadosProdutor {
   /**
    * Zero por grafia nao e o mesmo que "nao comprou": a busca e por trecho exato da descricao. Sem
    * digitos de proposito, para nao virar numero "com fonte" no ValidadorNumeros.
+   *
+   * <p>Escrita <strong>para o usuario</strong>: o prompt manda repassar a observacao, e o modelo a
+   * copia como esta. Recado ao modelo aqui ("diga isso ao usuario", "em vez de afirmar...") chegava
+   * a resposta palavra por palavra (issue #203). O teste {@code textosDasFuncoesSaoParaOUsuario}
+   * barra a volta disso.
    */
   static final String NADA_POR_DESCRICAO =
-      "Nenhuma compra encontrada com esse termo no periodo. A busca procura o trecho exato na "
-          + "descricao dos itens (acentos e grafia contam): diga isso ao usuario e sugira outro "
-          + "termo ou o codigo NCM, em vez de afirmar que ele nao comprou.";
+      "Nao encontrei compras com esse termo no periodo. A busca procura o termo exato na "
+          + "descricao dos itens das notas (acentos e grafia contam): tente outro termo ou o "
+          + "codigo NCM do insumo.";
 
   /** Mesmo cuidado para a busca por NCM. */
   static final String NADA_POR_NCM =
-      "Nenhuma compra encontrada com esse codigo NCM no periodo. Diga isso ao usuario e sugira "
-          + "conferir o codigo ou buscar pelo nome do insumo.";
+      "Nao encontrei compras com esse codigo NCM no periodo. Confira o codigo ou busque pelo "
+          + "nome do insumo.";
 
   /** Abrangencia do valorTotal de listarNotas sem filtro de situacao (sem digitos, ver acima). */
   static final String TOTAL_SO_AUTORIZADAS =
