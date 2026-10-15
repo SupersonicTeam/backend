@@ -249,6 +249,11 @@ CREATE INDEX IF NOT EXISTS idx_assistente_interacao_produtor_criado
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS
     tokens_estimados BOOLEAN DEFAULT FALSE NOT NULL;
 
+-- Desfecho por parte do MISTO — Sprint 7 (migration 0030). Idempotente, como o bloco acima.
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS desfecho_dados VARCHAR(40);
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS desfecho_legislacao VARCHAR(40);
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS pergunta_lei_reescrita BOOLEAN;
+
 -- Cota semanal de creditos da Ceres — Sprint 7 issue #166 (migration 0029). Manter sincronizado
 -- com 0029-assistente-uso-semanal.xml.
 CREATE TABLE IF NOT EXISTS assistente_uso_semanal (

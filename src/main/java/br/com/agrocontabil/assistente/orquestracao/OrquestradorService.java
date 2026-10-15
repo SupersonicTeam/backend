@@ -106,15 +106,15 @@ public class OrquestradorService {
    */
   public ResultadoOrquestracao responder(
       String pergunta, ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota) {
-    Intencao rota = classificar(pergunta, contexto);
+    ClassificacaoIntencao classificacao = classificar(pergunta, contexto);
+    Intencao rota = classificacao.intencao();
     aoDecidirRota.accept(rota);
     contexto.verificarAtiva();
 
     ResultadoOrquestracao resultado = switch (rota) {
       case DADOS -> deRota(rota, dados(pergunta, contexto));
       case LEGISLACAO -> deRota(rota, lei(pergunta, contexto));
-      case MISTO -> combinar(
-          dados(pergunta, contexto), leiRegraGeral(pergunta, contexto), contexto);
+      case MISTO -> misto(pergunta, classificacao.perguntaLei(), contexto);
       case FORA_DE_ESCOPO -> new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO,
           PromptsCeres.FORA_DE_ESCOPO, DesfechoInteracao.FORA_DE_ESCOPO, List.of(), false);
     };
@@ -122,22 +122,41 @@ public class OrquestradorService {
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }
 
-  private Intencao classificar(String pergunta, ContextoAssistente contexto) {
+  /** Intenção da pergunta; confiança abaixo do mínimo vira fora de escopo. */
+  private ClassificacaoIntencao classificar(String pergunta, ContextoAssistente contexto) {
     if (FiltroInjecao.pareceInjecao(pergunta)) {
       log.info("Ceres: pergunta com forma de prompt injection tratada como fora de escopo");
-      return Intencao.FORA_DE_ESCOPO;
+      return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1);
     }
     if (disponibilidade.disponivel()) {
       try {
         ClassificacaoIntencao classificacao = classificador.classificar(pergunta, contexto);
         return classificacao.confianca() < confiancaMinima
-            ? Intencao.FORA_DE_ESCOPO
-            : classificacao.intencao();
+            ? new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, classificacao.confianca())
+            : classificacao;
       } catch (AssistenteIndisponivelException e) {
         semModelo(contexto, "classificacao");
       }
     }
-    return fallback.classificar(pergunta);
+    return new ClassificacaoIntencao(fallback.classificar(pergunta), 1);
+  }
+
+  /**
+   * As duas partes do MISTO. A de lei recebe só a pergunta legal, se o classificador a separou e
+   * ela passou nas conferências ({@link PerguntaLei}); senão, a pergunta inteira. O desfecho de
+   * cada parte fica no contexto para a auditoria.
+   */
+  private ResultadoOrquestracao misto(
+      String pergunta, String reescrita, ContextoAssistente contexto) {
+    ResultadoRota dados = dados(pergunta, contexto);
+    contexto.registrarDesfechoDados(dados.desfecho());
+    PerguntaLei perguntaLei = PerguntaLei.escolher(pergunta, reescrita);
+    if (reescrita != null && !perguntaLei.reescrita()) {
+      log.info("Ceres: pergunta de lei do classificador descartada; vai a pergunta inteira");
+    }
+    ResultadoRota lei = leiRegraGeral(perguntaLei.texto(), contexto);
+    contexto.registrarDesfechoLegislacao(lei.desfecho(), perguntaLei.reescrita());
+    return combinar(dados, lei, contexto);
   }
 
   private ResultadoRota dados(String pergunta, ContextoAssistente contexto) {
@@ -163,7 +182,11 @@ public class OrquestradorService {
     return fallback.parteLei(pergunta, contexto);
   }
 
-  /** Parte de lei do MISTO: só a regra geral, sem falar dos dados (issue #170). */
+  /**
+   * Parte de lei do MISTO: só a regra geral, sem falar dos dados (issue #170).
+   *
+   * @param pergunta a pergunta legal ({@link PerguntaLei}), não necessariamente a do usuário
+   */
   private ResultadoRota leiRegraGeral(String pergunta, ContextoAssistente contexto) {
     if (disponibilidade.disponivel()) {
       try {

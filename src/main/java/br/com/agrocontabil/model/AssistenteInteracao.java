@@ -52,6 +52,25 @@ public class AssistenteInteracao {
       columnDefinition = "VARCHAR(40)")
   private DesfechoInteracao desfecho;
 
+  /** Desfecho da parte de dados do MISTO; nulo nas outras rotas (changeSet 0030). */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "desfecho_dados", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private DesfechoInteracao desfechoDados;
+
+  /** Desfecho da parte de lei do MISTO; nulo nas outras rotas (changeSet 0030). */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "desfecho_legislacao", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private DesfechoInteracao desfechoLegislacao;
+
+  /**
+   * A parte de lei do MISTO recebeu a pergunta legal separada pelo classificador. Só o fato: o
+   * texto da pergunta, reescrita ou não, nunca é gravado.
+   */
+  @Column(name = "pergunta_lei_reescrita", updatable = false)
+  private Boolean perguntaLeiReescrita;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;

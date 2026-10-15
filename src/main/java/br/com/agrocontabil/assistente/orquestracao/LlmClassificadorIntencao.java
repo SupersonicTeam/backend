@@ -56,7 +56,10 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
     return interpretar(resposta.getResult().getOutput().getText());
   }
 
-  /** Lê {@code {"intencao": "...", "confianca": 0.9}} com tolerância. */
+  /**
+   * Lê {@code {"intencao": "...", "confianca": 0.9}} com tolerância; no MISTO, também o
+   * {@code perguntaLei} (conferido depois pelo orquestrador).
+   */
   ClassificacaoIntencao interpretar(String texto) {
     if (texto == null) {
       return ClassificacaoIntencao.indeterminada();
@@ -72,7 +75,11 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
       JsonNode json = objectMapper.readTree(limpo.substring(inicio, fim + 1));
       Intencao intencao = Intencao.valueOf(
           json.path("intencao").asText("").trim().toUpperCase(Locale.ROOT));
-      return new ClassificacaoIntencao(intencao, json.path("confianca").asDouble(0));
+      // A parte legal so interessa ao MISTO; nas outras rotas a pergunta vai inteira.
+      String perguntaLei = intencao == Intencao.MISTO && json.path("perguntaLei").isTextual()
+          ? json.path("perguntaLei").asText()
+          : null;
+      return new ClassificacaoIntencao(intencao, json.path("confianca").asDouble(0), perguntaLei);
     } catch (Exception e) {
       log.info("Classificador de intencao devolveu JSON invalido: {}", e.getClass().getSimpleName());
       return ClassificacaoIntencao.indeterminada();

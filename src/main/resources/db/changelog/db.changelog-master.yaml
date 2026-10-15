@@ -64,3 +64,5 @@ databaseChangeLog:
       file: db/changelog/changes/0028-alerta-tributario.xml
   - include:
       file: db/changelog/changes/0029-assistente-uso-semanal.xml
+  - include:
+      file: db/changelog/changes/0030-assistente-interacao-partes-misto.xml

@@ -166,7 +166,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
           .append(" | ").append(r.execucao().rota() == null ? "—" : r.execucao().rota())
           .append(" | ").append(r.execucao().erro() != null
               ? "erro: " + r.execucao().erro()
-              : r.execucao().desfecho())
+              : r.execucao().desfecho()).append(partesMisto(r.execucao()))
           .append(" | ").append(marca(r.rotaCorreta()))
           .append(" | ").append(marca(r.funcaoCorreta()))
           .append(" | ").append(marca(r.parametrosCorretos()))
@@ -177,6 +177,16 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
           .append(" | ").append(segundos(r.execucao().latenciaMs())).append(" |\n");
     }
     return md.toString();
+  }
+
+  /** No MISTO, o desfecho de cada parte: mostra qual das duas foi descartada. */
+  static String partesMisto(ExecucaoPergunta execucao) {
+    if (execucao.desfechoDados() == null && execucao.desfechoLegislacao() == null) {
+      return "";
+    }
+    return " (dados " + (execucao.desfechoDados() == null ? "—" : execucao.desfechoDados())
+        + ", lei " + (execucao.desfechoLegislacao() == null ? "—" : execucao.desfechoLegislacao())
+        + (Boolean.TRUE.equals(execucao.perguntaLeiReescrita()) ? ", reescrita" : "") + ")";
   }
 
   private static String marca(Boolean valor) {

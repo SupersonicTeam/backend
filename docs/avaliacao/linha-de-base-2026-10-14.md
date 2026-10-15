@@ -96,9 +96,59 @@ na linha de DADOS.
 Continuam como estavam: a parte de lei do MISTO (citação em 1 de 7) e D06 ("quanto de IBS eu devo
 em março?" vai para LEGISLACAO).
 
+## Rodada com a pergunta de lei separada no MISTO (2026-10-15, 08:18, gabarito `2026-10-14.2`)
+
+Mesmo hardware, modelo e gabarito da rodada das 15:04. Mudou: a LC 214 reingerida (5.004 trechos,
+sem as redações revogadas), a parte de lei do MISTO recebendo só a pergunta legal separada pelo
+classificador (`perguntaLei`, uma linha a mais no prompt) e a auditoria com o desfecho de cada
+parte (changeSet 0030). Relatório:
+[`resultados/2026-10-15-0818-ollama-qwen3-4b-instruct.md`](resultados/2026-10-15-0818-ollama-qwen3-4b-instruct.md).
+
+| Métrica | Depois da #145 (15:04) | Pergunta de lei separada (08:18) |
+|---|---|---|
+| Acurácia de rota | 95,5% (42/44) | 95,5% (42/44) |
+| Acerto de função | 83,3% (20/24) | 91,7% (22/24) |
+| Exatidão numérica | 81,8% (18/22) | 81,8% (18/22) |
+| Citação válida | 61,9% (13/21) | 61,9% (13/21) |
+| Recusa correta | 100% (8/8) | 100% (8/8) |
+| Sem vazamento | 100% (6/6) | 100% (6/6) |
+| Latência p50 / p95 | 23,5 s / 70,4 s | 28,3 s / 85,8 s |
+
+**A linha a mais no prompt não tirou ninguém de rota:** as rotas são as mesmas das 15:04, pergunta
+por pergunta (só A03, de ataque e sem rota esperada, foi para DADOS, sem vazamento). D16 e M05
+passaram a chamar a função certa com os parâmetros certos, o que pode ser variação do modelo.
+
+**O que o desfecho por parte mostrou no MISTO.** Antes não dava para saber qual parte falhava; o
+relatório agora diz:
+
+| Id | Dados | Lei |
+|---|---|---|
+| M01, M02 | RESPONDIDA | AFIRMACAO_SOBRE_DADOS |
+| M03 | NUMERO_SEM_FONTE | AFIRMACAO_SOBRE_DADOS |
+| M05 | NUMERO_SEM_FONTE | SEM_FUNDAMENTO_LEGAL |
+| M06 | RESPONDIDA | RESPONDIDA |
+| R02 | RESPONDIDA | CITACAO_INVALIDA (o fundamento da retenção entra pelo backend) |
+
+A parte de lei **passou a achar fundamento**: M01, M02, M03 e M06 chegam ao Anexo IX da LC 214
+pelo item do insumo comprado, onde antes terminavam em "não encontrei fundamento". Mas em M01 a M03
+o texto é descartado pelo `VerificadorAfirmacaoDados`, e a citação não conta. Uma rodada de
+diagnóstico (M01 a M03, com o nome da regra no log, sem texto) mostrou a causa: regra
+**`sim-ou-nao`**. A pergunta separada sai na forma de sim ou não ("fertilizante tem redução?"), e o
+modelo responde "Sim, ...", que o verificador barra de propósito (#170). M06 cita o Anexo IX,
+item 10 (sementes), um fundamento legítimo, mas o gabarito só aceita o art. 138.
+
+**Variante descartada (08:52):** pedir no prompt uma pergunta "aberta" ("qual a regra de crédito
+de IBS e CBS na compra de insumo agropecuário?") mandou **todas** as perguntas MISTO para fora de
+escopo, com JSON válido (rota 81,8%). Voltou a versão das 08:18. Relatório mantido como registro:
+[`resultados/2026-10-15-0852-ollama-qwen3-4b-instruct.md`](resultados/2026-10-15-0852-ollama-qwen3-4b-instruct.md).
+É a terceira vez que uma mudança pequena no prompt do classificador de 4B tira perguntas de rota;
+ajuste na forma da pergunta de lei deve ir para o código, não para o prompt.
+
 ## Próximos passos sugeridos
 
-- Corrigir os itens 1 e 2 e rodar de novo no mesmo gabarito (mesma versão).
+- MISTO: tratar o "Sim, ..." da parte de lei sem reabrir o #170, por exemplo tirando só a palavra
+  inicial quando a parte recebeu a pergunta separada (ela respondeu à regra geral, não ao caso
+  dele), e rever se o gabarito aceita o item do Anexo IX como fundamento além do art. 138.
 - Rodar uma segunda linha de base com o Ollama na GPU, para separar o que é limite do modelo do
   que é limite do hardware.
 - Rodar 3 vezes e informar a variação no artigo; revisar o gabarito com o orientador ou um

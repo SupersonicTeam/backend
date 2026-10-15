@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0030-assistente-interacao-partes-misto.xml
+         Sprint 7 — desfecho de cada parte da pergunta MISTO na auditoria.
+
+         O MISTO responde em duas partes (dados e lei), cada uma com os
+         proprios validadores, e a auditoria so guardava o desfecho final:
+         nao dava para saber qual das duas foi descartada.
+         - desfecho_dados / desfecho_legislacao: o DesfechoInteracao de cada
+           parte. Nulos fora do MISTO (o desfecho da pergunta ja e o da rota)
+           e na parte que nao chegou a terminar.
+         - pergunta_lei_reescrita: a parte de lei recebeu a pergunta legal
+           separada pelo classificador (true) ou a pergunta inteira (false).
+           So o fato: o texto da pergunta, reescrita ou nao, nunca e gravado.
+         ================================================================ -->
+
+    <changeSet id="0030-add-partes-misto" author="supersonic-team">
+        <comment>Desfecho por parte do MISTO na auditoria da Ceres.</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="desfecho_dados" type="VARCHAR(40)"/>
+            <column name="desfecho_legislacao" type="VARCHAR(40)"/>
+            <column name="pergunta_lei_reescrita" type="BOOLEAN"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

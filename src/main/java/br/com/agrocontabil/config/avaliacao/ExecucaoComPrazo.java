@@ -63,7 +63,8 @@ final class ExecucaoComPrazo implements AutoCloseable {
     try {
       ResultadoOrquestracao r = futuro.get(prazo.toMillis(), TimeUnit.MILLISECONDS);
       return new ExecucaoPergunta(r.rota(), r.texto(), r.desfecho(), r.citacoes(),
-          contexto.fontes(), r.modoFallback(), decorrido(inicio), null);
+          contexto.fontes(), r.modoFallback(), decorrido(inicio), null, contexto.desfechoDados(),
+          contexto.desfechoLegislacao(), contexto.perguntaLeiReescrita());
     } catch (TimeoutException e) {
       contexto.interromper(DesfechoInteracao.TEMPO_ESGOTADO);
       futuro.cancel(true);
@@ -98,7 +99,8 @@ final class ExecucaoComPrazo implements AutoCloseable {
   private static ExecucaoPergunta falha(AtomicReference<Intencao> rota,
       ContextoAssistente contexto, DesfechoInteracao desfecho, long inicio, Throwable e) {
     return new ExecucaoPergunta(rota.get(), null, desfecho, List.of(), contexto.fontes(),
-        false, decorrido(inicio), e.getClass().getSimpleName());
+        false, decorrido(inicio), e.getClass().getSimpleName(), contexto.desfechoDados(),
+        contexto.desfechoLegislacao(), contexto.perguntaLeiReescrita());
   }
 
   private static long decorrido(long inicioNs) {

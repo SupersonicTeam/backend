@@ -4,6 +4,8 @@ import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,21 +24,27 @@ import org.springframework.stereotype.Component;
 @Component
 public class VerificadorAfirmacaoDados {
 
-  private static final List<Pattern> REFERENCIAS_AO_USUARIO = List.of(
+  private static final Logger log = LoggerFactory.getLogger(VerificadorAfirmacaoDados.class);
+
+  /** Regra com o nome que vai ao log (nunca o texto: ele pode trazer dado do produtor). */
+  private record Regra(String nome, Pattern padrao) {}
+
+  private static final List<Regra> REFERENCIAS_AO_USUARIO = List.of(
       // Segunda pessoa, inclusive a de tratamento.
-      Pattern.compile("\\b(voce|voces|vc|o senhor|a senhora)\\b"),
+      new Regra("segunda-pessoa", Pattern.compile("\\b(voce|voces|vc|o senhor|a senhora)\\b")),
       // Posse do que só os dados mostram ("seus insumos", "no seu caso"). "Seu/sua" sozinho não:
       // o texto legal usa a terceira pessoa ("a pessoa juridica e suas filiais").
-      Pattern.compile("\\b(seu|sua|seus|suas|teu|tua|teus|tuas)\\s+(compras?|vendas?|notas?|"
+      new Regra("posse", Pattern.compile("\\b(seu|sua|seus|suas|teu|tua|teus|tuas)\\s+("
+          + "compras?|vendas?|notas?|"
           + "insumos?|fertilizantes?|defensivos?|sementes?|produtos?|operacao|operacoes|"
           + "creditos?|guias?|aquisicao|aquisicoes|mercadorias?|dados|apuracao|fazenda|"
-          + "propriedade|empresa|impostos?|tributos?|saldo|debitos?|caso|situacao)\\b"),
+          + "propriedade|empresa|impostos?|tributos?|saldo|debitos?|caso|situacao)\\b")),
       // Resposta de sim ou não à pergunta sobre o caso dele ("Sim, têm direito..."): uma regra geral
       // não começa assim. "Não incide" passa; "Não, ..." não.
-      Pattern.compile("^\\W*(sim\\b|nao\\s*[,.;:!])"),
+      new Regra("sim-ou-nao", Pattern.compile("^\\W*(sim\\b|nao\\s*[,.;:!])")),
       // Ações do usuário no passado, que só os dados poderiam confirmar.
-      Pattern.compile("\\b(comprou|vendeu|adquiriu|pagou|emitiu|recebeu|comprados por|vendidos por)"
-          + "\\b"));
+      new Regra("acao-do-usuario", Pattern.compile(
+          "\\b(comprou|vendeu|adquiriu|pagou|emitiu|recebeu|comprados por|vendidos por)\\b")));
 
   private static final Pattern DIACRITICOS = Pattern.compile("\\p{M}+");
 
@@ -49,6 +57,12 @@ public class VerificadorAfirmacaoDados {
     String normalizado = DIACRITICOS.matcher(
         Normalizer.normalize(texto == null ? "" : texto, Normalizer.Form.NFD)).replaceAll("")
         .toLowerCase(Locale.ROOT);
-    return REFERENCIAS_AO_USUARIO.stream().anyMatch(p -> p.matcher(normalizado).find());
+    for (Regra regra : REFERENCIAS_AO_USUARIO) {
+      if (regra.padrao().matcher(normalizado).find()) {
+        log.info("Ceres: parte de lei do MISTO fala dos dados (regra {})", regra.nome());
+        return true;
+      }
+    }
+    return false;
   }
 }

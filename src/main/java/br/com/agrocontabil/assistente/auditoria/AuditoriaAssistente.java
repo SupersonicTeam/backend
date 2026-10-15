@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
  * <p>O que entra: produtor, rota, desfecho, funções usadas com os parâmetros (mascarados pelo
  * {@link DataSanitizer} — o parâmetro de busca pode ecoar o que o usuário digitou), quantas funções
  * o modelo pediu, trechos de lei citados, modelo, latência, tokens e o <em>tamanho</em> da pergunta.
+ * No MISTO, também o desfecho de cada parte e se a de lei recebeu a pergunta legal reescrita.
  *
  * <p>O que <strong>não</strong> entra, por desenho: o texto da pergunta e o da resposta. O registro
  * nem tem onde guardá-los.
@@ -56,6 +57,9 @@ public class AuditoriaAssistente {
         contexto.produtorId(),
         rota,
         desfecho,
+        contexto.desfechoDados(),
+        contexto.desfechoLegislacao(),
+        contexto.perguntaLeiReescrita(),
         funcoesJson(contexto.fontes()),
         contexto.chamadasDeFuncao(),
         contexto.trechosCitados().isEmpty() ? null : json(contexto.trechosCitados()),

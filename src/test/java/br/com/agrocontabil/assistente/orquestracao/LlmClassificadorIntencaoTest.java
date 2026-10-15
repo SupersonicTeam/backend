@@ -60,6 +60,29 @@ class LlmClassificadorIntencaoTest {
   }
 
   @Test
+  @DisplayName("MISTO: le a pergunta de lei separada pelo classificador")
+  void mistoLePerguntaLei() {
+    ClassificacaoIntencao c = classificador.interpretar("{\"intencao\": \"MISTO\","
+        + " \"confianca\": 0.8, \"perguntaLei\": \"  adubo da direito a credito?  \"}");
+
+    assertThat(c.intencao()).isEqualTo(Intencao.MISTO);
+    assertThat(c.perguntaLei()).isEqualTo("adubo da direito a credito?");
+  }
+
+  @Test
+  @DisplayName("Pergunta de lei so no MISTO, so texto e nunca em branco")
+  void perguntaLeiForaDoMistoIgnorada() {
+    assertThat(classificador.interpretar("{\"intencao\": \"LEGISLACAO\", \"confianca\": 0.8,"
+        + " \"perguntaLei\": \"outra pergunta\"}").perguntaLei()).isNull();
+    assertThat(classificador.interpretar("{\"intencao\": \"MISTO\", \"confianca\": 0.8,"
+        + " \"perguntaLei\": {\"x\": 1}}").perguntaLei()).isNull();
+    assertThat(classificador.interpretar("{\"intencao\": \"MISTO\", \"confianca\": 0.8,"
+        + " \"perguntaLei\": \"   \"}").perguntaLei()).isNull();
+    assertThat(classificador.interpretar("{\"intencao\": \"MISTO\", \"confianca\": 0.8}")
+        .perguntaLei()).isNull();
+  }
+
+  @Test
   @DisplayName("Resposta ilegivel ou intencao desconhecida: indeterminada (fora de escopo, 0)")
   void ilegivel() {
     for (String texto : new String[] {
