@@ -23,10 +23,14 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -357,5 +361,41 @@ class FerramentasDadosProdutorTest {
     assertThatThrownBy(() -> ferramentas.consultarRetencoes("2026-09-01", "2026-08-01",
         toolContext)).isInstanceOf(ParametroFerramentaInvalidoException.class);
     verifyNoInteractions(dados);
+  }
+
+  @Test
+  @DisplayName("#203: todo texto que as funcoes devolvem pode ir ao usuario como esta")
+  void textosDasFuncoesSaoParaOUsuario() throws Exception {
+    // O prompt manda repassar a observacao, e o modelo copia: recado ao modelo vira resposta.
+    List<String> textos = new ArrayList<>();
+    for (Field campo : FerramentasDadosProdutor.class.getDeclaredFields()) {
+      if (!Modifier.isStatic(campo.getModifiers())) {
+        continue;
+      }
+      campo.setAccessible(true);
+      Object valor = campo.get(null);
+      if (valor instanceof String texto) {
+        textos.add(texto);
+      } else if (valor instanceof List<?> lista) {
+        lista.stream().filter(String.class::isInstance).map(String.class::cast).forEach(textos::add);
+      }
+    }
+    assertThat(textos).contains(FerramentasDadosProdutor.NADA_POR_DESCRICAO,
+        FerramentasDadosProdutor.NADA_POR_NCM, FerramentasDadosProdutor.AVISO_EXPORTACAO);
+    for (String texto : textos) {
+      String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD)
+          .replaceAll("\\p{M}+", "").toLowerCase(java.util.Locale.ROOT);
+      assertThat(normalizado).as(texto).doesNotContain(
+          "usuario", "diga ", "em vez de", "modelo", "repasse", "responda", "afirmar");
+    }
+  }
+
+  @Test
+  @DisplayName("#203: busca vazia por descricao fala com o usuario, sem digito")
+  void nadaPorDescricaoParaOUsuario() {
+    assertThat(FerramentasDadosProdutor.NADA_POR_DESCRICAO)
+        .startsWith("Nao encontrei compras").contains("codigo NCM").doesNotContainPattern("\\d");
+    assertThat(FerramentasDadosProdutor.NADA_POR_NCM)
+        .startsWith("Nao encontrei compras").doesNotContainPattern("\\d");
   }
 }

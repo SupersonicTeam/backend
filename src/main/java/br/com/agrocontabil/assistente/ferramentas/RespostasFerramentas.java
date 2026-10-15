@@ -24,7 +24,8 @@ public final class RespostasFerramentas {
    * @param valorTotal      soma do valor dos itens comprados
    * @param quantidadeNotas notas de entrada em que o insumo aparece
    * @param porUnidade      quantidade e valor por unidade de medida
-   * @param observacao      orientacao ao usuario quando nada foi encontrado; nulo caso contrario
+   * @param observacao      frase ao usuario quando nada foi encontrado, repassada como esta (nunca
+   *                        recado ao modelo, #203); nulo caso contrario
    */
   public record ComprasInsumo(
       String insumo, String criterio, String dataInicio, String dataFim, String valorTotal,
