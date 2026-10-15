@@ -2,6 +2,7 @@ package br.com.agrocontabil.db;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
 import java.time.Duration;
@@ -153,6 +154,23 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0030: desfecho por parte do MISTO, nulo fora dele, sem texto")
+  void changeSet0030PartesDoMisto() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable FROM information_schema.columns"
+            + " WHERE table_name = 'assistente_interacao' AND column_name IN"
+            + " ('desfecho_dados', 'desfecho_legislacao', 'pergunta_lei_reescrita')"
+            + " ORDER BY column_name");
+
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable")).containsExactly(
+        tuple("desfecho_dados", "character varying", "YES"),
+        tuple("desfecho_legislacao", "character varying", "YES"),
+        tuple("pergunta_lei_reescrita", "boolean", "YES"));
+  }
+
+  @Test
   @DisplayName("changeSet 0029: uso semanal sem negativos e reserva concorrente no PostgreSQL (#166)")
   void changeSet0029UsoSemanalEReservaConcorrente() throws Exception {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -239,9 +257,9 @@ class LiquibaseChangelogIntegrationTest {
         String.class);
 
     assertThat(colunas).containsExactly(
-        "chamadas_funcao", "criado_em", "desfecho", "funcoes", "id", "latencia_ms", "modelo",
-        "produtor_id", "rota", "tamanho_pergunta", "tokens_entrada", "tokens_estimados",
-        "tokens_saida",
+        "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados", "desfecho_legislacao",
+        "funcoes", "id", "latencia_ms", "modelo", "pergunta_lei_reescrita", "produtor_id", "rota",
+        "tamanho_pergunta", "tokens_entrada", "tokens_estimados", "tokens_saida",
         "trechos_citados");
     // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
     assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")

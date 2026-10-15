@@ -84,6 +84,10 @@ class OrquestradorServiceTest {
     assertThat(r.exibirFontes()).isTrue();
     verifyNoInteractions(rotaLegislacao);
     assertThat(rotasAvisadas).containsExactly(Intencao.DADOS);
+    // Rota de uma parte so: o desfecho da pergunta ja e o dela.
+    assertThat(contexto.desfechoDados()).isNull();
+    assertThat(contexto.desfechoLegislacao()).isNull();
+    assertThat(contexto.perguntaLeiReescrita()).isNull();
   }
 
   @Test
@@ -241,6 +245,58 @@ class OrquestradorServiceTest {
   }
 
   /** Rota de dados que consultou e encontrou dados. */
+  @Test
+  @DisplayName("MISTO: a lei recebe so a pergunta legal do classificador; dados, a inteira")
+  void mistoUsaPerguntaLeiDoClassificador() {
+    when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
+        Intencao.MISTO, 0.9, "Adubo da direito a credito?"));
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(eq("Adubo da direito a credito?"), any(), any()))
+        .thenReturn(ResultadoRota.aceita("Ha credito (LC 214/2025, art. 138).", List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    verify(rotaDados).responder(eq("pergunta"), any());
+    assertThat(contexto.desfechoDados()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.desfechoLegislacao()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.perguntaLeiReescrita()).isTrue();
+  }
+
+  @Test
+  @DisplayName("MISTO com pergunta legal recusada: vai a pergunta inteira, e o contexto registra")
+  void mistoPerguntaLeiRecusadaUsaOriginal() {
+    when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
+        Intencao.MISTO, 0.9, "A reducao de 60% vale?"));
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(eq("pergunta"), any(), any())).thenReturn(
+        ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA));
+
+    responder();
+
+    // A auditoria agora mostra qual parte falhou: dados aceitos, lei descartada.
+    assertThat(contexto.desfechoDados()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.desfechoLegislacao()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+    assertThat(contexto.perguntaLeiReescrita()).isFalse();
+  }
+
+  @Test
+  @DisplayName("#146: MISTO com a lei fora: a busca textual tambem usa a pergunta legal")
+  void mistoFallbackDaLeiUsaPerguntaLei() {
+    when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
+        Intencao.MISTO, 0.9, "Adubo da direito a credito?"));
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+        .thenThrow(new AssistenteIndisponivelException("embedding fora", null));
+    when(buscaTextual.buscar(eq("Adubo da direito a credito?"), any(), anyInt()))
+        .thenReturn(List.of(TRECHO_TEXTUAL));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
+    assertThat(contexto.desfechoLegislacao()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
+  }
+
   private void dadosEncontrados(String texto) {
     when(rotaDados.responder(anyString(), any())).thenAnswer(invocacao -> {
       contexto.registrarFonte("listarNotas", java.util.Map.of(), false);

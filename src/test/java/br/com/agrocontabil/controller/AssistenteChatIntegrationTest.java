@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
+import br.com.agrocontabil.assistente.porta.AuditoriaPorta;
 import br.com.agrocontabil.config.LimiteCorpoAssistenteFilter;
 import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.model.AssistenteInteracao;
@@ -28,6 +29,7 @@ import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +86,7 @@ class AssistenteChatIntegrationTest {
   @Autowired private ChatModelSimulado modelo;
   @Autowired private TestDatabaseCleaner cleaner;
   @Autowired private AssistenteInteracaoRepository interacaoRepository;
+  @Autowired private AuditoriaPorta auditoriaPorta;
   @Autowired private LimiteCorpoAssistenteFilter limiteCorpoFilter;
 
   private MockMvc mockMvc;
@@ -388,6 +391,22 @@ class AssistenteChatIntegrationTest {
   // --- sanitizacao, auditoria e limites (issue #144) ---
 
   @Test
+  @DisplayName("MISTO: o desfecho de cada parte e a pergunta reescrita sao gravados (0030)")
+  void auditoriaGravaPartesDoMisto() {
+    auditoriaPorta.registrar(new AuditoriaPorta.RegistroInteracao(produtorA.getId(), "MISTO",
+        DesfechoInteracao.RESPONDIDA, DesfechoInteracao.RESPONDIDA,
+        DesfechoInteracao.CITACAO_INVALIDA, true, "[]", 1, null, "none/simulado", 10, 20, 5,
+        false, 80, OffsetDateTime.now()));
+
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement().satisfies(i -> {
+          assertThat(i.getDesfechoDados()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+          assertThat(i.getDesfechoLegislacao()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+          assertThat(i.getPerguntaLeiReescrita()).isTrue();
+        });
+  }
+
+  @Test
   @DisplayName("#144: toda pergunta gera auditoria com rota, funcoes e desfecho, sem o texto")
   void auditoriaSemConteudo() throws Exception {
     modelo.responderCom(modeloFiel(Map.of(
@@ -407,6 +426,10 @@ class AssistenteChatIntegrationTest {
       assertThat(i.getModelo()).isEqualTo("none/simulado");
       assertThat(i.getTamanhoPergunta()).isEqualTo(pergunta.length());
       assertThat(i.getLatenciaMs()).isNotNegative();
+      // Rota de uma parte so: nada das partes do MISTO.
+      assertThat(i.getDesfechoDados()).isNull();
+      assertThat(i.getDesfechoLegislacao()).isNull();
+      assertThat(i.getPerguntaLeiReescrita()).isNull();
       // Nenhum campo guarda a pergunta nem a resposta.
       assertThat(String.valueOf(i.getFuncoes()) + i.getTrechosCitados() + i.getModelo())
           .doesNotContain("primeiro semestre", "Voce comprou", "3.734,56");

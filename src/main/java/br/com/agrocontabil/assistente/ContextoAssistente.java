@@ -61,6 +61,9 @@ public final class ContextoAssistente {
   private final AtomicInteger consultasComResultado = new AtomicInteger();
   private final List<String> trechosCitados = Collections.synchronizedList(new ArrayList<>());
   private final AtomicReference<DesfechoInteracao> interrupcao = new AtomicReference<>();
+  private final AtomicReference<DesfechoInteracao> desfechoDados = new AtomicReference<>();
+  private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
+  private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
 
   /**
    * Cria o contexto de uma pergunta.
@@ -229,6 +232,41 @@ public final class ContextoAssistente {
     synchronized (trechosCitados) {
       return List.copyOf(trechosCitados);
     }
+  }
+
+  /**
+   * Desfecho da parte de dados do MISTO, para a auditoria saber qual das duas falhou. Nas rotas de
+   * uma parte só fica nulo: o desfecho da pergunta já é o dela.
+   */
+  public void registrarDesfechoDados(DesfechoInteracao desfecho) {
+    desfechoDados.set(desfecho);
+  }
+
+  /**
+   * Desfecho da parte de lei do MISTO.
+   *
+   * @param desfecho  como a parte terminou
+   * @param reescrita {@code true} se ela recebeu a pergunta legal separada pelo classificador, e
+   *                  não a pergunta inteira
+   */
+  public void registrarDesfechoLegislacao(DesfechoInteracao desfecho, boolean reescrita) {
+    desfechoLegislacao.set(desfecho);
+    perguntaLeiReescrita.set(reescrita);
+  }
+
+  /** Desfecho da parte de dados do MISTO; nulo fora do MISTO ou se ela não terminou. */
+  public DesfechoInteracao desfechoDados() {
+    return desfechoDados.get();
+  }
+
+  /** Desfecho da parte de lei do MISTO; nulo fora do MISTO ou se ela não terminou. */
+  public DesfechoInteracao desfechoLegislacao() {
+    return desfechoLegislacao.get();
+  }
+
+  /** Se a parte de lei do MISTO recebeu a pergunta reescrita; nulo se ela não terminou. */
+  public Boolean perguntaLeiReescrita() {
+    return perguntaLeiReescrita.get();
   }
 
   /** Funções pedidas pelo modelo nesta pergunta. */

@@ -80,6 +80,20 @@ class RelatorioAvaliacaoTest {
   }
 
   @Test
+  @DisplayName("MISTO: o desfecho de cada parte aparece ao lado do desfecho final")
+  void partesDoMisto() {
+    ExecucaoPergunta misto = new ExecucaoPergunta(Intencao.MISTO, "texto",
+        DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null,
+        DesfechoInteracao.RESPONDIDA, DesfechoInteracao.CITACAO_INVALIDA, true);
+    ExecucaoPergunta dados = new ExecucaoPergunta(Intencao.DADOS, "texto",
+        DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null);
+
+    assertThat(RelatorioAvaliacao.partesMisto(misto))
+        .isEqualTo(" (dados RESPONDIDA, lei CITACAO_INVALIDA, reescrita)");
+    assertThat(RelatorioAvaliacao.partesMisto(dados)).isEmpty();
+  }
+
+  @Test
   @DisplayName("Markdown traz condições, métricas e uma linha por pergunta")
   void markdown() {
     String md = relatorio(List.of(

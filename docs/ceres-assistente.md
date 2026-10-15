@@ -127,6 +127,11 @@ trocável por configuração).
   pediu, modelo, latência, tokens e o **tamanho** da pergunta. **Sem o texto da pergunta nem da
   resposta** — a entidade nem tem onde guardá-los. Se a auditoria não gravar, a resposta não é
   entregue (503). Alimenta também a avaliação do TCC (#158).
+- **Partes do MISTO (changeSet 0030):** `desfecho_dados` e `desfecho_legislacao` guardam o
+  desfecho de cada parte, e `pergunta_lei_reescrita` diz se a de lei recebeu a pergunta legal
+  separada pelo classificador. Só o fato: o texto da pergunta, reescrita ou não, nunca é gravado.
+  Nulos nas outras rotas e na parte que não terminou. O relatório da avaliação mostra o mesmo ao
+  lado do desfecho final ("RESPONDIDA (dados RESPONDIDA, lei CITACAO_INVALIDA, reescrita)").
 - **Tamanho:** pergunta de no máximo 1000 caracteres (`@Size`) e corpo de no máximo 16 KB
   (`LimiteCorpoAssistenteFilter`, antes de o Jackson ler — 413). O `rejectedValue` dos erros de
   validação é truncado em 100 caracteres, em toda a API.
@@ -299,7 +304,15 @@ mudança no prompt do classificador pede uma rodada do gabarito (`docs/avaliacao
   externo, ver #148). Falha aqui é complemento perdido, não erro;
 - as partes são juntadas com ligação fixa: "Sobre a regra legal: ..." ou, sem dados, "De forma
   geral, a legislação prevê: ..." — sem o "não tenho a informação" seguido de "sim, as suas
-  compras têm direito" do teste do PR #168.
+  compras têm direito" do teste do PR #168;
+- **a parte de lei recebe só a pergunta legal.** Com a pergunta inteira, a busca de trechos ficava
+  diluída pelo pedido de dados e o modelo da regra geral recebia um pedido que o prompt dele
+  proíbe atender. No MISTO, o classificador devolve também `perguntaLei` (a parte legal, sem os
+  dados), que vai à busca, ao modelo e ao fallback textual da lei; a parte de dados segue com a
+  pergunta inteira. É texto do modelo, então `orquestracao/PerguntaLei` só a aceita se tiver até
+  300 caracteres, não tiver forma de prompt injection e não trouxer número que o usuário não
+  escreveu (o `ValidadorNumeros` aceita os números da pergunta: um "60%" inventado na reescrita
+  viraria fonte). Fora disso, vai a pergunta inteira, como antes.
 
 ### Contrato
 

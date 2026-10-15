@@ -56,7 +56,8 @@ public final class PromptsCeres {
       compras?", "minha apuracao esta de acordo com a reducao para insumos?").
       - FORA_DE_ESCOPO: qualquer outro assunto.
       Responda SOMENTE com JSON, sem texto em volta: {"intencao": "DADOS", "confianca": 0.9}
-      A confianca vai de 0 a 1.
+      A confianca vai de 0 a 1. Se for MISTO, inclua "perguntaLei": so a pergunta sobre a regra \
+      legal, sem os dados dele (ex.: "insumo agropecuario da direito a credito de IBS e CBS?").
       """;
 
   /** Resposta fixa para pergunta fora de escopo ou de intenção incerta (sem chamar o modelo). */
