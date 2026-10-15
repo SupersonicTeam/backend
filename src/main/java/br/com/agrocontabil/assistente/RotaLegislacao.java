@@ -44,11 +44,13 @@ public class RotaLegislacao {
 
   /**
    * "Sim" ou "Não" no começo da resposta, como o {@code VerificadorAfirmacaoDados} reconhece:
-   * "Sim" com ou sem pontuação, "Não" só com pontuação ("Não incide" é regra, não resposta).
+   * "Sim" como palavra inteira, "Não" só com pontuação ("Não incide" é regra, não resposta). Aceita
+   * o negrito do Markdown em volta ("**Sim**,") e travessão, que o modelo usa.
    */
   private static final Pattern SIM_OU_NAO_INICIAL = Pattern.compile(
-      "^[\\s\\p{Punct}]*(?:sim(?:\\s*[,.;:!\\u2013\\u2014-]|\\s)|n[a\\u00e3]o\\s*[,.;:!\\u2013\\u2014-])"
-          + "[\\s\\p{Punct}]*",
+      "^[\\s\\p{Punct}\\u2013\\u2014]*"
+          + "(?:sim(?=[\\s\\p{Punct}\\u2013\\u2014]|$)|n[a\\u00e3]o[*_]*\\s*[,.;:!\\u2013\\u2014-])"
+          + "[\\s\\p{Punct}\\u2013\\u2014]*",
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
   /**

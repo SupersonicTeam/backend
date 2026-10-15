@@ -136,8 +136,16 @@ class RotaLegislacaoTest {
         .isEqualTo("Não incide IBS na exportação.");
     assertThat(RotaLegislacao.semSimOuNaoInicial("Simples Nacional tem regra propria."))
         .isEqualTo("Simples Nacional tem regra propria.");
+    // Negrito do Markdown e travessao, como o qwen escreve (achado do review do PR #197).
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Sim**, os insumos tem reducao."))
+        .isEqualTo("Os insumos tem reducao.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Não**, a soja não está no Anexo IX."))
+        .isEqualTo("A soja não está no Anexo IX.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Sim — os insumos tem reducao."))
+        .isEqualTo("Os insumos tem reducao.");
     // Nada depois: fica como veio, e o verificador descarta.
     assertThat(RotaLegislacao.semSimOuNaoInicial("Sim.")).isEqualTo("Sim.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Sim**")).isEqualTo("**Sim**");
   }
 
   @Test
