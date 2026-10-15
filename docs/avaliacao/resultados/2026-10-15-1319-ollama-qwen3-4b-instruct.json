@@ -1,0 +1,349 @@
+{
+  "ambiente" : {
+    "executadoEm" : "2026-10-15T13:19:42-03:00",
+    "hojeReferencia" : "2026-09-15",
+    "versaoGabarito" : "2026-10-15.1",
+    "modelo" : "ollama/qwen3:4b-instruct",
+    "modeloEmbedding" : "ollama/bge-m3",
+    "hardware" : [ "Ollama em container Docker sem acesso a GPU: inferencia so em CPU", "Windows 11 amd64, 16 nucleos logicos (Intel64 Family 6 Model 154 Stepping 3, GenuineIntel), Java 26.0.1", "Memoria total: 31.7 GB", "Ollama 0.35.0", "qwen3:4b-instruct: 3.6 GB, 0% na GPU", "bge-m3:latest: 1.1 GB, 0% na GPU" ],
+    "duracaoSegundos" : 564
+  },
+  "metricas" : {
+    "Acurácia de rota" : {
+      "acertos" : 6,
+      "total" : 7
+    },
+    "Acerto de função" : {
+      "acertos" : 5,
+      "total" : 7
+    },
+    "Acerto de parâmetros" : {
+      "acertos" : 4,
+      "total" : 7
+    },
+    "Exatidão numérica" : {
+      "acertos" : 4,
+      "total" : 7
+    },
+    "Citação válida" : {
+      "acertos" : 4,
+      "total" : 7
+    },
+    "Recusa correta" : {
+      "acertos" : 0,
+      "total" : 0
+    },
+    "Sem vazamento" : {
+      "acertos" : 0,
+      "total" : 0
+    },
+    "Sem falha técnica" : {
+      "acertos" : 7,
+      "total" : 7
+    }
+  },
+  "latenciaP50Ms" : 74723,
+  "latenciaP95Ms" : 159074,
+  "perguntas" : {
+    "R02" : "Quanto do pagamento das minhas vendas de agosto de 2026 fica retido em IBS e CBS, e por qual regra?",
+    "M01" : "Quanto comprei de fertilizante no primeiro semestre de 2026 e essa compra tem reducao de aliquota?",
+    "M02" : "Quanto gastei com glifosato em abril de 2026 e defensivo agricola tem aliquota reduzida?",
+    "M03" : "Qual o meu credito de CBS de janeiro a agosto de 2026 e a lei permite usar esse credito?",
+    "M04" : "Qual o saldo de CBS de agosto de 2026 e qual a aliquota de CBS prevista para 2026?",
+    "M05" : "Quanto vendi em agosto de 2026 e a venda de soja em graos tem reducao de aliquota?",
+    "M06" : "Quanto comprei de semente de soja em maio de 2026 e semente e insumo agropecuario com reducao?"
+  },
+  "resultados" : [ {
+    "id" : "R02",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "MISTO",
+      "texto" : "O valor do pagamento das vendas de agosto de 2026 que fica retido é:\n\n- **IBS**: R$ 75,60  \n- **CBS**: R$ 680,40  \n\nEssa divisão é regulamentada pela **Lei Complementar 214/2025, arts. 31 e 32** (split payment).\n\nFundamento das retencoes: o Funrural do produtor pessoa fisica e retido pelo comprador empresa ou cooperativa (Lei 8.212/1991, art. 30, IV), a 1,2% mais 0,1% da receita bruta (art. 25, I e II) e 0,2% do SENAR (Lei 9.528/1997, art. 6º); e o IBS e a CBS destacados na nota sao separados no pagamento pelo split payment (LC 214/2025, arts. 31 e 32).",
+      "desfecho" : "RESPONDIDA",
+      "citacoes" : [ {
+        "norma" : "Lei 8.212/1991",
+        "dispositivo" : "art. 30, inciso IV",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/l8212cons.htm",
+        "trecho" : "Art. 30. A arrecadação e o recolhimento das contribuições ou de outras importâncias devidas à Seguridade Social obedecem às seguintes normas: IV - a empresa adquirente, consumidora ou consignatária ou a cooperativa ficam sub-rogadas nas obrigações da pessoa física de que trata a alínea \"a\" do inciso V do art. 12 e do segurado especial pelo cumprimento das obrigações do art. 25 desta Lei, independentemente de as operações de venda ou consignação terem sido realizadas diretamente com o produtor ou com intermediário pessoa física, exceto no caso do inciso X deste artigo, na forma estabelecida em regulamento;"
+      }, {
+        "norma" : "Lei 8.212/1991",
+        "dispositivo" : "art. 25, inciso I",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/l8212cons.htm",
+        "trecho" : "Art. 25. A contribuição do empregador rural pessoa física, em substituição à contribuição de que tratam os incisos I e II do art. 22, e a do segurado especial, referidos, respectivamente, na alínea a do inciso V e no inciso VII do art. 12 desta Lei, destinada à Seguridade Social, é de: I - 1,2% (um inteiro e dois décimos por cento) da receita bruta proveniente da comercialização da sua produção;"
+      }, {
+        "norma" : "Lei 8.212/1991",
+        "dispositivo" : "art. 25, inciso II",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/l8212cons.htm",
+        "trecho" : "Art. 25. A contribuição do empregador rural pessoa física, em substituição à contribuição de que tratam os incisos I e II do art. 22, e a do segurado especial, referidos, respectivamente, na alínea a do inciso V e no inciso VII do art. 12 desta Lei, destinada à Seguridade Social, é de: II - 0,1% da receita bruta proveniente da comercialização da sua produção para financiamento das prestações por acidente do trabalho. ."
+      }, {
+        "norma" : "Lei 9.528/1997",
+        "dispositivo" : "art. 6º",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/l9528.htm",
+        "trecho" : "Art. 6o A contribuição do empregador rural pessoa física e a do segurado especial, referidos, respectivamente, na alínea a do inciso V e no inciso VII do art. 12 da Lei no 8.212, de 24 de julho de 1991, para o Serviço Nacional de Aprendizagem Rural (SENAR), criado pela Lei no 8.315, de 23 de dezembro de 1991, é de zero vírgula dois por cento, incidente sobre a receita bruta proveniente da comercialização de sua produção rural."
+      }, {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "art. 31",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "Art. 31. Nas transações de pagamento relativas a operações com bens ou com serviços, os prestadores de serviços de pagamento eletrônico e as instituições operadoras de sistemas de pagamentos deverão segregar e recolher ao Comitê Gestor do IBS e à RFB, no momento da liquidação financeira da transação (split payment), os valores do IBS e da CBS, de acordo com o disposto nesta Subseção."
+      }, {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "art. 32",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "Art. 32. O procedimento padrão do split payment obedecerá ao disposto neste artigo."
+      } ],
+      "fontes" : [ {
+        "funcao" : "consultarRetencoes",
+        "parametros" : {
+          "dataInicio" : "2026-08-01",
+          "dataFim" : "2026-08-31"
+        }
+      } ],
+      "modoFallback" : false,
+      "latenciaMs" : 159074,
+      "erro" : null,
+      "desfechoDados" : "RESPONDIDA",
+      "desfechoLegislacao" : "CITACAO_INVALIDA",
+      "perguntaLeiReescrita" : true
+    },
+    "valoresEsperados" : [ "R$ 75,60", "R$ 680,40" ],
+    "rotaCorreta" : true,
+    "funcaoCorreta" : true,
+    "parametrosCorretos" : true,
+    "numeroCorreto" : true,
+    "citacaoValida" : true,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  }, {
+    "id" : "M01",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "MISTO",
+      "texto" : "R$ 15.980,00\n\nNao tem informacao sobre reducao de aliquota.\n\nSobre a regra legal: A compra de fertilizantes tem redução de aliquota. Os fertilizantes estão incluídos no Anexo IX, com redução de 60% das alíquotas do IBS e da CBS. (LC 214/2025, Anexo IX, item 2)",
+      "desfecho" : "RESPONDIDA",
+      "citacoes" : [ {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "Anexo IX, item 2",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "ANEXO IX - INSUMOS AGROPECUÁRIOS E AQUÍCOLAS SUBMETIDOS À REDUÇÃO DE 60% (SESSENTA POR CENTO) DAS ALÍQUOTAS DO IBS E DA CBS. Item 2: Fertilizantes (adubos), em conformidade com as definições e demais requisitos da legislação específica - Capítulo 31 3824.99.77 3824.99.79 3824.99.89"
+      } ],
+      "fontes" : [ {
+        "funcao" : "totalComprasPorInsumo",
+        "parametros" : {
+          "descricaoOuNcm" : "fertilizante",
+          "dataInicio" : "2026-01-01",
+          "dataFim" : "2026-06-30"
+        }
+      } ],
+      "modoFallback" : false,
+      "latenciaMs" : 73532,
+      "erro" : null,
+      "desfechoDados" : "RESPONDIDA",
+      "desfechoLegislacao" : "RESPONDIDA",
+      "perguntaLeiReescrita" : true
+    },
+    "valoresEsperados" : [ "R$ 15.980,00" ],
+    "rotaCorreta" : true,
+    "funcaoCorreta" : true,
+    "parametrosCorretos" : true,
+    "numeroCorreto" : true,
+    "citacaoValida" : true,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  }, {
+    "id" : "M02",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "MISTO",
+      "texto" : "Gastei R$ 8.250,00 com glifosato em abril de 2026.\n\nO defensivo agricola com NCM 3808 tem aliquota reduzida.\n\nSobre a regra legal: Os defensivos agrícolas têm redução de 60% das alíquotas do IBS e da CBS, desde que destinados diretamente ao uso agropecuário ou à fabricação de defensivo agropecuário, em conformidade com a legislação específica. (LC 214/2025, Anexo IX, item 6)",
+      "desfecho" : "RESPONDIDA",
+      "citacoes" : [ {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "Anexo IX, item 6",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "ANEXO IX - INSUMOS AGROPECUÁRIOS E AQUÍCOLAS SUBMETIDOS À REDUÇÃO DE 60% (SESSENTA POR CENTO) DAS ALÍQUOTAS DO IBS E DA CBS. Item 6: Inseticidas, fungicidas, formicidas, herbicidas, parasiticidas, germicidas, acaricidas, nematicidas, raticidas, desfolhantes, dessecantes, espalhantes adesivos, estimuladores e inibidores de crescimento (reguladores); todos destinados diretamente ao uso agropecuário ou destinados diretamente à fabricação de defensivo agropecuário; em conformidade com as definições e demais requisitos da legislação específica - 38.08 3824.99.89"
+      } ],
+      "fontes" : [ {
+        "funcao" : "totalComprasPorInsumo",
+        "parametros" : {
+          "descricaoOuNcm" : "glifosato",
+          "dataInicio" : "2026-04-01",
+          "dataFim" : "2026-04-30"
+        }
+      }, {
+        "funcao" : "totalComprasPorInsumo",
+        "parametros" : {
+          "descricaoOuNcm" : "3808",
+          "dataInicio" : "2026-04-01",
+          "dataFim" : "2026-04-30"
+        }
+      } ],
+      "modoFallback" : false,
+      "latenciaMs" : 74723,
+      "erro" : null,
+      "desfechoDados" : "RESPONDIDA",
+      "desfechoLegislacao" : "RESPONDIDA",
+      "perguntaLeiReescrita" : true
+    },
+    "valoresEsperados" : [ "R$ 8.250,00" ],
+    "rotaCorreta" : true,
+    "funcaoCorreta" : true,
+    "parametrosCorretos" : true,
+    "numeroCorreto" : true,
+    "citacaoValida" : true,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  }, {
+    "id" : "M03",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "MISTO",
+      "texto" : "Nao consegui confirmar os valores da resposta com os seus dados, por isso nao vou mostra-los. Tente reformular a pergunta.\n\nSobre a regra legal: O contribuinte sujeito ao regime regular da CBS poderá apropriar crédito presumido sobre o estoque de bens materiais existente em 1º de janeiro de 2027 nas hipóteses previstas no art. 381, § 1º, II e III (LC 214/2025, art. 381, § 1º, inciso II; LC 214/2025, art. 381, inciso III; LC 214/2025, art. 381, § 1º, inciso III; LC 214/2025, art. 381, inciso II, alínea d).",
+      "desfecho" : "RESPONDIDA",
+      "citacoes" : [ {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "art. 381, § 1º, inciso II",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "Art. 381. O contribuinte sujeito ao regime regular da CBS poderá apropriar crédito presumido sobre o estoque de bens materiais existente em 1º de janeiro de 2027 nas seguintes hipóteses: § 1º O direito ao crédito presumido previsto no caput: II - não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção, suspensão ou não sofreu a incidência da Contribuição para o PIS/Pasep e da COFINS;"
+      }, {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "art. 381, inciso III",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "Art. 381. O contribuinte sujeito ao regime regular da CBS poderá apropriar crédito presumido sobre o estoque de bens materiais existente em 1º de janeiro de 2027 nas seguintes hipóteses: III - em relação à parcela do valor dos bens em estoque sujeita à vedação parcial de creditamento estabelecida pelos §§ 7º a 9º do art. 3º da Lei nº 10.637, de 30 de dezembro de 2002, e da Lei nº 10.833, de 29 de dezembro 2003."
+      }, {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "art. 381, § 1º, inciso III",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "Art. 381. O contribuinte sujeito ao regime regular da CBS poderá apropriar crédito presumido sobre o estoque de bens materiais existente em 1º de janeiro de 2027 nas seguintes hipóteses: § 1º O direito ao crédito presumido previsto no caput: III - não se aplica aos bens considerados de uso e consumo pessoal de que trata o art. 57 desta Lei Complementar;"
+      }, {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "art. 381, inciso II, alínea d",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "Art. 381. O contribuinte sujeito ao regime regular da CBS poderá apropriar crédito presumido sobre o estoque de bens materiais existente em 1º de janeiro de 2027 nas seguintes hipóteses: II - em relação aos bens em estoque sujeitos, na aquisição, à substituição tributária ou à incidência monofásica de que tratam os seguintes dispositivos: d) art. 53 da Lei nº 9.532, de 10 de dezembro de 1997; e"
+      } ],
+      "fontes" : [ {
+        "funcao" : "consultarCreditos",
+        "parametros" : {
+          "dataInicio" : "2026-01-01",
+          "dataFim" : "2026-08-31"
+        }
+      } ],
+      "modoFallback" : false,
+      "latenciaMs" : 92528,
+      "erro" : null,
+      "desfechoDados" : "NUMERO_SEM_FONTE",
+      "desfechoLegislacao" : "RESPONDIDA",
+      "perguntaLeiReescrita" : true
+    },
+    "valoresEsperados" : [ "R$ 692,46" ],
+    "rotaCorreta" : true,
+    "funcaoCorreta" : true,
+    "parametrosCorretos" : true,
+    "numeroCorreto" : false,
+    "citacaoValida" : false,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  }, {
+    "id" : "M04",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "LEGISLACAO",
+      "texto" : "Nao encontrei fundamento legal para isso.",
+      "desfecho" : "CITACAO_INVALIDA",
+      "citacoes" : [ ],
+      "fontes" : [ ],
+      "modoFallback" : false,
+      "latenciaMs" : 23144,
+      "erro" : null,
+      "desfechoDados" : null,
+      "desfechoLegislacao" : null,
+      "perguntaLeiReescrita" : null
+    },
+    "valoresEsperados" : [ "R$ 598,05" ],
+    "rotaCorreta" : false,
+    "funcaoCorreta" : false,
+    "parametrosCorretos" : false,
+    "numeroCorreto" : false,
+    "citacaoValida" : false,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  }, {
+    "id" : "M05",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "MISTO",
+      "texto" : "Em agosto de 2026, o débito de IBS foi de R$ 75,60 e de CBS de R$ 680,40.  \n\nNenhuma compra de \"soja em graos\" foi encontrada no período. A busca exige correspondência exata na descrição. Sugira outro termo ou o código NCM para busca mais precisa.\n\nNao encontrei fundamento legal para isso.",
+      "desfecho" : "RESPONDIDA",
+      "citacoes" : [ ],
+      "fontes" : [ {
+        "funcao" : "consultarApuracao",
+        "parametros" : {
+          "mes" : "2026-08"
+        }
+      }, {
+        "funcao" : "totalComprasPorInsumo",
+        "parametros" : {
+          "descricaoOuNcm" : "soja em graos",
+          "dataInicio" : "2026-08-01",
+          "dataFim" : "2026-08-31"
+        }
+      } ],
+      "modoFallback" : false,
+      "latenciaMs" : 51069,
+      "erro" : null,
+      "desfechoDados" : "RESPONDIDA",
+      "desfechoLegislacao" : "SEM_FUNDAMENTO_LEGAL",
+      "perguntaLeiReescrita" : true
+    },
+    "valoresEsperados" : [ "R$ 75.600,00" ],
+    "rotaCorreta" : true,
+    "funcaoCorreta" : false,
+    "parametrosCorretos" : false,
+    "numeroCorreto" : false,
+    "citacaoValida" : false,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  }, {
+    "id" : "M06",
+    "categoria" : "MISTO",
+    "execucao" : {
+      "rota" : "MISTO",
+      "texto" : "Comprei R$ 19.200,00 de semente de soja em maio de 2026.\n\nNenhuma compra encontrada com o termo \"semente e insumo agropecuario com reducao\". A busca procura o trecho exato na descrição dos itens (acentos e grafia contam). Sugira outro termo ou o código NCM, em vez de afirmar que não comprou.\n\nSobre a regra legal: Os insumos agropecuários listados no Anexo IX estão sujeitos a redução de 60% das alíquotas do IBS e da CBS. A semente, incluindo sementes genéticas, básicas, nativas, certificadas e não certificadas, está prevista no Item 10 do Anexo IX. (LC 214/2025, Anexo IX, item 10)",
+      "desfecho" : "RESPONDIDA",
+      "citacoes" : [ {
+        "norma" : "LC 214/2025",
+        "dispositivo" : "Anexo IX, item 10",
+        "url" : "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+        "trecho" : "ANEXO IX - INSUMOS AGROPECUÁRIOS E AQUÍCOLAS SUBMETIDOS À REDUÇÃO DE 60% (SESSENTA POR CENTO) DAS ALÍQUOTAS DO IBS E DA CBS. Item 10: Semente genética, semente básica, semente nativa in natura, semente certificada de primeira geração (C1), semente certificada de segunda geração (C2), semente não certificada de primeira geração (S1), semente não certificada de segunda geração (S2) e sementes de cultivar local, tradicional ou crioula; em conformidade com as definições e demais requisitos da legislação específica - Capítulos 7, 10 e 12"
+      } ],
+      "fontes" : [ {
+        "funcao" : "totalComprasPorInsumo",
+        "parametros" : {
+          "descricaoOuNcm" : "semente de soja",
+          "dataInicio" : "2026-05-01",
+          "dataFim" : "2026-05-30"
+        }
+      }, {
+        "funcao" : "totalComprasPorInsumo",
+        "parametros" : {
+          "descricaoOuNcm" : "semente e insumo agropecuario com reducao",
+          "dataInicio" : "2026-05-01",
+          "dataFim" : "2026-05-30"
+        }
+      } ],
+      "modoFallback" : false,
+      "latenciaMs" : 90150,
+      "erro" : null,
+      "desfechoDados" : "RESPONDIDA",
+      "desfechoLegislacao" : "RESPONDIDA",
+      "perguntaLeiReescrita" : true
+    },
+    "valoresEsperados" : [ "R$ 19.200,00" ],
+    "rotaCorreta" : true,
+    "funcaoCorreta" : true,
+    "parametrosCorretos" : false,
+    "numeroCorreto" : true,
+    "citacaoValida" : true,
+    "recusaCorreta" : null,
+    "vazamento" : null
+  } ]
+}

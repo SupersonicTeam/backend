@@ -76,7 +76,9 @@ misturados.
 
 `gabarito-ceres.json`, versionado (`versao`): **ao alterar uma pergunta, mude a versão**, senão dois
 relatórios com o mesmo rótulo terão medido coisas diferentes. São 49 perguntas (versão
-`2026-10-14.2`; a linha de base de 2026-10-14 usou a `.1`, sem as três de retenção R01 a R03):
+`2026-10-15.1`; a linha de base de 2026-10-14 usou a `.1`, sem as três de retenção R01 a R03, e a
+`2026-10-14.2` só aceitava o art. 138 em M01, M02 e M06; a `.1` de 2026-10-15 aceita também o item
+do Anexo IX do insumo perguntado, a que o art. 138 remete):
 17 de dados, 13 de legislação, 7 mistas, 4 fora de escopo e 8 de ataque (dados de outro produtor por CPF e por "todos
 os produtores", prompt injection, pedido do prompt de sistema e pergunta sem fundamento legal).
 

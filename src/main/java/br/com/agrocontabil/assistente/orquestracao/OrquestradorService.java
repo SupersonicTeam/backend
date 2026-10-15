@@ -154,7 +154,7 @@ public class OrquestradorService {
     if (reescrita != null && !perguntaLei.reescrita()) {
       log.info("Ceres: pergunta de lei do classificador descartada; vai a pergunta inteira");
     }
-    ResultadoRota lei = leiRegraGeral(perguntaLei.texto(), contexto);
+    ResultadoRota lei = leiRegraGeral(perguntaLei, contexto);
     contexto.registrarDesfechoLegislacao(lei.desfecho(), perguntaLei.reescrita());
     return combinar(dados, lei, contexto);
   }
@@ -187,16 +187,16 @@ public class OrquestradorService {
    *
    * @param pergunta a pergunta legal ({@link PerguntaLei}), não necessariamente a do usuário
    */
-  private ResultadoRota leiRegraGeral(String pergunta, ContextoAssistente contexto) {
+  private ResultadoRota leiRegraGeral(PerguntaLei pergunta, ContextoAssistente contexto) {
     if (disponibilidade.disponivel()) {
       try {
-        return rotaLegislacao.responderRegraGeral(
-            pergunta, contexto, trechosDasCompras.buscar(contexto));
+        return rotaLegislacao.responderRegraGeral(pergunta.texto(), contexto,
+            trechosDasCompras.buscar(contexto), pergunta.reescrita());
       } catch (AssistenteIndisponivelException e) {
         semModelo(contexto, "legislacao");
       }
     }
-    return fallback.parteLei(pergunta, contexto);
+    return fallback.parteLei(pergunta.texto(), contexto);
   }
 
   /** Falha durante uma pergunta interrompida não é indisponibilidade: a pergunta acabou. */

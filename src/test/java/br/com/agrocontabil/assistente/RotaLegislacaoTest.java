@@ -84,6 +84,71 @@ class RotaLegislacaoTest {
   }
 
   @Test
+  @DisplayName("Pergunta legal separada: o 'Sim,' inicial sai e a regra geral passa")
+  void perguntaSeparadaTiraSimInicial() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("Sim, os insumos agropecuarios tem reducao de 60% [T1].");
+
+    ResultadoRota r = rota.responderRegraGeral(
+        "Fertilizante tem reducao de aliquota?", contexto, List.of(), true);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.texto()).startsWith("Os insumos agropecuarios tem reducao de 60%");
+  }
+
+  @Test
+  @DisplayName("Pergunta inteira: o 'Sim,' responde ao caso do produtor e o texto sai (#170)")
+  void perguntaInteiraMantemDescarteDoSim() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("Sim, os insumos agropecuarios tem reducao de 60% [T1].");
+
+    ResultadoRota r = rota.responderRegraGeral(
+        "Quanto comprei de fertilizante e tem reducao?", contexto, List.of(), false);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.AFIRMACAO_SOBRE_DADOS);
+  }
+
+  @Test
+  @DisplayName("Pergunta separada: tirar o 'Sim' nao salva texto que fala do que ele comprou")
+  void perguntaSeparadaContinuaBarrandoDados() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("Sim, os fertilizantes que você comprou têm redução de 60% [T1].");
+
+    ResultadoRota r = rota.responderRegraGeral(
+        "Fertilizante tem reducao?", contexto, List.of(), true);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.AFIRMACAO_SOBRE_DADOS);
+  }
+
+  @Test
+  @DisplayName("Corte do 'Sim'/'Nao' inicial: so a palavra de resposta, nunca a regra")
+  void semSimOuNaoInicial() {
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Sim, os insumos tem reducao."))
+        .isEqualTo("Os insumos tem reducao.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Sim.** É reduzida em 60%."))
+        .isEqualTo("É reduzida em 60%.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Sim os insumos tem reducao."))
+        .isEqualTo("Os insumos tem reducao.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("NÃO, a soja em grãos não está no Anexo IX."))
+        .isEqualTo("A soja em grãos não está no Anexo IX.");
+    // "Nao incide" e regra, nao resposta; "Simples Nacional" nao e "Sim".
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Não incide IBS na exportação."))
+        .isEqualTo("Não incide IBS na exportação.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Simples Nacional tem regra propria."))
+        .isEqualTo("Simples Nacional tem regra propria.");
+    // Negrito do Markdown e travessao, como o qwen escreve (achado do review do PR #197).
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Sim**, os insumos tem reducao."))
+        .isEqualTo("Os insumos tem reducao.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Não**, a soja não está no Anexo IX."))
+        .isEqualTo("A soja não está no Anexo IX.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Sim — os insumos tem reducao."))
+        .isEqualTo("Os insumos tem reducao.");
+    // Nada depois: fica como veio, e o verificador descarta.
+    assertThat(RotaLegislacao.semSimOuNaoInicial("Sim.")).isEqualTo("Sim.");
+    assertThat(RotaLegislacao.semSimOuNaoInicial("**Sim**")).isEqualTo("**Sim**");
+  }
+
+  @Test
   @DisplayName("#170: item de anexo da compra entra depois dos trechos da busca, renumerado")
   void complementaresEntramRenumerados() {
     TrechoRecuperado anexo = new TrechoRecuperado("T1", "id-anexo", "LC 214/2025",

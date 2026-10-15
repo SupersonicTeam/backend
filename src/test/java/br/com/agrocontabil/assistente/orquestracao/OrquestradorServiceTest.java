@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente.orquestracao;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -122,7 +123,7 @@ class OrquestradorServiceTest {
   void misto() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenReturn(ResultadoRota.aceita("Ha credito (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -135,7 +136,7 @@ class OrquestradorServiceTest {
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
     verify(rotaDados).responder(anyString(), any());
     // #170: no MISTO a lei responde so a regra geral; o responder() puro nao e usado.
-    verify(rotaLegislacao).responderRegraGeral(anyString(), any(), any());
+    verify(rotaLegislacao).responderRegraGeral(anyString(), any(), any(), anyBoolean());
     verify(rotaLegislacao, never()).responder(anyString(), any());
   }
 
@@ -144,7 +145,7 @@ class OrquestradorServiceTest {
   void mistoSemFundamento() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any())).thenReturn(
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean())).thenReturn(
         ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA));
 
     ResultadoOrquestracao r = responder();
@@ -163,7 +164,7 @@ class OrquestradorServiceTest {
           "totalComprasPorInsumo", java.util.Map.of("descricaoOuNcm", "adubo"), true);
       return ResultadoRota.aceita("Nao tem essa informacao.");
     });
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenReturn(ResultadoRota.aceita("Fertilizantes tem reducao (LC 214/2025, art. 138).",
             List.of(CITACAO)));
 
@@ -184,7 +185,7 @@ class OrquestradorServiceTest {
     // Sem consulta, um "voce comprou fertilizantes" sem numero passaria pelo ValidadorNumeros.
     when(rotaDados.responder(anyString(), any()))
         .thenReturn(ResultadoRota.aceita("Voce comprou fertilizantes."));
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -198,7 +199,7 @@ class OrquestradorServiceTest {
   void mistoLeiFalandoDosDados() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any())).thenReturn(new ResultadoRota(
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean())).thenReturn(new ResultadoRota(
         RotaLegislacao.SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -215,7 +216,7 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.MISTO, 0.9);
     when(rotaDados.responder(anyString(), any()))
         .thenThrow(new AssistenteIndisponivelException("timeout no laco de funcoes", null));
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -232,7 +233,7 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
     when(trechosDasCompras.buscar(contexto)).thenReturn(List.of(TRECHO_TEXTUAL));
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), eq(List.of(TRECHO_TEXTUAL))))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), eq(List.of(TRECHO_TEXTUAL)), anyBoolean()))
         .thenReturn(ResultadoRota.aceita("Ha reducao (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -251,7 +252,7 @@ class OrquestradorServiceTest {
     when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
         Intencao.MISTO, 0.9, "Adubo da direito a credito?"));
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(eq("Adubo da direito a credito?"), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(eq("Adubo da direito a credito?"), any(), any(), eq(true)))
         .thenReturn(ResultadoRota.aceita("Ha credito (LC 214/2025, art. 138).", List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
@@ -269,7 +270,7 @@ class OrquestradorServiceTest {
     when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
         Intencao.MISTO, 0.9, "A reducao de 60% vale?"));
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(eq("pergunta"), any(), any())).thenReturn(
+    when(rotaLegislacao.responderRegraGeral(eq("pergunta"), any(), any(), eq(false))).thenReturn(
         ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA));
 
     responder();
@@ -286,7 +287,7 @@ class OrquestradorServiceTest {
     when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
         Intencao.MISTO, 0.9, "Adubo da direito a credito?"));
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenThrow(new AssistenteIndisponivelException("embedding fora", null));
     when(buscaTextual.buscar(eq("Adubo da direito a credito?"), any(), anyInt()))
         .thenReturn(List.of(TRECHO_TEXTUAL));
@@ -390,7 +391,7 @@ class OrquestradorServiceTest {
   void mistoComLeiForaMantemDados() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
-    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any()))
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenThrow(new AssistenteIndisponivelException("embedding fora", null));
     when(buscaTextual.buscar(anyString(), any(), anyInt())).thenReturn(List.of(TRECHO_TEXTUAL));
 
