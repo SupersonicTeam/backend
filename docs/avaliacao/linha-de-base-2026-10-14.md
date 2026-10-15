@@ -170,10 +170,25 @@ fundamento; aceitar o item no gabarito é decisão da equipe (muda a versão do 
 com NCM 3808 tem alíquota reduzida", M02; "a venda de soja em grãos não teve redução", M05). É o
 espelho do #170: ela vê só as funções, não a lei.
 
+## Gabarito `2026-10-15.1`: o item do Anexo IX vale como fundamento (13:19, só MISTO)
+
+Decisão do Murillo em 2026-10-15: M01, M02 e M06 aceitam, além do art. 138, o item do Anexo IX do
+insumo perguntado (2 fertilizantes, 6 defensivos, 10 sementes). L04 fica só com o art. 138, porque
+pergunta o percentual. Relatório:
+[`resultados/2026-10-15-1319-ollama-qwen3-4b-instruct.md`](resultados/2026-10-15-1319-ollama-qwen3-4b-instruct.md).
+
+| MISTO | 08:18 (`.2`) | 13:19 (`2026-10-15.1`) |
+|---|---|---|
+| Citação válida | 14,3% (1/7) | 57,1% (4/7) |
+| Exatidão numérica | 57,1% (4/7) | 57,1% (4/7) |
+| Parte de lei aceita | M06 | M01, M02, M03, M06 |
+
+Ficam: M03 (a lei é aceita, mas não cita o dispositivo esperado, e a parte de dados cai em
+NUMERO_SEM_FONTE), M04 (vai para LEGISLACAO) e M05 (soja em grãos sem fundamento na base).
+
 ## Próximos passos sugeridos
 
-- MISTO: impedir a parte de dados de afirmar regra legal (o espelho do #170) e decidir se o gabarito
-  aceita o item do Anexo IX como fundamento além do art. 138.
+- MISTO: impedir a parte de dados de afirmar regra legal (o espelho do #170).
 - Rodar uma segunda linha de base com o Ollama na GPU, para separar o que é limite do modelo do
   que é limite do hardware.
 - Rodar 3 vezes e informar a variação no artigo; revisar o gabarito com o orientador ou um
