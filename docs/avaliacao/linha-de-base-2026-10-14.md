@@ -144,11 +144,36 @@ escopo, com JSON válido (rota 81,8%). Voltou a versão das 08:18. Relatório ma
 É a terceira vez que uma mudança pequena no prompt do classificador de 4B tira perguntas de rota;
 ajuste na forma da pergunta de lei deve ir para o código, não para o prompt.
 
+## Sem o "Sim," inicial na parte de lei (2026-10-15, 12:58, só MISTO)
+
+Com a pergunta separada, a parte de lei responde à regra geral, então o "Sim," ou "Não," do começo
+sai antes do `VerificadorAfirmacaoDados` (só nesse caso: com a pergunta inteira, ele responderia
+ao caso do produtor e o texto continua descartado). O resto passa pelo verificador como antes:
+"Sim, os fertilizantes que você comprou..." continua barrado. Prompt inalterado, então rodaram só
+as 7 perguntas MISTO (M01 a M06 e R02). Relatório:
+[`resultados/2026-10-15-1258-ollama-qwen3-4b-instruct.md`](resultados/2026-10-15-1258-ollama-qwen3-4b-instruct.md).
+
+| Id | Lei às 08:18 | Lei agora | Cita |
+|---|---|---|---|
+| M01 | AFIRMACAO_SOBRE_DADOS | RESPONDIDA | Anexo IX, item 2 (fertilizantes) |
+| M02 | AFIRMACAO_SOBRE_DADOS | RESPONDIDA | Anexo IX, item 6 (defensivos) |
+| M03 | AFIRMACAO_SOBRE_DADOS | NUMERO_SEM_FONTE | — |
+| M05 | SEM_FUNDAMENTO_LEGAL | SEM_FUNDAMENTO_LEGAL | — |
+| M06 | RESPONDIDA | RESPONDIDA | Anexo IX, item 10 (sementes) |
+
+A regra `sim-ou-nao` não disparou mais. A métrica de citação do MISTO segue em 1 de 7 só porque o
+gabarito pede o art. 138 e a Ceres cita o item do Anexo IX que o art. 138 remete: o caput reduz em
+60% as alíquotas "dos insumos agropecuários e aquícolas relacionados no Anexo IX". Os dois são
+fundamento; aceitar o item no gabarito é decisão da equipe (muda a versão do gabarito).
+
+**Achado novo:** a parte de **dados** do MISTO às vezes afirma regra legal ("o defensivo agrícola
+com NCM 3808 tem alíquota reduzida", M02; "a venda de soja em grãos não teve redução", M05). É o
+espelho do #170: ela vê só as funções, não a lei.
+
 ## Próximos passos sugeridos
 
-- MISTO: tratar o "Sim, ..." da parte de lei sem reabrir o #170, por exemplo tirando só a palavra
-  inicial quando a parte recebeu a pergunta separada (ela respondeu à regra geral, não ao caso
-  dele), e rever se o gabarito aceita o item do Anexo IX como fundamento além do art. 138.
+- MISTO: impedir a parte de dados de afirmar regra legal (o espelho do #170) e decidir se o gabarito
+  aceita o item do Anexo IX como fundamento além do art. 138.
 - Rodar uma segunda linha de base com o Ollama na GPU, para separar o que é limite do modelo do
   que é limite do hardware.
 - Rodar 3 vezes e informar a variação no artigo; revisar o gabarito com o orientador ou um

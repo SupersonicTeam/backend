@@ -43,6 +43,15 @@ public class RotaLegislacao {
   private static final Pattern RACIOCINIO = Pattern.compile("(?s)<think>.*?</think>");
 
   /**
+   * "Sim" ou "Não" no começo da resposta, como o {@code VerificadorAfirmacaoDados} reconhece:
+   * "Sim" com ou sem pontuação, "Não" só com pontuação ("Não incide" é regra, não resposta).
+   */
+  private static final Pattern SIM_OU_NAO_INICIAL = Pattern.compile(
+      "^[\\s\\p{Punct}]*(?:sim(?:\\s*[,.;:!\\u2013\\u2014-]|\\s)|n[a\\u00e3]o\\s*[,.;:!\\u2013\\u2014-])"
+          + "[\\s\\p{Punct}]*",
+      Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+  /**
    * Texto da parte de lei do MISTO quando o modelo falou dos dados do produtor (issue #170). As
    * citações validadas seguem na resposta; sem dígitos, para não virar fonte de número.
    */
@@ -96,11 +105,35 @@ public class RotaLegislacao {
    */
   public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto,
       List<TrechoRecuperado> complementares) {
-    return responder(pergunta, contexto, true, complementares);
+    return responderRegraGeral(pergunta, contexto, complementares, false);
+  }
+
+  /**
+   * Parte de legislação do MISTO, sabendo se a pergunta é a legal separada pelo classificador.
+   *
+   * <p>Com a pergunta separada ("fertilizante tem redução?"), o modelo responde à regra geral, e
+   * o "Sim," ou "Não," do começo responde a ela, não ao caso do produtor: a palavra sai e o resto
+   * passa pelo {@link VerificadorAfirmacaoDados} normalmente. Com a pergunta inteira, o "Sim"
+   * responderia ao caso dele, e o texto continua descartado (issue #170).
+   *
+   * @param pergunta         pergunta que a parte de lei recebe
+   * @param contexto         contexto da pergunta
+   * @param complementares   trechos extras (podem ser vazios)
+   * @param perguntaSeparada {@code true} se {@code pergunta} é a parte legal separada
+   * @return regra geral com citações, ou só as citações
+   */
+  public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto,
+      List<TrechoRecuperado> complementares, boolean perguntaSeparada) {
+    return responder(pergunta, contexto, true, perguntaSeparada, complementares);
   }
 
   private ResultadoRota responder(String pergunta, ContextoAssistente contexto,
       boolean soRegraGeral, List<TrechoRecuperado> complementares) {
+    return responder(pergunta, contexto, soRegraGeral, false, complementares);
+  }
+
+  private ResultadoRota responder(String pergunta, ContextoAssistente contexto,
+      boolean soRegraGeral, boolean perguntaSeparada, List<TrechoRecuperado> complementares) {
     contexto.verificarAtiva();
     List<TrechoRecuperado> trechos =
         juntar(busca.buscar(pergunta, contexto.hoje()), complementares);
@@ -143,12 +176,31 @@ public class RotaLegislacao {
     }
 
     contexto.registrarTrechosCitados(citacao.idsCitados());
-    if (soRegraGeral && verificadorDados.afirmaSobreDados(citacao.texto())) {
+    String regra = soRegraGeral && perguntaSeparada
+        ? semSimOuNaoInicial(citacao.texto())
+        : citacao.texto();
+    if (soRegraGeral && verificadorDados.afirmaSobreDados(regra)) {
       log.info("Ceres: parte de legislacao do MISTO falou dos dados do produtor; so trechos");
       return new ResultadoRota(
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
-    return ResultadoRota.aceita(citacao.texto(), citacao.citacoes());
+    return ResultadoRota.aceita(regra, citacao.citacoes());
+  }
+
+  /**
+   * Tira o "Sim," ou "Não," do começo e põe a frase seguinte em maiúscula. Se nada sobrar, devolve o
+   * texto como veio, e o verificador o descarta.
+   */
+  static String semSimOuNaoInicial(String texto) {
+    java.util.regex.Matcher m = SIM_OU_NAO_INICIAL.matcher(texto);
+    if (!m.find()) {
+      return texto;
+    }
+    String resto = texto.substring(m.end()).strip();
+    if (resto.isEmpty()) {
+      return texto;
+    }
+    return Character.toUpperCase(resto.charAt(0)) + resto.substring(1);
   }
 
   /**

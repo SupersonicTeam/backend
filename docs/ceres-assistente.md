@@ -312,7 +312,12 @@ mudança no prompt do classificador pede uma rodada do gabarito (`docs/avaliacao
   pergunta inteira. É texto do modelo, então `orquestracao/PerguntaLei` só a aceita se tiver até
   300 caracteres, não tiver forma de prompt injection e não trouxer número que o usuário não
   escreveu (o `ValidadorNumeros` aceita os números da pergunta: um "60%" inventado na reescrita
-  viraria fonte). Fora disso, vai a pergunta inteira, como antes.
+  viraria fonte). Fora disso, vai a pergunta inteira, como antes;
+- **"Sim," inicial com a pergunta separada.** A pergunta legal costuma sair de sim ou não
+  ("fertilizante tem redução?"), e o modelo responde "Sim, ...". Respondendo à regra geral, essa
+  palavra não fala do caso do produtor: com a pergunta separada, a `RotaLegislacao` tira o "Sim,"
+  ou "Não," do começo antes do `VerificadorAfirmacaoDados` ("Não incide" fica: é regra). Com a
+  pergunta inteira, o texto continua descartado.
 
 ### Contrato
 
