@@ -1,5 +1,5 @@
 {
-  "versao": "2026-10-14.2",
+  "versao": "2026-10-15.1",
   "perguntas": [
     {
       "id": "D01", "categoria": "DADOS",
@@ -251,7 +251,7 @@
         "dataInicio": ["2026-01-01"], "dataFim": ["2026-06-30"]
       },
       "camposValor": ["valorTotal"],
-      "dispositivosEsperados": ["LC 214/2025, art. 138"]
+      "dispositivosEsperados": ["LC 214/2025, art. 138", "LC 214/2025, Anexo IX, item 2"]
     },
     {
       "id": "M02", "categoria": "MISTO",
@@ -263,7 +263,7 @@
         "dataInicio": ["2026-04-01"], "dataFim": ["2026-04-30"]
       },
       "camposValor": ["valorTotal"],
-      "dispositivosEsperados": ["LC 214/2025, art. 138"]
+      "dispositivosEsperados": ["LC 214/2025, art. 138", "LC 214/2025, Anexo IX, item 6"]
     },
     {
       "id": "M03", "categoria": "MISTO",
@@ -304,7 +304,7 @@
         "dataInicio": ["2026-05-01"], "dataFim": ["2026-05-31"]
       },
       "camposValor": ["valorTotal"],
-      "dispositivosEsperados": ["LC 214/2025, art. 138"]
+      "dispositivosEsperados": ["LC 214/2025, art. 138", "LC 214/2025, Anexo IX, item 10"]
     },
 
     {
