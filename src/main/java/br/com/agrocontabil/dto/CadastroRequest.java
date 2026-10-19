@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.common.Sensivel;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.validation.ValidCpfCnpj;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -45,13 +46,17 @@ public record CadastroRequest(
     String email,
 
     @NotNull
+    @Sensivel
     @Schema(description = "Minimo de 10 caracteres; no maximo 72 bytes", format = "password",
         accessMode = Schema.AccessMode.WRITE_ONLY)
     String senha) {
 
-  /** Sem a senha: o {@code toString} padrão do record a poria em qualquer log do request. */
+  /**
+   * Sem senha, e-mail nem documento: o {@code toString} padrão do record os poria em qualquer log
+   * do request (LGPD).
+   */
   @Override
   public String toString() {
-    return "CadastroRequest[papel=" + papel + ", email=" + email + "]";
+    return "CadastroRequest[papel=" + papel + "]";
   }
 }

@@ -1,19 +1,30 @@
 package br.com.agrocontabil.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.dto.CadastroRequest;
+import br.com.agrocontabil.exception.CadastroConflitoException;
 import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -55,6 +67,7 @@ class CadastroIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private ContadorRepository contadorRepository;
   @Autowired private PasswordEncoder passwordEncoder;
+  @Autowired private CadastroService cadastroService;
   @Autowired private TestDatabaseCleaner cleaner;
 
   @BeforeEach
@@ -206,6 +219,61 @@ class CadastroIntegrationTest {
             .content(corpo("ADMIN", CPF, "admin@fazenda.com.br", SENHA)))
         .andExpect(status().isBadRequest());
     assertThat(credencialRepository.count()).isZero();
+  }
+
+  @Test
+  @DisplayName("a restricao (papel, cpf_cnpj) existe no banco e e reconhecida como de cadastro")
+  void restricaoUnicaDoDocumento() throws Exception {
+    assertThat(cadastrar(corpo("PRODUTOR", CPF, "primeiro@fazenda.com.br", SENHA))
+        .getResponse().getStatus()).isEqualTo(201);
+    Produtor outro = produtorRepository.save(
+        Produtor.builder().nomeCompleto("Outro").cpfCnpj("11144477735").build());
+
+    // Grava direto, pulando a checagem previa do service: so a restricao pode barrar.
+    CredencialUsuario duplicada = CredencialUsuario.builder()
+        .email("segundo@fazenda.com.br").senhaHash("{bcrypt}x").papel(PapelUsuario.PRODUTOR)
+        .cpfCnpj(CPF).produtorId(outro.getId()).build();
+
+    assertThatThrownBy(() -> credencialRepository.saveAndFlush(duplicada))
+        .isInstanceOfSatisfying(DataIntegrityViolationException.class,
+            e -> assertThat(CadastroService.violouUnicidadeDeCadastro(e)).isTrue());
+  }
+
+  @Test
+  @DisplayName("dois cadastros simultaneos do mesmo CPF: exatamente um vence")
+  void cadastrosSimultaneos() throws Exception {
+    int concorrentes = 4;
+    ExecutorService pool = Executors.newFixedThreadPool(concorrentes);
+    CountDownLatch largada = new CountDownLatch(1);
+    try {
+      List<Future<Boolean>> resultados = new ArrayList<>();
+      for (int i = 0; i < concorrentes; i++) {
+        String email = "simultaneo" + i + "@fazenda.com.br";
+        resultados.add(pool.submit(() -> {
+          largada.await();
+          try {
+            cadastroService.cadastrar(
+                new CadastroRequest(PapelUsuario.PRODUTOR, "Fazenda", CPF, email, SENHA));
+            return true;
+          } catch (CadastroConflitoException e) {
+            return false;
+          }
+        }));
+      }
+      largada.countDown();
+      long vencedores = 0;
+      for (Future<Boolean> resultado : resultados) {
+        if (resultado.get(30, TimeUnit.SECONDS)) {
+          vencedores++;
+        }
+      }
+      assertThat(vencedores).isEqualTo(1);
+    } finally {
+      pool.shutdownNow();
+    }
+    // O perdedor nao deixa produtor orfao: a gravacao do produtor e da credencial e atomica.
+    assertThat(credencialRepository.count()).isEqualTo(1);
+    assertThat(produtorRepository.count()).isEqualTo(1);
   }
 
   @Test

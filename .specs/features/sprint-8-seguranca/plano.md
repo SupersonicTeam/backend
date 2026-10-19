@@ -73,6 +73,13 @@ sessão), achados corrigidos no próprio PR, CI verde e review do Copilot antes 
 - Envio por porta (`EnvioEmail`); em `dev` o link vai para o log só com flag explícita, nunca em
   `prod`. SMTP real por `spring.mail.*`.
 
+### Achados do review do #205 (registrados para os PRs seguintes)
+- O 409 do cadastro não diz qual campo colidiu, mas quem controla os dois testa um por vez:
+  enumeração de e-mail/CPF é contida pelo limite de tentativas (#208/#150), não pelo texto.
+- O cadastro não prova a posse do e-mail nem do CPF/CNPJ: alguém pode ocupar o e-mail de outra
+  pessoa. Na #209 o dono real do e-mail recupera a conta pela redefinição de senha (que revoga as
+  sessões); verificação de e-mail no cadastro depende de SMTP e fica como débito.
+
 ## Bloqueios externos conhecidos
 
 - O Angular ainda não tem tela de login (SupersonicTeam/Agrocontabil). O mock por header continua

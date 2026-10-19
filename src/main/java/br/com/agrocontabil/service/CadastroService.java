@@ -12,9 +12,11 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.security.PapelUsuario;
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -48,6 +50,11 @@ public class CadastroService {
 
   /** Nome do campo da senha no request, para o {@code field} dos erros da política. */
   static final String CAMPO_SENHA = "senha";
+
+  /** Restrições únicas que dois cadastros simultâneos podem disputar. */
+  private static final List<String> RESTRICOES_UNICAS_DO_CADASTRO = List.of(
+      "uk_credencial_email", "uk_credencial_papel_cpf_cnpj", "uk_credencial_produtor",
+      "uk_credencial_contador", "uk_contador_cpf_cnpj");
 
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
@@ -94,6 +101,10 @@ public class CadastroService {
     try {
       credencial = transacao.execute(status -> gravar(request, email, cpfCnpj, senhaHash));
     } catch (DataIntegrityViolationException e) {
+      if (!violouUnicidadeDeCadastro(e)) {
+        // Outra restricao (coluna nova esquecida, FK): e bug, nao duplicidade — nao mascarar.
+        throw e;
+      }
       // Corrida entre dois cadastros do mesmo e-mail/documento: a restricao unica decidiu.
       log.info("Cadastro recusado pela restricao unica (corrida de cadastro simultaneo).");
       throw new CadastroConflitoException();
@@ -151,17 +162,40 @@ public class CadastroService {
   }
 
   /**
-   * Normaliza o e-mail de login: sem espaços nas pontas e em minúsculas.
+   * Normaliza o e-mail de login: NFKC, sem espaços nas pontas e em minúsculas.
    *
    * <p>A parte local de um e-mail é tecnicamente sensível a maiúsculas (RFC 5321), mas nenhum
    * provedor real a trata assim; aceitar {@code Joao@} e {@code joao@} como contas diferentes
-   * abriria espaço para uma conta-sombra com o e-mail de outra pessoa.
+   * abriria espaço para uma conta-sombra com o e-mail de outra pessoa. Pelo mesmo motivo o NFKC:
+   * {@code josé@} com o acento composto e com o acento combinante são o mesmo endereço na tela e
+   * precisam ser a mesma conta.
    *
    * @param email e-mail como digitado
    * @return e-mail normalizado
    */
   public static String normalizarEmail(String email) {
-    return email == null ? null : email.strip().toLowerCase(Locale.ROOT);
+    return email == null
+        ? null
+        : Normalizer.normalize(email, Normalizer.Form.NFKC).strip().toLowerCase(Locale.ROOT);
+  }
+
+  /**
+   * A violação veio de uma das restrições únicas que o cadastro disputa (changeSets 0024/0031)?
+   *
+   * <p>Pelo nome da restrição, que o Hibernate extrai da mensagem do driver; o PostgreSQL o
+   * devolve em minúsculas e o H2 em maiúsculas, daí a comparação sem caixa.
+   */
+  public static boolean violouUnicidadeDeCadastro(DataIntegrityViolationException e) {
+    Throwable causa = e;
+    while (causa != null) {
+      if (causa instanceof ConstraintViolationException violacao
+          && violacao.getConstraintName() != null) {
+        String nome = violacao.getConstraintName().toLowerCase(Locale.ROOT);
+        return RESTRICOES_UNICAS_DO_CADASTRO.stream().anyMatch(nome::contains);
+      }
+      causa = causa.getCause();
+    }
+    return false;
   }
 
   /** CPF {@code 000.000.000-00} ou CNPJ {@code 00.000.000/0000-00}, a grafia do seed. */

@@ -110,8 +110,8 @@ public enum ErrorCode {
    */
   SENHA_FRACA,
   /**
-   * E-mail ou CPF/CNPJ já cadastrado. HTTP 409. A mensagem não diz qual dos dois, para não virar
-   * consulta de "este e-mail tem conta?".
+   * E-mail ou CPF/CNPJ já cadastrado. HTTP 409. A mensagem não diz qual dos dois; a enumeração
+   * campo a campo é contida pelo limite de tentativas (issues #208/#150).
    */
   CADASTRO_CONFLITO,
   // Ceres — assistente fiscal (issue #141)

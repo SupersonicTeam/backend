@@ -8,8 +8,10 @@ import org.springframework.http.HttpStatus;
 /**
  * O cadastro esbarrou num e-mail ou CPF/CNPJ que já existe (issue #205). HTTP 409.
  *
- * <p>A mensagem é a mesma nos dois casos e não repete os dados recebidos: dizer "este e-mail já
- * tem conta" transformaria o cadastro numa consulta de quem é cliente.
+ * <p>A mensagem é a mesma nos dois casos e não repete os dados recebidos. Isso <em>não</em> elimina
+ * a enumeração: quem controla os dois campos ainda testa um de cada vez (e-mail alvo com CPF novo,
+ * ou o contrário). É inerente a todo cadastro com unicidade; o freio real é o limite de tentativas
+ * por IP (issues #208 e #150), não o texto da resposta.
  *
  * <p>Também cobre o CPF/CNPJ de um produtor ou contador que já existe <em>sem</em> credencial: o
  * cadastro nunca "reivindica" uma identidade preexistente, porque bastaria saber o CPF de alguém

@@ -58,7 +58,11 @@ public class CredencialUsuario {
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id;
 
-  /** E-mail de login, já normalizado (sem espaços nas pontas, minúsculas). Único. */
+  /**
+   * E-mail de login, já normalizado (NFKC, sem espaços nas pontas, minúsculas). Único. Dado
+   * pessoal: fora do {@code toString}.
+   */
+  @ToString.Exclude
   @Column(name = "email", nullable = false, length = 254)
   private String email;
 
@@ -72,7 +76,7 @@ public class CredencialUsuario {
   private String senhaHash;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "papel", nullable = false, length = 20)
+  @Column(name = "papel", nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
   private PapelUsuario papel;
 
   /** Documento da identidade, só dígitos (11 = CPF, 14 = CNPJ). */

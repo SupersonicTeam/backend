@@ -22,8 +22,10 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.security.PapelUsuario;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -160,11 +162,41 @@ class CadastroServiceTest {
       p.setId(UUID.randomUUID());
       return p;
     });
+    // H2 devolve o nome da restricao em maiusculas; o PostgreSQL, em minusculas.
     when(credencialRepository.saveAndFlush(any(CredencialUsuario.class)))
-        .thenThrow(new DataIntegrityViolationException("uk_credencial_email"));
+        .thenThrow(violacao("UK_CREDENCIAL_EMAIL"));
 
     assertThatThrownBy(() -> service.cadastrar(pedido(PapelUsuario.PRODUTOR, CPF)))
         .isInstanceOf(CadastroConflitoException.class);
+  }
+
+  @Test
+  @DisplayName("violacao que nao e de unicidade do cadastro sobe como esta (nao vira 'ja cadastrado')")
+  void outraViolacaoNaoEhMascarada() {
+    comTransacao();
+    when(passwordEncoder.encode(SENHA)).thenReturn("{bcrypt}hash");
+    when(produtorRepository.saveAndFlush(any(Produtor.class)))
+        .thenThrow(violacao("fk_qualquer_coisa"));
+
+    assertThatThrownBy(() -> service.cadastrar(pedido(PapelUsuario.PRODUTOR, CPF)))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .isNotInstanceOf(CadastroConflitoException.class);
+    assertThat(CadastroService.violouUnicidadeDeCadastro(
+        new DataIntegrityViolationException("sem causa"))).isFalse();
+  }
+
+  @Test
+  @DisplayName("e-mail normalizado por NFKC: acento composto e combinante sao a mesma conta")
+  void emailNfkc() {
+    assertThat(CadastroService.normalizarEmail(" José@Fazenda.com "))
+        .isEqualTo(CadastroService.normalizarEmail("josé@fazenda.com"))
+        .isEqualTo("josé@fazenda.com");
+    assertThat(CadastroService.normalizarEmail(null)).isNull();
+  }
+
+  private static DataIntegrityViolationException violacao(String restricao) {
+    return new DataIntegrityViolationException("violacao", new ConstraintViolationException(
+        "violacao", new SQLException("dup"), restricao));
   }
 
   @Test
@@ -188,6 +220,7 @@ class CadastroServiceTest {
   @Test
   @DisplayName("toString do request nao carrega a senha")
   void toStringSemSenha() {
-    assertThat(pedido(PapelUsuario.PRODUTOR, CPF).toString()).doesNotContain(SENHA, CPF);
+    assertThat(pedido(PapelUsuario.PRODUTOR, CPF).toString())
+        .doesNotContain(SENHA, CPF, "Joaquim", "joaquim");
   }
 }
