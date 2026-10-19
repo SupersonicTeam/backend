@@ -1,6 +1,7 @@
 package br.com.agrocontabil.security;
 
 import br.com.agrocontabil.config.LimiteTaxaProperties;
+import br.com.agrocontabil.config.MockIdentidadeFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -54,14 +56,16 @@ public class LimiteTaxaGeralFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     String caminho = RotasAutenticacao.caminho(request);
-    if (!caminho.startsWith(PREFIXO_API)) {
+    // Rotas publicas de autenticacao ja tem limite proprio por IP (#208/#209): conta-las aqui de
+    // novo faria quem divide IP (CGNAT de operadora movel) perder o refresh por trafego alheio.
+    if (!caminho.startsWith(PREFIXO_API) || RotasAutenticacao.ehPublicaPost(request)) {
       filterChain.doFilter(request, response);
       return;
     }
 
     String chave = chaveCliente(request);
     long esperar = geral.tentar(chave);
-    if (esperar == 0 && caminho.startsWith(PREFIXO_CHAT)) {
+    if (esperar == 0 && ehChat(caminho)) {
       esperar = chat.tentar(chave);
     }
     if (esperar > 0) {
@@ -73,10 +77,24 @@ public class LimiteTaxaGeralFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
-  /** Identidade autenticada, ou o IP (/64 no IPv6) de quem ainda não tem uma. */
+  /** {@code /api/assistente/chat} e o que estiver sob ele ({@code /chat/stream}), e só. */
+  private static boolean ehChat(String caminho) {
+    return caminho.equals(PREFIXO_CHAT) || caminho.startsWith(PREFIXO_CHAT + "/");
+  }
+
+  /**
+   * Identidade autenticada, ou o IP (/64 no IPv6) de quem ainda não tem uma.
+   *
+   * <p>Requisição sem {@code Authorization} e sem {@code X-Usuario-Id} vai pelo IP mesmo que haja
+   * principal: em dev/homolog o mock a autentica como o produtor semente, e todo cliente sem header
+   * dividiria um balde só — um cliente com 100 req/min derrubaria o login de todos (achado do
+   * review da #150). Em prod o mock não existe e nada muda.
+   */
   private static String chaveCliente(HttpServletRequest request) {
     Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
-    if (autenticacao != null
+    boolean identidadeDeclarada = request.getHeader(HttpHeaders.AUTHORIZATION) != null
+        || request.getHeader(MockIdentidadeFilter.HEADER_USUARIO_ID) != null;
+    if (identidadeDeclarada && autenticacao != null
         && autenticacao.getPrincipal() instanceof UsuarioAutenticado usuario) {
       return "u:" + usuario.papel() + ":" + usuario.id();
     }

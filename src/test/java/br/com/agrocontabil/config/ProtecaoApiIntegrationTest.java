@@ -173,4 +173,28 @@ class ProtecaoApiIntegrationTest {
         .andReturn().getResponse().getStatus();
     assertThat(status).isEqualTo(415);
   }
+
+  @Test
+  @DisplayName("sem header, o mock cai no semente, mas o limite segue por IP")
+  void semHeaderLimitaPorIpMesmoComSemente() throws Exception {
+    String ipAbusivo = ipNovo();
+    for (int i = 0; i < 5; i++) {
+      mockMvc.perform(doIp(get("/api/auth/me"), ipAbusivo)).andExpect(status().isOk());
+    }
+    mockMvc.perform(doIp(get("/api/auth/me"), ipAbusivo)).andExpect(status().isTooManyRequests());
+
+    // Outro cliente sem header, tambem resolvido como o semente: cota propria.
+    mockMvc.perform(doIp(get("/api/auth/me"), ipNovo())).andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("rotas publicas de autenticacao ficam fora do limite geral (tem limite proprio)")
+  void rotasDeAutenticacaoForaDoGeral() throws Exception {
+    String ip = ipNovo();
+    for (int i = 0; i < 5; i++) {
+      mockMvc.perform(doIp(get("/api/v1/health"), ip));
+    }
+    // O balde geral deste IP esgotou, mas o logout (rota de autenticacao) nao depende dele.
+    mockMvc.perform(doIp(post("/api/auth/logout"), ip)).andExpect(status().isNoContent());
+  }
 }
