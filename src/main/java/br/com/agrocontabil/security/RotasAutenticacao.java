@@ -6,7 +6,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.util.UrlPathHelper;
 
 /**
- * Rotas públicas de autenticação (issues #205–#207): fonte única para o {@code SecurityConfig},
+ * Rotas públicas de autenticação (issues #205–#209): fonte única para o {@code SecurityConfig},
  * que as libera, e para o {@link JwtAutenticacaoFilter}, que ignora o Bearer nelas.
  *
  * <p>Duas listas iguais em dois arquivos se separam no primeiro endpoint novo; uma rota pública
@@ -26,8 +26,15 @@ public final class RotasAutenticacao {
   /** Logout deste dispositivo pelo cookie de refresh (#207). */
   public static final String LOGOUT = "/api/auth/logout";
 
+  /** Pedido de redefinição de senha por e-mail (#209). */
+  public static final String SENHA_ESQUECI = "/api/auth/senha/esqueci";
+
+  /** Redefinição de senha com o token do e-mail (#209). */
+  public static final String SENHA_REDEFINIR = "/api/auth/senha/redefinir";
+
   /** Todas as rotas públicas de autenticação, só com {@code POST}. */
-  public static final Set<String> PUBLICAS_POST = Set.of(CADASTRO, LOGIN, REFRESH, LOGOUT);
+  public static final Set<String> PUBLICAS_POST =
+      Set.of(CADASTRO, LOGIN, REFRESH, LOGOUT, SENHA_ESQUECI, SENHA_REDEFINIR);
 
   /** Decodifica o percent-encoding e tira o conteúdo após {@code ;} — como o roteamento faz. */
   private static final UrlPathHelper CAMINHOS = new UrlPathHelper();

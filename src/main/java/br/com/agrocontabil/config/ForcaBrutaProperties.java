@@ -16,6 +16,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param loginPorMinuto    tentativas de login por IP por minuto
  * @param cadastroPorMinuto cadastros por IP por minuto
  * @param refreshPorMinuto  renovações de sessão por IP por minuto
+ * @param senhaPorMinuto    pedidos de "esqueci a senha" e redefinições por IP por minuto (#209)
  * @param maxIps            IPs acompanhados ao mesmo tempo: teto de memória do limitador
  */
 @ConfigurationProperties(prefix = "app.seguranca.forca-bruta")
@@ -25,12 +26,13 @@ public record ForcaBrutaProperties(
     @DefaultValue("10") int loginPorMinuto,
     @DefaultValue("5") int cadastroPorMinuto,
     @DefaultValue("30") int refreshPorMinuto,
+    @DefaultValue("5") int senhaPorMinuto,
     @DefaultValue("10000") int maxIps) {
 
   /** Valores que desligariam a proteção em silêncio impedem a subida. */
   public ForcaBrutaProperties {
     if (maxFalhas < 1 || bloqueio.isNegative() || bloqueio.isZero() || loginPorMinuto < 1
-        || cadastroPorMinuto < 1 || refreshPorMinuto < 1 || maxIps < 1) {
+        || cadastroPorMinuto < 1 || refreshPorMinuto < 1 || senhaPorMinuto < 1 || maxIps < 1) {
       throw new IllegalStateException(
           "app.seguranca.forca-bruta: limites e duracao do bloqueio precisam ser positivos.");
     }

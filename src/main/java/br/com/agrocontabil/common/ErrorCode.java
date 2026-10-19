@@ -131,6 +131,11 @@ public enum ErrorCode {
    * {@code Retry-After}.
    */
   MUITAS_TENTATIVAS,
+  // Recuperacao e troca de senha (Sprint 8 — issue #209)
+  /** Link de redefinição desconhecido, expirado, já usado ou substituído. HTTP 400. */
+  TOKEN_REDEFINICAO_INVALIDO,
+  /** Senha atual não confere na troca de senha. HTTP 400. */
+  SENHA_ATUAL_INCORRETA,
   // Ceres — assistente fiscal (issue #141)
   /**
    * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).

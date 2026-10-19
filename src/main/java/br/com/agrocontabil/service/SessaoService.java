@@ -10,16 +10,11 @@ import br.com.agrocontabil.repository.SessaoRefreshRepository;
 import br.com.agrocontabil.security.JwtService;
 import br.com.agrocontabil.security.JwtService.TokenAcesso;
 import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.security.TokenOpaco;
 import br.com.agrocontabil.security.UsuarioAutenticado;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -32,7 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Sessão de login: o par access token (JWT, 15 min) + refresh token (opaco, rotativo) — issue #207.
  *
- * <p><strong>Refresh opaco.</strong> 256 bits de {@link SecureRandom}, em base64url. No banco só o
+ * <p><strong>Refresh opaco.</strong> 256 bits aleatórios ({@link TokenOpaco}). No banco só o
  * SHA-256: quem ler a tabela não renova sessão nenhuma. Não é JWT de propósito — um refresh
  * precisa ser revogável um a um, e a revogação já exige consultar o banco.
  *
@@ -56,8 +51,6 @@ public class SessaoService {
 
   private static final Logger log = LoggerFactory.getLogger(SessaoService.class);
 
-  /** 256 bits. */
-  private static final int BYTES_TOKEN = 32;
 
   private final SessaoRefreshRepository sessaoRepository;
   private final CredencialUsuarioRepository credencialRepository;
@@ -65,7 +58,6 @@ public class SessaoService {
   private final RefreshProperties propriedades;
   private final Clock clock;
   private final TransactionTemplate transacao;
-  private final SecureRandom aleatorio = new SecureRandom();
 
   public SessaoService(
       SessaoRefreshRepository sessaoRepository,
@@ -108,7 +100,7 @@ public class SessaoService {
     if (refreshToken == null || refreshToken.isBlank()) {
       throw new SessaoInvalidaException();
     }
-    String hash = hash(refreshToken);
+    String hash = TokenOpaco.hash(refreshToken);
     Renovacao renovacao = transacao.execute(status -> renovarSobLock(hash));
     if (renovacao == null || renovacao.credencial() == null) {
       throw new SessaoInvalidaException();
@@ -126,7 +118,7 @@ public class SessaoService {
     if (refreshToken == null || refreshToken.isBlank()) {
       return;
     }
-    String hash = hash(refreshToken);
+    String hash = TokenOpaco.hash(refreshToken);
     // Mesmo lock da renovacao: um refresh deste token em andamento termina (e grava o sucessor)
     // antes do UPDATE da familia, que entao o alcanca. Sem o lock, o sucessor inserido por uma
     // renovacao simultanea escaparia da revogacao — e quem tivesse uma copia do token seguiria
@@ -210,13 +202,11 @@ public class SessaoService {
 
   private String gravarToken(UUID credencialId, UUID familiaId, int versaoSessao,
       OffsetDateTime familiaIniciadaEm, OffsetDateTime agora, Instant expiraEm) {
-    byte[] bytes = new byte[BYTES_TOKEN];
-    aleatorio.nextBytes(bytes);
-    String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    String token = TokenOpaco.gerar();
     sessaoRepository.save(SessaoRefresh.builder()
         .credencialId(credencialId)
         .familiaId(familiaId)
-        .tokenHash(hash(token))
+        .tokenHash(TokenOpaco.hash(token))
         .versaoSessao(versaoSessao)
         .familiaIniciadaEm(familiaIniciadaEm)
         .criadoEm(agora)
@@ -244,18 +234,6 @@ public class SessaoService {
     return OffsetDateTime.now(clock);
   }
 
-  /**
-   * SHA-256 do token, em hexadecimal. Sem sal de propósito: o token já tem 256 bits de entropia
-   * (não há dicionário a atacar) e o hash precisa ser determinístico para a busca.
-   */
-  static String hash(String token) {
-    try {
-      MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-      return HexFormat.of().formatHex(sha256.digest(token.getBytes(StandardCharsets.UTF_8)));
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256 indisponivel na JVM", e);
-    }
-  }
 
   /** Desfecho da renovação dentro da transação; {@code credencial} nula = recusada. */
   private record Renovacao(CredencialUsuario credencial, String refreshToken, Instant expiraEm) {

@@ -171,7 +171,8 @@ class LoginServiceTest {
 
     service.entrar(new LoginRequest(EMAIL, SENHA));
 
-    verify(credencialRepository).atualizarSenhaHash(credencial.getId(), "{bcrypt}novo");
+    verify(credencialRepository)
+        .atualizarSenhaHashSeIgual(credencial.getId(), "{bcrypt}real", "{bcrypt}novo");
     verify(credencialRepository, never()).save(any());
   }
 }

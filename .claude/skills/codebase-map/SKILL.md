@@ -36,6 +36,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 |--------|-----------|
 | `HealthController` | `GET /api/v1/health` |
 | `AutenticacaoController` | `/api/auth/**` — `POST /cadastro`, `/login`, `/refresh`, `/logout` públicos (#205–#207), `POST /logout-todos` e `GET /me` autenticados; só com web |
+| `SenhaController` | `/api/auth/senha/**` — `esqueci` e `redefinir` públicos, `alterar` autenticado (#209); só com web |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
@@ -61,6 +62,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `LoginService` | Login (#206): e-mail normalizado + senha NFKC; e-mail sem conta confere contra hash fictício (tempo igual); falha de qualquer tipo = `CredenciaisInvalidasException` (401); rehash por `UPDATE` só da coluna; `usuarioLogado()` p/ `/me`. Só web |
 | `SessaoService` | Par access+refresh (#207): abre família no login, `renovar` (rotação, reuso → revoga família, lock pessimista, vida máxima, desfecho gravado antes de recusar), `encerrar`, `encerrarTodas`/`revogarTodas` (ponto único de revogação em massa). Só web |
 | `SessaoRefreshLimpezaJob` | Diário 3h + ShedLock (#207): apaga sessões vencidas há mais que `retencao` |
+| `SenhaService` | Recuperação/troca de senha (#209): `solicitarRedefinicao` (202 sempre, trabalho no pool `agro-email-`), `redefinir` (valida → BCrypt fora de tx → regrava sob lock), `alterar` (senha atual com a reserva antitentativa); troca = hash + links apagados + `revogarTodas` + bloqueio zerado. Só web |
+| `EnvioEmail` | Porta de e-mail (#209); implementação escolhida no `config/EmailConfig` (SMTP / LOG só dev / DESLIGADO) |
 | `BloqueioContaService` | Bloqueio por conta (#208): `reservarTentativa` (conta a tentativa sob lock pessimista **antes** do BCrypt; 5 → 15 min; vencido recomeça), `reservarFicticia` (e-mail sem conta, mesmo custo), `liberar` (sucesso zera) |
 | `AutenticacaoTokenService` | JWT → `UsuarioAutenticado` (#206): relê a credencial a cada requisição (ativa, mesmo papel, mesma `versaoSessao`). Só web |
 | `PoliticaSenha` | NIST 800-63B (#205): 10 caracteres a 72 bytes UTF-8 (limite do BCrypt), sem repetição, sem e-mail/CPF, fora de `seguranca/senhas-comuns.txt`; `normalizar` (NFKC) antes de validar e de gerar/conferir hash |
@@ -144,6 +147,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `ProdutorEmContextoResolver` | Autoriza o `produtorId` alvo: produtor só a si, contador só a carteira → 404 |
 | `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate: Bearer`, 403); `recusarToken` = 401 `error="invalid_token"` (#206) |
 | `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto/de exemplo (dev: efêmero) |
+| `TokenOpaco` | Token de 256 bits (base64url) + SHA-256 hex — fonte única do refresh (#207) e da redefinição (#209) |
 | `CookieRefresh` | Monta/lê/apaga o cookie `agro_refresh` (HttpOnly, Secure, SameSite=Strict, Path=/api/auth) — #207 |
 | `LimitadorTaxa` | Balde de fichas (bucket4j) por chave, em memória, com teto LRU (#208; reusado pelo rate limit da #150) |
 | `LimiteTaxaAutenticacaoFilter` | 429 `MUITAS_TENTATIVAS` + `Retry-After` por IP em login/cadastro/refresh, antes do filtro JWT (#208); não é bean |
@@ -183,6 +187,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
 | `AlertaTributario` | Alerta RN010 (issue #140): tipo (`TipoAlertaTributario`), referência (guia/nota/apuração do produtor), data-limite, descrição sem PII, status (`StatusAlertaTributario`). Tabela `alerta_tributario` (0028), única por `(tipo, referencia_id, data_limite)` |
 | `Contador` | Escritório de contabilidade — 2ª identidade do sistema; vínculo N:N com `Produtor` via `contador_produtor` (issue #93) |
+| `RedefinicaoSenha` | Pedido de redefinição (`redefinicao_senha`, 0034, #209): só o SHA-256 do token, validade, uso; um por credencial |
 | `SessaoRefresh` | Refresh emitido (`sessao_refresh`, 0032, #207): só o SHA-256, família, versão de sessão, início da família, expiração, `usadoEm`, `revogadoEm` |
 | `CredencialUsuario` | E-mail de login + hash da senha (`credencial_usuario`, 0031, #205): papel + **exatamente uma** referência (`produtorId`/`contadorId`, CHECK), `cpfCnpj` só dígitos (único por papel), `ativo`, `versaoSessao` (revogação em massa: o token leva a versão). Sem relacionamento JPA; hash e documento fora do `toString` |
 | **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ; AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS — `ENVIANDO`/`CANCELANDO` sao transitorios e bloqueiam toda operacao, issue #96) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` · `TipoGuiaFiscal` (ICMS/FUNRURAL/DARF/GPS/OUTRO) · `StatusGuiaFiscal` (PENDENTE/PAGA/VENCIDA) |
@@ -290,5 +295,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0033-credencial-bloqueio` (próximo número livre: **0034**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0034-redefinicao-senha` (próximo número livre: **0035**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

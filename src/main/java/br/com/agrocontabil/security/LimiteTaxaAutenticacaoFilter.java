@@ -46,6 +46,7 @@ public class LimiteTaxaAutenticacaoFilter extends OncePerRequestFilter {
       ForcaBrutaProperties propriedades, SecurityErrorResponder errorResponder) {
     this.errorResponder = errorResponder;
     int maxIps = propriedades.maxIps();
+    LimitadorTaxa senha = new LimitadorTaxa(propriedades.senhaPorMinuto(), MINUTO, maxIps);
     // Um limitador por rota: cadastrar nao gasta as tentativas de login, e vice-versa.
     this.limitePorRota = Map.of(
         RotasAutenticacao.LOGIN,
@@ -53,7 +54,10 @@ public class LimiteTaxaAutenticacaoFilter extends OncePerRequestFilter {
         RotasAutenticacao.CADASTRO,
         new LimitadorTaxa(propriedades.cadastroPorMinuto(), MINUTO, maxIps),
         RotasAutenticacao.REFRESH,
-        new LimitadorTaxa(propriedades.refreshPorMinuto(), MINUTO, maxIps));
+        new LimitadorTaxa(propriedades.refreshPorMinuto(), MINUTO, maxIps),
+        // Um balde so para os dois passos da recuperacao: alternar entre eles nao dobra a cota.
+        RotasAutenticacao.SENHA_ESQUECI, senha,
+        RotasAutenticacao.SENHA_REDEFINIR, senha);
   }
 
   @Override

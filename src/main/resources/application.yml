@@ -241,7 +241,15 @@ app:
       login-por-minuto: ${LIMITE_LOGIN_POR_MINUTO:10}
       cadastro-por-minuto: ${LIMITE_CADASTRO_POR_MINUTO:5}
       refresh-por-minuto: ${LIMITE_REFRESH_POR_MINUTO:30}
+      senha-por-minuto: ${LIMITE_SENHA_POR_MINUTO:5}
       max-ips: 10000
+    # Recuperacao de senha (#209). modo-email: SMTP (prod, com spring.mail.*), LOG (so dev: o link
+    # vai para o log; proibido em prod) ou DESLIGADO.
+    redefinicao:
+      validade: ${REDEFINICAO_VALIDADE:PT30M}
+      url-frontend: ${REDEFINICAO_URL_FRONTEND:http://localhost:4200/redefinir-senha}
+      modo-email: ${EMAIL_MODO:DESLIGADO}
+      remetente: ${EMAIL_REMETENTE:nao-responda@agrocontabil.local}
     # Refresh token rotativo em cookie HttpOnly (#207).
     refresh:
       validade: ${REFRESH_VALIDADE:P7D}

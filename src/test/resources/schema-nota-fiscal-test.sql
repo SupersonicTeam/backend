@@ -521,3 +521,23 @@ MERGE INTO cfop_referencia (codigo, descricao, tipo_operacao, ambito, aplicavel_
     ('6949', 'Outra saida de mercadoria ou prestacao de servico nao especificada (interestadual)', 'SAIDA', 'INTERESTADUAL', TRUE),
     ('7101', 'Venda de producao do estabelecimento (exportacao)', 'SAIDA', 'EXTERIOR', TRUE),
     ('1556', 'Compra de material para uso ou consumo (operacao interna)', 'ENTRADA', 'INTERNO', FALSE);
+
+-- Redefinicao de senha — Sprint 8 issue #209 (migration 0034). Manter sincronizado com
+-- 0034-redefinicao-senha.xml.
+CREATE TABLE IF NOT EXISTS redefinicao_senha (
+    id             UUID                      NOT NULL,
+    credencial_id  UUID                      NOT NULL,
+    token_hash     VARCHAR(64)               NOT NULL,
+    criado_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    expira_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    usado_em       TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE redefinicao_senha ADD CONSTRAINT IF NOT EXISTS uk_redefinicao_senha_token_hash
+    UNIQUE (token_hash);
+
+ALTER TABLE redefinicao_senha ADD CONSTRAINT IF NOT EXISTS fk_redefinicao_senha_credencial
+    FOREIGN KEY (credencial_id) REFERENCES credencial_usuario (id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_redefinicao_senha_credencial ON redefinicao_senha (credencial_id);
