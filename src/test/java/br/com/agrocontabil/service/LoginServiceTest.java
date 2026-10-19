@@ -62,6 +62,7 @@ class LoginServiceTest {
   void loginValido() {
     CredencialUsuario credencial = credencial(true);
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.reservarTentativa(any())).thenReturn(true);
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
     SessaoEmitida sessao = new SessaoEmitida(new LoginResponse("jwt", "Bearer",
         Instant.parse("2026-10-19T12:15:00Z"), PapelUsuario.PRODUTOR, credencial.getProdutorId()),
@@ -83,6 +84,7 @@ class LoginServiceTest {
     assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
         .isInstanceOf(CredenciaisInvalidasException.class);
     verify(passwordEncoder).matches(SENHA, "{bcrypt}ficticio");
+    verify(bloqueioConta).reservarFicticia();
     verify(sessaoService, never()).abrir(any());
   }
 
@@ -91,11 +93,14 @@ class LoginServiceTest {
   void senhaErrada() {
     CredencialUsuario credencial = credencial(true);
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.reservarTentativa(any())).thenReturn(true);
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(false);
 
     assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
         .isInstanceOf(CredenciaisInvalidasException.class);
-    verify(bloqueioConta).registrarFalha(credencial.getId());
+    // A falha ja foi contada na reserva, antes do BCrypt: nada a liberar.
+    verify(bloqueioConta).reservarTentativa(credencial.getId());
+    verify(bloqueioConta, never()).liberar(any());
     verify(sessaoService, never()).abrir(any());
   }
 
@@ -104,13 +109,14 @@ class LoginServiceTest {
   void contaBloqueada() {
     CredencialUsuario credencial = credencial(true);
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
-    when(bloqueioConta.bloqueada(credencial)).thenReturn(true);
+    when(bloqueioConta.reservarTentativa(credencial.getId())).thenReturn(false);
 
     assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
         .isInstanceOf(CredenciaisInvalidasException.class);
     verify(passwordEncoder, never()).matches(SENHA, "{bcrypt}real");
     verify(passwordEncoder).matches(SENHA, "{bcrypt}ficticio");
-    verify(bloqueioConta, never()).registrarFalha(any());
+    verify(bloqueioConta, never()).reservarFicticia();
+    verify(bloqueioConta, never()).liberar(any());
     verify(sessaoService, never()).abrir(any());
   }
 
@@ -119,17 +125,19 @@ class LoginServiceTest {
   void sucessoZeraFalhas() {
     CredencialUsuario credencial = credencial(true);
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.reservarTentativa(any())).thenReturn(true);
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
 
     service.entrar(new LoginRequest(EMAIL, SENHA));
 
-    verify(bloqueioConta).zerarFalhas(credencial);
+    verify(bloqueioConta).liberar(credencial.getId());
   }
 
   @Test
   @DisplayName("credencial desativada com a senha certa: o mesmo 401 (nao revela que existe)")
   void desativada() {
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial(false)));
+    when(bloqueioConta.reservarTentativa(any())).thenReturn(true);
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
 
     assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
@@ -153,6 +161,7 @@ class LoginServiceTest {
   void rehashNoLogin() {
     CredencialUsuario credencial = credencial(true);
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.reservarTentativa(any())).thenReturn(true);
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
     when(passwordEncoder.upgradeEncoding("{bcrypt}real")).thenReturn(true);
     when(passwordEncoder.encode(SENHA)).thenReturn("{bcrypt}novo");

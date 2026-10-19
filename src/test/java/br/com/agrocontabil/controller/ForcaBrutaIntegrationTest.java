@@ -13,6 +13,7 @@ import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.BloqueioContaService;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -159,6 +160,26 @@ class ForcaBrutaIntegrationTest {
   }
 
   @Test
+  @DisplayName("caminho com percent-encoding (/api/auth/logi%6E) conta no mesmo limite")
+  void percentEncodingNaoEscapaDoLimite() throws Exception {
+    String ip = ipNovo();
+    for (int i = 0; i < 3; i++) {
+      mockMvc.perform(login("ninguem@fazenda.com.br", SENHA, ip));
+    }
+
+    // O Spring decodifica o caminho para rotear (a requisicao chegaria ao login); o limite
+    // precisa enxergar o mesmo caminho decodificado.
+    // URI.create: o template do MockMvc reencodaria o "%" (%256E) e o firewall barraria.
+    mockMvc.perform(post(URI.create("/api/auth/logi%6E")).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"ninguem@fazenda.com.br\",\"senha\":\"%s\"}".formatted(SENHA))
+            .with(requisicao -> {
+              requisicao.setRemoteAddr(ip);
+              return requisicao;
+            }))
+        .andExpect(status().isTooManyRequests());
+  }
+
+  @Test
   @DisplayName("X-Forwarded-For forjado nao troca o IP: o limite continua valendo")
   void xForwardedForNaoEnganaOLimite() throws Exception {
     String ip = ipNovo();
@@ -173,29 +194,62 @@ class ForcaBrutaIntegrationTest {
   }
 
   @Test
-  @DisplayName("falhas simultaneas da mesma conta: todas contam (incremento sob lock)")
-  void falhasSimultaneas() throws Exception {
+  @DisplayName("reservas simultaneas: exatamente max-falhas conseguem conferir a senha")
+  void reservasSimultaneas() throws Exception {
     UUID id = credencial().getId();
     int concorrentes = 8;
     ExecutorService pool = Executors.newFixedThreadPool(concorrentes);
     CountDownLatch largada = new CountDownLatch(1);
+    long liberadas = 0;
     try {
-      List<Future<?>> tarefas = new ArrayList<>();
+      List<Future<Boolean>> tarefas = new ArrayList<>();
       for (int i = 0; i < concorrentes; i++) {
         tarefas.add(pool.submit(() -> {
           largada.await();
-          bloqueioConta.registrarFalha(id);
-          return null;
+          return bloqueioConta.reservarTentativa(id);
         }));
       }
       largada.countDown();
-      for (Future<?> tarefa : tarefas) {
-        tarefa.get(30, TimeUnit.SECONDS);
+      for (Future<Boolean> tarefa : tarefas) {
+        if (tarefa.get(30, TimeUnit.SECONDS)) {
+          liberadas++;
+        }
       }
     } finally {
       pool.shutdownNow();
     }
 
-    assertThat(credencial().getFalhasLogin()).isEqualTo(concorrentes);
+    assertThat(liberadas).isEqualTo(5);
+    assertThat(credencial().getFalhasLogin()).isEqualTo(5);
+    assertThat(credencial().getBloqueadaAte()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("ataque paralelo pela API: nem com 8 senhas ao mesmo tempo passam mais de 5 palpites")
+  void ataqueParaleloPelaApi() throws Exception {
+    int concorrentes = 8;
+    ExecutorService pool = Executors.newFixedThreadPool(concorrentes);
+    CountDownLatch largada = new CountDownLatch(1);
+    try {
+      List<Future<Integer>> tarefas = new ArrayList<>();
+      for (int i = 0; i < concorrentes; i++) {
+        String senha = "palpite numero " + i;
+        String ip = ipNovo();
+        tarefas.add(pool.submit(() -> {
+          largada.await();
+          return mockMvc.perform(login(EMAIL, senha, ip)).andReturn().getResponse().getStatus();
+        }));
+      }
+      largada.countDown();
+      for (Future<Integer> tarefa : tarefas) {
+        assertThat(tarefa.get(30, TimeUnit.SECONDS)).isEqualTo(401);
+      }
+    } finally {
+      pool.shutdownNow();
+    }
+
+    // Antes da reserva, as 8 liam "nao bloqueada" e as 8 tinham a senha conferida.
+    assertThat(credencial().getFalhasLogin()).isEqualTo(5);
+    mockMvc.perform(login(EMAIL, SENHA, ipNovo())).andExpect(status().isUnauthorized());
   }
 }

@@ -10,7 +10,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -99,9 +98,7 @@ public class JwtAutenticacaoFilter extends OncePerRequestFilter {
    * principal; a credencial delas é o corpo (login) ou o cookie (refresh, logout).
    */
   private static boolean ehRotaDeAutenticacao(HttpServletRequest request) {
-    String caminho = request.getRequestURI().substring(request.getContextPath().length());
-    return HttpMethod.POST.matches(request.getMethod())
-        && RotasAutenticacao.PUBLICAS_POST.contains(caminho);
+    return RotasAutenticacao.ehPublicaPost(request);
   }
 
   /** O esquema é case-insensitive (RFC 9110 §11.1). */

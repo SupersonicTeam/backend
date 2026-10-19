@@ -6,7 +6,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,10 +61,10 @@ public class LimiteTaxaAutenticacaoFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     LimitadorTaxa limitador = HttpMethod.POST.matches(request.getMethod())
-        ? limitePorRota.get(request.getRequestURI().substring(request.getContextPath().length()))
+        ? limitePorRota.get(RotasAutenticacao.caminho(request))
         : null;
     if (limitador != null) {
-      long esperar = limitador.tentar(request.getRemoteAddr());
+      long esperar = limitador.tentar(chaveCliente(request.getRemoteAddr()));
       if (esperar > 0) {
         log.warn("Limite de tentativas excedido: rota={}, ip={}", request.getRequestURI(),
             request.getRemoteAddr());
@@ -70,5 +73,31 @@ public class LimiteTaxaAutenticacaoFilter extends OncePerRequestFilter {
       }
     }
     filterChain.doFilter(request, response);
+  }
+
+  /**
+   * Chave do cliente no limitador: o IPv4 inteiro; do IPv6, só o prefixo /64.
+   *
+   * <p>Um assinante IPv6 recebe um /64 inteiro (2^64 endereços): limitar por endereço completo
+   * deixaria o atacante trocar de "IP" a cada tentativa e ainda varrer o teto de memória do
+   * {@link LimitadorTaxa}. O /64 é a menor unidade que um provedor entrega a um cliente.
+   *
+   * @param ip {@code remoteAddr}
+   * @return chave para o limitador
+   */
+  static String chaveCliente(String ip) {
+    if (ip == null || ip.indexOf(':') < 0) {
+      return ip;
+    }
+    try {
+      byte[] bytes = InetAddress.getByName(ip).getAddress();
+      if (bytes.length != 16) {
+        return ip;
+      }
+      return HexFormat.of().formatHex(bytes, 0, 8) + "::/64";
+    } catch (UnknownHostException e) {
+      // remoteAddr e sempre literal; sem resolver DNS, um literal invalido nao chega aqui.
+      return ip;
+    }
   }
 }
