@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @ConditionalOnWebApplication
 @RequestMapping("/api/auth/senha")
-@Tag(name = "Autenticacao", description = "Cadastro de conta, login e identidade autenticada")
+@Tag(name = "Autenticacao")
 public class SenhaController {
 
   private final SenhaService senhaService;

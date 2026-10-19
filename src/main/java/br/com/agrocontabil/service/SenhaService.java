@@ -117,6 +117,11 @@ public class SenhaService {
   /** Encerra o pool do e-mail no desligamento. */
   @PreDestroy
   void encerrar() {
+    int pendentes = executor.getThreadPoolExecutor().getQueue().size();
+    if (pendentes > 0) {
+      log.warn("Desligando com {} pedido(s) de redefinicao de senha na fila: nao serao enviados; "
+          + "o titular precisa pedir de novo.", pendentes);
+    }
     executor.shutdown();
   }
 
