@@ -181,10 +181,32 @@ class RefreshTokenIntegrationTest {
   }
 
   @Test
+  @DisplayName("Bearer expirado/invalido anexado ao /refresh e ao /logout nao atrapalha (interceptor)")
+  void bearerInvalidoNaoBloqueiaRefresh() throws Exception {
+    Par par = login();
+
+    mockMvc.perform(post("/api/auth/refresh")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer token.expirado.qualquer")
+            .cookie(new Cookie(COOKIE, par.refresh())))
+        .andExpect(status().isOk());
+    mockMvc.perform(post("/api/auth/logout")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer token.expirado.qualquer"))
+        .andExpect(status().isNoContent());
+    // Fora das rotas de autenticacao o Bearer invalido continua derrubando a requisicao.
+    mockMvc.perform(post("/api/auth/logout-todos")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer token.expirado.qualquer"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   @DisplayName("sem cookie, cookie vazio ou desconhecido: 401 SESSAO_INVALIDA")
   void semCookie() throws Exception {
     assertThat(refresh(null).getResponse().getStatus()).isEqualTo(401);
-    assertThat(refresh("nao-existe").getResponse().getStatus()).isEqualTo(401);
+    MvcResult desconhecido = refresh("nao-existe");
+    assertThat(desconhecido.getResponse().getStatus()).isEqualTo(401);
+    // O cookie que nao renova e apagado na mesma resposta: o navegador para de reenvia-lo.
+    assertThat(desconhecido.getResponse().getHeader(HttpHeaders.SET_COOKIE))
+        .contains(COOKIE + "=", "Max-Age=0");
   }
 
   @Test

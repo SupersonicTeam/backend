@@ -84,6 +84,28 @@ class JwtAutenticacaoFilterTest {
   }
 
   @Test
+  @DisplayName("rota publica de autenticacao: Bearer ignorado, sem consultar tokens; GET nao conta")
+  void rotaDeAutenticacaoIgnoraBearer() throws Exception {
+    FilterChain cadeia = mock(FilterChain.class);
+    MockHttpServletRequest refresh = new MockHttpServletRequest("POST", "/api/auth/refresh");
+    refresh.addHeader("Authorization", "Bearer expirado");
+
+    filtro.doFilter(refresh, new MockHttpServletResponse(), cadeia);
+
+    verify(cadeia).doFilter(org.mockito.ArgumentMatchers.eq(refresh),
+        org.mockito.ArgumentMatchers.any());
+    verifyNoInteractions(tokens);
+
+    // Mesmo caminho com outro metodo nao e rota de autenticacao: o token e conferido.
+    when(tokens.autenticar("expirado")).thenReturn(Optional.empty());
+    MockHttpServletRequest get = new MockHttpServletRequest("GET", "/api/auth/refresh");
+    get.addHeader("Authorization", "Bearer expirado");
+    MockHttpServletResponse resposta = new MockHttpServletResponse();
+    filtro.doFilter(get, resposta, mock(FilterChain.class));
+    assertThat(resposta.getStatus()).isEqualTo(401);
+  }
+
+  @Test
   @DisplayName("sem Authorization ou outro esquema: segue sem consultar tokens")
   void semBearer() throws Exception {
     FilterChain cadeia = mock(FilterChain.class);

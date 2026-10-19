@@ -3,8 +3,10 @@ package br.com.agrocontabil.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.security.CookieRefresh;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -22,7 +24,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
  */
 class GlobalExceptionHandlerTest {
 
-  private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+  private final GlobalExceptionHandler handler = new GlobalExceptionHandler(
+      new StaticListableBeanFactory().getBeanProvider(CookieRefresh.class));
 
   @Test
   @DisplayName("Upload acima do limite responde 413 com envelope errors[]")

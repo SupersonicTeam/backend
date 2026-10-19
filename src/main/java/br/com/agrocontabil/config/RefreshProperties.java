@@ -1,6 +1,7 @@
 package br.com.agrocontabil.config;
 
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -27,4 +28,29 @@ public record RefreshProperties(
     @DefaultValue("Strict") String cookieSameSite,
     @DefaultValue("/api/auth") String cookieCaminho,
     @DefaultValue("P7D") Duration retencao) {
+
+  /**
+   * Recusa na subida a configuração que o navegador descartaria em silêncio ou que reabriria o
+   * CSRF de {@code /refresh} e {@code /logout}.
+   *
+   * <ul>
+   *   <li>{@code SameSite} só {@code Strict}, {@code Lax} ou {@code None};
+   *   <li>{@code None} exige {@code Secure} — sem ele o navegador nem grava o cookie;
+   *   <li>validade e vida máxima positivas, e a validade não maior que a vida máxima.
+   * </ul>
+   */
+  public RefreshProperties {
+    if (!List.of("Strict", "Lax", "None").contains(cookieSameSite)) {
+      throw new IllegalStateException(
+          "app.seguranca.refresh.cookie-same-site invalido: use Strict, Lax ou None.");
+    }
+    if ("None".equals(cookieSameSite) && !cookieSeguro) {
+      throw new IllegalStateException(
+          "Cookie de refresh com SameSite=None exige cookie-seguro=true (o navegador o descarta).");
+    }
+    if (validade.isNegative() || validade.isZero() || vidaMaxima.compareTo(validade) < 0) {
+      throw new IllegalStateException(
+          "app.seguranca.refresh: validade deve ser positiva e nao maior que a vida-maxima.");
+    }
+  }
 }

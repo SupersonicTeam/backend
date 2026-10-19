@@ -28,14 +28,6 @@ public interface SessaoRefreshRepository extends JpaRepository<SessaoRefresh, UU
   Optional<SessaoRefresh> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
 
   /**
-   * Sessão pelo hash do token, sem lock (logout).
-   *
-   * @param tokenHash SHA-256 do token em hexadecimal
-   * @return a sessão, se o hash existir
-   */
-  Optional<SessaoRefresh> findByTokenHash(String tokenHash);
-
-  /**
    * Revoga todos os tokens ainda não revogados de uma família.
    *
    * @param familiaId família

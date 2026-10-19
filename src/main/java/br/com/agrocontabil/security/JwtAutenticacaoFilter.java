@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,7 +28,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *   <li>{@code Bearer} inválido por qualquer motivo → <strong>401 aqui mesmo</strong>, sem seguir a
  *       cadeia. Seguir sem identidade deixaria o mock cair no produtor semente e transformaria um
  *       token adulterado num acesso válido;
- *   <li>outro esquema ({@code Basic}...) → segue sem identidade, e o 401 vem da cadeia.
+ *   <li>outro esquema ({@code Basic}...) → segue sem identidade, e o 401 vem da cadeia;
+ *   <li>rotas públicas de autenticação (cadastro, login, refresh, logout) → o Bearer é ignorado
+ *       (lista em {@link RotasAutenticacao}).
  * </ul>
  *
  * <p>Não é um bean de propósito: o Spring Boot registraria todo {@code Filter} do contexto também
@@ -54,7 +57,7 @@ public class JwtAutenticacaoFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     String autorizacao = request.getHeader(HttpHeaders.AUTHORIZATION);
-    if (autorizacao == null || !ehBearer(autorizacao)) {
+    if (autorizacao == null || !ehBearer(autorizacao) || ehRotaDeAutenticacao(request)) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -84,6 +87,21 @@ public class JwtAutenticacaoFilter extends OncePerRequestFilter {
       // Threads do Tomcat sao reusadas: a identidade nao pode vazar para a proxima requisicao.
       SecurityContextHolder.clearContext();
     }
+  }
+
+  /**
+   * Requisição a uma rota pública de autenticação ({@link RotasAutenticacao}, issues #205–#207).
+   *
+   * <p>Nelas o Bearer é ignorado, válido ou não. O caso que importa é o refresh: o cliente o chama
+   * justamente quando o access token expirou, e um interceptor que anexa o token a toda chamada
+   * mandaria o expirado junto — recusá-lo aqui derrubaria a renovação no único momento em que ela
+   * é necessária. Ignorar é seguro porque essas rotas são {@code permitAll} e nenhuma lê o
+   * principal; a credencial delas é o corpo (login) ou o cookie (refresh, logout).
+   */
+  private static boolean ehRotaDeAutenticacao(HttpServletRequest request) {
+    String caminho = request.getRequestURI().substring(request.getContextPath().length());
+    return HttpMethod.POST.matches(request.getMethod())
+        && RotasAutenticacao.PUBLICAS_POST.contains(caminho);
   }
 
   /** O esquema é case-insensitive (RFC 9110 §11.1). */

@@ -90,10 +90,11 @@ public class SessaoService {
    */
   public SessaoEmitida abrir(CredencialUsuario credencial) {
     OffsetDateTime agora = OffsetDateTime.now(clock);
+    Instant expiraEm = expiracao(agora, agora);
     String refresh = transacao.execute(status ->
         gravarToken(credencial.getId(), UUID.randomUUID(), credencial.getVersaoSessao(), agora,
-            agora));
-    return emitir(credencial, refresh, expiracao(agora, agora));
+            agora, expiraEm));
+    return emitir(credencial, refresh, expiraEm);
   }
 
   /**
@@ -126,7 +127,11 @@ public class SessaoService {
       return;
     }
     String hash = hash(refreshToken);
-    transacao.executeWithoutResult(status -> sessaoRepository.findByTokenHash(hash)
+    // Mesmo lock da renovacao: um refresh deste token em andamento termina (e grava o sucessor)
+    // antes do UPDATE da familia, que entao o alcanca. Sem o lock, o sucessor inserido por uma
+    // renovacao simultanea escaparia da revogacao — e quem tivesse uma copia do token seguiria
+    // logado depois do logout da vitima.
+    transacao.executeWithoutResult(status -> sessaoRepository.findByTokenHashForUpdate(hash)
         .ifPresent(s -> sessaoRepository.revogarFamilia(s.getFamiliaId(), agora())));
   }
 
@@ -199,12 +204,12 @@ public class SessaoService {
 
     sessao.setUsadoEm(agora);
     String novo = gravarToken(sessao.getCredencialId(), sessao.getFamiliaId(),
-        sessao.getVersaoSessao(), sessao.getFamiliaIniciadaEm(), agora);
+        sessao.getVersaoSessao(), sessao.getFamiliaIniciadaEm(), agora, expiraEm);
     return new Renovacao(credencial.get(), novo, expiraEm);
   }
 
   private String gravarToken(UUID credencialId, UUID familiaId, int versaoSessao,
-      OffsetDateTime familiaIniciadaEm, OffsetDateTime agora) {
+      OffsetDateTime familiaIniciadaEm, OffsetDateTime agora, Instant expiraEm) {
     byte[] bytes = new byte[BYTES_TOKEN];
     aleatorio.nextBytes(bytes);
     String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -215,7 +220,7 @@ public class SessaoService {
         .versaoSessao(versaoSessao)
         .familiaIniciadaEm(familiaIniciadaEm)
         .criadoEm(agora)
-        .expiraEm(OffsetDateTime.ofInstant(expiracao(familiaIniciadaEm, agora), clock.getZone()))
+        .expiraEm(OffsetDateTime.ofInstant(expiraEm, clock.getZone()))
         .build());
     return token;
   }
