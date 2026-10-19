@@ -27,4 +27,15 @@ class ValorRejeitadoTest {
     assertThat(resumido).isEqualTo("a".repeat(99) + "\uD83C\uDF3E...");
     assertThat(Character.isHighSurrogate(resumido.charAt(resumido.length() - 4))).isFalse();
   }
+
+  @Test
+  @DisplayName("Campo de senha, token ou segredo nunca tem o valor ecoado (#205)")
+  void campoSensivelNaoEcoa() {
+    assertThat(GlobalExceptionHandler.campoSensivel("senha")).isTrue();
+    assertThat(GlobalExceptionHandler.campoSensivel("novaSenha")).isTrue();
+    assertThat(GlobalExceptionHandler.campoSensivel("refreshToken")).isTrue();
+    assertThat(GlobalExceptionHandler.campoSensivel("clientSecret")).isTrue();
+    assertThat(GlobalExceptionHandler.campoSensivel("email")).isFalse();
+    assertThat(GlobalExceptionHandler.campoSensivel(null)).isFalse();
+  }
 }

@@ -123,6 +123,7 @@ br.com.agrocontabil
 
 | Método | Path | Descrição |
 |--------|------|-----------|
+| POST | `/api/auth/cadastro` | **Público.** Cria conta de produtor ou contador (#205): `{papel, nomeCompleto, cpfCnpj (obrigatório, só dígitos, DV), email, senha}`; senha de 10 caracteres a 72 bytes, fora da lista de comuns, sem o e-mail/CPF (400 `SENHA_FRACA`, nunca ecoa a senha); e-mail ou CPF/CNPJ já existente → 409 `CADASTRO_CONFLITO` sem dizer qual — inclusive produtor/contador já cadastrado sem credencial (nunca reivindicado) |
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
@@ -155,7 +156,7 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator` | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro` | público | público |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
@@ -374,6 +375,21 @@ Issues #169, #146, #170, #140, #166, #158, #145 e #128; PRs #183–#194. Plano e
 - **Avaliação com gabarito (#158):** comando `dev,avaliacao`, 49 perguntas, valor esperado calculado pelo backend, relatórios em `docs/avaliacao/`. Linha de base e rodada pós-#145 (rota 95,5%, número 81,8%, citação 61,9%, recusa 100%, sem vazamento) em `docs/avaliacao/linha-de-base-2026-10-14.md`.
 - **RN009 (#145), definida pelo Murillo em 2026-10-14:** Funrural retido pelo comprador (1,5% do produtor PF na venda a empresa ou cooperativa; exportação imune) **e** split payment do IBS/CBS; `RetencaoService`, função `consultarRetencoes` e `FundamentoRetencao` (as duas regras e as citações sempre, em código). Lei 8.212 e Lei 9.528 (art. 6º) entraram na base; o fatiador aprendeu as grafias do consolidado antigo (tachado por estilo, artigo sem hífen, assinatura com "em", "Vigência encerrada" solto).
 - **Transporte SOAP + mTLS da SEFAZ (#128):** `SoapSefazTransport` com `mock.enabled=false`, envio, consulta e cancelamento (evento 110111 assinado), testado contra servidor simulado com mTLS. Ver `docs/sefaz-transporte-soap.md`.
+
+### Sprint 8 — login, JWT e segurança (em andamento; plano em `.specs/features/sprint-8-seguranca/plano.md`)
+
+Ordem: #205 cadastro → #206 login JWT → #207 refresh → #208 força bruta → #209 senha → #150 rate
+limit → #148 LGPD → #149 auditoria → #147 AES-256. Login por **e-mail**; **CPF/CNPJ obrigatório**
+no cadastro (decisão do Murillo, 2026-10-19).
+
+- **#205 Credencial e cadastro:** `credencial_usuario` (changeSet **0031**) separada de
+  `produtores`/`contadores` — papel + exatamente uma referência (CHECK `ck_credencial_identidade`),
+  e-mail único normalizado, `(papel, cpf_cnpj)` único (barra a corrida de dois cadastros; a coluna
+  de `produtores` não é única), `versao_sessao` para revogação em massa (contador levado no token, não timestamp: o `iat` tem resolução de segundo), CASCADE das
+  identidades. Hash `DelegatingPasswordEncoder` + BCrypt custo 12 (`SenhaConfig`), calculado **fora**
+  de transação. `PoliticaSenha` (NIST 800-63B): 10 caracteres a 72 bytes UTF-8, NFKC. O cadastro
+  **nunca vincula** credencial a produtor/contador preexistente: quem soubesse o CPF tomaria a conta.
+  O `GlobalExceptionHandler` não ecoa `rejectedValue` de campo com senha/token/segredo no nome.
 
 ### Débitos técnicos abertos
 

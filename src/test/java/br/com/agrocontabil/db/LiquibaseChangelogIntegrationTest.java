@@ -215,6 +215,56 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0031 cria credencial_usuario com CHECK de identidade, unicidades e CASCADE")
+  void changeSet0031CriaCredencialUsuario() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'credencial_usuario' ORDER BY column_name", String.class))
+        .containsExactly("ativo", "contador_id", "cpf_cnpj", "created_at", "email", "id", "papel",
+            "produtor_id", "senha_hash", "updated_at", "versao_sessao");
+
+    String produtorId = UUID.randomUUID().toString();
+    String contadorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, ?)",
+        produtorId, "Produtor Credencial");
+    jdbc.update("INSERT INTO contadores (id, nome_completo) VALUES (?::uuid, ?)",
+        contadorId, "Contador Credencial");
+    String insert = "INSERT INTO credencial_usuario (id, email, senha_hash, papel, cpf_cnpj,"
+        + " produtor_id, contador_id) VALUES (?::uuid, ?, '{bcrypt}x', ?,"
+        + " ?, ?::uuid, ?::uuid)";
+
+    jdbc.update(insert, UUID.randomUUID().toString(), "p@x.com", "PRODUTOR", "52998224725",
+        produtorId, null);
+    // ativo nasce verdadeiro e versao_sessao em zero, pelos defaults do banco.
+    assertThat(jdbc.queryForObject("SELECT ativo FROM credencial_usuario WHERE email = 'p@x.com'",
+        Boolean.class)).isTrue();
+    assertThat(jdbc.queryForObject(
+        "SELECT versao_sessao FROM credencial_usuario WHERE email = 'p@x.com'",
+        Integer.class)).isZero();
+
+    // CHECK: papel e referencia precisam bater, e so uma referencia por linha.
+    assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID().toString(), "c@x.com",
+        "CONTADOR", "11222333000181", produtorId, null))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID().toString(), "c@x.com",
+        "CONTADOR", "11222333000181", null, null))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    // E-mail unico; (papel, documento) unico.
+    assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID().toString(), "p@x.com",
+        "CONTADOR", "11222333000181", null, contadorId))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    jdbc.update(insert, UUID.randomUUID().toString(), "c@x.com", "CONTADOR", "52998224725",
+        null, contadorId);
+
+    // A credencial nao sobrevive a identidade.
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    jdbc.update("DELETE FROM contadores WHERE id = ?::uuid", contadorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM credencial_usuario"
+        + " WHERE email IN ('p@x.com', 'c@x.com')", Integer.class)).isZero();
+  }
+
+  @Test
   @DisplayName("changeSet 0028 cria alerta_tributario com chave unica e CASCADE do produtor (#140)")
   void changeSet0028CriaAlertaTributario() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

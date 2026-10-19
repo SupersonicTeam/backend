@@ -1,6 +1,7 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.Contador;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,6 +29,15 @@ public interface ContadorRepository extends JpaRepository<Contador, UUID> {
    * @return {@code true} se já existir
    */
   boolean existsByCpfCnpj(String cpfCnpj);
+
+  /**
+   * Diz se algum contador tem um destes documentos (issue #205) — mesmas grafias de
+   * {@code ProdutorRepository#existsByCpfCnpjIn}.
+   *
+   * @param grafias o mesmo documento em cada formato possível
+   * @return {@code true} se algum contador tem um deles
+   */
+  boolean existsByCpfCnpjIn(Collection<String> grafias);
 
   /**
    * Responde se o contador atende o produtor informado.

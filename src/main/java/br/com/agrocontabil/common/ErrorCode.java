@@ -103,6 +103,17 @@ public enum ErrorCode {
    * revelar a existencia do recurso alheio.
    */
   PAPEL_NAO_AUTORIZADO,
+  // Credencial e cadastro (Sprint 8 — issue #205)
+  /**
+   * A senha escolhida não atende a política (tamanho, senha comum, contém o e-mail ou o
+   * documento). HTTP 400. A resposta nunca ecoa a senha.
+   */
+  SENHA_FRACA,
+  /**
+   * E-mail ou CPF/CNPJ já cadastrado. HTTP 409. A mensagem não diz qual dos dois, para não virar
+   * consulta de "este e-mail tem conta?".
+   */
+  CADASTRO_CONFLITO,
   // Ceres — assistente fiscal (issue #141)
   /**
    * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).

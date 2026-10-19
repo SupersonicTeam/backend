@@ -1,6 +1,7 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.Produtor;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +13,17 @@ import org.springframework.data.repository.query.Param;
 public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
 
   Optional<Produtor> findByCpfCnpj(String cpfCnpj);
+
+  /**
+   * Diz se algum produtor tem um destes documentos (issue #205).
+   *
+   * <p>Recebe mais de uma grafia porque a coluna guarda o documento como chegou: o seed grava com
+   * máscara ({@code 123.456.789-00}), o cadastro grava só dígitos.
+   *
+   * @param grafias o mesmo documento em cada formato possível
+   * @return {@code true} se algum produtor tem um deles
+   */
+  boolean existsByCpfCnpjIn(Collection<String> grafias);
 
   /**
    * Primeiro lote de IDs de produtor, em ordem de ID, para varreduras em lote dos jobs

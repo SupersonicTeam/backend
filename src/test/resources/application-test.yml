@@ -30,6 +30,10 @@ spring:
 app:
   cors:
     allowed-origins: http://localhost:4200
+  # BCrypt no custo minimo: o custo de producao (12) somaria segundos a cada teste de cadastro.
+  seguranca:
+    senha:
+      bcrypt-custo: 4
   nfe:
     # Certificado autoassinado de teste (sem valor juridico) — ver src/test/resources/certs/README.md
     certificado:

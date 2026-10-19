@@ -349,6 +349,46 @@ ALTER TABLE assistente_interacao ADD CONSTRAINT IF NOT EXISTS fk_assistente_inte
 ALTER TABLE alerta_tributario ADD CONSTRAINT IF NOT EXISTS fk_alerta_tributario_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
 
+-- Credencial de acesso — Sprint 8 issue #205 (migration 0031). Manter sincronizado com
+-- 0031-credencial-usuario.xml. Nos testes com create-drop o Hibernate ja criou a tabela (o CREATE
+-- vira no-op), por isso unicidades, FKs e CHECK vem em ALTER idempotente.
+CREATE TABLE IF NOT EXISTS credencial_usuario (
+    id                     UUID                      NOT NULL,
+    email                  VARCHAR(254)              NOT NULL,
+    senha_hash             VARCHAR(100)              NOT NULL,
+    papel                  VARCHAR(20)               NOT NULL,
+    cpf_cnpj               VARCHAR(14)               NOT NULL,
+    produtor_id            UUID,
+    contador_id            UUID,
+    ativo                  BOOLEAN                   DEFAULT TRUE NOT NULL,
+    versao_sessao          INTEGER                   DEFAULT 0 NOT NULL,
+    created_at             TIMESTAMP WITH TIME ZONE,
+    updated_at             TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS uk_credencial_email UNIQUE (email);
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS uk_credencial_produtor
+    UNIQUE (produtor_id);
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS uk_credencial_contador
+    UNIQUE (contador_id);
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS uk_credencial_papel_cpf_cnpj
+    UNIQUE (papel, cpf_cnpj);
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS fk_credencial_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS fk_credencial_contador
+    FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
+
+ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS ck_credencial_identidade CHECK (
+    (papel = 'PRODUTOR' AND produtor_id IS NOT NULL AND contador_id IS NULL)
+    OR (papel = 'CONTADOR' AND contador_id IS NOT NULL AND produtor_id IS NULL)
+);
+
 -- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).
 -- O perfil de teste desabilita o Liquibase (liquibase.enabled=false), entao o

@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -404,7 +405,8 @@ public class GlobalExceptionHandler {
 
   private ErrorDetail toErrorDetail(ConstraintViolation<?> violation) {
     String field = lastNode(violation);
-    String rejected = resumirValorRejeitado(violation.getInvalidValue());
+    String rejected = campoSensivel(field)
+        ? null : resumirValorRejeitado(violation.getInvalidValue());
     return new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         field,
@@ -420,6 +422,22 @@ public class GlobalExceptionHandler {
    * conteúdo e memória desperdiçada). 100 caracteres bastam para o cliente reconhecer o campo.
    */
   static final int MAXIMO_VALOR_REJEITADO = 100;
+
+  /**
+   * Trechos de nome de campo cujo valor nunca volta no {@code rejectedValue} (issue #205): senha,
+   * token e segredo. Defesa em profundidade — os DTOs de credencial já evitam anotar a senha com
+   * regra que a ecoaria, mas uma anotação nova num campo desses não pode vazar o valor.
+   */
+  private static final List<String> TRECHOS_CAMPO_SENSIVEL =
+      List.of("senha", "password", "token", "secret", "segredo");
+
+  static boolean campoSensivel(String campo) {
+    if (campo == null) {
+      return false;
+    }
+    String minusculo = campo.toLowerCase(Locale.ROOT);
+    return TRECHOS_CAMPO_SENSIVEL.stream().anyMatch(minusculo::contains);
+  }
 
   static String resumirValorRejeitado(Object valor) {
     if (valor == null) {
@@ -441,7 +459,8 @@ public class GlobalExceptionHandler {
   }
 
   private ErrorDetail toErrorDetail(FieldError error) {
-    String rejected = resumirValorRejeitado(error.getRejectedValue());
+    String rejected = campoSensivel(error.getField())
+        ? null : resumirValorRejeitado(error.getRejectedValue());
     return new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         error.getField(),
