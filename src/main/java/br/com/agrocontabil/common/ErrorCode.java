@@ -120,6 +120,11 @@ public enum ErrorCode {
    * respondem igual para não revelar quem tem conta. HTTP 401.
    */
   CREDENCIAIS_INVALIDAS,
+  /**
+   * O refresh token não renova a sessão: ausente, desconhecido, expirado, revogado ou reusado
+   * (issue #207). HTTP 401 — o cliente volta ao login.
+   */
+  SESSAO_INVALIDA,
   // Ceres — assistente fiscal (issue #141)
   /**
    * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).

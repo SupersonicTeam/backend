@@ -1,15 +1,13 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.LoginRequest;
-import br.com.agrocontabil.dto.LoginResponse;
 import br.com.agrocontabil.dto.UsuarioLogadoResponse;
 import br.com.agrocontabil.exception.CredenciaisInvalidasException;
 import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
-import br.com.agrocontabil.security.JwtService;
-import br.com.agrocontabil.security.JwtService.TokenAcesso;
 import br.com.agrocontabil.security.UsuarioAutenticado;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import br.com.agrocontabil.service.SessaoService.SessaoEmitida;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,7 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
- * Login por e-mail e senha, com emissão do JWT de acesso (issue #206).
+ * Login por e-mail e senha (issue #206). Com a senha conferida, abre a sessão pelo
+ * {@link SessaoService}: JWT de acesso no corpo e refresh token no cookie (issue #207).
  *
  * <p><strong>Uma resposta para todo fracasso.</strong> E-mail sem conta, senha errada e credencial
  * desativada lançam a mesma {@link CredenciaisInvalidasException}. E o <em>tempo</em> também é o
@@ -42,7 +41,7 @@ public class LoginService {
 
   private final CredencialUsuarioRepository credencialRepository;
   private final PasswordEncoder passwordEncoder;
-  private final JwtService jwtService;
+  private final SessaoService sessaoService;
   private final UsuarioAutenticadoProvider usuarioProvider;
 
   /** Senha conferida contra o hash fictício quando a enviada não pode chegar ao BCrypt. */
@@ -54,11 +53,11 @@ public class LoginService {
   public LoginService(
       CredencialUsuarioRepository credencialRepository,
       PasswordEncoder passwordEncoder,
-      JwtService jwtService,
+      SessaoService sessaoService,
       UsuarioAutenticadoProvider usuarioProvider) {
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
-    this.jwtService = jwtService;
+    this.sessaoService = sessaoService;
     this.usuarioProvider = usuarioProvider;
     this.hashFicticio = passwordEncoder.encode(UUID.randomUUID().toString());
   }
@@ -67,10 +66,10 @@ public class LoginService {
    * Confere e-mail e senha e emite o token de acesso.
    *
    * @param request e-mail e senha
-   * @return token de acesso, validade e papel
+   * @return access token (corpo da resposta) e refresh token (cookie)
    * @throws CredenciaisInvalidasException se e-mail e senha não conferirem, por qualquer motivo
    */
-  public LoginResponse entrar(LoginRequest request) {
+  public SessaoEmitida entrar(LoginRequest request) {
     String email = CadastroService.normalizarEmail(request.email());
     String senha = PoliticaSenha.normalizar(request.senha());
 
@@ -97,11 +96,8 @@ public class LoginService {
 
     atualizarHashSeDefasado(credencial, senha);
 
-    TokenAcesso token = jwtService.emitir(
-        credencial.getId(), credencial.getPapel(), credencial.getVersaoSessao());
     log.info("Login: papel={}, usuarioId={}", credencial.getPapel(), credencial.usuarioId());
-    return new LoginResponse(token.token(), LoginResponse.TIPO_BEARER, token.expiraEm(),
-        credencial.getPapel(), credencial.usuarioId());
+    return sessaoService.abrir(credencial);
   }
 
   /**
@@ -112,6 +108,13 @@ public class LoginService {
   public UsuarioLogadoResponse usuarioLogado() {
     UsuarioAutenticado usuario = usuarioProvider.get();
     return new UsuarioLogadoResponse(usuario.id(), usuario.papel(), usuario.nome());
+  }
+
+  /**
+   * Encerra todas as sessões de quem está autenticado (issue #207).
+   */
+  public void sairDeTodos() {
+    sessaoService.encerrarTodas(usuarioProvider.get());
   }
 
   /**

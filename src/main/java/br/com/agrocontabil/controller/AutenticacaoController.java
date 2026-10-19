@@ -6,8 +6,11 @@ import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.dto.LoginRequest;
 import br.com.agrocontabil.dto.LoginResponse;
 import br.com.agrocontabil.dto.UsuarioLogadoResponse;
+import br.com.agrocontabil.security.CookieRefresh;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.LoginService;
+import br.com.agrocontabil.service.SessaoService;
+import br.com.agrocontabil.service.SessaoService.SessaoEmitida;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.CacheControl;
@@ -41,10 +45,15 @@ public class AutenticacaoController {
 
   private final CadastroService cadastroService;
   private final LoginService loginService;
+  private final SessaoService sessaoService;
+  private final CookieRefresh cookieRefresh;
 
-  public AutenticacaoController(CadastroService cadastroService, LoginService loginService) {
+  public AutenticacaoController(CadastroService cadastroService, LoginService loginService,
+      SessaoService sessaoService, CookieRefresh cookieRefresh) {
     this.cadastroService = cadastroService;
     this.loginService = loginService;
+    this.sessaoService = sessaoService;
+    this.cookieRefresh = cookieRefresh;
   }
 
   /**
@@ -77,24 +86,86 @@ public class AutenticacaoController {
    * cache de navegador nem de proxy.
    *
    * @param request e-mail e senha
-   * @return token de acesso
+   * @return token de acesso no corpo; refresh token no cookie {@code HttpOnly}
    */
   @PostMapping("/login")
   @SecurityRequirements
   @Operation(summary = "Login por e-mail e senha",
       description = "Publico. Devolve o JWT de acesso (validade de 15 minutos) a enviar em "
-          + "Authorization: Bearer. E-mail sem conta, senha errada e conta desativada respondem o "
-          + "mesmo 401 CREDENCIAIS_INVALIDAS.")
+          + "Authorization: Bearer, e grava o refresh token num cookie HttpOnly (Path=/api/auth). "
+          + "E-mail sem conta, senha errada e conta desativada respondem o mesmo 401 "
+          + "CREDENCIAIS_INVALIDAS.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Token emitido"),
+      @ApiResponse(responseCode = "200", description = "Token emitido e cookie de refresh gravado"),
       @ApiResponse(responseCode = "401", description = "E-mail ou senha incorretos",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<LoginResponse> entrar(@Valid @RequestBody LoginRequest request) {
-    return ResponseEntity.ok()
-        .cacheControl(CacheControl.noStore())
-        .header(HttpHeaders.PRAGMA, "no-cache")
-        .body(loginService.entrar(request));
+    return comSessao(loginService.entrar(request));
+  }
+
+  /**
+   * Troca o refresh token do cookie por um par novo (issue #207). O usado deixa de valer; um usado
+   * que volta encerra a sessão inteira (detecção de roubo).
+   *
+   * @param request requisição, de onde vem o cookie
+   * @return token de acesso novo no corpo; refresh novo no cookie
+   */
+  @PostMapping("/refresh")
+  @SecurityRequirements
+  @Operation(summary = "Renova o token de acesso pelo cookie de refresh",
+      description = "Publico (o access token pode ja ter expirado). Le o cookie HttpOnly gravado "
+          + "no login, devolve um access token novo e troca o cookie. Refresh ausente, vencido, "
+          + "revogado ou ja usado responde 401 SESSAO_INVALIDA; o reuso de um refresh ja trocado "
+          + "encerra todas as renovacoes daquele login.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Par renovado"),
+      @ApiResponse(responseCode = "401", description = "Sessao expirada ou encerrada",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<LoginResponse> renovar(HttpServletRequest request) {
+    return comSessao(sessaoService.renovar(cookieRefresh.ler(request).orElse(null)));
+  }
+
+  /**
+   * Encerra a sessão deste dispositivo e apaga o cookie (issue #207). Idempotente.
+   *
+   * @param request requisição, de onde vem o cookie
+   * @return 204 com o cookie apagado
+   */
+  @PostMapping("/logout")
+  @SecurityRequirements
+  @Operation(summary = "Sai deste dispositivo",
+      description = "Publico (funciona com o access token expirado). Revoga o refresh do cookie e "
+          + "o apaga. O access token em maos segue valido ate expirar (no maximo 15 minutos): o "
+          + "frontend deve descarta-lo.")
+  @ApiResponse(responseCode = "204", description = "Sessao encerrada")
+  public ResponseEntity<Void> sair(HttpServletRequest request) {
+    sessaoService.encerrar(cookieRefresh.ler(request).orElse(null));
+    return ResponseEntity.noContent()
+        .header(HttpHeaders.SET_COOKIE, cookieRefresh.apagar())
+        .build();
+  }
+
+  /**
+   * Encerra todas as sessões de quem está autenticado (issue #207).
+   *
+   * @return 204 com o cookie apagado
+   */
+  @PostMapping("/logout-todos")
+  @Operation(summary = "Sai de todos os dispositivos",
+      description = "Revoga todos os refresh tokens da conta e invalida na hora todos os access "
+          + "tokens ja emitidos, inclusive o desta requisicao.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "204", description = "Todas as sessoes encerradas"),
+      @ApiResponse(responseCode = "401", description = "Sem identidade valida",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<Void> sairDeTodos() {
+    loginService.sairDeTodos();
+    return ResponseEntity.noContent()
+        .header(HttpHeaders.SET_COOKIE, cookieRefresh.apagar())
+        .build();
   }
 
   /**
@@ -113,5 +184,20 @@ public class AutenticacaoController {
   })
   public ResponseEntity<UsuarioLogadoResponse> usuarioLogado() {
     return ResponseEntity.ok(loginService.usuarioLogado());
+  }
+
+  /**
+   * Resposta com o par de tokens: access no corpo, refresh no cookie.
+   *
+   * <p>{@code Cache-Control: no-store} (RFC 6749 §5.1): resposta com credencial não pode ficar em
+   * cache de navegador nem de proxy.
+   */
+  private ResponseEntity<LoginResponse> comSessao(SessaoEmitida sessao) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .header(HttpHeaders.PRAGMA, "no-cache")
+        .header(HttpHeaders.SET_COOKIE,
+            cookieRefresh.criar(sessao.refreshToken(), sessao.refreshExpiraEm()))
+        .body(sessao.acesso());
   }
 }

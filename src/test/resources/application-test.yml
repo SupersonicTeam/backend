@@ -37,6 +37,10 @@ app:
     # Segredo fixo de teste (so existe aqui; >= 32 bytes, como o JwtService exige).
     jwt:
       segredo: segredo-de-teste-agrocontabil-com-mais-de-32-bytes
+    # Limpeza das sessoes desligada: os testes chamam o job direto.
+    refresh:
+      limpeza:
+        enabled: false
   nfe:
     # Certificado autoassinado de teste (sem valor juridico) — ver src/test/resources/certs/README.md
     certificado:

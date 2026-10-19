@@ -6,6 +6,7 @@ import br.com.agrocontabil.sefaz.SefazStatusSyncJob;
 import br.com.agrocontabil.service.AlertaTributarioJob;
 import br.com.agrocontabil.service.ApuracaoFechamentoJob;
 import br.com.agrocontabil.service.GuiaFiscalStatusSyncJob;
+import br.com.agrocontabil.service.SessaoRefreshLimpezaJob;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
@@ -27,7 +28,7 @@ class SchedulerLockConfigTest {
 
   private static final List<Class<?>> JOBS = List.of(
       SefazStatusSyncJob.class, ApuracaoFechamentoJob.class, GuiaFiscalStatusSyncJob.class,
-      AlertaTributarioJob.class);
+      AlertaTributarioJob.class, SessaoRefreshLimpezaJob.class);
 
   @Test
   @DisplayName("Todo metodo @Scheduled dos jobs tem @SchedulerLock com teto e piso declarados")
@@ -56,7 +57,7 @@ class SchedulerLockConfigTest {
     // Dois jobs com o mesmo nome se bloqueariam mutuamente: um deixaria de rodar.
     assertThat(nomes).doesNotHaveDuplicates()
         .containsExactlyInAnyOrder(SefazStatusSyncJob.LOCK, ApuracaoFechamentoJob.LOCK,
-            GuiaFiscalStatusSyncJob.LOCK, AlertaTributarioJob.LOCK);
+            GuiaFiscalStatusSyncJob.LOCK, AlertaTributarioJob.LOCK, SessaoRefreshLimpezaJob.LOCK);
   }
 
   @Test

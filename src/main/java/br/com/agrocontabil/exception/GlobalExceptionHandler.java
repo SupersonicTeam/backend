@@ -4,6 +4,7 @@ import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.Sensivel;
+import br.com.agrocontabil.security.CookieRefresh;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
@@ -45,6 +47,16 @@ public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+  /**
+   * Cookie de refresh (issue #207), para apagá-lo quando a sessão é recusada. Opcional: só existe
+   * com servidor web, e o handler também é carregado nos testes de fatia sem ele.
+   */
+  private final ObjectProvider<CookieRefresh> cookieRefresh;
+
+  public GlobalExceptionHandler(ObjectProvider<CookieRefresh> cookieRefresh) {
+    this.cookieRefresh = cookieRefresh;
+  }
+
   /** Qualquer exceção de domínio. Status, message e errors vêm da própria exceção. */
   @ExceptionHandler(DomainException.class)
   public ResponseEntity<ApiError> handleDomain(DomainException ex, HttpServletRequest request) {
@@ -65,6 +77,12 @@ public class GlobalExceptionHandler {
     if (status == HttpStatus.UNAUTHORIZED) {
       // RFC 9110 §15.5.2: toda resposta 401 traz o desafio em WWW-Authenticate (Bearer, #206).
       resposta.header(HttpHeaders.WWW_AUTHENTICATE, NaoAutenticadoException.DESAFIO);
+    }
+    if (ex instanceof SessaoInvalidaException) {
+      // Refresh recusado (#207): o cookie nao vale mais nada. Sem apaga-lo, o navegador o
+      // reenviaria a cada abertura do app ate o Max-Age, sempre com o mesmo 401.
+      cookieRefresh.ifAvailable(
+          cookie -> resposta.header(HttpHeaders.SET_COOKIE, cookie.apagar()));
     }
     if (ex instanceof ComRetryAfter espera) {
       // RFC 9110 §10.2.3: em 503 (Ceres ocupada, #157) e 429 (cota semanal, #166), diz ao
