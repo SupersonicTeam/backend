@@ -429,8 +429,7 @@ no cadastro (decisão do Murillo, 2026-10-19).
   por 15 min; durante o bloqueio a senha **nem é conferida**; cada tentativa é **reservada (contada)
   sob lock pessimista antes do BCrypt** — contar depois deixava N logins paralelos lerem "não
   bloqueada" e terem todos a senha conferida (achado do review); e-mail sem conta faz reserva
-  fictícia de mesmo custo; (falhas
-  paralelas contam todas); bloqueio vencido recomeça do zero; sucesso zera. A resposta do bloqueio
+  fictícia de mesmo custo; bloqueio vencido recomeça do zero; sucesso zera. A resposta do bloqueio
   é **o mesmo 401** `CREDENCIAIS_INVALIDAS` — a issue pedia 423, mas e-mail inexistente nunca
   bloqueia e o 423 viraria oráculo de enumeração. (2) **Limite por IP**
   (`LimiteTaxaAutenticacaoFilter` + `LimitadorTaxa`, bucket4j em memória com teto LRU de 10 mil
@@ -439,8 +438,7 @@ no cadastro (decisão do Murillo, 2026-10-19).
   (`server.forward-headers-strategy: native`, que só confia em proxy interno — fixar
   `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` no Nginx real). O caminho é comparado **decodificado**
   (`RotasAutenticacao.caminho`): `POST /api/auth/logi%6E` escapava do limite (achado do review).
-  IPv6 agrupado por /64. Limite por réplica
-  (com 2+ instâncias, `limite × réplicas`).
+  IPv6 agrupado por /64. Limite por réplica (com 2+ instâncias, `limite × réplicas`).
 
 ### Débitos técnicos abertos
 

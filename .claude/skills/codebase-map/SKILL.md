@@ -61,7 +61,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `LoginService` | Login (#206): e-mail normalizado + senha NFKC; e-mail sem conta confere contra hash fictício (tempo igual); falha de qualquer tipo = `CredenciaisInvalidasException` (401); rehash por `UPDATE` só da coluna; `usuarioLogado()` p/ `/me`. Só web |
 | `SessaoService` | Par access+refresh (#207): abre família no login, `renovar` (rotação, reuso → revoga família, lock pessimista, vida máxima, desfecho gravado antes de recusar), `encerrar`, `encerrarTodas`/`revogarTodas` (ponto único de revogação em massa). Só web |
 | `SessaoRefreshLimpezaJob` | Diário 3h + ShedLock (#207): apaga sessões vencidas há mais que `retencao` |
-| `BloqueioContaService` | Bloqueio por conta (#208): `bloqueada`, `registrarFalha` (lock pessimista, 5 erros → 15 min, bloqueio vencido recomeça), `zerarFalhas` |
+| `BloqueioContaService` | Bloqueio por conta (#208): `reservarTentativa` (conta a tentativa sob lock pessimista **antes** do BCrypt; 5 → 15 min; vencido recomeça), `reservarFicticia` (e-mail sem conta, mesmo custo), `liberar` (sucesso zera) |
 | `AutenticacaoTokenService` | JWT → `UsuarioAutenticado` (#206): relê a credencial a cada requisição (ativa, mesmo papel, mesma `versaoSessao`). Só web |
 | `PoliticaSenha` | NIST 800-63B (#205): 10 caracteres a 72 bytes UTF-8 (limite do BCrypt), sem repetição, sem e-mail/CPF, fora de `seguranca/senhas-comuns.txt`; `normalizar` (NFKC) antes de validar e de gerar/conferir hash |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository`; fechamento do job por produtor em transação própria, lendo IDs em lotes por keyset (issue #100) |
@@ -147,7 +147,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `CookieRefresh` | Monta/lê/apaga o cookie `agro_refresh` (HttpOnly, Secure, SameSite=Strict, Path=/api/auth) — #207 |
 | `LimitadorTaxa` | Balde de fichas (bucket4j) por chave, em memória, com teto LRU (#208; reusado pelo rate limit da #150) |
 | `LimiteTaxaAutenticacaoFilter` | 429 `MUITAS_TENTATIVAS` + `Retry-After` por IP em login/cadastro/refresh, antes do filtro JWT (#208); não é bean |
-| `RotasAutenticacao` | Fonte única das rotas públicas de autenticação (SecurityConfig + filtros) |
+| `RotasAutenticacao` | Fonte única das rotas públicas de autenticação (SecurityConfig + filtros); `caminho(request)` = caminho **decodificado** (comparar o `getRequestURI()` cru deixava `/logi%6E` escapar do limite) |
 | `JwtAutenticacaoFilter` | Bearer → identidade; inválido = 401 na hora (antes do mock); não é bean (instanciado no `SecurityConfig`) |
 
 ### `danfe/`
