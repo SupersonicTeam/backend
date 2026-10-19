@@ -243,6 +243,11 @@ app:
       refresh-por-minuto: ${LIMITE_REFRESH_POR_MINUTO:30}
       senha-por-minuto: ${LIMITE_SENHA_POR_MINUTO:5}
       max-ips: 10000
+    # Limite geral da API (#150): por identidade (ou IP sem identidade), em memoria, por replica.
+    limite:
+      geral-por-minuto: ${LIMITE_GERAL_POR_MINUTO:100}
+      chat-por-minuto: ${LIMITE_CHAT_POR_MINUTO:20}
+      max-chaves: 10000
     # Recuperacao de senha (#209). modo-email: SMTP (prod, com spring.mail.*), LOG (so dev: o link
     # vai para o log; proibido em prod) ou DESLIGADO.
     redefinicao:

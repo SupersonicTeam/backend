@@ -12,6 +12,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties(
     {JwtProperties.class, RefreshProperties.class, ForcaBrutaProperties.class,
-        RedefinicaoSenhaProperties.class})
+        RedefinicaoSenhaProperties.class, LimiteTaxaProperties.class})
 public class JwtConfig {
 }

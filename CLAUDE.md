@@ -455,6 +455,14 @@ no cadastro (decisão do Murillo, 2026-10-19).
   `EnvioEmail` (`EmailConfig`): `SMTP` (`spring.mail.*`; obrigatório o host), `LOG` (só dev — **a
   aplicação não sobe com LOG em prod**) ou `DESLIGADO` (padrão). Limite por IP compartilhado entre
   `esqueci` e `redefinir` (5/min).
+- **#150 Rate limit geral e headers:** `LimiteTaxaGeralFilter` (depois de toda identificação, antes
+  da autorização) limita `/api/**` a 100/min e o chat da Ceres (`/api/assistente/chat*`) a 20/min
+  **por identidade** — usuário autenticado; IP (/64 no IPv6) só sem identidade —, então um
+  escritório atrás de NAT não divide a cota. 429 `MUITAS_TENTATIVAS` + `Retry-After`. Headers
+  explícitos no `SecurityConfig`: HSTS 1 ano + subdomínios (só em requisição segura),
+  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` e
+  **CSP `default-src 'none'` só em `/api/**`** (o Swagger UI precisa de script). CORS e 415 já
+  existiam; agora com teste de requisição real de origem proibida (403) e de `text/plain` (415).
 
 ### Débitos técnicos abertos
 
