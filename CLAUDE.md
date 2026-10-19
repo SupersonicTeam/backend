@@ -128,6 +128,9 @@ br.com.agrocontabil
 | GET | `/api/auth/me` | Identidade da requisição: `{usuarioId, papel, nome}` (#206) |
 | POST | `/api/auth/refresh` | **Público.** Lê o cookie `agro_refresh`, devolve access novo e troca o cookie (#207); refresh ausente/vencido/revogado/reusado → 401 `SESSAO_INVALIDA` (reuso revoga a família) |
 | POST | `/api/auth/logout` | **Público, idempotente.** Revoga a família do cookie e o apaga → 204 (#207) |
+| POST | `/api/auth/senha/esqueci` | **Público.** `{email}` → **sempre 202** (#209); com conta ativa, link de uso único (30 min, token no fragmento `#token=`) vai por e-mail em segundo plano |
+| POST | `/api/auth/senha/redefinir` | **Público.** `{token, novaSenha}` → 204 e cookie apagado; encerra todas as sessões; link inválido/expirado/usado → 400 `TOKEN_REDEFINICAO_INVALIDO`; senha fraca → 400 `SENHA_FRACA` (o link segue valendo) |
+| POST | `/api/auth/senha/alterar` | Autenticado. `{senhaAtual, novaSenha}` → 204; encerra todas as sessões; senha atual errada (ou conta travada por tentativas) → 400 `SENHA_ATUAL_INCORRETA` |
 | POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
@@ -161,7 +164,7 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout` | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir` | público | público |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
@@ -439,6 +442,19 @@ no cadastro (decisão do Murillo, 2026-10-19).
   `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` no Nginx real). O caminho é comparado **decodificado**
   (`RotasAutenticacao.caminho`): `POST /api/auth/logi%6E` escapava do limite (achado do review).
   IPv6 agrupado por /64. Limite por réplica (com 2+ instâncias, `limite × réplicas`).
+- **#209 Recuperação e troca de senha** (`SenhaService`, `SenhaController`, changeSet **0034**
+  `redefinicao_senha`): `esqueci` responde **sempre 202** e trabalha em **segundo plano** (pool
+  `agro-email-`), então nem o tempo revela quem tem conta. Token de 256 bits (`TokenOpaco`,
+  compartilhado com o refresh), **só o SHA-256** no banco, uso único, 30 min; pedido novo apaga os
+  anteriores. O link leva o token no **fragmento** (`#token=`): não vai a log de servidor nem ao
+  `Referer`. `redefinir` valida → política + BCrypt fora de transação → regrava sob lock (senha
+  fraca não queima o link; dois envios simultâneos não passam). `alterar` (autenticado) confere a
+  senha atual com a **mesma reserva antitentativa** do login (access token roubado não adivinha a
+  senha por ali). As duas trocas, na mesma transação: hash novo + links pendentes apagados +
+  `SessaoService.revogarTodas` (derruba access e refresh) + bloqueio zerado. E-mail pela porta
+  `EnvioEmail` (`EmailConfig`): `SMTP` (`spring.mail.*`; obrigatório o host), `LOG` (só dev — **a
+  aplicação não sobe com LOG em prod**) ou `DESLIGADO` (padrão). Limite por IP compartilhado entre
+  `esqueci` e `redefinir` (5/min).
 
 ### Débitos técnicos abertos
 

@@ -43,6 +43,7 @@ app:
       login-por-minuto: 100000
       cadastro-por-minuto: 100000
       refresh-por-minuto: 100000
+      senha-por-minuto: 100000
     # Limpeza das sessoes desligada: os testes chamam o job direto.
     refresh:
       limpeza:

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0034-redefinicao-senha.xml
+         Sprint 8 — issue #209 (recuperacao e troca de senha).
+
+         Um token de redefinicao por pedido de "esqueci a senha". Como no
+         refresh, so o SHA-256 do token e gravado. Uso unico (usado_em) e
+         validade curta (30 min). Um pedido novo apaga os anteriores da
+         mesma credencial: so o ultimo link enviado vale, e a tabela fica
+         limitada a uma linha por credencial.
+
+         CASCADE da credencial, como as sessoes de refresh.
+         ================================================================ -->
+
+    <changeSet id="0034-create-redefinicao-senha" author="supersonic-team">
+        <comment>
+            Cria redefinicao_senha (hash do token, validade e uso).
+        </comment>
+
+        <createTable tableName="redefinicao_senha">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="credencial_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hash" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uk_redefinicao_senha_token_hash"/>
+            </column>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expira_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="usado_em" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="redefinicao_senha"
+                baseColumnNames="credencial_id"
+                constraintName="fk_redefinicao_senha_credencial"
+                referencedTableName="credencial_usuario"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="redefinicao_senha" indexName="idx_redefinicao_senha_credencial">
+            <column name="credencial_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="redefinicao_senha"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

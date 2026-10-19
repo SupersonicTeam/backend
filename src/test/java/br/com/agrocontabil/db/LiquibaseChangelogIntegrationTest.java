@@ -302,6 +302,33 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0034 cria redefinicao_senha com hash unico e CASCADE da credencial")
+  void changeSet0034CriaRedefinicaoSenha() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'redefinicao_senha' ORDER BY column_name", String.class))
+        .containsExactly("credencial_id", "criado_em", "expira_em", "id", "token_hash", "usado_em");
+
+    String produtorId = UUID.randomUUID().toString();
+    String credencialId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, ?)",
+        produtorId, "Produtor Redefinicao");
+    jdbc.update("INSERT INTO credencial_usuario (id, email, senha_hash, papel, cpf_cnpj,"
+        + " produtor_id) VALUES (?::uuid, 'r@x.com', '{bcrypt}x', 'PRODUTOR', '52998224725',"
+        + " ?::uuid)", credencialId, produtorId);
+    String insert = "INSERT INTO redefinicao_senha (id, credencial_id, token_hash, criado_em,"
+        + " expira_em) VALUES (gen_random_uuid(), ?::uuid, ?, now(), now() + interval '30 minutes')";
+    jdbc.update(insert, credencialId, "b".repeat(64));
+    assertThatThrownBy(() -> jdbc.update(insert, credencialId, "b".repeat(64)))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM redefinicao_senha"
+        + " WHERE credencial_id = ?::uuid", Integer.class, credencialId)).isZero();
+  }
+
+  @Test
   @DisplayName("changeSet 0028 cria alerta_tributario com chave unica e CASCADE do produtor (#140)")
   void changeSet0028CriaAlertaTributario() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
