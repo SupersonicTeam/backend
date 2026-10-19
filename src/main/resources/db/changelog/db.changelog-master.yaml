@@ -66,3 +66,5 @@ databaseChangeLog:
       file: db/changelog/changes/0029-assistente-uso-semanal.xml
   - include:
       file: db/changelog/changes/0030-assistente-interacao-partes-misto.xml
+  - include:
+      file: db/changelog/changes/0031-credencial-usuario.xml

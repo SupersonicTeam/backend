@@ -4,10 +4,12 @@ import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
+import br.com.agrocontabil.common.Sensivel;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -79,8 +81,10 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiError> handleValidation(
       MethodArgumentNotValidException ex, HttpServletRequest request) {
+    Object alvo = ex.getBindingResult().getTarget();
+    Class<?> tipoAlvo = alvo == null ? null : alvo.getClass();
     List<ErrorDetail> errors = ex.getBindingResult().getFieldErrors().stream()
-        .map(this::toErrorDetail)
+        .map(erro -> toErrorDetail(erro, tipoAlvo))
         .toList();
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
@@ -404,7 +408,9 @@ public class GlobalExceptionHandler {
 
   private ErrorDetail toErrorDetail(ConstraintViolation<?> violation) {
     String field = lastNode(violation);
-    String rejected = resumirValorRejeitado(violation.getInvalidValue());
+    Object folha = violation.getLeafBean();
+    String rejected = campoSensivel(folha == null ? null : folha.getClass(), field)
+        ? null : resumirValorRejeitado(violation.getInvalidValue());
     return new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         field,
@@ -420,6 +426,51 @@ public class GlobalExceptionHandler {
    * conteúdo e memória desperdiçada). 100 caracteres bastam para o cliente reconhecer o campo.
    */
   static final int MAXIMO_VALOR_REJEITADO = 100;
+
+  /**
+   * Trechos de nome de campo cujo valor nunca volta no {@code rejectedValue} (issue #205): senha,
+   * token e segredo. Rede de segurança da anotação {@link Sensivel}.
+   */
+  private static final List<String> TRECHOS_CAMPO_SENSIVEL =
+      List.of("senha", "password", "token", "secret", "segredo");
+
+  /**
+   * Diz se o valor do campo nunca pode voltar no {@code rejectedValue} (issue #205).
+   *
+   * <p>A fonte de verdade é a anotação {@link Sensivel} no campo do DTO. O nome do campo (senha,
+   * token, segredo) é a rede de segurança para quem esquecer a anotação — e cobre os caminhos em
+   * que a classe do campo não é conhecida (parâmetro de método, propriedade aninhada).
+   *
+   * @param tipo  classe que declara o campo, se conhecida
+   * @param campo nome do campo ou caminho da propriedade
+   * @return {@code true} se o valor deve ser omitido
+   */
+  static boolean campoSensivel(Class<?> tipo, String campo) {
+    return anotadoSensivel(tipo, campo) || campoSensivel(campo);
+  }
+
+  static boolean campoSensivel(String campo) {
+    if (campo == null) {
+      return false;
+    }
+    String minusculo = campo.toLowerCase(Locale.ROOT);
+    return TRECHOS_CAMPO_SENSIVEL.stream().anyMatch(minusculo::contains);
+  }
+
+  private static boolean anotadoSensivel(Class<?> tipo, String campo) {
+    if (tipo == null || campo == null || campo.contains(".") || campo.contains("[")) {
+      return false;
+    }
+    for (Class<?> atual = tipo; atual != null && atual != Object.class;
+        atual = atual.getSuperclass()) {
+      try {
+        return atual.getDeclaredField(campo).isAnnotationPresent(Sensivel.class);
+      } catch (NoSuchFieldException e) {
+        // Campo herdado: segue para a superclasse.
+      }
+    }
+    return false;
+  }
 
   static String resumirValorRejeitado(Object valor) {
     if (valor == null) {
@@ -440,8 +491,9 @@ public class GlobalExceptionHandler {
     return lastDot >= 0 ? path.substring(lastDot + 1) : path;
   }
 
-  private ErrorDetail toErrorDetail(FieldError error) {
-    String rejected = resumirValorRejeitado(error.getRejectedValue());
+  private ErrorDetail toErrorDetail(FieldError error, Class<?> tipoAlvo) {
+    String rejected = campoSensivel(tipoAlvo, error.getField())
+        ? null : resumirValorRejeitado(error.getRejectedValue());
     return new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         error.getField(),

@@ -16,6 +16,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless |
+| `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
 | `MockIdentidadeFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (profiles dev/homolog); sem header usa o semente (#91) |
@@ -31,6 +32,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Endpoints |
 |--------|-----------|
 | `HealthController` | `GET /api/v1/health` |
+| `AutenticacaoController` | `/api/auth/**` — `POST /cadastro` público (#205) |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
@@ -52,6 +54,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ReducaoNcmResolver` | **Único** ponto de resolução da redução de base por NCM (issue #52): item → NCM → zero |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext`; sem identidade lança `NaoAutenticadoException` (401) |
+| `CadastroService` | Cadastro de conta (#205): política + hash **fora** de transação, checagem e gravação (identidade + credencial) num `TransactionTemplate` curto; CPF/CNPJ já existente (qualquer grafia) → 409, nunca reivindica identidade; `normalizarEmail` |
+| `PoliticaSenha` | NIST 800-63B (#205): 10 caracteres a 72 bytes UTF-8 (limite do BCrypt), sem repetição, sem e-mail/CPF, fora de `seguranca/senhas-comuns.txt`; `normalizar` (NFKC) antes de validar e de gerar/conferir hash |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository`; fechamento do job por produtor em transação própria, lendo IDs em lotes por keyset (issue #100) |
 | `ResumoLoteApuracao` | Record interno com o resultado do lote do job de fechamento: concluídas + IDs com falha (issue #100) |
 | `DashboardService` | Agrega o painel do produtor (issue #65): reúsa `ApuracaoService` (KPIs) + `NotaFiscalRepository` (série mensal, últimas notas); zero-fill de 6 meses; anti-IDOR |
@@ -165,6 +169,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
 | `AlertaTributario` | Alerta RN010 (issue #140): tipo (`TipoAlertaTributario`), referência (guia/nota/apuração do produtor), data-limite, descrição sem PII, status (`StatusAlertaTributario`). Tabela `alerta_tributario` (0028), única por `(tipo, referencia_id, data_limite)` |
 | `Contador` | Escritório de contabilidade — 2ª identidade do sistema; vínculo N:N com `Produtor` via `contador_produtor` (issue #93) |
+| `CredencialUsuario` | E-mail de login + hash da senha (`credencial_usuario`, 0031, #205): papel + **exatamente uma** referência (`produtorId`/`contadorId`, CHECK), `cpfCnpj` só dígitos (único por papel), `ativo`, `versaoSessao` (revogação em massa: o token leva a versão). Sem relacionamento JPA; hash e documento fora do `toString` |
 | **Enums** | `StatusNotaFiscal` (RASCUNHO→XML_GERADO→[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ; AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS — `ENVIANDO`/`CANCELANDO` sao transitorios e bloqueiam toda operacao, issue #96) · `OrigemNotaFiscal` (PROPRIA/IMPORTADA) · `TipoDocumentoFiscal` (NFE/NFA) · `TipoOperacaoCfop` · `AmbitoCfop` · `TipoProdutor` · `TipoGuiaFiscal` (ICMS/FUNRURAL/DARF/GPS/OUTRO) · `StatusGuiaFiscal` (PENDENTE/PAGA/VENCIDA) |
 | `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback`, `RegimeTributario` | **Scaffolding de sprint futura (AI consultoria)** — sem controller/service |
 
@@ -177,10 +182,12 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 - `SefazEnvioResponse` / `SefazStatusResponse` — retornos SEFAZ
 - `GuiaFiscalRequest/Response` — guia fiscal do Contador (issue #74)
 - `VencimentoFiscalResponse` — item do calendário fiscal do produtor (issue #74)
+- `CadastroRequest/Response` — cadastro de conta (#205); `toString` do request sem a senha
 
 ### `mapper/`
 - `NotaFiscalMapper` — entidade ↔ DTO (request/response)
 - `GuiaFiscalMapper` — entidade ↔ DTO de guia fiscal e item do calendário (issue #74)
+- `CredencialMapper` — credencial → DTO, nunca com hash nem documento (#205)
 
 ### `validation/`
 Bean Validation customizada (anotação + validator):
@@ -229,7 +236,7 @@ Bean Validation customizada (anotação + validator):
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
-`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `ContadorRepository` (`findByCpfCnpj` + `existsByIdAndProdutoresId` — vínculo Contador↔Produtor, issue #93), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `ContadorRepository` (`findByCpfCnpj` + `existsByIdAndProdutoresId` — vínculo Contador↔Produtor, issue #93), `CredencialUsuarioRepository` (`findByEmail`, `existsByEmail`, `existsByPapelAndCpfCnpj` — #205; `ProdutorRepository`/`ContadorRepository` ganharam `existsByCpfCnpjIn` p/ checar as grafias com e sem máscara), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
 
 ## Endpoints REST (`/api/notas`)
 | Método | Path | Descrição |
@@ -268,5 +275,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0027-legislacao-tsv-sem-acento` (próximo número livre: **0028**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0031-credencial-usuario` (próximo número livre: **0032**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

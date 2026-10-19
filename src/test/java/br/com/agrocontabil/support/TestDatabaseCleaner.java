@@ -4,6 +4,7 @@ import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -32,6 +33,7 @@ public class TestDatabaseCleaner {
   private final ApuracaoMensalRepository apuracaoRepository;
   private final GuiaFiscalRepository guiaFiscalRepository;
   private final NotaFiscalRepository notaFiscalRepository;
+  private final CredencialUsuarioRepository credencialRepository;
   private final ContadorRepository contadorRepository;
   private final ProdutorRepository produtorRepository;
 
@@ -43,6 +45,7 @@ public class TestDatabaseCleaner {
       ApuracaoMensalRepository apuracaoRepository,
       GuiaFiscalRepository guiaFiscalRepository,
       NotaFiscalRepository notaFiscalRepository,
+      CredencialUsuarioRepository credencialRepository,
       ContadorRepository contadorRepository,
       ProdutorRepository produtorRepository) {
     this.alertaRepository = alertaRepository;
@@ -51,6 +54,7 @@ public class TestDatabaseCleaner {
     this.apuracaoRepository = apuracaoRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.notaFiscalRepository = notaFiscalRepository;
+    this.credencialRepository = credencialRepository;
     this.contadorRepository = contadorRepository;
     this.produtorRepository = produtorRepository;
   }
@@ -74,6 +78,9 @@ public class TestDatabaseCleaner {
     apuracaoRepository.deleteAll();
     guiaFiscalRepository.deleteAll();
     notaFiscalRepository.deleteAll();
+    // Credenciais (#205): CASCADE no banco, mas nem todo contexto de teste roda o script que cria
+    // as FKs; sem elas a credencial de um produtor apagado sobraria e o e-mail ficaria ocupado.
+    credencialRepository.deleteAll();
     contadorRepository.deleteAll();
     produtorRepository.deleteAll();
   }

@@ -187,11 +187,14 @@ class AlertaTributarioIntegrationTest {
         .filter(g -> g.getValor().compareTo(new BigDecimal("777.00")) == 0)
         .findFirst().orElseThrow();
     // Um alerta do A apontando para a guia do B (bug ou dado corrompido): nao vaza para o A.
+    // Data diferente da do alerta legitimo do B (HOJE + 3), que o job acabou de gravar: a tripla
+    // (tipo, referencia, data) e unica no banco, e repeti-la so passava quando o H2 do contexto
+    // estava sem o indice — o que dependia da ordem em que os contextos de teste sobem.
     alertaRepository.saveAndFlush(br.com.agrocontabil.model.AlertaTributario.builder()
         .produtor(produtorA)
         .tipo(br.com.agrocontabil.model.TipoAlertaTributario.VENCIMENTO_GUIA)
         .referenciaId(guiaDoB.getId())
-        .dataLimite(HOJE.plusDays(3))
+        .dataLimite(HOJE.plusDays(2))
         .descricao("Guia de FUNRURAL de R$ 777,00")
         .status(br.com.agrocontabil.model.StatusAlertaTributario.ATIVO)
         .criadoEm(java.time.OffsetDateTime.now())

@@ -31,6 +31,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <caption>Endpoint x papel</caption>
  *   <tr><th>Rota</th><th>Quem acessa</th></tr>
  *   <tr><td>{@code /api/v1/health}, Swagger, Actuator</td><td>publico</td></tr>
+ *   <tr><td>{@code POST /api/auth/cadastro}</td><td>publico</td></tr>
  *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}</td><td>somente PRODUTOR</td></tr>
  *   <tr><td>demais {@code /api/**}</td><td>PRODUTOR ou CONTADOR</td></tr>
  * </table>
@@ -80,6 +81,9 @@ public class SecurityConfig {
       "/error"
   };
 
+  /** Cadastro de conta, publico por natureza (issue #205). */
+  static final String ROTA_CADASTRO = "/api/auth/cadastro";
+
   private final CorsConfigurationSource corsConfigurationSource;
   private final SecurityErrorResponder errorResponder;
   private final MockIdentidadeFilter mockIdentidadeFilter;
@@ -111,6 +115,9 @@ public class SecurityConfig {
                 // o SseEmitter rodaria sem SecurityContext e seria negado com a resposta ja enviada.
                 auth.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                     .requestMatchers(ROTAS_PUBLICAS).permitAll()
+                    // Cadastro de conta (#205): quem chega aqui ainda nao tem identidade. So o
+                    // POST — um GET ou DELETE no mesmo caminho cai na regra de /api/** abaixo.
+                    .requestMatchers(HttpMethod.POST, ROTA_CADASTRO).permitAll()
                     // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
                     .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
                     .hasRole(PapelUsuario.PRODUTOR.name())

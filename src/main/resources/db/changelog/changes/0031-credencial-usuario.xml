@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0031-credencial-usuario.xml
+         Sprint 8 — issue #205 (credencial de acesso e cadastro).
+
+         Primeira peca da autenticacao real: e-mail de login + hash da
+         senha, em tabela propria. Uma linha por identidade (produtor OU
+         contador), com o papel e exatamente uma das duas referencias,
+         garantido por CHECK.
+
+         Por que tabela propria: o login resolve um e-mail sem saber se e
+         produtor ou contador, e o agregado do produtor (emissao, apuracao,
+         dashboard) nao deve carregar o hash da senha.
+
+         cpf_cnpj repete o documento da identidade, so digitos, para que a
+         unicidade (papel, cpf_cnpj) barre no banco dois cadastros
+         simultaneos do mesmo documento: produtores.cpf_cnpj nao e unico.
+
+         versao_sessao e o mecanismo de revogacao em massa: todo token leva
+         a versao em que foi emitido e so vale enquanto ela for a atual
+         (troca de senha e redefinicao incrementam). Contador, nao
+         timestamp: o iat do JWT tem resolucao de segundo.
+
+         CASCADE nas duas FKs: a credencial nao tem sentido sem a
+         identidade, e o direito ao esquecimento (LGPD, #148) apaga as duas.
+         ================================================================ -->
+
+    <changeSet id="0031-create-credencial-usuario" author="supersonic-team">
+        <comment>
+            Cria credencial_usuario (e-mail unico, hash da senha, papel,
+            documento, referencia ao produtor ou ao contador).
+        </comment>
+
+        <createTable tableName="credencial_usuario">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(254)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uk_credencial_email"/>
+            </column>
+            <column name="senha_hash" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="papel" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cpf_cnpj" type="VARCHAR(14)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints unique="true" uniqueConstraintName="uk_credencial_produtor"/>
+            </column>
+            <column name="contador_id" type="UUID">
+                <constraints unique="true" uniqueConstraintName="uk_credencial_contador"/>
+            </column>
+            <column name="ativo" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="versao_sessao" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="credencial_usuario"
+                columnNames="papel, cpf_cnpj"
+                constraintName="uk_credencial_papel_cpf_cnpj"/>
+
+        <addForeignKeyConstraint
+                baseTableName="credencial_usuario"
+                baseColumnNames="produtor_id"
+                constraintName="fk_credencial_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="credencial_usuario"
+                baseColumnNames="contador_id"
+                constraintName="fk_credencial_contador"
+                referencedTableName="contadores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <!-- addCheckConstraint e recurso pago do Liquibase: SQL portavel (PostgreSQL e H2). -->
+        <sql>
+            ALTER TABLE credencial_usuario ADD CONSTRAINT ck_credencial_identidade CHECK (
+                (papel = 'PRODUTOR' AND produtor_id IS NOT NULL AND contador_id IS NULL)
+                OR (papel = 'CONTADOR' AND contador_id IS NOT NULL AND produtor_id IS NULL)
+            )
+        </sql>
+
+        <rollback>
+            <dropTable tableName="credencial_usuario"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
