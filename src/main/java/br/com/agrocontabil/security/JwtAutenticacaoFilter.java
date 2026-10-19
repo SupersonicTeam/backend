@@ -10,7 +10,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -57,7 +56,11 @@ public class JwtAutenticacaoFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     String autorizacao = request.getHeader(HttpHeaders.AUTHORIZATION);
-    if (autorizacao == null || !ehBearer(autorizacao) || ehRotaDeAutenticacao(request)) {
+    // Rotas publicas de autenticacao ignoram o Bearer: o cliente chama o refresh justamente com o
+    // access token expirado, e um interceptor que o anexa a toda chamada derrubaria a renovacao.
+    // Seguro porque sao permitAll e nenhuma le o principal (a credencial e o corpo ou o cookie).
+    if (autorizacao == null || !ehBearer(autorizacao)
+        || RotasAutenticacao.ehPublicaPost(request)) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -87,21 +90,6 @@ public class JwtAutenticacaoFilter extends OncePerRequestFilter {
       // Threads do Tomcat sao reusadas: a identidade nao pode vazar para a proxima requisicao.
       SecurityContextHolder.clearContext();
     }
-  }
-
-  /**
-   * Requisição a uma rota pública de autenticação ({@link RotasAutenticacao}, issues #205–#207).
-   *
-   * <p>Nelas o Bearer é ignorado, válido ou não. O caso que importa é o refresh: o cliente o chama
-   * justamente quando o access token expirou, e um interceptor que anexa o token a toda chamada
-   * mandaria o expirado junto — recusá-lo aqui derrubaria a renovação no único momento em que ela
-   * é necessária. Ignorar é seguro porque essas rotas são {@code permitAll} e nenhuma lê o
-   * principal; a credencial delas é o corpo (login) ou o cookie (refresh, logout).
-   */
-  private static boolean ehRotaDeAutenticacao(HttpServletRequest request) {
-    String caminho = request.getRequestURI().substring(request.getContextPath().length());
-    return HttpMethod.POST.matches(request.getMethod())
-        && RotasAutenticacao.PUBLICAS_POST.contains(caminho);
   }
 
   /** O esquema é case-insensitive (RFC 9110 §11.1). */

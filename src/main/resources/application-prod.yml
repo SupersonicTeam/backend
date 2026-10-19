@@ -44,3 +44,11 @@ logging:
   level:
     root: WARN
     br.com.agrocontabil: INFO
+
+# Atras do Nginx (#208): o limite de tentativas por IP precisa do IP do cliente, nao do proxy.
+# "native" liga o RemoteIpValve do Tomcat, que so aceita X-Forwarded-For quando quem conecta e um
+# proxy interno (127.x, 10.x, 172.16-31.x, 192.168.x) — um cliente da internet nao forja o IP.
+# Fixe o endereco real do Nginx em SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES (ver .env.example) e
+# nunca publique a porta do backend fora da rede interna.
+server:
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:native}

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.security.JwtAutenticacaoFilter;
+import br.com.agrocontabil.security.LimiteTaxaAutenticacaoFilter;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.RotasAutenticacao;
 import br.com.agrocontabil.security.SecurityErrorResponder;
@@ -88,16 +89,19 @@ public class SecurityConfig {
   private final CorsConfigurationSource corsConfigurationSource;
   private final SecurityErrorResponder errorResponder;
   private final AutenticacaoTokenService autenticacaoTokenService;
+  private final ForcaBrutaProperties forcaBruta;
   private final MockIdentidadeFilter mockIdentidadeFilter;
 
   public SecurityConfig(
       CorsConfigurationSource corsConfigurationSource,
       SecurityErrorResponder errorResponder,
       AutenticacaoTokenService autenticacaoTokenService,
+      ForcaBrutaProperties forcaBruta,
       @Autowired(required = false) MockIdentidadeFilter mockIdentidadeFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
     this.errorResponder = errorResponder;
     this.autenticacaoTokenService = autenticacaoTokenService;
+    this.forcaBruta = forcaBruta;
     this.mockIdentidadeFilter = mockIdentidadeFilter;
   }
 
@@ -137,6 +141,10 @@ public class SecurityConfig {
     JwtAutenticacaoFilter jwtFilter =
         new JwtAutenticacaoFilter(autenticacaoTokenService, errorResponder);
     http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+    // Limite por IP (#208) antes de tudo que toca banco ou BCrypt; depois do CORS, para o 429
+    // levar os headers de CORS e o Angular conseguir ler o envelope.
+    http.addFilterBefore(
+        new LimiteTaxaAutenticacaoFilter(forcaBruta, errorResponder), JwtAutenticacaoFilter.class);
     if (mockIdentidadeFilter != null) {
       http.addFilterAfter(mockIdentidadeFilter, JwtAutenticacaoFilter.class);
     }

@@ -125,6 +125,12 @@ public enum ErrorCode {
    * (issue #207). HTTP 401 — o cliente volta ao login.
    */
   SESSAO_INVALIDA,
+  // Forca bruta (Sprint 8 — issue #208)
+  /**
+   * Limite de tentativas por IP excedido em login, cadastro ou refresh. HTTP 429 com
+   * {@code Retry-After}.
+   */
+  MUITAS_TENTATIVAS,
   // Ceres — assistente fiscal (issue #141)
   /**
    * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).

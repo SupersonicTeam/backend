@@ -233,6 +233,15 @@ app:
       audiencia: ${JWT_AUDIENCIA:agrocontabil-api}
       validade: ${JWT_VALIDADE:PT15M}
       tolerancia-relogio: PT30S
+    # Protecao contra forca bruta (#208): bloqueio por conta e limite por IP (em memoria, por
+    # replica). Atras de proxy, o IP real so chega com server.forward-headers-strategy=native.
+    forca-bruta:
+      max-falhas: ${FORCA_BRUTA_MAX_FALHAS:5}
+      bloqueio: ${FORCA_BRUTA_BLOQUEIO:PT15M}
+      login-por-minuto: ${LIMITE_LOGIN_POR_MINUTO:10}
+      cadastro-por-minuto: ${LIMITE_CADASTRO_POR_MINUTO:5}
+      refresh-por-minuto: ${LIMITE_REFRESH_POR_MINUTO:30}
+      max-ips: 10000
     # Refresh token rotativo em cookie HttpOnly (#207).
     refresh:
       validade: ${REFRESH_VALIDADE:P7D}

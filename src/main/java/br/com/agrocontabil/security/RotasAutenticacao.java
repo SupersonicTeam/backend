@@ -1,6 +1,9 @@
 package br.com.agrocontabil.security;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.util.UrlPathHelper;
 
 /**
  * Rotas públicas de autenticação (issues #205–#207): fonte única para o {@code SecurityConfig},
@@ -26,6 +29,35 @@ public final class RotasAutenticacao {
   /** Todas as rotas públicas de autenticação, só com {@code POST}. */
   public static final Set<String> PUBLICAS_POST = Set.of(CADASTRO, LOGIN, REFRESH, LOGOUT);
 
+  /** Decodifica o percent-encoding e tira o conteúdo após {@code ;} — como o roteamento faz. */
+  private static final UrlPathHelper CAMINHOS = new UrlPathHelper();
+
   private RotasAutenticacao() {
+  }
+
+  /**
+   * Caminho da requisição como o Spring o roteia: decodificado, sem o context path e sem
+   * parâmetros de matriz.
+   *
+   * <p>Comparar o {@code getRequestURI()} cru abre um desvio (achado do review de segurança da
+   * #208): {@code POST /api/auth/logi%6E} chega ao login — o Spring decodifica para rotear —, mas
+   * não casaria com {@code "/api/auth/login"} e escaparia do limite de tentativas. Todo filtro
+   * que decide por caminho precisa usar este método.
+   *
+   * @param request requisição
+   * @return caminho decodificado dentro da aplicação
+   */
+  public static String caminho(HttpServletRequest request) {
+    return CAMINHOS.getPathWithinApplication(request);
+  }
+
+  /**
+   * A requisição é um {@code POST} para uma das rotas públicas de autenticação?
+   *
+   * @param request requisição
+   * @return {@code true} para cadastro, login, refresh e logout
+   */
+  public static boolean ehPublicaPost(HttpServletRequest request) {
+    return HttpMethod.POST.matches(request.getMethod()) && PUBLICAS_POST.contains(caminho(request));
   }
 }

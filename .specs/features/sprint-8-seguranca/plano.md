@@ -73,6 +73,10 @@ sessão), achados corrigidos no próprio PR, CI verde e review do Copilot antes 
 - Envio por porta (`EnvioEmail`); em `dev` o link vai para o log só com flag explícita, nunca em
   `prod`. SMTP real por `spring.mail.*`.
 
+### Achados registrados para PRs seguintes
+- (#208 → #148) O log do 429 grava o IP do cliente — dado pessoal (LGPD): decidir mascaramento
+  e retenção dos logs de segurança na #148.
+
 ### Achados do review do #205 (registrados para os PRs seguintes)
 - O 409 do cadastro não diz qual campo colidiu, mas quem controla os dois testa um por vez:
   enumeração de e-mail/CPF é contida pelo limite de tentativas (#208/#150), não pelo texto.

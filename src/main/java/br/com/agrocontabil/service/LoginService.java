@@ -42,6 +42,7 @@ public class LoginService {
   private final CredencialUsuarioRepository credencialRepository;
   private final PasswordEncoder passwordEncoder;
   private final SessaoService sessaoService;
+  private final BloqueioContaService bloqueioConta;
   private final UsuarioAutenticadoProvider usuarioProvider;
 
   /** Senha conferida contra o hash fictício quando a enviada não pode chegar ao BCrypt. */
@@ -54,10 +55,12 @@ public class LoginService {
       CredencialUsuarioRepository credencialRepository,
       PasswordEncoder passwordEncoder,
       SessaoService sessaoService,
+      BloqueioContaService bloqueioConta,
       UsuarioAutenticadoProvider usuarioProvider) {
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
     this.sessaoService = sessaoService;
+    this.bloqueioConta = bloqueioConta;
     this.usuarioProvider = usuarioProvider;
     this.hashFicticio = passwordEncoder.encode(UUID.randomUUID().toString());
   }
@@ -82,18 +85,34 @@ public class LoginService {
 
     Optional<CredencialUsuario> encontrada = credencialRepository.findByEmail(email);
     if (encontrada.isEmpty()) {
-      // Mesmo custo de CPU do caminho com conta: o tempo de resposta nao revela o e-mail.
+      // Mesmo custo de banco e de CPU do caminho com conta: o tempo nao revela o e-mail.
+      bloqueioConta.reservarFicticia();
       passwordEncoder.matches(senha, hashFicticio);
       throw new CredenciaisInvalidasException();
     }
 
     CredencialUsuario credencial = encontrada.get();
-    boolean senhaConfere = passwordEncoder.matches(senha, credencial.getSenhaHash());
-    if (!senhaConfere || !credencial.isAtivo()) {
-      log.info("Login recusado: credencial={}", credencial.getId());
+    // A tentativa e contada ANTES de conferir a senha (#208): requisicoes paralelas consomem a
+    // cota na fila do lock, e a sexta em diante ja encontra a conta travada.
+    if (!bloqueioConta.reservarTentativa(credencial.getId())) {
+      // Conta travada: a senha nem e conferida — a adivinhacao para. Mesmo custo e mesma
+      // resposta dos outros fracassos: um 423 diria que este e-mail tem conta.
+      passwordEncoder.matches(senha, hashFicticio);
+      log.info("Login recusado (conta bloqueada): credencial={}", credencial.getId());
       throw new CredenciaisInvalidasException();
     }
 
+    boolean senhaConfere = passwordEncoder.matches(senha, credencial.getSenhaHash());
+    if (!senhaConfere) {
+      log.info("Login recusado: credencial={}", credencial.getId());
+      throw new CredenciaisInvalidasException();
+    }
+    if (!credencial.isAtivo()) {
+      log.info("Login recusado (conta desativada): credencial={}", credencial.getId());
+      throw new CredenciaisInvalidasException();
+    }
+
+    bloqueioConta.liberar(credencial.getId());
     atualizarHashSeDefasado(credencial, senha);
 
     log.info("Login: papel={}, usuarioId={}", credencial.getPapel(), credencial.usuarioId());

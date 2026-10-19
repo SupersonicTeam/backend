@@ -124,7 +124,7 @@ br.com.agrocontabil
 | Método | Path | Descrição |
 |--------|------|-----------|
 | POST | `/api/auth/cadastro` | **Público.** Cria conta de produtor ou contador (#205): `{papel, nomeCompleto, cpfCnpj (obrigatório, só dígitos, DV), email, senha}`; senha de 10 caracteres a 72 bytes, fora da lista de comuns, sem o e-mail/CPF (400 `SENHA_FRACA`, nunca ecoa a senha); e-mail ou CPF/CNPJ já existente → 409 `CADASTRO_CONFLITO` sem dizer qual — inclusive produtor/contador já cadastrado sem credencial (nunca reivindicado) |
-| POST | `/api/auth/login` | **Público.** `{email, senha}` → `{accessToken, tokenType: "Bearer", expiraEm, papel, usuarioId}` (#206); `Cache-Control: no-store`; qualquer falha = 401 `CREDENCIAIS_INVALIDAS` |
+| POST | `/api/auth/login` | **Público.** `{email, senha}` → `{accessToken, tokenType: "Bearer", expiraEm, papel, usuarioId}` (#206); `Cache-Control: no-store`; qualquer falha (inclusive conta bloqueada por 5 erros, #208) = 401 `CREDENCIAIS_INVALIDAS`; 10/min por IP → 429 `MUITAS_TENTATIVAS` |
 | GET | `/api/auth/me` | Identidade da requisição: `{usuarioId, papel, nome}` (#206) |
 | POST | `/api/auth/refresh` | **Público.** Lê o cookie `agro_refresh`, devolve access novo e troca o cookie (#207); refresh ausente/vencido/revogado/reusado → 401 `SESSAO_INVALIDA` (reuso revoga a família) |
 | POST | `/api/auth/logout` | **Público, idempotente.** Revoga a família do cookie e o apaga → 204 (#207) |
@@ -424,6 +424,21 @@ no cadastro (decisão do Murillo, 2026-10-19).
   derruba na hora os access tokens já emitidos. `SessaoService.revogarTodas` é o ponto único de
   revogação em massa (a troca de senha da #209 passa por ele). `SessaoRefreshLimpezaJob` diário
   (3h, ShedLock) apaga sessões vencidas há mais de 7 dias.
+- **#208 Força bruta:** duas barreiras. (1) **Bloqueio por conta** (`BloqueioContaService`,
+  changeSet **0033**: `falhas_login`, `bloqueada_ate`): 5 senhas erradas seguidas travam o login
+  por 15 min; durante o bloqueio a senha **nem é conferida**; cada tentativa é **reservada (contada)
+  sob lock pessimista antes do BCrypt** — contar depois deixava N logins paralelos lerem "não
+  bloqueada" e terem todos a senha conferida (achado do review); e-mail sem conta faz reserva
+  fictícia de mesmo custo; bloqueio vencido recomeça do zero; sucesso zera. A resposta do bloqueio
+  é **o mesmo 401** `CREDENCIAIS_INVALIDAS` — a issue pedia 423, mas e-mail inexistente nunca
+  bloqueia e o 423 viraria oráculo de enumeração. (2) **Limite por IP**
+  (`LimiteTaxaAutenticacaoFilter` + `LimitadorTaxa`, bucket4j em memória com teto LRU de 10 mil
+  IPs): login 10/min, cadastro 5/min, refresh 30/min → **429 `MUITAS_TENTATIVAS`** + `Retry-After`,
+  antes de banco e BCrypt. IP = `remoteAddr`; `X-Forwarded-For` só vale em prod
+  (`server.forward-headers-strategy: native`, que só confia em proxy interno — fixar
+  `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` no Nginx real). O caminho é comparado **decodificado**
+  (`RotasAutenticacao.caminho`): `POST /api/auth/logi%6E` escapava do limite (achado do review).
+  IPv6 agrupado por /64. Limite por réplica (com 2+ instâncias, `limite × réplicas`).
 
 ### Débitos técnicos abertos
 
