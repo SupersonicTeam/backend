@@ -221,8 +221,9 @@ class LiquibaseChangelogIntegrationTest {
 
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'credencial_usuario' ORDER BY column_name", String.class))
-        .containsExactly("ativo", "contador_id", "cpf_cnpj", "created_at", "email", "id", "papel",
-            "produtor_id", "senha_hash", "updated_at", "versao_sessao");
+        .containsExactly("ativo", "bloqueada_ate", "contador_id", "cpf_cnpj", "created_at", "email",
+            "falhas_login", "id", "papel", "produtor_id", "senha_hash", "updated_at",
+            "versao_sessao");
 
     String produtorId = UUID.randomUUID().toString();
     String contadorId = UUID.randomUUID().toString();

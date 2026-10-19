@@ -4,10 +4,12 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Registra {@link JwtProperties} (issue #206) e {@link RefreshProperties} (issue #207), no padrão do
+ * Registra {@link JwtProperties} (issue #206), {@link RefreshProperties} (issue #207) e
+ * {@link ForcaBrutaProperties} (issue #208), no padrão do
  * {@code AssistenteConfig}.
  */
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, RefreshProperties.class})
+@EnableConfigurationProperties(
+    {JwtProperties.class, RefreshProperties.class, ForcaBrutaProperties.class})
 public class JwtConfig {
 }

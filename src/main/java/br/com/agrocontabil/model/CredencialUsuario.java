@@ -110,6 +110,15 @@ public class CredencialUsuario {
   @Column(name = "versao_sessao", nullable = false)
   private int versaoSessao = 0;
 
+  /** Senhas erradas seguidas desde o último login com sucesso (issue #208). */
+  @Builder.Default
+  @Column(name = "falhas_login", nullable = false)
+  private int falhasLogin = 0;
+
+  /** Até quando o login está travado por excesso de falhas; nulo = não travado (issue #208). */
+  @Column(name = "bloqueada_ate")
+  private OffsetDateTime bloqueadaAte;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

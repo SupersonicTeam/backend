@@ -38,6 +38,7 @@ class LoginServiceTest {
   @Mock private CredencialUsuarioRepository credencialRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private SessaoService sessaoService;
+  @Mock private BloqueioContaService bloqueioConta;
   @Mock private UsuarioAutenticadoProvider usuarioProvider;
 
   private LoginService service;
@@ -45,7 +46,7 @@ class LoginServiceTest {
   @BeforeEach
   void setUp() {
     when(passwordEncoder.encode(anyString())).thenReturn("{bcrypt}ficticio");
-    service = new LoginService(credencialRepository, passwordEncoder, sessaoService,
+    service = new LoginService(credencialRepository, passwordEncoder, sessaoService, bloqueioConta,
         usuarioProvider);
   }
 
@@ -86,13 +87,43 @@ class LoginServiceTest {
   }
 
   @Test
-  @DisplayName("senha errada: 401 e nenhum token")
+  @DisplayName("senha errada: 401, falha contada e nenhum token")
   void senhaErrada() {
-    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial(true)));
+    CredencialUsuario credencial = credencial(true);
+    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(false);
 
     assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
         .isInstanceOf(CredenciaisInvalidasException.class);
+    verify(bloqueioConta).registrarFalha(credencial.getId());
+    verify(sessaoService, never()).abrir(any());
+  }
+
+  @Test
+  @DisplayName("conta bloqueada: nem a senha certa entra, a senha real nao e conferida, mesmo 401")
+  void contaBloqueada() {
+    CredencialUsuario credencial = credencial(true);
+    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.bloqueada(credencial)).thenReturn(true);
+
+    assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
+        .isInstanceOf(CredenciaisInvalidasException.class);
+    verify(passwordEncoder, never()).matches(SENHA, "{bcrypt}real");
+    verify(passwordEncoder).matches(SENHA, "{bcrypt}ficticio");
+    verify(bloqueioConta, never()).registrarFalha(any());
+    verify(sessaoService, never()).abrir(any());
+  }
+
+  @Test
+  @DisplayName("login com sucesso zera as falhas")
+  void sucessoZeraFalhas() {
+    CredencialUsuario credencial = credencial(true);
+    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
+
+    service.entrar(new LoginRequest(EMAIL, SENHA));
+
+    verify(bloqueioConta).zerarFalhas(credencial);
   }
 
   @Test

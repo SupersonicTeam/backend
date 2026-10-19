@@ -362,6 +362,8 @@ CREATE TABLE IF NOT EXISTS credencial_usuario (
     contador_id            UUID,
     ativo                  BOOLEAN                   DEFAULT TRUE NOT NULL,
     versao_sessao          INTEGER                   DEFAULT 0 NOT NULL,
+    falhas_login           INTEGER                   DEFAULT 0 NOT NULL,
+    bloqueada_ate          TIMESTAMP WITH TIME ZONE,
     created_at             TIMESTAMP WITH TIME ZONE,
     updated_at             TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)

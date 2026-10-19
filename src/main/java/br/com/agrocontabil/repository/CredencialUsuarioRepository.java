@@ -2,9 +2,11 @@ package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.security.PapelUsuario;
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,6 +39,18 @@ public interface CredencialUsuarioRepository extends JpaRepository<CredencialUsu
    * @return {@code true} se já existe credencial deste documento neste papel
    */
   boolean existsByPapelAndCpfCnpj(PapelUsuario papel, String cpfCnpj);
+
+  /**
+   * Credencial sob lock pessimista (issue #208): serializa as falhas de login simultâneas da mesma
+   * conta, para que dez tentativas paralelas contem dez — e não uma só, como leria um
+   * incremento sobre a cópia em memória.
+   *
+   * @param id credencial
+   * @return a credencial, se existir
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT c FROM CredencialUsuario c WHERE c.id = :id")
+  Optional<CredencialUsuario> findByIdForUpdate(@Param("id") UUID id);
 
   /**
    * Regrava só o hash da senha (issue #206: rehash no login quando o custo do BCrypt sobe).

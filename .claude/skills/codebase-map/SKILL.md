@@ -17,6 +17,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 |--------|-----------------|
 | `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless |
 | `RefreshProperties` | `app.seguranca.refresh.*` (#207): validade (7d), vida máxima (30d), atributos do cookie, retenção |
+| `ForcaBrutaProperties` | `app.seguranca.forca-bruta.*` (#208): max-falhas, bloqueio, limites por IP por rota, teto de IPs; valores não positivos impedem a subida |
 | `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
@@ -60,6 +61,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `LoginService` | Login (#206): e-mail normalizado + senha NFKC; e-mail sem conta confere contra hash fictício (tempo igual); falha de qualquer tipo = `CredenciaisInvalidasException` (401); rehash por `UPDATE` só da coluna; `usuarioLogado()` p/ `/me`. Só web |
 | `SessaoService` | Par access+refresh (#207): abre família no login, `renovar` (rotação, reuso → revoga família, lock pessimista, vida máxima, desfecho gravado antes de recusar), `encerrar`, `encerrarTodas`/`revogarTodas` (ponto único de revogação em massa). Só web |
 | `SessaoRefreshLimpezaJob` | Diário 3h + ShedLock (#207): apaga sessões vencidas há mais que `retencao` |
+| `BloqueioContaService` | Bloqueio por conta (#208): `bloqueada`, `registrarFalha` (lock pessimista, 5 erros → 15 min, bloqueio vencido recomeça), `zerarFalhas` |
 | `AutenticacaoTokenService` | JWT → `UsuarioAutenticado` (#206): relê a credencial a cada requisição (ativa, mesmo papel, mesma `versaoSessao`). Só web |
 | `PoliticaSenha` | NIST 800-63B (#205): 10 caracteres a 72 bytes UTF-8 (limite do BCrypt), sem repetição, sem e-mail/CPF, fora de `seguranca/senhas-comuns.txt`; `normalizar` (NFKC) antes de validar e de gerar/conferir hash |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository`; fechamento do job por produtor em transação própria, lendo IDs em lotes por keyset (issue #100) |
@@ -143,6 +145,9 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate: Bearer`, 403); `recusarToken` = 401 `error="invalid_token"` (#206) |
 | `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto/de exemplo (dev: efêmero) |
 | `CookieRefresh` | Monta/lê/apaga o cookie `agro_refresh` (HttpOnly, Secure, SameSite=Strict, Path=/api/auth) — #207 |
+| `LimitadorTaxa` | Balde de fichas (bucket4j) por chave, em memória, com teto LRU (#208; reusado pelo rate limit da #150) |
+| `LimiteTaxaAutenticacaoFilter` | 429 `MUITAS_TENTATIVAS` + `Retry-After` por IP em login/cadastro/refresh, antes do filtro JWT (#208); não é bean |
+| `RotasAutenticacao` | Fonte única das rotas públicas de autenticação (SecurityConfig + filtros) |
 | `JwtAutenticacaoFilter` | Bearer → identidade; inválido = 401 na hora (antes do mock); não é bean (instanciado no `SecurityConfig`) |
 
 ### `danfe/`
@@ -285,5 +290,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0032-sessao-refresh` (próximo número livre: **0033**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0033-credencial-bloqueio` (próximo número livre: **0034**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

@@ -51,6 +51,9 @@ public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessD
   private static final String MENSAGEM_TOKEN_INVALIDO = "Token de acesso invalido ou expirado.";
   private static final String SUGESTAO_TOKEN_INVALIDO =
       "Entre de novo em POST /api/auth/login para obter um token valido.";
+  private static final String MENSAGEM_429 = "Muitas tentativas em pouco tempo.";
+  private static final String SUGESTAO_429 =
+      "Aguarde o tempo indicado no header Retry-After e tente de novo.";
   private static final String MENSAGEM_500 = "Erro interno ao processar a requisicao.";
   private static final String SUGESTAO_500 = "Tente novamente em instantes.";
   private static final String MENSAGEM_403 = "Seu papel nao tem acesso a este recurso.";
@@ -104,6 +107,23 @@ public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessD
       throws IOException {
     escrever(request, response, HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
         MENSAGEM_500, SUGESTAO_500);
+  }
+
+  /**
+   * Limite de tentativas por IP excedido (issue #208): 429 {@code MUITAS_TENTATIVAS} com
+   * {@code Retry-After} (RFC 6585 §4).
+   *
+   * @param request          requisição barrada
+   * @param response         resposta a escrever
+   * @param esperarSegundos  segundos até poder tentar de novo
+   * @throws IOException se a escrita falhar
+   */
+  public void muitasTentativas(
+      HttpServletRequest request, HttpServletResponse response, long esperarSegundos)
+      throws IOException {
+    response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(esperarSegundos));
+    escrever(request, response, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.MUITAS_TENTATIVAS,
+        MENSAGEM_429, SUGESTAO_429);
   }
 
   /** Identidade válida, papel insuficiente: 403. */
