@@ -24,10 +24,23 @@ import org.springframework.http.HttpStatus;
  */
 public class NaoAutenticadoException extends DomainException {
 
-  private static final String MENSAGEM = "Requisicao sem identidade de usuario valida.";
+  /**
+   * Desafio de todo 401 (RFC 9110 §15.5.2 e RFC 6750 §3), o mesmo na cadeia de filtros e no
+   * {@code GlobalExceptionHandler}. Desde a Sprint 8 (#206) o esquema é {@code Bearer}; o header
+   * {@code X-Usuario-Id} segue aceito em dev/homolog, mas não é anunciado como esquema.
+   */
+  public static final String DESAFIO = "Bearer realm=\"agrocontabil\"";
 
-  private static final String SUGESTAO =
-      "Envie o header X-Usuario-Id com o identificador do usuario.";
+  /** Desafio do token recusado (expirado, adulterado, revogado) — RFC 6750 §3.1. */
+  public static final String DESAFIO_TOKEN_INVALIDO =
+      "Bearer realm=\"agrocontabil\", error=\"invalid_token\"";
+
+  static final String MENSAGEM = "Requisicao sem identidade de usuario valida.";
+
+  /** Sugestão de todo 401 de identidade ausente ou inválida. */
+  public static final String SUGESTAO =
+      "Entre com e-mail e senha em POST /api/auth/login e envie o token no header "
+          + "Authorization: Bearer <token>.";
 
   public NaoAutenticadoException() {
     super(

@@ -1,7 +1,6 @@
 package br.com.agrocontabil.exception;
 
 import br.com.agrocontabil.common.ApiError;
-import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.Sensivel;
@@ -64,10 +63,8 @@ public class GlobalExceptionHandler {
 
     ResponseEntity.BodyBuilder resposta = ResponseEntity.status(status);
     if (status == HttpStatus.UNAUTHORIZED) {
-      // RFC 9110 §15.5.2: toda resposta 401 deve trazer o desafio em WWW-Authenticate. Hoje o
-      // esquema e o header de identidade da Onda 4; na Sprint 8 (#93) passa a ser Bearer.
-      resposta.header(HttpHeaders.WWW_AUTHENTICATE,
-          "Header realm=\"agrocontabil\", header=\"" + MockIdentidadeFilter.HEADER_USUARIO_ID + "\"");
+      // RFC 9110 §15.5.2: toda resposta 401 traz o desafio em WWW-Authenticate (Bearer, #206).
+      resposta.header(HttpHeaders.WWW_AUTHENTICATE, NaoAutenticadoException.DESAFIO);
     }
     if (ex instanceof ComRetryAfter espera) {
       // RFC 9110 §10.2.3: em 503 (Ceres ocupada, #157) e 429 (cota semanal, #166), diz ao

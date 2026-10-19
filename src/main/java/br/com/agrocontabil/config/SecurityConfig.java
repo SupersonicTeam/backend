@@ -1,7 +1,9 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.security.JwtAutenticacaoFilter;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.SecurityErrorResponder;
+import br.com.agrocontabil.service.AutenticacaoTokenService;
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -31,7 +33,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <caption>Endpoint x papel</caption>
  *   <tr><th>Rota</th><th>Quem acessa</th></tr>
  *   <tr><td>{@code /api/v1/health}, Swagger, Actuator</td><td>publico</td></tr>
- *   <tr><td>{@code POST /api/auth/cadastro}</td><td>publico</td></tr>
+ *   <tr><td>{@code POST /api/auth/cadastro}, {@code POST /api/auth/login}</td><td>publico</td></tr>
  *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}</td><td>somente PRODUTOR</td></tr>
  *   <tr><td>demais {@code /api/**}</td><td>PRODUTOR ou CONTADOR</td></tr>
  * </table>
@@ -84,16 +86,22 @@ public class SecurityConfig {
   /** Cadastro de conta, publico por natureza (issue #205). */
   static final String ROTA_CADASTRO = "/api/auth/cadastro";
 
+  /** Login: troca e-mail e senha pelo token (issue #206). */
+  static final String ROTA_LOGIN = "/api/auth/login";
+
   private final CorsConfigurationSource corsConfigurationSource;
   private final SecurityErrorResponder errorResponder;
+  private final AutenticacaoTokenService autenticacaoTokenService;
   private final MockIdentidadeFilter mockIdentidadeFilter;
 
   public SecurityConfig(
       CorsConfigurationSource corsConfigurationSource,
       SecurityErrorResponder errorResponder,
+      AutenticacaoTokenService autenticacaoTokenService,
       @Autowired(required = false) MockIdentidadeFilter mockIdentidadeFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
     this.errorResponder = errorResponder;
+    this.autenticacaoTokenService = autenticacaoTokenService;
     this.mockIdentidadeFilter = mockIdentidadeFilter;
   }
 
@@ -115,9 +123,9 @@ public class SecurityConfig {
                 // o SseEmitter rodaria sem SecurityContext e seria negado com a resposta ja enviada.
                 auth.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                     .requestMatchers(ROTAS_PUBLICAS).permitAll()
-                    // Cadastro de conta (#205): quem chega aqui ainda nao tem identidade. So o
+                    // Cadastro (#205) e login (#206): quem chega aqui ainda nao tem identidade. So o
                     // POST — um GET ou DELETE no mesmo caminho cai na regra de /api/** abaixo.
-                    .requestMatchers(HttpMethod.POST, ROTA_CADASTRO).permitAll()
+                    .requestMatchers(HttpMethod.POST, ROTA_CADASTRO, ROTA_LOGIN).permitAll()
                     // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
                     .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
                     .hasRole(PapelUsuario.PRODUTOR.name())
@@ -126,8 +134,13 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated());
 
+    // JWT primeiro (#206): Bearer valido autentica; Bearer invalido morre aqui com 401, antes que
+    // o mock de dev/homolog tenha chance de cair no produtor semente.
+    JwtAutenticacaoFilter jwtFilter =
+        new JwtAutenticacaoFilter(autenticacaoTokenService, errorResponder);
+    http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
     if (mockIdentidadeFilter != null) {
-      http.addFilterBefore(mockIdentidadeFilter, UsernamePasswordAuthenticationFilter.class);
+      http.addFilterAfter(mockIdentidadeFilter, JwtAutenticacaoFilter.class);
     }
 
     return http.build();

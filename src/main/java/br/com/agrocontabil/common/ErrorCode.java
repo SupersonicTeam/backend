@@ -114,6 +114,12 @@ public enum ErrorCode {
    * campo a campo é contida pelo limite de tentativas (issues #208/#150).
    */
   CADASTRO_CONFLITO,
+  // Login e JWT (Sprint 8 — issue #206)
+  /**
+   * E-mail e senha não conferem — inclusive e-mail sem conta e credencial desativada, que
+   * respondem igual para não revelar quem tem conta. HTTP 401.
+   */
+  CREDENCIAIS_INVALIDAS,
   // Ceres — assistente fiscal (issue #141)
   /**
    * O modelo de linguagem nao respondeu (Ollama fora do ar, provedor por API recusou, timeout).

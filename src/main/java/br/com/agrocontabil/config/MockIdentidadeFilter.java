@@ -15,6 +15,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -50,6 +51,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *       cliente). O 401 nasce no provider, ja dentro do {@code GlobalExceptionHandler} — excecao
  *       lancada aqui no filtro nao passaria pelo {@code @RestControllerAdvice} e escaparia ao
  *       envelope de erro padrao;
+ *   <li>header {@code Authorization} presente (qualquer esquema, valido ou nao) → o mock nao age.
+ *       Desde a #206 o {@code JwtAutenticacaoFilter} roda antes: Bearer valido ja autenticou,
+ *       Bearer invalido ja respondeu 401; um {@code Authorization} que sobra aqui (vazio, Basic) nao
+ *       pode virar o produtor semente;
  *   <li>contexto de seguranca ja preenchido → preservado (e o que permite testes de integracao
  *       injetarem o principal na mao).
  * </ul>
@@ -85,7 +90,13 @@ public class MockIdentidadeFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
 
     if (SecurityContextHolder.getContext().getAuthentication() != null) {
-      // Contexto montado por outro mecanismo (ex.: teste de integracao). Nao e nosso para limpar.
+      // Contexto montado por outro mecanismo (JWT, teste de integracao). Nao e nosso para limpar.
+      filterChain.doFilter(request, response);
+      return;
+    }
+    if (request.getHeader(HttpHeaders.AUTHORIZATION) != null) {
+      // Quem manda Authorization quer autenticacao de verdade (#206): um Bearer vazio ou outro
+      // esquema nao pode cair no produtor semente. Segue sem identidade e a cadeia responde 401.
       filterChain.doFilter(request, response);
       return;
     }

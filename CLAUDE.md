@@ -124,6 +124,8 @@ br.com.agrocontabil
 | Método | Path | Descrição |
 |--------|------|-----------|
 | POST | `/api/auth/cadastro` | **Público.** Cria conta de produtor ou contador (#205): `{papel, nomeCompleto, cpfCnpj (obrigatório, só dígitos, DV), email, senha}`; senha de 10 caracteres a 72 bytes, fora da lista de comuns, sem o e-mail/CPF (400 `SENHA_FRACA`, nunca ecoa a senha); e-mail ou CPF/CNPJ já existente → 409 `CADASTRO_CONFLITO` sem dizer qual — inclusive produtor/contador já cadastrado sem credencial (nunca reivindicado) |
+| POST | `/api/auth/login` | **Público.** `{email, senha}` → `{accessToken, tokenType: "Bearer", expiraEm, papel, usuarioId}` (#206); `Cache-Control: no-store`; qualquer falha = 401 `CREDENCIAIS_INVALIDAS` |
+| GET | `/api/auth/me` | Identidade da requisição: `{usuarioId, papel, nome}` (#206) |
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
@@ -156,7 +158,7 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro` | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `POST /api/auth/login` | público | público |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
@@ -389,7 +391,23 @@ no cadastro (decisão do Murillo, 2026-10-19).
   identidades. Hash `DelegatingPasswordEncoder` + BCrypt custo 12 (`SenhaConfig`), calculado **fora**
   de transação. `PoliticaSenha` (NIST 800-63B): 10 caracteres a 72 bytes UTF-8, NFKC. O cadastro
   **nunca vincula** credencial a produtor/contador preexistente: quem soubesse o CPF tomaria a conta.
-  O `GlobalExceptionHandler` não ecoa `rejectedValue` de campo com senha/token/segredo no nome.
+  O `GlobalExceptionHandler` não ecoa `rejectedValue` de campo anotado `@Sensivel` (ou com
+  senha/token/segredo no nome, como rede de segurança).
+- **#206 Login e JWT:** `POST /api/auth/login` (público) devolve JWT HS256 de 15 min
+  (`JwtService`, jjwt 0.12.6): `sub` = credencial, `papel`, `sv` = `versao_sessao`, `jti`, `iss`,
+  `aud`; nada de nome/e-mail/CPF no token. Conferência estrita: assinatura, só `HS256` (checagem
+  explícita do `alg`), `iss`/`aud`/`exp` exigidos, tolerância de 30 s. O
+  `AutenticacaoTokenService` relê a credencial **a cada requisição** — desativada, papel trocado
+  ou `versao_sessao` diferente derrubam o token na hora. `JwtAutenticacaoFilter` roda **antes** do
+  mock e responde 401 `error="invalid_token"` ali mesmo; o `MockIdentidadeFilter` ignora qualquer
+  requisição com `Authorization` (senão um Bearer adulterado viraria o produtor semente). Login
+  com falha (e-mail sem conta, senha errada, conta desativada, e-mail malformado) = **o mesmo**
+  401 `CREDENCIAIS_INVALIDAS`, com o BCrypt rodado contra hash fictício para igualar o tempo.
+  `JWT_SECRET` ≥ 32 bytes é obrigatório em homolog/prod (a aplicação não sobe sem ele nem com o
+  valor de exemplo); em dev ausente/exemplo vira segredo efêmero. Desafio do 401 agora é
+  `Bearer realm="agrocontabil"`. `GET /api/auth/me` devolve id, papel e nome. Seed de dev/homolog
+  ganha credenciais se `SEED_SENHA` (forte) estiver definida. Default `UserDetailsService` do Boot
+  excluído (não loga mais senha gerada).
 
 ### Débitos técnicos abertos
 
