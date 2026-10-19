@@ -145,7 +145,9 @@ public class LoginService {
    */
   private void atualizarHashSeDefasado(CredencialUsuario credencial, String senha) {
     if (passwordEncoder.upgradeEncoding(credencial.getSenhaHash())) {
-      credencialRepository.atualizarSenhaHash(credencial.getId(), passwordEncoder.encode(senha));
+      // Condicional ao hash lido: uma redefinicao de senha no meio nao e desfeita (#209).
+      credencialRepository.atualizarSenhaHashSeIgual(
+          credencial.getId(), credencial.getSenhaHash(), passwordEncoder.encode(senha));
     }
   }
 }

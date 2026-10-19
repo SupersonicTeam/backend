@@ -2,6 +2,7 @@ package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.RedefinicaoSenha;
 import jakarta.persistence.LockModeType;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -42,4 +43,13 @@ public interface RedefinicaoSenhaRepository extends JpaRepository<RedefinicaoSen
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM RedefinicaoSenha r WHERE r.credencialId = :credencialId")
   int apagarDaCredencial(@Param("credencialId") UUID credencialId);
+
+  /**
+   * Já existe pedido desta credencial criado depois do instante? (intervalo mínimo entre links)
+   *
+   * @param credencialId credencial
+   * @param instante     início da janela
+   * @return {@code true} se houver pedido recente
+   */
+  boolean existsByCredencialIdAndCriadoEmAfter(UUID credencialId, OffsetDateTime instante);
 }

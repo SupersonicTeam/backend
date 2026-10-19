@@ -14,6 +14,7 @@ import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,6 +62,9 @@ public class SenhaService {
   static final String CAMPO_NOVA_SENHA = "novaSenha";
 
   private static final String SENHA_FICTICIA = "senha-ficticia-de-igualacao";
+
+  /** Intervalo mínimo entre dois links para a mesma conta. */
+  static final Duration INTERVALO_MINIMO_ENTRE_LINKS = Duration.ofMinutes(1);
 
   private final CredencialUsuarioRepository credencialRepository;
   private final RedefinicaoSenhaRepository redefinicaoRepository;
@@ -144,9 +148,16 @@ public class SenhaService {
       if (credencial.isEmpty()) {
         return;
       }
-      String token = TokenOpaco.gerar();
       OffsetDateTime agora = OffsetDateTime.now(clock);
       UUID credencialId = credencial.get().getId();
+      if (redefinicaoRepository.existsByCredencialIdAndCriadoEmAfter(
+          credencialId, agora.minus(INTERVALO_MINIMO_ENTRE_LINKS))) {
+        // Um pedido novo apaga o link anterior: sem intervalo, qualquer um invalidaria sem parar
+        // o link que a vitima acabou de receber (e encheria a caixa de entrada dela).
+        log.info("Pedido de redefinicao ignorado (intervalo minimo): credencial={}", credencialId);
+        return;
+      }
+      String token = TokenOpaco.gerar();
       transacao.executeWithoutResult(status -> {
         redefinicaoRepository.apagarDaCredencial(credencialId);
         redefinicaoRepository.save(RedefinicaoSenha.builder()
@@ -222,6 +233,9 @@ public class SenhaService {
     if (!passwordEncoder.matches(atual, credencial.getSenhaHash())) {
       throw new SenhaAtualIncorretaException();
     }
+    // A senha atual conferiu: a tentativa foi legitima e a reserva volta ja, antes da politica.
+    // Sem isso, cinco senhas novas recusadas pela politica travariam o proprio titular.
+    bloqueioConta.liberar(credencial.getId());
 
     String senha = PoliticaSenha.normalizar(novaSenha);
     politicaSenha.validar(senha, credencial.getEmail(), credencial.getCpfCnpj(), CAMPO_NOVA_SENHA);

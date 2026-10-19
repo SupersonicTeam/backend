@@ -3,6 +3,7 @@ package br.com.agrocontabil.config;
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties.ModoEmail;
 import br.com.agrocontabil.service.EnvioEmail;
 import java.util.Arrays;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -19,7 +20,8 @@ import org.springframework.mail.javamail.JavaMailSender;
  *   <li>{@code SMTP}: envio real pelo {@link JavaMailSender} do Spring Boot ({@code spring.mail.*});
  *       sem {@code spring.mail.host} a aplicação não sobe;
  *   <li>{@code LOG}: o link vai para o log em WARN. É um segredo em log, aceitável só na máquina do
- *       desenvolvedor — <strong>a aplicação não sobe com {@code LOG} no profile {@code prod}</strong>;
+ *       desenvolvedor — <strong>a aplicação só sobe com {@code LOG} nos profiles {@code dev} e
+ *       {@code test}</strong>;
  *   <li>{@code DESLIGADO} (padrão): nada é enviado. A recuperação de senha fica indisponível, e a
  *       resposta continua 202 (não pode diferir de quando o e-mail não tem conta).
  * </ul>
@@ -30,6 +32,9 @@ public class EmailConfig {
   private static final Logger log = LoggerFactory.getLogger(EmailConfig.class);
 
   private static final String ASSUNTO = "Redefinicao de senha - AgroContabil";
+
+  /** Profiles em que o modo LOG é aceito: a máquina do desenvolvedor e os testes. */
+  static final List<String> PERFIS_COM_LOG = List.of("dev", "test");
 
   /**
    * Implementação da porta de e-mail conforme o modo configurado.
@@ -45,9 +50,17 @@ public class EmailConfig {
       ObjectProvider<JavaMailSender> mailSender,
       Environment ambiente) {
     ModoEmail modo = propriedades.modoEmail();
-    if (modo == ModoEmail.LOG && Arrays.asList(ambiente.getActiveProfiles()).contains("prod")) {
+    List<String> perfis = Arrays.asList(ambiente.getActiveProfiles());
+    // Lista de permissao, nao de bloqueio: um profile com outro nome (homolog, producao, nenhum)
+    // tambem nao pode por links vivos de redefinicao no log (achado do review da #209).
+    if (modo == ModoEmail.LOG && perfis.stream().noneMatch(PERFIS_COM_LOG::contains)) {
       throw new IllegalStateException("app.seguranca.redefinicao.modo-email=LOG poe o link de "
-          + "redefinicao (um segredo) no log: proibido no profile prod. Use SMTP.");
+          + "redefinicao (um segredo) no log: permitido so nos profiles " + PERFIS_COM_LOG
+          + ". Use SMTP.");
+    }
+    if (perfis.contains("prod") && !propriedades.urlFrontend().startsWith("https://")) {
+      throw new IllegalStateException("app.seguranca.redefinicao.url-frontend precisa ser HTTPS "
+          + "em prod (REDEFINICAO_URL_FRONTEND): o link leva o token de redefinicao.");
     }
     return switch (modo) {
       case SMTP -> smtp(mailSender.getIfAvailable(), propriedades.remetente());

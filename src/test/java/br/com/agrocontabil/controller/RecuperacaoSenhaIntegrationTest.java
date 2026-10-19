@@ -167,6 +167,7 @@ class RecuperacaoSenhaIntegrationTest {
   void linkAnteriorExpiradoOuDesconhecido() throws Exception {
     esqueci(EMAIL);
     String primeiro = tokenDoEmail();
+    envelhecerPedidos(Duration.ofMinutes(2)); // fora do intervalo minimo entre links
     esqueci(EMAIL);
     String segundo = tokenDoEmail();
 
@@ -234,5 +235,38 @@ class RecuperacaoSenhaIntegrationTest {
     redefinir(tokenDoEmail(), NOVA);
 
     assertThat(login(NOVA).getResponse().getStatus()).isEqualTo(200);
+  }
+
+  /** Recua o criado_em dos pedidos (o intervalo mínimo entre links é de 1 minuto). */
+  private void envelhecerPedidos(Duration quanto) {
+    new JdbcTemplate(dataSource).update("UPDATE redefinicao_senha SET criado_em = ?",
+        OffsetDateTime.now().minus(quanto));
+  }
+
+  @Test
+  @DisplayName("intervalo minimo: segundo pedido em menos de 1 min nao gera link nem invalida o 1o")
+  void intervaloMinimoEntreLinks() throws Exception {
+    esqueci(EMAIL);
+    String primeiro = tokenDoEmail();
+
+    assertThat(esqueci(EMAIL)).isEqualTo(202);
+    assertThat(LINKS.poll(1, TimeUnit.SECONDS)).isNull();
+    // O link que a vitima recebeu continua valendo: nao da para invalida-lo em sequencia.
+    assertThat(redefinir(primeiro, NOVA).getResponse().getStatus()).isEqualTo(204);
+  }
+
+  @Test
+  @DisplayName("alterar com senha atual certa e senha nova fraca nao trava o proprio titular")
+  void alterarComSenhaNovaFracaNaoTrava() throws Exception {
+    String acesso = accessToken();
+    for (int i = 0; i < 6; i++) {
+      mockMvc.perform(post("/api/auth/senha/alterar").contentType(MediaType.APPLICATION_JSON)
+              .header(HttpHeaders.AUTHORIZATION, "Bearer " + acesso)
+              .content("{\"senhaAtual\":\"%s\",\"novaSenha\":\"1234567890\"}".formatted(SENHA)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.errors[0].code").value("SENHA_FRACA"));
+    }
+
+    assertThat(login(SENHA).getResponse().getStatus()).isEqualTo(200);
   }
 }

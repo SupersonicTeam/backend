@@ -68,6 +68,26 @@ public interface CredencialUsuarioRepository extends JpaRepository<CredencialUsu
   int atualizarSenhaHash(@Param("id") UUID id, @Param("senhaHash") String senhaHash);
 
   /**
+   * Regrava o hash só se ele ainda for o que foi lido — o rehash do login (issue #206).
+   *
+   * <p>Achado do review da #209: o rehash incondicional corria com a redefinição de senha. O
+   * invasor entrando com a senha antiga no instante em que a vítima a redefine podia regravar o
+   * hash da senha <em>antiga</em> por cima do novo, e a senha roubada voltava a funcionar. Com a
+   * condição, se a senha mudou no meio, o rehash não acontece (0 linhas).
+   *
+   * @param id       credencial
+   * @param hashLido hash conferido no login
+   * @param novoHash hash no custo atual
+   * @return linhas alteradas (0 se a senha mudou no meio)
+   */
+  @Transactional
+  @Modifying
+  @Query("UPDATE CredencialUsuario c SET c.senhaHash = :novoHash"
+      + " WHERE c.id = :id AND c.senhaHash = :hashLido")
+  int atualizarSenhaHashSeIgual(@Param("id") UUID id, @Param("hashLido") String hashLido,
+      @Param("novoHash") String novoHash);
+
+  /**
    * Incrementa a versão de sessão: todo access token e todo refresh emitidos antes deixam de valer
    * (issue #207). {@code UPDATE} atômico — duas revogações simultâneas nunca se anulam.
    *
