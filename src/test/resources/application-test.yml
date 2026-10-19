@@ -34,6 +34,9 @@ app:
   seguranca:
     senha:
       bcrypt-custo: 4
+    # Segredo fixo de teste (so existe aqui; >= 32 bytes, como o JwtService exige).
+    jwt:
+      segredo: segredo-de-teste-agrocontabil-com-mais-de-32-bytes
   nfe:
     # Certificado autoassinado de teste (sem valor juridico) — ver src/test/resources/certs/README.md
     certificado:

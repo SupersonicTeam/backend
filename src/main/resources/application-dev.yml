@@ -31,6 +31,13 @@ logging:
     org.hibernate.SQL: DEBUG
 
 app:
+  # Sem JWT_SECRET em dev, um segredo aleatorio e gerado na subida (tokens morrem no reinicio, #206).
+  seguranca:
+    jwt:
+      permitir-segredo-efemero: true
+  # Senha das contas semeadas (#206). Vazia = seed sem credencial; precisa passar na politica.
+  seed:
+    senha: ${SEED_SENHA:}
   nfe:
     # Certificado autoassinado de teste (src/test/resources/certs) — apenas para permitir
     # assinar/autorizar NF-e em dev local (SEFAZ ja e mock). NUNCA usar em prod.

@@ -16,6 +16,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless |
+| `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
@@ -32,7 +33,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Endpoints |
 |--------|-----------|
 | `HealthController` | `GET /api/v1/health` |
-| `AutenticacaoController` | `/api/auth/**` — `POST /cadastro` público (#205) |
+| `AutenticacaoController` | `/api/auth/**` — `POST /cadastro` e `POST /login` públicos (#205/#206), `GET /me`; só com web |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
@@ -55,6 +56,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext`; sem identidade lança `NaoAutenticadoException` (401) |
 | `CadastroService` | Cadastro de conta (#205): política + hash **fora** de transação, checagem e gravação (identidade + credencial) num `TransactionTemplate` curto; CPF/CNPJ já existente (qualquer grafia) → 409, nunca reivindica identidade; `normalizarEmail` |
+| `LoginService` | Login (#206): e-mail normalizado + senha NFKC; e-mail sem conta confere contra hash fictício (tempo igual); falha de qualquer tipo = `CredenciaisInvalidasException` (401); rehash por `UPDATE` só da coluna; `usuarioLogado()` p/ `/me`. Só web |
+| `AutenticacaoTokenService` | JWT → `UsuarioAutenticado` (#206): relê a credencial a cada requisição (ativa, mesmo papel, mesma `versaoSessao`). Só web |
 | `PoliticaSenha` | NIST 800-63B (#205): 10 caracteres a 72 bytes UTF-8 (limite do BCrypt), sem repetição, sem e-mail/CPF, fora de `seguranca/senhas-comuns.txt`; `normalizar` (NFKC) antes de validar e de gerar/conferir hash |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository`; fechamento do job por produtor em transação própria, lendo IDs em lotes por keyset (issue #100) |
 | `ResumoLoteApuracao` | Record interno com o resultado do lote do job de fechamento: concluídas + IDs com falha (issue #100) |
@@ -134,7 +137,9 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `UsuarioAutenticado` | Principal da requisição: papel + produtor **ou** contador (invariante na construção) |
 | `UsuarioAutenticadoProvider` | Porta única para a identidade autenticada (`get()` → 401; `tentar()` → `Optional`) |
 | `ProdutorEmContextoResolver` | Autoriza o `produtorId` alvo: produtor só a si, contador só a carteira → 404 |
-| `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate`, 403) |
+| `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate: Bearer`, 403); `recusarToken` = 401 `error="invalid_token"` (#206) |
+| `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto/de exemplo (dev: efêmero) |
+| `JwtAutenticacaoFilter` | Bearer → identidade; inválido = 401 na hora (antes do mock); não é bean (instanciado no `SecurityConfig`) |
 
 ### `danfe/`
 | Classe | Responsabilidade |

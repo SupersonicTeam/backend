@@ -225,6 +225,14 @@ app:
     senha:
       # Fator de custo do BCrypt (#205). 12 = ~250 ms por hash; nao baixar em producao.
       bcrypt-custo: ${SENHA_BCRYPT_CUSTO:12}
+    # JWT de acesso (#206). Sem JWT_SECRET (>= 32 bytes, aleatorio) a aplicacao nao sobe, exceto
+    # em dev/test, que ligam permitir-segredo-efemero. Gere com: openssl rand -base64 48
+    jwt:
+      segredo: ${JWT_SECRET:}
+      emissor: ${JWT_EMISSOR:agrocontabil-backend}
+      audiencia: ${JWT_AUDIENCIA:agrocontabil-api}
+      validade: ${JWT_VALIDADE:PT15M}
+      tolerancia-relogio: PT30S
   nfe:
     # Certificado digital A1 (.p12) para assinatura da NF-e. Em prod vem de env var.
     # Nenhum segredo no repositorio — ver .env.example.

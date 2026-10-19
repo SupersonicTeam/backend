@@ -3,7 +3,7 @@ package br.com.agrocontabil.security;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
-import br.com.agrocontabil.config.MockIdentidadeFilter;
+import br.com.agrocontabil.exception.NaoAutenticadoException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,14 +43,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessDeniedHandler {
 
-  /** Desafio do 401 — hoje o header de identidade da Onda 4; com JWT passa a ser {@code Bearer}. */
-  static final String DESAFIO =
-      "Header realm=\"agrocontabil\", header=\"" + MockIdentidadeFilter.HEADER_USUARIO_ID + "\"";
+  /** Desafio do 401 sem identidade — {@code Bearer} desde a Sprint 8 (#206). */
+  static final String DESAFIO = NaoAutenticadoException.DESAFIO;
 
   private static final String MENSAGEM_401 = "Requisicao sem identidade de usuario valida.";
-  private static final String SUGESTAO_401 =
-      "Envie o header " + MockIdentidadeFilter.HEADER_USUARIO_ID
-          + " com o identificador do usuario.";
+  private static final String SUGESTAO_401 = NaoAutenticadoException.SUGESTAO;
+  private static final String MENSAGEM_TOKEN_INVALIDO = "Token de acesso invalido ou expirado.";
+  private static final String SUGESTAO_TOKEN_INVALIDO =
+      "Entre de novo em POST /api/auth/login para obter um token valido.";
   private static final String MENSAGEM_403 = "Seu papel nao tem acesso a este recurso.";
   private static final String SUGESTAO_403 =
       "Autentique-se com um usuario que tenha o papel exigido por este recurso.";
@@ -69,6 +69,24 @@ public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessD
     response.setHeader(HttpHeaders.WWW_AUTHENTICATE, DESAFIO);
     escrever(request, response, HttpStatus.UNAUTHORIZED, ErrorCode.NAO_AUTENTICADO, MENSAGEM_401,
         SUGESTAO_401);
+  }
+
+  /**
+   * Token Bearer recusado (adulterado, expirado, de outro emissor, de credencial desativada ou com
+   * sessão revogada): 401 com {@code error="invalid_token"} (RFC 6750 §3.1).
+   *
+   * <p>Uma resposta só para todos os motivos — dizer "expirado" ou "revogado" ajudaria quem testa
+   * tokens roubados.
+   *
+   * @param request  requisição recusada
+   * @param response resposta a escrever
+   * @throws IOException se a escrita falhar
+   */
+  public void recusarToken(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    response.setHeader(HttpHeaders.WWW_AUTHENTICATE, NaoAutenticadoException.DESAFIO_TOKEN_INVALIDO);
+    escrever(request, response, HttpStatus.UNAUTHORIZED, ErrorCode.NAO_AUTENTICADO,
+        MENSAGEM_TOKEN_INVALIDO, SUGESTAO_TOKEN_INVALIDO);
   }
 
   /** Identidade válida, papel insuficiente: 403. */

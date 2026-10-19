@@ -1,10 +1,13 @@
 package br.com.agrocontabil.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,9 +24,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /** Nome do esquema de seguranca Bearer na especificacao (issue #206). */
+    static final String ESQUEMA_BEARER = "bearerAuth";
+
     @Bean
     public OpenAPI agroContabilOpenApi() {
         return new OpenAPI()
+                .components(new Components().addSecuritySchemes(ESQUEMA_BEARER,
+                        new SecurityScheme()
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .bearerFormat("JWT")))
+                .addSecurityItem(new SecurityRequirement().addList(ESQUEMA_BEARER))
                 .info(new Info()
                         .title("AgroContabil API")
                         .description("""
@@ -35,10 +47,11 @@ public class OpenApiConfig {
                                 assinatura de XML, DANFE em PDF, importação de XML, geração de NFA, \
                                 envio/consulta/cancelamento na SEFAZ).
 
-                                **Autenticação:** em stand-by até a Sprint 8. O produtor \
-                                "autenticado" é injetado por um filtro mock; todas as operações são \
-                                restritas a esse produtor (anti-IDOR: 404 para recurso de outro \
-                                produtor, nunca 403).
+                                **Autenticação:** JWT Bearer. Entre em `POST /api/auth/login` \
+                                (e-mail e senha) e envie o `accessToken` no header \
+                                `Authorization: Bearer`. Em dev/homolog o header `X-Usuario-Id` \
+                                segue aceito sem token. Anti-IDOR: 404 para recurso de outro \
+                                produtor, nunca 403.
 
                                 **Contrato de erro:** toda resposta de erro segue o envelope \
                                 `ApiError` com a lista `errors[]`, onde cada item traz \

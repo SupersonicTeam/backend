@@ -164,7 +164,8 @@ class DataLoaderTest {
   void naoSemeiaQuandoAmbosExistem() {
     when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.of(produtorExistente(CPF_A)));
     when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.of(produtorExistente(CPF_B)));
-    when(contadorRepository.existsByCpfCnpj(CNPJ_CONTADOR)).thenReturn(true);
+    when(contadorRepository.findByCpfCnpj(CNPJ_CONTADOR))
+        .thenReturn(Optional.of(Contador.builder().id(UUID.randomUUID()).build()));
 
     dataLoader.run();
 
@@ -211,7 +212,8 @@ class DataLoaderTest {
     stubarSave();
     when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
     when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
-    when(contadorRepository.existsByCpfCnpj(CNPJ_CONTADOR)).thenReturn(true);
+    when(contadorRepository.findByCpfCnpj(CNPJ_CONTADOR))
+        .thenReturn(Optional.of(Contador.builder().id(UUID.randomUUID()).build()));
 
     dataLoader.run();
 

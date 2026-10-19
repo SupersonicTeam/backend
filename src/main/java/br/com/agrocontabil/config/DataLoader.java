@@ -1,19 +1,28 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.exception.SenhaFracaException;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.service.PoliticaSenha;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -63,18 +72,82 @@ public class DataLoader implements CommandLineRunner {
 
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
+  private final CredencialUsuarioRepository credencialRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final PoliticaSenha politicaSenha;
+  private final String senhaSeed;
 
   public DataLoader(
-      ProdutorRepository produtorRepository, ContadorRepository contadorRepository) {
+      ProdutorRepository produtorRepository,
+      ContadorRepository contadorRepository,
+      CredencialUsuarioRepository credencialRepository,
+      PasswordEncoder passwordEncoder,
+      PoliticaSenha politicaSenha,
+      @Value("${app.seed.senha:}") String senhaSeed) {
     this.produtorRepository = produtorRepository;
     this.contadorRepository = contadorRepository;
+    this.credencialRepository = credencialRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.politicaSenha = politicaSenha;
+    this.senhaSeed = senhaSeed;
   }
 
   @Override
   public void run(String... args) {
     Produtor produtorA = semear(produtorA());
-    semear(produtorB());
-    semearContador(produtorA);
+    Produtor produtorB = semear(produtorB());
+    Contador contador = semearContador(produtorA);
+    semearCredenciais(produtorA, produtorB, contador);
+  }
+
+  /**
+   * Dá às três identidades semeadas uma credencial de login (issue #206), com a senha de
+   * {@code SEED_SENHA}.
+   *
+   * <p>Sem a variável, nada é criado e o login das sementes fica indisponível — o
+   * {@code X-Usuario-Id} continua funcionando. A senha nunca tem valor padrão no código nem vai
+   * para o log, e precisa passar pela mesma política do cadastro: uma senha fraca de homologação é
+   * exatamente o tipo de credencial que vaza e é testada em produção.
+   *
+   * <p>Idempotente pelo e-mail: credencial existente não é tocada (nem a senha, que pode ter sido
+   * trocada pelo desenvolvedor).
+   */
+  void semearCredenciais(Produtor produtorA, Produtor produtorB, Contador contador) {
+    if (senhaSeed == null || senhaSeed.isBlank()) {
+      log.info("SEED_SENHA vazia: contas semeadas sem credencial (use X-Usuario-Id).");
+      return;
+    }
+    String senha = PoliticaSenha.normalizar(senhaSeed);
+    try {
+      politicaSenha.validar(senha, null, null, "SEED_SENHA");
+    } catch (SenhaFracaException e) {
+      log.warn("SEED_SENHA nao atende a politica de senha: contas semeadas sem credencial.");
+      return;
+    }
+    String hash = passwordEncoder.encode(senha);
+    semearCredencial(produtorA.getEmail(), PapelUsuario.PRODUTOR, produtorA.getCpfCnpj(),
+        produtorA.getId(), null, hash);
+    semearCredencial(produtorB.getEmail(), PapelUsuario.PRODUTOR, produtorB.getCpfCnpj(),
+        produtorB.getId(), null, hash);
+    semearCredencial(contador.getEmail(), PapelUsuario.CONTADOR, contador.getCpfCnpj(),
+        null, contador.getId(), hash);
+  }
+
+  private void semearCredencial(String email, PapelUsuario papel, String cpfCnpj,
+      UUID produtorId, UUID contadorId, String hash) {
+    String emailNormalizado = CadastroService.normalizarEmail(email);
+    if (credencialRepository.existsByEmail(emailNormalizado)) {
+      return;
+    }
+    credencialRepository.save(CredencialUsuario.builder()
+        .email(emailNormalizado)
+        .senhaHash(hash)
+        .papel(papel)
+        .cpfCnpj(cpfCnpj.replaceAll("\\D", ""))
+        .produtorId(produtorId)
+        .contadorId(contadorId)
+        .build());
+    log.info("Credencial semeada: papel={} (login pelo e-mail do seed, senha de SEED_SENHA)", papel);
   }
 
   /**
@@ -105,10 +178,12 @@ public class DataLoader implements CommandLineRunner {
    * semeado apagaria vinculos criados a mao durante o desenvolvimento.
    *
    * @param produtorA produtor que este contador atende
+   * @return o contador semeado, ou o que ja existia com o mesmo CNPJ
    */
-  private void semearContador(Produtor produtorA) {
-    if (contadorRepository.existsByCpfCnpj(CNPJ_CONTADOR)) {
-      return;
+  private Contador semearContador(Produtor produtorA) {
+    Optional<Contador> existente = contadorRepository.findByCpfCnpj(CNPJ_CONTADOR);
+    if (existente.isPresent()) {
+      return existente.get();
     }
 
     Contador contador =
@@ -127,6 +202,7 @@ public class DataLoader implements CommandLineRunner {
         salvo.getNomeCompleto(),
         salvo.getId(),
         produtorA.getId());
+    return salvo;
   }
 
   private Produtor produtorA() {

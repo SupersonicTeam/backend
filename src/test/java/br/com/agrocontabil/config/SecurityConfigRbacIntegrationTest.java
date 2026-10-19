@@ -54,14 +54,14 @@ class SecurityConfigRbacIntegrationTest {
     mockMvc
         .perform(get("/api/dashboard"))
         .andExpect(status().isUnauthorized())
-        // RFC 9110 §15.5.2 — mesmo desafio que o GlobalExceptionHandler ja devolvia.
+        // RFC 9110 §15.5.2 / RFC 6750 §3 — desde a #206 o desafio e Bearer.
         .andExpect(header().string("WWW-Authenticate",
-            Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)))
+            Matchers.startsWith("Bearer ")))
         .andExpect(jsonPath("$.status").value(401))
         .andExpect(jsonPath("$.path").value("/api/dashboard"))
         .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
         .andExpect(jsonPath("$.errors[0].suggestion").value(
-            Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)));
+            Matchers.containsString("/api/auth/login")));
   }
 
   @Test

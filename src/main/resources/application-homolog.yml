@@ -31,6 +31,9 @@ spring:
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  # Senha das contas semeadas (#206). Vazia = seed sem credencial; precisa passar na politica.
+  seed:
+    senha: ${SEED_SENHA:}
 
 # Health SEM detalhes, como em producao.
 #

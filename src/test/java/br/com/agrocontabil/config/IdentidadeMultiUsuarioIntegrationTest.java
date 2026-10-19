@@ -161,13 +161,12 @@ class IdentidadeMultiUsuarioIntegrationTest {
     semFiltro
         .perform(get("/api/notas"))
         .andExpect(status().isUnauthorized())
-        // RFC 9110 exige o desafio no 401 — mesmo cuidado que a #66 teve com Allow/Accept.
+        // RFC 9110 exige o desafio no 401; desde a #206 o esquema anunciado e Bearer.
         .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
-            .header().string("WWW-Authenticate",
-                org.hamcrest.Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)))
+            .header().string("WWW-Authenticate", org.hamcrest.Matchers.startsWith("Bearer ")))
         .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"))
         .andExpect(jsonPath("$.errors[0].suggestion").value(
-            org.hamcrest.Matchers.containsString(MockIdentidadeFilter.HEADER_USUARIO_ID)));
+            org.hamcrest.Matchers.containsString("/api/auth/login")));
   }
 
   @Test
