@@ -126,6 +126,9 @@ br.com.agrocontabil
 | POST | `/api/auth/cadastro` | **Público.** Cria conta de produtor ou contador (#205): `{papel, nomeCompleto, cpfCnpj (obrigatório, só dígitos, DV), email, senha}`; senha de 10 caracteres a 72 bytes, fora da lista de comuns, sem o e-mail/CPF (400 `SENHA_FRACA`, nunca ecoa a senha); e-mail ou CPF/CNPJ já existente → 409 `CADASTRO_CONFLITO` sem dizer qual — inclusive produtor/contador já cadastrado sem credencial (nunca reivindicado) |
 | POST | `/api/auth/login` | **Público.** `{email, senha}` → `{accessToken, tokenType: "Bearer", expiraEm, papel, usuarioId}` (#206); `Cache-Control: no-store`; qualquer falha = 401 `CREDENCIAIS_INVALIDAS` |
 | GET | `/api/auth/me` | Identidade da requisição: `{usuarioId, papel, nome}` (#206) |
+| POST | `/api/auth/refresh` | **Público.** Lê o cookie `agro_refresh`, devolve access novo e troca o cookie (#207); refresh ausente/vencido/revogado/reusado → 401 `SESSAO_INVALIDA` (reuso revoga a família) |
+| POST | `/api/auth/logout` | **Público, idempotente.** Revoga a família do cookie e o apaga → 204 (#207) |
+| POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
@@ -158,7 +161,7 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `POST /api/auth/login` | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout` | público | público |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
@@ -408,6 +411,19 @@ no cadastro (decisão do Murillo, 2026-10-19).
   `Bearer realm="agrocontabil"`. `GET /api/auth/me` devolve id, papel e nome. Seed de dev/homolog
   ganha credenciais se `SEED_SENHA` (forte) estiver definida. Default `UserDetailsService` do Boot
   excluído (não loga mais senha gerada).
+- **#207 Refresh token e logout:** login (e `POST /api/auth/refresh`) grava um refresh **opaco**
+  de 256 bits num cookie `agro_refresh` — `HttpOnly`, `Secure` (desligado só em dev),
+  `SameSite=Strict`, `Path=/api/auth` — e nunca no corpo. Tabela `sessao_refresh` (changeSet
+  **0032**) guarda só o **SHA-256**. `SessaoService`: rotação a cada uso; um refresh já usado que
+  volta = cópia → **a família inteira é revogada** (OAuth 2.0 Security BCP §4.14); lock pessimista
+  na leitura impede duas renovações simultâneas; validade 7 dias e **vida máxima** de 30 dias desde
+  o login; refresh morre junto com a `versao_sessao` da credencial. O desfecho inválido é gravado
+  **antes** de recusar (a exceção sai depois do commit, senão desfaria a revogação).
+  `POST /api/auth/logout` (público, idempotente) revoga a família e apaga o cookie;
+  `POST /api/auth/logout-todos` (autenticado) incrementa a `versao_sessao` e revoga todas —
+  derruba na hora os access tokens já emitidos. `SessaoService.revogarTodas` é o ponto único de
+  revogação em massa (a troca de senha da #209 passa por ele). `SessaoRefreshLimpezaJob` diário
+  (3h, ShedLock) apaga sessões vencidas há mais de 7 dias.
 
 ### Débitos técnicos abertos
 

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0032-sessao-refresh.xml
+         Sprint 8 — issue #207 (refresh token rotativo e logout).
+
+         Uma linha por refresh token emitido. O token em si nunca e
+         gravado: so o SHA-256 dele (token_hash). Quem ler o banco nao
+         consegue renovar sessao nenhuma.
+
+         Rotacao: cada uso marca a linha como usada (usado_em) e cria a
+         seguinte na mesma familia. Um token ja usado que volta e sinal de
+         roubo (o ladrao ou a vitima esta usando uma copia): a familia
+         inteira e revogada (revogado_em).
+
+         familia_iniciada_em fixa a vida maxima da sessao: a rotacao
+         renova a validade, mas nunca alem dela.
+
+         versao_sessao copia a da credencial no momento da emissao: troca
+         ou redefinicao de senha incrementam a da credencial, e todo
+         refresh antigo deixa de valer junto com os access tokens.
+
+         CASCADE da credencial: sessao sem credencial nao tem dono.
+         ================================================================ -->
+
+    <changeSet id="0032-create-sessao-refresh" author="supersonic-team">
+        <comment>
+            Cria sessao_refresh (hash do refresh token, familia, validade,
+            uso e revogacao).
+        </comment>
+
+        <createTable tableName="sessao_refresh">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="credencial_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="familia_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hash" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uk_sessao_refresh_token_hash"/>
+            </column>
+            <column name="versao_sessao" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="familia_iniciada_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expira_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="usado_em" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="revogado_em" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="sessao_refresh"
+                baseColumnNames="credencial_id"
+                constraintName="fk_sessao_refresh_credencial"
+                referencedTableName="credencial_usuario"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="sessao_refresh" indexName="idx_sessao_refresh_familia">
+            <column name="familia_id"/>
+        </createIndex>
+        <createIndex tableName="sessao_refresh" indexName="idx_sessao_refresh_credencial">
+            <column name="credencial_id"/>
+        </createIndex>
+        <!-- Limpeza diaria das sessoes vencidas (SessaoRefreshLimpezaJob). -->
+        <createIndex tableName="sessao_refresh" indexName="idx_sessao_refresh_expira_em">
+            <column name="expira_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="sessao_refresh"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

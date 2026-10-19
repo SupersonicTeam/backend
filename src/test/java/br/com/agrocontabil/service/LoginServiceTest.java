@@ -14,10 +14,9 @@ import br.com.agrocontabil.dto.LoginResponse;
 import br.com.agrocontabil.exception.CredenciaisInvalidasException;
 import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
-import br.com.agrocontabil.security.JwtService;
-import br.com.agrocontabil.security.JwtService.TokenAcesso;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import br.com.agrocontabil.service.SessaoService.SessaoEmitida;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,7 +37,7 @@ class LoginServiceTest {
 
   @Mock private CredencialUsuarioRepository credencialRepository;
   @Mock private PasswordEncoder passwordEncoder;
-  @Mock private JwtService jwtService;
+  @Mock private SessaoService sessaoService;
   @Mock private UsuarioAutenticadoProvider usuarioProvider;
 
   private LoginService service;
@@ -46,7 +45,8 @@ class LoginServiceTest {
   @BeforeEach
   void setUp() {
     when(passwordEncoder.encode(anyString())).thenReturn("{bcrypt}ficticio");
-    service = new LoginService(credencialRepository, passwordEncoder, jwtService, usuarioProvider);
+    service = new LoginService(credencialRepository, passwordEncoder, sessaoService,
+        usuarioProvider);
   }
 
   private CredencialUsuario credencial(boolean ativo) {
@@ -57,22 +57,21 @@ class LoginServiceTest {
   }
 
   @Test
-  @DisplayName("credencial certa: token com a versao de sessao atual e e-mail normalizado")
+  @DisplayName("credencial certa: abre a sessao da propria credencial, com e-mail normalizado")
   void loginValido() {
     CredencialUsuario credencial = credencial(true);
     when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
-    Instant expira = Instant.parse("2026-10-19T12:15:00Z");
-    when(jwtService.emitir(credencial.getId(), PapelUsuario.PRODUTOR, 2))
-        .thenReturn(new TokenAcesso("jwt", expira));
+    SessaoEmitida sessao = new SessaoEmitida(new LoginResponse("jwt", "Bearer",
+        Instant.parse("2026-10-19T12:15:00Z"), PapelUsuario.PRODUTOR, credencial.getProdutorId()),
+        "refresh-bruto", Instant.parse("2026-10-26T12:00:00Z"));
+    when(sessaoService.abrir(credencial)).thenReturn(sessao);
 
-    LoginResponse resposta = service.entrar(new LoginRequest(" Joaquim@Fazenda.com.br ", SENHA));
+    SessaoEmitida resposta =
+        service.entrar(new LoginRequest(" Joaquim@Fazenda.com.br ", SENHA));
 
-    assertThat(resposta.accessToken()).isEqualTo("jwt");
-    assertThat(resposta.tokenType()).isEqualTo("Bearer");
-    assertThat(resposta.expiraEm()).isEqualTo(expira);
-    assertThat(resposta.usuarioId()).isEqualTo(credencial.getProdutorId());
-    assertThat(resposta.toString()).doesNotContain("jwt");
+    assertThat(resposta).isSameAs(sessao);
+    assertThat(resposta.toString()).doesNotContain("jwt", "refresh-bruto");
   }
 
   @Test
@@ -83,7 +82,7 @@ class LoginServiceTest {
     assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
         .isInstanceOf(CredenciaisInvalidasException.class);
     verify(passwordEncoder).matches(SENHA, "{bcrypt}ficticio");
-    verify(jwtService, never()).emitir(any(), any(), eq(0));
+    verify(sessaoService, never()).abrir(any());
   }
 
   @Test
@@ -126,7 +125,9 @@ class LoginServiceTest {
     when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
     when(passwordEncoder.upgradeEncoding("{bcrypt}real")).thenReturn(true);
     when(passwordEncoder.encode(SENHA)).thenReturn("{bcrypt}novo");
-    when(jwtService.emitir(any(), any(), eq(2))).thenReturn(new TokenAcesso("jwt", Instant.now()));
+    when(sessaoService.abrir(credencial)).thenReturn(new SessaoEmitida(
+        new LoginResponse("jwt", "Bearer", Instant.now(), PapelUsuario.PRODUTOR, UUID.randomUUID()),
+        "refresh", Instant.now()));
 
     service.entrar(new LoginRequest(EMAIL, SENHA));
 

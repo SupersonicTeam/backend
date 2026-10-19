@@ -52,4 +52,31 @@ public interface CredencialUsuarioRepository extends JpaRepository<CredencialUsu
   @Modifying
   @Query("UPDATE CredencialUsuario c SET c.senhaHash = :senhaHash WHERE c.id = :id")
   int atualizarSenhaHash(@Param("id") UUID id, @Param("senhaHash") String senhaHash);
+
+  /**
+   * Incrementa a versão de sessão: todo access token e todo refresh emitidos antes deixam de valer
+   * (issue #207). {@code UPDATE} atômico — duas revogações simultâneas nunca se anulam.
+   *
+   * @param id credencial
+   * @return linhas alteradas
+   */
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("UPDATE CredencialUsuario c SET c.versaoSessao = c.versaoSessao + 1 WHERE c.id = :id")
+  int incrementarVersaoSessao(@Param("id") UUID id);
+
+  /**
+   * Credencial de um produtor.
+   *
+   * @param produtorId produtor
+   * @return a credencial, se o produtor tiver uma
+   */
+  Optional<CredencialUsuario> findByProdutorId(UUID produtorId);
+
+  /**
+   * Credencial de um contador.
+   *
+   * @param contadorId contador
+   * @return a credencial, se o contador tiver uma
+   */
+  Optional<CredencialUsuario> findByContadorId(UUID contadorId);
 }

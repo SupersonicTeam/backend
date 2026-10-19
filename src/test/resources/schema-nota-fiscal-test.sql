@@ -389,6 +389,32 @@ ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS ck_credencial_identi
     OR (papel = 'CONTADOR' AND contador_id IS NOT NULL AND produtor_id IS NULL)
 );
 
+-- Sessoes de refresh — Sprint 8 issue #207 (migration 0032). Manter sincronizado com
+-- 0032-sessao-refresh.xml. Mesmo cuidado da credencial: unicidade e FK em ALTER idempotente.
+CREATE TABLE IF NOT EXISTS sessao_refresh (
+    id                   UUID                      NOT NULL,
+    credencial_id        UUID                      NOT NULL,
+    familia_id           UUID                      NOT NULL,
+    token_hash           VARCHAR(64)               NOT NULL,
+    versao_sessao        INTEGER                   NOT NULL,
+    familia_iniciada_em  TIMESTAMP WITH TIME ZONE  NOT NULL,
+    criado_em            TIMESTAMP WITH TIME ZONE  NOT NULL,
+    expira_em            TIMESTAMP WITH TIME ZONE  NOT NULL,
+    usado_em             TIMESTAMP WITH TIME ZONE,
+    revogado_em          TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE sessao_refresh ADD CONSTRAINT IF NOT EXISTS uk_sessao_refresh_token_hash
+    UNIQUE (token_hash);
+
+ALTER TABLE sessao_refresh ADD CONSTRAINT IF NOT EXISTS fk_sessao_refresh_credencial
+    FOREIGN KEY (credencial_id) REFERENCES credencial_usuario (id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_sessao_refresh_familia ON sessao_refresh (familia_id);
+CREATE INDEX IF NOT EXISTS idx_sessao_refresh_credencial ON sessao_refresh (credencial_id);
+CREATE INDEX IF NOT EXISTS idx_sessao_refresh_expira_em ON sessao_refresh (expira_em);
+
 -- ============================================================================
 -- Referencia de NCM/CFOP — Sprint 2 issue #20 (migration 0007).
 -- O perfil de teste desabilita o Liquibase (liquibase.enabled=false), entao o

@@ -265,6 +265,42 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0032 cria sessao_refresh com hash unico, indices e CASCADE da credencial")
+  void changeSet0032CriaSessaoRefresh() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'sessao_refresh' ORDER BY column_name", String.class))
+        .containsExactly("credencial_id", "criado_em", "expira_em", "familia_id",
+            "familia_iniciada_em", "id", "revogado_em", "token_hash", "usado_em", "versao_sessao");
+    assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes"
+        + " WHERE tablename = 'sessao_refresh'", String.class))
+        .contains("idx_sessao_refresh_familia", "idx_sessao_refresh_credencial",
+            "idx_sessao_refresh_expira_em", "uk_sessao_refresh_token_hash");
+
+    String produtorId = UUID.randomUUID().toString();
+    String credencialId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, ?)",
+        produtorId, "Produtor Sessao");
+    jdbc.update("INSERT INTO credencial_usuario (id, email, senha_hash, papel, cpf_cnpj,"
+        + " produtor_id) VALUES (?::uuid, 's@x.com', '{bcrypt}x', 'PRODUTOR', '11144477735',"
+        + " ?::uuid)", credencialId, produtorId);
+    String insert = "INSERT INTO sessao_refresh (id, credencial_id, familia_id, token_hash,"
+        + " versao_sessao, familia_iniciada_em, criado_em, expira_em) VALUES (?::uuid, ?::uuid,"
+        + " gen_random_uuid(), ?, 0, now(), now(), now() + interval '7 days')";
+    jdbc.update(insert, UUID.randomUUID().toString(), credencialId, "a".repeat(64));
+    // O mesmo hash duas vezes nunca: a busca pelo token precisa achar uma linha so.
+    assertThatThrownBy(() -> jdbc.update(insert, UUID.randomUUID().toString(), credencialId,
+        "a".repeat(64)))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    // Apagar a identidade leva a credencial e, com ela, as sessoes.
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sessao_refresh"
+        + " WHERE credencial_id = ?::uuid", Integer.class, credencialId)).isZero();
+  }
+
+  @Test
   @DisplayName("changeSet 0028 cria alerta_tributario com chave unica e CASCADE do produtor (#140)")
   void changeSet0028CriaAlertaTributario() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

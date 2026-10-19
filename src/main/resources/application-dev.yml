@@ -35,6 +35,9 @@ app:
   seguranca:
     jwt:
       permitir-segredo-efemero: true
+    # Dev roda em http://localhost: um cookie Secure nao seria gravado pelo navegador.
+    refresh:
+      cookie-seguro: ${REFRESH_COOKIE_SEGURO:false}
   # Senha das contas semeadas (#206). Vazia = seed sem credencial; precisa passar na politica.
   seed:
     senha: ${SEED_SENHA:}

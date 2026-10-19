@@ -233,6 +233,23 @@ app:
       audiencia: ${JWT_AUDIENCIA:agrocontabil-api}
       validade: ${JWT_VALIDADE:PT15M}
       tolerancia-relogio: PT30S
+    # Refresh token rotativo em cookie HttpOnly (#207).
+    refresh:
+      validade: ${REFRESH_VALIDADE:P7D}
+      # Vida maxima da sessao desde o login: a renovacao nunca passa disso.
+      vida-maxima: ${REFRESH_VIDA_MAXIMA:P30D}
+      cookie-nome: agro_refresh
+      # Secure: so por HTTPS. Desligar so em dev sobre HTTP (application-dev.yml).
+      cookie-seguro: ${REFRESH_COOKIE_SEGURO:true}
+      cookie-same-site: Strict
+      cookie-caminho: /api/auth
+      retencao: P7D
+      limpeza:
+        enabled: ${REFRESH_LIMPEZA_ENABLED:true}
+        cron: ${REFRESH_LIMPEZA_CRON:0 0 3 * * *}
+        lock:
+          at-most-for: PT30M
+          at-least-for: PT5M
   nfe:
     # Certificado digital A1 (.p12) para assinatura da NF-e. Em prod vem de env var.
     # Nenhum segredo no repositorio — ver .env.example.
