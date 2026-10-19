@@ -210,6 +210,31 @@ class JwtServiceTest {
   }
 
   @Test
+  @DisplayName("segredo de 64+ bytes (openssl rand -base64 48) segue assinando HS256 e recusa HS512")
+  void segredoLongoContinuaHs256() {
+    String longo = "a".repeat(64);
+    Clock clock = Clock.fixed(AGORA, ZoneOffset.UTC);
+    JwtService jwt = new JwtService(propriedades(longo, false), clock);
+
+    String token = jwt.emitir(CREDENCIAL, PapelUsuario.PRODUTOR, 0).token();
+    String cabecalho = new String(Base64.getUrlDecoder().decode(token.split("\\.")[0]),
+        StandardCharsets.UTF_8);
+    assertThat(cabecalho).contains("\"alg\":\"HS256\"");
+    assertThat(jwt.conferir(token)).isPresent();
+
+    // Com o MESMO segredo de 64 bytes, um HS512 tem assinatura valida para a chave — so a lista
+    // fechada de algoritmo o recusa.
+    String hs512 = Jwts.builder()
+        .subject(CREDENCIAL.toString())
+        .issuer("agrocontabil-backend").audience().add("agrocontabil-api").and()
+        .expiration(Date.from(AGORA.plusSeconds(600)))
+        .claim("papel", "PRODUTOR").claim("sv", 0)
+        .signWith(Keys.hmacShaKeyFor(longo.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS512)
+        .compact();
+    assertThat(jwt.conferir(hs512)).isEmpty();
+  }
+
+  @Test
   @DisplayName("toString das propriedades nao mostra o segredo")
   void propriedadesSemSegredo() {
     assertThat(propriedades(SEGREDO, false).toString()).doesNotContain(SEGREDO);

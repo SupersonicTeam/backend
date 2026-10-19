@@ -107,6 +107,18 @@ class LoginServiceTest {
   }
 
   @Test
+  @DisplayName("senha acima de 72 bytes: o mesmo 401, sem buscar a conta nem passar a senha ao BCrypt")
+  void senhaLongaDemais() {
+    String longa = "é".repeat(40); // 80 bytes
+
+    assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, longa)))
+        .isInstanceOf(CredenciaisInvalidasException.class);
+    verify(passwordEncoder, never()).matches(eq(longa), anyString());
+    verify(passwordEncoder).matches(anyString(), eq("{bcrypt}ficticio"));
+    verify(credencialRepository, never()).findByEmail(anyString());
+  }
+
+  @Test
   @DisplayName("hash defasado (custo antigo): regravado so na coluna do hash")
   void rehashNoLogin() {
     CredencialUsuario credencial = credencial(true);

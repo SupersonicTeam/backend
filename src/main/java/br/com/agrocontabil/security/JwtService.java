@@ -6,7 +6,6 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -16,6 +15,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -52,6 +52,9 @@ public class JwtService {
   /** Mínimo de bytes do segredo do HS256 (RFC 7518 §3.2). */
   static final int MINIMO_BYTES_SEGREDO = 32;
 
+  /** Algoritmo JCA da chave: o do HS256, qualquer que seja o tamanho do segredo. */
+  private static final String ALGORITMO_CHAVE = "HmacSHA256";
+
   private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
   private final SecretKey chave;
@@ -69,7 +72,9 @@ public class JwtService {
   public JwtService(JwtProperties propriedades, Clock clock) {
     this.propriedades = propriedades;
     this.clock = clock;
-    this.chave = Keys.hmacShaKeyFor(bytesDoSegredo(propriedades));
+    // HmacSHA256 explicito: Keys.hmacShaKeyFor escolheria HmacSHA512 para segredo de 64+ bytes (o
+    // que o openssl rand -base64 48 do .env.example gera), e a chave deixaria de casar com o HS256.
+    this.chave = new SecretKeySpec(bytesDoSegredo(propriedades), ALGORITMO_CHAVE);
     this.parser = Jwts.parser()
         .verifyWith(chave)
         .requireIssuer(propriedades.emissor())

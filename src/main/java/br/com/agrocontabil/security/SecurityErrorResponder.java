@@ -51,6 +51,8 @@ public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessD
   private static final String MENSAGEM_TOKEN_INVALIDO = "Token de acesso invalido ou expirado.";
   private static final String SUGESTAO_TOKEN_INVALIDO =
       "Entre de novo em POST /api/auth/login para obter um token valido.";
+  private static final String MENSAGEM_500 = "Erro interno ao processar a requisicao.";
+  private static final String SUGESTAO_500 = "Tente novamente em instantes.";
   private static final String MENSAGEM_403 = "Seu papel nao tem acesso a este recurso.";
   private static final String SUGESTAO_403 =
       "Autentique-se com um usuario que tenha o papel exigido por este recurso.";
@@ -84,9 +86,24 @@ public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessD
    */
   public void recusarToken(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
-    response.setHeader(HttpHeaders.WWW_AUTHENTICATE, NaoAutenticadoException.DESAFIO_TOKEN_INVALIDO);
+    response.setHeader(
+        HttpHeaders.WWW_AUTHENTICATE, NaoAutenticadoException.DESAFIO_TOKEN_INVALIDO);
     escrever(request, response, HttpStatus.UNAUTHORIZED, ErrorCode.NAO_AUTENTICADO,
         MENSAGEM_TOKEN_INVALIDO, SUGESTAO_TOKEN_INVALIDO);
+  }
+
+  /**
+   * Falha técnica na própria cadeia de filtros (banco fora ao autenticar o token): 500 genérico,
+   * no mesmo envelope do {@code GlobalExceptionHandler}. O detalhe fica no log de quem chama.
+   *
+   * @param request  requisição que falhou
+   * @param response resposta a escrever
+   * @throws IOException se a escrita falhar
+   */
+  public void falhaInterna(HttpServletRequest request, HttpServletResponse response)
+      throws IOException {
+    escrever(request, response, HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
+        MENSAGEM_500, SUGESTAO_500);
   }
 
   /** Identidade válida, papel insuficiente: 403. */

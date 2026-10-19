@@ -66,12 +66,18 @@ public class AutenticacaoTokenService {
         .flatMap(this::identidade);
   }
 
+  /**
+   * Identidade dona da credencial. Referência nula (dado fora do CHECK do banco) é token inválido,
+   * não exceção: o {@code findById(null)} do Spring Data lançaria dentro do filtro.
+   */
   private Optional<UsuarioAutenticado> identidade(CredencialUsuario credencial) {
     if (credencial.getPapel() == PapelUsuario.CONTADOR) {
-      return contadorRepository.findById(credencial.getContadorId())
+      return Optional.ofNullable(credencial.getContadorId())
+          .flatMap(contadorRepository::findById)
           .map(UsuarioAutenticado::deContador);
     }
-    return produtorRepository.findById(credencial.getProdutorId())
+    return Optional.ofNullable(credencial.getProdutorId())
+        .flatMap(produtorRepository::findById)
         .map(UsuarioAutenticado::deProdutor);
   }
 }

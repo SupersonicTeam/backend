@@ -10,6 +10,7 @@ import br.com.agrocontabil.security.JwtService;
 import br.com.agrocontabil.security.JwtService.TokenAcesso;
 import br.com.agrocontabil.security.UsuarioAutenticado;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -44,6 +45,9 @@ public class LoginService {
   private final JwtService jwtService;
   private final UsuarioAutenticadoProvider usuarioProvider;
 
+  /** Senha conferida contra o hash fictício quando a enviada não pode chegar ao BCrypt. */
+  private static final String SENHA_FICTICIA = "senha-ficticia-de-igualacao";
+
   /** Hash de uma senha aleatória, no custo atual: conferido quando o e-mail não tem conta. */
   private final String hashFicticio;
 
@@ -69,6 +73,13 @@ public class LoginService {
   public LoginResponse entrar(LoginRequest request) {
     String email = CadastroService.normalizarEmail(request.email());
     String senha = PoliticaSenha.normalizar(request.senha());
+
+    if (senha.getBytes(StandardCharsets.UTF_8).length > PoliticaSenha.MAXIMO_BYTES) {
+      // Nenhuma senha cadastrada passa de 72 bytes (a politica barra), e o BCrypt recusa conferir
+      // acima disso com excecao (500). Mesmo 401 e mesmo custo dos outros caminhos.
+      passwordEncoder.matches(SENHA_FICTICIA, hashFicticio);
+      throw new CredenciaisInvalidasException();
+    }
 
     Optional<CredencialUsuario> encontrada = credencialRepository.findByEmail(email);
     if (encontrada.isEmpty()) {
