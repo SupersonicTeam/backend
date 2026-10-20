@@ -13,7 +13,8 @@ A versão para o titular é servida em `GET /api/politica-dados`.
 | `produtores.endereco_*` | endereço do emitente | contrato | apagado (o que já está no XML das notas não muda) |
 | `produtores.culturas`, `faturamento_anual` | perfil econômico | contrato | apagado |
 | `contadores.nome_completo`, `email`, `telefone` | identificação e contato | contrato | anonimizado / apagado |
-| `contador_produtor` | vínculo com produtores | contrato | apagado |
+| `contadores.cpf_cnpj`, `crc` | identificação do escritório | contrato | apagados (o contador não é parte dos documentos fiscais; juntos reidentificariam a pessoa no cadastro do CRC) |
+| `contador_produtor` | vínculo com produtores | contrato | apagado — na exclusão do contador **e** na do produtor (o escritório deixa de alcançar a conta encerrada) |
 | `credencial_usuario` (e-mail, hash da senha, CPF/CNPJ) | acesso | contrato / legítimo interesse | **apagada** (sessões e links de redefinição vão junto) |
 | `sessao_refresh` | sessões (só hash do token) | legítimo interesse (segurança) | apagadas |
 | `redefinicao_senha` | links de redefinição (só hash) | contrato | apagados |
@@ -23,11 +24,11 @@ A versão para o titular é servida em `GET /api/politica-dados`.
 
 ## Logs
 
-- Toda mensagem de log passa pela `MascaraDadosPessoais` (conversor do Logback em
+- Toda mensagem de log **e todo stack trace** passam pela `MascaraDadosPessoais` (conversores do Logback em
   `logback-spring.xml`): CPF, CNPJ, e-mail e telefone viram `[CPF]`, `[CNPJ]`, `[EMAIL]`,
   `[TELEFONE]`. A chave de acesso da NF-e não é mascarada (não é dado pessoal e é necessária
   para investigar rejeições da SEFAZ).
-- O IP dos logs de limite de tentativas sai truncado (último octeto / após o /64).
+- O IP dos logs de limite de tentativas sai truncado pelos bytes (último octeto / após o /64; IPv4 mapeado em IPv6 vira IPv4 truncado).
 - Senha, token e hash nunca são logados nem ecoados em erro (`@Sensivel`, `toString` dos DTOs).
 
 ## Exclusão
@@ -35,4 +36,15 @@ A versão para o titular é servida em `GET /api/politica-dados`.
 `DELETE /api/usuarios/{id}/dados` com `{senha}`: só o próprio titular (404 para outro id), com a
 senha atual (mesma reserva antitentativa do login). Anonimiza, apaga a credencial e encerra todas
 as sessões. Irreversível. O CPF/CNPJ fica no registro anonimizado, então um novo cadastro com o
-mesmo documento é recusado (409); a reativação passa pelo escritório.
+mesmo documento é recusado (409); a reativação passa pelo escritório. O contador, que não guarda
+o documento, pode se cadastrar de novo.
+
+## Limites conhecidos
+
+- **Reativação do produtor:** não há fluxo no código; o documento retido bloqueia um novo cadastro
+  e a reativação, hoje, é manual (pelo encarregado).
+- **Alertas recriados:** o job diário de alertas (RN010) volta a gerar alertas a partir das guias e
+  notas guardadas do produtor anonimizado. Não carregam dado pessoal, mas ninguém os lê.
+- **Máscara de log:** cobre CPF/CNPJ numéricos (com ou sem pontuação), e-mail e telefone brasileiro
+  (com DDD entre parênteses, ou sem parênteses com o hífen). O CNPJ alfanumérico da RFB ainda não
+  é reconhecido.

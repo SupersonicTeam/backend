@@ -33,9 +33,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * culturas e faturamento. O nome que já está dentro do XML de uma NF-e autorizada não muda — o
  * documento fiscal é imutável.
  *
+ * <p>Do contador, que não é parte dos documentos fiscais, saem também o CPF/CNPJ e o CRC.
+ *
  * <p>Junto: a credencial é apagada (com ela, sessões e links de redefinição — a conta deixa de
- * existir e todo token emitido morre na próxima requisição), os alertas são apagados, e o contador
- * perde a carteira (o vínculo é dado de relacionamento, não fiscal).
+ * existir e todo token emitido morre na próxima requisição), os alertas são apagados, e os
+ * vínculos produtor×contador são desfeitos dos dois lados (dado de relacionamento, não fiscal).
  *
  * <p><strong>Só o próprio titular, com a senha.</strong> O {@code id} do caminho precisa ser o de
  * quem está autenticado (404 para outro, como o resto do anti-IDOR), e a senha atual é conferida
@@ -125,6 +127,8 @@ public class ExclusaoDadosService {
       produtor.setCulturas(null);
       produtor.setFaturamentoAnual(null);
     });
+    // O contador da carteira deixa de alcancar a conta encerrada (guias, calendario).
+    contadorRepository.desvincularProdutor(id);
     alertaRepository.apagarDoProdutor(id);
   }
 
@@ -133,6 +137,10 @@ public class ExclusaoDadosService {
       contador.setNomeCompleto(NOME_ANONIMIZADO);
       contador.setEmail(null);
       contador.setTelefone(null);
+      // O contador nao e parte dos documentos fiscais: sem guarda legal para o documento e o
+      // CRC, que juntos reidentificariam a pessoa no cadastro publico do conselho.
+      contador.setCpfCnpj(null);
+      contador.setCrc(null);
       contador.getProdutores().clear();
     });
   }

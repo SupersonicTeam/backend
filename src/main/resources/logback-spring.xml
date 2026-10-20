@@ -3,9 +3,11 @@
   Logging do AgroContabil (LGPD, issue #148).
 
   Igual ao padrao do Spring Boot (base.xml: console, arquivo opcional, niveis do application.yml),
-  com uma diferenca: a mensagem de log (%m / %msg / %message) passa pela mascara de dados pessoais
-  - CPF, CNPJ, e-mail e telefone viram [CPF], [CNPJ], [EMAIL], [TELEFONE] em qualquer log.
-  As regras precisam vir antes do include, para valer nos padroes que ele define.
+  com uma diferenca: a mensagem de log (%m / %msg / %message) e o stack trace passam pela mascara
+  de dados pessoais - CPF, CNPJ, e-mail e telefone viram [CPF], [CNPJ], [EMAIL], [TELEFONE] em
+  qualquer log. As regras e a propriedade precisam vir antes do include, para valer nos padroes
+  que ele define. O stack trace entra pela LOG_EXCEPTION_CONVERSION_WORD, e nao redefinindo %wEx:
+  o defaults.xml do Boot registra o %wEx depois e sobrescreveria a regra.
 -->
 <configuration>
   <conversionRule conversionWord="m"
@@ -14,5 +16,8 @@
                   converterClass="br.com.agrocontabil.config.MensagemLogMascaradaConverter"/>
   <conversionRule conversionWord="message"
                   converterClass="br.com.agrocontabil.config.MensagemLogMascaradaConverter"/>
+  <conversionRule conversionWord="wExMascarado"
+                  converterClass="br.com.agrocontabil.config.ExcecaoLogMascaradaConverter"/>
+  <property name="LOG_EXCEPTION_CONVERSION_WORD" value="%wExMascarado"/>
   <include resource="org/springframework/boot/logging/logback/base.xml"/>
 </configuration>

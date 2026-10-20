@@ -9,8 +9,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
  *
  * <p>Ligado em {@code logback-spring.xml} no lugar das palavras {@code %m}, {@code %msg} e
  * {@code %message}: o padrão de log do Spring Boot continua o mesmo, só a mensagem passa pela
- * {@link MascaraDadosPessoais}. O stack trace das exceções não passa por aqui — por isso as
- * mensagens de exceção do projeto nunca carregam documento nem e-mail.
+ * {@link MascaraDadosPessoais}. O stack trace é do {@link ExcecaoLogMascaradaConverter}.
  */
 public class MensagemLogMascaradaConverter extends MessageConverter {
 

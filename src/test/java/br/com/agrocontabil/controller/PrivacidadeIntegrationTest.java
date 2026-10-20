@@ -9,7 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
@@ -27,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
@@ -52,6 +55,8 @@ class PrivacidadeIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private CredencialUsuarioRepository credencialRepository;
   @Autowired private SessaoRefreshRepository sessaoRepository;
+  @Autowired private ContadorRepository contadorRepository;
+  @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private TestDatabaseCleaner cleaner;
 
@@ -152,14 +157,49 @@ class PrivacidadeIntegrationTest {
   }
 
   @Test
-  @DisplayName("contador: anonimizado e sem carteira")
+  @DisplayName("contador: anonimizado, sem documento nem CRC, e sem carteira")
   void exclusaoDoContador() throws Exception {
     CadastroResponse contador = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.CONTADOR, "Escritorio Campo", "11222333000181", "esc@campo.com.br", SENHA));
+    jdbcTemplate.update("UPDATE contadores SET crc = 'MT-012345/O' WHERE id = ?",
+        contador.usuarioId());
+    vincular(contador.usuarioId(), titular.usuarioId());
 
     MvcResult resultado = excluir(contador.usuarioId(), accessToken("esc@campo.com.br"), SENHA);
 
     assertThat(resultado.getResponse().getStatus()).isEqualTo(204);
     assertThat(credencialRepository.findByEmail("esc@campo.com.br")).isEmpty();
+    Contador anonimizado = contadorRepository.findById(contador.usuarioId()).orElseThrow();
+    assertThat(anonimizado.getNomeCompleto()).isEqualTo("Titular excluido (LGPD)");
+    assertThat(anonimizado.getCpfCnpj()).isNull();
+    assertThat(anonimizado.getCrc()).isNull();
+    assertThat(contadorRepository.existsByIdAndProdutoresId(
+        contador.usuarioId(), titular.usuarioId())).isFalse();
+  }
+
+  @Test
+  @DisplayName("produtor excluido: o contador da carteira deixa de alcancar a conta (404)")
+  void contadorPerdeAcessoAoProdutorExcluido() throws Exception {
+    CadastroResponse contador = cadastroService.cadastrar(new CadastroRequest(
+        PapelUsuario.CONTADOR, "Escritorio Campo", "11222333000181", "esc@campo.com.br", SENHA));
+    vincular(contador.usuarioId(), titular.usuarioId());
+    String tokenContador = accessToken("esc@campo.com.br");
+    mockMvc.perform(get("/api/contador/guias").param("produtorId", titular.usuarioId().toString())
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenContador))
+        .andExpect(status().isOk());
+
+    assertThat(excluir(titular.usuarioId(), accessToken(EMAIL), SENHA).getResponse().getStatus())
+        .isEqualTo(204);
+
+    mockMvc.perform(get("/api/contador/guias").param("produtorId", titular.usuarioId().toString())
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenContador))
+        .andExpect(status().isNotFound());
+    // O escritorio continua com a propria conta.
+    assertThat(credencialRepository.findByEmail("esc@campo.com.br")).isPresent();
+  }
+
+  private void vincular(UUID contadorId, UUID produtorId) {
+    jdbcTemplate.update("INSERT INTO contador_produtor (contador_id, produtor_id) VALUES (?, ?)",
+        contadorId, produtorId);
   }
 }
