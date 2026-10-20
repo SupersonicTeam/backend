@@ -15,6 +15,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 ### `config/`
 | Classe | Responsabilidade |
 |--------|-----------------|
+| `ProfileObrigatorioEnvironmentPostProcessor` | Recusa a subida sem exatamente um profile de ambiente (`dev`/`homolog`/`prod`/`test`) — fim do default `dev` (#219); registrado em `META-INF/spring.factories` |
 | `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless; headers de segurança (HSTS, DENY, nosniff, no-referrer, Permissions-Policy, CSP só em `/api/**` — #150) |
 | `RefreshProperties` | `app.seguranca.refresh.*` (#207): validade (7d), vida máxima (30d), atributos do cookie, retenção |
 | `LimiteTaxaProperties` | `app.seguranca.limite.*` (#150): geral e chat por minuto, teto de chaves |

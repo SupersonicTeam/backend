@@ -37,6 +37,8 @@ cp .env.example .env
 ./mvnw spring-boot:run
 ```
 
+> **Profile obrigatório.** A aplicação **não sobe** sem exatamente um profile de ambiente (`dev`, `homolog`, `prod` ou `test`) — não existe mais default `dev` (issue #219). O `./mvnw spring-boot:run` já ativa `dev` quando `SPRING_PROFILES_ACTIVE` não está definida; `-Dspring-boot.run.profiles=dev,ingestao` (ou `dev,avaliacao`) sobrepõe. Rodando pela IDE, defina `SPRING_PROFILES_ACTIVE=dev` na configuração de execução.
+
 A API sobe em `http://localhost:8080`.
 
 | Recurso | URL |
@@ -62,8 +64,10 @@ Os testes rodam no profile `test` com banco H2 em memória — não dependem de 
 
 ```bash
 ./mvnw clean package
-java -jar target/backend-tcc-0.0.1-SNAPSHOT.jar
+SPRING_PROFILES_ACTIVE=prod java -jar target/backend-tcc-0.0.1-SNAPSHOT.jar
 ```
+
+Sem `SPRING_PROFILES_ACTIVE`, o JAR (e a imagem Docker) recusa a subida com `Nenhum profile de ambiente ativo`.
 
 ## Profiles e configuração
 
@@ -73,6 +77,7 @@ A configuração é dividida por profile e **nenhum segredo fica no repositório
 |---|---|---|
 | base | `application.yml` | Comum a todos |
 | `dev` | `application-dev.yml` | Local + Docker Compose |
+| `homolog` | `application-homolog.yml` | Homologação (seed + identidade por header; nunca dados reais) |
 | `prod` | `application-prod.yml` | Tudo via env var |
 | `test` | `application-test.yml` | H2 em memória |
 
