@@ -21,6 +21,7 @@ A versão para o titular é servida em `GET /api/politica-dados`.
 | `alerta_tributario` | alertas derivados | contrato | apagados |
 | `nota_fiscal`, `nota_fiscal_item`, `guias_fiscais`, `apuracao_mensal` | documentos fiscais (incluem dados de destinatários) | obrigação legal — 5 anos (CTN art. 173) | **mantidos** (LGPD art. 16, I) |
 | `assistente_interacao` | metadados da Ceres, sem texto da pergunta/resposta | legítimo interesse | mantidos (não identificam conteúdo) |
+| `registro_auditoria` | quem fez o quê (ids pseudônimos, papel, ação, status, código de erro) | obrigação legal / legítimo interesse (RNF012) | **mantido** 5 a 6 anos (até o fim do prazo decadencial, CTN art. 173), sem dado pessoal |
 
 ## Logs
 

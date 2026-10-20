@@ -12,6 +12,7 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.RegistroAuditoriaRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
+import java.time.OffsetDateTime;
 import org.springframework.boot.test.context.TestComponent;
 
 /**
@@ -98,6 +99,6 @@ public class TestDatabaseCleaner {
     contadorRepository.deleteAll();
     produtorRepository.deleteAll();
     // Auditoria (#149): sem FK (sobrevive ao que audita); limpa para um teste nao ver o do outro.
-    auditoriaRepository.deleteAll();
+    auditoriaRepository.apagarAnterioresA(OffsetDateTime.now().plusYears(100));
   }
 }

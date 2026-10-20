@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -82,7 +83,7 @@ class AuditoriaIntegrationTest {
   }
 
   private List<RegistroAuditoria> registros() {
-    return auditoriaRepository.findAll().stream()
+    return auditoriaRepository.findByProdutorId(produtor.usuarioId(), Pageable.unpaged()).stream()
         .sorted(Comparator.comparing(RegistroAuditoria::getOcorridoEm))
         .toList();
   }
@@ -94,7 +95,11 @@ class AuditoriaIntegrationTest {
 
     MvcResult criada = mockMvc.perform(post("/api/notas").header(HttpHeaders.AUTHORIZATION, token)
             .contentType(MediaType.APPLICATION_JSON).content(payloadNota(1)))
-        .andExpect(status().isCreated()).andReturn();
+        .andExpect(status().isCreated())
+        // ResultadoAuditavel e so para a auditoria: nada dele aparece no contrato JSON.
+        .andExpect(jsonPath("$.recursoAuditado").doesNotExist())
+        .andExpect(jsonPath("$.produtorAuditado").doesNotExist())
+        .andReturn();
     UUID notaId = UUID.fromString(objectMapper.readTree(criada.getResponse().getContentAsString())
         .get("id").asText());
     mockMvc.perform(put("/api/notas/{id}", notaId).header(HttpHeaders.AUTHORIZATION, token)

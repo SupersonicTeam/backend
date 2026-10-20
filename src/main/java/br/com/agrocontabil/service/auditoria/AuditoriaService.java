@@ -67,7 +67,7 @@ public class AuditoriaService {
    *
    * @param registro o registro montado pelo aspecto
    */
-  void registrar(RegistroAuditoria registro) {
+  public void registrar(RegistroAuditoria registro) {
     try {
       transacao.executeWithoutResult(status -> repository.save(registro));
     } catch (RuntimeException e) {

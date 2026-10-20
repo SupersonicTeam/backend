@@ -24,15 +24,17 @@ import org.junit.jupiter.api.Test;
 class RegistroAuditoriaRetencaoJobTest {
 
   @Test
-  @DisplayName("apaga so o que passou de 5 anos")
+  @DisplayName("corte no 1o de janeiro de 5 anos atras: fato de mar/2026 vive ate o fim de 2031")
   void apagaAnterioresACincoAnos() {
     RegistroAuditoriaRepository repository = mock(RegistroAuditoriaRepository.class);
-    Clock clock = Clock.fixed(Instant.parse("2031-10-20T06:30:00Z"), ZoneId.of("America/Sao_Paulo"));
+    Clock clock = Clock.fixed(Instant.parse("2031-10-20T06:30:00Z"),
+        ZoneId.of("America/Sao_Paulo"));
 
     new RegistroAuditoriaRetencaoJob(repository, new AuditoriaProperties(5), clock)
         .aplicarRetencao();
 
-    verify(repository).apagarAnterioresA(OffsetDateTime.now(clock).minusYears(5));
+    verify(repository).apagarAnterioresA(
+        OffsetDateTime.parse("2026-01-01T00:00:00-03:00"));
   }
 
   @Test

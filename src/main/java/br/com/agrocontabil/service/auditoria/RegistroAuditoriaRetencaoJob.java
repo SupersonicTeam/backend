@@ -3,6 +3,7 @@ package br.com.agrocontabil.service.auditoria;
 import br.com.agrocontabil.config.AuditoriaProperties;
 import br.com.agrocontabil.repository.RegistroAuditoriaRepository;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -15,6 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Retenção da auditoria (issue #149, RNF012): apaga os registros com mais de
  * {@code app.auditoria.retencao-anos} (5, nunca menos — ver {@link AuditoriaProperties}).
+ *
+ * <p><strong>Contado do 1º de janeiro.</strong> O prazo de decadência do CTN (art. 173, I) corre
+ * do primeiro dia do exercício seguinte ao fato, então um registro de março de 2026 precisa viver
+ * até o fim de 2031. O corte é o 1º de janeiro de (ano corrente − retenção): fica tudo do ano do
+ * corte em diante, e a guarda real fica entre 5 e 6 anos, nunca menos de 5.
  *
  * <p>Mesmo padrão dos demais jobs: desligável por propriedade (desligado nos testes) e com lock
  * distribuído ({@code SchedulerLockConfigTest} exige).
@@ -48,10 +54,18 @@ public class RegistroAuditoriaRetencaoJob {
       lockAtLeastFor = "${app.auditoria.retencao.lock.at-least-for:PT5M}")
   @Transactional
   public void aplicarRetencao() {
-    OffsetDateTime corte = OffsetDateTime.now(clock).minusYears(propriedades.retencaoAnos());
+    OffsetDateTime corte = corte();
     int apagados = repository.apagarAnterioresA(corte);
     if (apagados > 0) {
       log.info("Retencao da auditoria: {} registro(s) anteriores a {} apagado(s)", apagados, corte);
     }
+  }
+
+  /** 1º de janeiro de (ano corrente − retenção), meia-noite no fuso do projeto. */
+  OffsetDateTime corte() {
+    LocalDate hoje = LocalDate.now(clock);
+    return LocalDate.of(hoje.getYear() - propriedades.retencaoAnos(), 1, 1)
+        .atStartOfDay(clock.getZone())
+        .toOffsetDateTime();
   }
 }
