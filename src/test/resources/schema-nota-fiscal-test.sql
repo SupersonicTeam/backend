@@ -5,15 +5,15 @@
 CREATE TABLE IF NOT EXISTS produtores (
     id                  UUID          NOT NULL,
     nome_completo       VARCHAR(255)  NOT NULL,
-    cpf_cnpj            VARCHAR(20),
+    cpf_cnpj            VARCHAR(100),
     tipo_produtor       VARCHAR(20),
     regime_tributario   VARCHAR(20),
     porte_empresa       VARCHAR(20),
     culturas            VARCHAR(4096),
     faturamento_anual   NUMERIC(15,2),
     estado              VARCHAR(2),
-    email               VARCHAR(255),
-    telefone            VARCHAR(20),
+    email               VARCHAR(512),
+    telefone            VARCHAR(100),
     -- Endereco completo + IE do emitente — Onda 2 issue #88 (migration 0021).
     -- Todas nullable: obrigatoriedade e regra de emissao (FiscalRulesValidator).
     endereco_logradouro            VARCHAR(60),
@@ -203,10 +203,10 @@ CREATE INDEX IF NOT EXISTS idx_guia_fiscal_produtor_id ON guias_fiscais (produto
 CREATE TABLE IF NOT EXISTS contadores (
     id             UUID          NOT NULL,
     nome_completo  VARCHAR(255)  NOT NULL,
-    cpf_cnpj       VARCHAR(20),
+    cpf_cnpj       VARCHAR(100),
     crc            VARCHAR(20),
-    email          VARCHAR(255),
-    telefone       VARCHAR(20),
+    email          VARCHAR(512),
+    telefone       VARCHAR(100),
     created_at     TIMESTAMP WITH TIME ZONE,
     updated_at     TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),
@@ -354,10 +354,10 @@ ALTER TABLE alerta_tributario ADD CONSTRAINT IF NOT EXISTS fk_alerta_tributario_
 -- vira no-op), por isso unicidades, FKs e CHECK vem em ALTER idempotente.
 CREATE TABLE IF NOT EXISTS credencial_usuario (
     id                     UUID                      NOT NULL,
-    email                  VARCHAR(254)              NOT NULL,
+    email                  VARCHAR(512)              NOT NULL,
     senha_hash             VARCHAR(100)              NOT NULL,
     papel                  VARCHAR(20)               NOT NULL,
-    cpf_cnpj               VARCHAR(14)               NOT NULL,
+    cpf_cnpj               VARCHAR(100)              NOT NULL,
     produtor_id            UUID,
     contador_id            UUID,
     ativo                  BOOLEAN                   DEFAULT TRUE NOT NULL,
@@ -563,3 +563,7 @@ CREATE TABLE IF NOT EXISTS registro_auditoria (
 CREATE INDEX IF NOT EXISTS idx_registro_auditoria_produtor_ocorrido
     ON registro_auditoria (produtor_id, ocorrido_em);
 CREATE INDEX IF NOT EXISTS idx_registro_auditoria_ocorrido ON registro_auditoria (ocorrido_em);
+
+-- Dados pessoais cifrados — Sprint 8 issue #147 (migration 0036): as colunas cpf_cnpj, email e
+-- telefone de produtores/contadores e cpf_cnpj/email de credencial_usuario ja nascem alargadas nos
+-- CREATE TABLE acima (100 / 512). Manter sincronizado com 0036-dados-pessoais-cifrados.xml.

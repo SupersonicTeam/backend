@@ -329,6 +329,29 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0036 alarga as colunas de dado pessoal e as marca como cifradas (#147)")
+  void changeSet0036AlargaColunasCifradas() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    String largura = "SELECT character_maximum_length FROM information_schema.columns"
+        + " WHERE table_name = ? AND column_name = ?";
+    String comentario = "SELECT col_description(?::regclass, ordinal_position::int)"
+        + " FROM information_schema.columns WHERE table_name = ? AND column_name = ?";
+
+    for (String tabela : List.of("produtores", "contadores", "credencial_usuario")) {
+      assertThat(jdbc.queryForObject(largura, Integer.class, tabela, "cpf_cnpj")).isEqualTo(100);
+      assertThat(jdbc.queryForObject(largura, Integer.class, tabela, "email")).isEqualTo(512);
+      assertThat(jdbc.queryForObject(comentario, String.class, tabela, tabela, "email"))
+          .startsWith("CIFRADO");
+    }
+    assertThat(jdbc.queryForObject(largura, Integer.class, "produtores", "telefone"))
+        .isEqualTo(100);
+    // credencial_usuario continua exigindo documento e e-mail.
+    assertThat(jdbc.queryForObject("SELECT is_nullable FROM information_schema.columns"
+        + " WHERE table_name = 'credencial_usuario' AND column_name = 'email'", String.class))
+        .isEqualTo("NO");
+  }
+
+  @Test
   @DisplayName("changeSet 0035 cria registro_auditoria sem FK, que sobrevive ao produtor (#149)")
   void changeSet0035CriaRegistroAuditoria() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

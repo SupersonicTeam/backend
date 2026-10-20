@@ -29,6 +29,16 @@ sessão), achados corrigidos no próprio PR, CI verde e review do Copilot antes 
 
 ## Decisões técnicas (tomadas sem consulta, registradas para revisão)
 
+### Criptografia em repouso (#147)
+- **Determinística** (AES-256-GCM com IV sintético por HMAC), não com IV aleatório: CPF/CNPJ e
+  e-mail são buscados por igualdade e únicos; com IV aleatório seria preciso um índice cego em
+  coluna à parte, que vaza o mesmo (igualdade) e exigiria mudar toda busca. Aqui o Hibernate cifra
+  o parâmetro da consulta e nada acima do JPA muda.
+- Escopo: identidade e contato (`produtores`, `contadores`, `credencial_usuario`). Notas e XML
+  assinado ficam fora: o XML traz tudo em claro, e cifrar só a coluna seria teatro. Débito.
+- Chave pública de dev/test no código (banco de dev legível entre reinícios); recusada fora deles.
+- Conteúdo legado cifrado pela aplicação na subida (o Liquibase não tem a chave).
+
 ### Credencial
 - Tabela própria `credencial_usuario`, separada de `produtores`/`contadores`: uma linha por
   identidade, com `papel` e **exatamente uma** das FKs (`produtor_id` / `contador_id`), garantido

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,7 +38,8 @@ public class Produtor {
   @Column(name = "nome_completo", nullable = false)
   private String nomeCompleto;
 
-  @Column(name = "cpf_cnpj", length = 20)
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "cpf_cnpj", length = 100)
   private String cpfCnpj;
 
   @Enumerated(EnumType.STRING)
@@ -80,10 +82,12 @@ public class Produtor {
   @Column(name = "inscricao_estadual", length = 14)
   private String inscricaoEstadual;
 
-  @Column(name = "email")
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "email", length = 512)
   private String email;
 
-  @Column(name = "telefone", length = 20)
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "telefone", length = 100)
   private String telefone;
 
   @Column(name = "created_at", updatable = false)

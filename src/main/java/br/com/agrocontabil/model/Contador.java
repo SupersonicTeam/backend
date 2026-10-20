@@ -1,6 +1,7 @@
 package br.com.agrocontabil.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -60,7 +61,8 @@ public class Contador {
   private String nomeCompleto;
 
   /** CPF ou CNPJ do escritório — identifica o contador no login que chegará com o JWT. */
-  @Column(name = "cpf_cnpj", length = 20, unique = true)
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "cpf_cnpj", length = 100, unique = true)
   private String cpfCnpj;
 
   /**
@@ -72,10 +74,12 @@ public class Contador {
   @Column(name = "crc", length = 20)
   private String crc;
 
-  @Column(name = "email")
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "email", length = 512)
   private String email;
 
-  @Column(name = "telefone", length = 20)
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "telefone", length = 100)
   private String telefone;
 
   /**

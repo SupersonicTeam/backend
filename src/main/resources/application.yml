@@ -235,7 +235,7 @@ app:
   lgpd:
     controlador: ${LGPD_CONTROLADOR:AgroContabil - Supersonic Team}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:privacidade@agrocontabil.local}
-    versao-politica: 2026-10-19
+    versao-politica: 2026-10-20
   # Autenticacao (Sprint 8).
   seguranca:
     senha:
@@ -243,6 +243,12 @@ app:
       bcrypt-custo: ${SENHA_BCRYPT_CUSTO:12}
     # JWT de acesso (#206). Sem JWT_SECRET (>= 32 bytes, aleatorio) a aplicacao nao sobe, exceto
     # em dev/test, que ligam permitir-segredo-efemero. Gere com: openssl rand -base64 48
+    # Dados pessoais cifrados em repouso (#147): AES-256-GCM deterministico (ver CifraDeterministica).
+    # 32 bytes aleatorios em Base64 (openssl rand -base64 32). Sem ela, a aplicacao nao sobe fora de
+    # dev/test. Perder a chave = perder os dados pessoais: guardar como o segredo do banco.
+    cripto:
+      chave: ${CRIPTO_CHAVE:}
+      migrar-legado: ${CRIPTO_MIGRAR_LEGADO:true}
     jwt:
       segredo: ${JWT_SECRET:}
       emissor: ${JWT_EMISSOR:agrocontabil-backend}

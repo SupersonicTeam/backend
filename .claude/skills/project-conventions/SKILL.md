@@ -55,7 +55,9 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 - **Anti-IDOR:** toda operação sobre recurso de produtor usa `findByIdAndProdutorId` e responde **404** (não 403) para recurso de outro produtor — não revela existência.
 - **`produtorId` vindo do cliente é afirmação, não identidade.** Quando um endpoint recebe `produtorId` no path/query/payload (calendário, guias fiscais), confrontar com `produtorProvider.get().getId()` **antes** de ler ou gravar; divergiu, `ResourceNotFoundException` (404). Foi o que faltava nas guias até a issue #94.
-- Produtor "autenticado" vem do `MockProdutorFilter` via `AuthenticatedProdutorProvider`. O filtro resolve o UUID do header **`X-Usuario-Id`** por requisição (profiles `dev`/`homolog`); sem header, produtor semente. O header **declara** identidade, não prova — auth real só na Sprint 8 (#93).
+- Identidade **provada** por JWT (`JwtAutenticacaoFilter` → `UsuarioAutenticadoProvider`/`AuthenticatedProdutorProvider`; credencial relida a cada requisição). Em `dev`/`homolog`, requisição **sem** `Authorization` ainda pode declarar identidade por `X-Usuario-Id` (`MockIdentidadeFilter`); nunca em prod.
+- **Dado pessoal novo em coluna** (CPF/CNPJ, e-mail, telefone…) = `@Convert(converter = DadoPessoalCifradoConverter.class)` + `CifragemLegadoRunner.COLUNAS_CIFRADAS` + largura no changeSet (#147). Nunca logar dado pessoal (a máscara do logback é rede de segurança, #148).
+- **Operação de escrita crítica nova** = `@Auditado(acao, recurso)` no método público do service (#149); nada de dado pessoal no retorno usado pela auditoria.
 - **Sem identidade válida → 401** `NaoAutenticadoException` (`ErrorCode.NAO_AUTENTICADO`), nunca 500. Vale tanto para header que não resolve quanto para profile sem filtro (prod).
 - **Nenhum segredo no repo** — env vars (`${DB_PASSWORD}`, `${JWT_SECRET}`, `NFE_CERT_*`). CORS por env, nunca `*`.
 - **Logs sem senha/token/credencial.**

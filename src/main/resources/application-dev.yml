@@ -33,6 +33,9 @@ logging:
 app:
   # Sem JWT_SECRET em dev, um segredo aleatorio e gerado na subida (tokens morrem no reinicio, #206).
   seguranca:
+    # Sem CRIPTO_CHAVE, a chave publica de desenvolvimento (#147): dado de dev nao e protegido.
+    cripto:
+      permitir-chave-de-desenvolvimento: true
     jwt:
       permitir-segredo-efemero: true
     # Dev roda em http://localhost: um cookie Secure nao seria gravado pelo navegador.
