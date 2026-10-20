@@ -131,6 +131,8 @@ br.com.agrocontabil
 | POST | `/api/auth/senha/esqueci` | **Público.** `{email}` → **sempre 202** (#209); com conta ativa, link de uso único (30 min, token no fragmento `#token=`) vai por e-mail em segundo plano |
 | POST | `/api/auth/senha/redefinir` | **Público.** `{token, novaSenha}` → 204 e cookie apagado; encerra todas as sessões; link inválido/expirado/usado → 400 `TOKEN_REDEFINICAO_INVALIDO`; senha fraca → 400 `SENHA_FRACA` (o link segue valendo) |
 | POST | `/api/auth/senha/alterar` | Autenticado. `{senhaAtual, novaSenha}` → 204; encerra todas as sessões; senha atual errada (ou conta travada por tentativas) → 400 `SENHA_ATUAL_INCORRETA` |
+| GET | `/api/politica-dados` | **Público.** Política de tratamento de dados pessoais (LGPD art. 9º, #148) |
+| DELETE | `/api/usuarios/{id}/dados` | Autenticado, só o próprio titular (404 para outro). `{senha}` → 204; anonimiza dados pessoais, mantém os fiscais (guarda de 5 anos), apaga a conta e encerra as sessões (#148) |
 | POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
@@ -164,7 +166,7 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir` | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir`, `GET /api/politica-dados` | público | público |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas` | próprios dados | **403** no service — esses endpoints ainda não recebem produtor-alvo |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
@@ -463,6 +465,17 @@ no cadastro (decisão do Murillo, 2026-10-19).
   `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` e
   **CSP `default-src 'none'` só em `/api/**`** (o Swagger UI precisa de script). CORS e 415 já
   existiam; agora com teste de requisição real de origem proibida (403) e de `text/plain` (415).
+- **#148 LGPD básica** (mapa completo em `docs/lgpd.md`): `DELETE /api/usuarios/{id}/dados`
+  (`ExclusaoDadosService`) — só o próprio titular (404 para outro id), com a **senha atual**
+  (`SenhaService.confirmarSenhaAtual`, mesma reserva antitentativa do login). **Anonimiza, não
+  apaga:** nome vira "Titular excluido (LGPD)", contato/endereço/culturas/faturamento somem, mas
+  CPF/CNPJ, IE e UF ficam — os documentos fiscais têm guarda legal de 5 anos (CTN art. 173; LGPD
+  art. 16, I). Credencial, sessões, links de redefinição, alertas e a carteira do contador são
+  apagados; todo token morre. `GET /api/politica-dados` (público, `PoliticaDadosService` +
+  `app.lgpd.*`). **Toda mensagem de log** passa pela `MascaraDadosPessoais`
+  (`MensagemLogMascaradaConverter` em `logback-spring.xml`, no lugar de `%m`/`%msg`/`%message`):
+  CPF, CNPJ, e-mail e telefone viram marcadores; a chave de acesso fica (não é pessoal e a
+  operação precisa dela). IP dos logs de limite truncado (último octeto / após o /64).
 
 ### Débitos técnicos abertos
 

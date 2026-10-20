@@ -85,4 +85,15 @@ public interface AlertaTributarioRepository extends JpaRepository<AlertaTributar
       """)
   int resolverObsoletos(@Param("hoje") LocalDate hoje, @Param("periodo") String periodo,
       @Param("agora") OffsetDateTime agora);
+
+  /**
+   * Apaga os alertas de um produtor (direito ao esquecimento, issue #148): alerta é derivado e
+   * operacional, sem valor depois que o titular sai.
+   *
+   * @param produtorId produtor
+   * @return linhas apagadas
+   */
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("DELETE FROM AlertaTributario a WHERE a.produtor.id = :produtorId")
+  int apagarDoProdutor(@Param("produtorId") UUID produtorId);
 }

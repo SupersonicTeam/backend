@@ -37,6 +37,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 |--------|-----------|
 | `HealthController` | `GET /api/v1/health` |
 | `AutenticacaoController` | `/api/auth/**` — `POST /cadastro`, `/login`, `/refresh`, `/logout` públicos (#205–#207), `POST /logout-todos` e `GET /me` autenticados; só com web |
+| `PrivacidadeController` | `GET /api/politica-dados` (público) e `DELETE /api/usuarios/{id}/dados` (#148) |
 | `SenhaController` | `/api/auth/senha/**` — `esqueci` e `redefinir` públicos, `alterar` autenticado (#209); só com web |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
@@ -63,6 +64,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `LoginService` | Login (#206): e-mail normalizado + senha NFKC; e-mail sem conta confere contra hash fictício (tempo igual); falha de qualquer tipo = `CredenciaisInvalidasException` (401); rehash por `UPDATE` só da coluna; `usuarioLogado()` p/ `/me`. Só web |
 | `SessaoService` | Par access+refresh (#207): abre família no login, `renovar` (rotação, reuso → revoga família, lock pessimista, vida máxima, desfecho gravado antes de recusar), `encerrar`, `encerrarTodas`/`revogarTodas` (ponto único de revogação em massa). Só web |
 | `SessaoRefreshLimpezaJob` | Diário 3h + ShedLock (#207): apaga sessões vencidas há mais que `retencao` |
+| `ExclusaoDadosService` | Direito ao esquecimento (#148): só o próprio titular + senha atual; anonimiza dados pessoais, mantém os fiscais, apaga credencial/sessões/links/alertas/carteira |
+| `PoliticaDadosService` | Política de dados (#148) a partir de `app.lgpd.*` |
 | `SenhaService` | Recuperação/troca de senha (#209): `solicitarRedefinicao` (202 sempre, trabalho no pool `agro-email-`), `redefinir` (valida → BCrypt fora de tx → regrava sob lock), `alterar` (senha atual com a reserva antitentativa); troca = hash + links apagados + `revogarTodas` + bloqueio zerado. Só web |
 | `EnvioEmail` | Porta de e-mail (#209); implementação escolhida no `config/EmailConfig` (SMTP / LOG só dev / DESLIGADO) |
 | `BloqueioContaService` | Bloqueio por conta (#208): `reservarTentativa` (conta a tentativa sob lock pessimista **antes** do BCrypt; 5 → 15 min; vencido recomeça), `reservarFicticia` (e-mail sem conta, mesmo custo), `liberar` (sucesso zera) |
@@ -254,6 +257,7 @@ Bean Validation customizada (anotação + validator):
 - `ApiError` — envelope `{ errors: [] }` de resposta de erro
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
+- `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148)
 - `UfIbge` — cUF das 27 UFs (`Optional`, sem default silencioso) + `prefixoCoerente(codigoIbge, uf)` (issue #88)
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 

@@ -220,6 +220,12 @@ app:
   cors:
     # Lista separada por virgula; sobrescrita por APP_CORS_ALLOWED_ORIGINS em prod.
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  # Politica de dados (LGPD, #148): controlador e canal do encarregado exibidos em
+  # GET /api/politica-dados.
+  lgpd:
+    controlador: ${LGPD_CONTROLADOR:AgroContabil - Supersonic Team}
+    contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:privacidade@agrocontabil.local}
+    versao-politica: 2026-10-19
   # Autenticacao (Sprint 8).
   seguranca:
     senha:

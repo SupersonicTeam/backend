@@ -5,6 +5,9 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repositório Spring Data JPA para {@link Contador} — issue #93.
@@ -51,4 +54,18 @@ public interface ContadorRepository extends JpaRepository<Contador, UUID> {
    * @return {@code true} se houver vínculo entre os dois
    */
   boolean existsByIdAndProdutoresId(UUID contadorId, UUID produtorId);
+
+  /**
+   * Desfaz todos os vínculos de um produtor com contadores (exclusão de dados, issue #148).
+   *
+   * <p>Consulta nativa na tabela de vínculo: o lado dono do {@code @ManyToMany} é o contador, e
+   * carregar cada carteira para tirar um produtor dela custaria uma consulta por escritório.
+   *
+   * @param produtorId identificador do produtor
+   * @return quantidade de vínculos removidos
+   */
+  @Modifying(flushAutomatically = true)
+  @Query(value = "DELETE FROM contador_produtor WHERE produtor_id = :produtorId",
+      nativeQuery = true)
+  int desvincularProdutor(@Param("produtorId") UUID produtorId);
 }

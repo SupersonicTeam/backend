@@ -222,6 +222,26 @@ public class SenhaService {
    *     bloqueada por tentativas)
    */
   public void alterar(String senhaAtual, String novaSenha) {
+    CredencialUsuario credencial = confirmarSenhaAtual(senhaAtual);
+
+    String senha = PoliticaSenha.normalizar(novaSenha);
+    politicaSenha.validar(senha, credencial.getEmail(), credencial.getCpfCnpj(), CAMPO_NOVA_SENHA);
+    String hash = passwordEncoder.encode(senha);
+    transacao.executeWithoutResult(status -> gravarSenhaNova(credencial.getId(), hash));
+    log.info("Senha alterada pelo titular: credencial={}", credencial.getId());
+  }
+
+  /**
+   * Confirma a senha atual de quem está autenticado — a prova adicional das operações sensíveis
+   * (troca de senha; exclusão dos dados pessoais, #148). Passa pela mesma reserva antitentativa do
+   * login: com um access token roubado, ninguém adivinha a senha por aqui.
+   *
+   * @param senhaAtual senha informada
+   * @return a credencial de quem está autenticado
+   * @throws SenhaAtualIncorretaException se a senha não conferir, a conta estiver travada ou a
+   *     identidade não tiver credencial (mock de dev/homolog)
+   */
+  public CredencialUsuario confirmarSenhaAtual(String senhaAtual) {
     UsuarioAutenticado usuario = usuarioProvider.get();
     CredencialUsuario credencial = (usuario.papel() == PapelUsuario.CONTADOR
         ? credencialRepository.findByContadorId(usuario.id())
@@ -241,12 +261,7 @@ public class SenhaService {
     // A senha atual conferiu: a tentativa foi legitima e a reserva volta ja, antes da politica.
     // Sem isso, cinco senhas novas recusadas pela politica travariam o proprio titular.
     bloqueioConta.liberar(credencial.getId());
-
-    String senha = PoliticaSenha.normalizar(novaSenha);
-    politicaSenha.validar(senha, credencial.getEmail(), credencial.getCpfCnpj(), CAMPO_NOVA_SENHA);
-    String hash = passwordEncoder.encode(senha);
-    transacao.executeWithoutResult(status -> gravarSenhaNova(credencial.getId(), hash));
-    log.info("Senha alterada pelo titular: credencial={}", credencial.getId());
+    return credencial;
   }
 
   /**
