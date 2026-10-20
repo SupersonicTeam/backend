@@ -54,4 +54,4 @@ public record ApuracaoResponse(
     long totalNotas,
 
     @Schema(description = "Instante do fechamento automatico (nulo se aberto)")
-    OffsetDateTime dataFechamento) {}
+    OffsetDateTime dataFechamento) implements ResultadoAuditavel {}

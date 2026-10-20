@@ -100,7 +100,17 @@ public record NotaFiscalResponse(
 
     @Schema(description = "Data e hora da ultima atualizacao da nota")
     OffsetDateTime updatedAt
-) {
+) implements ResultadoAuditavel {
+
+  @Override
+  public UUID recursoAuditado() {
+    return id;
+  }
+
+  @Override
+  public UUID produtorAuditado() {
+    return produtorId;
+  }
 
   /**
    * Endereco do destinatario retornado na resposta da nota fiscal.

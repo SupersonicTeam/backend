@@ -329,6 +329,32 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0035 cria registro_auditoria sem FK, que sobrevive ao produtor (#149)")
+  void changeSet0035CriaRegistroAuditoria() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'registro_auditoria' ORDER BY column_name", String.class))
+        .containsExactly("acao", "codigo_erro", "estado_antes", "estado_depois", "id",
+            "ocorrido_em", "papel", "produtor_id", "recurso", "recurso_id", "sucesso",
+            "usuario_id");
+    assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes"
+        + " WHERE tablename = 'registro_auditoria'", String.class))
+        .contains("idx_registro_auditoria_produtor_ocorrido", "idx_registro_auditoria_ocorrido");
+
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, ?)",
+        produtorId, "Produtor Auditado");
+    jdbc.update("INSERT INTO registro_auditoria (id, ocorrido_em, acao, recurso, produtor_id,"
+        + " sucesso) VALUES (gen_random_uuid(), now(), 'NOTA_CRIADA', 'NOTA_FISCAL', ?::uuid,"
+        + " TRUE)", produtorId);
+
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM registro_auditoria"
+        + " WHERE produtor_id = ?::uuid", Integer.class, produtorId)).isOne();
+  }
+
+  @Test
   @DisplayName("changeSet 0028 cria alerta_tributario com chave unica e CASCADE do produtor (#140)")
   void changeSet0028CriaAlertaTributario() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

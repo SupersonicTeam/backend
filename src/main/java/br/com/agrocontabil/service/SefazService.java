@@ -14,14 +14,17 @@ import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SefazComunicacaoException;
 import br.com.agrocontabil.exception.SefazConexaoException;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.sefaz.SefazAmbiente;
 import br.com.agrocontabil.sefaz.SefazClient;
 import br.com.agrocontabil.sefaz.SefazRetorno;
 import br.com.agrocontabil.sefaz.SituacaoSefaz;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -155,6 +158,7 @@ public class SefazService {
    * @throws br.com.agrocontabil.exception.SefazComunicacaoException
    *         se a comunicação com a SEFAZ falhar após esgotar as tentativas (HTTP 502)
    */
+  @Auditado(acao = AcaoAuditada.NOTA_ENVIADA_SEFAZ, recurso = RecursoAuditado.NOTA_FISCAL)
   public SefazEnvioResponse enviar(UUID notaId) {
     Produtor produtor = produtorProvider.get();
     SefazAmbiente ambiente = sefazProperties.getAmbiente();
@@ -289,6 +293,7 @@ public class SefazService {
    * @throws CancelamentoRejeitadoException       se a SEFAZ recusar o evento (HTTP 422, issue #84)
    * @throws SefazComunicacaoException            se a comunicação falhar após o retry (HTTP 502)
    */
+  @Auditado(acao = AcaoAuditada.NOTA_CANCELADA, recurso = RecursoAuditado.NOTA_FISCAL)
   public CancelamentoResponse cancelar(UUID notaId, String motivo) {
     Produtor produtor = produtorProvider.get();
 

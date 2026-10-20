@@ -75,7 +75,14 @@ sessão), achados corrigidos no próprio PR, CI verde e review do Copilot antes 
 
 ### Achados registrados para PRs seguintes
 - (#208 → #148) O log do 429 grava o IP do cliente — dado pessoal (LGPD): decidir mascaramento
-  e retenção dos logs de segurança na #148.
+  e retenção dos logs de segurança na #148. **Feito na #148** (IP truncado pelos bytes).
+- (#149) Falha de contador (404 fora da carteira, 403 em `/pagar`) fica com `produtor_id` nulo e
+  não aparece em `GET /api/auditoria`; uma visão do próprio contador ou de administração fica
+  para quando houver esse papel.
+- (#149) Se um método `@Auditado` passar a ser chamado de dentro de outra transação, o registro
+  entra nela (e um erro ao gravá-lo a marcaria rollback-only). Hoje só controllers chamam.
+- (#149) Imutabilidade só pela aplicação (repositório sem `delete`); trigger/REVOKE no banco fica
+  para quando houver usuário de banco separado da aplicação.
 
 ### Achados do review do #205 (registrados para os PRs seguintes)
 - O 409 do cadastro não diz qual campo colidiu, mas quem controla os dois testa um por vez:

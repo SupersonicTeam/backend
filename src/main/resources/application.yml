@@ -222,6 +222,16 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
   # Politica de dados (LGPD, #148): controlador e canal do encarregado exibidos em
   # GET /api/politica-dados.
+  # Auditoria das operacoes criticas (Sprint 8, #149 — RNF012). Retencao nunca abaixo de 5 anos
+  # (a aplicacao nao sobe); o job roda numa replica so (ShedLock).
+  auditoria:
+    retencao-anos: ${AUDITORIA_RETENCAO_ANOS:5}
+    retencao:
+      enabled: ${AUDITORIA_RETENCAO_ENABLED:true}
+      cron: ${AUDITORIA_RETENCAO_CRON:0 30 3 * * *}
+      lock:
+        at-most-for: PT30M
+        at-least-for: PT5M
   lgpd:
     controlador: ${LGPD_CONTROLADOR:AgroContabil - Supersonic Team}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:privacidade@agrocontabil.local}

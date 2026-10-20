@@ -589,4 +589,13 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
       @Param("produtorId") UUID produtorId,
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim);
+
+  /**
+   * Só o status da nota, para o "antes" da auditoria (issue #149) — sem carregar a entidade.
+   *
+   * @param id id da nota
+   * @return o status, se a nota existir
+   */
+  @Query("SELECT n.status FROM NotaFiscal n WHERE n.id = :id")
+  Optional<StatusNotaFiscal> findStatusById(@Param("id") UUID id);
 }

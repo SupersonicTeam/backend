@@ -133,6 +133,7 @@ br.com.agrocontabil
 | POST | `/api/auth/senha/alterar` | Autenticado. `{senhaAtual, novaSenha}` → 204; encerra todas as sessões; senha atual errada (ou conta travada por tentativas) → 400 `SENHA_ATUAL_INCORRETA` |
 | GET | `/api/politica-dados` | **Público.** Política de tratamento de dados pessoais (LGPD art. 9º, #148) |
 | DELETE | `/api/usuarios/{id}/dados` | Autenticado, só o próprio titular (404 para outro). `{senha}` → 204; anonimiza dados pessoais, mantém os fiscais (guarda de 5 anos), apaga a conta e encerra as sessões (#148) |
+| GET | `/api/auditoria?produtorId=&page=&size=` | Auditoria das operações críticas do produtor (#149, RNF012): só contador (produtor 403), só produtor da carteira (404 fora); padrão 50, máx. 200; corpo array + total em `X-Total-Count` |
 | POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |
 | GET | `/api/notas` | Lista paginada (produtor autenticado) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
@@ -171,6 +172,7 @@ br.com.agrocontabil
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
   | `GET /api/calendario-fiscal/{produtorId}/vencimentos` | próprio calendário | calendário dos produtores da carteira |
+  | `GET /api/auditoria` | **403** | auditoria dos produtores da carteira (404 fora dela) |
 - **Identidade por requisição via header `X-Usuario-Id` (Onda 4, issue #91; papéis na #93).** O `MockIdentidadeFilter` (profiles **`dev` e `homolog`**, nunca `prod`) resolve a cada requisição a identidade cujo **UUID** vem nesse header — **produtor ou contador**, buscados nessa ordem. O header **declara** a identidade, não a prova — é mock multi-usuário, não autenticação; serve para exercitar o anti-IDOR e o escopo por papel até o login real chegar. Contrato:
   - **sem header** → produtor semente (o produtor A do `DataLoader`), para o Angular atual não quebrar. O fallback é sempre **produtor**: cair em contador por omissão trocaria as permissões da requisição;
   - **UUID de produtor existente** → esse produtor, papel `PRODUTOR`;
@@ -475,7 +477,25 @@ no cadastro (decisão do Murillo, 2026-10-19).
   `app.lgpd.*`). **Toda mensagem de log** passa pela `MascaraDadosPessoais`
   (`MensagemLogMascaradaConverter` em `logback-spring.xml`, no lugar de `%m`/`%msg`/`%message`):
   CPF, CNPJ, e-mail e telefone viram marcadores; a chave de acesso fica (não é pessoal e a
-  operação precisa dela). IP dos logs de limite truncado (último octeto / após o /64).
+  operação precisa dela); o **stack trace** também (`ExcecaoLogMascaradaConverter`, via
+  `LOG_EXCEPTION_CONVERSION_WORD`). IP dos logs de limite truncado pelos bytes. A exclusão do
+  produtor desfaz os vínculos com contadores (o ex-contador perdia o acesso só quando ele próprio
+  saía); a do contador apaga também CPF/CNPJ e CRC.
+- **#149 Auditoria (RNF012):** `registro_auditoria` (changeSet **0035**, sem FK — sobrevive ao que
+  audita). `@Auditado(acao, recurso)` (`service/auditoria/`) nos métodos de escrita: nota (criar,
+  editar, excluir, gerar XML, enviar, cancelar, importar), guia (criar, pagar), reabertura de
+  apuração, troca de senha, logout de todas as sessões e exclusão de dados. O `AuditoriaAspect`
+  fica **por fora do `@Transactional`** (`HIGHEST_PRECEDENCE + 100`): grava depois do commit, numa
+  transação curta própria, então o registro de falha sobrevive ao rollback e nunca há duas
+  conexões presas (#97); erro da auditoria vira log e nunca muda o resultado. **Sem dado
+  pessoal:** ids, papel, ação, estado antes (status lido por id, guardado só no sucesso — a
+  operação já fez o anti-IDOR) e depois (`ResultadoAuditavel.status()` do retorno), e na falha
+  só o código do erro, nunca a mensagem. `RegistroAuditoriaRepository` estende `Repository` (sem
+  `delete`/`saveAll`): o único caminho de saída é o `RegistroAuditoriaRetencaoJob` (diário,
+  ShedLock), com corte no **1º de janeiro** de (ano − `app.auditoria.retencao-anos`) — a
+  decadência do CTN art. 173 corre do exercício seguinte; retenção abaixo de 5 impede a subida.
+  `GET /api/auditoria` só para contador, só da carteira. **Método de escrita novo e crítico =
+  anotar com `@Auditado`** (o `RegistroAuditoriaRetencaoJobTest` trava os de nota e guia).
 
 ### Débitos técnicos abertos
 

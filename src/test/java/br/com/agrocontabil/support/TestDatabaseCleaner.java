@@ -10,7 +10,9 @@ import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
+import br.com.agrocontabil.repository.RegistroAuditoriaRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
+import java.time.OffsetDateTime;
 import org.springframework.boot.test.context.TestComponent;
 
 /**
@@ -40,6 +42,7 @@ public class TestDatabaseCleaner {
   private final CredencialUsuarioRepository credencialRepository;
   private final ContadorRepository contadorRepository;
   private final ProdutorRepository produtorRepository;
+  private final RegistroAuditoriaRepository auditoriaRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -53,7 +56,8 @@ public class TestDatabaseCleaner {
       RedefinicaoSenhaRepository redefinicaoSenhaRepository,
       CredencialUsuarioRepository credencialRepository,
       ContadorRepository contadorRepository,
-      ProdutorRepository produtorRepository) {
+      ProdutorRepository produtorRepository,
+      RegistroAuditoriaRepository auditoriaRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -65,6 +69,7 @@ public class TestDatabaseCleaner {
     this.credencialRepository = credencialRepository;
     this.contadorRepository = contadorRepository;
     this.produtorRepository = produtorRepository;
+    this.auditoriaRepository = auditoriaRepository;
   }
 
   /**
@@ -93,5 +98,7 @@ public class TestDatabaseCleaner {
     credencialRepository.deleteAll();
     contadorRepository.deleteAll();
     produtorRepository.deleteAll();
+    // Auditoria (#149): sem FK (sobrevive ao que audita); limpa para um teste nao ver o do outro.
+    auditoriaRepository.apagarAnterioresA(OffsetDateTime.now().plusYears(100));
   }
 }
