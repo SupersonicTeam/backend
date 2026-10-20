@@ -83,6 +83,8 @@ public class SecurityConfig {
    */
   private static final String[] ROTAS_PUBLICAS = {
       "/api/v1/health/**",
+      // Politica de dados (LGPD, #148): o titular le antes de se cadastrar.
+      "/api/politica-dados",
       "/v3/api-docs/**",
       "/swagger-ui/**",
       "/swagger-ui.html",

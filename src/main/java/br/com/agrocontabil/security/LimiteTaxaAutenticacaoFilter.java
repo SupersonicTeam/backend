@@ -1,5 +1,6 @@
 package br.com.agrocontabil.security;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.config.ForcaBrutaProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -71,7 +72,7 @@ public class LimiteTaxaAutenticacaoFilter extends OncePerRequestFilter {
       long esperar = limitador.tentar(chaveCliente(request.getRemoteAddr()));
       if (esperar > 0) {
         log.warn("Limite de tentativas excedido: rota={}, ip={}", request.getRequestURI(),
-            request.getRemoteAddr());
+            MascaraDadosPessoais.truncarIp(request.getRemoteAddr()));
         errorResponder.muitasTentativas(request, response, esperar);
         return;
       }
