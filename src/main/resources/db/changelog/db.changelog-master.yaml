@@ -76,3 +76,5 @@ databaseChangeLog:
       file: db/changelog/changes/0034-redefinicao-senha.xml
   - include:
       file: db/changelog/changes/0035-registro-auditoria.xml
+  - include:
+      file: db/changelog/changes/0036-dados-pessoais-cifrados.xml

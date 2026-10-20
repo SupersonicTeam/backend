@@ -496,6 +496,25 @@ no cadastro (decisão do Murillo, 2026-10-19).
   decadência do CTN art. 173 corre do exercício seguinte; retenção abaixo de 5 impede a subida.
   `GET /api/auditoria` só para contador, só da carteira. **Método de escrita novo e crítico =
   anotar com `@Auditado`** (o `RegistroAuditoriaRetencaoJobTest` trava os de nota e guia).
+- **#147 Criptografia em repouso (RNF004):** `cpf_cnpj`, `email` e `telefone` de `produtores` e
+  `contadores` e `cpf_cnpj`/`email` de `credencial_usuario` passam pelo
+  `DadoPessoalCifradoConverter` (`@Convert`) e vão ao banco como `v1:` + Base64url (changeSet
+  **0036** alarga as colunas e as comenta como cifradas). `security/CifraDeterministica`:
+  **AES-256-GCM determinístico com IV sintético** (12 bytes do HMAC-SHA256 do texto, chave de IV
+  separada da de cifra, ambas derivadas da mestra por HMAC; o IV é reconferido na volta).
+  Determinística de propósito: o Hibernate cifra também os parâmetros das consultas, então
+  `findByCpfCnpj`, `existsByEmail`, o `IN` das grafias do cadastro e as constraints únicas seguem
+  funcionando sem índice cego, e o vazamento é o mesmo de um índice cego (igualdade). Chave mestra
+  `CRIPTO_CHAVE` (32 bytes em Base64) obrigatória fora de dev/test; em dev/test vale a chave
+  **pública** de desenvolvimento (`permitir-chave-de-desenvolvimento`), recusada nos outros
+  profiles (comparada pelos bytes: sem o `=` final também é recusada). Valor sem prefixo é legado
+  em claro e é lido como está; o `CifragemLegadoRunner` (`SmartInitializingSingleton`) o cifra
+  **antes de o Tomcat aceitar conexões** — com a janela aberta, uma conta legada não seria achada
+  pelas buscas e um cadastro com o mesmo CPF/e-mail passaria (achado do review). Idempotente
+  (`UPDATE ... WHERE coluna = <lido>`); erro numa linha fica em `ERROR` com o id e não derruba a
+  subida; desligado nos testes, que o chamam direto. **Coluna de dado pessoal nova = `@Convert` + entrada no
+  `CifragemLegadoRunner.COLUNAS_CIFRADAS` + largura no changeSet.** Fora do escopo: dados das
+  notas e o XML assinado (débito).
 
 ### Débitos técnicos abertos
 

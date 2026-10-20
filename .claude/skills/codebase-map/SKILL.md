@@ -21,6 +21,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ForcaBrutaProperties` | `app.seguranca.forca-bruta.*` (#208): max-falhas, bloqueio, limites por IP por rota, teto de IPs; valores não positivos impedem a subida |
 | `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
+| `CriptografiaConfig` / `CriptografiaProperties` | Chave dos dados pessoais em repouso (#147, `app.seguranca.cripto.*`) |
+| `CifragemLegadoRunner` | Cifra na subida as linhas em claro de antes da #147 (`COLUNAS_CIFRADAS`), idempotente |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
 | `MockIdentidadeFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (profiles dev/homolog); sem header usa o semente (#91) |
@@ -156,6 +158,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate: Bearer`, 403); `recusarToken` = 401 `error="invalid_token"` (#206) |
 | `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto/de exemplo (dev: efêmero) |
 | `TokenOpaco` | Token de 256 bits (base64url) + SHA-256 hex — fonte única do refresh (#207) e da redefinição (#209) |
+| `CifraDeterministica` | AES-256-GCM determinístico (IV sintético por HMAC) dos dados pessoais em repouso (#147); `v1:` + Base64url; legado sem prefixo passa; chave `CRIPTO_CHAVE` obrigatória fora de dev/test |
 | `CookieRefresh` | Monta/lê/apaga o cookie `agro_refresh` (HttpOnly, Secure, SameSite=Strict, Path=/api/auth) — #207 |
 | `LimitadorTaxa` | Balde de fichas (bucket4j) por chave, em memória, com teto LRU (#208; reusado pelo rate limit da #150) |
 | `LimiteTaxaGeralFilter` | Limite geral `/api/**` 100/min e chat 20/min por identidade (IP sem identidade) — #150; depois da identificação, antes da autorização; não é bean |
@@ -184,6 +187,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 ### `model/`
 | Classe | Responsabilidade |
 |--------|-----------------|
+| `DadoPessoalCifradoConverter` | `@Convert` de CPF/CNPJ, e-mail e telefone de `Produtor`/`Contador`/`CredencialUsuario` (#147); monta a cifra do `Environment` (vale em `@DataJpaTest`) |
 | `NotaFiscal` | Entidade principal (tabela `notas_fiscais`) |
 | `NotaFiscalItem` | Itens da nota (tabela `nota_fiscal_itens`) |
 | `EnderecoDestinatario` | Embedded address do destinatário |
@@ -305,5 +309,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0035-registro-auditoria` (próximo número livre: **0036**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0036-dados-pessoais-cifrados` (próximo número livre: **0037**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

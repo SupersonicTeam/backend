@@ -49,3 +49,17 @@ o documento, pode se cadastrar de novo.
 - **Máscara de log:** cobre CPF/CNPJ numéricos (com ou sem pontuação), e-mail e telefone brasileiro
   (com DDD entre parênteses, ou sem parênteses com o hífen). O CNPJ alfanumérico da RFB ainda não
   é reconhecido.
+
+## Criptografia em repouso (#147)
+
+`produtores` e `contadores` (`cpf_cnpj`, `email`, `telefone`) e `credencial_usuario`
+(`cpf_cnpj`, `email`) são gravados cifrados pela aplicação, com AES-256-GCM determinístico
+(`CifraDeterministica`, IV sintético por HMAC): no banco só aparece `v1:` + Base64url. A cifra é
+determinística para que as buscas por igualdade e as constraints únicas sigam valendo; o que ela
+revela a quem lê o banco sem a chave é só que dois registros têm o mesmo valor. A chave mestra
+(`CRIPTO_CHAVE`, 32 bytes em Base64) é obrigatória fora de dev/test; **perdê-la é perder esses
+dados**. Linhas gravadas antes da #147 são cifradas na subida (`CifragemLegadoRunner`).
+
+Fora do escopo, de propósito: os dados de destinatário/emitente das notas e o XML assinado (que
+traz todos os dados da NF-e) — cifrar só a coluna não protegeria nada enquanto o XML estiver em
+claro; fica como débito.

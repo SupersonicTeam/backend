@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0036-dados-pessoais-cifrados.xml
+         Sprint 8 - issue #147 (AES-256 em repouso, RNF004).
+
+         CPF/CNPJ, e-mail e telefone de produtores, contadores e credenciais
+         passam a ser gravados cifrados pela aplicacao (AES-256-GCM
+         deterministico, formato "v1:" + Base64url). O valor cifrado e maior
+         que o claro: as colunas sao alargadas (100 para documento/telefone,
+         512 para e-mail) e ganham comentario de coluna cifrada.
+
+         O conteudo legado NAO e cifrado aqui: o Liquibase nao tem a chave.
+         Quem cifra as linhas antigas e o CifragemLegadoRunner, na subida.
+         ================================================================ -->
+
+    <changeSet id="0036-alarga-colunas-cifradas" author="supersonic-team">
+        <comment>
+            Alarga as colunas de dado pessoal para caber o valor cifrado e marca cada uma
+            como cifrada no comentario.
+        </comment>
+
+        <modifyDataType tableName="produtores" columnName="cpf_cnpj" newDataType="VARCHAR(100)"/>
+        <setColumnRemarks tableName="produtores" columnName="cpf_cnpj"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="produtores" columnName="email" newDataType="VARCHAR(512)"/>
+        <setColumnRemarks tableName="produtores" columnName="email"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="produtores" columnName="telefone" newDataType="VARCHAR(100)"/>
+        <setColumnRemarks tableName="produtores" columnName="telefone"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="contadores" columnName="cpf_cnpj" newDataType="VARCHAR(100)"/>
+        <setColumnRemarks tableName="contadores" columnName="cpf_cnpj"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="contadores" columnName="email" newDataType="VARCHAR(512)"/>
+        <setColumnRemarks tableName="contadores" columnName="email"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="contadores" columnName="telefone" newDataType="VARCHAR(100)"/>
+        <setColumnRemarks tableName="contadores" columnName="telefone"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="credencial_usuario" columnName="cpf_cnpj" newDataType="VARCHAR(100)"/>
+        <setColumnRemarks tableName="credencial_usuario" columnName="cpf_cnpj"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <modifyDataType tableName="credencial_usuario" columnName="email" newDataType="VARCHAR(512)"/>
+        <setColumnRemarks tableName="credencial_usuario" columnName="email"
+                          remarks="CIFRADO (AES-256-GCM, #147): v1: + Base64url"/>
+
+        <addNotNullConstraint tableName="credencial_usuario" columnName="cpf_cnpj"
+                              columnDataType="VARCHAR(100)"/>
+        <addNotNullConstraint tableName="credencial_usuario" columnName="email"
+                              columnDataType="VARCHAR(512)"/>
+    </changeSet>
+</databaseChangeLog>

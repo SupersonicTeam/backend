@@ -119,8 +119,9 @@ class ForcaBrutaIntegrationTest {
       mockMvc.perform(login(EMAIL, "senha errada numero " + i, ipNovo()));
     }
     new JdbcTemplate(dataSource).update(
-        "UPDATE credencial_usuario SET bloqueada_ate = ? WHERE email = ?",
-        OffsetDateTime.now().minusSeconds(1), EMAIL);
+        // Por id: o e-mail esta cifrado no banco (#147).
+        "UPDATE credencial_usuario SET bloqueada_ate = ? WHERE id = ?",
+        OffsetDateTime.now().minusSeconds(1), credencial().getId());
 
     mockMvc.perform(login(EMAIL, SENHA, ipNovo())).andExpect(status().isOk());
     assertThat(credencial().getFalhasLogin()).isZero();
@@ -134,8 +135,9 @@ class ForcaBrutaIntegrationTest {
       mockMvc.perform(login(EMAIL, "senha errada numero " + i, ipNovo()));
     }
     new JdbcTemplate(dataSource).update(
-        "UPDATE credencial_usuario SET bloqueada_ate = ? WHERE email = ?",
-        OffsetDateTime.now().minusSeconds(1), EMAIL);
+        // Por id: o e-mail esta cifrado no banco (#147).
+        "UPDATE credencial_usuario SET bloqueada_ate = ? WHERE id = ?",
+        OffsetDateTime.now().minusSeconds(1), credencial().getId());
 
     mockMvc.perform(login(EMAIL, "mais uma errada", ipNovo()));
 

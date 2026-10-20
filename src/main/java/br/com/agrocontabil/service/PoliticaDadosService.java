@@ -34,6 +34,7 @@ public class PoliticaDadosService {
         List.of(
             "Identificacao: nome, CPF ou CNPJ, inscricao estadual.",
             "Contato e acesso: e-mail (login) e telefone; a senha e guardada so como hash.",
+            "CPF/CNPJ, e-mail e telefone ficam cifrados no banco (AES-256).",
             "Endereco do produtor (emitente das notas fiscais).",
             "Dados fiscais: notas fiscais emitidas e importadas, guias, apuracoes de IBS/CBS.",
             "Seguranca: tentativas de login e sessoes ativas (sem guardar o token em si).",

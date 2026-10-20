@@ -35,6 +35,10 @@ app:
     senha:
       bcrypt-custo: 4
     # Segredo fixo de teste (so existe aqui; >= 32 bytes, como o JwtService exige).
+    cripto:
+      permitir-chave-de-desenvolvimento: true
+      # O schema H2 nasce depois do contexto (script @Sql): o teste da migracao a chama direto.
+      migrar-legado: false
     jwt:
       segredo: segredo-de-teste-agrocontabil-com-mais-de-32-bytes
     # Limites por IP altos: todas as requisicoes do MockMvc vem de 127.0.0.1, e as suites de

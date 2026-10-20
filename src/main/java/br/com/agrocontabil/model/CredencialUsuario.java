@@ -2,6 +2,7 @@ package br.com.agrocontabil.model;
 
 import br.com.agrocontabil.security.PapelUsuario;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -63,7 +64,8 @@ public class CredencialUsuario {
    * pessoal: fora do {@code toString}.
    */
   @ToString.Exclude
-  @Column(name = "email", nullable = false, length = 254)
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "email", nullable = false, length = 512)
   private String email;
 
   /**
@@ -81,7 +83,8 @@ public class CredencialUsuario {
 
   /** Documento da identidade, só dígitos (11 = CPF, 14 = CNPJ). */
   @ToString.Exclude
-  @Column(name = "cpf_cnpj", nullable = false, length = 14)
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "cpf_cnpj", nullable = false, length = 100)
   private String cpfCnpj;
 
   /** Produtor dono desta credencial; preenchido só quando o papel é PRODUTOR. */
