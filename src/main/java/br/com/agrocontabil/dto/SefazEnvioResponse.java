@@ -40,4 +40,4 @@ public record SefazEnvioResponse(
 
     @Schema(description = "Data e hora da autorizacao pelo fisco (nula se nao autorizada)",
         example = "2026-06-15T10:00:00-03:00")
-    OffsetDateTime dataAutorizacao) {}
+    OffsetDateTime dataAutorizacao) implements ResultadoAuditavel {}

@@ -3,12 +3,15 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.dto.ImportacaoNotaResultado;
 import br.com.agrocontabil.event.NotaImportadaEvent;
 import br.com.agrocontabil.exception.XmlImportacaoInvalidaException;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.nfe.NfeToNotaFiscalMapper;
 import br.com.agrocontabil.nfe.NfeXmlImporter;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -83,6 +86,7 @@ public class ImportacaoNotaFiscalService {
    * @param arquivos lista de arquivos (nome + conteudo bruto) a importar
    * @return lista de resultados na mesma ordem dos arquivos recebidos
    */
+  @Auditado(acao = AcaoAuditada.NOTAS_IMPORTADAS, recurso = RecursoAuditado.NOTA_FISCAL)
   public List<ImportacaoNotaResultado> importar(List<ArquivoXml> arquivos) {
     Produtor produtor = produtorProvider.get();
     List<ImportacaoNotaResultado> resultados = new ArrayList<>();

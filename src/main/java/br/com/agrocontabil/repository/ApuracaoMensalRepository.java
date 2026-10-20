@@ -116,4 +116,13 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
       @Param("status") StatusApuracao status,
       @Param("inicio") String inicio,
       @Param("fim") String fim);
+
+  /**
+   * Só o status da apuração, para o "antes" da auditoria (issue #149).
+   *
+   * @param id id da apuração
+   * @return o status, se a apuração existir
+   */
+  @Query("SELECT a.status FROM ApuracaoMensal a WHERE a.id = :id")
+  Optional<StatusApuracao> findStatusById(@Param("id") UUID id);
 }

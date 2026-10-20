@@ -130,4 +130,13 @@ public interface GuiaFiscalRepository extends JpaRepository<GuiaFiscal, UUID> {
       @Param("produtorId") UUID produtorId,
       @Param("de") LocalDate de,
       @Param("ate") LocalDate ate);
+
+  /**
+   * Só o status da guia, para o "antes" da auditoria (issue #149).
+   *
+   * @param id id da guia
+   * @return o status, se a guia existir
+   */
+  @Query("SELECT g.status FROM GuiaFiscal g WHERE g.id = :id")
+  Optional<StatusGuiaFiscal> findStatusById(@Param("id") UUID id);
 }

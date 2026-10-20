@@ -48,4 +48,15 @@ public record GuiaFiscalResponse(
     OffsetDateTime dataPagamento,
 
     @Schema(description = "Data/hora de criacao da guia")
-    OffsetDateTime createdAt) {}
+    OffsetDateTime createdAt) implements ResultadoAuditavel {
+
+  @Override
+  public UUID recursoAuditado() {
+    return id;
+  }
+
+  @Override
+  public UUID produtorAuditado() {
+    return produtorId;
+  }
+}

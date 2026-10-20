@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0035-registro-auditoria.xml
+         Sprint 8 — issue #149 (logs de auditoria, RNF012).
+
+         Uma linha por operacao critica (criar/editar/excluir/emitir/
+         cancelar nota, guias, reabertura de apuracao, senha, exclusao de
+         dados), com sucesso ou falha. Retencao de 5 anos por job.
+
+         Sem dado pessoal: quem fez (id e papel), sobre o que (tipo e id do
+         recurso, produtor afetado), o estado antes/depois (ex.: status da
+         nota) e o codigo do erro. Nada de nome, documento, e-mail ou corpo
+         da requisicao — e o que permite guardar 5 anos sem conflitar com a
+         exclusao de dados pessoais (#148).
+
+         Sem FK de proposito: o registro precisa sobreviver ao que audita
+         (nota excluida, credencial apagada).
+         ================================================================ -->
+
+    <changeSet id="0035-create-registro-auditoria" author="supersonic-team">
+        <comment>
+            Cria registro_auditoria (quem, o que, sobre qual recurso, resultado) e os indices
+            da consulta por produtor e da retencao.
+        </comment>
+
+        <createTable tableName="registro_auditoria">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ocorrido_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="acao" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recurso" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recurso_id" type="UUID"/>
+            <column name="usuario_id" type="UUID"/>
+            <column name="papel" type="VARCHAR(20)"/>
+            <column name="produtor_id" type="UUID"/>
+            <column name="sucesso" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="codigo_erro" type="VARCHAR(60)"/>
+            <column name="estado_antes" type="VARCHAR(40)"/>
+            <column name="estado_depois" type="VARCHAR(40)"/>
+        </createTable>
+
+        <createIndex tableName="registro_auditoria"
+                     indexName="idx_registro_auditoria_produtor_ocorrido">
+            <column name="produtor_id"/>
+            <column name="ocorrido_em"/>
+        </createIndex>
+
+        <createIndex tableName="registro_auditoria" indexName="idx_registro_auditoria_ocorrido">
+            <column name="ocorrido_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="registro_auditoria"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

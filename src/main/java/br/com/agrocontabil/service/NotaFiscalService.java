@@ -11,12 +11,15 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
@@ -112,6 +115,7 @@ public class NotaFiscalService {
    * @return DTO de resposta com ID gerado e totais calculados
    */
   @Transactional
+  @Auditado(acao = AcaoAuditada.NOTA_CRIADA, recurso = RecursoAuditado.NOTA_FISCAL)
   public NotaFiscalResponse create(NotaFiscalRequest request) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = NotaFiscalMapper.toEntity(request, produtor);
@@ -171,6 +175,7 @@ public class NotaFiscalService {
    * @throws NotaFiscalNaoEditavelException   se o status nao for editavel (409 Conflict)
    */
   @Transactional
+  @Auditado(acao = AcaoAuditada.NOTA_ATUALIZADA, recurso = RecursoAuditado.NOTA_FISCAL)
   public NotaFiscalResponse update(UUID id, NotaFiscalRequest request) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = notaFiscalRepository
@@ -234,6 +239,7 @@ public class NotaFiscalService {
    * @throws NotaFiscalNaoEditavelException se o status nao for editavel (409 Conflict)
    */
   @Transactional
+  @Auditado(acao = AcaoAuditada.NOTA_EXCLUIDA, recurso = RecursoAuditado.NOTA_FISCAL)
   public void delete(UUID id) {
     Produtor produtor = produtorProvider.get();
     NotaFiscal nota = notaFiscalRepository
@@ -284,6 +290,7 @@ public class NotaFiscalService {
    * @throws br.com.agrocontabil.exception.XmlGenerationException
    *         se o XML gerado nao for valido segundo o XSD (422)
    */
+  @Auditado(acao = AcaoAuditada.NOTA_XML_GERADO, recurso = RecursoAuditado.NOTA_FISCAL)
   public NotaFiscalResponse gerarXml(UUID id) {
     Produtor produtor = produtorProvider.get();
 

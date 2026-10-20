@@ -3,11 +3,14 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.dto.LoginRequest;
 import br.com.agrocontabil.dto.UsuarioLogadoResponse;
 import br.com.agrocontabil.exception.CredenciaisInvalidasException;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.security.UsuarioAutenticado;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import br.com.agrocontabil.service.SessaoService.SessaoEmitida;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
@@ -132,6 +135,7 @@ public class LoginService {
   /**
    * Encerra todas as sessões de quem está autenticado (issue #207).
    */
+  @Auditado(acao = AcaoAuditada.SESSOES_ENCERRADAS, recurso = RecursoAuditado.CONTA)
   public void sairDeTodos() {
     sessaoService.encerrarTodas(usuarioProvider.get());
   }

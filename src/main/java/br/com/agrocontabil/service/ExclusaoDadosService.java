@@ -1,7 +1,9 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
@@ -11,6 +13,7 @@ import br.com.agrocontabil.repository.SessaoRefreshRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.UsuarioAutenticado;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -95,6 +98,7 @@ public class ExclusaoDadosService {
    * @throws ResourceNotFoundException se o id não for o de quem está autenticado
    * @throws br.com.agrocontabil.exception.SenhaAtualIncorretaException se a senha não conferir
    */
+  @Auditado(acao = AcaoAuditada.DADOS_PESSOAIS_EXCLUIDOS, recurso = RecursoAuditado.CONTA)
   public void excluir(UUID id, String senha) {
     UsuarioAutenticado usuario = usuarioProvider.get();
     if (!usuario.id().equals(id)) {

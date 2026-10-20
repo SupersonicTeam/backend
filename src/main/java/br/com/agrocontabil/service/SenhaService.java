@@ -3,7 +3,9 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties;
 import br.com.agrocontabil.exception.SenhaAtualIncorretaException;
 import br.com.agrocontabil.exception.TokenRedefinicaoInvalidoException;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.RedefinicaoSenha;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
@@ -11,6 +13,7 @@ import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.TokenOpaco;
 import br.com.agrocontabil.security.UsuarioAutenticado;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -221,6 +224,7 @@ public class SenhaService {
    * @throws SenhaAtualIncorretaException se a senha atual não conferir (ou a conta estiver
    *     bloqueada por tentativas)
    */
+  @Auditado(acao = AcaoAuditada.SENHA_ALTERADA, recurso = RecursoAuditado.CONTA)
   public void alterar(String senhaAtual, String novaSenha) {
     CredencialUsuario credencial = confirmarSenhaAtual(senhaAtual);
 

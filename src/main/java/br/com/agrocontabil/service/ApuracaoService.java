@@ -8,14 +8,17 @@ import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
 import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.DebitoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -335,6 +338,7 @@ public class ApuracaoService {
    * @throws ApuracaoNaoReabrivelException  se o status não for FECHADO (409)
    * @throws ReaberturaForaPrazoException   se o período estiver fora do limite de 3 meses (422)
    */
+  @Auditado(acao = AcaoAuditada.APURACAO_REABERTA, recurso = RecursoAuditado.APURACAO)
   public ApuracaoResponse reabrir(UUID id) {
     Produtor produtor = produtorProvider.get();
     ApuracaoMensal apuracao = apuracaoRepository

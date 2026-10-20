@@ -5,11 +5,14 @@ import br.com.agrocontabil.dto.GuiaFiscalResponse;
 import br.com.agrocontabil.exception.GuiaJaPagaException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.GuiaFiscalMapper;
+import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
+import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -90,6 +93,7 @@ public class GuiaFiscalService {
    * @throws ResourceNotFoundException se o produtorId não for acessível pela identidade autenticada
    *     ou não existir — 404 nos dois casos, para não distinguir um do outro (anti-IDOR)
    */
+  @Auditado(acao = AcaoAuditada.GUIA_CRIADA, recurso = RecursoAuditado.GUIA_FISCAL)
   public GuiaFiscalResponse criar(GuiaFiscalRequest request) {
     Produtor produtor = produtorEmContexto.resolver(request.produtorId());
 
@@ -130,6 +134,7 @@ public class GuiaFiscalService {
    *     autenticado (anti-IDOR — 404, nunca 403)
    * @throws GuiaJaPagaException se a guia já estiver PAGA
    */
+  @Auditado(acao = AcaoAuditada.GUIA_PAGA, recurso = RecursoAuditado.GUIA_FISCAL)
   public GuiaFiscalResponse marcarComoPaga(UUID id) {
     UUID produtorId = produtorProvider.get().getId();
     GuiaFiscal guia = guiaFiscalRepository.findByIdAndProdutorId(id, produtorId)

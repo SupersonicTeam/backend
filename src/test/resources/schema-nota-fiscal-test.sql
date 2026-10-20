@@ -541,3 +541,25 @@ ALTER TABLE redefinicao_senha ADD CONSTRAINT IF NOT EXISTS fk_redefinicao_senha_
     FOREIGN KEY (credencial_id) REFERENCES credencial_usuario (id) ON DELETE CASCADE;
 
 CREATE INDEX IF NOT EXISTS idx_redefinicao_senha_credencial ON redefinicao_senha (credencial_id);
+
+-- Registro de auditoria — Sprint 8 issue #149 (migration 0035). Manter sincronizado com
+-- 0035-registro-auditoria.xml. Sem FK, como em producao.
+CREATE TABLE IF NOT EXISTS registro_auditoria (
+    id             UUID                      NOT NULL,
+    ocorrido_em    TIMESTAMP WITH TIME ZONE  NOT NULL,
+    acao           VARCHAR(40)               NOT NULL,
+    recurso        VARCHAR(20)               NOT NULL,
+    recurso_id     UUID,
+    usuario_id     UUID,
+    papel          VARCHAR(20),
+    produtor_id    UUID,
+    sucesso        BOOLEAN                   NOT NULL,
+    codigo_erro    VARCHAR(60),
+    estado_antes   VARCHAR(40),
+    estado_depois  VARCHAR(40),
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_registro_auditoria_produtor_ocorrido
+    ON registro_auditoria (produtor_id, ocorrido_em);
+CREATE INDEX IF NOT EXISTS idx_registro_auditoria_ocorrido ON registro_auditoria (ocorrido_em);

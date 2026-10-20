@@ -44,4 +44,4 @@ public record CancelamentoResponse(
 
     @Schema(description = "Descricao textual do status do evento",
         example = "Evento registrado e vinculado a NF-e")
-    String sefazMotivo) {}
+    String sefazMotivo) implements ResultadoAuditavel {}
