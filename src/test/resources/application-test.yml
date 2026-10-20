@@ -44,6 +44,9 @@ app:
       cadastro-por-minuto: 100000
       refresh-por-minuto: 100000
       senha-por-minuto: 100000
+    limite:
+      geral-por-minuto: 100000
+      chat-por-minuto: 100000
     # Limpeza das sessoes desligada: os testes chamam o job direto.
     refresh:
       limpeza:

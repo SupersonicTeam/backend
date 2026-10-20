@@ -2,6 +2,7 @@ package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.security.JwtAutenticacaoFilter;
 import br.com.agrocontabil.security.LimiteTaxaAutenticacaoFilter;
+import br.com.agrocontabil.security.LimiteTaxaGeralFilter;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.RotasAutenticacao;
 import br.com.agrocontabil.security.SecurityErrorResponder;
@@ -16,7 +17,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
@@ -90,6 +96,7 @@ public class SecurityConfig {
   private final SecurityErrorResponder errorResponder;
   private final AutenticacaoTokenService autenticacaoTokenService;
   private final ForcaBrutaProperties forcaBruta;
+  private final LimiteTaxaProperties limiteTaxa;
   private final MockIdentidadeFilter mockIdentidadeFilter;
 
   public SecurityConfig(
@@ -97,11 +104,13 @@ public class SecurityConfig {
       SecurityErrorResponder errorResponder,
       AutenticacaoTokenService autenticacaoTokenService,
       ForcaBrutaProperties forcaBruta,
+      LimiteTaxaProperties limiteTaxa,
       @Autowired(required = false) MockIdentidadeFilter mockIdentidadeFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
     this.errorResponder = errorResponder;
     this.autenticacaoTokenService = autenticacaoTokenService;
     this.forcaBruta = forcaBruta;
+    this.limiteTaxa = limiteTaxa;
     this.mockIdentidadeFilter = mockIdentidadeFilter;
   }
 
@@ -148,6 +157,25 @@ public class SecurityConfig {
     if (mockIdentidadeFilter != null) {
       http.addFilterAfter(mockIdentidadeFilter, JwtAutenticacaoFilter.class);
     }
+    // Limite geral (#150) depois de toda identificacao (JWT, mock, anonimo): a chave e a
+    // identidade, nao o IP, quando ha uma. Antes da autorizacao, para nao gastar o resto da cadeia.
+    http.addFilterAfter(
+        new LimiteTaxaGeralFilter(limiteTaxa, errorResponder), AnonymousAuthenticationFilter.class);
+
+    http.headers(headers -> headers
+        // HSTS: o navegador so fala HTTPS com a API por 1 ano. So sai em requisicao segura (atras
+        // do Nginx, o X-Forwarded-Proto do forward-headers-strategy=native faz isSecure valer).
+        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+        .frameOptions(frame -> frame.deny())
+        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
+        .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=()"))
+        // CSP so na API: respostas JSON/PDF nao carregam nada. O Swagger UI (fora de /api) precisa
+        // de script e estilo, e uma CSP global o quebraria.
+        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+            PathPatternRequestMatcher.withDefaults().matcher("/api/**"),
+            new StaticHeadersWriter("Content-Security-Policy",
+                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))));
 
     return http.build();
   }

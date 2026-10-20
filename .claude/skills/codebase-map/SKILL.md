@@ -15,8 +15,9 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 ### `config/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless |
+| `SecurityConfig` | Regras por papel (#93): público só health/OpenAPI/Actuator, `/api/**` exige papel; CSRF off, stateless; headers de segurança (HSTS, DENY, nosniff, no-referrer, Permissions-Policy, CSP só em `/api/**` — #150) |
 | `RefreshProperties` | `app.seguranca.refresh.*` (#207): validade (7d), vida máxima (30d), atributos do cookie, retenção |
+| `LimiteTaxaProperties` | `app.seguranca.limite.*` (#150): geral e chat por minuto, teto de chaves |
 | `ForcaBrutaProperties` | `app.seguranca.forca-bruta.*` (#208): max-falhas, bloqueio, limites por IP por rota, teto de IPs; valores não positivos impedem a subida |
 | `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
@@ -150,6 +151,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `TokenOpaco` | Token de 256 bits (base64url) + SHA-256 hex — fonte única do refresh (#207) e da redefinição (#209) |
 | `CookieRefresh` | Monta/lê/apaga o cookie `agro_refresh` (HttpOnly, Secure, SameSite=Strict, Path=/api/auth) — #207 |
 | `LimitadorTaxa` | Balde de fichas (bucket4j) por chave, em memória, com teto LRU (#208; reusado pelo rate limit da #150) |
+| `LimiteTaxaGeralFilter` | Limite geral `/api/**` 100/min e chat 20/min por identidade (IP sem identidade) — #150; depois da identificação, antes da autorização; não é bean |
 | `LimiteTaxaAutenticacaoFilter` | 429 `MUITAS_TENTATIVAS` + `Retry-After` por IP em login/cadastro/refresh, antes do filtro JWT (#208); não é bean |
 | `RotasAutenticacao` | Fonte única das rotas públicas de autenticação (SecurityConfig + filtros); `caminho(request)` = caminho **decodificado** (comparar o `getRequestURI()` cru deixava `/logi%6E` escapar do limite) |
 | `JwtAutenticacaoFilter` | Bearer → identidade; inválido = 401 na hora (antes do mock); não é bean (instanciado no `SecurityConfig`) |
