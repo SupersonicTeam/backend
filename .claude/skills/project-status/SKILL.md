@@ -51,7 +51,7 @@ Após rodar os comandos, produza um resumo em ~5 bullets:
 ## Contexto fixo (não precisa buscar toda vez)
 
 - Stack: Java 21 + Spring Boot 3.5.14 + PostgreSQL 16
-- Auth: mock até Sprint 8 (`MockProdutorFilter`)
+- Auth: JWT real desde a Sprint 8 (`JwtAutenticacaoFilter`, refresh em cookie); mock `X-Usuario-Id` só em dev/homolog e só sem `Authorization`
 - SEFAZ: transporte plugável; `MockSefazTransport` em uso até Sprint 7
 - Pacotes principais: `controller/`, `service/`, `nfe/`, `danfe/`, `sefaz/`, `exception/`, `common/`
 - Worktrees isolados para cada feature (nunca commitar direto em `main`)

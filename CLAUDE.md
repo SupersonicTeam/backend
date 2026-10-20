@@ -228,10 +228,10 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 1.076 testes, todos passando** (2026-10-15) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 1.261 testes, todos passando** (2026-10-20) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
-## Estado atual — Sprint 7 concluída (2026-10-14)
+## Estado atual — Sprint 8 concluída (2026-10-20)
 
 > Histórico das sprints anteriores abaixo (Sprint 0 → Sprint 3); Sprints 4 e 5, as Ondas, a Sprint 6 (Ceres) e a Sprint 7 no fim desta seção.
 
@@ -388,7 +388,10 @@ Issues #169, #146, #170, #140, #166, #158, #145 e #128; PRs #183–#194. Plano e
 - **RN009 (#145), definida pelo Murillo em 2026-10-14:** Funrural retido pelo comprador (1,5% do produtor PF na venda a empresa ou cooperativa; exportação imune) **e** split payment do IBS/CBS; `RetencaoService`, função `consultarRetencoes` e `FundamentoRetencao` (as duas regras e as citações sempre, em código). Lei 8.212 e Lei 9.528 (art. 6º) entraram na base; o fatiador aprendeu as grafias do consolidado antigo (tachado por estilo, artigo sem hífen, assinatura com "em", "Vigência encerrada" solto).
 - **Transporte SOAP + mTLS da SEFAZ (#128):** `SoapSefazTransport` com `mock.enabled=false`, envio, consulta e cancelamento (evento 110111 assinado), testado contra servidor simulado com mTLS. Ver `docs/sefaz-transporte-soap.md`.
 
-### Sprint 8 — login, JWT e segurança (em andamento; plano em `.specs/features/sprint-8-seguranca/plano.md`)
+### Sprint 8 — login, JWT e segurança (concluída em 2026-10-20; plano em `.specs/features/sprint-8-seguranca/plano.md`)
+
+Issues #205–#209, #150, #148, #149 e #147; PRs #210–#218. Identidade **provada** (JWT) em todo
+ambiente; o mock por header segue só em dev/homolog e cede a qualquer `Authorization`.
 
 Ordem: #205 cadastro → #206 login JWT → #207 refresh → #208 força bruta → #209 senha → #150 rate
 limit → #148 LGPD → #149 auditoria → #147 AES-256. Login por **e-mail**; **CPF/CNPJ obrigatório**
@@ -530,9 +533,9 @@ no cadastro (decisão do Murillo, 2026-10-19).
   - Lock distribuído dos jobs (`ShedLock`) entregue na Onda 5, issue **#87**.
 - **Homologação real da SEFAZ (#128):** o transporte está pronto e testado contra servidor simulado; falta rodar envio, consulta e cancelamento na homologação com cStat reais, o que depende do certificado A1 ICP-Brasil de um emitente de teste, do credenciamento na UF e do truststore da cadeia ICP-Brasil (`docs/sefaz-transporte-soap.md`).
 - **Ceres:** a parte de lei do MISTO recebe só a pergunta legal separada pelo classificador e passou a achar fundamento (Anexo IX, com o "Sim," inicial tirado quando a pergunta é a separada); falta a parte de **dados** do MISTO não afirmar regra legal (M02, M05); o gabarito `2026-10-15.1` aceita o item do Anexo IX além do art. 138 (citação do MISTO 1/7 → 4/7); o desfecho de cada parte está na auditoria (changeSet 0030). Ver `docs/avaliacao/linha-de-base-2026-10-14.md`. E "quanto de IBS eu devo em março?" vai para LEGISLACAO (D06).
-- **Sprint 8 — o que a #93 NÃO cobriu:** login e cadastro, **JWT**, recuperação de senha e rate limiting continuam abertos. A #93 entregou papéis, entidade `Contador`, vínculo e RBAC, mas a identidade ainda é *declarada* no header, não provada. Também abertos: mascarar CPF/CNPJ em logs (LGPD) e lock pessimista contra geração concorrente. (DV de CPF/CNPJ entregue na #18 via `DocumentoFiscalValidator`; `IllegalStateException`→401 entregue na #92.)
+- **Depois da Sprint 8 (#205–#209, #150, #148, #149, #147):** login, JWT, refresh, recuperação de senha, rate limit, LGPD, auditoria e cifra em repouso entregues. Abertos: **verificação de e-mail no cadastro** (depende de SMTP); **profile padrão `dev`** quando `SPRING_PROFILES_ACTIVE` falta (sobe com segredo JWT efêmero, mock de identidade e chave pública de cifra — exigir profile explícito); cifra **sem AAD por coluna** (mesma cifra entre tabelas); **dados das notas e XML assinado em claro**; falha de contador sem `produtor_id` na auditoria; rate limit em memória (por réplica); o Angular ainda não tem tela de login.
 - **Contador ainda não alcança dashboard/apuração/relatório (#93):** esses endpoints não recebem `produtorId` — derivam tudo do produtor autenticado, e um contador ali recebe 403. Liberá-los exige decidir *como* o produtor-alvo entra na requisição (padronizar `produtorId` no path, como no calendário) e ajustar o Angular; fica para a issue do painel do Contador.
-- **Identidade declarada, não provada (Onda 4):** o header `X-Usuario-Id` não é verificado — qualquer cliente pode afirmar ser qualquer produtor. É aceitável porque só existe em `dev`/`homolog`, **nunca em prod**, e some quando o JWT entrar (issue própria de login). Homologação, portanto, não deve receber dados reais de produtor.
+- **Identidade declarada no mock (Onda 4):** em `dev`/`homolog`, requisição **sem** `Authorization` ainda pode declarar identidade por `X-Usuario-Id` (o JWT da #206 tem precedência). Nunca em prod; homologação não deve receber dados reais de produtor.
 - **IE de produtor sem dígito verificador (#88):** não há algoritmo nacional padronizado de DV de Inscrição Estadual (cada UF tem o seu). Só o formato é validado; validação por UF fica para quando houver necessidade real.
 - **Bairro do destinatário (#88):** `EnderecoDestinatario` não modela o bairro e o XSD exige `xBairro` no `enderDest` — o literal `"CENTRO"` permanece nesse grupo. Resolver modelando o campo no domínio e no DTO. (`"S/N"` em `nro` não é placeholder: é a convenção do layout para imóvel sem número.)
 - **Tabela IBGE de municípios (Sprint 7):** a coerência município×UF é verificada só pelo prefixo (2 primeiros dígitos = cUF). A tabela completa dos 5.570 municípios validaria a existência do código.
@@ -546,8 +549,8 @@ Quando a fundação estiver validada, nesta ordem aproximada:
 1. **Observabilidade:** logs estruturados em JSON (logback + encoder), métricas via Micrometer/Prometheus, expor mais endpoints do Actuator com cautela.
 2. **Monitoramento:** Sentry (erros) ou stack Grafana/Loki (logs/métricas).
 3. **CI/CD (GitHub Actions):** rodar testes → build do JAR → build da imagem Docker → deploy automático na VPS.
-4. **Rate limiting** na API (Sprint 8, junto da segurança).
-5. **Auth JWT completa** (Sprint 8): cadastro, login JWT, RBAC produtor/contador, recuperação de senha.
+4. ~~Rate limiting na API~~ — entregue na Sprint 8 (#150; em memória, por réplica — distribuído fica para quando houver 2+ instâncias).
+5. ~~Auth JWT completa~~ — entregue na Sprint 8 (#205–#209).
 6. **Extrair a Ceres (módulo `assistente`) como serviço separado — só sob critério.** Decisão de 2026-09-29: hoje ela é módulo do monólito, e só a inferência roda à parte (Ollama; serviço Python dos classificadores na fase 2). A fronteira é travada pelo `ArquiteturaAssistenteTest` (backend#141): o módulo só fala com o resto do backend pelas interfaces de `assistente.porta`, implementadas em `assistente.adaptador`. Extrair = trocar o adaptador por um cliente HTTP. **Gatilhos:** (a) o chat precisar escalar independente da emissão; (b) outra equipe assumir a IA, com ritmo de deploy próprio; (c) a orquestração migrar para Python; (d) o bulkhead da backend#157 deixar de proteger a emissão em produção. Antes de algum gatilho se confirmar, não extrair: um serviço separado duplicaria a regra fiscal ou exigiria propagar identidade a cada chamada de ferramenta.
 7. **Planos de assinatura com créditos semanais da Ceres (épico SupersonicTeam/Agrocontabil#72).** Decisão de 2026-09-30, no estilo dos planos do Claude: **cobrança mensal, uso limitado por semana, sem limite de janela curta** (nada de reset a cada 5 horas nem teto diário). O uso é medido em **créditos** = (tokens de entrada × peso + tokens de saída × peso) × fator do modelo, então pergunta complexa e modelo maior gastam mais. A **etapa A** (backend#166) entrega o mecanismo de cota com plano padrão por configuração: reserva do teto antes da chamada ao modelo, acerto pelo consumo real, 429 `LIMITE_USO_ASSISTENTE`. A **etapa B** (o épico) traz `Plano` versionado (créditos por semana + modelos permitidos), `Assinatura`, gateway de pagamento e, provavelmente, a entidade `Escritorio` para cota compartilhada entre contadores. Não confundir com o bulkhead (#157) nem com o rate limit (#150), que são proteção técnica.
 
