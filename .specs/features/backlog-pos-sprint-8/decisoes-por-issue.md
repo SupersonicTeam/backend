@@ -86,10 +86,21 @@ agora quebraria o contrato à toa. **[padrão]**
 - Desempenho com 60 meses: **uma** consulta para as apurações persistidas da faixa e **uma**
   agregação `GROUP BY mês` para os meses ainda não consolidados — nunca uma projeção ao vivo por
   mês. **[padrão]**
-- Mês sem nota aparece na lista (a faixa não tem buraco), com zeros e **`quantidadeNotas: 0`**.
-  O frontend mostra **"Sem notas emitidas"** quando `quantidadeNotas == 0` — distinto de um mês
-  com notas e imposto zero. `quantidadeNotas` vale também no `?periodo=` e soma no grupo.
+- Mês sem nota aparece na lista (a faixa não tem buraco), com zeros e **`totalNotas: 0`**.
+  O frontend mostra **"Sem notas emitidas"** quando `totalNotas == 0` — distinto de um mês
+  com notas e imposto zero. `totalNotas` vale também no `?periodo=` e soma no grupo.
   **[Murillo]**
+  - **Reaproveita o `totalNotas`, sem campo `quantidadeNotas`. [Murillo, 2026-10-24]** O
+    `ApuracaoResponse` já tinha `totalNotas` (saídas autorizadas + entradas importadas
+    autorizadas), que já saía 0 no mês sem nota; um segundo campo com o mesmo número só
+    duplicaria o contrato.
+- **Formato do item. [Murillo, 2026-10-24]**
+  - `periodo` do grupo: `2026-07` (MES), `2026-T1` (TRIMESTRE), `2026-S1` (SEMESTRE) e `2026`
+    (ANO).
+  - Todo item, inclusive o do `?periodo=`, traz `inicio` e `fim` (`AAAA-MM`, os meses que a faixa
+    cobre de fato) e `parcial`. No MES, `inicio` = `fim` = o mês.
+  - `dataFechamento` do grupo = o fechamento mais recente dos meses, preenchido só quando todos
+    fecharam; senão `null`.
 - **Não expor `id`** no `ApuracaoResponse` (só depois da #224).
 
 ## #89 — preview de DANFE de rascunho
