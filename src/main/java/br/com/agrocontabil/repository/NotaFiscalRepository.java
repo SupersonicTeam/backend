@@ -249,31 +249,56 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
    * da própria query — um produtor nunca vê o volume de notas de outro.
    *
    * <p>Considera apenas notas {@link br.com.agrocontabil.model.StatusNotaFiscal#AUTORIZADA} com
-   * {@code dataEmissao} em {@code [inicio, fim)}, agrupando por ano/mês (extração {@code year()}/
-   * {@code month()} do HQL, portável entre H2 e PostgreSQL) e por {@code origem}
-   * (PROPRIA = saída, IMPORTADA = entrada). Meses sem notas simplesmente não retornam linha — o
-   * serviço preenche a lacuna com zero. Notas em rascunho, rejeitadas ou canceladas não entram,
-   * mantendo a série coerente com os KPIs de apuração.
+   * {@code dataEmissao} em {@code [inicio, fim)}, agrupando por ano/mês de Brasília e por
+   * {@code origem} (PROPRIA = saída, IMPORTADA = entrada). Meses sem notas simplesmente não
+   * retornam linha — o serviço preenche a lacuna com zero. Notas em rascunho, rejeitadas ou
+   * canceladas não entram, mantendo a série coerente com os KPIs de apuração.
    *
    * @param produtorId identificador do produtor autenticado
    * @param inicio     início do intervalo (inclusivo)
    * @param fim        fim do intervalo (exclusivo)
    * @return contagens por (ano, mês, origem) das notas autorizadas no intervalo
    */
-  @Query("""
-      SELECT new br.com.agrocontabil.repository.NotasPorMesAgregado(
-          year(n.dataEmissao),
-          month(n.dataEmissao),
-          n.origem,
-          COUNT(n))
-      FROM NotaFiscal n
-      WHERE n.produtor.id = :produtorId
-        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
-        AND n.dataEmissao >= :inicio
-        AND n.dataEmissao < :fim
-      GROUP BY year(n.dataEmissao), month(n.dataEmissao), n.origem
+  default List<NotasPorMesAgregado> contarNotasPorMesEOrigem(
+      UUID produtorId, OffsetDateTime inicio, OffsetDateTime fim) {
+    return contarNotasPorMesEOrigemNativo(produtorId, inicio, fim).stream()
+        .map(linha -> new NotasPorMesAgregado(
+            ((Number) linha[0]).intValue(),
+            ((Number) linha[1]).intValue(),
+            OrigemNotaFiscal.valueOf((String) linha[2]),
+            ((Number) linha[3]).longValue()))
+        .toList();
+  }
+
+  /**
+   * Consulta de {@link #contarNotasPorMesEOrigem}; use aquele, que devolve o record.
+   *
+   * <p>SQL nativo de propósito: o mês é o de Brasília ({@code AT TIME ZONE}), como os limites
+   * {@code [início, fim)} que o {@code DashboardService} monta. O {@code year()}/{@code month()} do
+   * HQL extrairia no fuso da sessão do banco (o da JVM, que o pgjdbc envia na conexão; o
+   * {@code hibernate.jdbc.time_zone} não o muda), e com a JVM em UTC uma nota das 22h do último dia
+   * do mês contaria no mês seguinte. H2 e PostgreSQL aceitam a mesma sintaxe.
+   *
+   * @param produtorId identificador do produtor autenticado
+   * @param inicio     início do intervalo (inclusivo)
+   * @param fim        fim do intervalo (exclusivo)
+   * @return uma linha por (ano, mês, origem): {@code [ano, mês, origem, quantidade]}
+   */
+  @Query(nativeQuery = true, value = """
+      SELECT EXTRACT(YEAR FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')) AS ano,
+             EXTRACT(MONTH FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')) AS mes,
+             n.origem AS origem,
+             COUNT(*) AS quantidade
+      FROM nota_fiscal n
+      WHERE n.produtor_id = :produtorId
+        AND n.status = 'AUTORIZADA'
+        AND n.data_emissao >= :inicio
+        AND n.data_emissao < :fim
+      GROUP BY EXTRACT(YEAR FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')),
+               EXTRACT(MONTH FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')),
+               n.origem
       """)
-  List<NotasPorMesAgregado> contarNotasPorMesEOrigem(
+  List<Object[]> contarNotasPorMesEOrigemNativo(
       @Param("produtorId") UUID produtorId,
       @Param("inicio") OffsetDateTime inicio,
       @Param("fim") OffsetDateTime fim);
