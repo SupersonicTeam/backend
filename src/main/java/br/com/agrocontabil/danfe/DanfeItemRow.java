@@ -18,11 +18,17 @@ import lombok.Getter;
 @AllArgsConstructor
 public class DanfeItemRow {
 
-  /** Número sequencial do item na nota. */
-  private final Integer numeroItem;
+  /** Código do produto informado pelo emitente; sem ele, o número do item. */
+  private final String codigo;
 
   /** Descrição do produto/serviço. */
   private final String descricao;
+
+  /** NCM formatado ({@code 0000.00.00}). */
+  private final String ncm;
+
+  /** CFOP da operação do item. */
+  private final String cfop;
 
   /** Unidade comercial (ex.: KG, UN). */
   private final String unidade;
@@ -36,8 +42,14 @@ public class DanfeItemRow {
   /** Valor total do item já formatado. */
   private final String valorTotal;
 
+  /** Alíquota do IBS em percentual já formatada. */
+  private final String aliquotaIbs;
+
   /** Valor do IBS do item já formatado. */
   private final String valorIbs;
+
+  /** Alíquota da CBS em percentual já formatada. */
+  private final String aliquotaCbs;
 
   /** Valor da CBS do item já formatado. */
   private final String valorCbs;
