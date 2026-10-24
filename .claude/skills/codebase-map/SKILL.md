@@ -23,6 +23,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
 | `CriptografiaConfig` / `CriptografiaProperties` | Chave dos dados pessoais em repouso (#147, `app.seguranca.cripto.*`) |
+| `BuscaNotasLegadoRunner` | Preenche na subida a `busca_normalizada` das notas anteriores ao changeSet 0037 com a própria `NormalizacaoBusca` (sem backfill SQL, que divergiria da regra Java), idempotente; `app.notas.busca.preencher-legado` (#174) |
 | `CifragemLegadoRunner` | Cifra na subida as linhas em claro de antes da #147 (`COLUNAS_CIFRADAS`), idempotente |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
@@ -139,6 +140,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `rag/IngestaoLegislacaoService` | `PgVectorStore.add` idempotente pelo hash; nova redação = nova vigência (fecha só o `vigenciaFim` da anterior, ordem que se repara sozinha). `IngestaoLegislacaoRunner` = comando no profile `ingestao` |
 | `rag/BuscaLegislacaoService` | Top-k vigentes na data, com limiar de similaridade (`app.assistente.rag.*`); filtro de vigência via `FilterExpressionBuilder` |
 | `rag/BuscaTextualLegislacaoService` | Busca textual do fallback (issue #146): OU dos lexemas (máx. 20, cada um com `quote_literal`), mínimo de 2 casados, mesma vigência; coluna `conteudo_tsv_sem_acento` (0027). Mapa de acentos travado pelo `BuscaTextualMapaAcentosTest` |
+| `rag/VerificacaoBaseLegislacao` | WARN na subida quando `legislacao_trecho` está vazia (issue #175), só com a Ceres ligada (`spring.ai.model.chat` ≠ `none`) e fora do profile `ingestao`; nunca derruba a subida nem o health |
 | `rag/ValidadorCitacao` | Marca `[Tn]` inexistente ou ausente → "não encontrei fundamento legal"; senão troca a marca pela referência dos metadados e devolve `CitacaoLegal` com link |
 | `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
 | `ferramentas/FerramentasDadosProdutor` | 6 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`, `listarAlertas` — #140). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
@@ -268,17 +270,18 @@ Bean Validation customizada (anotação + validator):
 - `ApiError` — envelope `{ errors: [] }` de resposta de erro
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
+- `NormalizacaoBusca` — minúsculas, sem acento (NFD sem marcas + NFC, para não expandir escritas como o coreano), espaços colapsados, até 600 caracteres; regra única do que vai para `nota_fiscal.busca_normalizada` e do termo buscado (#174) + `escaparLike`
 - `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148)
 - `UfIbge` — cUF das 27 UFs (`Optional`, sem default silencioso) + `prefixoCoerente(codigoIbge, uf)` (issue #88)
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
 ### `repository/`
-`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `ContadorRepository` (`findByCpfCnpj` + `existsByIdAndProdutoresId` — vínculo Contador↔Produtor, issue #93), `CredencialUsuarioRepository` (`findByEmail`, `existsByEmail`, `existsByPapelAndCpfCnpj` — #205; `ProdutorRepository`/`ContadorRepository` ganharam `existsByCpfCnpjIn` p/ checar as grafias com e sem máscara), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
+`NotaFiscalRepository` (paginado + ownership `findByIdAndProdutorId`; `JpaSpecificationExecutor` com as peças de `NotaFiscalEspecificacoes` — `doProdutor` é sempre a base, #174), `NotaFiscalValidacaoRepository`, `ProdutorRepository`, `CfopReferenciaRepository`, `NcmReferenciaRepository`, `AliquotaIbsUfRepository`/`AliquotaCbsRepository` (`findVigente` — lista ordenada por `data_inicio DESC`; só o resolvedor consome), `ContadorRepository` (`findByCpfCnpj` + `existsByIdAndProdutoresId` — vínculo Contador↔Produtor, issue #93), `CredencialUsuarioRepository` (`findByEmail`, `existsByEmail`, `existsByPapelAndCpfCnpj` — #205; `ProdutorRepository`/`ContadorRepository` ganharam `existsByCpfCnpjIn` p/ checar as grafias com e sem máscara), `GuiaFiscalRepository` (ownership `findByIdAndProdutorId` + `findByStatusAndDataVencimentoBefore` p/ job — issue #74; listagem paginada `findByProdutorId(Pageable)` e janela do calendário — issue #103) · e os do scaffolding AI: `ConversaRepository`, `DiagnosticoRepository`, `FeedbackRepository`.
 
 ## Endpoints REST (`/api/notas`)
 | Método | Path | Descrição |
 |--------|------|-----------|
-| GET | `/api/notas` | Lista paginada (produtor autenticado) |
+| GET | `/api/notas` | Lista paginada do produtor autenticado, com filtros `status`/`tipoDocumento`/`emitidaDe`/`emitidaAte`/`busca` (`FiltroNotasRequest` → `NotaFiscalEspecificacoes`, issue #174) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; origem=IMPORTADA) |
@@ -312,5 +315,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0036-dados-pessoais-cifrados` (próximo número livre: **0037**; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0037-nota-fiscal-busca` (próximo número livre: **0038**; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

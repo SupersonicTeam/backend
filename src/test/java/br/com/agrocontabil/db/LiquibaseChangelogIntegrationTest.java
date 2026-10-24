@@ -154,6 +154,42 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0037: busca_normalizada com GIN de trigrama usável no LIKE (#174)")
+  void changeSet0037BuscaDasNotas() throws Exception {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT extname FROM pg_extension"
+        + " WHERE extname IN ('pg_trgm', 'btree_gin') ORDER BY extname", String.class))
+        .containsExactly("btree_gin", "pg_trgm");
+    Map<String, Object> coluna = jdbc.queryForMap("SELECT data_type, character_maximum_length,"
+        + " is_nullable FROM information_schema.columns"
+        + " WHERE table_name = 'nota_fiscal' AND column_name = 'busca_normalizada'");
+    assertThat(coluna).containsEntry("data_type", "character varying")
+        .containsEntry("character_maximum_length", 600).containsEntry("is_nullable", "YES");
+    assertThat(jdbc.queryForObject("SELECT indexdef FROM pg_indexes"
+        + " WHERE indexname = 'idx_nota_fiscal_busca_trgm'", String.class))
+        .contains("USING gin (produtor_id, busca_normalizada gin_trgm_ops)");
+
+    // O LIKE '%termo%' precisa casar com a classe de operador do indice (gin_trgm_ops): sem
+    // varredura sequencial, so o GIN cobre busca_normalizada. Com a tabela vazia o planner
+    // prefere o btree de produtor_id quando ele aparece na consulta, entao aqui vai so o LIKE; o
+    // plano com produtor + LIKE sobre 200 mil notas esta medido no PR da #174.
+    try (var conexao = dataSource.getConnection(); var comando = conexao.createStatement()) {
+      conexao.setAutoCommit(false);
+      comando.execute("SET LOCAL enable_seqscan = off");
+      StringBuilder plano = new StringBuilder();
+      try (var linhas = comando.executeQuery("EXPLAIN SELECT id FROM nota_fiscal"
+          + " WHERE busca_normalizada LIKE '%cooperativa%'")) {
+        while (linhas.next()) {
+          plano.append(linhas.getString(1)).append('\n');
+        }
+      }
+      conexao.rollback();
+      assertThat(plano.toString()).contains("idx_nota_fiscal_busca_trgm");
+    }
+  }
+
+  @Test
   @DisplayName("changeSet 0030: desfecho por parte do MISTO, nulo fora dele, sem texto")
   void changeSet0030PartesDoMisto() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

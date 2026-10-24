@@ -28,6 +28,10 @@ spring:
       embedding: none
 
 app:
+  # O schema H2 nasce depois do contexto (script @Sql): o teste do preenchimento o chama direto.
+  notas:
+    busca:
+      preencher-legado: false
   cors:
     allowed-origins: http://localhost:4200
   # BCrypt no custo minimo: o custo de producao (12) somaria segundos a cada teste de cadastro.

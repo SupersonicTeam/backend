@@ -177,6 +177,11 @@ Com o modelo fora, a Ceres responde **sem gerar texto**, parte por parte (`Orque
 
 ### Ingestão (comando manual, nunca endpoint)
 
+Um banco novo vem com `legislacao_trecho` vazia: a ingestão é passo obrigatório ao montar o
+ambiente (roteiro no `README.md`). Com a base vazia a `RotaLegislacao` responde "não encontrei
+fundamento legal" sem chamar o modelo, e a `VerificacaoBaseLegislacao` loga um `WARN` na subida
+(só com a Ceres ligada e fora do profile `ingestao`; nunca derruba a subida nem o health — #175).
+
 1. Salve o **texto compilado** da norma a partir do Planalto (ex.:
    `https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm` e
    `https://www.planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc132.htm`) e anote a data de

@@ -219,6 +219,11 @@ management:
 
 # Configuracoes da aplicacao (namespace proprio)
 app:
+  # Busca das notas (issue #174): preenche na subida a busca_normalizada das notas gravadas antes
+  # do changeSet 0037, com a mesma normalizacao Java da gravacao (NormalizacaoBusca).
+  notas:
+    busca:
+      preencher-legado: ${NOTAS_BUSCA_PREENCHER_LEGADO:true}
   cors:
     # Lista separada por virgula; sobrescrita por APP_CORS_ALLOWED_ORIGINS em prod.
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
