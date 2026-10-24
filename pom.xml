@@ -372,4 +372,25 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<!--
+			A aplicacao nao sobe sem profile de ambiente explicito (issue #219). Para o desenvolvimento
+			local nao depender disso, o spring-boot:run ativa dev quando SPRING_PROFILES_ACTIVE nao esta
+			definida. E propriedade, e nao <profiles> na configuracao do plugin, para que
+			-Dspring-boot.run.profiles=dev,ingestao (ou dev,avaliacao) continue sobrepondo. So vale
+			para o spring-boot:run: o JAR e a imagem Docker exigem a variavel.
+		-->
+		<profile>
+			<id>spring-boot-run-dev</id>
+			<activation>
+				<property>
+					<name>!env.SPRING_PROFILES_ACTIVE</name>
+				</property>
+			</activation>
+			<properties>
+				<spring-boot.run.profiles>dev</spring-boot.run.profiles>
+			</properties>
+		</profile>
+	</profiles>
+
 </project>

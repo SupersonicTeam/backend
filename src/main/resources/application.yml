@@ -1,10 +1,12 @@
 # Configuracao base — compartilhada por todos os profiles.
-# Profile ativo definido por SPRING_PROFILES_ACTIVE (default: dev).
+# Profile ativo: SPRING_PROFILES_ACTIVE, SEM default (issue #219). Sem exatamente um profile de
+# ambiente (dev | homolog | prod | test) a aplicacao recusa a subida — ver
+# ProfileObrigatorioEnvironmentPostProcessor. Local, ./mvnw spring-boot:run ja ativa dev (pom.xml).
+# Nunca recolocar spring.profiles.active aqui: o antigo default dev ligava, num deploy sem a
+# variavel, segredo JWT efemero, identidade por header e chave de cifra de desenvolvimento.
 spring:
   application:
     name: agrocontabil-backend
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   data:
     web:
