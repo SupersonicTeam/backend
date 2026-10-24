@@ -18,6 +18,23 @@ class NormalizacaoBuscaTest {
   }
 
   @Test
+  @DisplayName("Escrita que o NFD decompõe sem acento (coreano) volta ao tamanho original")
+  void naoExpandeTexto() {
+    String hangul = "한국".repeat(100);
+
+    assertThat(NormalizacaoBusca.normalizar(hangul)).isEqualTo(hangul);
+    assertThat(NormalizacaoBusca.normalizar("Kråkeslottet Łódź"))
+        .isEqualTo("krakeslottet łodz");
+  }
+
+  @Test
+  @DisplayName("O texto juntado nunca passa do tamanho da coluna")
+  void juntarRespeitaOTamanhoDaColuna() {
+    assertThat(NormalizacaoBusca.juntar("a".repeat(400), "b".repeat(400)))
+        .hasSize(NormalizacaoBusca.TAMANHO_MAXIMO);
+  }
+
+  @Test
   @DisplayName("Junta as partes ignorando as nulas")
   void juntaPartes() {
     assertThat(NormalizacaoBusca.juntar(123L, "José", null, "Venda de Soja"))

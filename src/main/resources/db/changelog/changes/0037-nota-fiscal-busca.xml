@@ -12,8 +12,10 @@
          busca_normalizada: numero + nome do destinatario + natureza da
          operacao, em minusculas e sem acento. Mantida pela APLICACAO
          (NotaFiscal @PrePersist/@PreUpdate, NormalizacaoBusca) — a mesma
-         regra no PostgreSQL e no H2; aqui so o backfill das notas que ja
-         existem, com o mesmo mapa de acentos da 0027.
+         regra no PostgreSQL e no H2. Sem backfill em SQL de proposito: um
+         translate() so cobre as letras do mapa e divergiria da regra Java
+         (NFD sem marcas + NFC). As notas que ja existem sao preenchidas na
+         subida pelo BuscaNotasLegadoRunner, com a propria NormalizacaoBusca.
 
          Indice GIN de trigrama composto (produtor_id, busca_normalizada):
          atende produtor_id = ? AND busca_normalizada LIKE '%termo%' sem ler
@@ -48,25 +50,6 @@
         </addColumn>
         <rollback>
             <dropColumn tableName="nota_fiscal" columnName="busca_normalizada"/>
-        </rollback>
-    </changeSet>
-
-    <changeSet id="0037-nota-fiscal-busca-backfill" author="supersonic-team" dbms="postgresql">
-        <comment>
-            Preenche busca_normalizada das notas existentes com a regra da
-            NormalizacaoBusca: sem acento, minusculas, espacos colapsados.
-        </comment>
-        <sql>
-            UPDATE nota_fiscal
-               SET busca_normalizada = lower(translate(
-                     btrim(regexp_replace(
-                       concat_ws(' ', numero::text, destinatario_nome, natureza_operacao),
-                       '\s+', ' ', 'g')),
-                     'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ',
-                     'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN'))
-        </sql>
-        <rollback>
-            <sql>UPDATE nota_fiscal SET busca_normalizada = NULL</sql>
         </rollback>
     </changeSet>
 

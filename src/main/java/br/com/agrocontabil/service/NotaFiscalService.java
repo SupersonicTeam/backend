@@ -185,8 +185,11 @@ public class NotaFiscalService {
         && filtro.emitidaDe().isAfter(filtro.emitidaAte())) {
       throw FiltroNotasInvalidoException.faixaInvertida(filtro.emitidaDe(), filtro.emitidaAte());
     }
-    if (filtro.status() != null && !filtro.status().isEmpty()) {
-      consulta = consulta.and(NotaFiscalEspecificacoes.comStatus(filtro.status()));
+    // ?status= vazio chega como lista com nulo: IN (null) nao casaria nada e zeraria a lista.
+    List<StatusNotaFiscal> status = filtro.status() == null ? List.of()
+        : filtro.status().stream().filter(Objects::nonNull).toList();
+    if (!status.isEmpty()) {
+      consulta = consulta.and(NotaFiscalEspecificacoes.comStatus(status));
     }
     if (filtro.tipoDocumento() != null) {
       consulta = consulta.and(NotaFiscalEspecificacoes.doTipo(filtro.tipoDocumento()));
@@ -206,14 +209,17 @@ public class NotaFiscalService {
 
   /**
    * Termo de 3+ caracteres casa o texto pesquisável; termo só de dígitos mais curto casa o número
-   * da nota por prefixo; texto mais curto é ignorado (o trigrama não ajuda abaixo de 3).
+   * da nota por prefixo; texto mais curto é ignorado (o trigrama não ajuda abaixo de 3). Dígitos
+   * com zero à esquerda não são prefixo de número de nota: ignorados como o texto curto, em vez de
+   * zerar a lista.
    */
   private static Specification<NotaFiscal> busca(String termoBruto) {
     String termo = NormalizacaoBusca.normalizar(termoBruto);
     if (termo.length() >= BUSCA_MINIMA) {
       return NotaFiscalEspecificacoes.contendo(NormalizacaoBusca.escaparLike(termo));
     }
-    if (!termo.isEmpty() && termo.chars().allMatch(Character::isDigit)) {
+    if (!termo.isEmpty() && termo.charAt(0) != '0'
+        && termo.chars().allMatch(c -> c >= '0' && c <= '9')) {
       return NotaFiscalEspecificacoes.numeroComPrefixo(termo);
     }
     return null;

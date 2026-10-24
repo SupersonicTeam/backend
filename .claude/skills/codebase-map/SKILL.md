@@ -23,6 +23,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
 | `CriptografiaConfig` / `CriptografiaProperties` | Chave dos dados pessoais em repouso (#147, `app.seguranca.cripto.*`) |
+| `BuscaNotasLegadoRunner` | Preenche na subida a `busca_normalizada` das notas anteriores ao changeSet 0037 com a própria `NormalizacaoBusca` (sem backfill SQL, que divergiria da regra Java), idempotente; `app.notas.busca.preencher-legado` (#174) |
 | `CifragemLegadoRunner` | Cifra na subida as linhas em claro de antes da #147 (`COLUNAS_CIFRADAS`), idempotente |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
@@ -266,7 +267,7 @@ Bean Validation customizada (anotação + validator):
 - `ApiError` — envelope `{ errors: [] }` de resposta de erro
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
-- `NormalizacaoBusca` — minúsculas, sem acento, espaços colapsados; regra única do que vai para `nota_fiscal.busca_normalizada` e do termo buscado (#174) + `escaparLike`
+- `NormalizacaoBusca` — minúsculas, sem acento (NFD sem marcas + NFC, para não expandir escritas como o coreano), espaços colapsados, até 600 caracteres; regra única do que vai para `nota_fiscal.busca_normalizada` e do termo buscado (#174) + `escaparLike`
 - `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148)
 - `UfIbge` — cUF das 27 UFs (`Optional`, sem default silencioso) + `prefixoCoerente(codigoIbge, uf)` (issue #88)
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)

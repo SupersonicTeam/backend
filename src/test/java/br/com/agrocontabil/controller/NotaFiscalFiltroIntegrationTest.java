@@ -221,6 +221,42 @@ class NotaFiscalFiltroIntegrationTest {
   }
 
   @Test
+  @DisplayName("Termo numérico curto com zero à esquerda é ignorado, como o texto curto")
+  void termoNumericoCurtoComZeroEhIgnorado() throws Exception {
+    nota(produtorA, 1L, "Cooperativa", "Venda", dia(2026, 9, 1));
+    nota(produtorA, 2L, "Laticínio", "Venda", dia(2026, 9, 1));
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "0"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(2));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "05"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(2));
+  }
+
+  @Test
+  @DisplayName("status vazio (?status=) não filtra")
+  void statusVazioNaoFiltra() throws Exception {
+    nota(produtorA, 1L, "A", "Venda", dia(2026, 9, 1));
+    nota(produtorA, 2L, "B", "Venda", dia(2026, 9, 1));
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("status", ""))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(2));
+  }
+
+  @Test
+  @DisplayName("Destinatário longo em escrita que o NFD expande (coreano) grava e é achado")
+  void nomeQueExpandeNoNfdGravaEEhAchado() throws Exception {
+    // 255 sílabas Hangul viravam 765 jamo no NFD e estouravam busca_normalizada (600).
+    nota(produtorA, 1L, "한".repeat(255), "Venda de produção rural", dia(2026, 9, 1));
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "한".repeat(3)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1));
+  }
+
+  @Test
   @DisplayName("Curinga do LIKE no termo é texto, não curinga")
   void curingaNoTermoEhLiteral() throws Exception {
     nota(produtorA, 1L, "Cooperativa", "Venda", dia(2026, 9, 1));
