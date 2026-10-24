@@ -52,6 +52,33 @@ A API sobe em `http://localhost:8080`.
 
 > **Ceres (assistente fiscal):** o Ollama fica no profile `ia` do compose e não sobe por padrão. Para usar a Ceres em dev: `docker compose --profile ia up -d` (a primeira subida baixa ~4 GB de modelos). Sem ele, o resto do backend funciona normalmente. Detalhes em [`docs/ceres-assistente.md`](docs/ceres-assistente.md).
 
+### Ambiente novo: ingerir a legislação (uma vez)
+
+A base de legislação que a Ceres cita (`legislacao_trecho`) **não** é criada pelo Liquibase nem
+pela subida: é carregada por um comando de manutenção, e um banco recém-criado vem vazio. Sem
+ela a Ceres não inventa nada, mas responde "não encontrei fundamento legal" a toda pergunta de
+lei e o frontend nunca mostra citação. Na subida com a Ceres ligada, a aplicação loga um `WARN`
+`Base de legislacao vazia` quando falta esse passo (issue #175).
+
+1. Suba Postgres e Ollama: `docker compose --profile ia up -d`.
+2. Salve o texto compilado de cada norma a partir do Planalto, sem converter o charset.
+3. Rode o comando de ingestão uma vez por norma (idempotente; comando completo, com os
+   parâmetros de cada uma, em [`docs/ceres-assistente.md`](docs/ceres-assistente.md#ingestão-comando-manual-nunca-endpoint)):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ingestao -Dspring-boot.run.arguments="--ingestao.arquivo=/caminho/lcp214.htm --ingestao.norma='LC 214/2025' --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm --ingestao.data-captura=2026-09-29 --ingestao.vigencia-inicio=2025-01-16"
+```
+
+| Norma | Página no Planalto | `vigencia-inicio` |
+|---|---|---|
+| LC 214/2025 | `ccivil_03/leis/lcp/lcp214.htm` | 2025-01-16 |
+| EC 132/2023 | `ccivil_03/constituicao/emendas/emc/emc132.htm` | 2023-12-21 |
+| LC 227/2026 | `ccivil_03/leis/lcp/lcp227.htm` | 2026-01-14 |
+| Lei 8.212/1991 | `ccivil_03/leis/l8212cons.htm` | 1991-07-25 |
+| Lei 9.528/1997 (só `--ingestao.somente='art. 6º'`) | `ccivil_03/leis/l9528.htm` | 1997-12-11 |
+
+4. Confira: `SELECT norma, count(*) FROM legislacao_trecho GROUP BY norma;` deve listar as cinco.
+
 ## Testes
 
 ```bash

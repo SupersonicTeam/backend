@@ -138,6 +138,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `rag/IngestaoLegislacaoService` | `PgVectorStore.add` idempotente pelo hash; nova redação = nova vigência (fecha só o `vigenciaFim` da anterior, ordem que se repara sozinha). `IngestaoLegislacaoRunner` = comando no profile `ingestao` |
 | `rag/BuscaLegislacaoService` | Top-k vigentes na data, com limiar de similaridade (`app.assistente.rag.*`); filtro de vigência via `FilterExpressionBuilder` |
 | `rag/BuscaTextualLegislacaoService` | Busca textual do fallback (issue #146): OU dos lexemas (máx. 20, cada um com `quote_literal`), mínimo de 2 casados, mesma vigência; coluna `conteudo_tsv_sem_acento` (0027). Mapa de acentos travado pelo `BuscaTextualMapaAcentosTest` |
+| `rag/VerificacaoBaseLegislacao` | WARN na subida quando `legislacao_trecho` está vazia (issue #175), só com a Ceres ligada (`spring.ai.model.chat` ≠ `none`) e fora do profile `ingestao`; nunca derruba a subida nem o health |
 | `rag/ValidadorCitacao` | Marca `[Tn]` inexistente ou ausente → "não encontrei fundamento legal"; senão troca a marca pela referência dos metadados e devolve `CitacaoLegal` com link |
 | `PromptsCeres` | Instruções de sistema (orientam; as garantias estão em código) |
 | `ferramentas/FerramentasDadosProdutor` | 6 funções `@Tool` (`totalComprasPorInsumo`, `consultarApuracao`, `consultarCreditos`, `listarNotas`, `proximosVencimentos`, `listarAlertas` — #140). **Nenhum parâmetro de produtor**; valida parâmetros antes de consultar; DTOs enxutos em `RespostasFerramentas` (issues #142/#143) |
