@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,7 +23,8 @@ import org.springframework.data.repository.query.Param;
  * <p>Fornece acesso paginado às notas de um produtor específico e busca segura
  * por ID vinculada ao produtor, evitando acesso cruzado entre produtores.
  */
-public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
+public interface NotaFiscalRepository
+    extends JpaRepository<NotaFiscal, UUID>, JpaSpecificationExecutor<NotaFiscal> {
 
   /**
    * Retorna todas as notas fiscais de um produtor de forma paginada.

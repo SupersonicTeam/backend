@@ -4,6 +4,7 @@ import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.CancelamentoRequest;
 import br.com.agrocontabil.dto.CancelamentoResponse;
 import br.com.agrocontabil.dto.ImportacaoNotaResultado;
+import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
@@ -77,19 +78,26 @@ public class NotaFiscalController {
   }
 
   /**
-   * Lista as notas fiscais do produtor autenticado, paginadas.
+   * Lista as notas fiscais do produtor autenticado, paginadas e filtradas (issue #174).
    */
   @GetMapping
   @Operation(
-      summary = "Lista notas fiscais paginadas",
-      description = "Retorna todas as notas do produtor autenticado. "
-          + "Suporta paginacao e ordenacao via parametros do Pageable.")
+      summary = "Lista notas fiscais paginadas, com filtros",
+      description = "Notas do produtor autenticado. Filtros opcionais e combinaveis: status "
+          + "(repetivel, OU), tipoDocumento, emitidaDe/emitidaAte (dias inclusivos, Brasilia) e "
+          + "busca (numero, destinatario ou natureza da operacao; sem acento nem caixa). "
+          + "totalElements reflete o filtro. sort aceita dataEmissao, numero, status, valorTotal "
+          + "e createdAt.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+      @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+      @ApiResponse(responseCode = "400",
+          description = "Faixa invertida ou sort nao permitido (FILTRO_NOTAS_INVALIDO), "
+              + "ou parametro invalido (VALIDATION_ERROR)")
   })
   public ResponseEntity<Page<NotaFiscalResponse>> listAll(
+      @Valid @ParameterObject FiltroNotasRequest filtro,
       @ParameterObject Pageable pageable) {
-    return ResponseEntity.ok(notaFiscalService.findAll(pageable));
+    return ResponseEntity.ok(notaFiscalService.findAll(filtro, pageable));
   }
 
   /**

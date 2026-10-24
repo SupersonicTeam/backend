@@ -1,5 +1,6 @@
 package br.com.agrocontabil.model;
 
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.sefaz.SefazAmbiente;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -326,6 +327,20 @@ public class NotaFiscal {
   @Column(name = "version", nullable = false)
   private Long version;
 
+  /**
+   * Texto pesquisável da nota (issue #174): número, nome do destinatário e natureza da operação,
+   * em minúsculas e sem acento ({@link NormalizacaoBusca}). Mantido pela aplicação em
+   * {@code @PrePersist}/{@code @PreUpdate} — nunca escrito por fora — e indexado por trigrama no
+   * PostgreSQL (changeSet 0037), o que deixa a busca parcial do {@code GET /api/notas} fora da
+   * varredura da tabela.
+   *
+   * <p>Guarda o nome do destinatário em claro, como a própria coluna {@code destinatario_nome}.
+   * Se os dados das notas forem cifrados (débito da #147), esta coluna entra na mesma decisão:
+   * busca parcial e cifra determinística não convivem.
+   */
+  @Column(name = "busca_normalizada", length = 600)
+  private String buscaNormalizada;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 
@@ -336,11 +351,18 @@ public class NotaFiscal {
   protected void onCreate() {
     createdAt = OffsetDateTime.now();
     updatedAt = OffsetDateTime.now();
+    atualizarBuscaNormalizada();
   }
 
   @PreUpdate
   protected void onUpdate() {
     updatedAt = OffsetDateTime.now();
+    atualizarBuscaNormalizada();
+  }
+
+  /** Recalcula {@link #buscaNormalizada} a partir dos campos pesquisáveis (issue #174). */
+  void atualizarBuscaNormalizada() {
+    buscaNormalizada = NormalizacaoBusca.juntar(numero, destinatarioNome, naturezaOperacao);
   }
 
   // -------------------------------------------------------------------------

@@ -77,6 +77,11 @@ public enum ErrorCode {
    * o máximo permitido (issue #103). HTTP 400.
    */
   JANELA_CALENDARIO_INVALIDA,
+  /**
+   * Filtro de {@code GET /api/notas} inválido: {@code emitidaDe} depois de {@code emitidaAte} ou
+   * ordenação por propriedade fora da lista permitida (issue #174). HTTP 400.
+   */
+  FILTRO_NOTAS_INVALIDO,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:
