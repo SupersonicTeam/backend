@@ -170,7 +170,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 ### `danfe/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `DanfePdfService` | Gera PDF via JasperReports (`.jrxml` em resources); `gerarPreview` = mesma DANFE com o parâmetro `MARCA_DAGUA` (banda `background`) e a chave em branco (issue #89) |
+| `DanfePdfService` | Gera PDF via JasperReports (`reports/danfe.jrxml`, layout do DANFE oficial com IBS/CBS: emitente com logo `reports/agrocontabil-logo.png` e endereço, chave em blocos, protocolo, destinatário completo, cálculo do imposto, itens com NCM/CFOP/alíquotas, dados adicionais; "Página X de Y" pela variável `PAGINA_ATUAL` — `PAGE_COUNT` conta registros, não páginas). Toda formatação (CPF/CNPJ, CEP, NCM, chave, moeda, datas em Brasília) é feita aqui; `gerarPreview` = mesma DANFE com `MARCA_DAGUA`, chave e protocolo em branco e aviso nas informações complementares (issue #89) |
 | `DanfeItemRow` | DTO de linha de item para o relatório Jasper |
 
 ### `sefaz/`

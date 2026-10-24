@@ -2,19 +2,27 @@ package br.com.agrocontabil.danfe;
 
 import br.com.agrocontabil.exception.DanfeGenerationException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
+import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperExportManager;
 import net.sf.jasperreports.engine.JasperFillManager;
@@ -49,6 +57,19 @@ public class DanfePdfService {
   private static final Locale BR = Locale.of("pt", "BR");
   private static final DateTimeFormatter DATA_FMT =
       DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+  private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
+
+  /** Marca do AgroContábil no cabeçalho (classpath; o JasperReports carrega pelo nome). */
+  private static final String LOGO = "reports/agrocontabil-logo.png";
+
+  /** Base legal do bloco de imposto, nas informações complementares. */
+  private static final String INFO_REFORMA = "Tributos da reforma tributária do consumo:"
+      + " IBS e CBS calculados conforme a EC 132/2023 e a LC 214/2025.";
+
+  /** Aviso do preview nas informações complementares (issue #89). */
+  private static final String INFO_PREVIEW = "PRÉ-VISUALIZAÇÃO SEM VALOR FISCAL: nota ainda não"
+      + " emitida. Chave de acesso, protocolo e assinatura só existem depois da geração do XML e"
+      + " da autorização na SEFAZ. ";
 
   /** Cache do template compilado (double-checked locking). */
   private volatile JasperReport compiledReport;
@@ -56,8 +77,8 @@ public class DanfePdfService {
   /**
    * Gera o PDF da DANFE para a nota informada.
    *
-   * <p>Deve ser chamado dentro de uma transação ativa: acessa a coleção de itens (lazy)
-   * da nota.
+   * <p>A nota precisa chegar com itens e produtor já carregados (o {@code NotaFiscalService}
+   * usa o {@code JOIN FETCH} da emissão, #99): a geração roda fora de transação.
    *
    * @param nota nota fiscal com produtor, itens e totais carregados
    * @return bytes do PDF gerado
@@ -81,7 +102,10 @@ public class DanfePdfService {
    */
   public byte[] gerarPreview(NotaFiscal nota) {
     Map<String, Object> params = montarParametros(nota);
-    params.put("CHAVE_ACESSO", "");
+    params.put("CHAVE_ACESSO", "—");
+    params.put("CONSULTA_CHAVE", "A chave de acesso é gerada na emissão do XML.");
+    params.put("PROTOCOLO", "Não autorizada (pré-visualização)");
+    params.put("INFO_COMPLEMENTAR", INFO_PREVIEW + INFO_REFORMA);
     params.put("MARCA_DAGUA", MARCA_DAGUA_RASCUNHO);
     return gerar(nota, params);
   }
@@ -128,29 +152,78 @@ public class DanfePdfService {
   /** Monta os parâmetros escalares do relatório a partir da nota. */
   private Map<String, Object> montarParametros(NotaFiscal nota) {
     Map<String, Object> params = new HashMap<>();
-    params.put("TITULO", "DANFE");
-    params.put("NUMERO", nota.getNumero() != null ? String.valueOf(nota.getNumero()) : "");
+    params.put("LOGO", LOGO);
+    params.put("NUMERO", numeroDocumento(nota.getNumero()));
     params.put("SERIE", nota.getSerie() != null ? String.valueOf(nota.getSerie()) : "");
     params.put("MODELO", nota.getModelo());
+    params.put("TIPO_OPERACAO", tipoOperacao(nota));
+    params.put("TIPO_DOCUMENTO",
+        nota.getTipoDocumento() == TipoDocumentoFiscal.NFA ? "NFA (nota avulsa)" : "NF-e");
     params.put("NAT_OPERACAO", nota.getNaturezaOperacao());
-    params.put("CHAVE_ACESSO", nota.getChaveAcesso());
+    params.put("CHAVE_ACESSO", chave(nota.getChaveAcesso()));
+    params.put("CONSULTA_CHAVE", nota.getChaveAcesso() != null
+        ? "Consulta de autenticidade no portal nacional da NF-e (www.nfe.fazenda.gov.br/portal)"
+            + " ou no site da SEFAZ autorizadora."
+        : "A chave de acesso é gerada na emissão do XML.");
+    params.put("PROTOCOLO", protocolo(nota));
     params.put("DATA_EMISSAO", formatarData(nota.getDataEmissao()));
-    params.put("STATUS", nota.getStatus() != null ? nota.getStatus().name() : "");
+    params.put("DATA_SAIDA", formatarData(nota.getDataSaida()));
+    params.put("SITUACAO", nota.getStatus() != null
+        ? nota.getStatus().name().replace('_', ' ') : "");
+    params.put("ORIGEM", nota.getOrigem() == OrigemNotaFiscal.IMPORTADA
+        ? "Importada (nota de terceiro)" : "Emitida pelo produtor");
 
-    Produtor emit = nota.getProdutor();
-    params.put("EMIT_NOME", emit != null ? emit.getNomeCompleto() : "");
-    params.put("EMIT_CPF_CNPJ", emit != null ? emit.getCpfCnpj() : "");
-    params.put("EMIT_ESTADO", emit != null ? emit.getEstado() : "");
+    montarEmitente(nota, params);
 
     params.put("DEST_NOME", nota.getDestinatarioNome());
-    params.put("DEST_CPF_CNPJ", nota.getDestinatarioCpfCnpj());
-    params.put("DEST_ENDERECO", formatarEndereco(nota.getDestinatarioEndereco()));
+    params.put("DEST_CPF_CNPJ", documento(nota.getDestinatarioCpfCnpj()));
+    params.put("DEST_IE", nota.getDestinatarioIe());
+    EnderecoDestinatario dest = nota.getDestinatarioEndereco();
+    if (dest != null) {
+      params.put("DEST_ENDERECO", juntar(", ", dest.getLogradouro(), dest.getNumero()));
+      params.put("DEST_MUNICIPIO", dest.getMunicipio());
+      params.put("DEST_UF", dest.getUf());
+      params.put("DEST_CEP", cep(dest.getCep()));
+      params.put("DEST_IBGE", dest.getCodigoMunicipioIbge());
+    }
 
+    params.put("BASE_IBS_CBS", moeda(baseIbsCbs(nota)));
     params.put("TOTAL_PRODUTOS", moeda(nota.getValorTotalProdutos()));
     params.put("TOTAL_IBS", moeda(nota.getValorTotalIbs()));
     params.put("TOTAL_CBS", moeda(nota.getValorTotalCbs()));
     params.put("TOTAL_NOTA", moeda(nota.getValorTotalNota()));
+    params.put("INFO_COMPLEMENTAR", INFO_REFORMA);
+    params.put("GERADO_EM", ZonedDateTime.now(BRASILIA).format(DATA_FMT));
     return params;
+  }
+
+  /**
+   * Emitente: o produtor nas notas próprias; o terceiro (só nome e documento, do XML importado) nas
+   * notas de entrada importadas.
+   */
+  private void montarEmitente(NotaFiscal nota, Map<String, Object> params) {
+    if (nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
+      params.put("EMIT_NOME", nota.getEmitenteNome());
+      params.put("EMIT_CPF_CNPJ", documento(nota.getEmitenteCpfCnpj()));
+      return;
+    }
+    Produtor emit = nota.getProdutor();
+    if (emit == null) {
+      return;
+    }
+    params.put("EMIT_NOME", emit.getNomeCompleto());
+    params.put("EMIT_CPF_CNPJ", documento(emit.getCpfCnpj()));
+    params.put("EMIT_IE", emit.getInscricaoEstadual());
+    EnderecoProdutor end = emit.getEndereco();
+    if (end != null) {
+      params.put("EMIT_ENDERECO", juntar(" - ",
+          juntar(", ", end.getLogradouro(), end.getNumero()), end.getComplemento()));
+      params.put("EMIT_BAIRRO_CEP", juntar(" - ", end.getBairro(),
+          end.getCep() != null ? "CEP " + cep(end.getCep()) : null));
+      params.put("EMIT_MUNICIPIO_UF", juntar(" - ", end.getMunicipio(), emit.getEstado()));
+    } else {
+      params.put("EMIT_MUNICIPIO_UF", emit.getEstado());
+    }
   }
 
   /** Converte os itens da nota em linhas formatadas para o datasource. */
@@ -158,16 +231,43 @@ public class DanfePdfService {
     List<DanfeItemRow> rows = new ArrayList<>();
     for (NotaFiscalItem item : nota.getItens()) {
       rows.add(new DanfeItemRow(
-          item.getNumeroItem(),
+          item.getCodigoProduto() != null && !item.getCodigoProduto().isBlank()
+              ? item.getCodigoProduto() : String.valueOf(item.getNumeroItem()),
           item.getDescricao(),
+          ncm(item.getNcm()),
+          item.getCfop(),
           item.getUnidade(),
           quantidade(item.getQuantidade()),
           moeda(item.getValorUnitario()),
           moeda(item.getValorTotal()),
+          percentual(item.getAliquotaIbs()),
           moeda(item.getValorIbs()),
+          percentual(item.getAliquotaCbs()),
           moeda(item.getValorCbs())));
     }
     return rows;
+  }
+
+  /** "1 - SAÍDA" ou "0 - ENTRADA", pelo CFOP do primeiro item (1/2/3 = entrada). */
+  private static String tipoOperacao(NotaFiscal nota) {
+    String cfop = nota.getItens().isEmpty() ? null : nota.getItens().get(0).getCfop();
+    boolean entrada = cfop != null && !cfop.isEmpty() && "123".indexOf(cfop.charAt(0)) >= 0;
+    return entrada ? "0 - ENTRADA" : "1 - SAÍDA";
+  }
+
+  /** Protocolo e data da autorização; sem autorização, o aviso. */
+  private String protocolo(NotaFiscal nota) {
+    if (nota.getProtocoloAutorizacao() == null) {
+      return "Não autorizada";
+    }
+    return nota.getDataAutorizacao() == null ? nota.getProtocoloAutorizacao()
+        : nota.getProtocoloAutorizacao() + " - " + formatarData(nota.getDataAutorizacao());
+  }
+
+  /** Soma da base de cálculo de IBS/CBS dos itens; nula se nenhum item tem base. */
+  private static BigDecimal baseIbsCbs(NotaFiscal nota) {
+    return nota.getItens().stream().map(NotaFiscalItem::getBaseCalculoIbsCbs)
+        .filter(Objects::nonNull).reduce(BigDecimal::add).orElse(null);
   }
 
   /** Formata um valor monetário em pt-BR com 2 casas; nulo vira "-". */
@@ -192,34 +292,85 @@ public class DanfePdfService {
     return nf.format(valor);
   }
 
-  /** Formata a data de emissão; nula vira string vazia. */
-  private String formatarData(OffsetDateTime data) {
-    return data != null ? data.format(DATA_FMT) : "";
-  }
-
-  /** Compõe o endereço do destinatário numa única linha; nulo/vazio vira "-". */
-  private String formatarEndereco(EnderecoDestinatario endereco) {
-    if (endereco == null) {
+  /** Alíquota em proporção decimal (0.0090) como percentual ("0,90%"); nula vira "-". */
+  private String percentual(BigDecimal aliquota) {
+    if (aliquota == null) {
       return "-";
     }
-    List<String> partes = new ArrayList<>();
-    if (endereco.getLogradouro() != null && !endereco.getLogradouro().isBlank()) {
-      String logradouro = endereco.getLogradouro();
-      if (endereco.getNumero() != null && !endereco.getNumero().isBlank()) {
-        logradouro = logradouro + ", " + endereco.getNumero();
+    NumberFormat nf = NumberFormat.getNumberInstance(BR);
+    nf.setMinimumFractionDigits(2);
+    nf.setMaximumFractionDigits(4);
+    return nf.format(aliquota.movePointRight(2)) + "%";
+  }
+
+  /** Data e hora em Brasília; nula vira string vazia. */
+  private String formatarData(OffsetDateTime data) {
+    return data != null ? data.atZoneSameInstant(BRASILIA).format(DATA_FMT) : "";
+  }
+
+  /** CPF (11 dígitos) ou CNPJ (14) com máscara; outro formato sai como veio. */
+  static String documento(String valor) {
+    if (valor == null) {
+      return null;
+    }
+    String d = valor.replaceAll("[^0-9]", "");
+    if (d.length() == 11) {
+      return d.substring(0, 3) + "." + d.substring(3, 6) + "." + d.substring(6, 9) + "-"
+          + d.substring(9);
+    }
+    if (d.length() == 14) {
+      return d.substring(0, 2) + "." + d.substring(2, 5) + "." + d.substring(5, 8) + "/"
+          + d.substring(8, 12) + "-" + d.substring(12);
+    }
+    return valor;
+  }
+
+  /** CEP com hífen ({@code 00000-000}); outro formato sai como veio. */
+  static String cep(String valor) {
+    if (valor == null) {
+      return null;
+    }
+    String d = valor.replaceAll("[^0-9]", "");
+    return d.length() == 8 ? d.substring(0, 5) + "-" + d.substring(5) : valor;
+  }
+
+  /** NCM com pontos ({@code 0000.00.00}); outro formato sai como veio. */
+  static String ncm(String valor) {
+    if (valor == null || !valor.matches("[0-9]{8}")) {
+      return valor;
+    }
+    return valor.substring(0, 4) + "." + valor.substring(4, 6) + "." + valor.substring(6);
+  }
+
+  /** Chave de acesso em blocos de 4 dígitos, como na DANFE oficial. */
+  static String chave(String valor) {
+    if (valor == null) {
+      return null;
+    }
+    StringBuilder blocos = new StringBuilder();
+    for (int i = 0; i < valor.length(); i += 4) {
+      if (i > 0) {
+        blocos.append(' ');
       }
-      partes.add(logradouro);
+      blocos.append(valor, i, Math.min(i + 4, valor.length()));
     }
-    if (endereco.getMunicipio() != null && !endereco.getMunicipio().isBlank()) {
-      String municipio = endereco.getMunicipio();
-      if (endereco.getUf() != null && !endereco.getUf().isBlank()) {
-        municipio = municipio + "/" + endereco.getUf();
-      }
-      partes.add(municipio);
+    return blocos.toString();
+  }
+
+  /** Número do documento com 9 dígitos agrupados ({@code 000.000.001}). */
+  static String numeroDocumento(Long numero) {
+    if (numero == null) {
+      return "";
     }
-    if (endereco.getCep() != null && !endereco.getCep().isBlank()) {
-      partes.add("CEP " + endereco.getCep());
-    }
-    return partes.isEmpty() ? "-" : String.join(" - ", partes);
+    String d = String.format("%09d", numero);
+    return d.length() == 9
+        ? d.substring(0, 3) + "." + d.substring(3, 6) + "." + d.substring(6) : d;
+  }
+
+  /** Junta as partes não vazias com o separador; tudo vazio vira nulo. */
+  private static String juntar(String separador, String... partes) {
+    String junto = Stream.of(partes).filter(p -> p != null && !p.isBlank())
+        .collect(Collectors.joining(separador));
+    return junto.isEmpty() ? null : junto;
   }
 }

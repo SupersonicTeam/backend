@@ -2,6 +2,7 @@ package br.com.agrocontabil.danfe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
@@ -11,6 +12,7 @@ import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +26,12 @@ import org.junit.jupiter.api.Test;
  * documento PDF não vazio (assinatura {@code %PDF}).
  */
 class DanfePdfServiceTest {
+
+  private static final String CHAVE = "41262612345678000195550010000000011000000012";
+
+  /** Chave como a DANFE a imprime: blocos de 4 dígitos. */
+  private static final String CHAVE_FORMATADA =
+      "4126 2612 3456 7800 0195 5500 1000 0000 0110 0000 0012";
 
   private final DanfePdfService service = new DanfePdfService();
 
@@ -51,6 +59,70 @@ class DanfePdfServiceTest {
   }
 
   // -------------------------------------------------------------------------
+  // Conteúdo e paginação (revisão do layout, issue #89)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("Rodapé conta páginas, não itens: 3 itens numa página = Página 1 de 1")
+  void rodapeContaPaginasNaoItens() throws IOException {
+    NotaFiscal nota = buildNota();
+    nota.addItem(item(2));
+    nota.addItem(item(3));
+
+    byte[] pdf = service.gerarPdf(nota);
+
+    assertThat(paginas(pdf)).isEqualTo(1);
+    assertThat(texto(pdf)).contains("Página 1 de 1").doesNotContain("de 3");
+  }
+
+  @Test
+  @DisplayName("Nota com muitos itens: cada página diz Página N de total")
+  void variasPaginasNumeradasPeloTotal() throws IOException {
+    NotaFiscal nota = buildNota();
+    for (int i = 2; i <= 60; i++) {
+      nota.addItem(item(i));
+    }
+
+    byte[] pdf = service.gerarPdf(nota);
+    int total = paginas(pdf);
+
+    assertThat(total).isGreaterThan(1);
+    String texto = texto(pdf);
+    for (int pagina = 1; pagina <= total; pagina++) {
+      assertThat(texto).contains("Página " + pagina + " de " + total);
+    }
+    assertThat(texto).doesNotContain("de 60");
+  }
+
+  @Test
+  @DisplayName("DANFE traz emitente, destinatário e itens completos, com documentos formatados")
+  void danfeTrazDadosCompletos() throws IOException {
+    String texto = texto(service.gerarPdf(buildNota()));
+
+    assertThat(texto)
+        // Emitente: nome, CPF formatado, IE e endereço completo.
+        .contains("Joao da Silva Produtor").contains("529.982.247-25").contains("1234567890")
+        .contains("Avenida Historiador Rubens de Mendonca, 1894").contains("Bosque da Saude")
+        .contains("Cuiaba").contains("78050-000")
+        // Destinatário: documento formatado, endereço, CEP e IE.
+        .contains("Jose Comprador").contains("987.654.321-00").contains("Rua das Flores, 100")
+        .contains("78000-000").contains("9876543210")
+        // Itens: código, NCM, CFOP.
+        .contains("SOJA-01").contains("1201.00.90").contains("6101")
+        // Operação, chave em blocos e protocolo.
+        .contains("Venda de producao rural").contains("SAÍDA").contains(CHAVE_FORMATADA)
+        .contains("141260000012345");
+  }
+
+  @Test
+  @DisplayName("A logo do AgroContábil vai embutida no PDF")
+  void logoEmbutida() {
+    String bruto = new String(service.gerarPdf(buildNota()), StandardCharsets.ISO_8859_1);
+
+    assertThat(bruto).contains("/Subtype/Image");
+  }
+
+  // -------------------------------------------------------------------------
   // Preview de rascunho (issue #89)
   // -------------------------------------------------------------------------
 
@@ -65,7 +137,7 @@ class DanfePdfServiceTest {
 
     assertThat(texto).contains("RASCUNHO").contains("SEM VALOR FISCAL")
         .contains("Jose Comprador")
-        .doesNotContain("41262612345678000195550010000000011000000012")
+        .doesNotContain(CHAVE).doesNotContain(CHAVE_FORMATADA)
         .doesNotContain("(nao disponivel)");
   }
 
@@ -74,7 +146,7 @@ class DanfePdfServiceTest {
   void previewIgnoraChaveDaNota() throws IOException {
     String texto = texto(service.gerarPreview(buildNota()));
 
-    assertThat(texto).doesNotContain("41262612345678000195550010000000011000000012");
+    assertThat(texto).doesNotContain(CHAVE).doesNotContain(CHAVE_FORMATADA);
   }
 
   @Test
@@ -82,8 +154,16 @@ class DanfePdfServiceTest {
   void danfeSemMarcaDagua() throws IOException {
     String texto = texto(service.gerarPdf(buildNota()));
 
-    assertThat(texto).doesNotContain("SEM VALOR FISCAL")
-        .contains("41262612345678000195550010000000011000000012");
+    assertThat(texto).doesNotContain("SEM VALOR FISCAL").contains(CHAVE_FORMATADA);
+  }
+
+  private static int paginas(byte[] pdf) throws IOException {
+    PdfReader leitor = new PdfReader(pdf);
+    try {
+      return leitor.getNumberOfPages();
+    } finally {
+      leitor.close();
+    }
   }
 
   private static String texto(byte[] pdf) throws IOException {
@@ -101,26 +181,7 @@ class DanfePdfServiceTest {
   }
 
   private NotaFiscal buildNota() {
-    Produtor produtor = Produtor.builder()
-        .id(UUID.randomUUID())
-        .nomeCompleto("Fazenda Boa Esperanca LTDA")
-        .cpfCnpj("12345678000195")
-        .estado("MT")
-        .build();
-
-    NotaFiscalItem item = NotaFiscalItem.builder()
-        .id(UUID.randomUUID())
-        .numeroItem(1)
-        .descricao("Soja em graos")
-        .ncm("12010090")
-        .cfop("6101")
-        .unidade("KG")
-        .quantidade(new BigDecimal("500.0000"))
-        .valorUnitario(new BigDecimal("2.0000"))
-        .valorTotal(new BigDecimal("1000.00"))
-        .valorIbs(new BigDecimal("1.00"))
-        .valorCbs(new BigDecimal("9.00"))
-        .build();
+    Produtor produtor = ProdutorTestFixtures.produtorCompleto();
 
     NotaFiscal nota = NotaFiscal.builder()
         .id(UUID.randomUUID())
@@ -132,6 +193,7 @@ class DanfePdfServiceTest {
         .produtor(produtor)
         .destinatarioNome("Jose Comprador")
         .destinatarioCpfCnpj("98765432100")
+        .destinatarioIe("9876543210")
         .destinatarioEndereco(EnderecoDestinatario.builder()
             .logradouro("Rua das Flores")
             .numero("100")
@@ -144,11 +206,31 @@ class DanfePdfServiceTest {
         .valorTotalIbs(new BigDecimal("1.00"))
         .valorTotalCbs(new BigDecimal("9.00"))
         .status(StatusNotaFiscal.XML_GERADO)
-        .chaveAcesso("41262612345678000195550010000000011000000012")
+        .chaveAcesso(CHAVE)
+        .protocoloAutorizacao("141260000012345")
         .xmlGerado("<NFe/>")
         .build();
 
-    nota.addItem(item);
+    nota.addItem(item(1));
     return nota;
+  }
+
+  private static NotaFiscalItem item(int numero) {
+    return NotaFiscalItem.builder()
+        .id(UUID.randomUUID())
+        .numeroItem(numero)
+        .codigoProduto(numero == 1 ? "SOJA-01" : "ITEM-" + numero)
+        .descricao("Soja em graos")
+        .ncm("12010090")
+        .cfop("6101")
+        .unidade("KG")
+        .quantidade(new BigDecimal("500.0000"))
+        .valorUnitario(new BigDecimal("2.0000"))
+        .valorTotal(new BigDecimal("1000.00"))
+        .aliquotaIbs(new BigDecimal("0.0010"))
+        .valorIbs(new BigDecimal("1.00"))
+        .aliquotaCbs(new BigDecimal("0.0090"))
+        .valorCbs(new BigDecimal("9.00"))
+        .build();
   }
 }
