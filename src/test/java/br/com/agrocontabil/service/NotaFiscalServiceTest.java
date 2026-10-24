@@ -11,10 +11,12 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.NotaFiscalItemRequest;
+import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
+import br.com.agrocontabil.exception.FiltroNotasInvalidoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
@@ -31,6 +33,9 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.junit.jupiter.api.BeforeEach;
@@ -242,13 +247,14 @@ class NotaFiscalServiceTest {
     var pageable = PageRequest.of(0, 20);
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByProdutorId(produtorId, pageable)).thenReturn(page);
+    when(notaFiscalRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
 
-    Page<NotaFiscalResponse> result = notaFiscalService.findAll(pageable);
+    Page<NotaFiscalResponse> result =
+        notaFiscalService.findAll(FiltroNotasRequest.vazio(), pageable);
 
     assertThat(result.getTotalElements()).isEqualTo(1);
     assertThat(result.getContent().get(0).produtorId()).isEqualTo(produtorId);
-    verify(notaFiscalRepository).findByProdutorId(produtorId, pageable);
+    verify(notaFiscalRepository).findAll(any(Specification.class), eq(pageable));
   }
 
   // -------------------------------------------------------------------------
@@ -487,13 +493,56 @@ class NotaFiscalServiceTest {
     Page<NotaFiscal> emptyPage = new PageImpl<>(List.of(), pageable, 0);
 
     when(produtorProvider.get()).thenReturn(produtor);
-    when(notaFiscalRepository.findByProdutorId(produtorId, pageable)).thenReturn(emptyPage);
+    when(notaFiscalRepository.findAll(any(Specification.class), eq(pageable)))
+        .thenReturn(emptyPage);
 
-    Page<NotaFiscalResponse> result = notaFiscalService.findAll(pageable);
+    Page<NotaFiscalResponse> result =
+        notaFiscalService.findAll(FiltroNotasRequest.vazio(), pageable);
 
     assertThat(result.getPageable().getPageNumber()).isEqualTo(2);
     assertThat(result.getPageable().getPageSize()).isEqualTo(10);
-    verify(notaFiscalRepository).findByProdutorId(produtorId, pageable);
+    verify(notaFiscalRepository).findAll(any(Specification.class), eq(pageable));
+  }
+
+  // -------------------------------------------------------------------------
+  // findAll — filtros (issue #174)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("findAll com faixa invertida lanca 400 antes de consultar o banco")
+  void findAllComFaixaInvertidaLanca400() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    var filtro = new FiltroNotasRequest(null, null,
+        java.time.LocalDate.of(2026, 9, 30), java.time.LocalDate.of(2026, 9, 1), null);
+
+    assertThatThrownBy(() -> notaFiscalService.findAll(filtro, PageRequest.of(0, 20)))
+        .isInstanceOf(FiltroNotasInvalidoException.class);
+    verify(notaFiscalRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+  }
+
+  @Test
+  @DisplayName("findAll com sort fora da lista branca lanca 400 antes de consultar o banco")
+  void findAllComSortNaoPermitidoLanca400() {
+    var pageable = PageRequest.of(0, 20, Sort.by("xmlGerado"));
+
+    assertThatThrownBy(() -> notaFiscalService.findAll(FiltroNotasRequest.vazio(), pageable))
+        .isInstanceOf(FiltroNotasInvalidoException.class)
+        .hasMessageContaining("xmlGerado");
+    verify(notaFiscalRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+  }
+
+  @Test
+  @DisplayName("findAll traduz valorTotal para valorTotalNota e desempata pelo id")
+  void findAllTraduzOrdenacaoEDesempata() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findAll(any(Specification.class), any(Pageable.class)))
+        .thenReturn(Page.empty());
+
+    notaFiscalService.findAll(FiltroNotasRequest.vazio(),
+        PageRequest.of(1, 12, Sort.by(Sort.Direction.DESC, "valorTotal")));
+
+    verify(notaFiscalRepository).findAll(any(Specification.class), eq(PageRequest.of(1, 12,
+        Sort.by(Sort.Order.desc("valorTotalNota"), Sort.Order.asc("id")))));
   }
 
   // -------------------------------------------------------------------------

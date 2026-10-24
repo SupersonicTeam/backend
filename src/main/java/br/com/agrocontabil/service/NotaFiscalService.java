@@ -1,9 +1,12 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.danfe.DanfePdfService;
+import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
+import br.com.agrocontabil.exception.FiltroNotasInvalidoException;
 import br.com.agrocontabil.exception.NfaInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
@@ -18,12 +21,17 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.repository.NotaFiscalEspecificacoes;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -32,7 +40,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -63,6 +74,24 @@ public class NotaFiscalService {
   private static final String VERSAO_LAYOUT_NFE = "4.00";
 
   private static final Logger log = LoggerFactory.getLogger(NotaFiscalService.class);
+
+  /** Fuso dos limites de dia dos filtros de emissão (issue #174). */
+  private static final ZoneId FUSO_FILTRO = ZoneId.of("America/Sao_Paulo");
+
+  /** Abaixo disso o trigrama não ajuda e o termo de texto é ignorado (issue #174). */
+  static final int BUSCA_MINIMA = 3;
+
+  /**
+   * Ordenações aceitas em {@code GET /api/notas} → propriedade da entidade (issue #174).
+   * {@code valorTotal} e {@code valorTotalNota} (nome no response) ordenam pelo total da nota.
+   */
+  static final Map<String, String> ORDENACOES_PERMITIDAS = Map.of(
+      "dataEmissao", "dataEmissao",
+      "numero", "numero",
+      "status", "status",
+      "valorTotal", "valorTotalNota",
+      "valorTotalNota", "valorTotalNota",
+      "createdAt", "createdAt");
 
   /**
    * Status em que a nota ainda é considerada "rascunho" editável: além de
@@ -128,17 +157,92 @@ public class NotaFiscalService {
   }
 
   /**
-   * Lista todas as notas fiscais do produtor autenticado, paginadas.
+   * Lista as notas do produtor autenticado, paginadas e filtradas (issue #174).
    *
-   * @param pageable parametros de paginacao e ordenacao
+   * <p>O {@code totalElements} da página reflete o filtro. O produtor vem sempre do token: nenhum
+   * filtro alarga o recorte.
+   *
+   * @param filtro   filtros opcionais (status, tipo, faixa de emissão, busca)
+   * @param pageable paginacao e ordenacao (so propriedades de {@link #ORDENACOES_PERMITIDAS})
    * @return pagina de notas do produtor autenticado
+   * @throws FiltroNotasInvalidoException faixa invertida ou ordenacao nao permitida (400)
    */
   @Transactional(readOnly = true)
-  public Page<NotaFiscalResponse> findAll(Pageable pageable) {
-    Produtor produtor = produtorProvider.get();
-    return notaFiscalRepository
-        .findByProdutorId(produtor.getId(), pageable)
-        .map(NotaFiscalMapper::toResponse);
+  public Page<NotaFiscalResponse> findAll(FiltroNotasRequest filtro, Pageable pageable) {
+    Pageable pagina = paginaComOrdenacaoPermitida(pageable);
+    Specification<NotaFiscal> consulta = especificacao(produtorProvider.get().getId(), filtro);
+    return notaFiscalRepository.findAll(consulta, pagina).map(NotaFiscalMapper::toResponse);
+  }
+
+  /**
+   * Filtros sobre o recorte do produtor — sempre {@code and} sobre {@code doProdutor}, nunca no
+   * lugar dele (issue #174).
+   */
+  private static Specification<NotaFiscal> especificacao(
+      UUID produtorId, FiltroNotasRequest filtro) {
+    Specification<NotaFiscal> consulta = NotaFiscalEspecificacoes.doProdutor(produtorId);
+    if (filtro.emitidaDe() != null && filtro.emitidaAte() != null
+        && filtro.emitidaDe().isAfter(filtro.emitidaAte())) {
+      throw FiltroNotasInvalidoException.faixaInvertida(filtro.emitidaDe(), filtro.emitidaAte());
+    }
+    if (filtro.status() != null && !filtro.status().isEmpty()) {
+      consulta = consulta.and(NotaFiscalEspecificacoes.comStatus(filtro.status()));
+    }
+    if (filtro.tipoDocumento() != null) {
+      consulta = consulta.and(NotaFiscalEspecificacoes.doTipo(filtro.tipoDocumento()));
+    }
+    if (filtro.emitidaDe() != null) {
+      consulta = consulta.and(NotaFiscalEspecificacoes.emitidaAPartirDe(
+          inicioDoDia(filtro.emitidaDe())));
+    }
+    if (filtro.emitidaAte() != null) {
+      // Inclusivo no dia inteiro: dataEmissao e instante, entao "ate o dia 10" = antes do dia 11.
+      consulta = consulta.and(NotaFiscalEspecificacoes.emitidaAntesDe(
+          inicioDoDia(filtro.emitidaAte().plusDays(1))));
+    }
+    Specification<NotaFiscal> busca = busca(filtro.busca());
+    return busca == null ? consulta : consulta.and(busca);
+  }
+
+  /**
+   * Termo de 3+ caracteres casa o texto pesquisável; termo só de dígitos mais curto casa o número
+   * da nota por prefixo; texto mais curto é ignorado (o trigrama não ajuda abaixo de 3).
+   */
+  private static Specification<NotaFiscal> busca(String termoBruto) {
+    String termo = NormalizacaoBusca.normalizar(termoBruto);
+    if (termo.length() >= BUSCA_MINIMA) {
+      return NotaFiscalEspecificacoes.contendo(NormalizacaoBusca.escaparLike(termo));
+    }
+    if (!termo.isEmpty() && termo.chars().allMatch(Character::isDigit)) {
+      return NotaFiscalEspecificacoes.numeroComPrefixo(termo);
+    }
+    return null;
+  }
+
+  private static OffsetDateTime inicioDoDia(LocalDate dia) {
+    return dia.atStartOfDay(FUSO_FILTRO).toOffsetDateTime();
+  }
+
+  /**
+   * Só ordena por propriedade da lista branca — fora dela, 400 em vez do 500 que a propriedade
+   * desconhecida virava no Spring Data. Com ordenação, o {@code id} desempata: sem ele, notas com o
+   * mesmo valor podiam pular ou repetir entre páginas.
+   */
+  private static Pageable paginaComOrdenacaoPermitida(Pageable pageable) {
+    if (pageable.getSort().isUnsorted()) {
+      return pageable;
+    }
+    List<Sort.Order> ordens = new ArrayList<>();
+    for (Sort.Order ordem : pageable.getSort()) {
+      String propriedade = ORDENACOES_PERMITIDAS.get(ordem.getProperty());
+      if (propriedade == null) {
+        throw FiltroNotasInvalidoException.ordenacaoNaoPermitida(
+            ordem.getProperty(), ORDENACOES_PERMITIDAS.keySet().stream().sorted().toList());
+      }
+      ordens.add(ordem.withProperty(propriedade));
+    }
+    ordens.add(Sort.Order.asc("id"));
+    return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(ordens));
   }
 
   /**

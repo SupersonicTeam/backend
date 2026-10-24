@@ -136,7 +136,7 @@ br.com.agrocontabil
 | DELETE | `/api/usuarios/{id}/dados` | Autenticado, só o próprio titular (404 para outro). `{senha}` → 204; anonimiza dados pessoais, mantém os fiscais (guarda de 5 anos), apaga a conta e encerra as sessões (#148) |
 | GET | `/api/auditoria?produtorId=&page=&size=` | Auditoria das operações críticas do produtor (#149, RNF012): só contador (produtor 403), só produtor da carteira (404 fora); padrão 50, máx. 200; corpo array + total em `X-Total-Count` |
 | POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |
-| GET | `/api/notas` | Lista paginada (produtor autenticado) |
+| GET | `/api/notas?status=&tipoDocumento=&emitidaDe=&emitidaAte=&busca=` | Lista paginada do produtor autenticado com filtros opcionais e combináveis (#174): `status` repetível (OU), `tipoDocumento`, faixa de emissão em dias inclusivos (Brasília), `busca` em número/destinatário/natureza sem acento nem caixa (3–100 caracteres; número curto casa por prefixo; GIN de trigrama, changeSet 0037). `totalElements` reflete o filtro. `sort` só `dataEmissao`, `numero`, `status`, `valorTotal`, `createdAt`; faixa invertida ou `sort` fora da lista → 400 `FILTRO_NOTAS_INVALIDO` |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; produtor=destinatário; origem=IMPORTADA) |

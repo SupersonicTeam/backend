@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0037-nota-fiscal-busca.xml
+         Issue #174 — filtros de GET /api/notas.
+
+         busca_normalizada: numero + nome do destinatario + natureza da
+         operacao, em minusculas e sem acento. Mantida pela APLICACAO
+         (NotaFiscal @PrePersist/@PreUpdate, NormalizacaoBusca) — a mesma
+         regra no PostgreSQL e no H2; aqui so o backfill das notas que ja
+         existem, com o mesmo mapa de acentos da 0027.
+
+         Indice GIN de trigrama composto (produtor_id, busca_normalizada):
+         atende produtor_id = ? AND busca_normalizada LIKE '%termo%' sem ler
+         a tabela do produtor inteira. pg_trgm da o operador de trigrama;
+         btree_gin permite o uuid no mesmo indice GIN. As duas vem no
+         contrib da imagem pgvector/pgvector:pg16.
+
+         Coluna nullable de proposito: linha gravada fora da aplicacao so
+         deixa de aparecer na busca, nunca quebra a insercao.
+
+         NAO editar changeSets anteriores. No H2 (profile test) so a coluna,
+         em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0037-extensoes-busca" author="supersonic-team" dbms="postgresql">
+        <preConditions onFail="HALT"
+                       onFailMessage="Extensoes pg_trgm/btree_gin indisponiveis neste PostgreSQL. Instale o contrib do PostgreSQL (presente na imagem pgvector/pgvector:pg16) antes de subir o backend (issue #174).">
+            <sqlCheck expectedResult="2">
+                SELECT COUNT(*) FROM pg_available_extensions WHERE name IN ('pg_trgm', 'btree_gin')
+            </sqlCheck>
+        </preConditions>
+        <comment>Habilita pg_trgm e btree_gin para a busca das notas (issue #174).</comment>
+        <sql>CREATE EXTENSION IF NOT EXISTS pg_trgm</sql>
+        <sql>CREATE EXTENSION IF NOT EXISTS btree_gin</sql>
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="0037-nota-fiscal-busca-normalizada" author="supersonic-team">
+        <comment>Coluna busca_normalizada em nota_fiscal (issue #174).</comment>
+        <addColumn tableName="nota_fiscal">
+            <column name="busca_normalizada" type="VARCHAR(600)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="busca_normalizada"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0037-nota-fiscal-busca-backfill" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Preenche busca_normalizada das notas existentes com a regra da
+            NormalizacaoBusca: sem acento, minusculas, espacos colapsados.
+        </comment>
+        <sql>
+            UPDATE nota_fiscal
+               SET busca_normalizada = lower(translate(
+                     btrim(regexp_replace(
+                       concat_ws(' ', numero::text, destinatario_nome, natureza_operacao),
+                       '\s+', ' ', 'g')),
+                     'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ',
+                     'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN'))
+        </sql>
+        <rollback>
+            <sql>UPDATE nota_fiscal SET busca_normalizada = NULL</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0037-index-nota-fiscal-busca-trgm" author="supersonic-team" dbms="postgresql">
+        <comment>
+            GIN de trigrama (produtor_id, busca_normalizada) para o LIKE '%termo%'
+            da busca de GET /api/notas (issue #174).
+        </comment>
+        <sql>
+            CREATE INDEX idx_nota_fiscal_busca_trgm ON nota_fiscal
+                USING gin (produtor_id, busca_normalizada gin_trgm_ops)
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS idx_nota_fiscal_busca_trgm</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
