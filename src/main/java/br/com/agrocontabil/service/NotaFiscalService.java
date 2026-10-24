@@ -74,11 +74,12 @@ public class NotaFiscalService {
       EnumSet.of(StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS);
 
   /**
-   * Status com preview de DANFE (issue #89): os anteriores à emissão. A aprovação do contador
-   * (#178) acrescenta {@code AGUARDANDO_APROVACAO}, {@code APROVADA} e {@code DEVOLVIDA} aqui.
+   * Status com preview de DANFE (issue #89): os anteriores à emissão. Hoje são exatamente os
+   * editáveis, então é o mesmo conjunto — um lugar só para manter. A aprovação do contador (#178)
+   * separa os dois: {@code AGUARDANDO_APROVACAO} e {@code APROVADA} têm preview mas não são
+   * editáveis; nessa hora este campo vira um {@code EnumSet} próprio.
    */
-  private static final Set<StatusNotaFiscal> STATUS_PREVIEW =
-      EnumSet.of(StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS);
+  private static final Set<StatusNotaFiscal> STATUS_PREVIEW = STATUS_EDITAVEIS;
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
