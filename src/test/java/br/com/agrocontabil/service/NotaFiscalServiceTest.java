@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +16,7 @@ import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
+import br.com.agrocontabil.exception.DanfePreviewIndisponivelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.FiltroNotasInvalidoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
@@ -41,6 +43,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -915,6 +919,65 @@ class NotaFiscalServiceTest {
     assertThatThrownBy(() -> notaFiscalService.gerarPdf(notaId))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining(notaId.toString());
+  }
+
+  // -------------------------------------------------------------------------
+  // gerarPreviewDanfe (issue #89)
+  // -------------------------------------------------------------------------
+
+  @ParameterizedTest
+  @EnumSource(value = StatusNotaFiscal.class, names = {"RASCUNHO", "COM_INCONSISTENCIAS"})
+  @DisplayName("gerarPreviewDanfe gera o preview sem validar nem gravar nada")
+  void gerarPreviewDanfeNaoValidaNemGrava(StatusNotaFiscal status) {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(status);
+    byte[] pdfFake = new byte[] {'%', 'P', 'D', 'F'};
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+    when(danfePdfService.gerarPreview(nota)).thenReturn(pdfFake);
+
+    assertThat(notaFiscalService.gerarPreviewDanfe(notaId)).isEqualTo(pdfFake);
+
+    verify(notaFiscalRepository, never()).save(any());
+    verify(danfePdfService, never()).gerarPdf(any());
+    verifyNoInteractions(geracaoNotaFiscalService, geracaoNfaService, validacaoService);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = StatusNotaFiscal.class, mode = EnumSource.Mode.EXCLUDE,
+      names = {"RASCUNHO", "COM_INCONSISTENCIAS"})
+  @DisplayName("gerarPreviewDanfe fora do rascunho responde 409 (ali ja existe o /pdf)")
+  void gerarPreviewDanfeForaDoRascunhoLanca409(StatusNotaFiscal status) {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal nota = buildNotaSalva();
+    nota.setId(notaId);
+    nota.setStatus(status);
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
+        .thenReturn(Optional.of(nota));
+
+    assertThatThrownBy(() -> notaFiscalService.gerarPreviewDanfe(notaId))
+        .isInstanceOf(DanfePreviewIndisponivelException.class);
+    verify(danfePdfService, never()).gerarPreview(any());
+  }
+
+  @Test
+  @DisplayName("gerarPreviewDanfe de nota de outro produtor responde 404")
+  void gerarPreviewDanfeDeOutroProdutorLanca404() {
+    UUID notaId = UUID.randomUUID();
+
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorIdComGrafoDeEmissao(notaId, produtorId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> notaFiscalService.gerarPreviewDanfe(notaId))
+        .isInstanceOf(ResourceNotFoundException.class);
+    verify(danfePdfService, never()).gerarPreview(any());
   }
 
   // -------------------------------------------------------------------------

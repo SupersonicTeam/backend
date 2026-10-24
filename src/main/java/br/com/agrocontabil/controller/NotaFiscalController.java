@@ -31,6 +31,7 @@ import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -326,6 +327,39 @@ public class NotaFiscalController {
         .contentType(MediaType.APPLICATION_PDF)
         .header(HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"danfe-" + id + ".pdf\"")
+        .body(pdf);
+  }
+
+  /**
+   * Pré-visualização da DANFE de uma nota ainda não emitida (issue #89).
+   *
+   * <p>{@code inline}: o produtor confere na tela antes de gerar o XML. {@code no-store}: o
+   * rascunho muda a cada edição e o preview nunca pode sair de cache velho.
+   */
+  @GetMapping(value = "/{id}/danfe-preview", produces = MediaType.APPLICATION_PDF_VALUE)
+  @Operation(
+      summary = "Pre-visualiza a DANFE de um rascunho",
+      description = "Gera a DANFE de uma nota em RASCUNHO ou COM_INCONSISTENCIAS com a marca "
+          + "d'agua \"RASCUNHO — SEM VALOR FISCAL\" e a chave de acesso em branco. Nao valida, "
+          + "nao assina e nao altera a nota. Para nota com XML gerado, use GET /{id}/pdf.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200",
+          description = "PDF do preview",
+          content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+      @ApiResponse(responseCode = "404",
+          description = "Nota nao encontrada ou nao pertence ao produtor",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Nota ja emitida (DANFE_PREVIEW_INDISPONIVEL) — use /pdf",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<byte[]> previewDanfe(@PathVariable UUID id) {
+    byte[] pdf = notaFiscalService.gerarPreviewDanfe(id);
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_PDF)
+        .cacheControl(CacheControl.noStore())
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "inline; filename=\"danfe-preview-" + id + ".pdf\"")
         .body(pdf);
   }
 
