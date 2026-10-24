@@ -8,11 +8,9 @@ import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,9 +45,7 @@ public class ApuracaoFaixaService {
   /** Atalhos de {@code ultimos}: semestre, 1, 3 e 5 anos. */
   static final Set<Integer> ULTIMOS_PERMITIDOS = Set.of(6, 12, 36, 60);
 
-  private static final ZoneId ZONA = ZoneId.of("America/Sao_Paulo");
-
-  private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+  private static final BigDecimal ZERO = ApuracaoMes.valor(null);
 
   private final ApuracaoMensalRepository apuracaoRepository;
   private final NotaFiscalRepository notaFiscalRepository;
@@ -170,52 +166,27 @@ public class ApuracaoFaixaService {
     List<ApuracaoResponse> meses = new ArrayList<>();
     for (YearMonth mes = de; !mes.isAfter(ate); mes = mes.plusMonths(1)) {
       ApuracaoMensal persistida = persistidas.get(mes);
+      Object[] linha = aoVivo.get(mes);
       meses.add(persistida != null
-          ? daPersistida(persistida, atual)
-          : daAgregacao(mes, aoVivo.get(mes), atual));
+          ? ApuracaoMes.daPersistida(persistida, atual)
+          : linha == null
+              ? ApuracaoMes.aoVivo(mes, null, null, null, null, 0, atual)
+              : ApuracaoMes.aoVivo(mes, linha[2], linha[3], linha[4], linha[5],
+                  ((Number) linha[6]).longValue(), atual));
     }
     return meses;
   }
 
   private Map<YearMonth, Object[]> agregarPorMes(UUID produtorId, YearMonth de, YearMonth ate) {
-    OffsetDateTime inicio = de.atDay(1).atStartOfDay(ZONA).toOffsetDateTime();
-    OffsetDateTime fim = ate.plusMonths(1).atDay(1).atStartOfDay(ZONA).toOffsetDateTime();
+    OffsetDateTime inicio = de.atDay(1).atStartOfDay(ApuracaoMes.ZONA).toOffsetDateTime();
+    OffsetDateTime fim =
+        ate.plusMonths(1).atDay(1).atStartOfDay(ApuracaoMes.ZONA).toOffsetDateTime();
     Map<YearMonth, Object[]> porMes = new HashMap<>();
     for (Object[] linha : notaFiscalRepository.agregarApuracaoPorMes(produtorId, inicio, fim)) {
       porMes.put(YearMonth.of(((Number) linha[0]).intValue(), ((Number) linha[1]).intValue()),
           linha);
     }
     return porMes;
-  }
-
-  private static ApuracaoResponse daPersistida(ApuracaoMensal a, YearMonth atual) {
-    YearMonth mes = YearMonth.parse(a.getPeriodo());
-    return new ApuracaoResponse(a.getPeriodo(), a.getStatus().name(),
-        a.getDebitoIbs(), a.getDebitoCbs(), a.getCreditoIbs(), a.getCreditoCbs(),
-        a.getSaldoIbs(), a.getSaldoCbs(), a.getTotalNotas(), a.getDataFechamento(),
-        a.getPeriodo(), a.getPeriodo(), !mes.isBefore(atual));
-  }
-
-  /** Mesma conta da projeção ao vivo do {@link ApuracaoService}: nulo do {@code SUM} vira zero. */
-  private static ApuracaoResponse daAgregacao(YearMonth mes, Object[] linha, YearMonth atual) {
-    BigDecimal debitoIbs = linha == null ? ZERO : valor(linha[2]);
-    BigDecimal debitoCbs = linha == null ? ZERO : valor(linha[3]);
-    BigDecimal creditoIbs = linha == null ? ZERO : valor(linha[4]);
-    BigDecimal creditoCbs = linha == null ? ZERO : valor(linha[5]);
-    long notas = linha == null ? 0 : ((Number) linha[6]).longValue();
-    return new ApuracaoResponse(mes.toString(), StatusApuracao.ABERTO.name(),
-        debitoIbs, debitoCbs, creditoIbs, creditoCbs,
-        debitoIbs.subtract(creditoIbs), debitoCbs.subtract(creditoCbs), notas, null,
-        mes.toString(), mes.toString(), !mes.isBefore(atual));
-  }
-
-  private static BigDecimal valor(Object soma) {
-    if (soma == null) {
-      return ZERO;
-    }
-    BigDecimal numero = soma instanceof BigDecimal decimal
-        ? decimal : new BigDecimal(soma.toString());
-    return numero.setScale(2, RoundingMode.HALF_UP);
   }
 
   /**

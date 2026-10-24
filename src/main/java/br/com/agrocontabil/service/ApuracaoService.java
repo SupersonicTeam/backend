@@ -20,7 +20,6 @@ import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -83,7 +82,7 @@ public class ApuracaoService {
   private static final Logger log = LoggerFactory.getLogger(ApuracaoService.class);
 
   /** Fuso de referência do projeto para o recorte mensal do período. */
-  private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
+  private static final ZoneId ZONE = ApuracaoMes.ZONA;
 
   /** Janela máxima de reabertura retroativa (RN005): 3 meses inclusivos. */
   private static final int MESES_MAX_REABERTURA = 3;
@@ -485,13 +484,8 @@ public class ApuracaoService {
    */
   private ApuracaoResponse projetarAoVivo(UUID produtorId, YearMonth mes) {
     Totais totais = agregarTotais(produtorId, mes);
-    return new ApuracaoResponse(
-        mes.toString(), StatusApuracao.ABERTO.name(),
-        totais.debitoIbs(), totais.debitoCbs(),
-        totais.creditoIbs(), totais.creditoCbs(),
-        totais.saldoIbs(), totais.saldoCbs(),
-        totais.totalNotas(), null,
-        mes.toString(), mes.toString(), naoTerminou(mes));
+    return ApuracaoMes.aoVivo(mes, totais.debitoIbs(), totais.debitoCbs(),
+        totais.creditoIbs(), totais.creditoCbs(), totais.totalNotas(), YearMonth.now(clock));
   }
 
   /**
@@ -533,18 +527,7 @@ public class ApuracaoService {
   }
 
   private ApuracaoResponse toResponse(ApuracaoMensal a) {
-    return new ApuracaoResponse(
-        a.getPeriodo(), a.getStatus().name(),
-        a.getDebitoIbs(), a.getDebitoCbs(),
-        a.getCreditoIbs(), a.getCreditoCbs(),
-        a.getSaldoIbs(), a.getSaldoCbs(),
-        a.getTotalNotas(), a.getDataFechamento(),
-        a.getPeriodo(), a.getPeriodo(), naoTerminou(YearMonth.parse(a.getPeriodo())));
-  }
-
-  /** Mês corrente ou futuro: a apuração ainda pode mudar ({@code parcial}, issue #179). */
-  private boolean naoTerminou(YearMonth mes) {
-    return !mes.isBefore(YearMonth.now(clock));
+    return ApuracaoMes.daPersistida(a, YearMonth.now(clock));
   }
 
   /**
@@ -563,6 +546,6 @@ public class ApuracaoService {
 
   /** Trata nulo do {@code SUM} (período sem notas) como {@code 0.00} com 2 casas. */
   private BigDecimal coalesce(BigDecimal valor) {
-    return (valor != null ? valor : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    return ApuracaoMes.valor(valor);
   }
 }

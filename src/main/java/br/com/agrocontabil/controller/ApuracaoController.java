@@ -73,7 +73,11 @@ public class ApuracaoController {
           + "TRIMESTRE (2026-T1), SEMESTRE (2026-S1) ou ANO (2026); o grupo so e FECHADO se todos "
           + "os meses fecharam e vem parcial quando a faixa o corta ou ele ainda nao terminou.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Apuracao consultada com sucesso"),
+      // ResponseEntity<?> nao diz o tipo ao springdoc: objeto com periodo, lista com faixa.
+      @ApiResponse(responseCode = "200",
+          description = "Objeto com periodo; lista em ordem crescente com de/ate ou ultimos",
+          content = @Content(mediaType = "application/json", schema = @Schema(
+              oneOf = {ApuracaoResponse.class, ApuracaoResponse[].class}))),
       @ApiResponse(responseCode = "400",
           description = "Formato invalido (VALIDATION_ERROR) ou faixa invalida "
               + "(FAIXA_APURACAO_INVALIDA: combinacao, ordem, acima de 60 meses ou ultimos "

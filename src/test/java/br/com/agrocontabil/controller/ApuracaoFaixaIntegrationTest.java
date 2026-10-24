@@ -268,6 +268,20 @@ class ApuracaoFaixaIntegrationTest {
         .andExpect(jsonPath("$.errors[0].field").value("agrupamento"));
   }
 
+  @Test
+  @DisplayName("OpenAPI publica a resposta 200 como objeto ou lista de ApuracaoResponse")
+  void openApiDocumentaObjetoOuLista() throws Exception {
+    String resposta = "$.paths['/api/apuracao'].get.responses['200'].content['application/json']"
+        + ".schema.oneOf";
+
+    mockMvc.perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath(resposta + "[0].$ref").value("#/components/schemas/ApuracaoResponse"))
+        .andExpect(jsonPath(resposta + "[1].type").value("array"))
+        .andExpect(jsonPath(resposta + "[1].items.$ref")
+            .value("#/components/schemas/ApuracaoResponse"));
+  }
+
   // -------------------------------------------------------------------------
 
   private void esperar400(String campo, String p1, String v1, String p2, String v2)
