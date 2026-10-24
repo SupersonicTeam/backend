@@ -45,7 +45,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AuditoriaController` | `GET /api/auditoria?produtorId=` — só contador, só carteira; array + `X-Total-Count` (#149) |
 | `SenhaController` | `/api/auth/senha/**` — `esqueci` e `redefinir` públicos, `alterar` autenticado (#209); só com web |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
-| `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004) + `/{id}/reabrir` (RN005) |
+| `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004), faixa `de`/`ate`/`ultimos` + `agrupamento` (`ApuracaoFaixaService`, issue #179) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
 | `GuiaFiscalController` | `/api/contador/guias` — CRUD de guias fiscais do Contador (issue #74) |
 | `CalendarioFiscalController` | `GET /api/calendario-fiscal/{produtorId}/vencimentos` — calendário fiscal do produtor (issue #74) |
@@ -80,6 +80,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AutenticacaoTokenService` | JWT → `UsuarioAutenticado` (#206): relê a credencial a cada requisição (ativa, mesmo papel, mesma `versaoSessao`). Só web |
 | `PoliticaSenha` | NIST 800-63B (#205): 10 caracteres a 72 bytes UTF-8 (limite do BCrypt), sem repetição, sem e-mail/CPF, fora de `seguranca/senhas-comuns.txt`; `normalizar` (NFKC) antes de validar e de gerar/conferir hash |
 | `ApuracaoService` | Consolida/consulta/reabre apuração mensal de IBS/CBS (RN004/RN005); reúsa agregações do `NotaFiscalRepository`; fechamento do job por produtor em transação própria, lendo IDs em lotes por keyset (issue #100) |
+| `ApuracaoFaixaService` | Faixa de meses da apuração (issue #179): valida a combinação (`FaixaApuracaoInvalidaException`, teto 60, `ultimos` 6/12/36/60), lê as persistidas numa consulta e agrega os meses abertos num `GROUP BY` nativo com `AT TIME ZONE 'America/Sao_Paulo'` (`NotaFiscalRepository.agregarApuracaoPorMes`); agrupa por `AgrupamentoApuracao` |
+| `ApuracaoMes` | Regra única de mês → `ApuracaoResponse` (persistido ou ao vivo: arredondamento, saldo, `parcial`), usada pelo `ApuracaoService` e pelo `ApuracaoFaixaService` para a faixa nunca divergir do `?periodo=` (issue #179) |
 | `ResumoLoteApuracao` | Record interno com o resultado do lote do job de fechamento: concluídas + IDs com falha (issue #100) |
 | `DashboardService` | Agrega o painel do produtor (issue #65): reúsa `ApuracaoService` (KPIs) + `NotaFiscalRepository` (série mensal, últimas notas); zero-fill de 6 meses; anti-IDOR |
 | `GuiaFiscalService` | CRUD de guias fiscais (issues #74/#94): `criar`/`listar`/`marcarComoPaga` exigem que o `produtorId` seja o do produtor autenticado — 404 se divergir (anti-IDOR) |

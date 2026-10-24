@@ -244,6 +244,47 @@ public interface NotaFiscalRepository
       @Param("fim") OffsetDateTime fim);
 
   /**
+   * Débito, crédito e quantidade de notas do produtor <strong>por mês</strong>, numa consulta só
+   * (issue #179 — faixa de {@code GET /api/apuracao}). Mesmo recorte de
+   * {@link #somarDebitosPorPeriodo} (PROPRIA + AUTORIZADA) e {@link #somarCreditosPorPeriodo}
+   * (IMPORTADA + AUTORIZADA), para a faixa somar exatamente o que a consulta mês a mês somaria.
+   *
+   * <p>SQL nativo de propósito: o mês é o de Brasília ({@code AT TIME ZONE}), como os limites
+   * {@code [início, fim)} da apuração. O {@code year()}/{@code month()} do HQL extrairia no fuso da
+   * sessão do banco, e uma nota das 22h do dia 31 cairia no mês seguinte. H2 e PostgreSQL aceitam a
+   * mesma sintaxe.
+   *
+   * @param produtorId produtor da sessão
+   * @param inicio     início do intervalo (inclusivo)
+   * @param fim        fim do intervalo (exclusivo)
+   * @return uma linha por mês com nota: {@code [ano, mês, débito IBS, débito CBS, crédito IBS,
+   *     crédito CBS, quantidade]}; somas nulas quando o mês só tem um dos lados
+   */
+  @Query(nativeQuery = true, value = """
+      SELECT EXTRACT(YEAR FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')) AS ano,
+             EXTRACT(MONTH FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')) AS mes,
+             SUM(CASE WHEN n.origem = 'PROPRIA' THEN n.valor_total_ibs END) AS debito_ibs,
+             SUM(CASE WHEN n.origem = 'PROPRIA' THEN n.valor_total_cbs END) AS debito_cbs,
+             SUM(CASE WHEN n.origem = 'IMPORTADA' THEN n.valor_total_credito_ibs END)
+                 AS credito_ibs,
+             SUM(CASE WHEN n.origem = 'IMPORTADA' THEN n.valor_total_credito_cbs END)
+                 AS credito_cbs,
+             COUNT(*) AS quantidade
+      FROM nota_fiscal n
+      WHERE n.produtor_id = :produtorId
+        AND n.status = 'AUTORIZADA'
+        AND n.origem IN ('PROPRIA', 'IMPORTADA')
+        AND n.data_emissao >= :inicio
+        AND n.data_emissao < :fim
+      GROUP BY EXTRACT(YEAR FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo')),
+               EXTRACT(MONTH FROM (n.data_emissao AT TIME ZONE 'America/Sao_Paulo'))
+      """)
+  List<Object[]> agregarApuracaoPorMes(
+      @Param("produtorId") UUID produtorId,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
    * Conta as notas <strong>autorizadas</strong> de um produtor por mês e origem, dentro de um
    * intervalo de tempo, para a série mensal do dashboard (issue Agrocontabil#65 — Sprint 5).
    *

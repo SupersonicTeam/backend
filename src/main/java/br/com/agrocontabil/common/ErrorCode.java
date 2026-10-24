@@ -83,6 +83,11 @@ public enum ErrorCode {
    */
   JANELA_CALENDARIO_INVALIDA,
   /**
+   * Faixa de {@code GET /api/apuracao} inválida: combinação de parâmetros, faixa invertida, acima
+   * de 60 meses ou {@code ultimos} fora de 6/12/36/60 (issue #179). HTTP 400.
+   */
+  FAIXA_APURACAO_INVALIDA,
+  /**
    * Filtro de {@code GET /api/notas} inválido: {@code emitidaDe} depois de {@code emitidaAte} ou
    * ordenação por propriedade fora da lista permitida (issue #174). HTTP 400.
    */

@@ -33,6 +33,19 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
   Optional<ApuracaoMensal> findByProdutorIdAndPeriodo(UUID produtorId, String periodo);
 
   /**
+   * Apurações persistidas do produtor numa faixa de períodos, numa consulta só (issue #179).
+   * {@code periodo} é {@code YYYY-MM}, então a ordem do texto é a ordem do calendário e o
+   * {@code BETWEEN} é inclusivo nas duas pontas. Usa a unique {@code (produtor_id, periodo)}.
+   *
+   * @param produtorId produtor da sessão
+   * @param de         primeiro período ({@code YYYY-MM})
+   * @param ate        último período ({@code YYYY-MM})
+   * @return apurações da faixa, em ordem de período
+   */
+  List<ApuracaoMensal> findByProdutorIdAndPeriodoBetweenOrderByPeriodo(
+      UUID produtorId, String de, String ate);
+
+  /**
    * Busca uma apuração por ID restringindo ao produtor dono (recorte anti-IDOR).
    *
    * <p>Usada na reabertura (issue Agrocontabil#42): retorna vazio — resultando em 404 — quando a

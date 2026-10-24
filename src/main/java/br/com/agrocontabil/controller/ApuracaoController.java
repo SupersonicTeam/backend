@@ -2,6 +2,8 @@ package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.ApuracaoResponse;
+import br.com.agrocontabil.model.AgrupamentoApuracao;
+import br.com.agrocontabil.service.ApuracaoFaixaService;
 import br.com.agrocontabil.service.ApuracaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,42 +36,78 @@ import org.springframework.web.bind.annotation.RestController;
     description = "Apuracao mensal consolidada de IBS/CBS por periodo (RN004)")
 public class ApuracaoController {
 
-  private final ApuracaoService apuracaoService;
+  /** Mês {@code YYYY-MM} com mês 01–12. */
+  private static final String MES = "\\d{4}-(0[1-9]|1[0-2])";
 
-  public ApuracaoController(ApuracaoService apuracaoService) {
+  private static final String MENSAGEM_MES =
+      "Use o formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).";
+
+  private final ApuracaoService apuracaoService;
+  private final ApuracaoFaixaService apuracaoFaixaService;
+
+  public ApuracaoController(ApuracaoService apuracaoService,
+      ApuracaoFaixaService apuracaoFaixaService) {
     this.apuracaoService = apuracaoService;
+    this.apuracaoFaixaService = apuracaoFaixaService;
   }
 
   /**
-   * Retorna a apuração mensal do produtor autenticado no período informado.
+   * Apuração do produtor autenticado: um mês ({@code periodo}) ou uma faixa ({@code de}/{@code ate}
+   * ou {@code ultimos}), opcionalmente agrupada (issue #179).
    *
-   * @param periodo período no formato {@code YYYY-MM} (mês 01–12)
-   * @return apuração do período — persistida quando já consolidada; projeção ao vivo das notas
-   *     (status ABERTO, não persistida) quando o período ainda não foi consolidado
+   * @param periodo     um mês ({@code YYYY-MM}); devolve um objeto
+   * @param de          início da faixa ({@code YYYY-MM}); devolve uma lista
+   * @param ate         fim da faixa ({@code YYYY-MM})
+   * @param ultimos     atalho de faixa: 6, 12, 36 ou 60 meses até o mês corrente
+   * @param agrupamento {@code MES} (padrão), {@code TRIMESTRE}, {@code SEMESTRE} ou {@code ANO}
+   * @return a apuração do mês, ou a lista da faixa em ordem crescente
    */
   @GetMapping
   @Operation(
-      summary = "Consulta a apuracao mensal por periodo",
-      description = "Retorna a apuracao de IBS/CBS do produtor autenticado no mes informado: "
-          + "debito das saidas AUTORIZADAS, credito das entradas IMPORTADAS e o saldo "
-          + "(debito - credito). O periodo usa o formato YYYY-MM (ex.: 2026-07). Se o periodo ja "
-          + "foi consolidado, devolve os valores persistidos (com status e data de fechamento). Se "
-          + "ainda nao foi consolidado (mes corrente, antes do fechamento), projeta os valores ao "
-          + "vivo a partir das notas, sempre em ABERTO e sem persistir.")
+      summary = "Consulta a apuracao de um mes ou de uma faixa de meses",
+      description = "Com periodo=YYYY-MM devolve a apuracao de IBS/CBS do mes (objeto): "
+          + "debito das saidas AUTORIZADAS, credito das entradas IMPORTADAS e saldo; persistida "
+          + "se ja consolidada, projecao ao vivo (ABERTO) se nao. Com de/ate (YYYY-MM, ate 60 "
+          + "meses) ou ultimos (6, 12, 36 ou 60) devolve uma lista em ordem crescente, sem "
+          + "buraco: mes sem nota vem com zeros e totalNotas 0. agrupamento soma os meses por "
+          + "TRIMESTRE (2026-T1), SEMESTRE (2026-S1) ou ANO (2026); o grupo so e FECHADO se todos "
+          + "os meses fecharam e vem parcial quando a faixa o corta ou ele ainda nao terminou.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Apuracao consultada com sucesso"),
+      // ResponseEntity<?> nao diz o tipo ao springdoc: objeto com periodo, lista com faixa.
+      @ApiResponse(responseCode = "200",
+          description = "Objeto com periodo; lista em ordem crescente com de/ate ou ultimos",
+          content = @Content(mediaType = "application/json", schema = @Schema(
+              oneOf = {ApuracaoResponse.class, ApuracaoResponse[].class}))),
       @ApiResponse(responseCode = "400",
-          description = "Periodo ausente ou em formato invalido (esperado YYYY-MM)",
+          description = "Formato invalido (VALIDATION_ERROR) ou faixa invalida "
+              + "(FAIXA_APURACAO_INVALIDA: combinacao, ordem, acima de 60 meses ou ultimos "
+              + "fora de 6/12/36/60)",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
-  public ResponseEntity<ApuracaoResponse> apuracao(
-      @Parameter(description = "Periodo no formato YYYY-MM (mes 01-12)", example = "2026-07")
-      @RequestParam
-      @Pattern(
-          regexp = "\\d{4}-(0[1-9]|1[0-2])",
-          message = "Periodo deve estar no formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).")
-      String periodo) {
-    return ResponseEntity.ok(apuracaoService.consultar(periodo));
+  public ResponseEntity<?> apuracao(
+      @Parameter(description = "Um mes (YYYY-MM)", example = "2026-07")
+      @RequestParam(required = false)
+      @Pattern(regexp = MES, message = MENSAGEM_MES)
+      String periodo,
+      @Parameter(description = "Inicio da faixa (YYYY-MM)", example = "2026-01")
+      @RequestParam(required = false)
+      @Pattern(regexp = MES, message = MENSAGEM_MES)
+      String de,
+      @Parameter(description = "Fim da faixa (YYYY-MM), inclusivo", example = "2026-06")
+      @RequestParam(required = false)
+      @Pattern(regexp = MES, message = MENSAGEM_MES)
+      String ate,
+      @Parameter(description = "Ultimos N meses ate o corrente: 6, 12, 36 ou 60")
+      @RequestParam(required = false)
+      Integer ultimos,
+      @Parameter(description = "MES (padrao), TRIMESTRE, SEMESTRE ou ANO")
+      @RequestParam(required = false)
+      AgrupamentoApuracao agrupamento) {
+    if (periodo != null) {
+      apuracaoFaixaService.exigirSemFaixa(de, ate, ultimos, agrupamento);
+      return ResponseEntity.ok(apuracaoService.consultar(periodo));
+    }
+    return ResponseEntity.ok(apuracaoFaixaService.consultar(de, ate, ultimos, agrupamento));
   }
 
   /**

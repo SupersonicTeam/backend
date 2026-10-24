@@ -22,6 +22,13 @@ import java.time.OffsetDateTime;
  * @param saldoCbs       saldo de CBS a recolher ({@code débito − crédito})
  * @param totalNotas     quantidade de notas consideradas na consolidação
  * @param dataFechamento instante do fechamento automático; nulo enquanto o período está aberto
+ * @param inicio         primeiro mês coberto ({@code YYYY-MM}); igual a {@code fim} num mês só
+ * @param fim            último mês coberto ({@code YYYY-MM})
+ * @param parcial        {@code true} quando o período ainda não terminou ou, numa faixa agrupada,
+ *                       quando a faixa cobre só parte do grupo (issue #179)
+ *
+ * <p>Sem {@code id} de propósito: a reabertura por id fica para a #224, que antes restringe quem
+ * pode reabrir.
  */
 @Schema(description = "Apuração mensal consolidada de IBS/CBS de um produtor em um período")
 public record ApuracaoResponse(
@@ -54,4 +61,13 @@ public record ApuracaoResponse(
     long totalNotas,
 
     @Schema(description = "Instante do fechamento automatico (nulo se aberto)")
-    OffsetDateTime dataFechamento) implements ResultadoAuditavel {}
+    OffsetDateTime dataFechamento,
+
+    @Schema(description = "Primeiro mes coberto (YYYY-MM)", example = "2026-07")
+    String inicio,
+
+    @Schema(description = "Ultimo mes coberto (YYYY-MM)", example = "2026-09")
+    String fim,
+
+    @Schema(description = "Periodo ainda nao terminou, ou grupo coberto so em parte pela faixa")
+    boolean parcial) implements ResultadoAuditavel {}
