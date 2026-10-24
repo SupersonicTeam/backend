@@ -77,6 +77,11 @@ public enum ErrorCode {
    * o máximo permitido (issue #103). HTTP 400.
    */
   JANELA_CALENDARIO_INVALIDA,
+  /**
+   * Faixa de {@code GET /api/apuracao} inválida: combinação de parâmetros, faixa invertida, acima
+   * de 60 meses ou {@code ultimos} fora de 6/12/36/60 (issue #179). HTTP 400.
+   */
+  FAIXA_APURACAO_INVALIDA,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:

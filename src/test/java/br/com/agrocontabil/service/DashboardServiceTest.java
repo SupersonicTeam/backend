@@ -64,7 +64,8 @@ class DashboardServiceTest {
         "2026-07", "ABERTO",
         new BigDecimal("150.00"), new BigDecimal("1350.00"),
         new BigDecimal("30.00"), new BigDecimal("270.00"),
-        new BigDecimal("120.00"), new BigDecimal("1080.00"), 8L, null);
+        new BigDecimal("120.00"), new BigDecimal("1080.00"), 8L, null,
+        "2026-07", "2026-07", false);
   }
 
   @BeforeEach

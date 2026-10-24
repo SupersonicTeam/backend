@@ -10,15 +10,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
+import br.com.agrocontabil.exception.FaixaApuracaoInvalidaException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.service.ApuracaoFaixaService;
 import br.com.agrocontabil.service.ApuracaoService;
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +53,10 @@ class ApuracaoControllerTest {
   @MockBean
   private ApuracaoService apuracaoService;
 
+  /** Faixa de meses (issue #179); a regra dela e testada com o service real na integracao. */
+  @MockBean
+  private ApuracaoFaixaService apuracaoFaixaService;
+
   /** MockIdentidadeFilter (@Component) depende de ProdutorRepository — mockado no @WebMvcTest. */
   @MockBean
   private ProdutorRepository produtorRepository;
@@ -65,7 +72,8 @@ class ApuracaoControllerTest {
         "2026-07", "ABERTO",
         new BigDecimal("150.00"), new BigDecimal("1350.00"),
         new BigDecimal("30.00"), new BigDecimal("270.00"),
-        new BigDecimal("120.00"), new BigDecimal("1080.00"), 8L, null));
+        new BigDecimal("120.00"), new BigDecimal("1080.00"), 8L, null,
+        "2026-07", "2026-07", false));
 
     mockMvc.perform(get("/api/apuracao").param("periodo", "2026-07"))
         .andExpect(status().isOk())
@@ -89,12 +97,44 @@ class ApuracaoControllerTest {
   }
 
   @Test
-  @DisplayName("GET /api/apuracao sem o parametro periodo retorna 400")
+  @DisplayName("GET /api/apuracao sem periodo nem faixa: o service da faixa recusa com 400")
   void semPeriodoRetorna400() throws Exception {
+    when(apuracaoFaixaService.consultar(null, null, null, null)).thenThrow(
+        new FaixaApuracaoInvalidaException("de", "Informe periodo, a faixa ou ultimos.",
+            "Ex.: ?ultimos=6.", null, "YYYY-MM"));
+
     mockMvc.perform(get("/api/apuracao"))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("FAIXA_APURACAO_INVALIDA"));
 
     verifyNoInteractions(apuracaoService);
+  }
+
+  @Test
+  @DisplayName("GET /api/apuracao com de/ate devolve a lista do service da faixa")
+  void faixaDevolveLista() throws Exception {
+    when(apuracaoFaixaService.consultar("2026-01", "2026-02", null, null)).thenReturn(List.of(
+        new ApuracaoResponse("2026-01", "FECHADO", BigDecimal.ONE, BigDecimal.ONE,
+            BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.ONE, 1L, null,
+            "2026-01", "2026-01", false)));
+
+    mockMvc.perform(get("/api/apuracao").param("de", "2026-01").param("ate", "2026-02"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$[0].periodo").value("2026-01"))
+        .andExpect(jsonPath("$[0].id").doesNotExist());
+
+    verifyNoInteractions(apuracaoService);
+  }
+
+  @Test
+  @DisplayName("GET /api/apuracao com de mal formatado retorna 400 VALIDATION_ERROR")
+  void deInvalidoRetorna400() throws Exception {
+    mockMvc.perform(get("/api/apuracao").param("de", "2026-1").param("ate", "2026-02"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"));
+
+    verifyNoInteractions(apuracaoFaixaService);
   }
 
   @Test
@@ -105,7 +145,8 @@ class ApuracaoControllerTest {
         "2026-06", "ABERTO",
         new BigDecimal("100.00"), new BigDecimal("50.00"),
         new BigDecimal("10.00"), new BigDecimal("5.00"),
-        new BigDecimal("90.00"), new BigDecimal("45.00"), 3L, null));
+        new BigDecimal("90.00"), new BigDecimal("45.00"), 3L, null,
+        "2026-06", "2026-06", false));
 
     mockMvc.perform(post("/api/apuracao/{id}/reabrir", id))
         .andExpect(status().isOk())

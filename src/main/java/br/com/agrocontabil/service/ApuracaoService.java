@@ -490,7 +490,8 @@ public class ApuracaoService {
         totais.debitoIbs(), totais.debitoCbs(),
         totais.creditoIbs(), totais.creditoCbs(),
         totais.saldoIbs(), totais.saldoCbs(),
-        totais.totalNotas(), null);
+        totais.totalNotas(), null,
+        mes.toString(), mes.toString(), naoTerminou(mes));
   }
 
   /**
@@ -537,7 +538,13 @@ public class ApuracaoService {
         a.getDebitoIbs(), a.getDebitoCbs(),
         a.getCreditoIbs(), a.getCreditoCbs(),
         a.getSaldoIbs(), a.getSaldoCbs(),
-        a.getTotalNotas(), a.getDataFechamento());
+        a.getTotalNotas(), a.getDataFechamento(),
+        a.getPeriodo(), a.getPeriodo(), naoTerminou(YearMonth.parse(a.getPeriodo())));
+  }
+
+  /** Mês corrente ou futuro: a apuração ainda pode mudar ({@code parcial}, issue #179). */
+  private boolean naoTerminou(YearMonth mes) {
+    return !mes.isBefore(YearMonth.now(clock));
   }
 
   /**
