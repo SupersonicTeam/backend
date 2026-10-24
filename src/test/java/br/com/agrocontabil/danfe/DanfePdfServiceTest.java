@@ -7,6 +7,9 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -45,6 +48,56 @@ class DanfePdfServiceTest {
 
     assertThat(pdf).isNotEmpty();
     assertThat(new String(pdf, 0, 4)).isEqualTo("%PDF");
+  }
+
+  // -------------------------------------------------------------------------
+  // Preview de rascunho (issue #89)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("Preview leva a marca d'agua de rascunho e deixa a chave em branco")
+  void previewTemMarcaDaguaESemChave() throws IOException {
+    NotaFiscal nota = buildNota();
+    nota.setStatus(StatusNotaFiscal.RASCUNHO);
+    nota.setXmlGerado(null);
+
+    String texto = texto(service.gerarPreview(nota));
+
+    assertThat(texto).contains("RASCUNHO").contains("SEM VALOR FISCAL")
+        .contains("Jose Comprador")
+        .doesNotContain("41262612345678000195550010000000011000000012")
+        .doesNotContain("(nao disponivel)");
+  }
+
+  @Test
+  @DisplayName("Preview nunca mostra chave, mesmo que a nota carregue uma")
+  void previewIgnoraChaveDaNota() throws IOException {
+    String texto = texto(service.gerarPreview(buildNota()));
+
+    assertThat(texto).doesNotContain("41262612345678000195550010000000011000000012");
+  }
+
+  @Test
+  @DisplayName("DANFE de verdade nao leva a marca d'agua")
+  void danfeSemMarcaDagua() throws IOException {
+    String texto = texto(service.gerarPdf(buildNota()));
+
+    assertThat(texto).doesNotContain("SEM VALOR FISCAL")
+        .contains("41262612345678000195550010000000011000000012");
+  }
+
+  private static String texto(byte[] pdf) throws IOException {
+    PdfReader leitor = new PdfReader(pdf);
+    try {
+      StringBuilder texto = new StringBuilder();
+      PdfTextExtractor extrator = new PdfTextExtractor(leitor);
+      for (int pagina = 1; pagina <= leitor.getNumberOfPages(); pagina++) {
+        texto.append(extrator.getTextFromPage(pagina)).append('\n');
+      }
+      return texto.toString();
+    } finally {
+      leitor.close();
+    }
   }
 
   private NotaFiscal buildNota() {

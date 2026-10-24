@@ -4,6 +4,7 @@ import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
+import br.com.agrocontabil.exception.DanfePreviewIndisponivelException;
 import br.com.agrocontabil.exception.NfaInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
@@ -70,6 +71,13 @@ public class NotaFiscalService {
    * (issue #22) pode ser editada e ter o XML gerado novamente após a correção dos campos.
    */
   private static final Set<StatusNotaFiscal> STATUS_EDITAVEIS =
+      EnumSet.of(StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS);
+
+  /**
+   * Status com preview de DANFE (issue #89): os anteriores à emissão. A aprovação do contador
+   * (#178) acrescenta {@code AGUARDANDO_APROVACAO}, {@code APROVADA} e {@code DEVOLVIDA} aqui.
+   */
+  private static final Set<StatusNotaFiscal> STATUS_PREVIEW =
       EnumSet.of(StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS);
 
   private final NotaFiscalRepository notaFiscalRepository;
@@ -419,6 +427,35 @@ public class NotaFiscalService {
     // de leitura; dentro da transacao, N downloads concorrentes ocupavam o pool inteiro enquanto
     // montavam PDF (issue #99). Nao ha fase de escrita: gerar DANFE nao altera a nota.
     return danfePdfService.gerarPdf(nota);
+  }
+
+  /**
+   * Gera a pré-visualização da DANFE de uma nota ainda não emitida (issue #89).
+   *
+   * <p>Só para os status de {@link #STATUS_PREVIEW}; fora deles vale o {@link #gerarPdf(UUID)} de
+   * verdade (409). Não roda o {@code FiscalRulesValidator} — conferir uma nota incompleta é
+   * justamente o caso de uso —, não assina, não gera chave e não grava nada: a nota sai da
+   * transação de leitura e o PDF é montado fora dela, como no {@link #gerarPdf(UUID)} (#99).
+   *
+   * @param id identificador da nota
+   * @return bytes do PDF com a marca d'água "RASCUNHO — SEM VALOR FISCAL"
+   * @throws ResourceNotFoundException          nota inexistente ou de outro produtor (404)
+   * @throws DanfePreviewIndisponivelException nota já emitida (409)
+   */
+  public byte[] gerarPreviewDanfe(UUID id) {
+    Produtor produtor = produtorProvider.get();
+
+    NotaFiscal nota = emTransacaoDeLeitura(() -> {
+      NotaFiscal encontrada = notaFiscalRepository
+          .findByIdAndProdutorIdComGrafoDeEmissao(id, produtor.getId())
+          .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
+      if (!STATUS_PREVIEW.contains(encontrada.getStatus())) {
+        throw new DanfePreviewIndisponivelException(id, encontrada.getStatus());
+      }
+      return encontrada;
+    });
+
+    return danfePdfService.gerarPreview(nota);
   }
 
   // -------------------------------------------------------------------------

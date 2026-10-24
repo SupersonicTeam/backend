@@ -170,7 +170,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 ### `danfe/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `DanfePdfService` | Gera PDF via JasperReports (`.jrxml` em resources) |
+| `DanfePdfService` | Gera PDF via JasperReports (`.jrxml` em resources); `gerarPreview` = mesma DANFE com o parâmetro `MARCA_DAGUA` (banda `background`) e a chave em branco (issue #89) |
 | `DanfeItemRow` | DTO de linha de item para o relatório Jasper |
 
 ### `sefaz/`
@@ -247,6 +247,7 @@ Bean Validation customizada (anotação + validator):
 | `XmlImportacaoInvalidaException` | 422 | XML importado inválido/malformado |
 | `DanfeIndisponivelException` | 409 | PDF pedido antes do XML |
 | `XmlIndisponivelException` | 409 | XML pedido antes de ser gerado (issue #89) |
+| `DanfePreviewIndisponivelException` | 409 | Preview de DANFE pedido para nota já emitida (issue #89) |
 | `DanfeGenerationException` | 500 (genérico) | Falha interna no JasperReports |
 | `AssinaturaDigitalException` | 500 (genérico) | Falha na assinatura/cert |
 | `SefazComunicacaoException` | 502 | Base das falhas de comunicação; instância direta = indeterminada |
@@ -285,6 +286,7 @@ Bean Validation customizada (anotação + validator):
 | POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
 | GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`; 409 se ainda nao gerado) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
+| GET | `/api/notas/{id}/danfe-preview` | Preview da DANFE de rascunho com marca d'água, sem validar nem gravar (issue #89) |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |

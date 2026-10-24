@@ -145,6 +145,7 @@ br.com.agrocontabil
 | POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO/COM_INCONSISTENCIAS→XML_GERADO) |
 | GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`; 409 se ainda nao gerado) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
+| GET | `/api/notas/{id}/danfe-preview` | Preview da DANFE de nota não emitida (#89): só `RASCUNHO`/`COM_INCONSISTENCIAS` (outros → 409 `DANFE_PREVIEW_INDISPONIVEL`), marca d'água "RASCUNHO — SEM VALOR FISCAL", chave em branco, sem validar nem gravar; `inline` + `no-store` |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |

@@ -42,6 +42,9 @@
   <parameter name="TOTAL_CBS"      class="java.lang.String"/>
   <parameter name="TOTAL_NOTA"     class="java.lang.String"/>
 
+  <!-- Marca d'agua do preview de rascunho (issue #89). Nula na DANFE de verdade. -->
+  <parameter name="MARCA_DAGUA"    class="java.lang.String"/>
+
   <!-- =====================================================================
        Campos do datasource (colecao de itens — DanfeItemRow)
        ===================================================================== -->
@@ -53,6 +56,25 @@
   <field name="valorTotal"    class="java.lang.String"/>
   <field name="valorIbs"      class="java.lang.String"/>
   <field name="valorCbs"      class="java.lang.String"/>
+
+  <!-- =====================================================================
+       Fundo de todas as paginas: marca d'agua do preview (issue #89), so
+       quando MARCA_DAGUA vem preenchido. Vertical, de ponta a ponta da area
+       util, em cinza claro para nao esconder os dados.
+       ===================================================================== -->
+  <background>
+    <band height="802" splitType="Stretch">
+      <textField isBlankWhenNull="true">
+        <reportElement x="207" y="0" width="120" height="802" forecolor="#D0D0D0">
+          <printWhenExpression><![CDATA[$P{MARCA_DAGUA} != null]]></printWhenExpression>
+        </reportElement>
+        <textElement textAlignment="Center" verticalAlignment="Middle" rotation="Left">
+          <font fontName="SansSerif" size="34" isBold="true"/>
+        </textElement>
+        <textFieldExpression><![CDATA[$P{MARCA_DAGUA}]]></textFieldExpression>
+      </textField>
+    </band>
+  </background>
 
   <!-- =====================================================================
        Cabecalho do documento (title)

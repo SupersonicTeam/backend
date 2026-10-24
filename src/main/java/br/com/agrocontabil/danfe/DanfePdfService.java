@@ -43,6 +43,9 @@ public class DanfePdfService {
   private static final Logger log = LoggerFactory.getLogger(DanfePdfService.class);
 
   private static final String TEMPLATE = "reports/danfe.jrxml";
+
+  /** Marca d'água do preview de rascunho (issue #89), parâmetro {@code MARCA_DAGUA} do template. */
+  public static final String MARCA_DAGUA_RASCUNHO = "RASCUNHO — SEM VALOR FISCAL";
   private static final Locale BR = Locale.of("pt", "BR");
   private static final DateTimeFormatter DATA_FMT =
       DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -61,8 +64,30 @@ public class DanfePdfService {
    * @throws DanfeGenerationException se a compilação/preenchimento/exportação falhar
    */
   public byte[] gerarPdf(NotaFiscal nota) {
+    return gerar(nota, montarParametros(nota));
+  }
+
+  /**
+   * Gera a pré-visualização da DANFE de uma nota ainda não emitida (issue #89).
+   *
+   * <p>Mesmo layout da DANFE, com a marca d'água {@link #MARCA_DAGUA_RASCUNHO} em todas as páginas
+   * e a chave de acesso em branco — mesmo que a nota carregue uma, o preview nunca a mostra: o
+   * documento não tem valor fiscal e não pode ser confundido com a DANFE de uma NF-e autorizada.
+   * Não valida, não assina e não altera a nota.
+   *
+   * @param nota nota com produtor e itens carregados
+   * @return bytes do PDF gerado
+   * @throws DanfeGenerationException se a compilação/preenchimento/exportação falhar
+   */
+  public byte[] gerarPreview(NotaFiscal nota) {
+    Map<String, Object> params = montarParametros(nota);
+    params.put("CHAVE_ACESSO", "");
+    params.put("MARCA_DAGUA", MARCA_DAGUA_RASCUNHO);
+    return gerar(nota, params);
+  }
+
+  private byte[] gerar(NotaFiscal nota, Map<String, Object> params) {
     try {
-      Map<String, Object> params = montarParametros(nota);
       List<DanfeItemRow> itens = montarItens(nota);
       JasperPrint print =
           JasperFillManager.fillReport(getReport(), params, new JRBeanCollectionDataSource(itens));
