@@ -84,6 +84,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     valor_total_credito_cbs     NUMERIC(15,2),
     -- Lock otimista — Onda 3 issue #95 (migration 0022)
     version                     BIGINT         NOT NULL DEFAULT 0,
+    -- Busca das notas — issue #174 (migration 0037). Mantida pela aplicacao; o indice GIN de
+    -- trigrama (pg_trgm + btree_gin) e so do PostgreSQL e nao e replicado aqui.
+    busca_normalizada           VARCHAR(600),
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),

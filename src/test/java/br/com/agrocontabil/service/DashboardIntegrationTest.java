@@ -35,8 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Exercita a pilha real ({@link DashboardService} + {@link ApuracaoService} +
  * {@link NotaFiscalRepository}). O objetivo principal é <strong>garantir a portabilidade</strong>
- * da query de série mensal — a agregação por {@code year()}/{@code month()} + {@code origem} roda
- * no H2 exatamente como rodará no PostgreSQL — e confirmar o zero-fill dos 6 meses, a exclusão de
+ * da query nativa de série mensal — a agregação por mês de Brasília ({@code AT TIME ZONE}) +
+ * {@code origem} roda no H2 com a mesma sintaxe do PostgreSQL — e confirmar o zero-fill dos 6 meses, a exclusão de
  * notas não autorizadas/fora da janela e o mapeamento das últimas notas sem expor entidade JPA.
  */
 @SpringBootTest
@@ -72,7 +72,7 @@ class DashboardIntegrationTest {
   }
 
   @Test
-  @DisplayName("Serie mensal agrega por mes/origem (year/month portavel) com zero-fill e exclusoes")
+  @DisplayName("Serie mensal agrega por mes/origem com zero-fill e exclusoes")
   void serieMensalAgregaPorMesEorigem() {
     OffsetDateTime maio = OffsetDateTime.of(2026, 5, 10, 9, 0, 0, 0, ZoneOffset.ofHours(-3));
     OffsetDateTime julho = OffsetDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneOffset.ofHours(-3));
@@ -95,6 +95,28 @@ class DashboardIntegrationTest {
         .containsExactly(1L, 1L); // julho: 1 entrada + 1 saida (rascunho nao conta)
     assertThat(serie.get(0)).extracting(NotaPorMes::entradas, NotaPorMes::saidas)
         .containsExactly(0L, 0L); // fevereiro vazio
+  }
+
+  @Test
+  @DisplayName("Nota das 22h30 do ultimo dia do mes (Brasilia) conta naquele mes, gravada em UTC")
+  void notaDoFimDoUltimoDiaContaNoMesDeBrasilia() {
+    // 31/07 22h30 em Brasilia = 01/08 01h30 UTC. Gravada com offset Z, como chega de uma sessao
+    // em UTC: o month() do HQL extraia agosto e a nota sumia de julho.
+    OffsetDateTime fimDeJulho = OffsetDateTime.of(2026, 8, 1, 1, 30, 0, 0, ZoneOffset.UTC);
+    // 28/02 22h00 em Brasilia = 01/03 01h00 UTC: fevereiro, nao marco.
+    OffsetDateTime fimDeFevereiro = OffsetDateTime.of(2026, 3, 1, 1, 0, 0, 0, ZoneOffset.UTC);
+
+    salvarSaida(1L, StatusNotaFiscal.AUTORIZADA, fimDeJulho);
+    salvarEntradaImportada(2L, fimDeFevereiro);
+
+    List<NotaPorMes> serie = dashboardService.montar("2026-07").notasPorMes();
+
+    assertThat(serie.get(5)).extracting(NotaPorMes::periodo, NotaPorMes::saidas)
+        .containsExactly("2026-07", 1L);
+    assertThat(serie.get(0)).extracting(NotaPorMes::periodo, NotaPorMes::entradas)
+        .containsExactly("2026-02", 1L);
+    assertThat(serie.get(1)).extracting(NotaPorMes::entradas, NotaPorMes::saidas)
+        .containsExactly(0L, 0L);
   }
 
   @Test
