@@ -47,6 +47,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004), faixa `de`/`ate`/`ultimos` + `agrupamento` (`ApuracaoFaixaService`, issue #179) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
+| `RevisaoNotaController` | `/api/notas/{id}/enviar-para-revisao`, `/retirar-da-revisao`, `/revisoes` e `/api/contador/produtores/{produtorId}/notas/{id}/aprovar`, `/devolver`, `/revisoes` (#178) |
 | `ObrigacaoController` | `/api/contador/obrigacoes` (+ `/{id}`, `/reativar`, `/restaurar-padrao`) — catálogo de obrigações do escritório (#181) |
 | `GuiaFiscalController` | `/api/contador/guias` — CRUD de guias fiscais do Contador (issue #74) |
 | `CarteiraController` | `/api/contador/produtores` (lista), `/{produtorId}/ficha`, `/etiquetas`, `/suspender`/`/reativar`/`/encerrar`, `/api/contador/etiquetas`, `/api/contador/convites` — só contador (#177) |
@@ -100,6 +101,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `FichaClienteService` | Ficha do cliente (observações, etiquetas, catálogo) — só vínculo ATIVO, via `ProdutorEmContextoResolver.exigirContadorComAcesso` (#177) |
 | `CarteiraNotasService` | Leitura das notas do cliente pelo escritório (#177): resolver primeiro, depois `NotaFiscalService.findAllDoProdutor`/`findByIdDoProdutor` e `NotaFiscalValidacaoService.listarValidacoesDoProdutor` |
 | `ObrigacaoFiscalService` | Catálogo de obrigações (#181): efetivo = próprias + versões + modelos sem versão; editar/desativar modelo cria a versão do escritório (`toBuilder` do modelo); `ocorrencias(produtor, escritorios, de, ate)` = todas as datas da janela (dia inexistente → último; `AjusteFimDeSemana`) + fechamento da apuração (RN004) |
+| `RevisaoNotaService` | Aprovação do contador (#178): `enviarParaRevisao` (exige contador ATIVO; validação fiscal + pré-condições da NFA fora de tx, falha → `registrarInconsistencias` + 422; recheca status e versão sob lock), `retirarDaRevisao`, `aprovar`/`devolver` (carteira ativa → 404, função ADMINISTRADOR/CONTADOR → 403), histórico em `nota_fiscal_revisao` (0041). `NotaFiscalService.gerarXml` exige `APROVADA` com contador; `NotaFiscalValidacaoService` grava `APROVACAO_CADUCADA` |
 | `CalendarioFiscalService` | Monta o calendário fiscal do produtor (issue #74): reúsa `GuiaFiscalRepository` como única fonte de vencimento nesta entrega |
 
 ### `nfe/`
@@ -334,5 +336,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0040-obrigacao-fiscal; próximo número livre: **0041**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0041-nota-fiscal-revisao; próximo número livre: **0042**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

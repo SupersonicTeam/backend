@@ -509,6 +509,37 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0041: historico de revisao da nota, CASCADE da nota (#178)")
+  void changeSet0041RevisaoDaNota() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'nota_fiscal_revisao' ORDER BY column_name", String.class))
+        .containsExactly("acao", "id", "motivo", "nota_fiscal_id", "ocorrido_em", "papel",
+            "usuario_id");
+    assertThat(jdbc.queryForObject("SELECT character_maximum_length FROM information_schema.columns"
+        + " WHERE table_name = 'nota_fiscal' AND column_name = 'status'", Integer.class))
+        .as("AGUARDANDO_APROVACAO tem 20 caracteres").isGreaterThanOrEqualTo(20);
+
+    String produtorId = UUID.randomUUID().toString();
+    String notaId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    jdbc.update("INSERT INTO nota_fiscal (id, produtor_id, numero, serie, modelo,"
+        + " natureza_operacao, data_emissao, destinatario_nome, destinatario_cpf_cnpj,"
+        + " valor_total_produtos, valor_total_nota, status) VALUES (?::uuid, ?::uuid, 1, 1, '55',"
+        + " 'Venda', now(), 'Comprador', '12345678901', 1, 1, 'AGUARDANDO_APROVACAO')",
+        notaId, produtorId);
+    jdbc.update("INSERT INTO nota_fiscal_revisao (id, nota_fiscal_id, acao, ocorrido_em)"
+        + " VALUES (gen_random_uuid(), ?::uuid, 'APROVACAO_CADUCADA', now())", notaId);
+
+    jdbc.update("DELETE FROM nota_fiscal WHERE id = ?::uuid", notaId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM nota_fiscal_revisao"
+        + " WHERE nota_fiscal_id = ?::uuid", Integer.class, notaId)).isZero();
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
   @DisplayName("changeSet 0034 cria redefinicao_senha com hash unico e CASCADE da credencial")
   void changeSet0034CriaRedefinicaoSenha() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

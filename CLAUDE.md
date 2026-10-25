@@ -67,8 +67,9 @@ br.com.agrocontabil
 │                  # CfopReferencia, NcmReferencia + repos do scaffolding AI)
 ├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario,
 │                  # NotaFiscalValidacao [#22], CfopReferencia/NcmReferencia [#20])
-│                  # enums: StatusNotaFiscal (RASCUNHO→XML_GERADO→[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ;
-│                  #                   AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS),
+│                  # enums: StatusNotaFiscal (RASCUNHO→[AGUARDANDO_APROVACAO→APROVADA, #178]→XML_GERADO
+│                  #                   →[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ;
+│                  #                   AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS; DEVOLVIDA),
 │                  # OrigemNotaFiscal (PROPRIA/IMPORTADA), TipoDocumentoFiscal (NFE/NFA),
 │                  # TipoOperacaoCfop, AmbitoCfop, TipoProdutor
 │                  # modelos pré-criados para sprint futura de consultoria AI:
@@ -155,12 +156,16 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; produtor=destinatário; origem=IMPORTADA) |
-| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS) |
-| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS) |
-| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO/COM_INCONSISTENCIAS→XML_GERADO) |
+| PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS/DEVOLVIDA) |
+| DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS/DEVOLVIDA) |
+| POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (→XML_GERADO). **Com contador vinculado** (vínculo ATIVO conferido na hora, #178) só `APROVADA` — editável → 409 `APROVACAO_EXIGIDA`; sem contador, `RASCUNHO`/`COM_INCONSISTENCIAS`/`DEVOLVIDA` (e `APROVADA`). Falha numa nota aprovada derruba a aprovação (`APROVACAO_CADUCADA` no histórico) |
+| POST | `/api/notas/{id}/enviar-para-revisao` · `/retirar-da-revisao` | Produtor (#178): editável → `AGUARDANDO_APROVACAO`, depois da validação fiscal (falha → 422 e `COM_INCONSISTENCIAS` com o lote); sem contador → 409 `TRANSICAO_REVISAO_INVALIDA`; retirar volta a `RASCUNHO`. `AGUARDANDO_APROVACAO`/`APROVADA` não são editáveis |
+| GET | `/api/notas/{id}/revisoes` · `/api/contador/produtores/{produtorId}/notas/{id}/revisoes` | Histórico da revisão (`ENVIADA`/`RETIRADA`/`APROVADA`/`DEVOLVIDA`/`APROVACAO_CADUCADA`, motivo, id e papel de quem agiu), do mais recente (#178) |
+| POST | `/api/contador/produtores/{produtorId}/notas/{id}/aprovar` · `/devolver` | Contador `ADMINISTRADOR`/`CONTADOR` (assistente 403; #178): `AGUARDANDO_APROVACAO` → `APROVADA` ou `DEVOLVIDA` `{motivo}` (5–500); o contador não edita; fora da carteira ou nota de outro produtor → 404; `@Auditado` |
+| GET | `/api/contador/produtores/{produtorId}/notas/{id}/danfe-preview` | Preview da DANFE para a revisão (#178), nos mesmos status do preview do produtor |
 | GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`; 409 se ainda nao gerado) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
-| GET | `/api/notas/{id}/danfe-preview` | Preview da DANFE de nota não emitida (#89): só `RASCUNHO`/`COM_INCONSISTENCIAS` (outros → 409 `DANFE_PREVIEW_INDISPONIVEL`), marca d'água "RASCUNHO — SEM VALOR FISCAL", chave em branco, sem validar nem gravar; `inline` + `no-store` |
+| GET | `/api/notas/{id}/danfe-preview` | Preview da DANFE de nota não emitida (#89): `RASCUNHO`/`COM_INCONSISTENCIAS` e, desde a #178, `DEVOLVIDA`/`AGUARDANDO_APROVACAO`/`APROVADA` (outros → 409 `DANFE_PREVIEW_INDISPONIVEL`), marca d'água "RASCUNHO — SEM VALOR FISCAL", chave em branco, sem validar nem gravar; `inline` + `no-store` |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006) |
@@ -254,7 +259,7 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 1.407 testes, todos passando** (2026-10-25) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 1.420 testes, todos passando** (2026-10-25) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 8 concluída (2026-10-20)

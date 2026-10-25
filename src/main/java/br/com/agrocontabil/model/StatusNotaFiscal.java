@@ -31,6 +31,18 @@ public enum StatusNotaFiscal {
   COM_INCONSISTENCIAS,
 
   /**
+   * O produtor enviou a nota para o contador revisar (issue #178): já passou pela validação
+   * fiscal e não é editável enquanto espera o aval.
+   */
+  AGUARDANDO_APROVACAO,
+
+  /** O contador aprovou (issue #178): o produtor já pode gerar o XML. Não é editável. */
+  APROVADA,
+
+  /** O contador devolveu com motivo (issue #178): volta a ser editável pelo produtor. */
+  DEVOLVIDA,
+
+  /**
    * XML da NF-e foi gerado e assinado localmente. Pronto para envio à SEFAZ.
    */
   XML_GERADO,

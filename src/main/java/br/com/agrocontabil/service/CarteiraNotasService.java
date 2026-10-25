@@ -61,6 +61,18 @@ public class CarteiraNotasService {
   }
 
   /**
+   * Preview da DANFE de uma nota do cliente ainda não emitida (revisão, issue #178).
+   *
+   * @param produtorId cliente
+   * @param notaId     nota
+   * @return PDF com a marca d'água de rascunho
+   */
+  public byte[] previewDanfe(UUID produtorId, UUID notaId) {
+    produtorEmContexto.exigirContadorComAcesso(produtorId);
+    return notaFiscalService.gerarPreviewDanfeDoProdutor(produtorId, notaId);
+  }
+
+  /**
    * Histórico de inconsistências de uma nota do cliente.
    *
    * @param produtorId cliente

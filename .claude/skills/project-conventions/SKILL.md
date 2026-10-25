@@ -93,9 +93,10 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 ## Estado da nota fiscal (referência rápida)
 
-`RASCUNHO → XML_GERADO → AUTORIZADA / REJEITADA / PENDENTE_SEFAZ / CANCELADA`; `COM_INCONSISTENCIAS`.
-- Editável (update/delete/gerar-xml): apenas `RASCUNHO` e `COM_INCONSISTENCIAS`.
-- Fora disso → **409** (`NotaFiscalNaoEditavelException`).
+`RASCUNHO → [AGUARDANDO_APROVACAO → APROVADA] → XML_GERADO → AUTORIZADA / REJEITADA / PENDENTE_SEFAZ / CANCELADA`; `COM_INCONSISTENCIAS`; `DEVOLVIDA`.
+- Editável (update/delete): `RASCUNHO`, `COM_INCONSISTENCIAS` e `DEVOLVIDA` (#178). Fora disso → **409** (`NotaFiscalNaoEditavelException`).
+- `gerar-xml` **com contador vinculado** (vínculo ATIVO conferido na hora): só `APROVADA`; editável → 409 `AprovacaoExigidaException`. Sem contador: os editáveis e `APROVADA`.
+- Transições da revisão só pelo `RevisaoNotaService` (enviar/retirar pelo produtor, aprovar/devolver pelo `ADMINISTRADOR`/`CONTADOR`), sob lock e com histórico em `nota_fiscal_revisao`.
 
 ## Bibliotecas externas
 

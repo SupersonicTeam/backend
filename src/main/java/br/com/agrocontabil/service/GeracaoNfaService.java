@@ -48,6 +48,21 @@ public class GeracaoNfaService {
    *     invalido (HTTP 422)
    */
   public String gerarXml(NotaFiscal nota) {
+    validarPreCondicoes(nota);
+    Produtor produtor = nota.getProdutor();
+    log.info("Emitindo NFA para produtor pessoa fisica {} (cpf={}).",
+        produtor.getId(), mascarar(somenteDigitos(produtor.getCpfCnpj())));
+    return geracaoNotaFiscalService.gerarXml(nota);
+  }
+
+  /**
+   * Pré-condições da NFA (produtor pessoa física com CPF válido), sem gerar nada — também usadas
+   * no envio da nota para revisão (issue #178).
+   *
+   * @param nota nota NFA
+   * @throws NfaInvalidaParaEmissaoException se o emitente não puder emitir NFA (422)
+   */
+  public void validarPreCondicoes(NotaFiscal nota) {
     Produtor produtor = nota.getProdutor();
 
     if (produtor.getTipoProdutor() != TipoProdutor.PESSOA_FISICA) {
@@ -64,10 +79,6 @@ public class GeracaoNfaService {
           produtor.getId(), mascarar(documento));
       throw NfaInvalidaParaEmissaoException.cpfEmitenteInvalido();
     }
-
-    log.info("Emitindo NFA para produtor pessoa fisica {} (cpf={}).",
-        produtor.getId(), mascarar(documento));
-    return geracaoNotaFiscalService.gerarXml(nota);
   }
 
   private static String somenteDigitos(String documento) {

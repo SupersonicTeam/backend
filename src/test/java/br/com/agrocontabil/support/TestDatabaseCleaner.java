@@ -11,6 +11,7 @@ import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
@@ -55,6 +56,7 @@ public class TestDatabaseCleaner {
   private final ConviteMembroRepository conviteMembroRepository;
   private final EscritorioRepository escritorioRepository;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
+  private final NotaFiscalRevisaoRepository revisaoRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -75,7 +77,8 @@ public class TestDatabaseCleaner {
       EtiquetaCarteiraRepository etiquetaRepository,
       ConviteMembroRepository conviteMembroRepository,
       EscritorioRepository escritorioRepository,
-      ObrigacaoFiscalRepository obrigacaoRepository) {
+      ObrigacaoFiscalRepository obrigacaoRepository,
+      NotaFiscalRevisaoRepository revisaoRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -94,6 +97,7 @@ public class TestDatabaseCleaner {
     this.conviteMembroRepository = conviteMembroRepository;
     this.escritorioRepository = escritorioRepository;
     this.obrigacaoRepository = obrigacaoRepository;
+    this.revisaoRepository = revisaoRepository;
   }
 
   /**
@@ -112,6 +116,8 @@ public class TestDatabaseCleaner {
     alertaRepository.deleteAll();
     interacaoRepository.deleteAll();
     validacaoRepository.deleteAll();
+    // Revisoes (#178) antes das notas: sem relacao JPA, so a FK do script as levaria.
+    revisaoRepository.deleteAll();
     apuracaoRepository.deleteAll();
     guiaFiscalRepository.deleteAll();
     notaFiscalRepository.deleteAll();
