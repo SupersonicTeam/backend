@@ -3,18 +3,17 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.dto.EtiquetaResponse;
 import br.com.agrocontabil.dto.FichaClienteResponse;
-import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.EtiquetaCarteira;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
-import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.security.MembroEscritorioProvider;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import br.com.agrocontabil.security.UsuarioAutenticado;
-import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -39,17 +38,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FichaClienteService {
 
-  private final UsuarioAutenticadoProvider usuarioProvider;
+  private final MembroEscritorioProvider membroProvider;
   private final ProdutorEmContextoResolver produtorEmContexto;
   private final VinculoCarteiraRepository vinculoRepository;
   private final EtiquetaCarteiraRepository etiquetaRepository;
 
   public FichaClienteService(
-      UsuarioAutenticadoProvider usuarioProvider,
+      MembroEscritorioProvider membroProvider,
       ProdutorEmContextoResolver produtorEmContexto,
       VinculoCarteiraRepository vinculoRepository,
       EtiquetaCarteiraRepository etiquetaRepository) {
-    this.usuarioProvider = usuarioProvider;
+    this.membroProvider = membroProvider;
     this.produtorEmContexto = produtorEmContexto;
     this.vinculoRepository = vinculoRepository;
     this.etiquetaRepository = etiquetaRepository;
@@ -93,7 +92,7 @@ public class FichaClienteService {
   @Transactional
   public FichaClienteResponse definirEtiquetas(UUID produtorId, List<String> nomes) {
     VinculoCarteira vinculo = vinculoAtivo(produtorId);
-    UUID contadorId = vinculo.getContadorId();
+    UUID escritorioId = vinculo.getEscritorioId();
 
     Map<String, String> pedidas = new LinkedHashMap<>();
     for (String nome : nomes) {
@@ -101,13 +100,13 @@ public class FichaClienteService {
       pedidas.putIfAbsent(NormalizacaoBusca.normalizar(limpo), limpo);
     }
     Map<String, EtiquetaCarteira> existentes = etiquetaRepository
-        .findByContadorIdAndNomeNormalizadoIn(contadorId, pedidas.keySet()).stream()
+        .findByEscritorioIdAndNomeNormalizadoIn(escritorioId, pedidas.keySet()).stream()
         .collect(Collectors.toMap(EtiquetaCarteira::getNomeNormalizado, Function.identity()));
 
     Set<EtiquetaCarteira> etiquetas = new LinkedHashSet<>();
     pedidas.forEach((normalizado, nome) -> etiquetas.add(existentes.computeIfAbsent(normalizado,
         n -> etiquetaRepository.save(EtiquetaCarteira.builder()
-            .contadorId(contadorId)
+            .escritorioId(escritorioId)
             .nome(nome)
             .nomeNormalizado(n)
             .build()))));
@@ -117,21 +116,21 @@ public class FichaClienteService {
   }
 
   /**
-   * Catálogo de etiquetas do contador autenticado.
+   * Catálogo de etiquetas do escritório do contador autenticado (qualquer membro).
    *
    * @return etiquetas em ordem alfabética
-   * @throws PapelNaoAutorizadoException se quem pede não for contador (403)
    */
   @Transactional(readOnly = true)
   public List<EtiquetaResponse> catalogo() {
     return etiquetaRepository
-        .findByContadorIdOrderByNomeNormalizadoAsc(exigirContador().contador().getId()).stream()
+        .findByEscritorioIdOrderByNomeNormalizadoAsc(membroProvider.membro().getEscritorioId())
+        .stream()
         .map(e -> new EtiquetaResponse(e.getId(), e.getNome()))
         .toList();
   }
 
   /**
-   * Apaga a etiqueta do catálogo e de todos os clientes.
+   * Apaga a etiqueta do catálogo e de todos os clientes (só administrador: vale para a equipe).
    *
    * @param etiquetaId etiqueta
    * @throws ResourceNotFoundException etiqueta de outro escritório ou inexistente (404)
@@ -139,7 +138,8 @@ public class FichaClienteService {
   @Transactional
   public void excluirEtiqueta(UUID etiquetaId) {
     EtiquetaCarteira etiqueta = etiquetaRepository
-        .findByIdAndContadorId(etiquetaId, exigirContador().contador().getId())
+        .findByIdAndEscritorioId(etiquetaId,
+            membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR).getEscritorioId())
         .orElseThrow(() -> new ResourceNotFoundException("Etiqueta", etiquetaId));
     etiquetaRepository.desaplicar(etiqueta.getId());
     etiquetaRepository.delete(etiqueta);
@@ -148,16 +148,8 @@ public class FichaClienteService {
   private VinculoCarteira vinculoAtivo(UUID produtorId) {
     UsuarioAutenticado contador = produtorEmContexto.exigirContadorComAcesso(produtorId);
     return vinculoRepository
-        .findFicha(contador.contador().getId(), produtorId, SituacaoVinculo.ATIVO)
+        .findFicha(contador.contador().getEscritorioId(), produtorId, SituacaoVinculo.ATIVO)
         .orElseThrow(() -> new ResourceNotFoundException("Produtor", produtorId));
-  }
-
-  private UsuarioAutenticado exigirContador() {
-    UsuarioAutenticado usuario = usuarioProvider.get();
-    if (!usuario.isContador()) {
-      throw new PapelNaoAutorizadoException(usuario.papel(), PapelUsuario.CONTADOR);
-    }
-    return usuario;
   }
 
   private static FichaClienteResponse resposta(VinculoCarteira vinculo) {

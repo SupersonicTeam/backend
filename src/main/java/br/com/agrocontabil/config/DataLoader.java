@@ -4,6 +4,8 @@ import br.com.agrocontabil.exception.SenhaFracaException;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.EnderecoProdutor;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -12,6 +14,7 @@ import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.PapelUsuario;
@@ -77,6 +80,7 @@ public class DataLoader implements CommandLineRunner {
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
   private final VinculoCarteiraRepository vinculoRepository;
+  private final EscritorioRepository escritorioRepository;
   private final CredencialUsuarioRepository credencialRepository;
   private final PasswordEncoder passwordEncoder;
   private final PoliticaSenha politicaSenha;
@@ -86,6 +90,7 @@ public class DataLoader implements CommandLineRunner {
       ProdutorRepository produtorRepository,
       ContadorRepository contadorRepository,
       VinculoCarteiraRepository vinculoRepository,
+      EscritorioRepository escritorioRepository,
       CredencialUsuarioRepository credencialRepository,
       PasswordEncoder passwordEncoder,
       PoliticaSenha politicaSenha,
@@ -93,6 +98,7 @@ public class DataLoader implements CommandLineRunner {
     this.produtorRepository = produtorRepository;
     this.contadorRepository = contadorRepository;
     this.vinculoRepository = vinculoRepository;
+    this.escritorioRepository = escritorioRepository;
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
     this.politicaSenha = politicaSenha;
@@ -193,8 +199,13 @@ public class DataLoader implements CommandLineRunner {
       return existente.get();
     }
 
+    // Escritorio do seed com o contador como administrador (issue #228).
+    Escritorio escritorio = escritorioRepository.save(
+        Escritorio.builder().nome("Escritorio Contabil Campo Certo").build());
     Contador contador =
         Contador.builder()
+            .escritorioId(escritorio.getId())
+            .funcao(FuncaoEscritorio.ADMINISTRADOR)
             .nomeCompleto("Escritorio Contabil Campo Certo")
             .cpfCnpj(CNPJ_CONTADOR)
             .crc("MT-012345/O")
@@ -205,7 +216,8 @@ public class DataLoader implements CommandLineRunner {
     Contador salvo = contadorRepository.save(contador);
     // Vinculo ATIVO direto, sem convite: e o seed de dev/homolog (issue #177).
     vinculoRepository.save(VinculoCarteira.builder()
-        .contadorId(salvo.getId())
+        .escritorioId(escritorio.getId())
+        .responsavelId(salvo.getId())
         .produtorId(produtorA.getId())
         .situacao(SituacaoVinculo.ATIVO)
         .inicio(OffsetDateTime.now())

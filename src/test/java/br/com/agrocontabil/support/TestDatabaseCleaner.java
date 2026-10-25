@@ -5,7 +5,9 @@ import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
+import br.com.agrocontabil.repository.ConviteMembroRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -49,6 +51,8 @@ public class TestDatabaseCleaner {
   private final ConviteCarteiraRepository conviteRepository;
   private final VinculoCarteiraRepository vinculoRepository;
   private final EtiquetaCarteiraRepository etiquetaRepository;
+  private final ConviteMembroRepository conviteMembroRepository;
+  private final EscritorioRepository escritorioRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -66,7 +70,9 @@ public class TestDatabaseCleaner {
       RegistroAuditoriaRepository auditoriaRepository,
       ConviteCarteiraRepository conviteRepository,
       VinculoCarteiraRepository vinculoRepository,
-      EtiquetaCarteiraRepository etiquetaRepository) {
+      EtiquetaCarteiraRepository etiquetaRepository,
+      ConviteMembroRepository conviteMembroRepository,
+      EscritorioRepository escritorioRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -82,6 +88,8 @@ public class TestDatabaseCleaner {
     this.conviteRepository = conviteRepository;
     this.vinculoRepository = vinculoRepository;
     this.etiquetaRepository = etiquetaRepository;
+    this.conviteMembroRepository = conviteMembroRepository;
+    this.escritorioRepository = escritorioRepository;
   }
 
   /**
@@ -112,7 +120,10 @@ public class TestDatabaseCleaner {
     conviteRepository.deleteAll();
     vinculoRepository.deleteAll();
     etiquetaRepository.deleteAll();
+    conviteMembroRepository.deleteAll();
     contadorRepository.deleteAll();
+    // Escritorio (#228) depois dos contadores, que o referenciam.
+    escritorioRepository.deleteAll();
     produtorRepository.deleteAll();
     // Auditoria (#149): sem FK (sobrevive ao que audita); limpa para um teste nao ver o do outro.
     auditoriaRepository.apagarAnterioresA(OffsetDateTime.now().plusYears(100));

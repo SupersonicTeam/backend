@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.EnderecoDestinatario;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
@@ -29,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>O que este teste protege: o vínculo {@code ATIVO} é a <strong>única</strong> autorização que
  * o contador tem sobre os dados de um produtor, e a pergunta é feita por
- * {@link VinculoCarteiraRepository#existsByContadorIdAndProdutorIdAndSituacao}, método derivado do
+ * {@link VinculoCarteiraRepository#existsByEscritorioIdAndProdutorIdAndSituacao}, método derivado do
  * nome — uma renomeação de campo o quebra silenciosamente, e só uma consulta real detecta.
  */
 @SpringBootTest
@@ -42,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 class ContadorVinculoIntegrationTest {
 
   @Autowired ContadorRepository contadorRepository;
+  @Autowired EscritorioRepository escritorioRepository;
   @Autowired ProdutorRepository produtorRepository;
   @Autowired VinculoCarteiraRepository vinculoRepository;
   @Autowired NotaFiscalRepository notaRepository;
@@ -49,7 +52,8 @@ class ContadorVinculoIntegrationTest {
 
   private Produtor atendido;
   private Produtor naoAtendido;
-  private Contador contador;
+  private Escritorio escritorio;
+  private Contador membro;
 
   @BeforeEach
   void semear() {
@@ -61,63 +65,78 @@ class ContadorVinculoIntegrationTest {
     naoAtendido = produtorRepository.save(
         Produtor.builder().nomeCompleto("Sitio Sem Contador").cpfCnpj("11122233344")
             .estado("PR").build());
-    contador = contadorRepository.saveAndFlush(Contador.builder()
-        .nomeCompleto("Escritorio Teste")
+    escritorio = escritorioRepository.saveAndFlush(
+        Escritorio.builder().nome("Escritorio Teste").build());
+    membro = contadorRepository.saveAndFlush(Contador.builder()
+        .nomeCompleto("Contadora Teste")
         .cpfCnpj("11.222.333/0001-95")
         .crc("MT-999999/O")
+        .escritorioId(escritorio.getId())
+        .funcao(FuncaoEscritorio.ADMINISTRADOR)
         .build());
-    vincular(contador, atendido, SituacaoVinculo.ATIVO);
+    vincular(escritorio, atendido, SituacaoVinculo.ATIVO);
   }
 
-  private VinculoCarteira vincular(Contador c, Produtor p, SituacaoVinculo situacao) {
-    return vinculoRepository.saveAndFlush(VinculoCarteira.builder().contadorId(c.getId())
+  private VinculoCarteira vincular(Escritorio e, Produtor p, SituacaoVinculo situacao) {
+    return vinculoRepository.saveAndFlush(VinculoCarteira.builder().escritorioId(e.getId())
+        .responsavelId(membro == null ? null : membro.getId())
         .produtorId(p.getId()).situacao(situacao).inicio(OffsetDateTime.now()).build());
   }
 
   @Test
   @DisplayName("vinculo ATIVO autoriza; sem vinculo, nao")
   void ativoAutoriza() {
-    assertThat(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), atendido.getId(), SituacaoVinculo.ATIVO)).isTrue();
-    assertThat(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), naoAtendido.getId(), SituacaoVinculo.ATIVO)).isFalse();
-    assertThat(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
+    assertThat(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        escritorio.getId(), atendido.getId(), SituacaoVinculo.ATIVO)).isTrue();
+    assertThat(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        escritorio.getId(), naoAtendido.getId(), SituacaoVinculo.ATIVO)).isFalse();
+    assertThat(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
         UUID.randomUUID(), atendido.getId(), SituacaoVinculo.ATIVO)).isFalse();
   }
 
   @Test
   @DisplayName("vinculo suspenso nao autoriza, mas e o vinculo aberto do par")
   void suspensoNaoAutoriza() {
-    vincular(contador, naoAtendido, SituacaoVinculo.SUSPENSO);
+    vincular(escritorio, naoAtendido, SituacaoVinculo.SUSPENSO);
 
-    assertThat(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), naoAtendido.getId(), SituacaoVinculo.ATIVO)).isFalse();
-    assertThat(vinculoRepository.findAbertoForUpdate(contador.getId(), naoAtendido.getId()))
+    assertThat(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        escritorio.getId(), naoAtendido.getId(), SituacaoVinculo.ATIVO)).isFalse();
+    assertThat(vinculoRepository.findAbertoForUpdate(escritorio.getId(), naoAtendido.getId()))
         .get().extracting(VinculoCarteira::getSituacao).isEqualTo(SituacaoVinculo.SUSPENSO);
   }
 
   @Test
   @DisplayName("encerrado fica como historico e nao e vinculo aberto")
   void encerradoEhHistorico() {
-    vincular(contador, naoAtendido, SituacaoVinculo.ENCERRADO);
+    vincular(escritorio, naoAtendido, SituacaoVinculo.ENCERRADO);
 
-    assertThat(vinculoRepository.findAbertoForUpdate(contador.getId(), naoAtendido.getId()))
+    assertThat(vinculoRepository.findAbertoForUpdate(escritorio.getId(), naoAtendido.getId()))
         .isEmpty();
-    assertThat(vinculoRepository.findIdsDoContador(contador.getId())).hasSize(2);
+    assertThat(vinculoRepository.findIdsDoEscritorio(escritorio.getId())).hasSize(2);
   }
 
   @Test
   @DisplayName("um produtor pode ser atendido por mais de um escritorio")
   void produtorAtendidoPorVariosContadores() {
-    Contador segundo = contadorRepository.saveAndFlush(
-        Contador.builder().nomeCompleto("Segundo Escritorio").cpfCnpj("44.555.666/0001-77")
-            .build());
+    Escritorio segundo = escritorioRepository.saveAndFlush(
+        Escritorio.builder().nome("Segundo Escritorio").build());
     vincular(segundo, atendido, SituacaoVinculo.ATIVO);
 
-    assertThat(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), atendido.getId(), SituacaoVinculo.ATIVO)).isTrue();
-    assertThat(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
+    assertThat(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        escritorio.getId(), atendido.getId(), SituacaoVinculo.ATIVO)).isTrue();
+    assertThat(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
         segundo.getId(), atendido.getId(), SituacaoVinculo.ATIVO)).isTrue();
+  }
+
+  @Test
+  @DisplayName("membro removido: os clientes dele ficam sem responsavel; contagem de abertos")
+  void limparResponsavelEAbertos() {
+    vincular(escritorio, naoAtendido, SituacaoVinculo.ENCERRADO);
+
+    assertThat(vinculoRepository.contarAbertosDoEscritorio(escritorio.getId())).isEqualTo(1);
+    assertThat(vinculoRepository.limparResponsavel(membro.getId())).isEqualTo(2);
+    assertThat(vinculoRepository.findAll()).allSatisfy(
+        v -> assertThat(v.getResponsavelId()).isNull());
   }
 
   @Test
@@ -128,7 +147,7 @@ class ContadorVinculoIntegrationTest {
     notaRepository.saveAndFlush(nota(naoAtendido));
 
     assertThat(vinculoRepository.contarNotasDaCarteira(
-        contador.getId(), StatusNotaFiscal.COM_INCONSISTENCIAS))
+        escritorio.getId(), StatusNotaFiscal.COM_INCONSISTENCIAS))
         .containsExactly(new ContagemPorProdutor(atendido.getId(), 2));
   }
 

@@ -203,9 +203,21 @@ CREATE INDEX IF NOT EXISTS idx_guia_fiscal_produtor_id ON guias_fiscais (produto
 
 -- Contador e vinculo N:N com produtor — Onda 7 issue #93 (migration 0024).
 -- Manter sincronizado com 0024-contador-vinculo.xml.
+-- Escritorio (migration 0039, issue #228): dono da carteira; o contador e membro com funcao.
+CREATE TABLE IF NOT EXISTS escritorio (
+    id          UUID                      NOT NULL,
+    nome        VARCHAR(255)              NOT NULL,
+    cnpj        VARCHAR(14),
+    created_at  TIMESTAMP WITH TIME ZONE,
+    updated_at  TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS contadores (
     id             UUID          NOT NULL,
     nome_completo  VARCHAR(255)  NOT NULL,
+    escritorio_id      UUID,
+    funcao_escritorio  VARCHAR(20),
     cpf_cnpj       VARCHAR(100),
     crc            VARCHAR(20),
     email          VARCHAR(512),
@@ -222,7 +234,8 @@ CREATE TABLE IF NOT EXISTS contadores (
 -- e aqui a regra fica no servico.
 CREATE TABLE IF NOT EXISTS carteira_vinculo (
     id            UUID                      NOT NULL,
-    contador_id   UUID                      NOT NULL,
+    escritorio_id   UUID                    NOT NULL,
+    responsavel_id  UUID,
     produtor_id   UUID                      NOT NULL,
     situacao      VARCHAR(20)               NOT NULL,
     inicio        TIMESTAMP WITH TIME ZONE  NOT NULL,
@@ -233,21 +246,22 @@ CREATE TABLE IF NOT EXISTS carteira_vinculo (
     PRIMARY KEY (id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_contador_situacao
-    ON carteira_vinculo (contador_id, situacao);
+CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_escritorio_situacao
+    ON carteira_vinculo (escritorio_id, situacao);
+CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_responsavel ON carteira_vinculo (responsavel_id);
 CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_produtor ON carteira_vinculo (produtor_id);
 
 CREATE TABLE IF NOT EXISTS etiqueta_carteira (
     id                UUID                      NOT NULL,
-    contador_id       UUID                      NOT NULL,
+    escritorio_id     UUID                      NOT NULL,
     nome              VARCHAR(30)               NOT NULL,
     nome_normalizado  VARCHAR(30)               NOT NULL,
     created_at        TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
 );
 
-ALTER TABLE etiqueta_carteira ADD CONSTRAINT IF NOT EXISTS uk_etiqueta_carteira_nome
-    UNIQUE (contador_id, nome_normalizado);
+ALTER TABLE etiqueta_carteira ADD CONSTRAINT IF NOT EXISTS uk_etiqueta_carteira_escritorio_nome
+    UNIQUE (escritorio_id, nome_normalizado);
 
 CREATE TABLE IF NOT EXISTS carteira_vinculo_etiqueta (
     vinculo_id   UUID  NOT NULL,
@@ -260,7 +274,8 @@ CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_etiqueta_etiqueta
 
 CREATE TABLE IF NOT EXISTS convite_carteira (
     id             UUID                      NOT NULL,
-    contador_id    UUID                      NOT NULL,
+    escritorio_id  UUID                      NOT NULL,
+    convidado_por  UUID,
     email          VARCHAR(512)              NOT NULL,
     situacao       VARCHAR(20)               NOT NULL,
     criado_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
@@ -272,8 +287,27 @@ CREATE TABLE IF NOT EXISTS convite_carteira (
 
 CREATE INDEX IF NOT EXISTS idx_convite_carteira_email_situacao
     ON convite_carteira (email, situacao);
-CREATE INDEX IF NOT EXISTS idx_convite_carteira_contador_criado
-    ON convite_carteira (contador_id, criado_em);
+CREATE INDEX IF NOT EXISTS idx_convite_carteira_escritorio_criado
+    ON convite_carteira (escritorio_id, criado_em);
+
+-- Convite de equipe (migration 0039, issue #228): so o SHA-256 do token, uso unico.
+CREATE TABLE IF NOT EXISTS convite_membro (
+    id             UUID                      NOT NULL,
+    escritorio_id  UUID                      NOT NULL,
+    email          VARCHAR(512)              NOT NULL,
+    funcao         VARCHAR(20)               NOT NULL,
+    token_hash     VARCHAR(64)               NOT NULL,
+    criado_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    expira_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    usado_em       TIMESTAMP WITH TIME ZONE,
+    convidado_por  UUID,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE convite_membro ADD CONSTRAINT IF NOT EXISTS uk_convite_membro_token_hash
+    UNIQUE (token_hash);
+CREATE INDEX IF NOT EXISTS idx_convite_membro_escritorio_criado
+    ON convite_membro (escritorio_id, criado_em);
 
 -- Auditoria das interacoes com a Ceres — Sprint 6 issue #144 (migration 0025).
 -- Sem o texto da pergunta nem da resposta. Manter sincronizado com 0025-assistente-interacao.xml.
@@ -387,14 +421,20 @@ ALTER TABLE guias_fiscais ADD CONSTRAINT IF NOT EXISTS fk_guia_fiscal_produtor
 
 -- Carteira (migration 0038): CASCADE em tudo, como era o contador_produtor da 0024. Sem isso,
 -- apagar um produtor ou contador semeado num teste falharia por integridade referencial.
-ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_contador
-    FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
+ALTER TABLE contadores ADD CONSTRAINT IF NOT EXISTS fk_contador_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE SET NULL;
+
+ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+
+ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_responsavel
+    FOREIGN KEY (responsavel_id) REFERENCES contadores (id) ON DELETE SET NULL;
 
 ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
 
-ALTER TABLE etiqueta_carteira ADD CONSTRAINT IF NOT EXISTS fk_etiqueta_carteira_contador
-    FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
+ALTER TABLE etiqueta_carteira ADD CONSTRAINT IF NOT EXISTS fk_etiqueta_carteira_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
 
 ALTER TABLE carteira_vinculo_etiqueta ADD CONSTRAINT IF NOT EXISTS
     fk_carteira_vinculo_etiqueta_vinculo
@@ -404,8 +444,17 @@ ALTER TABLE carteira_vinculo_etiqueta ADD CONSTRAINT IF NOT EXISTS
     fk_carteira_vinculo_etiqueta_etiqueta
     FOREIGN KEY (etiqueta_id) REFERENCES etiqueta_carteira (id) ON DELETE CASCADE;
 
-ALTER TABLE convite_carteira ADD CONSTRAINT IF NOT EXISTS fk_convite_carteira_contador
-    FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
+ALTER TABLE convite_carteira ADD CONSTRAINT IF NOT EXISTS fk_convite_carteira_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+
+ALTER TABLE convite_carteira ADD CONSTRAINT IF NOT EXISTS fk_convite_carteira_convidado_por
+    FOREIGN KEY (convidado_por) REFERENCES contadores (id) ON DELETE SET NULL;
+
+ALTER TABLE convite_membro ADD CONSTRAINT IF NOT EXISTS fk_convite_membro_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+
+ALTER TABLE convite_membro ADD CONSTRAINT IF NOT EXISTS fk_convite_membro_convidado_por
+    FOREIGN KEY (convidado_por) REFERENCES contadores (id) ON DELETE SET NULL;
 
 ALTER TABLE convite_carteira ADD CONSTRAINT IF NOT EXISTS fk_convite_carteira_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
@@ -623,6 +672,7 @@ CREATE TABLE IF NOT EXISTS registro_auditoria (
     usuario_id     UUID,
     papel          VARCHAR(20),
     produtor_id    UUID,
+    escritorio_id  UUID,
     sucesso        BOOLEAN                   NOT NULL,
     codigo_erro    VARCHAR(60),
     estado_antes   VARCHAR(40),
@@ -633,6 +683,8 @@ CREATE TABLE IF NOT EXISTS registro_auditoria (
 CREATE INDEX IF NOT EXISTS idx_registro_auditoria_produtor_ocorrido
     ON registro_auditoria (produtor_id, ocorrido_em);
 CREATE INDEX IF NOT EXISTS idx_registro_auditoria_ocorrido ON registro_auditoria (ocorrido_em);
+CREATE INDEX IF NOT EXISTS idx_registro_auditoria_escritorio
+    ON registro_auditoria (escritorio_id, ocorrido_em);
 
 -- Dados pessoais cifrados — Sprint 8 issue #147 (migration 0036): as colunas cpf_cnpj, email e
 -- telefone de produtores/contadores e cpf_cnpj/email de credencial_usuario ja nascem alargadas nos

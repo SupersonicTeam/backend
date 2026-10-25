@@ -48,12 +48,15 @@ public class LimiteTaxaAutenticacaoFilter extends OncePerRequestFilter {
     this.errorResponder = errorResponder;
     int maxIps = propriedades.maxIps();
     LimitadorTaxa senha = new LimitadorTaxa(propriedades.senhaPorMinuto(), MINUTO, maxIps);
+    // Cadastro pelo convite de equipe (#228) divide o balde do cadastro: alternar as duas rotas
+    // nao dobra a cota.
+    LimitadorTaxa cadastro = new LimitadorTaxa(propriedades.cadastroPorMinuto(), MINUTO, maxIps);
     // Um limitador por rota: cadastrar nao gasta as tentativas de login, e vice-versa.
     this.limitePorRota = Map.of(
         RotasAutenticacao.LOGIN,
         new LimitadorTaxa(propriedades.loginPorMinuto(), MINUTO, maxIps),
-        RotasAutenticacao.CADASTRO,
-        new LimitadorTaxa(propriedades.cadastroPorMinuto(), MINUTO, maxIps),
+        RotasAutenticacao.CADASTRO, cadastro,
+        RotasAutenticacao.CADASTRO_EQUIPE, cadastro,
         RotasAutenticacao.REFRESH,
         new LimitadorTaxa(propriedades.refreshPorMinuto(), MINUTO, maxIps),
         // Um balde so para os dois passos da recuperacao: alternar entre eles nao dobra a cota.

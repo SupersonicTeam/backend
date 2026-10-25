@@ -45,13 +45,13 @@ public interface ConviteCarteiraRepository extends JpaRepository<ConviteCarteira
   /**
    * Convite do escritório para o e-mail numa situação.
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @param email      e-mail normalizado
    * @param situacao   situação
    * @return o convite, se houver (pendente é um só por par)
    */
-  Optional<ConviteCarteira> findByContadorIdAndEmailAndSituacao(
-      UUID contadorId, String email, SituacaoConvite situacao);
+  Optional<ConviteCarteira> findByEscritorioIdAndEmailAndSituacao(
+      UUID escritorioId, String email, SituacaoConvite situacao);
 
   /**
    * Situação do convite (estado "antes" da auditoria).
@@ -65,44 +65,44 @@ public interface ConviteCarteiraRepository extends JpaRepository<ConviteCarteira
   /**
    * Convites pendentes e válidos do escritório.
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @param situacao   {@code PENDENTE}
    * @param agora      instante atual
    * @return convites, do mais recente ao mais antigo
    */
-  List<ConviteCarteira> findByContadorIdAndSituacaoAndExpiraEmAfterOrderByCriadoEmDesc(
-      UUID contadorId, SituacaoConvite situacao, OffsetDateTime agora);
+  List<ConviteCarteira> findByEscritorioIdAndSituacaoAndExpiraEmAfterOrderByCriadoEmDesc(
+      UUID escritorioId, SituacaoConvite situacao, OffsetDateTime agora);
 
   /**
    * Quantos convites o escritório criou desde um instante (teto contra envio em massa).
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @param desde      início da janela
    * @return quantidade
    */
-  long countByContadorIdAndCriadoEmAfter(UUID contadorId, OffsetDateTime desde);
+  long countByEscritorioIdAndCriadoEmAfter(UUID escritorioId, OffsetDateTime desde);
 
   /**
    * Convite mais antigo do escritório desde um instante (quando o teto libera de novo).
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @param desde      início da janela
    * @return o mais antigo da janela, se houver
    */
-  Optional<ConviteCarteira> findFirstByContadorIdAndCriadoEmAfterOrderByCriadoEmAsc(
-      UUID contadorId, OffsetDateTime desde);
+  Optional<ConviteCarteira> findFirstByEscritorioIdAndCriadoEmAfterOrderByCriadoEmAsc(
+      UUID escritorioId, OffsetDateTime desde);
 
   /**
    * Apaga o convite pendente do escritório para o e-mail (reenviar substitui o anterior).
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @param email      e-mail normalizado
    * @return linhas removidas
    */
   @Modifying(flushAutomatically = true)
-  @Query("DELETE FROM ConviteCarteira c WHERE c.contadorId = :contadorId AND c.email = :email"
+  @Query("DELETE FROM ConviteCarteira c WHERE c.escritorioId = :escritorioId AND c.email = :email"
       + " AND c.situacao = br.com.agrocontabil.model.SituacaoConvite.PENDENTE")
-  int apagarPendente(@Param("contadorId") UUID contadorId, @Param("email") String email);
+  int apagarPendente(@Param("escritorioId") UUID escritorioId, @Param("email") String email);
 
   /**
    * Apaga os convites vencidos ou respondidos antes do corte (retenção, LGPD: o e-mail de quem
@@ -118,12 +118,12 @@ public interface ConviteCarteiraRepository extends JpaRepository<ConviteCarteira
   /**
    * Apaga os convites do escritório (exclusão LGPD).
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @return linhas removidas
    */
   @Modifying(flushAutomatically = true)
-  @Query("DELETE FROM ConviteCarteira c WHERE c.contadorId = :contadorId")
-  int apagarDoContador(@Param("contadorId") UUID contadorId);
+  @Query("DELETE FROM ConviteCarteira c WHERE c.escritorioId = :escritorioId")
+  int apagarDoEscritorio(@Param("escritorioId") UUID escritorioId);
 
   /**
    * Apaga os convites respondidos pelo produtor ou dirigidos ao e-mail dele (exclusão LGPD).

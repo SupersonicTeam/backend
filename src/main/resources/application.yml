@@ -237,6 +237,12 @@ app:
         lock:
           at-most-for: PT30M
           at-least-for: PT5M
+  # Equipe do escritorio (issue #228): convite com token de uso unico no fragmento do link.
+  escritorio:
+    convite:
+      validade: ${ESCRITORIO_CONVITE_VALIDADE:P7D}
+      url-frontend: ${ESCRITORIO_CONVITE_URL_FRONTEND:http://localhost:4200/equipe/convite}
+      max-por-dia: ${ESCRITORIO_CONVITE_MAX_POR_DIA:30}
   cors:
     # Lista separada por virgula; sobrescrita por APP_CORS_ALLOWED_ORIGINS em prod.
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}

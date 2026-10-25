@@ -338,65 +338,132 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("changeSet 0038: carteira com um vinculo aberto por par, convite e etiquetas (#177)")
-  void changeSet0038CarteiraDoContador() {
+  @DisplayName("changeSets 0038/0039: carteira do escritorio, um vinculo aberto por par (#177, #228)")
+  void changeSet0038CarteiraDoEscritorio() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables"
         + " WHERE table_name = 'contador_produtor'", Integer.class)).isZero();
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'carteira_vinculo' ORDER BY column_name", String.class))
-        .containsExactly("contador_id", "created_at", "fim", "id", "inicio", "observacoes",
-            "produtor_id", "situacao", "updated_at");
+        .containsExactly("created_at", "escritorio_id", "fim", "id", "inicio", "observacoes",
+            "produtor_id", "responsavel_id", "situacao", "updated_at");
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'convite_carteira' ORDER BY column_name", String.class))
-        .containsExactly("contador_id", "criado_em", "email", "expira_em", "id", "produtor_id",
-            "respondido_em", "situacao");
+        .containsExactly("convidado_por", "criado_em", "email", "escritorio_id", "expira_em",
+            "id", "produtor_id", "respondido_em", "situacao");
     assertThat(jdbc.queryForObject("SELECT col_description('convite_carteira'::regclass,"
         + " (SELECT ordinal_position FROM information_schema.columns"
         + " WHERE table_name = 'convite_carteira' AND column_name = 'email')::int)",
         String.class)).contains("cifrado");
 
-    String contadorId = UUID.randomUUID().toString();
+    String escritorioId = UUID.randomUUID().toString();
     String produtorId = UUID.randomUUID().toString();
-    jdbc.update("INSERT INTO contadores (id, nome_completo) VALUES (?::uuid, 'Escritorio')",
-        contadorId);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio')", escritorioId);
     jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
         produtorId);
-    String vinculo = "INSERT INTO carteira_vinculo (id, contador_id, produtor_id, situacao,"
+    String vinculo = "INSERT INTO carteira_vinculo (id, escritorio_id, produtor_id, situacao,"
         + " inicio) VALUES (gen_random_uuid(), ?::uuid, ?::uuid, ?, now())";
-    jdbc.update(vinculo, contadorId, produtorId, "ENCERRADO");
-    jdbc.update(vinculo, contadorId, produtorId, "ENCERRADO");
-    jdbc.update(vinculo, contadorId, produtorId, "ATIVO");
+    jdbc.update(vinculo, escritorioId, produtorId, "ENCERRADO");
+    jdbc.update(vinculo, escritorioId, produtorId, "ENCERRADO");
+    jdbc.update(vinculo, escritorioId, produtorId, "ATIVO");
     // Indice unico parcial: so um vinculo nao encerrado por par.
-    assertThatThrownBy(() -> jdbc.update(vinculo, contadorId, produtorId, "SUSPENSO"))
+    assertThatThrownBy(() -> jdbc.update(vinculo, escritorioId, produtorId, "SUSPENSO"))
         .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
-    String convite = "INSERT INTO convite_carteira (id, contador_id, email, situacao, criado_em,"
-        + " expira_em) VALUES (gen_random_uuid(), ?::uuid, 'v1:abc', ?, now(), now())";
-    jdbc.update(convite, contadorId, "RECUSADO");
-    jdbc.update(convite, contadorId, "PENDENTE");
-    assertThatThrownBy(() -> jdbc.update(convite, contadorId, "PENDENTE"))
+    String convite = "INSERT INTO convite_carteira (id, escritorio_id, email, situacao,"
+        + " criado_em, expira_em) VALUES (gen_random_uuid(), ?::uuid, 'v1:abc', ?, now(), now())";
+    jdbc.update(convite, escritorioId, "RECUSADO");
+    jdbc.update(convite, escritorioId, "PENDENTE");
+    assertThatThrownBy(() -> jdbc.update(convite, escritorioId, "PENDENTE"))
         .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
     String etiquetaId = UUID.randomUUID().toString();
-    jdbc.update("INSERT INTO etiqueta_carteira (id, contador_id, nome, nome_normalizado)"
-        + " VALUES (?::uuid, ?::uuid, 'Soja', 'soja')", etiquetaId, contadorId);
+    jdbc.update("INSERT INTO etiqueta_carteira (id, escritorio_id, nome, nome_normalizado)"
+        + " VALUES (?::uuid, ?::uuid, 'Soja', 'soja')", etiquetaId, escritorioId);
     jdbc.update("INSERT INTO carteira_vinculo_etiqueta (vinculo_id, etiqueta_id)"
         + " SELECT id, ?::uuid FROM carteira_vinculo WHERE situacao = 'ATIVO'"
-        + " AND contador_id = ?::uuid", etiquetaId, contadorId);
+        + " AND escritorio_id = ?::uuid", etiquetaId, escritorioId);
 
-    // CASCADE: o produtor apagado leva o vinculo e a etiqueta aplicada; o contador, o resto.
+    // CASCADE: o produtor apagado leva o vinculo e a etiqueta aplicada; o escritorio, o resto.
     jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM carteira_vinculo"
-        + " WHERE contador_id = ?::uuid", Integer.class, contadorId)).isZero();
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioId)).isZero();
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM carteira_vinculo_etiqueta"
         + " WHERE etiqueta_id = ?::uuid", Integer.class, etiquetaId)).isZero();
-    jdbc.update("DELETE FROM contadores WHERE id = ?::uuid", contadorId);
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioId);
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM convite_carteira"
-        + " WHERE contador_id = ?::uuid", Integer.class, contadorId)).isZero();
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioId)).isZero();
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM etiqueta_carteira"
-        + " WHERE contador_id = ?::uuid", Integer.class, contadorId)).isZero();
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioId)).isZero();
+  }
+
+  @Test
+  @DisplayName("changeSet 0039: contador e vinculos antigos viram escritorio unipessoal (#228)")
+  void changeSet0039MigraContadorParaEscritorio() throws Exception {
+    JdbcTemplate admin = new JdbcTemplate(dataSource);
+    admin.execute("DROP DATABASE IF EXISTS migra_0039");
+    admin.execute("CREATE DATABASE migra_0039");
+    String url = POSTGRES.getJdbcUrl().replaceFirst("/[^/?]+(\\?|$)", "/migra_0039$1");
+    try (java.sql.Connection conexao = java.sql.DriverManager.getConnection(
+        url, POSTGRES.getUsername(), POSTGRES.getPassword())) {
+      liquibase.database.Database banco = liquibase.database.DatabaseFactory.getInstance()
+          .findCorrectDatabaseImplementation(new liquibase.database.jvm.JdbcConnection(conexao));
+      liquibase.Liquibase liquibase = new liquibase.Liquibase(
+          "db/changelog/db.changelog-master.yaml",
+          new liquibase.resource.ClassLoaderResourceAccessor(), banco);
+      List<liquibase.changelog.ChangeSet> pendentes = liquibase.listUnrunChangeSets(
+          new liquibase.Contexts(), new liquibase.LabelExpression());
+      int ate0038 = 0;
+      while (!pendentes.get(ate0038).getId().startsWith("0039-")) {
+        ate0038++;
+      }
+      liquibase.update(ate0038, "");
+
+      // Dados como eram antes da 0039: carteira, etiqueta e convite do contador.
+      String contadorId = UUID.randomUUID().toString();
+      String produtorId = UUID.randomUUID().toString();
+      JdbcTemplate jdbc = new JdbcTemplate(
+          new org.springframework.jdbc.datasource.SingleConnectionDataSource(conexao, true));
+      jdbc.update("INSERT INTO contadores (id, nome_completo) VALUES (?::uuid, 'Campo Certo')",
+          contadorId);
+      jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Fazenda')",
+          produtorId);
+      jdbc.update("INSERT INTO carteira_vinculo (id, contador_id, produtor_id, situacao, inicio)"
+          + " VALUES (gen_random_uuid(), ?::uuid, ?::uuid, 'ATIVO', now())", contadorId,
+          produtorId);
+      jdbc.update("INSERT INTO etiqueta_carteira (id, contador_id, nome, nome_normalizado)"
+          + " VALUES (gen_random_uuid(), ?::uuid, 'Soja', 'soja')", contadorId);
+      jdbc.update("INSERT INTO convite_carteira (id, contador_id, email, situacao, criado_em,"
+          + " expira_em) VALUES (gen_random_uuid(), ?::uuid, 'v1:x', 'PENDENTE', now(), now())",
+          contadorId);
+
+      liquibase.update("");
+
+      assertThat(jdbc.queryForMap("SELECT escritorio_id::text AS escritorio,"
+          + " funcao_escritorio AS funcao FROM contadores WHERE id = ?::uuid", contadorId))
+          .containsEntry("escritorio", contadorId).containsEntry("funcao", "ADMINISTRADOR");
+      assertThat(jdbc.queryForObject("SELECT nome FROM escritorio WHERE id = ?::uuid",
+          String.class, contadorId)).isEqualTo("Campo Certo");
+      assertThat(jdbc.queryForMap("SELECT escritorio_id::text AS escritorio,"
+          + " responsavel_id::text AS responsavel FROM carteira_vinculo"
+          + " WHERE produtor_id = ?::uuid", produtorId))
+          .containsEntry("escritorio", contadorId).containsEntry("responsavel", contadorId);
+      assertThat(jdbc.queryForObject("SELECT escritorio_id::text FROM etiqueta_carteira",
+          String.class)).isEqualTo(contadorId);
+      assertThat(jdbc.queryForMap("SELECT escritorio_id::text AS escritorio,"
+          + " convidado_por::text AS por FROM convite_carteira"))
+          .containsEntry("escritorio", contadorId).containsEntry("por", contadorId);
+      assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pg_indexes"
+          + " WHERE indexname IN ('uk_carteira_vinculo_aberto_escritorio',"
+          + " 'uk_convite_carteira_pendente_escritorio')", Integer.class)).isEqualTo(2);
+      // O registro de auditoria guarda o escritorio de quem agiu.
+      assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns"
+          + " WHERE table_name = 'registro_auditoria' AND column_name = 'escritorio_id'",
+          Integer.class)).isEqualTo(1);
+    } finally {
+      admin.execute("DROP DATABASE IF EXISTS migra_0039 WITH (FORCE)");
+    }
   }
 
   @Test
@@ -456,9 +523,10 @@ class LiquibaseChangelogIntegrationTest {
 
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'registro_auditoria' ORDER BY column_name", String.class))
-        .containsExactly("acao", "codigo_erro", "estado_antes", "estado_depois", "id",
-            "ocorrido_em", "papel", "produtor_id", "recurso", "recurso_id", "sucesso",
-            "usuario_id");
+        // escritorio_id veio com a 0039 (#228).
+        .containsExactly("acao", "codigo_erro", "escritorio_id", "estado_antes",
+            "estado_depois", "id", "ocorrido_em", "papel", "produtor_id", "recurso",
+            "recurso_id", "sucesso", "usuario_id");
     assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes"
         + " WHERE tablename = 'registro_auditoria'", String.class))
         .contains("idx_registro_auditoria_produtor_ocorrido", "idx_registro_auditoria_ocorrido");

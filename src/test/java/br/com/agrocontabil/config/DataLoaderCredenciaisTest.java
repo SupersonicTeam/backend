@@ -37,7 +37,7 @@ class DataLoaderCredenciaisTest {
   @Mock private PasswordEncoder passwordEncoder;
 
   private DataLoader loader(String senha) {
-    return new DataLoader(produtorRepository, contadorRepository, null, credencialRepository,
+    return new DataLoader(produtorRepository, contadorRepository, null, null, credencialRepository,
         passwordEncoder, new PoliticaSenha(), senha);
   }
 

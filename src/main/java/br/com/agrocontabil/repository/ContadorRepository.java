@@ -1,8 +1,10 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -42,6 +44,51 @@ public interface ContadorRepository extends JpaRepository<Contador, UUID> {
    * @return {@code true} se algum contador tem um deles
    */
   boolean existsByCpfCnpjIn(Collection<String> grafias);
+
+  /**
+   * Membros do escritório, por nome.
+   *
+   * @param escritorioId escritório
+   * @return contadores do escritório
+   */
+  List<Contador> findByEscritorioIdOrderByNomeCompletoAsc(UUID escritorioId);
+
+  /**
+   * Membro do escritório por id (anti-IDOR: o de outro escritório não existe).
+   *
+   * @param id           contador
+   * @param escritorioId escritório
+   * @return o membro, se for daquele escritório
+   */
+  Optional<Contador> findByIdAndEscritorioId(UUID id, UUID escritorioId);
+
+  /**
+   * Quantos membros do escritório têm a função — o último administrador não sai.
+   *
+   * @param escritorioId escritório
+   * @param funcao       função
+   * @return quantidade
+   */
+  long countByEscritorioIdAndFuncao(UUID escritorioId, FuncaoEscritorio funcao);
+
+  /**
+   * Quantos membros o escritório tem.
+   *
+   * @param escritorioId escritório
+   * @return quantidade
+   */
+  long countByEscritorioId(UUID escritorioId);
+
+  /**
+   * Membros do escritório sob lock pessimista: serializa troca de função e remoção, para dois
+   * administradores não se rebaixarem ao mesmo tempo e deixarem o escritório sem nenhum.
+   *
+   * @param escritorioId escritório
+   * @return membros
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT c FROM Contador c WHERE c.escritorioId = :escritorioId ORDER BY c.id")
+  List<Contador> findByEscritorioIdForUpdate(@Param("escritorioId") UUID escritorioId);
 
   /**
    * Contador sob lock pessimista: serializa os convites de um escritório para o teto diário

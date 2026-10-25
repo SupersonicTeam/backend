@@ -71,9 +71,10 @@ class AuditoriaIntegrationTest {
     contador = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.CONTADOR, "Escritorio Campo", "11222333000181", EMAIL_CONTADOR, SENHA));
     jdbcTemplate.update("UPDATE produtores SET estado = 'MT' WHERE id = ?", produtor.usuarioId());
-    jdbcTemplate.update("INSERT INTO carteira_vinculo (id, contador_id, produtor_id, situacao,"
-        + " inicio) VALUES (RANDOM_UUID(), ?, ?, 'ATIVO', CURRENT_TIMESTAMP)",
-        contador.usuarioId(), produtor.usuarioId());
+    jdbcTemplate.update("INSERT INTO carteira_vinculo (id, escritorio_id, produtor_id, situacao,"
+        + " inicio) SELECT RANDOM_UUID(), escritorio_id, ?, 'ATIVO', CURRENT_TIMESTAMP"
+        + " FROM contadores WHERE id = ?",
+        produtor.usuarioId(), contador.usuarioId());
   }
 
   private String token(String email) throws Exception {

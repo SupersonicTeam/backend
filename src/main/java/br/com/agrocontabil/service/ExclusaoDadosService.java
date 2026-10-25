@@ -2,13 +2,13 @@ package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.AcaoAuditada;
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
-import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
@@ -44,8 +44,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>Junto: a credencial é apagada (com ela, sessões e links de redefinição — a conta deixa de
  * existir e todo token emitido morre na próxima requisição), os alertas são apagados, e os
- * vínculos produtor×contador são desfeitos dos dois lados (dado de relacionamento, não fiscal) —
- * com eles a ficha do cliente (observações e etiquetas) e os convites da carteira (#177).
+ * vínculos produtor×escritório do produtor são apagados (dado de relacionamento, não fiscal) —
+ * com eles a ficha do cliente (observações e etiquetas) e os convites da carteira (#177). O
+ * contador sai da equipe; se era o único membro, o escritório sai inteiro (#228), e o último
+ * administrador de uma equipe precisa antes promover outro (409).
  *
  * <p><strong>Só o próprio titular, com a senha.</strong> O {@code id} do caminho precisa ser o de
  * quem está autenticado (404 para outro, como o resto do anti-IDOR), e a senha atual é conferida
@@ -71,7 +73,7 @@ public class ExclusaoDadosService {
   private final AlertaTributarioRepository alertaRepository;
   private final VinculoCarteiraRepository vinculoRepository;
   private final ConviteCarteiraRepository conviteRepository;
-  private final EtiquetaCarteiraRepository etiquetaRepository;
+  private final EquipeEscritorioService equipeService;
   private final Clock clock;
   private final TransactionTemplate transacao;
 
@@ -86,7 +88,7 @@ public class ExclusaoDadosService {
       AlertaTributarioRepository alertaRepository,
       VinculoCarteiraRepository vinculoRepository,
       ConviteCarteiraRepository conviteRepository,
-      EtiquetaCarteiraRepository etiquetaRepository,
+      EquipeEscritorioService equipeService,
       Clock clock,
       PlatformTransactionManager transactionManager) {
     this.usuarioProvider = usuarioProvider;
@@ -99,7 +101,7 @@ public class ExclusaoDadosService {
     this.alertaRepository = alertaRepository;
     this.vinculoRepository = vinculoRepository;
     this.conviteRepository = conviteRepository;
-    this.etiquetaRepository = etiquetaRepository;
+    this.equipeService = equipeService;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
   }
@@ -153,6 +155,13 @@ public class ExclusaoDadosService {
   }
 
   private void anonimizarContador(UUID id) {
+    Contador membro = contadorRepository.findById(id).orElse(null);
+    if (membro == null) {
+      return;
+    }
+    // A equipe primeiro (#228): sozinho, o escritorio inteiro sai (carteira, convites, catalogo);
+    // com equipe, so ele, e o ultimo administrador de uma equipe nao sai (409, nada e apagado).
+    equipeService.sairPorExclusao(membro);
     contadorRepository.findById(id).ifPresent(contador -> {
       contador.setNomeCompleto(NOME_ANONIMIZADO);
       contador.setEmail(null);
@@ -162,9 +171,6 @@ public class ExclusaoDadosService {
       contador.setCpfCnpj(null);
       contador.setCrc(null);
     });
-    apagarVinculos(vinculoRepository.findIdsDoContador(id));
-    conviteRepository.apagarDoContador(id);
-    etiquetaRepository.apagarDoContador(id);
   }
 
   private void apagarVinculos(List<UUID> vinculos) {

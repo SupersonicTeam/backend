@@ -134,6 +134,11 @@ class CarteiraIntegrationTest {
         .get("accessToken").asText();
   }
 
+  private UUID escritorioDe(UUID contadorId) {
+    return jdbcTemplate.queryForObject("SELECT escritorio_id FROM contadores WHERE id = ?",
+        UUID.class, contadorId);
+  }
+
   private ResultActions convidar(String token, String email) throws Exception {
     return mockMvc.perform(post("/api/contador/convites").header(HttpHeaders.AUTHORIZATION, token)
         .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"%s\"}".formatted(email)));
@@ -304,7 +309,7 @@ class CarteiraIntegrationTest {
 
     assertThat(conviteRepository.findById(UUID.fromString(conviteId)).orElseThrow()
         .getSituacao()).isEqualTo(SituacaoConvite.RECUSADO);
-    assertThat(vinculoRepository.findIdsDoContador(contador.usuarioId())).isEmpty();
+    assertThat(vinculoRepository.findIdsDoEscritorio(escritorioDe(contador.usuarioId()))).isEmpty();
   }
 
   @Test
@@ -352,7 +357,7 @@ class CarteiraIntegrationTest {
   void listaBuscaFiltroOrdem() throws Exception {
     clienteA();
     vinculoRepository.save(br.com.agrocontabil.model.VinculoCarteira.builder()
-        .contadorId(contador.usuarioId()).produtorId(produtorB.usuarioId())
+        .escritorioId(escritorioDe(contador.usuarioId())).produtorId(produtorB.usuarioId())
         .situacao(SituacaoVinculo.ATIVO).inicio(java.time.OffsetDateTime.now()).build());
     inserirGuia(produtorB.usuarioId(),
         LocalDate.now(ZoneId.of("America/Sao_Paulo")).minusDays(5), "VENCIDA");
@@ -508,7 +513,7 @@ class CarteiraIntegrationTest {
     comoContador("/api/contador/produtores/{id}/ficha", produtorA.usuarioId())
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.observacoes").doesNotExist());
-    assertThat(vinculoRepository.findIdsDoContador(contador.usuarioId())).hasSize(2);
+    assertThat(vinculoRepository.findIdsDoEscritorio(escritorioDe(contador.usuarioId()))).hasSize(2);
 
     // Historico: cada vinculo encerrado e uma linha propria (vinculoId), e de quem saiu o
     // escritorio guarda so o nome, sem os dados atuais do produtor.

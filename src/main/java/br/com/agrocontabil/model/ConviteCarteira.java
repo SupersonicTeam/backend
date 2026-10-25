@@ -41,8 +41,13 @@ public class ConviteCarteira {
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id;
 
-  @Column(name = "contador_id", nullable = false, updatable = false)
-  private UUID contadorId;
+  /** Escritório que convidou (issue #228). */
+  @Column(name = "escritorio_id", nullable = false, updatable = false)
+  private UUID escritorioId;
+
+  /** Membro que mandou o convite: vira o responsável pelo cliente no aceite. */
+  @Column(name = "convidado_por")
+  private UUID convidadoPor;
 
   /** E-mail normalizado do convidado. */
   @ToString.Exclude

@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
@@ -14,6 +16,7 @@ import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
@@ -64,6 +67,7 @@ class ContadorEscopoIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private ContadorRepository contadorRepository;
   @Autowired private VinculoCarteiraRepository vinculoRepository;
+  @Autowired private EscritorioRepository escritorioRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private TestDatabaseCleaner cleaner;
 
@@ -83,12 +87,16 @@ class ContadorEscopoIntegrationTest {
         Produtor.builder().nomeCompleto("Sitio Vizinho").cpfCnpj("11122233344").estado("PR")
             .build());
 
+    Escritorio escritorio = escritorioRepository.save(
+        Escritorio.builder().nome("Escritorio Campo Certo").build());
     Contador novo = Contador.builder()
+        .escritorioId(escritorio.getId())
+        .funcao(FuncaoEscritorio.ADMINISTRADOR)
         .nomeCompleto("Escritorio Campo Certo")
         .cpfCnpj("12.345.678/0001-95")
         .build();
     contador = contadorRepository.save(novo);
-    vinculoRepository.save(VinculoCarteira.builder().contadorId(contador.getId())
+    vinculoRepository.save(VinculoCarteira.builder().escritorioId(escritorio.getId())
         .produtorId(atendido.getId()).situacao(SituacaoVinculo.ATIVO)
         .inicio(OffsetDateTime.now()).build());
 

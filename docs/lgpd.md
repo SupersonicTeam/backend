@@ -16,7 +16,10 @@ A versão para o titular é servida em `GET /api/politica-dados`.
 | `contadores.cpf_cnpj`, `crc` | identificação do escritório | contrato | apagados (o contador não é parte dos documentos fiscais; juntos reidentificariam a pessoa no cadastro do CRC) |
 | `carteira_vinculo` (#177, substitui `contador_produtor`) | vínculo com produtores, situação, início/fim, observações internas do escritório (ficha) | consentimento do produtor (aceite do convite, art. 7º, I) e contrato | apagado com a ficha e as etiquetas aplicadas — na exclusão do contador **e** na do produtor (o escritório deixa de alcançar a conta encerrada); observações nunca vão ao produtor nem ao log |
 | `convite_carteira` (#177) | e-mail convidado (cifrado, #147), situação, validade | legítimo interesse do escritório em convidar; o vínculo só nasce do aceite | apagado 30 dias depois de vencer (`ConviteCarteiraLimpezaJob`), na exclusão do contador e na do produtor (respondidos por ele ou para o e-mail dele) |
-| `etiqueta_carteira` (#177) | catálogo de etiquetas do escritório | contrato | apagado na exclusão do contador |
+| `etiqueta_carteira` (#177) | catálogo de etiquetas do escritório | contrato | apagado com o escritório |
+| `escritorio` (#228) | nome e CNPJ do escritório | contrato | apagado quando o último membro exclui os dados (com a carteira, os convites e o catálogo); com equipe, o membro só sai — e o último administrador de uma equipe precisa antes promover outro (409) |
+| `convite_membro` (#228) | e-mail convidado (cifrado), função, só o SHA-256 do token | legítimo interesse do escritório | apagado com o escritório |
+| `contadores.escritorio_id`/`funcao_escritorio` (#228) | a que escritório o contador pertence | contrato | zerados ao sair da equipe ou na exclusão |
 | `credencial_usuario` (e-mail, hash da senha, CPF/CNPJ) | acesso | contrato / legítimo interesse | **apagada** (sessões e links de redefinição vão junto) |
 | `sessao_refresh` | sessões (só hash do token) | legítimo interesse (segurança) | apagadas |
 | `redefinicao_senha` | links de redefinição (só hash) | contrato | apagados |

@@ -37,8 +37,8 @@ public class EtiquetaCarteira {
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id;
 
-  @Column(name = "contador_id", nullable = false, updatable = false)
-  private UUID contadorId;
+  @Column(name = "escritorio_id", nullable = false, updatable = false)
+  private UUID escritorioId;
 
   @Column(name = "nome", nullable = false, length = 30)
   private String nome;

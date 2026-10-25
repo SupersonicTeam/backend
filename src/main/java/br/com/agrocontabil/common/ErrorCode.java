@@ -106,6 +106,21 @@ public enum ErrorCode {
    * issue #177. HTTP 429 com {@code Retry-After}.
    */
   LIMITE_CONVITES,
+  /**
+   * Convite de equipe inválido, vencido, já usado ou de outro e-mail (issue #228). HTTP 400, sem
+   * dizer qual dos casos.
+   */
+  CONVITE_EQUIPE_INVALIDO,
+  /**
+   * A operação deixaria o escritório sem administrador (remover, rebaixar ou excluir os dados do
+   * último) — issue #228. HTTP 409.
+   */
+  ULTIMO_ADMINISTRADOR,
+  /**
+   * O contador já atende clientes ou tem equipe no escritório atual e não pode trocá-lo pelo do
+   * convite (issue #228). HTTP 409.
+   */
+  ESCRITORIO_ATUAL_EM_USO,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:

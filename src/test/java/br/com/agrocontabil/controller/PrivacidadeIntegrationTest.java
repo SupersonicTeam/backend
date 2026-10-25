@@ -176,7 +176,10 @@ class PrivacidadeIntegrationTest {
     assertThat(anonimizado.getCpfCnpj()).isNull();
     assertThat(anonimizado.getCrc()).isNull();
     // A carteira inteira (vinculo e ficha) sai, nao so o acesso.
-    assertThat(vinculoRepository.findIdsDoContador(contador.usuarioId())).isEmpty();
+    // Sozinho no escritorio unipessoal: o escritorio inteiro (carteira e ficha) sai (#228).
+    assertThat(vinculoRepository.count()).isZero();
+    assertThat(jdbcTemplate.queryForObject("SELECT escritorio_id FROM contadores WHERE id = ?",
+        UUID.class, contador.usuarioId())).isNull();
   }
 
   @Test
@@ -201,8 +204,9 @@ class PrivacidadeIntegrationTest {
   }
 
   private void vincular(UUID contadorId, UUID produtorId) {
-    jdbcTemplate.update("INSERT INTO carteira_vinculo (id, contador_id, produtor_id, situacao,"
-        + " inicio) VALUES (RANDOM_UUID(), ?, ?, 'ATIVO', CURRENT_TIMESTAMP)",
-        contadorId, produtorId);
+    jdbcTemplate.update("INSERT INTO carteira_vinculo (id, escritorio_id, produtor_id, situacao,"
+        + " inicio) SELECT RANDOM_UUID(), escritorio_id, ?, 'ATIVO', CURRENT_TIMESTAMP"
+        + " FROM contadores WHERE id = ?",
+        produtorId, contadorId);
   }
 }

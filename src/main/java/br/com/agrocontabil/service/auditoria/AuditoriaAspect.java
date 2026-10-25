@@ -108,6 +108,9 @@ public class AuditoriaAspect {
             ? usuarioId : recurso)
         .usuarioId(usuarioId)
         .papel(usuario.map(u -> u.papel().name()).orElse(null))
+        // Escritorio de quem agiu (#228): o contador age em nome da equipe.
+        .escritorioId(usuario.filter(UsuarioAutenticado::isContador)
+            .map(u -> u.contador().getEscritorioId()).orElse(null))
         .produtorId(produtorAfetado(usuario, auditavel));
   }
 
