@@ -26,6 +26,18 @@ public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
   boolean existsByCpfCnpjIn(Collection<String> grafias);
 
   /**
+   * Ids dos produtores com um destes documentos — busca da carteira por CPF/CNPJ (issue #177).
+   *
+   * <p>Só por igualdade: a coluna é cifrada de forma determinística (#147), e o Hibernate cifra
+   * também as grafias do parâmetro.
+   *
+   * @param grafias o mesmo documento com e sem máscara
+   * @return ids encontrados
+   */
+  @Query("SELECT p.id FROM Produtor p WHERE p.cpfCnpj IN :grafias")
+  List<UUID> findIdsByCpfCnpjIn(@Param("grafias") Collection<String> grafias);
+
+  /**
    * Primeiro lote de IDs de produtor, em ordem de ID, para varreduras em lote dos jobs
    * (issue #100).
    *

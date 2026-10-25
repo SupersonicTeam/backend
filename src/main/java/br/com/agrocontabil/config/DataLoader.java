@@ -7,14 +7,18 @@ import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.TipoProdutor;
+import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.PoliticaSenha;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -72,6 +76,7 @@ public class DataLoader implements CommandLineRunner {
 
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
+  private final VinculoCarteiraRepository vinculoRepository;
   private final CredencialUsuarioRepository credencialRepository;
   private final PasswordEncoder passwordEncoder;
   private final PoliticaSenha politicaSenha;
@@ -80,12 +85,14 @@ public class DataLoader implements CommandLineRunner {
   public DataLoader(
       ProdutorRepository produtorRepository,
       ContadorRepository contadorRepository,
+      VinculoCarteiraRepository vinculoRepository,
       CredencialUsuarioRepository credencialRepository,
       PasswordEncoder passwordEncoder,
       PoliticaSenha politicaSenha,
       @Value("${app.seed.senha:}") String senhaSeed) {
     this.produtorRepository = produtorRepository;
     this.contadorRepository = contadorRepository;
+    this.vinculoRepository = vinculoRepository;
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
     this.politicaSenha = politicaSenha;
@@ -194,9 +201,15 @@ public class DataLoader implements CommandLineRunner {
             .email("contato@campocerto.example.com")
             .telefone("(65) 3333-0001")
             .build();
-    contador.vincular(produtorA);
 
     Contador salvo = contadorRepository.save(contador);
+    // Vinculo ATIVO direto, sem convite: e o seed de dev/homolog (issue #177).
+    vinculoRepository.save(VinculoCarteira.builder()
+        .contadorId(salvo.getId())
+        .produtorId(produtorA.getId())
+        .situacao(SituacaoVinculo.ATIVO)
+        .inicio(OffsetDateTime.now())
+        .build());
     log.info(
         "Contador semeado: {} (X-Usuario-Id: {}) — atende o produtor {}",
         salvo.getNomeCompleto(),

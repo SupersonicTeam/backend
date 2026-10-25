@@ -24,12 +24,12 @@ import net.javacrumbs.shedlock.core.SimpleLock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -335,6 +335,68 @@ class LiquibaseChangelogIntegrationTest {
     jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sessao_refresh"
         + " WHERE credencial_id = ?::uuid", Integer.class, credencialId)).isZero();
+  }
+
+  @Test
+  @DisplayName("changeSet 0038: carteira com um vinculo aberto por par, convite e etiquetas (#177)")
+  void changeSet0038CarteiraDoContador() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables"
+        + " WHERE table_name = 'contador_produtor'", Integer.class)).isZero();
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'carteira_vinculo' ORDER BY column_name", String.class))
+        .containsExactly("contador_id", "created_at", "fim", "id", "inicio", "observacoes",
+            "produtor_id", "situacao", "updated_at");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'convite_carteira' ORDER BY column_name", String.class))
+        .containsExactly("contador_id", "criado_em", "email", "expira_em", "id", "produtor_id",
+            "respondido_em", "situacao");
+    assertThat(jdbc.queryForObject("SELECT col_description('convite_carteira'::regclass,"
+        + " (SELECT ordinal_position FROM information_schema.columns"
+        + " WHERE table_name = 'convite_carteira' AND column_name = 'email')::int)",
+        String.class)).contains("cifrado");
+
+    String contadorId = UUID.randomUUID().toString();
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO contadores (id, nome_completo) VALUES (?::uuid, 'Escritorio')",
+        contadorId);
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    String vinculo = "INSERT INTO carteira_vinculo (id, contador_id, produtor_id, situacao,"
+        + " inicio) VALUES (gen_random_uuid(), ?::uuid, ?::uuid, ?, now())";
+    jdbc.update(vinculo, contadorId, produtorId, "ENCERRADO");
+    jdbc.update(vinculo, contadorId, produtorId, "ENCERRADO");
+    jdbc.update(vinculo, contadorId, produtorId, "ATIVO");
+    // Indice unico parcial: so um vinculo nao encerrado por par.
+    assertThatThrownBy(() -> jdbc.update(vinculo, contadorId, produtorId, "SUSPENSO"))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    String convite = "INSERT INTO convite_carteira (id, contador_id, email, situacao, criado_em,"
+        + " expira_em) VALUES (gen_random_uuid(), ?::uuid, 'v1:abc', ?, now(), now())";
+    jdbc.update(convite, contadorId, "RECUSADO");
+    jdbc.update(convite, contadorId, "PENDENTE");
+    assertThatThrownBy(() -> jdbc.update(convite, contadorId, "PENDENTE"))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    String etiquetaId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO etiqueta_carteira (id, contador_id, nome, nome_normalizado)"
+        + " VALUES (?::uuid, ?::uuid, 'Soja', 'soja')", etiquetaId, contadorId);
+    jdbc.update("INSERT INTO carteira_vinculo_etiqueta (vinculo_id, etiqueta_id)"
+        + " SELECT id, ?::uuid FROM carteira_vinculo WHERE situacao = 'ATIVO'"
+        + " AND contador_id = ?::uuid", etiquetaId, contadorId);
+
+    // CASCADE: o produtor apagado leva o vinculo e a etiqueta aplicada; o contador, o resto.
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM carteira_vinculo"
+        + " WHERE contador_id = ?::uuid", Integer.class, contadorId)).isZero();
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM carteira_vinculo_etiqueta"
+        + " WHERE etiqueta_id = ?::uuid", Integer.class, etiquetaId)).isZero();
+    jdbc.update("DELETE FROM contadores WHERE id = ?::uuid", contadorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM convite_carteira"
+        + " WHERE contador_id = ?::uuid", Integer.class, contadorId)).isZero();
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM etiqueta_carteira"
+        + " WHERE contador_id = ?::uuid", Integer.class, contadorId)).isZero();
   }
 
   @Test

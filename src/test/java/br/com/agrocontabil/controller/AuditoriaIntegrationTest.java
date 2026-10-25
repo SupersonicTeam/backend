@@ -34,8 +34,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -71,7 +71,8 @@ class AuditoriaIntegrationTest {
     contador = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.CONTADOR, "Escritorio Campo", "11222333000181", EMAIL_CONTADOR, SENHA));
     jdbcTemplate.update("UPDATE produtores SET estado = 'MT' WHERE id = ?", produtor.usuarioId());
-    jdbcTemplate.update("INSERT INTO contador_produtor (contador_id, produtor_id) VALUES (?, ?)",
+    jdbcTemplate.update("INSERT INTO carteira_vinculo (id, contador_id, produtor_id, situacao,"
+        + " inicio) VALUES (RANDOM_UUID(), ?, ?, 'ATIVO', CURRENT_TIMESTAMP)",
         contador.usuarioId(), produtor.usuarioId());
   }
 

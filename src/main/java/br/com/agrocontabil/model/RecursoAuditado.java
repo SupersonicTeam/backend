@@ -5,5 +5,8 @@ public enum RecursoAuditado {
   NOTA_FISCAL,
   GUIA_FISCAL,
   APURACAO,
-  CONTA
+  CONTA,
+  /** Vinculo da carteira (issue #177): o recurso_id e o do produtor. */
+  VINCULO_CARTEIRA,
+  CONVITE_CARTEIRA
 }

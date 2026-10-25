@@ -216,14 +216,64 @@ CREATE TABLE IF NOT EXISTS contadores (
     CONSTRAINT uk_contador_cpf_cnpj UNIQUE (cpf_cnpj)
 );
 
-CREATE TABLE IF NOT EXISTS contador_produtor (
-    contador_id  UUID  NOT NULL,
-    produtor_id  UUID  NOT NULL,
-    PRIMARY KEY (contador_id, produtor_id)
+-- Carteira do contador — issue #177 (migration 0038, que substitui o contador_produtor da 0024).
+-- Manter sincronizado com 0038-carteira-contador.xml. Os indices unicos parciais (um vinculo
+-- aberto por par, um convite pendente por par) sao so do PostgreSQL: o H2 nao tem indice parcial,
+-- e aqui a regra fica no servico.
+CREATE TABLE IF NOT EXISTS carteira_vinculo (
+    id            UUID                      NOT NULL,
+    contador_id   UUID                      NOT NULL,
+    produtor_id   UUID                      NOT NULL,
+    situacao      VARCHAR(20)               NOT NULL,
+    inicio        TIMESTAMP WITH TIME ZONE  NOT NULL,
+    fim           TIMESTAMP WITH TIME ZONE,
+    observacoes   VARCHAR(1000),
+    created_at    TIMESTAMP WITH TIME ZONE,
+    updated_at    TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_contador_produtor_produtor_id
-    ON contador_produtor (produtor_id);
+CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_contador_situacao
+    ON carteira_vinculo (contador_id, situacao);
+CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_produtor ON carteira_vinculo (produtor_id);
+
+CREATE TABLE IF NOT EXISTS etiqueta_carteira (
+    id                UUID                      NOT NULL,
+    contador_id       UUID                      NOT NULL,
+    nome              VARCHAR(30)               NOT NULL,
+    nome_normalizado  VARCHAR(30)               NOT NULL,
+    created_at        TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE etiqueta_carteira ADD CONSTRAINT IF NOT EXISTS uk_etiqueta_carteira_nome
+    UNIQUE (contador_id, nome_normalizado);
+
+CREATE TABLE IF NOT EXISTS carteira_vinculo_etiqueta (
+    vinculo_id   UUID  NOT NULL,
+    etiqueta_id  UUID  NOT NULL,
+    PRIMARY KEY (vinculo_id, etiqueta_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_carteira_vinculo_etiqueta_etiqueta
+    ON carteira_vinculo_etiqueta (etiqueta_id);
+
+CREATE TABLE IF NOT EXISTS convite_carteira (
+    id             UUID                      NOT NULL,
+    contador_id    UUID                      NOT NULL,
+    email          VARCHAR(512)              NOT NULL,
+    situacao       VARCHAR(20)               NOT NULL,
+    criado_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    expira_em      TIMESTAMP WITH TIME ZONE  NOT NULL,
+    respondido_em  TIMESTAMP WITH TIME ZONE,
+    produtor_id    UUID,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_convite_carteira_email_situacao
+    ON convite_carteira (email, situacao);
+CREATE INDEX IF NOT EXISTS idx_convite_carteira_contador_criado
+    ON convite_carteira (contador_id, criado_em);
 
 -- Auditoria das interacoes com a Ceres — Sprint 6 issue #144 (migration 0025).
 -- Sem o texto da pergunta nem da resposta. Manter sincronizado com 0025-assistente-interacao.xml.
@@ -335,12 +385,29 @@ ALTER TABLE apuracao_mensal ADD CONSTRAINT IF NOT EXISTS fk_apuracao_produtor
 ALTER TABLE guias_fiscais ADD CONSTRAINT IF NOT EXISTS fk_guia_fiscal_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id);
 
--- Vinculo contador_produtor: CASCADE nos dois lados (migration 0024). Sem isso, apagar um
--- produtor semeado num teste falharia por integridade referencial.
-ALTER TABLE contador_produtor ADD CONSTRAINT IF NOT EXISTS fk_contador_produtor_contador
+-- Carteira (migration 0038): CASCADE em tudo, como era o contador_produtor da 0024. Sem isso,
+-- apagar um produtor ou contador semeado num teste falharia por integridade referencial.
+ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_contador
     FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
 
-ALTER TABLE contador_produtor ADD CONSTRAINT IF NOT EXISTS fk_contador_produtor_produtor
+ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
+
+ALTER TABLE etiqueta_carteira ADD CONSTRAINT IF NOT EXISTS fk_etiqueta_carteira_contador
+    FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
+
+ALTER TABLE carteira_vinculo_etiqueta ADD CONSTRAINT IF NOT EXISTS
+    fk_carteira_vinculo_etiqueta_vinculo
+    FOREIGN KEY (vinculo_id) REFERENCES carteira_vinculo (id) ON DELETE CASCADE;
+
+ALTER TABLE carteira_vinculo_etiqueta ADD CONSTRAINT IF NOT EXISTS
+    fk_carteira_vinculo_etiqueta_etiqueta
+    FOREIGN KEY (etiqueta_id) REFERENCES etiqueta_carteira (id) ON DELETE CASCADE;
+
+ALTER TABLE convite_carteira ADD CONSTRAINT IF NOT EXISTS fk_convite_carteira_contador
+    FOREIGN KEY (contador_id) REFERENCES contadores (id) ON DELETE CASCADE;
+
+ALTER TABLE convite_carteira ADD CONSTRAINT IF NOT EXISTS fk_convite_carteira_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
 
 -- Auditoria da Ceres: RESTRICT, como nota_fiscal (migration 0025). O TestDatabaseCleaner apaga as

@@ -224,6 +224,19 @@ app:
   notas:
     busca:
       preencher-legado: ${NOTAS_BUSCA_PREENCHER_LEGADO:true}
+  # Carteira do contador (issue #177): convite por e-mail, aceito pelo produtor.
+  carteira:
+    convite:
+      validade: ${CARTEIRA_CONVITE_VALIDADE:P14D}
+      url-frontend: ${CARTEIRA_CONVITE_URL_FRONTEND:http://localhost:4200/convites}
+      max-por-dia: ${CARTEIRA_CONVITE_MAX_POR_DIA:30}
+      retencao: ${CARTEIRA_CONVITE_RETENCAO:P30D}
+      limpeza:
+        enabled: ${CARTEIRA_CONVITE_LIMPEZA_ENABLED:true}
+        cron: ${CARTEIRA_CONVITE_LIMPEZA_CRON:0 15 3 * * *}
+        lock:
+          at-most-for: PT30M
+          at-least-for: PT5M
   cors:
     # Lista separada por virgula; sobrescrita por APP_CORS_ALLOWED_ORIGINS em prod.
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}

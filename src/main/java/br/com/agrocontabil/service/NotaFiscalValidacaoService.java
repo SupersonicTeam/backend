@@ -6,7 +6,6 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
-import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -129,9 +128,22 @@ public class NotaFiscalValidacaoService {
    */
   @Transactional(readOnly = true)
   public List<NotaFiscalValidacaoResponse> listarValidacoes(UUID notaId) {
-    Produtor produtor = produtorProvider.get();
+    return listarValidacoesDoProdutor(produtorProvider.get().getId(), notaId);
+  }
+
+  /**
+   * Histórico de uma nota de produtor já autorizado por quem chama (leitura do contador, #177).
+   *
+   * @param produtorId produtor cujo acesso já foi conferido
+   * @param notaId     nota
+   * @return histórico de inconsistências
+   * @throws ResourceNotFoundException se a nota nao for daquele produtor (404)
+   */
+  @Transactional(readOnly = true)
+  public List<NotaFiscalValidacaoResponse> listarValidacoesDoProdutor(
+      UUID produtorId, UUID notaId) {
     notaFiscalRepository
-        .findByIdAndProdutorId(notaId, produtor.getId())
+        .findByIdAndProdutorId(notaId, produtorId)
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
 
     return NotaFiscalMapper.toValidacaoResponseList(
