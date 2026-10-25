@@ -107,6 +107,18 @@ public enum ErrorCode {
    */
   LIMITE_CONVITES,
   /**
+   * Transição de pendência que o status atual não permite (ex.: concluir sem anexo enviado) —
+   * issue #180. HTTP 409.
+   */
+  TRANSICAO_PENDENCIA_INVALIDA,
+  /**
+   * Anexo recusado: vazio, acima de 5 MB ou de tipo fora de PDF/JPEG/PNG/XML conferido pelos
+   * bytes iniciais (issue #180). HTTP 400.
+   */
+  ANEXO_INVALIDO,
+  /** A pendência já tem o máximo de anexos (10) — issue #180. HTTP 409. */
+  LIMITE_ANEXOS,
+  /**
    * Transição da revisão que o status da nota não permite (ex.: aprovar nota que não está
    * aguardando aprovação) ou envio sem contador vinculado — issue #178. HTTP 409.
    */

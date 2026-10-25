@@ -14,6 +14,8 @@ import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
+import br.com.agrocontabil.repository.PendenciaAnexoRepository;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.RegistroAuditoriaRepository;
@@ -57,6 +59,8 @@ public class TestDatabaseCleaner {
   private final EscritorioRepository escritorioRepository;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
   private final NotaFiscalRevisaoRepository revisaoRepository;
+  private final PendenciaAnexoRepository pendenciaAnexoRepository;
+  private final PendenciaRepository pendenciaRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -78,7 +82,9 @@ public class TestDatabaseCleaner {
       ConviteMembroRepository conviteMembroRepository,
       EscritorioRepository escritorioRepository,
       ObrigacaoFiscalRepository obrigacaoRepository,
-      NotaFiscalRevisaoRepository revisaoRepository) {
+      NotaFiscalRevisaoRepository revisaoRepository,
+      PendenciaAnexoRepository pendenciaAnexoRepository,
+      PendenciaRepository pendenciaRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -98,6 +104,8 @@ public class TestDatabaseCleaner {
     this.escritorioRepository = escritorioRepository;
     this.obrigacaoRepository = obrigacaoRepository;
     this.revisaoRepository = revisaoRepository;
+    this.pendenciaAnexoRepository = pendenciaAnexoRepository;
+    this.pendenciaRepository = pendenciaRepository;
   }
 
   /**
@@ -121,6 +129,9 @@ public class TestDatabaseCleaner {
     apuracaoRepository.deleteAll();
     guiaFiscalRepository.deleteAll();
     notaFiscalRepository.deleteAll();
+    // Pendencias (#180) e anexos: referenciam produtor, escritorio e contador.
+    pendenciaAnexoRepository.deleteAllInBatch();
+    pendenciaRepository.deleteAllInBatch();
     // Credenciais (#205): CASCADE no banco, mas nem todo contexto de teste roda o script que cria
     // as FKs; sem elas a credencial de um produtor apagado sobraria e o e-mail ficaria ocupado.
     sessaoRefreshRepository.deleteAll();

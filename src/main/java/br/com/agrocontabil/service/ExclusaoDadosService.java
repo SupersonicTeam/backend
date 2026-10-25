@@ -9,6 +9,8 @@ import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.PendenciaAnexoRepository;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
@@ -45,7 +47,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>Junto: a credencial é apagada (com ela, sessões e links de redefinição — a conta deixa de
  * existir e todo token emitido morre na próxima requisição), os alertas são apagados, e os
  * vínculos produtor×escritório do produtor são apagados (dado de relacionamento, não fiscal) —
- * com eles a ficha do cliente (observações e etiquetas) e os convites da carteira (#177). O
+ * com eles a ficha do cliente (observações e etiquetas), os convites da carteira (#177) e os
+ * pedidos de documento com os anexos (#180). O
  * contador sai da equipe; se era o único membro, o escritório sai inteiro (#228), e o último
  * administrador de uma equipe precisa antes promover outro (409).
  *
@@ -73,6 +76,8 @@ public class ExclusaoDadosService {
   private final AlertaTributarioRepository alertaRepository;
   private final VinculoCarteiraRepository vinculoRepository;
   private final ConviteCarteiraRepository conviteRepository;
+  private final PendenciaRepository pendenciaRepository;
+  private final PendenciaAnexoRepository anexoRepository;
   private final EquipeEscritorioService equipeService;
   private final Clock clock;
   private final TransactionTemplate transacao;
@@ -88,6 +93,8 @@ public class ExclusaoDadosService {
       AlertaTributarioRepository alertaRepository,
       VinculoCarteiraRepository vinculoRepository,
       ConviteCarteiraRepository conviteRepository,
+      PendenciaRepository pendenciaRepository,
+      PendenciaAnexoRepository anexoRepository,
       EquipeEscritorioService equipeService,
       Clock clock,
       PlatformTransactionManager transactionManager) {
@@ -101,6 +108,8 @@ public class ExclusaoDadosService {
     this.alertaRepository = alertaRepository;
     this.vinculoRepository = vinculoRepository;
     this.conviteRepository = conviteRepository;
+    this.pendenciaRepository = pendenciaRepository;
+    this.anexoRepository = anexoRepository;
     this.equipeService = equipeService;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
@@ -151,6 +160,9 @@ public class ExclusaoDadosService {
     // (observacoes, etiquetas) mora no vinculo e vai junto.
     apagarVinculos(vinculoRepository.findIdsDoProdutor(id));
     conviteRepository.apagarDoProdutor(id, email);
+    // Pedidos de documento e anexos (#180): documento enviado ao escritorio, nao fiscal emitido.
+    anexoRepository.apagarDoProdutor(id);
+    pendenciaRepository.apagarDoProdutor(id);
     alertaRepository.apagarDoProdutor(id);
   }
 

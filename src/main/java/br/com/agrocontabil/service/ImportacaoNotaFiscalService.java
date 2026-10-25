@@ -54,6 +54,9 @@ public class ImportacaoNotaFiscalService {
   /** Fuso de referência do projeto para o período (mês) afetado na apuração. */
   private static final ZoneId FUSO_BRASIL = ZoneId.of("America/Sao_Paulo");
 
+  /** Teto de um XML de NF-e importado (o multipart aceita até 5 MB por causa dos anexos, #180). */
+  static final int TAMANHO_MAXIMO_XML = 2 * 1024 * 1024;
+
   private final NfeXmlImporter nfeXmlImporter;
   private final NfeToNotaFiscalMapper nfeToNotaFiscalMapper;
   private final NotaFiscalRepository notaFiscalRepository;
@@ -102,6 +105,10 @@ public class ImportacaoNotaFiscalService {
   private ImportacaoNotaResultado importarArquivo(ArquivoXml arquivo, Produtor produtor) {
     String nome = arquivo.nome();
     try {
+      // O multipart aceita 5 MB por arquivo desde os anexos da #180; um XML de NF-e segue com 2 MB.
+      if (arquivo.conteudo() != null && arquivo.conteudo().length > TAMANHO_MAXIMO_XML) {
+        throw new XmlImportacaoInvalidaException("Arquivo acima de 2 MB: nao e um XML de NF-e.");
+      }
       NfeXmlImporter.ResultadoImportacao parsed = nfeXmlImporter.importar(arquivo.conteudo());
       NotaFiscal nota = nfeToNotaFiscalMapper.toNotaFiscal(
           parsed.nfe(), produtor, parsed.nfeXml(), parsed.autorizada());

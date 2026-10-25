@@ -16,5 +16,7 @@ public enum RecursoAuditado {
   /** Membro da equipe do escritorio (issue #228): o recurso_id e o contador. */
   MEMBRO_ESCRITORIO,
   /** O escritorio em si (#228): nome e CNPJ. */
-  ESCRITORIO
+  ESCRITORIO,
+  /** Pendencia (pedido de documento, #180). */
+  PENDENCIA
 }

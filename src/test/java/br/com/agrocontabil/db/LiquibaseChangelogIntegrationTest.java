@@ -540,6 +540,47 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0042: pendencia e anexo em bytea, CASCADE do produtor e do escritorio")
+  void changeSet0042Pendencia() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'pendencia' ORDER BY column_name", String.class))
+        .containsExactly("created_at", "criado_por", "data_limite", "descricao", "escritorio_id",
+            "id", "motivo", "observacoes", "produtor_id", "status", "tipos_documento", "titulo",
+            "updated_at");
+    assertThat(jdbc.queryForObject("SELECT data_type FROM information_schema.columns"
+        + " WHERE table_name = 'pendencia_anexo' AND column_name = 'conteudo'", String.class))
+        .isEqualTo("bytea");
+
+    String escritorioId = UUID.randomUUID().toString();
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio')", escritorioId);
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    String pendenciaId = UUID.randomUUID().toString();
+    String insertPendencia = "INSERT INTO pendencia (id, escritorio_id, produtor_id, titulo,"
+        + " status) VALUES (?::uuid, ?::uuid, ?::uuid, 'Extrato', 'PENDENTE')";
+    String insertAnexo = "INSERT INTO pendencia_anexo (id, pendencia_id, nome_arquivo, mime,"
+        + " tamanho, sha256, conteudo, enviado_em) VALUES (gen_random_uuid(), ?::uuid, 'a.pdf',"
+        + " 'application/pdf', 4, ?, ?, now())";
+    jdbc.update(insertPendencia, pendenciaId, escritorioId, produtorId);
+    jdbc.update(insertAnexo, pendenciaId, "c".repeat(64), new byte[] {'%', 'P', 'D', 'F'});
+
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pendencia_anexo"
+        + " WHERE pendencia_id = ?::uuid", Integer.class, pendenciaId)).isZero();
+
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    jdbc.update(insertPendencia, pendenciaId, escritorioId, produtorId);
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pendencia WHERE id = ?::uuid",
+        Integer.class, pendenciaId)).isZero();
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
   @DisplayName("changeSet 0034 cria redefinicao_senha com hash unico e CASCADE da credencial")
   void changeSet0034CriaRedefinicaoSenha() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

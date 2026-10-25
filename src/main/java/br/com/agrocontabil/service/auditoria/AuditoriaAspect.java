@@ -86,7 +86,9 @@ public class AuditoriaAspect {
     }
 
     ResultadoAuditavel auditavel = resultado instanceof ResultadoAuditavel r ? r : null;
-    UUID recurso = recursoArgumento == null && auditavel != null
+    // O recurso que a resposta informa vence o primeiro UUID dos argumentos: numa criacao com o
+    // produtor no path (pendencia, #180) o primeiro UUID e o produtor, nao o recurso criado.
+    UUID recurso = auditavel != null && auditavel.recursoAuditado() != null
         ? auditavel.recursoAuditado() : recursoArgumento;
     auditoria.registrar(base(auditado, usuario, recurso, auditavel)
         .sucesso(true)

@@ -6,6 +6,7 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.GuiaFiscalMapper;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import br.com.agrocontabil.security.UsuarioAutenticado;
@@ -56,6 +57,7 @@ public class CalendarioFiscalService {
   private final UsuarioAutenticadoProvider usuarioProvider;
   private final VinculoCarteiraRepository vinculoRepository;
   private final ObrigacaoFiscalService obrigacaoService;
+  private final PendenciaRepository pendenciaRepository;
   private final Clock clock;
 
   /**
@@ -68,12 +70,14 @@ public class CalendarioFiscalService {
       UsuarioAutenticadoProvider usuarioProvider,
       VinculoCarteiraRepository vinculoRepository,
       ObrigacaoFiscalService obrigacaoService,
+      PendenciaRepository pendenciaRepository,
       Clock clock) {
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.produtorEmContexto = produtorEmContexto;
     this.usuarioProvider = usuarioProvider;
     this.vinculoRepository = vinculoRepository;
     this.obrigacaoService = obrigacaoService;
+    this.pendenciaRepository = pendenciaRepository;
     this.clock = clock;
   }
 
@@ -119,6 +123,13 @@ public class CalendarioFiscalService {
         ? List.of(usuario.contador().getEscritorioId())
         : vinculoRepository.findEscritoriosAtivosDoProdutor(produtorId);
     itens.addAll(obrigacaoService.ocorrencias(produtor, escritorios, inicio, fim));
+    // Pedidos de documento em aberto com prazo (#180): tipo "solicitacao".
+    if (!escritorios.isEmpty()) {
+      pendenciaRepository.findNoCalendario(produtorId, escritorios, inicio, fim).forEach(p ->
+          itens.add(new VencimentoFiscalResponse(p.getId().toString(), p.getTitulo(),
+              p.getDescricao(), p.getDataLimite(), "solicitacao", "pendente", null,
+              p.getTitulo(), null, null)));
+    }
     // Mais recente primeiro, como a lista de guias ja vinha (findVencimentosNaJanela).
     itens.sort(Comparator.comparing(VencimentoFiscalResponse::dataVencimento).reversed()
         .thenComparing(VencimentoFiscalResponse::tipo)

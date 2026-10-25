@@ -65,7 +65,9 @@ spring:
   # NF-e assinado costuma ter dezenas de KB; permitimos lotes de varios arquivos.
   servlet:
     multipart:
-      max-file-size: 2MB
+      # 5 MB pelos anexos das pendencias (#180); o XML de NF-e importado segue com 2 MB, conferido
+      # no ImportacaoNotaFiscalService.
+      max-file-size: 5MB
       max-request-size: 20MB
 
   jpa:
@@ -234,6 +236,16 @@ app:
       limpeza:
         enabled: ${CARTEIRA_CONVITE_LIMPEZA_ENABLED:true}
         cron: ${CARTEIRA_CONVITE_LIMPEZA_CRON:0 15 3 * * *}
+        lock:
+          at-most-for: PT30M
+          at-least-for: PT5M
+  # Pendencias e documentos (issue #180): anexos guardados por 5 anos (minimo; guarda fiscal).
+  pendencias:
+    anexo:
+      retencao-anos: ${PENDENCIAS_ANEXO_RETENCAO_ANOS:5}
+      retencao:
+        enabled: ${PENDENCIAS_ANEXO_RETENCAO_ENABLED:true}
+        cron: ${PENDENCIAS_ANEXO_RETENCAO_CRON:0 45 3 * * *}
         lock:
           at-most-for: PT30M
           at-least-for: PT5M

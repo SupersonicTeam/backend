@@ -21,11 +21,13 @@ import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ContagemPorProdutor;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaDoVinculo;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
@@ -113,6 +115,7 @@ public class CarteiraService {
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
   private final EscritorioRepository escritorioRepository;
+  private final PendenciaRepository pendenciaRepository;
   private final Clock clock;
 
   public CarteiraService(
@@ -123,6 +126,7 @@ public class CarteiraService {
       ProdutorRepository produtorRepository,
       ContadorRepository contadorRepository,
       EscritorioRepository escritorioRepository,
+      PendenciaRepository pendenciaRepository,
       Clock clock) {
     this.membroProvider = membroProvider;
     this.produtorProvider = produtorProvider;
@@ -131,6 +135,7 @@ public class CarteiraService {
     this.produtorRepository = produtorRepository;
     this.contadorRepository = contadorRepository;
     this.escritorioRepository = escritorioRepository;
+    this.pendenciaRepository = pendenciaRepository;
     this.clock = clock;
   }
 
@@ -164,7 +169,7 @@ public class CarteiraService {
             .filter(e -> !e.isEmpty()).collect(Collectors.toSet());
     Map<UUID, AtencaoCarteiraResponse> atencao = situacao == SituacaoVinculo.ATIVO
         ? atencao(escritorioId) : Map.of();
-    AtencaoCarteiraResponse semNada = new AtencaoCarteiraResponse(0, 0, 0, 0);
+    AtencaoCarteiraResponse semNada = new AtencaoCarteiraResponse(0, 0, 0, 0, 0);
 
     List<ProdutorCarteiraResponse> clientes = vinculos.stream()
         .filter(doResponsavel)
@@ -446,9 +451,12 @@ public class CarteiraService {
         vinculoRepository.contarGuiasVencidasDaCarteira(escritorioId, hoje));
     Map<UUID, Long> proximos = porProdutor(vinculoRepository.contarGuiasNaFaixaDaCarteira(
         escritorioId, StatusGuiaFiscal.PENDENTE, hoje, hoje.plusDays(DIAS_VENCIMENTOS_PROXIMOS)));
+    Map<UUID, Long> enviadas = porProdutor(
+        pendenciaRepository.contarDaCarteira(escritorioId, StatusPendencia.ENVIADA));
 
     Set<UUID> produtores = new HashSet<>(inconsistencias.keySet());
     produtores.addAll(aguardando.keySet());
+    produtores.addAll(enviadas.keySet());
     produtores.addAll(vencidas.keySet());
     produtores.addAll(proximos.keySet());
     Map<UUID, AtencaoCarteiraResponse> atencao = new HashMap<>();
@@ -457,7 +465,8 @@ public class CarteiraService {
           inconsistencias.getOrDefault(produtorId, 0L),
           aguardando.getOrDefault(produtorId, 0L),
           vencidas.getOrDefault(produtorId, 0L),
-          proximos.getOrDefault(produtorId, 0L)));
+          proximos.getOrDefault(produtorId, 0L),
+          enviadas.getOrDefault(produtorId, 0L)));
     }
     return atencao;
   }

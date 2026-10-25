@@ -5,6 +5,7 @@ import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -24,13 +25,16 @@ class EstadoRecursoLeitor {
   private final GuiaFiscalRepository guiaRepository;
   private final ApuracaoMensalRepository apuracaoRepository;
   private final ConviteCarteiraRepository conviteRepository;
+  private final PendenciaRepository pendenciaRepository;
 
   EstadoRecursoLeitor(NotaFiscalRepository notaRepository, GuiaFiscalRepository guiaRepository,
-      ApuracaoMensalRepository apuracaoRepository, ConviteCarteiraRepository conviteRepository) {
+      ApuracaoMensalRepository apuracaoRepository, ConviteCarteiraRepository conviteRepository,
+      PendenciaRepository pendenciaRepository) {
     this.notaRepository = notaRepository;
     this.guiaRepository = guiaRepository;
     this.apuracaoRepository = apuracaoRepository;
     this.conviteRepository = conviteRepository;
+    this.pendenciaRepository = pendenciaRepository;
   }
 
   /**
@@ -48,6 +52,7 @@ class EstadoRecursoLeitor {
       case CONVITE_CARTEIRA -> conviteRepository.findSituacaoById(id);
       // O vinculo e auditado pelo id do produtor; a situacao anterior vai no "depois" da
       // operacao anterior.
+      case PENDENCIA -> pendenciaRepository.findStatusById(id);
       case CONTA, VINCULO_CARTEIRA, MEMBRO_ESCRITORIO, ESCRITORIO -> Optional.empty();
     };
     return status.map(Object::toString);

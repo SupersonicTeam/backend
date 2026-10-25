@@ -53,6 +53,7 @@ class CarteiraServiceTest {
   @Mock private ProdutorRepository produtorRepository;
   @Mock private ContadorRepository contadorRepository;
   @Mock private EscritorioRepository escritorioRepository;
+  @Mock private br.com.agrocontabil.repository.PendenciaRepository pendenciaRepository;
 
   private final Clock clock =
       Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"), ZoneId.of("America/Sao_Paulo"));
@@ -66,7 +67,8 @@ class CarteiraServiceTest {
     service = new CarteiraService(new MembroEscritorioProvider(usuarioProvider),
         new AuthenticatedProdutorProvider(usuarioProvider),
         new ProdutorEmContextoResolver(usuarioProvider, produtorRepository, vinculoRepository),
-        vinculoRepository, produtorRepository, contadorRepository, escritorioRepository, clock);
+        vinculoRepository, produtorRepository, contadorRepository, escritorioRepository,
+        pendenciaRepository, clock);
   }
 
   private static FiltroCarteiraRequest filtro(String busca, String sort) {

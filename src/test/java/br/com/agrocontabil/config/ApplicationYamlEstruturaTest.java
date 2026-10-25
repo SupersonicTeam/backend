@@ -70,10 +70,10 @@ class ApplicationYamlEstruturaTest {
   }
 
   @Test
-  @DisplayName("limites de upload em spring.servlet.multipart")
+  @DisplayName("limites de upload em spring.servlet.multipart (5 MB pelos anexos da #180)")
   void limitesDeUpload() {
     assertThat(propriedades.getProperty("spring.servlet.multipart.max-file-size"))
-        .isEqualTo("2MB");
+        .isEqualTo("5MB");
     assertThat(propriedades.getProperty("spring.servlet.multipart.max-request-size"))
         .isEqualTo("20MB");
   }

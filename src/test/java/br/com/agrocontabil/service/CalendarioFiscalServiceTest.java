@@ -55,6 +55,7 @@ class CalendarioFiscalServiceTest {
   @Mock private UsuarioAutenticadoProvider usuarioProvider;
   @Mock private VinculoCarteiraRepository vinculoRepository;
   @Mock private ObrigacaoFiscalService obrigacaoService;
+  @Mock private br.com.agrocontabil.repository.PendenciaRepository pendenciaRepository;
 
   private CalendarioFiscalService service;
   private Produtor produtor;
@@ -62,7 +63,7 @@ class CalendarioFiscalServiceTest {
   @BeforeEach
   void setUp() {
     service = new CalendarioFiscalService(guiaFiscalRepository, produtorEmContexto,
-        usuarioProvider, vinculoRepository, obrigacaoService, CLOCK_FIXO);
+        usuarioProvider, vinculoRepository, obrigacaoService, pendenciaRepository, CLOCK_FIXO);
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
     // As obrigacoes (#181) tem teste proprio: aqui o calendario so das guias.
     org.mockito.Mockito.lenient().when(produtorEmContexto.resolver(produtor.getId()))

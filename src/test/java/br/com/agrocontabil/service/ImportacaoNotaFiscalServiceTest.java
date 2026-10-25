@@ -163,6 +163,18 @@ class ImportacaoNotaFiscalServiceTest {
     verifyNoInteractions(eventPublisher);
   }
 
+  @Test
+  @DisplayName("XML acima de 2 MB: INVALIDA sem chegar ao parser (multipart aceita 5 MB, #180)")
+  void xmlAcimaDoTeto() {
+    ArquivoXml grande = new ArquivoXml("grande.xml",
+        new byte[ImportacaoNotaFiscalService.TAMANHO_MAXIMO_XML + 1]);
+
+    List<ImportacaoNotaResultado> resultados = service.importar(List.of(grande));
+
+    assertThat(resultados.get(0).status()).isEqualTo(Status.INVALIDA);
+    verifyNoInteractions(nfeXmlImporter);
+  }
+
   private NotaFiscal notaComChave(String chave) {
     return NotaFiscal.builder()
         .id(UUID.randomUUID())
