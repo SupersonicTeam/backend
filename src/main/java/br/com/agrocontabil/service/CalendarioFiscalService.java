@@ -4,12 +4,18 @@ import br.com.agrocontabil.dto.VencimentoFiscalResponse;
 import br.com.agrocontabil.exception.JanelaCalendarioInvalidaException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.GuiaFiscalMapper;
+import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
+import br.com.agrocontabil.security.UsuarioAutenticado;
+import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -20,10 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
  * /api/calendario-fiscal/{produtorId}/vencimentos}).
  *
  * <p>Fecha a lacuna que já quebrava a tela de Calendário do Angular: o {@code CalendarioApi} do
- * frontend chama este endpoint sem fallback mock (erro direto se 404). Nesta entrega a única
- * fonte de vencimento é a {@link br.com.agrocontabil.model.GuiaFiscal} do produtor — reúsa
- * {@link GuiaFiscalRepository}, sem nova tabela. Outras fontes de prazo fiscal (obrigações,
- * declarações) ficam para quando o backend as modelar.
+ * frontend chama este endpoint sem fallback mock (erro direto se 404). Fontes: as guias do produtor
+ * ({@code tipo = "imposto"}) e, desde a issue #181, as ocorrências das obrigações do catálogo dos
+ * escritórios que o atendem mais o fechamento da apuração ({@code tipo = "obrigacao"},
+ * {@link ObrigacaoFiscalService}). O produtor vê as obrigações de todos os escritórios ativos dele;
+ * o contador, só as do próprio escritório (o catálogo de outro escritório não é dele).
  *
  * <p><strong>Anti-IDOR:</strong> o {@code produtorId} do path precisa ser acessível pela identidade
  * autenticada — o próprio produtor, ou um produtor da carteira do contador (issue #93). Quem decide
@@ -46,18 +53,27 @@ public class CalendarioFiscalService {
 
   private final GuiaFiscalRepository guiaFiscalRepository;
   private final ProdutorEmContextoResolver produtorEmContexto;
+  private final UsuarioAutenticadoProvider usuarioProvider;
+  private final VinculoCarteiraRepository vinculoRepository;
+  private final ObrigacaoFiscalService obrigacaoService;
   private final Clock clock;
 
   /**
-   * Constrói o serviço com o repositório de guias, o provedor do produtor autenticado e o
-   * {@link Clock} do projeto ({@code America/Sao_Paulo}), que define o mês corrente da janela.
+   * Constrói o serviço com o repositório de guias, o resolvedor do produtor-alvo, as fontes das
+   * obrigações (#181) e o {@link Clock} do projeto ({@code America/Sao_Paulo}).
    */
   public CalendarioFiscalService(
       GuiaFiscalRepository guiaFiscalRepository,
       ProdutorEmContextoResolver produtorEmContexto,
+      UsuarioAutenticadoProvider usuarioProvider,
+      VinculoCarteiraRepository vinculoRepository,
+      ObrigacaoFiscalService obrigacaoService,
       Clock clock) {
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.produtorEmContexto = produtorEmContexto;
+    this.usuarioProvider = usuarioProvider;
+    this.vinculoRepository = vinculoRepository;
+    this.obrigacaoService = obrigacaoService;
     this.clock = clock;
   }
 
@@ -80,7 +96,7 @@ public class CalendarioFiscalService {
    */
   public List<VencimentoFiscalResponse> listarVencimentos(
       UUID produtorId, LocalDate de, LocalDate ate) {
-    produtorEmContexto.exigirAcesso(produtorId);
+    Produtor produtor = produtorEmContexto.resolver(produtorId);
 
     YearMonth mesCorrente = YearMonth.now(clock);
     LocalDate inicio = de != null ? de : mesCorrente.minusMonths(MESES_JANELA_PADRAO).atDay(1);
@@ -94,8 +110,19 @@ public class CalendarioFiscalService {
       throw JanelaCalendarioInvalidaException.excedeMaximo(inicio, fim, MESES_JANELA_MAXIMA);
     }
 
-    return guiaFiscalRepository.findVencimentosNaJanela(produtorId, inicio, fim).stream()
-        .map(GuiaFiscalMapper::toVencimento)
-        .toList();
+    List<VencimentoFiscalResponse> itens = new ArrayList<>(
+        guiaFiscalRepository.findVencimentosNaJanela(produtorId, inicio, fim).stream()
+            .map(GuiaFiscalMapper::toVencimento)
+            .toList());
+    UsuarioAutenticado usuario = usuarioProvider.get();
+    List<UUID> escritorios = usuario.isContador()
+        ? List.of(usuario.contador().getEscritorioId())
+        : vinculoRepository.findEscritoriosAtivosDoProdutor(produtorId);
+    itens.addAll(obrigacaoService.ocorrencias(produtor, escritorios, inicio, fim));
+    // Mais recente primeiro, como a lista de guias ja vinha (findVencimentosNaJanela).
+    itens.sort(Comparator.comparing(VencimentoFiscalResponse::dataVencimento).reversed()
+        .thenComparing(VencimentoFiscalResponse::tipo)
+        .thenComparing(VencimentoFiscalResponse::id));
+    return itens;
   }
 }

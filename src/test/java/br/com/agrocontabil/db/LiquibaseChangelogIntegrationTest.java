@@ -467,6 +467,48 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0040: obrigacoes com 11 modelos, CHECK de prazo e uma versao por modelo")
+  void changeSet0040ObrigacoesFiscais() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM obrigacao_fiscal WHERE modelo"
+        + " AND escritorio_id IS NULL AND ativa", Integer.class)).isEqualTo(11);
+    assertThat(jdbc.queryForObject("SELECT regimes_tributarios FROM obrigacao_fiscal"
+        + " WHERE titulo = 'DCTFWeb'", String.class)).isEqualTo("PRESUMIDO,REAL");
+    assertThat(jdbc.queryForMap("SELECT dia, mes, ajuste_fim_de_semana FROM obrigacao_fiscal"
+        + " WHERE titulo = 'ECD'"))
+        .containsEntry("dia", 31).containsEntry("mes", 6)
+        .containsEntry("ajuste_fim_de_semana", "ANTECIPA");
+
+    String escritorioId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio')", escritorioId);
+    String versao = "INSERT INTO obrigacao_fiscal (id, escritorio_id, modelo, modelo_id, titulo,"
+        + " periodicidade, dia, ajuste_fim_de_semana, ativa) VALUES (gen_random_uuid(), ?::uuid,"
+        + " false, '00000000-0000-4000-8181-000000000001', 'DAS', 'MENSAL', 18, 'NENHUM', true)";
+    jdbc.update(versao, escritorioId);
+    assertThatThrownBy(() -> jdbc.update(versao, escritorioId))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    // Mensal com mes, e linha de escritorio marcada como modelo: barradas pelo CHECK.
+    assertThatThrownBy(() -> jdbc.update("INSERT INTO obrigacao_fiscal (id, escritorio_id,"
+        + " modelo, titulo, periodicidade, dia, mes, ajuste_fim_de_semana, ativa) VALUES"
+        + " (gen_random_uuid(), ?::uuid, false, 'X', 'MENSAL', 10, 3, 'NENHUM', true)",
+        escritorioId))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update("INSERT INTO obrigacao_fiscal (id, escritorio_id,"
+        + " modelo, titulo, periodicidade, dia, ajuste_fim_de_semana, ativa) VALUES"
+        + " (gen_random_uuid(), ?::uuid, true, 'X', 'MENSAL', 10, 'NENHUM', true)",
+        escritorioId))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+    // CASCADE do escritorio; o modelo fica.
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM obrigacao_fiscal"
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioId)).isZero();
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM obrigacao_fiscal WHERE modelo",
+        Integer.class)).isEqualTo(11);
+  }
+
+  @Test
   @DisplayName("changeSet 0034 cria redefinicao_senha com hash unico e CASCADE da credencial")
   void changeSet0034CriaRedefinicaoSenha() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

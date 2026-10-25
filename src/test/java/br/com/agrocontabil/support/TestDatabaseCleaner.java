@@ -12,6 +12,7 @@ import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
+import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.RegistroAuditoriaRepository;
@@ -53,6 +54,7 @@ public class TestDatabaseCleaner {
   private final EtiquetaCarteiraRepository etiquetaRepository;
   private final ConviteMembroRepository conviteMembroRepository;
   private final EscritorioRepository escritorioRepository;
+  private final ObrigacaoFiscalRepository obrigacaoRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -72,7 +74,8 @@ public class TestDatabaseCleaner {
       VinculoCarteiraRepository vinculoRepository,
       EtiquetaCarteiraRepository etiquetaRepository,
       ConviteMembroRepository conviteMembroRepository,
-      EscritorioRepository escritorioRepository) {
+      EscritorioRepository escritorioRepository,
+      ObrigacaoFiscalRepository obrigacaoRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -90,6 +93,7 @@ public class TestDatabaseCleaner {
     this.etiquetaRepository = etiquetaRepository;
     this.conviteMembroRepository = conviteMembroRepository;
     this.escritorioRepository = escritorioRepository;
+    this.obrigacaoRepository = obrigacaoRepository;
   }
 
   /**
@@ -122,6 +126,8 @@ public class TestDatabaseCleaner {
     etiquetaRepository.deleteAll();
     conviteMembroRepository.deleteAll();
     contadorRepository.deleteAll();
+    // Obrigacoes dos escritorios (#181); os modelos do sistema ficam (vem do script, nao do teste).
+    obrigacaoRepository.apagarDosEscritorios();
     // Escritorio (#228) depois dos contadores, que o referenciam.
     escritorioRepository.deleteAll();
     produtorRepository.deleteAll();

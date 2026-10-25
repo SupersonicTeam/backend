@@ -182,7 +182,7 @@ class ContadorEscopoIntegrationTest {
             .param("ate", "2026-12-31")
             .header(MockIdentidadeFilter.HEADER_USUARIO_ID, contador.getId()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(1));
+        .andExpect(jsonPath("$[?(@.tipo == 'imposto')]", org.hamcrest.Matchers.hasSize(1)));
   }
 
   @Test

@@ -26,6 +26,7 @@ import br.com.agrocontabil.repository.ConviteMembroRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
+import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
 import br.com.agrocontabil.security.PapelUsuario;
@@ -76,6 +77,7 @@ public class EquipeEscritorioService {
   private final VinculoCarteiraRepository vinculoRepository;
   private final EtiquetaCarteiraRepository etiquetaRepository;
   private final ConviteCarteiraRepository conviteCarteiraRepository;
+  private final ObrigacaoFiscalRepository obrigacaoRepository;
   private final CadastroService cadastroService;
   private final EnvioConviteEquipe envio;
   private final ConviteEquipeProperties propriedades;
@@ -92,6 +94,7 @@ public class EquipeEscritorioService {
       VinculoCarteiraRepository vinculoRepository,
       EtiquetaCarteiraRepository etiquetaRepository,
       ConviteCarteiraRepository conviteCarteiraRepository,
+      ObrigacaoFiscalRepository obrigacaoRepository,
       CadastroService cadastroService,
       EnvioConviteEquipe envio,
       ConviteEquipeProperties propriedades,
@@ -105,6 +108,7 @@ public class EquipeEscritorioService {
     this.vinculoRepository = vinculoRepository;
     this.etiquetaRepository = etiquetaRepository;
     this.conviteCarteiraRepository = conviteCarteiraRepository;
+    this.obrigacaoRepository = obrigacaoRepository;
     this.cadastroService = cadastroService;
     this.envio = envio;
     this.propriedades = propriedades;
@@ -406,7 +410,7 @@ public class EquipeEscritorioService {
     contadorRepository.saveAndFlush(contador);
   }
 
-  /** Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogo). */
+  /** Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogos). */
   private void apagarEscritorio(UUID escritorioId) {
     List<UUID> vinculos = vinculoRepository.findIdsDoEscritorio(escritorioId);
     if (!vinculos.isEmpty()) {
@@ -416,6 +420,7 @@ public class EquipeEscritorioService {
     conviteCarteiraRepository.apagarDoEscritorio(escritorioId);
     etiquetaRepository.apagarDoEscritorio(escritorioId);
     conviteRepository.apagarDoEscritorio(escritorioId);
+    obrigacaoRepository.apagarDoEscritorio(escritorioId);
     escritorioRepository.deleteById(escritorioId);
     escritorioRepository.flush();
   }

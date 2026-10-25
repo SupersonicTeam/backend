@@ -58,14 +58,18 @@ public final class GuiaFiscalMapper {
    * entrega. {@code status} é o valor real em minúsculas (pendente/paga→pago/vencida→vencido).
    */
   public static VencimentoFiscalResponse toVencimento(GuiaFiscal guia) {
+    String titulo = "Guia " + guia.getTipoGuia().name();
     return new VencimentoFiscalResponse(
-        guia.getId(),
-        "Guia " + guia.getTipoGuia().name(),
+        guia.getId().toString(),
+        titulo,
         guia.getObservacoes(),
         guia.getDataVencimento(),
         "imposto",
         toStatusVencimento(guia.getStatus()),
-        guia.getValor());
+        guia.getValor(),
+        titulo,
+        null,
+        null);
   }
 
   private static String toStatusVencimento(StatusGuiaFiscal status) {

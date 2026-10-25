@@ -15,10 +15,12 @@ import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
+import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.service.ObrigacaoFiscalService;
 import br.com.agrocontabil.service.PoliticaSenha;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -77,10 +79,15 @@ public class DataLoader implements CommandLineRunner {
    */
   private static final String CNPJ_CONTADOR = "12.345.678/0001-95";
 
+  /** Modelos de obrigação do changeSet 0040 que o seed personaliza (issue #181). */
+  static final UUID MODELO_DAS = UUID.fromString("00000000-0000-4000-8181-000000000001");
+  static final UUID MODELO_DEFIS = UUID.fromString("00000000-0000-4000-8181-000000000004");
+
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
   private final VinculoCarteiraRepository vinculoRepository;
   private final EscritorioRepository escritorioRepository;
+  private final ObrigacaoFiscalRepository obrigacaoRepository;
   private final CredencialUsuarioRepository credencialRepository;
   private final PasswordEncoder passwordEncoder;
   private final PoliticaSenha politicaSenha;
@@ -91,6 +98,7 @@ public class DataLoader implements CommandLineRunner {
       ContadorRepository contadorRepository,
       VinculoCarteiraRepository vinculoRepository,
       EscritorioRepository escritorioRepository,
+      ObrigacaoFiscalRepository obrigacaoRepository,
       CredencialUsuarioRepository credencialRepository,
       PasswordEncoder passwordEncoder,
       PoliticaSenha politicaSenha,
@@ -99,6 +107,7 @@ public class DataLoader implements CommandLineRunner {
     this.contadorRepository = contadorRepository;
     this.vinculoRepository = vinculoRepository;
     this.escritorioRepository = escritorioRepository;
+    this.obrigacaoRepository = obrigacaoRepository;
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
     this.politicaSenha = politicaSenha;
@@ -214,6 +223,7 @@ public class DataLoader implements CommandLineRunner {
             .build();
 
     Contador salvo = contadorRepository.save(contador);
+    personalizarObrigacoes(escritorio.getId());
     // Vinculo ATIVO direto, sem convite: e o seed de dev/homolog (issue #177).
     vinculoRepository.save(VinculoCarteira.builder()
         .escritorioId(escritorio.getId())
@@ -228,6 +238,23 @@ public class DataLoader implements CommandLineRunner {
         salvo.getId(),
         produtorA.getId());
     return salvo;
+  }
+
+  /**
+   * Personaliza o catálogo de obrigações do escritório semeado (issue #181), para a demonstração
+   * mostrar as duas formas: a DEFIS desativada e o DAS com outro dia. Sem os modelos (banco sem a
+   * 0040), nada é feito.
+   */
+  private void personalizarObrigacoes(UUID escritorioId) {
+    obrigacaoRepository.findModeloById(MODELO_DEFIS).ifPresent(defis ->
+        obrigacaoRepository.save(
+            ObrigacaoFiscalService.versaoDoEscritorio(defis, escritorioId).ativa(false).build()));
+    obrigacaoRepository.findModeloById(MODELO_DAS).ifPresent(das ->
+        obrigacaoRepository.save(ObrigacaoFiscalService.versaoDoEscritorio(das, escritorioId)
+            .titulo("DAS / PGDAS-D (conferir guia)")
+            .descricao("Lembrete interno: conferir a guia dois dias antes do vencimento")
+            .dia(18)
+            .build()));
   }
 
   private Produtor produtorA() {

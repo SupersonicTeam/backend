@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0040-obrigacao-fiscal.xml
+         Issue #181 (obrigacoes no calendario fiscal).
+
+         Catalogo de obrigacoes acessorias e recolhimentos, por escritorio.
+         Linhas com escritorio_id NULL e modelo = true sao os MODELOS do
+         sistema, semeados aqui: valem para todo escritorio ate ele mexer.
+         Editar um modelo cria a versao do escritorio (escritorio_id +
+         modelo_id), que vale no lugar dele so para aquele escritorio;
+         desativar = versao com ativa = false; "restaurar padrao" apaga a
+         versao. Modelo novo num changeSet futuro chega a quem nao
+         personalizou, e a correcao de um modelo nao passa por cima da
+         personalizacao de ninguem.
+
+         regimes_tributarios: lista separada por virgula (ex. PRESUMIDO,REAL);
+         vazio = todos. tipo_produtor NULL = todos. Feriados fora da v1: so
+         o fim de semana e ajustado. Dia inexistente no mes cai no ultimo.
+
+         Os ids dos modelos sao fixos, para changeSets futuros os
+         referenciarem. Datas a conferir com o contador do grupo antes do
+         merge (decisoes-por-issue.md, #181).
+         ================================================================ -->
+
+    <changeSet id="0040-create-obrigacao-fiscal" author="supersonic-team">
+        <comment>Cria obrigacao_fiscal (modelos do sistema e catalogo de cada escritorio).</comment>
+
+        <createTable tableName="obrigacao_fiscal">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="escritorio_id" type="UUID"/>
+            <column name="modelo" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modelo_id" type="UUID"/>
+            <column name="titulo" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(500)"/>
+            <column name="periodicidade" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dia" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mes" type="INTEGER"/>
+            <column name="ajuste_fim_de_semana" type="VARCHAR(10)" defaultValue="NENHUM">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tipo_produtor" type="VARCHAR(20)"/>
+            <column name="regimes_tributarios" type="VARCHAR(60)"/>
+            <column name="origem" type="VARCHAR(200)"/>
+            <column name="ativa" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="obrigacao_fiscal" baseColumnNames="escritorio_id"
+                constraintName="fk_obrigacao_fiscal_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+        <!-- Modelo retirado num changeSet futuro: a versao do escritorio fica como obrigacao propria. -->
+        <addForeignKeyConstraint baseTableName="obrigacao_fiscal" baseColumnNames="modelo_id"
+                constraintName="fk_obrigacao_fiscal_modelo"
+                referencedTableName="obrigacao_fiscal" referencedColumnNames="id"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="obrigacao_fiscal" indexName="idx_obrigacao_fiscal_escritorio">
+            <column name="escritorio_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="obrigacao_fiscal"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0040-obrigacao-fiscal-regras" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Uma versao por modelo e escritorio; dominio das colunas fechadas (o H2 dos testes nao
+            tem indice parcial: la a regra fica so no servico).
+        </comment>
+        <sql>
+            CREATE UNIQUE INDEX uk_obrigacao_fiscal_versao
+                ON obrigacao_fiscal (escritorio_id, modelo_id) WHERE modelo_id IS NOT NULL;
+            ALTER TABLE obrigacao_fiscal ADD CONSTRAINT ck_obrigacao_fiscal_dono CHECK (
+                (modelo AND escritorio_id IS NULL AND modelo_id IS NULL)
+                OR (NOT modelo AND escritorio_id IS NOT NULL));
+            ALTER TABLE obrigacao_fiscal ADD CONSTRAINT ck_obrigacao_fiscal_prazo CHECK (
+                dia BETWEEN 1 AND 31
+                AND ((periodicidade = 'MENSAL' AND mes IS NULL)
+                  OR (periodicidade = 'ANUAL' AND mes BETWEEN 1 AND 12)));
+        </sql>
+        <rollback>
+            <sql>
+                DROP INDEX uk_obrigacao_fiscal_versao;
+                ALTER TABLE obrigacao_fiscal DROP CONSTRAINT ck_obrigacao_fiscal_dono;
+                ALTER TABLE obrigacao_fiscal DROP CONSTRAINT ck_obrigacao_fiscal_prazo;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0040-modelos-obrigacao-fiscal" author="supersonic-team">
+        <comment>Os 11 modelos da v1 (datas e origem a conferir com o contador do grupo).</comment>
+
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000001"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DAS / PGDAS-D"/>
+            <column name="descricao" value="Apuracao e recolhimento mensal do Simples Nacional"/>
+            <column name="periodicidade" value="MENSAL"/>
+            <column name="dia" valueNumeric="20"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="tipo_produtor" value="PESSOA_JURIDICA"/>
+            <column name="regimes_tributarios" value="SIMPLES"/>
+            <column name="origem" value="LC 123/2006, art. 21"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000002"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DAS-MEI"/>
+            <column name="descricao" value="Recolhimento mensal do MEI"/>
+            <column name="periodicidade" value="MENSAL"/>
+            <column name="dia" valueNumeric="20"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="regimes_tributarios" value="MEI"/>
+            <column name="origem" value="LC 123/2006, art. 18-A"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000003"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DASN-SIMEI"/>
+            <column name="descricao" value="Declaracao anual do MEI"/>
+            <column name="periodicidade" value="ANUAL"/>
+            <column name="dia" valueNumeric="31"/>
+            <column name="mes" valueNumeric="5"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="regimes_tributarios" value="MEI"/>
+            <column name="origem" value="Res. CGSN 140/2018"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000004"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DEFIS"/>
+            <column name="descricao" value="Declaracao de informacoes socioeconomicas e fiscais do Simples"/>
+            <column name="periodicidade" value="ANUAL"/>
+            <column name="dia" valueNumeric="31"/>
+            <column name="mes" valueNumeric="3"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="tipo_produtor" value="PESSOA_JURIDICA"/>
+            <column name="regimes_tributarios" value="SIMPLES"/>
+            <column name="origem" value="Res. CGSN 140/2018"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000005"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DCTFWeb"/>
+            <column name="descricao" value="Declaracao de debitos e creditos tributarios federais previdenciarios"/>
+            <column name="periodicidade" value="MENSAL"/>
+            <column name="dia" valueNumeric="15"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="tipo_produtor" value="PESSOA_JURIDICA"/>
+            <column name="regimes_tributarios" value="PRESUMIDO,REAL"/>
+            <column name="origem" value="IN RFB 2.005/2021"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000006"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="EFD-Reinf"/>
+            <column name="descricao" value="Escrituracao fiscal digital de retencoes e outras informacoes fiscais"/>
+            <column name="periodicidade" value="MENSAL"/>
+            <column name="dia" valueNumeric="15"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="tipo_produtor" value="PESSOA_JURIDICA"/>
+            <column name="regimes_tributarios" value="PRESUMIDO,REAL"/>
+            <column name="origem" value="IN RFB 2.043/2021"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000007"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="Funrural (recolhimento)"/>
+            <column name="descricao" value="Contribuicao do produtor rural sobre a comercializacao"/>
+            <column name="periodicidade" value="MENSAL"/>
+            <column name="dia" valueNumeric="20"/>
+            <column name="ajuste_fim_de_semana" value="NENHUM"/>
+            <column name="origem" value="Lei 8.212/1991, art. 30"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000008"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DIRPF com atividade rural (+ LCDPR)"/>
+            <column name="descricao" value="Declaracao do imposto de renda da pessoa fisica e livro caixa digital do produtor rural"/>
+            <column name="periodicidade" value="ANUAL"/>
+            <column name="dia" valueNumeric="31"/>
+            <column name="mes" valueNumeric="5"/>
+            <column name="ajuste_fim_de_semana" value="ANTECIPA"/>
+            <column name="tipo_produtor" value="PESSOA_FISICA"/>
+            <column name="origem" value="IN anual da RFB; IN RFB 1.848/2018"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000009"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="DITR"/>
+            <column name="descricao" value="Declaracao do imposto territorial rural (dono de imovel rural)"/>
+            <column name="periodicidade" value="ANUAL"/>
+            <column name="dia" valueNumeric="30"/>
+            <column name="mes" valueNumeric="9"/>
+            <column name="ajuste_fim_de_semana" value="ANTECIPA"/>
+            <column name="origem" value="Lei 9.393/1996"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000010"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="ECD"/>
+            <column name="descricao" value="Escrituracao contabil digital (ultimo dia util de junho)"/>
+            <column name="periodicidade" value="ANUAL"/>
+            <column name="dia" valueNumeric="31"/>
+            <column name="mes" valueNumeric="6"/>
+            <column name="ajuste_fim_de_semana" value="ANTECIPA"/>
+            <column name="tipo_produtor" value="PESSOA_JURIDICA"/>
+            <column name="regimes_tributarios" value="PRESUMIDO,REAL"/>
+            <column name="origem" value="IN RFB 2.003/2021"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+        <insert tableName="obrigacao_fiscal">
+            <column name="id" value="00000000-0000-4000-8181-000000000011"/>
+            <column name="modelo" valueBoolean="true"/>
+            <column name="titulo" value="ECF"/>
+            <column name="descricao" value="Escrituracao contabil fiscal (ultimo dia util de julho)"/>
+            <column name="periodicidade" value="ANUAL"/>
+            <column name="dia" valueNumeric="31"/>
+            <column name="mes" valueNumeric="7"/>
+            <column name="ajuste_fim_de_semana" value="ANTECIPA"/>
+            <column name="tipo_produtor" value="PESSOA_JURIDICA"/>
+            <column name="regimes_tributarios" value="PRESUMIDO,REAL"/>
+            <column name="origem" value="IN RFB 2.004/2021"/>
+            <column name="ativa" valueBoolean="true"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="obrigacao_fiscal">
+                <where>modelo = true</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

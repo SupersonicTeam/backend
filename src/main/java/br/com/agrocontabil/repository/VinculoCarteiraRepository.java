@@ -90,6 +90,16 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
       @Param("escritorioId") UUID escritorioId, @Param("situacao") SituacaoVinculo situacao);
 
   /**
+   * Escritórios que atendem o produtor com vínculo ativo (obrigações do calendário, #181).
+   *
+   * @param produtorId produtor
+   * @return ids dos escritórios
+   */
+  @Query("SELECT v.escritorioId FROM VinculoCarteira v WHERE v.produtorId = :produtorId"
+      + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO")
+  List<UUID> findEscritoriosAtivosDoProdutor(@Param("produtorId") UUID produtorId);
+
+  /**
    * Vínculos não encerrados do produtor (o produtor vê quem o atende).
    *
    * @param produtorId produtor

@@ -56,8 +56,9 @@ class CalendarioFiscalControllerTest {
   void vencimentosRetorna200ComPayload() throws Exception {
     UUID produtorId = UUID.randomUUID();
     VencimentoFiscalResponse vencimento = new VencimentoFiscalResponse(
-        UUID.randomUUID(), "Guia ICMS", "Referente a agosto/2026",
-        LocalDate.of(2026, 8, 20), "imposto", "pendente", new BigDecimal("1250.00"));
+        UUID.randomUUID().toString(), "Guia ICMS", "Referente a agosto/2026",
+        LocalDate.of(2026, 8, 20), "imposto", "pendente", new BigDecimal("1250.00"),
+        "Guia ICMS", null, null);
     when(calendarioFiscalService.listarVencimentos(produtorId, null, null))
         .thenReturn(List.of(vencimento));
 

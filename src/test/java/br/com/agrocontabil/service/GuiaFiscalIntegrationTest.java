@@ -14,8 +14,8 @@ import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
-import br.com.agrocontabil.support.TestDatabaseCleaner;
 import br.com.agrocontabil.support.AutenticacaoTestSupport;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -30,8 +30,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -105,7 +105,8 @@ class GuiaFiscalIntegrationTest {
     assertThat(guias).hasSize(1);
 
     List<VencimentoFiscalResponse> vencimentos =
-        calendarioFiscalService.listarVencimentos(produtor.getId(), INICIO_2026, FIM_2026);
+        calendarioFiscalService.listarVencimentos(produtor.getId(), INICIO_2026, FIM_2026)
+            .stream().filter(v -> "imposto".equals(v.tipo())).toList();
     assertThat(vencimentos).hasSize(1);
     assertThat(vencimentos.get(0).status()).isEqualTo("pendente");
 
@@ -114,7 +115,7 @@ class GuiaFiscalIntegrationTest {
     assertThat(paga.dataPagamento()).isNotNull();
 
     assertThat(calendarioFiscalService.listarVencimentos(produtor.getId(), INICIO_2026, FIM_2026)
-        .get(0).status())
+        .stream().filter(v -> "imposto".equals(v.tipo())).findFirst().orElseThrow().status())
         .isEqualTo("pago");
   }
 

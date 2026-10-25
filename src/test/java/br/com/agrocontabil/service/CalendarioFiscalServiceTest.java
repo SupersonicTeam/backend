@@ -17,7 +17,10 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
+import br.com.agrocontabil.security.UsuarioAutenticado;
+import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -49,14 +52,23 @@ class CalendarioFiscalServiceTest {
 
   @Mock private GuiaFiscalRepository guiaFiscalRepository;
   @Mock private ProdutorEmContextoResolver produtorEmContexto;
+  @Mock private UsuarioAutenticadoProvider usuarioProvider;
+  @Mock private VinculoCarteiraRepository vinculoRepository;
+  @Mock private ObrigacaoFiscalService obrigacaoService;
 
   private CalendarioFiscalService service;
   private Produtor produtor;
 
   @BeforeEach
   void setUp() {
-    service = new CalendarioFiscalService(guiaFiscalRepository, produtorEmContexto, CLOCK_FIXO);
+    service = new CalendarioFiscalService(guiaFiscalRepository, produtorEmContexto,
+        usuarioProvider, vinculoRepository, obrigacaoService, CLOCK_FIXO);
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
+    // As obrigacoes (#181) tem teste proprio: aqui o calendario so das guias.
+    org.mockito.Mockito.lenient().when(produtorEmContexto.resolver(produtor.getId()))
+        .thenReturn(produtor);
+    org.mockito.Mockito.lenient().when(usuarioProvider.get())
+        .thenReturn(UsuarioAutenticado.deProdutor(produtor));
   }
 
   @Test
@@ -106,7 +118,7 @@ class CalendarioFiscalServiceTest {
     // O resolver e quem decide o acesso desde a #93; aqui ele nega, como faria para um produtorId
     // que nao e o do autenticado nem esta na carteira do contador.
     org.mockito.Mockito.doThrow(new ResourceNotFoundException("Produtor", produtorIdSolicitado))
-        .when(produtorEmContexto).exigirAcesso(produtorIdSolicitado);
+        .when(produtorEmContexto).resolver(produtorIdSolicitado);
 
     assertThatThrownBy(() -> service.listarVencimentos(produtorIdSolicitado, null, null))
         .isInstanceOf(ResourceNotFoundException.class);

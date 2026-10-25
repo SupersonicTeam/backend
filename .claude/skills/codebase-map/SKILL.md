@@ -47,6 +47,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
 | `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004), faixa `de`/`ate`/`ultimos` + `agrupamento` (`ApuracaoFaixaService`, issue #179) + `/{id}/reabrir` (RN005) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
+| `ObrigacaoController` | `/api/contador/obrigacoes` (+ `/{id}`, `/reativar`, `/restaurar-padrao`) — catálogo de obrigações do escritório (#181) |
 | `GuiaFiscalController` | `/api/contador/guias` — CRUD de guias fiscais do Contador (issue #74) |
 | `CarteiraController` | `/api/contador/produtores` (lista), `/{produtorId}/ficha`, `/etiquetas`, `/suspender`/`/reativar`/`/encerrar`, `/api/contador/etiquetas`, `/api/contador/convites` — só contador (#177) |
 | `CarteiraNotasController` | `/api/contador/produtores/{produtorId}/notas` (+ `/{id}`, `/{id}/validacoes`) — leitura, padrão de rota do contador (#177) |
@@ -98,6 +99,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `EquipeEscritorioService` | Escritório e equipe (#228): dados do escritório, membros, troca de função e remoção sob lock dos membros (nunca sem administrador → 409), convite de equipe (token no fragmento, 202 sempre, e-mail no pool `agro-email-equipe-`), aceite com a conta (mesmo e-mail; unipessoal vazio sai) e cadastro pelo convite (`CadastroService.cadastrar(request, ingresso)`); `sairPorExclusao` para a LGPD |
 | `FichaClienteService` | Ficha do cliente (observações, etiquetas, catálogo) — só vínculo ATIVO, via `ProdutorEmContextoResolver.exigirContadorComAcesso` (#177) |
 | `CarteiraNotasService` | Leitura das notas do cliente pelo escritório (#177): resolver primeiro, depois `NotaFiscalService.findAllDoProdutor`/`findByIdDoProdutor` e `NotaFiscalValidacaoService.listarValidacoesDoProdutor` |
+| `ObrigacaoFiscalService` | Catálogo de obrigações (#181): efetivo = próprias + versões + modelos sem versão; editar/desativar modelo cria a versão do escritório (`toBuilder` do modelo); `ocorrencias(produtor, escritorios, de, ate)` = todas as datas da janela (dia inexistente → último; `AjusteFimDeSemana`) + fechamento da apuração (RN004) |
 | `CalendarioFiscalService` | Monta o calendário fiscal do produtor (issue #74): reúsa `GuiaFiscalRepository` como única fonte de vencimento nesta entrega |
 
 ### `nfe/`
@@ -216,6 +218,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `AlertaTributario` | Alerta RN010 (issue #140): tipo (`TipoAlertaTributario`), referência (guia/nota/apuração do produtor), data-limite, descrição sem PII, status (`StatusAlertaTributario`). Tabela `alerta_tributario` (0028), única por `(tipo, referencia_id, data_limite)` |
 | `Contador` | Escritório de contabilidade — 2ª identidade do sistema (issue #93); a carteira é `VinculoCarteira` desde a #177 |
 | `Escritorio` / `FuncaoEscritorio` | Escritório (#228, `escritorio`, 0039): dono da carteira, catálogos e convites; o `Contador` é membro (`escritorioId` + `funcao` ADMINISTRADOR/CONTADOR/ASSISTENTE). Cadastro de contador cria o unipessoal; a 0039 migra cada contador para um com o **mesmo id** |
+| `ObrigacaoFiscal` | Obrigação do calendário (#181, `obrigacao_fiscal`, 0040): modelo (sem escritório, 11 semeados com ids fixos `00000000-0000-4000-8181-0000000000NN`), versão do escritório (`modeloId`) ou própria; `Periodicidade`, `AjusteFimDeSemana`, `tipoProdutor`, `regimes` (`RegimesTributariosConverter`: lista na coluna), `aplicaA(tipo, regime)` |
 | `ConviteMembro` | Convite de equipe (#228, `convite_membro`): e-mail cifrado, função, só o SHA-256 do token, uso único, validade |
 | `VinculoCarteira` | Vínculo escritório × produtor (`carteira_vinculo`, 0038, #177, substitui `contador_produtor`; dono = `escritorioId` + `responsavelId` desde a 0039): `SituacaoVinculo` ATIVO/SUSPENSO/ENCERRADO, início/fim, observações internas (ficha) e etiquetas (N:N `carteira_vinculo_etiqueta`). Só ATIVO autoriza; um não encerrado por par (índice parcial PG) |
 | `ConviteCarteira` / `EtiquetaCarteira` | Convite por e-mail cifrado (`SituacaoConvite` PENDENTE/ACEITO/RECUSADO, validade) e catálogo de etiquetas do escritório (único pelo nome normalizado) — #177 |
@@ -331,5 +334,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0039-escritorio-equipe; próximo número livre: **0040**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0040-obrigacao-fiscal; próximo número livre: **0041**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

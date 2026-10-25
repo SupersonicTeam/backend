@@ -12,8 +12,8 @@ import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
-import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
@@ -27,8 +27,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -150,8 +150,10 @@ class GuiaFiscalVolumeIntegrationTest {
 
     mockMvc.perform(comoProdutor(vencimentos()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(1)))
-        .andExpect(jsonPath("$[0].dataVencimento").value(dentro.toString()));
+        // So as guias: o fechamento da apuracao (#181) tambem entra no calendario.
+        .andExpect(jsonPath("$[?(@.tipo == 'imposto')]", hasSize(1)))
+        .andExpect(jsonPath("$[?(@.tipo == 'imposto')].dataVencimento",
+            contains(dentro.toString())));
   }
 
   @Test
@@ -166,7 +168,8 @@ class GuiaFiscalVolumeIntegrationTest {
             .param("de", "2024-07-01")
             .param("ate", "2024-09-30"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[*].dataVencimento", contains("2024-09-30", "2024-07-01")));
+        .andExpect(jsonPath("$[?(@.tipo == 'imposto')].dataVencimento",
+            contains("2024-09-30", "2024-07-01")));
   }
 
   @Test

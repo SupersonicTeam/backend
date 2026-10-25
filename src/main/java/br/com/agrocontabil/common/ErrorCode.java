@@ -107,6 +107,11 @@ public enum ErrorCode {
    */
   LIMITE_CONVITES,
   /**
+   * Obrigação do catálogo com prazo incoerente (mês na mensal, sem mês na anual) ou operação que
+   * não cabe nela (restaurar padrão de obrigação própria) — issue #181. HTTP 400.
+   */
+  OBRIGACAO_INVALIDA,
+  /**
    * Convite de equipe inválido, vencido, já usado ou de outro e-mail (issue #228). HTTP 400, sem
    * dizer qual dos casos.
    */
