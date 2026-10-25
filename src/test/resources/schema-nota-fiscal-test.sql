@@ -732,3 +732,22 @@ MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, 
 MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000009', TRUE, 'DITR', 'Declaracao do imposto territorial rural (dono de imovel rural)', 'ANUAL', 30, 9, 'ANTECIPA', NULL, NULL, 'Lei 9.393/1996', TRUE);
 MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000010', TRUE, 'ECD', 'Escrituracao contabil digital (ultimo dia util de junho)', 'ANUAL', 31, 6, 'ANTECIPA', 'PESSOA_JURIDICA', 'PRESUMIDO,REAL', 'IN RFB 2.003/2021', TRUE);
 MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000011', TRUE, 'ECF', 'Escrituracao contabil fiscal (ultimo dia util de julho)', 'ANUAL', 31, 7, 'ANTECIPA', 'PESSOA_JURIDICA', 'PRESUMIDO,REAL', 'IN RFB 2.004/2021', TRUE);
+
+-- Historico de revisao da nota — issue #178 (migration 0041). Manter sincronizado com
+-- 0041-nota-fiscal-revisao.xml.
+CREATE TABLE IF NOT EXISTS nota_fiscal_revisao (
+    id              UUID                      NOT NULL,
+    nota_fiscal_id  UUID                      NOT NULL,
+    acao            VARCHAR(20)               NOT NULL,
+    motivo          VARCHAR(500),
+    usuario_id      UUID,
+    papel           VARCHAR(20),
+    ocorrido_em     TIMESTAMP WITH TIME ZONE  NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_nota_fiscal_revisao_nota
+    ON nota_fiscal_revisao (nota_fiscal_id, ocorrido_em);
+
+ALTER TABLE nota_fiscal_revisao ADD CONSTRAINT IF NOT EXISTS fk_nota_fiscal_revisao_nota
+    FOREIGN KEY (nota_fiscal_id) REFERENCES nota_fiscal (id) ON DELETE CASCADE;

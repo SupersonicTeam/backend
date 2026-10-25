@@ -6,8 +6,11 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
+import br.com.agrocontabil.model.AcaoRevisao;
+import br.com.agrocontabil.model.NotaFiscalRevisao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -39,14 +42,17 @@ public class NotaFiscalValidacaoService {
   private final NotaFiscalRepository notaFiscalRepository;
   private final NotaFiscalValidacaoRepository validacaoRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
+  private final NotaFiscalRevisaoRepository revisaoRepository;
 
   public NotaFiscalValidacaoService(
       NotaFiscalRepository notaFiscalRepository,
       NotaFiscalValidacaoRepository validacaoRepository,
-      AuthenticatedProdutorProvider produtorProvider) {
+      AuthenticatedProdutorProvider produtorProvider,
+      NotaFiscalRevisaoRepository revisaoRepository) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.validacaoRepository = validacaoRepository;
     this.produtorProvider = produtorProvider;
+    this.revisaoRepository = revisaoRepository;
   }
 
   /**
@@ -108,6 +114,15 @@ public class NotaFiscalValidacaoService {
 
     validacaoRepository.saveAll(registros);
 
+    // Nota aprovada que falhou no gerar-xml: a aprovacao cai (issue #178). O contador aprovou o
+    // conteudo que agora se mostrou invalido; corrigido, ele precisa ver de novo.
+    if (nota.getStatus() == StatusNotaFiscal.APROVADA) {
+      revisaoRepository.save(NotaFiscalRevisao.builder()
+          .notaFiscalId(notaId)
+          .acao(AcaoRevisao.APROVACAO_CADUCADA)
+          .ocorridoEm(validadoEm)
+          .build());
+    }
     nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
     notaFiscalRepository.save(nota);
 

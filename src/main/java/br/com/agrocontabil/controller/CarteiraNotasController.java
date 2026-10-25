@@ -12,6 +12,8 @@ import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,6 +53,18 @@ public class CarteiraNotasController {
   @Operation(summary = "Nota do cliente (404 se for de outro produtor)")
   public NotaFiscalResponse buscar(@PathVariable UUID produtorId, @PathVariable UUID notaId) {
     return carteiraNotasService.buscar(produtorId, notaId);
+  }
+
+  /** Preview da DANFE de nota não emitida, para a revisão. */
+  @GetMapping(value = "/{notaId}/danfe-preview", produces = MediaType.APPLICATION_PDF_VALUE)
+  @Operation(summary = "Preview da DANFE da nota do cliente (rascunho, em revisao ou aprovada)")
+  public ResponseEntity<byte[]> previewDanfe(@PathVariable UUID produtorId,
+      @PathVariable UUID notaId) {
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_PDF)
+        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=danfe-preview-" + notaId + ".pdf")
+        .header(HttpHeaders.CACHE_CONTROL, "no-store")
+        .body(carteiraNotasService.previewDanfe(produtorId, notaId));
   }
 
   /** Histórico de inconsistências de uma nota do cliente. */

@@ -440,20 +440,22 @@ public class CarteiraService {
     LocalDate hoje = LocalDate.now(clock.withZone(FUSO));
     Map<UUID, Long> inconsistencias = porProdutor(vinculoRepository.contarNotasDaCarteira(
         escritorioId, StatusNotaFiscal.COM_INCONSISTENCIAS));
+    Map<UUID, Long> aguardando = porProdutor(vinculoRepository.contarNotasDaCarteira(
+        escritorioId, StatusNotaFiscal.AGUARDANDO_APROVACAO));
     Map<UUID, Long> vencidas = porProdutor(
         vinculoRepository.contarGuiasVencidasDaCarteira(escritorioId, hoje));
     Map<UUID, Long> proximos = porProdutor(vinculoRepository.contarGuiasNaFaixaDaCarteira(
         escritorioId, StatusGuiaFiscal.PENDENTE, hoje, hoje.plusDays(DIAS_VENCIMENTOS_PROXIMOS)));
 
     Set<UUID> produtores = new HashSet<>(inconsistencias.keySet());
+    produtores.addAll(aguardando.keySet());
     produtores.addAll(vencidas.keySet());
     produtores.addAll(proximos.keySet());
     Map<UUID, AtencaoCarteiraResponse> atencao = new HashMap<>();
     for (UUID produtorId : produtores) {
       atencao.put(produtorId, new AtencaoCarteiraResponse(
           inconsistencias.getOrDefault(produtorId, 0L),
-          // AGUARDANDO_APROVACAO chega com a issue #178.
-          0L,
+          aguardando.getOrDefault(produtorId, 0L),
           vencidas.getOrDefault(produtorId, 0L),
           proximos.getOrDefault(produtorId, 0L)));
     }

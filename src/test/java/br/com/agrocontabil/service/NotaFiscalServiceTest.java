@@ -27,6 +27,7 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -69,6 +70,8 @@ import br.com.agrocontabil.service.GeracaoNotaFiscalService;
 @ExtendWith(MockitoExtension.class)
 class NotaFiscalServiceTest {
 
+  // Sem stub: sem contador vinculado, o gerar-xml aceita os editaveis como antes (#178).
+  @Mock private VinculoCarteiraRepository vinculoRepository;
   @Mock
   private NotaFiscalRepository notaFiscalRepository;
 
@@ -123,6 +126,7 @@ class NotaFiscalServiceTest {
         geracaoNfaService,
         danfePdfService,
         validacaoService,
+        vinculoRepository,
         new TransactionTemplate(mock(PlatformTransactionManager.class)));
     produtorId = UUID.randomUUID();
     produtor = Produtor.builder()
@@ -949,7 +953,9 @@ class NotaFiscalServiceTest {
 
   @ParameterizedTest
   @EnumSource(value = StatusNotaFiscal.class, mode = EnumSource.Mode.EXCLUDE,
-      names = {"RASCUNHO", "COM_INCONSISTENCIAS"})
+      // A revisao do contador (#178) tambem tem preview: devolvida, aguardando e aprovada.
+      names = {"RASCUNHO", "COM_INCONSISTENCIAS", "DEVOLVIDA", "AGUARDANDO_APROVACAO",
+          "APROVADA"})
   @DisplayName("gerarPreviewDanfe fora do rascunho responde 409 (ali ja existe o /pdf)")
   void gerarPreviewDanfeForaDoRascunhoLanca409(StatusNotaFiscal status) {
     UUID notaId = UUID.randomUUID();

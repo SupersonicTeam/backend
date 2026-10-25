@@ -5,6 +5,7 @@ import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.exception.AprovacaoExigidaException;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.DanfePreviewIndisponivelException;
 import br.com.agrocontabil.exception.FiltroNotasInvalidoException;
@@ -24,6 +25,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.NotaFiscalEspecificacoes;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -99,16 +101,28 @@ public class NotaFiscalService {
    * {@link StatusNotaFiscal#RASCUNHO}, uma nota {@link StatusNotaFiscal#COM_INCONSISTENCIAS}
    * (issue #22) pode ser editada e ter o XML gerado novamente após a correção dos campos.
    */
-  private static final Set<StatusNotaFiscal> STATUS_EDITAVEIS =
-      EnumSet.of(StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS);
+  static final Set<StatusNotaFiscal> STATUS_EDITAVEIS = EnumSet.of(StatusNotaFiscal.RASCUNHO,
+      StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA);
 
   /**
-   * Status com preview de DANFE (issue #89): os anteriores à emissão. Hoje são exatamente os
-   * editáveis, então é o mesmo conjunto — um lugar só para manter. A aprovação do contador (#178)
-   * separa os dois: {@code AGUARDANDO_APROVACAO} e {@code APROVADA} têm preview mas não são
-   * editáveis; nessa hora este campo vira um {@code EnumSet} próprio.
+   * Status com preview de DANFE (issue #89): os anteriores à emissão — os editáveis e, desde a
+   * aprovação do contador (#178), os da revisão, que têm preview mas não são editáveis.
    */
-  private static final Set<StatusNotaFiscal> STATUS_PREVIEW = STATUS_EDITAVEIS;
+  private static final Set<StatusNotaFiscal> STATUS_PREVIEW = EnumSet.of(
+      StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA,
+      StatusNotaFiscal.AGUARDANDO_APROVACAO, StatusNotaFiscal.APROVADA);
+
+  /** Com contador vinculado, só a nota aprovada vai a {@code gerar-xml} (issue #178). */
+  private static final Set<StatusNotaFiscal> EMISSIVEIS_COM_CONTADOR =
+      EnumSet.of(StatusNotaFiscal.APROVADA);
+
+  /**
+   * Sem contador, emite direto: os editáveis, e também a aprovada (o vínculo pode ter acabado
+   * depois do aval, e ela não pode ficar presa).
+   */
+  private static final Set<StatusNotaFiscal> EMISSIVEIS_SEM_CONTADOR = EnumSet.of(
+      StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA,
+      StatusNotaFiscal.APROVADA);
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
@@ -117,6 +131,7 @@ public class NotaFiscalService {
   private final GeracaoNfaService geracaoNfaService;
   private final DanfePdfService danfePdfService;
   private final NotaFiscalValidacaoService validacaoService;
+  private final VinculoCarteiraRepository vinculoRepository;
   private final TransactionTemplate transactionTemplate;
   private final TransactionTemplate readOnlyTransactionTemplate;
 
@@ -128,6 +143,7 @@ public class NotaFiscalService {
       GeracaoNfaService geracaoNfaService,
       DanfePdfService danfePdfService,
       NotaFiscalValidacaoService validacaoService,
+      VinculoCarteiraRepository vinculoRepository,
       TransactionTemplate transactionTemplate) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
@@ -136,6 +152,7 @@ public class NotaFiscalService {
     this.geracaoNfaService = geracaoNfaService;
     this.danfePdfService = danfePdfService;
     this.validacaoService = validacaoService;
+    this.vinculoRepository = vinculoRepository;
     this.transactionTemplate = transactionTemplate;
     // Variante somente-leitura derivada do template autoconfigurado: a fase de leitura
     // nao escreve nada, e marca-la readOnly permite ao Hibernate dispensar dirty checking.
@@ -450,13 +467,14 @@ public class NotaFiscalService {
     // Fase 1 (transacao curta, somente leitura): valida a pre-condicao e materializa o grafo de
     // emissao (itens + produtor) via JOIN FETCH. A entidade sai daqui destacada, mas completa —
     // o pipeline a percorre sem tocar em proxy nenhum.
+    // Com contador vinculado (conferido agora, issue #178) so a nota aprovada emite.
+    boolean comContador =
+        !vinculoRepository.findEscritoriosAtivosDoProdutor(produtor.getId()).isEmpty();
     NotaFiscal nota = emTransacaoDeLeitura(() -> {
       NotaFiscal encontrada = notaFiscalRepository
           .findByIdAndProdutorIdComGrafoDeEmissao(id, produtor.getId())
           .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
-      if (!STATUS_EDITAVEIS.contains(encontrada.getStatus())) {
-        throw new NotaFiscalNaoEditavelException(id, encontrada.getStatus());
-      }
+      exigirEmissivel(id, encontrada.getStatus(), comContador);
       return encontrada;
     });
 
@@ -489,9 +507,7 @@ public class NotaFiscalService {
       NotaFiscal atual = notaFiscalRepository
           .findByIdAndProdutorIdForUpdate(id, produtor.getId())
           .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
-      if (!STATUS_EDITAVEIS.contains(atual.getStatus())) {
-        throw new NotaFiscalNaoEditavelException(id, atual.getStatus());
-      }
+      exigirEmissivel(id, atual.getStatus(), comContador);
       if (!Objects.equals(versaoLida, atual.getVersion())) {
         log.warn("Nota alterada durante a geracao do XML: id={} versaoLida={} versaoAtual={}",
             id, versaoLida, atual.getVersion());
@@ -588,11 +604,21 @@ public class NotaFiscalService {
    * @throws DanfePreviewIndisponivelException nota já emitida (409)
    */
   public byte[] gerarPreviewDanfe(UUID id) {
-    Produtor produtor = produtorProvider.get();
+    return gerarPreviewDanfeDoProdutor(produtorProvider.get().getId(), id);
+  }
 
+  /**
+   * Preview da DANFE de nota de um produtor já autorizado por quem chama — a revisão do contador
+   * (issue #178), depois do {@code ProdutorEmContextoResolver}.
+   *
+   * @param produtorId produtor cujo acesso já foi conferido
+   * @param id         nota
+   * @return bytes do PDF
+   */
+  public byte[] gerarPreviewDanfeDoProdutor(UUID produtorId, UUID id) {
     NotaFiscal nota = emTransacaoDeLeitura(() -> {
       NotaFiscal encontrada = notaFiscalRepository
-          .findByIdAndProdutorIdComGrafoDeEmissao(id, produtor.getId())
+          .findByIdAndProdutorIdComGrafoDeEmissao(id, produtorId)
           .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
       if (!STATUS_PREVIEW.contains(encontrada.getStatus())) {
         throw new DanfePreviewIndisponivelException(id, encontrada.getStatus());
@@ -601,6 +627,22 @@ public class NotaFiscalService {
     });
 
     return danfePdfService.gerarPreview(nota);
+  }
+
+  /**
+   * A nota pode ir a {@code gerar-xml}? Com contador, só aprovada (409 {@code APROVACAO_EXIGIDA}
+   * se ainda está no rascunho); sem contador, os editáveis e a aprovada (issue #178).
+   */
+  private static void exigirEmissivel(UUID id, StatusNotaFiscal status, boolean comContador) {
+    Set<StatusNotaFiscal> emissiveis = comContador
+        ? EMISSIVEIS_COM_CONTADOR : EMISSIVEIS_SEM_CONTADOR;
+    if (emissiveis.contains(status)) {
+      return;
+    }
+    if (comContador && STATUS_EDITAVEIS.contains(status)) {
+      throw new AprovacaoExigidaException(id, status);
+    }
+    throw new NotaFiscalNaoEditavelException(id, status);
   }
 
   // -------------------------------------------------------------------------
