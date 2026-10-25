@@ -82,3 +82,5 @@ databaseChangeLog:
       file: db/changelog/changes/0037-nota-fiscal-busca.xml
   - include:
       file: db/changelog/changes/0038-carteira-contador.xml
+  - include:
+      file: db/changelog/changes/0039-escritorio-equipe.xml

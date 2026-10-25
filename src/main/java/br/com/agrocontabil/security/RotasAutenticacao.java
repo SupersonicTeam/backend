@@ -17,6 +17,9 @@ public final class RotasAutenticacao {
   /** Cadastro de conta (#205). */
   public static final String CADASTRO = "/api/auth/cadastro";
 
+  /** Cadastro de contador pelo link do convite de equipe (#228). */
+  public static final String CADASTRO_EQUIPE = "/api/auth/cadastro/equipe";
+
   /** Login: e-mail e senha pelo par de tokens (#206). */
   public static final String LOGIN = "/api/auth/login";
 
@@ -34,7 +37,7 @@ public final class RotasAutenticacao {
 
   /** Todas as rotas públicas de autenticação, só com {@code POST}. */
   public static final Set<String> PUBLICAS_POST =
-      Set.of(CADASTRO, LOGIN, REFRESH, LOGOUT, SENHA_ESQUECI, SENHA_REDEFINIR);
+      Set.of(CADASTRO, CADASTRO_EQUIPE, LOGIN, REFRESH, LOGOUT, SENHA_ESQUECI, SENHA_REDEFINIR);
 
   /** Decodifica o percent-encoding e tira o conteúdo após {@code ;} — como o roteamento faz. */
   private static final UrlPathHelper CAMINHOS = new UrlPathHelper();

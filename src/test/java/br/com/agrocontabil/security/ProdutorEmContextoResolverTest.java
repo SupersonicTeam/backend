@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import br.com.agrocontabil.exception.NaoAutenticadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.repository.ProdutorRepository;
@@ -51,7 +52,8 @@ class ProdutorEmContextoResolverTest {
         new ProdutorEmContextoResolver(
             new UsuarioAutenticadoProvider(), produtorRepository, vinculoRepository);
     produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Fazenda Boa Vista").build();
-    contador = Contador.builder().id(UUID.randomUUID()).nomeCompleto("Escritorio").build();
+    contador = Contador.builder().id(UUID.randomUUID()).nomeCompleto("Escritorio")
+        .escritorioId(UUID.randomUUID()).funcao(FuncaoEscritorio.CONTADOR).build();
   }
 
   @AfterEach
@@ -92,8 +94,8 @@ class ProdutorEmContextoResolverTest {
   @DisplayName("contador acessa produtor da carteira")
   void contadorAcessaProdutorVinculado() {
     AutenticacaoTestSupport.autenticarComo(contador);
-    when(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), produtor.getId(), SituacaoVinculo.ATIVO))
+    when(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        contador.getEscritorioId(), produtor.getId(), SituacaoVinculo.ATIVO))
         .thenReturn(true);
 
     assertThatCode(() -> resolver.exigirAcesso(produtor.getId())).doesNotThrowAnyException();
@@ -103,8 +105,8 @@ class ProdutorEmContextoResolverTest {
   @DisplayName("contador sem vinculo com o produtor recebe 404")
   void contadorNaoAcessaProdutorSemVinculo() {
     AutenticacaoTestSupport.autenticarComo(contador);
-    when(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), produtor.getId(), SituacaoVinculo.ATIVO))
+    when(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        contador.getEscritorioId(), produtor.getId(), SituacaoVinculo.ATIVO))
         .thenReturn(false);
 
     assertThatThrownBy(() -> resolver.exigirAcesso(produtor.getId()))
@@ -140,8 +142,8 @@ class ProdutorEmContextoResolverTest {
   @DisplayName("resolver() nao consulta o produtor quando o acesso ja foi negado")
   void resolverNaoConsultaProdutorQuandoNegado() {
     AutenticacaoTestSupport.autenticarComo(contador);
-    when(vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.getId(), produtor.getId(), SituacaoVinculo.ATIVO))
+    when(vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        contador.getEscritorioId(), produtor.getId(), SituacaoVinculo.ATIVO))
         .thenReturn(false);
 
     assertThatThrownBy(() -> resolver.resolver(produtor.getId()))

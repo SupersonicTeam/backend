@@ -9,6 +9,8 @@ import br.com.agrocontabil.dto.FichaClienteRequest;
 import br.com.agrocontabil.dto.FichaClienteResponse;
 import br.com.agrocontabil.dto.FiltroCarteiraRequest;
 import br.com.agrocontabil.dto.ProdutorCarteiraResponse;
+import br.com.agrocontabil.dto.ResponsavelClienteRequest;
+import br.com.agrocontabil.dto.ResponsavelClienteResponse;
 import br.com.agrocontabil.dto.SituacaoVinculoResponse;
 import br.com.agrocontabil.service.CarteiraService;
 import br.com.agrocontabil.service.ConviteCarteiraService;
@@ -66,7 +68,8 @@ public class CarteiraController {
       description = "Corpo em array e total em X-Total-Count. Busca por trecho do nome (sem "
           + "acento nem caixa) ou CPF/CNPJ completo; filtros regime, tipoProdutor, uf, etiqueta "
           + "(repetivel), situacao (padrao ATIVO) e precisaAtencao; sort nome (padrao) ou "
-          + "urgencia; page/size (padrao 50, maximo 200). atencao so em vinculo ATIVO.")
+          + "urgencia; responsavel (eu, nenhum ou id do membro); page/size (padrao 50, maximo "
+          + "200). atencao so em vinculo ATIVO.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Clientes",
           headers = @Header(name = GuiaFiscalController.HEADER_TOTAL,
@@ -106,6 +109,16 @@ public class CarteiraController {
   public FichaClienteResponse definirEtiquetas(@PathVariable UUID produtorId,
       @Valid @RequestBody EtiquetasClienteRequest request) {
     return fichaService.definirEtiquetas(produtorId, request.etiquetas());
+  }
+
+  /** Troca o responsável pelo cliente. */
+  @PatchMapping("/produtores/{produtorId}/responsavel")
+  @Operation(summary = "Troca o responsavel pelo cliente (administrador ou o proprio responsavel)",
+      description = "responsavelId nulo deixa o cliente sem responsavel. Membro de outro "
+          + "escritorio: 404.")
+  public ResponsavelClienteResponse alterarResponsavel(@PathVariable UUID produtorId,
+      @RequestBody ResponsavelClienteRequest request) {
+    return carteiraService.alterarResponsavel(produtorId, request.responsavelId());
   }
 
   /** Suspende o cliente. */

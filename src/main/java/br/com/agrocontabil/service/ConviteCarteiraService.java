@@ -10,15 +10,16 @@ import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.ConviteCarteira;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.SituacaoConvite;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
-import br.com.agrocontabil.security.PapelUsuario;
-import br.com.agrocontabil.security.UsuarioAutenticado;
-import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
+import br.com.agrocontabil.repository.EscritorioRepository;
+import br.com.agrocontabil.security.MembroEscritorioProvider;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import jakarta.annotation.PreDestroy;
 import java.time.Clock;
@@ -26,6 +27,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -70,7 +72,9 @@ public class ConviteCarteiraService {
   /** Tamanho máximo do nome do escritório no texto do e-mail. */
   private static final int NOME_MAXIMO_NO_EMAIL = 120;
 
-  private final UsuarioAutenticadoProvider usuarioProvider;
+  private final MembroEscritorioProvider membroProvider;
+  private final AuthenticatedProdutorProvider produtorProvider;
+  private final EscritorioRepository escritorioRepository;
   private final ConviteCarteiraRepository conviteRepository;
   private final ContadorRepository contadorRepository;
   private final CredencialUsuarioRepository credencialRepository;
@@ -82,7 +86,9 @@ public class ConviteCarteiraService {
   private final ThreadPoolTaskExecutor executor;
 
   public ConviteCarteiraService(
-      UsuarioAutenticadoProvider usuarioProvider,
+      MembroEscritorioProvider membroProvider,
+      AuthenticatedProdutorProvider produtorProvider,
+      EscritorioRepository escritorioRepository,
       ConviteCarteiraRepository conviteRepository,
       ContadorRepository contadorRepository,
       CredencialUsuarioRepository credencialRepository,
@@ -91,7 +97,9 @@ public class ConviteCarteiraService {
       ConviteCarteiraProperties propriedades,
       Clock clock,
       PlatformTransactionManager transactionManager) {
-    this.usuarioProvider = usuarioProvider;
+    this.membroProvider = membroProvider;
+    this.produtorProvider = produtorProvider;
+    this.escritorioRepository = escritorioRepository;
     this.conviteRepository = conviteRepository;
     this.contadorRepository = contadorRepository;
     this.credencialRepository = credencialRepository;
@@ -115,7 +123,8 @@ public class ConviteCarteiraService {
   }
 
   /**
-   * Convida um e-mail para a carteira do contador autenticado. Reenviar substitui o convite
+   * Convida um e-mail para a carteira do escritório do contador autenticado (só
+   * administrador). Reenviar substitui o convite
    * pendente anterior para o mesmo e-mail (com novo e-mail e nova validade), desde que o anterior
    * tenha mais de {@link #INTERVALO_MINIMO_REENVIO}; antes disso, nada muda.
    *
@@ -126,27 +135,29 @@ public class ConviteCarteiraService {
    */
   @Auditado(acao = AcaoAuditada.CONVITE_ENVIADO, recurso = RecursoAuditado.CONVITE_CARTEIRA)
   public ConviteEnviadoResponse convidar(String email) {
-    Contador contador = exigirContador().contador();
+    Contador contador = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR);
+    UUID escritorioId = contador.getEscritorioId();
     String normalizado = CadastroService.normalizarEmail(email);
     OffsetDateTime agora = OffsetDateTime.now(clock);
 
     ConviteCarteira convite = transacao.execute(status -> {
       // Serializa os convites do escritorio: sem o lock, requisicoes simultaneas leriam a mesma
       // contagem e passariam juntas do teto.
-      contadorRepository.findByIdForUpdate(contador.getId());
+      Escritorio escritorio = escritorioRepository.findByIdForUpdate(escritorioId)
+          .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
       OffsetDateTime inicioJanela = agora.minus(JANELA_TETO);
-      long naJanela = conviteRepository.countByContadorIdAndCriadoEmAfter(
-          contador.getId(), inicioJanela);
+      long naJanela = conviteRepository.countByEscritorioIdAndCriadoEmAfter(
+          escritorioId, inicioJanela);
       if (naJanela >= propriedades.maxPorDia()) {
         long espera = conviteRepository
-            .findFirstByContadorIdAndCriadoEmAfterOrderByCriadoEmAsc(contador.getId(), inicioJanela)
+            .findFirstByEscritorioIdAndCriadoEmAfterOrderByCriadoEmAsc(escritorioId, inicioJanela)
             .map(maisAntigo -> Duration.between(agora, maisAntigo.getCriadoEm().plus(JANELA_TETO))
                 .toSeconds())
             .orElse(JANELA_TETO.toSeconds());
         throw new LimiteConvitesException(propriedades.maxPorDia(), espera);
       }
       Optional<ConviteCarteira> recente = conviteRepository
-          .findByContadorIdAndEmailAndSituacao(contador.getId(), normalizado,
+          .findByEscritorioIdAndEmailAndSituacao(escritorioId, normalizado,
               SituacaoConvite.PENDENTE)
           .filter(c -> c.getCriadoEm().isAfter(agora.minus(INTERVALO_MINIMO_REENVIO)));
       if (recente.isPresent()) {
@@ -154,37 +165,38 @@ public class ConviteCarteiraService {
         // escaparia do teto diario e encheria a caixa de entrada de uma pessoa.
         return recente.get();
       }
-      conviteRepository.apagarPendente(contador.getId(), normalizado);
+      conviteRepository.apagarPendente(escritorioId, normalizado);
       ConviteCarteira salvo = conviteRepository.save(ConviteCarteira.builder()
-          .contadorId(contador.getId())
+          .escritorioId(escritorioId)
+          .convidadoPor(contador.getId())
           .email(normalizado)
           .situacao(SituacaoConvite.PENDENTE)
           .criadoEm(agora)
           .expiraEm(agora.plus(propriedades.validade()))
           .build());
-      String escritorio = nomeParaEmail(contador.getNomeCompleto());
+      String nomeEscritorio = nomeParaEmail(escritorio.getNome());
       TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
         @Override
         public void afterCommit() {
-          enviarEmSegundoPlano(normalizado, escritorio);
+          enviarEmSegundoPlano(normalizado, nomeEscritorio);
         }
       });
       return salvo;
     });
-    log.info("Convite da carteira registrado: convite={}, contador={}", convite.getId(),
-        contador.getId());
+    log.info("Convite da carteira registrado: convite={}, escritorio={}", convite.getId(),
+        escritorioId);
     return enviado(convite);
   }
 
   /**
-   * Convites pendentes do contador autenticado.
+   * Convites pendentes do escritório do contador autenticado (qualquer membro).
    *
    * @return convites válidos, do mais recente ao mais antigo
    */
   public List<ConviteEnviadoResponse> listarEnviados() {
-    UUID contadorId = exigirContador().contador().getId();
-    return conviteRepository.findByContadorIdAndSituacaoAndExpiraEmAfterOrderByCriadoEmDesc(
-            contadorId, SituacaoConvite.PENDENTE, OffsetDateTime.now(clock)).stream()
+    UUID escritorioId = membroProvider.membro().getEscritorioId();
+    return conviteRepository.findByEscritorioIdAndSituacaoAndExpiraEmAfterOrderByCriadoEmDesc(
+            escritorioId, SituacaoConvite.PENDENTE, OffsetDateTime.now(clock)).stream()
         .map(ConviteCarteiraService::enviado)
         .toList();
   }
@@ -196,18 +208,23 @@ public class ConviteCarteiraService {
    * @throws PapelNaoAutorizadoException se quem pede for contador (403)
    */
   public List<ConviteRecebidoResponse> listarRecebidos() {
-    String email = emailDoProdutor(exigirProdutor());
+    String email = emailDoProdutor(produtorProvider.get());
     if (email == null) {
       return List.of();
     }
     List<ConviteCarteira> convites = conviteRepository
         .findByEmailAndSituacaoAndExpiraEmAfterOrderByCriadoEmDesc(
             email, SituacaoConvite.PENDENTE, OffsetDateTime.now(clock));
-    Map<UUID, Contador> contadores = contadorRepository
-        .findAllById(convites.stream().map(ConviteCarteira::getContadorId).toList()).stream()
+    Map<UUID, Escritorio> escritorios = escritorioRepository
+        .findAllById(convites.stream().map(ConviteCarteira::getEscritorioId).toList()).stream()
+        .collect(Collectors.toMap(Escritorio::getId, Function.identity()));
+    Map<UUID, Contador> convidantes = contadorRepository
+        .findAllById(convites.stream().map(ConviteCarteira::getConvidadoPor)
+            .filter(Objects::nonNull).toList()).stream()
         .collect(Collectors.toMap(Contador::getId, Function.identity()));
     return convites.stream()
-        .map(c -> recebido(c, contadores.get(c.getContadorId())))
+        .map(c -> recebido(c, escritorios.get(c.getEscritorioId()),
+            c.getConvidadoPor() == null ? null : convidantes.get(c.getConvidadoPor())))
         .toList();
   }
 
@@ -238,7 +255,7 @@ public class ConviteCarteiraService {
   }
 
   private ConviteRecebidoResponse responder(UUID conviteId, SituacaoConvite resposta) {
-    Produtor produtor = exigirProdutor();
+    Produtor produtor = produtorProvider.get();
     String email = emailDoProdutor(produtor);
     OffsetDateTime agora = OffsetDateTime.now(clock);
     return transacao.execute(status -> {
@@ -251,9 +268,13 @@ public class ConviteCarteiraService {
       convite.setRespondidoEm(agora);
       convite.setProdutorId(produtor.getId());
       if (resposta == SituacaoConvite.ACEITO) {
-        carteiraService.ativarPorConvite(convite.getContadorId(), produtor.getId());
+        carteiraService.ativarPorConvite(convite.getEscritorioId(), produtor.getId(),
+            convite.getConvidadoPor());
       }
-      return recebido(convite, contadorRepository.findById(convite.getContadorId()).orElse(null));
+      return recebido(convite,
+          escritorioRepository.findById(convite.getEscritorioId()).orElse(null),
+          convite.getConvidadoPor() == null ? null
+              : contadorRepository.findById(convite.getConvidadoPor()).orElse(null));
     });
   }
 
@@ -288,30 +309,16 @@ public class ConviteCarteiraService {
         : limpo;
   }
 
-  private UsuarioAutenticado exigirContador() {
-    UsuarioAutenticado usuario = usuarioProvider.get();
-    if (!usuario.isContador()) {
-      throw new PapelNaoAutorizadoException(usuario.papel(), PapelUsuario.CONTADOR);
-    }
-    return usuario;
-  }
-
-  private Produtor exigirProdutor() {
-    UsuarioAutenticado usuario = usuarioProvider.get();
-    if (usuario.isContador()) {
-      throw new PapelNaoAutorizadoException(usuario.papel(), PapelUsuario.PRODUTOR);
-    }
-    return usuario.produtor();
-  }
-
   private static ConviteEnviadoResponse enviado(ConviteCarteira convite) {
     return new ConviteEnviadoResponse(convite.getId(), convite.getEmail(), convite.getSituacao(),
         convite.getCriadoEm(), convite.getExpiraEm());
   }
 
-  private static ConviteRecebidoResponse recebido(ConviteCarteira convite, Contador contador) {
+  private static ConviteRecebidoResponse recebido(ConviteCarteira convite, Escritorio escritorio,
+      Contador contador) {
     return new ConviteRecebidoResponse(
         convite.getId(),
+        escritorio == null ? null : escritorio.getNome(),
         contador == null ? null : contador.getNomeCompleto(),
         contador == null ? null : contador.getCrc(),
         convite.getSituacao(),

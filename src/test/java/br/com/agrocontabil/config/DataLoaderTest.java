@@ -9,10 +9,13 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import java.util.List;
@@ -38,6 +41,7 @@ class DataLoaderTest {
   @Mock ProdutorRepository produtorRepository;
   @Mock ContadorRepository contadorRepository;
   @Mock VinculoCarteiraRepository vinculoRepository;
+  @Mock EscritorioRepository escritorioRepository;
 
   @InjectMocks DataLoader dataLoader;
 
@@ -64,6 +68,13 @@ class DataLoaderTest {
    * existe nao chega a salvar, e um stub nao usado falharia o teste.
    */
   private void stubarSaveContador() {
+    when(escritorioRepository.save(any(Escritorio.class)))
+        .thenAnswer(
+            invocacao -> {
+              Escritorio escritorio = invocacao.getArgument(0);
+              escritorio.setId(UUID.randomUUID());
+              return escritorio;
+            });
     when(contadorRepository.save(any(Contador.class)))
         .thenAnswer(
             invocacao -> {
@@ -200,7 +211,9 @@ class DataLoaderTest {
     // Vinculo parcial de proposito: o produtor B fica de fora para dar um "produtor que este
     // contador nao atende" aos cenarios de acesso negado.
     VinculoCarteira vinculo = capturarVinculoSemeado();
-    assertThat(vinculo.getContadorId()).isEqualTo(contador.getId());
+    assertThat(vinculo.getEscritorioId()).isEqualTo(contador.getEscritorioId());
+    assertThat(vinculo.getResponsavelId()).isEqualTo(contador.getId());
+    assertThat(contador.getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
     assertThat(vinculo.getProdutorId()).isEqualTo(produtorA.getId());
     assertThat(vinculo.getSituacao()).isEqualTo(SituacaoVinculo.ATIVO);
   }

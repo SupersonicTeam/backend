@@ -20,9 +20,10 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li><strong>Produtor</strong> — o alvo precisa ser ele mesmo. É o guard provisório que a issue
  *       #94 colocou dentro de cada serviço, agora num lugar só;
- *   <li><strong>Contador</strong> — o alvo precisa estar na carteira dele com vínculo
- *       {@code ATIVO} ({@code carteira_vinculo}, issue #177). O vínculo é a única autorização que
- *       o contador tem sobre os dados de um produtor; suspenso ou encerrado, o produtor some.
+ *   <li><strong>Contador</strong> — o alvo precisa estar na carteira do escritório dele com
+ *       vínculo {@code ATIVO} ({@code carteira_vinculo}, issues #177 e #228). O vínculo é a
+ *       única autorização que o contador tem sobre os dados de um produtor; suspenso, encerrado
+ *       ou contador sem escritório, o produtor some.
  * </ul>
  *
  * <p>Sem transação própria: é sempre chamado de dentro de um serviço transacional e participa da
@@ -96,9 +97,11 @@ public class ProdutorEmContextoResolver {
     return usuario;
   }
 
+  /** O produtor está na carteira ativa do escritório do contador (#228); sem escritório, não. */
   private boolean atendeAtivo(UsuarioAutenticado contador, UUID produtorId) {
-    return vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
-        contador.contador().getId(), produtorId, SituacaoVinculo.ATIVO);
+    UUID escritorioId = contador.contador().getEscritorioId();
+    return escritorioId != null && vinculoRepository.existsByEscritorioIdAndProdutorIdAndSituacao(
+        escritorioId, produtorId, SituacaoVinculo.ATIVO);
   }
 
   /**

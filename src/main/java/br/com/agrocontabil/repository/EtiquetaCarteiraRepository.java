@@ -16,29 +16,29 @@ public interface EtiquetaCarteiraRepository extends JpaRepository<EtiquetaCartei
   /**
    * Catálogo do escritório em ordem alfabética.
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @return etiquetas
    */
-  List<EtiquetaCarteira> findByContadorIdOrderByNomeNormalizadoAsc(UUID contadorId);
+  List<EtiquetaCarteira> findByEscritorioIdOrderByNomeNormalizadoAsc(UUID escritorioId);
 
   /**
    * Etiquetas do escritório pelos nomes normalizados.
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @param nomes      nomes normalizados
    * @return as que existem
    */
-  List<EtiquetaCarteira> findByContadorIdAndNomeNormalizadoIn(
-      UUID contadorId, Collection<String> nomes);
+  List<EtiquetaCarteira> findByEscritorioIdAndNomeNormalizadoIn(
+      UUID escritorioId, Collection<String> nomes);
 
   /**
    * Etiqueta do escritório por id (anti-IDOR: a de outro escritório não existe).
    *
    * @param id         etiqueta
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @return a etiqueta, se for dele
    */
-  Optional<EtiquetaCarteira> findByIdAndContadorId(UUID id, UUID contadorId);
+  Optional<EtiquetaCarteira> findByIdAndEscritorioId(UUID id, UUID escritorioId);
 
   /**
    * Tira a etiqueta de todos os vínculos (antes de apagá-la do catálogo).
@@ -54,10 +54,10 @@ public interface EtiquetaCarteiraRepository extends JpaRepository<EtiquetaCartei
   /**
    * Apaga o catálogo do escritório (exclusão LGPD), já sem vínculos que o usem.
    *
-   * @param contadorId escritório
+   * @param escritorioId escritório
    * @return linhas removidas
    */
   @Modifying(flushAutomatically = true, clearAutomatically = true)
-  @Query("DELETE FROM EtiquetaCarteira e WHERE e.contadorId = :contadorId")
-  int apagarDoContador(@Param("contadorId") UUID contadorId);
+  @Query("DELETE FROM EtiquetaCarteira e WHERE e.escritorioId = :escritorioId")
+  int apagarDoEscritorio(@Param("escritorioId") UUID escritorioId);
 }

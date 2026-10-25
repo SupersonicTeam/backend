@@ -48,7 +48,7 @@ class EstadoRecursoLeitor {
       case CONVITE_CARTEIRA -> conviteRepository.findSituacaoById(id);
       // O vinculo e auditado pelo id do produtor; a situacao anterior vai no "depois" da
       // operacao anterior.
-      case CONTA, VINCULO_CARTEIRA -> Optional.empty();
+      case CONTA, VINCULO_CARTEIRA, MEMBRO_ESCRITORIO, ESCRITORIO -> Optional.empty();
     };
     return status.map(Object::toString);
   }

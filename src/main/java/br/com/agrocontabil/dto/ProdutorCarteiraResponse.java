@@ -25,6 +25,8 @@ import java.util.UUID;
  * @param situacaoVinculo situação do vínculo
  * @param inicioVinculo   início do vínculo
  * @param fimVinculo      fim (só encerrado)
+ * @param responsavelId   membro do escritório responsável pelo cliente (#228; nulo = nenhum)
+ * @param responsavelNome nome do responsável
  * @param etiquetas       etiquetas do escritório, em ordem alfabética
  * @param atencao         indicadores de atenção (nulo fora de {@code ATIVO})
  */
@@ -39,6 +41,8 @@ public record ProdutorCarteiraResponse(
     SituacaoVinculo situacaoVinculo,
     OffsetDateTime inicioVinculo,
     OffsetDateTime fimVinculo,
+    UUID responsavelId,
+    String responsavelNome,
     List<String> etiquetas,
     AtencaoCarteiraResponse atencao) {
 }

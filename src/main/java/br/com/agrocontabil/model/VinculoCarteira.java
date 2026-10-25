@@ -55,8 +55,13 @@ public class VinculoCarteira {
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id;
 
-  @Column(name = "contador_id", nullable = false, updatable = false)
-  private UUID contadorId;
+  /** Escritório dono do vínculo (issue #228; até a #177 era o contador). */
+  @Column(name = "escritorio_id", nullable = false, updatable = false)
+  private UUID escritorioId;
+
+  /** Membro do escritório responsável pelo cliente; nulo = sem responsável. */
+  @Column(name = "responsavel_id")
+  private UUID responsavelId;
 
   @Column(name = "produtor_id", nullable = false, updatable = false)
   private UUID produtorId;

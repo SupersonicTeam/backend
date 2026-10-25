@@ -16,10 +16,13 @@ import br.com.agrocontabil.exception.SenhaFracaException;
 import br.com.agrocontabil.mapper.CredencialMapper;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import java.sql.SQLException;
@@ -48,6 +51,7 @@ class CadastroServiceTest {
 
   @Mock private ProdutorRepository produtorRepository;
   @Mock private ContadorRepository contadorRepository;
+  @Mock private EscritorioRepository escritorioRepository;
   @Mock private CredencialUsuarioRepository credencialRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private PlatformTransactionManager transactionManager;
@@ -56,7 +60,8 @@ class CadastroServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new CadastroService(produtorRepository, contadorRepository, credencialRepository,
+    service = new CadastroService(produtorRepository, contadorRepository, escritorioRepository,
+        credencialRepository,
         passwordEncoder, new PoliticaSenha(), new CredencialMapper(), transactionManager);
   }
 
@@ -106,10 +111,16 @@ class CadastroServiceTest {
   }
 
   @Test
-  @DisplayName("contador: grava contador e credencial com papel CONTADOR")
+  @DisplayName("contador: grava contador, credencial e o escritorio unipessoal, como administrador")
   void cadastraContador() {
     comTransacao();
     UUID contadorId = UUID.randomUUID();
+    UUID escritorioId = UUID.randomUUID();
+    when(escritorioRepository.save(any(Escritorio.class))).thenAnswer(inv -> {
+      Escritorio e = inv.getArgument(0);
+      e.setId(escritorioId);
+      return e;
+    });
     when(passwordEncoder.encode(SENHA)).thenReturn("{bcrypt}hash");
     when(contadorRepository.saveAndFlush(any(Contador.class))).thenAnswer(inv -> {
       Contador c = inv.getArgument(0);
@@ -122,6 +133,10 @@ class CadastroServiceTest {
     CadastroResponse resposta = service.cadastrar(pedido(PapelUsuario.CONTADOR, "11222333000181"));
 
     assertThat(resposta.usuarioId()).isEqualTo(contadorId);
+    ArgumentCaptor<Contador> contador = ArgumentCaptor.forClass(Contador.class);
+    verify(contadorRepository).saveAndFlush(contador.capture());
+    assertThat(contador.getValue().getEscritorioId()).isEqualTo(escritorioId);
+    assertThat(contador.getValue().getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
     assertThat(resposta.papel()).isEqualTo(PapelUsuario.CONTADOR);
     verify(contadorRepository).existsByCpfCnpjIn(List.of("11222333000181", "11.222.333/0001-81"));
     verify(produtorRepository, never()).saveAndFlush(any());

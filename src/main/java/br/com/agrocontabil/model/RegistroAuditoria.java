@@ -68,6 +68,10 @@ public class RegistroAuditoria {
   @Column(name = "produtor_id", updatable = false)
   private UUID produtorId;
 
+  /** Escritório do contador que agiu (issue #228); nulo para o produtor. */
+  @Column(name = "escritorio_id", updatable = false)
+  private UUID escritorioId;
+
   @Column(name = "sucesso", nullable = false, updatable = false)
   private boolean sucesso;
 

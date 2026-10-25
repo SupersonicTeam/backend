@@ -26,29 +26,30 @@ import org.springframework.data.repository.query.Param;
 public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira, UUID> {
 
   /**
-   * Responde se o contador tem vínculo na situação informada com o produtor.
+   * Responde se o escritório tem vínculo na situação informada com o produtor (issue #228: o dono
+   * é o escritório, não o contador).
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param produtorId produtor
    * @param situacao   situação exigida
    * @return {@code true} se houver
    */
-  boolean existsByContadorIdAndProdutorIdAndSituacao(
-      UUID contadorId, UUID produtorId, SituacaoVinculo situacao);
+  boolean existsByEscritorioIdAndProdutorIdAndSituacao(
+      UUID escritorioId, UUID produtorId, SituacaoVinculo situacao);
 
   /**
    * Vínculo não encerrado do par, sob lock pessimista (transições de situação).
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param produtorId produtor
    * @return o vínculo ativo ou suspenso, se houver
    */
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT v FROM VinculoCarteira v WHERE v.contadorId = :contadorId"
+  @Query("SELECT v FROM VinculoCarteira v WHERE v.escritorioId = :escritorioId"
       + " AND v.produtorId = :produtorId AND v.situacao <> br.com.agrocontabil.model"
       + ".SituacaoVinculo.ENCERRADO")
   Optional<VinculoCarteira> findAbertoForUpdate(
-      @Param("contadorId") UUID contadorId, @Param("produtorId") UUID produtorId);
+      @Param("escritorioId") UUID escritorioId, @Param("produtorId") UUID produtorId);
 
   /**
    * Vínculo do produtor por id, sob lock pessimista (o produtor encerra o vínculo).
@@ -65,28 +66,28 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
   /**
    * Vínculo do par numa situação, com o produtor e as etiquetas (ficha do cliente).
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param produtorId produtor
    * @param situacao   situação
    * @return o vínculo, se houver
    */
   @Query("SELECT DISTINCT v FROM VinculoCarteira v JOIN FETCH v.produtor"
-      + " LEFT JOIN FETCH v.etiquetas WHERE v.contadorId = :contadorId"
+      + " LEFT JOIN FETCH v.etiquetas WHERE v.escritorioId = :escritorioId"
       + " AND v.produtorId = :produtorId AND v.situacao = :situacao")
-  Optional<VinculoCarteira> findFicha(@Param("contadorId") UUID contadorId,
+  Optional<VinculoCarteira> findFicha(@Param("escritorioId") UUID escritorioId,
       @Param("produtorId") UUID produtorId, @Param("situacao") SituacaoVinculo situacao);
 
   /**
    * Vínculos do escritório numa situação, com o produtor (lista da carteira).
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param situacao   situação
    * @return vínculos, em qualquer ordem
    */
   @Query("SELECT v FROM VinculoCarteira v JOIN FETCH v.produtor"
-      + " WHERE v.contadorId = :contadorId AND v.situacao = :situacao")
+      + " WHERE v.escritorioId = :escritorioId AND v.situacao = :situacao")
   List<VinculoCarteira> findDaCarteira(
-      @Param("contadorId") UUID contadorId, @Param("situacao") SituacaoVinculo situacao);
+      @Param("escritorioId") UUID escritorioId, @Param("situacao") SituacaoVinculo situacao);
 
   /**
    * Vínculos não encerrados do produtor (o produtor vê quem o atende).
@@ -102,37 +103,37 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
   /**
    * Etiquetas dos vínculos do escritório numa situação, numa consulta só.
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param situacao   situação
    * @return pares vínculo × nome
    */
   @Query("SELECT new br.com.agrocontabil.repository.EtiquetaDoVinculo("
       + "v.id, e.nome) FROM VinculoCarteira v JOIN v.etiquetas e"
-      + " WHERE v.contadorId = :contadorId AND v.situacao = :situacao")
+      + " WHERE v.escritorioId = :escritorioId AND v.situacao = :situacao")
   List<EtiquetaDoVinculo> findEtiquetasDaCarteira(
-      @Param("contadorId") UUID contadorId, @Param("situacao") SituacaoVinculo situacao);
+      @Param("escritorioId") UUID escritorioId, @Param("situacao") SituacaoVinculo situacao);
 
   /**
    * Notas por produtor da carteira ativa num status.
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param status     status das notas
    * @return contagens (só produtores com alguma)
    */
   @Query("SELECT new br.com.agrocontabil.repository.ContagemPorProdutor("
       + "n.produtor.id, COUNT(n)) FROM NotaFiscal n WHERE n.status = :status"
       + " AND n.produtor.id IN (SELECT v.produtorId FROM VinculoCarteira v"
-      + " WHERE v.contadorId = :contadorId"
+      + " WHERE v.escritorioId = :escritorioId"
       + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO)"
       + " GROUP BY n.produtor.id")
   List<ContagemPorProdutor> contarNotasDaCarteira(
-      @Param("contadorId") UUID contadorId, @Param("status") StatusNotaFiscal status);
+      @Param("escritorioId") UUID escritorioId, @Param("status") StatusNotaFiscal status);
 
   /**
    * Guias vencidas por produtor da carteira ativa: {@code VENCIDA} e também a {@code PENDENTE} com
    * vencimento passado que o job diário ainda não marcou.
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param hoje       data de hoje em Brasília
    * @return contagens (só produtores com alguma)
    */
@@ -142,16 +143,16 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
       + " OR (g.status = br.com.agrocontabil.model.StatusGuiaFiscal.PENDENTE"
       + " AND g.dataVencimento < :hoje))"
       + " AND g.produtor.id IN (SELECT v.produtorId FROM VinculoCarteira v"
-      + " WHERE v.contadorId = :contadorId"
+      + " WHERE v.escritorioId = :escritorioId"
       + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO)"
       + " GROUP BY g.produtor.id")
   List<ContagemPorProdutor> contarGuiasVencidasDaCarteira(
-      @Param("contadorId") UUID contadorId, @Param("hoje") LocalDate hoje);
+      @Param("escritorioId") UUID escritorioId, @Param("hoje") LocalDate hoje);
 
   /**
    * Guias de um status com vencimento na faixa, por produtor da carteira ativa.
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @param status     status das guias
    * @param de         primeiro dia (inclusivo)
    * @param ate        último dia (inclusivo)
@@ -161,12 +162,33 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
       + "g.produtor.id, COUNT(g)) FROM GuiaFiscal g WHERE g.status = :status"
       + " AND g.dataVencimento BETWEEN :de AND :ate"
       + " AND g.produtor.id IN (SELECT v.produtorId FROM VinculoCarteira v"
-      + " WHERE v.contadorId = :contadorId"
+      + " WHERE v.escritorioId = :escritorioId"
       + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO)"
       + " GROUP BY g.produtor.id")
-  List<ContagemPorProdutor> contarGuiasNaFaixaDaCarteira(@Param("contadorId") UUID contadorId,
+  List<ContagemPorProdutor> contarGuiasNaFaixaDaCarteira(@Param("escritorioId") UUID escritorioId,
       @Param("status") StatusGuiaFiscal status, @Param("de") LocalDate de,
       @Param("ate") LocalDate ate);
+
+  /**
+   * Deixa sem responsável os clientes de um membro (removido da equipe ou excluído).
+   *
+   * @param responsavelId contador
+   * @return vínculos alterados
+   */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("UPDATE VinculoCarteira v SET v.responsavelId = NULL"
+      + " WHERE v.responsavelId = :responsavelId")
+  int limparResponsavel(@Param("responsavelId") UUID responsavelId);
+
+  /**
+   * Quantos vínculos não encerrados o escritório tem (o unipessoal só sai de cena vazio).
+   *
+   * @param escritorioId escritório
+   * @return vínculos ativos ou suspensos
+   */
+  @Query("SELECT COUNT(v) FROM VinculoCarteira v WHERE v.escritorioId = :escritorioId"
+      + " AND v.situacao <> br.com.agrocontabil.model.SituacaoVinculo.ENCERRADO")
+  long contarAbertosDoEscritorio(@Param("escritorioId") UUID escritorioId);
 
   /**
    * Tira as etiquetas dos vínculos informados (antes de apagá-los).
@@ -191,11 +213,11 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
   /**
    * Ids dos vínculos de um escritório (exclusão LGPD).
    *
-   * @param contadorId contador
+   * @param escritorioId escritório
    * @return ids
    */
-  @Query("SELECT v.id FROM VinculoCarteira v WHERE v.contadorId = :contadorId")
-  List<UUID> findIdsDoContador(@Param("contadorId") UUID contadorId);
+  @Query("SELECT v.id FROM VinculoCarteira v WHERE v.escritorioId = :escritorioId")
+  List<UUID> findIdsDoEscritorio(@Param("escritorioId") UUID escritorioId);
 
   /**
    * Apaga vínculos por id (a ficha vai junto: as observações moram no vínculo).

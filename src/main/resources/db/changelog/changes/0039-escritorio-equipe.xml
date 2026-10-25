@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0039-escritorio-equipe.xml
+         Issue #228 (escritorio de contabilidade com equipe).
+
+         O dono da carteira deixa de ser o contador e passa a ser o
+         escritorio. Cada contador pertence a um escritorio (v1) com uma
+         funcao: ADMINISTRADOR, CONTADOR ou ASSISTENTE. O vinculo com o
+         produtor (0038) troca contador_id por escritorio_id e ganha um
+         responsavel (membro); etiquetas e convites da carteira passam ao
+         escritorio.
+
+         Migracao: cada contador existente vira ADMINISTRADOR de um
+         escritorio unipessoal com o nome dele e o MESMO id (assim os
+         vinculos, etiquetas e convites trocam de dono sem tabela de
+         correspondencia). Os vinculos ganham o contador como responsavel.
+
+         convite_membro: convite de equipe com token opaco (so o SHA-256),
+         uso unico e e-mail cifrado (#147). registro_auditoria ganha o
+         escritorio de quem agiu.
+         ================================================================ -->
+
+    <changeSet id="0039-create-escritorio" author="supersonic-team">
+        <comment>Cria escritorio e liga o contador a ele, com a funcao.</comment>
+
+        <createTable tableName="escritorio">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cnpj" type="VARCHAR(14)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addColumn tableName="contadores">
+            <column name="escritorio_id" type="UUID"/>
+            <column name="funcao_escritorio" type="VARCHAR(20)"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="contadores"
+                baseColumnNames="escritorio_id"
+                constraintName="fk_contador_escritorio"
+                referencedTableName="escritorio"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+
+        <createIndex tableName="contadores" indexName="idx_contador_escritorio">
+            <column name="escritorio_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropColumn tableName="contadores" columnName="funcao_escritorio"/>
+            <dropColumn tableName="contadores" columnName="escritorio_id"/>
+            <dropTable tableName="escritorio"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0039-migra-contador-para-escritorio" author="supersonic-team" dbms="postgresql">
+        <comment>Cada contador vira administrador de um escritorio unipessoal com o mesmo id.</comment>
+        <sql>
+            INSERT INTO escritorio (id, nome, created_at, updated_at)
+            SELECT c.id, c.nome_completo, COALESCE(c.created_at, now()), now()
+              FROM contadores c;
+            UPDATE contadores SET escritorio_id = id, funcao_escritorio = 'ADMINISTRADOR';
+        </sql>
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="0039-carteira-do-escritorio" author="supersonic-team">
+        <comment>
+            Vinculo, etiqueta e convite da carteira trocam contador_id por escritorio_id; o
+            vinculo ganha responsavel e o convite guarda quem convidou.
+        </comment>
+
+        <addColumn tableName="carteira_vinculo">
+            <column name="escritorio_id" type="UUID"/>
+            <column name="responsavel_id" type="UUID"/>
+        </addColumn>
+        <addColumn tableName="etiqueta_carteira">
+            <column name="escritorio_id" type="UUID"/>
+        </addColumn>
+        <addColumn tableName="convite_carteira">
+            <column name="escritorio_id" type="UUID"/>
+            <column name="convidado_por" type="UUID"/>
+        </addColumn>
+
+        <sql dbms="postgresql">
+            UPDATE carteira_vinculo SET escritorio_id = contador_id, responsavel_id = contador_id;
+            UPDATE etiqueta_carteira SET escritorio_id = contador_id;
+            UPDATE convite_carteira SET escritorio_id = contador_id, convidado_por = contador_id;
+        </sql>
+
+        <!-- Cair a coluna leva junto os indices e FKs que a usam (inclusive os parciais). -->
+        <dropColumn tableName="carteira_vinculo" columnName="contador_id"/>
+        <dropColumn tableName="etiqueta_carteira" columnName="contador_id"/>
+        <dropColumn tableName="convite_carteira" columnName="contador_id"/>
+
+        <addNotNullConstraint tableName="carteira_vinculo" columnName="escritorio_id"
+                              columnDataType="UUID"/>
+        <addNotNullConstraint tableName="etiqueta_carteira" columnName="escritorio_id"
+                              columnDataType="UUID"/>
+        <addNotNullConstraint tableName="convite_carteira" columnName="escritorio_id"
+                              columnDataType="UUID"/>
+
+        <addForeignKeyConstraint baseTableName="carteira_vinculo" baseColumnNames="escritorio_id"
+                constraintName="fk_carteira_vinculo_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="carteira_vinculo" baseColumnNames="responsavel_id"
+                constraintName="fk_carteira_vinculo_responsavel"
+                referencedTableName="contadores" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="etiqueta_carteira" baseColumnNames="escritorio_id"
+                constraintName="fk_etiqueta_carteira_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="convite_carteira" baseColumnNames="escritorio_id"
+                constraintName="fk_convite_carteira_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="convite_carteira" baseColumnNames="convidado_por"
+                constraintName="fk_convite_carteira_convidado_por"
+                referencedTableName="contadores" referencedColumnNames="id" onDelete="SET NULL"/>
+
+        <addUniqueConstraint tableName="etiqueta_carteira"
+                             columnNames="escritorio_id, nome_normalizado"
+                             constraintName="uk_etiqueta_carteira_escritorio_nome"/>
+
+        <createIndex tableName="carteira_vinculo"
+                     indexName="idx_carteira_vinculo_escritorio_situacao">
+            <column name="escritorio_id"/>
+            <column name="situacao"/>
+        </createIndex>
+        <createIndex tableName="carteira_vinculo" indexName="idx_carteira_vinculo_responsavel">
+            <column name="responsavel_id"/>
+        </createIndex>
+        <createIndex tableName="convite_carteira"
+                     indexName="idx_convite_carteira_escritorio_criado">
+            <column name="escritorio_id"/>
+            <column name="criado_em"/>
+        </createIndex>
+
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="0039-carteira-unicos-parciais" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Os indices unicos parciais da 0038 sairam com contador_id; voltam por escritorio.
+        </comment>
+        <sql>
+            CREATE UNIQUE INDEX uk_carteira_vinculo_aberto_escritorio
+                ON carteira_vinculo (escritorio_id, produtor_id)
+                WHERE situacao &lt;&gt; 'ENCERRADO';
+            CREATE UNIQUE INDEX uk_convite_carteira_pendente_escritorio
+                ON convite_carteira (escritorio_id, email)
+                WHERE situacao = 'PENDENTE';
+        </sql>
+        <rollback>
+            <sql>
+                DROP INDEX uk_carteira_vinculo_aberto_escritorio;
+                DROP INDEX uk_convite_carteira_pendente_escritorio;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0039-create-convite-membro" author="supersonic-team">
+        <comment>Convite de equipe: token opaco (so o SHA-256), funcao, uso unico.</comment>
+
+        <createTable tableName="convite_membro">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="escritorio_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="funcao" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token_hash" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uk_convite_membro_token_hash"/>
+            </column>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expira_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="usado_em" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="convidado_por" type="UUID"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="convite_membro" baseColumnNames="escritorio_id"
+                constraintName="fk_convite_membro_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="convite_membro" baseColumnNames="convidado_por"
+                constraintName="fk_convite_membro_convidado_por"
+                referencedTableName="contadores" referencedColumnNames="id" onDelete="SET NULL"/>
+
+        <createIndex tableName="convite_membro" indexName="idx_convite_membro_escritorio_criado">
+            <column name="escritorio_id"/>
+            <column name="criado_em"/>
+        </createIndex>
+
+        <sql dbms="postgresql">
+            COMMENT ON COLUMN convite_membro.email IS
+                'Dado pessoal cifrado (AES-256-GCM deterministico, issue #147)'
+        </sql>
+
+        <rollback>
+            <dropTable tableName="convite_membro"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0039-auditoria-escritorio" author="supersonic-team">
+        <comment>O registro de auditoria guarda o escritorio de quem agiu (contador).</comment>
+        <addColumn tableName="registro_auditoria">
+            <column name="escritorio_id" type="UUID"/>
+        </addColumn>
+        <createIndex tableName="registro_auditoria" indexName="idx_registro_auditoria_escritorio">
+            <column name="escritorio_id"/>
+            <column name="ocorrido_em"/>
+        </createIndex>
+        <rollback>
+            <dropColumn tableName="registro_auditoria" columnName="escritorio_id"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -41,6 +41,10 @@ public record FiltroCarteiraRequest(
     @Schema(description = "So clientes com algum indicador de atencao")
     Boolean precisaAtencao,
 
+    @Schema(description = "eu, nenhum ou o id de um membro do escritorio (issue #228)")
+    @Size(max = 36)
+    String responsavel,
+
     @Schema(description = "nome (padrao) ou urgencia")
     String sort,
 

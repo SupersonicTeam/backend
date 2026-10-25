@@ -50,6 +50,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `GuiaFiscalController` | `/api/contador/guias` — CRUD de guias fiscais do Contador (issue #74) |
 | `CarteiraController` | `/api/contador/produtores` (lista), `/{produtorId}/ficha`, `/etiquetas`, `/suspender`/`/reativar`/`/encerrar`, `/api/contador/etiquetas`, `/api/contador/convites` — só contador (#177) |
 | `CarteiraNotasController` | `/api/contador/produtores/{produtorId}/notas` (+ `/{id}`, `/{id}/validacoes`) — leitura, padrão de rota do contador (#177) |
+| `EscritorioController` | `/api/escritorio`, `/api/escritorio/membros/**` (+ convites e aceite) e o público `POST /api/auth/cadastro/equipe` (#228) |
 | `ConviteController` | Lado do produtor (#177): `/api/convites` (+ aceitar/recusar) e `/api/vinculos` (+ encerrar) |
 | `CalendarioFiscalController` | `GET /api/calendario-fiscal/{produtorId}/vencimentos` — calendário fiscal do produtor (issue #74) |
 
@@ -94,6 +95,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `CotaUsoAssistenteService` | Cota semanal da Ceres (issue #166): créditos = ⌈(entrada×peso + saída×peso)×fator÷tokensPorCredito⌉; reserva do teto por `UPDATE` condicional atômico, acerto pelo real, estorno integral; semana = segunda em BRT. `PlanoUsoProvider` (hoje `PlanoUsoPorConfiguracao`) é o ponto de troca para as assinaturas. Tabela `assistente_uso_semanal` (0029). Na Ceres: `porta/CotaUsoPorta` + `adaptador/CotaUsoAdaptador`; `AssistenteService` reserva na thread da requisição e encerra (acerto/estorno) uma vez só |
 | `CarteiraService` | Carteira do escritório (#177): `listar` (vínculos + etiquetas + uma agregação `GROUP BY produtor` por indicador de atenção no `VinculoCarteiraRepository`; filtra, ordena por nome/urgência e pagina em memória), `suspender`/`reativar`/`encerrar` (escritório, lock pessimista, `@Auditado`), `listarDoProdutor`/`encerrarPeloProdutor` (lado do produtor) e `ativarPorConvite` |
 | `ConviteCarteiraService` | Convite (#177): grava pelo e-mail sem olhar se há conta (sempre 202), teto diário, e-mail depois do commit no pool `agro-email-convite-` (porta `EnvioConviteCarteira`, `config/CarteiraConfig`); o produtor vê os do e-mail da credencial e aceita/recusa sob lock. `ConviteCarteiraLimpezaJob` (ShedLock) apaga os vencidos há 30 dias |
+| `EquipeEscritorioService` | Escritório e equipe (#228): dados do escritório, membros, troca de função e remoção sob lock dos membros (nunca sem administrador → 409), convite de equipe (token no fragmento, 202 sempre, e-mail no pool `agro-email-equipe-`), aceite com a conta (mesmo e-mail; unipessoal vazio sai) e cadastro pelo convite (`CadastroService.cadastrar(request, ingresso)`); `sairPorExclusao` para a LGPD |
 | `FichaClienteService` | Ficha do cliente (observações, etiquetas, catálogo) — só vínculo ATIVO, via `ProdutorEmContextoResolver.exigirContadorComAcesso` (#177) |
 | `CarteiraNotasService` | Leitura das notas do cliente pelo escritório (#177): resolver primeiro, depois `NotaFiscalService.findAllDoProdutor`/`findByIdDoProdutor` e `NotaFiscalValidacaoService.listarValidacoesDoProdutor` |
 | `CalendarioFiscalService` | Monta o calendário fiscal do produtor (issue #74): reúsa `GuiaFiscalRepository` como única fonte de vencimento nesta entrega |
@@ -166,6 +168,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `PapelUsuario` | Enum PRODUTOR/CONTADOR + authority `ROLE_*` |
 | `UsuarioAutenticado` | Principal da requisição: papel + produtor **ou** contador (invariante na construção) |
 | `UsuarioAutenticadoProvider` | Porta única para a identidade autenticada (`get()` → 401; `tentar()` → `Optional`) |
+| `MembroEscritorioProvider` | Contador como membro (#228): `membro()` (403 para produtor e para contador sem escritório, `SEM_ESCRITORIO`), `exigirFuncao(...)` (403 `PAPEL_NAO_AUTORIZADO` com a função), `contador()` (com ou sem escritório) |
 | `ProdutorEmContextoResolver` | Autoriza o `produtorId` alvo: produtor só a si, contador só a carteira **ATIVA** (`VinculoCarteiraRepository`) → 404; `exigirContadorComAcesso` = padrão `/api/contador/produtores/{produtorId}/...` (produtor 403) — #177 |
 | `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate: Bearer`, 403); `recusarToken` = 401 `error="invalid_token"` (#206) |
 | `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto/de exemplo (dev: efêmero) |
@@ -212,7 +215,9 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
 | `AlertaTributario` | Alerta RN010 (issue #140): tipo (`TipoAlertaTributario`), referência (guia/nota/apuração do produtor), data-limite, descrição sem PII, status (`StatusAlertaTributario`). Tabela `alerta_tributario` (0028), única por `(tipo, referencia_id, data_limite)` |
 | `Contador` | Escritório de contabilidade — 2ª identidade do sistema (issue #93); a carteira é `VinculoCarteira` desde a #177 |
-| `VinculoCarteira` | Vínculo escritório × produtor (`carteira_vinculo`, 0038, #177, substitui `contador_produtor`): `SituacaoVinculo` ATIVO/SUSPENSO/ENCERRADO, início/fim, observações internas (ficha) e etiquetas (N:N `carteira_vinculo_etiqueta`). Só ATIVO autoriza; um não encerrado por par (índice parcial PG) |
+| `Escritorio` / `FuncaoEscritorio` | Escritório (#228, `escritorio`, 0039): dono da carteira, catálogos e convites; o `Contador` é membro (`escritorioId` + `funcao` ADMINISTRADOR/CONTADOR/ASSISTENTE). Cadastro de contador cria o unipessoal; a 0039 migra cada contador para um com o **mesmo id** |
+| `ConviteMembro` | Convite de equipe (#228, `convite_membro`): e-mail cifrado, função, só o SHA-256 do token, uso único, validade |
+| `VinculoCarteira` | Vínculo escritório × produtor (`carteira_vinculo`, 0038, #177, substitui `contador_produtor`; dono = `escritorioId` + `responsavelId` desde a 0039): `SituacaoVinculo` ATIVO/SUSPENSO/ENCERRADO, início/fim, observações internas (ficha) e etiquetas (N:N `carteira_vinculo_etiqueta`). Só ATIVO autoriza; um não encerrado por par (índice parcial PG) |
 | `ConviteCarteira` / `EtiquetaCarteira` | Convite por e-mail cifrado (`SituacaoConvite` PENDENTE/ACEITO/RECUSADO, validade) e catálogo de etiquetas do escritório (único pelo nome normalizado) — #177 |
 | `RedefinicaoSenha` | Pedido de redefinição (`redefinicao_senha`, 0034, #209): só o SHA-256 do token, validade, uso; um por credencial |
 | `SessaoRefresh` | Refresh emitido (`sessao_refresh`, 0032, #207): só o SHA-256, família, versão de sessão, início da família, expiração, `usadoEm`, `revogadoEm` |
@@ -326,5 +331,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (próximo número livre: **0039**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0039-escritorio-equipe; próximo número livre: **0040**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

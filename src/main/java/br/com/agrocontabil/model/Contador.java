@@ -3,6 +3,8 @@ package br.com.agrocontabil.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -66,6 +68,18 @@ public class Contador {
   @Convert(converter = DadoPessoalCifradoConverter.class)
   @Column(name = "telefone", length = 100)
   private String telefone;
+
+  /**
+   * Escritório de que o contador é membro (issue #228); nulo depois de removido da equipe, quando
+   * ele deixa de alcançar qualquer carteira.
+   */
+  @Column(name = "escritorio_id")
+  private UUID escritorioId;
+
+  /** Função no escritório; nula junto com o escritório. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "funcao_escritorio", length = 20, columnDefinition = "VARCHAR(20)")
+  private FuncaoEscritorio funcao;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;

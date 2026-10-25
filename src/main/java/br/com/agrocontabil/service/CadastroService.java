@@ -6,10 +6,13 @@ import br.com.agrocontabil.exception.CadastroConflitoException;
 import br.com.agrocontabil.mapper.CredencialMapper;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import java.text.Normalizer;
@@ -58,6 +61,7 @@ public class CadastroService {
 
   private final ProdutorRepository produtorRepository;
   private final ContadorRepository contadorRepository;
+  private final EscritorioRepository escritorioRepository;
   private final CredencialUsuarioRepository credencialRepository;
   private final PasswordEncoder passwordEncoder;
   private final PoliticaSenha politicaSenha;
@@ -67,6 +71,7 @@ public class CadastroService {
   public CadastroService(
       ProdutorRepository produtorRepository,
       ContadorRepository contadorRepository,
+      EscritorioRepository escritorioRepository,
       CredencialUsuarioRepository credencialRepository,
       PasswordEncoder passwordEncoder,
       PoliticaSenha politicaSenha,
@@ -74,6 +79,7 @@ public class CadastroService {
       PlatformTransactionManager transactionManager) {
     this.produtorRepository = produtorRepository;
     this.contadorRepository = contadorRepository;
+    this.escritorioRepository = escritorioRepository;
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
     this.politicaSenha = politicaSenha;
@@ -90,6 +96,33 @@ public class CadastroService {
    * @throws CadastroConflitoException se o e-mail ou o CPF/CNPJ já estiver cadastrado
    */
   public CadastroResponse cadastrar(CadastroRequest request) {
+    return cadastrar(request, null);
+  }
+
+  /**
+   * Como o contador entra num escritório no cadastro (issue #228): roda na transação do cadastro,
+   * com o contador já gravado. Uma exceção desfaz o cadastro inteiro.
+   */
+  @FunctionalInterface
+  interface IngressoEscritorio {
+
+    /**
+     * Põe o contador num escritório (define {@code escritorioId} e {@code funcao}).
+     *
+     * @param contador contador recém-gravado, gerenciado
+     */
+    void aplicar(Contador contador);
+  }
+
+  /**
+   * Cria a conta; o contador entra no escritório que o {@code ingresso} decidir — sem ele, num
+   * escritório unipessoal com o nome do contador, como administrador (issue #228).
+   *
+   * @param request  dados do cadastro, já validados por Bean Validation
+   * @param ingresso como o contador entra num escritório; nulo = unipessoal
+   * @return id da identidade criada, papel e e-mail
+   */
+  CadastroResponse cadastrar(CadastroRequest request, IngressoEscritorio ingresso) {
     String email = normalizarEmail(request.email());
     String cpfCnpj = request.cpfCnpj();
     String senha = PoliticaSenha.normalizar(request.senha());
@@ -99,7 +132,8 @@ public class CadastroService {
 
     CredencialUsuario credencial;
     try {
-      credencial = transacao.execute(status -> gravar(request, email, cpfCnpj, senhaHash));
+      credencial = transacao.execute(
+          status -> gravar(request, email, cpfCnpj, senhaHash, ingresso));
     } catch (DataIntegrityViolationException e) {
       if (!violouUnicidadeDeCadastro(e)) {
         // Outra restricao (coluna nova esquecida, FK): e bug, nao duplicidade — nao mascarar.
@@ -114,8 +148,8 @@ public class CadastroService {
     return credencialMapper.toCadastroResponse(credencial);
   }
 
-  private CredencialUsuario gravar(
-      CadastroRequest request, String email, String cpfCnpj, String senhaHash) {
+  private CredencialUsuario gravar(CadastroRequest request, String email, String cpfCnpj,
+      String senhaHash, IngressoEscritorio ingresso) {
     PapelUsuario papel = request.papel();
     if (credencialRepository.existsByEmail(email) || documentoJaCadastrado(papel, cpfCnpj)) {
       throw new CadastroConflitoException();
@@ -129,11 +163,17 @@ public class CadastroService {
 
     UUID usuarioId;
     if (papel == PapelUsuario.CONTADOR) {
-      usuarioId = contadorRepository.saveAndFlush(Contador.builder()
+      Contador contador = contadorRepository.saveAndFlush(Contador.builder()
           .nomeCompleto(request.nomeCompleto().strip())
           .cpfCnpj(cpfCnpj)
           .email(email)
-          .build()).getId();
+          .build());
+      if (ingresso == null) {
+        criarEscritorioUnipessoal(contador);
+      } else {
+        ingresso.aplicar(contador);
+      }
+      usuarioId = contador.getId();
       credencial.contadorId(usuarioId);
     } else {
       usuarioId = produtorRepository.saveAndFlush(Produtor.builder()
@@ -147,6 +187,16 @@ public class CadastroService {
     }
 
     return credencialRepository.saveAndFlush(credencial.build());
+  }
+
+  /**
+   * Escritório unipessoal do contador que se cadastra sozinho: ele é o administrador (issue #228).
+   */
+  private void criarEscritorioUnipessoal(Contador contador) {
+    Escritorio escritorio = escritorioRepository.save(
+        Escritorio.builder().nome(contador.getNomeCompleto()).build());
+    contador.setEscritorioId(escritorio.getId());
+    contador.setFuncao(FuncaoEscritorio.ADMINISTRADOR);
   }
 
   /**

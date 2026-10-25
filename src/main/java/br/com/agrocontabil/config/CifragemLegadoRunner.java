@@ -44,7 +44,8 @@ public class CifragemLegadoRunner implements SmartInitializingSingleton {
       "produtores", List.of("cpf_cnpj", "email", "telefone"),
       "contadores", List.of("cpf_cnpj", "email", "telefone"),
       "credencial_usuario", List.of("cpf_cnpj", "email"),
-      "convite_carteira", List.of("email"));
+      "convite_carteira", List.of("email"),
+      "convite_membro", List.of("email"));
 
   private static final int LOTE = 500;
 
