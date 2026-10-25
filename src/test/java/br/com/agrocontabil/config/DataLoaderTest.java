@@ -16,6 +16,7 @@ import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
+import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import java.util.List;
@@ -42,6 +43,7 @@ class DataLoaderTest {
   @Mock ContadorRepository contadorRepository;
   @Mock VinculoCarteiraRepository vinculoRepository;
   @Mock EscritorioRepository escritorioRepository;
+  @Mock ObrigacaoFiscalRepository obrigacaoRepository;
 
   @InjectMocks DataLoader dataLoader;
 

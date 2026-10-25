@@ -1,51 +1,46 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.model.Periodicidade;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 /**
- * Item do calendário fiscal do produtor (issue #74 — {@code GET /api/calendario-fiscal}).
+ * Item do calendário fiscal do produtor (issues #74 e #181).
  *
- * <p>Nesta entrega a única fonte é a {@code GuiaFiscal} do produtor, mapeada para {@code tipo =
- * "imposto"}. Outros tipos de vencimento ({@code obrigacao}/{@code declaracao}/{@code
- * solicitacao}) ficam para quando o backend modelar outras fontes de prazo fiscal.
- *
- * <p><strong>Nota de integração:</strong> o {@code status} aqui é o valor real
- * ({@code pendente}/{@code pago}/{@code vencido}) — o mapeamento atual do frontend
- * ({@code calendario.service.ts}) só reconhece {@code "vencido"} e trata qualquer outro valor
- * como {@code "pendente"}, então uma guia {@code pago} aparece como pendente até o frontend
- * ajustar esse mapeamento (fora do escopo deste backend).
- *
- * @param id             identificador da guia de origem
- * @param evento         título exibido no calendário (ex.: "Guia ICMS")
- * @param descricao      observações da guia; pode ser nulo
- * @param dataVencimento data de vencimento
- * @param tipo           tipo do vencimento; sempre {@code "imposto"} nesta entrega
- * @param status         status do vencimento ({@code pendente}/{@code pago}/{@code vencido})
- * @param valor          valor da guia
+ * <p>{@code tipo = "imposto"} é uma guia; {@code tipo = "obrigacao"} é uma ocorrência derivada do
+ * catálogo de obrigações (ou o fechamento da apuração), sem status nem valor.
  */
-@Schema(description = "Item do calendario fiscal do produtor")
+@Schema(description = "Vencimento do calendario fiscal")
 public record VencimentoFiscalResponse(
 
-    @Schema(description = "Identificador da guia de origem")
-    UUID id,
+    @Schema(description = "Id da guia; na obrigacao, <obrigacaoId>:<data>")
+    String id,
 
     @Schema(description = "Titulo exibido no calendario", example = "Guia ICMS")
     String evento,
 
-    @Schema(description = "Observacoes da guia", example = "Referente a agosto/2026")
+    @Schema(description = "Observacoes da guia ou descricao da obrigacao")
     String descricao,
 
     @Schema(description = "Data de vencimento", example = "2026-08-20")
     LocalDate dataVencimento,
 
-    @Schema(description = "Tipo do vencimento", example = "imposto")
+    @Schema(description = "imposto (guia) ou obrigacao", example = "imposto")
     String tipo,
 
-    @Schema(description = "Status do vencimento (pendente/pago/vencido)", example = "pendente")
+    @Schema(description = "Status da guia (pendente/pago/vencido); nulo na obrigacao",
+        example = "pendente")
     String status,
 
-    @Schema(description = "Valor do vencimento", example = "1250.00")
-    BigDecimal valor) {}
+    @Schema(description = "Valor da guia; nulo na obrigacao", example = "1250.00")
+    BigDecimal valor,
+
+    @Schema(description = "Titulo (igual a evento; contrato da #181)")
+    String titulo,
+
+    @Schema(description = "MENSAL ou ANUAL, so na obrigacao")
+    Periodicidade periodicidade,
+
+    @Schema(description = "Fundamento legal, so na obrigacao")
+    String origem) {}

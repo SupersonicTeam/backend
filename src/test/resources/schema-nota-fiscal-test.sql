@@ -689,3 +689,46 @@ CREATE INDEX IF NOT EXISTS idx_registro_auditoria_escritorio
 -- Dados pessoais cifrados — Sprint 8 issue #147 (migration 0036): as colunas cpf_cnpj, email e
 -- telefone de produtores/contadores e cpf_cnpj/email de credencial_usuario ja nascem alargadas nos
 -- CREATE TABLE acima (100 / 512). Manter sincronizado com 0036-dados-pessoais-cifrados.xml.
+
+-- Obrigacoes do calendario — issue #181 (migration 0040). Manter sincronizado com
+-- 0040-obrigacao-fiscal.xml, inclusive os 11 modelos (MERGE: idempotente, o script roda por classe).
+-- O indice unico parcial (uma versao por modelo e escritorio) e os CHECK sao so do PostgreSQL.
+CREATE TABLE IF NOT EXISTS obrigacao_fiscal (
+    id                    UUID                      NOT NULL,
+    escritorio_id         UUID,
+    modelo                BOOLEAN                   DEFAULT FALSE NOT NULL,
+    modelo_id             UUID,
+    titulo                VARCHAR(120)              NOT NULL,
+    descricao             VARCHAR(500),
+    periodicidade         VARCHAR(10)               NOT NULL,
+    dia                   INTEGER                   NOT NULL,
+    mes                   INTEGER,
+    ajuste_fim_de_semana  VARCHAR(10)               DEFAULT 'NENHUM' NOT NULL,
+    tipo_produtor         VARCHAR(20),
+    regimes_tributarios   VARCHAR(60),
+    origem                VARCHAR(200),
+    ativa                 BOOLEAN                   DEFAULT TRUE NOT NULL,
+    created_at            TIMESTAMP WITH TIME ZONE,
+    updated_at            TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_obrigacao_fiscal_escritorio ON obrigacao_fiscal (escritorio_id);
+
+ALTER TABLE obrigacao_fiscal ADD CONSTRAINT IF NOT EXISTS fk_obrigacao_fiscal_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+
+ALTER TABLE obrigacao_fiscal ADD CONSTRAINT IF NOT EXISTS fk_obrigacao_fiscal_modelo
+    FOREIGN KEY (modelo_id) REFERENCES obrigacao_fiscal (id) ON DELETE SET NULL;
+
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000001', TRUE, 'DAS / PGDAS-D', 'Apuracao e recolhimento mensal do Simples Nacional', 'MENSAL', 20, NULL, 'NENHUM', 'PESSOA_JURIDICA', 'SIMPLES', 'LC 123/2006, art. 21', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000002', TRUE, 'DAS-MEI', 'Recolhimento mensal do MEI', 'MENSAL', 20, NULL, 'NENHUM', NULL, 'MEI', 'LC 123/2006, art. 18-A', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000003', TRUE, 'DASN-SIMEI', 'Declaracao anual do MEI', 'ANUAL', 31, 5, 'NENHUM', NULL, 'MEI', 'Res. CGSN 140/2018', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000004', TRUE, 'DEFIS', 'Declaracao de informacoes socioeconomicas e fiscais do Simples', 'ANUAL', 31, 3, 'NENHUM', 'PESSOA_JURIDICA', 'SIMPLES', 'Res. CGSN 140/2018', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000005', TRUE, 'DCTFWeb', 'Declaracao de debitos e creditos tributarios federais previdenciarios', 'MENSAL', 15, NULL, 'NENHUM', 'PESSOA_JURIDICA', 'PRESUMIDO,REAL', 'IN RFB 2.005/2021', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000006', TRUE, 'EFD-Reinf', 'Escrituracao fiscal digital de retencoes e outras informacoes fiscais', 'MENSAL', 15, NULL, 'NENHUM', 'PESSOA_JURIDICA', 'PRESUMIDO,REAL', 'IN RFB 2.043/2021', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000007', TRUE, 'Funrural (recolhimento)', 'Contribuicao do produtor rural sobre a comercializacao', 'MENSAL', 20, NULL, 'NENHUM', NULL, NULL, 'Lei 8.212/1991, art. 30', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000008', TRUE, 'DIRPF com atividade rural (+ LCDPR)', 'Declaracao do imposto de renda da pessoa fisica e livro caixa digital do produtor rural', 'ANUAL', 31, 5, 'ANTECIPA', 'PESSOA_FISICA', NULL, 'IN anual da RFB; IN RFB 1.848/2018', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000009', TRUE, 'DITR', 'Declaracao do imposto territorial rural (dono de imovel rural)', 'ANUAL', 30, 9, 'ANTECIPA', NULL, NULL, 'Lei 9.393/1996', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000010', TRUE, 'ECD', 'Escrituracao contabil digital (ultimo dia util de junho)', 'ANUAL', 31, 6, 'ANTECIPA', 'PESSOA_JURIDICA', 'PRESUMIDO,REAL', 'IN RFB 2.003/2021', TRUE);
+MERGE INTO obrigacao_fiscal (id, modelo, titulo, descricao, periodicidade, dia, mes, ajuste_fim_de_semana, tipo_produtor, regimes_tributarios, origem, ativa) KEY (id) VALUES ('00000000-0000-4000-8181-000000000011', TRUE, 'ECF', 'Escrituracao contabil fiscal (ultimo dia util de julho)', 'ANUAL', 31, 7, 'ANTECIPA', 'PESSOA_JURIDICA', 'PRESUMIDO,REAL', 'IN RFB 2.004/2021', TRUE);
