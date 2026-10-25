@@ -6,7 +6,6 @@ import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.FuncaoEscritorio;
-import br.com.agrocontabil.model.ObrigacaoFiscal;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -21,10 +20,10 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.service.ObrigacaoFiscalService;
 import br.com.agrocontabil.service.PoliticaSenha;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.EnumSet;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -248,22 +247,14 @@ public class DataLoader implements CommandLineRunner {
    */
   private void personalizarObrigacoes(UUID escritorioId) {
     obrigacaoRepository.findModeloById(MODELO_DEFIS).ifPresent(defis ->
-        obrigacaoRepository.save(versao(defis, escritorioId).ativa(false).build()));
+        obrigacaoRepository.save(
+            ObrigacaoFiscalService.versaoDoEscritorio(defis, escritorioId).ativa(false).build()));
     obrigacaoRepository.findModeloById(MODELO_DAS).ifPresent(das ->
-        obrigacaoRepository.save(versao(das, escritorioId)
+        obrigacaoRepository.save(ObrigacaoFiscalService.versaoDoEscritorio(das, escritorioId)
             .titulo("DAS / PGDAS-D (conferir guia)")
             .descricao("Lembrete interno: conferir a guia dois dias antes do vencimento")
             .dia(18)
             .build()));
-  }
-
-  private static ObrigacaoFiscal.ObrigacaoFiscalBuilder versao(ObrigacaoFiscal modelo,
-      UUID escritorioId) {
-    return modelo.toBuilder().id(null).modelo(false).escritorioId(escritorioId)
-        .modeloId(modelo.getId())
-        .regimes(modelo.getRegimes().isEmpty() ? EnumSet.noneOf(RegimeTributario.class)
-            : EnumSet.copyOf(modelo.getRegimes()))
-        .createdAt(null).updatedAt(null);
   }
 
   private Produtor produtorA() {

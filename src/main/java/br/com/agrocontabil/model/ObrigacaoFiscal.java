@@ -126,6 +126,10 @@ public class ObrigacaoFiscal {
   /**
    * Vale para o produtor? Tipo e regime casam (nulo/vazio = todos).
    *
+   * <p>Produtor com regime ou tipo desconhecido (o cadastro não pede o regime) só recebe as
+   * obrigações que valem para todos: mostrar as de todo regime ao mesmo tempo (MEI, Simples e
+   * Presumido juntos) seria pior que faltar. Cadastrar o regime acende as específicas.
+   *
    * @param tipo   tipo do produtor
    * @param regime regime do produtor
    * @return {@code true} se a obrigação se aplica

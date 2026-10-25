@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.ObrigacaoFiscal;
 import br.com.agrocontabil.model.Periodicidade;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
 import java.time.DayOfWeek;
@@ -59,11 +60,13 @@ public class ObrigacaoFiscalService {
 
   private final MembroEscritorioProvider membroProvider;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
+  private final EscritorioRepository escritorioRepository;
 
   public ObrigacaoFiscalService(MembroEscritorioProvider membroProvider,
-      ObrigacaoFiscalRepository obrigacaoRepository) {
+      ObrigacaoFiscalRepository obrigacaoRepository, EscritorioRepository escritorioRepository) {
     this.membroProvider = membroProvider;
     this.obrigacaoRepository = obrigacaoRepository;
+    this.escritorioRepository = escritorioRepository;
   }
 
   /**
@@ -251,6 +254,14 @@ public class ObrigacaoFiscalService {
 
   private ObrigacaoResponse definirAtiva(UUID id, boolean ativa) {
     UUID escritorioId = administrador();
+    // Modelo sem versao do escritorio que ja esta como pedido: nada a gravar. Uma versao identica
+    // ao modelo congelaria o modelo para o escritorio (correcoes futuras nao chegariam).
+    var intacto = obrigacaoRepository.findModeloById(id)
+        .filter(m -> m.isAtiva() == ativa)
+        .filter(m -> obrigacaoRepository.findByEscritorioIdAndModeloId(escritorioId, id).isEmpty());
+    if (intacto.isPresent()) {
+      return resposta(intacto.get());
+    }
     ObrigacaoFiscal alvo = editavel(id, escritorioId);
     alvo.setAtiva(ativa);
     return resposta(obrigacaoRepository.save(alvo));
@@ -266,21 +277,41 @@ public class ObrigacaoFiscalService {
           ObrigacaoFiscal modelo = obrigacaoRepository.findModeloById(id)
               .orElseThrow(() -> new ResourceNotFoundException("Obrigacao", id));
           return obrigacaoRepository.findByEscritorioIdAndModeloId(escritorioId, id)
-              .orElseGet(() -> modelo.toBuilder()
-                  .id(null)
-                  .modelo(false)
-                  .escritorioId(escritorioId)
-                  .modeloId(modelo.getId())
-                  .regimes(modelo.getRegimes().isEmpty() ? EnumSet.noneOf(RegimeTributario.class)
-                      : EnumSet.copyOf(modelo.getRegimes()))
-                  .createdAt(null)
-                  .updatedAt(null)
-                  .build());
+              .orElseGet(() -> versaoDoEscritorio(modelo, escritorioId).build());
         });
   }
 
+  /**
+   * Administrador do escritório, com o escritório sob lock: serializa as escritas do catálogo, para
+   * duas edições simultâneas de um modelo não criarem duas versões.
+   */
+  /**
+   * Versão do escritório como cópia do modelo (ainda não gravada) — ponto único da cópia, usado
+   * também pelo seed de dev.
+   *
+   * @param modelo       modelo do sistema
+   * @param escritorioId escritório
+   * @return builder da versão, para ajustar antes de gravar
+   */
+  public static ObrigacaoFiscal.ObrigacaoFiscalBuilder versaoDoEscritorio(ObrigacaoFiscal modelo,
+      UUID escritorioId) {
+    return modelo.toBuilder()
+        .id(null)
+        .modelo(false)
+        .escritorioId(escritorioId)
+        .modeloId(modelo.getId())
+        .regimes(modelo.getRegimes().isEmpty() ? EnumSet.noneOf(RegimeTributario.class)
+            : EnumSet.copyOf(modelo.getRegimes()))
+        .createdAt(null)
+        .updatedAt(null);
+  }
+
   private UUID administrador() {
-    return membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR).getEscritorioId();
+    UUID escritorioId = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR)
+        .getEscritorioId();
+    escritorioRepository.findByIdForUpdate(escritorioId)
+        .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+    return escritorioId;
   }
 
   private static void validarPrazo(ObrigacaoRequest request) {

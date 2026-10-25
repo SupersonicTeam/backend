@@ -219,6 +219,19 @@ class ObrigacaoCalendarioIntegrationTest {
   }
 
   @Test
+  @DisplayName("reativar modelo nunca personalizado nao cria versao (o modelo segue chegando)")
+  void reativarModeloIntacto() throws Exception {
+    mockMvc.perform(post("/api/contador/obrigacoes/{id}/reativar", DAS)
+            .header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.origemCatalogo").value("MODELO"))
+        .andExpect(jsonPath("$.ativa").value(true));
+
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM obrigacao_fiscal"
+        + " WHERE modelo = FALSE", Integer.class)).isZero();
+  }
+
+  @Test
   @DisplayName("obrigacao propria: so administrador cria; regras de mes; de outro escritorio 404")
   void obrigacaoPropria() throws Exception {
     mockMvc.perform(post("/api/contador/obrigacoes").header(HttpHeaders.AUTHORIZATION, tokenA)
