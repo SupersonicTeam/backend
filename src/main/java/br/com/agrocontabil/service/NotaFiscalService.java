@@ -178,9 +178,31 @@ public class NotaFiscalService {
    */
   @Transactional(readOnly = true)
   public Page<NotaFiscalResponse> findAll(FiltroNotasRequest filtro, Pageable pageable) {
+    // A ordenacao e conferida antes da identidade: o 400 nao depende de quem pede.
     Pageable pagina = paginaComOrdenacaoPermitida(pageable);
-    Specification<NotaFiscal> consulta = especificacao(produtorProvider.get().getId(), filtro);
-    return notaFiscalRepository.findAll(consulta, pagina).map(NotaFiscalMapper::toResponse);
+    return listar(produtorProvider.get().getId(), filtro, pagina);
+  }
+
+  /**
+   * Lista as notas de um produtor já autorizado por quem chama — a leitura do contador sobre a
+   * carteira (issue #177), depois do {@code ProdutorEmContextoResolver}.
+   *
+   * @param produtorId produtor cujo acesso já foi conferido
+   * @param filtro     filtros opcionais
+   * @param pageable   paginacao e ordenacao
+   * @return pagina de notas do produtor
+   */
+  @Transactional(readOnly = true)
+  public Page<NotaFiscalResponse> findAllDoProdutor(
+      UUID produtorId, FiltroNotasRequest filtro, Pageable pageable) {
+    return listar(produtorId, filtro, paginaComOrdenacaoPermitida(pageable));
+  }
+
+  private Page<NotaFiscalResponse> listar(
+      UUID produtorId, FiltroNotasRequest filtro, Pageable paginaPermitida) {
+    Specification<NotaFiscal> consulta = especificacao(produtorId, filtro);
+    return notaFiscalRepository.findAll(consulta, paginaPermitida)
+        .map(NotaFiscalMapper::toResponse);
   }
 
   /**
@@ -272,9 +294,21 @@ public class NotaFiscalService {
    */
   @Transactional(readOnly = true)
   public NotaFiscalResponse findById(UUID id) {
-    Produtor produtor = produtorProvider.get();
+    return findByIdDoProdutor(produtorProvider.get().getId(), id);
+  }
+
+  /**
+   * Busca uma nota de um produtor já autorizado por quem chama (leitura do contador, issue #177).
+   *
+   * @param produtorId produtor cujo acesso já foi conferido
+   * @param id         nota
+   * @return DTO de resposta
+   * @throws ResourceNotFoundException se a nota nao for daquele produtor (404)
+   */
+  @Transactional(readOnly = true)
+  public NotaFiscalResponse findByIdDoProdutor(UUID produtorId, UUID id) {
     NotaFiscal nota = notaFiscalRepository
-        .findByIdAndProdutorId(id, produtor.getId())
+        .findByIdAndProdutorId(id, produtorId)
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", id));
     return NotaFiscalMapper.toResponse(nota);
   }

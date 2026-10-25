@@ -92,6 +92,20 @@ public enum ErrorCode {
    * ordenação por propriedade fora da lista permitida (issue #174). HTTP 400.
    */
   FILTRO_NOTAS_INVALIDO,
+  /**
+   * Filtro ou ordenação de {@code GET /api/contador/produtores} inválidos (issue #177). HTTP 400.
+   */
+  FILTRO_CARTEIRA_INVALIDO,
+  /**
+   * Transição de vínculo da carteira que a situação atual não permite (ex.: reativar um vínculo
+   * ativo) — issue #177. HTTP 409.
+   */
+  VINCULO_SITUACAO_INVALIDA,
+  /**
+   * O escritório passou do teto de convites por dia ({@code app.carteira.convite.max-por-dia}) —
+   * issue #177. HTTP 429 com {@code Retry-After}.
+   */
+  LIMITE_CONVITES,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:

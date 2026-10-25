@@ -4,7 +4,9 @@ import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -12,6 +14,7 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.RegistroAuditoriaRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import java.time.OffsetDateTime;
 import org.springframework.boot.test.context.TestComponent;
 
@@ -43,6 +46,9 @@ public class TestDatabaseCleaner {
   private final ContadorRepository contadorRepository;
   private final ProdutorRepository produtorRepository;
   private final RegistroAuditoriaRepository auditoriaRepository;
+  private final ConviteCarteiraRepository conviteRepository;
+  private final VinculoCarteiraRepository vinculoRepository;
+  private final EtiquetaCarteiraRepository etiquetaRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -57,7 +63,10 @@ public class TestDatabaseCleaner {
       CredencialUsuarioRepository credencialRepository,
       ContadorRepository contadorRepository,
       ProdutorRepository produtorRepository,
-      RegistroAuditoriaRepository auditoriaRepository) {
+      RegistroAuditoriaRepository auditoriaRepository,
+      ConviteCarteiraRepository conviteRepository,
+      VinculoCarteiraRepository vinculoRepository,
+      EtiquetaCarteiraRepository etiquetaRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -70,12 +79,15 @@ public class TestDatabaseCleaner {
     this.contadorRepository = contadorRepository;
     this.produtorRepository = produtorRepository;
     this.auditoriaRepository = auditoriaRepository;
+    this.conviteRepository = conviteRepository;
+    this.vinculoRepository = vinculoRepository;
+    this.etiquetaRepository = etiquetaRepository;
   }
 
   /**
    * Apaga filhos antes dos pais: alertas tributários → auditoria da Ceres → validações e itens
-   * (cascade da entidade) → apurações → guias → notas → contadores (que levam o vínculo
-   * {@code contador_produtor}) → produtores.
+   * (cascade da entidade) → apurações → guias → notas → carteira (convites, vínculos,
+   * etiquetas — #177) → contadores → produtores.
    *
    * <p>Os contadores (issue #93) entram antes dos produtores porque o vínculo N:N referencia os
    * dois: deixá-los para trás faria o {@code produtorRepository.deleteAll()} falhar por integridade
@@ -96,6 +108,10 @@ public class TestDatabaseCleaner {
     sessaoRefreshRepository.deleteAll();
     redefinicaoSenhaRepository.deleteAll();
     credencialRepository.deleteAll();
+    // Carteira (#177): o vinculo leva as linhas de etiqueta (lado dono do N:N); depois o catalogo.
+    conviteRepository.deleteAll();
+    vinculoRepository.deleteAll();
+    etiquetaRepository.deleteAll();
     contadorRepository.deleteAll();
     produtorRepository.deleteAll();
     // Auditoria (#149): sem FK (sobrevive ao que audita); limpa para um teste nao ver o do outro.

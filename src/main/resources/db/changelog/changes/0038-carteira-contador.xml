@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0038-carteira-contador.xml
+         Issue #177 (carteira do contador com convite).
+
+         O vinculo contador x produtor ganha situacao e historia:
+         carteira_vinculo substitui contador_produtor (0024). Cada linha e
+         um vinculo com inicio e fim; ATIVO e o unico que autoriza o
+         contador (ProdutorEmContextoResolver), SUSPENSO guarda a ficha sem
+         dar acesso, ENCERRADO e historia. Um vinculo nao encerrado por
+         par (indice unico parcial, so PostgreSQL).
+
+         A ficha do cliente (observacoes internas) mora no proprio vinculo;
+         as etiquetas vem de um catalogo do escritorio. O convite guarda o
+         e-mail cifrado (cifra deterministica, #147): o produtor o encontra
+         por igualdade com o e-mail da propria credencial.
+
+         As linhas de contador_produtor viram vinculos ATIVO, com inicio na
+         criacao do contador, e a tabela antiga sai.
+         ================================================================ -->
+
+    <changeSet id="0038-create-carteira-vinculo" author="supersonic-team">
+        <comment>
+            Cria carteira_vinculo (contador, produtor, situacao, inicio, fim, observacoes).
+        </comment>
+
+        <createTable tableName="carteira_vinculo">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="contador_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="situacao" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="inicio" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fim" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="observacoes" type="VARCHAR(1000)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="carteira_vinculo"
+                baseColumnNames="contador_id"
+                constraintName="fk_carteira_vinculo_contador"
+                referencedTableName="contadores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="carteira_vinculo"
+                baseColumnNames="produtor_id"
+                constraintName="fk_carteira_vinculo_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="carteira_vinculo" indexName="idx_carteira_vinculo_contador_situacao">
+            <column name="contador_id"/>
+            <column name="situacao"/>
+        </createIndex>
+
+        <createIndex tableName="carteira_vinculo" indexName="idx_carteira_vinculo_produtor">
+            <column name="produtor_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="carteira_vinculo"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0038-carteira-vinculo-unico-aberto" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Um vinculo nao encerrado por par contador x produtor. Indice parcial: o H2 nao tem,
+            e la a regra fica so no servico.
+        </comment>
+        <sql>
+            CREATE UNIQUE INDEX uk_carteira_vinculo_aberto
+                ON carteira_vinculo (contador_id, produtor_id)
+                WHERE situacao &lt;&gt; 'ENCERRADO'
+        </sql>
+        <rollback>
+            <sql>DROP INDEX uk_carteira_vinculo_aberto</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0038-migra-contador-produtor" author="supersonic-team">
+        <comment>
+            Cada linha de contador_produtor vira um vinculo ATIVO e a tabela antiga sai.
+        </comment>
+        <sql dbms="postgresql">
+            INSERT INTO carteira_vinculo
+                (id, contador_id, produtor_id, situacao, inicio, created_at, updated_at)
+            SELECT gen_random_uuid(), cp.contador_id, cp.produtor_id, 'ATIVO',
+                   COALESCE(c.created_at, now()), now(), now()
+              FROM contador_produtor cp
+              JOIN contadores c ON c.id = cp.contador_id
+        </sql>
+        <dropTable tableName="contador_produtor"/>
+        <!-- Sem volta automatica: o historico de situacoes nao cabe no N:N antigo. -->
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="0038-create-etiqueta-carteira" author="supersonic-team">
+        <comment>
+            Catalogo de etiquetas do escritorio e a ligacao etiqueta x vinculo.
+        </comment>
+
+        <createTable tableName="etiqueta_carteira">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="contador_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome_normalizado" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="etiqueta_carteira"
+                columnNames="contador_id, nome_normalizado"
+                constraintName="uk_etiqueta_carteira_nome"/>
+
+        <addForeignKeyConstraint
+                baseTableName="etiqueta_carteira"
+                baseColumnNames="contador_id"
+                constraintName="fk_etiqueta_carteira_contador"
+                referencedTableName="contadores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createTable tableName="carteira_vinculo_etiqueta">
+            <column name="vinculo_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="etiqueta_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="carteira_vinculo_etiqueta"
+                columnNames="vinculo_id, etiqueta_id"
+                constraintName="pk_carteira_vinculo_etiqueta"/>
+
+        <addForeignKeyConstraint
+                baseTableName="carteira_vinculo_etiqueta"
+                baseColumnNames="vinculo_id"
+                constraintName="fk_carteira_vinculo_etiqueta_vinculo"
+                referencedTableName="carteira_vinculo"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="carteira_vinculo_etiqueta"
+                baseColumnNames="etiqueta_id"
+                constraintName="fk_carteira_vinculo_etiqueta_etiqueta"
+                referencedTableName="etiqueta_carteira"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="carteira_vinculo_etiqueta"
+                     indexName="idx_carteira_vinculo_etiqueta_etiqueta">
+            <column name="etiqueta_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="carteira_vinculo_etiqueta"/>
+            <dropTable tableName="etiqueta_carteira"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0038-create-convite-carteira" author="supersonic-team">
+        <comment>
+            Convite do escritorio ao produtor, por e-mail (cifrado), com validade e resposta.
+        </comment>
+
+        <createTable tableName="convite_carteira">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="contador_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="situacao" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expira_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="respondido_em" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="produtor_id" type="UUID"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="convite_carteira"
+                baseColumnNames="contador_id"
+                constraintName="fk_convite_carteira_contador"
+                referencedTableName="contadores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="convite_carteira"
+                baseColumnNames="produtor_id"
+                constraintName="fk_convite_carteira_produtor"
+                referencedTableName="produtores"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="convite_carteira" indexName="idx_convite_carteira_email_situacao">
+            <column name="email"/>
+            <column name="situacao"/>
+        </createIndex>
+
+        <createIndex tableName="convite_carteira" indexName="idx_convite_carteira_contador_criado">
+            <column name="contador_id"/>
+            <column name="criado_em"/>
+        </createIndex>
+
+        <sql dbms="postgresql">
+            COMMENT ON COLUMN convite_carteira.email IS
+                'Dado pessoal cifrado (AES-256-GCM deterministico, issue #147)'
+        </sql>
+
+        <rollback>
+            <dropTable tableName="convite_carteira"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0038-convite-carteira-unico-pendente" author="supersonic-team" dbms="postgresql">
+        <comment>Um convite pendente por par escritorio x e-mail (reenviar substitui).</comment>
+        <sql>
+            CREATE UNIQUE INDEX uk_convite_carteira_pendente
+                ON convite_carteira (contador_id, email)
+                WHERE situacao = 'PENDENTE'
+        </sql>
+        <rollback>
+            <sql>DROP INDEX uk_convite_carteira_pendente</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

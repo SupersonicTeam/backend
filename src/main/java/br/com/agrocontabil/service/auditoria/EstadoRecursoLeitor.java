@@ -2,6 +2,7 @@ package br.com.agrocontabil.service.auditoria;
 
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
+import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.util.Optional;
@@ -22,12 +23,14 @@ class EstadoRecursoLeitor {
   private final NotaFiscalRepository notaRepository;
   private final GuiaFiscalRepository guiaRepository;
   private final ApuracaoMensalRepository apuracaoRepository;
+  private final ConviteCarteiraRepository conviteRepository;
 
   EstadoRecursoLeitor(NotaFiscalRepository notaRepository, GuiaFiscalRepository guiaRepository,
-      ApuracaoMensalRepository apuracaoRepository) {
+      ApuracaoMensalRepository apuracaoRepository, ConviteCarteiraRepository conviteRepository) {
     this.notaRepository = notaRepository;
     this.guiaRepository = guiaRepository;
     this.apuracaoRepository = apuracaoRepository;
+    this.conviteRepository = conviteRepository;
   }
 
   /**
@@ -42,7 +45,10 @@ class EstadoRecursoLeitor {
       case NOTA_FISCAL -> notaRepository.findStatusById(id);
       case GUIA_FISCAL -> guiaRepository.findStatusById(id);
       case APURACAO -> apuracaoRepository.findStatusById(id);
-      case CONTA -> Optional.empty();
+      case CONVITE_CARTEIRA -> conviteRepository.findSituacaoById(id);
+      // O vinculo e auditado pelo id do produtor; a situacao anterior vai no "depois" da
+      // operacao anterior.
+      case CONTA, VINCULO_CARTEIRA -> Optional.empty();
     };
     return status.map(Object::toString);
   }

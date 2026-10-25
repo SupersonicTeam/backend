@@ -10,8 +10,11 @@ import static org.mockito.Mockito.when;
 import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.SituacaoVinculo;
+import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,6 +37,7 @@ class DataLoaderTest {
 
   @Mock ProdutorRepository produtorRepository;
   @Mock ContadorRepository contadorRepository;
+  @Mock VinculoCarteiraRepository vinculoRepository;
 
   @InjectMocks DataLoader dataLoader;
 
@@ -72,6 +76,12 @@ class DataLoaderTest {
   /** Produtor como o banco devolveria: mesmo CPF e com id, para o vinculo do contador. */
   private Produtor produtorExistente(String cpfCnpj) {
     return Produtor.builder().id(UUID.randomUUID()).cpfCnpj(cpfCnpj).build();
+  }
+
+  private VinculoCarteira capturarVinculoSemeado() {
+    ArgumentCaptor<VinculoCarteira> captor = ArgumentCaptor.forClass(VinculoCarteira.class);
+    verify(vinculoRepository).save(captor.capture());
+    return captor.getValue();
   }
 
   private Contador capturarContadorSemeado() {
@@ -189,7 +199,10 @@ class DataLoaderTest {
     assertThat(contador.getCrc()).isNotBlank();
     // Vinculo parcial de proposito: o produtor B fica de fora para dar um "produtor que este
     // contador nao atende" aos cenarios de acesso negado.
-    assertThat(contador.getProdutores()).containsExactly(produtorA);
+    VinculoCarteira vinculo = capturarVinculoSemeado();
+    assertThat(vinculo.getContadorId()).isEqualTo(contador.getId());
+    assertThat(vinculo.getProdutorId()).isEqualTo(produtorA.getId());
+    assertThat(vinculo.getSituacao()).isEqualTo(SituacaoVinculo.ATIVO);
   }
 
   @Test
@@ -203,7 +216,7 @@ class DataLoaderTest {
     dataLoader.run();
 
     verify(produtorRepository, never()).save(any(Produtor.class));
-    assertThat(capturarContadorSemeado().getProdutores()).containsExactly(produtorAExistente);
+    assertThat(capturarVinculoSemeado().getProdutorId()).isEqualTo(produtorAExistente.getId());
   }
 
   @Test

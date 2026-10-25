@@ -1,9 +1,11 @@
 package br.com.agrocontabil.security;
 
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.Produtor;
-import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -18,9 +20,9 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li><strong>Produtor</strong> — o alvo precisa ser ele mesmo. É o guard provisório que a issue
  *       #94 colocou dentro de cada serviço, agora num lugar só;
- *   <li><strong>Contador</strong> — o alvo precisa estar na carteira dele
- *       ({@code contador_produtor}). O vínculo é a única autorização que o contador tem sobre os
- *       dados de um produtor.
+ *   <li><strong>Contador</strong> — o alvo precisa estar na carteira dele com vínculo
+ *       {@code ATIVO} ({@code carteira_vinculo}, issue #177). O vínculo é a única autorização que
+ *       o contador tem sobre os dados de um produtor; suspenso ou encerrado, o produtor some.
  * </ul>
  *
  * <p>Sem transação própria: é sempre chamado de dentro de um serviço transacional e participa da
@@ -37,15 +39,15 @@ public class ProdutorEmContextoResolver {
 
   private final UsuarioAutenticadoProvider usuarioProvider;
   private final ProdutorRepository produtorRepository;
-  private final ContadorRepository contadorRepository;
+  private final VinculoCarteiraRepository vinculoRepository;
 
   public ProdutorEmContextoResolver(
       UsuarioAutenticadoProvider usuarioProvider,
       ProdutorRepository produtorRepository,
-      ContadorRepository contadorRepository) {
+      VinculoCarteiraRepository vinculoRepository) {
     this.usuarioProvider = usuarioProvider;
     this.produtorRepository = produtorRepository;
-    this.contadorRepository = contadorRepository;
+    this.vinculoRepository = vinculoRepository;
   }
 
   /**
@@ -63,12 +65,40 @@ public class ProdutorEmContextoResolver {
 
     boolean autorizado =
         usuario.isContador()
-            ? contadorRepository.existsByIdAndProdutoresId(usuario.contador().getId(), produtorId)
+            ? atendeAtivo(usuario, produtorId)
             : usuario.produtor().getId().equals(produtorId);
 
     if (!autorizado) {
       throw new ResourceNotFoundException("Produtor", produtorId);
     }
+  }
+
+  /**
+   * Exige um <strong>contador</strong> com vínculo ativo com o produtor — o padrão das rotas
+   * {@code /api/contador/produtores/{produtorId}/...} (issue #177).
+   *
+   * <p>Ali o produtor não entra nem para os próprios dados: ele tem as rotas sem
+   * {@code produtorId}.
+   *
+   * @param produtorId produtor-alvo do path
+   * @return o contador autenticado
+   * @throws PapelNaoAutorizadoException se quem pede não for contador (403)
+   * @throws ResourceNotFoundException se o produtor não estiver na carteira ativa (404)
+   */
+  public UsuarioAutenticado exigirContadorComAcesso(UUID produtorId) {
+    UsuarioAutenticado usuario = usuarioProvider.get();
+    if (!usuario.isContador()) {
+      throw new PapelNaoAutorizadoException(usuario.papel(), PapelUsuario.CONTADOR);
+    }
+    if (!atendeAtivo(usuario, produtorId)) {
+      throw new ResourceNotFoundException("Produtor", produtorId);
+    }
+    return usuario;
+  }
+
+  private boolean atendeAtivo(UsuarioAutenticado contador, UUID produtorId) {
+    return vinculoRepository.existsByContadorIdAndProdutorIdAndSituacao(
+        contador.contador().getId(), produtorId, SituacaoVinculo.ATIVO);
   }
 
   /**

@@ -43,7 +43,8 @@ public class CifragemLegadoRunner implements SmartInitializingSingleton {
   static final Map<String, List<String>> COLUNAS_CIFRADAS = Map.of(
       "produtores", List.of("cpf_cnpj", "email", "telefone"),
       "contadores", List.of("cpf_cnpj", "email", "telefone"),
-      "credencial_usuario", List.of("cpf_cnpj", "email"));
+      "credencial_usuario", List.of("cpf_cnpj", "email"),
+      "convite_carteira", List.of("email"));
 
   private static final int LOTE = 500;
 

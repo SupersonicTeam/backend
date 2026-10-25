@@ -6,16 +6,20 @@ import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
+import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.repository.SessaoRefreshRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.UsuarioAutenticado;
 import br.com.agrocontabil.security.UsuarioAutenticadoProvider;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +44,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>Junto: a credencial é apagada (com ela, sessões e links de redefinição — a conta deixa de
  * existir e todo token emitido morre na próxima requisição), os alertas são apagados, e os
- * vínculos produtor×contador são desfeitos dos dois lados (dado de relacionamento, não fiscal).
+ * vínculos produtor×contador são desfeitos dos dois lados (dado de relacionamento, não fiscal) —
+ * com eles a ficha do cliente (observações e etiquetas) e os convites da carteira (#177).
  *
  * <p><strong>Só o próprio titular, com a senha.</strong> O {@code id} do caminho precisa ser o de
  * quem está autenticado (404 para outro, como o resto do anti-IDOR), e a senha atual é conferida
@@ -64,6 +69,9 @@ public class ExclusaoDadosService {
   private final SessaoRefreshRepository sessaoRepository;
   private final RedefinicaoSenhaRepository redefinicaoRepository;
   private final AlertaTributarioRepository alertaRepository;
+  private final VinculoCarteiraRepository vinculoRepository;
+  private final ConviteCarteiraRepository conviteRepository;
+  private final EtiquetaCarteiraRepository etiquetaRepository;
   private final Clock clock;
   private final TransactionTemplate transacao;
 
@@ -76,6 +84,9 @@ public class ExclusaoDadosService {
       SessaoRefreshRepository sessaoRepository,
       RedefinicaoSenhaRepository redefinicaoRepository,
       AlertaTributarioRepository alertaRepository,
+      VinculoCarteiraRepository vinculoRepository,
+      ConviteCarteiraRepository conviteRepository,
+      EtiquetaCarteiraRepository etiquetaRepository,
       Clock clock,
       PlatformTransactionManager transactionManager) {
     this.usuarioProvider = usuarioProvider;
@@ -86,6 +97,9 @@ public class ExclusaoDadosService {
     this.sessaoRepository = sessaoRepository;
     this.redefinicaoRepository = redefinicaoRepository;
     this.alertaRepository = alertaRepository;
+    this.vinculoRepository = vinculoRepository;
+    this.conviteRepository = conviteRepository;
+    this.etiquetaRepository = etiquetaRepository;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
   }
@@ -111,7 +125,7 @@ public class ExclusaoDadosService {
       if (usuario.papel() == PapelUsuario.CONTADOR) {
         anonimizarContador(id);
       } else {
-        anonimizarProdutor(id);
+        anonimizarProdutor(id, credencial.getEmail());
       }
       // Sem esperar o CASCADE do banco: os filhos vao explicitamente, na mesma transacao.
       sessaoRepository.revogarDaCredencial(credencial.getId(), OffsetDateTime.now(clock));
@@ -122,7 +136,7 @@ public class ExclusaoDadosService {
         usuario.papel(), id);
   }
 
-  private void anonimizarProdutor(UUID id) {
+  private void anonimizarProdutor(UUID id, String email) {
     produtorRepository.findById(id).ifPresent(produtor -> {
       produtor.setNomeCompleto(NOME_ANONIMIZADO);
       produtor.setEmail(null);
@@ -131,8 +145,10 @@ public class ExclusaoDadosService {
       produtor.setCulturas(null);
       produtor.setFaturamentoAnual(null);
     });
-    // O contador da carteira deixa de alcancar a conta encerrada (guias, calendario).
-    contadorRepository.desvincularProdutor(id);
+    // O contador da carteira deixa de alcancar a conta encerrada (guias, calendario); a ficha
+    // (observacoes, etiquetas) mora no vinculo e vai junto.
+    apagarVinculos(vinculoRepository.findIdsDoProdutor(id));
+    conviteRepository.apagarDoProdutor(id, email);
     alertaRepository.apagarDoProdutor(id);
   }
 
@@ -145,7 +161,17 @@ public class ExclusaoDadosService {
       // CRC, que juntos reidentificariam a pessoa no cadastro publico do conselho.
       contador.setCpfCnpj(null);
       contador.setCrc(null);
-      contador.getProdutores().clear();
     });
+    apagarVinculos(vinculoRepository.findIdsDoContador(id));
+    conviteRepository.apagarDoContador(id);
+    etiquetaRepository.apagarDoContador(id);
+  }
+
+  private void apagarVinculos(List<UUID> vinculos) {
+    if (vinculos.isEmpty()) {
+      return;
+    }
+    vinculoRepository.apagarEtiquetasDosVinculos(vinculos);
+    vinculoRepository.apagarPorIds(vinculos);
   }
 }

@@ -9,14 +9,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
+import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,8 +29,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -59,6 +63,7 @@ class ContadorEscopoIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private ContadorRepository contadorRepository;
+  @Autowired private VinculoCarteiraRepository vinculoRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
   @Autowired private TestDatabaseCleaner cleaner;
 
@@ -82,8 +87,10 @@ class ContadorEscopoIntegrationTest {
         .nomeCompleto("Escritorio Campo Certo")
         .cpfCnpj("12.345.678/0001-95")
         .build();
-    novo.vincular(atendido);
     contador = contadorRepository.save(novo);
+    vinculoRepository.save(VinculoCarteira.builder().contadorId(contador.getId())
+        .produtorId(atendido.getId()).situacao(SituacaoVinculo.ATIVO)
+        .inicio(OffsetDateTime.now()).build());
 
     guiaFiscalRepository.save(guia(atendido));
     guiaFiscalRepository.save(guia(naoAtendido));
