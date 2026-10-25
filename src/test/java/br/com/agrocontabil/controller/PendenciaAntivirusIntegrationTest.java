@@ -159,6 +159,31 @@ class PendenciaAntivirusIntegrationTest {
   }
 
   @Test
+  @DisplayName("ameaca registrada mesmo se a pendencia fechou durante a verificacao")
+  void infectadoRegistradoComPendenciaFechadaNoMeio() throws Exception {
+    String id = criar();
+    doAnswer(chamada -> {
+      // O contador cancela enquanto o clamd verifica.
+      jdbcTemplate.update("UPDATE pendencia SET status = 'CANCELADA' WHERE id = ?",
+          UUID.fromString(id));
+      return ResultadoVerificacao.infectado("Pdf.Exploit");
+    }).when(antivirus).verificar(any());
+
+    mockMvc.perform(multipart("/api/pendencias/{id}/anexos", id)
+            .file(new MockMultipartFile("arquivo", "x.pdf", "application/pdf", PDF))
+            .header(HttpHeaders.AUTHORIZATION, tokenProdutor))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.errors[0].code").value("ANEXO_INFECTADO"));
+
+    assertThat(jdbcTemplate.queryForObject("SELECT situacao FROM pendencia_anexo", String.class))
+        .isEqualTo("INFECTADO");
+    assertThat(jdbcTemplate.queryForList(
+        "SELECT acao FROM registro_auditoria WHERE acao = 'PENDENCIA_ANEXO_INFECTADO'",
+        String.class)).hasSize(1);
+    assertThat(statusPendencia(id)).isEqualTo("CANCELADA");
+  }
+
+  @Test
   @DisplayName("antivirus chamado fora de transacao e antes do tipo (o parse so ve arquivo limpo)")
   void verificacaoForaDeTransacao() throws Exception {
     when(antivirus.verificar(any())).thenAnswer(chamada -> {

@@ -283,12 +283,17 @@ public class PendenciaService {
     leitura.executeWithoutResult(status -> conferirAnexavel(
         pendenciaRepository.findDoProdutorAtiva(pendenciaId, produtorId), pendenciaId));
     Optional<ResultadoVerificacao> veredito = verificacao.verificar(conteudo);
+    boolean infectado = veredito.filter(ResultadoVerificacao::infectado).isPresent();
     // O registro do infectado nao tem tipo conferido: nunca e baixado.
-    String mime = veredito.filter(ResultadoVerificacao::infectado).isPresent()
-        ? MIME_NAO_CONFERIDO : ConferenciaAnexo.mimeConferido(conteudo);
+    String mime = infectado ? MIME_NAO_CONFERIDO : ConferenciaAnexo.mimeConferido(conteudo);
     Gravado gravado = transacao.execute(status -> {
-      Pendencia pendencia = conferirAnexavel(
-          pendenciaRepository.findDoProdutorAtivaForUpdate(pendenciaId, produtorId), pendenciaId);
+      Optional<Pendencia> travada =
+          pendenciaRepository.findDoProdutorAtivaForUpdate(pendenciaId, produtorId);
+      // A ameaca fica registrada mesmo se a pendencia fechou ou encheu durante a verificacao: o
+      // registro nao ocupa vaga nem muda o status. So o dono (404) e reconferido.
+      Pendencia pendencia = infectado
+          ? travada.orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId))
+          : conferirAnexavel(travada, pendenciaId);
       PendenciaAnexo anexo = PendenciaAnexo.builder()
           .pendenciaId(pendenciaId)
           .nomeArquivo(ConferenciaAnexo.nomeSanitizado(nomeOriginal))
@@ -303,7 +308,7 @@ public class PendenciaService {
       // O veredito entra antes do save: um arquivo infectado nunca chega ao banco.
       veredito.ifPresent(resultado -> verificacao.aplicar(anexo, pendencia, resultado));
       anexoRepository.save(anexo);
-      return new Gravado(anexo, pendencia, resposta(pendencia, true));
+      return new Gravado(anexo, pendencia, infectado ? null : resposta(pendencia, true));
     });
     PendenciaAnexo anexo = gravado.anexo();
     if (anexo.getSituacao() == SituacaoAnexo.INFECTADO) {
