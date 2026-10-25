@@ -63,6 +63,16 @@ public interface ConviteMembroRepository extends JpaRepository<ConviteMembro, UU
   long countByEscritorioIdAndCriadoEmAfter(UUID escritorioId, OffsetDateTime desde);
 
   /**
+   * Convite de equipe mais antigo do escritório desde um instante (quando o teto libera).
+   *
+   * @param escritorioId escritório
+   * @param desde        início da janela
+   * @return o mais antigo da janela, se houver
+   */
+  Optional<ConviteMembro> findFirstByEscritorioIdAndCriadoEmAfterOrderByCriadoEmAsc(
+      UUID escritorioId, OffsetDateTime desde);
+
+  /**
    * Apaga os convites não usados do escritório para o e-mail.
    *
    * @param escritorioId escritório

@@ -34,6 +34,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,6 +50,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @AutoConfigureMockMvc
 @Import({TestDatabaseCleaner.class, EscritorioEquipeIntegrationTest.CapturaConvite.class})
 @ActiveProfiles("test")
+@TestPropertySource(properties = "app.escritorio.convite.max-por-dia=5")
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
 @DisplayName("Escritorio com equipe: convite, funcoes, responsavel e dois escritorios (#228)")
@@ -386,6 +388,79 @@ class EscritorioEquipeIntegrationTest {
     mockMvc.perform(get("/api/escritorio/membros").header(HttpHeaders.AUTHORIZATION, tokenAdminB))
         .andExpect(header().string("X-Total-Count", "1"))
         .andExpect(jsonPath("$[0].id").value(adminB.usuarioId().toString()));
+  }
+
+  @Test
+  @DisplayName("convite do proprio escritorio nao muda funcao: o admin unico nao se rebaixa (400)")
+  void aceiteNoMesmoEscritorio() throws Exception {
+    String tokenProprio = conviteDeEquipe(EMAIL_ADMIN_A, "ASSISTENTE");
+
+    mockMvc.perform(post("/api/escritorio/membros/convites/aceitar")
+            .header(HttpHeaders.AUTHORIZATION, tokenAdminA).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"token\":\"%s\"}".formatted(tokenProprio)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("CONVITE_EQUIPE_INVALIDO"));
+
+    assertThat(jdbcTemplate.queryForObject("SELECT funcao_escritorio FROM contadores WHERE id = ?",
+        String.class, adminA.usuarioId())).isEqualTo("ADMINISTRADOR");
+  }
+
+  @Test
+  @DisplayName("convite de equipe: reenvio em 24 h nao manda outro e-mail; teto com Retry-After")
+  void reenvioETetoDeEquipe() throws Exception {
+    convidarMembro(tokenAdminA, EMAIL_NOVO, "CONTADOR").andExpect(status().isAccepted());
+    convidarMembro(tokenAdminA, EMAIL_NOVO, "CONTADOR").andExpect(status().isAccepted());
+    assertThat(LINKS.poll(5, TimeUnit.SECONDS)).isNotNull();
+    assertThat(LINKS.poll(1, TimeUnit.SECONDS)).isNull();
+
+    for (int i = 0; i < 4; i++) {
+      convidarMembro(tokenAdminA, "m" + i + "@x.com", "CONTADOR")
+          .andExpect(status().isAccepted());
+    }
+    jdbcTemplate.update("UPDATE convite_membro SET criado_em = DATEADD('HOUR', -22,"
+        + " CURRENT_TIMESTAMP)");
+    String espera = convidarMembro(tokenAdminA, "sexto@x.com", "CONTADOR")
+        .andExpect(status().isTooManyRequests())
+        .andExpect(jsonPath("$.errors[0].code").value("LIMITE_CONVITES"))
+        .andReturn().getResponse().getHeader(HttpHeaders.RETRY_AFTER);
+    assertThat(Long.parseLong(espera)).isBetween(7000L, 7300L);
+  }
+
+  @Test
+  @DisplayName("convite vencido nao bloqueia o reenvio, mesmo dentro de 24 h")
+  void reenvioDeConviteVencido() throws Exception {
+    convidarMembro(tokenAdminA, EMAIL_NOVO, "CONTADOR").andExpect(status().isAccepted());
+    assertThat(LINKS.poll(5, TimeUnit.SECONDS)).isNotNull();
+    jdbcTemplate.update("UPDATE convite_membro SET expira_em = DATEADD('MINUTE', -1,"
+        + " CURRENT_TIMESTAMP)");
+
+    convidarMembro(tokenAdminA, EMAIL_NOVO, "CONTADOR").andExpect(status().isAccepted());
+
+    assertThat(LINKS.poll(5, TimeUnit.SECONDS)).isNotNull();
+  }
+
+  @Test
+  @DisplayName("PATCH do escritorio: CNPJ ausente fica, vazio apaga; a edicao e auditada")
+  void patchDoEscritorio() throws Exception {
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenAdminA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Escritorio A\",\"cnpj\":\"11222333000181\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.cnpj").value("11222333000181"));
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenAdminA)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Novo Nome\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.nome").value("Novo Nome"))
+        .andExpect(jsonPath("$.cnpj").value("11222333000181"));
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenAdminA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Novo Nome\",\"cnpj\":\"\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.cnpj").doesNotExist());
+
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM registro_auditoria"
+        + " WHERE acao = 'ESCRITORIO_ALTERADO' AND sucesso = TRUE AND recurso_id = ?",
+        Integer.class, escritorioDe(adminA.usuarioId()))).isEqualTo(3);
   }
 
   @Test

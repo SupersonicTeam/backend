@@ -137,11 +137,12 @@ public class EquipeEscritorioService {
   }
 
   /**
-   * Edita nome e CNPJ do escritório (só administrador).
+   * Edita nome e CNPJ do escritório (só administrador). O nome aparece nos e-mails de convite.
    *
    * @param request dados novos
    * @return o escritório
    */
+  @Auditado(acao = AcaoAuditada.ESCRITORIO_ALTERADO, recurso = RecursoAuditado.ESCRITORIO)
   public EscritorioResponse atualizar(EscritorioRequest request) {
     Contador membro = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR);
     return transacao.execute(status -> {
@@ -149,7 +150,10 @@ public class EquipeEscritorioService {
           .orElseThrow(() -> new ResourceNotFoundException("Escritorio",
               membro.getEscritorioId()));
       escritorio.setNome(request.nome().strip());
-      escritorio.setCnpj(request.cnpj());
+      // PATCH: CNPJ ausente fica como esta; vazio apaga.
+      if (request.cnpj() != null) {
+        escritorio.setCnpj(request.cnpj().isBlank() ? null : request.cnpj());
+      }
       return resposta(escritorio, membro);
     });
   }
@@ -237,16 +241,23 @@ public class EquipeEscritorioService {
       var vigente = conviteRepository
           .findFirstByEscritorioIdAndEmailAndUsadoEmIsNullOrderByCriadoEmDesc(
               escritorioId, normalizado)
-          .filter(c -> c.getCriadoEm().isAfter(agora.minus(JANELA_TETO)));
+          .filter(c -> c.getCriadoEm().isAfter(agora.minus(JANELA_TETO)))
+          .filter(c -> c.getExpiraEm().isAfter(agora));
       if (vigente.isPresent()) {
         // Mesmo e-mail em menos de 24 h: o convite vigente fica, sem novo e-mail (o reenvio
         // escaparia do teto e encheria a caixa de entrada de uma pessoa).
         return vigente.get();
       }
+      OffsetDateTime inicioJanela = agora.minus(JANELA_TETO);
       long naJanela = conviteRepository.countByEscritorioIdAndCriadoEmAfter(
-          escritorioId, agora.minus(JANELA_TETO));
+          escritorioId, inicioJanela);
       if (naJanela >= propriedades.maxPorDia()) {
-        throw new LimiteConvitesException(propriedades.maxPorDia(), JANELA_TETO.toSeconds());
+        long espera = conviteRepository
+            .findFirstByEscritorioIdAndCriadoEmAfterOrderByCriadoEmAsc(escritorioId, inicioJanela)
+            .map(maisAntigo -> Duration.between(agora, maisAntigo.getCriadoEm().plus(JANELA_TETO))
+                .toSeconds())
+            .orElse(JANELA_TETO.toSeconds());
+        throw new LimiteConvitesException(propriedades.maxPorDia(), espera);
       }
       conviteRepository.apagarPendentes(escritorioId, normalizado);
       String token = TokenOpaco.gerar();
@@ -306,7 +317,12 @@ public class EquipeEscritorioService {
       Contador gerenciado = contadorRepository.findById(contador.getId())
           .orElseThrow(ConviteEquipeInvalidoException::new);
       UUID anterior = gerenciado.getEscritorioId();
-      if (anterior != null && !anterior.equals(convite.getEscritorioId())) {
+      if (convite.getEscritorioId().equals(anterior)) {
+        // Ja e da equipe: funcao se troca por PATCH, sob a regra do ultimo administrador. Pelo
+        // convite, o administrador unico se rebaixaria e deixaria o escritorio sem nenhum.
+        throw new ConviteEquipeInvalidoException();
+      }
+      if (anterior != null) {
         sairDoAnteriorVazio(gerenciado, anterior);
         // As exclusoes em massa do escritorio antigo limpam o contexto de persistencia: o
         // contador e o convite voltam a ser lidos para a gravacao valer.
