@@ -107,6 +107,16 @@ public enum ErrorCode {
    */
   LIMITE_CONVITES,
   /**
+   * Transição da revisão que o status da nota não permite (ex.: aprovar nota que não está
+   * aguardando aprovação) ou envio sem contador vinculado — issue #178. HTTP 409.
+   */
+  TRANSICAO_REVISAO_INVALIDA,
+  /**
+   * Produtor com contador vinculado tentou gerar o XML de nota não aprovada (issue #178).
+   * HTTP 409.
+   */
+  APROVACAO_EXIGIDA,
+  /**
    * Obrigação do catálogo com prazo incoerente (mês na mensal, sem mês na anual) ou operação que
    * não cabe nela (restaurar padrão de obrigação própria) — issue #181. HTTP 400.
    */

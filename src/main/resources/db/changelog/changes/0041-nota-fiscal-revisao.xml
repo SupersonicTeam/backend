@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0041-nota-fiscal-revisao.xml
+         Issue #178 (aprovacao do contador antes da emissao).
+
+         Historico da revisao da nota, no padrao de nota_fiscal_validacao:
+         uma linha por acao (ENVIADA, RETIRADA, APROVADA, DEVOLVIDA,
+         APROVACAO_CADUCADA), com o motivo da devolucao e quem agiu (id da
+         identidade e papel; sem nome nem documento).
+
+         Os status novos da nota (AGUARDANDO_APROVACAO, APROVADA, DEVOLVIDA)
+         nao pedem changeSet: nota_fiscal.status e VARCHAR(20) sem CHECK,
+         e AGUARDANDO_APROVACAO tem exatamente 20 caracteres.
+         ================================================================ -->
+
+    <changeSet id="0041-create-nota-fiscal-revisao" author="supersonic-team">
+        <comment>Cria nota_fiscal_revisao (historico de envio, aprovacao e devolucao).</comment>
+
+        <createTable tableName="nota_fiscal_revisao">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nota_fiscal_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="acao" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="motivo" type="VARCHAR(500)"/>
+            <column name="usuario_id" type="UUID"/>
+            <column name="papel" type="VARCHAR(20)"/>
+            <column name="ocorrido_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="nota_fiscal_revisao" baseColumnNames="nota_fiscal_id"
+                constraintName="fk_nota_fiscal_revisao_nota"
+                referencedTableName="nota_fiscal" referencedColumnNames="id" onDelete="CASCADE"/>
+
+        <createIndex tableName="nota_fiscal_revisao" indexName="idx_nota_fiscal_revisao_nota">
+            <column name="nota_fiscal_id"/>
+            <column name="ocorrido_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="nota_fiscal_revisao"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
