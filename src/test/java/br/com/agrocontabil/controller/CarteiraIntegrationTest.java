@@ -218,6 +218,19 @@ class CarteiraIntegrationTest {
   }
 
   @Test
+  @DisplayName("convite: reenvio horas depois tambem nao manda e-mail (um por endereco por dia)")
+  void reenvioNoMesmoDiaNaoEscapaDoTeto() throws Exception {
+    convidar(tokenContador, EMAIL_A).andExpect(status().isAccepted());
+    assertThat(ENVIADOS.poll(5, TimeUnit.SECONDS)).isNotNull();
+    jdbcTemplate.update("UPDATE convite_carteira SET criado_em = DATEADD('HOUR', -5,"
+        + " CURRENT_TIMESTAMP)");
+
+    convidar(tokenContador, EMAIL_A).andExpect(status().isAccepted());
+
+    assertThat(ENVIADOS.poll(1, TimeUnit.SECONDS)).isNull();
+  }
+
+  @Test
   @DisplayName("convite: teto diario por escritorio vira 429 com Retry-After")
   void conviteComTeto() throws Exception {
     for (int i = 0; i < 5; i++) {
@@ -226,6 +239,23 @@ class CarteiraIntegrationTest {
     convidar(tokenContador, "sexto@x.com").andExpect(status().isTooManyRequests())
         .andExpect(header().exists(HttpHeaders.RETRY_AFTER))
         .andExpect(jsonPath("$.errors[0].code").value("LIMITE_CONVITES"));
+  }
+
+  @Test
+  @DisplayName("convite: Retry-After conta ate o convite mais antigo sair da janela de 24 h")
+  void retryAfterPeloConviteMaisAntigo() throws Exception {
+    for (int i = 0; i < 5; i++) {
+      convidar(tokenContador, "convidado" + i + "@x.com").andExpect(status().isAccepted());
+    }
+    jdbcTemplate.update("UPDATE convite_carteira SET criado_em = DATEADD('HOUR', -22,"
+        + " CURRENT_TIMESTAMP)");
+
+    String espera = convidar(tokenContador, "sexto@x.com")
+        .andExpect(status().isTooManyRequests())
+        .andReturn().getResponse().getHeader(HttpHeaders.RETRY_AFTER);
+
+    // Faltam ~2 h para o mais antigo sair da janela.
+    assertThat(Long.parseLong(espera)).isBetween(7000L, 7300L);
   }
 
   @Test
@@ -479,6 +509,20 @@ class CarteiraIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.observacoes").doesNotExist());
     assertThat(vinculoRepository.findIdsDoContador(contador.usuarioId())).hasSize(2);
+
+    // Historico: cada vinculo encerrado e uma linha propria (vinculoId), e de quem saiu o
+    // escritorio guarda so o nome, sem os dados atuais do produtor.
+    mockMvc.perform(post("/api/contador/produtores/{id}/encerrar", produtorA.usuarioId())
+            .header(HttpHeaders.AUTHORIZATION, tokenContador))
+        .andExpect(status().isOk());
+    JsonNode encerrados = json(comoContador("/api/contador/produtores?situacao=ENCERRADO"));
+    assertThat(encerrados).hasSize(2);
+    assertThat(encerrados.get(0).get("vinculoId").asText())
+        .isNotEqualTo(encerrados.get(1).get("vinculoId").asText());
+    assertThat(encerrados.get(0).get("nomeCompleto").asText()).isEqualTo("Joaquim Conceição");
+    assertThat(encerrados.get(0).get("cpfCnpj").isNull()).isTrue();
+    assertThat(encerrados.get(0).get("uf").isNull()).isTrue();
+    assertThat(encerrados.get(0).get("regime").isNull()).isTrue();
   }
 
   @Test

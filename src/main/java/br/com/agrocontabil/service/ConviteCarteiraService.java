@@ -57,8 +57,15 @@ public class ConviteCarteiraService {
 
   private static final Logger log = LoggerFactory.getLogger(ConviteCarteiraService.class);
 
-  /** Reenviar ao mesmo e-mail antes disso devolve o convite vigente, sem novo e-mail. */
-  static final Duration INTERVALO_MINIMO_REENVIO = Duration.ofHours(1);
+  /** Janela do teto de convites. */
+  static final Duration JANELA_TETO = Duration.ofHours(24);
+
+  /**
+   * Reenviar ao mesmo e-mail antes disso devolve o convite vigente, sem novo e-mail. Igual à
+   * janela do teto de propósito: o reenvio apaga a linha anterior, e com intervalo menor um
+   * endereço receberia várias mensagens no dia sem que nenhuma somasse no teto.
+   */
+  static final Duration INTERVALO_MINIMO_REENVIO = JANELA_TETO;
 
   /** Tamanho máximo do nome do escritório no texto do e-mail. */
   private static final int NOME_MAXIMO_NO_EMAIL = 120;
@@ -124,11 +131,19 @@ public class ConviteCarteiraService {
     OffsetDateTime agora = OffsetDateTime.now(clock);
 
     ConviteCarteira convite = transacao.execute(status -> {
-      long ultimas24h = conviteRepository.countByContadorIdAndCriadoEmAfter(
-          contador.getId(), agora.minusHours(24));
-      if (ultimas24h >= propriedades.maxPorDia()) {
-        throw new LimiteConvitesException(
-            propriedades.maxPorDia(), Duration.ofHours(1).toSeconds());
+      // Serializa os convites do escritorio: sem o lock, requisicoes simultaneas leriam a mesma
+      // contagem e passariam juntas do teto.
+      contadorRepository.findByIdForUpdate(contador.getId());
+      OffsetDateTime inicioJanela = agora.minus(JANELA_TETO);
+      long naJanela = conviteRepository.countByContadorIdAndCriadoEmAfter(
+          contador.getId(), inicioJanela);
+      if (naJanela >= propriedades.maxPorDia()) {
+        long espera = conviteRepository
+            .findFirstByContadorIdAndCriadoEmAfterOrderByCriadoEmAsc(contador.getId(), inicioJanela)
+            .map(maisAntigo -> Duration.between(agora, maisAntigo.getCriadoEm().plus(JANELA_TETO))
+                .toSeconds())
+            .orElse(JANELA_TETO.toSeconds());
+        throw new LimiteConvitesException(propriedades.maxPorDia(), espera);
       }
       Optional<ConviteCarteira> recente = conviteRepository
           .findByContadorIdAndEmailAndSituacao(contador.getId(), normalizado,

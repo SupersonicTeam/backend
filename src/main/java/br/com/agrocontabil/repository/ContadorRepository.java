@@ -1,10 +1,14 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.Contador;
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repositório Spring Data JPA para {@link Contador} — issue #93.
@@ -38,4 +42,15 @@ public interface ContadorRepository extends JpaRepository<Contador, UUID> {
    * @return {@code true} se algum contador tem um deles
    */
   boolean existsByCpfCnpjIn(Collection<String> grafias);
+
+  /**
+   * Contador sob lock pessimista: serializa os convites de um escritório para o teto diário
+   * (issue #177) não ser furado por requisições simultâneas.
+   *
+   * @param id contador
+   * @return o contador, se existir
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT c FROM Contador c WHERE c.id = :id")
+  Optional<Contador> findByIdForUpdate(@Param("id") UUID id);
 }

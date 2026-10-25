@@ -389,13 +389,16 @@ public class CarteiraService {
   private static ProdutorCarteiraResponse resposta(VinculoCarteira vinculo,
       List<String> etiquetas, AtencaoCarteiraResponse atencao) {
     Produtor produtor = vinculo.getProdutor();
+    // Encerrado: so o nome, para o historico; o resto e dado atual de quem nao e mais cliente.
+    boolean cliente = vinculo.getSituacao() != SituacaoVinculo.ENCERRADO;
     return new ProdutorCarteiraResponse(
+        vinculo.getId(),
         produtor.getId(),
         produtor.getNomeCompleto(),
-        produtor.getCpfCnpj(),
-        produtor.getTipoProdutor(),
-        produtor.getRegimeTributario(),
-        produtor.getEstado(),
+        cliente ? produtor.getCpfCnpj() : null,
+        cliente ? produtor.getTipoProdutor() : null,
+        cliente ? produtor.getRegimeTributario() : null,
+        cliente ? produtor.getEstado() : null,
         vinculo.getSituacao(),
         vinculo.getInicio(),
         vinculo.getFim(),

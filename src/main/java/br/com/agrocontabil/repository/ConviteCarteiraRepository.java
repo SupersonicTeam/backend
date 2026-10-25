@@ -83,6 +83,16 @@ public interface ConviteCarteiraRepository extends JpaRepository<ConviteCarteira
   long countByContadorIdAndCriadoEmAfter(UUID contadorId, OffsetDateTime desde);
 
   /**
+   * Convite mais antigo do escritório desde um instante (quando o teto libera de novo).
+   *
+   * @param contadorId escritório
+   * @param desde      início da janela
+   * @return o mais antigo da janela, se houver
+   */
+  Optional<ConviteCarteira> findFirstByContadorIdAndCriadoEmAfterOrderByCriadoEmAsc(
+      UUID contadorId, OffsetDateTime desde);
+
+  /**
    * Apaga o convite pendente do escritório para o e-mail (reenviar substitui o anterior).
    *
    * @param contadorId escritório
