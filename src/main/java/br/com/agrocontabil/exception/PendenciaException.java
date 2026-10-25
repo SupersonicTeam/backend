@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 
 /**
  * Recusas do fluxo de pendências e anexos (issue #180): transição inválida (409), anexo
- * recusado (400) e teto de anexos (409).
+ * recusado (400), teto de anexos (409) e, do antivírus (#227), anexo infectado (422) e em
+ * verificação (409).
  */
 public class PendenciaException extends DomainException {
 
@@ -46,6 +47,31 @@ public class PendenciaException extends DomainException {
     return new PendenciaException(HttpStatus.BAD_REQUEST, ErrorCode.ANEXO_INVALIDO, "arquivo",
         motivo, "Envie um PDF, JPEG, PNG ou XML de ate 5 MB.", null,
         "PDF, JPEG, PNG ou XML, ate 5 MB");
+  }
+
+  /**
+   * O antivírus achou ameaça no arquivo (#227); o conteúdo já foi descartado.
+   *
+   * @param assinatura nome da assinatura achada
+   * @return a exceção (422)
+   */
+  public static PendenciaException anexoInfectado(String assinatura) {
+    return new PendenciaException(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.ANEXO_INFECTADO,
+        "arquivo", "O antivirus encontrou uma ameaca no arquivo; ele nao foi guardado.",
+        "Passe um antivirus no seu computador e envie o documento de novo, de preferencia "
+            + "gerado outra vez a partir do original.", assinatura, null);
+  }
+
+  /**
+   * O anexo ainda não passou pelo antivírus (#227).
+   *
+   * @param anexoId anexo
+   * @return a exceção (409)
+   */
+  public static PendenciaException anexoEmVerificacao(UUID anexoId) {
+    return new PendenciaException(HttpStatus.CONFLICT, ErrorCode.ANEXO_EM_VERIFICACAO, "anexoId",
+        "O anexo " + anexoId + " ainda esta em verificacao de antivirus.",
+        "Tente baixar de novo em alguns minutos.", "EM_VERIFICACAO", "LIMPO");
   }
 
   /**

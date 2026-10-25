@@ -100,6 +100,17 @@ public interface PendenciaRepository extends JpaRepository<Pendencia, UUID> {
       @Param("produtorId") UUID produtorId);
 
   /**
+   * Pendência sob lock pessimista, sem filtro de dono: só para o job do antivírus (#227), que
+   * parte de um anexo já gravado, não de uma requisição.
+   *
+   * @param id pendência
+   * @return a pendência
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT p FROM Pendencia p WHERE p.id = :id")
+  Optional<Pendencia> findByIdForUpdate(@Param("id") UUID id);
+
+  /**
    * Pendências em aberto com prazo na janela, dos escritórios informados (calendário).
    *
    * @param produtorId  produtor

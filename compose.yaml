@@ -72,6 +72,31 @@ services:
         condition: service_healthy
     restart: 'no'
 
+  # Antivirus dos anexos das pendencias (issue #227). Fora do compose padrao de dev (o clamd usa
+  # ~1,5 GB de RAM com as assinaturas carregadas): so sobe com o profile "antivirus" (ou "full").
+  # Sem ele o dev roda com ANTIVIRUS_MODO=SEM_VERIFICACAO (padrao do application-dev.yml).
+  #   docker compose --profile antivirus up -d clamav   # e ANTIVIRUS_MODO=CLAMAV no backend
+  # A imagem ja traz as assinaturas; o freshclam do proprio container as atualiza. A primeira
+  # subida leva ~1 min (clamd carregando a base): ate la o backend deixa os anexos em verificacao.
+  clamav:
+    profiles:
+      - antivirus
+      - full
+    image: 'clamav/clamav:1.4.3'
+    container_name: agrocontabil-clamav
+    # Somente loopback: o clamd nao tem autenticacao. O backend do compose chega pela rede
+    # interna (clamav:3310).
+    ports:
+      - '127.0.0.1:${ANTIVIRUS_PORTA:-3310}:3310'
+    volumes:
+      - agrocontabil_clamav:/var/lib/clamav
+    healthcheck:
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
   backend:
     profiles:
       - full
@@ -95,6 +120,8 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.openai.com}
       AI_API_COMPLETIONS_PATH: ${AI_API_COMPLETIONS_PATH:-/v1/chat/completions}
+      ANTIVIRUS_MODO: CLAMAV
+      ANTIVIRUS_HOST: clamav
     ports:
       - '8080:8080'
     depends_on:
@@ -110,3 +137,4 @@ services:
 volumes:
   agrocontabil_pgdata:
   agrocontabil_ollama:
+  agrocontabil_clamav:

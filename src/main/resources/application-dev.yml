@@ -44,6 +44,11 @@ app:
     # Dev sem SMTP: o link de redefinicao de senha vai para o log (#209).
     redefinicao:
       modo-email: ${EMAIL_MODO:LOG}
+  # Dev sem o container do ClamAV: anexo sai limpo sem verificar (#227). Com
+  # `docker compose --profile antivirus up -d clamav`, use ANTIVIRUS_MODO=CLAMAV.
+  pendencias:
+    antivirus:
+      modo: ${ANTIVIRUS_MODO:SEM_VERIFICACAO}
   # Senha das contas semeadas (#206). Vazia = seed sem credencial; precisa passar na politica.
   seed:
     senha: ${SEED_SENHA:}

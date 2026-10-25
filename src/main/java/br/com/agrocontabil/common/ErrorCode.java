@@ -119,6 +119,13 @@ public enum ErrorCode {
   /** A pendência já tem o máximo de anexos (10) — issue #180. HTTP 409. */
   LIMITE_ANEXOS,
   /**
+   * O antivírus achou ameaça no anexo; o conteúdo foi descartado (issue #227). HTTP 422, com o
+   * nome da assinatura em {@code rejectedValue}.
+   */
+  ANEXO_INFECTADO,
+  /** Download de anexo que ainda não passou pelo antivírus (issue #227). HTTP 409. */
+  ANEXO_EM_VERIFICACAO,
+  /**
    * Transição da revisão que o status da nota não permite (ex.: aprovar nota que não está
    * aguardando aprovação) ou envio sem contador vinculado — issue #178. HTTP 409.
    */

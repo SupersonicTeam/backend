@@ -9,12 +9,14 @@ import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Pendencia;
 import br.com.agrocontabil.model.PendenciaAnexo;
 import br.com.agrocontabil.model.RecursoAuditado;
+import br.com.agrocontabil.model.SituacaoAnexo;
 import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.repository.AnexoResumo;
 import br.com.agrocontabil.repository.ContagemPorPendencia;
 import br.com.agrocontabil.repository.PendenciaAnexoRepository;
 import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
+import br.com.agrocontabil.service.VerificacaoAntivirus.ResultadoVerificacao;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -22,11 +24,14 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Pendências e documentos (issue #180, versão mínima): o escritório pede, o produtor anexa.
@@ -35,7 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
  * qualquer membro, só a carteira ativa (404 fora); lado do produtor em {@code /api/pendencias},
  * só as dele (404 para a de outro). As transições gravam sob o lock pessimista da pendência e
  * rechecam o status. O anexo é conferido pelos bytes (PDF/JPEG/PNG/XML, até 5 MB, até 10 por
- * pendência) e fica no banco; o download devolve o MIME conferido, nunca o declarado.
+ * pendência) e fica no banco; o download devolve o MIME conferido, nunca o declarado, e só de
+ * anexo que o antivírus deu como limpo (#227, {@link VerificacaoAnexoService}).
  */
 @Service
 public class PendenciaService {
@@ -43,21 +49,32 @@ public class PendenciaService {
   /** Teto de anexos por pendência. */
   static final int MAXIMO_ANEXOS = 10;
 
+  /** MIME do registro de um anexo infectado, recusado antes da conferência do tipo (#227). */
+  static final String MIME_NAO_CONFERIDO = "application/octet-stream";
+
   private static final Set<StatusPendencia> TODOS = EnumSet.allOf(StatusPendencia.class);
 
   private final ProdutorEmContextoResolver produtorEmContexto;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final PendenciaRepository pendenciaRepository;
   private final PendenciaAnexoRepository anexoRepository;
+  private final VerificacaoAnexoService verificacao;
+  private final TransactionTemplate transacao;
+  private final TransactionTemplate leitura;
   private final Clock clock;
 
   public PendenciaService(ProdutorEmContextoResolver produtorEmContexto,
       AuthenticatedProdutorProvider produtorProvider, PendenciaRepository pendenciaRepository,
-      PendenciaAnexoRepository anexoRepository, Clock clock) {
+      PendenciaAnexoRepository anexoRepository, VerificacaoAnexoService verificacao,
+      PlatformTransactionManager transactionManager, Clock clock) {
     this.produtorEmContexto = produtorEmContexto;
     this.produtorProvider = produtorProvider;
     this.pendenciaRepository = pendenciaRepository;
     this.anexoRepository = anexoRepository;
+    this.verificacao = verificacao;
+    this.transacao = new TransactionTemplate(transactionManager);
+    this.leitura = new TransactionTemplate(transactionManager);
+    this.leitura.setReadOnly(true);
     this.clock = clock;
   }
 
@@ -242,40 +259,73 @@ public class PendenciaService {
   }
 
   /**
-   * O produtor anexa um arquivo: a pendência vai a {@code ENVIADA}. Só em escritório com vínculo
-   * {@code ATIVO}; dono, status e teto são conferidos antes de o arquivo ser lido.
+   * O produtor anexa um arquivo. Só em escritório com vínculo {@code ATIVO}; dono, status e teto
+   * são conferidos antes de o arquivo ser lido.
+   *
+   * <p>Antivírus (#227), em três fases e sem transação durante a verificação: confere (leitura
+   * curta) → verifica o arquivo → grava sob o lock da pendência, rechecando status e teto.
+   * {@code LIMPO} leva a pendência a {@code ENVIADA}; sem veredito o anexo fica
+   * {@code EM_VERIFICACAO} (201, a pendência não muda até o job verificar); {@code INFECTADO}
+   * grava só o registro, sem o arquivo, e responde 422. O antivírus vem antes da conferência do
+   * tipo: toda ameaça que chega fica registrada (o arquivo de teste EICAR, que é texto, sai 422 e
+   * não 400), e o parse do XML só roda em arquivo limpo.
    *
    * @param pendenciaId  pendência
    * @param nomeOriginal nome do arquivo enviado
    * @param conteudo     bytes
    * @return a pendência, com os anexos
-   * @throws PendenciaException arquivo recusado (400), teto de anexos (409) ou pendência fechada
-   *     (409)
+   * @throws PendenciaException arquivo recusado (400), teto de anexos (409), pendência fechada
+   *     (409) ou arquivo infectado (422)
    */
-  @Transactional
   @Auditado(acao = AcaoAuditada.PENDENCIA_ANEXO_ENVIADO, recurso = RecursoAuditado.PENDENCIA)
   public PendenciaResponse anexar(UUID pendenciaId, String nomeOriginal, byte[] conteudo) {
     UUID produtorId = produtorProvider.get().getId();
-    Pendencia pendencia = pendenciaRepository.findDoProdutorAtivaForUpdate(pendenciaId,
-            produtorId)
+    leitura.executeWithoutResult(status -> conferirAnexavel(
+        pendenciaRepository.findDoProdutorAtiva(pendenciaId, produtorId), pendenciaId));
+    Optional<ResultadoVerificacao> veredito = verificacao.verificar(conteudo);
+    // O registro do infectado nao tem tipo conferido: nunca e baixado.
+    String mime = veredito.filter(ResultadoVerificacao::infectado).isPresent()
+        ? MIME_NAO_CONFERIDO : ConferenciaAnexo.mimeConferido(conteudo);
+    Gravado gravado = transacao.execute(status -> {
+      Pendencia pendencia = conferirAnexavel(
+          pendenciaRepository.findDoProdutorAtivaForUpdate(pendenciaId, produtorId), pendenciaId);
+      PendenciaAnexo anexo = PendenciaAnexo.builder()
+          .pendenciaId(pendenciaId)
+          .nomeArquivo(ConferenciaAnexo.nomeSanitizado(nomeOriginal))
+          .mime(mime)
+          .tamanho(conteudo.length)
+          .sha256(ConferenciaAnexo.sha256(conteudo))
+          .conteudo(conteudo)
+          .situacao(SituacaoAnexo.EM_VERIFICACAO)
+          .enviadoPor(produtorId)
+          .enviadoEm(OffsetDateTime.now(clock))
+          .build();
+      // O veredito entra antes do save: um arquivo infectado nunca chega ao banco.
+      veredito.ifPresent(resultado -> verificacao.aplicar(anexo, pendencia, resultado));
+      anexoRepository.save(anexo);
+      return new Gravado(anexo, pendencia, resposta(pendencia, true));
+    });
+    PendenciaAnexo anexo = gravado.anexo();
+    if (anexo.getSituacao() == SituacaoAnexo.INFECTADO) {
+      verificacao.auditarInfectado(anexo.getId(), produtorId, anexo.getAssinaturaVirus(),
+          gravado.pendencia());
+      throw PendenciaException.anexoInfectado(anexo.getAssinaturaVirus());
+    }
+    return gravado.resposta();
+  }
+
+  private record Gravado(PendenciaAnexo anexo, Pendencia pendencia, PendenciaResponse resposta) {
+  }
+
+  /** Dono (404), status e teto; o anexo infectado não ocupa vaga. */
+  private Pendencia conferirAnexavel(Optional<Pendencia> encontrada, UUID pendenciaId) {
+    Pendencia pendencia = encontrada
         .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
     exigir(pendencia, EnumSet.of(StatusPendencia.PENDENTE, StatusPendencia.ENVIADA));
-    if (anexoRepository.countByPendenciaId(pendenciaId) >= MAXIMO_ANEXOS) {
+    if (anexoRepository.contarVisiveis(pendenciaId) >= MAXIMO_ANEXOS) {
       throw PendenciaException.limiteAnexos(MAXIMO_ANEXOS);
     }
-    String mime = ConferenciaAnexo.mimeConferido(conteudo);
-    anexoRepository.save(PendenciaAnexo.builder()
-        .pendenciaId(pendenciaId)
-        .nomeArquivo(ConferenciaAnexo.nomeSanitizado(nomeOriginal))
-        .mime(mime)
-        .tamanho(conteudo.length)
-        .sha256(ConferenciaAnexo.sha256(conteudo))
-        .conteudo(conteudo)
-        .enviadoPor(produtorId)
-        .enviadoEm(OffsetDateTime.now(clock))
-        .build());
-    pendencia.setStatus(StatusPendencia.ENVIADA);
-    return resposta(pendencia, true);
+    return pendencia;
   }
 
   /**
@@ -315,9 +365,14 @@ public class PendenciaService {
         .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
   }
 
+  /** Só {@code LIMPO}: em verificação é 409; infectado não existe para quem baixa (404). */
   private Download download(UUID pendenciaId, UUID anexoId) {
     PendenciaAnexo anexo = anexoRepository.findByIdAndPendenciaId(anexoId, pendenciaId)
+        .filter(a -> a.getSituacao() != SituacaoAnexo.INFECTADO)
         .orElseThrow(() -> new ResourceNotFoundException("Anexo", anexoId));
+    if (anexo.getSituacao() != SituacaoAnexo.LIMPO) {
+      throw PendenciaException.anexoEmVerificacao(anexoId);
+    }
     return new Download(anexo.getNomeArquivo(), anexo.getMime(), anexo.getConteudo());
   }
 
@@ -355,7 +410,7 @@ public class PendenciaService {
     List<AnexoResumo> anexos = comAnexos && p.getId() != null
         ? anexoRepository.findResumos(p.getId()) : List.of();
     long quantidade = comAnexos ? anexos.size()
-        : p.getId() == null ? 0 : anexoRepository.countByPendenciaId(p.getId());
+        : p.getId() == null ? 0 : anexoRepository.contarVisiveis(p.getId());
     return resposta(p, anexos, quantidade);
   }
 

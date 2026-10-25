@@ -90,3 +90,5 @@ databaseChangeLog:
       file: db/changelog/changes/0041-nota-fiscal-revisao.xml
   - include:
       file: db/changelog/changes/0042-pendencia.xml
+  - include:
+      file: db/changelog/changes/0043-pendencia-anexo-antivirus.xml

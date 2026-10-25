@@ -249,6 +249,22 @@ app:
         lock:
           at-most-for: PT30M
           at-least-for: PT5M
+    # Antivirus dos anexos (issue #227): ClamAV (clamd) por TCP. Falha fechada — com o clamd fora
+    # do ar o anexo fica EM_VERIFICACAO (nao pode ser baixado) e o job reverifica. SEM_VERIFICACAO
+    # so sobe em dev/test.
+    antivirus:
+      modo: ${ANTIVIRUS_MODO:CLAMAV}
+      host: ${ANTIVIRUS_HOST:localhost}
+      porta: ${ANTIVIRUS_PORTA:3310}
+      connect-timeout: ${ANTIVIRUS_CONNECT_TIMEOUT:PT2S}
+      read-timeout: ${ANTIVIRUS_READ_TIMEOUT:PT30S}
+      lote-tamanho: ${ANTIVIRUS_LOTE_TAMANHO:20}
+      reverificacao:
+        enabled: ${ANTIVIRUS_REVERIFICACAO_ENABLED:true}
+        intervalo-ms: ${ANTIVIRUS_REVERIFICACAO_INTERVALO_MS:120000}
+        lock:
+          at-most-for: PT15M
+          at-least-for: PT1M
   # Equipe do escritorio (issue #228): convite com token de uso unico no fragmento do link.
   escritorio:
     convite:
