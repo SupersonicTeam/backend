@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.PendenciaAnexo;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.repository.AnexoResumo;
+import br.com.agrocontabil.repository.ContagemPorPendencia;
 import br.com.agrocontabil.repository.PendenciaAnexoRepository;
 import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
@@ -20,8 +21,10 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,8 +79,7 @@ public class PendenciaService {
   @Transactional(readOnly = true)
   public List<PendenciaResponse> listar(UUID produtorId, Collection<StatusPendencia> status) {
     UUID escritorioId = escritorio(produtorId);
-    return pendenciaRepository.findDoEscritorio(escritorioId, produtorId, filtro(status))
-        .stream().map(p -> resposta(p, false)).toList();
+    return lista(pendenciaRepository.findDoEscritorio(escritorioId, produtorId, filtro(status)));
   }
 
   /**
@@ -194,6 +196,8 @@ public class PendenciaService {
     Pendencia pendencia = travadaDoEscritorio(pendenciaId, produtorId);
     exigir(pendencia, EnumSet.of(StatusPendencia.CONCLUIDA, StatusPendencia.CANCELADA));
     pendencia.setStatus(StatusPendencia.PENDENTE);
+    // O motivo era do cancelamento (ou da ultima rejeicao): reaberto, o pedido recomeca limpo.
+    pendencia.setMotivo(null);
     return resposta(pendencia, false);
   }
 
@@ -222,8 +226,8 @@ public class PendenciaService {
    */
   @Transactional(readOnly = true)
   public List<PendenciaResponse> listarDoProdutor(Collection<StatusPendencia> status) {
-    return pendenciaRepository.findDoProdutor(produtorProvider.get().getId(), filtro(status))
-        .stream().map(p -> resposta(p, false)).toList();
+    return lista(pendenciaRepository.findDoProdutor(produtorProvider.get().getId(),
+        filtro(status)));
   }
 
   /**
@@ -238,7 +242,8 @@ public class PendenciaService {
   }
 
   /**
-   * O produtor anexa um arquivo: a pendência vai a {@code ENVIADA}.
+   * O produtor anexa um arquivo: a pendência vai a {@code ENVIADA}. Só em escritório com vínculo
+   * {@code ATIVO}; dono, status e teto são conferidos antes de o arquivo ser lido.
    *
    * @param pendenciaId  pendência
    * @param nomeOriginal nome do arquivo enviado
@@ -250,15 +255,15 @@ public class PendenciaService {
   @Transactional
   @Auditado(acao = AcaoAuditada.PENDENCIA_ANEXO_ENVIADO, recurso = RecursoAuditado.PENDENCIA)
   public PendenciaResponse anexar(UUID pendenciaId, String nomeOriginal, byte[] conteudo) {
-    String mime = ConferenciaAnexo.mimeConferido(conteudo);
     UUID produtorId = produtorProvider.get().getId();
-    Pendencia pendencia = pendenciaRepository.findByIdAndProdutorIdForUpdate(pendenciaId,
+    Pendencia pendencia = pendenciaRepository.findDoProdutorAtivaForUpdate(pendenciaId,
             produtorId)
         .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
     exigir(pendencia, EnumSet.of(StatusPendencia.PENDENTE, StatusPendencia.ENVIADA));
     if (anexoRepository.countByPendenciaId(pendenciaId) >= MAXIMO_ANEXOS) {
       throw PendenciaException.limiteAnexos(MAXIMO_ANEXOS);
     }
+    String mime = ConferenciaAnexo.mimeConferido(conteudo);
     anexoRepository.save(PendenciaAnexo.builder()
         .pendenciaId(pendenciaId)
         .nomeArquivo(ConferenciaAnexo.nomeSanitizado(nomeOriginal))
@@ -306,7 +311,7 @@ public class PendenciaService {
   }
 
   private Pendencia doProdutor(UUID pendenciaId) {
-    return pendenciaRepository.findByIdAndProdutorId(pendenciaId, produtorProvider.get().getId())
+    return pendenciaRepository.findDoProdutorAtiva(pendenciaId, produtorProvider.get().getId())
         .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
   }
 
@@ -334,11 +339,28 @@ public class PendenciaService {
     pendencia.setObservacoes(request.observacoes());
   }
 
+  /** Lista sem os anexos, com a quantidade de cada pendência numa consulta só. */
+  private List<PendenciaResponse> lista(List<Pendencia> pendencias) {
+    if (pendencias.isEmpty()) {
+      return List.of();
+    }
+    Map<UUID, Long> quantidades = anexoRepository.contarPorPendencia(
+            pendencias.stream().map(Pendencia::getId).toList()).stream()
+        .collect(Collectors.toMap(ContagemPorPendencia::pendenciaId, ContagemPorPendencia::total));
+    return pendencias.stream()
+        .map(p -> resposta(p, List.of(), quantidades.getOrDefault(p.getId(), 0L))).toList();
+  }
+
   private PendenciaResponse resposta(Pendencia p, boolean comAnexos) {
     List<AnexoResumo> anexos = comAnexos && p.getId() != null
         ? anexoRepository.findResumos(p.getId()) : List.of();
     long quantidade = comAnexos ? anexos.size()
         : p.getId() == null ? 0 : anexoRepository.countByPendenciaId(p.getId());
+    return resposta(p, anexos, quantidade);
+  }
+
+  private static PendenciaResponse resposta(Pendencia p, List<AnexoResumo> anexos,
+      long quantidade) {
     return new PendenciaResponse(p.getId(), p.getProdutorId(), p.getEscritorioId(),
         p.getTitulo(), p.getDescricao(), p.getObservacoes(), p.getDataLimite(),
         List.copyOf(p.getTiposDocumento()), p.getStatus(), p.getMotivo(), quantidade, anexos,

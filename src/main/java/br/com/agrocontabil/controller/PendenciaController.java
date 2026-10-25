@@ -4,7 +4,6 @@ import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.MotivoPendenciaRequest;
 import br.com.agrocontabil.dto.PendenciaRequest;
 import br.com.agrocontabil.dto.PendenciaResponse;
-import br.com.agrocontabil.exception.PendenciaException;
 import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.service.PendenciaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -152,15 +151,9 @@ public class PendenciaController {
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<PendenciaResponse> anexar(@PathVariable UUID id,
-      @RequestPart("arquivo") MultipartFile arquivo) {
-    byte[] bytes;
-    try {
-      bytes = arquivo.getBytes();
-    } catch (IOException e) {
-      throw PendenciaException.anexoInvalido("Nao foi possivel ler o arquivo enviado.");
-    }
+      @RequestPart("arquivo") MultipartFile arquivo) throws IOException {
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(pendenciaService.anexar(id, arquivo.getOriginalFilename(), bytes));
+        .body(pendenciaService.anexar(id, arquivo.getOriginalFilename(), arquivo.getBytes()));
   }
 
   /** Download para o produtor. */

@@ -2,6 +2,7 @@ package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.PendenciaAnexo;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +44,17 @@ public interface PendenciaAnexoRepository extends JpaRepository<PendenciaAnexo, 
    * @return o anexo, com o conteúdo
    */
   Optional<PendenciaAnexo> findByIdAndPendenciaId(UUID id, UUID pendenciaId);
+
+  /**
+   * Quantidade de anexos por pendência, numa consulta (listas, sem N+1).
+   *
+   * @param pendencias pendências
+   * @return contagens (pendência sem anexo não aparece)
+   */
+  @Query("SELECT new br.com.agrocontabil.repository.ContagemPorPendencia(a.pendenciaId, COUNT(a))"
+      + " FROM PendenciaAnexo a WHERE a.pendenciaId IN :pendencias GROUP BY a.pendenciaId")
+  List<ContagemPorPendencia> contarPorPendencia(
+      @Param("pendencias") Collection<UUID> pendencias);
 
   /**
    * Apaga os anexos enviados antes do corte (retenção de 5 anos).

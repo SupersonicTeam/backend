@@ -31,13 +31,17 @@ public interface PendenciaRepository extends JpaRepository<Pendencia, UUID> {
       @Param("produtorId") UUID produtorId, @Param("status") Collection<StatusPendencia> status);
 
   /**
-   * Pendências do produtor (todos os escritórios), mais recentes primeiro.
+   * Pendências do produtor nos escritórios com vínculo {@code ATIVO}, mais recentes primeiro.
+   * Escritório suspenso ou encerrado some da visão do produtor, como no calendário.
    *
    * @param produtorId produtor
    * @param status     status aceitos
    * @return pendências
    */
   @Query("SELECT p FROM Pendencia p WHERE p.produtorId = :produtorId AND p.status IN :status"
+      + " AND p.escritorioId IN (SELECT v.escritorioId FROM VinculoCarteira v"
+      + " WHERE v.produtorId = :produtorId"
+      + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO)"
       + " ORDER BY p.createdAt DESC, p.id")
   List<Pendencia> findDoProdutor(@Param("produtorId") UUID produtorId,
       @Param("status") Collection<StatusPendencia> status);
@@ -52,13 +56,19 @@ public interface PendenciaRepository extends JpaRepository<Pendencia, UUID> {
   Optional<StatusPendencia> findStatusById(@Param("id") UUID id);
 
   /**
-   * Pendência do produtor (anti-IDOR: a de outro produtor não existe).
+   * Pendência do produtor num escritório com vínculo {@code ATIVO} (anti-IDOR: a de outro
+   * produtor não existe).
    *
    * @param id         pendência
    * @param produtorId produtor
    * @return a pendência, se for dele
    */
-  Optional<Pendencia> findByIdAndProdutorId(UUID id, UUID produtorId);
+  @Query("SELECT p FROM Pendencia p WHERE p.id = :id AND p.produtorId = :produtorId"
+      + " AND p.escritorioId IN (SELECT v.escritorioId FROM VinculoCarteira v"
+      + " WHERE v.produtorId = :produtorId"
+      + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO)")
+  Optional<Pendencia> findDoProdutorAtiva(@Param("id") UUID id,
+      @Param("produtorId") UUID produtorId);
 
   /**
    * Pendência do escritório para o produtor, sob lock pessimista (transições).
@@ -75,15 +85,18 @@ public interface PendenciaRepository extends JpaRepository<Pendencia, UUID> {
       @Param("escritorioId") UUID escritorioId, @Param("produtorId") UUID produtorId);
 
   /**
-   * Pendência do produtor sob lock pessimista (anexo).
+   * Pendência do produtor num escritório com vínculo {@code ATIVO}, sob lock pessimista (anexo).
    *
    * @param id         pendência
    * @param produtorId produtor
    * @return a pendência, se for dele
    */
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT p FROM Pendencia p WHERE p.id = :id AND p.produtorId = :produtorId")
-  Optional<Pendencia> findByIdAndProdutorIdForUpdate(@Param("id") UUID id,
+  @Query("SELECT p FROM Pendencia p WHERE p.id = :id AND p.produtorId = :produtorId"
+      + " AND p.escritorioId IN (SELECT v.escritorioId FROM VinculoCarteira v"
+      + " WHERE v.produtorId = :produtorId"
+      + " AND v.situacao = br.com.agrocontabil.model.SituacaoVinculo.ATIVO)")
+  Optional<Pendencia> findDoProdutorAtivaForUpdate(@Param("id") UUID id,
       @Param("produtorId") UUID produtorId);
 
   /**

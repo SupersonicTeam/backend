@@ -253,6 +253,34 @@ class PendenciaIntegrationTest {
   }
 
   @Test
+  @DisplayName("vinculo nao ativo: o produtor deixa de ver e de anexar na pendencia daquele escritorio")
+  void vinculoNaoAtivo() throws Exception {
+    String id = criar(null);
+    jdbcTemplate.update("UPDATE carteira_vinculo SET situacao = 'ENCERRADO' WHERE produtor_id = ?"
+        + " AND escritorio_id = (SELECT escritorio_id FROM contadores"
+        + " WHERE nome_completo = 'Escritorio')", produtorA.usuarioId());
+
+    assertThat(anexar(id, "e.pdf", "application/pdf", PDF, tokenA).getResponse().getStatus())
+        .isEqualTo(404);
+    mockMvc.perform(get("/api/pendencias/{id}", id).header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(status().isNotFound());
+    mockMvc.perform(get("/api/pendencias").header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(header().string("X-Total-Count", "0"));
+  }
+
+  @Test
+  @DisplayName("reabrir limpa o motivo do cancelamento")
+  void reabrirLimpaMotivo() throws Exception {
+    String id = criar(null);
+    transicao(id, "cancelar", "{\"motivo\":\"Nao precisa mais\"}", 200);
+    transicao(id, "reabrir", null, 200);
+
+    mockMvc.perform(get("/api/pendencias/{id}", id).header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$.status").value("PENDENTE"))
+        .andExpect(jsonPath("$.motivo").doesNotExist());
+  }
+
+  @Test
   @DisplayName("LGPD: exclusao do produtor apaga pendencias e anexos; a do escritorio, as dele")
   void exclusaoLgpd() throws Exception {
     String id = criar(null);
