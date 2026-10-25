@@ -219,6 +219,44 @@ class ObrigacaoCalendarioIntegrationTest {
   }
 
   @Test
+  @DisplayName("prazo do modelo e livre para o escritorio: dia, mes, ajuste e periodicidade")
+  void prazoDoModeloLivre() throws Exception {
+    // DEFIS: modelo anual 31/03 sem ajuste -> 11/04 (sabado) postergando para a segunda.
+    mockMvc.perform(put("/api/contador/obrigacoes/{id}", DEFIS)
+            .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"titulo\":\"DEFIS\",\"periodicidade\":\"ANUAL\",\"dia\":11,"
+                + "\"mes\":4,\"ajusteFimDeSemana\":\"POSTERGA\",\"regimes\":[\"SIMPLES\"]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.dia").value(11))
+        .andExpect(jsonPath("$.mes").value(4))
+        .andExpect(jsonPath("$.ajusteFimDeSemana").value("POSTERGA"));
+    // DAS: modelo mensal dia 20 sem ajuste -> anual, 31/12, antecipando.
+    mockMvc.perform(put("/api/contador/obrigacoes/{id}", DAS)
+            .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"titulo\":\"DAS anual\",\"periodicidade\":\"ANUAL\",\"dia\":31,"
+                + "\"mes\":12,\"ajusteFimDeSemana\":\"ANTECIPA\",\"regimes\":[\"SIMPLES\"]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.periodicidade").value("ANUAL"))
+        .andExpect(jsonPath("$.ajusteFimDeSemana").value("ANTECIPA"));
+
+    JsonNode itens = objectMapper.readTree(mockMvc.perform(
+            get("/api/calendario-fiscal/{id}/vencimentos?de=2026-01-01&ate=2026-12-31",
+                produtor.usuarioId()).header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    List<String> obrigacoes = new ArrayList<>();
+    itens.forEach(i -> obrigacoes.add(i.get("titulo").asText() + "@"
+        + i.get("dataVencimento").asText()));
+    // 2026-04-11 e sabado (posterga para 13); 2026-12-31 e quinta (fica).
+    assertThat(obrigacoes).contains("DEFIS@2026-04-13", "DAS anual@2026-12-31")
+        .noneMatch(t -> t.startsWith("DEFIS@2026-03") || t.startsWith("DAS / PGDAS-D"));
+    // O modelo nao mudou.
+    assertThat(jdbcTemplate.queryForMap("SELECT dia, mes, ajuste_fim_de_semana FROM"
+        + " obrigacao_fiscal WHERE id = ?", UUID.fromString(DEFIS)))
+        .containsEntry("DIA", 31).containsEntry("MES", 3)
+        .containsEntry("AJUSTE_FIM_DE_SEMANA", "NENHUM");
+  }
+
+  @Test
   @DisplayName("reativar modelo nunca personalizado nao cria versao (o modelo segue chegando)")
   void reativarModeloIntacto() throws Exception {
     mockMvc.perform(post("/api/contador/obrigacoes/{id}/reativar", DAS)

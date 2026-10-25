@@ -230,6 +230,13 @@ dono**. Escopo completo na issue (SupersonicTeam/backend#228). Pontos que afetam
 
     Fora da v1 por exigir regra que o catálogo não modela: EFD-Contribuições (10º dia útil do
     2º mês), obrigações estaduais (EFD ICMS/IPI, GIA) e eSocial por evento.
+- **Datas dos 11 modelos conferidas, sem correções; prazo totalmente editável pelo escritório.
+  [Murillo, 2026-10-25]** Cada escritório pode ter prazos de entrega diferentes: na versão do
+  escritório, `dia`, `mes`, `ajuste_fim_de_semana` (e a `periodicidade`) são livres, sem amarra ao
+  valor do modelo — só a coerência do prazo (1–31; mês só na anual) é conferida. Coberto pelo
+  `ObrigacaoCalendarioIntegrationTest.prazoDoModeloLivre`.
+- **Regime como lista** (`regimes_tributarios`), não coluna única: DCTFWeb, EFD-Reinf, ECD e ECF
+  valem para Presumido e Real. **[padrão, PR #237]**
 - O `DataLoader` de dev cria uma versão do escritório de exemplo (um modelo desativado e um
   editado) para a demonstração mostrar a personalização. **[padrão]**
 - Prazo de pedido de documento **não** entra aqui: é da #180 (pergunta 3 da issue).
