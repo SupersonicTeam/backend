@@ -67,8 +67,9 @@ br.com.agrocontabil
 │                  # CfopReferencia, NcmReferencia + repos do scaffolding AI)
 ├── model/         # entidades JPA (Produtor, NotaFiscal, NotaFiscalItem, EnderecoDestinatario,
 │                  # NotaFiscalValidacao [#22], CfopReferencia/NcmReferencia [#20])
-│                  # enums: StatusNotaFiscal (RASCUNHO→XML_GERADO→[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ;
-│                  #                   AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS),
+│                  # enums: StatusNotaFiscal (RASCUNHO→[AGUARDANDO_APROVACAO→APROVADA, #178]→XML_GERADO
+│                  #                   →[ENVIANDO]→AUTORIZADA/REJEITADA/PENDENTE_SEFAZ;
+│                  #                   AUTORIZADA→[CANCELANDO]→CANCELADA; COM_INCONSISTENCIAS; DEVOLVIDA),
 │                  # OrigemNotaFiscal (PROPRIA/IMPORTADA), TipoDocumentoFiscal (NFE/NFA),
 │                  # TipoOperacaoCfop, AmbitoCfop, TipoProdutor
 │                  # modelos pré-criados para sprint futura de consultoria AI:

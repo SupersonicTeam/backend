@@ -2,6 +2,7 @@ package br.com.agrocontabil.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -94,6 +95,11 @@ class RevisaoNotaControllerIntegrationTest {
             notaA).header(HttpHeaders.AUTHORIZATION, tokenContador)
             .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"ok\"}"))
         .andExpect(status().isBadRequest());
+    // Espacos nao contam para os 5 caracteres minimos.
+    mockMvc.perform(post("/api/contador/produtores/{p}/notas/{n}/devolver", produtorA.usuarioId(),
+            notaA).header(HttpHeaders.AUTHORIZATION, tokenContador)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"  a    \"}"))
+        .andExpect(status().isBadRequest());
     mockMvc.perform(post("/api/contador/produtores/{p}/notas/{n}/devolver", produtorA.usuarioId(),
             notaA).header(HttpHeaders.AUTHORIZATION, tokenContador)
             .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"Falta o frete\"}"))
@@ -101,6 +107,7 @@ class RevisaoNotaControllerIntegrationTest {
         .andExpect(jsonPath("$.status").value("DEVOLVIDA"));
     mockMvc.perform(get("/api/notas/{n}/revisoes", notaA).header(HttpHeaders.AUTHORIZATION, tokenA))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"))
         .andExpect(jsonPath("$[0].acao").value("DEVOLVIDA"))
         .andExpect(jsonPath("$[0].motivo").value("Falta o frete"));
   }

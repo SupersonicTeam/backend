@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,8 +60,8 @@ public class RevisaoNotaController {
   /** Histórico de revisão, para o produtor. */
   @GetMapping("/api/notas/{id}/revisoes")
   @Operation(summary = "Historico de revisao da nota (envios, aprovacoes, devolucoes e motivos)")
-  public List<NotaFiscalRevisaoResponse> historico(@PathVariable UUID id) {
-    return revisaoService.historico(id);
+  public ResponseEntity<List<NotaFiscalRevisaoResponse>> historico(@PathVariable UUID id) {
+    return comTotal(revisaoService.historico(id));
   }
 
   /** O contador aprova. */
@@ -81,8 +82,15 @@ public class RevisaoNotaController {
   /** Histórico de revisão, para o contador. */
   @GetMapping("/api/contador/produtores/{produtorId}/notas/{id}/revisoes")
   @Operation(summary = "Historico de revisao da nota do cliente")
-  public List<NotaFiscalRevisaoResponse> historicoNaCarteira(@PathVariable UUID produtorId,
-      @PathVariable UUID id) {
-    return revisaoService.historicoNaCarteira(produtorId, id);
+  public ResponseEntity<List<NotaFiscalRevisaoResponse>> historicoNaCarteira(
+      @PathVariable UUID produtorId, @PathVariable UUID id) {
+    return comTotal(revisaoService.historicoNaCarteira(produtorId, id));
+  }
+
+  private static ResponseEntity<List<NotaFiscalRevisaoResponse>> comTotal(
+      List<NotaFiscalRevisaoResponse> historico) {
+    return ResponseEntity.ok()
+        .header(GuiaFiscalController.HEADER_TOTAL, String.valueOf(historico.size()))
+        .body(historico);
   }
 }

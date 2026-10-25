@@ -205,7 +205,7 @@ public class RevisaoNotaService {
     return emTransacao(() -> {
       NotaFiscal atual = travada(notaId, produtorId);
       exigirStatus(atual, EM_REVISAO);
-      return transitar(atual, StatusNotaFiscal.DEVOLVIDA, AcaoRevisao.DEVOLVIDA, motivo.strip());
+      return transitar(atual, StatusNotaFiscal.DEVOLVIDA, AcaoRevisao.DEVOLVIDA, motivo);
     });
   }
 
