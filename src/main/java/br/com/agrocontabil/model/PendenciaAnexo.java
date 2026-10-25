@@ -80,6 +80,13 @@ public class PendenciaAnexo {
   @Column(name = "assinatura_virus", length = 200)
   private String assinaturaVirus;
 
+  /**
+   * O envio ainda não moveu a pendência: o veredito {@code LIMPO} a leva de {@code PENDENTE} a
+   * {@code ENVIADA}. {@code false} nos anexos de antes da #227, que já a moveram no envio.
+   */
+  @Column(name = "libera_pendencia", nullable = false, updatable = false)
+  private boolean liberaPendencia;
+
   /** Última tentativa de verificação (a definitiva, fora de {@code EM_VERIFICACAO}). */
   @Setter
   @Column(name = "verificado_em")

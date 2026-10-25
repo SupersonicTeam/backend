@@ -18,6 +18,12 @@
          guarda o SHA-256 e o nome da assinatura. O CHECK amarra as duas
          coisas: so INFECTADO fica sem arquivo, e INFECTADO nunca tem arquivo.
 
+         libera_pendencia: o envio ainda nao moveu a pendencia, entao o
+         veredito LIMPO a leva de PENDENTE a ENVIADA. Os anexos de antes
+         desta migration ja levaram a pendencia a ENVIADA no envio (#180):
+         entram FALSE, senao liberar um anexo antigo reabriria em
+         "recebidos" uma pendencia que o contador rejeitou.
+
          verificado_em = ultima tentativa: o job pega primeiro os nunca
          tentados e os tentados ha mais tempo, entao um anexo que o clamd
          recusa sempre nao segura a fila.
@@ -32,6 +38,9 @@
             </column>
             <column name="assinatura_virus" type="VARCHAR(200)"/>
             <column name="verificado_em" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="libera_pendencia" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
         </addColumn>
 
         <dropNotNullConstraint tableName="pendencia_anexo" columnName="conteudo"
@@ -59,6 +68,7 @@
             </sql>
             <addNotNullConstraint tableName="pendencia_anexo" columnName="conteudo"
                     columnDataType="BYTEA"/>
+            <dropColumn tableName="pendencia_anexo" columnName="libera_pendencia"/>
             <dropColumn tableName="pendencia_anexo" columnName="verificado_em"/>
             <dropColumn tableName="pendencia_anexo" columnName="assinatura_virus"/>
             <dropColumn tableName="pendencia_anexo" columnName="situacao"/>

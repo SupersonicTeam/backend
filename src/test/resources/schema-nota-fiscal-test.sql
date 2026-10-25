@@ -796,6 +796,7 @@ CREATE TABLE IF NOT EXISTS pendencia_anexo (
     situacao          VARCHAR(20)               DEFAULT 'EM_VERIFICACAO' NOT NULL,
     assinatura_virus  VARCHAR(200),
     verificado_em     TIMESTAMP WITH TIME ZONE,
+    libera_pendencia  BOOLEAN                   DEFAULT FALSE NOT NULL,
     PRIMARY KEY (id)
 );
 

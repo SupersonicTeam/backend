@@ -62,7 +62,8 @@ public interface PendenciaAnexoRepository extends JpaRepository<PendenciaAnexo, 
    * @return o anexo, se ainda estiver em verificação
    */
   @Query("SELECT new br.com.agrocontabil.repository.AnexoEmVerificacao("
-      + "a.id, a.pendenciaId, a.enviadoPor, a.conteudo) FROM PendenciaAnexo a WHERE a.id = :id"
+      + "a.id, a.pendenciaId, a.enviadoPor, a.conteudo, a.liberaPendencia)"
+      + " FROM PendenciaAnexo a WHERE a.id = :id"
       + " AND a.situacao = br.com.agrocontabil.model.SituacaoAnexo.EM_VERIFICACAO")
   Optional<AnexoEmVerificacao> findEmVerificacao(@Param("id") UUID id);
 

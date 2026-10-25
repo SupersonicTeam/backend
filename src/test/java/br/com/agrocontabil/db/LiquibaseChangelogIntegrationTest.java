@@ -589,8 +589,9 @@ class LiquibaseChangelogIntegrationTest {
 
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'pendencia_anexo' AND column_name IN"
-        + " ('situacao', 'assinatura_virus', 'verificado_em') ORDER BY column_name", String.class))
-        .containsExactly("assinatura_virus", "situacao", "verificado_em");
+        + " ('situacao', 'assinatura_virus', 'verificado_em', 'libera_pendencia')"
+        + " ORDER BY column_name", String.class))
+        .containsExactly("assinatura_virus", "libera_pendencia", "situacao", "verificado_em");
     assertThat(jdbc.queryForObject("SELECT is_nullable FROM information_schema.columns"
         + " WHERE table_name = 'pendencia_anexo' AND column_name = 'conteudo'", String.class))
         .isEqualTo("YES");
@@ -611,6 +612,9 @@ class LiquibaseChangelogIntegrationTest {
     // Sem a coluna (como os anexos de antes da 0043): nasce em verificacao — falha fechada.
     jdbc.update(base.formatted("", ""), pendenciaId, "c".repeat(64),
         new byte[] {'%', 'P', 'D', 'F'});
+    // E nao move a pendencia quando o job o liberar: o envio antigo ja a moveu.
+    assertThat(jdbc.queryForObject("SELECT libera_pendencia FROM pendencia_anexo"
+        + " WHERE pendencia_id = ?::uuid", Boolean.class, pendenciaId)).isFalse();
     assertThat(jdbc.queryForObject("SELECT situacao FROM pendencia_anexo WHERE pendencia_id ="
         + " ?::uuid", String.class, pendenciaId)).isEqualTo("EM_VERIFICACAO");
 

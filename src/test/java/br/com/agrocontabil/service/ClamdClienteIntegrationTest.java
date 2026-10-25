@@ -54,6 +54,12 @@ class ClamdClienteIntegrationTest {
   }
 
   @Test
+  @DisplayName("PING do health responde PONG")
+  void responde() {
+    assertThat(cliente().responde()).isTrue();
+  }
+
+  @Test
   @DisplayName("PDF comum de varios blocos e limpo")
   void pdfLimpo() {
     byte[] pdf = ("%PDF-1.7\n" + "extrato da conta\n".repeat(10_000))

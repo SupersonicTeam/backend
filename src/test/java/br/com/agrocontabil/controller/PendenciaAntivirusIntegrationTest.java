@@ -283,6 +283,25 @@ class PendenciaAntivirusIntegrationTest {
   }
 
   @Test
+  @DisplayName("anexo de antes da 0043 liberado pelo job nao reabre a pendencia rejeitada")
+  void anexoLegadoNaoReabrePendencia() throws Exception {
+    String id = criar();
+    // Como a 0043 deixa um anexo da #180: em verificacao, sem a coluna libera_pendencia (default).
+    jdbcTemplate.update("INSERT INTO pendencia_anexo (id, pendencia_id, nome_arquivo, mime,"
+        + " tamanho, sha256, conteudo, enviado_em, situacao) VALUES (RANDOM_UUID(), ?, 'a.pdf',"
+        + " 'application/pdf', ?, ?, ?, CURRENT_TIMESTAMP, 'EM_VERIFICACAO')",
+        UUID.fromString(id), PDF.length, "a".repeat(64), PDF);
+    doReturn(ResultadoVerificacao.limpo()).when(antivirus).verificar(any());
+
+    assertThat(verificacao.reprocessarPendentes().limpos()).isEqualTo(1);
+
+    // O envio antigo ja tinha levado a pendencia a ENVIADA e o contador o rejeitou: segue PENDENTE.
+    assertThat(statusPendencia(id)).isEqualTo("PENDENTE");
+    assertThat(jdbcTemplate.queryForObject("SELECT situacao FROM pendencia_anexo", String.class))
+        .isEqualTo("LIMPO");
+  }
+
+  @Test
   @DisplayName("ERROR do clamd num anexo nao segura a fila: o seguinte e verificado")
   void recusaDeUmNaoParaOLote() throws Exception {
     when(antivirus.verificar(any()))

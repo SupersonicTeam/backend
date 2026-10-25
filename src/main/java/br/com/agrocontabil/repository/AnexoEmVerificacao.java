@@ -10,6 +10,9 @@ import java.util.UUID;
  * @param pendenciaId pendência
  * @param enviadoPor  produtor que anexou
  * @param conteudo    bytes
+ * @param liberaPendencia se o veredito limpo leva a pendência de {@code PENDENTE} a
+ *                    {@code ENVIADA} (falso nos anexos de antes da #227)
  */
-public record AnexoEmVerificacao(UUID id, UUID pendenciaId, UUID enviadoPor, byte[] conteudo) {
+public record AnexoEmVerificacao(UUID id, UUID pendenciaId, UUID enviadoPor, byte[] conteudo,
+    boolean liberaPendencia) {
 }

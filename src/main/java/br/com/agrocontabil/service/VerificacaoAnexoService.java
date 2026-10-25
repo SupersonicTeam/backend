@@ -212,7 +212,7 @@ public class VerificacaoAnexoService {
     if (alterados == 0) {
       return Optional.empty();
     }
-    if (!resultado.infectado()) {
+    if (!resultado.infectado() && anexo.liberaPendencia()) {
       liberar(pendencia.get());
     }
     return pendencia;

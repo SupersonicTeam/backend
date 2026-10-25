@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,5 +58,19 @@ public class AntivirusConfig {
     }
     log.warn("Antivirus dos anexos DESLIGADO (modo SEM_VERIFICACAO): todo anexo sai como limpo.");
     return conteudo -> ResultadoVerificacao.limpo();
+  }
+
+  /**
+   * Health {@code clamav} (DEGRADED, nunca DOWN), só no modo {@code CLAMAV}.
+   *
+   * @param propriedades configuração do antivírus
+   * @return o indicador
+   */
+  @Bean
+  @ConditionalOnProperty(name = "app.pendencias.antivirus.modo", havingValue = "CLAMAV",
+      matchIfMissing = true)
+  public ClamAvHealthIndicator clamavHealthIndicator(AntivirusProperties propriedades) {
+    return new ClamAvHealthIndicator(new ClamdCliente(propriedades.host(), propriedades.porta(),
+        propriedades.connectTimeout(), propriedades.readTimeout()), ClamAvHealthIndicator.CACHE);
   }
 }

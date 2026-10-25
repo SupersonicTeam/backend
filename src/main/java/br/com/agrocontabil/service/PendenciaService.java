@@ -302,6 +302,7 @@ public class PendenciaService {
           .sha256(ConferenciaAnexo.sha256(conteudo))
           .conteudo(conteudo)
           .situacao(SituacaoAnexo.EM_VERIFICACAO)
+          .liberaPendencia(true)
           .enviadoPor(produtorId)
           .enviadoEm(OffsetDateTime.now(clock))
           .build();

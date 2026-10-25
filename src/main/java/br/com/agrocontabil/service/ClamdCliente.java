@@ -33,6 +33,7 @@ public class ClamdCliente implements VerificacaoAntivirus {
   private static final int ASSINATURA_MAXIMA = 200;
 
   private static final byte[] COMANDO = "zINSTREAM\0".getBytes(StandardCharsets.US_ASCII);
+  private static final byte[] PING = "zPING\0".getBytes(StandardCharsets.US_ASCII);
   private static final String PREFIXO = "stream:";
   private static final String ACHADO = " FOUND";
 
@@ -77,6 +78,23 @@ public class ClamdCliente implements VerificacaoAntivirus {
           "clamd inacessivel em " + host + ":" + porta + ": " + e.getMessage(), e, true);
     }
     return interpretar(resposta);
+  }
+
+  /**
+   * Confere se o clamd responde ({@code zPING} → {@code PONG}), para o health.
+   *
+   * @return {@code true} se respondeu {@code PONG}
+   */
+  public boolean responde() {
+    try (Socket socket = new Socket()) {
+      socket.connect(new InetSocketAddress(host, porta), connectTimeoutMs);
+      socket.setSoTimeout(connectTimeoutMs);
+      socket.getOutputStream().write(PING);
+      socket.getOutputStream().flush();
+      return "PONG".equals(ler(socket.getInputStream()).strip());
+    } catch (IOException e) {
+      return false;
+    }
   }
 
   /**
