@@ -27,6 +27,8 @@ import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
+import br.com.agrocontabil.repository.PendenciaAnexoRepository;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
 import br.com.agrocontabil.security.PapelUsuario;
@@ -78,6 +80,8 @@ public class EquipeEscritorioService {
   private final EtiquetaCarteiraRepository etiquetaRepository;
   private final ConviteCarteiraRepository conviteCarteiraRepository;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
+  private final PendenciaRepository pendenciaRepository;
+  private final PendenciaAnexoRepository anexoRepository;
   private final CadastroService cadastroService;
   private final EnvioConviteEquipe envio;
   private final ConviteEquipeProperties propriedades;
@@ -95,6 +99,8 @@ public class EquipeEscritorioService {
       EtiquetaCarteiraRepository etiquetaRepository,
       ConviteCarteiraRepository conviteCarteiraRepository,
       ObrigacaoFiscalRepository obrigacaoRepository,
+      PendenciaRepository pendenciaRepository,
+      PendenciaAnexoRepository anexoRepository,
       CadastroService cadastroService,
       EnvioConviteEquipe envio,
       ConviteEquipeProperties propriedades,
@@ -109,6 +115,8 @@ public class EquipeEscritorioService {
     this.etiquetaRepository = etiquetaRepository;
     this.conviteCarteiraRepository = conviteCarteiraRepository;
     this.obrigacaoRepository = obrigacaoRepository;
+    this.pendenciaRepository = pendenciaRepository;
+    this.anexoRepository = anexoRepository;
     this.cadastroService = cadastroService;
     this.envio = envio;
     this.propriedades = propriedades;
@@ -410,7 +418,7 @@ public class EquipeEscritorioService {
     contadorRepository.saveAndFlush(contador);
   }
 
-  /** Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogos). */
+  /** Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogos, pendências). */
   private void apagarEscritorio(UUID escritorioId) {
     List<UUID> vinculos = vinculoRepository.findIdsDoEscritorio(escritorioId);
     if (!vinculos.isEmpty()) {
@@ -421,6 +429,8 @@ public class EquipeEscritorioService {
     etiquetaRepository.apagarDoEscritorio(escritorioId);
     conviteRepository.apagarDoEscritorio(escritorioId);
     obrigacaoRepository.apagarDoEscritorio(escritorioId);
+    anexoRepository.apagarDoEscritorio(escritorioId);
+    pendenciaRepository.apagarDoEscritorio(escritorioId);
     escritorioRepository.deleteById(escritorioId);
     escritorioRepository.flush();
   }

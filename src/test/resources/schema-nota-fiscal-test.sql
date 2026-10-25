@@ -751,3 +751,52 @@ CREATE INDEX IF NOT EXISTS idx_nota_fiscal_revisao_nota
 
 ALTER TABLE nota_fiscal_revisao ADD CONSTRAINT IF NOT EXISTS fk_nota_fiscal_revisao_nota
     FOREIGN KEY (nota_fiscal_id) REFERENCES nota_fiscal (id) ON DELETE CASCADE;
+
+-- Pendencias e documentos — issue #180 (migration 0042). Manter sincronizado com
+-- 0042-pendencia.xml. BYTEA do PostgreSQL vira VARBINARY no H2.
+CREATE TABLE IF NOT EXISTS pendencia (
+    id               UUID                      NOT NULL,
+    escritorio_id    UUID                      NOT NULL,
+    produtor_id      UUID                      NOT NULL,
+    titulo           VARCHAR(120)              NOT NULL,
+    descricao        VARCHAR(1000),
+    observacoes      VARCHAR(1000),
+    data_limite      DATE,
+    tipos_documento  VARCHAR(120),
+    status           VARCHAR(20)               NOT NULL,
+    motivo           VARCHAR(500),
+    criado_por       UUID,
+    created_at       TIMESTAMP WITH TIME ZONE,
+    updated_at       TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pendencia_escritorio_produtor
+    ON pendencia (escritorio_id, produtor_id, status);
+CREATE INDEX IF NOT EXISTS idx_pendencia_produtor_status ON pendencia (produtor_id, status);
+
+ALTER TABLE pendencia ADD CONSTRAINT IF NOT EXISTS fk_pendencia_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+ALTER TABLE pendencia ADD CONSTRAINT IF NOT EXISTS fk_pendencia_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
+ALTER TABLE pendencia ADD CONSTRAINT IF NOT EXISTS fk_pendencia_criado_por
+    FOREIGN KEY (criado_por) REFERENCES contadores (id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS pendencia_anexo (
+    id            UUID                      NOT NULL,
+    pendencia_id  UUID                      NOT NULL,
+    nome_arquivo  VARCHAR(120)              NOT NULL,
+    mime          VARCHAR(40)               NOT NULL,
+    tamanho       INTEGER                   NOT NULL,
+    sha256        VARCHAR(64)               NOT NULL,
+    conteudo      VARBINARY(5242880)        NOT NULL,
+    enviado_por   UUID,
+    enviado_em    TIMESTAMP WITH TIME ZONE  NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pendencia_anexo_pendencia
+    ON pendencia_anexo (pendencia_id, enviado_em);
+
+ALTER TABLE pendencia_anexo ADD CONSTRAINT IF NOT EXISTS fk_pendencia_anexo_pendencia
+    FOREIGN KEY (pendencia_id) REFERENCES pendencia (id) ON DELETE CASCADE;

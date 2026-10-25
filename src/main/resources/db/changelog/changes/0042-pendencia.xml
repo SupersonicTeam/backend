@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0042-pendencia.xml
+         Issue #180 (pendencias e documentos, versao minima).
+
+         O escritorio pede documentos ao produtor (pendencia) e o produtor
+         anexa. Ciclo PENDENTE -> ENVIADA -> CONCLUIDA; CANCELADA; rejeitar
+         volta a PENDENTE; reabrir volta a PENDENTE. tipos_documento e lista
+         separada por virgula (NOTA_FISCAL, COMPROVANTE_PAGAMENTO, EXTRATO,
+         CONTRATO, OUTRO).
+
+         pendencia_anexo guarda o arquivo no banco (bytea): PDF, JPEG, PNG
+         ou XML, conferidos pelos bytes iniciais, ate 5 MB, com o MIME
+         conferido (nunca o declarado), o SHA-256, quem enviou e quando.
+         Retencao de 5 anos (job) e exclusao junto com o produtor (LGPD).
+         ================================================================ -->
+
+    <changeSet id="0042-create-pendencia" author="supersonic-team">
+        <comment>Cria pendencia (pedido de documento do escritorio ao produtor).</comment>
+
+        <createTable tableName="pendencia">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="escritorio_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="titulo" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(1000)"/>
+            <column name="observacoes" type="VARCHAR(1000)"/>
+            <column name="data_limite" type="DATE"/>
+            <column name="tipos_documento" type="VARCHAR(120)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="motivo" type="VARCHAR(500)"/>
+            <column name="criado_por" type="UUID"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="pendencia" baseColumnNames="escritorio_id"
+                constraintName="fk_pendencia_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="pendencia" baseColumnNames="produtor_id"
+                constraintName="fk_pendencia_produtor"
+                referencedTableName="produtores" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="pendencia" baseColumnNames="criado_por"
+                constraintName="fk_pendencia_criado_por"
+                referencedTableName="contadores" referencedColumnNames="id" onDelete="SET NULL"/>
+
+        <createIndex tableName="pendencia" indexName="idx_pendencia_escritorio_produtor">
+            <column name="escritorio_id"/>
+            <column name="produtor_id"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="pendencia" indexName="idx_pendencia_produtor_status">
+            <column name="produtor_id"/>
+            <column name="status"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="pendencia"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0042-create-pendencia-anexo" author="supersonic-team">
+        <comment>Cria pendencia_anexo (arquivo no banco, MIME conferido pelos bytes).</comment>
+
+        <createTable tableName="pendencia_anexo">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="pendencia_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome_arquivo" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mime" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tamanho" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sha256" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="conteudo" type="BYTEA">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enviado_por" type="UUID"/>
+            <column name="enviado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="pendencia_anexo" baseColumnNames="pendencia_id"
+                constraintName="fk_pendencia_anexo_pendencia"
+                referencedTableName="pendencia" referencedColumnNames="id" onDelete="CASCADE"/>
+
+        <createIndex tableName="pendencia_anexo" indexName="idx_pendencia_anexo_pendencia">
+            <column name="pendencia_id"/>
+            <column name="enviado_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="pendencia_anexo"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

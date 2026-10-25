@@ -17,8 +17,9 @@ import java.lang.annotation.Target;
  *
  * <p>De onde vem cada campo:
  * <ul>
- *   <li><strong>recurso afetado:</strong> o primeiro argumento {@code UUID}; sem ele, o
- *       {@code recursoAuditado()} do retorno ({@code ResultadoAuditavel});</li>
+ *   <li><strong>recurso afetado:</strong> o {@code recursoAuditado()} do retorno
+ *       ({@code ResultadoAuditavel}) quando houver; senão, o primeiro argumento {@code UUID}
+ *       (numa criação com o produtor no path, o primeiro UUID é o produtor — #180);</li>
  *   <li><strong>estado antes:</strong> lido do banco pelo id, antes da operação (nota, guia,
  *       apuração); <strong>estado depois:</strong> o {@code status()} do retorno;</li>
  *   <li><strong>produtor afetado:</strong> o próprio produtor autenticado, ou o
