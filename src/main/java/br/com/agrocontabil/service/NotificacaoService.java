@@ -253,7 +253,7 @@ public class NotificacaoService {
   public int avisarVencimentosDeAmanha() {
     LocalDate amanha = LocalDate.now(clock).plusDays(1);
     int registrados = 0;
-    List<UUID> lote = produtorRepository.findIdsOrdenados(PageRequest.ofSize(LOTE_PRODUTORES));
+    List<UUID> lote = produtorRepository.findIdsComTelefone(PageRequest.ofSize(LOTE_PRODUTORES));
     while (!lote.isEmpty()) {
       for (UUID produtorId : lote) {
         if (Thread.currentThread().isInterrupted()) {
@@ -262,14 +262,14 @@ public class NotificacaoService {
         try {
           Avisos avisos = porProdutor.execute(status -> avisarProdutor(produtorId, amanha));
           if (avisos != null) {
-            avisos.registrados().forEach(aviso -> envio.enviar(aviso, avisos.telefone()));
+            avisos.registrados().forEach(aviso -> entregar(aviso, avisos.telefone()));
             registrados += avisos.registrados().size();
           }
         } catch (RuntimeException e) {
           log.error("Aviso automatico de vencimento falhou para o produtor {}", produtorId, e);
         }
       }
-      lote = produtorRepository.findIdsOrdenadosApos(lote.get(lote.size() - 1),
+      lote = produtorRepository.findIdsComTelefoneApos(lote.get(lote.size() - 1),
           PageRequest.ofSize(LOTE_PRODUTORES));
     }
     return registrados;
@@ -392,9 +392,23 @@ public class NotificacaoService {
           .criadoEm(agora)
           .build());
     });
-    envio.enviar(gravada, produtor.getTelefone());
+    entregar(gravada, produtor.getTelefone());
     return new ResultadoNotificacaoResponse(quantidade, urgentes, gravada.getId(),
         produtor.getId());
+  }
+
+  /**
+   * Entrega pela porta, depois do commit. A falha do canal vira log e não muda a resposta: a
+   * notificação já está registrada, e um 500 levaria o cliente a repetir o disparo (gastando o
+   * teto por hora com duplicatas). Sem o texto nem o telefone no log.
+   */
+  private void entregar(Notificacao notificacao, String destinatario) {
+    try {
+      envio.enviar(notificacao, destinatario);
+    } catch (RuntimeException e) {
+      log.error("Canal de notificacao falhou para a notificacao {} (fica REGISTRADA): {}",
+          notificacao.getId(), e.getClass().getSimpleName());
+    }
   }
 
   private Contador membro(UUID produtorId) {

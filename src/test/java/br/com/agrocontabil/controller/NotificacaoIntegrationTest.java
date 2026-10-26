@@ -28,6 +28,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -72,6 +73,9 @@ class NotificacaoIntegrationTest {
   /** Notificações entregues à porta, com a prova de que não havia transação aberta. */
   static final List<String> ENTREGUES = new CopyOnWriteArrayList<>();
 
+  /** Liga a falha do canal (provedor fora do ar). */
+  static final AtomicBoolean CANAL_FORA = new AtomicBoolean();
+
   @TestConfiguration
   static class Config {
     @Bean
@@ -83,8 +87,13 @@ class NotificacaoIntegrationTest {
     @Bean
     @Primary
     EnvioNotificacao envioCapturado() {
-      return (notificacao, destinatario) -> ENTREGUES.add(notificacao.getId() + "|" + destinatario
-          + "|tx=" + TransactionSynchronizationManager.isActualTransactionActive());
+      return (notificacao, destinatario) -> {
+        ENTREGUES.add(notificacao.getId() + "|" + destinatario
+            + "|tx=" + TransactionSynchronizationManager.isActualTransactionActive());
+        if (CANAL_FORA.get()) {
+          throw new IllegalStateException("provedor de WhatsApp fora do ar");
+        }
+      };
     }
   }
 
@@ -112,6 +121,7 @@ class NotificacaoIntegrationTest {
   void setUp() throws Exception {
     cleaner.limparTudo();
     ENTREGUES.clear();
+    CANAL_FORA.set(false);
     produtorA = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.PRODUTOR, "Produtor A", "52998224725", "a@fazenda.com.br", SENHA));
     produtorB = cadastroService.cadastrar(new CadastroRequest(
@@ -207,6 +217,24 @@ class NotificacaoIntegrationTest {
     assertThat(jdbcTemplate.queryForList("SELECT acao FROM registro_auditoria"
         + " WHERE produtor_id = ?", String.class, produtorA.usuarioId()))
         .contains("NOTIFICACAO_REGISTRADA");
+  }
+
+  @Test
+  @DisplayName("canal fora do ar depois do commit: o registro vale, 200, e o job segue")
+  void canalForaDoAr() throws Exception {
+    CANAL_FORA.set(true);
+    guia(produtorA.usuarioId(), HOJE.plusDays(1), "PENDENTE", "amanha");
+    pedido(produtorA.usuarioId(), escritorio, "Extrato", HOJE.plusDays(1));
+
+    mockMvc.perform(post("/api/notificacao/enviar").header(HttpHeaders.AUTHORIZATION, tokenA)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"mensagem\":\"Oi\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enviados").value(1));
+    // Os dois avisos de amanha sao tentados, mesmo com o primeiro falhando no canal.
+    assertThat(notificacaoService.avisarVencimentosDeAmanha()).isEqualTo(2);
+
+    assertThat(notificacoes()).isEqualTo(3);
+    assertThat(ENTREGUES).hasSize(3);
   }
 
   @Test

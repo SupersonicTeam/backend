@@ -67,6 +67,27 @@ public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
   List<UUID> findIdsOrdenadosApos(@Param("apos") UUID apos, Pageable lote);
 
   /**
+   * Primeiro lote de IDs de produtor com telefone (aviso automático da #182: quem não tem
+   * WhatsApp nem é carregado).
+   *
+   * @param lote tamanho do lote
+   * @return até {@code lote} IDs, em ordem crescente
+   */
+  @Query("SELECT p.id FROM Produtor p WHERE p.telefone IS NOT NULL ORDER BY p.id")
+  List<UUID> findIdsComTelefone(Pageable lote);
+
+  /**
+   * Lote seguinte de IDs de produtor com telefone, por keyset.
+   *
+   * @param apos último ID do lote anterior
+   * @param lote tamanho do lote
+   * @return até {@code lote} IDs maiores que {@code apos}, em ordem crescente
+   */
+  @Query("SELECT p.id FROM Produtor p WHERE p.telefone IS NOT NULL AND p.id > :apos"
+      + " ORDER BY p.id")
+  List<UUID> findIdsComTelefoneApos(@Param("apos") UUID apos, Pageable lote);
+
+  /**
    * O produtor sob lock pessimista: serializa os disparos de notificação dele, para o teto por
    * hora não ser furado por envios simultâneos (issue #182).
    *
