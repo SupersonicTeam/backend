@@ -15,6 +15,7 @@ import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.PendenciaAnexoRepository;
+import br.com.agrocontabil.repository.NotificacaoRepository;
 import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
@@ -61,6 +62,7 @@ public class TestDatabaseCleaner {
   private final NotaFiscalRevisaoRepository revisaoRepository;
   private final PendenciaAnexoRepository pendenciaAnexoRepository;
   private final PendenciaRepository pendenciaRepository;
+  private final NotificacaoRepository notificacaoRepository;
 
   /** Construtor com todos os repositórios das tabelas dependentes de {@code produtores}. */
   public TestDatabaseCleaner(
@@ -84,7 +86,8 @@ public class TestDatabaseCleaner {
       ObrigacaoFiscalRepository obrigacaoRepository,
       NotaFiscalRevisaoRepository revisaoRepository,
       PendenciaAnexoRepository pendenciaAnexoRepository,
-      PendenciaRepository pendenciaRepository) {
+      PendenciaRepository pendenciaRepository,
+      NotificacaoRepository notificacaoRepository) {
     this.alertaRepository = alertaRepository;
     this.interacaoRepository = interacaoRepository;
     this.validacaoRepository = validacaoRepository;
@@ -106,6 +109,7 @@ public class TestDatabaseCleaner {
     this.revisaoRepository = revisaoRepository;
     this.pendenciaAnexoRepository = pendenciaAnexoRepository;
     this.pendenciaRepository = pendenciaRepository;
+    this.notificacaoRepository = notificacaoRepository;
   }
 
   /**
@@ -132,6 +136,8 @@ public class TestDatabaseCleaner {
     // Pendencias (#180) e anexos: referenciam produtor, escritorio e contador.
     pendenciaAnexoRepository.deleteAllInBatch();
     pendenciaRepository.deleteAllInBatch();
+    // Notificacoes (#182): referenciam produtor e escritorio.
+    notificacaoRepository.deleteAllInBatch();
     // Credenciais (#205): CASCADE no banco, mas nem todo contexto de teste roda o script que cria
     // as FKs; sem elas a credencial de um produtor apagado sobraria e o e-mail ficaria ocupado.
     sessaoRefreshRepository.deleteAll();

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0044-notificacao.xml
+         Issue #182 (notificacao por WhatsApp, so o registro na v1).
+
+         Cada disparo (produtor, membro do escritorio ou o aviso automatico
+         de vencimento de amanha) vira uma linha, com o canal WHATSAPP e o
+         status REGISTRADA: o envio real fica atras da porta EnvioNotificacao.
+
+         escritorio_id: o escritorio do membro que disparou (nulo quando foi
+         o produtor ou o sistema) — o contador so ve as do proprio escritorio.
+         chave_item: so no aviso automatico, "<item>:<data>"; unica por
+         produtor, o job nao avisa duas vezes o mesmo vencimento (NULL nao
+         conflita nas duas bases).
+
+         Retencao de 1 ano (NotificacaoRetencaoJob); apagada na exclusao
+         do produtor (LGPD) e quando o escritorio sai.
+         ================================================================ -->
+
+    <changeSet id="0044-create-notificacao" author="supersonic-team">
+        <comment>Cria notificacao (registro dos avisos por WhatsApp ao produtor).</comment>
+
+        <createTable tableName="notificacao">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="produtor_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="escritorio_id" type="UUID"/>
+            <column name="disparado_por" type="UUID"/>
+            <column name="papel" type="VARCHAR(20)"/>
+            <column name="tipo" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="canal" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="texto" type="VARCHAR(4000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantidade_itens" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="urgentes" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="chave_item" type="VARCHAR(120)"/>
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="notificacao" baseColumnNames="produtor_id"
+                constraintName="fk_notificacao_produtor"
+                referencedTableName="produtores" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="notificacao" baseColumnNames="escritorio_id"
+                constraintName="fk_notificacao_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+
+        <addUniqueConstraint tableName="notificacao" columnNames="produtor_id, chave_item"
+                constraintName="uk_notificacao_produtor_chave"/>
+
+        <createIndex tableName="notificacao" indexName="idx_notificacao_produtor_criado">
+            <column name="produtor_id"/>
+            <column name="criado_em"/>
+        </createIndex>
+        <createIndex tableName="notificacao" indexName="idx_notificacao_criado">
+            <column name="criado_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="notificacao"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

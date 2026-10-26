@@ -1,12 +1,14 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.Produtor;
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -63,4 +65,15 @@ public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
    */
   @Query("SELECT p.id FROM Produtor p WHERE p.id > :apos ORDER BY p.id")
   List<UUID> findIdsOrdenadosApos(@Param("apos") UUID apos, Pageable lote);
+
+  /**
+   * O produtor sob lock pessimista: serializa os disparos de notificação dele, para o teto por
+   * hora não ser furado por envios simultâneos (issue #182).
+   *
+   * @param id produtor
+   * @return o produtor
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT p FROM Produtor p WHERE p.id = :id")
+  Optional<Produtor> findByIdForUpdate(@Param("id") UUID id);
 }

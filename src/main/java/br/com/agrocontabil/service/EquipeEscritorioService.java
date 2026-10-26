@@ -27,6 +27,7 @@ import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
+import br.com.agrocontabil.repository.NotificacaoRepository;
 import br.com.agrocontabil.repository.PendenciaAnexoRepository;
 import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
@@ -82,6 +83,7 @@ public class EquipeEscritorioService {
   private final ObrigacaoFiscalRepository obrigacaoRepository;
   private final PendenciaRepository pendenciaRepository;
   private final PendenciaAnexoRepository anexoRepository;
+  private final NotificacaoRepository notificacaoRepository;
   private final CadastroService cadastroService;
   private final EnvioConviteEquipe envio;
   private final ConviteEquipeProperties propriedades;
@@ -101,6 +103,7 @@ public class EquipeEscritorioService {
       ObrigacaoFiscalRepository obrigacaoRepository,
       PendenciaRepository pendenciaRepository,
       PendenciaAnexoRepository anexoRepository,
+      NotificacaoRepository notificacaoRepository,
       CadastroService cadastroService,
       EnvioConviteEquipe envio,
       ConviteEquipeProperties propriedades,
@@ -117,6 +120,7 @@ public class EquipeEscritorioService {
     this.obrigacaoRepository = obrigacaoRepository;
     this.pendenciaRepository = pendenciaRepository;
     this.anexoRepository = anexoRepository;
+    this.notificacaoRepository = notificacaoRepository;
     this.cadastroService = cadastroService;
     this.envio = envio;
     this.propriedades = propriedades;
@@ -431,6 +435,7 @@ public class EquipeEscritorioService {
     obrigacaoRepository.apagarDoEscritorio(escritorioId);
     anexoRepository.apagarDoEscritorio(escritorioId);
     pendenciaRepository.apagarDoEscritorio(escritorioId);
+    notificacaoRepository.apagarDoEscritorio(escritorioId);
     escritorioRepository.deleteById(escritorioId);
     escritorioRepository.flush();
   }

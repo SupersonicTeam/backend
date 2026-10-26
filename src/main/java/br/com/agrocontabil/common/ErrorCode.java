@@ -126,6 +126,16 @@ public enum ErrorCode {
   /** Download de anexo que ainda não passou pelo antivírus (issue #227). HTTP 409. */
   ANEXO_EM_VERIFICACAO,
   /**
+   * O produtor não tem telefone (WhatsApp) cadastrado: nada é registrado (issue #182). HTTP 422 —
+   * distinto de "nada a avisar", que é 200 com {@code enviados = 0}.
+   */
+  CONTATO_AUSENTE,
+  /**
+   * Passou do teto de disparos manuais de notificação por produtor por hora (issue #182). HTTP 429
+   * com {@code Retry-After}.
+   */
+  LIMITE_NOTIFICACOES,
+  /**
    * Transição da revisão que o status da nota não permite (ex.: aprovar nota que não está
    * aguardando aprovação) ou envio sem contador vinculado — issue #178. HTTP 409.
    */

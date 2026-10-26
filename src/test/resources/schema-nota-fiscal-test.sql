@@ -815,3 +815,34 @@ ALTER TABLE pendencia_anexo ADD CONSTRAINT IF NOT EXISTS ck_pendencia_anexo_cont
 
 ALTER TABLE pendencia_anexo ADD CONSTRAINT IF NOT EXISTS fk_pendencia_anexo_pendencia
     FOREIGN KEY (pendencia_id) REFERENCES pendencia (id) ON DELETE CASCADE;
+
+-- Notificacao por WhatsApp (registro) — issue #182 (migration 0044).
+CREATE TABLE IF NOT EXISTS notificacao (
+    id                UUID                      NOT NULL,
+    produtor_id       UUID                      NOT NULL,
+    escritorio_id     UUID,
+    disparado_por     UUID,
+    papel             VARCHAR(20),
+    tipo              VARCHAR(30)               NOT NULL,
+    canal             VARCHAR(20)               NOT NULL,
+    status            VARCHAR(20)               NOT NULL,
+    texto             VARCHAR(4000)             NOT NULL,
+    quantidade_itens  INTEGER                   NOT NULL,
+    urgentes          INTEGER                   NOT NULL,
+    chave_item        VARCHAR(120),
+    criado_em         TIMESTAMP WITH TIME ZONE  NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notificacao_produtor_criado ON notificacao (produtor_id, criado_em);
+
+CREATE INDEX IF NOT EXISTS idx_notificacao_criado ON notificacao (criado_em);
+
+ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS uk_notificacao_produtor_chave
+    UNIQUE (produtor_id, chave_item);
+
+ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS fk_notificacao_produtor
+    FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
+
+ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS fk_notificacao_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
