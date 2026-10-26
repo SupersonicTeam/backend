@@ -2,6 +2,8 @@ package br.com.agrocontabil.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,12 +14,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
 /**
  * Arquivo anexado a uma pendência (issue #180), guardado no banco. O {@code mime} é o conferido
  * pelos bytes iniciais, nunca o declarado pelo cliente. As listagens leem só os metadados
- * (projeção no repositório); o conteúdo sai apenas no download.
+ * (projeção no repositório); o conteúdo sai apenas no download, e só de anexo {@code LIMPO}
+ * (antivírus, #227).
  */
 @Entity
 @Table(name = "pendencia_anexo")
@@ -52,8 +56,10 @@ public class PendenciaAnexo {
   @Column(name = "sha256", nullable = false, updatable = false, length = 64)
   private String sha256;
 
+  /** O arquivo; {@code null} só em {@code INFECTADO}, que descarta o conteúdo (#227). */
   @ToString.Exclude
-  @Column(name = "conteudo", nullable = false, updatable = false, length = TAMANHO_MAXIMO)
+  @Setter
+  @Column(name = "conteudo", length = TAMANHO_MAXIMO)
   private byte[] conteudo;
 
   /** Produtor que anexou. */
@@ -62,4 +68,27 @@ public class PendenciaAnexo {
 
   @Column(name = "enviado_em", nullable = false, updatable = false)
   private OffsetDateTime enviadoEm;
+
+  /** Resultado do antivírus (#227); só {@code LIMPO} pode ser baixado. */
+  @Setter
+  @Enumerated(EnumType.STRING)
+  @Column(name = "situacao", nullable = false, length = 20)
+  private SituacaoAnexo situacao;
+
+  /** Nome da assinatura achada pelo antivírus, em {@code INFECTADO}. */
+  @Setter
+  @Column(name = "assinatura_virus", length = 200)
+  private String assinaturaVirus;
+
+  /**
+   * O envio ainda não moveu a pendência: o veredito {@code LIMPO} a leva de {@code PENDENTE} a
+   * {@code ENVIADA}. {@code false} nos anexos de antes da #227, que já a moveram no envio.
+   */
+  @Column(name = "libera_pendencia", nullable = false, updatable = false)
+  private boolean liberaPendencia;
+
+  /** Última tentativa de verificação (a definitiva, fora de {@code EM_VERIFICACAO}). */
+  @Setter
+  @Column(name = "verificado_em")
+  private OffsetDateTime verificadoEm;
 }

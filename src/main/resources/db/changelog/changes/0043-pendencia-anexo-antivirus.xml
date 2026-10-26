@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0043-pendencia-anexo-antivirus.xml
+         Issue #227 (antivirus nos anexos das pendencias, ClamAV).
+
+         situacao: EM_VERIFICACAO -> LIMPO ou INFECTADO. So LIMPO e baixado.
+         Os anexos de antes desta migration nunca foram verificados: entram
+         EM_VERIFICACAO (default da coluna) e o job os verifica — falha
+         fechada, nada fica disponivel sem passar pelo antivirus.
+
+         INFECTADO descarta o conteudo (conteudo passa a aceitar NULL) e
+         guarda o SHA-256 e o nome da assinatura. O CHECK amarra as duas
+         coisas: so INFECTADO fica sem arquivo, e INFECTADO nunca tem arquivo.
+
+         libera_pendencia: o envio ainda nao moveu a pendencia, entao o
+         veredito LIMPO a leva de PENDENTE a ENVIADA. Os anexos de antes
+         desta migration ja levaram a pendencia a ENVIADA no envio (#180):
+         entram FALSE, senao liberar um anexo antigo reabriria em
+         "recebidos" uma pendencia que o contador rejeitou.
+
+         verificado_em = ultima tentativa: o job pega primeiro os nunca
+         tentados e os tentados ha mais tempo, entao um anexo que o clamd
+         recusa sempre nao segura a fila.
+         ================================================================ -->
+
+    <changeSet id="0043-pendencia-anexo-situacao" author="supersonic-team">
+        <comment>Situacao do antivirus no anexo; conteudo nulo so em INFECTADO.</comment>
+
+        <addColumn tableName="pendencia_anexo">
+            <column name="situacao" type="VARCHAR(20)" defaultValue="EM_VERIFICACAO">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assinatura_virus" type="VARCHAR(200)"/>
+            <column name="verificado_em" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="libera_pendencia" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <dropNotNullConstraint tableName="pendencia_anexo" columnName="conteudo"
+                columnDataType="BYTEA"/>
+
+        <sql>
+            ALTER TABLE pendencia_anexo ADD CONSTRAINT ck_pendencia_anexo_situacao
+                CHECK (situacao IN ('EM_VERIFICACAO', 'LIMPO', 'INFECTADO'));
+            ALTER TABLE pendencia_anexo ADD CONSTRAINT ck_pendencia_anexo_conteudo
+                CHECK ((situacao = 'INFECTADO' AND conteudo IS NULL)
+                    OR (situacao &lt;&gt; 'INFECTADO' AND conteudo IS NOT NULL));
+        </sql>
+
+        <createIndex tableName="pendencia_anexo" indexName="idx_pendencia_anexo_situacao">
+            <column name="situacao"/>
+            <column name="verificado_em"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="pendencia_anexo" indexName="idx_pendencia_anexo_situacao"/>
+            <sql>
+                ALTER TABLE pendencia_anexo DROP CONSTRAINT ck_pendencia_anexo_conteudo;
+                ALTER TABLE pendencia_anexo DROP CONSTRAINT ck_pendencia_anexo_situacao;
+                DELETE FROM pendencia_anexo WHERE conteudo IS NULL;
+            </sql>
+            <addNotNullConstraint tableName="pendencia_anexo" columnName="conteudo"
+                    columnDataType="BYTEA"/>
+            <dropColumn tableName="pendencia_anexo" columnName="libera_pendencia"/>
+            <dropColumn tableName="pendencia_anexo" columnName="verificado_em"/>
+            <dropColumn tableName="pendencia_anexo" columnName="assinatura_virus"/>
+            <dropColumn tableName="pendencia_anexo" columnName="situacao"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

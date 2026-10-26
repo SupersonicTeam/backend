@@ -789,14 +789,29 @@ CREATE TABLE IF NOT EXISTS pendencia_anexo (
     mime          VARCHAR(40)               NOT NULL,
     tamanho       INTEGER                   NOT NULL,
     sha256        VARCHAR(64)               NOT NULL,
-    conteudo      VARBINARY(5242880)        NOT NULL,
+    conteudo      VARBINARY(5242880),
     enviado_por   UUID,
     enviado_em    TIMESTAMP WITH TIME ZONE  NOT NULL,
+    -- Antivirus — issue #227 (migration 0043).
+    situacao          VARCHAR(20)               DEFAULT 'EM_VERIFICACAO' NOT NULL,
+    assinatura_virus  VARCHAR(200),
+    verificado_em     TIMESTAMP WITH TIME ZONE,
+    libera_pendencia  BOOLEAN                   DEFAULT FALSE NOT NULL,
     PRIMARY KEY (id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pendencia_anexo_pendencia
     ON pendencia_anexo (pendencia_id, enviado_em);
+
+CREATE INDEX IF NOT EXISTS idx_pendencia_anexo_situacao
+    ON pendencia_anexo (situacao, verificado_em);
+
+ALTER TABLE pendencia_anexo ADD CONSTRAINT IF NOT EXISTS ck_pendencia_anexo_situacao
+    CHECK (situacao IN ('EM_VERIFICACAO', 'LIMPO', 'INFECTADO'));
+
+ALTER TABLE pendencia_anexo ADD CONSTRAINT IF NOT EXISTS ck_pendencia_anexo_conteudo
+    CHECK ((situacao = 'INFECTADO' AND conteudo IS NULL)
+        OR (situacao <> 'INFECTADO' AND conteudo IS NOT NULL));
 
 ALTER TABLE pendencia_anexo ADD CONSTRAINT IF NOT EXISTS fk_pendencia_anexo_pendencia
     FOREIGN KEY (pendencia_id) REFERENCES pendencia (id) ON DELETE CASCADE;

@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.annotation.DirtiesContext;
@@ -578,6 +579,56 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pendencia WHERE id = ?::uuid",
         Integer.class, pendenciaId)).isZero();
     jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
+  @DisplayName("changeSet 0043: situacao do antivirus, anexo antigo em verificacao e so INFECTADO"
+      + " sem arquivo")
+  void changeSet0043AntivirusDoAnexo() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'pendencia_anexo' AND column_name IN"
+        + " ('situacao', 'assinatura_virus', 'verificado_em', 'libera_pendencia')"
+        + " ORDER BY column_name", String.class))
+        .containsExactly("assinatura_virus", "libera_pendencia", "situacao", "verificado_em");
+    assertThat(jdbc.queryForObject("SELECT is_nullable FROM information_schema.columns"
+        + " WHERE table_name = 'pendencia_anexo' AND column_name = 'conteudo'", String.class))
+        .isEqualTo("YES");
+
+    String escritorioId = UUID.randomUUID().toString();
+    String produtorId = UUID.randomUUID().toString();
+    String pendenciaId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio')", escritorioId);
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    jdbc.update("INSERT INTO pendencia (id, escritorio_id, produtor_id, titulo, status)"
+        + " VALUES (?::uuid, ?::uuid, ?::uuid, 'Extrato', 'PENDENTE')", pendenciaId,
+        escritorioId, produtorId);
+    String base = "INSERT INTO pendencia_anexo (id, pendencia_id, nome_arquivo, mime, tamanho,"
+        + " sha256, conteudo, enviado_em%s) VALUES (gen_random_uuid(), ?::uuid, 'a.pdf',"
+        + " 'application/pdf', 4, ?, ?, now()%s)";
+
+    // Sem a coluna (como os anexos de antes da 0043): nasce em verificacao — falha fechada.
+    jdbc.update(base.formatted("", ""), pendenciaId, "c".repeat(64),
+        new byte[] {'%', 'P', 'D', 'F'});
+    // E nao move a pendencia quando o job o liberar: o envio antigo ja a moveu.
+    assertThat(jdbc.queryForObject("SELECT libera_pendencia FROM pendencia_anexo"
+        + " WHERE pendencia_id = ?::uuid", Boolean.class, pendenciaId)).isFalse();
+    assertThat(jdbc.queryForObject("SELECT situacao FROM pendencia_anexo WHERE pendencia_id ="
+        + " ?::uuid", String.class, pendenciaId)).isEqualTo("EM_VERIFICACAO");
+
+    String comSituacao = base.formatted(", situacao", ", ?");
+    jdbc.update(comSituacao, pendenciaId, "d".repeat(64), null, "INFECTADO");
+    assertThatThrownBy(() -> jdbc.update(comSituacao, pendenciaId, "e".repeat(64),
+        new byte[] {1}, "INFECTADO")).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(comSituacao, pendenciaId, "f".repeat(64), null,
+        "LIMPO")).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(comSituacao, pendenciaId, "g".repeat(64),
+        new byte[] {1}, "SUSPEITO")).isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioId);
   }
 
   @Test

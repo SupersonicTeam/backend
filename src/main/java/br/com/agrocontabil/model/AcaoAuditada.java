@@ -45,5 +45,7 @@ public enum AcaoAuditada {
   PENDENCIA_CONCLUIDA,
   PENDENCIA_REJEITADA,
   PENDENCIA_CANCELADA,
-  PENDENCIA_REABERTA
+  PENDENCIA_REABERTA,
+  // Antivirus dos anexos (issue #227): ameaca achada no envio ou pelo job
+  PENDENCIA_ANEXO_INFECTADO
 }
