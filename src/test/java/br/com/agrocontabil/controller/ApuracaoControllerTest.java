@@ -9,14 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.agrocontabil.dto.ApuracaoResponse;
-import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
 import br.com.agrocontabil.exception.FaixaApuracaoInvalidaException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
-import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
-import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.ApuracaoFaixaService;
 import br.com.agrocontabil.service.ApuracaoService;
 import java.math.BigDecimal;
@@ -138,57 +137,14 @@ class ApuracaoControllerTest {
   }
 
   @Test
-  @DisplayName("POST /api/apuracao/{id}/reabrir com sucesso retorna 200 com status ABERTO")
-  void reabrirComSucessoRetorna200() throws Exception {
-    UUID id = UUID.randomUUID();
-    when(apuracaoService.reabrir(id)).thenReturn(new ApuracaoResponse(
-        "2026-06", "ABERTO",
-        new BigDecimal("100.00"), new BigDecimal("50.00"),
-        new BigDecimal("10.00"), new BigDecimal("5.00"),
-        new BigDecimal("90.00"), new BigDecimal("45.00"), 3L, null,
-        "2026-06", "2026-06", false));
-
-    mockMvc.perform(post("/api/apuracao/{id}/reabrir", id))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("ABERTO"))
-        .andExpect(jsonPath("$.periodo").value("2026-06"));
-  }
-
-  @Test
-  @DisplayName("POST reabrir de apuracao de outro produtor (ou inexistente) retorna 404")
-  void reabrirInexistenteRetorna404() throws Exception {
-    UUID id = UUID.randomUUID();
-    when(apuracaoService.reabrir(id)).thenThrow(new ResourceNotFoundException("Apuracao", id));
-
-    mockMvc.perform(post("/api/apuracao/{id}/reabrir", id))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.status").value(404))
-        .andExpect(jsonPath("$.errors[0].code").value("RESOURCE_NOT_FOUND"));
-  }
-
-  @Test
-  @DisplayName("POST reabrir de apuracao nao FECHADA retorna 409 estruturado")
-  void reabrirNaoFechadaRetorna409() throws Exception {
-    UUID id = UUID.randomUUID();
-    when(apuracaoService.reabrir(id))
-        .thenThrow(new ApuracaoNaoReabrivelException(id, StatusApuracao.ABERTO));
-
-    mockMvc.perform(post("/api/apuracao/{id}/reabrir", id))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.status").value(409))
-        .andExpect(jsonPath("$.errors[0].code").value("APURACAO_NAO_REABRIVEL"));
-  }
-
-  @Test
-  @DisplayName("POST reabrir fora do prazo de 3 meses retorna 422 estruturado")
-  void reabrirForaPrazoRetorna422() throws Exception {
+  @DisplayName("POST /api/apuracao/{id}/reabrir: a reabertura e do contador (#224), 403")
+  void reabrirPeloProdutorRetorna403() throws Exception {
     UUID id = UUID.randomUUID();
     when(apuracaoService.reabrir(id)).thenThrow(
-        new ReaberturaForaPrazoException(id, YearMonth.of(2026, 3), YearMonth.of(2026, 4)));
+        new PapelNaoAutorizadoException(PapelUsuario.PRODUTOR, PapelUsuario.CONTADOR));
 
     mockMvc.perform(post("/api/apuracao/{id}/reabrir", id))
-        .andExpect(status().isUnprocessableEntity())
-        .andExpect(jsonPath("$.status").value(422))
-        .andExpect(jsonPath("$.errors[0].code").value("REABERTURA_FORA_PRAZO"));
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.errors[0].code").value("PAPEL_NAO_AUTORIZADO"));
   }
 }

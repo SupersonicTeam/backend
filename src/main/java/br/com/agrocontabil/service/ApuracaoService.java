@@ -6,10 +6,12 @@ import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.event.NotaImportadaEvent;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
 import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.ApuracaoMensal;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusApuracao;
@@ -18,6 +20,9 @@ import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.DebitoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.MembroEscritorioProvider;
+import br.com.agrocontabil.security.PapelUsuario;
+import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -91,6 +96,8 @@ public class ApuracaoService {
   private final ApuracaoMensalRepository apuracaoRepository;
   private final ProdutorRepository produtorRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
+  private final ProdutorEmContextoResolver produtorEmContexto;
+  private final MembroEscritorioProvider membroProvider;
   private final AuditorAware<String> auditorAware;
   private final Clock clock;
 
@@ -105,7 +112,8 @@ public class ApuracaoService {
   private final int loteTamanho;
 
   /**
-   * Constrói o serviço com os repositórios de notas/apuração/produtor, o provedor autenticado, o
+   * Constrói o serviço com os repositórios de notas/apuração/produtor, o provedor autenticado, a
+   * autorização do contador sobre a carteira e a função no escritório (reabertura, #224), o
    * {@link AuditorAware} (identidade de quem reabre), o {@link Clock} (mês de referência da RN005;
    * injetável para tornar determinística a borda de 3 meses nos testes), o gerenciador de
    * transações (transação por item do job) e o tamanho do lote de leitura do fechamento.
@@ -115,6 +123,8 @@ public class ApuracaoService {
       ApuracaoMensalRepository apuracaoRepository,
       ProdutorRepository produtorRepository,
       AuthenticatedProdutorProvider produtorProvider,
+      ProdutorEmContextoResolver produtorEmContexto,
+      MembroEscritorioProvider membroProvider,
       AuditorAware<String> auditorAware,
       Clock clock,
       PlatformTransactionManager transactionManager,
@@ -127,6 +137,8 @@ public class ApuracaoService {
     this.apuracaoRepository = apuracaoRepository;
     this.produtorRepository = produtorRepository;
     this.produtorProvider = produtorProvider;
+    this.produtorEmContexto = produtorEmContexto;
+    this.membroProvider = membroProvider;
     this.auditorAware = auditorAware;
     this.clock = clock;
     this.transacaoPorItem = new TransactionTemplate(transactionManager);
@@ -316,42 +328,69 @@ public class ApuracaoService {
   }
 
   /**
-   * Reabre uma apuração FECHADA do produtor autenticado, transitando-a para
-   * {@link StatusApuracao#ABERTO} e registrando quem reabriu e quando (auditoria — RN005).
+   * Rota antiga {@code POST /api/apuracao/{id}/reabrir}: a reabertura é do contador (issue #224).
    *
-   * <p>Validações, nesta ordem:
-   * <ol>
-   *   <li><strong>Ownership (anti-IDOR):</strong> busca por {@code (id, produtorId)} — apuração
-   *       de outro produtor (ou inexistente) resulta em {@link ResourceNotFoundException} (404),
-   *       sem revelar existência.</li>
-   *   <li><strong>Precondição de status:</strong> apenas {@link StatusApuracao#FECHADO} é
-   *       reabrível — senão {@link ApuracaoNaoReabrivelException} (409).</li>
-   *   <li><strong>RN005 — prazo:</strong> o período deve estar dentro dos 3 meses retroativos
-   *       (inclusive) em relação ao mês atual ({@code America/Sao_Paulo}) — senão
-   *       {@link ReaberturaForaPrazoException} (422).</li>
-   * </ol>
+   * <p>A RN005 diz que o contador reabre; até a #224 este método conferia só a posse pelo produtor
+   * autenticado, e o produtor reabria sozinho o próprio mês fechado — o recálculo por evento (#64)
+   * voltava a mexer em débito e crédito já fechados sem o contador saber. Agora a reabertura é
+   * {@link #reabrirPeloContador(UUID, String)}. Aqui o contador já recebe 403 do
+   * {@link AuthenticatedProdutorProvider} (a rota não traz o produtor-alvo) e o produtor, 403
+   * {@code PAPEL_NAO_AUTORIZADO}. A tentativa fica na auditoria.
    *
-   * @param id identificador da apuração
-   * @return apuração reaberta ({@code status == ABERTO})
-   * @throws ResourceNotFoundException      se inexistente ou de outro produtor (404)
-   * @throws ApuracaoNaoReabrivelException  se o status não for FECHADO (409)
-   * @throws ReaberturaForaPrazoException   se o período estiver fora do limite de 3 meses (422)
+   * @param id identificador da apuração (não é lido)
+   * @return nunca retorna
+   * @throws PapelNaoAutorizadoException sempre (403)
    */
   @Auditado(acao = AcaoAuditada.APURACAO_REABERTA, recurso = RecursoAuditado.APURACAO)
   public ApuracaoResponse reabrir(UUID id) {
-    Produtor produtor = produtorProvider.get();
+    produtorProvider.get();
+    throw new PapelNaoAutorizadoException(PapelUsuario.PRODUTOR, PapelUsuario.CONTADOR);
+  }
+
+  /**
+   * O escritório reabre uma apuração FECHADA de um cliente da carteira (issue #224, RN005),
+   * transitando-a para {@link StatusApuracao#ABERTO} e registrando quem reabriu e quando.
+   *
+   * <p>Validações, nesta ordem:
+   * <ol>
+   *   <li><strong>Carteira:</strong> {@link ProdutorEmContextoResolver#exigirContadorComAcesso}
+   *       — produtor recebe 403; fora da carteira ativa do escritório, 404 (não revela o
+   *       produtor).</li>
+   *   <li><strong>Função (#228):</strong> {@code ADMINISTRADOR} ou {@code CONTADOR}; o
+   *       {@code ASSISTENTE} recebe 403.</li>
+   *   <li><strong>Existência:</strong> o período do produtor, lido sob lock pessimista — sem
+   *       apuração consolidada, 404.</li>
+   *   <li><strong>Status:</strong> só {@link StatusApuracao#FECHADO} reabre (409).</li>
+   *   <li><strong>RN005 — prazo:</strong> até 3 meses retroativos ao mês atual
+   *       ({@code America/Sao_Paulo}), inclusive (422).</li>
+   * </ol>
+   *
+   * <p>A rota é pelo período, não pelo id: o {@code ApuracaoResponse} não expõe o id, e o par
+   * {@code (produtor, periodo)} já é único. O id e o produtor vão só à auditoria, pelo
+   * {@link ReaberturaApuracao}.
+   *
+   * @param produtorId cliente da carteira ativa
+   * @param periodo    mês da apuração ({@code YYYY-MM}, já validado no controller)
+   * @return a apuração reaberta e, para a auditoria, o id e o produtor
+   */
+  @Auditado(acao = AcaoAuditada.APURACAO_REABERTA, recurso = RecursoAuditado.APURACAO)
+  public ReaberturaApuracao reabrirPeloContador(UUID produtorId, String periodo) {
+    produtorEmContexto.exigirContadorComAcesso(produtorId);
+    membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR, FuncaoEscritorio.CONTADOR);
+
+    YearMonth mes = YearMonth.parse(periodo);
     ApuracaoMensal apuracao = apuracaoRepository
-        .findByIdAndProdutorIdForUpdate(id, produtor.getId())
-        .orElseThrow(() -> new ResourceNotFoundException("Apuracao", id));
+        .findByProdutorIdAndPeriodoForUpdate(produtorId, mes.toString())
+        .orElseThrow(() -> new ResourceNotFoundException("Apuracao", mes));
+    UUID id = apuracao.getId();
 
     if (apuracao.getStatus() != StatusApuracao.FECHADO) {
       throw new ApuracaoNaoReabrivelException(id, apuracao.getStatus());
     }
 
-    YearMonth periodo = YearMonth.parse(apuracao.getPeriodo());
     YearMonth periodoLimite = YearMonth.now(clock).minusMonths(MESES_MAX_REABERTURA);
-    if (periodo.isBefore(periodoLimite)) {
-      throw new ReaberturaForaPrazoException(id, periodo, periodoLimite);
+    if (mes.isBefore(periodoLimite)) {
+      throw new ReaberturaForaPrazoException(id, mes, periodoLimite);
     }
 
     apuracao.setStatus(StatusApuracao.ABERTO);
@@ -359,9 +398,9 @@ public class ApuracaoService {
     apuracao.setReabertoPor(auditorAware.getCurrentAuditor().orElse(null));
     apuracao.setDataReabertura(OffsetDateTime.now(clock));
     ApuracaoMensal salva = apuracaoRepository.save(apuracao);
-    log.info("Apuracao reaberta: id={} periodo={} reabertoPor={}",
+    log.info("Apuracao reaberta pelo escritorio: id={} periodo={} reabertoPor={}",
         salva.getId(), salva.getPeriodo(), salva.getReabertoPor());
-    return toResponse(salva);
+    return new ReaberturaApuracao(toResponse(salva), salva.getId(), produtorId);
   }
 
   /**

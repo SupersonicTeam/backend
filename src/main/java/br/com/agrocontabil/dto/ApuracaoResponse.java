@@ -27,8 +27,8 @@ import java.time.OffsetDateTime;
  * @param parcial        {@code true} quando o período ainda não terminou ou, numa faixa agrupada,
  *                       quando a faixa cobre só parte do grupo (issue #179)
  *
- * <p>Sem {@code id} de propósito: a reabertura por id fica para a #224, que antes restringe quem
- * pode reabrir.
+ * <p>Sem {@code id} de propósito: a reabertura (#224) é pelo período, na rota da carteira do
+ * contador, e o id só vai à auditoria.
  */
 @Schema(description = "Apuração mensal consolidada de IBS/CBS de um produtor em um período")
 public record ApuracaoResponse(

@@ -162,29 +162,6 @@ class ApuracaoFechamentoIntegrationTest {
   }
 
   @Test
-  @DisplayName("Reabre apuracao FECHADA do mes atual: volta a ABERTO com auditoria (quem/quando)")
-  void reabreApuracaoFechadaComAuditoria() {
-    autenticar(produtor);
-    // Periodo do mes corrente -> sempre dentro da janela de 3 meses (RN005), independe da data.
-    String periodo = YearMonth.now(ZONE).toString();
-    salvarSaidaAutorizada(produtor, 1L, OffsetDateTime.now(ZONE), "80.00");
-    apuracaoService.fecharPeriodo(periodo);
-    ApuracaoMensal fechada =
-        apuracaoRepository.findByProdutorIdAndPeriodo(produtor.getId(), periodo).orElseThrow();
-    assertThat(fechada.getStatus()).isEqualTo(StatusApuracao.FECHADO);
-
-    var resposta = apuracaoService.reabrir(fechada.getId());
-
-    assertThat(resposta.status()).isEqualTo("ABERTO");
-    ApuracaoMensal reaberta = apuracaoRepository.findById(fechada.getId()).orElseThrow();
-    assertThat(reaberta.getStatus()).isEqualTo(StatusApuracao.ABERTO);
-    assertThat(reaberta.getDataReabertura()).isNotNull();
-    // Auditoria registra o ID do produtor autenticado (identidade mock; nunca CPF/CNPJ — LGPD).
-    assertThat(reaberta.getReabertoPor()).isEqualTo(produtor.getId().toString());
-    assertThat(reaberta.getReabertoPor()).doesNotContain(produtor.getCpfCnpj());
-  }
-
-  @Test
   @DisplayName("Refecha apuracao ABERTA de mes anterior na janela RN005; ignora fora da janela (#57)")
   void refechaReabertaDeMesAnteriorDentroDaJanela() {
     YearMonth mesCorrente = YearMonth.now(ZONE);

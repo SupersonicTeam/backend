@@ -90,19 +90,6 @@ public interface ApuracaoMensalRepository extends JpaRepository<ApuracaoMensal, 
   Optional<ApuracaoMensal> findByIdForUpdate(@Param("id") UUID id);
 
   /**
-   * Mesma busca de {@link #findByIdAndProdutorId} (recorte anti-IDOR), com lock pessimista de
-   * escrita: a reabertura (RN005) não pode se intercalar com o refechamento do job.
-   *
-   * @param id         identificador da apuração
-   * @param produtorId identificador do produtor autenticado
-   * @return a apuração travada até o fim da transação, ou vazio se inexistente ou de outro produtor
-   */
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT a FROM ApuracaoMensal a WHERE a.id = :id AND a.produtor.id = :produtorId")
-  Optional<ApuracaoMensal> findByIdAndProdutorIdForUpdate(
-      @Param("id") UUID id, @Param("produtorId") UUID produtorId);
-
-  /**
    * IDs das apurações em um dado status cujo período esteja na faixa {@code [inicio, fim)}.
    *
    * <p>Usada pelo refechamento automático de períodos reabertos (issues Agrocontabil#57 e #100 —
