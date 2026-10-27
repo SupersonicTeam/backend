@@ -293,7 +293,7 @@ class AssistenteStreamingIntegrationTest {
 
     // A thread da Ceres foi interrompida e devolveu a vaga do produtor.
     modelo.responderTexto("Sem notas no periodo.");
-    assertThat(eventos(stream(produtorA, "de novo").body())).extracting(Evento::nome)
+    assertThat(eventos(streamEmConexaoNova(produtorA, "de novo").body())).extracting(Evento::nome)
         .containsExactly("rota", "resposta", "fim");
   }
 
@@ -349,6 +349,18 @@ class AssistenteStreamingIntegrationTest {
 
   private HttpResponse<String> stream(Produtor produtor, String pergunta) throws Exception {
     return enviar(produtor.getId(), "/api/assistente/chat/stream", "text/event-stream", pergunta);
+  }
+
+  /**
+   * Stream por um cliente novo, sem conexão no pool. Depois de um SSE abortado por tempo, o Tomcat
+   * fecha a conexão; o cliente compartilhado podia reaproveitá-la antes de perceber o fechamento e
+   * a requisição seguinte falhava com "header parser received no bytes" (teste instável na CI).
+   */
+  private HttpResponse<String> streamEmConexaoNova(Produtor produtor, String pergunta)
+      throws Exception {
+    HttpClient novo = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    return novo.send(requisicao(produtor.getId(), "/api/assistente/chat/stream",
+        "text/event-stream", pergunta), HttpResponse.BodyHandlers.ofString());
   }
 
   private HttpResponse<String> enviar(UUID usuario, String caminho, String accept,
