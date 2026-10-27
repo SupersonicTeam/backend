@@ -11,6 +11,7 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +38,14 @@ import org.springframework.stereotype.Component;
  *
  * <p><strong>Segredo.</strong> A aplicação não sobe com segredo ausente (fora de {@code dev}/{@code
  * test}), com menos de 32 bytes (RFC 7518 §3.2: a chave do HS256 precisa ter pelo menos o tamanho
- * do hash) ou com o valor de exemplo do {@code .env.example}.
+ * do hash) ou com o valor de exemplo do {@code .env.example}. Desde a #222 recusa também os
+ * segredos <em>públicos</em> — placeholders conhecidos ({@code CHANGE_ME}, "troque", "mude este",
+ * "secret", "exemplo", o default do compose de orquestração) e o segredo do profile {@code test} —
+ * e o de entropia baixa (menos de {@value #MINIMO_CARACTERES_DISTINTOS} caracteres distintos): só
+ * 32 bytes não bastavam, e o default do compose (49 bytes) era aceito em homolog e prod. Com o
+ * segredo conhecido, qualquer um assina token válido. Em {@code dev}/{@code test} um placeholder
+ * vale como ausente (segredo efêmero), e o segredo do profile {@code test} é aceito: é ele que os
+ * testes de integração usam.
  */
 @Component
 @ConditionalOnWebApplication
@@ -51,6 +59,26 @@ public class JwtService {
 
   /** Mínimo de bytes do segredo do HS256 (RFC 7518 §3.2). */
   static final int MINIMO_BYTES_SEGREDO = 32;
+
+  /** Mínimo de caracteres distintos do segredo (#222): barra "aaaa…" e "0123…0123". */
+  static final int MINIMO_CARACTERES_DISTINTOS = 16;
+
+  /**
+   * Marcas de placeholder (#222), comparadas em minúsculas e só com letras e dígitos: um segredo
+   * aleatório (openssl rand -base64 48) praticamente nunca as contém, e um texto de exemplo quase
+   * sempre contém uma.
+   */
+  private static final List<String> MARCAS_DE_PLACEHOLDER = List.of(
+      "changeme", "change", "troque", "mudeeste", "mudeesse", "secret", "exemplo", "example",
+      "placeholder");
+
+  /**
+   * Segredos publicados (#222): o default do compose de orquestração e o do profile {@code test}.
+   * Fora de dev/test, qualquer um deles é recusado — estão no repositório ou no {@code .env.example}.
+   */
+  private static final List<String> SEGREDOS_PUBLICOS = List.of(
+      "troque-este-segredo-em-producao-min-32-caracteres",
+      "segredo-de-teste-agrocontabil-com-mais-de-32-bytes");
 
   /** Algoritmo JCA da chave: o do HS256, qualquer que seja o tamanho do segredo. */
   private static final String ALGORITMO_CHAVE = "HmacSHA256";
@@ -153,11 +181,13 @@ public class JwtService {
   private static byte[] bytesDoSegredo(JwtProperties propriedades) {
     String segredo = propriedades.segredo();
     boolean ausente = segredo == null || segredo.isBlank();
-    boolean deExemplo = !ausente && segredo.toUpperCase(Locale.ROOT).contains("CHANGE_ME");
+    boolean deExemplo = !ausente && placeholder(segredo);
     if (ausente || deExemplo) {
       if (!propriedades.permitirSegredoEfemero()) {
+        // Nunca o segredo na mensagem: ela vai para o log da subida.
         throw new IllegalStateException(deExemplo
-            ? "JWT_SECRET ainda e o valor de exemplo do .env.example: gere um segredo aleatorio."
+            ? "JWT_SECRET e um valor de exemplo conhecido (placeholder ou default de compose): "
+                + "gere um segredo aleatorio (openssl rand -base64 48)."
             : "JWT_SECRET ausente: defina um segredo aleatorio de pelo menos "
                 + MINIMO_BYTES_SEGREDO + " bytes (ex.: openssl rand -base64 48).");
       }
@@ -174,7 +204,25 @@ public class JwtService {
       throw new IllegalStateException("JWT_SECRET curto demais: o HS256 exige pelo menos "
           + MINIMO_BYTES_SEGREDO + " bytes.");
     }
+    if (!propriedades.permitirSegredoEfemero()) {
+      // Em dev/test o segredo do profile test precisa valer; fora deles, publico e recusado.
+      if (SEGREDOS_PUBLICOS.contains(segredo.strip())) {
+        throw new IllegalStateException("JWT_SECRET e um valor de exemplo conhecido (publicado no "
+            + "repositorio): gere um segredo aleatorio (openssl rand -base64 48).");
+      }
+      if (segredo.chars().distinct().count() < MINIMO_CARACTERES_DISTINTOS) {
+        throw new IllegalStateException("JWT_SECRET com entropia baixa: menos de "
+            + MINIMO_CARACTERES_DISTINTOS + " caracteres distintos. Gere um segredo aleatorio "
+            + "(openssl rand -base64 48).");
+      }
+    }
     return bytes;
+  }
+
+  /** Contém uma marca de placeholder, ignorando caixa, hífen, sublinhado e espaço. */
+  private static boolean placeholder(String segredo) {
+    String normalizado = segredo.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    return MARCAS_DE_PLACEHOLDER.stream().anyMatch(normalizado::contains);
   }
 
   /**

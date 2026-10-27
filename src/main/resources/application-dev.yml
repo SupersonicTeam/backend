@@ -4,7 +4,9 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/${DB_NAME:agrocontabil}
     username: ${DB_USER:agrocontabil}
-    password: ${DB_PASSWORD:agrocontabil}
+    # Sem default (#225): a senha vem do .env, o mesmo que o compose.yaml usa para criar o banco.
+    # Uma senha literal aqui virava a senha efetiva de qualquer servidor que subisse com dev.
+    password: ${DB_PASSWORD}
     hikari:
       # statement_timeout do PostgreSQL (issue #98): aborta no servidor a query que passar do
       # limite, complementando o timeout de transacao do Spring. Fica fora do application.yml
@@ -54,7 +56,9 @@ app:
     senha: ${SEED_SENHA:}
   nfe:
     # Certificado autoassinado de teste (src/test/resources/certs) — apenas para permitir
-    # assinar/autorizar NF-e em dev local (SEFAZ ja e mock). NUNCA usar em prod.
+    # assinar/autorizar NF-e em dev local (SEFAZ ja e mock). NUNCA usar em prod: a chave privada e
+    # a senha sao publicas. E default so deste profile, e a subida avisa em WARN quando o
+    # certificado carregado e autoassinado (#225).
     #
     # O path default abaixo e relativo ao working directory do processo e so resolve
     # rodando a partir da raiz do checkout (./mvnw spring-boot:run) — se o backend for

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.config.RefreshProperties;
 import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.model.CredencialUsuario;
@@ -23,6 +24,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,9 +34,12 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -167,6 +172,20 @@ class RefreshTokenIntegrationTest {
     // ...e o legitimo, que ninguem reusou, morre junto.
     assertThat(refresh(renovado.refresh()).getResponse().getStatus()).isEqualTo(401);
     assertThat(sessaoRepository.findAll()).allSatisfy(s -> assertThat(s.getRevogadoEm()).isNotNull());
+  }
+
+  @Test
+  @ExtendWith(OutputCaptureExtension.class)
+  @DisplayName("reuso detectado: o WARN leva a referencia curta, nunca o UUID da credencial (#222)")
+  void reusoNaoLogaUuidDaCredencial(CapturedOutput saida) throws Exception {
+    Par vitima = login();
+    refresh(vitima.refresh());
+    refresh(vitima.refresh());
+
+    UUID credencialId = credencialRepository.findByEmail(EMAIL).orElseThrow().getId();
+    assertThat(saida.getOut()).contains("Reuso de refresh token detectado")
+        .contains(MascaraDadosPessoais.referencia(credencialId))
+        .doesNotContain(credencialId.toString());
   }
 
   @Test

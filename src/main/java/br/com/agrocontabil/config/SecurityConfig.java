@@ -56,7 +56,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * <p>Mantemos CSRF desabilitado (API stateless), sessao stateless e CORS controlado por
  * configuracao.
  *
- * <p>Em {@code dev} e {@code homolog}, o {@link MockIdentidadeFilter} resolve a identidade a partir
+ * <p>Em {@code dev} (só nele desde a #221), o {@link MockIdentidadeFilter} resolve a identidade a partir
  * do header {@code X-Usuario-Id} (UUID de produtor ou de contador) e preenche a authority do papel;
  * sem o header, cai no produtor semente. O header <strong>declara</strong> a identidade, nao a
  * prova — nao e autenticacao, e sim o mock multi-usuario que permite exercitar anti-IDOR e escopo
@@ -148,7 +148,7 @@ public class SecurityConfig {
                     .authenticated());
 
     // JWT primeiro (#206): Bearer valido autentica; Bearer invalido morre aqui com 401, antes que
-    // o mock de dev/homolog tenha chance de cair no produtor semente.
+    // o mock de dev tenha chance de cair no produtor semente.
     JwtAutenticacaoFilter jwtFilter =
         new JwtAutenticacaoFilter(autenticacaoTokenService, errorResponder);
     http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -31,9 +31,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * com a diferenca de permitir N usuarios — o suficiente para exercitar ponta a ponta o anti-IDOR e,
  * desde a #93, o escopo por papel. Autenticacao de verdade (login + JWT) e issue propria.
  *
- * <p>Por isso o filtro so e registrado nos profiles {@code dev} e {@code homolog}. Em producao ele
- * nao existe: nenhuma requisicao carrega principal e o {@code UsuarioAutenticadoProvider} responde
- * 401.
+ * <p>Por isso o filtro so e registrado no profile {@code dev}. Em {@code homolog} e {@code prod} ele
+ * nao existe: so o JWT autentica, e requisicao sem token recebe 401. Ate a #221 ele subia tambem em
+ * homolog, ao lado do login real: omitir o {@code Authorization} e mandar o UUID da vitima em
+ * {@code X-Usuario-Id} tomava a conta sem senha — e UUID nao e segredo (header {@code Location},
+ * logs, bundle do frontend).
  *
  * <p>Contrato:
  *
@@ -60,7 +62,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * </ul>
  */
 @Component
-@Profile({"dev", "homolog"})
+@Profile("dev")
 public class MockIdentidadeFilter extends OncePerRequestFilter {
 
   /** Header que declara qual usuario esta fazendo a requisicao. Valor: UUID do produtor ou contador. */

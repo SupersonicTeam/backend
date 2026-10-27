@@ -3,8 +3,13 @@ package br.com.agrocontabil.common;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -63,6 +68,30 @@ public final class MascaraDadosPessoais {
       resultado = regra.padrao().matcher(resultado).replaceAll(regra.marcador());
     }
     return resultado;
+  }
+
+  /**
+   * Referência curta de um id para log (#222): {@code ref:} + 12 hex do SHA-256 do UUID.
+   *
+   * <p>Para o id da credencial, que é o {@code sub} do JWT: com ele no log, quem obtivesse o
+   * segredo forjaria o token de uma conta específica. A referência correlaciona os eventos de uma
+   * mesma conta (o hash é estável) e, com o UUID em mãos, a operação a recalcula; o caminho
+   * inverso não existe.
+   *
+   * @param id id a referenciar
+   * @return {@code ref:<12 hex>}; nulo vira {@code ref:-}
+   */
+  public static String referencia(UUID id) {
+    if (id == null) {
+      return "ref:-";
+    }
+    try {
+      byte[] hash = MessageDigest.getInstance("SHA-256")
+          .digest(id.toString().getBytes(StandardCharsets.UTF_8));
+      return "ref:" + HexFormat.of().formatHex(hash, 0, 6);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 indisponivel na JVM", e);
+    }
   }
 
   /**

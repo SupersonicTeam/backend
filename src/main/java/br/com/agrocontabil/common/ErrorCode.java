@@ -181,7 +181,7 @@ public enum ErrorCode {
   // Identidade / autenticacao (Onda 4 — issue #92)
   /**
    * Requisicao sem identidade de usuario valida: nenhum mecanismo de identidade ativo (fora dos
-   * profiles dev/homolog) ou header {@code X-Usuario-Id} que nao resolve. HTTP 401.
+   * profile dev; homolog so autentica por JWT desde a #221) ou header {@code X-Usuario-Id} que nao resolve. HTTP 401.
    */
   NAO_AUTENTICADO,
   // Autorizacao por papel (Onda 7 — issue #93)

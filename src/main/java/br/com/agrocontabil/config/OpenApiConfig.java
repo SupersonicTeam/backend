@@ -49,7 +49,7 @@ public class OpenApiConfig {
 
                                 **Autenticação:** JWT Bearer. Entre em `POST /api/auth/login` \
                                 (e-mail e senha) e envie o `accessToken` no header \
-                                `Authorization: Bearer`. Em dev/homolog o header `X-Usuario-Id` \
+                                `Authorization: Bearer`. Em dev o header `X-Usuario-Id` \
                                 segue aceito sem token. Anti-IDOR: 404 para recurso de outro \
                                 produtor, nunca 403.
 

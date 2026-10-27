@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.dto.LoginRequest;
 import br.com.agrocontabil.dto.LoginResponse;
 import br.com.agrocontabil.exception.CredenciaisInvalidasException;
@@ -26,9 +27,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 @DisplayName("LoginService — e-mail e senha por JWT (#206)")
 class LoginServiceTest {
 
@@ -118,6 +121,31 @@ class LoginServiceTest {
     verify(bloqueioConta, never()).reservarFicticia();
     verify(bloqueioConta, never()).liberar(any());
     verify(sessaoService, never()).abrir(any());
+  }
+
+  @Test
+  @DisplayName("login recusado: o log leva uma referencia curta, nunca o UUID da credencial (#222)")
+  void logSemUuidDaCredencial(CapturedOutput saida) {
+    // O UUID da credencial e o "sub" do JWT: com ele (e o segredo vazado) forja-se um token.
+    CredencialUsuario errada = credencial(true);
+    CredencialUsuario bloqueada = credencial(true);
+    CredencialUsuario desativada = credencial(false);
+    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(errada),
+        Optional.of(bloqueada), Optional.of(desativada));
+    when(bloqueioConta.reservarTentativa(errada.getId())).thenReturn(true);
+    when(bloqueioConta.reservarTentativa(bloqueada.getId())).thenReturn(false);
+    when(bloqueioConta.reservarTentativa(desativada.getId())).thenReturn(true);
+    when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(false, true);
+
+    for (int i = 0; i < 3; i++) {
+      assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA)))
+          .isInstanceOf(CredenciaisInvalidasException.class);
+    }
+
+    for (CredencialUsuario c : new CredencialUsuario[] {errada, bloqueada, desativada}) {
+      assertThat(saida.getOut()).doesNotContain(c.getId().toString())
+          .contains(MascaraDadosPessoais.referencia(c.getId()));
+    }
   }
 
   @Test

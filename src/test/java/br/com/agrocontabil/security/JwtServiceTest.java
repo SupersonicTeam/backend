@@ -26,7 +26,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 @DisplayName("JwtService — emissao e conferencia estrita do JWT de acesso (#206)")
 class JwtServiceTest {
 
-  private static final String SEGREDO = "segredo-de-teste-agrocontabil-com-mais-de-32-bytes";
+  /** Segredo forte deste teste: o do application-test.yml e publico, recusado fora de dev/test. */
+  private static final String SEGREDO = "Kq7vX2pLm9TzR4wY8nB3cF6hJ1sD5gA0eUiOZxQ";
+  /** Segredo do application-test.yml: publico, aceito so no modo de dev/test (#222). */
+  private static final String SEGREDO_DO_PROFILE_TEST =
+      "segredo-de-teste-agrocontabil-com-mais-de-32-bytes";
   private static final Instant AGORA = Instant.parse("2026-10-19T12:00:00Z");
   private static final UUID CREDENCIAL = UUID.randomUUID();
 
@@ -195,6 +199,60 @@ class JwtServiceTest {
         .isInstanceOf(IllegalStateException.class).hasMessageContaining("exemplo");
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {
+      // default do compose de orquestracao e do .env.example de la (#222)
+      "troque-este-segredo-em-producao-min-32-caracteres",
+      SEGREDO_DO_PROFILE_TEST,
+      "change-me-please-this-is-not-a-real-key-0123456",
+      "ChangeMe0123456789abcdefghijklmnopqrstuvwxyz",
+      "mude-este-valor-antes-de-subir-em-producao-0123",
+      "my-super-secret-jwt-key-for-production-0123456",
+      "valor-de-exemplo-do-segredo-do-jwt-0123456789"})
+  @DisplayName("placeholder conhecido ou segredo publico impede a subida fora de dev/test (#222)")
+  void segredoPublicoImpedeSubida(String segredo) {
+    Clock clock = Clock.fixed(AGORA, ZoneOffset.UTC);
+    assertThatThrownBy(() -> new JwtService(propriedades(segredo, false), clock))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("conhecido")
+        .hasMessageNotContaining(segredo);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "abababababababababababababababababababab",
+      "0123456789012345678901234567890123456789",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})
+  @DisplayName("segredo com menos de 16 caracteres distintos impede a subida fora de dev/test (#222)")
+  void segredoSemEntropiaImpedeSubida(String segredo) {
+    Clock clock = Clock.fixed(AGORA, ZoneOffset.UTC);
+    assertThatThrownBy(() -> new JwtService(propriedades(segredo, false), clock))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("distintos")
+        .hasMessageNotContaining(segredo);
+  }
+
+  @Test
+  @DisplayName("em dev/test, placeholder conhecido vira efemero e o segredo do profile test vale")
+  void devTrataPlaceholderComoAusente() {
+    Clock clock = Clock.fixed(AGORA, ZoneOffset.UTC);
+    String compose = "troque-este-segredo-em-producao-min-32-caracteres";
+    JwtService comDefault = new JwtService(propriedades(compose, true), clock);
+    String forjado = Jwts.builder()
+        .subject(CREDENCIAL.toString())
+        .issuer("agrocontabil-backend").audience().add("agrocontabil-api").and()
+        .expiration(Date.from(AGORA.plusSeconds(600)))
+        .claim("papel", "PRODUTOR").claim("sv", 0)
+        .signWith(Keys.hmacShaKeyFor(compose.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256)
+        .compact();
+    assertThat(comDefault.conferir(forjado)).as("o default publico nunca assina token").isEmpty();
+
+    JwtService doProfileTest = new JwtService(propriedades(SEGREDO_DO_PROFILE_TEST, true), clock);
+    String token = doProfileTest.emitir(CREDENCIAL, PapelUsuario.PRODUTOR, 0).token();
+    assertThat(new JwtService(propriedades(SEGREDO_DO_PROFILE_TEST, true), clock).conferir(token))
+        .as("os testes de integracao assinam com o segredo do profile test").isPresent();
+  }
+
   @Test
   @DisplayName("em dev, ausente ou de exemplo vira segredo efemero (tokens nao sobrevivem ao reinicio)")
   void segredoEfemero() {
@@ -212,7 +270,7 @@ class JwtServiceTest {
   @Test
   @DisplayName("segredo de 64+ bytes (openssl rand -base64 48) segue assinando HS256 e recusa HS512")
   void segredoLongoContinuaHs256() {
-    String longo = "a".repeat(64);
+    String longo = (SEGREDO + SEGREDO).substring(0, 64);
     Clock clock = Clock.fixed(AGORA, ZoneOffset.UTC);
     JwtService jwt = new JwtService(propriedades(longo, false), clock);
 

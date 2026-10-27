@@ -88,4 +88,17 @@ class MascaraDadosPessoaisTest {
     assertThat(saida).contains("Key (email)=([EMAIL])").contains("cpf [CPF]")
         .doesNotContain("joao@").doesNotContain("52998224725");
   }
+
+  @Test
+  @DisplayName("referencia de id: estavel, curta e sem o UUID (#222)")
+  void referenciaDeId() {
+    java.util.UUID id = java.util.UUID.fromString("72f7d6a7-c101-401b-a58b-50216b04caf9");
+
+    String ref = MascaraDadosPessoais.referencia(id);
+
+    assertThat(ref).matches("ref:[0-9a-f]{12}").isEqualTo(MascaraDadosPessoais.referencia(id))
+        .doesNotContain("72f7d6a7");
+    assertThat(MascaraDadosPessoais.referencia(java.util.UUID.randomUUID())).isNotEqualTo(ref);
+    assertThat(MascaraDadosPessoais.referencia(null)).isEqualTo("ref:-");
+  }
 }
