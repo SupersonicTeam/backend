@@ -37,9 +37,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApuracaoController {
 
   /** Mês {@code YYYY-MM} com mês 01–12. */
-  private static final String MES = "\\d{4}-(0[1-9]|1[0-2])";
+  static final String MES ="\\d{4}-(0[1-9]|1[0-2])";
 
-  private static final String MENSAGEM_MES =
+  static final String MENSAGEM_MES =
       "Use o formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).";
 
   private final ApuracaoService apuracaoService;
@@ -111,30 +111,26 @@ public class ApuracaoController {
   }
 
   /**
-   * Reabre uma apuração fechada do produtor autenticado (issue Agrocontabil#42 — RN005).
+   * Rota antiga da reabertura (issue Agrocontabil#42): desde a #224 responde 403 a todos.
    *
-   * <p>Delega ao {@link ApuracaoService#reabrir(UUID)}, que aplica ownership (404), precondição de
-   * status FECHADO (409) e o limite de 3 meses retroativos (422). Registra quem reabriu e quando.
+   * <p>A RN005 dá a reabertura ao contador, pela rota da carteira
+   * ({@code POST /api/contador/produtores/{produtorId}/apuracao/{periodo}/reabrir},
+   * {@link CarteiraApuracaoController}). Esta segue mapeada para o produtor receber o 403
+   * {@code PAPEL_NAO_AUTORIZADO} explícito, e não um 404 de rota que pareceria erro do cliente.
    *
-   * @param id identificador da apuração
-   * @return apuração reaberta ({@code status == ABERTO})
+   * @param id identificador da apuração (não é lido)
+   * @return nunca retorna
    */
   @PostMapping("/{id}/reabrir")
   @Operation(
-      summary = "Reabre uma apuracao mensal fechada",
-      description = "Transita uma apuracao de FECHADO para ABERTO, registrando quem reabriu e "
-          + "quando (auditoria). A reabertura so e permitida dentro de 3 meses retroativos ao mes "
-          + "atual (RN005). Restrito ao produtor autenticado (anti-IDOR).")
+      summary = "Rota antiga da reabertura: 403 (a reabertura e do contador)",
+      deprecated = true,
+      description = "Desde a #224 a reabertura (RN005) e do contador, em POST "
+          + "/api/contador/produtores/{produtorId}/apuracao/{periodo}/reabrir. Aqui produtor e "
+          + "contador recebem 403 PAPEL_NAO_AUTORIZADO.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Apuracao reaberta com sucesso"),
-      @ApiResponse(responseCode = "404",
-          description = "Apuracao inexistente ou de outro produtor",
-          content = @Content(schema = @Schema(implementation = ApiError.class))),
-      @ApiResponse(responseCode = "409",
-          description = "Apuracao nao esta em status FECHADO",
-          content = @Content(schema = @Schema(implementation = ApiError.class))),
-      @ApiResponse(responseCode = "422",
-          description = "Periodo fora do limite de 3 meses retroativos (RN005)",
+      @ApiResponse(responseCode = "403",
+          description = "Reabertura e do contador, pela rota da carteira",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<ApuracaoResponse> reabrir(

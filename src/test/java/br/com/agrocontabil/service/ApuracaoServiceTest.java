@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,9 +18,12 @@ import br.com.agrocontabil.event.NotaEmitidaEvent;
 import br.com.agrocontabil.event.NotaImportadaEvent;
 import br.com.agrocontabil.exception.ApuracaoNaoReabrivelException;
 import br.com.agrocontabil.exception.ApuracaoPeriodoFechadoException;
+import br.com.agrocontabil.exception.FuncaoNaoAutorizadaException;
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ReaberturaForaPrazoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.ApuracaoMensal;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
@@ -27,6 +31,8 @@ import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.DebitoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.security.MembroEscritorioProvider;
+import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -42,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -67,6 +74,8 @@ class ApuracaoServiceTest {
   @Mock private AuthenticatedProdutorProvider produtorProvider;
   @Mock private org.springframework.data.domain.AuditorAware<String> auditorAware;
   @Mock private PlatformTransactionManager transactionManager;
+  @Mock private ProdutorEmContextoResolver produtorEmContexto;
+  @Mock private MembroEscritorioProvider membroProvider;
 
   private ApuracaoService service;
 
@@ -90,7 +99,8 @@ class ApuracaoServiceTest {
   private ApuracaoService novoService(int loteTamanho) {
     return new ApuracaoService(
         notaFiscalRepository, apuracaoRepository, produtorRepository, produtorProvider,
-        auditorAware, CLOCK_FIXO, transactionManager, loteTamanho);
+        produtorEmContexto, membroProvider, auditorAware, CLOCK_FIXO, transactionManager,
+        loteTamanho);
   }
 
   @BeforeEach
@@ -126,22 +136,33 @@ class ApuracaoServiceTest {
   }
 
   @Test
-  @DisplayName("Reabre apuracao FECHADA dentro de 3 meses: volta a ABERTO com auditoria preenchida")
+  @DisplayName("Contador reabre apuracao FECHADA dentro de 3 meses: ABERTO, quem reabriu e o "
+      + "resultado auditavel com id e produtor (#224)")
   void reabreDentroDoPrazo() {
     ApuracaoMensal apuracao = fechada("2026-06");
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(produtor.getId().toString()));
-    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(apuracao.getId(), produtor.getId()))
+    UUID contadorId = UUID.randomUUID();
+    when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(contadorId.toString()));
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-06"))
         .thenReturn(Optional.of(apuracao));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    ApuracaoResponse resposta = service.reabrir(apuracao.getId());
+    ReaberturaApuracao resultado = service.reabrirPeloContador(produtor.getId(), "2026-06");
 
-    assertThat(resposta.status()).isEqualTo("ABERTO");
+    assertThat(resultado.apuracao().status()).isEqualTo("ABERTO");
+    assertThat(resultado.status()).isEqualTo("ABERTO");
+    assertThat(resultado.recursoAuditado()).isEqualTo(apuracao.getId());
+    assertThat(resultado.produtorAuditado()).isEqualTo(produtor.getId());
+    InOrder ordem = inOrder(produtorEmContexto, membroProvider, apuracaoRepository);
+    ordem.verify(produtorEmContexto).exigirContadorComAcesso(produtor.getId());
+    ordem.verify(membroProvider).exigirFuncao(FuncaoEscritorio.ADMINISTRADOR,
+        FuncaoEscritorio.CONTADOR);
+    ordem.verify(apuracaoRepository).findByProdutorIdAndPeriodoForUpdate(produtor.getId(),
+        "2026-06");
     verify(apuracaoRepository).save(apuracaoCaptor.capture());
     ApuracaoMensal salva = apuracaoCaptor.getValue();
     assertThat(salva.getStatus()).isEqualTo(StatusApuracao.ABERTO);
-    assertThat(salva.getReabertoPor()).isEqualTo(produtor.getId().toString());
+    assertThat(salva.getDataFechamento()).isNull();
+    assertThat(salva.getReabertoPor()).isEqualTo(contadorId.toString());
     assertThat(salva.getDataReabertura()).isNotNull();
   }
 
@@ -149,25 +170,22 @@ class ApuracaoServiceTest {
   @DisplayName("Reabre o 3o mes retroativo (2026-04): borda inclusiva permitida")
   void reabreTerceiroMesRetroativoPermitido() {
     ApuracaoMensal apuracao = fechada("2026-04");
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(apuracao.getId(), produtor.getId()))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-04"))
         .thenReturn(Optional.of(apuracao));
     when(apuracaoRepository.save(any(ApuracaoMensal.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    ApuracaoResponse resposta = service.reabrir(apuracao.getId());
-
-    assertThat(resposta.status()).isEqualTo("ABERTO");
+    assertThat(service.reabrirPeloContador(produtor.getId(), "2026-04").status())
+        .isEqualTo("ABERTO");
   }
 
   @Test
   @DisplayName("Reabertura do 4o mes retroativo (2026-03) fora do prazo: 422, nao persiste")
   void reaberturaQuartoMesRetroativoNegada() {
     ApuracaoMensal apuracao = fechada("2026-03");
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(apuracao.getId(), produtor.getId()))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-03"))
         .thenReturn(Optional.of(apuracao));
 
-    assertThatThrownBy(() -> service.reabrir(apuracao.getId()))
+    assertThatThrownBy(() -> service.reabrirPeloContador(produtor.getId(), "2026-03"))
         .isInstanceOf(ReaberturaForaPrazoException.class);
 
     verify(apuracaoRepository, never()).save(any());
@@ -178,28 +196,62 @@ class ApuracaoServiceTest {
   void reaberturaStatusInvalidoLanca409() {
     ApuracaoMensal aberta = fechada("2026-06");
     aberta.setStatus(StatusApuracao.ABERTO);
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(aberta.getId(), produtor.getId()))
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-06"))
         .thenReturn(Optional.of(aberta));
 
-    assertThatThrownBy(() -> service.reabrir(aberta.getId()))
+    assertThatThrownBy(() -> service.reabrirPeloContador(produtor.getId(), "2026-06"))
         .isInstanceOf(ApuracaoNaoReabrivelException.class);
 
     verify(apuracaoRepository, never()).save(any());
   }
 
   @Test
-  @DisplayName("Reabertura de apuracao de outro produtor (ou inexistente) retorna 404")
-  void reaberturaDeOutroProdutorRetorna404() {
-    UUID id = UUID.randomUUID();
-    when(produtorProvider.get()).thenReturn(produtor);
-    when(apuracaoRepository.findByIdAndProdutorIdForUpdate(id, produtor.getId()))
+  @DisplayName("Periodo sem apuracao consolidada: 404, nao persiste")
+  void reaberturaSemApuracaoRetorna404() {
+    when(apuracaoRepository.findByProdutorIdAndPeriodoForUpdate(produtor.getId(), "2026-06"))
         .thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.reabrir(id))
+    assertThatThrownBy(() -> service.reabrirPeloContador(produtor.getId(), "2026-06"))
         .isInstanceOf(ResourceNotFoundException.class);
 
     verify(apuracaoRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Produtor fora da carteira ativa: 404 do resolver antes de tocar a apuracao")
+  void reaberturaForaDaCarteiraRetorna404() {
+    doThrow(new ResourceNotFoundException("Produtor", produtor.getId()))
+        .when(produtorEmContexto).exigirContadorComAcesso(produtor.getId());
+
+    assertThatThrownBy(() -> service.reabrirPeloContador(produtor.getId(), "2026-06"))
+        .isInstanceOf(ResourceNotFoundException.class);
+
+    verifyNoInteractions(apuracaoRepository, membroProvider);
+  }
+
+  @Test
+  @DisplayName("Assistente do escritorio nao reabre: 403 antes de tocar a apuracao")
+  void assistenteNaoReabre() {
+    when(membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR, FuncaoEscritorio.CONTADOR))
+        .thenThrow(new FuncaoNaoAutorizadaException(FuncaoEscritorio.ASSISTENTE,
+            List.of(FuncaoEscritorio.ADMINISTRADOR, FuncaoEscritorio.CONTADOR)));
+
+    assertThatThrownBy(() -> service.reabrirPeloContador(produtor.getId(), "2026-06"))
+        .isInstanceOf(FuncaoNaoAutorizadaException.class);
+
+    verifyNoInteractions(apuracaoRepository);
+  }
+
+  @Test
+  @DisplayName("Rota antiga POST /api/apuracao/{id}/reabrir: produtor recebe 403 e nada e lido")
+  void produtorNaoReabrePelaRotaAntiga() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    UUID id = UUID.randomUUID();
+
+    assertThatThrownBy(() -> service.reabrir(id))
+        .isInstanceOf(PapelNaoAutorizadoException.class);
+
+    verifyNoInteractions(apuracaoRepository);
   }
 
   @Test

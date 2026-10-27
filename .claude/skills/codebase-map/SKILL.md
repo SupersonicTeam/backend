@@ -45,7 +45,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `AuditoriaController` | `GET /api/auditoria?produtorId=` — só contador, só carteira; array + `X-Total-Count` (#149) |
 | `SenhaController` | `/api/auth/senha/**` — `esqueci` e `redefinir` públicos, `alterar` autenticado (#209); só com web |
 | `NotaFiscalController` | `/api/notas/**` — todos os 12 endpoints (ver tabela abaixo) |
-| `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004), faixa `de`/`ate`/`ultimos` + `agrupamento` (`ApuracaoFaixaService`, issue #179) + `/{id}/reabrir` (RN005) |
+| `ApuracaoController` | `/api/apuracao` — consulta mensal (RN004), faixa `de`/`ate`/`ultimos` + `agrupamento` (`ApuracaoFaixaService`, issue #179) + `/{id}/reabrir` (rota antiga: 403 a todos desde a #224) |
 | `DashboardController` | `GET /api/dashboard?periodo=YYYY-MM` — painel agregador do produtor (issue #65) |
 | `RevisaoNotaController` | `/api/notas/{id}/enviar-para-revisao`, `/retirar-da-revisao`, `/revisoes` e `/api/contador/produtores/{produtorId}/notas/{id}/aprovar`, `/devolver`, `/revisoes` (#178) |
 | `PendenciaController` | `/api/contador/produtores/{produtorId}/pendencias/**` (escritório) e `/api/pendencias/**` (produtor, anexo multipart e download) — pendências e documentos (#180) |
@@ -53,6 +53,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `ObrigacaoController` | `/api/contador/obrigacoes` (+ `/{id}`, `/reativar`, `/restaurar-padrao`) — catálogo de obrigações do escritório (#181) |
 | `GuiaFiscalController` | `/api/contador/guias` — CRUD de guias fiscais do Contador (issue #74) |
 | `CarteiraController` | `/api/contador/produtores` (lista), `/{produtorId}/ficha`, `/etiquetas`, `/suspender`/`/reativar`/`/encerrar`, `/api/contador/etiquetas`, `/api/contador/convites` — só contador (#177) |
+| `CarteiraApuracaoController` | `POST /api/contador/produtores/{produtorId}/apuracao/{periodo}/reabrir` — reabertura RN005 pelo escritório (`ApuracaoService.reabrirPeloContador`: carteira ativa → 404, `ADMINISTRADOR`/`CONTADOR` → 403, lock por produtor+período; resultado `ReaberturaApuracao` leva id e produtor só à auditoria) (#224) |
 | `CarteiraNotasController` | `/api/contador/produtores/{produtorId}/notas` (+ `/{id}`, `/{id}/validacoes`) — leitura, padrão de rota do contador (#177) |
 | `EscritorioController` | `/api/escritorio`, `/api/escritorio/membros/**` (+ convites e aceite) e o público `POST /api/auth/cadastro/equipe` (#228) |
 | `ConviteController` | Lado do produtor (#177): `/api/convites` (+ aceitar/recusar) e `/api/vinculos` (+ encerrar) |

@@ -1,7 +1,9 @@
 package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -9,14 +11,11 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
-import br.com.agrocontabil.support.TestDatabaseCleaner;
 import br.com.agrocontabil.support.AutenticacaoTestSupport;
+import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -32,8 +31,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -150,8 +149,8 @@ class ApuracaoIntegrationTest {
   }
 
   @Test
-  @DisplayName("Reabrir apuracao de outro produtor retorna 404 (anti-IDOR)")
-  void reabrirDeOutroProdutorRetorna404() {
+  @DisplayName("Produtor nao reabre apuracao (RN005 e do contador, #224): 403, nada muda")
+  void produtorNaoReabre() {
     Produtor outro = produtorRepository.save(
         Produtor.builder().nomeCompleto("Outro Produtor").cpfCnpj("11122233344").build());
     ApuracaoMensal doOutro = apuracaoRepository.save(ApuracaoMensal.builder()
@@ -164,9 +163,9 @@ class ApuracaoIntegrationTest {
         .totalNotas(0L)
         .build());
 
-    // O produtor autenticado (setUp) e "produtor", nao "outro".
+    // O produtor autenticado (setUp) e "produtor": nem a propria, nem a do outro.
     assertThatThrownBy(() -> apuracaoService.reabrir(doOutro.getId()))
-        .isInstanceOf(ResourceNotFoundException.class);
+        .isInstanceOf(PapelNaoAutorizadoException.class);
     assertThat(apuracaoRepository.findById(doOutro.getId()).orElseThrow().getStatus())
         .isEqualTo(StatusApuracao.FECHADO);
   }
