@@ -1,5 +1,18 @@
-.git
+target/
+.git/
 .gitignore
-*.md
+.idea/
+.vscode/
+*.iml
+docs/
+HELP.md
+README.md
+.mvn/wrapper/maven-wrapper.jar
+# Worktrees e configuracao do Claude Code: gigabytes de target/ no contexto de build.
 .claude/
-.env*
+# Segredos: o Dockerfile so copia pom.xml e src, mas o .env nem deve chegar ao daemon.
+.env
+.env.*
+!.env.example
+deploy/
+.specs/

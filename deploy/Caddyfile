@@ -1,0 +1,32 @@
+{$SITE_HOST} {
+	encode zstd gzip
+
+	# Senha no site inteiro: o backend roda em dev (identidade declarada por X-Usuario-Id).
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	# O navegador reenvia o "Authorization: Basic" em toda chamada da SPA; o backend o leria como
+	# credencial (o JwtAutenticacaoFilter recusaria e o mock ignora requisicao com Authorization).
+	# Tira so o Basic: um Bearer do login real passa intacto.
+	@basic header_regexp Authorization ^Basic\s
+	request_header @basic -Authorization
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	# API direto no backend (sem o Actuator: so /api e publico). SSE da Ceres sai sem buffer.
+	handle /api/* {
+		reverse_proxy backend:8080 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

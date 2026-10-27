@@ -1,0 +1,149 @@
+name: agrocontabil
+
+# Ambiente de demonstracao na VPS (Oracle Cloud, Ampere A1 arm64). Fica em /opt/agrocontabil ao lado
+# do .env, do Caddyfile e de certs/. As imagens do backend e do frontend vem do GHCR, publicadas pelos
+# workflows docker-publish.yml de cada repositorio. Atualizar: docker compose pull && docker compose up -d
+#
+# Profile dev ATRAS DE SENHA: o frontend ainda se identifica pelo X-Usuario-Id (mock so do dev, #221),
+# entao o Caddy exige basic auth no site inteiro. So dados ficticios aqui — em dev a chave de cifra e
+# a publica de desenvolvimento e qualquer requisicao pode declarar qualquer identidade.
+
+networks:
+  interna:
+
+volumes:
+  pgdata:
+  ollama:
+  clamav:
+  caddy_data:
+  caddy_config:
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-agrocontabil}
+      POSTGRES_USER: ${DB_USER:-agrocontabil}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [interna]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-agrocontabil} -d ${DB_NAME:-agrocontabil}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Sem porta publicada: o Ollama nao tem autenticacao. O backend chega por http://ollama:11434.
+  ollama:
+    image: ollama/ollama:0.35.0
+    restart: unless-stopped
+    environment:
+      # Uma pergunta por vez em CPU (o bulkhead do backend ja limita) e modelo sempre carregado.
+      OLLAMA_NUM_PARALLEL: '1'
+      OLLAMA_KEEP_ALIVE: 24h
+    volumes:
+      - ollama:/root/.ollama
+    networks: [interna]
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Baixa bge-m3 + modelo de chat na primeira subida (~4 GB) e termina.
+  ollama-init:
+    image: ollama/ollama:0.35.0
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
+    entrypoint: ['/bin/sh', '-c', 'ollama pull bge-m3 && ollama pull "$$AI_CHAT_MODEL"']
+    networks: [interna]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: 'no'
+
+  # Variante Debian: a clamav/clamav (Alpine) nao publica arm64.
+  clamav:
+    image: clamav/clamav-debian:1.4.3
+    restart: unless-stopped
+    volumes:
+      - clamav:/var/lib/clamav
+    networks: [interna]
+    healthcheck:
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  backend:
+    image: ghcr.io/supersonicteam/backend:${BACKEND_TAG:-latest}
+    restart: unless-stopped
+    # Janela do graceful shutdown do Spring (30s, #101) + folga.
+    stop_grace_period: 35s
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: 'false'
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-agrocontabil}
+      DB_NAME: ${DB_NAME:-agrocontabil}
+      DB_USER: ${DB_USER:-agrocontabil}
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_CORS_ALLOWED_ORIGINS: https://${SITE_HOST}
+      # Atras do Caddy (HTTPS): o cookie de refresh pode e deve ser Secure.
+      REFRESH_COOKIE_SEGURO: 'true'
+      REDEFINICAO_URL_FRONTEND: https://${SITE_HOST}/redefinir-senha
+      SEED_SENHA: ${SEED_SENHA:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      # Certificado autoassinado de teste (publico) — SEFAZ segue mock em dev.
+      NFE_CERT_PATH: file:/certs/nfe-teste.p12
+      AI_OLLAMA_BASE_URL: http://ollama:11434
+      AI_CHAT_PROVIDER: ollama
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
+      ANTIVIRUS_MODO: CLAMAV
+      ANTIVIRUS_HOST: clamav
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=25 -Duser.timezone=America/Sao_Paulo
+      LOGGING_LEVEL_ORG_HIBERNATE_SQL: INFO
+      SPRING_JPA_SHOW_SQL: 'false'
+    volumes:
+      - ./certs:/certs:ro
+    networks: [interna]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  frontend:
+    image: ghcr.io/supersonicteam/frontend:${FRONTEND_TAG:-latest}
+    restart: unless-stopped
+    networks: [interna]
+    depends_on:
+      - backend
+
+  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST e senha no site inteiro.
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_HOST: ${SITE_HOST:?defina SITE_HOST no .env}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-banca}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?gere com caddy hash-password}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [interna]
+    depends_on:
+      - frontend
+      - backend
