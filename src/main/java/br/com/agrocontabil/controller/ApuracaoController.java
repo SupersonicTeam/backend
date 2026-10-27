@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApuracaoController {
 
   /** Mês {@code YYYY-MM} com mês 01–12. */
-  static final String MES ="\\d{4}-(0[1-9]|1[0-2])";
+  static final String MES = "\\d{4}-(0[1-9]|1[0-2])";
 
   static final String MENSAGEM_MES =
       "Use o formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).";
