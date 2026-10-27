@@ -30,7 +30,10 @@ Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 
 
 ```bash
 ./mvnw spring-boot:run        # roda em dev (sobe o Postgres do compose junto; o pom ativa dev
-                              # se SPRING_PROFILES_ACTIVE faltar — o JAR exige a variável, #219)
+                              # se SPRING_PROFILES_ACTIVE faltar — o JAR exige a variável, #219).
+                              # Sem a integracao docker-compose (--spring.docker.compose.enabled=false,
+                              # comum nos worktrees), exporte DB_PASSWORD: o dev nao tem senha padrao (#225)
+                              # e o Spring Boot nao le o .env
 ./mvnw test                   # testes no profile test (H2 em memória)
 ./mvnw clean package          # gera o JAR em target/
 ```
@@ -236,7 +239,7 @@ br.com.agrocontabil
 ### Nota de integração para o frontend (papéis — issue #93)
 
 - **Nada muda para o produtor.** Sem header, ou com `X-Usuario-Id` de produtor, todos os endpoints respondem como antes.
-- **Para agir como contador**, envie `X-Usuario-Id` com o **UUID do contador** (o `DataLoader` loga o id na subida, em dev/homolog). Ele alcança `GET`/`POST /api/contador/guias` e `GET /api/calendario-fiscal/{produtorId}/vencimentos` **somente** dos produtores vinculados; fora da carteira a resposta é **404** — por design, para não revelar a existência do produtor.
+- **Para agir como contador**, envie `X-Usuario-Id` com o **UUID do contador** (o `DataLoader` loga o id na subida). **Só em dev** desde a #221: em homolog e prod, só o login (JWT). Ele alcança `GET`/`POST /api/contador/guias` e `GET /api/calendario-fiscal/{produtorId}/vencimentos` **somente** dos produtores vinculados; fora da carteira a resposta é **404** — por design, para não revelar a existência do produtor.
 - **Dois erros novos a tratar:** `401 NAO_AUTENTICADO` agora também pode vir da própria cadeia de filtros (mesmo envelope `errors[]`, com `WWW-Authenticate`); `403 PAPEL_NAO_AUTORIZADO` aparece quando o papel não faz aquela operação — contador em `PATCH /api/contador/guias/{id}/pagar`, ou contador em `/api/dashboard`, `/api/apuracao`, `/api/creditos` e `/api/relatorios`, que ainda derivam tudo do produtor autenticado.
 - **Rotas públicas:** `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`.
 

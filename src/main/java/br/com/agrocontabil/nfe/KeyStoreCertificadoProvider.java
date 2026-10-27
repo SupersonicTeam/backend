@@ -24,7 +24,8 @@ import org.springframework.stereotype.Component;
  * Falhas viram {@link AssinaturaDigitalException} (HTTP 500) com o código apropriado.
  *
  * <p>Na subida (#225) o certificado configurado é carregado uma vez só para avisar: um certificado
- * autoassinado — o de teste do repositório, default do profile {@code dev} — vira WARN, porque o
+ * autoassinado ou emitido fora da ICP-Brasil — o de teste do repositório, default do profile
+ * {@code dev}, ou um de AC de teste — vira WARN, porque o
  * XML assinado com ele não tem validade jurídica e a chave privada é pública. Falha na subida
  * também só avisa: a aplicação sobe e a emissão responde o erro quando for pedida.
  */
@@ -107,12 +108,13 @@ public class KeyStoreCertificadoProvider {
             "Alias '" + alias + "' nao contem chave privada e certificado");
       }
       cert.checkValidity(); // lanca CertificateExpiredException/NotYetValid
-      if (autoassinado(cert)) {
-        // Certificado ICP-Brasil nunca e autoassinado: este e o de teste (ou um gerado a mao).
-        log.warn("Certificado digital da NF-e autoassinado ({}): uso so em dev/test. O XML "
-            + "assinado com ele nao tem validade juridica e a chave privada e publica; em "
-            + "homolog/prod configure um A1 ICP-Brasil (NFE_CERT_PATH).",
-            cert.getSubjectX500Principal().getName());
+      if (autoassinado(cert) || !emitidoPelaIcpBrasil(cert)) {
+        // A1 de verdade e sempre emitido por AC da ICP-Brasil: este e o de teste (autoassinado)
+        // ou um de AC de teste gerado a mao.
+        log.warn("Certificado digital da NF-e de teste ({}, emitido por {}): autoassinado ou fora "
+            + "da ICP-Brasil, uso so em dev/test. O XML assinado com ele nao tem validade "
+            + "juridica; em homolog/prod configure um A1 ICP-Brasil (NFE_CERT_PATH).",
+            cert.getSubjectX500Principal().getName(), cert.getIssuerX500Principal().getName());
       }
 
       this.privateKey = key;
@@ -129,6 +131,11 @@ public class KeyStoreCertificadoProvider {
       throw new AssinaturaDigitalException(ErrorCode.CERTIFICADO_INVALIDO,
           "Falha ao carregar o certificado: " + e.getMessage(), e);
     }
+  }
+
+  /** As ACs da ICP-Brasil levam {@code O=ICP-Brasil} no nome (DOC-ICP-04). */
+  private static boolean emitidoPelaIcpBrasil(X509Certificate cert) {
+    return cert.getIssuerX500Principal().getName().contains("O=ICP-Brasil");
   }
 
   private static boolean autoassinado(X509Certificate cert) {

@@ -173,7 +173,8 @@ public class SessaoService {
       // Reuso: alguem tem uma copia. Encerra a familia e grava antes de recusar.
       int revogadas = sessaoRepository.revogarFamilia(sessao.getFamiliaId(), agora);
       log.warn("Reuso de refresh token detectado: familia={} revogada ({} token(s)), "
-          + "credencial={}", sessao.getFamiliaId(), revogadas, sessao.getCredencialId());
+          + "credencial={}", sessao.getFamiliaId(), revogadas,
+          MascaraDadosPessoais.referencia(sessao.getCredencialId()));
       return Renovacao.INVALIDA;
     }
     if (!sessao.getExpiraEm().isAfter(agora)) {

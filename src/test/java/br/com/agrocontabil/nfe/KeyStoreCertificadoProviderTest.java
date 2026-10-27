@@ -63,7 +63,7 @@ class KeyStoreCertificadoProviderTest {
 
     provider.conferirNaSubida();
 
-    assertThat(saida.getOut()).contains("WARN").contains("autoassinado")
+    assertThat(saida.getOut()).contains("WARN").contains("autoassinado ou fora da ICP-Brasil")
         .doesNotContain("changeit");
     assertThat(provider.getCertificate()).isNotNull();
   }
