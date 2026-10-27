@@ -116,6 +116,11 @@ services:
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
       ANTIVIRUS_MODO: CLAMAV
       ANTIVIRUS_HOST: clamav
+      # Atras do Caddy: sem isto o backend ve todo cliente com o IP do Caddy e o limite por IP de
+      # login/cadastro (#208) vira um limite global — 10 senhas erradas de um usuario barram o login de
+      # todos por 1 min. O Tomcat so confia no X-Forwarded-For de proxy interno (172.16/12 inclui a
+      # rede do compose) e o Caddy reescreve o header com o IP real (nao repassa o do cliente).
+      SERVER_FORWARD_HEADERS_STRATEGY: native
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=25 -Duser.timezone=America/Sao_Paulo
       LOGGING_LEVEL_ORG_HIBERNATE_SQL: INFO
       SPRING_JPA_SHOW_SQL: 'false'
