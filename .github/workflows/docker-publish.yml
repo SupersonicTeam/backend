@@ -1,9 +1,15 @@
-name: Docker - Backend (GHCR)
+name: Docker - Backend (GHCR + deploy)
 
-# Publica a imagem do backend no GHCR para amd64 e arm64 (VPS Oracle Ampere A1).
-# Deploy: na VPS, `docker compose pull && docker compose up -d` em /opt/agrocontabil (deploy/README.md).
+# CD do backend: so roda depois do "CI - Backend" verde num push na main (nunca publica imagem de
+# commit com teste quebrado). Publica a imagem no GHCR (amd64 + arm64, VPS Oracle Ampere) e faz o
+# deploy na VPS pelo deploy.sh (deploy/README.md): lock da VPS compartilhado com o frontend, so o
+# servico backend e recriado, rollback para a tag anterior se nao ficar healthy.
+#
+# workflow_dispatch: republica e reimplanta o commit escolhido sem esperar a CI (ex.: VPS recriada).
 on:
-  push:
+  workflow_run:
+    workflows: ['CI - Backend']
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -11,18 +17,34 @@ permissions:
   contents: read
   packages: write
 
-concurrency:
-  group: docker-publish-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   publish:
     name: Build and push
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
+    # Um publish por vez; o mais novo cancela o que ainda espera.
+    concurrency:
+      group: docker-publish-backend
+      cancel-in-progress: true
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
 
     steps:
+      # Commit que a CI testou (no workflow_run o github.sha e o topo da main, que pode ser outro).
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Image name and tag
+        id: tag
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${SHA::7}" >> "$GITHUB_OUTPUT"
 
       # Só o estágio final (apk add, adduser) roda emulado em arm64; o Maven roda nativo
       # (FROM --platform=$BUILDPLATFORM no Dockerfile).
@@ -39,22 +61,45 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,format=short
-
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ steps.tag.outputs.image }}:${{ steps.tag.outputs.tag }}
+            ${{ steps.tag.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy na VPS
+    needs: publish
+    runs-on: ubuntu-latest
+    # Deploys do backend em fila (sem cancelar o que ja esta na VPS); o lock da VPS serializa com o
+    # frontend.
+    concurrency:
+      group: deploy-vps-backend
+      cancel-in-progress: false
+    environment:
+      name: vps-oracle
+      url: https://${{ vars.VPS_SITE_HOST }}
+
+    steps:
+      # A chave so executa "deploy <servico> <tag>" (command= forcado no authorized_keys da VPS).
+      - name: Deploy
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
+          HOST: ${{ vars.VPS_HOST }}
+          TAG: ${{ needs.publish.outputs.tag }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "ubuntu@$HOST" "deploy backend $TAG"

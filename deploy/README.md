@@ -57,13 +57,28 @@ gunzip -c legislacao.tsv.gz | docker compose exec -T postgres \
   psql -U agrocontabil -d agrocontabil -c "\copy legislacao_trecho(id, content, metadata, embedding) from stdin"
 ```
 
-## Atualizar
+## CI/CD
 
-```bash
-cd /opt/agrocontabil && docker compose pull backend frontend && docker compose up -d
+```
+PR ──► CI (testes) ──► merge na main ──► CI verde ──► docker-publish.yml ──► GHCR ──► deploy na VPS
 ```
 
-`BACKEND_TAG`/`FRONTEND_TAG` no `.env` fixam uma versão (`sha-xxxxxxx`) em vez de `latest`.
+- O `docker-publish.yml` de cada repo dispara por `workflow_run` **só quando a CI do push na `main`
+  passa** (backend: `CI - Backend`; frontend: `CI`) e publica `sha-xxxxxxx` + `latest`.
+- O job **Deploy na VPS** entra por SSH com uma chave só da CI. Na VPS ela tem
+  `command="/opt/agrocontabil/ssh-forcado.sh"` no `authorized_keys`: não abre shell e só aceita
+  `deploy <backend|frontend> <sha-xxxxxxx|latest>`.
+- `deploy.sh` (nesta pasta, copiado para `/opt/agrocontabil`):
+  - **lock único da VPS** (`flock` em `.deploy.lock`): backend e frontend implantam em série — o
+    segundo espera o primeiro terminar (até 15 min);
+  - recria **só o próprio serviço** (`up -d --no-deps`): o deploy do frontend não reinicia o backend;
+  - grava a tag no `.env` (`BACKEND_TAG`/`FRONTEND_TAG`), então um `up -d` manual depois mantém a versão;
+  - espera `healthy` (5 min); se não ficar, **rollback** para a tag anterior e o job falha.
+- Configuração no GitHub (cada repo): secret `VPS_SSH_KEY` (chave privada da CI) e variáveis
+  `VPS_HOST`, `VPS_SITE_HOST` e `VPS_KNOWN_HOSTS` (saída de `ssh-keyscan -t ed25519 <ip>`).
+- Reimplantar sem novo commit: *Actions → Docker - … (GHCR + deploy) → Run workflow*.
+
+Deploy manual de uma versão (na VM): `./deploy.sh backend sha-xxxxxxx`.
 
 ## Custos
 

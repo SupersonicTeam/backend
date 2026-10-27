@@ -124,6 +124,13 @@ services:
     image: ghcr.io/supersonicteam/frontend:${FRONTEND_TAG:-latest}
     restart: unless-stopped
     networks: [interna]
+    # O deploy.sh espera este healthy antes de dar o deploy por concluido (senao, rollback).
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1/ || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - backend
 
