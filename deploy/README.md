@@ -31,6 +31,22 @@ frontend tiver login, troque para `SPRING_PROFILES_ACTIVE: prod` com os segredos
 - Só o Caddy publica porta. Backend, Postgres, Ollama e ClamAV ficam na rede interna do compose; o
   Actuator não é exposto (o Caddy só repassa `/api/*`).
 
+## Operação
+
+- **Backup do banco:** `backup.sh` roda no cron do `ubuntu` às 03:30 (VM em `America/Sao_Paulo`):
+  `pg_dump` custom em `backups/agrocontabil-AAAA-MM-DD.dump`, 7 dias de retenção, log em
+  `backups/backup.log`. Restauração no cabeçalho do script. Fica no mesmo disco; contra perder a VM,
+  vale a **política de backup do volume de boot** na Oracle (Always Free: até 5 backups).
+- **Logs:** todo serviço do compose usa `json-file` com 20 MB × 5 arquivos (âncora `x-logging`), e o
+  `/etc/docker/daemon.json` repete o limite para qualquer container fora do compose.
+- **Monitor:** `GET /healthz` é a única rota sem senha e responde só `UP` (200) ou `DOWN` (503) pelo
+  health do backend, sem repassar o corpo do Actuator. É o alvo do UptimeRobot.
+- **SSH:** só chave (sem senha, root sem senha) e `fail2ban` no jail `sshd` (5 falhas em 10 min →
+  1 h de bloqueio). No Ubuntu 24.04 a unidade é `ssh.service`, então o
+  `/etc/fail2ban/jail.d/sshd.local` fixa o `journalmatch` — o padrão do fail2ban nunca casaria.
+- **Arquivos de configuração** (`compose.yaml`, `Caddyfile`, scripts) não vão pelo CD, que só troca
+  imagem: ao mudar algum, copie para `/opt/agrocontabil` e rode `docker compose up -d`.
+
 ## Primeira subida
 
 ```bash

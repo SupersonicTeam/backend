@@ -1,8 +1,25 @@
 {$SITE_HOST} {
 	encode zstd gzip
 
-	# Senha no site inteiro: o backend roda em dev (identidade declarada por X-Usuario-Id).
-	basic_auth {
+	# Monitor externo (UptimeRobot): unica rota sem senha. Responde so UP/DOWN pelo health do
+	# backend, sem repassar o corpo (em dev o Actuator detalha banco, Ollama e ClamAV).
+	handle /healthz {
+		rewrite * /actuator/health
+		reverse_proxy backend:8080 {
+			@saudavel status 2xx
+			handle_response @saudavel {
+				respond "UP" 200
+			}
+			handle_response {
+				respond "DOWN" 503
+			}
+		}
+	}
+
+	# Senha no site inteiro (menos /healthz): o backend roda em dev (identidade declarada por
+	# X-Usuario-Id).
+	@protegido not path /healthz
+	basic_auth @protegido {
 		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
 	}
 

@@ -8,6 +8,13 @@ name: agrocontabil
 # entao o Caddy exige basic auth no site inteiro. So dados ficticios aqui — em dev a chave de cifra e
 # a publica de desenvolvimento e qualquer requisicao pode declarar qualquer identidade.
 
+# Rotacao dos logs de todo servico: o json-file padrao do Docker cresce sem limite e enche o disco.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: '5'
+
 networks:
   interna:
 
@@ -21,6 +28,7 @@ volumes:
 services:
   postgres:
     image: pgvector/pgvector:0.8.6-pg16
+    logging: *logging
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-agrocontabil}
@@ -38,6 +46,7 @@ services:
   # Sem porta publicada: o Ollama nao tem autenticacao. O backend chega por http://ollama:11434.
   ollama:
     image: ollama/ollama:0.35.0
+    logging: *logging
     restart: unless-stopped
     environment:
       # Uma pergunta por vez em CPU (o bulkhead do backend ja limita) e modelo sempre carregado.
@@ -55,6 +64,7 @@ services:
   # Baixa bge-m3 + modelo de chat na primeira subida (~4 GB) e termina.
   ollama-init:
     image: ollama/ollama:0.35.0
+    logging: *logging
     environment:
       OLLAMA_HOST: http://ollama:11434
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
@@ -68,6 +78,7 @@ services:
   # Variante Debian: a clamav/clamav (Alpine) nao publica arm64.
   clamav:
     image: clamav/clamav-debian:1.4.3
+    logging: *logging
     restart: unless-stopped
     volumes:
       - clamav:/var/lib/clamav
@@ -81,6 +92,7 @@ services:
 
   backend:
     image: ghcr.io/supersonicteam/backend:${BACKEND_TAG:-latest}
+    logging: *logging
     restart: unless-stopped
     # Janela do graceful shutdown do Spring (30s, #101) + folga.
     stop_grace_period: 35s
@@ -122,6 +134,7 @@ services:
 
   frontend:
     image: ghcr.io/supersonicteam/frontend:${FRONTEND_TAG:-latest}
+    logging: *logging
     restart: unless-stopped
     networks: [interna]
     # O deploy.sh espera este healthy antes de dar o deploy por concluido (senao, rollback).
@@ -137,6 +150,7 @@ services:
   # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST e senha no site inteiro.
   caddy:
     image: caddy:2.10-alpine
+    logging: *logging
     restart: unless-stopped
     ports:
       - '80:80'
