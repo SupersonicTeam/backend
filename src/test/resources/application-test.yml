@@ -45,6 +45,8 @@ app:
       migrar-legado: false
     jwt:
       segredo: segredo-de-teste-agrocontabil-com-mais-de-32-bytes
+      # Este segredo e publico: fora do modo de dev/test o JwtService o recusa (#222).
+      permitir-segredo-efemero: true
     # Limites por IP altos: todas as requisicoes do MockMvc vem de 127.0.0.1, e as suites de
     # login fazem dezenas. O teste do limite os baixa com @TestPropertySource.
     forca-bruta:

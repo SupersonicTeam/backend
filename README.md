@@ -104,7 +104,7 @@ A configuração é dividida por profile e **nenhum segredo fica no repositório
 |---|---|---|
 | base | `application.yml` | Comum a todos |
 | `dev` | `application-dev.yml` | Local + Docker Compose |
-| `homolog` | `application-homolog.yml` | Homologação (seed + identidade por header; nunca dados reais) |
+| `homolog` | `application-homolog.yml` | Homologação (seed; só login com JWT, sem o mock `X-Usuario-Id` desde a #221) |
 | `prod` | `application-prod.yml` | Tudo via env var |
 | `test` | `application-test.yml` | H2 em memória |
 

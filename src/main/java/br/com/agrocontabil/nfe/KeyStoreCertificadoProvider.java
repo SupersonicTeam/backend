@@ -8,6 +8,10 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Enumeration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -18,9 +22,16 @@ import org.springframework.stereotype.Component;
  *
  * <p>Cache lazy thread-safe; valida a validade temporal do certificado no carregamento.
  * Falhas viram {@link AssinaturaDigitalException} (HTTP 500) com o código apropriado.
+ *
+ * <p>Na subida (#225) o certificado configurado é carregado uma vez só para avisar: um certificado
+ * autoassinado — o de teste do repositório, default do profile {@code dev} — vira WARN, porque o
+ * XML assinado com ele não tem validade jurídica e a chave privada é pública. Falha na subida
+ * também só avisa: a aplicação sobe e a emissão responde o erro quando for pedida.
  */
 @Component
 public class KeyStoreCertificadoProvider {
+
+  private static final Logger log = LoggerFactory.getLogger(KeyStoreCertificadoProvider.class);
 
   private final CertificadoDigitalProperties props;
   private final ResourceLoader resourceLoader = new DefaultResourceLoader();
@@ -43,6 +54,22 @@ public class KeyStoreCertificadoProvider {
   public X509Certificate getCertificate() {
     ensureLoaded();
     return certificate;
+  }
+
+  /** Carrega o certificado na subida só para avisar (#225); nunca impede a subida. */
+  @EventListener(ApplicationReadyEvent.class)
+  public void conferirNaSubida() {
+    if (props.path() == null || props.path().isBlank()) {
+      log.info("Certificado digital da NF-e nao configurado: a emissao falha ate definir "
+          + "NFE_CERT_PATH.");
+      return;
+    }
+    try {
+      ensureLoaded();
+    } catch (AssinaturaDigitalException e) {
+      log.warn("Certificado digital da NF-e nao carregou na subida: {}. A emissao vai falhar ate "
+          + "corrigir NFE_CERT_PATH/NFE_CERT_PASSWORD.", e.getMessage());
+    }
   }
 
   private void ensureLoaded() {
@@ -80,6 +107,13 @@ public class KeyStoreCertificadoProvider {
             "Alias '" + alias + "' nao contem chave privada e certificado");
       }
       cert.checkValidity(); // lanca CertificateExpiredException/NotYetValid
+      if (autoassinado(cert)) {
+        // Certificado ICP-Brasil nunca e autoassinado: este e o de teste (ou um gerado a mao).
+        log.warn("Certificado digital da NF-e autoassinado ({}): uso so em dev/test. O XML "
+            + "assinado com ele nao tem validade juridica e a chave privada e publica; em "
+            + "homolog/prod configure um A1 ICP-Brasil (NFE_CERT_PATH).",
+            cert.getSubjectX500Principal().getName());
+      }
 
       this.privateKey = key;
       this.certificate = cert;
@@ -94,6 +128,18 @@ public class KeyStoreCertificadoProvider {
     } catch (Exception e) {
       throw new AssinaturaDigitalException(ErrorCode.CERTIFICADO_INVALIDO,
           "Falha ao carregar o certificado: " + e.getMessage(), e);
+    }
+  }
+
+  private static boolean autoassinado(X509Certificate cert) {
+    if (!cert.getSubjectX500Principal().equals(cert.getIssuerX500Principal())) {
+      return false;
+    }
+    try {
+      cert.verify(cert.getPublicKey());
+      return true;
+    } catch (Exception e) {
+      return false;
     }
   }
 

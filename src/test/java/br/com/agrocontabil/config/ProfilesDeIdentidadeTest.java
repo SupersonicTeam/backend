@@ -7,10 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Trava em quais profiles o mecanismo de identidade existe (issues #91/#92).
+ * Trava em quais profiles o mecanismo de identidade existe (issues #91/#92; mock so em dev desde a
+ * #221).
  *
- * <p>Sem isto, trocar {@code homolog} por {@code homologacao} num dos dois beans — ou esquecer um
- * deles num refactor — passa batido: a suíte roda no profile {@code test} e registra o filtro à
+ * <p>Sem isto, trocar {@code homolog} por {@code homologacao} no seed — ou esquecer um dos beans
+ * num refactor — passa batido: a suíte roda no profile {@code test} e registra o filtro à
  * mão, então nada quebraria no build. A falha só apareceria no deploy de homologação, com a API
  * inteira respondendo 401 (filtro ausente) ou sem produtores para o header referenciar
  * ({@code DataLoader} ausente).
@@ -22,9 +23,11 @@ import org.springframework.context.annotation.Profile;
 class ProfilesDeIdentidadeTest {
 
   @Test
-  @DisplayName("MockIdentidadeFilter existe em dev e homolog, e em nenhum outro profile")
-  void filtroSoExisteEmDevEHomolog() {
-    assertThat(profilesDe(MockIdentidadeFilter.class)).containsExactlyInAnyOrder("dev", "homolog");
+  @DisplayName("MockIdentidadeFilter existe so em dev: homolog autentica por JWT (#221)")
+  void filtroSoExisteEmDev() {
+    // Em homolog o mock convivia com o login real: X-Usuario-Id com o UUID da vitima, sem senha,
+    // tomava a conta. O HomologSemMockIdentidadeIntegrationTest sobe o profile de verdade.
+    assertThat(profilesDe(MockIdentidadeFilter.class)).containsExactly("dev");
   }
 
   @Test

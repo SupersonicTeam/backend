@@ -27,7 +27,7 @@ public class NaoAutenticadoException extends DomainException {
   /**
    * Desafio de todo 401 (RFC 9110 §15.5.2 e RFC 6750 §3), o mesmo na cadeia de filtros e no
    * {@code GlobalExceptionHandler}. Desde a Sprint 8 (#206) o esquema é {@code Bearer}; o header
-   * {@code X-Usuario-Id} segue aceito em dev/homolog, mas não é anunciado como esquema.
+   * {@code X-Usuario-Id} segue aceito em dev (só nele desde a #221), mas não é anunciado como esquema.
    */
   public static final String DESAFIO = "Bearer realm=\"agrocontabil\"";
 

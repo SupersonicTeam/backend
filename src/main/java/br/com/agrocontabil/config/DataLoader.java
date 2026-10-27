@@ -40,7 +40,9 @@ import org.springframework.stereotype.Component;
  * <p>Sao <strong>dois</strong> produtores desde a issue #91: com um so, o anti-IDOR aplicado em toda
  * a API ({@code findByIdAndProdutorId} → 404) nao tem como ser exercido — nao existe "o outro
  * produtor" cujo recurso deva ser negado. O produtor A e tambem o <em>semente</em>: e ele que o
- * {@link MockIdentidadeFilter} injeta quando a requisicao nao declara {@code X-Usuario-Id}.
+ * {@link MockIdentidadeFilter} injeta em dev quando a requisicao nao declara {@code X-Usuario-Id}.
+ * Em homolog nao ha mock (#221): as contas semeadas so sao alcancaveis pelo login, com credencial
+ * criada quando {@code SEED_SENHA} esta definida.
  *
  * <p>Desde a issue #93 semeia tambem <strong>um contador</strong>, vinculado apenas ao produtor A —
  * o vinculo parcial e o que permite exercitar, em dev e na homologacao, tanto o acesso autorizado
@@ -136,7 +138,8 @@ public class DataLoader implements CommandLineRunner {
    */
   void semearCredenciais(Produtor produtorA, Produtor produtorB, Contador contador) {
     if (senhaSeed == null || senhaSeed.isBlank()) {
-      log.info("SEED_SENHA vazia: contas semeadas sem credencial (use X-Usuario-Id).");
+      log.info("SEED_SENHA vazia: contas semeadas sem credencial (em dev, use X-Usuario-Id; em "
+          + "homolog, defina SEED_SENHA: so o login autentica, #221).");
       return;
     }
     String senha = PoliticaSenha.normalizar(senhaSeed);
@@ -188,7 +191,7 @@ public class DataLoader implements CommandLineRunner {
     // O id nao e segredo — ja viaja na URL de varios endpoints — e e o valor que o
     // desenvolvedor precisa ter em maos para simular este usuario via header.
     log.info(
-        "Produtor semeado: {} (X-Usuario-Id: {})", salvo.getNomeCompleto(), salvo.getId());
+        "Produtor semeado: {} (id: {})", salvo.getNomeCompleto(), salvo.getId());
     return salvo;
   }
 
@@ -233,7 +236,7 @@ public class DataLoader implements CommandLineRunner {
         .inicio(OffsetDateTime.now())
         .build());
     log.info(
-        "Contador semeado: {} (X-Usuario-Id: {}) — atende o produtor {}",
+        "Contador semeado: {} (id: {}) — atende o produtor {}",
         salvo.getNomeCompleto(),
         salvo.getId(),
         produtorA.getId());

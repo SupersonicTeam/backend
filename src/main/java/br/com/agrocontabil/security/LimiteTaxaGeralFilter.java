@@ -86,7 +86,7 @@ public class LimiteTaxaGeralFilter extends OncePerRequestFilter {
    * Identidade autenticada, ou o IP (/64 no IPv6) de quem ainda não tem uma.
    *
    * <p>Requisição sem {@code Authorization} e sem {@code X-Usuario-Id} vai pelo IP mesmo que haja
-   * principal: em dev/homolog o mock a autentica como o produtor semente, e todo cliente sem header
+   * principal: em dev o mock a autentica como o produtor semente, e todo cliente sem header
    * dividiria um balde só — um cliente com 100 req/min derrubaria o login de todos (achado do
    * review da #150). Em prod o mock não existe e nada muda.
    */

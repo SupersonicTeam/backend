@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.config.ForcaBrutaProperties;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import java.time.Clock;
@@ -78,7 +79,8 @@ public class BloqueioContaService {
           if (tentativas >= propriedades.maxFalhas()) {
             credencial.setBloqueadaAte(agora.plus(propriedades.bloqueio()));
             log.warn("Conta bloqueada apos {} tentativas sem sucesso: credencial={}, ate={}",
-                tentativas, credencialId, credencial.getBloqueadaAte());
+                tentativas, MascaraDadosPessoais.referencia(credencialId),
+                credencial.getBloqueadaAte());
           }
           return true;
         }).orElse(false));

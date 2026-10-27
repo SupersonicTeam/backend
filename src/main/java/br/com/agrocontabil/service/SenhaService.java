@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties;
 import br.com.agrocontabil.exception.SenhaAtualIncorretaException;
 import br.com.agrocontabil.exception.TokenRedefinicaoInvalidoException;
@@ -162,7 +163,8 @@ public class SenhaService {
           credencialId, agora.minus(INTERVALO_MINIMO_ENTRE_LINKS))) {
         // Um pedido novo apaga o link anterior: sem intervalo, qualquer um invalidaria sem parar
         // o link que a vitima acabou de receber (e encheria a caixa de entrada dela).
-        log.info("Pedido de redefinicao ignorado (intervalo minimo): credencial={}", credencialId);
+        log.info("Pedido de redefinicao ignorado (intervalo minimo): credencial={}",
+            MascaraDadosPessoais.referencia(credencialId));
         return;
       }
       String token = TokenOpaco.gerar();
@@ -177,7 +179,8 @@ public class SenhaService {
       });
       envioEmail.enviarRedefinicaoSenha(
           email, propriedades.urlFrontend() + "#token=" + token, propriedades.validade());
-      log.info("Link de redefinicao de senha emitido: credencial={}", credencialId);
+      log.info("Link de redefinicao de senha emitido: credencial={}",
+          MascaraDadosPessoais.referencia(credencialId));
     } catch (RuntimeException e) {
       // Sem o e-mail no log (LGPD) e sem propagar: ninguem espera por este resultado.
       log.error("Falha ao processar pedido de redefinicao de senha.", e);
@@ -213,7 +216,8 @@ public class SenhaService {
       travado.setUsadoEm(OffsetDateTime.now(clock));
       gravarSenhaNova(credencial.getId(), hash);
     });
-    log.info("Senha redefinida pelo link: credencial={}", credencial.getId());
+    log.info("Senha redefinida pelo link: credencial={}",
+        MascaraDadosPessoais.referencia(credencial.getId()));
   }
 
   /**
@@ -232,7 +236,8 @@ public class SenhaService {
     politicaSenha.validar(senha, credencial.getEmail(), credencial.getCpfCnpj(), CAMPO_NOVA_SENHA);
     String hash = passwordEncoder.encode(senha);
     transacao.executeWithoutResult(status -> gravarSenhaNova(credencial.getId(), hash));
-    log.info("Senha alterada pelo titular: credencial={}", credencial.getId());
+    log.info("Senha alterada pelo titular: credencial={}",
+        MascaraDadosPessoais.referencia(credencial.getId()));
   }
 
   /**
@@ -243,7 +248,7 @@ public class SenhaService {
    * @param senhaAtual senha informada
    * @return a credencial de quem está autenticado
    * @throws SenhaAtualIncorretaException se a senha não conferir, a conta estiver travada ou a
-   *     identidade não tiver credencial (mock de dev/homolog)
+   *     identidade não tiver credencial (mock de dev)
    */
   public CredencialUsuario confirmarSenhaAtual(String senhaAtual) {
     UsuarioAutenticado usuario = usuarioProvider.get();

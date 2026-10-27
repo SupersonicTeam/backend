@@ -9,9 +9,11 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-agrocontabil}
       POSTGRES_USER: ${DB_USER:-agrocontabil}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    # Somente loopback (#225): em 0.0.0.0 o banco ficava ao alcance de quem estivesse na mesma
+    # rede. O backend do compose chega pela rede interna (postgres:5432).
     ports:
-      - '${DB_PORT:-5432}:5432'
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     volumes:
       - agrocontabil_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -109,10 +111,16 @@ services:
     # agendados terminarem.
     stop_grace_period: 35s
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      # Sem default (#221): com "dev" fixo, quem subia o perfil full num servidor subia com o mock
+      # de identidade (X-Usuario-Id) aberto na porta 8080. Vazio, a aplicacao recusa a subida
+      # (#219) — nao ":?", que o compose avalia mesmo sem o perfil full e quebraria o "up" do dev.
+      # homolog/prod exigem JWT_SECRET e CRIPTO_CHAVE fortes (a aplicacao nao sobe sem eles).
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      CRIPTO_CHAVE: ${CRIPTO_CHAVE:-}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-agrocontabil}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-agrocontabil}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       AI_OLLAMA_BASE_URL: http://ollama:11434
       AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}

@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.config.RefreshProperties;
 import br.com.agrocontabil.dto.LoginResponse;
 import br.com.agrocontabil.exception.SessaoInvalidaException;
@@ -131,7 +132,7 @@ public class SessaoService {
    * Encerra todas as sessões de quem está autenticado ("sair de todos os dispositivos"): revoga
    * todos os refresh e invalida todos os access tokens já emitidos, inclusive o desta requisição.
    *
-   * <p>Sem credencial (identidade do mock de dev/homolog), não há sessão a encerrar.
+   * <p>Sem credencial (identidade do mock de dev), não há sessão a encerrar.
    *
    * @param usuario identidade autenticada
    */
@@ -152,7 +153,8 @@ public class SessaoService {
     transacao.executeWithoutResult(status -> {
       credencialRepository.incrementarVersaoSessao(credencialId);
       int revogadas = sessaoRepository.revogarDaCredencial(credencialId, agora());
-      log.info("Sessoes encerradas: credencial={}, refresh revogados={}", credencialId, revogadas);
+      log.info("Sessoes encerradas: credencial={}, refresh revogados={}",
+          MascaraDadosPessoais.referencia(credencialId), revogadas);
     });
   }
 

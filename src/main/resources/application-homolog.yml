@@ -1,12 +1,12 @@
 # Profile HOMOLOG — ambiente de validacao antes de producao.
 #
 # Espelha o PROD na infraestrutura (banco por env, sem docker-compose, nenhum segredo literal) e
-# difere em dois pontos deliberados:
-#   1. o MockIdentidadeFilter e o DataLoader ficam ativos (@Profile({"dev","homolog"})), para que o
-#      cenario multi-usuario da issue #91 seja exercitavel com dois produtores semeados. A
-#      identidade vem declarada no header X-Usuario-Id — e mock, nao autenticacao: por isso este
-#      profile NUNCA deve ser usado com dados reais de produtor;
-#   2. logs e health mais verbosos, porque homologacao existe para diagnosticar.
+# na autenticacao: so JWT. Difere em dois pontos deliberados:
+#   1. o DataLoader semeia dois produtores e um contador, para o cenario multi-usuario da issue #91;
+#      com SEED_SENHA definida eles ganham credencial e entram pelo POST /api/auth/login. O
+#      MockIdentidadeFilter (X-Usuario-Id) NAO existe aqui desde a #221: convivendo com o login real,
+#      ele tomava qualquer conta pelo UUID, sem senha;
+#   2. logs mais verbosos, porque homologacao existe para diagnosticar.
 spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME}
@@ -37,11 +37,10 @@ app:
 
 # Health SEM detalhes, como em producao.
 #
-# O application.yml base usa "when-authorized", que em dev basta: dev e local. Aqui nao serve —
-# o MockIdentidadeFilter autentica TODA requisicao sem header como o produtor semente, entao
-# "autorizado" passa a significar "qualquer visitante" e o health detalhado (datasource, disco,
-# componentes) ficaria aberto a quem alcancar o ambiente. Diagnostico em homologacao sai pelo log,
-# que ja e DEBUG.
+# O application.yml base usa "when-authorized", que em dev basta: dev e local. Aqui, mesmo sem o
+# mock (#221), "autorizado" seria qualquer conta cadastrada — e o cadastro e publico —, entao o
+# health detalhado (datasource, disco, componentes) ficaria aberto a quem criasse uma conta.
+# Diagnostico em homologacao sai pelo log, que ja e DEBUG.
 management:
   endpoint:
     health:

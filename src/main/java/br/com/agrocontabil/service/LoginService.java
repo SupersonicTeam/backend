@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.dto.LoginRequest;
 import br.com.agrocontabil.dto.UsuarioLogadoResponse;
 import br.com.agrocontabil.exception.CredenciaisInvalidasException;
@@ -101,17 +102,20 @@ public class LoginService {
       // Conta travada: a senha nem e conferida — a adivinhacao para. Mesmo custo e mesma
       // resposta dos outros fracassos: um 423 diria que este e-mail tem conta.
       passwordEncoder.matches(senha, hashFicticio);
-      log.info("Login recusado (conta bloqueada): credencial={}", credencial.getId());
+      log.info("Login recusado (conta bloqueada): credencial={}",
+          MascaraDadosPessoais.referencia(credencial.getId()));
       throw new CredenciaisInvalidasException();
     }
 
     boolean senhaConfere = passwordEncoder.matches(senha, credencial.getSenhaHash());
     if (!senhaConfere) {
-      log.info("Login recusado: credencial={}", credencial.getId());
+      log.info("Login recusado: credencial={}",
+          MascaraDadosPessoais.referencia(credencial.getId()));
       throw new CredenciaisInvalidasException();
     }
     if (!credencial.isAtivo()) {
-      log.info("Login recusado (conta desativada): credencial={}", credencial.getId());
+      log.info("Login recusado (conta desativada): credencial={}",
+          MascaraDadosPessoais.referencia(credencial.getId()));
       throw new CredenciaisInvalidasException();
     }
 

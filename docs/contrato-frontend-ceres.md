@@ -34,7 +34,7 @@ Garantias do backend que a tela deve **mostrar**, não esconder:
 ## 2. Identidade e acesso
 
 - Mesma identidade do resto da API: header **`X-Usuario-Id`** com o UUID do produtor (em
-  `dev`/`homolog`; o JWT substitui na Sprint 8). Sem o header, o backend usa o produtor semente.
+  `dev` — em `homolog` e `prod`, só o JWT, desde a #221). Sem o header, o backend usa o produtor semente.
 - **Só produtor.** Contador recebe `403 PAPEL_NAO_AUTORIZADO`: a Ceres ainda não recebe produtor-alvo.
 - CORS: origem `http://localhost:4200` liberada; `Retry-After` exposto (seção 5).
 

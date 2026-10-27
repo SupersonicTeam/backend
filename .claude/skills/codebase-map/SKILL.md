@@ -27,7 +27,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `CifragemLegadoRunner` | Cifra na subida as linhas em claro de antes da #147 (`COLUNAS_CIFRADAS`), idempotente |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig` | springdoc / Swagger UI |
-| `MockIdentidadeFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (profiles dev/homolog); sem header usa o semente (#91) |
+| `MockIdentidadeFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (só profile dev desde a #221; homolog só JWT — `HomologSemMockIdentidadeIntegrationTest`); sem header usa o semente (#91) |
 | `TributosProperties/Config` | Alíquotas IBS/CBS do `application.yml` |
 | `CertificadoDigitalProperties/Config` | Caminho/senha do `.p12` via env `NFE_CERT_*` |
 | `SefazProperties/Config` | Ambiente (HOMOLOGACAO/PRODUCAO), timeouts |
@@ -121,7 +121,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `SecureXmlFactories` | Fábrica XML com hardening XXE (centralizado) |
 | `NfeAssinador` | Assinatura enveloped (Apache Santuario, RSA-SHA1) |
 | `AssinaturaValidator` | Verifica assinatura + tamper detection |
-| `KeyStoreCertificadoProvider` | Carrega `.p12` PKCS#12; lazy + validação |
+| `KeyStoreCertificadoProvider` | Carrega `.p12` PKCS#12; lazy + validação; `conferirNaSubida` (ApplicationReadyEvent) avisa em WARN certificado autoassinado ou que não carrega, sem impedir a subida (#225) |
 | `nfe/model/` | Classes JAXB puras do layout NF-e 4.00 (NFe, InfNFe, Emit, Dest…) |
 
 ### `assistente/` — Ceres, a assistente fiscal (Sprint 6)
@@ -180,7 +180,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `MembroEscritorioProvider` | Contador como membro (#228): `membro()` (403 para produtor e para contador sem escritório, `SEM_ESCRITORIO`), `exigirFuncao(...)` (403 `PAPEL_NAO_AUTORIZADO` com a função), `contador()` (com ou sem escritório) |
 | `ProdutorEmContextoResolver` | Autoriza o `produtorId` alvo: produtor só a si, contador só a carteira **ATIVA** (`VinculoCarteiraRepository`) → 404; `exigirContadorComAcesso` = padrão `/api/contador/produtores/{produtorId}/...` (produtor 403) — #177 |
 | `SecurityErrorResponder` | Envelope `ApiError` nas negativas da cadeia de filtros (401 + `WWW-Authenticate: Bearer`, 403); `recusarToken` = 401 `error="invalid_token"` (#206) |
-| `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto/de exemplo (dev: efêmero) |
+| `JwtService` | Emite/confere o JWT HS256 (#206): claims `sub`/`papel`/`sv`/`jti`/`iss`/`aud`; só HS256 (checagem explícita do `alg`); recusa subir com segredo ausente/curto, placeholder conhecido, segredo publicado ou < 16 caracteres distintos (#222; dev/test: placeholder vira efêmero) |
 | `TokenOpaco` | Token de 256 bits (base64url) + SHA-256 hex — fonte única do refresh (#207) e da redefinição (#209) |
 | `CifraDeterministica` | AES-256-GCM determinístico (IV sintético por HMAC) dos dados pessoais em repouso (#147); `v1:` + Base64url; legado sem prefixo passa; chave `CRIPTO_CHAVE` obrigatória fora de dev/test |
 | `CookieRefresh` | Monta/lê/apaga o cookie `agro_refresh` (HttpOnly, Secure, SameSite=Strict, Path=/api/auth) — #207 |
@@ -296,7 +296,7 @@ Bean Validation customizada (anotação + validator):
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
 - `NormalizacaoBusca` — minúsculas, sem acento (NFD sem marcas + NFC, para não expandir escritas como o coreano), espaços colapsados, até 600 caracteres; regra única do que vai para `nota_fiscal.busca_normalizada` e do termo buscado (#174) + `escaparLike`
-- `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148)
+- `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148); `referencia(UUID)` = `ref:` + 12 hex do SHA-256, para o id da credencial nos logs (#222)
 - `UfIbge` — cUF das 27 UFs (`Optional`, sem default silencioso) + `prefixoCoerente(codigoIbge, uf)` (issue #88)
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 
