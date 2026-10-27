@@ -9,6 +9,8 @@ import br.com.agrocontabil.service.ConviteCarteiraLimpezaJob;
 import br.com.agrocontabil.service.GuiaFiscalStatusSyncJob;
 import br.com.agrocontabil.service.PendenciaAnexoRetencaoJob;
 import br.com.agrocontabil.service.VerificacaoAnexoJob;
+import br.com.agrocontabil.service.AvisoVencimentoJob;
+import br.com.agrocontabil.service.NotificacaoRetencaoJob;
 import br.com.agrocontabil.service.SessaoRefreshLimpezaJob;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -32,7 +34,8 @@ class SchedulerLockConfigTest {
   private static final List<Class<?>> JOBS = List.of(
       SefazStatusSyncJob.class, ApuracaoFechamentoJob.class, GuiaFiscalStatusSyncJob.class,
       AlertaTributarioJob.class, SessaoRefreshLimpezaJob.class,
-      ConviteCarteiraLimpezaJob.class, PendenciaAnexoRetencaoJob.class, VerificacaoAnexoJob.class);
+      ConviteCarteiraLimpezaJob.class, PendenciaAnexoRetencaoJob.class, VerificacaoAnexoJob.class,
+      AvisoVencimentoJob.class, NotificacaoRetencaoJob.class);
 
   @Test
   @DisplayName("Todo metodo @Scheduled dos jobs tem @SchedulerLock com teto e piso declarados")
@@ -63,7 +66,7 @@ class SchedulerLockConfigTest {
         .containsExactlyInAnyOrder(SefazStatusSyncJob.LOCK, ApuracaoFechamentoJob.LOCK,
             GuiaFiscalStatusSyncJob.LOCK, AlertaTributarioJob.LOCK, SessaoRefreshLimpezaJob.LOCK,
             ConviteCarteiraLimpezaJob.LOCK, PendenciaAnexoRetencaoJob.LOCK,
-            VerificacaoAnexoJob.LOCK);
+            VerificacaoAnexoJob.LOCK, AvisoVencimentoJob.LOCK, NotificacaoRetencaoJob.LOCK);
   }
 
   @Test

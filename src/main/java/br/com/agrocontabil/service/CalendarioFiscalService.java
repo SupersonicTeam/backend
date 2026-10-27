@@ -114,14 +114,30 @@ public class CalendarioFiscalService {
       throw JanelaCalendarioInvalidaException.excedeMaximo(inicio, fim, MESES_JANELA_MAXIMA);
     }
 
-    List<VencimentoFiscalResponse> itens = new ArrayList<>(
-        guiaFiscalRepository.findVencimentosNaJanela(produtorId, inicio, fim).stream()
-            .map(GuiaFiscalMapper::toVencimento)
-            .toList());
     UsuarioAutenticado usuario = usuarioProvider.get();
     List<UUID> escritorios = usuario.isContador()
         ? List.of(usuario.contador().getEscritorioId())
         : vinculoRepository.findEscritoriosAtivosDoProdutor(produtorId);
+    return vencimentos(produtor, escritorios, inicio, fim);
+  }
+
+  /**
+   * Os vencimentos do produtor na janela, <strong>sem autorização</strong>: quem chama já decidiu
+   * o alcance — o calendário acima, a notificação (#182) e o aviso automático do job.
+   *
+   * @param produtor    produtor
+   * @param escritorios escritórios cujas obrigações e pedidos entram (vazio = só guias e RN004)
+   * @param inicio      primeiro dia, inclusivo
+   * @param fim         último dia, inclusivo
+   * @return vencimentos, mais recentes primeiro
+   */
+  public List<VencimentoFiscalResponse> vencimentos(Produtor produtor, List<UUID> escritorios,
+      LocalDate inicio, LocalDate fim) {
+    UUID produtorId = produtor.getId();
+    List<VencimentoFiscalResponse> itens = new ArrayList<>(
+        guiaFiscalRepository.findVencimentosNaJanela(produtorId, inicio, fim).stream()
+            .map(GuiaFiscalMapper::toVencimento)
+            .toList());
     itens.addAll(obrigacaoService.ocorrencias(produtor, escritorios, inicio, fim));
     // Pedidos de documento em aberto com prazo (#180): tipo "solicitacao".
     if (!escritorios.isEmpty()) {

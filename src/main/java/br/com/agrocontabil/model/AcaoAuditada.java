@@ -47,5 +47,7 @@ public enum AcaoAuditada {
   PENDENCIA_CANCELADA,
   PENDENCIA_REABERTA,
   // Antivirus dos anexos (issue #227): ameaca achada no envio ou pelo job
-  PENDENCIA_ANEXO_INFECTADO
+  PENDENCIA_ANEXO_INFECTADO,
+  // Notificacao por WhatsApp (issue #182): disparo do produtor ou do escritorio
+  NOTIFICACAO_REGISTRADA
 }

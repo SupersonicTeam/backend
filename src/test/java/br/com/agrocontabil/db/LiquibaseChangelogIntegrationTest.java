@@ -582,6 +582,35 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0044: notificacao com aviso unico por item e CASCADE do produtor")
+  void changeSet0044Notificacao() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'notificacao' ORDER BY column_name", String.class))
+        .containsExactly("canal", "chave_item", "criado_em", "disparado_por", "escritorio_id",
+            "id", "papel", "produtor_id", "quantidade_itens", "status", "texto", "tipo",
+            "urgentes");
+
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    String insert = "INSERT INTO notificacao (id, produtor_id, tipo, canal, status, texto,"
+        + " quantidade_itens, urgentes, chave_item, criado_em) VALUES (gen_random_uuid(),"
+        + " ?::uuid, ?, 'WHATSAPP', 'REGISTRADA', 'texto', 1, 0, ?, now())";
+    // Manuais (sem chave) nao conflitam entre si; o aviso do mesmo item e data, sim.
+    jdbc.update(insert, produtorId, "MENSAGEM", null);
+    jdbc.update(insert, produtorId, "MENSAGEM", null);
+    jdbc.update(insert, produtorId, "AVISO_URGENTE", "imposto:x:2026-03-04");
+    assertThatThrownBy(() -> jdbc.update(insert, produtorId, "AVISO_URGENTE",
+        "imposto:x:2026-03-04")).isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notificacao WHERE produtor_id ="
+        + " ?::uuid", Integer.class, produtorId)).isZero();
+  }
+
+  @Test
   @DisplayName("changeSet 0043: situacao do antivirus, anexo antigo em verificacao e so INFECTADO"
       + " sem arquivo")
   void changeSet0043AntivirusDoAnexo() {

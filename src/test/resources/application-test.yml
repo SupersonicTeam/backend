@@ -86,6 +86,12 @@ app:
     enabled: false
   # Antivirus dos anexos (#227): sem ClamAV nos testes; os do antivirus trocam a porta por
   # @MockitoBean e chamam o reprocessamento direto.
+  # Notificacao (#182): jobs desligados; os testes chamam o service e o job direto.
+  notificacao:
+    aviso:
+      enabled: false
+    retencao:
+      enabled: false
   pendencias:
     antivirus:
       modo: SEM_VERIFICACAO

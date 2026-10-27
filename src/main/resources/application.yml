@@ -265,6 +265,23 @@ app:
         lock:
           at-most-for: PT15M
           at-least-for: PT1M
+  # Notificacao por WhatsApp (issue #182): so o registro na v1 (porta EnvioNotificacao). Teto de
+  # disparos manuais por produtor por hora; aviso automatico do que vence amanha as 9h; retencao.
+  notificacao:
+    max-por-hora: ${NOTIFICACAO_MAX_POR_HORA:10}
+    retencao-dias: ${NOTIFICACAO_RETENCAO_DIAS:365}
+    aviso:
+      enabled: ${NOTIFICACAO_AVISO_ENABLED:true}
+      cron: ${NOTIFICACAO_AVISO_CRON:0 0 9 * * *}
+      lock:
+        at-most-for: PT30M
+        at-least-for: PT5M
+    retencao:
+      enabled: ${NOTIFICACAO_RETENCAO_ENABLED:true}
+      cron: ${NOTIFICACAO_RETENCAO_CRON:0 0 4 * * *}
+      lock:
+        at-most-for: PT30M
+        at-least-for: PT5M
   # Equipe do escritorio (issue #228): convite com token de uso unico no fragmento do link.
   escritorio:
     convite:

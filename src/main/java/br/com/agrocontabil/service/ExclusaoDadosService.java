@@ -9,6 +9,7 @@ import br.com.agrocontabil.repository.AlertaTributarioRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.NotificacaoRepository;
 import br.com.agrocontabil.repository.PendenciaAnexoRepository;
 import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
@@ -78,6 +79,7 @@ public class ExclusaoDadosService {
   private final ConviteCarteiraRepository conviteRepository;
   private final PendenciaRepository pendenciaRepository;
   private final PendenciaAnexoRepository anexoRepository;
+  private final NotificacaoRepository notificacaoRepository;
   private final EquipeEscritorioService equipeService;
   private final Clock clock;
   private final TransactionTemplate transacao;
@@ -95,6 +97,7 @@ public class ExclusaoDadosService {
       ConviteCarteiraRepository conviteRepository,
       PendenciaRepository pendenciaRepository,
       PendenciaAnexoRepository anexoRepository,
+      NotificacaoRepository notificacaoRepository,
       EquipeEscritorioService equipeService,
       Clock clock,
       PlatformTransactionManager transactionManager) {
@@ -110,6 +113,7 @@ public class ExclusaoDadosService {
     this.conviteRepository = conviteRepository;
     this.pendenciaRepository = pendenciaRepository;
     this.anexoRepository = anexoRepository;
+    this.notificacaoRepository = notificacaoRepository;
     this.equipeService = equipeService;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
@@ -163,6 +167,7 @@ public class ExclusaoDadosService {
     // Pedidos de documento e anexos (#180): documento enviado ao escritorio, nao fiscal emitido.
     anexoRepository.apagarDoProdutor(id);
     pendenciaRepository.apagarDoProdutor(id);
+    notificacaoRepository.apagarDoProdutor(id);
     alertaRepository.apagarDoProdutor(id);
   }
 
