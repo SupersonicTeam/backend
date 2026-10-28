@@ -62,6 +62,16 @@ public record ImportacaoNotaResultado(
         arquivo, true, Status.IMPORTADA, notaId, chave, "Nota importada com sucesso.");
   }
 
+  /**
+   * Fabrica o resultado da nota gravada sem a confirmacao da SEFAZ (issue #223): o fisco nao
+   * respondeu, a nota fica {@code PENDENTE_SEFAZ} (fora da apuracao) e a sincronizacao confirma.
+   */
+  public static ImportacaoNotaResultado aguardandoSefaz(String arquivo, UUID notaId, String chave) {
+    return new ImportacaoNotaResultado(arquivo, true, Status.IMPORTADA, notaId, chave,
+        "Nota importada; a SEFAZ nao respondeu e a autorizacao sera confirmada depois. O credito "
+            + "so entra na apuracao com a confirmacao.");
+  }
+
   /** Fabrica um resultado de duplicidade (nota ja existente pela chave de acesso). */
   public static ImportacaoNotaResultado duplicada(String arquivo, String chave) {
     return new ImportacaoNotaResultado(

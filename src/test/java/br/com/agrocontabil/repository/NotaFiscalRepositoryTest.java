@@ -264,18 +264,17 @@ class NotaFiscalRepositoryTest {
   }
 
   /**
-   * A unique {@code uk_nota_fiscal_chave_acesso} (changeset 0002, global e nunca removida) é a
-   * defesa contra chave de acesso duplicada — a rede de segurança do banco para a dedup de notas
-   * (inclusive importadas), complementando a checagem de aplicação em
-   * {@code ImportacaoNotaFiscalService.existsByChaveAcesso}. O schema de teste não replicava esta
-   * unique (o comentário afirmava, falsamente, que ela existia); este teste guarda a regra.
+   * A unique {@code uk_nota_fiscal_produtor_chave_origem} (changeset 0045, issue #223) é a defesa
+   * do banco contra a mesma chave duas vezes <em>na conta do produtor</em>, complementando a
+   * checagem de aplicação em {@code ImportacaoNotaFiscalService}. Ela substituiu a unique global
+   * da 0002: o emitente (PROPRIA) e o destinatário (IMPORTADA) têm a mesma NF-e.
    *
    * <p>A unicidade de {@code (numero, serie, modelo)} por produtor NÃO é testada aqui: ela é um
    * índice único <em>parcial</em> ({@code WHERE origem='PROPRIA'}, changeset 0009) que o H2 não
    * suporta — regra deliberadamente mantida só no Liquibase.
    */
   @Test
-  @DisplayName("deve rejeitar nota com chave_acesso duplicada (unique global)")
+  @DisplayName("deve rejeitar a mesma chave duas vezes no produtor e origem (unique 0045)")
   void shouldRejectDuplicateChaveAcesso() {
     String chave = "41260000000000000000000000000000000000000001";
     NotaFiscal primeira = buildNotaFiscal();
@@ -287,6 +286,27 @@ class NotaFiscalRepositoryTest {
     outra.setChaveAcesso(chave);
     assertThatThrownBy(() -> notaFiscalRepository.saveAndFlush(outra))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  @DisplayName("a mesma chave em outro produtor nao conflita: emitente e destinatario (#223)")
+  void mesmaChaveEmOutroProdutor() {
+    String chave = "41260000000000000000000000000000000000000002";
+    NotaFiscal doEmitente = buildNotaFiscal();
+    doEmitente.setChaveAcesso(chave);
+    notaFiscalRepository.saveAndFlush(doEmitente);
+
+    Produtor destinatario = produtorRepository.saveAndFlush(Produtor.builder()
+        .nomeCompleto("Destinatario").cpfCnpj("39053344705").build());
+    NotaFiscal importada = buildNotaFiscalForProdutor(destinatario, 1L);
+    importada.setChaveAcesso(chave);
+    importada.setOrigem(OrigemNotaFiscal.IMPORTADA);
+    notaFiscalRepository.saveAndFlush(importada);
+
+    assertThat(notaFiscalRepository.existsByProdutorIdAndChaveAcessoAndOrigem(
+        destinatario.getId(), chave, OrigemNotaFiscal.IMPORTADA)).isTrue();
+    assertThat(notaFiscalRepository.existsByProdutorIdAndChaveAcessoAndOrigem(
+        produtor.getId(), chave, OrigemNotaFiscal.IMPORTADA)).isFalse();
   }
 
   // -------------------------------------------------------------------------

@@ -160,15 +160,20 @@ public interface NotaFiscalRepository
       @Param("status") StatusNotaFiscal status, @Param("apos") UUID apos, Pageable lote);
 
   /**
-   * Indica se ja existe uma nota com a chave de acesso informada (issue #19).
+   * Indica se o produtor ja tem uma nota com a chave de acesso e a origem informadas (issue #223).
    *
-   * <p>Usado na deduplicacao de notas importadas: a {@code chave_acesso} e globalmente unica
-   * (44 digitos), entao a existencia previa sinaliza um XML ja importado.
+   * <p>Deduplicacao da importacao <em>dentro da conta do produtor</em>: a chave e unica por
+   * (produtor, chave, origem), entao o emitente (PROPRIA) e o destinatario (IMPORTADA) tem a mesma
+   * NF-e. Ate a #223 a checagem era no sistema inteiro: o destinatario nao importava a NF-e que
+   * outro usuario emitiu para ele, e "duplicada" revelava a chave em outra conta.
    *
+   * @param produtorId  produtor autenticado
    * @param chaveAcesso chave de acesso de 44 digitos
-   * @return {@code true} se ja houver uma nota com esta chave
+   * @param origem      origem da nota ({@code IMPORTADA} na importacao)
+   * @return {@code true} se o produtor ja tiver essa nota
    */
-  boolean existsByChaveAcesso(String chaveAcesso);
+  boolean existsByProdutorIdAndChaveAcessoAndOrigem(
+      UUID produtorId, String chaveAcesso, OrigemNotaFiscal origem);
 
   /**
    * Agrega o crédito tributário de IBS/CBS das notas de <strong>entrada</strong> de um produtor

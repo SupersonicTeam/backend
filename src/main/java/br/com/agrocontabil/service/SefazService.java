@@ -16,9 +16,11 @@ import br.com.agrocontabil.exception.SefazComunicacaoException;
 import br.com.agrocontabil.exception.SefazConexaoException;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.nfe.DigestAssinatura;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.sefaz.SefazAmbiente;
 import br.com.agrocontabil.sefaz.SefazClient;
@@ -717,10 +719,13 @@ public class SefazService {
           nota.getChaveAcesso(), nota.getId());
       return;
     }
-    nota.setStatus(mapStatus(retorno.situacao()));
     nota.setSefazCstat(retorno.cStat());
     nota.setSefazMotivo(retorno.xMotivo());
     nota.setSefazAmbiente(ambiente);
+    if (nota.getOrigem() == OrigemNotaFiscal.IMPORTADA && !importadaConfirmada(nota, retorno)) {
+      return;
+    }
+    nota.setStatus(mapStatus(retorno.situacao()));
     if (retorno.situacao() == SituacaoSefaz.AUTORIZADA) {
       nota.setProtocoloAutorizacao(retorno.protocolo());
       nota.setDataAutorizacao(retorno.dataAutorizacao());
@@ -730,6 +735,30 @@ public class SefazService {
           ? retorno.dataAutorizacao()
           : OffsetDateTime.now(FUSO_BRASIL));
     }
+  }
+
+  /**
+   * Regras da NF-e de terceiro importada que entrou pendente (issue #223), as mesmas da
+   * importação: chave que o fisco não conhece nunca foi autorizada (não volta a {@code XML_GERADO},
+   * que liberaria "transmitir" o XML de outro emitente), e autorizada com {@code digVal} diferente
+   * do DigestValue do XML é outro conteúdo com a mesma chave.
+   *
+   * @return {@code true} para seguir o mapeamento comum; {@code false} se a nota já foi recusada
+   */
+  private boolean importadaConfirmada(NotaFiscal nota, SefazRetorno retorno) {
+    if (retorno.situacao() == SituacaoSefaz.NAO_ENCONTRADA) {
+      nota.setStatus(StatusNotaFiscal.REJEITADA);
+      return false;
+    }
+    if (retorno.situacao() == SituacaoSefaz.AUTORIZADA
+        && !DigestAssinatura.confere(nota.getXmlGerado(), retorno.digestValue())) {
+      log.warn("NF-e importada {} com conteudo diferente do autorizado na SEFAZ (digVal)",
+          nota.getId());
+      nota.setStatus(StatusNotaFiscal.REJEITADA);
+      nota.setSefazMotivo("Conteudo do XML importado difere da NF-e autorizada na SEFAZ");
+      return false;
+    }
+    return true;
   }
 
   // -------------------------------------------------------------------------

@@ -1,10 +1,14 @@
 package br.com.agrocontabil.sefaz;
 
+import br.com.agrocontabil.config.SefazProperties;
+import br.com.agrocontabil.nfe.DigestAssinatura;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -73,6 +77,43 @@ public class MockSefazTransport implements SefazTransport {
   private final Set<String> chavesCanceladas = ConcurrentHashMap.newKeySet();
 
   /**
+   * DigestValue da assinatura de cada XML transmitido: o {@code digVal} que a SEFAZ devolve na
+   * consulta e que a importação confere contra o XML enviado (issue #223).
+   */
+  private final Map<String, String> digestPorChave = new ConcurrentHashMap<>();
+
+  /** Consulta de chave desconhecida volta AUTORIZADA (só dev, #223). */
+  private final boolean autorizarTerceiros;
+
+  /** Mock fiel: chave que ele não transmitiu é 217 na consulta. */
+  public MockSefazTransport() {
+    this(false);
+  }
+
+  /**
+   * Mock do contexto Spring.
+   *
+   * @param propriedades {@code app.nfe.sefaz.mock.autorizar-terceiros}
+   */
+  @Autowired
+  public MockSefazTransport(SefazProperties propriedades) {
+    this(propriedades.getMock().isAutorizarTerceiros());
+  }
+
+  /**
+   * Mock com a consulta de chave desconhecida escolhida.
+   *
+   * @param autorizarTerceiros {@code true}: chave desconhecida volta AUTORIZADA, sem digVal
+   */
+  public MockSefazTransport(boolean autorizarTerceiros) {
+    this.autorizarTerceiros = autorizarTerceiros;
+    if (autorizarTerceiros) {
+      log.warn("[MOCK SEFAZ] autorizar-terceiros ligado: NF-e de terceiro importada e dada como "
+          + "autorizada sem conferir o conteudo. Uso so em dev.");
+    }
+  }
+
+  /**
    * {@inheritDoc}
    *
    * <p>Simula autorização imediata. Reenviar uma chave já transmitida responde cStat 204, como a
@@ -89,6 +130,10 @@ public class MockSefazTransport implements SefazTransport {
           SituacaoSefaz.REJEITADA, CSTAT_DUPLICIDADE_NFE, XMOTIVO_DUPLICIDADE_NFE, null, null);
     }
     String protocolo = buildProtocolo(chaveAcesso);
+    if (chaveAcesso != null) {
+      DigestAssinatura.extrair(xmlAssinado)
+          .ifPresent(digest -> digestPorChave.put(chaveAcesso, digest));
+    }
     SefazRetorno retorno = new SefazRetorno(
         SituacaoSefaz.AUTORIZADA,
         CSTAT_AUTORIZADO,
@@ -120,6 +165,13 @@ public class MockSefazTransport implements SefazTransport {
           OffsetDateTime.now());
     }
 
+    if (chaveAcesso != null && autorizarTerceiros && !chavesTransmitidas.contains(chaveAcesso)) {
+      log.warn("[MOCK SEFAZ] Chave de terceiro dada como autorizada (autorizar-terceiros): "
+          + "chave={}", chaveAcesso);
+      return new SefazRetorno(SituacaoSefaz.AUTORIZADA, CSTAT_AUTORIZADO, XMOTIVO_AUTORIZADO,
+          buildProtocolo(chaveAcesso), OffsetDateTime.now(), null);
+    }
+
     if (chaveAcesso == null || !chavesTransmitidas.contains(chaveAcesso)) {
       log.warn("[MOCK SEFAZ] Chave nunca transmitida por este mock: chave={} -> cStat={}",
           chaveAcesso, CSTAT_NAO_CONSTA);
@@ -136,7 +188,8 @@ public class MockSefazTransport implements SefazTransport {
         CSTAT_AUTORIZADO,
         XMOTIVO_AUTORIZADO,
         buildProtocolo(chaveAcesso),
-        OffsetDateTime.now());
+        OffsetDateTime.now(),
+        digestPorChave.get(chaveAcesso));
   }
 
   /**

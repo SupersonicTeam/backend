@@ -29,9 +29,11 @@ import org.springframework.stereotype.Component;
  * (compra). O produtor autenticado e o <strong>destinatario</strong>; o emitente do XML e um
  * terceiro, cujos dados vao para as colunas {@code emitente_nome}/{@code emitente_cpf_cnpj}.
  *
- * <p>Origem = {@link OrigemNotaFiscal#IMPORTADA}. O status inicial e {@code AUTORIZADA} quando
- * o XML e um {@code nfeProc} autorizado (cStat=100), sinalizado pelo chamador; caso contrario,
- * um status neutro ({@code XML_GERADO}, ja que ha XML valido mas sem confirmacao do fisco).
+ * <p>Origem = {@link OrigemNotaFiscal#IMPORTADA}. O status inicial e sempre
+ * {@code PENDENTE_SEFAZ} (issue #223): nada do XML prova a autorizacao — o {@code protNFe} vem do
+ * proprio usuario. Quem decide e a consulta a SEFAZ pela chave, no
+ * {@code ImportacaoNotaFiscalService}. Antes, o {@code cStat=100} do upload virava
+ * {@code AUTORIZADA} e gerava credito de IBS/CBS de NF-e forjada.
  *
  * <p><strong>NCM/CFOP:</strong> mapeados como informativos, sem validacao dura de existencia.
  * Uma nota real de terceiro pode conter NCM/CFOP fora do subconjunto curado do sistema — por
@@ -50,12 +52,10 @@ public class NfeToNotaFiscalMapper {
    * @param nfe           grafo desserializado do XML importado
    * @param produtor      produtor autenticado (destinatario/dono da nota importada)
    * @param xmlOriginal   XML bruto assinado (persistido em {@code xmlGerado} para auditoria)
-   * @param autorizada    {@code true} se o XML for um nfeProc autorizado (cStat=100)
-   * @return entidade {@link NotaFiscal} pronta para persistencia (itens ja associados)
+   * @return entidade {@link NotaFiscal} em {@code PENDENTE_SEFAZ} (itens ja associados)
    * @throws XmlImportacaoInvalidaException se faltarem dados estruturais minimos (Id/ide/emit)
    */
-  public NotaFiscal toNotaFiscal(
-      NFe nfe, Produtor produtor, String xmlOriginal, boolean autorizada) {
+  public NotaFiscal toNotaFiscal(NFe nfe, Produtor produtor, String xmlOriginal) {
     InfNFe infNFe = requireInfNFe(nfe);
     Ide ide = requireIde(infNFe);
     Emit emit = requireEmit(infNFe);
@@ -64,7 +64,7 @@ public class NfeToNotaFiscalMapper {
 
     NotaFiscal nota = NotaFiscal.builder()
         .origem(OrigemNotaFiscal.IMPORTADA)
-        .status(autorizada ? StatusNotaFiscal.AUTORIZADA : StatusNotaFiscal.XML_GERADO)
+        .status(StatusNotaFiscal.PENDENTE_SEFAZ)
         .tipoDocumento(TipoDocumentoFiscal.NFE)
         .chaveAcesso(chaveAcesso)
         .numero(parseLong(ide.getNNF(), "numero da NF-e (nNF)"))
@@ -77,7 +77,7 @@ public class NfeToNotaFiscalMapper {
         // Emitente terceiro: colunas dedicadas (nao e o produtor).
         .emitenteNome(emit.getXNome())
         .emitenteCpfCnpj(emit.getCnpj() != null ? emit.getCnpj() : emit.getCpf())
-        // Destinatario da nota = produtor autenticado (dado do dest do XML e informativo).
+        // Destinatario = produtor autenticado; o servico ja conferiu o CPF/CNPJ do dest (#223).
         .destinatarioNome(resolveDestNome(infNFe.getDest(), produtor))
         .destinatarioCpfCnpj(resolveDestCpfCnpj(infNFe.getDest(), produtor))
         .destinatarioIe(infNFe.getDest() != null ? infNFe.getDest().getIe() : null)

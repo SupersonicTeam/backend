@@ -20,10 +20,22 @@ import java.time.OffsetDateTime;
  *                        evento de cancelamento quando a situação é CANCELADA
  * @param dataAutorizacao instante da autorização pelo fisco (nulo se não autorizado); do evento de
  *                        cancelamento quando a situação é CANCELADA
+ * @param digestValue     {@code digVal} do protocolo: o DigestValue da assinatura do XML que o fisco
+ *                        autorizou (issue #223). Só na consulta de NF-e autorizada; nulo quando o
+ *                        transporte não o informa. É o que prova que o XML importado é o autorizado,
+ *                        e não um com a mesma chave e outro conteúdo
  */
 public record SefazRetorno(
     SituacaoSefaz situacao,
     String cStat,
     String xMotivo,
     String protocolo,
-    OffsetDateTime dataAutorizacao) {}
+    OffsetDateTime dataAutorizacao,
+    String digestValue) {
+
+  /** Retorno sem {@code digVal}: envio, cancelamento e consultas que não o trazem. */
+  public SefazRetorno(SituacaoSefaz situacao, String cStat, String xMotivo, String protocolo,
+      OffsetDateTime dataAutorizacao) {
+    this(situacao, cStat, xMotivo, protocolo, dataAutorizacao, null);
+  }
+}
