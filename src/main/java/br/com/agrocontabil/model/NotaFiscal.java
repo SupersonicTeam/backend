@@ -20,6 +20,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -51,9 +52,12 @@ import lombok.ToString;
 // porque notas IMPORTADAS de terceiros podem colidir em numero/serie (numero e do emitente).
 // Uma @UniqueConstraint global (todas as origens) via ddl-auto=create-drop rejeitaria importadas
 // validas nos testes e divergiria do schema real. A unicidade parcial vive no Liquibase (0009) e,
-// no perfil de teste, no schema-nota-fiscal-test.sql. A unique de chave_acesso vem do
-// @Column(unique=true) abaixo (essa e global e continua valida).
-@Table(name = "nota_fiscal")
+// no perfil de teste, no schema-nota-fiscal-test.sql. A chave de acesso e unica por produtor e
+// origem (changeSet 0045, issue #223), nao no sistema inteiro: o emitente (PROPRIA) e o
+// destinatario (IMPORTADA) tem a mesma NF-e, cada um na sua conta.
+@Table(name = "nota_fiscal", uniqueConstraints = @UniqueConstraint(
+    name = "uk_nota_fiscal_produtor_chave_origem",
+    columnNames = {"produtor_id", "chave_acesso", "origem"}))
 @Data
 @EqualsAndHashCode(exclude = {"itens", "produtor"})
 @ToString(exclude = {"itens", "produtor"})
@@ -71,7 +75,7 @@ public class NotaFiscal {
    * Chave de acesso da NF-e (44 dígitos numéricos). Nula enquanto a nota está em rascunho;
    * preenchida na geração do XML.
    */
-  @Column(name = "chave_acesso", length = 44, unique = true)
+  @Column(name = "chave_acesso", length = 44)
   private String chaveAcesso;
 
   /** Número sequencial da NF-e no emissor. */

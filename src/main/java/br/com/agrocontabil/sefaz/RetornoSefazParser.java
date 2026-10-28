@@ -103,11 +103,13 @@ final class RetornoSefazParser {
     exigirProcessado(cStat, xMotivo);
     if (AUTORIZADO.equals(cStat) || DENEGADA.contains(cStat)) {
       Element infProt = filho(ret, "infProt");
+      // digVal (#223): o DigestValue do XML autorizado, conferido na importacao de NF-e de terceiro.
       return new SefazRetorno(
           AUTORIZADO.equals(cStat) ? SituacaoSefaz.AUTORIZADA : SituacaoSefaz.DENEGADA,
           cStat, xMotivo,
           infProt == null ? null : texto(infProt, "nProt"),
-          infProt == null ? null : data(texto(infProt, "dhRecbto")));
+          infProt == null ? null : data(texto(infProt, "dhRecbto")),
+          infProt == null ? null : texto(infProt, "digVal"));
     }
     if (CANCELADA.contains(cStat)) {
       Element evento = eventoDeCancelamento(ret);

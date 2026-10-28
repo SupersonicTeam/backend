@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.exception.SefazRespostaIndeterminadaException;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -258,6 +259,41 @@ class SefazServiceSincronizacaoTest {
     when(notaFiscalRepository.findById(any()))
         .thenAnswer(inv -> Optional.ofNullable(banco.get(inv.getArgument(0, UUID.class))));
     return ids;
+  }
+
+  @Test
+  @DisplayName("#223: importada pendente — 217 vira REJEITADA (nunca XML_GERADO), digVal "
+      + "diferente vira REJEITADA, mesmo digVal vira AUTORIZADA")
+  void importadaPendenteSegueAsRegrasDaImportacao() {
+    List<UUID> ids = pendentes(3);
+    String xml = "<NFe><Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\">"
+        + "<DigestValue>digestDoXml=</DigestValue></Signature></NFe>";
+    ids.forEach(id -> {
+      banco.get(id).setOrigem(OrigemNotaFiscal.IMPORTADA);
+      banco.get(id).setXmlGerado(xml);
+    });
+    when(notaFiscalRepository.findIdsPorStatus(eq(StatusNotaFiscal.PENDENTE_SEFAZ), any()))
+        .thenReturn(ids);
+    when(sefazClient.consultarStatus(eq(banco.get(ids.get(0)).getChaveAcesso()), any()))
+        .thenReturn(new SefazRetorno(SituacaoSefaz.NAO_ENCONTRADA, "217", "NF-e nao consta",
+            null, null));
+    when(sefazClient.consultarStatus(eq(banco.get(ids.get(1)).getChaveAcesso()), any()))
+        .thenReturn(new SefazRetorno(SituacaoSefaz.AUTORIZADA, "100", "Autorizado",
+            "141260000000017", OffsetDateTime.now(), "outroDigest="));
+    when(sefazClient.consultarStatus(eq(banco.get(ids.get(2)).getChaveAcesso()), any()))
+        .thenReturn(new SefazRetorno(SituacaoSefaz.AUTORIZADA, "100", "Autorizado",
+            "141260000000018", OffsetDateTime.now(), "digestDoXml="));
+    permitirGravacao();
+
+    sefazService.sincronizarPendentes();
+
+    assertThat(banco.get(ids.get(0)).getStatus()).isEqualTo(StatusNotaFiscal.REJEITADA);
+    assertThat(banco.get(ids.get(1)).getStatus()).isEqualTo(StatusNotaFiscal.REJEITADA);
+    assertThat(banco.get(ids.get(1)).getSefazMotivo()).contains("difere");
+    assertThat(banco.get(ids.get(1)).getProtocoloAutorizacao()).isNull();
+    assertThat(banco.get(ids.get(2)).getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    // So a confirmada entra na apuracao.
+    verify(eventPublisher, times(1)).publishEvent(any(Object.class));
   }
 
   private void permitirGravacao() {

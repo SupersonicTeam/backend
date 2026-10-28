@@ -424,6 +424,19 @@ public class SefazProperties implements InitializingBean {
      */
     private boolean enabled = true;
 
+    /**
+     * Na consulta, a chave que o mock não transmitiu volta AUTORIZADA em vez de 217 (issue #223).
+     * Padrão: {@code false}.
+     *
+     * <p>A importação de NF-e de terceiro confirma a autorização na SEFAZ pela chave; o mock só
+     * conhece as chaves que ele mesmo transmitiu, então no dev nenhuma NF-e de terceiro seria
+     * confirmada. Ligado só no {@code application-dev.yml}, para a demonstração; sem o
+     * {@code digVal}, o conteúdo do XML não é conferido. Vale para qualquer chave desconhecida —
+     * inclusive a de nota própria pendente que nunca chegou ao mock, que a sincronização daria como
+     * autorizada (a guarda da #96 fica desligada em dev). Nunca fora de dev.
+     */
+    private boolean autorizarTerceiros = false;
+
     /** Retorna se o mock está habilitado. */
     public boolean isEnabled() {
       return enabled;
@@ -432,6 +445,16 @@ public class SefazProperties implements InitializingBean {
     /** Define se o mock está habilitado. */
     public void setEnabled(boolean enabled) {
       this.enabled = enabled;
+    }
+
+    /** Retorna se a consulta de chave desconhecida volta autorizada (só dev). */
+    public boolean isAutorizarTerceiros() {
+      return autorizarTerceiros;
+    }
+
+    /** Define se a consulta de chave desconhecida volta autorizada (só dev). */
+    public void setAutorizarTerceiros(boolean autorizarTerceiros) {
+      this.autorizarTerceiros = autorizarTerceiros;
     }
   }
 

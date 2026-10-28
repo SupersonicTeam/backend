@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0045-nota-fiscal-chave-por-produtor.xml
+         Issue #223 (importacao de NF-e de terceiro).
+
+         A chave de acesso era unica no sistema inteiro (uk_nota_fiscal_chave_acesso,
+         0002). Com dois usuarios, o emitente (nota PROPRIA) e o destinatario (nota
+         IMPORTADA) tem a mesma NF-e: o destinatario nao conseguia importar, quem
+         conhecesse a chave (impressa na DANFE) importava antes e travava o
+         destinatario, e a resposta "duplicada" revelava a chave em outra conta.
+
+         Passa a ser unica por (produtor, chave, origem). Os dados existentes ja
+         satisfazem a nova constraint (eram unicos pela chave sozinha). NULL nao
+         conflita nas duas bases (rascunho sem chave).
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0045-nota-fiscal-chave-por-produtor" author="supersonic-team">
+        <dropUniqueConstraint
+                tableName="nota_fiscal"
+                constraintName="uk_nota_fiscal_chave_acesso"/>
+        <addUniqueConstraint
+                tableName="nota_fiscal"
+                columnNames="produtor_id, chave_acesso, origem"
+                constraintName="uk_nota_fiscal_produtor_chave_origem"/>
+        <rollback>
+            <dropUniqueConstraint
+                    tableName="nota_fiscal"
+                    constraintName="uk_nota_fiscal_produtor_chave_origem"/>
+            <addUniqueConstraint
+                    tableName="nota_fiscal"
+                    columnNames="chave_acesso"
+                    constraintName="uk_nota_fiscal_chave_acesso"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

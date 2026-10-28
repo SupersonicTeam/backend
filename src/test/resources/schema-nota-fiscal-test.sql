@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     -- origem: PROPRIA (emitida pelo produtor) | IMPORTADA (nota de entrada de terceiro).
     -- emitente_*: preenchidos apenas em notas importadas.
     -- Obs.: o indice unico PARCIAL (WHERE origem='PROPRIA') do PostgreSQL nao e portavel
-    -- para o H2 usado nos testes; aqui garantimos as colunas. A dedup de importadas por
-    -- chave_acesso e coberta pelo unique de chave_acesso ja existente na entidade/migration.
+    -- para o H2 usado nos testes; aqui garantimos as colunas. A dedup de importadas e pela
+    -- unique (produtor_id, chave_acesso, origem) do fim da tabela (changeset 0045, #223).
     origem                      VARCHAR(10)    NOT NULL DEFAULT 'PROPRIA',
     emitente_nome               VARCHAR(255),
     emitente_cpf_cnpj           VARCHAR(14),
@@ -90,9 +90,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),
-    -- chave_acesso e globalmente unica (changeset 0002, nunca removida). Espelha producao e
-    -- cobre a dedup de notas (inclusive importadas) por chave.
-    CONSTRAINT uk_nota_fiscal_chave_acesso UNIQUE (chave_acesso)
+    -- chave_acesso e unica por (produtor, chave, origem) desde o changeset 0045 (issue #223),
+    -- que substituiu a unique global da 0002: emitente e destinatario tem a mesma NF-e.
+    CONSTRAINT uk_nota_fiscal_produtor_chave_origem UNIQUE (produtor_id, chave_acesso, origem)
 );
 -- Nota: a unicidade de (produtor, numero, serie, modelo) restrita a origem='PROPRIA' e um
 -- INDICE UNICO PARCIAL no PostgreSQL (changeset 0009; a unique total de 0002 foi REMOVIDA la

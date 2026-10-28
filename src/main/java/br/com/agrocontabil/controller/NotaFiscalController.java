@@ -293,8 +293,12 @@ public class NotaFiscalController {
   })
   public ResponseEntity<String> obterXml(@PathVariable UUID id) {
     String xml = notaFiscalService.obterXml(id);
+    // attachment (#223): o XML de uma nota importada veio do usuario; aberto inline, o navegador o
+    // renderizaria na origem da API.
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_XML)
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"nfe-" + id + ".xml\"")
+        .header(HttpHeaders.CACHE_CONTROL, "no-store")
         .body(xml);
   }
 

@@ -37,16 +37,18 @@ class NfeToNotaFiscalMapperTest {
   }
 
   @Test
-  @DisplayName("Mapeia nfeProc autorizado: origem IMPORTADA, status AUTORIZADA, emitente terceiro")
+  @DisplayName("Mapeia nfeProc: origem IMPORTADA, PENDENTE_SEFAZ (o protNFe do upload nao prova "
+      + "nada, #223), emitente terceiro")
   void mapeiaNfeProcAutorizado() {
     ResultadoImportacao r = importer.importar(
         NfeImportTestFixtures.comoNfeProcAutorizada(NfeImportTestFixtures.gerarNfeAssinada())
             .getBytes(StandardCharsets.UTF_8));
 
-    NotaFiscal nota = mapper.toNotaFiscal(r.nfe(), produtor, r.nfeXml(), r.autorizada());
+    NotaFiscal nota = mapper.toNotaFiscal(r.nfe(), produtor, r.nfeXml());
 
     assertThat(nota.getOrigem()).isEqualTo(OrigemNotaFiscal.IMPORTADA);
-    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
+    assertThat(nota.getProtocoloAutorizacao()).isNull();
     // Produtor autenticado e o dono/destinatario.
     assertThat(nota.getProdutor()).isSameAs(produtor);
     // Emitente terceiro nas colunas dedicadas.
@@ -66,14 +68,15 @@ class NfeToNotaFiscalMapperTest {
   }
 
   @Test
-  @DisplayName("NFe pura (sem protocolo) mapeia para status neutro XML_GERADO")
+  @DisplayName("NFe pura (sem protocolo) tambem entra PENDENTE_SEFAZ, nunca XML_GERADO (#223)")
   void mapeiaNfePuraComoNeutra() {
     ResultadoImportacao r = importer.importar(
         NfeImportTestFixtures.gerarNfeAssinada().getBytes(StandardCharsets.UTF_8));
 
-    NotaFiscal nota = mapper.toNotaFiscal(r.nfe(), produtor, r.nfeXml(), r.autorizada());
+    NotaFiscal nota = mapper.toNotaFiscal(r.nfe(), produtor, r.nfeXml());
 
     assertThat(nota.getOrigem()).isEqualTo(OrigemNotaFiscal.IMPORTADA);
-    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.XML_GERADO);
+    // XML_GERADO liberaria "transmitir" o XML de outro emitente com o certificado do produtor.
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
   }
 }

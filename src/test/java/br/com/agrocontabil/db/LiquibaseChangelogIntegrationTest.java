@@ -582,6 +582,38 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0045: chave de acesso unica por produtor e origem, nao global (#223)")
+  void changeSet0045ChavePorProdutor() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT constraint_name FROM information_schema.table_constraints"
+        + " WHERE table_name = 'nota_fiscal' AND constraint_type = 'UNIQUE'", String.class))
+        .contains("uk_nota_fiscal_produtor_chave_origem")
+        .doesNotContain("uk_nota_fiscal_chave_acesso");
+
+    String emitente = UUID.randomUUID().toString();
+    String destinatario = UUID.randomUUID().toString();
+    for (String id : new String[] {emitente, destinatario}) {
+      jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')", id);
+    }
+    String chave = "4".repeat(44);
+    String insert = "INSERT INTO nota_fiscal (id, produtor_id, chave_acesso, numero, serie,"
+        + " modelo, natureza_operacao, data_emissao, destinatario_nome, destinatario_cpf_cnpj,"
+        + " valor_total_produtos, valor_total_nota, status, origem, tipo_documento)"
+        + " VALUES (gen_random_uuid(), ?::uuid, ?, ?, 1, '55', 'Venda', now(), 'Comprador',"
+        + " '52998224725', 100, 100, 'AUTORIZADA', ?, 'NFE')";
+    // O emitente tem a PROPRIA; o destinatario importa a mesma chave.
+    jdbc.update(insert, emitente, chave, 1, "PROPRIA");
+    jdbc.update(insert, destinatario, chave, 1, "IMPORTADA");
+    // O mesmo produtor nao importa a mesma chave duas vezes.
+    assertThatThrownBy(() -> jdbc.update(insert, destinatario, chave, 2, "IMPORTADA"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM nota_fiscal WHERE chave_acesso = ?", chave);
+    jdbc.update("DELETE FROM produtores WHERE id IN (?::uuid, ?::uuid)", emitente, destinatario);
+  }
+
+  @Test
   @DisplayName("changeSet 0044: notificacao com aviso unico por item e CASCADE do produtor")
   void changeSet0044Notificacao() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

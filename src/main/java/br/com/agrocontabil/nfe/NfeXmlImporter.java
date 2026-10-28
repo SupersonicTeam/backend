@@ -58,8 +58,6 @@ public class NfeXmlImporter {
 
   private static final Logger log = LoggerFactory.getLogger(NfeXmlImporter.class);
 
-  private static final String CSTAT_AUTORIZADA = "100";
-
   private final XsdValidator xsdValidator;
   private final AtomicReference<JAXBContext> contextCache = new AtomicReference<>();
 
@@ -69,19 +67,21 @@ public class NfeXmlImporter {
   }
 
   /**
-   * Resultado da importacao de um XML: o grafo desserializado e o indicador de autorizacao.
+   * Resultado da importacao de um XML: o grafo desserializado e o XML do {@code <NFe>}.
    *
-   * @param nfe        grafo JAXB desserializado do elemento {@code <NFe>}
-   * @param nfeXml     XML bruto do elemento {@code <NFe>} (assinado, para auditoria/persistencia)
-   * @param autorizada {@code true} se o XML e um {@code nfeProc} autorizado (protNFe cStat=100)
+   * <p>Sem indicador de autorizacao desde a #223: o {@code protNFe} do upload nao prova nada, e a
+   * autorizacao e confirmada na SEFAZ pela chave.
+   *
+   * @param nfe    grafo JAXB desserializado do elemento {@code <NFe>}
+   * @param nfeXml XML bruto do elemento {@code <NFe>} (assinado, para auditoria/persistencia)
    */
-  public record ResultadoImportacao(NFe nfe, String nfeXml, boolean autorizada) {}
+  public record ResultadoImportacao(NFe nfe, String nfeXml) {}
 
   /**
    * Le, valida e converte um XML de NF-e para o grafo JAXB {@link NFe}.
    *
    * @param xmlBytes conteudo bruto do arquivo XML enviado
-   * @return {@link ResultadoImportacao} com o grafo, o XML da NFe e o indicador de autorizacao
+   * @return {@link ResultadoImportacao} com o grafo e o XML da NFe
    * @throws XmlImportacaoInvalidaException se o XML for malformado, nao contiver um
    *     elemento {@code <NFe>} reconhecivel ou reprovar na validacao XSD (HTTP 422)
    */
@@ -105,26 +105,7 @@ public class NfeXmlImporter {
     // 3) Unmarshalling JAXB via StAX endurecido (defesa em profundidade contra XXE).
     NFe nfe = unmarshal(nfeXml);
 
-    boolean autorizada = isNfeProcAutorizada(document);
-    return new ResultadoImportacao(nfe, nfeXml, autorizada);
-  }
-
-  /**
-   * Detecta se o documento e um {@code nfeProc} com protocolo autorizado (cStat=100).
-   *
-   * <p>Busca de forma namespace-aware o elemento {@code cStat} dentro de {@code protNFe/infProt}.
-   * Um {@code <NFe>} puro (sem protocolo) retorna {@code false} (status neutro).
-   */
-  private boolean isNfeProcAutorizada(Document document) {
-    NodeList cStatNodes = document.getElementsByTagNameNS(NfeNamespace.NS, "cStat");
-    for (int i = 0; i < cStatNodes.getLength(); i++) {
-      Node parent = cStatNodes.item(i).getParentNode();
-      // Considera apenas o cStat do protocolo (infProt), nao de outros grupos.
-      if (parent != null && "infProt".equals(parent.getLocalName())) {
-        return CSTAT_AUTORIZADA.equals(cStatNodes.item(i).getTextContent().trim());
-      }
-    }
-    return false;
+    return new ResultadoImportacao(nfe, nfeXml);
   }
 
   // =========================================================================

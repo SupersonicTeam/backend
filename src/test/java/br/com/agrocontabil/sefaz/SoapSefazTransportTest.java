@@ -209,11 +209,14 @@ class SoapSefazTransportTest {
     void autorizadaEPendente() {
       servidor.responder(200, retConsSitNFe("100",
           "<protNFe versao=\"4.00\"><infProt><nProt>141260000012345</nProt>"
-              + "<dhRecbto>2026-10-01T10:00:00-03:00</dhRecbto><cStat>100</cStat></infProt>"
+              + "<dhRecbto>2026-10-01T10:00:00-03:00</dhRecbto>"
+              + "<digVal>Rrdm5ZOwrY9+sdsbUgViPt/gNY=</digVal><cStat>100</cStat></infProt>"
               + "</protNFe>"));
       SefazRetorno autorizada = transporte().consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
       assertThat(autorizada.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
       assertThat(autorizada.protocolo()).isEqualTo("141260000012345");
+      // digVal (#223): o DigestValue do XML autorizado, conferido na importacao de terceiro.
+      assertThat(autorizada.digestValue()).isEqualTo("Rrdm5ZOwrY9+sdsbUgViPt/gNY=");
 
       servidor.responder(200, retConsSitNFe("105", ""));
       assertThat(transporte().consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO).situacao())

@@ -65,7 +65,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `NotaFiscalService` | CRUD de notas + orquestra geração XML, DANFE, envio, cancelamento (anti-IDOR 404). **Não é `@Transactional` na classe** (issue #99): `gerarXml` roda em 3 fases via `TransactionTemplate` (lê e carrega o grafo → assina/XSD **fora de transação** → recarrega sob lock, recheca e persiste); `gerarPdf` só na fase de leitura. CRUD segue declarativo |
 | `GeracaoNotaFiscalService` | Pipeline NF-e mod. 55: validar → mapear → gerar XML → assinar → validar XSD |
 | `GeracaoNfaService` | Geração de NFA (Nota Fiscal Avulsa do produtor rural — issue #18) |
-| `ImportacaoNotaFiscalService` | Importa XML(s) de NF-e recebida (multipart; produtor=destinatário; issue #19) |
+| `ImportacaoNotaFiscalService` | Importa XML(s) de NF-e recebida (multipart; issue #19). Desde a #223: `dest` = produtor, `AssinaturaValidator`, dedup `existsByProdutorIdAndChaveAcessoAndOrigem`, consulta à SEFAZ pela chave fora de transação + `DigestAssinatura.confere` (digVal); sem resposta → `PENDENTE_SEFAZ` |
 | `NotaFiscalValidacaoService` | Persiste lote de inconsistências em transação **única** (`REQUIRED` desde a issue #97 — era `REQUIRES_NEW` e exigia 2 conexões); marca nota `COM_INCONSISTENCIAS`. **Só pode ser chamado fora de transação** |
 | `SefazService` | Envio, consulta de status e cancelamento na SEFAZ. **Nao e `@Transactional` na classe** (issue #96): cada transmissao roda em 3 transacoes curtas via `TransactionTemplate` — reserva sob lock pessimista, I/O fora de transacao, desfecho — mais a compensacao e `reconciliarTransmissoesPresas` |
 | `TributacaoService` | Débito: calcula IBS/CBS por item, classifica natureza (DEBITO/CREDITO) e agrega totais; alíquota via `AliquotaIbsCbsResolver`, redução via `ReducaoNcmResolver` |
@@ -115,7 +115,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 |--------|-----------------|
 | `FiscalRulesValidator` | Valida regras de negócio fiscal antes de gerar XML (inclui NCM/CFOP — issue #20) |
 | `NotaFiscalNfeMapper` | Entidade → classes JAXB (formatação fiscal) |
-| `NfeToNotaFiscalMapper` | Mapper reverso: XML NF-e importado → entidade (issue #19) |
+| `NfeToNotaFiscalMapper` | Mapper reverso: XML NF-e importado → entidade (issue #19), sempre em `PENDENTE_SEFAZ` (#223: o `protNFe` do upload não prova nada) |
+| `DigestAssinatura` | DigestValue da assinatura do XML e `confere(xml, digVal)` contra o protocolo da SEFAZ (#223) |
 | `NfeXmlImporter` | Parser XXE-safe do XML importado |
 | `XmlGenerator` | JAXB marshall → String XML |
 | `XsdValidator` | Valida XML contra XSD oficial layout 4.00 |
@@ -201,10 +202,10 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `SefazTransport` | Interface plugável de transmissão |
-| `MockSefazTransport` | Mock fiel à SEFAZ nos casos da reconciliação: 204 no reenvio, 573 no evento repetido, 217 → `NAO_ENCONTRADA`, 101 → `CANCELADA` (issue #83) |
+| `MockSefazTransport` | Mock fiel à SEFAZ nos casos da reconciliação: 204 no reenvio, 573 no evento repetido, 217 → `NAO_ENCONTRADA`, 101 → `CANCELADA` (issue #83); guarda o DigestValue de cada XML transmitido e o devolve como `digVal` na consulta; `autorizar-terceiros` (só dev) autoriza chave desconhecida sem `digVal` (#223) |
 | `SoapSefazTransport` | Transporte real (issue #128), com `mock.enabled=false`: SOAP 1.2 + mTLS (certificado A1 do emitente) nos webservices NF-e 4.00, endereço pela UF do cUF da chave ou `PADRAO` (`app.nfe.sefaz.webservices.*`), truststore ICP-Brasil configurável. `ClienteSoapSefaz` (HttpClient do JDK, teto de 1 MB, classificação conexão × indeterminada), `RetornoSefazParser` (cStat → `SituacaoSefaz`), `MensagensSefaz` (envelopes). Testado contra `HttpsServer` com mTLS. Cancelamento: evento 110111 com `infEvento` assinado (`NfeAssinador.assinarElemento`) e autor pelo certificado (`DocumentoEmitente`). Ver `docs/sefaz-transporte-soap.md` |
 | `SefazClient` | Retry pela idempotência: `enviar`/`cancelar` só re-tentam `SefazConexaoException`; `consultarStatus` re-tenta qualquer falha de comunicação (issue #83) |
-| `SefazRetorno` | Record com cStat, motivo, protocolo, situação |
+| `SefazRetorno` | Record com cStat, motivo, protocolo, situação e `digestValue` (`infProt/digVal` da consulta, #223; construtor de 5 argumentos = sem digVal) |
 | `SituacaoSefaz` | Enum: AUTORIZADA, REJEITADA, PENDENTE, DENEGADA; só na consulta: NAO_ENCONTRADA, CANCELADA (issue #83) |
 | `SefazAmbiente` | Enum: HOMOLOGACAO, PRODUCAO |
 | `SefazStatusSyncJob` | `@Scheduled` — reconcilia transmissões presas e sincroniza notas PENDENTE_SEFAZ (keyset por IDs + disjuntor — issue #83) |
@@ -310,11 +311,11 @@ Bean Validation customizada (anotação + validator):
 | GET | `/api/notas` | Lista paginada do produtor autenticado, com filtros `status`/`tipoDocumento`/`emitidaDe`/`emitidaAte`/`busca` (`FiltroNotasRequest` → `NotaFiscalEspecificacoes`, issue #174) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
-| POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; origem=IMPORTADA) |
+| POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; origem=IMPORTADA; destinatário, assinatura e SEFAZ conferidos — #223) |
 | PUT | `/api/notas/{id}` | Atualiza (só RASCUNHO/COM_INCONSISTENCIAS) |
 | DELETE | `/api/notas/{id}` | Exclui (só RASCUNHO/COM_INCONSISTENCIAS) |
 | POST | `/api/notas/{id}/gerar-xml` | Gera e assina XML NF-e (RASCUNHO→XML_GERADO) |
-| GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`; 409 se ainda nao gerado) |
+| GET | `/api/notas/{id}/xml` | Baixa XML assinado (`application/xml`, `attachment`; 409 se ainda nao gerado) |
 | GET | `/api/notas/{id}/pdf` | Baixa DANFE (`application/pdf`) |
 | GET | `/api/notas/{id}/danfe-preview` | Preview da DANFE de rascunho com marca d'água, sem validar nem gravar (issue #89) |
 | POST | `/api/notas/{id}/enviar-sefaz` | Transmite à SEFAZ (XML_GERADO→AUTORIZADA/REJEITADA) |
@@ -342,5 +343,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0041-nota-fiscal-revisao; próximo número livre: **0042**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0045-nota-fiscal-chave-por-produtor = chave única por produtor+chave+origem, #223; próximo número livre: **0046**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

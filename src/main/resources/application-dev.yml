@@ -55,6 +55,12 @@ app:
   seed:
     senha: ${SEED_SENHA:}
   nfe:
+    # Importacao de NF-e de terceiro (#223): a autorizacao e confirmada na SEFAZ pela chave, e o
+    # mock so conhece as chaves que transmitiu. Ligado aqui, a chave desconhecida volta autorizada
+    # (sem conferir o conteudo) para a demonstracao funcionar. So em dev.
+    sefaz:
+      mock:
+        autorizar-terceiros: ${NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS:true}
     # Certificado autoassinado de teste (src/test/resources/certs) — apenas para permitir
     # assinar/autorizar NF-e em dev local (SEFAZ ja e mock). NUNCA usar em prod: a chave privada e
     # a senha sao publicas. E default so deste profile, e a subida avisa em WARN quando o

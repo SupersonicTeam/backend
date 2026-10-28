@@ -29,6 +29,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.UnaryOperator;
 
 /**
  * Fixtures compartilhados para os testes de importacao de XML (issue #19).
@@ -169,6 +170,35 @@ public final class NfeImportTestFixtures {
     when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
     return new TributacaoService(
         new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
+  }
+
+  /**
+   * Chave de acesso (44 digitos) de um XML de NF-e.
+   *
+   * @param nfeXml XML com o {@code infNFe}
+   * @return a chave, sem o prefixo {@code NFe}
+   */
+  public static String chaveDe(String nfeXml) {
+    return extrairChave(nfeXml);
+  }
+
+  /**
+   * Mesma NF-e (mesma chave) com o conteudo alterado e assinatura nova e valida, pelo certificado de
+   * teste (issue #223): a assinatura confere, mas o DigestValue nao e o do XML que a SEFAZ
+   * autorizou. E o XML forjado que so o {@code digVal} da consulta denuncia.
+   *
+   * @param nfeXml    XML assinado original
+   * @param alteracao troca de conteudo aplicada antes de reassinar
+   * @return o XML alterado e reassinado
+   */
+  public static String reassinar(String nfeXml, UnaryOperator<String> alteracao) {
+    String semAssinatura = removerDeclaracao(nfeXml)
+        .replaceAll("(?s)<(?:\\w+:)?Signature[ >].*?</(?:\\w+:)?Signature>", "");
+    String alterado = alteracao.apply(semAssinatura);
+    KeyStoreCertificadoProvider certProvider = new KeyStoreCertificadoProvider(
+        new CertificadoDigitalProperties(
+            "classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"));
+    return new NfeAssinador(certProvider).assinar(alterado, "NFe" + extrairChave(alterado));
   }
 
   private static String removerDeclaracao(String xml) {

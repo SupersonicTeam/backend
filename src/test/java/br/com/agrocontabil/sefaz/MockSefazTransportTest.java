@@ -114,4 +114,29 @@ class MockSefazTransportTest {
     assertThat(retorno.cStat()).isEqualTo("101");
     assertThat(retorno.protocolo()).isNotNull();
   }
+
+  @Test
+  @DisplayName("#223: consulta de chave transmitida devolve o digVal (DigestValue do XML enviado)")
+  void consultaDevolveDigestDoXmlTransmitido() {
+    transport.enviar("<NFe><ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">"
+        + "<ds:DigestValue> abc123= </ds:DigestValue>"
+        + "</ds:Signature></NFe>", CHAVE, SefazAmbiente.HOMOLOGACAO);
+
+    assertThat(transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO).digestValue())
+        .isEqualTo("abc123=");
+  }
+
+  @Test
+  @DisplayName("#223: autorizar-terceiros (so dev) da chave desconhecida como autorizada, sem digVal")
+  void autorizarTerceirosSoNoModoDev() {
+    MockSefazTransport dev = new MockSefazTransport(true);
+
+    SefazRetorno retorno = dev.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO);
+
+    assertThat(retorno.situacao()).isEqualTo(SituacaoSefaz.AUTORIZADA);
+    assertThat(retorno.digestValue()).isNull();
+    // O padrao segue fiel a SEFAZ: chave que o mock nao transmitiu e 217.
+    assertThat(new MockSefazTransport().consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO)
+        .situacao()).isEqualTo(SituacaoSefaz.NAO_ENCONTRADA);
+  }
 }

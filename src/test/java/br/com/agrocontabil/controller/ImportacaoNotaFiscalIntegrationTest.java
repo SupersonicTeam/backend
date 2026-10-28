@@ -10,6 +10,8 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.nfe.NfeImportTestFixtures;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.sefaz.MockSefazTransport;
+import br.com.agrocontabil.sefaz.SefazAmbiente;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.nio.charset.StandardCharsets;
@@ -71,11 +73,16 @@ class ImportacaoNotaFiscalIntegrationTest {
   @Autowired
   private NotaFiscalRepository notaFiscalRepository;
 
+  @Autowired
+  private MockSefazTransport mockSefaz;
+
+  private String nfeXml;
   private String nfeProcXml;
+  private Produtor produtor;
 
   @BeforeEach
   void setUp() {
-    Produtor produtor = produtorRepository.save(Produtor.builder()
+    produtor = produtorRepository.save(Produtor.builder()
         .nomeCompleto("Joao da Silva Produtor")
         .cpfCnpj("52998224725")
         .estado("SC")
@@ -84,9 +91,15 @@ class ImportacaoNotaFiscalIntegrationTest {
     SecurityContextHolder.getContext().setAuthentication(
         AutenticacaoTestSupport.tokenDe(produtor));
 
-    // XML de NF-e real, assinado e autorizado (nfeProc cStat=100), gerado pelo pipeline.
-    nfeProcXml = NfeImportTestFixtures.comoNfeProcAutorizada(
-        NfeImportTestFixtures.gerarNfeAssinada());
+    // XML de NF-e real, assinado pelo pipeline; o emitente o transmitiu a SEFAZ (mock), que o
+    // autorizou e guarda o DigestValue (#223). O protNFe do nfeProc e decorativo.
+    nfeXml = NfeImportTestFixtures.gerarNfeAssinada();
+    autorizarNaSefaz(nfeXml);
+    nfeProcXml = NfeImportTestFixtures.comoNfeProcAutorizada(nfeXml);
+  }
+
+  private void autorizarNaSefaz(String xml) {
+    mockSefaz.enviar(xml, NfeImportTestFixtures.chaveDe(xml), SefazAmbiente.HOMOLOGACAO);
   }
 
   @AfterEach
@@ -109,7 +122,7 @@ class ImportacaoNotaFiscalIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].id").exists());
 
-    // Confirma a persistencia com origem IMPORTADA e emitente terceiro.
+    // Confirma a persistencia com origem IMPORTADA e emitente terceiro, AUTORIZADA pela consulta.
     var notas = notaFiscalRepository.findAll();
     org.assertj.core.api.Assertions.assertThat(notas).hasSize(1);
     org.assertj.core.api.Assertions.assertThat(notas.get(0).getOrigem())
@@ -152,6 +165,138 @@ class ImportacaoNotaFiscalIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].status").value("DUPLICADA"))
         .andExpect(jsonPath("$[0].sucesso").value(false));
+  }
+
+  @Test
+  @DisplayName("#223: XML com destinatario de outro CPF/CNPJ e recusado e nada e gravado")
+  void destinatarioDeOutroProdutor() throws Exception {
+    Produtor outro = produtorRepository.save(Produtor.builder()
+        .nomeCompleto("Outro Produtor").cpfCnpj("39053344705").estado("SC").build());
+    SecurityContextHolder.getContext().setAuthentication(AutenticacaoTestSupport.tokenDe(outro));
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("alheia.xml", nfeProcXml)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].status").value("INVALIDA"))
+        .andExpect(jsonPath("$[0].sucesso").value(false))
+        .andExpect(jsonPath("$[0].motivo").value(
+            org.hamcrest.Matchers.containsString("destinatario")));
+
+    org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#223: XML alterado depois de assinado (assinatura nao confere) e recusado")
+  void assinaturaAdulterada() throws Exception {
+    String adulterado = nfeProcXml.replace("<vProd>1750.00</vProd>", "<vProd>9750.00</vProd>");
+    org.assertj.core.api.Assertions.assertThat(adulterado).isNotEqualTo(nfeProcXml);
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("adulterada.xml",
+            adulterado)))
+        .andExpect(jsonPath("$[0].status").value("INVALIDA"))
+        .andExpect(jsonPath("$[0].motivo").value(
+            org.hamcrest.Matchers.containsString("Assinatura")));
+
+    org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#223: protNFe forjado (cStat=100 no upload) de NF-e que a SEFAZ nao conhece: nada")
+  void protNfeForjadoNaoAutoriza() throws Exception {
+    // Assinada e com destinatario certo, mas nunca transmitida: a SEFAZ responde 217.
+    String forjada = NfeImportTestFixtures.comoNfeProcAutorizada(
+        NfeImportTestFixtures.gerarNfeAssinada());
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("forjada.xml", forjada)))
+        .andExpect(jsonPath("$[0].status").value("INVALIDA"))
+        .andExpect(jsonPath("$[0].motivo").value(
+            org.hamcrest.Matchers.containsString("SEFAZ")));
+
+    // Nem nota AUTORIZADA nem credito: nada gravado.
+    org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#223: mesma chave com outro conteudo, reassinado: digVal da SEFAZ nao confere")
+  void conteudoDiferenteDoAutorizado() throws Exception {
+    String trocado = NfeImportTestFixtures.reassinar(nfeXml,
+        xml -> xml.replace("<vProd>1750.00</vProd>", "<vProd>9750.00</vProd>"));
+    org.assertj.core.api.Assertions.assertThat(NfeImportTestFixtures.chaveDe(trocado))
+        .isEqualTo(NfeImportTestFixtures.chaveDe(nfeXml));
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("trocada.xml",
+            NfeImportTestFixtures.comoNfeProcAutorizada(trocado))))
+        .andExpect(jsonPath("$[0].status").value("INVALIDA"))
+        .andExpect(jsonPath("$[0].motivo").value(
+            org.hamcrest.Matchers.containsString("difere")));
+
+    org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#223: forjado com o digest verdadeiro num CDATA do infCpl tambem e recusado")
+  void digestVerdadeiroEmCdataNaoEngana() throws Exception {
+    String digestVerdadeiro = br.com.agrocontabil.nfe.DigestAssinatura.extrair(nfeXml)
+        .orElseThrow();
+    String forjado = NfeImportTestFixtures.reassinar(nfeXml,
+        xml -> xml.replace("<vProd>1750.00</vProd>", "<vProd>9750.00</vProd>")
+            .replace("<infCpl>", "<infCpl><![CDATA[<DigestValue>" + digestVerdadeiro
+                + "</DigestValue>]]>"));
+    org.assertj.core.api.Assertions.assertThat(forjado).contains("CDATA");
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("cdata.xml",
+            NfeImportTestFixtures.comoNfeProcAutorizada(forjado))))
+        .andExpect(jsonPath("$[0].status").value("INVALIDA"));
+
+    org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#223: dois produtores — o destinatario importa a NF-e que o emitente (usuario) "
+      + "tem como PROPRIA; a chave do outro nao responde DUPLICADA")
+  void destinatarioImportaNotaDoEmitenteUsuario() throws Exception {
+    Produtor emitente = produtorRepository.save(Produtor.builder()
+        .nomeCompleto("Fornecedora").cpfCnpj(NfeImportTestFixtures.EMITENTE_CNPJ).estado("PR")
+        .build());
+    String chave = NfeImportTestFixtures.chaveDe(nfeXml);
+    notaFiscalRepository.save(br.com.agrocontabil.model.NotaFiscal.builder()
+        .produtor(emitente)
+        .origem(OrigemNotaFiscal.PROPRIA)
+        .status(br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA)
+        .tipoDocumento(br.com.agrocontabil.model.TipoDocumentoFiscal.NFE)
+        .chaveAcesso(chave)
+        .numero(NfeImportTestFixtures.NUMERO)
+        .serie(NfeImportTestFixtures.SERIE)
+        .modelo("55")
+        .naturezaOperacao("Venda")
+        .dataEmissao(java.time.OffsetDateTime.now())
+        .destinatarioNome("JOAO DA SILVA PRODUTOR")
+        .destinatarioCpfCnpj("52998224725")
+        .valorTotalProdutos(new java.math.BigDecimal("1750.00"))
+        .valorTotalNota(new java.math.BigDecimal("1750.00"))
+        .build());
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("entrada.xml", nfeProcXml)))
+        .andExpect(jsonPath("$[0].status").value("IMPORTADA"))
+        .andExpect(jsonPath("$[0].sucesso").value(true));
+
+    var doDestinatario = notaFiscalRepository.findAll().stream()
+        .filter(n -> n.getProdutor().getId().equals(produtor.getId())).toList();
+    org.assertj.core.api.Assertions.assertThat(doDestinatario).hasSize(1);
+    org.assertj.core.api.Assertions.assertThat(doDestinatario.get(0).getStatus())
+        .isEqualTo(br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA);
+  }
+
+  @Test
+  @DisplayName("#223: GET /xml de nota importada sai como anexo, nunca inline")
+  void xmlImportadoSaiComoAnexo() throws Exception {
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("n.xml", nfeProcXml)))
+        .andExpect(jsonPath("$[0].status").value("IMPORTADA"));
+    var nota = notaFiscalRepository.findAll().get(0);
+
+    mockMvc.perform(get("/api/notas/{id}/xml", nota.getId()))
+        .andExpect(status().isOk())
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+            .string("Content-Disposition", org.hamcrest.Matchers.startsWith("attachment")));
   }
 
   private MockMultipartFile arquivoXml(String nome, String conteudo) {
