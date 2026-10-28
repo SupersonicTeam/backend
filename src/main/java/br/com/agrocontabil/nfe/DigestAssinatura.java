@@ -1,8 +1,10 @@
 package br.com.agrocontabil.nfe;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
 /**
  * DigestValue da assinatura de um XML de NF-e (issue #223).
@@ -11,12 +13,17 @@ import java.util.regex.Pattern;
  * Comparar com o do XML recebido prova que o conteúdo é o autorizado: a assinatura sozinha não
  * basta, porque qualquer certificado (até autoassinado) assina um XML forjado com a chave de uma
  * NF-e real.
+ *
+ * <p><strong>Pelo DOM, não pelo texto.</strong> Só conta o {@code DigestValue} no namespace da
+ * assinatura (XML-DSig), e só quando há exatamente um. Uma busca no texto pegaria o primeiro
+ * {@code <DigestValue>} que aparecesse — e um XML forjado leva, num {@code CDATA} do
+ * {@code infCpl} (que vem antes da assinatura), o digest da NF-e verdadeira, passando na
+ * conferência com o conteúdo trocado. Texto e {@code CDATA} não são elementos no DOM.
  */
 public final class DigestAssinatura {
 
-  /** DigestValue da Reference, com ou sem prefixo de namespace ({@code ds:}). */
-  private static final Pattern DIGEST_VALUE =
-      Pattern.compile("<(?:\\w+:)?DigestValue>\\s*([^<\\s]+)\\s*</(?:\\w+:)?DigestValue>");
+  /** Namespace da assinatura XML (XML-DSig). */
+  private static final String XMLDSIG_NS = "http://www.w3.org/2000/09/xmldsig#";
 
   private DigestAssinatura() {}
 
@@ -24,14 +31,25 @@ public final class DigestAssinatura {
    * DigestValue da (única) Reference da assinatura do XML.
    *
    * @param xml XML assinado
-   * @return o valor em Base64, ou vazio se o XML não tiver assinatura
+   * @return o valor em Base64, ou vazio se não houver exatamente um {@code ds:DigestValue} ou o
+   *     XML não for legível
    */
   public static Optional<String> extrair(String xml) {
-    if (xml == null) {
+    if (xml == null || xml.isBlank()) {
       return Optional.empty();
     }
-    Matcher digest = DIGEST_VALUE.matcher(xml);
-    return digest.find() ? Optional.of(digest.group(1)) : Optional.empty();
+    try {
+      Document doc = SecureXmlFactories.hardenedDocumentBuilderFactory().newDocumentBuilder()
+          .parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+      NodeList digests = doc.getElementsByTagNameNS(XMLDSIG_NS, "DigestValue");
+      if (digests.getLength() != 1) {
+        return Optional.empty();
+      }
+      String valor = digests.item(0).getTextContent().strip();
+      return valor.isEmpty() ? Optional.empty() : Optional.of(valor);
+    } catch (Exception e) {
+      return Optional.empty();
+    }
   }
 
   /**

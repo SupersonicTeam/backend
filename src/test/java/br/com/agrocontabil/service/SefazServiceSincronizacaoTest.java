@@ -266,7 +266,8 @@ class SefazServiceSincronizacaoTest {
       + "diferente vira REJEITADA, mesmo digVal vira AUTORIZADA")
   void importadaPendenteSegueAsRegrasDaImportacao() {
     List<UUID> ids = pendentes(3);
-    String xml = "<NFe><Signature><DigestValue>digestDoXml=</DigestValue></Signature></NFe>";
+    String xml = "<NFe><Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\">"
+        + "<DigestValue>digestDoXml=</DigestValue></Signature></NFe>";
     ids.forEach(id -> {
       banco.get(id).setOrigem(OrigemNotaFiscal.IMPORTADA);
       banco.get(id).setXmlGerado(xml);

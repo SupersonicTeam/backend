@@ -66,7 +66,8 @@ class ImportacaoNotaFiscalServiceTest {
   private static final String CPF = "52998224725";
   private static final String DIGEST = "q1w2e3r4t5y6u7i8o9p0asdfghj=";
   private static final String XML_ASSINADO =
-      "<NFe><Signature><DigestValue>" + DIGEST + "</DigestValue></Signature></NFe>";
+      "<NFe><Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><DigestValue>" + DIGEST
+          + "</DigestValue></Signature></NFe>";
 
   @Mock private NfeXmlImporter nfeXmlImporter;
   @Mock private NfeToNotaFiscalMapper nfeToNotaFiscalMapper;

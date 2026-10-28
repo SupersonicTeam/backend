@@ -118,7 +118,8 @@ class MockSefazTransportTest {
   @Test
   @DisplayName("#223: consulta de chave transmitida devolve o digVal (DigestValue do XML enviado)")
   void consultaDevolveDigestDoXmlTransmitido() {
-    transport.enviar("<NFe><ds:Signature><ds:DigestValue> abc123= </ds:DigestValue>"
+    transport.enviar("<NFe><ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">"
+        + "<ds:DigestValue> abc123= </ds:DigestValue>"
         + "</ds:Signature></NFe>", CHAVE, SefazAmbiente.HOMOLOGACAO);
 
     assertThat(transport.consultarStatus(CHAVE, SefazAmbiente.HOMOLOGACAO).digestValue())

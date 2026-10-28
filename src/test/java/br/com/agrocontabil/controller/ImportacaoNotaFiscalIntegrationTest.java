@@ -233,6 +233,24 @@ class ImportacaoNotaFiscalIntegrationTest {
   }
 
   @Test
+  @DisplayName("#223: forjado com o digest verdadeiro num CDATA do infCpl tambem e recusado")
+  void digestVerdadeiroEmCdataNaoEngana() throws Exception {
+    String digestVerdadeiro = br.com.agrocontabil.nfe.DigestAssinatura.extrair(nfeXml)
+        .orElseThrow();
+    String forjado = NfeImportTestFixtures.reassinar(nfeXml,
+        xml -> xml.replace("<vProd>1750.00</vProd>", "<vProd>9750.00</vProd>")
+            .replace("<infCpl>", "<infCpl><![CDATA[<DigestValue>" + digestVerdadeiro
+                + "</DigestValue>]]>"));
+    org.assertj.core.api.Assertions.assertThat(forjado).contains("CDATA");
+
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("cdata.xml",
+            NfeImportTestFixtures.comoNfeProcAutorizada(forjado))))
+        .andExpect(jsonPath("$[0].status").value("INVALIDA"));
+
+    org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
+  }
+
+  @Test
   @DisplayName("#223: dois produtores — o destinatario importa a NF-e que o emitente (usuario) "
       + "tem como PROPRIA; a chave do outro nao responde DUPLICADA")
   void destinatarioImportaNotaDoEmitenteUsuario() throws Exception {
