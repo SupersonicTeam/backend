@@ -118,7 +118,18 @@ class AliquotaIbsCbsResolverTest {
     assertThat(vigentes.ibsEstadual()).isEqualByComparingTo("0.0005");
     assertThat(vigentes.ibsMunicipal()).isEqualByComparingTo("0.0005");
     assertThat(vigentes.ibsTotal()).isEqualByComparingTo(IBS_YML);
+    assertThat(vigentes.origemIbs()).isEqualTo(OrigemAliquota.FALLBACK_YML);
     verifyNoInteractions(aliquotaIbsUfRepository);
+  }
+
+  @Test
+  @DisplayName("fallback usa a data de Brasilia: 01/01/2027 02h UTC ainda e 2026 (#277)")
+  void fallbackUsaDataDeBrasilia() {
+    NotaFiscal semEndereco = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA)
+        .dataEmissao(OffsetDateTime.of(2027, 1, 1, 2, 0, 0, 0, ZoneOffset.UTC))
+        .build();
+
+    assertThat(resolver.resolver(semEndereco).ibsMunicipal()).isEqualByComparingTo("0");
   }
 
   @Test

@@ -115,6 +115,26 @@ class AliquotaVigenciaIntegrationTest {
         new BigDecimal("0.13"), new BigDecimal("0.12"));
   }
 
+  @Test
+  @DisplayName("vigencias sobrepostas: a de inicio mais recente vence (ORDER BY data_inicio DESC)")
+  void sobreposicaoVenceAMaisRecente() throws Exception {
+    // Vigencia aberta de MT a partir de 2027-07-01 por cima da de 2027-2028 do seed.
+    jdbc.update("INSERT INTO aliquota_ibs_uf (uf, data_inicio, data_fim, aliquota_estadual,"
+        + " aliquota_municipal) VALUES ('MT', DATE '2027-07-01', NULL, 0.0010, 0.0010)");
+    try {
+      mockMvc.perform(post("/api/notas")
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(payload("2027-08-10T10:00:00-03:00")))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.itens[0].aliquotaIbs").value(0.0020))
+          .andExpect(jsonPath("$.valorTotalIbs").value(0.50));
+    } finally {
+      // O H2 sobrevive ao contexto (DB_CLOSE_DELAY=-1): a linha nao pode ficar para outra classe.
+      jdbc.update("DELETE FROM aliquota_ibs_uf WHERE uf = 'MT'"
+          + " AND data_inicio = DATE '2027-07-01'");
+    }
+  }
+
   /** Alíquota e valor estadual e municipal do único item gravado. */
   private List<BigDecimal> parcelas() {
     return jdbc.queryForObject("SELECT aliquota_ibs_uf, aliquota_ibs_mun, valor_ibs_uf,"

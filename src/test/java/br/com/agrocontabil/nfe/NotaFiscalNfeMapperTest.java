@@ -87,6 +87,35 @@ class NotaFiscalNfeMapperTest {
   }
 
   @Test
+  @DisplayName("item legado sem parcelas: 2026 todo estadual, 2027 dividido 50/50 (#277)")
+  void itemLegadoSemParcelasSegueAEsferaDoAno() {
+    for (int ano : new int[] {2026, 2027}) {
+      NotaFiscalItem item = itemBase();
+      item.setAliquotaIbs(new BigDecimal("0.0010"));
+      item.setValorIbs(new BigDecimal("1.00"));
+      NotaFiscal nota = notaCom(item);
+      // 31/12 23h em Brasilia = 01/01 02h UTC: vale o ano de Brasilia.
+      nota.setDataEmissao(OffsetDateTime.of(ano + 1, 1, 1, 2, 0, 0, 0, ZoneOffset.UTC));
+      nota.setValorTotalIbs(new BigDecimal("1.00"));
+      nota.setValorTotalCbs(new BigDecimal("9.00"));
+
+      NFe nfe = mapper.toNfe(nota);
+
+      IbsCbs.GIbsCbs g = nfe.getInfNFe().getDet().get(0).getImposto().getIbsCbs().getGIBSCBS();
+      IbsCbsTot tot = nfe.getInfNFe().getTotal().getIbsCbsTot();
+      boolean dividido = ano >= 2027;
+      assertThat(g.getGIBSUF().getVIBSUF()).as("ano %d", ano)
+          .isEqualTo(dividido ? "0.50" : "1.00");
+      assertThat(g.getGIBSMun().getVIBSMun()).as("ano %d", ano)
+          .isEqualTo(dividido ? "0.50" : "0.00");
+      assertThat(g.getGIBSMun().getPIBSMun()).as("ano %d", ano)
+          .isEqualTo(dividido ? "0.0500" : "0.0000");
+      assertThat(tot.getGIBS().getGIBSMun().getVIBSMun()).as("ano %d", ano)
+          .isEqualTo(dividido ? "0.50" : "0.00");
+    }
+  }
+
+  @Test
   @DisplayName(
       "dhEmi/dhSaiEnt com offset UTC devem serializar offset numerico, nunca o literal 'Z' — "
           + "XSD da NF-e (TDateTimeUTC) rejeita 'Z'")

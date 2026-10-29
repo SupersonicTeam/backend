@@ -88,7 +88,8 @@ public class TributosProperties {
      * Alíquota do IBS como proporção decimal (ex.: {@code 0.0010} = 0,10 %).
      *
      * <p>Valor de referência para o ano-teste de 2026 conforme LC 214/2025. Fallback quando a
-     * UF não consta em {@code aliquota_ibs_uf} (dividido 50/50 entre estado e município).
+     * UF não consta em {@code aliquota_ibs_uf}: toda estadual antes de 2027 e dividida 50/50
+     * entre estado e município depois (LC 214/2025, art. 344 — issue #277).
      * Ajustável em {@code application.yml} sem recompilar.
      */
     private BigDecimal aliquota = new BigDecimal("0.0010");

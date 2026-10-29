@@ -55,9 +55,10 @@ import org.springframework.stereotype.Component;
  *
  * <p><strong>Fallback conservador:</strong> quando a UF não é determinável, não consta na tabela
  * ou a data está fora de qualquer vigência (ex.: nota anterior a 2026-01-01 ou posterior à última
- * vigência cadastrada), a alíquota de IBS de {@link TributosProperties} é dividida igualmente entre
- * estado e município (comportamento anterior à issue #31 preservado) e um {@code WARN} é
- * registrado; o mesmo vale para a CBS. Nunca lança — decisão do spec da Onda 2.
+ * vigência cadastrada), vale a alíquota de IBS de {@link TributosProperties}, toda estadual antes
+ * de 2027 e dividida igualmente entre estado e município a partir de 2027
+ * ({@link #temParcelaMunicipal(LocalDate)}, issue #277), e um {@code WARN} é registrado; o mesmo
+ * vale para a CBS. Nunca lança — decisão do spec da Onda 2.
  *
  * <p><strong>Vigências semeadas:</strong> IBS de 2026 só estadual (0,1%) e de 2027–2028 dividido
  * 0,05% + 0,05% (changeset {@code 0047}, issue #277); CBS só de 2026. As demais alíquotas da
@@ -129,7 +130,7 @@ public class AliquotaIbsCbsResolver {
               + " usando fallback do application.yml",
           uf, data, nota.getId(), produtorId(nota));
       BigDecimal configurada = tributosProperties.getIbs().getAliquota();
-      if (data.isBefore(INICIO_IBS_MUNICIPAL)) {
+      if (!temParcelaMunicipal(data)) {
         // 2026 (fase de teste): IBS so estadual (EC 132/2023; NT 2026.010, item 2) — #277.
         ibsEstadual = configurada;
         ibsMunicipal = BigDecimal.ZERO.setScale(configurada.scale());
@@ -156,6 +157,30 @@ public class AliquotaIbsCbsResolver {
     }
 
     return new AliquotasVigentes(ibsEstadual, ibsMunicipal, aliquotaCbs, origemIbs, origemCbs);
+  }
+
+  /**
+   * Indica se o IBS tem parcela municipal na data (de 2027 em diante; LC 214/2025, art. 344). Em
+   * 2026 o IBS é só estadual — issue #277. Regra única do fallback por esfera, usada também pelo
+   * {@code NotaFiscalNfeMapper} para item legado sem as parcelas gravadas.
+   *
+   * @param data data de referência (emissão em {@code America/Sao_Paulo})
+   * @return {@code true} a partir de {@link #INICIO_IBS_MUNICIPAL}
+   */
+  public static boolean temParcelaMunicipal(LocalDate data) {
+    return !data.isBefore(INICIO_IBS_MUNICIPAL);
+  }
+
+  /**
+   * Mesma regra de {@link #temParcelaMunicipal(LocalDate)} pela data de emissão da nota em BRT
+   * (sem data, hoje).
+   *
+   * @param dataEmissao data de emissão; pode ser nula
+   * @return {@code true} a partir de {@link #INICIO_IBS_MUNICIPAL}
+   */
+  public static boolean temParcelaMunicipal(OffsetDateTime dataEmissao) {
+    return temParcelaMunicipal(dataEmissao == null
+        ? LocalDate.now(ZONE) : dataEmissao.atZoneSameInstant(ZONE).toLocalDate());
   }
 
   /**
