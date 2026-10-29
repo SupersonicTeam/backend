@@ -121,6 +121,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     aliquota_cbs            NUMERIC(7,4),
     valor_cbs               NUMERIC(15,2),
     percentual_reducao      NUMERIC(5,2)   DEFAULT 0,
+    -- Tratamento aplicado no calculo — issue #272 (migration 0048)
+    percentual_reducao_aplicado  NUMERIC(5,2),
+    c_class_trib_aplicado        VARCHAR(6),
     -- Crédito tributário de entrada — Sprint 4 issue Agrocontabil#30 (migration 0011)
     valor_credito_ibs       NUMERIC(15,2),
     valor_credito_cbs       NUMERIC(15,2),
@@ -547,8 +550,9 @@ CREATE INDEX IF NOT EXISTS idx_sessao_refresh_expira_em ON sessao_refresh (expir
 CREATE TABLE IF NOT EXISTS ncm_agropecuario (
     codigo                     VARCHAR(8)    NOT NULL,
     descricao                  VARCHAR(255)  NOT NULL,
-    -- Redução padrão de base IBS/CBS por NCM — Sprint 4 issue #30 (migration 0012)
-    percentual_reducao_padrao  DECIMAL(5,2)  NOT NULL DEFAULT 0,
+    -- Produto in natura (LC 214/2025, art. 137) — issue #272 (migration 0048, que tirou o
+    -- percentual_reducao_padrao hipotetico do 0012)
+    in_natura                  BOOLEAN       NOT NULL DEFAULT FALSE,
     PRIMARY KEY (codigo)
 );
 
@@ -561,27 +565,87 @@ CREATE TABLE IF NOT EXISTS cfop_referencia (
     PRIMARY KEY (codigo)
 );
 
--- percentual_reducao_padrao replicado do seed do changeset 0012 (ano-teste, incerteza documentada).
--- Codigos conferidos contra a nomenclatura oficial (changeset 0046, issue #282): 12010090,
--- 12010010, 04070090 e 01039000 nao existem e sairam; NcmSemeadoExisteNaNomenclaturaTest trava.
-MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (codigo) VALUES
-    ('12019000', 'Soja, mesmo triturada, exceto para semeadura', 0),
-    ('12011000', 'Soja para semeadura', 0),
-    ('10059010', 'Milho em grao (exceto para semeadura)', 60),
-    ('10051000', 'Milho para semeadura', 0),
-    ('10011900', 'Trigo duro (exceto para semeadura)', 0),
-    ('10063021', 'Arroz semibranqueado ou branqueado, polido', 60),
-    ('09011110', 'Cafe nao torrado, nao descafeinado, em grao', 0),
-    ('17011400', 'Outros acucares de cana, em bruto', 0),
-    ('52010020', 'Algodao em bruto, nao cardado nem penteado', 0),
-    ('01022110', 'Bovinos reprodutores de raca pura, prenhes ou com cria', 0),
-    ('01039100', 'Suinos vivos de peso inferior a 50 kg', 0),
-    ('01039200', 'Suinos vivos de peso igual ou superior a 50 kg', 0),
-    ('04072100', 'Ovos frescos de galinha (Gallus domesticus), com casca', 60),
-    ('04072900', 'Outros ovos frescos de aves, com casca (exceto de galinha)', 60),
-    ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', 60),
-    ('08043000', 'Abacaxis (ananases) frescos ou secos', 60),
-    ('07020000', 'Tomates frescos ou refrigerados', 60);
+-- Codigos conferidos contra a nomenclatura oficial (changeset 0046, issue #282); in_natura do
+-- changeset 0048 (issue #272). NcmSemeadoExisteNaNomenclaturaTest trava o espelho.
+MERGE INTO ncm_agropecuario (codigo, descricao, in_natura) KEY (codigo) VALUES
+    ('12019000', 'Soja, mesmo triturada, exceto para semeadura', TRUE),
+    ('12011000', 'Soja para semeadura', FALSE),
+    ('10059010', 'Milho em grao (exceto para semeadura)', TRUE),
+    ('10051000', 'Milho para semeadura', FALSE),
+    ('10011900', 'Trigo duro (exceto para semeadura)', TRUE),
+    ('10063021', 'Arroz semibranqueado ou branqueado, polido', FALSE),
+    ('09011110', 'Cafe nao torrado, nao descafeinado, em grao', FALSE),
+    ('17011400', 'Outros acucares de cana, em bruto', FALSE),
+    ('52010020', 'Algodao em bruto, nao cardado nem penteado', TRUE),
+    ('01022110', 'Bovinos reprodutores de raca pura, prenhes ou com cria', FALSE),
+    ('01039100', 'Suinos vivos de peso inferior a 50 kg', FALSE),
+    ('01039200', 'Suinos vivos de peso igual ou superior a 50 kg', FALSE),
+    ('04072100', 'Ovos frescos de galinha (Gallus domesticus), com casca', FALSE),
+    ('04072900', 'Outros ovos frescos de aves, com casca (exceto de galinha)', FALSE),
+    ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', FALSE),
+    ('08043000', 'Abacaxis (ananases) frescos ou secos', FALSE),
+    ('07020000', 'Tomates frescos ou refrigerados', FALSE);
+
+-- ============================================================================
+-- Tabela oficial de classificacao tributaria do IBS/CBS — issue #272 (migration 0048).
+-- Le os MESMOS CSVs que o loadData do Liquibase (db/changelog/data), entao o espelho nao
+-- diverge do seed. MERGE: o script roda mais de uma vez no mesmo H2 (DB_CLOSE_DELAY=-1).
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS classificacao_tributaria (
+    c_class_trib            VARCHAR(6)     NOT NULL,
+    cst                     VARCHAR(3)     NOT NULL,
+    descricao               VARCHAR(1000)  NOT NULL,
+    percentual_reducao_ibs  NUMERIC(5,2)   NOT NULL,
+    percentual_reducao_cbs  NUMERIC(5,2)   NOT NULL,
+    data_inicio             DATE           NOT NULL,
+    data_fim                DATE,
+    versao_tabela           VARCHAR(40)    NOT NULL,
+    CONSTRAINT pk_classificacao_tributaria PRIMARY KEY (c_class_trib, data_inicio)
+);
+
+CREATE TABLE IF NOT EXISTS classificacao_tributaria_anexo_item (
+    id            INTEGER        NOT NULL,
+    c_class_trib  VARCHAR(6)     NOT NULL,
+    anexo         INTEGER        NOT NULL,
+    descricao     VARCHAR(1500)  NOT NULL,
+    condicao      VARCHAR(255),
+    excecao       VARCHAR(1000),
+    CONSTRAINT pk_classificacao_tributaria_anexo_item PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS classificacao_tributaria_anexo_ncm (
+    item_id      INTEGER      NOT NULL,
+    ncm          VARCHAR(8)   NOT NULL,
+    permissao    VARCHAR(10)  NOT NULL,
+    data_inicio  DATE         NOT NULL,
+    data_fim     DATE,
+    CONSTRAINT pk_classificacao_tributaria_anexo_ncm
+        PRIMARY KEY (item_id, ncm, permissao, data_inicio),
+    CONSTRAINT fk_anexo_ncm_item FOREIGN KEY (item_id)
+        REFERENCES classificacao_tributaria_anexo_item (id),
+    CONSTRAINT ck_anexo_ncm_permissao CHECK (permissao IN ('PERMITIDO', 'VEDADO'))
+);
+CREATE INDEX IF NOT EXISTS idx_classificacao_tributaria_anexo_ncm_ncm
+    ON classificacao_tributaria_anexo_ncm (ncm);
+
+MERGE INTO classificacao_tributaria (c_class_trib, cst, descricao, percentual_reducao_ibs,
+    percentual_reducao_cbs, data_inicio, data_fim, versao_tabela) KEY (c_class_trib, data_inicio)
+    SELECT c_class_trib, cst, descricao, percentual_reducao_ibs, percentual_reducao_cbs,
+           data_inicio, data_fim, versao_tabela
+      FROM CSVREAD('classpath:db/changelog/data/classificacao-tributaria.csv', NULL,
+                   'charset=UTF-8');
+
+MERGE INTO classificacao_tributaria_anexo_item (id, c_class_trib, anexo, descricao, condicao,
+    excecao) KEY (id)
+    SELECT id, c_class_trib, anexo, descricao, condicao, excecao
+      FROM CSVREAD('classpath:db/changelog/data/classificacao-tributaria-anexo-item.csv', NULL,
+                   'charset=UTF-8');
+
+MERGE INTO classificacao_tributaria_anexo_ncm (item_id, ncm, permissao, data_inicio, data_fim)
+    KEY (item_id, ncm, permissao, data_inicio)
+    SELECT item_id, ncm, permissao, data_inicio, data_fim
+      FROM CSVREAD('classpath:db/changelog/data/classificacao-tributaria-anexo-ncm.csv', NULL,
+                   'charset=UTF-8');
 
 -- ============================================================================
 -- Aliquota de IBS por UF — Sprint 4 issue #31 (migration 0013) + vigencia

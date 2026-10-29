@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +17,8 @@ import lombok.NoArgsConstructor;
  * nota fiscal. Não é um catálogo oficial completo — é um subconjunto suficiente para o escopo
  * do TCC (produtos agropecuários típicos).
  *
- * <p>Mapeada para a tabela {@code ncm_agropecuario}.
+ * <p>Todo código precisa existir na nomenclatura oficial ({@code NcmSemeadoExisteNaNomenclaturaTest},
+ * issue #282). Mapeada para a tabela {@code ncm_agropecuario}.
  */
 @Entity
 @Table(name = "ncm_agropecuario")
@@ -38,18 +38,14 @@ public class NcmReferencia {
   private String descricao;
 
   /**
-   * Percentual de redução <strong>padrão</strong> da base de cálculo de IBS/CBS para este NCM,
-   * de 0 a 100 (ex.: {@code 60} = 60 %) — Sprint 4, issue Agrocontabil#30 (RF015).
+   * Produto agropecuário <em>in natura</em> (LC 214/2025, art. 137): sem industrialização; a
+   * secagem, a limpeza, a debulha de grãos e o descaroçamento não tiram a condição (§ 1º, I).
+   * Dá a redução de 60% (cClassTrib 200036) quando o NCM não está num anexo de alíquota zero —
+   * issue #272. O art. 137 não tem lista de NCM, por isso a marca fica na referência.
    *
-   * <p>Aplicado pelo {@code TributacaoService} como <em>default</em> quando o item da nota não
-   * informa {@code percentualReducao} explícito, modelando os regimes diferenciados
-   * agropecuários (cesta básica, insumos etc.) da LC 214/2025.
-   *
-   * <p><strong>Incerteza documentada:</strong> as tabelas oficiais de redução por NCM da
-   * LC 214/2025 ainda não foram finalizadas pela RFB/CONFAZ. Os percentuais deste seed são
-   * <em>referência de ano-teste</em>, parametrizados no changeset {@code 0012} e ajustáveis sem
-   * recompilar. Default {@code 0} (sem redução) para NCM não mapeado.
+   * <p>Substitui o {@code percentual_reducao_padrao} hipotético do changeSet {@code 0012}: a
+   * redução por NCM vem da tabela oficial ({@code ClassificacaoTributariaService}).
    */
-  @Column(name = "percentual_reducao_padrao", precision = 5, scale = 2, nullable = false)
-  private BigDecimal percentualReducaoPadrao;
+  @Column(name = "in_natura", nullable = false)
+  private boolean inNatura;
 }

@@ -1,83 +1,87 @@
 package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
+import br.com.agrocontabil.service.ReducaoNcmResolver.ReducaoAplicada;
+import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.math.BigDecimal;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * Testes unitários do {@link ReducaoNcmResolver} (issue Agrocontabil#52).
- *
- * <p>Cobre a precedência item → NCM → zero que centraliza a resolução da redução de base
- * compartilhada entre o cálculo de débito e o de crédito.
- */
+/** Testes do {@link ReducaoNcmResolver} (issues #52 e #272). */
 class ReducaoNcmResolverTest {
 
-  private NcmReferenciaRepository ncmReferenciaRepository;
+  private ClassificacaoTributariaService classificacao;
   private ReducaoNcmResolver resolver;
 
   @BeforeEach
   void setUp() {
-    ncmReferenciaRepository = mock(NcmReferenciaRepository.class);
-    resolver = new ReducaoNcmResolver(ncmReferenciaRepository);
+    classificacao = mock(ClassificacaoTributariaService.class);
+    resolver = new ReducaoNcmResolver(classificacao);
   }
 
   @Test
-  @DisplayName("percentualReducao do item prevalece e nao consulta a tabela de NCM")
+  @DisplayName("percentual informado no item prevalece e nao consulta a tabela")
   void percentualDoItemPrevalece() {
     NotaFiscalItem item = NotaFiscalItem.builder()
-        .ncm("12019000")
-        .percentualReducao(new BigDecimal("40"))
-        .build();
+        .ncm("12019000").percentualReducao(new BigDecimal("15")).cClassTrib("200036").build();
 
-    BigDecimal reducao = resolver.resolver(item);
+    ReducaoAplicada aplicada = resolver.tratamento(item);
 
-    assertThat(reducao).isEqualByComparingTo("40");
-    verifyNoInteractions(ncmReferenciaRepository);
+    assertThat(aplicada.percentualReducao()).isEqualByComparingTo("15");
+    assertThat(aplicada.cClassTrib()).isEqualTo("200036");
+    verifyNoInteractions(classificacao);
   }
 
   @Test
-  @DisplayName("Sem percentualReducao no item, usa a reducao padrao do NCM")
-  void usaReducaoPadraoDoNcm() {
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
-        .thenReturn(Optional.of(new BigDecimal("60")));
-    NotaFiscalItem item = NotaFiscalItem.builder().ncm("12019000").build();
+  @DisplayName("sem percentual no item usa a tabela oficial na data de emissao em BRT")
+  void usaTabelaOficialNaDataDeEmissao() {
+    // 31/12/2026 23h em BRT = 01/01/2027 em UTC: a vigencia e a do dia em Brasilia.
+    NotaFiscal nota = NotaFiscal.builder()
+        .dataEmissao(OffsetDateTime.of(2027, 1, 1, 2, 0, 0, 0, ZoneOffset.UTC)).build();
+    NotaFiscalItem item = NotaFiscalItem.builder().ncm("04072100").notaFiscal(nota).build();
+    when(classificacao.tratamentoPorNcm(eq("04072100"), any(LocalDate.class)))
+        .thenReturn(new TratamentoTributarioNcm("04072100", "200014", "200",
+            new BigDecimal("100"), Origem.ANEXO, "Anexo XV", List.of(), "IT"));
 
-    BigDecimal reducao = resolver.resolver(item);
+    ReducaoAplicada aplicada = resolver.tratamento(item);
 
-    assertThat(reducao).isEqualByComparingTo("60");
+    assertThat(aplicada.percentualReducao()).isEqualByComparingTo("100");
+    assertThat(aplicada.cClassTrib()).isEqualTo("200014");
+    verify(classificacao).tratamentoPorNcm("04072100", LocalDate.of(2026, 12, 31));
   }
 
   @Test
-  @DisplayName("NCM sem reducao de referencia resulta em zero (conservador)")
-  void ncmSemReferenciaResultaZero() {
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("99999999"))
-        .thenReturn(Optional.empty());
-    NotaFiscalItem item = NotaFiscalItem.builder().ncm("99999999").build();
+  @DisplayName("so o cClassTrib informado: vale a reducao oficial dele, nao a do NCM")
+  void cClassTribInformadoUsaReducaoOficial() {
+    NotaFiscalItem item = NotaFiscalItem.builder().ncm("10063021").cClassTrib("000001").build();
+    when(classificacao.classificacao(eq("000001"), any(LocalDate.class))).thenReturn(
+        java.util.Optional.of(br.com.agrocontabil.model.ClassificacaoTributaria.builder()
+            .codigo("000001").percentualReducaoIbs(BigDecimal.ZERO).build()));
 
-    BigDecimal reducao = resolver.resolver(item);
+    ReducaoAplicada aplicada = resolver.tratamento(item);
 
-    assertThat(reducao).isEqualByComparingTo("0");
+    assertThat(aplicada.percentualReducao()).isEqualByComparingTo("0");
+    assertThat(aplicada.cClassTrib()).isEqualTo("000001");
   }
 
   @Test
-  @DisplayName("Item sem percentualReducao e sem NCM resulta em zero, sem consultar a tabela")
-  void semNcmResultaZeroSemConsultar() {
-    NotaFiscalItem item = NotaFiscalItem.builder().build();
-
-    BigDecimal reducao = resolver.resolver(item);
-
-    assertThat(reducao).isEqualByComparingTo("0");
-    verify(ncmReferenciaRepository, never()).findPercentualReducaoPadraoByCodigo(null);
+  @DisplayName("NCM ausente resulta em zero sem consultar a tabela")
+  void ncmAusenteResultaEmZero() {
+    assertThat(resolver.resolver(NotaFiscalItem.builder().build())).isEqualByComparingTo("0");
+    verifyNoInteractions(classificacao);
   }
 }

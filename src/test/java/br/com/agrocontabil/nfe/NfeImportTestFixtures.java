@@ -2,6 +2,7 @@ package br.com.agrocontabil.nfe;
 
 import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
+import br.com.agrocontabil.support.ReducaoTestSupport;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,11 +19,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import br.com.agrocontabil.service.GeracaoNotaFiscalService;
 import br.com.agrocontabil.service.AliquotaIbsCbsResolver;
-import br.com.agrocontabil.service.ReducaoNcmResolver;
 import br.com.agrocontabil.service.TributacaoService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -159,9 +158,7 @@ public final class NfeImportTestFixtures {
     cbs.setAliquota(new BigDecimal("0.0090"));
     props.setIbs(ibs);
     props.setCbs(cbs);
-    // Sem redução por NCM nas fixtures: repositório mockado devolve Optional.empty().
-    NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
-    when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
+    // Sem redução por NCM nas fixtures: tabela de classificação simulada sem redução.
     // Sem alíquota por UF nas fixtures: cai no fallback da alíquota parametrizada (issue #31).
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
@@ -169,7 +166,7 @@ public final class NfeImportTestFixtures {
     AliquotaCbsRepository cbsRepo = mock(AliquotaCbsRepository.class);
     when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
     return new TributacaoService(
-        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
+        ReducaoTestSupport.resolverSemReducao(), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
   }
 
   /**

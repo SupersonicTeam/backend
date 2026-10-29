@@ -226,6 +226,10 @@ app:
   notas:
     busca:
       preencher-legado: ${NOTAS_BUSCA_PREENCHER_LEGADO:true}
+    # Tabela oficial de reducao (issue #272): recalcula na subida o IBS/CBS das notas ainda nao
+    # emitidas calculadas antes do changeSet 0048 (sem o tratamento aplicado gravado).
+    tributos:
+      recalcular-legado: ${NOTAS_TRIBUTOS_RECALCULAR_LEGADO:true}
   # Carteira do contador (issue #177): convite por e-mail, aceito pelo produtor.
   carteira:
     convite:

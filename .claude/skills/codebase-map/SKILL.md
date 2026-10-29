@@ -23,6 +23,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `JwtProperties` / `JwtConfig` | `app.seguranca.jwt.*` (#206): segredo (`JWT_SECRET`), emissor, audiência, validade (15 min), tolerância, `permitir-segredo-efemero` (só dev/test); `toString` sem o segredo |
 | `SenhaConfig` | `PasswordEncoder` delegante, BCrypt custo `app.seguranca.senha.bcrypt-custo` (12; 4 nos testes) — fora do `SecurityConfig` para valer sem web (#205) |
 | `CriptografiaConfig` / `CriptografiaProperties` | Chave dos dados pessoais em repouso (#147, `app.seguranca.cripto.*`) |
+| `TributosLegadoRunner` | Recalcula na subida o IBS/CBS das notas não emitidas sem `percentual_reducao_aplicado` (calculadas antes da tabela oficial, #272), uma transação por nota; `app.notas.tributos.recalcular-legado` |
 | `BuscaNotasLegadoRunner` | Preenche na subida a `busca_normalizada` das notas anteriores ao changeSet 0037 com a própria `NormalizacaoBusca` (sem backfill SQL, que divergiria da regra Java), idempotente; `app.notas.busca.preencher-legado` (#174) |
 | `CifragemLegadoRunner` | Cifra na subida as linhas em claro de antes da #147 (`COLUNAS_CIFRADAS`), idempotente |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
@@ -72,7 +73,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `TributacaoService` | Débito: calcula IBS/CBS por item, classifica natureza (DEBITO/CREDITO) e agrega totais; alíquota via `AliquotaIbsCbsResolver`, redução via `ReducaoNcmResolver` |
 | `CreditoTributarioService` | Crédito nas notas IMPORTADAS (RN003): mesma base e mesma alíquota do débito (resolvedores compartilhados); só lê `credito.percentualAproveitamento` das properties |
 | `AliquotaIbsCbsResolver` | **Único** ponto de resolução de alíquota (issues #86/#85): IBS por UF aplicável (RN002; nota importada = UF do destinatário) + CBS, ambos pela **vigência** na `dataEmissao` em BRT; devolve `AliquotasVigentes` com origem (TABELA_UF/TABELA_VIGENCIA/FALLBACK_YML); fallback conservador para `TributosProperties` com WARN |
-| `ReducaoNcmResolver` | **Único** ponto de resolução da redução de base por NCM (issue #52): item → NCM → zero |
+| `ReducaoNcmResolver` | **Único** ponto de resolução da redução por item (issues #52/#272): percentual informado no item → tratamento do NCM na tabela oficial (`ClassificacaoTributariaService`), na vigência da emissão em BRT; `tratamento(item)` devolve `ReducaoAplicada` (percentual + cClassTrib), gravada pelo `TributacaoService` em `percentualReducaoAplicado`/`cClassTribAplicado` |
+| `ClassificacaoTributariaService` | Tabela oficial de cClassTrib e anexos da LC 214 por NCM (#272, IT 2025.002 v1.70, changeSet 0048). Serviço de domínio **independente do cálculo** (a Ceres o reusa, #283): `tratamentoPorNcm(ncm, data)` → `TratamentoTributarioNcm` (precedência Anexo I/XV 100% → in natura art. 137 60% → Anexo IX/VII 60% → integral 000001), `enquadramentos(ncm, data)` (itens de anexo com texto, condição e exceção; VEDADO tira o NCM do cClassTrib), `classificacao(cClassTrib, data)` |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext`; sem identidade lança `NaoAutenticadoException` (401) |
 | `CadastroService` | Cadastro de conta (#205): política + hash **fora** de transação, checagem e gravação (identidade + credencial) num `TransactionTemplate` curto; CPF/CNPJ já existente (qualquer grafia) → 409, nunca reivindica identidade; `normalizarEmail` |
@@ -221,6 +223,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `EnderecoDestinatario` | Embedded address do destinatário |
 | `Produtor` | Produtor rural autenticado |
 | `NotaFiscalValidacao` | Histórico de inconsistências de validação (issue #22) |
+| `ClassificacaoTributaria` / `ClassificacaoTributariaAnexoItem` / `ClassificacaoTributariaAnexoNcm` | Tabela oficial do IBS/CBS (#272, changeSet 0048, carregada dos CSVs em `db/changelog/data/`, que o espelho H2 lê por `CSVREAD`): 104 cClassTrib da NF-e; itens dos Anexos I, VII, IX e XV; NCM PERMITIDO/VEDADO com vigência |
 | `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20). Todo NCM semeado precisa existir na nomenclatura oficial versionada em `src/test/resources/ncm/nomenclatura-ncm-oficial.txt` (`NcmSemeadoExisteNaNomenclaturaTest`, #282) |
 | `AliquotaIbsUf` (+ `AliquotaIbsUfId`) | Alíquota de IBS (estadual/municipal) por UF **e vigência** — PK composta `(uf, data_inicio)`; `data_fim` NULL = aberta (issues #31/#85) |
 | `AliquotaCbs` | Alíquota de CBS por vigência (`aliquota_cbs`, issue #85); substitui o valor fixo do yml como fonte primária |
@@ -346,5 +349,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0045-nota-fiscal-chave-por-produtor = chave única por produtor+chave+origem, #223; 0046-ncm-codigos-oficiais = NCMs inexistentes trocados pelos oficiais, #282; próximo número livre: **0047**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0045-nota-fiscal-chave-por-produtor = chave única por produtor+chave+origem, #223; 0046-ncm-codigos-oficiais = NCMs inexistentes trocados pelos oficiais, #282; 0047-ibs-2026-estadual = IBS 2026 todo estadual, #277; 0048-classificacao-tributaria-oficial = tabela oficial de redução, #272; próximo número livre: **0049**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.

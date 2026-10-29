@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0048-classificacao-tributaria-oficial.xml
+         Issue #272.
+
+         A reducao de IBS/CBS por NCM vinha do seed 0012, que se declarava
+         hipotetico (60% para arroz, leite, ovos, tomate, abacaxi e milho;
+         soja sem reducao). Passa a vir da TABELA OFICIAL:
+
+           - Tabela de Classificacao Tributaria do IBS e da CBS (cClassTrib),
+             Informe Tecnico 2025.002 v1.70, Portal da NF-e, 01/10/2026;
+           - itens dos anexos da LC 214/2025 por NCM, como publicados nos
+             dados da mesma tabela no portal da SVRS
+             (dfe-portal.svrs.rs.gov.br/Cff/ClassificacaoTributaria, campo
+             Anexos de cada cClassTrib), baixados em 2026-10-29.
+
+         Tres tabelas, carregadas dos CSVs em ../data (os mesmos arquivos
+         que o espelho H2 dos testes le por CSVREAD):
+
+           1. classificacao_tributaria: os 104 cClassTrib validos na NF-e
+              (indNFe = 1), com CST, percentuais de reducao e vigencia;
+           2. classificacao_tributaria_anexo_item: os itens dos anexos que
+              valem para o agro — Anexo I (200003, cesta basica, zero),
+              Anexo XV (200014, horticolas/frutas/ovos, zero), Anexo VII
+              (200034, alimentos, 60%) e Anexo IX (200038, insumos, 60%) —
+              com condicao e excecao;
+           3. classificacao_tributaria_anexo_ncm: NCM de cada item, PERMITIDO
+              ou VEDADO (a tabela oficial veda, por exemplo, no Anexo VII os
+              produtos do Anexo I), com vigencia.
+
+         O art. 137 (in natura, 200036, 60%) nao tem anexo: vale pela
+         condicao (§ 1o: sem industrializacao; secagem, limpeza, debulha de
+         graos e descarocamento nao tiram a condicao). Fica como marca
+         ncm_agropecuario.in_natura nos codigos da referencia que a cumprem.
+
+         percentual_reducao_padrao (hipotetico, 0012) sai: o resolvedor
+         nao o le mais.
+
+         Nova versao do IT = novos CSVs + changeSet novo que fecha a
+         vigencia (data_fim) do que mudou. NAO editar este changeSet.
+         ================================================================ -->
+
+    <changeSet id="0048-create-classificacao-tributaria" author="supersonic-team">
+        <createTable tableName="classificacao_tributaria">
+            <column name="c_class_trib" type="VARCHAR(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cst" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(1000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="percentual_reducao_ibs" type="NUMERIC(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="percentual_reducao_cbs" type="NUMERIC(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_inicio" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_fim" type="DATE"/>
+            <column name="versao_tabela" type="VARCHAR(40)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <!-- Chave com a vigencia: nova versao do IT com outro percentual = linha nova (data_inicio
+             nova), fechando a anterior com data_fim; nunca update do percentual. -->
+        <addPrimaryKey tableName="classificacao_tributaria"
+                       columnNames="c_class_trib, data_inicio"
+                       constraintName="pk_classificacao_tributaria"/>
+
+        <createTable tableName="classificacao_tributaria_anexo_item">
+            <column name="id" type="INTEGER">
+                <constraints primaryKey="true" primaryKeyName="pk_classificacao_tributaria_anexo_item" nullable="false"/>
+            </column>
+            <!-- Sem FK: o codigo se repete em classificacao_tributaria a cada vigencia. -->
+            <column name="c_class_trib" type="VARCHAR(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="anexo" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(1500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="condicao" type="VARCHAR(255)"/>
+            <column name="excecao" type="VARCHAR(1000)"/>
+        </createTable>
+
+        <createTable tableName="classificacao_tributaria_anexo_ncm">
+            <column name="item_id" type="INTEGER">
+                <constraints nullable="false"
+                             foreignKeyName="fk_anexo_ncm_item"
+                             references="classificacao_tributaria_anexo_item(id)"/>
+            </column>
+            <column name="ncm" type="VARCHAR(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="permissao" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_inicio" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_fim" type="DATE"/>
+        </createTable>
+        <addPrimaryKey tableName="classificacao_tributaria_anexo_ncm"
+                       columnNames="item_id, ncm, permissao, data_inicio"
+                       constraintName="pk_classificacao_tributaria_anexo_ncm"/>
+        <createIndex tableName="classificacao_tributaria_anexo_ncm"
+                     indexName="idx_classificacao_tributaria_anexo_ncm_ncm">
+            <column name="ncm"/>
+        </createIndex>
+        <sql>
+            ALTER TABLE classificacao_tributaria_anexo_ncm
+              ADD CONSTRAINT ck_anexo_ncm_permissao CHECK (permissao IN ('PERMITIDO', 'VEDADO'));
+        </sql>
+
+        <rollback>
+            <dropTable tableName="classificacao_tributaria_anexo_ncm"/>
+            <dropTable tableName="classificacao_tributaria_anexo_item"/>
+            <dropTable tableName="classificacao_tributaria"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0048-seed-classificacao-tributaria" author="supersonic-team">
+        <loadData tableName="classificacao_tributaria"
+                  file="../data/classificacao-tributaria.csv"
+                  relativeToChangelogFile="true" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="c_class_trib" type="STRING"/>
+            <column name="cst" type="STRING"/>
+            <column name="descricao" type="STRING"/>
+            <column name="percentual_reducao_ibs" type="NUMERIC"/>
+            <column name="percentual_reducao_cbs" type="NUMERIC"/>
+            <column name="data_inicio" type="DATE"/>
+            <column name="data_fim" type="DATE"/>
+            <column name="versao_tabela" type="STRING"/>
+        </loadData>
+        <loadData tableName="classificacao_tributaria_anexo_item"
+                  file="../data/classificacao-tributaria-anexo-item.csv"
+                  relativeToChangelogFile="true" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="id" type="NUMERIC"/>
+            <column name="c_class_trib" type="STRING"/>
+            <column name="anexo" type="NUMERIC"/>
+            <column name="descricao" type="STRING"/>
+            <column name="condicao" type="STRING"/>
+            <column name="excecao" type="STRING"/>
+        </loadData>
+        <loadData tableName="classificacao_tributaria_anexo_ncm"
+                  file="../data/classificacao-tributaria-anexo-ncm.csv"
+                  relativeToChangelogFile="true" encoding="UTF-8" separator="," quotchar="&quot;">
+            <column name="item_id" type="NUMERIC"/>
+            <column name="ncm" type="STRING"/>
+            <column name="permissao" type="STRING"/>
+            <column name="data_inicio" type="DATE"/>
+            <column name="data_fim" type="DATE"/>
+        </loadData>
+        <rollback>
+            <delete tableName="classificacao_tributaria_anexo_ncm"/>
+            <delete tableName="classificacao_tributaria_anexo_item"/>
+            <delete tableName="classificacao_tributaria"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Art. 137, § 1o, I: secagem, limpeza, debulha de graos e descarocamento nao tiram a
+         condicao de in natura. Graos (soja, milho, trigo) e algodao em caroco simplesmente
+         debulhado. Sementes e animais vivos ficam pelos anexos (IX). -->
+    <changeSet id="0048-ncm-in-natura" author="supersonic-team">
+        <addColumn tableName="ncm_agropecuario">
+            <column name="in_natura" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <update tableName="ncm_agropecuario">
+            <column name="in_natura" valueBoolean="true"/>
+            <where>codigo IN ('12019000', '10059010', '10011900', '52010020')</where>
+        </update>
+        <dropColumn tableName="ncm_agropecuario" columnName="percentual_reducao_padrao"/>
+        <rollback>
+            <addColumn tableName="ncm_agropecuario">
+                <column name="percentual_reducao_padrao" type="NUMERIC(5,2)" defaultValueNumeric="0">
+                    <constraints nullable="false"/>
+                </column>
+            </addColumn>
+            <dropColumn tableName="ncm_agropecuario" columnName="in_natura"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Tratamento aplicado no calculo (#272): a reducao efetiva e o cClassTrib da regra (ou o
+         informado pelo cliente). O XML da NF-e (#278) e a tela usam estes, nao os de entrada. -->
+    <changeSet id="0048-nota-fiscal-item-tratamento-aplicado" author="supersonic-team">
+        <addColumn tableName="nota_fiscal_item">
+            <column name="percentual_reducao_aplicado" type="NUMERIC(5,2)"/>
+            <column name="c_class_trib_aplicado" type="VARCHAR(6)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="nota_fiscal_item" columnName="c_class_trib_aplicado"/>
+            <dropColumn tableName="nota_fiscal_item" columnName="percentual_reducao_aplicado"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

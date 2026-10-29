@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
+import br.com.agrocontabil.support.ReducaoTestSupport;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,7 +20,6 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 class CreditoTributarioServiceTest {
 
   private TributosProperties tributosProperties;
-  private NcmReferenciaRepository ncmReferenciaRepository;
+  private ClassificacaoTributariaService classificacao;
   private AliquotaIbsUfRepository aliquotaIbsUfRepository;
   private AliquotaCbsRepository aliquotaCbsRepository;
   private CreditoTributarioService service;
@@ -48,11 +48,8 @@ class CreditoTributarioServiceTest {
   @BeforeEach
   void setUp() {
     tributosProperties = new TributosProperties();
-    ncmReferenciaRepository = mock(NcmReferenciaRepository.class);
-    // Por padrão nenhum NCM tem redução de referência; casos específicos sobrescrevem.
-    lenient()
-        .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
-        .thenReturn(Optional.empty());
+    // Por padrão nenhum NCM tem redução na tabela oficial; casos específicos sobrescrevem.
+    classificacao = ReducaoTestSupport.classificacaoSemReducao();
     aliquotaIbsUfRepository = mock(AliquotaIbsUfRepository.class);
     // Por padrão nenhuma UF cadastrada: o resolver cai para a alíquota do yml (0,0010 / 0,0090).
     lenient().when(aliquotaIbsUfRepository.findVigente(anyString(), any(LocalDate.class)))
@@ -62,7 +59,7 @@ class CreditoTributarioServiceTest {
     lenient().when(aliquotaCbsRepository.findVigente(any(LocalDate.class))).thenReturn(List.of());
     service = new CreditoTributarioService(
         tributosProperties,
-        new ReducaoNcmResolver(ncmReferenciaRepository),
+        new ReducaoNcmResolver(classificacao),
         new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, tributosProperties));
   }
 
@@ -194,11 +191,10 @@ class CreditoTributarioServiceTest {
   }
 
   @Test
-  @DisplayName("Credito aplica a reducao padrao do NCM quando o item omite percentualReducao (#52)")
+  @DisplayName("Credito aplica a reducao do NCM na tabela oficial quando o item omite percentualReducao (#52)")
   void creditoAplicaReducaoPadraoPorNcm() {
     // NCM com reducao padrao de 60% na tabela de referencia; item nao informa percentualReducao.
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
-        .thenReturn(Optional.of(new BigDecimal("60")));
+    ReducaoTestSupport.comReducao(classificacao, "12019000", "60", "200036");
     NotaFiscalItem item = item("6101", "1000.00");
     item.setNcm("12019000");
     NotaFiscal nota = notaImportada(item);
@@ -214,8 +210,7 @@ class CreditoTributarioServiceTest {
   @DisplayName("percentualReducao informado no item prevalece sobre a reducao padrao do NCM (#52)")
   void percentualReducaoDoItemPrevaleceSobreNcm() {
     // Mesmo com o NCM tendo reducao padrao de 30%, o valor informado no item (60%) prevalece.
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
-        .thenReturn(Optional.of(new BigDecimal("30")));
+    ReducaoTestSupport.comReducao(classificacao, "12019000", "30", "200036");
     NotaFiscalItem item = item("6101", "1000.00");
     item.setNcm("12019000");
     item.setPercentualReducao(new BigDecimal("60"));
@@ -240,7 +235,7 @@ class CreditoTributarioServiceTest {
             .aliquotaMunicipal(new BigDecimal("0.0020"))
             .build()));
     TributacaoService debito = new TributacaoService(
-        new ReducaoNcmResolver(ncmReferenciaRepository),
+        new ReducaoNcmResolver(classificacao),
         new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, tributosProperties));
 
     NotaFiscal nota = notaImportada(item("6101", "1000.00"));

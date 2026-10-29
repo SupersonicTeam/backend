@@ -131,12 +131,13 @@ class ImportacaoNotaFiscalIntegrationTest {
         .isEqualTo(NfeImportTestFixtures.EMITENTE_CNPJ);
 
     // RN003 (issue Agrocontabil#30): credito de IBS/CBS calculado e persistido na importacao.
-    // Item do fixture: CFOP 6101 (elegivel), valorTotal 1750.00 → com as aliquotas-teste
-    // 2026 (IBS 0,10 % / CBS 0,90 %) e aproveitamento 100 %: IBS 1.75 e CBS 15.75.
+    // Item do fixture: CFOP 6101 (elegivel), fertilizante 31052000, valorTotal 1750.00. Insumo
+    // do Anexo IX tem 60% de reducao na tabela oficial (art. 138 — issue #272): base efetiva
+    // 700.00 → IBS 0,10 % = 0.70 e CBS 0,90 % = 6.30, aproveitamento 100 %.
     org.assertj.core.api.Assertions.assertThat(notas.get(0).getValorTotalCreditoIbs())
-        .isEqualByComparingTo("1.75");
+        .isEqualByComparingTo("0.70");
     org.assertj.core.api.Assertions.assertThat(notas.get(0).getValorTotalCreditoCbs())
-        .isEqualByComparingTo("15.75");
+        .isEqualByComparingTo("6.30");
   }
 
   @Test
