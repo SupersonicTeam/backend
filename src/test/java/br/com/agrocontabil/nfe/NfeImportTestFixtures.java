@@ -158,7 +158,7 @@ public final class NfeImportTestFixtures {
     cbs.setAliquota(new BigDecimal("0.0090"));
     props.setIbs(ibs);
     props.setCbs(cbs);
-    // Sem redução por NCM nas fixtures: repositório mockado devolve Optional.empty().
+    // Sem redução por NCM nas fixtures: tabela de classificação simulada sem redução.
     // Sem alíquota por UF nas fixtures: cai no fallback da alíquota parametrizada (issue #31).
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());

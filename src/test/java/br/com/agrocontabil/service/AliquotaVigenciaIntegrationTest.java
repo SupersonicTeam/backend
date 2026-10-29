@@ -143,7 +143,7 @@ class AliquotaVigenciaIntegrationTest {
   }
 
   private static String payload(String dataEmissao) {
-    // 100 KG × 2,50 = 250,00; NCM 12019000 (soja) sem redução padrão no seed.
+    // 100 KG × 2,50 = 250,00; redução explícita 0 (a soja tem 60% na tabela oficial, #272).
     return """
         {
           "numero": 1,
@@ -159,7 +159,8 @@ class AliquotaVigenciaIntegrationTest {
               "cfop": "6101",
               "unidade": "KG",
               "quantidade": 100,
-              "valorUnitario": 2.50
+              "valorUnitario": 2.50,
+              "percentualReducao": 0
             }
           ]
         }
