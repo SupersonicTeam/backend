@@ -28,14 +28,16 @@ import org.springframework.transaction.annotation.Transactional;
  * Serviço agregador do dashboard financeiro do produtor (issue Agrocontabil#65 — Sprint 5).
  *
  * <p><strong>Reúso, sem recomputar somas:</strong> os KPIs de IBS/CBS do período vêm do
- * {@link ApuracaoService#consultar(String)} (apuração persistida quando consolidada, projeção ao
- * vivo do mês corrente caso contrário). O volume mensal de notas e as últimas notas vêm de queries
- * do {@link NotaFiscalRepository}. Este serviço apenas <em>compõe</em> essas fontes num único
+ * {@link ApuracaoService#consultarParaProdutor} (apuração persistida quando consolidada,
+ * projeção ao vivo do mês corrente caso contrário). O volume mensal de notas e as últimas notas
+ * vêm de queries do {@link NotaFiscalRepository}. Este serviço apenas <em>compõe</em> essas fontes num único
  * payload — não redefine a semântica de débito/crédito.
  *
  * <p><strong>Recorte de segurança (anti-IDOR):</strong> tanto o {@link ApuracaoService} quanto as
- * queries de nota filtram pelo produtor autenticado ({@link AuthenticatedProdutorProvider}); um
- * produtor nunca enxerga dados de outro. O DTO de saída nunca expõe entidade JPA nem o CPF/CNPJ.
+ * queries de nota filtram por um produtor: o autenticado ({@link AuthenticatedProdutorProvider})
+ * na rota do produtor, ou o cliente já autorizado pelo {@code ProdutorEmContextoResolver} na rota
+ * da carteira (issue #255). {@link #montarDoProdutor} não autoriza. O DTO de saída nunca expõe
+ * entidade JPA nem o CPF/CNPJ.
  */
 @Service
 @Transactional(readOnly = true)
@@ -78,9 +80,25 @@ public class DashboardService {
    */
   public DashboardResponse montar(String periodo) {
     YearMonth mes = resolverPeriodo(periodo);
-    Produtor produtor = produtorProvider.get();
+    return montarDoProdutor(produtorProvider.get(), mes.toString());
+  }
 
-    ApuracaoResponse apuracao = apuracaoService.consultar(mes.toString());
+  /**
+   * Mesmo painel de {@link #montar(String)}, para um produtor já autorizado pelo chamador — o
+   * painel de um cliente da carteira (issue #255).
+   *
+   * <p><strong>Contrato de segurança:</strong> o produtor tem de ter passado pelo
+   * {@code ProdutorEmContextoResolver} antes; aqui o id dele é só o filtro das consultas.
+   *
+   * @param produtor produtor já autorizado
+   * @param periodo  período {@code YYYY-MM}; quando {@code null}, o mês corrente
+   * @return payload agregado do dashboard
+   */
+  public DashboardResponse montarDoProdutor(Produtor produtor, String periodo) {
+    YearMonth mes = resolverPeriodo(periodo);
+
+    ApuracaoResponse apuracao =
+        apuracaoService.consultarParaProdutor(produtor.getId(), mes.toString());
 
     return new DashboardResponse(
         DashboardMapper.toProdutorResumo(produtor),

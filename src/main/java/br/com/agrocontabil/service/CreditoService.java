@@ -1,7 +1,6 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.CreditoSaldoResponse;
-import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
@@ -26,9 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
  * e agregados por mês diretamente das notas. Não depende da entidade {@code ApuracaoMensal}
  * (desenvolvida em paralelo em outra issue) — o desacoplamento é intencional.
  *
- * <p><strong>Recorte de segurança (anti-IDOR):</strong> a agregação é sempre feita pelo ID do
- * produtor autenticado obtido via {@link AuthenticatedProdutorProvider}; a query do repositório
- * filtra por esse ID, de modo que um produtor nunca soma créditos de outro.
+ * <p><strong>Recorte de segurança (anti-IDOR):</strong> a agregação é sempre filtrada por um
+ * produtor: o autenticado ({@link AuthenticatedProdutorProvider}) na rota do produtor, ou o
+ * cliente já autorizado pelo {@code ProdutorEmContextoResolver} na rota da carteira (issue #255,
+ * {@code CarteiraIndicadoresService}). As variantes {@code ...DoProdutor} não autorizam: nunca
+ * as chame com um id vindo do cliente sem passar antes pelo resolver.
  *
  * <p><strong>Premissa fiscal (LC 214/2025):</strong> a apropriação do crédito segue a
  * competência da <em>emissão</em> da nota de entrada ({@code dataEmissao}); o recorte mensal usa
@@ -63,20 +64,35 @@ public class CreditoService {
    */
   public CreditoSaldoResponse consultarSaldo(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
-    Produtor produtor = produtorProvider.get();
+    return consultarSaldoDoProdutor(produtorProvider.get().getId(), mes.toString());
+  }
+
+  /**
+   * Mesma consulta de {@link #consultarSaldo(String)}, para um produtor já autorizado pelo
+   * chamador — o saldo de um cliente da carteira (issue #255).
+   *
+   * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de ter passado pelo
+   * {@code ProdutorEmContextoResolver} antes; aqui ele é só o filtro da agregação.
+   *
+   * @param produtorId produtor já autorizado
+   * @param periodo    período no formato {@code YYYY-MM}
+   * @return saldo consolidado do período (zerado quando não há notas de entrada no mês)
+   */
+  public CreditoSaldoResponse consultarSaldoDoProdutor(UUID produtorId, String periodo) {
+    YearMonth mes = parsePeriodo(periodo);
 
     OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
     OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
 
     CreditoSaldoAgregado agregado =
-        notaFiscalRepository.somarCreditosPorPeriodo(produtor.getId(), inicio, fim);
+        notaFiscalRepository.somarCreditosPorPeriodo(produtorId, inicio, fim);
 
     BigDecimal creditoIbs = coalesce(agregado.creditoIbs());
     BigDecimal creditoCbs = coalesce(agregado.creditoCbs());
     BigDecimal total = creditoIbs.add(creditoCbs);
 
     log.info("Saldo de credito consultado: produtor={} periodo={} notas={}",
-        produtor.getId(), mes, agregado.quantidadeNotas());
+        produtorId, mes, agregado.quantidadeNotas());
 
     return new CreditoSaldoResponse(
         mes.toString(), creditoIbs, creditoCbs, total, agregado.quantidadeNotas());

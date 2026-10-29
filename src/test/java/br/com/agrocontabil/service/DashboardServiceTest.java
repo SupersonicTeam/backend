@@ -103,7 +103,8 @@ class DashboardServiceTest {
   @DisplayName("KPIs e distribuicao vem da apuracao do periodo, sem recomputar somas")
   void kpisVemDaApuracao() {
     produtorAutenticado();
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
 
     DashboardResponse dash = service.montar("2026-07");
 
@@ -121,7 +122,8 @@ class DashboardServiceTest {
   @DisplayName("Resumo do produtor expoe nome/tipo/UF, nunca o CPF/CNPJ")
   void resumoProdutorSemDocumento() {
     produtorAutenticado();
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
 
     DashboardResponse dash = service.montar("2026-07");
 
@@ -136,19 +138,21 @@ class DashboardServiceTest {
   @DisplayName("Periodo ausente usa o mes corrente do Clock (2026-07)")
   void periodoAusenteUsaMesCorrente() {
     produtorAutenticado();
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
 
     DashboardResponse dash = service.montar(null);
 
     assertThat(dash.periodo()).isEqualTo("2026-07");
-    verify(apuracaoService).consultar("2026-07");
+    verify(apuracaoService).consultarParaProdutor(produtor.getId(), "2026-07");
   }
 
   @Test
   @DisplayName("Serie mensal cobre 6 meses (fev..jul), com zero-fill dos meses sem notas")
   void serieMensalSeisMesesComZeroFill() {
     produtorAutenticado();
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
     // Notas so em maio (2 saidas) e julho (3 saidas + 1 entrada); demais meses zerados.
     when(notaFiscalRepository.contarNotasPorMesEOrigem(
             eq(produtor.getId()), any(), any()))
@@ -175,7 +179,8 @@ class DashboardServiceTest {
   @DisplayName("Janela da serie usa [inicio do 6o mes anterior, inicio do mes seguinte) no fuso BR")
   void janelaDaSerieNoFusoBrasilia() {
     produtorAutenticado();
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
     when(notaFiscalRepository.contarNotasPorMesEOrigem(any(), any(), any()))
         .thenReturn(List.of());
 
@@ -193,7 +198,8 @@ class DashboardServiceTest {
   @DisplayName("Ultimas notas resolvem a contraparte pela origem (destinatario/emitente)")
   void ultimasNotasResolvemContraparte() {
     produtorAutenticado();
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
     NotaFiscal saida = NotaFiscal.builder()
         .id(UUID.randomUUID()).numero(1024L).origem(OrigemNotaFiscal.PROPRIA)
         .destinatarioNome("Cooperativa Agro Ltda").destinatarioCpfCnpj("11222333000181")
@@ -223,7 +229,8 @@ class DashboardServiceTest {
   @DisplayName("Financeiro: entradas/saidas vem do valor total por origem; saldo e lucro derivados")
   void financeiroDerivaSaldoELucroDoValorPorOrigem() {
     produtorAutenticadoComValores(new BigDecimal("12500.00"), new BigDecimal("3200.00"));
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
 
     DashboardResponse dash = service.montar("2026-07");
 
@@ -238,7 +245,8 @@ class DashboardServiceTest {
   @DisplayName("Financeiro: origem sem notas no periodo trata SUM nulo como zero")
   void financeiroTrataSumNuloComoZero() {
     produtorAutenticadoComValores(null, null);
-    when(apuracaoService.consultar("2026-07")).thenReturn(apuracaoJulho());
+    when(apuracaoService.consultarParaProdutor(produtor.getId(), "2026-07"))
+        .thenReturn(apuracaoJulho());
 
     DashboardResponse dash = service.montar("2026-07");
 

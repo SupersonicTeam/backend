@@ -190,8 +190,9 @@ public class ApuracaoService {
    * {@code SecurityContext}: com streaming elas rodam em outra thread, onde ele chega vazio (#143).
    *
    * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de vir de identidade já
-   * resolvida no servidor (o {@code ContextoAssistente} montado a partir do produtor autenticado),
-   * nunca de entrada do cliente ou do modelo.
+   * resolvida no servidor (o {@code ContextoAssistente} montado a partir do produtor autenticado)
+   * ou já autorizada pelo {@code ProdutorEmContextoResolver} (rota da carteira, issue #255) —
+   * nunca direto de entrada do cliente ou do modelo.
    *
    * @param produtorId produtor da sessão
    * @param periodo    período no formato {@code YYYY-MM}
