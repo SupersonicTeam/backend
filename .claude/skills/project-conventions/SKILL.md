@@ -67,7 +67,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 - Schema só via **Liquibase** (`db.changelog-master.yaml`). Hibernate em `ddl-auto: validate` — **proibido** `update`/`create`.
 - Uma mudança de schema = um changeSet novo. Nunca editar changeSet aplicado.
-- **Tabelas de vigência (`aliquota_ibs_uf`, `aliquota_cbs`):** nova alíquota = novo changeSet com `insert` (e `update` só para fechar `data_fim` da vigência anterior). Nunca alterar a alíquota de uma linha existente — notas já calculadas dependem dela.
+- **Tabelas de vigência (`aliquota_ibs_uf`, `aliquota_cbs`):** nova alíquota = novo changeSet com `insert` (e `update` só para fechar `data_fim` da vigência anterior). Nunca alterar a alíquota de uma linha existente — notas já calculadas dependem dela. Única exceção registrada: linha errada desde a origem (não uma vigência nova), corrigida com a justificativa no changeSet — o IBS de 2026 dividido 50/50 no 0013, corrigido pelo 0047 (#277).
 - Todo changeSet novo precisa do **espelho no `schema-nota-fiscal-test.sql`** (Liquibase é desligado no profile `test`).
 - **NCM semeado em `ncm_agropecuario`** tem de existir na nomenclatura oficial versionada em `src/test/resources/ncm/nomenclatura-ncm-oficial.txt` (Siscomex, com a versão da Gecex no cabeçalho). O `NcmSemeadoExisteNaNomenclaturaTest` lê o changelog e o espelho do H2 e falha se o código não existir ou se os dois divergirem (#282). Ele não confere fixtures de teste nem exemplos do OpenAPI: use neles só códigos da referência. Nova versão da Gecex = novo download desse arquivo. Na emissão, o `FiscalRulesValidator` também confere o NCM contra a referência (422), porque nota gravada antes de um código sair dela não passa mais pelo `@ValidNcm`.
 

@@ -55,13 +55,14 @@ import org.springframework.stereotype.Component;
  *
  * <p><strong>Fallback conservador:</strong> quando a UF não é determinável, não consta na tabela
  * ou a data está fora de qualquer vigência (ex.: nota anterior a 2026-01-01 ou posterior à última
- * vigência cadastrada), a alíquota de IBS de {@link TributosProperties} é dividida igualmente entre
- * estado e município (comportamento anterior à issue #31 preservado) e um {@code WARN} é
- * registrado; o mesmo vale para a CBS. Nunca lança — decisão do spec da Onda 2.
+ * vigência cadastrada), vale a alíquota de IBS de {@link TributosProperties}, toda estadual antes
+ * de 2027 e dividida igualmente entre estado e município a partir de 2027
+ * ({@link #temParcelaMunicipal(LocalDate)}, issue #277), e um {@code WARN} é registrado; o mesmo
+ * vale para a CBS. Nunca lança — decisão do spec da Onda 2.
  *
- * <p><strong>Débito técnico documentado:</strong> apenas a vigência de 2026 é semeada (changeset
- * {@code 0019}); as alíquotas de 2027–2033 (LC 214/2025, arts. 87–92 e regime de transição)
- * entram por novo changeset quando RFB/CONFAZ/Comitê Gestor as publicarem.
+ * <p><strong>Vigências semeadas:</strong> IBS de 2026 só estadual (0,1%) e de 2027–2028 dividido
+ * 0,05% + 0,05% (changeset {@code 0047}, issue #277); CBS só de 2026. As demais alíquotas da
+ * transição (LC 214/2025, arts. 87–92) entram por novo changeset quando forem publicadas.
  *
  * <p>Consulta a tabela de referência (leitura); deve ser chamado dentro de uma transação
  * read-only pelo serviço que o utiliza. Os logs não contêm CPF/CNPJ.
@@ -71,6 +72,13 @@ public class AliquotaIbsCbsResolver {
 
   private static final Logger log = LoggerFactory.getLogger(AliquotaIbsCbsResolver.class);
   private static final BigDecimal DOIS = BigDecimal.valueOf(2);
+
+  /**
+   * Primeiro dia com parcela municipal de IBS (LC 214/2025, art. 344). Em 2026 o IBS é só
+   * estadual (EC 132/2023; NT 2026.010 v1.00, item 2; IT 2025.002 v1.70, seção 05) — issue #277.
+   * Usado só no fallback: a tabela {@code aliquota_ibs_uf} já traz a divisão por vigência.
+   */
+  static final LocalDate INICIO_IBS_MUNICIPAL = LocalDate.of(2027, 1, 1);
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
   private final AliquotaIbsUfRepository aliquotaIbsUfRepository;
@@ -122,8 +130,15 @@ public class AliquotaIbsCbsResolver {
               + " usando fallback do application.yml",
           uf, data, nota.getId(), produtorId(nota));
       BigDecimal configurada = tributosProperties.getIbs().getAliquota();
-      ibsEstadual = configurada.divide(DOIS, 4, RoundingMode.HALF_UP);
-      ibsMunicipal = configurada.subtract(ibsEstadual);
+      if (!temParcelaMunicipal(data)) {
+        // 2026 (fase de teste): IBS so estadual (EC 132/2023; NT 2026.010, item 2) — #277.
+        ibsEstadual = configurada;
+        ibsMunicipal = BigDecimal.ZERO.setScale(configurada.scale());
+      } else {
+        // A partir de 2027 o IBS tem as duas parcelas (LC 214/2025, art. 344).
+        ibsEstadual = configurada.divide(DOIS, 4, RoundingMode.HALF_UP);
+        ibsMunicipal = configurada.subtract(ibsEstadual);
+      }
       origemIbs = OrigemAliquota.FALLBACK_YML;
     }
 
@@ -142,6 +157,30 @@ public class AliquotaIbsCbsResolver {
     }
 
     return new AliquotasVigentes(ibsEstadual, ibsMunicipal, aliquotaCbs, origemIbs, origemCbs);
+  }
+
+  /**
+   * Indica se o IBS tem parcela municipal na data (de 2027 em diante; LC 214/2025, art. 344). Em
+   * 2026 o IBS é só estadual — issue #277. Regra única do fallback por esfera, usada também pelo
+   * {@code NotaFiscalNfeMapper} para item legado sem as parcelas gravadas.
+   *
+   * @param data data de referência (emissão em {@code America/Sao_Paulo})
+   * @return {@code true} a partir de {@link #INICIO_IBS_MUNICIPAL}
+   */
+  public static boolean temParcelaMunicipal(LocalDate data) {
+    return !data.isBefore(INICIO_IBS_MUNICIPAL);
+  }
+
+  /**
+   * Mesma regra de {@link #temParcelaMunicipal(LocalDate)} pela data de emissão da nota em BRT
+   * (sem data, hoje).
+   *
+   * @param dataEmissao data de emissão; pode ser nula
+   * @return {@code true} a partir de {@link #INICIO_IBS_MUNICIPAL}
+   */
+  public static boolean temParcelaMunicipal(OffsetDateTime dataEmissao) {
+    return temParcelaMunicipal(dataEmissao == null
+        ? LocalDate.now(ZONE) : dataEmissao.atZoneSameInstant(ZONE).toLocalDate());
   }
 
   /**

@@ -24,6 +24,7 @@ import br.com.agrocontabil.nfe.model.Pag;
 import br.com.agrocontabil.nfe.model.Prod;
 import br.com.agrocontabil.nfe.model.Total;
 import br.com.agrocontabil.nfe.model.Transp;
+import br.com.agrocontabil.service.AliquotaIbsCbsResolver;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -312,23 +313,27 @@ public class NotaFiscalNfeMapper {
     g.setVBC(formatDecimal2(item.getBaseCalculoIbsCbs()));
 
     // Parcelas estadual/municipal reais de IBS (issue #31): resolvidas por UF no
-    // TributacaoService e gravadas no item. Fallback 50/50 apenas para itens legados
-    // gravados antes da issue #31 (parcelas ausentes) — mantém compatibilidade.
+    // TributacaoService e gravadas no item. Item legado gravado antes da issue #31 (parcelas
+    // ausentes) usa a regra do fallback do resolvedor: todo estadual antes de 2027, 50/50 depois
+    // (issue #277).
     BigDecimal alqIbs = item.getAliquotaIbs();
     BigDecimal valorIbs = item.getValorIbs() != null
         ? item.getValorIbs() : BigDecimal.ZERO;
+    boolean dividido = AliquotaIbsCbsResolver.temParcelaMunicipal(
+        item.getNotaFiscal() != null ? item.getNotaFiscal().getDataEmissao() : null);
 
     BigDecimal alqIbsUf = item.getAliquotaIbsUf();
     BigDecimal alqIbsMun = item.getAliquotaIbsMun();
     if (alqIbsUf == null || alqIbsMun == null) {
-      alqIbsUf = alqIbs.divide(BigDecimal.valueOf(2), 10, RoundingMode.HALF_UP);
+      alqIbsUf = dividido ? alqIbs.divide(BigDecimal.valueOf(2), 10, RoundingMode.HALF_UP) : alqIbs;
       alqIbsMun = alqIbs.subtract(alqIbsUf);
     }
 
     BigDecimal valorIbsUf = item.getValorIbsUf();
     BigDecimal valorIbsMun = item.getValorIbsMun();
     if (valorIbsUf == null || valorIbsMun == null) {
-      valorIbsUf = valorIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
+      valorIbsUf = dividido ? valorIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
+          : valorIbs;
       valorIbsMun = valorIbs.subtract(valorIbsUf);
     }
 
@@ -407,7 +412,7 @@ public class NotaFiscalNfeMapper {
     tot.setVBCIBSCBS(formatDecimal2(baseTotal));
 
     // gIBS — soma das parcelas estadual/municipal reais dos itens (issue #31).
-    // Fallback 50/50 apenas se algum item não trouxer as parcelas (item legado).
+    // Item legado sem as parcelas: regra do fallback do resolvedor (todo estadual antes de 2027).
     boolean parcelasReais = nota.getItens().stream()
         .allMatch(i -> i.getValorIbsUf() != null && i.getValorIbsMun() != null);
     BigDecimal ibsUf;
@@ -420,7 +425,8 @@ public class NotaFiscalNfeMapper {
           .map(NotaFiscalItem::getValorIbsMun)
           .reduce(BigDecimal.ZERO, BigDecimal::add);
     } else {
-      ibsUf = totalIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
+      ibsUf = AliquotaIbsCbsResolver.temParcelaMunicipal(nota.getDataEmissao())
+          ? totalIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP) : totalIbs;
       ibsMun = totalIbs.subtract(ibsUf);
     }
 

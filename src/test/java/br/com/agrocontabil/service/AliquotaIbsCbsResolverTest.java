@@ -91,9 +91,27 @@ class AliquotaIbsCbsResolverTest {
   }
 
   @Test
-  @DisplayName("sem UF determinavel cai para a aliquota do yml dividida 50/50 (fallback conservador)")
-  void fallbackYmlQuandoUfAusente() {
-    NotaFiscal semEndereco = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA).build();
+  @DisplayName("sem UF determinavel em 2026 cai para o yml todo estadual (EC 132; NT 2026.010) — #277")
+  void fallbackYmlEm2026TodoEstadual() {
+    NotaFiscal semEndereco = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA)
+        .dataEmissao(OffsetDateTime.of(2026, 12, 31, 23, 0, 0, 0, ZoneOffset.ofHours(-3)))
+        .build();
+
+    AliquotasVigentes vigentes = resolver.resolver(semEndereco);
+
+    assertThat(vigentes.ibsEstadual()).isEqualByComparingTo(IBS_YML);
+    assertThat(vigentes.ibsMunicipal()).isEqualByComparingTo("0");
+    assertThat(vigentes.ibsTotal()).isEqualByComparingTo(IBS_YML);
+    assertThat(vigentes.origemIbs()).isEqualTo(OrigemAliquota.FALLBACK_YML);
+    verifyNoInteractions(aliquotaIbsUfRepository);
+  }
+
+  @Test
+  @DisplayName("sem UF determinavel a partir de 2027 divide o yml 50/50 (LC 214, art. 344) — #277")
+  void fallbackYmlDesde2027Dividido() {
+    NotaFiscal semEndereco = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA)
+        .dataEmissao(OffsetDateTime.of(2027, 1, 1, 0, 0, 0, 0, ZoneOffset.ofHours(-3)))
+        .build();
 
     AliquotasVigentes vigentes = resolver.resolver(semEndereco);
 
@@ -102,6 +120,16 @@ class AliquotaIbsCbsResolverTest {
     assertThat(vigentes.ibsTotal()).isEqualByComparingTo(IBS_YML);
     assertThat(vigentes.origemIbs()).isEqualTo(OrigemAliquota.FALLBACK_YML);
     verifyNoInteractions(aliquotaIbsUfRepository);
+  }
+
+  @Test
+  @DisplayName("fallback usa a data de Brasilia: 01/01/2027 02h UTC ainda e 2026 (#277)")
+  void fallbackUsaDataDeBrasilia() {
+    NotaFiscal semEndereco = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA)
+        .dataEmissao(OffsetDateTime.of(2027, 1, 1, 2, 0, 0, 0, ZoneOffset.UTC))
+        .build();
+
+    assertThat(resolver.resolver(semEndereco).ibsMunicipal()).isEqualByComparingTo("0");
   }
 
   @Test
