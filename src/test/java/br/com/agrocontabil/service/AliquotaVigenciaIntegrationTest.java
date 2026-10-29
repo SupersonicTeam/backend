@@ -1,18 +1,15 @@
 package br.com.agrocontabil.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import br.com.agrocontabil.model.AliquotaIbsUf;
-import br.com.agrocontabil.model.AliquotaIbsUfId;
 import br.com.agrocontabil.model.Produtor;
-import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import br.com.agrocontabil.support.AutenticacaoTestSupport;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -35,21 +33,18 @@ import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Teste de integração da vigência temporal das alíquotas (Onda 2, issue #85 — FISC-04/FISC-07).
+ * Teste de integração da vigência temporal das alíquotas (Onda 2, issue #85; divisão do IBS por
+ * esfera, issue #277).
  *
  * <p>Sobe o contexto completo com o seed de referência (schema H2 espelho dos changesets
- * {@code 0013}/{@code 0019}) e insere uma segunda vigência para MT a partir de 2027-01-01
- * ({@code 0,0010 + 0,0010 = 0,0020}). Exercita o fluxo real {@code POST /api/notas}:
+ * {@code 0013}/{@code 0020}/{@code 0047}) e exercita o fluxo real {@code POST /api/notas}:
  * <ul>
- *   <li>nota emitida em 2027 → IBS pela segunda vigência ({@code 250,00 × 0,0020 = 0,50});</li>
- *   <li>nota emitida em 2026 → IBS pela vigência do seed ({@code 250,00 × 0,0010 = 0,25}),
- *       inalterada pela inserção.</li>
+ *   <li>nota emitida em 2026 → IBS de 0,1% todo estadual ({@code 250,00 × 0,0010 = 0,25} no
+ *       {@code vIBSUF}, zero no {@code vIBSMun}) — EC 132/2023, NT 2026.010 item 2;</li>
+ *   <li>nota emitida em 2027 → mesma alíquota total, dividida 0,05% + 0,05% (LC 214/2025,
+ *       art. 344): {@code 0,13} estadual (arredondado) e {@code 0,12} municipal, que fecha o
+ *       total.</li>
  * </ul>
- *
- * <p>A vigência de 2026 do seed é aberta ({@code data_fim = NULL}) e também cobre 2027 — a query
- * ordenada por {@code data_inicio DESC} garante que a de início mais recente vence (edge case de
- * sobreposição do spec). A vigência inserida é removida no {@code @AfterEach} para não contaminar
- * outros testes que compartilham o seed.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -63,12 +58,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 class AliquotaVigenciaIntegrationTest {
 
-  private static final LocalDate INICIO_2027 = LocalDate.of(2027, 1, 1);
-
   @Autowired private MockMvc mockMvc;
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private TestDatabaseCleaner cleaner;
-  @Autowired private AliquotaIbsUfRepository aliquotaIbsUfRepository;
+  @Autowired private JdbcTemplate jdbc;
 
   private Produtor produtor;
 
@@ -84,46 +77,49 @@ class AliquotaVigenciaIntegrationTest {
         .build());
     SecurityContextHolder.getContext().setAuthentication(
         AutenticacaoTestSupport.tokenDe(produtor));
-
-    // Segunda vigência de MT: 2027 em diante, aliquota dobrada (0,0010 + 0,0010).
-    aliquotaIbsUfRepository.save(AliquotaIbsUf.builder()
-        .uf("MT")
-        .dataInicio(INICIO_2027)
-        .dataFim(null)
-        .aliquotaEstadual(new BigDecimal("0.0010"))
-        .aliquotaMunicipal(new BigDecimal("0.0010"))
-        .build());
   }
 
   @AfterEach
   void tearDown() {
-    // A vigencia sai primeiro: o H2 em memoria sobrevive ao @DirtiesContext
-    // (DB_CLOSE_DELAY=-1), entao uma falha nos deleteAll nao pode deixa-la para tras.
-    aliquotaIbsUfRepository.deleteById(new AliquotaIbsUfId("MT", INICIO_2027));
     SecurityContextHolder.clearContext();
     cleaner.limparTudo();
   }
 
   @Test
-  @DisplayName("nota emitida em 2027 usa a segunda vigencia de MT (0,0020)")
-  void notaDe2027UsaSegundaVigencia() throws Exception {
+  @DisplayName("nota emitida em 2026: IBS de 0,1% todo estadual, municipal zero (#277)")
+  void notaDe2026TemIbsSoEstadual() throws Exception {
     mockMvc.perform(post("/api/notas")
             .contentType(MediaType.APPLICATION_JSON)
-            .content(payload("2027-03-15T10:00:00-03:00")))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.itens[0].aliquotaIbs").value(0.0020))
-        .andExpect(jsonPath("$.valorTotalIbs").value(0.50));
-  }
-
-  @Test
-  @DisplayName("nota emitida em 2026 continua na vigencia do seed (0,0010)")
-  void notaDe2026UsaVigenciaDoSeed() throws Exception {
-    mockMvc.perform(post("/api/notas")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(payload("2026-06-10T10:00:00-03:00")))
+            .content(payload("2026-12-31T23:00:00-03:00")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.itens[0].aliquotaIbs").value(0.0010))
         .andExpect(jsonPath("$.valorTotalIbs").value(0.25));
+
+    assertThat(parcelas()).containsExactly(
+        new BigDecimal("0.0010"), new BigDecimal("0.0000"),
+        new BigDecimal("0.25"), new BigDecimal("0.00"));
+  }
+
+  @Test
+  @DisplayName("nota emitida em 2027: mesmo IBS total, dividido 0,05% + 0,05% (art. 344, #277)")
+  void notaDe2027TemIbsDividido() throws Exception {
+    mockMvc.perform(post("/api/notas")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload("2027-01-01T00:00:00-03:00")))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.itens[0].aliquotaIbs").value(0.0010))
+        .andExpect(jsonPath("$.valorTotalIbs").value(0.25));
+
+    assertThat(parcelas()).containsExactly(
+        new BigDecimal("0.0005"), new BigDecimal("0.0005"),
+        new BigDecimal("0.13"), new BigDecimal("0.12"));
+  }
+
+  /** Alíquota e valor estadual e municipal do único item gravado. */
+  private List<BigDecimal> parcelas() {
+    return jdbc.queryForObject("SELECT aliquota_ibs_uf, aliquota_ibs_mun, valor_ibs_uf,"
+        + " valor_ibs_mun FROM nota_fiscal_item", (rs, i) -> List.of(
+            rs.getBigDecimal(1), rs.getBigDecimal(2), rs.getBigDecimal(3), rs.getBigDecimal(4)));
   }
 
   private static String payload(String dataEmissao) {

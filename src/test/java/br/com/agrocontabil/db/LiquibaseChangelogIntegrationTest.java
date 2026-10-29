@@ -582,6 +582,21 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0047: IBS de 2026 todo estadual; 0,05% + 0,05% em 2027-2028 (#277)")
+  void changeSet0047IbsPorEsfera() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    String vigencias = "SELECT COUNT(*) FROM aliquota_ibs_uf WHERE data_inicio = ?::date"
+        + " AND data_fim = ?::date AND aliquota_estadual = ? AND aliquota_municipal = ?";
+
+    assertThat(jdbc.queryForObject(vigencias, Integer.class, "2026-01-01", "2026-12-31",
+        new java.math.BigDecimal("0.0010"), java.math.BigDecimal.ZERO)).isEqualTo(27);
+    assertThat(jdbc.queryForObject(vigencias, Integer.class, "2027-01-01", "2028-12-31",
+        new java.math.BigDecimal("0.0005"), new java.math.BigDecimal("0.0005"))).isEqualTo(27);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM aliquota_ibs_uf", Integer.class))
+        .isEqualTo(54);
+  }
+
+  @Test
   @DisplayName("changeSet 0045: chave de acesso unica por produtor e origem, nao global (#223)")
   void changeSet0045ChavePorProdutor() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

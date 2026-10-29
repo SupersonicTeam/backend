@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0047-ibs-2026-estadual.xml
+         Issue #277.
+
+         O seed 0013 (vigencia de 2026 desde o 0020) divide o IBS em
+         0,05% estadual + 0,05% municipal. Essa divisao e a de 2027-2028.
+         Em 2026 o IBS e 0,1% estadual e 0% municipal:
+           - NT 2026.010 v1.00, item 2: "Em 2026 (fase de teste) - as
+             aliquotas sao fixas, conforme determinado pela EC 132/2023
+             (0,1% para o IBS estadual e 0,9% para a CBS). A partir de
+             2027 ... IBS a aliquota estadual de 0,05% e municipal de
+             0,05% no bienio 2027-2028 (art. 344)";
+           - IT 2025.002 v1.70, secao 05: 2026 pIBSUF 0,1 / pIBSMun 0;
+             2027 e 2028 pIBSUF 0,05 / pIBSMun 0,05.
+         O total (0,1%) nao muda; muda a parcela de cada esfera.
+
+         Excecao deliberada a regra "nova aliquota = insert": a linha de
+         2026 esta errada desde a origem (nao e uma vigencia nova), entao
+         e corrigida por update, junto com o fechamento da data_fim. A
+         divisao 50/50 entra como vigencia nova, 2027-01-01 a 2028-12-31
+         (o bienio do art. 344). Depois de 2028 nao ha valor publicado:
+         o resolvedor cai no fallback com WARN.
+
+         Itens de notas AINDA EDITAVEIS (RASCUNHO, COM_INCONSISTENCIAS,
+         DEVOLVIDA) emitidas em 2026 (Brasilia) tem as parcelas
+         corrigidas: a estadual passa a ser o IBS inteiro e a municipal
+         zero (o total e o mesmo). Notas emitidas/importadas NAO mudam:
+         o XML assinado e o documento fiscal.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0047-ibs-vigencia-2027-2028" author="supersonic-team">
+        <sql>
+            INSERT INTO aliquota_ibs_uf (uf, data_inicio, data_fim, aliquota_estadual, aliquota_municipal)
+            SELECT uf, DATE '2027-01-01', DATE '2028-12-31', 0.0005, 0.0005
+              FROM aliquota_ibs_uf
+             WHERE data_inicio = DATE '2026-01-01';
+        </sql>
+        <rollback>
+            <delete tableName="aliquota_ibs_uf">
+                <where>data_inicio = DATE '2027-01-01'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0047-ibs-2026-estadual" author="supersonic-team">
+        <update tableName="aliquota_ibs_uf">
+            <column name="aliquota_estadual" valueNumeric="0.0010"/>
+            <column name="aliquota_municipal" valueNumeric="0.0000"/>
+            <column name="data_fim" valueDate="2026-12-31"/>
+            <where>data_inicio = DATE '2026-01-01'</where>
+        </update>
+        <rollback>
+            <sql>
+                UPDATE aliquota_ibs_uf
+                   SET aliquota_estadual = 0.0005, aliquota_municipal = 0.0005, data_fim = NULL
+                 WHERE data_inicio = DATE '2026-01-01';
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0047-ibs-2026-corrige-rascunhos" author="supersonic-team">
+        <sql>
+            UPDATE nota_fiscal_item
+               SET aliquota_ibs_uf = aliquota_ibs,
+                   aliquota_ibs_mun = 0,
+                   valor_ibs_uf = valor_ibs,
+                   valor_ibs_mun = 0
+             WHERE aliquota_ibs IS NOT NULL
+               AND valor_ibs IS NOT NULL
+               AND nota_fiscal_id IN (SELECT id FROM nota_fiscal
+                     WHERE status IN ('RASCUNHO','COM_INCONSISTENCIAS','DEVOLVIDA')
+                       AND data_emissao &lt; TIMESTAMP WITH TIME ZONE '2027-01-01 00:00:00-03:00');
+        </sql>
+        <!-- Sem rollback: desfazer voltaria a divisao errada. -->
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>
