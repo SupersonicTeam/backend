@@ -582,6 +582,20 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0046: NCMs inexistentes trocados pelos codigos oficiais (#282)")
+  void changeSet0046NcmCodigosOficiais() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT codigo FROM ncm_agropecuario WHERE codigo IN"
+        + " ('12019000', '12011000', '04072100', '01039100', '01039200', '12010090', '12010010',"
+        + " '04070090', '01039000') ORDER BY codigo", String.class))
+        .containsExactly("01039100", "01039200", "04072100", "12011000", "12019000");
+    // A reducao padrao (ano-teste) do ovo acompanha o codigo novo.
+    assertThat(jdbc.queryForObject("SELECT percentual_reducao_padrao FROM ncm_agropecuario"
+        + " WHERE codigo = '04072100'", java.math.BigDecimal.class)).isEqualByComparingTo("60");
+  }
+
+  @Test
   @DisplayName("changeSet 0045: chave de acesso unica por produtor e origem, nao global (#223)")
   void changeSet0045ChavePorProdutor() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

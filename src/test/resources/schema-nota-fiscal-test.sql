@@ -562,9 +562,11 @@ CREATE TABLE IF NOT EXISTS cfop_referencia (
 );
 
 -- percentual_reducao_padrao replicado do seed do changeset 0012 (ano-teste, incerteza documentada).
+-- Codigos conferidos contra a nomenclatura oficial (changeset 0046, issue #282): 12010090,
+-- 12010010, 04070090 e 01039000 nao existem e sairam; NcmSemeadoExisteNaNomenclaturaTest trava.
 MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (codigo) VALUES
-    ('12010090', 'Soja, mesmo triturada (exceto para semeadura)', 0),
-    ('12010010', 'Soja para semeadura', 0),
+    ('12019000', 'Soja, mesmo triturada, exceto para semeadura', 0),
+    ('12011000', 'Soja para semeadura', 0),
     ('10059010', 'Milho em grao (exceto para semeadura)', 60),
     ('10051000', 'Milho para semeadura', 0),
     ('10011900', 'Trigo duro (exceto para semeadura)', 0),
@@ -573,8 +575,9 @@ MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (
     ('17011400', 'Outros acucares de cana, em bruto', 0),
     ('52010020', 'Algodao em bruto, nao cardado nem penteado', 0),
     ('01022110', 'Bovinos reprodutores de raca pura, prenhes ou com cria', 0),
-    ('01039000', 'Suinos vivos (exceto reprodutores de raca pura)', 0),
-    ('04070090', 'Outros ovos de aves, com casca, frescos', 60),
+    ('01039100', 'Suinos vivos de peso inferior a 50 kg', 0),
+    ('01039200', 'Suinos vivos de peso igual ou superior a 50 kg', 0),
+    ('04072100', 'Ovos frescos de galinha (Gallus domesticus), com casca', 60),
     ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', 60),
     ('08043000', 'Abacaxis (ananases) frescos ou secos', 60),
     ('07020000', 'Tomates frescos ou refrigerados', 60);

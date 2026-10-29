@@ -153,7 +153,7 @@ class GeracaoNfaFlowTest {
         .numeroItem(1)
         .codigoProduto("SOJA001")
         .descricao("Soja em grao safra 2026")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("5101")
         .unidade("KG")
         .quantidade(new BigDecimal("1000.0000"))

@@ -221,7 +221,7 @@ class DanfePdfServiceTest {
         .numeroItem(numero)
         .codigoProduto(numero == 1 ? "SOJA-01" : "ITEM-" + numero)
         .descricao("Soja em graos")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("6101")
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))

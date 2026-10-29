@@ -31,7 +31,7 @@ public record NotaFiscalItemResponse(
     @Schema(description = "Descricao do produto ou servico", example = "Soja em graos")
     String descricao,
 
-    @Schema(description = "Codigo NCM com 8 digitos", example = "12010090")
+    @Schema(description = "Codigo NCM com 8 digitos", example = "12019000")
     String ncm,
 
     @Schema(description = "CFOP — Codigo Fiscal de Operacoes e Prestacoes", example = "6101")

@@ -118,7 +118,7 @@ class FiscalRulesValidatorCfopAmbitoTest {
     NotaFiscalItem item = NotaFiscalItem.builder()
         .numeroItem(1)
         .descricao("Soja")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop(cfop)
         .unidade("KG")
         .quantidade(new BigDecimal("100"))
