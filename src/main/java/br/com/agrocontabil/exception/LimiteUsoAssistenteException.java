@@ -12,7 +12,12 @@ import org.springframework.http.HttpStatus;
  * <p>429, e não 503 como o {@link AssistenteOcupadoException}: aqui o limite é a cota do cliente,
  * não a capacidade do servidor. A mensagem fala em créditos, nunca em tokens.
  */
-public class LimiteUsoAssistenteException extends DomainException implements ComRetryAfter {
+public class LimiteUsoAssistenteException extends DomainException
+    implements ComRetryAfter, ComMensagemCliente {
+
+  /** Mensagem segura para o cliente da API (também o {@code message} de topo, #251). */
+  public static final String MENSAGEM_CLIENTE =
+      "Os creditos da Ceres desta semana acabaram. Eles renovam na segunda-feira.";
 
   private final long retryAfterSegundos;
 
@@ -23,13 +28,17 @@ public class LimiteUsoAssistenteException extends DomainException implements Com
    */
   public LimiteUsoAssistenteException(long retryAfterSegundos) {
     super(HttpStatus.TOO_MANY_REQUESTS, "Creditos semanais da Ceres esgotados para o titular",
-        List.of(ErrorDetail.of(ErrorCode.LIMITE_USO_ASSISTENTE,
-            "Os creditos da Ceres desta semana acabaram. Eles renovam na segunda-feira.")));
+        List.of(ErrorDetail.of(ErrorCode.LIMITE_USO_ASSISTENTE, MENSAGEM_CLIENTE)));
     this.retryAfterSegundos = Math.max(1, retryAfterSegundos);
   }
 
   @Override
   public long retryAfterSegundos() {
     return retryAfterSegundos;
+  }
+
+  @Override
+  public String clientMessage() {
+    return MENSAGEM_CLIENTE;
   }
 }

@@ -3,7 +3,9 @@ package br.com.agrocontabil.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.common.ApiError;
+import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.security.CookieRefresh;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
@@ -143,5 +145,52 @@ class GlobalExceptionHandlerTest {
     // Nem a mensagem generica de NF-e (que confundiria o chat) nem o detalhe tecnico.
     assertThat(body.message()).isEqualTo(AssistenteIndisponivelException.MENSAGEM_CLIENTE);
     assertThat(body.message()).doesNotContain("NF-e", "ollama", "ResourceAccess");
+  }
+
+  @Test
+  @DisplayName("503 da Ceres: message de topo = errors[0], sem NF-e (#251)")
+  void mensagemDeTopoDaCeresSemNfe() {
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/assistente/chat");
+    for (DomainException ex : new DomainException[] {
+        AssistenteOcupadoException.limiteGlobal(),
+        AssistenteOcupadoException.perguntaEmAndamento(),
+        new AssistenteTempoEsgotadoException(),
+        new AssistenteIndisponivelException("modelo fora", null),
+        new LimiteUsoAssistenteException(60)}) {
+      ApiError body = handler.handleDomain(ex, request).getBody();
+
+      assertThat(body).isNotNull();
+      assertThat(body.message()).doesNotContain("NF-e")
+          .isEqualTo(body.errors().get(0).message());
+    }
+  }
+
+  @Test
+  @DisplayName("5xx de dominio: topo = errors[0] (seguro), nunca o getMessage tecnico (#251)")
+  void mensagemDeTopoDe5xx() {
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/notas");
+    for (DomainException ex : new DomainException[] {
+        new RelatorioGenerationException("jasper caiu: /tmp/x.jrxml", null),
+        new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU, "keystore senha errada"),
+        new DanfeGenerationException("jasper caiu", null),
+        new SefazComunicacaoException("timeout em sefaz.mt.gov.br")}) {
+      ApiError body = handler.handleDomain(ex, request).getBody();
+
+      assertThat(body).isNotNull();
+      assertThat(body.message()).isEqualTo(body.errors().get(0).message())
+          .doesNotContain(ex.getMessage());
+    }
+  }
+
+  @Test
+  @DisplayName("5xx de dominio sem errors: texto generico sem NF-e (#251)")
+  void mensagemGenericaDe5xxSemErrors() {
+    DomainException semErrors = new DomainException(
+        HttpStatus.INTERNAL_SERVER_ERROR, "detalhe tecnico", List.of()) {};
+
+    ApiError body = handler.handleDomain(
+        semErrors, new MockHttpServletRequest("GET", "/api/x")).getBody();
+
+    assertThat(body.message()).isEqualTo("Erro interno. Tente novamente mais tarde.");
   }
 }

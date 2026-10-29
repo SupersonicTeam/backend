@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
  * <p>A mensagem técnica ({@link #getMessage()}) só vai para o log (via handler). Ao cliente
  * é devolvido um envelope genérico, sem vazar fragmento de XML ou contexto do XSD.
  */
-public class XmlGenerationException extends DomainException {
+public class XmlGenerationException extends DomainException implements ComMensagemCliente {
 
   private static final String CLIENT_MESSAGE =
       "Nao foi possivel gerar o XML da NF-e. "
@@ -28,6 +28,7 @@ public class XmlGenerationException extends DomainException {
   }
 
   /** Mensagem genérica e segura para exibir ao cliente. */
+  @Override
   public String clientMessage() {
     return CLIENT_MESSAGE;
   }

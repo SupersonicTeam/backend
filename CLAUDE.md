@@ -238,6 +238,11 @@ br.com.agrocontabil
   de recursos (#157): nenhuma transação durante a chamada ao modelo, bulkhead (503
   `ASSISTENTE_OCUPADO` + `Retry-After`), pool próprio e timeouts por pergunta e por função.
   Detalhes em `docs/ceres-assistente.md`.
+- **`message` de topo do envelope (#251):** em **5xx** de domínio é a mensagem do `errors[0]`
+  (texto para o cliente por contrato; o `getMessage()` de um 5xx é técnico) — a Ceres ocupada fala
+  da Ceres, a SEFAZ indeterminada manda consultar antes de reenviar; sem `errors`, "Erro interno.
+  Tente novamente mais tarde.", que não fala de NF-e. 4xx usam o `getMessage()`, exceto quem
+  implementa `ComMensagemCliente` (`XmlGenerationException`, `LimiteUsoAssistenteException`).
 - **Erro sai em JSON quando o `Accept` não aceita JSON nem XML (#157, #250):** o envelope
   acompanha o `Accept` (JSON ou XML); para cliente que só aceita outra coisa —
   `text/event-stream` (SSE da Ceres) ou `application/pdf` (endpoints de arquivo) — a negociação
