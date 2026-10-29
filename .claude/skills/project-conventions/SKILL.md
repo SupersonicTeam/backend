@@ -68,6 +68,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Uma mudança de schema = um changeSet novo. Nunca editar changeSet aplicado.
 - **Tabelas de vigência (`aliquota_ibs_uf`, `aliquota_cbs`):** nova alíquota = novo changeSet com `insert` (e `update` só para fechar `data_fim` da vigência anterior). Nunca alterar a alíquota de uma linha existente — notas já calculadas dependem dela.
 - Todo changeSet novo precisa do **espelho no `schema-nota-fiscal-test.sql`** (Liquibase é desligado no profile `test`).
+- **NCM semeado** (`ncm_agropecuario`, testes, exemplos do OpenAPI) tem de existir na nomenclatura oficial versionada em `src/test/resources/ncm/nomenclatura-ncm-oficial.txt` (Siscomex, com a versão da Gecex no cabeçalho); o `NcmSemeadoExisteNaNomenclaturaTest` falha se não existir (#282). Nova versão da Gecex = novo download desse arquivo.
 
 ## Testes
 

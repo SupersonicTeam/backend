@@ -219,7 +219,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `EnderecoDestinatario` | Embedded address do destinatário |
 | `Produtor` | Produtor rural autenticado |
 | `NotaFiscalValidacao` | Histórico de inconsistências de validação (issue #22) |
-| `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20) |
+| `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20). Todo NCM semeado precisa existir na nomenclatura oficial versionada em `src/test/resources/ncm/nomenclatura-ncm-oficial.txt` (`NcmSemeadoExisteNaNomenclaturaTest`, #282) |
 | `AliquotaIbsUf` (+ `AliquotaIbsUfId`) | Alíquota de IBS (estadual/municipal) por UF **e vigência** — PK composta `(uf, data_inicio)`; `data_fim` NULL = aberta (issues #31/#85) |
 | `AliquotaCbs` | Alíquota de CBS por vigência (`aliquota_cbs`, issue #85); substitui o valor fixo do yml como fonte primária |
 | `EnderecoProdutor` | `@Embeddable` com o endereço completo do emitente (issue #88) — alimenta `<enderEmit>` e o `cMunFG`; a UF fica em `Produtor.estado` |
@@ -343,5 +343,5 @@ Bean Validation customizada (anotação + validator):
 
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
-- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0045-nota-fiscal-chave-por-produtor = chave única por produtor+chave+origem, #223; próximo número livre: **0046**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
+- `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0045-nota-fiscal-chave-por-produtor = chave única por produtor+chave+origem, #223; 0046-ncm-codigos-oficiais = NCMs inexistentes trocados pelos oficiais, #282; próximo número livre: **0047**; 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
 - **Nunca editar changesets já aplicados.** Nova mudança = novo arquivo.
