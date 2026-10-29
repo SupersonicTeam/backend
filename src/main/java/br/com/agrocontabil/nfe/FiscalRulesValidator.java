@@ -8,7 +8,13 @@ import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.ClassificacaoTributaria;
+import br.com.agrocontabil.service.ClassificacaoTributariaService;
 import br.com.agrocontabil.validation.NcmValidator;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +53,8 @@ public class FiscalRulesValidator {
   /** Maior serie representavel nos 3 digitos do layout e da chave de acesso (issue #88). */
   private static final int SERIE_MAXIMA = 999;
 
+  private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
+
   /**
    * Existência do NCM na tabela de referência (RN008) na emissão — issue #282. O
    * {@code @ValidNcm} só confere o request; nota gravada antes de um código sair da referência
@@ -55,19 +63,37 @@ public class FiscalRulesValidator {
    */
   private final NcmValidator ncmValidator;
 
-  /** Validador sem a conferência de existência do NCM (testes unitários sem Spring). */
+  /**
+   * Tabela oficial de classificação tributária, para conferir o cClassTrib aplicado do item
+   * (issue #278). Nulo = sem conferência (testes unitários que montam o validador sem Spring).
+   */
+  private final ClassificacaoTributariaService classificacaoService;
+
+  /** Validador sem as conferências contra tabelas (testes unitários sem Spring). */
   public FiscalRulesValidator() {
-    this(null);
+    this(null, null);
+  }
+
+  /**
+   * Validador com a conferência do NCM e sem a da classificação tributária.
+   *
+   * @param ncmValidator conferência do NCM contra a tabela de referência (RN008)
+   */
+  public FiscalRulesValidator(NcmValidator ncmValidator) {
+    this(ncmValidator, null);
   }
 
   /**
    * Validador completo.
    *
    * @param ncmValidator conferência do NCM contra a tabela de referência (RN008)
+   * @param classificacaoService tabela oficial de cClassTrib (issue #278)
    */
   @Autowired
-  public FiscalRulesValidator(NcmValidator ncmValidator) {
+  public FiscalRulesValidator(NcmValidator ncmValidator,
+      ClassificacaoTributariaService classificacaoService) {
     this.ncmValidator = ncmValidator;
+    this.classificacaoService = classificacaoService;
   }
 
   /**
@@ -320,6 +346,8 @@ public class FiscalRulesValidator {
         validarAmbitoCfop(nota, item, prefixo, violations);
       }
 
+      validarTributacaoIbsCbs(nota, item, prefixo, violations);
+
       if (item.getValorTotal() == null
           || item.getValorTotal().signum() <= 0) {
         violations.add(
@@ -344,6 +372,51 @@ public class FiscalRulesValidator {
    * sinalizada por outras regras ({@code validarEmitente}/{@code validarDestinatario}) — não
    * duplicamos a violação aqui.
    */
+  /**
+   * CST e cClassTrib do IBS/CBS que vão ao XML (issue #278): sem padrão fixo, o cClassTrib
+   * aplicado tem de existir na tabela oficial vigente na emissão, o CST informado tem de ser o do
+   * cClassTrib e a redução aplicada, a oficial do código. Item sem IBS/CBS calculado não entra.
+   */
+  private void validarTributacaoIbsCbs(NotaFiscal nota, NotaFiscalItem item, String prefixo,
+      List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+    if (item.getValorIbs() == null && item.getValorCbs() == null) {
+      return;
+    }
+    String cClassTrib = NotaFiscalNfeMapper.cClassTrib(item);
+    if (cClassTrib == null) {
+      violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+          prefixo + ".cClassTrib", "Informe o cClassTrib do IBS/CBS: o item tem percentual de"
+              + " reducao informado e nenhuma classificacao tributaria"));
+      return;
+    }
+    String cst = NotaFiscalNfeMapper.cst(item);
+    if (!cClassTrib.startsWith(cst)) {
+      violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+          prefixo + ".cstIbsCbs", "CST " + cst + " nao corresponde ao cClassTrib " + cClassTrib
+              + " (os tres primeiros digitos sao o CST)"));
+    }
+    if (classificacaoService == null || nota.getDataEmissao() == null) {
+      return;
+    }
+    LocalDate data = nota.getDataEmissao().atZoneSameInstant(ZONE).toLocalDate();
+    Optional<ClassificacaoTributaria> oficial =
+        classificacaoService.classificacao(cClassTrib, data);
+    if (oficial.isEmpty()) {
+      violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+          prefixo + ".cClassTrib", "cClassTrib " + cClassTrib + " nao existe na tabela oficial"
+              + " de classificacao tributaria vigente em " + data));
+      return;
+    }
+    BigDecimal reducao = NotaFiscalNfeMapper.reducao(item);
+    if (oficial.get().getPercentualReducaoIbs().compareTo(reducao) != 0) {
+      violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+          prefixo + ".percentualReducao", "Reducao de " + reducao.stripTrailingZeros()
+              .toPlainString() + "% nao corresponde ao cClassTrib " + cClassTrib + " ("
+              + oficial.get().getPercentualReducaoIbs().stripTrailingZeros().toPlainString()
+              + "% na tabela oficial)"));
+    }
+  }
+
   private void validarAmbitoCfop(
       NotaFiscal nota,
       NotaFiscalItem item,

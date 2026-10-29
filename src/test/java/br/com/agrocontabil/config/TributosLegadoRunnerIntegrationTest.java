@@ -88,8 +88,8 @@ class TributosLegadoRunnerIntegrationTest {
     assertThat(runner.recalcularLegado()).isEqualTo(1);
 
     assertThat(item(rascunho)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
-    assertThat((BigDecimal) item(rascunho).get("BASE_CALCULO_IBS_CBS"))
-        .isEqualByComparingTo("0.00");
+    // Aliquota zero (Anexo I): base cheia (#278), tributo zero.
+    assertThat((BigDecimal) item(rascunho).get("VALOR_IBS")).isEqualByComparingTo("0.00");
     assertThat(item(emitida).get("C_CLASS_TRIB_APLICADO")).isNull();
     assertThat((BigDecimal) item(emitida).get("BASE_CALCULO_IBS_CBS"))
         .isEqualByComparingTo("400.00");
@@ -117,7 +117,7 @@ class TributosLegadoRunnerIntegrationTest {
   }
 
   private Map<String, Object> item(String notaId) {
-    return jdbc.queryForMap("SELECT c_class_trib_aplicado, base_calculo_ibs_cbs"
+    return jdbc.queryForMap("SELECT c_class_trib_aplicado, base_calculo_ibs_cbs, valor_ibs"
         + " FROM nota_fiscal_item WHERE nota_fiscal_id = ?", java.util.UUID.fromString(notaId));
   }
 

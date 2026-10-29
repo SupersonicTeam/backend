@@ -295,12 +295,22 @@ public class NotaFiscalNfeMapper {
     return imposto;
   }
 
+  /**
+   * CST e cClassTrib do tratamento aplicado no cálculo (tabela oficial, IT 2025.002 — issues
+   * #272 e #278): o cClassTrib aplicado, ou o informado; o CST informado, ou os três primeiros
+   * dígitos do cClassTrib. Sem padrão fixo: o {@code FiscalRulesValidator} barra a emissão sem
+   * cClassTrib válido antes de chegar aqui.
+   */
   private IbsCbs buildIbsCbs(NotaFiscalItem item) {
+    String cClassTrib = cClassTrib(item);
+    if (cClassTrib == null) {
+      throw new IllegalStateException("Item " + item.getNumeroItem() + " sem cClassTrib aplicado");
+    }
     IbsCbs ibsCbs = new IbsCbs();
-    ibsCbs.setCst(item.getCstIbsCbs() != null ? item.getCstIbsCbs() : "101");
-    ibsCbs.setCClassTrib(item.getCClassTrib() != null ? item.getCClassTrib() : "010100");
+    ibsCbs.setCst(cst(item));
+    ibsCbs.setCClassTrib(cClassTrib);
 
-    if (item.getBaseCalculoIbsCbs() != null
+    if (item.getValorTotal() != null
         && item.getAliquotaIbs() != null
         && item.getAliquotaCbs() != null) {
       ibsCbs.setGIBSCBS(buildGIbsCbs(item));
@@ -308,9 +318,39 @@ public class NotaFiscalNfeMapper {
     return ibsCbs;
   }
 
+  /** cClassTrib que vai ao XML: o aplicado no cálculo ou o informado no item (#278). */
+  static String cClassTrib(NotaFiscalItem item) {
+    return item.getCClassTribAplicado() != null ? item.getCClassTribAplicado()
+        : item.getCClassTrib();
+  }
+
+  /** CST que vai ao XML: o informado ou o prefixo do cClassTrib (#278). */
+  static String cst(NotaFiscalItem item) {
+    if (item.getCstIbsCbs() != null) {
+      return item.getCstIbsCbs();
+    }
+    String cClassTrib = cClassTrib(item);
+    return cClassTrib == null ? null : cClassTrib.substring(0, 3);
+  }
+
+  /** Redução de alíquota aplicada ao item (0 a 100), nunca nula (#278). */
+  static BigDecimal reducao(NotaFiscalItem item) {
+    if (item.getPercentualReducaoAplicado() != null) {
+      return item.getPercentualReducaoAplicado();
+    }
+    return item.getPercentualReducao() != null ? item.getPercentualReducao() : BigDecimal.ZERO;
+  }
+
+  /** CSTs com redução de alíquota, em que o grupo gRed é obrigatório (ind_gRed = 1). */
+  static final java.util.Set<String> CST_COM_GRED = java.util.Set.of("011", "200", "515");
+
   private IbsCbs.GIbsCbs buildGIbsCbs(NotaFiscalItem item) {
     IbsCbs.GIbsCbs g = new IbsCbs.GIbsCbs();
-    g.setVBC(formatDecimal2(item.getBaseCalculoIbsCbs()));
+    // vBC e o valor cheio: a LC 214/2025 reduz a aliquota (gRed), nao a base (#278). Nota
+    // calculada antes da #278 tem a base reduzida gravada, mas o mesmo valor do tributo.
+    g.setVBC(formatDecimal2(item.getValorTotal()));
+    BigDecimal reducao = reducao(item);
+    boolean comGRed = CST_COM_GRED.contains(cst(item));
 
     // Parcelas estadual/municipal reais de IBS (issue #31): resolvidas por UF no
     // TributacaoService e gravadas no item. Item legado gravado antes da issue #31 (parcelas
@@ -339,10 +379,16 @@ public class NotaFiscalNfeMapper {
 
     IbsCbs.GIbsUf ibsUf = new IbsCbs.GIbsUf();
     ibsUf.setPIBSUF(formatAliquotaPercent(alqIbsUf));
+    if (comGRed) {
+      ibsUf.setGRed(buildGRed(alqIbsUf, reducao));
+    }
     ibsUf.setVIBSUF(formatDecimal2(valorIbsUf));
 
     IbsCbs.GIbsMun ibsMun = new IbsCbs.GIbsMun();
     ibsMun.setPIBSMun(formatAliquotaPercent(alqIbsMun));
+    if (comGRed) {
+      ibsMun.setGRed(buildGRed(alqIbsMun, reducao));
+    }
     ibsMun.setVIBSMun(formatDecimal2(valorIbsMun));
 
     g.setGIBSUF(ibsUf);
@@ -354,10 +400,26 @@ public class NotaFiscalNfeMapper {
 
     IbsCbs.GCbs gCbs = new IbsCbs.GCbs();
     gCbs.setPCBS(formatAliquotaPercent(alqCbs));
+    if (comGRed) {
+      gCbs.setGRed(buildGRed(alqCbs, reducao));
+    }
     gCbs.setVCBS(formatDecimal2(valorCbs));
 
     g.setGCBS(gCbs);
     return g;
+  }
+
+  /**
+   * Grupo {@code gRed}: {@code pRedAliq} = redução e {@code pAliqEfet} = alíquota × (1 − redução
+   * / 100), os dois em percentual com 4 casas (#278).
+   */
+  private IbsCbs.GRed buildGRed(BigDecimal aliquota, BigDecimal reducao) {
+    IbsCbs.GRed gRed = new IbsCbs.GRed();
+    gRed.setPRedAliq(reducao.setScale(4, RoundingMode.HALF_UP).toPlainString());
+    BigDecimal fator = BigDecimal.ONE.subtract(
+        reducao.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
+    gRed.setPAliqEfet(formatAliquotaPercent(aliquota.multiply(fator)));
+    return gRed;
   }
 
   private Total buildTotal(NotaFiscal nota) {
@@ -402,10 +464,11 @@ public class NotaFiscalNfeMapper {
     BigDecimal totalCbs = nota.getValorTotalCbs() != null
         ? nota.getValorTotalCbs() : BigDecimal.ZERO;
 
-    // Base total = soma das bases dos itens; fallback = totalProdutos se itens sem base
+    // Base total = soma dos vBC dos itens com IBS/CBS (valor cheio, #278).
     BigDecimal baseTotal = nota.getItens().stream()
-        .map(i -> i.getBaseCalculoIbsCbs() != null
-            ? i.getBaseCalculoIbsCbs() : BigDecimal.ZERO)
+        .filter(i -> i.getValorTotal() != null && i.getAliquotaIbs() != null
+            && i.getAliquotaCbs() != null)
+        .map(i -> i.getValorTotal().setScale(2, RoundingMode.HALF_UP))
         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     IbsCbsTot tot = new IbsCbsTot();

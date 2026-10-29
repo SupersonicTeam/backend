@@ -156,8 +156,8 @@ class GeracaoNfaFlowTest {
         .quantidade(new BigDecimal("1000.0000"))
         .valorUnitario(new BigDecimal("1.0000"))
         .valorTotal(new BigDecimal("1000.00"))
-        .cstIbsCbs("101")
-        .cClassTrib("010100")
+        .cstIbsCbs("000")
+        .cClassTrib("000001")
         .build();
 
     EnderecoDestinatario endDest = EnderecoDestinatario.builder()

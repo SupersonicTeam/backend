@@ -81,8 +81,8 @@ public record NotaFiscalItemRequest(
     @Schema(
         description =
             "CST IBS/CBS: Codigo de Situacao Tributaria (3 digitos). "
-                + "Opcional; tabela definida pela LC 214/2025.",
-        example = "000")
+                + "Opcional: sem ele, sao os tres primeiros digitos do cClassTrib.",
+        example = "200")
     @Pattern(
         regexp = "\\d{3}",
         message = "cstIbsCbs deve ter exatamente 3 digitos numericos")
@@ -91,8 +91,9 @@ public record NotaFiscalItemRequest(
     @Schema(
         description =
             "Codigo de Classificacao Tributaria — cClassTrib (6 digitos). "
-                + "Opcional; definido pela LC 214/2025 e Nota Tecnica RFB/CONFAZ.",
-        example = "010100")
+                + "Opcional: sem ele, vale o da regra pelo NCM (tabela oficial, IT 2025.002). "
+                + "Informado, a reducao e a oficial do codigo; a emissao confere que ele existe.",
+        example = "200036")
     @Pattern(
         regexp = "\\d{6}",
         message = "cClassTrib deve ter exatamente 6 digitos numericos")

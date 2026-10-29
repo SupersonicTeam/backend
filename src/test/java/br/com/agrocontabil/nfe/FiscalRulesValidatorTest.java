@@ -16,6 +16,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
+import br.com.agrocontabil.service.ClassificacaoTributariaService;
 import br.com.agrocontabil.validation.NcmValidator;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -68,6 +69,57 @@ class FiscalRulesValidatorTest {
         .contains("item[" + nota.getItens().get(0).getNumeroItem() + "].ncm");
     nota.getItens().get(0).setNcm("12019000");
     assertThatCode(() -> comReferencia.validar(nota)).doesNotThrowAnyException();
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.CsvSource({
+      // caso,                         CST, cClassTrib aplicado, reducao, campo com erro
+      "cClassTrib inexistente,         ,    010100, 0,  cClassTrib",
+      "CST divergente do cClassTrib,   101, 200036, 60, cstIbsCbs",
+      "reducao divergente da oficial,  ,    200036, 30, percentualReducao",
+      "percentual sem cClassTrib,      ,    ,       60, cClassTrib"
+  })
+  @DisplayName("IBS/CBS do item: cClassTrib, CST e reducao conferidos na tabela oficial (#278)")
+  void rejeitaTributacaoIbsCbsInconsistente(String caso, String cst, String cClassTrib,
+      String reducao, String campo) {
+    ClassificacaoTributariaService classificacao = mock(ClassificacaoTributariaService.class);
+    when(classificacao.classificacao(org.mockito.ArgumentMatchers.anyString(),
+        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.empty());
+    when(classificacao.classificacao(org.mockito.ArgumentMatchers.eq("200036"),
+        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.of(
+            br.com.agrocontabil.model.ClassificacaoTributaria.builder().codigo("200036")
+                .percentualReducaoIbs(new BigDecimal("60")).build()));
+    FiscalRulesValidator completo = new FiscalRulesValidator(null, classificacao);
+    NotaFiscal nota = notaValida();
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setValorIbs(new BigDecimal("0.40"));
+    item.setCstIbsCbs(cst);
+    item.setCClassTribAplicado(cClassTrib);
+    item.setPercentualReducaoAplicado(new BigDecimal(reducao));
+
+    Throwable erro = catchThrowable(() -> completo.validar(nota));
+
+    assertThat(erro).as(caso).isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class);
+    assertThat(((NotaFiscalInvalidaParaEmissaoException) erro).getErrors())
+        .extracting(ErrorDetail::field).as(caso).contains("item[1]." + campo);
+  }
+
+  @Test
+  @DisplayName("IBS/CBS coerente com a tabela oficial passa (#278)")
+  void aceitaTributacaoIbsCbsCoerente() {
+    ClassificacaoTributariaService classificacao = mock(ClassificacaoTributariaService.class);
+    when(classificacao.classificacao(org.mockito.ArgumentMatchers.eq("200036"),
+        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.of(
+            br.com.agrocontabil.model.ClassificacaoTributaria.builder().codigo("200036")
+                .percentualReducaoIbs(new BigDecimal("60")).build()));
+    NotaFiscal nota = notaValida();
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setValorIbs(new BigDecimal("0.40"));
+    item.setCClassTribAplicado("200036");
+    item.setPercentualReducaoAplicado(new BigDecimal("60.00"));
+
+    assertThatCode(() -> new FiscalRulesValidator(null, classificacao).validar(nota))
+        .doesNotThrowAnyException();
   }
 
   @Test
