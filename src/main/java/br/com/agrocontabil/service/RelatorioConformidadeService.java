@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -68,15 +69,30 @@ public class RelatorioConformidadeService {
    */
   public RelatorioConformidadeResponse gerar(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
-    Produtor produtor = produtorProvider.get();
+    return gerarDoProdutor(produtorProvider.get().getId(), mes.toString());
+  }
+
+  /**
+   * Mesmo relatório de {@link #gerar(String)}, para um produtor já autorizado pelo chamador — o
+   * relatório de um cliente da carteira (issue #255).
+   *
+   * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de ter passado pelo
+   * {@code ProdutorEmContextoResolver} antes; aqui ele é só o filtro das agregações.
+   *
+   * @param produtorId produtor já autorizado
+   * @param periodo    período no formato {@code YYYY-MM}
+   * @return relatório consolidado (débitos × créditos × saldo)
+   */
+  public RelatorioConformidadeResponse gerarDoProdutor(UUID produtorId, String periodo) {
+    YearMonth mes = parsePeriodo(periodo);
 
     OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
     OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
 
     DebitoSaldoAgregado debitos =
-        notaFiscalRepository.somarDebitosPorPeriodo(produtor.getId(), inicio, fim);
+        notaFiscalRepository.somarDebitosPorPeriodo(produtorId, inicio, fim);
     CreditoSaldoAgregado creditos =
-        notaFiscalRepository.somarCreditosPorPeriodo(produtor.getId(), inicio, fim);
+        notaFiscalRepository.somarCreditosPorPeriodo(produtorId, inicio, fim);
 
     BigDecimal debitoIbs = coalesce(debitos.debitoIbs());
     BigDecimal debitoCbs = coalesce(debitos.debitoCbs());
@@ -91,7 +107,7 @@ public class RelatorioConformidadeService {
     BigDecimal saldoAPagar = debitoTotal.subtract(creditoTotal);
 
     log.info("Relatorio de conformidade gerado: produtor={} periodo={} saidas={} entradas={}",
-        produtor.getId(), mes, debitos.quantidadeNotas(), creditos.quantidadeNotas());
+        produtorId, mes, debitos.quantidadeNotas(), creditos.quantidadeNotas());
 
     return new RelatorioConformidadeResponse(
         mes.toString(),
@@ -108,8 +124,19 @@ public class RelatorioConformidadeService {
    * @throws IllegalArgumentException se o período for inválido (HTTP 400)
    */
   public byte[] gerarPdf(String periodo) {
-    RelatorioConformidadeResponse relatorio = gerar(periodo);
-    Produtor produtor = produtorProvider.get();
+    return gerarPdfDoProdutor(produtorProvider.get(), periodo);
+  }
+
+  /**
+   * Mesmo PDF de {@link #gerarPdf(String)}, para um produtor já autorizado pelo chamador (issue
+   * #255). Mesmo contrato de segurança de {@link #gerarDoProdutor(UUID, String)}.
+   *
+   * @param produtor produtor já autorizado (nome e UF vão no cabeçalho do PDF)
+   * @param periodo  período no formato {@code YYYY-MM}
+   * @return bytes do PDF gerado
+   */
+  public byte[] gerarPdfDoProdutor(Produtor produtor, String periodo) {
+    RelatorioConformidadeResponse relatorio = gerarDoProdutor(produtor.getId(), periodo);
     return pdfService.gerarPdf(relatorio, produtor.getNomeCompleto(), produtor.getEstado());
   }
 

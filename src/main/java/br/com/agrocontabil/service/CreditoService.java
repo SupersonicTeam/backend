@@ -1,7 +1,6 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.CreditoSaldoResponse;
-import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.CreditoSaldoAgregado;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import java.math.BigDecimal;
@@ -63,20 +62,35 @@ public class CreditoService {
    */
   public CreditoSaldoResponse consultarSaldo(String periodo) {
     YearMonth mes = parsePeriodo(periodo);
-    Produtor produtor = produtorProvider.get();
+    return consultarSaldoDoProdutor(produtorProvider.get().getId(), mes.toString());
+  }
+
+  /**
+   * Mesma consulta de {@link #consultarSaldo(String)}, para um produtor já autorizado pelo
+   * chamador — o saldo de um cliente da carteira (issue #255).
+   *
+   * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de ter passado pelo
+   * {@code ProdutorEmContextoResolver} antes; aqui ele é só o filtro da agregação.
+   *
+   * @param produtorId produtor já autorizado
+   * @param periodo    período no formato {@code YYYY-MM}
+   * @return saldo consolidado do período (zerado quando não há notas de entrada no mês)
+   */
+  public CreditoSaldoResponse consultarSaldoDoProdutor(UUID produtorId, String periodo) {
+    YearMonth mes = parsePeriodo(periodo);
 
     OffsetDateTime inicio = mes.atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
     OffsetDateTime fim = mes.plusMonths(1).atDay(1).atStartOfDay(ZONE).toOffsetDateTime();
 
     CreditoSaldoAgregado agregado =
-        notaFiscalRepository.somarCreditosPorPeriodo(produtor.getId(), inicio, fim);
+        notaFiscalRepository.somarCreditosPorPeriodo(produtorId, inicio, fim);
 
     BigDecimal creditoIbs = coalesce(agregado.creditoIbs());
     BigDecimal creditoCbs = coalesce(agregado.creditoCbs());
     BigDecimal total = creditoIbs.add(creditoCbs);
 
     log.info("Saldo de credito consultado: produtor={} periodo={} notas={}",
-        produtor.getId(), mes, agregado.quantidadeNotas());
+        produtorId, mes, agregado.quantidadeNotas());
 
     return new CreditoSaldoResponse(
         mes.toString(), creditoIbs, creditoCbs, total, agregado.quantidadeNotas());

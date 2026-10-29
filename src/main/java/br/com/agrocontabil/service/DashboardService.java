@@ -78,9 +78,25 @@ public class DashboardService {
    */
   public DashboardResponse montar(String periodo) {
     YearMonth mes = resolverPeriodo(periodo);
-    Produtor produtor = produtorProvider.get();
+    return montarDoProdutor(produtorProvider.get(), mes.toString());
+  }
 
-    ApuracaoResponse apuracao = apuracaoService.consultar(mes.toString());
+  /**
+   * Mesmo painel de {@link #montar(String)}, para um produtor já autorizado pelo chamador — o
+   * painel de um cliente da carteira (issue #255).
+   *
+   * <p><strong>Contrato de segurança:</strong> o produtor tem de ter passado pelo
+   * {@code ProdutorEmContextoResolver} antes; aqui o id dele é só o filtro das consultas.
+   *
+   * @param produtor produtor já autorizado
+   * @param periodo  período {@code YYYY-MM}; quando {@code null}, o mês corrente
+   * @return payload agregado do dashboard
+   */
+  public DashboardResponse montarDoProdutor(Produtor produtor, String periodo) {
+    YearMonth mes = resolverPeriodo(periodo);
+
+    ApuracaoResponse apuracao =
+        apuracaoService.consultarParaProdutor(produtor.getId(), mes.toString());
 
     return new DashboardResponse(
         DashboardMapper.toProdutorResumo(produtor),

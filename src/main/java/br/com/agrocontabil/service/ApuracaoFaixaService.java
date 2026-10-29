@@ -92,7 +92,31 @@ public class ApuracaoFaixaService {
   public List<ApuracaoResponse> consultar(String de, String ate, Integer ultimos,
       AgrupamentoApuracao agrupamento) {
     YearMonth[] faixa = resolverFaixa(de, ate, ultimos);
-    UUID produtorId = produtorProvider.get().getId();
+    return consultarFaixa(produtorProvider.get().getId(), faixa, agrupamento);
+  }
+
+  /**
+   * Mesma consulta de {@link #consultar}, para um produtor já autorizado pelo chamador — a apuração
+   * de um cliente da carteira (issue #255).
+   *
+   * <p><strong>Contrato de segurança:</strong> {@code produtorId} tem de ter passado pelo
+   * {@code ProdutorEmContextoResolver} antes; aqui ele é só o filtro das consultas.
+   *
+   * @param produtorId  produtor já autorizado
+   * @param de          primeiro mês ({@code YYYY-MM}), junto com {@code ate}
+   * @param ate         último mês ({@code YYYY-MM}), junto com {@code de}
+   * @param ultimos     atalho: 6, 12, 36 ou 60 meses terminando no mês corrente
+   * @param agrupamento {@code MES} (padrão), {@code TRIMESTRE}, {@code SEMESTRE} ou {@code ANO}
+   * @return um item por grupo
+   * @throws FaixaApuracaoInvalidaException combinação, ordem, tamanho ou atalho inválidos (400)
+   */
+  public List<ApuracaoResponse> consultarDoProdutor(UUID produtorId, String de, String ate,
+      Integer ultimos, AgrupamentoApuracao agrupamento) {
+    return consultarFaixa(produtorId, resolverFaixa(de, ate, ultimos), agrupamento);
+  }
+
+  private List<ApuracaoResponse> consultarFaixa(UUID produtorId, YearMonth[] faixa,
+      AgrupamentoApuracao agrupamento) {
     List<ApuracaoResponse> meses = mesesDaFaixa(produtorId, faixa[0], faixa[1]);
     AgrupamentoApuracao grupo = agrupamento != null ? agrupamento : AgrupamentoApuracao.MES;
     return grupo == AgrupamentoApuracao.MES ? meses : agrupar(meses, grupo, faixa[0], faixa[1]);
