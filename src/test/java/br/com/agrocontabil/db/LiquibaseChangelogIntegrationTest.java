@@ -594,6 +594,9 @@ class LiquibaseChangelogIntegrationTest {
         new java.math.BigDecimal("0.0005"), new java.math.BigDecimal("0.0005"))).isEqualTo(27);
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM aliquota_ibs_uf", Integer.class))
         .isEqualTo(54);
+  }
+
+  @Test
   @DisplayName("changeSet 0046: NCMs inexistentes trocados pelos codigos oficiais (#282)")
   void changeSet0046NcmCodigosOficiais() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
