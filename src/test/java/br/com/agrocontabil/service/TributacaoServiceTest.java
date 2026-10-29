@@ -128,11 +128,11 @@ class TributacaoServiceTest {
   @Test
   @DisplayName("deve aplicar reducao padrao do NCM quando o item nao informa percentualReducao")
   void shouldApplyNcmDefaultReductionWhenItemOmitsReduction() {
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
         .thenReturn(Optional.of(new BigDecimal("40")));
     // percentualReducao nulo no item -> usa o default do NCM (40%)
     NotaFiscal nota = buildNotaComUmItem(new BigDecimal("1000.00"), null, "6101");
-    nota.getItens().get(0).setNcm("12010090");
+    nota.getItens().get(0).setNcm("12019000");
 
     service.calcular(nota);
 
@@ -148,10 +148,10 @@ class TributacaoServiceTest {
   void itemReductionShouldOverrideNcmDefault() {
     // NCM traz 40% de default, mas o item informa 0% explicitamente -> vence o item (0%).
     lenient()
-        .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+        .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
         .thenReturn(Optional.of(new BigDecimal("40")));
     NotaFiscal nota = buildNotaComUmItem(new BigDecimal("1000.00"), BigDecimal.ZERO, "6101");
-    nota.getItens().get(0).setNcm("12010090");
+    nota.getItens().get(0).setNcm("12019000");
 
     service.calcular(nota);
 
@@ -406,7 +406,7 @@ class TributacaoServiceTest {
         .id(UUID.randomUUID())
         .numeroItem(1)
         .descricao("Produto Teste")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop(cfop)
         .unidade("KG")
         .quantidade(BigDecimal.ONE)

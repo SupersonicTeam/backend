@@ -36,16 +36,16 @@ class NcmValidatorTest {
   @Test
   @DisplayName("NCM existente na tabela de referencia deve ser valido")
   void ncmExistenteDeveSerValido() {
-    when(repository.findAllCodigos()).thenReturn(List.of("12010090", "10059010"));
+    when(repository.findAllCodigos()).thenReturn(List.of("12019000", "10059010"));
     validator.carregarCache();
 
-    assertThat(validator.isValid("12010090", null)).isTrue();
+    assertThat(validator.isValid("12019000", null)).isTrue();
   }
 
   @Test
   @DisplayName("NCM inexistente na tabela de referencia deve ser invalido")
   void ncmInexistenteDeveSerInvalido() {
-    when(repository.findAllCodigos()).thenReturn(List.of("12010090"));
+    when(repository.findAllCodigos()).thenReturn(List.of("12019000"));
     validator.carregarCache();
 
     assertThat(validator.isValid("99999999", null)).isFalse();
@@ -54,7 +54,7 @@ class NcmValidatorTest {
   @Test
   @DisplayName("NCM null deve ser valido (delegado ao @NotBlank)")
   void ncmNullDeveSerValido() {
-    lenient().when(repository.findAllCodigos()).thenReturn(List.of("12010090"));
+    lenient().when(repository.findAllCodigos()).thenReturn(List.of("12019000"));
     validator.carregarCache();
 
     assertThat(validator.isValid(null, null)).isTrue();
@@ -63,7 +63,7 @@ class NcmValidatorTest {
   @Test
   @DisplayName("NCM em branco deve ser valido (delegado ao @NotBlank)")
   void ncmBlankDeveSerValido() {
-    lenient().when(repository.findAllCodigos()).thenReturn(List.of("12010090"));
+    lenient().when(repository.findAllCodigos()).thenReturn(List.of("12019000"));
     validator.carregarCache();
 
     assertThat(validator.isValid("   ", null)).isTrue();

@@ -107,7 +107,7 @@ class NotaFiscalUpdateItemFlowTest {
   private NotaFiscalRequest buildRequest(Long numeroItem, String descricao,
       BigDecimal quantidade, BigDecimal valorUnitario) {
     NotaFiscalItemRequest item = new NotaFiscalItemRequest(
-        numeroItem.intValue(), null, descricao, "12010090", "6101", "KG",
+        numeroItem.intValue(), null, descricao, "12019000", "6101", "KG",
         quantidade, valorUnitario, null, null, null);
 
     return new NotaFiscalRequest(

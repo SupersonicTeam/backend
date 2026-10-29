@@ -68,7 +68,7 @@ class SchemaTestIntegridadeReferencialTest {
   private static final String INSERT_ITEM =
       "INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, descricao, ncm, cfop, "
           + "unidade, quantidade, valor_unitario, valor_total) "
-          + "VALUES (?, ?, 1, 'Soja', '12010090', '6101', 'KG', 1, 10.00, 10.00)";
+          + "VALUES (?, ?, 1, 'Soja', '12019000', '6101', 'KG', 1, 10.00, 10.00)";
 
   private static final String INSERT_APURACAO =
       "INSERT INTO apuracao_mensal (id, produtor_id, periodo, status, debito_ibs, debito_cbs, "

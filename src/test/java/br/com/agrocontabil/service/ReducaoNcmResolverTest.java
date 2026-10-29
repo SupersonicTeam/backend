@@ -36,7 +36,7 @@ class ReducaoNcmResolverTest {
   @DisplayName("percentualReducao do item prevalece e nao consulta a tabela de NCM")
   void percentualDoItemPrevalece() {
     NotaFiscalItem item = NotaFiscalItem.builder()
-        .ncm("12010090")
+        .ncm("12019000")
         .percentualReducao(new BigDecimal("40"))
         .build();
 
@@ -49,9 +49,9 @@ class ReducaoNcmResolverTest {
   @Test
   @DisplayName("Sem percentualReducao no item, usa a reducao padrao do NCM")
   void usaReducaoPadraoDoNcm() {
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
         .thenReturn(Optional.of(new BigDecimal("60")));
-    NotaFiscalItem item = NotaFiscalItem.builder().ncm("12010090").build();
+    NotaFiscalItem item = NotaFiscalItem.builder().ncm("12019000").build();
 
     BigDecimal reducao = resolver.resolver(item);
 

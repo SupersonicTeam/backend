@@ -227,7 +227,7 @@ class NotaFiscalControllerTest {
             {
               "numeroItem": 1,
               "descricao": "Produto X",
-              "ncm": "12010090",
+              "ncm": "12019000",
               "cfop": "6101",
               "unidade": "UN",
               "quantidade": 10,
@@ -262,7 +262,7 @@ class NotaFiscalControllerTest {
             {
               "numeroItem": 1,
               "descricao": "Produto X",
-              "ncm": "12010090",
+              "ncm": "12019000",
               "cfop": "6101",
               "unidade": "UN",
               "quantidade": 10,
@@ -794,7 +794,7 @@ class NotaFiscalControllerTest {
             {
               "numeroItem": 1,
               "descricao": "Soja em graos",
-              "ncm": "12010090",
+              "ncm": "12019000",
               "cfop": "6101",
               "unidade": "KG",
               "quantidade": 500.0,

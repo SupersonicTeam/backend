@@ -150,7 +150,7 @@ class DanfePreviewIntegrationTest {
         .status(status)
         .build();
     nota.addItem(NotaFiscalItem.builder()
-        .numeroItem(1).descricao("Soja em graos").ncm("12010090").cfop("5101")
+        .numeroItem(1).descricao("Soja em graos").ncm("12019000").cfop("5101")
         .unidade("KG").quantidade(new BigDecimal("500")).valorUnitario(new BigDecimal("2"))
         .valorTotal(new BigDecimal("1000.00"))
         .build());

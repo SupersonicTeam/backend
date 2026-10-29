@@ -314,7 +314,7 @@ class NotaFiscalEscopoTransacionalIntegrationTest {
       nota.addItem(NotaFiscalItem.builder()
           .numeroItem(i)
           .descricao("Soja em graos - lote " + i)
-          .ncm("12010090")
+          .ncm("12019000")
           .cfop("6101")
           .unidade("KG")
           .quantidade(BigDecimal.ONE)

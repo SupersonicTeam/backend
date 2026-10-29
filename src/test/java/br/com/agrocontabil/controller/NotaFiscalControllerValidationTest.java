@@ -139,7 +139,7 @@ class NotaFiscalControllerValidationTest {
             {
               "numeroItem": 1,
               "descricao": "Soja em graos",
-              "ncm": "12010090",
+              "ncm": "12019000",
               "cfop": "6101",
               "unidade": "KG",
               "quantidade": 100,
