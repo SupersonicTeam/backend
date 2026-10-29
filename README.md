@@ -130,6 +130,15 @@ br.com.agrocontabil
 
 Arquitetura em camadas (MVC/clean): o fluxo de uma requisição é sempre `Controller → Service → Repository`. Controllers nunca contêm regra de negócio; entidades JPA nunca são expostas diretamente — sempre via DTO. Erros saem padronizados pelo `GlobalExceptionHandler` no envelope `ApiError.errors[]`.
 
+## Premissas e escopo
+
+O cálculo de IBS/CBS vale para o produtor **no regime regular** (LC 214/2025, arts. 164 e 165:
+acima do limite de receita ou optante); o produtor não contribuinte e o crédito presumido do
+comprador (art. 168) ficam para a [#281](https://github.com/SupersonicTeam/backend/issues/281).
+ICMS e Funrural seguem por guia, com o contador. Detalhes em
+[`docs/premissas-e-escopo.md`](docs/premissas-e-escopo.md); resposta preparada para a banca em
+[`docs/roteiro-banca-regime-regular.md`](docs/roteiro-banca-regime-regular.md).
+
 ## Funcionalidades (módulo Notas Fiscais)
 
 Emissão completa de NF-e modelo 55, exposta em `/api/notas`:

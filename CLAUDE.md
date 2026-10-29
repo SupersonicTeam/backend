@@ -18,6 +18,23 @@ Este repositório tem skills fixas em `.claude/skills/`. **Antes** de ler arquiv
 
 Backend do **AgroContabil** — software de auxílio ao produtor rural e ao escritório de contabilidade na reforma tributária do agronegócio (IBS/CBS — EC 132/2023 + LC 214/2025). TCC 2026, Supersonic Team (Murillo Weiss, Luiz Feliz Gervazio, Herick Eduardo Vavassori).
 
+## Premissas e escopo (issue #280, até a #281)
+
+Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
+`docs/roteiro-banca-regime-regular.md`). Resumo:
+
+- **O cálculo de IBS/CBS vale para o produtor no regime regular** (LC 214/2025, arts. 164 e 165):
+  acima do limite do art. 164 ou optante. Não contribuinte (inclusive o produtor integrado sem
+  opção), crédito presumido do comprador (art. 168), transição de limite, opção/renúncia e o
+  diferimento dos insumos do Anexo IX (art. 138, § 2º) estão **fora do escopo**; a modelagem é a
+  [#281](https://github.com/SupersonicTeam/backend/issues/281). Não criar campo de situação fora
+  dela.
+- **ICMS e Funrural por guia:** a NF-e não tem o grupo de ICMS por item (total zerado); o sistema
+  trata da reforma e os tributos atuais ficam com o contador.
+- **Demonstração:** o produtor semeado é optante (art. 165), nas observações do vínculo semeado.
+  **Pendente:** o seed é `PESSOA_FISICA` com `regimeTributario = SIMPLES`, que sai como CRT 1 na
+  NF-e e liga DAS/DEFIS no calendário — contradiz a premissa (ver o doc, seção 2).
+
 ## Stack fixada
 
 Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 (+ pgvector) · Liquibase · Spring Security · Bean Validation · Spring Actuator · springdoc-openapi 2.8.x · Spring AI 1.1.8 (Ollama local + API compatível com a da OpenAI) · JUnit 5 + Mockito · Docker Compose.

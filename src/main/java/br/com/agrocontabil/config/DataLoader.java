@@ -81,6 +81,17 @@ public class DataLoader implements CommandLineRunner {
    */
   private static final String CNPJ_CONTADOR = "12.345.678/0001-95";
 
+  /**
+   * Premissa da demonstração (issue #280): o produtor semeado é optante pelo regime regular do
+   * IBS/CBS (LC 214, art. 165). Não há campo de modelo para a situação do produtor (issue #281);
+   * o registro vai nas observações internas do vínculo, que o contador vê na ficha. Só no vínculo
+   * criado pelo seed: banco já semeado recebe o texto pela própria ficha
+   * ({@code PATCH /api/contador/produtores/{produtorId}/ficha}), nunca por reescrita na subida.
+   */
+  static final String OBSERVACAO_OPTANTE = "Optante pelo regime regular do IBS/CBS (LC 214/2025, "
+      + "art. 165): receita abaixo do limite do art. 164, inscrito como contribuinte por opção. O "
+      + "AgroContábil calcula o IBS/CBS do regime regular (premissa da issue #280).";
+
   /** Modelos de obrigação do changeSet 0040 que o seed personaliza (issue #181). */
   static final UUID MODELO_DAS = UUID.fromString("00000000-0000-4000-8181-000000000001");
   static final UUID MODELO_DEFIS = UUID.fromString("00000000-0000-4000-8181-000000000004");
@@ -234,6 +245,7 @@ public class DataLoader implements CommandLineRunner {
         .produtorId(produtorA.getId())
         .situacao(SituacaoVinculo.ATIVO)
         .inicio(OffsetDateTime.now())
+        .observacoes(OBSERVACAO_OPTANTE)
         .build());
     log.info(
         "Contador semeado: {} (id: {}) — atende o produtor {}",

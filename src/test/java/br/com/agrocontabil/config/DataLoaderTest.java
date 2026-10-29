@@ -218,6 +218,8 @@ class DataLoaderTest {
     assertThat(contador.getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
     assertThat(vinculo.getProdutorId()).isEqualTo(produtorA.getId());
     assertThat(vinculo.getSituacao()).isEqualTo(SituacaoVinculo.ATIVO);
+    // Premissa da demonstracao (#280): o cliente semeado e optante pelo regime regular.
+    assertThat(vinculo.getObservacoes()).contains("art. 165");
   }
 
   @Test
