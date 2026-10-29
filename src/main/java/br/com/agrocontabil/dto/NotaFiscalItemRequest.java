@@ -43,7 +43,7 @@ public record NotaFiscalItemRequest(
     @NotBlank(message = "descricao e obrigatoria")
     String descricao,
 
-    @Schema(description = "Codigo NCM com 8 digitos numericos", example = "12010090")
+    @Schema(description = "Codigo NCM com 8 digitos numericos", example = "12019000")
     @NotBlank(message = "ncm e obrigatorio")
     @Pattern(regexp = "\\d{8}", message = "ncm deve ter exatamente 8 digitos numericos")
     @ValidNcm

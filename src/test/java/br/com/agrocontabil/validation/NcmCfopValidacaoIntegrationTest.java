@@ -105,7 +105,7 @@ class NcmCfopValidacaoIntegrationTest {
   @DisplayName("POST com CFOP inaplicavel ao produtor rural deve retornar 400")
   void postComCfopInaplicavelDeveRetornar400() throws Exception {
     // 1556 existe na tabela mas nao e aplicavel ao produtor rural.
-    String payload = payload("12010090", "1556");
+    String payload = payload("12019000", "1556");
 
     mockMvc.perform(post("/api/notas")
             .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +118,7 @@ class NcmCfopValidacaoIntegrationTest {
   @Test
   @DisplayName("POST com NCM e CFOP validos deve retornar 201")
   void postComNcmCfopValidosDeveRetornar201() throws Exception {
-    String payload = payload("12010090", "6101");
+    String payload = payload("12019000", "6101");
 
     mockMvc.perform(post("/api/notas")
             .contentType(MediaType.APPLICATION_JSON)

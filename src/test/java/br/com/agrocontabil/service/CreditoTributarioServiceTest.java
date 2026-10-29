@@ -197,10 +197,10 @@ class CreditoTributarioServiceTest {
   @DisplayName("Credito aplica a reducao padrao do NCM quando o item omite percentualReducao (#52)")
   void creditoAplicaReducaoPadraoPorNcm() {
     // NCM com reducao padrao de 60% na tabela de referencia; item nao informa percentualReducao.
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
         .thenReturn(Optional.of(new BigDecimal("60")));
     NotaFiscalItem item = item("6101", "1000.00");
-    item.setNcm("12010090");
+    item.setNcm("12019000");
     NotaFiscal nota = notaImportada(item);
 
     service.calcular(nota);
@@ -214,10 +214,10 @@ class CreditoTributarioServiceTest {
   @DisplayName("percentualReducao informado no item prevalece sobre a reducao padrao do NCM (#52)")
   void percentualReducaoDoItemPrevaleceSobreNcm() {
     // Mesmo com o NCM tendo reducao padrao de 30%, o valor informado no item (60%) prevalece.
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12010090"))
+    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
         .thenReturn(Optional.of(new BigDecimal("30")));
     NotaFiscalItem item = item("6101", "1000.00");
-    item.setNcm("12010090");
+    item.setNcm("12019000");
     item.setPercentualReducao(new BigDecimal("60"));
     NotaFiscal nota = notaImportada(item);
 

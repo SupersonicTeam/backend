@@ -386,7 +386,7 @@ class NotaFiscalServiceTest {
         1,
         null,
         "Produto com fracao",
-        "12010090",
+        "12019000",
         "6101",
         "UN",
         new BigDecimal("3"),
@@ -424,7 +424,7 @@ class NotaFiscalServiceTest {
     // Item 2: 5 * 4.00 = 20.00
     // Total esperado: 45.00
     NotaFiscalItemRequest item1 = new NotaFiscalItemRequest(
-        1, null, "Soja em graos", "12010090", "6101", "KG",
+        1, null, "Soja em graos", "12019000", "6101", "KG",
         new BigDecimal("10"), new BigDecimal("2.50"), null, null, null);
     NotaFiscalItemRequest item2 = new NotaFiscalItemRequest(
         2, null, "Milho em graos", "10059010", "6101", "KG",
@@ -479,7 +479,7 @@ class NotaFiscalServiceTest {
         "Comprador Teste", "12345678901",
         null, null,
         List.of(new NotaFiscalItemRequest(
-            1, null, "Soja", "12010090", "6101", "KG",
+            1, null, "Soja", "12019000", "6101", "KG",
             new BigDecimal("1"), new BigDecimal("10.00"), null, null, null)));
 
     when(produtorProvider.get()).thenReturn(produtor);
@@ -586,7 +586,7 @@ class NotaFiscalServiceTest {
 
     // Novo request com 2 itens
     NotaFiscalItemRequest item1 = new NotaFiscalItemRequest(
-        1, null, "Soja", "12010090", "6101", "KG",
+        1, null, "Soja", "12019000", "6101", "KG",
         new BigDecimal("100"), new BigDecimal("3.00"), null, null, null);
     NotaFiscalItemRequest item2 = new NotaFiscalItemRequest(
         2, null, "Milho", "10059010", "6101", "KG",
@@ -995,7 +995,7 @@ class NotaFiscalServiceTest {
         1,
         null,
         "Soja em graos",
-        "12010090",
+        "12019000",
         "6101",
         "KG",
         new BigDecimal("500.0000"),
@@ -1023,7 +1023,7 @@ class NotaFiscalServiceTest {
         .id(UUID.randomUUID())
         .numeroItem(1)
         .descricao("Soja em graos")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("6101")
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))

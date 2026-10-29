@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0046-ncm-codigos-oficiais.xml
+         Issue #282.
+
+         Conferido em 2026-10-29 contra a nomenclatura NCM oficial (Siscomex,
+         "Vigente em 29/10/2026", Resolucao Gecex n. 926/2026): quatro codigos
+         semeados no 0007 nao existem.
+
+           12010090 (soja)        -> 12019000 (1201.90.00 Outras: grao)
+           12010010 (soja semente)-> 12011000 (1201.10.00 Para semeadura)
+           04070090 (ovos)        -> 04072100 (0407.21.00 ovos frescos de
+                                               Gallus domesticus) e 04072900
+                                               (0407.29.00 outros ovos frescos)
+           01039000 (suinos vivos)-> 01039100 (0103.91.00 peso < 50 kg) e
+                                     01039200 (0103.92.00 peso >= 50 kg)
+
+         Os inexistentes saem da referencia: NCM inexistente e recusado pela
+         SEFAZ, entao nao ha motivo para a RN008 aceita-lo. A reducao padrao
+         do ovo (60, ano-teste do 0012) passa ao codigo novo.
+
+         Itens de soja de notas AINDA NAO EMITIDAS (RASCUNHO,
+         COM_INCONSISTENCIAS, DEVOLVIDA, AGUARDANDO_APROVACAO, APROVADA) sao
+         corrigidos pelo de-para, que e unico (grao x semente). Ovos e suinos
+         nao tem de-para unico (especie da ave; peso do animal): esses itens
+         ficam como estao e o FiscalRulesValidator barra a emissao com a
+         mensagem do NCM fora da referencia, ate o produtor editar o item.
+         Notas ja emitidas/importadas (XML_GERADO em diante) NAO mudam: o XML
+         assinado e o documento fiscal.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0046-ncm-codigos-oficiais-inclui" author="supersonic-team">
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="12019000"/>
+            <column name="descricao" value="Soja, mesmo triturada, exceto para semeadura"/>
+            <column name="percentual_reducao_padrao" valueNumeric="0"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="12011000"/>
+            <column name="descricao" value="Soja para semeadura"/>
+            <column name="percentual_reducao_padrao" valueNumeric="0"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04072100"/>
+            <column name="descricao" value="Ovos frescos de galinha (Gallus domesticus), com casca"/>
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04072900"/>
+            <column name="descricao" value="Outros ovos frescos de aves, com casca (exceto de galinha)"/>
+            <column name="percentual_reducao_padrao" valueNumeric="60"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="01039100"/>
+            <column name="descricao" value="Suinos vivos de peso inferior a 50 kg"/>
+            <column name="percentual_reducao_padrao" valueNumeric="0"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="01039200"/>
+            <column name="descricao" value="Suinos vivos de peso igual ou superior a 50 kg"/>
+            <column name="percentual_reducao_padrao" valueNumeric="0"/>
+        </insert>
+        <rollback>
+            <delete tableName="ncm_agropecuario">
+                <where>codigo IN ('12019000','12011000','04072100','04072900','01039100','01039200')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0046-ncm-codigos-oficiais-corrige-rascunhos" author="supersonic-team">
+        <sql>
+            UPDATE nota_fiscal_item SET ncm = '12019000'
+             WHERE ncm = '12010090' AND nota_fiscal_id IN (SELECT id FROM nota_fiscal
+                   WHERE status IN ('RASCUNHO','COM_INCONSISTENCIAS','DEVOLVIDA',
+                                    'AGUARDANDO_APROVACAO','APROVADA'));
+            UPDATE nota_fiscal_item SET ncm = '12011000'
+             WHERE ncm = '12010010' AND nota_fiscal_id IN (SELECT id FROM nota_fiscal
+                   WHERE status IN ('RASCUNHO','COM_INCONSISTENCIAS','DEVOLVIDA',
+                                    'AGUARDANDO_APROVACAO','APROVADA'));
+        </sql>
+        <!-- Sem rollback: desfazer trocaria de volta por codigos que nao existem. -->
+        <rollback/>
+    </changeSet>
+
+    <changeSet id="0046-ncm-codigos-oficiais-remove-inexistentes" author="supersonic-team">
+        <delete tableName="ncm_agropecuario">
+            <where>codigo IN ('12010090','12010010','04070090','01039000')</where>
+        </delete>
+        <!-- Rollback devolve os codigos removidos (descricao e reducao do 0007/0012), para que
+             o rollback do changeSet de inclusao nao deixe soja, ovos e suinos sem codigo. -->
+        <rollback>
+            <sql>
+                INSERT INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) VALUES
+                    ('12010090', 'Soja, mesmo triturada (exceto para semeadura)', 0),
+                    ('12010010', 'Soja para semeadura', 0),
+                    ('04070090', 'Outros ovos de aves, com casca, frescos', 60),
+                    ('01039000', 'Suinos vivos (exceto reprodutores de raca pura)', 0);
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

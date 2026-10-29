@@ -309,7 +309,7 @@ class NotaFiscalMapperTest {
         .numeroItem(1)
         .codigoProduto("P001")
         .descricao("Soja em graos")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("6101")
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))
@@ -437,7 +437,7 @@ class NotaFiscalMapperTest {
         1,
         null,
         "Soja em graos",
-        "12010090",
+        "12019000",
         "6101",
         "KG",
         new BigDecimal(quantidade),
@@ -450,7 +450,7 @@ class NotaFiscalMapperTest {
         .id(UUID.randomUUID())
         .numeroItem(1)
         .descricao("Soja em graos")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("6101")
         .unidade("KG")
         .quantidade(new BigDecimal("100.0000"))

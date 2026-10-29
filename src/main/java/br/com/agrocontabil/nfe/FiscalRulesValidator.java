@@ -8,8 +8,10 @@ import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.validation.NcmValidator;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -44,6 +46,29 @@ public class FiscalRulesValidator {
 
   /** Maior serie representavel nos 3 digitos do layout e da chave de acesso (issue #88). */
   private static final int SERIE_MAXIMA = 999;
+
+  /**
+   * Existência do NCM na tabela de referência (RN008) na emissão — issue #282. O
+   * {@code @ValidNcm} só confere o request; nota gravada antes de um código sair da referência
+   * (os inexistentes removidos pelo changeSet 0046) chegaria à SEFAZ com NCM recusado. Nulo =
+   * sem conferência (testes unitários que montam o validador sem Spring).
+   */
+  private final NcmValidator ncmValidator;
+
+  /** Validador sem a conferência de existência do NCM (testes unitários sem Spring). */
+  public FiscalRulesValidator() {
+    this(null);
+  }
+
+  /**
+   * Validador completo.
+   *
+   * @param ncmValidator conferência do NCM contra a tabela de referência (RN008)
+   */
+  @Autowired
+  public FiscalRulesValidator(NcmValidator ncmValidator) {
+    this.ncmValidator = ncmValidator;
+  }
 
   /**
    * Valida a nota fiscal para emissão, agregando todas as violações encontradas.
@@ -280,6 +305,11 @@ public class FiscalRulesValidator {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 prefixo + ".ncm", "NCM e obrigatorio no layout da NF-e"));
+      } else if (ncmValidator != null && !ncmValidator.isValid(item.getNcm(), null)) {
+        violations.add(
+            new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+                prefixo + ".ncm", "NCM " + item.getNcm() + " nao consta na tabela de referencia"
+                    + " (nomenclatura oficial); edite o item e escolha o codigo correto"));
       }
 
       if (isBlank(item.getCfop())) {

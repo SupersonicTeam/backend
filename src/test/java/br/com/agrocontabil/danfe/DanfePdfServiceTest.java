@@ -108,7 +108,7 @@ class DanfePdfServiceTest {
         .contains("Jose Comprador").contains("987.654.321-00").contains("Rua das Flores, 100")
         .contains("78000-000").contains("9876543210")
         // Itens: código, NCM, CFOP.
-        .contains("SOJA-01").contains("1201.00.90").contains("6101")
+        .contains("SOJA-01").contains("1201.90.00").contains("6101")
         // Operação, chave em blocos e protocolo.
         .contains("Venda de producao rural").contains("SAÍDA").contains(CHAVE_FORMATADA)
         .contains("141260000012345");
@@ -221,7 +221,7 @@ class DanfePdfServiceTest {
         .numeroItem(numero)
         .codigoProduto(numero == 1 ? "SOJA-01" : "ITEM-" + numero)
         .descricao("Soja em graos")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("6101")
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))

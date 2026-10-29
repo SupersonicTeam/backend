@@ -128,7 +128,7 @@ class NotaFiscalRepositoryTest {
     NotaFiscalItem retrievedItem = retrieved.getItens().get(0);
     assertThat(retrievedItem.getNumeroItem()).isEqualTo(1);
     assertThat(retrievedItem.getDescricao()).isEqualTo("Soja em graos");
-    assertThat(retrievedItem.getNcm()).isEqualTo("12010090");
+    assertThat(retrievedItem.getNcm()).isEqualTo("12019000");
     assertThat(retrievedItem.getCfop()).isEqualTo("6101");
     assertThat(retrievedItem.getUnidade()).isEqualTo("KG");
     assertThat(retrievedItem.getQuantidade()).isEqualByComparingTo("500.0000");
@@ -364,7 +364,7 @@ class NotaFiscalRepositoryTest {
     return NotaFiscalItem.builder()
         .numeroItem(1)
         .descricao("Soja em graos")
-        .ncm("12010090")
+        .ncm("12019000")
         .cfop("6101")
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))

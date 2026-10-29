@@ -131,7 +131,7 @@ class RevisaoNotaIntegrationTest {
         .build();
     BigDecimal valor = new BigDecimal("1000.00");
     nota.addItem(NotaFiscalItem.builder().numeroItem(1).descricao("Soja em graos")
-        .ncm("12010090").cfop("6101").unidade("KG").quantidade(BigDecimal.ONE)
+        .ncm("12019000").cfop("6101").unidade("KG").quantidade(BigDecimal.ONE)
         .valorUnitario(valor).valorTotal(valor).build());
     nota.setValorTotalProdutos(valor);
     nota.setValorTotalNota(valor);
