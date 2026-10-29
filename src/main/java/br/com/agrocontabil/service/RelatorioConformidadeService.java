@@ -15,6 +15,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -27,9 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code ApuracaoMensal} (desenvolvida em paralelo em outra issue) — o desacoplamento é
  * intencional.
  *
- * <p><strong>Recorte de segurança (anti-IDOR):</strong> as agregações são sempre recortadas pelo
- * ID do produtor autenticado obtido via {@link AuthenticatedProdutorProvider}, no {@code WHERE}
- * das queries do repositório.
+ * <p><strong>Recorte de segurança (anti-IDOR):</strong> as agregações são sempre recortadas por
+ * um produtor no {@code WHERE}: o autenticado ({@link AuthenticatedProdutorProvider}) na rota do
+ * produtor, ou o cliente já autorizado pelo {@code ProdutorEmContextoResolver} na rota da carteira
+ * (issue #255). As variantes {@code ...DoProdutor} não autorizam: nunca as chame com um id vindo
+ * do cliente sem passar antes pelo resolver.
  *
  * <p><strong>Premissa fiscal (LC 214/2025, arts. 47–51):</strong> a apuração é não-cumulativa —
  * do débito das saídas do período deduz-se o crédito das entradas do mesmo período (competência
@@ -123,18 +126,24 @@ public class RelatorioConformidadeService {
    * @return bytes do PDF gerado
    * @throws IllegalArgumentException se o período for inválido (HTTP 400)
    */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public byte[] gerarPdf(String periodo) {
-    return gerarPdfDoProdutor(produtorProvider.get(), periodo);
+    YearMonth mes = parsePeriodo(periodo);
+    return gerarPdfDoProdutor(produtorProvider.get(), mes.toString());
   }
 
   /**
    * Mesmo PDF de {@link #gerarPdf(String)}, para um produtor já autorizado pelo chamador (issue
    * #255). Mesmo contrato de segurança de {@link #gerarDoProdutor(UUID, String)}.
    *
+   * <p>Fora de transação: as agregações rodam cada uma na transação curta do repositório e o
+   * JasperReports desenha o PDF sem segurar conexão do pool (mesmo cuidado da DANFE, #99).
+   *
    * @param produtor produtor já autorizado (nome e UF vão no cabeçalho do PDF)
    * @param periodo  período no formato {@code YYYY-MM}
    * @return bytes do PDF gerado
    */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public byte[] gerarPdfDoProdutor(Produtor produtor, String periodo) {
     RelatorioConformidadeResponse relatorio = gerarDoProdutor(produtor.getId(), periodo);
     return pdfService.gerarPdf(relatorio, produtor.getNomeCompleto(), produtor.getEstado());

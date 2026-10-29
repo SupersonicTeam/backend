@@ -73,6 +73,25 @@ class CarteiraIndicadoresServiceTest {
   }
 
   @Test
+  @DisplayName("relatorio JSON e faixa: autorizacao antes; periodo + faixa conferido depois dela")
+  void ordemNasDemaisRotas() {
+    service.relatorioConformidade(PRODUTOR, "2026-09");
+    service.apuracaoDaFaixa(PRODUTOR, "2026-01", "2026-06", null, null);
+    service.apuracaoDoMes(PRODUTOR, "2026-09", null, null, null, null);
+
+    InOrder ordem = inOrder(produtorEmContexto, relatorioService, apuracaoFaixaService,
+        apuracaoService);
+    ordem.verify(produtorEmContexto).exigirContadorComAcesso(PRODUTOR);
+    ordem.verify(relatorioService).gerarDoProdutor(PRODUTOR, "2026-09");
+    ordem.verify(produtorEmContexto).exigirContadorComAcesso(PRODUTOR);
+    ordem.verify(apuracaoFaixaService).consultarDoProdutor(PRODUTOR, "2026-01", "2026-06", null,
+        null);
+    ordem.verify(produtorEmContexto).exigirContadorComAcesso(PRODUTOR);
+    ordem.verify(apuracaoFaixaService).exigirSemFaixa(null, null, null, null);
+    ordem.verify(apuracaoService).consultarParaProdutor(PRODUTOR, "2026-09");
+  }
+
+  @Test
   @DisplayName("PDF e dashboard recebem o cliente carregado (nome e UF no cabecalho)")
   void pdfComOCliente() {
     Produtor cliente = Produtor.builder().id(PRODUTOR).nomeCompleto("Cliente").estado("MT")
@@ -81,5 +100,8 @@ class CarteiraIndicadoresServiceTest {
     when(relatorioService.gerarPdfDoProdutor(cliente, "2026-09")).thenReturn(new byte[] {1});
 
     assertThat(service.relatorioConformidadePdf(PRODUTOR, "2026-09")).containsExactly(1);
+    InOrder ordem = inOrder(produtorEmContexto, produtorRepository);
+    ordem.verify(produtorEmContexto).exigirContadorComAcesso(PRODUTOR);
+    ordem.verify(produtorRepository).findById(PRODUTOR);
   }
 }

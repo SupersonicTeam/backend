@@ -25,9 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
  * e agregados por mês diretamente das notas. Não depende da entidade {@code ApuracaoMensal}
  * (desenvolvida em paralelo em outra issue) — o desacoplamento é intencional.
  *
- * <p><strong>Recorte de segurança (anti-IDOR):</strong> a agregação é sempre feita pelo ID do
- * produtor autenticado obtido via {@link AuthenticatedProdutorProvider}; a query do repositório
- * filtra por esse ID, de modo que um produtor nunca soma créditos de outro.
+ * <p><strong>Recorte de segurança (anti-IDOR):</strong> a agregação é sempre filtrada por um
+ * produtor: o autenticado ({@link AuthenticatedProdutorProvider}) na rota do produtor, ou o
+ * cliente já autorizado pelo {@code ProdutorEmContextoResolver} na rota da carteira (issue #255,
+ * {@code CarteiraIndicadoresService}). As variantes {@code ...DoProdutor} não autorizam: nunca
+ * as chame com um id vindo do cliente sem passar antes pelo resolver.
  *
  * <p><strong>Premissa fiscal (LC 214/2025):</strong> a apropriação do crédito segue a
  * competência da <em>emissão</em> da nota de entrada ({@code dataEmissao}); o recorte mensal usa

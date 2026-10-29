@@ -259,7 +259,8 @@ class CarteiraIndicadoresIntegrationTest {
   // -------------------------------------------------------------------------
 
   private String token(String email) throws Exception {
-    MvcResult login = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+    MvcResult login = mockMvc.perform(post("/api/auth/login")
+        .contentType(MediaType.APPLICATION_JSON)
         .content("{\"email\":\"%s\",\"senha\":\"%s\"}".formatted(email, SENHA))).andReturn();
     return "Bearer " + objectMapper.readTree(login.getResponse().getContentAsString())
         .get("accessToken").asText();

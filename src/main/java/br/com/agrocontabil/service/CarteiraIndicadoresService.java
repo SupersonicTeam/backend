@@ -54,7 +54,8 @@ public class CarteiraIndicadoresService {
   /**
    * Apuração de um mês do cliente, como {@code GET /api/apuracao?periodo=}: {@code periodo} vem
    * sozinho (com faixa junto → 400 {@code FAIXA_APURACAO_INVALIDA}). A combinação só é conferida
-   * depois da autorização, para quem está fora da carteira receber 404 e não 400.
+   * depois da autorização, para quem está fora da carteira receber 404 e não 400 (o formato de
+   * cada parâmetro, esse sim, é conferido antes, pelo Bean Validation do controller).
    *
    * @param produtorId  cliente da carteira ativa
    * @param de          início da faixa (deve ser nulo)
