@@ -49,7 +49,7 @@
     <changeSet id="0048-create-classificacao-tributaria" author="supersonic-team">
         <createTable tableName="classificacao_tributaria">
             <column name="c_class_trib" type="VARCHAR(6)">
-                <constraints primaryKey="true" primaryKeyName="pk_classificacao_tributaria" nullable="false"/>
+                <constraints nullable="false"/>
             </column>
             <column name="cst" type="VARCHAR(3)">
                 <constraints nullable="false"/>
@@ -71,15 +71,19 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+        <!-- Chave com a vigencia: nova versao do IT com outro percentual = linha nova (data_inicio
+             nova), fechando a anterior com data_fim; nunca update do percentual. -->
+        <addPrimaryKey tableName="classificacao_tributaria"
+                       columnNames="c_class_trib, data_inicio"
+                       constraintName="pk_classificacao_tributaria"/>
 
         <createTable tableName="classificacao_tributaria_anexo_item">
             <column name="id" type="INTEGER">
                 <constraints primaryKey="true" primaryKeyName="pk_classificacao_tributaria_anexo_item" nullable="false"/>
             </column>
+            <!-- Sem FK: o codigo se repete em classificacao_tributaria a cada vigencia. -->
             <column name="c_class_trib" type="VARCHAR(6)">
-                <constraints nullable="false"
-                             foreignKeyName="fk_anexo_item_classificacao"
-                             references="classificacao_tributaria(c_class_trib)"/>
+                <constraints nullable="false"/>
             </column>
             <column name="anexo" type="INTEGER">
                 <constraints nullable="false"/>

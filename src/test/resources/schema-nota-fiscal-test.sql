@@ -600,7 +600,7 @@ CREATE TABLE IF NOT EXISTS classificacao_tributaria (
     data_inicio             DATE           NOT NULL,
     data_fim                DATE,
     versao_tabela           VARCHAR(40)    NOT NULL,
-    CONSTRAINT pk_classificacao_tributaria PRIMARY KEY (c_class_trib)
+    CONSTRAINT pk_classificacao_tributaria PRIMARY KEY (c_class_trib, data_inicio)
 );
 
 CREATE TABLE IF NOT EXISTS classificacao_tributaria_anexo_item (
@@ -610,9 +610,7 @@ CREATE TABLE IF NOT EXISTS classificacao_tributaria_anexo_item (
     descricao     VARCHAR(1500)  NOT NULL,
     condicao      VARCHAR(255),
     excecao       VARCHAR(1000),
-    CONSTRAINT pk_classificacao_tributaria_anexo_item PRIMARY KEY (id),
-    CONSTRAINT fk_anexo_item_classificacao FOREIGN KEY (c_class_trib)
-        REFERENCES classificacao_tributaria (c_class_trib)
+    CONSTRAINT pk_classificacao_tributaria_anexo_item PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS classificacao_tributaria_anexo_ncm (
@@ -631,7 +629,7 @@ CREATE INDEX IF NOT EXISTS idx_classificacao_tributaria_anexo_ncm_ncm
     ON classificacao_tributaria_anexo_ncm (ncm);
 
 MERGE INTO classificacao_tributaria (c_class_trib, cst, descricao, percentual_reducao_ibs,
-    percentual_reducao_cbs, data_inicio, data_fim, versao_tabela) KEY (c_class_trib)
+    percentual_reducao_cbs, data_inicio, data_fim, versao_tabela) KEY (c_class_trib, data_inicio)
     SELECT c_class_trib, cst, descricao, percentual_reducao_ibs, percentual_reducao_cbs,
            data_inicio, data_fim, versao_tabela
       FROM CSVREAD('classpath:db/changelog/data/classificacao-tributaria.csv', NULL,

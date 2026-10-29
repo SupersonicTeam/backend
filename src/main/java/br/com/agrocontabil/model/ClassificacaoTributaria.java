@@ -3,7 +3,9 @@ package br.com.agrocontabil.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
@@ -23,6 +25,7 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "classificacao_tributaria")
+@IdClass(ClassificacaoTributaria.Chave.class)
 @Data
 @Builder
 @NoArgsConstructor
@@ -50,8 +53,9 @@ public class ClassificacaoTributaria {
   @Column(name = "percentual_reducao_cbs", precision = 5, scale = 2, nullable = false)
   private BigDecimal percentualReducaoCbs;
 
-  /** Início da vigência (inclusive). */
-  @Column(name = "data_inicio", nullable = false)
+  /** Início da vigência (inclusive); parte da chave, para versões futuras da tabela. */
+  @Id
+  @Column(name = "data_inicio", nullable = false, updatable = false)
   private LocalDate dataInicio;
 
   /** Fim da vigência (inclusive); {@code null} = aberta. */
@@ -62,13 +66,12 @@ public class ClassificacaoTributaria {
   @Column(name = "versao_tabela", length = 40, nullable = false)
   private String versaoTabela;
 
-  /**
-   * Indica se a classificação vale na data.
-   *
-   * @param data data de referência
-   * @return {@code true} se {@code dataInicio <= data <= dataFim} (fim aberto incluso)
-   */
-  public boolean vigenteEm(LocalDate data) {
-    return !dataInicio.isAfter(data) && (dataFim == null || !dataFim.isBefore(data));
+  /** Chave composta (código, início da vigência). */
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Chave implements Serializable {
+    private String codigo;
+    private LocalDate dataInicio;
   }
 }

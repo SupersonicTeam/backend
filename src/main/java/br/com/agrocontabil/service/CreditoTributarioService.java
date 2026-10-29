@@ -132,7 +132,11 @@ public class CreditoTributarioService {
         item.setValorCreditoCbs(null);
         continue;
       }
-      BigDecimal baseCalculo = baseCalculo(item);
+      ReducaoNcmResolver.ReducaoAplicada aplicada = reducaoNcmResolver.tratamento(item);
+      // O tratamento aplicado tambem na nota importada: a tela le estes campos (#272).
+      item.setPercentualReducaoAplicado(aplicada.percentualReducao());
+      item.setCClassTribAplicado(aplicada.cClassTrib());
+      BigDecimal baseCalculo = baseCalculo(item, aplicada.percentualReducao());
       BigDecimal creditoIbs = baseCalculo.multiply(aliquotaIbs)
           .multiply(fatorAproveitamento)
           .setScale(2, RoundingMode.HALF_UP);
@@ -173,8 +177,7 @@ public class CreditoTributarioService {
    * {@link ReducaoNcmResolver} (precedência item → NCM → zero), garantindo simetria
    * débito × crédito (issue Agrocontabil#52).
    */
-  private BigDecimal baseCalculo(NotaFiscalItem item) {
-    BigDecimal reducao = reducaoNcmResolver.resolver(item);
+  private BigDecimal baseCalculo(NotaFiscalItem item, BigDecimal reducao) {
     BigDecimal fatorReducao = BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
     return item.getValorTotal().multiply(fatorReducao).setScale(2, RoundingMode.HALF_UP);
   }

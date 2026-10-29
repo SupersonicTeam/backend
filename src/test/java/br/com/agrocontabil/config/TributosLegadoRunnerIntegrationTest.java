@@ -67,6 +67,7 @@ class TributosLegadoRunnerIntegrationTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
+    jdbc.update("DELETE FROM nota_fiscal_revisao");
     cleaner.limparTudo();
   }
 
@@ -94,6 +95,25 @@ class TributosLegadoRunnerIntegrationTest {
         .isEqualByComparingTo("400.00");
     // Segunda subida: nada a fazer.
     assertThat(runner.recalcularLegado()).isZero();
+  }
+
+  @Test
+  @DisplayName("nota aprovada com valores mudados volta a RASCUNHO com APROVACAO_CADUCADA")
+  void aprovadaComValorNovoPerdeAprovacao() throws Exception {
+    String aprovada = criarNota("10063021");
+    java.util.UUID id = java.util.UUID.fromString(aprovada);
+    jdbc.update("UPDATE nota_fiscal_item SET percentual_reducao_aplicado = NULL,"
+        + " c_class_trib_aplicado = NULL, base_calculo_ibs_cbs = 400.00, valor_ibs = 0.40"
+        + " WHERE nota_fiscal_id = ?", id);
+    jdbc.update("UPDATE nota_fiscal SET status = 'APROVADA' WHERE id = ?", id);
+
+    assertThat(runner.recalcularLegado()).isEqualTo(1);
+
+    assertThat(jdbc.queryForObject("SELECT status FROM nota_fiscal WHERE id = ?", String.class,
+        id)).isEqualTo("RASCUNHO");
+    assertThat(jdbc.queryForObject("SELECT acao || ':' || motivo FROM nota_fiscal_revisao"
+        + " WHERE nota_fiscal_id = ?", String.class, id))
+        .isEqualTo("APROVACAO_CADUCADA:" + TributosLegadoRunner.MOTIVO_CADUCADA);
   }
 
   private Map<String, Object> item(String notaId) {

@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class ClassificacaoTributariaService {
+
+  private static final Logger log = LoggerFactory.getLogger(ClassificacaoTributariaService.class);
 
   static final String INTEGRAL = "000001";
   static final String IN_NATURA = "200036";
@@ -154,7 +158,7 @@ public class ClassificacaoTributariaService {
     if (cClassTrib == null) {
       return Optional.empty();
     }
-    return classificacaoRepository.findById(cClassTrib).filter(c -> c.vigenteEm(data));
+    return classificacaoRepository.findVigente(cClassTrib, data).stream().findFirst();
   }
 
   private TratamentoTributarioNcm tratamento(String ncm, String codigo, Origem origem,
@@ -164,7 +168,10 @@ public class ClassificacaoTributariaService {
         .map(ClassificacaoTributaria::getPercentualReducaoIbs)
         .orElse(BigDecimal.ZERO);
     if (classificacao.isEmpty() && origem != Origem.SEM_REDUCAO) {
-      // Tabela nao carregada (contexto de teste sem o seed): sem reducao, como o integral.
+      // Classificacao ausente ou fora de vigencia (tabela nao carregada, versao fechada sem
+      // sucessora): sem reducao, como o integral, mas nunca em silencio.
+      log.warn("cClassTrib {} sem vigencia em {} (ncm={}); IBS/CBS sem reducao", codigo, data,
+          ncm);
       return new TratamentoTributarioNcm(ncm, INTEGRAL, INTEGRAL.substring(0, 3), BigDecimal.ZERO,
           Origem.SEM_REDUCAO, null, enquadramentos, null);
     }
@@ -184,6 +191,14 @@ public class ClassificacaoTributariaService {
 
   private static EnquadramentoAnexo enquadramento(ClassificacaoTributariaAnexoItem item) {
     return new EnquadramentoAnexo(item.getCClassTrib(), item.getAnexo(), item.getDescricao(),
-        item.getCondicao(), item.getExcecao());
+        vazioComoNulo(item.getCondicao()), vazioComoNulo(item.getExcecao()));
+  }
+
+  /**
+   * O {@code loadData} do Liquibase grava a célula vazia do CSV como {@code ''} no PostgreSQL, e o
+   * {@code CSVREAD} do H2 a lê como {@code NULL}: aqui as duas viram nulo.
+   */
+  private static String vazioComoNulo(String texto) {
+    return texto == null || texto.isBlank() ? null : texto;
   }
 }

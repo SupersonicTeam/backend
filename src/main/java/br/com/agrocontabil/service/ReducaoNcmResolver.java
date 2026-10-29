@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.model.ClassificacaoTributaria;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
  * <ol>
  *   <li>se o item informa {@code percentualReducao} (não nulo), esse valor prevalece, com o
  *       {@code cClassTrib} informado (pode ser nulo);</li>
+ *   <li>se informa só o {@code cClassTrib}, vale a redução oficial desse código;</li>
  *   <li>senão, o tratamento do NCM na tabela oficial ({@link ClassificacaoTributariaService}):
  *       anexo de alíquota zero (100%), in natura (60%), anexo de 60% ou integral (0%).</li>
  * </ol>
@@ -64,12 +66,20 @@ public class ReducaoNcmResolver {
     if (item.getPercentualReducao() != null) {
       return new ReducaoAplicada(item.getPercentualReducao(), item.getCClassTrib());
     }
+    LocalDate data = dataReferencia(item.getNotaFiscal());
+    if (item.getCClassTrib() != null) {
+      // Sobrescrita manual so do cClassTrib: a reducao e a oficial do codigo, para o XML nao
+      // declarar uma classificacao e calcular outra. Codigo inexistente fica sem reducao.
+      BigDecimal oficial = classificacaoService.classificacao(item.getCClassTrib(), data)
+          .map(ClassificacaoTributaria::getPercentualReducaoIbs)
+          .orElse(BigDecimal.ZERO);
+      return new ReducaoAplicada(oficial, item.getCClassTrib());
+    }
     String ncm = item.getNcm();
     if (ncm == null || ncm.isBlank()) {
       return new ReducaoAplicada(BigDecimal.ZERO, null);
     }
-    TratamentoTributarioNcm tratamento =
-        classificacaoService.tratamentoPorNcm(ncm, dataReferencia(item.getNotaFiscal()));
+    TratamentoTributarioNcm tratamento = classificacaoService.tratamentoPorNcm(ncm, data);
     return new ReducaoAplicada(tratamento.percentualReducao(), tratamento.cClassTrib());
   }
 

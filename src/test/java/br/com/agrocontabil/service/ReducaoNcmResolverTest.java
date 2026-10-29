@@ -65,6 +65,20 @@ class ReducaoNcmResolverTest {
   }
 
   @Test
+  @DisplayName("so o cClassTrib informado: vale a reducao oficial dele, nao a do NCM")
+  void cClassTribInformadoUsaReducaoOficial() {
+    NotaFiscalItem item = NotaFiscalItem.builder().ncm("10063021").cClassTrib("000001").build();
+    when(classificacao.classificacao(eq("000001"), any(LocalDate.class))).thenReturn(
+        java.util.Optional.of(br.com.agrocontabil.model.ClassificacaoTributaria.builder()
+            .codigo("000001").percentualReducaoIbs(BigDecimal.ZERO).build()));
+
+    ReducaoAplicada aplicada = resolver.tratamento(item);
+
+    assertThat(aplicada.percentualReducao()).isEqualByComparingTo("0");
+    assertThat(aplicada.cClassTrib()).isEqualTo("000001");
+  }
+
+  @Test
   @DisplayName("NCM ausente resulta em zero sem consultar a tabela")
   void ncmAusenteResultaEmZero() {
     assertThat(resolver.resolver(NotaFiscalItem.builder().build())).isEqualByComparingTo("0");
