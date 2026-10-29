@@ -243,32 +243,43 @@ public class GlobalExceptionHandler {
    * {@code Accept: application/json}, por exemplo. Sem este handler a exceção caía na rede de
    * segurança e virava 500 com stack trace no log.
    *
-   * <p>O envelope sai sempre em JSON: o cliente acabou de dizer que não aceita o que o endpoint
-   * produz, e negociar de novo pelo mesmo {@code Accept} falharia dentro do próprio handler.
+   * <p>O envelope segue o {@link #tipoDoErro()}: XML para quem aceita XML, JSON nos demais casos
+   * (inclusive {@code Accept: application/pdf} num endpoint JSON e {@code Accept} malformado).
+   *
+   * <p>Limite conhecido: num endpoint sem {@code produces}, o Spring só descobre que não há
+   * representação <em>depois</em> de o método rodar (ao escrever o retorno). Numa escrita (POST
+   * com {@code Accept: application/pdf}), o 406 sai com a operação já gravada — como antes saía o
+   * 500. Os clientes do projeto mandam {@code Accept} JSON nas rotas JSON.
    */
   @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
   public ResponseEntity<ApiError> handleMediaTypeNotAcceptable(
       HttpMediaTypeNotAcceptableException ex, HttpServletRequest request) {
-    log.warn("Accept sem representacao em {}: {}", request.getRequestURI(),
-        request.getHeader(HttpHeaders.ACCEPT));
+    String accept = resumirValorRejeitado(request.getHeader(HttpHeaders.ACCEPT));
+    log.warn("Accept sem representacao em {}: {}", request.getRequestURI(), accept);
     String message = "Este endpoint nao produz nenhum dos formatos aceitos pelo cliente.";
-    List<MediaType> produzidos = ex.getSupportedMediaTypes();
+    // So os tipos concretos: na falha ao escrever o retorno o Spring lista os intervalos de todos
+    // os conversores (application/*+json etc.), que nao servem de Accept.
+    String produzidos = MediaType.toString(ex.getSupportedMediaTypes().stream()
+        .filter(tipo -> !tipo.isWildcardType() && !tipo.isWildcardSubtype()
+            && !tipo.getSubtype().startsWith("*+"))
+        .map(tipo -> new MediaType(tipo.getType(), tipo.getSubtype()))
+        .distinct()
+        .toList());
+    boolean temProduzidos = !produzidos.isEmpty();
     ErrorDetail detail = new ErrorDetail(
         ErrorCode.MEDIA_TYPE_NOT_ACCEPTABLE.code(),
         null,
         message,
-        produzidos.isEmpty() ? null
-            : "Envie um Accept compativel com " + MediaType.toString(produzidos) + ".",
-        resumirValorRejeitado(request.getHeader(HttpHeaders.ACCEPT)),
-        produzidos.isEmpty() ? null : MediaType.toString(produzidos));
+        temProduzidos ? "Envie um Accept compativel com " + produzidos + "." : null,
+        accept,
+        temProduzidos ? produzidos : null);
     ApiError body = ApiError.of(
         HttpStatus.NOT_ACCEPTABLE.value(),
         HttpStatus.NOT_ACCEPTABLE.getReasonPhrase(),
         message,
         request.getRequestURI(),
         List.of(detail));
-    return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
-        .contentType(MediaType.APPLICATION_JSON).body(body);
+    return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).contentType(tipoDoErro()).body(body);
   }
 
   /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
@@ -383,8 +394,11 @@ public class GlobalExceptionHandler {
    * receberia 500 vazio no lugar do 400/404/409/503. Para esse cliente o erro sai em JSON. Quem
    * aceita JSON ou XML segue negociando (o {@code /xml} devolve o envelope em XML a quem pede XML).
    *
-   * @return {@code application/json} quando o {@code Accept} não aceita JSON nem XML; {@code null}
-   *     (negociar) nos demais, inclusive sem {@code Accept} ou com ele malformado
+   * <p>{@code Accept} malformado também sai em JSON: com ele a negociação do Spring descarta o
+   * corpo do erro em silêncio (4xx/5xx sem envelope e sem {@code Content-Type}).
+   *
+   * @return {@code application/json} quando o {@code Accept} não aceita JSON nem XML ou não se
+   *     interpreta; {@code null} (negociar) quando aceita, ou quando não há {@code Accept}
    */
   static MediaType tipoDoErro() {
     if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes atributos)) {
@@ -400,16 +414,25 @@ public class GlobalExceptionHandler {
           ? null
           : MediaType.APPLICATION_JSON;
     } catch (InvalidMediaTypeException e) {
-      return null;
+      return MediaType.APPLICATION_JSON;
     }
   }
 
-  /** Tipo aceito em que o envelope se escreve (JSON ou XML), com qualidade acima de zero. */
+  /**
+   * Tipo aceito em que o envelope se escreve (JSON ou XML), com qualidade acima de zero. Dos
+   * intervalos, só {@code *}/{@code *} e {@code application/*} contam: {@code text/*} casaria com
+   * {@code text/xml} e mandaria XML a um cliente de SSE que espera o erro em JSON (#157).
+   */
   private static boolean escreveEnvelope(MediaType aceito) {
-    return aceito.getQualityValue() > 0
-        && (aceito.isCompatibleWith(MediaType.APPLICATION_JSON)
-            || aceito.isCompatibleWith(MediaType.APPLICATION_XML)
-            || aceito.isCompatibleWith(MediaType.TEXT_XML));
+    if (aceito.getQualityValue() <= 0) {
+      return false;
+    }
+    if (aceito.isWildcardSubtype()) {
+      return aceito.isWildcardType() || "application".equals(aceito.getType());
+    }
+    return aceito.isCompatibleWith(MediaType.APPLICATION_JSON)
+        || aceito.isCompatibleWith(MediaType.APPLICATION_XML)
+        || aceito.isCompatibleWith(MediaType.TEXT_XML);
   }
 
   /**

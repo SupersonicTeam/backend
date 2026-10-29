@@ -242,10 +242,12 @@ br.com.agrocontabil
   acompanha o `Accept` (JSON ou XML); para cliente que só aceita outra coisa —
   `text/event-stream` (SSE da Ceres) ou `application/pdf` (endpoints de arquivo) — a negociação
   falhava dentro do próprio handler e virava 500 vazio; o `GlobalExceptionHandler.tipoDoErro()`
-  fixa `application/json` para ele. **`Accept` sem representação → 406 `MEDIA_TYPE_NOT_ACCEPTABLE`**
-  (envelope em JSON, `expectedValue` = tipos que o endpoint produz): `/pdf`, `/xml`,
+  fixa `application/json` para ele (e para `Accept` malformado, que sem isso saía sem corpo;
+  `text/*` não conta como XML). **`Accept` sem representação → 406 `MEDIA_TYPE_NOT_ACCEPTABLE`**
+  (envelope pela mesma regra, `expectedValue` = tipos concretos produzidos): `/pdf`, `/xml`,
   `/danfe-preview` e o relatório PDF pedidos com `Accept: application/json`, ou endpoint JSON
-  pedido com `Accept: application/pdf`. Antes era 500 com stack trace no log.
+  pedido com `Accept: application/pdf`. Antes era 500 com stack trace no log. Limite: num
+  endpoint sem `produces` o 406 nasce ao escrever o retorno, depois de a operação rodar.
 
 ### Nota de integração para o frontend (papéis — issue #93)
 

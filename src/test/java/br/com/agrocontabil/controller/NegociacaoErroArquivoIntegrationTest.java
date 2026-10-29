@@ -125,7 +125,7 @@ class NegociacaoErroArquivoIntegrationTest {
     comoA(get("/api/notas/{id}/pdf", rascunho.getId()).accept(PDF))
         .andExpect(status().isConflict())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.errors[0].code").exists());
+        .andExpect(jsonPath("$.errors[0].code").value("DANFE_INDISPONIVEL"));
   }
 
   @Test
@@ -145,6 +145,28 @@ class NegociacaoErroArquivoIntegrationTest {
         .andExpect(status().isNotFound())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_XML))
         .andExpect(xpath("/ApiError/errors/errors/code").string("RESOURCE_NOT_FOUND"));
+  }
+
+  @Test
+  @DisplayName("/pdf com Accept: application/xml: 406 com o envelope em XML")
+  void pdfComAcceptXml406EmXml() throws Exception {
+    NotaFiscal nota = nota(produtorA, StatusNotaFiscal.AUTORIZADA);
+    comoA(get("/api/notas/{id}/pdf", nota.getId()).accept(MediaType.APPLICATION_XML))
+        .andExpect(status().isNotAcceptable())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_XML))
+        .andExpect(xpath("/ApiError/errors/errors/code").string("MEDIA_TYPE_NOT_ACCEPTABLE"));
+  }
+
+  @Test
+  @DisplayName("Accept malformado ou text/*: erro de dominio com envelope JSON, nunca corpo vazio")
+  void acceptMalformadoOuTextoCuringa() throws Exception {
+    NotaFiscal deB = nota(produtorB, StatusNotaFiscal.AUTORIZADA);
+    for (String accept : new String[] {"foo", "text/*", "text/event-stream, text/*;q=0.5"}) {
+      comoA(get("/api/notas/{id}", deB.getId()).header("Accept", accept))
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+          .andExpect(jsonPath("$.errors[0].code").value("RESOURCE_NOT_FOUND"));
+    }
   }
 
   // -------------------------------------------------------------------------
