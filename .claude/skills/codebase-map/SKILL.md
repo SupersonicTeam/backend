@@ -293,6 +293,7 @@ Bean Validation customizada (anotação + validator):
 | `AssistenteTempoEsgotadoException` | 503 | Pergunta além de `app.assistente.timeout-pergunta` (#157) |
 | `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
+| `ComMensagemCliente` | — | 4xx cujo `getMessage()` é texto de log define o `message` de topo do envelope (`XmlGenerationException`, `LimiteUsoAssistenteException`); 5xx usam o `errors[0]` (#251) |
 | `GlobalExceptionHandler` | — | `@RestControllerAdvice` → envelope `ApiError.errors[]` |
 
 ### `common/`

@@ -49,6 +49,12 @@ public class GlobalExceptionHandler {
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
+   * {@code message} genérico de erro interno: o 500 inesperado e o 5xx de domínio sem
+   * {@code errors} (issue #251). Não fala de NF-e.
+   */
+  static final String MENSAGEM_5XX = "Erro interno inesperado. Tente novamente mais tarde.";
+
+  /**
    * Cookie de refresh (issue #207), para apagá-lo quando a sessão é recusada. Opcional: só existe
    * com servidor web, e o handler também é carregado nos testes de fatia sem ele.
    */
@@ -461,28 +467,31 @@ public class GlobalExceptionHandler {
     return ApiError.of(
         HttpStatus.INTERNAL_SERVER_ERROR.value(),
         HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-        "Erro interno inesperado. Tente novamente mais tarde.",
+        MENSAGEM_5XX,
         path,
-        List.of(ErrorDetail.of(ErrorCode.INTERNAL_ERROR,
-            "Erro interno inesperado. Tente novamente mais tarde.")));
+        List.of(ErrorDetail.of(ErrorCode.INTERNAL_ERROR, MENSAGEM_5XX)));
   }
 
   /**
-   * Mensagem de envelope segura ao cliente. {@link XmlGenerationException} usa sua
-   * mensagem-cliente genérica; qualquer 5xx (ex.: {@link AssinaturaDigitalException},
-   * cujo {@code getMessage()} carrega detalhe técnico) recebe texto genérico; demais
-   * exceções (4xx) usam {@code getMessage()}, que já é seguro.
+   * Mensagem de topo do envelope, segura ao cliente (issue #251).
+   *
+   * <ul>
+   *   <li>Quem implementa {@link ComMensagemCliente} define a própria.</li>
+   *   <li>5xx: a mensagem do {@code errors[0]}, escrita para o cliente por contrato — o
+   *       {@code getMessage()} de um 5xx carrega detalhe técnico. Assim o topo diz o mesmo que o
+   *       erro (a Ceres ocupada fala da Ceres, a SEFAZ indeterminada manda consultar antes de
+   *       reenviar). Sem {@code errors} (ou com mensagem vazia), o texto genérico, que não fala
+   *       de NF-e.</li>
+   *   <li>Demais 4xx: {@code getMessage()}.</li>
+   * </ul>
    */
   private static String clientMessageFor(DomainException ex) {
-    if (ex instanceof XmlGenerationException xml) {
-      return xml.clientMessage();
-    }
-    if (ex instanceof AssistenteIndisponivelException assistente) {
-      // 503 da Ceres: a mensagem generica de 5xx fala em NF-e, o que confundiria o chat.
-      return assistente.clientMessage();
+    if (ex instanceof ComMensagemCliente comMensagem) {
+      return comMensagem.clientMessage();
     }
     if (ex.getStatus().is5xxServerError()) {
-      return "Erro interno ao processar a NF-e. Tente novamente mais tarde.";
+      String primeiro = ex.getErrors().isEmpty() ? null : ex.getErrors().get(0).message();
+      return primeiro == null || primeiro.isBlank() ? MENSAGEM_5XX : primeiro;
     }
     return ex.getMessage();
   }

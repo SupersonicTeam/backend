@@ -7,9 +7,11 @@ import org.springframework.http.HttpStatus;
 /**
  * Base de todas as exceções de domínio mapeadas para o contrato de erro estruturado.
  *
- * <p>Carrega o {@link HttpStatus} de resposta, a mensagem de envelope (amigável ao
- * cliente) e a lista de {@link ErrorDetail}. O {@code GlobalExceptionHandler} converte
- * qualquer subclasse num {@code ApiError} de forma uniforme.
+ * <p>Carrega o {@link HttpStatus} de resposta, a mensagem ({@code getMessage()}) e a lista de
+ * {@link ErrorDetail}, cujas mensagens são sempre texto para o cliente. O
+ * {@code GlobalExceptionHandler} converte qualquer subclasse num {@code ApiError}: num 4xx o
+ * {@code getMessage()} vira o {@code message} de topo (salvo {@link ComMensagemCliente}); num 5xx
+ * ele é só log, e o topo repete o {@code errors[0]} (issue #251).
  */
 public abstract class DomainException extends RuntimeException {
 
