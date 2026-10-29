@@ -605,9 +605,36 @@ class LiquibaseChangelogIntegrationTest {
         + " ('12019000', '12011000', '04072100', '04072900', '01039100', '01039200',"
         + " '12010090', '12010010', '04070090', '01039000') ORDER BY codigo", String.class))
         .containsExactly("01039100", "01039200", "04072100", "04072900", "12011000", "12019000");
-    // A reducao padrao (ano-teste) do ovo acompanha o codigo novo.
-    assertThat(jdbc.queryForObject("SELECT percentual_reducao_padrao FROM ncm_agropecuario"
-        + " WHERE codigo = '04072100'", java.math.BigDecimal.class)).isEqualByComparingTo("60");
+    // A reducao padrao (ano-teste) que o 0046 deu ao ovo saiu com a coluna no 0048 (#272).
+  }
+
+  @Test
+  @DisplayName("changeSet 0048: tabela oficial de cClassTrib e anexos carregada dos CSVs (#272)")
+  void changeSet0048ClassificacaoTributaria() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM classificacao_tributaria",
+        Integer.class)).isEqualTo(104);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM classificacao_tributaria_anexo_item",
+        Integer.class)).isEqualTo(79);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM classificacao_tributaria_anexo_ncm",
+        Integer.class)).isEqualTo(2128);
+    // Alimentos com caractere fora do ASCII: o loadData leu o CSV em UTF-8.
+    assertThat(jdbc.queryForObject("SELECT condicao FROM classificacao_tributaria_anexo_item"
+        + " WHERE id = 1", String.class)).isEqualTo("DESTINADOS À ALIMENTAÇÃO HUMANA");
+    assertThat(jdbc.queryForObject("SELECT cst || ':' || percentual_reducao_ibs FROM"
+        + " classificacao_tributaria WHERE c_class_trib = '200014'", String.class))
+        .isEqualTo("200:100.00");
+    assertThat(jdbc.queryForList("SELECT codigo FROM ncm_agropecuario WHERE in_natura"
+        + " ORDER BY codigo", String.class))
+        .containsExactly("10011900", "10059010", "12019000", "52010020");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'ncm_agropecuario'", String.class))
+        .doesNotContain("percentual_reducao_padrao");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'nota_fiscal_item' AND column_name LIKE '%aplicado'"
+        + " ORDER BY column_name", String.class))
+        .containsExactly("c_class_trib_aplicado", "percentual_reducao_aplicado");
   }
 
   @Test

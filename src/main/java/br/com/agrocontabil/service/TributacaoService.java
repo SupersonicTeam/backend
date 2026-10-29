@@ -19,9 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Regra de cálculo (LC 214/2025):</strong>
  * <ol>
- *   <li>{@code reducao} = {@code percentualReducao} informado no item; se nulo, cai para o
- *       percentual de redução <em>padrão</em> do NCM (tabela {@code ncm_agropecuario}); se o NCM
- *       não for de referência, {@code 0} (sem redução — postura conservadora).</li>
+ *   <li>{@code reducao} = {@code percentualReducao} informado no item; se nulo, a redução da
+ *       tabela oficial pelo NCM ({@link ReducaoNcmResolver}: alíquota zero do Anexo I/XV = 100%,
+ *       in natura e Anexos IX/VII = 60%, senão 0 — issue #272). A redução e o {@code cClassTrib}
+ *       aplicados ficam no item ({@code percentualReducaoAplicado}/{@code cClassTribAplicado}).</li>
  *   <li>{@code baseCalculo = valorTotalItem × (1 − reducao / 100)}</li>
  *   <li>{@code valorIbs = baseCalculo × aliquotaIbs} — arredondamento HALF_UP, 2 casas</li>
  *   <li>{@code valorCbs = baseCalculo × aliquotaCbs} — arredondamento HALF_UP, 2 casas</li>
@@ -105,7 +106,8 @@ public class TributacaoService {
     BigDecimal totalCbs = BigDecimal.ZERO;
 
     for (NotaFiscalItem item : nota.getItens()) {
-      BigDecimal reducao = reducaoNcmResolver.resolver(item);
+      ReducaoNcmResolver.ReducaoAplicada aplicada = reducaoNcmResolver.tratamento(item);
+      BigDecimal reducao = aplicada.percentualReducao();
       BigDecimal fatorReducao = BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
       BigDecimal baseCalculo = item.getValorTotal()
           .multiply(fatorReducao)
@@ -119,6 +121,8 @@ public class TributacaoService {
           baseCalculo.multiply(vigentes.ibsEstadual()).setScale(2, RoundingMode.HALF_UP);
       BigDecimal valorIbsMun = valorIbs.subtract(valorIbsUf);
 
+      item.setPercentualReducaoAplicado(reducao);
+      item.setCClassTribAplicado(aplicada.cClassTrib());
       item.setBaseCalculoIbsCbs(baseCalculo);
       item.setAliquotaIbs(vigentes.ibsTotal());
       item.setAliquotaIbsUf(vigentes.ibsEstadual());

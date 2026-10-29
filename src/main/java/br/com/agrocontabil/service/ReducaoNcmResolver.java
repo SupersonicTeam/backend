@@ -1,67 +1,92 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import org.springframework.stereotype.Component;
 
 /**
- * Resolve o percentual de redução da base de IBS/CBS aplicável a um item de nota fiscal
- * (Sprint 4 — issue Agrocontabil#30; correção de simetria débito × crédito — issue Agrocontabil#52).
+ * Resolve a redução de IBS/CBS aplicável a um item de nota fiscal (Sprint 4 — issue
+ * Agrocontabil#30; simetria débito × crédito — issue #52; tabela oficial — issue #272).
  *
- * <p>Componente <strong>único</strong> que centraliza a regra de precedência da redução, consumido
- * tanto pelo cálculo de <em>débito</em> ({@link TributacaoService}) quanto pelo de <em>crédito</em>
- * ({@link CreditoTributarioService}). Antes da issue #52 a lógica estava duplicada nos dois serviços
- * e divergiu: o crédito tratava {@code percentualReducao == null} como redução zero, ignorando o
- * default por NCM que o débito aplicava — superestimando o crédito e quebrando a simetria que o
- * Javadoc afirmava existir. Extrair a regra para um só ponto elimina a fonte da divergência.
+ * <p>Componente <strong>único</strong> da regra de redução, consumido pelo cálculo de
+ * <em>débito</em> ({@link TributacaoService}) e de <em>crédito</em>
+ * ({@link CreditoTributarioService}): os dois saem do mesmo ponto e a apuração fica simétrica.
  *
- * <p><strong>Precedência (LC 214/2025):</strong>
+ * <p><strong>Precedência:</strong>
  * <ol>
- *   <li>se o item informa {@code percentualReducao} (não nulo), esse valor prevalece;</li>
- *   <li>senão, usa a redução padrão do NCM (tabela {@code ncm_agropecuario});</li>
- *   <li>se o NCM não for de referência ou não tiver redução, retorna {@link BigDecimal#ZERO}
- *       (sem redução — postura conservadora).</li>
+ *   <li>se o item informa {@code percentualReducao} (não nulo), esse valor prevalece, com o
+ *       {@code cClassTrib} informado (pode ser nulo);</li>
+ *   <li>senão, o tratamento do NCM na tabela oficial ({@link ClassificacaoTributariaService}):
+ *       anexo de alíquota zero (100%), in natura (60%), anexo de 60% ou integral (0%).</li>
  * </ol>
+ * A vigência é a da data de emissão da nota em {@code America/Sao_Paulo} (hoje, sem data).
  *
- * <p><strong>Incerteza documentada:</strong> as tabelas oficiais de redução por NCM da LC 214/2025
- * ainda não foram finalizadas pela RFB/CONFAZ. Os percentuais são referência de ano-teste (seed do
- * changeset {@code 0012}), configuráveis sem recompilar, e servem apenas de default quando o item
- * não informa a redução.
+ * <p>A redução de 100% (alíquota zero do Anexo I e do Anexo XV) é válida: a base fica zero.
  *
- * <p>Este componente consulta a tabela de referência de NCM (leitura), portanto deve ser chamado
- * dentro de uma transação (read-only) pelo serviço que o utiliza.
+ * <p>Consulta tabelas de referência; deve ser chamado dentro de uma transação (read-only).
  */
 @Component
 public class ReducaoNcmResolver {
 
-  private final NcmReferenciaRepository ncmReferenciaRepository;
+  private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
+
+  private final ClassificacaoTributariaService classificacaoService;
 
   /**
-   * Constrói o resolver injetando o repositório read-only da tabela {@code ncm_agropecuario}.
+   * Constrói o resolver.
    *
-   * @param ncmReferenciaRepository repositório usado para resolver a redução padrão por NCM
+   * @param classificacaoService consulta da tabela oficial de classificação tributária
    */
-  public ReducaoNcmResolver(NcmReferenciaRepository ncmReferenciaRepository) {
-    this.ncmReferenciaRepository = ncmReferenciaRepository;
+  public ReducaoNcmResolver(ClassificacaoTributariaService classificacaoService) {
+    this.classificacaoService = classificacaoService;
   }
 
   /**
-   * Resolve o percentual de redução efetivo do item aplicando a precedência item → NCM → zero.
+   * Percentual de redução efetivo do item.
    *
    * @param item item da nota fiscal
-   * @return percentual de redução efetivo (0–100), nunca nulo
+   * @return percentual de 0 a 100, nunca nulo
    */
   public BigDecimal resolver(NotaFiscalItem item) {
+    return tratamento(item).percentualReducao();
+  }
+
+  /**
+   * Redução e {@code cClassTrib} aplicados ao item, pela precedência da classe.
+   *
+   * @param item item da nota fiscal
+   * @return tratamento aplicado, nunca nulo
+   */
+  public ReducaoAplicada tratamento(NotaFiscalItem item) {
     if (item.getPercentualReducao() != null) {
-      return item.getPercentualReducao();
+      return new ReducaoAplicada(item.getPercentualReducao(), item.getCClassTrib());
     }
     String ncm = item.getNcm();
     if (ncm == null || ncm.isBlank()) {
-      return BigDecimal.ZERO;
+      return new ReducaoAplicada(BigDecimal.ZERO, null);
     }
-    return ncmReferenciaRepository
-        .findPercentualReducaoPadraoByCodigo(ncm)
-        .orElse(BigDecimal.ZERO);
+    TratamentoTributarioNcm tratamento =
+        classificacaoService.tratamentoPorNcm(ncm, dataReferencia(item.getNotaFiscal()));
+    return new ReducaoAplicada(tratamento.percentualReducao(), tratamento.cClassTrib());
+  }
+
+  private static LocalDate dataReferencia(NotaFiscal nota) {
+    if (nota == null || nota.getDataEmissao() == null) {
+      return LocalDate.now(ZONE);
+    }
+    return nota.getDataEmissao().atZoneSameInstant(ZONE).toLocalDate();
+  }
+
+  /**
+   * Redução aplicada a um item.
+   *
+   * @param percentualReducao de 0 a 100
+   * @param cClassTrib classificação tributária da regra ou a informada; nula quando o cliente
+   *     informou só o percentual
+   */
+  public record ReducaoAplicada(BigDecimal percentualReducao, String cClassTrib) {
   }
 }

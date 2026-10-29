@@ -32,6 +32,8 @@ app:
   notas:
     busca:
       preencher-legado: false
+    tributos:
+      recalcular-legado: false
   cors:
     allowed-origins: http://localhost:4200
   # BCrypt no custo minimo: o custo de producao (12) somaria segundos a cada teste de cadastro.

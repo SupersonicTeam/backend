@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
+import br.com.agrocontabil.support.ReducaoTestSupport;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,7 +20,6 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -56,24 +56,22 @@ class TributacaoServiceTest {
   private static final BigDecimal ALIQUOTA_IBS = new BigDecimal("0.0010");
   private static final BigDecimal ALIQUOTA_CBS = new BigDecimal("0.0090");
 
-  @Mock private NcmReferenciaRepository ncmReferenciaRepository;
   @Mock private AliquotaIbsUfRepository aliquotaIbsUfRepository;
   @Mock private AliquotaCbsRepository aliquotaCbsRepository;
 
   private TributacaoService service;
+  private ClassificacaoTributariaService classificacao;
 
   @BeforeEach
   void setUp() {
     TributosProperties props = new TributosProperties();
     props.getIbs().setAliquota(ALIQUOTA_IBS);
     props.getCbs().setAliquota(ALIQUOTA_CBS);
+    // Por padrão nenhum NCM tem redução na tabela oficial; casos específicos sobrescrevem.
+    classificacao = ReducaoTestSupport.classificacaoSemReducao();
     service = new TributacaoService(
-        new ReducaoNcmResolver(ncmReferenciaRepository),
+        new ReducaoNcmResolver(classificacao),
         new AliquotaIbsCbsResolver(aliquotaIbsUfRepository, aliquotaCbsRepository, props));
-    // Por padrão nenhum NCM tem redução de referência; casos específicos sobrescrevem.
-    lenient()
-        .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo(anyString()))
-        .thenReturn(Optional.empty());
     // Por padrão nenhuma UF de referência (notas sem endereço caem no fallback das properties);
     // casos específicos sobrescrevem por UF.
     lenient()
@@ -128,8 +126,7 @@ class TributacaoServiceTest {
   @Test
   @DisplayName("deve aplicar reducao padrao do NCM quando o item nao informa percentualReducao")
   void shouldApplyNcmDefaultReductionWhenItemOmitsReduction() {
-    when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
-        .thenReturn(Optional.of(new BigDecimal("40")));
+    ReducaoTestSupport.comReducao(classificacao, "12019000", "40", "200036");
     // percentualReducao nulo no item -> usa o default do NCM (40%)
     NotaFiscal nota = buildNotaComUmItem(new BigDecimal("1000.00"), null, "6101");
     nota.getItens().get(0).setNcm("12019000");
@@ -147,9 +144,7 @@ class TributacaoServiceTest {
   @DisplayName("percentualReducao explicito do item deve prevalecer sobre a reducao padrao do NCM")
   void itemReductionShouldOverrideNcmDefault() {
     // NCM traz 40% de default, mas o item informa 0% explicitamente -> vence o item (0%).
-    lenient()
-        .when(ncmReferenciaRepository.findPercentualReducaoPadraoByCodigo("12019000"))
-        .thenReturn(Optional.of(new BigDecimal("40")));
+    ReducaoTestSupport.comReducao(classificacao, "12019000", "40", "200036");
     NotaFiscal nota = buildNotaComUmItem(new BigDecimal("1000.00"), BigDecimal.ZERO, "6101");
     nota.getItens().get(0).setNcm("12019000");
 
@@ -162,7 +157,7 @@ class TributacaoServiceTest {
   @Test
   @DisplayName("NCM sem reducao de referencia deve resultar em base cheia (sem reducao)")
   void unknownNcmShouldResultInFullBase() {
-    // findPercentual... devolve Optional.empty() (default do setUp)
+    // tabela simulada sem reducao para o NCM (default do setUp)
     NotaFiscal nota = buildNotaComUmItem(new BigDecimal("1000.00"), null, "6101");
     nota.getItens().get(0).setNcm("99999999");
 

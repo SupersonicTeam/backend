@@ -222,6 +222,8 @@ public final class NotaFiscalMapper {
         item.getCstIbsCbs(),
         item.getCClassTrib(),
         item.getPercentualReducao(),
+        item.getPercentualReducaoAplicado(),
+        item.getCClassTribAplicado(),
         item.getBaseCalculoIbsCbs(),
         item.getAliquotaIbs(),
         item.getValorIbs(),

@@ -64,6 +64,7 @@ br.com.agrocontabil
 │                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,
 │                  # TributacaoService, CreditoTributarioService, ChaveAcessoGenerator,
 │                  # AliquotaIbsCbsResolver + ReducaoNcmResolver (resolvedores únicos débito×crédito),
+│                  # ClassificacaoTributariaService (tabela oficial cClassTrib + anexos da LC 214 por NCM, #272),
 │                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider,
 │                  # RetencaoService (RN009: Funrural retido pelo comprador + split payment, #145),
 │                  # VerificacaoAnexoService + ClamdCliente (antivirus dos anexos, ClamAV, #227),
@@ -596,6 +597,7 @@ no cadastro (decisão do Murillo, 2026-10-19).
 - **Bairro do destinatário (#88):** `EnderecoDestinatario` não modela o bairro e o XSD exige `xBairro` no `enderDest` — o literal `"CENTRO"` permanece nesse grupo. Resolver modelando o campo no domínio e no DTO. (`"S/N"` em `nro` não é placeholder: é a convenção do layout para imóvel sem número.)
 - **Tabela IBGE de municípios (Sprint 7):** a coerência município×UF é verificada só pelo prefixo (2 primeiros dígitos = cUF). A tabela completa dos 5.570 municípios validaria a existência do código.
 - **Alíquotas 2027–2033 (Onda 2, #85; #277):** `aliquota_ibs_uf` tem 2026 (0,1% estadual, 0% municipal — EC 132/2023, NT 2026.010) e 2027–2028 (0,05% + 0,05%, LC 214 art. 344), changeSet **0047**; `aliquota_cbs` só 2026 (a CBS de 2027 ainda não foi publicada). Sem vigência, o fallback do yml vai todo para a parcela estadual antes de 2027 e é dividido 50/50 depois. Quando RFB/CONFAZ/Comitê Gestor publicarem as alíquotas da transição (LC 214/2025, arts. 87–92), inserir vigências por **novo changeSet com `insert`** (fechando a anterior com `data_fim`); nunca `update` em linha existente. Parcela municipal de IBS continua por UF (não por município).
+- **Redução por NCM pela tabela oficial (#272):** IT 2025.002 v1.70 + anexos I/VII/IX/XV por NCM (changeSet **0048**, CSVs em `db/changelog/data/`). O art. 137 (in natura) não tem lista: vale pela marca `ncm_agropecuario.in_natura` (soja, milho e trigo em grão, algodão debulhado). **Pendente de validação do contador (#284):** leite cru vendido ao laticínio (pergunta 2: hoje o NCM do Anexo I dá zero), arroz em casca (pergunta 3: 1006.10 cai no Anexo VII/IX, 60%) e venda a cooperativa optante (pergunta 6: o cClassTrib 200020 não é aplicado). A resposta da nota traz `percentualReducaoAplicado` e `cClassTribAplicado` (o frontend deve usá-los em vez do "-60%" fixo).
 - **Modelos pré-criados (consultoria AI — sprint não definida):** entidades `Conversa`, `Diagnostico`, `Feedback`, `ImpactoGeral`, `PorteEmpresa`, `TipoFeedback` e respectivos repositories existem no código mas **não têm controller nem service** — são scaffolding de feature futura. Não criar lógica sobre elas sem decisão explícita do Murillo.
 
 ## Roadmap pós-básico (não implementado)

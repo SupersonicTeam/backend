@@ -70,10 +70,26 @@ public record NotaFiscalItemResponse(
 
     @Schema(
         description =
-            "Percentual de reducao da base de calculo IBS/CBS aplicado a este item (0-100). "
-                + "0 = sem reducao (aliquota cheia).",
+            "Percentual de reducao IBS/CBS informado na entrada (0-100). Nulo quando o item "
+                + "nao informa: vale o da tabela oficial (percentualReducaoAplicado).",
         example = "0.00")
     BigDecimal percentualReducao,
+
+    @Schema(
+        description =
+            "Reducao IBS/CBS efetivamente aplicada (0-100; 100 = aliquota zero): a informada ou "
+                + "a da tabela oficial pelo NCM (IT 2025.002; LC 214/2025, arts. 125, 135, 137, "
+                + "138 e 148). Use este campo na tela, nao um valor fixo. Issue #272.",
+        example = "60.00")
+    BigDecimal percentualReducaoAplicado,
+
+    @Schema(
+        description =
+            "cClassTrib aplicado no calculo: o informado ou o da regra pelo NCM (200036 in natura, "
+                + "200003 cesta basica, 200014 horticolas/frutas/ovos, 200038 insumos, 000001 "
+                + "integral). Issue #272.",
+        example = "200036")
+    String cClassTribAplicado,
 
     @Schema(
         description =

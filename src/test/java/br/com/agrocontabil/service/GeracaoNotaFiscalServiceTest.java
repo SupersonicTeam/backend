@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
+import br.com.agrocontabil.support.ReducaoTestSupport;
 import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,11 +29,9 @@ import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
-import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,15 +69,13 @@ class GeracaoNotaFiscalServiceTest {
     props.setIbs(ibs);
     props.setCbs(cbs);
 
-    NcmReferenciaRepository ncmRepo = mock(NcmReferenciaRepository.class);
-    when(ncmRepo.findPercentualReducaoPadraoByCodigo(anyString())).thenReturn(Optional.empty());
     AliquotaIbsUfRepository aliquotaRepo = mock(AliquotaIbsUfRepository.class);
     when(aliquotaRepo.findVigente(anyString(), any(LocalDate.class))).thenReturn(List.of());
     // Sem vigencia de CBS nas fixtures: cai no fallback da aliquota parametrizada (issue #85).
     AliquotaCbsRepository cbsRepo = mock(AliquotaCbsRepository.class);
     when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
     tributacaoService = new TributacaoService(
-        new ReducaoNcmResolver(ncmRepo), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
+        ReducaoTestSupport.resolverSemReducao(), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();

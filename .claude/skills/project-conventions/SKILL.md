@@ -18,6 +18,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - **Regra de negócio** vive **só** no `service`.
 - **Repository** = Spring Data JPA. Queries de ownership sempre `findByIdAndProdutorId`.
 - **Entidade JPA nunca sai da API.** Sempre converter para DTO via `mapper`.
+- **Redução de IBS/CBS vem da tabela oficial** (`ClassificacaoTributariaService`, #272), nunca de percentual escrito à mão. Nova versão do Informe Técnico = CSVs novos em `db/changelog/data/` + changeSet que fecha a vigência do que mudou. Quem precisa *explicar* a regra (a Ceres) chama o service, não o resolvedor.
 - **Alíquota e redução de base têm um único resolvedor cada.** Nunca ler `TributosProperties.ibs/cbs` nem `AliquotaIbsUfRepository`/`NcmReferenciaRepository` direto num serviço de cálculo — sempre via `AliquotaIbsCbsResolver` (issue #86) e `ReducaoNcmResolver` (issue #52). Débito e crédito precisam sair do mesmo ponto para a apuração ser simétrica.
 
 ## Módulo da Ceres (`assistente`) — fronteira travada por ArchUnit (issue #141)

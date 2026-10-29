@@ -192,6 +192,22 @@ public class NotaFiscalItem {
   @Column(name = "percentual_reducao", precision = 5, scale = 2)
   private BigDecimal percentualReducao;
 
+  /**
+   * Redução de IBS/CBS <strong>aplicada</strong> no cálculo, de 0 a 100 (100 = alíquota zero):
+   * a informada em {@link #percentualReducao} ou a da tabela oficial pelo NCM — issue #272.
+   * Gravada pelo {@code TributacaoService}; nula em nota calculada antes do changeSet 0048.
+   */
+  @Column(name = "percentual_reducao_aplicado", precision = 5, scale = 2)
+  private BigDecimal percentualReducaoAplicado;
+
+  /**
+   * {@code cClassTrib} <strong>aplicado</strong> no cálculo: o informado em {@link #cClassTrib}
+   * ou o da regra pelo NCM (ex.: {@code 200036} in natura, {@code 200003} cesta básica) — issue
+   * #272. Nulo quando o cliente informou só o percentual, ou em nota anterior ao changeSet 0048.
+   */
+  @Column(name = "c_class_trib_aplicado", length = 6)
+  private String cClassTribAplicado;
+
   // -------------------------------------------------------------------------
   // Crédito tributário de entrada — Sprint 4, issue Agrocontabil#30 (RN003).
   // EC 132/2023, art. 156-A, § 1.º, VIII (não-cumulatividade); LC 214/2025, art. 47.
