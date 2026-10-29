@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.common.ErrorCode;
+import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.security.CookieRefresh;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -155,14 +156,25 @@ class GlobalExceptionHandlerTest {
         AssistenteOcupadoException.limiteGlobal(),
         AssistenteOcupadoException.perguntaEmAndamento(),
         new AssistenteTempoEsgotadoException(),
-        new AssistenteIndisponivelException("modelo fora", null),
-        new LimiteUsoAssistenteException(60)}) {
+        new AssistenteIndisponivelException("modelo fora", null)}) {
       ApiError body = handler.handleDomain(ex, request).getBody();
 
       assertThat(body).isNotNull();
+      assertThat(body.status()).isEqualTo(503);
       assertThat(body.message()).doesNotContain("NF-e")
           .isEqualTo(body.errors().get(0).message());
     }
+  }
+
+  @Test
+  @DisplayName("429 da cota da Ceres: topo pela ComMensagemCliente, nao o texto de log (#251)")
+  void mensagemDeTopoDaCotaDaCeres() {
+    ApiError body = handler.handleDomain(new LimiteUsoAssistenteException(60),
+        new MockHttpServletRequest("POST", "/api/assistente/chat")).getBody();
+
+    assertThat(body.status()).isEqualTo(429);
+    assertThat(body.message()).isEqualTo(LimiteUsoAssistenteException.MENSAGEM_CLIENTE)
+        .isEqualTo(body.errors().get(0).message());
   }
 
   @Test
@@ -173,7 +185,9 @@ class GlobalExceptionHandlerTest {
         new RelatorioGenerationException("jasper caiu: /tmp/x.jrxml", null),
         new AssinaturaDigitalException(ErrorCode.ASSINATURA_FALHOU, "keystore senha errada"),
         new DanfeGenerationException("jasper caiu", null),
-        new SefazComunicacaoException("timeout em sefaz.mt.gov.br")}) {
+        new SefazComunicacaoException("timeout em sefaz.mt.gov.br"),
+        new SefazConexaoException("connect refused sefaz.mt.gov.br"),
+        new SefazRespostaIndeterminadaException("read timeout sefaz.mt.gov.br")}) {
       ApiError body = handler.handleDomain(ex, request).getBody();
 
       assertThat(body).isNotNull();
@@ -183,14 +197,28 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
-  @DisplayName("5xx de dominio sem errors: texto generico sem NF-e (#251)")
-  void mensagemGenericaDe5xxSemErrors() {
-    DomainException semErrors = new DomainException(
-        HttpStatus.INTERNAL_SERVER_ERROR, "detalhe tecnico", List.of()) {};
+  @DisplayName("5xx sem errors ou com mensagem vazia: texto generico sem NF-e (#251)")
+  void mensagemGenericaDe5xx() {
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/x");
+    for (List<ErrorDetail> errors : List.of(List.<ErrorDetail>of(),
+        List.of(new ErrorDetail("X", null, null, null, null, null)),
+        List.of(new ErrorDetail("X", null, "  ", null, null, null)))) {
+      DomainException ex = new DomainException(
+          HttpStatus.INTERNAL_SERVER_ERROR, "detalhe tecnico", errors) {};
 
-    ApiError body = handler.handleDomain(
-        semErrors, new MockHttpServletRequest("GET", "/api/x")).getBody();
+      assertThat(handler.handleDomain(ex, request).getBody().message())
+          .isEqualTo(GlobalExceptionHandler.MENSAGEM_5XX)
+          .doesNotContain("NF-e");
+    }
+  }
 
-    assertThat(body.message()).isEqualTo("Erro interno. Tente novamente mais tarde.");
+  @Test
+  @DisplayName("4xx sem ComMensagemCliente segue com o getMessage como topo (#251)")
+  void quatroXxSegueComGetMessage() {
+    ApiError body = handler.handleDomain(new GuiaJaPagaException(java.util.UUID.randomUUID()),
+        new MockHttpServletRequest("PATCH", "/api/contador/guias/x/pagar")).getBody();
+
+    assertThat(body.status()).isEqualTo(409);
+    assertThat(body.message()).isNotBlank();
   }
 }

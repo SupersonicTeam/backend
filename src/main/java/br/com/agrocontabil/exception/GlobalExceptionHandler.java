@@ -48,8 +48,11 @@ public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-  /** {@code message} de topo de um 5xx de domínio sem {@code errors} (issue #251). */
-  static final String MENSAGEM_5XX = "Erro interno. Tente novamente mais tarde.";
+  /**
+   * {@code message} genérico de erro interno: o 500 inesperado e o 5xx de domínio sem
+   * {@code errors} (issue #251). Não fala de NF-e.
+   */
+  static final String MENSAGEM_5XX = "Erro interno inesperado. Tente novamente mais tarde.";
 
   /**
    * Cookie de refresh (issue #207), para apagá-lo quando a sessão é recusada. Opcional: só existe
@@ -464,10 +467,9 @@ public class GlobalExceptionHandler {
     return ApiError.of(
         HttpStatus.INTERNAL_SERVER_ERROR.value(),
         HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-        "Erro interno inesperado. Tente novamente mais tarde.",
+        MENSAGEM_5XX,
         path,
-        List.of(ErrorDetail.of(ErrorCode.INTERNAL_ERROR,
-            "Erro interno inesperado. Tente novamente mais tarde.")));
+        List.of(ErrorDetail.of(ErrorCode.INTERNAL_ERROR, MENSAGEM_5XX)));
   }
 
   /**
@@ -478,7 +480,8 @@ public class GlobalExceptionHandler {
    *   <li>5xx: a mensagem do {@code errors[0]}, escrita para o cliente por contrato — o
    *       {@code getMessage()} de um 5xx carrega detalhe técnico. Assim o topo diz o mesmo que o
    *       erro (a Ceres ocupada fala da Ceres, a SEFAZ indeterminada manda consultar antes de
-   *       reenviar). Sem {@code errors}, o texto genérico, que não fala de NF-e.</li>
+   *       reenviar). Sem {@code errors} (ou com mensagem vazia), o texto genérico, que não fala
+   *       de NF-e.</li>
    *   <li>Demais 4xx: {@code getMessage()}.</li>
    * </ul>
    */
@@ -487,9 +490,8 @@ public class GlobalExceptionHandler {
       return comMensagem.clientMessage();
     }
     if (ex.getStatus().is5xxServerError()) {
-      return ex.getErrors().isEmpty() || ex.getErrors().get(0).message() == null
-          ? MENSAGEM_5XX
-          : ex.getErrors().get(0).message();
+      String primeiro = ex.getErrors().isEmpty() ? null : ex.getErrors().get(0).message();
+      return primeiro == null || primeiro.isBlank() ? MENSAGEM_5XX : primeiro;
     }
     return ex.getMessage();
   }

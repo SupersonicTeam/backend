@@ -49,7 +49,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Todo erro sai pelo `GlobalExceptionHandler` (`@RestControllerAdvice`) → `ApiError` com envelope **`errors[]`**.
 - Cada erro é um `ErrorDetail`: `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`.
 - Exceções de domínio estendem `DomainException` (carrega `HttpStatus` + lista de `ErrorDetail`). Código em `ErrorCode`.
-- **Nunca** tratar exceção no controller. **Nunca** vazar stack trace / detalhe técnico ao cliente. 5xx = mensagem genérica; detalhe só no log.
+- **Nunca** tratar exceção no controller. **Nunca** vazar stack trace / detalhe técnico ao cliente. 5xx: o `getMessage()` é só log e o `message` de topo repete o `errors[0]` (por isso o `ErrorDetail` é sempre texto para o cliente); sem `errors`, o genérico (#251). 4xx com texto de log no `getMessage()` = implementar `ComMensagemCliente`.
 - Todo handler novo usa `.contentType(tipoDoErro())`: o envelope sai em JSON quando o `Accept` não aceita JSON nem XML (PDF, SSE — #157/#250). `Accept` sem representação = 406 `MEDIA_TYPE_NOT_ACCEPTABLE`.
 
 ## Segurança (já aplicada, manter)

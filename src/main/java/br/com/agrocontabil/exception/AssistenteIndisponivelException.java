@@ -36,8 +36,4 @@ public class AssistenteIndisponivelException extends DomainException {
     }
   }
 
-  /** Mensagem do envelope {@code ApiError} (o {@code message} de topo). */
-  public String clientMessage() {
-    return MENSAGEM_CLIENTE;
-  }
 }
