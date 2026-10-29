@@ -72,6 +72,11 @@ public enum ErrorCode {
   METHOD_NOT_ALLOWED,
   /** Content-Type da requisição não suportado pelo endpoint. HTTP 415. */
   MEDIA_TYPE_NOT_SUPPORTED,
+  /**
+   * Nenhuma representação do recurso casa com o {@code Accept} do cliente (ex.: {@code /pdf} com
+   * {@code Accept: application/json}). HTTP 406 (issue #250).
+   */
+  MEDIA_TYPE_NOT_ACCEPTABLE,
   /** Upload excede o tamanho máximo permitido. HTTP 413. */
   PAYLOAD_TOO_LARGE,
   // Guias fiscais do Contador (issue #74)
