@@ -578,6 +578,7 @@ MERGE INTO ncm_agropecuario (codigo, descricao, percentual_reducao_padrao) KEY (
     ('01039100', 'Suinos vivos de peso inferior a 50 kg', 0),
     ('01039200', 'Suinos vivos de peso igual ou superior a 50 kg', 0),
     ('04072100', 'Ovos frescos de galinha (Gallus domesticus), com casca', 60),
+    ('04072900', 'Outros ovos frescos de aves, com casca (exceto de galinha)', 60),
     ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', 60),
     ('08043000', 'Abacaxis (ananases) frescos ou secos', 60),
     ('07020000', 'Tomates frescos ou refrigerados', 60);

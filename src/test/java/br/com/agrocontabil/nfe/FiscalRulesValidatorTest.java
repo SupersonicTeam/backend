@@ -3,6 +3,8 @@ package br.com.agrocontabil.nfe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.ProdutorTestFixtures;
 import br.com.agrocontabil.common.ErrorDetail;
@@ -13,6 +15,8 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.repository.NcmReferenciaRepository;
+import br.com.agrocontabil.validation.NcmValidator;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -42,6 +46,28 @@ class FiscalRulesValidatorTest {
   @DisplayName("emitente completo e destinatario coerente passam na validacao")
   void notaValidaPassa() {
     assertThatCode(() -> validator.validar(notaValida())).doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("item com NCM fora da referencia e barrado na emissao, nao so no request (#282)")
+  void rejeitaNcmForaDaReferencia() {
+    NcmReferenciaRepository repository = mock(NcmReferenciaRepository.class);
+    when(repository.findAllCodigos()).thenReturn(List.of("12019000"));
+    NcmValidator ncmValidator = new NcmValidator(repository);
+    ncmValidator.carregarCache();
+    FiscalRulesValidator comReferencia = new FiscalRulesValidator(ncmValidator);
+    NotaFiscal nota = notaValida();
+    // Codigo removido pelo changeSet 0046: um rascunho gravado antes segue com ele.
+    nota.getItens().get(0).setNcm("01039000");
+
+    Throwable erro = catchThrowable(() -> comReferencia.validar(nota));
+
+    assertThat(erro).isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class);
+    assertThat(((NotaFiscalInvalidaParaEmissaoException) erro).getErrors())
+        .extracting(ErrorDetail::field)
+        .contains("item[" + nota.getItens().get(0).getNumeroItem() + "].ncm");
+    nota.getItens().get(0).setNcm("12019000");
+    assertThatCode(() -> comReferencia.validar(nota)).doesNotThrowAnyException();
   }
 
   @Test
