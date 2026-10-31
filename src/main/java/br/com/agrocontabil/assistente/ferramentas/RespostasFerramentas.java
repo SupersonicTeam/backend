@@ -183,11 +183,13 @@ public final class RespostasFerramentas {
    *                   mês); num mês passado, as não pagas daquele mês; nulo num mês futuro
    * @param aVencer    no mês corrente, as não pagas de hoje ao fim do mês; num mês futuro, as do mês
    *                   inteiro; nulo num mês passado
+   * @param quantidade guias de {@code emAtraso} e {@code aVencer} juntas, contadas pelo backend
+   *                   (o modelo não soma, #169)
    * @param valorTotal soma de {@code emAtraso} e {@code aVencer}, calculada pelo backend
    * @param observacao frase ao usuário com o recorte quando não há guia; nula caso contrário
    */
   public record VencimentosDoMes(String mes, GuiasDoRecorte emAtraso, GuiasDoRecorte aVencer,
-      String valorTotal, String observacao) {}
+      long quantidade, String valorTotal, String observacao) {}
 
   /**
    * Resultado de {@code listarAlertas} (issue #140, RN010).

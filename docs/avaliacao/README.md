@@ -141,8 +141,8 @@ conferido à mão contra as regras da #274 no `GabaritoCeresIntegrationTest`.
 
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função
-da #274 que ainda não existe ("quanto tenho que pagar este mês?", "tenho débito pendente?", nota
-pelo número, vendas por produto): **medem só a rota** até a #274 trazer a função, o seed e o valor
+da #274 que ainda não existe (nota pelo número, nota devolvida, vendas por produto; as de débito e
+de "este mês" saíram na `2026-10-31.2`): **medem só a rota** até a #274 trazer a função, o seed e o valor
 esperado, calculado pelas regras decididas no comentário "Decisões de comportamento" da #274
 (atrasadas + mês corrente; só atrasadas; obrigações, pedidos e IBS/CBS apurado fora), nunca a
 partir do que a Ceres faz hoje.

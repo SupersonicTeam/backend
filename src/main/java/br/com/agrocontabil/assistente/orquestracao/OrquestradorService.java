@@ -55,17 +55,17 @@ public class OrquestradorService {
   public static final String LIGACAO_SEM_DADOS = "De forma geral, a legislacao preve: ";
 
   /** Parte de dados do MISTO sem nada encontrado, pela primeira função consultada (#170). */
-  static final Map<String, String> SEM_DADOS_POR_FUNCAO = Map.of(
-      "totalComprasPorInsumo",
-      "Nao encontrei compras desse tipo nas suas notas no periodo consultado.",
-      "listarNotas", "Nao encontrei notas com esse filtro no periodo consultado.",
-      "proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado.",
-      "guiasEmAtraso", "Nao encontrei guias em atraso.",
-      "vencimentosDoMes", "Nao encontrei guias para pagar no mes consultado.",
-      "consultarCreditos", "Nao encontrei compras com credito no periodo consultado.",
-      "consultarApuracao", "Nao encontrei notas na apuracao do mes consultado.",
-      "listarAlertas", "Nao encontrei prazos vencendo nos proximos dias.",
-      "consultarRetencoes", "Nao encontrei vendas autorizadas no periodo consultado.");
+  static final Map<String, String> SEM_DADOS_POR_FUNCAO = Map.ofEntries(
+      Map.entry("totalComprasPorInsumo",
+          "Nao encontrei compras desse tipo nas suas notas no periodo consultado."),
+      Map.entry("listarNotas", "Nao encontrei notas com esse filtro no periodo consultado."),
+      Map.entry("proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado."),
+      Map.entry("guiasEmAtraso", "Nao encontrei guias em atraso."),
+      Map.entry("vencimentosDoMes", "Nao encontrei guias para pagar no mes consultado."),
+      Map.entry("consultarCreditos", "Nao encontrei compras com credito no periodo consultado."),
+      Map.entry("consultarApuracao", "Nao encontrei notas na apuracao do mes consultado."),
+      Map.entry("listarAlertas", "Nao encontrei prazos vencendo nos proximos dias."),
+      Map.entry("consultarRetencoes", "Nao encontrei vendas autorizadas no periodo consultado."));
 
   /** Parte de dados do MISTO sem consulta nenhuma: o modelo não buscou dado algum. */
   public static final String SEM_DADOS =

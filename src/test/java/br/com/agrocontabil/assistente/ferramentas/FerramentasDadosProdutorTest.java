@@ -390,8 +390,9 @@ class FerramentasDadosProdutorTest {
     assertThat(atraso.emAtraso().valorTotal()).isEqualTo("R$ 1.680,00");
     assertThat(atraso.emAtraso().quantidade()).isEqualTo(2);
     assertThat(atraso.emAtraso().ate()).isEqualTo("28/09/2026");
+    // Pela data: a PENDENTE vencida sai como VENCIDA (o job das 1h ainda nao a marcou).
     assertThat(atraso.emAtraso().guias()).extracting(Guia::situacao)
-        .containsExactly("VENCIDA", "PENDENTE");
+        .containsExactly("VENCIDA", "VENCIDA");
     assertThat(atraso.proximaGuia()).isNull();
     assertThat(atraso.observacao()).isNull();
     assertThat(contexto.fontes()).singleElement()
@@ -428,6 +429,7 @@ class FerramentasDadosProdutorTest {
     assertThat(mes.aVencer().valorTotal()).isEqualTo("R$ 4.108,00");
     assertThat(mes.aVencer().de()).isEqualTo("29/09/2026");
     assertThat(mes.valorTotal()).isEqualTo("R$ 5.788,00");
+    assertThat(mes.quantidade()).isEqualTo(5);
     assertThat(contexto.fontes()).singleElement()
         .satisfies(f -> assertThat(f.parametros()).containsEntry("mes", "2026-09"));
   }

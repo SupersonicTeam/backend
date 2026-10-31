@@ -18,6 +18,7 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Venciment
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
+import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -121,8 +122,18 @@ public class FerramentasDadosProdutor {
           + " comprador.",
       AVISO_SPLIT_PAYMENT);
   private static final int DIAS_VENCIMENTO_PADRAO = 30;
-  /** "Sem limite de data" para trás na busca de guias em atraso (decisões da #274). */
-  static final LocalDate SEM_LIMITE_PASSADO = LocalDate.of(2000, 1, 1);
+  /**
+   * "Sem limite de data" para trás na busca de guias em atraso (decisões da #274): o primeiro dia
+   * que o Postgres e o H2 aceitam sem cair em data antes de Cristo. A guia não tem limite inferior
+   * de vencimento, então um piso como 2000 deixaria de fora uma digitada com o ano errado.
+   */
+  static final LocalDate SEM_LIMITE_PASSADO = LocalDate.of(1, 1, 1);
+
+  /** Frase sem atraso; o recorte (a data) vai no fim. */
+  static final String SEM_ATRASO = "Nao encontrei guias em atraso (nao pagas com vencimento ate ";
+
+  /** Frase sem guia no mês; o recorte vai no fim. */
+  static final String SEM_GUIAS_NO_MES = "Nao encontrei guias para pagar ";
   private static final int MAXIMO_MESES_VENCIMENTO = 12;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
 
@@ -408,13 +419,7 @@ public class FerramentasDadosProdutor {
         FormatoBr.data(ate),
         pagina.total(),
         FormatoBr.moeda(totais.valor()),
-        pagina.itens().stream()
-            .map(g -> new Guia(
-                g.tipo().name(),
-                FormatoBr.data(g.dataVencimento()),
-                FormatoBr.moeda(g.valor()),
-                g.status().name()))
-            .toList());
+        pagina.itens().stream().map(g -> guia(g, contexto.hoje())).toList());
   }
 
   /**
@@ -440,9 +445,8 @@ public class FerramentasDadosProdutor {
     if (emAtraso.quantidade() == 0) {
       proxima = dados.vencimentosNaoPagos(contexto.produtorId(), contexto.hoje(),
               contexto.hoje().plusYears(1), 1).itens().stream()
-          .map(FerramentasDadosProdutor::guia).findFirst().orElse(null);
-      observacao = "Nao encontrei guias em atraso (nao pagas com vencimento ate "
-          + FormatoBr.data(ontem) + ").";
+          .map(g -> guia(g, contexto.hoje())).findFirst().orElse(null);
+      observacao = SEM_ATRASO + FormatoBr.data(ontem) + ").";
     }
     contexto.registrarFonte("guiasEmAtraso", Map.of(), emAtraso.quantidade() == 0);
     return new GuiasEmAtraso(emAtraso, proxima, observacao);
@@ -490,12 +494,12 @@ public class FerramentasDadosProdutor {
     long quantidade = (emAtraso == null ? 0 : emAtraso.resposta().quantidade())
         + (aVencer == null ? 0 : aVencer.resposta().quantidade());
     String observacao = quantidade > 0 ? null
-        : "Nao encontrei guias para pagar " + descricaoRecorte(consultado, atual, hoje) + ".";
+        : SEM_GUIAS_NO_MES + descricaoRecorte(consultado, atual, hoje) + ".";
     contexto.registrarFonte("vencimentosDoMes", parametros("mes", consultado.toString()),
         quantidade == 0);
     return new VencimentosDoMes(consultado.toString(),
         emAtraso == null ? null : emAtraso.resposta(), aVencer == null ? null : aVencer.resposta(),
-        FormatoBr.moeda(soma), observacao);
+        quantidade, FormatoBr.moeda(soma), observacao);
   }
 
   private static String descricaoRecorte(YearMonth mes, YearMonth atual, LocalDate hoje) {
@@ -520,16 +524,24 @@ public class FerramentasDadosProdutor {
     BigDecimal valor = totais.valor() == null ? BigDecimal.ZERO : totais.valor();
     return new Recorte(new GuiasDoRecorte(de == null ? null : FormatoBr.data(de),
         FormatoBr.data(ate), totais.quantidade(), FormatoBr.moeda(valor),
-        pagina.itens().stream().map(FerramentasDadosProdutor::guia).toList()), valor);
+        pagina.itens().stream().map(g -> guia(g, contexto.hoje())).toList()), valor);
   }
 
   private static BigDecimal valor(Recorte recorte) {
     return recorte == null ? BigDecimal.ZERO : recorte.valor();
   }
 
-  private static Guia guia(DadosProdutorPorta.Vencimento g) {
+  /**
+   * Guia como vai ao modelo. A situação é pela data (decisões da #274): não paga com vencimento
+   * antes de hoje sai {@code VENCIDA} mesmo que o job das 1h ainda não a tenha marcado; mostrar o
+   * {@code PENDENTE} gravado faria a Ceres chamar de "pendente" uma guia que ela lista como atraso.
+   */
+  private static Guia guia(DadosProdutorPorta.Vencimento g, LocalDate hoje) {
+    String situacao = g.status() != StatusGuiaFiscal.PAGA && g.dataVencimento().isBefore(hoje)
+        ? StatusGuiaFiscal.VENCIDA.name()
+        : g.status().name();
     return new Guia(g.tipo().name(), FormatoBr.data(g.dataVencimento()),
-        FormatoBr.moeda(g.valor()), g.status().name());
+        FormatoBr.moeda(g.valor()), situacao);
   }
 
   private static YearMonth mes(String valor) {
