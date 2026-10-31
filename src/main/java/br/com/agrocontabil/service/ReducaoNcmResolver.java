@@ -19,7 +19,8 @@ import org.springframework.stereotype.Component;
  * <p><strong>Precedência:</strong>
  * <ol>
  *   <li>se o item informa {@code percentualReducao} (não nulo), esse valor prevalece, com o
- *       {@code cClassTrib} informado (pode ser nulo);</li>
+ *       {@code cClassTrib} informado ou, sem ele, o integral (0%) ou o da regra do NCM quando o
+ *       percentual é o mesmo (#278);</li>
  *   <li>se informa só o {@code cClassTrib}, vale a redução oficial desse código;</li>
  *   <li>senão, o tratamento do NCM na tabela oficial ({@link ClassificacaoTributariaService}):
  *       anexo de alíquota zero (100%), in natura (60%), anexo de 60% ou integral (0%).</li>
@@ -63,10 +64,12 @@ public class ReducaoNcmResolver {
    * @return tratamento aplicado, nunca nulo
    */
   public ReducaoAplicada tratamento(NotaFiscalItem item) {
-    if (item.getPercentualReducao() != null) {
-      return new ReducaoAplicada(item.getPercentualReducao(), item.getCClassTrib());
-    }
     LocalDate data = dataReferencia(item.getNotaFiscal());
+    if (item.getPercentualReducao() != null) {
+      return new ReducaoAplicada(item.getPercentualReducao(),
+          item.getCClassTrib() != null ? item.getCClassTrib()
+              : classificacaoDoPercentual(item, data));
+    }
     if (item.getCClassTrib() != null) {
       // Sobrescrita manual so do cClassTrib: a reducao e a oficial do codigo, para o XML nao
       // declarar uma classificacao e calcular outra. Codigo inexistente fica sem reducao.
@@ -81,6 +84,23 @@ public class ReducaoNcmResolver {
     }
     TratamentoTributarioNcm tratamento = classificacaoService.tratamentoPorNcm(ncm, data);
     return new ReducaoAplicada(tratamento.percentualReducao(), tratamento.cClassTrib());
+  }
+
+  /**
+   * cClassTrib para um percentual informado sem classificação (#278): 0% é a tributação integral
+   * (000001); outro percentual igual ao da regra do NCM usa o código da regra. Diferente da regra,
+   * fica sem código e a emissão pede o cClassTrib.
+   */
+  private String classificacaoDoPercentual(NotaFiscalItem item, LocalDate data) {
+    if (item.getPercentualReducao().signum() == 0) {
+      return ClassificacaoTributariaService.INTEGRAL;
+    }
+    if (item.getNcm() == null || item.getNcm().isBlank()) {
+      return null;
+    }
+    TratamentoTributarioNcm regra = classificacaoService.tratamentoPorNcm(item.getNcm(), data);
+    return regra.percentualReducao().compareTo(item.getPercentualReducao()) == 0
+        ? regra.cClassTrib() : null;
   }
 
   private static LocalDate dataReferencia(NotaFiscal nota) {

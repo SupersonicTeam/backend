@@ -56,6 +56,12 @@ public class FiscalRulesValidator {
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
   /**
+   * CSTs do IBS/CBS que a emissão monta (#278): 000 (integral) e 200 (redução de alíquota, com
+   * {@code gRed}).
+   */
+  static final java.util.Set<String> CST_SUPORTADOS = java.util.Set.of("000", "200");
+
+  /**
    * Existência do NCM na tabela de referência (RN008) na emissão — issue #282. O
    * {@code @ValidNcm} só confere o request; nota gravada antes de um código sair da referência
    * (os inexistentes removidos pelo changeSet 0046) chegaria à SEFAZ com NCM recusado. Nulo =
@@ -358,21 +364,6 @@ public class FiscalRulesValidator {
   }
 
   /**
-   * Valida a compatibilidade entre o âmbito codificado no 1.º dígito do CFOP e a relação real
-   * de UFs (emitente × destinatário) — RN008, issue #20.
-   *
-   * <p>O 1.º dígito de um CFOP de saída codifica o âmbito da operação:
-   * <ul>
-   *   <li>{@code 5} → operação <strong>interna</strong> (mesma UF do emitente);</li>
-   *   <li>{@code 6} → operação <strong>interestadual</strong> (UF diferente);</li>
-   *   <li>{@code 7} → operação com o <strong>exterior</strong> (UF do destinatário {@code EX}).</li>
-   * </ul>
-   *
-   * <p>Esta validação só roda quando há UF de emitente e de destinatário; a ausência de UF já é
-   * sinalizada por outras regras ({@code validarEmitente}/{@code validarDestinatario}) — não
-   * duplicamos a violação aqui.
-   */
-  /**
    * CST e cClassTrib do IBS/CBS que vão ao XML (issue #278): sem padrão fixo, o cClassTrib
    * aplicado tem de existir na tabela oficial vigente na emissão, o CST informado tem de ser o do
    * cClassTrib e a redução aplicada, a oficial do código. Item sem IBS/CBS calculado não entra.
@@ -390,6 +381,15 @@ public class FiscalRulesValidator {
       return;
     }
     String cst = NotaFiscalNfeMapper.cst(item);
+    if (!CST_SUPORTADOS.contains(cClassTrib.substring(0, 3))) {
+      // Outros CSTs pedem grupos que o XML nao monta (gDif no 510/515, gIBSCBSMono no 620,
+      // sem gIBSCBS no 410) e calculo proprio: barrar antes de emitir errado.
+      violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+          prefixo + ".cClassTrib", "cClassTrib " + cClassTrib + " (CST "
+              + cClassTrib.substring(0, 3) + ") nao e suportado na emissao: so tributacao"
+              + " integral (CST 000) e reducao de aliquota (CST 200)"));
+      return;
+    }
     if (!cClassTrib.startsWith(cst)) {
       violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
           prefixo + ".cstIbsCbs", "CST " + cst + " nao corresponde ao cClassTrib " + cClassTrib
@@ -417,6 +417,21 @@ public class FiscalRulesValidator {
     }
   }
 
+  /**
+   * Valida a compatibilidade entre o âmbito codificado no 1.º dígito do CFOP e a relação real
+   * de UFs (emitente × destinatário) — RN008, issue #20.
+   *
+   * <p>O 1.º dígito de um CFOP de saída codifica o âmbito da operação:
+   * <ul>
+   *   <li>{@code 5} → operação <strong>interna</strong> (mesma UF do emitente);</li>
+   *   <li>{@code 6} → operação <strong>interestadual</strong> (UF diferente);</li>
+   *   <li>{@code 7} → operação com o <strong>exterior</strong> (UF do destinatário {@code EX}).</li>
+   * </ul>
+   *
+   * <p>Esta validação só roda quando há UF de emitente e de destinatário; a ausência de UF já é
+   * sinalizada por outras regras ({@code validarEmitente}/{@code validarDestinatario}) — não
+   * duplicamos a violação aqui.
+   */
   private void validarAmbitoCfop(
       NotaFiscal nota,
       NotaFiscalItem item,

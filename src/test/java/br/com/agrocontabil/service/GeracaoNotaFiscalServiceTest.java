@@ -7,6 +7,7 @@ import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -27,6 +28,7 @@ import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
 import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
+import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.nfe.XsdValidator;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import java.math.BigDecimal;
@@ -157,6 +159,32 @@ class GeracaoNotaFiscalServiceTest {
               + pAliqEfet + "</pAliqEfet></gRed>")
           .contains("<pCBS>0.9000</pCBS><gRed><pRedAliq>" + red + "</pRedAliq>");
     }
+  }
+
+  @Test
+  @DisplayName("importacao aceita NF-e autorizada no pacote de schemas anterior (PL_010g, #278)")
+  void importacaoAceitaSchemaAnterior() {
+    NotaFiscal nota = buildNotaCompleta();
+    tributacaoService.calcular(nota);
+    String xml = service.gerarXml(nota);
+    // gIBSCBSMono na estrutura de antes do PL_010g (sem gIBSMonoAdRem/gCBSMonoAdRem): valido no
+    // pacote anterior, recusado no atual. A assinatura deixa de conferir, mas o XSD nao a checa.
+    String monofasicoAntigo = xml.replaceFirst(
+        "<CST>[0-9]{3}</CST><cClassTrib>[0-9]{6}</cClassTrib><gIBSCBS>.*?</gIBSCBS>",
+        "<CST>620</CST><cClassTrib>620001</cClassTrib><gIBSCBSMono><gMonoPadrao>"
+            + "<qBCMono>1.0000</qBCMono><adRemIBS>0.0000</adRemIBS><adRemCBS>0.0000</adRemCBS>"
+            + "<vIBSMono>0.00</vIBSMono><vCBSMono>0.00</vCBSMono></gMonoPadrao>"
+            + "<vTotIBSMonoItem>0.00</vTotIBSMonoItem><vTotCBSMonoItem>0.00</vTotCBSMonoItem>"
+            + "</gIBSCBSMono>");
+    assertThat(monofasicoAntigo).isNotEqualTo(xml);
+    XsdValidator xsd = new XsdValidator();
+
+    assertThatThrownBy(() -> xsd.validar(monofasicoAntigo))
+        .isInstanceOf(XmlGenerationException.class);
+    assertThatCode(() -> xsd.validarAceitandoAnterior(monofasicoAntigo))
+        .doesNotThrowAnyException();
+    assertThatThrownBy(() -> xsd.validarAceitandoAnterior(xml.replace("<CST>", "<CSTX>")))
+        .isInstanceOf(XmlGenerationException.class);
   }
 
   // =========================================================================

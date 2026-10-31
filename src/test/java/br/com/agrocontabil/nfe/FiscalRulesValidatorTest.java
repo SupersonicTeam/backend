@@ -77,15 +77,19 @@ class FiscalRulesValidatorTest {
       "cClassTrib inexistente,         ,    010100, 0,  cClassTrib",
       "CST divergente do cClassTrib,   101, 200036, 60, cstIbsCbs",
       "reducao divergente da oficial,  ,    200036, 30, percentualReducao",
-      "percentual sem cClassTrib,      ,    ,       60, cClassTrib"
+      "percentual sem cClassTrib,      ,    ,       60, cClassTrib",
+      "CST nao suportado (410),        ,    410014, 0,  cClassTrib"
   })
   @DisplayName("IBS/CBS do item: cClassTrib, CST e reducao conferidos na tabela oficial (#278)")
   void rejeitaTributacaoIbsCbsInconsistente(String caso, String cst, String cClassTrib,
       String reducao, String campo) {
     ClassificacaoTributariaService classificacao = mock(ClassificacaoTributariaService.class);
-    when(classificacao.classificacao(org.mockito.ArgumentMatchers.anyString(),
-        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.empty());
-    when(classificacao.classificacao(org.mockito.ArgumentMatchers.eq("200036"),
+    // Nem toda linha chega a consultar a tabela (percentual sem cClassTrib para antes).
+    org.mockito.Mockito.lenient().when(classificacao.classificacao(
+        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(java.util.Optional.empty());
+    org.mockito.Mockito.lenient().when(classificacao.classificacao(
+        org.mockito.ArgumentMatchers.eq("200036"),
         org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.of(
             br.com.agrocontabil.model.ClassificacaoTributaria.builder().codigo("200036")
                 .percentualReducaoIbs(new BigDecimal("60")).build()));
@@ -94,6 +98,10 @@ class FiscalRulesValidatorTest {
     NotaFiscalItem item = nota.getItens().get(0);
     item.setValorIbs(new BigDecimal("0.40"));
     item.setCstIbsCbs(cst);
+    if (cst != null) {
+      // CST informado so vale com o cClassTrib informado junto (#278).
+      item.setCClassTrib(cClassTrib);
+    }
     item.setCClassTribAplicado(cClassTrib);
     item.setPercentualReducaoAplicado(new BigDecimal(reducao));
 
@@ -102,6 +110,19 @@ class FiscalRulesValidatorTest {
     assertThat(erro).as(caso).isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class);
     assertThat(((NotaFiscalInvalidaParaEmissaoException) erro).getErrors())
         .extracting(ErrorDetail::field).as(caso).contains("item[1]." + campo);
+  }
+
+  @Test
+  @DisplayName("CST informado sem cClassTrib (resto do exemplo antigo do OpenAPI) e ignorado (#278)")
+  void cstSemCClassTribIgnorado() {
+    NotaFiscal nota = notaValida();
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setValorIbs(new BigDecimal("0.40"));
+    item.setCstIbsCbs("000");
+    item.setCClassTribAplicado("200036");
+
+    assertThat(NotaFiscalNfeMapper.cst(item)).isEqualTo("200");
+    assertThatCode(() -> validator.validar(nota)).doesNotThrowAnyException();
   }
 
   @Test

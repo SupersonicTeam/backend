@@ -153,7 +153,8 @@ public class NfeXmlImporter {
 
   private void validarXsd(String nfeXml) {
     try {
-      xsdValidator.validar(nfeXml);
+      // NF-e de terceiro ja autorizada: vale o pacote de schemas atual ou o anterior (#278).
+      xsdValidator.validarAceitandoAnterior(nfeXml);
     } catch (RuntimeException e) {
       // XsdValidator lanca XmlGenerationException (semantica de emissao). Traduzimos para a
       // semantica de importacao sem vazar detalhe tecnico sensivel ao cliente.

@@ -324,9 +324,13 @@ public class NotaFiscalNfeMapper {
         : item.getCClassTrib();
   }
 
-  /** CST que vai ao XML: o informado ou o prefixo do cClassTrib (#278). */
+  /**
+   * CST que vai ao XML (#278): o informado, só quando o cliente também informou o cClassTrib (CST
+   * sem classificação é resto de rascunho antigo, como o exemplo {@code 000} do OpenAPI); senão o
+   * prefixo do cClassTrib.
+   */
   static String cst(NotaFiscalItem item) {
-    if (item.getCstIbsCbs() != null) {
+    if (item.getCstIbsCbs() != null && item.getCClassTrib() != null) {
       return item.getCstIbsCbs();
     }
     String cClassTrib = cClassTrib(item);

@@ -53,10 +53,40 @@ import org.xml.sax.SAXParseException;
 public class XsdValidator {
 
   private static final Logger log = LoggerFactory.getLogger(XsdValidator.class);
-  private static final String XSD_ROOT = "/xsd/nfe_v4.00.xsd";
+  /** Pacote de liberação atual (PL_010g v1.03, #278): emissão e, antes de tudo, a importação. */
+  private static final String DIR_ATUAL = "/xsd/";
 
-  private volatile Schema schema;
-  private final Object schemaLock = new Object();
+  /**
+   * Pacote anterior, só para a importação: uma NF-e de terceiro autorizada com o schema da época
+   * continua válida (a SEFAZ recusa a estrutura antiga só na emissão nova). Ex.: o grupo
+   * {@code gIBSCBSMono} foi reestruturado no PL_010g — #278.
+   */
+  private static final String DIR_ANTERIOR = "/xsd/anterior/";
+
+  private static final String XSD_RAIZ = "nfe_v4.00.xsd";
+
+  private final ConjuntoSchema atual = new ConjuntoSchema(DIR_ATUAL);
+  private final ConjuntoSchema anterior = new ConjuntoSchema(DIR_ANTERIOR);
+
+  /**
+   * Valida contra o pacote atual e, se falhar, contra o anterior — para XML de terceiro já
+   * autorizado (importação, #278). Falhando nos dois, lança o erro do pacote atual.
+   *
+   * @param xml XML da NF-e
+   * @throws XmlGenerationException se o XML não valida em nenhum dos dois pacotes
+   */
+  public void validarAceitandoAnterior(String xml) {
+    try {
+      validar(xml);
+    } catch (XmlGenerationException atualFalhou) {
+      try {
+        validar(xml, anterior.schema());
+        log.info("XML valido no pacote de schemas anterior (importacao de NF-e ja autorizada)");
+      } catch (XmlGenerationException anteriorFalhou) {
+        throw atualFalhou;
+      }
+    }
+  }
 
   /**
    * Valida o XML da NF-e contra o XSD oficial.
@@ -65,7 +95,10 @@ public class XsdValidator {
    * @throws XmlGenerationException se o XML não for válido, com lista de erros formatados
    */
   public void validar(String xml) {
-    Schema s = getSchema();
+    validar(xml, atual.schema());
+  }
+
+  private void validar(String xml, Schema s) {
     Validator validator = s.newValidator();
 
     // XXE: desativa resolução de entidades externas no validador
@@ -118,20 +151,32 @@ public class XsdValidator {
   // Schema cache
   // =========================================================================
 
-  private Schema getSchema() {
-    if (schema != null) {
-      return schema;
+  /** Schemas de um diretório do classpath, construídos uma vez e em cache. */
+  private final class ConjuntoSchema {
+
+    private final String diretorio;
+    private volatile Schema schema;
+
+    private ConjuntoSchema(String diretorio) {
+      this.diretorio = diretorio;
     }
-    synchronized (schemaLock) {
-      if (schema != null) {
-        return schema;
+
+    private Schema schema() {
+      Schema s = schema;
+      if (s == null) {
+        synchronized (this) {
+          s = schema;
+          if (s == null) {
+            s = buildSchema(diretorio);
+            schema = s;
+          }
+        }
       }
-      schema = buildSchema();
+      return s;
     }
-    return schema;
   }
 
-  private Schema buildSchema() {
+  private Schema buildSchema(String diretorio) {
     try {
       SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
 
@@ -140,13 +185,13 @@ public class XsdValidator {
       safeSetProperty(factory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
       safeSetProperty(factory, XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
 
-      // Resolver de imports relativos via classpath
-      factory.setResourceResolver(new ClasspathLsResourceResolver());
+      // Resolver de imports relativos via classpath, no mesmo diretorio da raiz
+      factory.setResourceResolver(new ClasspathLsResourceResolver(diretorio));
 
-      URL xsdUrl = XsdValidator.class.getResource(XSD_ROOT);
+      URL xsdUrl = XsdValidator.class.getResource(diretorio + XSD_RAIZ);
       if (xsdUrl == null) {
         throw new XmlGenerationException(
-            "XSD nfe_v4.00.xsd nao encontrado no classpath em /xsd/");
+            "XSD " + XSD_RAIZ + " nao encontrado no classpath em " + diretorio);
       }
       return factory.newSchema(xsdUrl);
     } catch (SAXException e) {
@@ -186,6 +231,12 @@ public class XsdValidator {
    */
   private static final class ClasspathLsResourceResolver implements LSResourceResolver {
 
+    private final String diretorio;
+
+    private ClasspathLsResourceResolver(String diretorio) {
+      this.diretorio = diretorio;
+    }
+
     @Override
     public LSInput resolveResource(
         String type,
@@ -202,7 +253,7 @@ public class XsdValidator {
           ? systemId.substring(systemId.lastIndexOf('/') + 1)
           : systemId;
 
-      InputStream stream = XsdValidator.class.getResourceAsStream("/xsd/" + fileName);
+      InputStream stream = XsdValidator.class.getResourceAsStream(diretorio + fileName);
       if (stream == null) {
         log.debug("Recurso XSD nao encontrado no classpath: {}", fileName);
         return null;
