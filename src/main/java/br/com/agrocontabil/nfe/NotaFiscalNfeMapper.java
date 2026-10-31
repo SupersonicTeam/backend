@@ -502,6 +502,36 @@ public class NotaFiscalNfeMapper {
     return t;
   }
 
+  /** Totais das parcelas estadual e municipal do IBS da nota. */
+  public record TotaisIbs(BigDecimal valorUf, BigDecimal valorMun) {
+  }
+
+  /**
+   * Totais do IBS por esfera que vão ao {@code IBSCBSTot} (issue #31): a soma das parcelas reais
+   * dos itens; com algum item legado sem as parcelas, o total da nota dividido pela regra do
+   * fallback do resolvedor (todo estadual antes de 2027). Fonte única do XML e do preview da
+   * DANFE (#279).
+   *
+   * @param nota nota com itens
+   * @return os totais, nunca nulos
+   */
+  public static TotaisIbs totaisIbs(NotaFiscal nota) {
+    boolean parcelasReais = nota.getItens().stream()
+        .allMatch(i -> i.getValorIbsUf() != null && i.getValorIbsMun() != null);
+    if (parcelasReais) {
+      return new TotaisIbs(
+          nota.getItens().stream().map(NotaFiscalItem::getValorIbsUf)
+              .reduce(BigDecimal.ZERO, BigDecimal::add),
+          nota.getItens().stream().map(NotaFiscalItem::getValorIbsMun)
+              .reduce(BigDecimal.ZERO, BigDecimal::add));
+    }
+    BigDecimal totalIbs = nota.getValorTotalIbs() != null
+        ? nota.getValorTotalIbs() : BigDecimal.ZERO;
+    BigDecimal ibsUf = AliquotaIbsCbsResolver.temParcelaMunicipal(nota.getDataEmissao())
+        ? totalIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP) : totalIbs;
+    return new TotaisIbs(ibsUf, totalIbs.subtract(ibsUf));
+  }
+
   private IbsCbsTot buildIbsCbsTot(NotaFiscal nota) {
     BigDecimal totalIbs = nota.getValorTotalIbs() != null
         ? nota.getValorTotalIbs() : BigDecimal.ZERO;
@@ -518,24 +548,9 @@ public class NotaFiscalNfeMapper {
     IbsCbsTot tot = new IbsCbsTot();
     tot.setVBCIBSCBS(formatDecimal2(baseTotal));
 
-    // gIBS — soma das parcelas estadual/municipal reais dos itens (issue #31).
-    // Item legado sem as parcelas: regra do fallback do resolvedor (todo estadual antes de 2027).
-    boolean parcelasReais = nota.getItens().stream()
-        .allMatch(i -> i.getValorIbsUf() != null && i.getValorIbsMun() != null);
-    BigDecimal ibsUf;
-    BigDecimal ibsMun;
-    if (parcelasReais) {
-      ibsUf = nota.getItens().stream()
-          .map(NotaFiscalItem::getValorIbsUf)
-          .reduce(BigDecimal.ZERO, BigDecimal::add);
-      ibsMun = nota.getItens().stream()
-          .map(NotaFiscalItem::getValorIbsMun)
-          .reduce(BigDecimal.ZERO, BigDecimal::add);
-    } else {
-      ibsUf = AliquotaIbsCbsResolver.temParcelaMunicipal(nota.getDataEmissao())
-          ? totalIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP) : totalIbs;
-      ibsMun = totalIbs.subtract(ibsUf);
-    }
+    TotaisIbs totaisIbs = totaisIbs(nota);
+    BigDecimal ibsUf = totaisIbs.valorUf();
+    BigDecimal ibsMun = totaisIbs.valorMun();
 
     IbsCbsTot.GIbsUfTot ufTot = new IbsCbsTot.GIbsUfTot();
     ufTot.setVDif("0.00");
@@ -680,14 +695,6 @@ public class NotaFiscalNfeMapper {
     return endereco.getCodigoMunicipioIbge();
   }
 
-  /**
-   * Mapeia {@link RegimeTributario} para o CRT da NF-e.
-   *
-   * <ul>
-   *   <li>SIMPLES_NACIONAL → "1"</li>
-   *   <li>outros / null → "3" (Regime Normal)</li>
-   * </ul>
-   */
   /**
    * Código do Regime Tributário (CRT, C21) do emitente: 1 Simples, 4 MEI, 3 regime normal. Fonte
    * única do XML e da DANFE (#279).

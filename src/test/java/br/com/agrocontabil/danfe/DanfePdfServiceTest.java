@@ -1,11 +1,14 @@
 package br.com.agrocontabil.danfe;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.ProdutorTestFixtures;
+import br.com.agrocontabil.exception.DanfeGenerationException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
@@ -196,8 +199,8 @@ class DanfePdfServiceTest {
       + " gRed), parcelas do IBS, CBS e o total do IBS/CBS/IS")
   void valoresImpressosSaoOsDoXml(Tratamento tratamento) throws IOException {
     NotaFiscal nota = notaComTratamento(tratamento);
-    String xml = new XmlGenerator().marshal(
-        new NotaFiscalNfeMapper(new ChaveAcessoGenerator()).toNfe(nota));
+    String xml = xml(nota);
+    nota.setXmlGerado(xml);
     String det = trecho(xml, "<det ", "</det>");
     String total = trecho(xml, "<IBSCBSTot>", "</IBSCBSTot>");
 
@@ -248,14 +251,89 @@ class DanfePdfServiceTest {
     // O XML não tem o grupo do IS: o campo sai vazio (nada de informação inexistente).
     assertThat(valorDoRotulo(texto, "VALOR DO IMPOSTO SELETIVO")).doesNotMatch("[0-9,.]+");
     assertThat(tag(totalCbs, "vCBS", 0)).isEqualTo(tratamento.valorCbs.toPlainString());
+
+    // O preview (sem XML, pela nota) imprime os mesmos valores fiscais que a DANFE do XML.
+    nota.setXmlGerado(null);
+    assertThat(quadrosFiscais(texto(service.gerarPreview(nota))))
+        .isEqualTo(quadrosFiscais(texto));
+  }
+
+  @Test
+  @DisplayName("Com XML, os valores fiscais saem do XML, não da nota (nota importada de terceiro)")
+  void notaImportadaUsaOXml() throws IOException {
+    NotaFiscal nota = notaComTratamento(Tratamento.SEM_REDUCAO);
+    // XML do fornecedor: ICMS destacado, CRT 1, bairro próprio e o CST/cClassTrib dele; a nota
+    // guarda o cClassTrib do crédito (outro), sem alíquotas nem totais de IBS/CBS.
+    String xml = xml(nota)
+        .replace("<vBC>0.00</vBC><vICMS>0.00</vICMS>", "<vBC>1000.00</vBC><vICMS>120.00</vICMS>")
+        .replace("<vFrete>0.00</vFrete>", "<vFrete>50.00</vFrete>")
+        .replace("<CRT>3</CRT>", "<CRT>1</CRT>")
+        .replace("<xBairro>CENTRO</xBairro>", "<xBairro>Distrito Industrial</xBairro>");
+    assertThat(xml).contains("<vICMS>120.00</vICMS>").contains("<CRT>1</CRT>")
+        .contains("Distrito Industrial");
+    nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
+    nota.setEmitenteNome("Fornecedor de Insumos Ltda");
+    nota.setValorTotalIbs(null);
+    nota.setValorTotalCbs(null);
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setCClassTribAplicado("200036");
+    item.setAliquotaIbs(null);
+    item.setAliquotaCbs(null);
+    nota.setXmlGerado(xml);
+
+    String texto = texto(service.gerarPdf(nota));
+
+    assertThat(valorDoRotulo(texto, "VALOR DO ICMS")).isEqualTo("120,00");
+    assertThat(valorDoRotulo(texto, "BASE DE CÁLC. DO ICMS")).isEqualTo("1.000,00");
+    assertThat(valorDoRotulo(texto, "VALOR DO FRETE")).isEqualTo("50,00");
+    assertThat(valorDoRotulo(texto, "CÓDIGO DE REGIME TRIBUTÁRIO (CRT)"))
+        .isEqualTo("1 - SIMPLES NACIONAL");
+    assertThat(texto).contains("Distrito Industrial").contains("CST 000")
+        .contains("[cClassTrib 000001]").doesNotContain("200036")
+        .contains("CBS 0,90%").contains("CBS 9,00")
+        .contains("Origem: importada (nota de terceiro)")
+        // A nota de terceiro não leva a assinatura do AgroContábil.
+        .doesNotContain("Emitido com o AgroContábil");
+    assertThat(valorDoRotulo(texto, "VALOR DA CBS")).isEqualTo("9,00");
+  }
+
+  @Test
+  @DisplayName("XML ilegível falha a geração (nunca cai em silêncio para os valores da nota)")
+  void xmlIlegivelFalha() {
+    NotaFiscal nota = buildNota();
+    nota.setXmlGerado("<NFe/>");
+
+    assertThatThrownBy(() -> service.gerarPdf(nota))
+        .isInstanceOf(DanfeGenerationException.class);
+  }
+
+  @Test
+  @DisplayName("DANFE de NF-e cancelada leva a marca d'água e a situação")
+  void notaCanceladaComMarcaDagua() throws IOException {
+    NotaFiscal nota = buildNota();
+    nota.setStatus(StatusNotaFiscal.CANCELADA);
+
+    String texto = texto(service.gerarPdf(nota));
+
+    assertThat(texto).contains("NF-e CANCELADA").contains("Situação: CANCELADA");
+  }
+
+  @Test
+  @DisplayName("Informações complementares trazem documento, situação e origem")
+  void situacaoNasInformacoesComplementares() throws IOException {
+    String texto = texto(service.gerarPdf(buildNota()));
+
+    assertThat(texto).contains("Documento: NF-e").contains("Situação: XML GERADO")
+        .contains("Origem: emitida pelo produtor").contains("Emitido com o AgroContábil")
+        .doesNotContain("NF-e CANCELADA");
   }
 
   @Test
   @DisplayName("Emitente traz o CRT do XML; o tipo de regime de apuração fica reservado e vazio")
   void crtERegimeDeApuracaoReservado() throws IOException {
     NotaFiscal nota = notaComTratamento(Tratamento.REDUCAO_60);
-    String xml = new XmlGenerator().marshal(
-        new NotaFiscalNfeMapper(new ChaveAcessoGenerator()).toNfe(nota));
+    String xml = xml(nota);
+    nota.setXmlGerado(xml);
 
     String texto = texto(service.gerarPdf(nota));
 
@@ -284,14 +362,15 @@ class DanfePdfServiceTest {
   @DisplayName("Quadro do ICMS/IPI preservado, com os zeros do XML")
   void quadroIcmsIpiComZeros() throws IOException {
     NotaFiscal nota = notaComTratamento(Tratamento.SEM_REDUCAO);
-    String xml = new XmlGenerator().marshal(
-        new NotaFiscalNfeMapper(new ChaveAcessoGenerator()).toNfe(nota));
+    String xml = xml(nota);
+    nota.setXmlGerado(xml);
 
     String texto = texto(service.gerarPdf(nota));
 
     assertThat(tag(xml, "vICMS", 0)).isEqualTo("0.00");
-    assertThat(texto).contains("BASE DE CÁLC. DO ICMS").contains("VALOR DO ICMS")
-        .contains("VALOR TOTAL DO IPI").contains("0,00");
+    assertThat(valorDoRotulo(texto, "VALOR DO ICMS")).isEqualTo("0,00");
+    assertThat(valorDoRotulo(texto, "VALOR TOTAL DO IPI")).isEqualTo("0,00");
+    assertThat(valorDoRotulo(texto, "VALOR TOTAL DA NOTA")).isEqualTo("1.000,00");
   }
 
   @Test
@@ -322,6 +401,24 @@ class DanfePdfServiceTest {
     item.setValorIbsMun(new BigDecimal("0.00"));
     item.setValorCbs(tratamento.valorCbs);
     return nota;
+  }
+
+  private static String xml(NotaFiscal nota) {
+    return new XmlGenerator().marshal(
+        new NotaFiscalNfeMapper(new ChaveAcessoGenerator()).toNfe(nota));
+  }
+
+  /**
+   * Do quadro do emitente aos dados adicionais (CRT, cálculo do imposto, IBS/CBS/IS e itens),
+   * sem o aviso nem a marca d'água do preview.
+   */
+  private static String quadrosFiscais(String texto) {
+    int de = texto.indexOf("CÓDIGO DE REGIME TRIBUTÁRIO (CRT)");
+    int ate = texto.indexOf("DADOS ADICIONAIS");
+    assertThat(de).isGreaterThanOrEqualTo(0);
+    return texto.substring(de, ate).lines().map(String::strip)
+        .filter(l -> !l.isEmpty() && !l.contains("RASCUNHO") && !l.contains("SEM VALOR"))
+        .toList().toString();
   }
 
   /** Conteúdo da {@code ocorrencia}-ésima tag (0 = a primeira). */
@@ -414,7 +511,6 @@ class DanfePdfServiceTest {
         .status(StatusNotaFiscal.XML_GERADO)
         .chaveAcesso(CHAVE)
         .protocoloAutorizacao("141260000012345")
-        .xmlGerado("<NFe/>")
         .build();
 
     nota.addItem(item(1));
