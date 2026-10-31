@@ -199,8 +199,8 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 ### `danfe/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `DanfePdfService` | Gera PDF via JasperReports (`reports/danfe.jrxml`, layout do DANFE oficial com IBS/CBS: emitente com logo `reports/agrocontabil-logo.png` e endereço, chave em blocos, protocolo, destinatário completo, cálculo do imposto, itens com NCM/CFOP/alíquotas, dados adicionais; "Página X de Y" pela variável `PAGINA_ATUAL` — `PAGE_COUNT` conta registros, não páginas). Toda formatação (CPF/CNPJ, CEP, NCM, chave, moeda, datas em Brasília) é feita aqui; `gerarPreview` = mesma DANFE com `MARCA_DAGUA`, chave e protocolo em branco e aviso nas informações complementares (issue #89) |
-| `DanfeItemRow` | DTO de linha de item para o relatório Jasper |
+| `DanfePdfService` | Gera PDF via JasperReports (`reports/danfe.jrxml`) no **leiaute retrato da NT 2026.010** (#279): canhoto; emitente (logo `reports/agrocontabil-logo.png`) \| DANFE \| chave; natureza \| protocolo; IE \| IE ST \| CNPJ; **CRT \| tipo de regime de apuração do IBS/CBS** (reservado, vazio); destinatário (com bairro e hora de saída); cálculo do imposto (ICMS/IPI com os zeros do XML + totais da nota); **TOTAL DO IBS / CBS / IS** (CBS, IBS UF, IBS Município; IS vazio: o XML não tem o grupo); itens com `[NCM][cClassTrib]`, CST/CFOP, base, alíquotas (efetiva com `gRed`) e valores de CBS/IBS UF/IBS Mun. Quadros facultativos (fatura, transportador, ISSQN, monofásicos) omitidos: o XML não os tem (item 4.4). **Os valores vêm dos helpers públicos do `NotaFiscalNfeMapper`** (`cst`, `cClassTrib`, `parcelasIbs`, `aliquotaEfetiva`, `crt`, `BAIRRO_DESTINATARIO`), nunca recalculados no PDF. "Página X de Y" pela variável `PAGINA_ATUAL`. `gerarPreview` = mesma DANFE com `MARCA_DAGUA`, chave e protocolo em branco (issue #89) |
+| `DanfeItemRow` | Linha de item do relatório Jasper (JavaBean): células de várias linhas (`\n`) da NT 2026.010 |
 
 ### `sefaz/`
 | Classe | Responsabilidade |

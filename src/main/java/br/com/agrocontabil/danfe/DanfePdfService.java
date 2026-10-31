@@ -8,6 +8,7 @@ import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -20,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.sf.jasperreports.engine.JasperCompileManager;
@@ -57,7 +58,12 @@ public class DanfePdfService {
   private static final Locale BR = Locale.of("pt", "BR");
   private static final DateTimeFormatter DATA_FMT =
       DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+  private static final DateTimeFormatter DIA_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+  private static final DateTimeFormatter HORA_FMT = DateTimeFormatter.ofPattern("HH:mm");
   private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
+
+  /** Valor impresso nos totais que o XML leva zerados (ICMS/IPI, frete, seguro etc.). */
+  private static final String ZERO_IMPRESSO = "0,00";
 
   /** Marca do AgroContábil no cabeçalho (classpath; o JasperReports carrega pelo nome). */
   private static final String LOGO = "reports/agrocontabil-logo.png";
@@ -166,8 +172,9 @@ public class DanfePdfService {
             + " ou no site da SEFAZ autorizadora."
         : "A chave de acesso é gerada na emissão do XML.");
     params.put("PROTOCOLO", protocolo(nota));
-    params.put("DATA_EMISSAO", formatarData(nota.getDataEmissao()));
-    params.put("DATA_SAIDA", formatarData(nota.getDataSaida()));
+    params.put("DATA_EMISSAO", formatarDia(nota.getDataEmissao()));
+    params.put("DATA_SAIDA", formatarDia(nota.getDataSaida()));
+    params.put("HORA_SAIDA", formatarHora(nota.getDataSaida()));
     params.put("SITUACAO", nota.getStatus() != null
         ? nota.getStatus().name().replace('_', ' ') : "");
     params.put("ORIGEM", nota.getOrigem() == OrigemNotaFiscal.IMPORTADA
@@ -181,17 +188,24 @@ public class DanfePdfService {
     EnderecoDestinatario dest = nota.getDestinatarioEndereco();
     if (dest != null) {
       params.put("DEST_ENDERECO", juntar(", ", dest.getLogradouro(), dest.getNumero()));
+      // O que vai no xBairro do XML: o domínio não modela o bairro do destinatário (#88).
+      params.put("DEST_BAIRRO", NotaFiscalNfeMapper.BAIRRO_DESTINATARIO);
       params.put("DEST_MUNICIPIO", dest.getMunicipio());
       params.put("DEST_UF", dest.getUf());
       params.put("DEST_CEP", cep(dest.getCep()));
       params.put("DEST_IBGE", dest.getCodigoMunicipioIbge());
     }
 
-    params.put("BASE_IBS_CBS", moeda(baseIbsCbs(nota)));
     params.put("TOTAL_PRODUTOS", moeda(nota.getValorTotalProdutos()));
-    params.put("TOTAL_IBS", moeda(nota.getValorTotalIbs()));
-    params.put("TOTAL_CBS", moeda(nota.getValorTotalCbs()));
     params.put("TOTAL_NOTA", moeda(nota.getValorTotalNota()));
+    // Total do ICMS/IPI, frete, seguro, desconto e outras: o XML leva zero (o produtor trata do
+    // ICMS por guia, fora da NF-e; ver docs/premissas-e-escopo.md). A DANFE imprime o mesmo.
+    params.put("ZERO", ZERO_IMPRESSO);
+    // Total do IBS/CBS/IS (NT 2026.010, item 4.1): os mesmos do IBSCBSTot do XML.
+    params.put("TOTAL_CBS", moeda(nota.getValorTotalCbs()));
+    params.put("TOTAL_IBS_UF", moeda(somaParcelas(nota, NotaFiscalNfeMapper.ParcelasIbs::valorUf)));
+    params.put("TOTAL_IBS_MUN",
+        moeda(somaParcelas(nota, NotaFiscalNfeMapper.ParcelasIbs::valorMun)));
     params.put("INFO_COMPLEMENTAR", INFO_REFORMA);
     params.put("GERADO_EM", ZonedDateTime.now(BRASILIA).format(DATA_FMT));
     return params;
@@ -214,6 +228,7 @@ public class DanfePdfService {
     params.put("EMIT_NOME", emit.getNomeCompleto());
     params.put("EMIT_CPF_CNPJ", documento(emit.getCpfCnpj()));
     params.put("EMIT_IE", emit.getInscricaoEstadual());
+    params.put("EMIT_CRT", crtImpresso(NotaFiscalNfeMapper.crt(emit.getRegimeTributario())));
     EnderecoProdutor end = emit.getEndereco();
     if (end != null) {
       params.put("EMIT_ENDERECO", juntar(" - ",
@@ -226,26 +241,62 @@ public class DanfePdfService {
     }
   }
 
-  /** Converte os itens da nota em linhas formatadas para o datasource. */
+  /**
+   * Converte os itens da nota em linhas do quadro de produtos (NT 2026.010, item 4.3), com os
+   * mesmos valores do XML: CST e cClassTrib do tratamento aplicado, {@code vBC} cheio, parcelas
+   * do IBS e a alíquota efetiva quando há {@code gRed} — tudo pelos helpers do
+   * {@link NotaFiscalNfeMapper}, nunca recalculado aqui.
+   */
   private List<DanfeItemRow> montarItens(NotaFiscal nota) {
     List<DanfeItemRow> rows = new ArrayList<>();
     for (NotaFiscalItem item : nota.getItens()) {
+      String cClassTrib = NotaFiscalNfeMapper.cClassTrib(item);
+      String cst = NotaFiscalNfeMapper.cst(item);
+      boolean comIbsCbs = item.getAliquotaIbs() != null && item.getAliquotaCbs() != null;
+      NotaFiscalNfeMapper.ParcelasIbs parcelas = NotaFiscalNfeMapper.parcelasIbs(item);
       rows.add(new DanfeItemRow(
-          item.getCodigoProduto() != null && !item.getCodigoProduto().isBlank()
-              ? item.getCodigoProduto() : String.valueOf(item.getNumeroItem()),
-          item.getDescricao(),
-          ncm(item.getNcm()),
-          item.getCfop(),
-          item.getUnidade(),
-          quantidade(item.getQuantidade()),
+          juntar("\n", juntar(" - ", item.getCodigoProduto(), item.getDescricao()), juntar(" ",
+              item.getNcm() != null ? "[NCM " + ncm(item.getNcm()) + "]" : null,
+              cClassTrib != null ? "[cClassTrib " + cClassTrib + "]" : null)),
+          juntar("\n", cst != null ? "CST " + cst : null,
+              item.getCfop() != null ? "CFOP " + item.getCfop() : null),
+          juntar("\n", quantidade(item.getQuantidade()), item.getUnidade()),
           moeda(item.getValorUnitario()),
           moeda(item.getValorTotal()),
-          percentual(item.getAliquotaIbs()),
-          moeda(item.getValorIbs()),
-          percentual(item.getAliquotaCbs()),
-          moeda(item.getValorCbs())));
+          comIbsCbs ? moeda(item.getValorTotal()) : null,
+          comIbsCbs ? String.join("\n",
+              "CBS " + percentual(NotaFiscalNfeMapper.aliquotaEfetiva(item.getAliquotaCbs(), item)),
+              "IBS UF "
+                  + percentual(NotaFiscalNfeMapper.aliquotaEfetiva(parcelas.aliquotaUf(), item)),
+              "IBS MUN "
+                  + percentual(NotaFiscalNfeMapper.aliquotaEfetiva(parcelas.aliquotaMun(), item)))
+              : null,
+          comIbsCbs ? String.join("\n",
+              "CBS " + moeda(item.getValorCbs()),
+              "IBS UF " + moeda(parcelas.valorUf()),
+              "IBS MUN " + moeda(parcelas.valorMun()))
+              : null));
     }
     return rows;
+  }
+
+  /** Soma de uma parcela do IBS nos itens com IBS calculado; nula se nenhum tem. */
+  private static BigDecimal somaParcelas(NotaFiscal nota,
+      Function<NotaFiscalNfeMapper.ParcelasIbs, BigDecimal> parcela) {
+    return nota.getItens().stream()
+        .filter(i -> i.getValorIbs() != null)
+        .map(i -> parcela.apply(NotaFiscalNfeMapper.parcelasIbs(i)))
+        .reduce(BigDecimal::add).orElse(null);
+  }
+
+  /** CRT com a descrição do MOC ({@code 3 - REGIME NORMAL}). */
+  private static String crtImpresso(String crt) {
+    return switch (crt) {
+      case "1" -> "1 - SIMPLES NACIONAL";
+      case "2" -> "2 - SIMPLES NACIONAL - EXCESSO DE SUBLIMITE";
+      case "4" -> "4 - MEI";
+      default -> crt + " - REGIME NORMAL";
+    };
   }
 
   /** "1 - SAÍDA" ou "0 - ENTRADA", pelo CFOP do primeiro item (1/2/3 = entrada). */
@@ -262,12 +313,6 @@ public class DanfePdfService {
     }
     return nota.getDataAutorizacao() == null ? nota.getProtocoloAutorizacao()
         : nota.getProtocoloAutorizacao() + " - " + formatarData(nota.getDataAutorizacao());
-  }
-
-  /** Soma da base de cálculo de IBS/CBS dos itens; nula se nenhum item tem base. */
-  private static BigDecimal baseIbsCbs(NotaFiscal nota) {
-    return nota.getItens().stream().map(NotaFiscalItem::getBaseCalculoIbsCbs)
-        .filter(Objects::nonNull).reduce(BigDecimal::add).orElse(null);
   }
 
   /** Formata um valor monetário em pt-BR com 2 casas; nulo vira "-". */
@@ -306,6 +351,16 @@ public class DanfePdfService {
   /** Data e hora em Brasília; nula vira string vazia. */
   private String formatarData(OffsetDateTime data) {
     return data != null ? data.atZoneSameInstant(BRASILIA).format(DATA_FMT) : "";
+  }
+
+  /** Só a data em Brasília (campo "Data de emissão" do quadro do destinatário). */
+  private String formatarDia(OffsetDateTime data) {
+    return data != null ? data.atZoneSameInstant(BRASILIA).format(DIA_FMT) : "";
+  }
+
+  /** Só a hora em Brasília (campo "Hora de saída"). */
+  private String formatarHora(OffsetDateTime data) {
+    return data != null ? data.atZoneSameInstant(BRASILIA).format(HORA_FMT) : "";
   }
 
   /** CPF (11 dígitos) ou CNPJ (14) com máscara; outro formato sai como veio. */

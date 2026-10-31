@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- DANFE — NF-e modelo 55 / NFA. Layout informativo inspirado no DANFE oficial (Manual de
-     Orientacao do Contribuinte), adaptado a reforma tributaria: o bloco de imposto traz IBS/CBS
-     (LC 214/2025). Toda formatacao (CPF/CNPJ, CEP, NCM, chave, moeda, datas) vem pronta do
-     DanfePdfService; o template so posiciona texto. -->
+<!-- DANFE - NF-e modelo 55 / NFA no leiaute de referencia RETRATO da NT 2026.010 v1.00
+     (DANFE Reforma Tributaria, issue #279): quadros do DANFE atual (MOC) preservados, CRT e o
+     campo reservado do tipo de regime de apuracao no emitente, bloco TOTAL DO IBS / CBS / IS
+     logo apos o TOTAL DO ICMS/IPI e, por item, CST/CFOP, cClassTrib, base e aliquota/valor de
+     CBS, IBS UF e IBS Municipio (aliquota efetiva quando ha gRed).
+     Quadros facultativos (item 4.4: fatura/duplicatas, transportador, ISSQN, monofasicos, FCP,
+     DIFAL) ficam de fora: o XML gerado nao os tem, e a NT proibe imprimir informacao
+     inexistente no XML. O Imposto Seletivo (IS) tambem nao esta no XML: o campo sai vazio.
+     Toda formatacao vem pronta do DanfePdfService; o template so posiciona texto. -->
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
@@ -17,9 +22,6 @@
               bottomMargin="20"
               whenNoDataType="AllSectionsNoDetail">
 
-  <!-- =====================================================================
-       Estilos
-       ===================================================================== -->
   <style name="Celula" mode="Transparent">
     <box>
       <pen lineWidth="0.5" lineColor="#7A8A80"/>
@@ -34,86 +36,69 @@
       <pen lineWidth="0.5" lineColor="#7A8A80"/>
     </box>
   </style>
-  <style name="LinhaItem" fontName="SansSerif" fontSize="6.5" vTextAlign="Middle">
+  <style name="LinhaItem" fontName="SansSerif" fontSize="6.5" vTextAlign="Top">
     <box topPadding="1" leftPadding="2" bottomPadding="1" rightPadding="2">
-      <pen lineWidth="0.5" lineColor="#B5C2BA"/>
+      <pen lineWidth="0.5" lineColor="#7A8A80"/>
     </box>
   </style>
 
-  <!-- =====================================================================
-       Parametros escalares
-       ===================================================================== -->
-  <parameter name="LOGO"              class="java.lang.String"/>
-  <parameter name="NUMERO"            class="java.lang.String"/>
-  <parameter name="SERIE"             class="java.lang.String"/>
-  <parameter name="MODELO"            class="java.lang.String"/>
-  <parameter name="TIPO_OPERACAO"     class="java.lang.String"/>
-  <parameter name="TIPO_DOCUMENTO"    class="java.lang.String"/>
-  <parameter name="NAT_OPERACAO"      class="java.lang.String"/>
-  <parameter name="CHAVE_ACESSO"      class="java.lang.String"/>
-  <parameter name="CONSULTA_CHAVE"    class="java.lang.String"/>
-  <parameter name="PROTOCOLO"         class="java.lang.String"/>
-  <parameter name="DATA_EMISSAO"      class="java.lang.String"/>
-  <parameter name="DATA_SAIDA"        class="java.lang.String"/>
-  <parameter name="SITUACAO"          class="java.lang.String"/>
-  <parameter name="ORIGEM"            class="java.lang.String"/>
-
-  <parameter name="EMIT_NOME"         class="java.lang.String"/>
-  <parameter name="EMIT_ENDERECO"     class="java.lang.String"/>
-  <parameter name="EMIT_BAIRRO_CEP"   class="java.lang.String"/>
+  <parameter name="LOGO" class="java.lang.String"/>
+  <parameter name="NUMERO" class="java.lang.String"/>
+  <parameter name="SERIE" class="java.lang.String"/>
+  <parameter name="MODELO" class="java.lang.String"/>
+  <parameter name="TIPO_OPERACAO" class="java.lang.String"/>
+  <parameter name="TIPO_DOCUMENTO" class="java.lang.String"/>
+  <parameter name="NAT_OPERACAO" class="java.lang.String"/>
+  <parameter name="CHAVE_ACESSO" class="java.lang.String"/>
+  <parameter name="CONSULTA_CHAVE" class="java.lang.String"/>
+  <parameter name="PROTOCOLO" class="java.lang.String"/>
+  <parameter name="DATA_EMISSAO" class="java.lang.String"/>
+  <parameter name="DATA_SAIDA" class="java.lang.String"/>
+  <parameter name="HORA_SAIDA" class="java.lang.String"/>
+  <parameter name="SITUACAO" class="java.lang.String"/>
+  <parameter name="ORIGEM" class="java.lang.String"/>
+  <parameter name="EMIT_NOME" class="java.lang.String"/>
+  <parameter name="EMIT_ENDERECO" class="java.lang.String"/>
+  <parameter name="EMIT_BAIRRO_CEP" class="java.lang.String"/>
   <parameter name="EMIT_MUNICIPIO_UF" class="java.lang.String"/>
-  <parameter name="EMIT_CPF_CNPJ"     class="java.lang.String"/>
-  <parameter name="EMIT_IE"           class="java.lang.String"/>
-
-  <parameter name="DEST_NOME"         class="java.lang.String"/>
-  <parameter name="DEST_CPF_CNPJ"     class="java.lang.String"/>
-  <parameter name="DEST_ENDERECO"     class="java.lang.String"/>
-  <parameter name="DEST_MUNICIPIO"    class="java.lang.String"/>
-  <parameter name="DEST_UF"           class="java.lang.String"/>
-  <parameter name="DEST_CEP"          class="java.lang.String"/>
-  <parameter name="DEST_IE"           class="java.lang.String"/>
-  <parameter name="DEST_IBGE"         class="java.lang.String"/>
-
-  <parameter name="BASE_IBS_CBS"      class="java.lang.String"/>
-  <parameter name="TOTAL_PRODUTOS"    class="java.lang.String"/>
-  <parameter name="TOTAL_IBS"         class="java.lang.String"/>
-  <parameter name="TOTAL_CBS"         class="java.lang.String"/>
-  <parameter name="TOTAL_NOTA"        class="java.lang.String"/>
-
+  <parameter name="EMIT_CPF_CNPJ" class="java.lang.String"/>
+  <parameter name="EMIT_IE" class="java.lang.String"/>
+  <parameter name="EMIT_CRT" class="java.lang.String"/>
+  <parameter name="DEST_NOME" class="java.lang.String"/>
+  <parameter name="DEST_CPF_CNPJ" class="java.lang.String"/>
+  <parameter name="DEST_ENDERECO" class="java.lang.String"/>
+  <parameter name="DEST_BAIRRO" class="java.lang.String"/>
+  <parameter name="DEST_MUNICIPIO" class="java.lang.String"/>
+  <parameter name="DEST_UF" class="java.lang.String"/>
+  <parameter name="DEST_CEP" class="java.lang.String"/>
+  <parameter name="DEST_IE" class="java.lang.String"/>
+  <parameter name="TOTAL_PRODUTOS" class="java.lang.String"/>
+  <parameter name="TOTAL_NOTA" class="java.lang.String"/>
+  <parameter name="ZERO" class="java.lang.String"/>
+  <parameter name="TOTAL_CBS" class="java.lang.String"/>
+  <parameter name="TOTAL_IBS_UF" class="java.lang.String"/>
+  <parameter name="TOTAL_IBS_MUN" class="java.lang.String"/>
   <parameter name="INFO_COMPLEMENTAR" class="java.lang.String"/>
-  <parameter name="GERADO_EM"         class="java.lang.String"/>
+  <parameter name="GERADO_EM" class="java.lang.String"/>
+  <parameter name="MARCA_DAGUA" class="java.lang.String"/>
 
-  <!-- Marca d'agua do preview de rascunho (issue #89). Nula na DANFE de verdade. -->
-  <parameter name="MARCA_DAGUA"       class="java.lang.String"/>
-
-  <!-- =====================================================================
-       Campos do datasource (colecao de itens — DanfeItemRow)
-       ===================================================================== -->
-  <field name="codigo"        class="java.lang.String"/>
-  <field name="descricao"     class="java.lang.String"/>
-  <field name="ncm"           class="java.lang.String"/>
-  <field name="cfop"          class="java.lang.String"/>
-  <field name="unidade"       class="java.lang.String"/>
-  <field name="quantidade"    class="java.lang.String"/>
+  <field name="descricao" class="java.lang.String"/>
+  <field name="cstCfop" class="java.lang.String"/>
+  <field name="quantidadeUnidade" class="java.lang.String"/>
   <field name="valorUnitario" class="java.lang.String"/>
-  <field name="valorTotal"    class="java.lang.String"/>
-  <field name="aliquotaIbs"   class="java.lang.String"/>
-  <field name="valorIbs"      class="java.lang.String"/>
-  <field name="aliquotaCbs"   class="java.lang.String"/>
-  <field name="valorCbs"      class="java.lang.String"/>
+  <field name="valorTotal" class="java.lang.String"/>
+  <field name="baseIbsCbs" class="java.lang.String"/>
+  <field name="aliquotas" class="java.lang.String"/>
+  <field name="valores" class="java.lang.String"/>
 
   <!-- Pagina atual: avaliada no fim de cada pagina (resetType Page), enquanto PAGE_NUMBER, no
        textField com evaluationTime="Auto", e avaliada no fim do relatorio = total de paginas.
-       PAGE_COUNT nao serve: e a contagem de REGISTROS da pagina (dava "1 de 3" com 3 itens). -->
+       PAGE_COUNT nao serve: e a contagem de REGISTROS da pagina. -->
   <variable name="PAGINA_ATUAL" class="java.lang.Integer" resetType="Page">
     <variableExpression><![CDATA[$V{PAGE_NUMBER}]]></variableExpression>
   </variable>
 
-  <!-- =====================================================================
-       Fundo de todas as paginas: marca d'agua do preview (issue #89), so
-       quando MARCA_DAGUA vem preenchido. Vertical, de ponta a ponta da area
-       util, em cinza claro para nao esconder os dados.
-       ===================================================================== -->
+  <!-- Marca d'agua do preview (issue #89), so quando MARCA_DAGUA vem preenchido. -->
   <background>
     <band height="802" splitType="Stretch">
       <textField isBlankWhenNull="true">
@@ -128,24 +113,65 @@
     </band>
   </background>
 
-  <!-- =====================================================================
-       Cabecalho do documento (so na primeira pagina)
-       ===================================================================== -->
   <title>
-    <band height="262" splitType="Stretch">
+    <band height="384" splitType="Stretch">
+
+      <!-- ===== Canhoto ===== -->
+      <frame>
+        <reportElement style="Celula" x="0" y="0" width="445" height="14"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement x="3" y="1" width="439" height="12"/>
+          <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="5.5"/></textElement>
+          <textFieldExpression><![CDATA["RECEBEMOS DE " + ($P{EMIT_NOME} != null ? $P{EMIT_NOME} : "") + " OS PRODUTOS CONSTANTES DA NOTA FISCAL INDICADA AO LADO"]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="0" y="14" width="110" height="20"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="104" height="7"/>
+          <text><![CDATA[DATA DE RECEBIMENTO]]></text>
+        </staticText>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="110" y="14" width="335" height="20"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="329" height="7"/>
+          <text><![CDATA[IDENTIFICAÇÃO E ASSINATURA DO RECEBEDOR]]></text>
+        </staticText>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="445" y="0" width="90" height="34"/>
+        <staticText>
+          <reportElement x="2" y="2" width="86" height="10"/>
+          <textElement textAlignment="Center"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
+          <text><![CDATA[NF-e]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true">
+          <reportElement x="2" y="12" width="86" height="10"/>
+          <textElement textAlignment="Center"><font fontName="SansSerif" size="7" isBold="true"/></textElement>
+          <textFieldExpression><![CDATA["Nº " + $P{NUMERO}]]></textFieldExpression>
+        </textField>
+        <textField isBlankWhenNull="true">
+          <reportElement x="2" y="22" width="86" height="10"/>
+          <textElement textAlignment="Center"><font fontName="SansSerif" size="7"/></textElement>
+          <textFieldExpression><![CDATA["Série " + $P{SERIE}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <line>
+        <reportElement x="0" y="39" width="535" height="1"/>
+        <graphicElement><pen lineWidth="0.5" lineStyle="Dashed" lineColor="#7A8A80"/></graphicElement>
+      </line>
 
       <!-- ===== Emitente, com a logo ===== -->
       <frame>
-        <reportElement style="Celula" x="0" y="0" width="250" height="96"/>
+        <reportElement style="Celula" x="0" y="44" width="250" height="96"/>
         <image scaleImage="RetainShape" hAlign="Center" vAlign="Middle" onErrorType="Blank">
           <reportElement x="4" y="6" width="48" height="48"/>
           <imageExpression><![CDATA[$P{LOGO}]]></imageExpression>
         </image>
         <textField isBlankWhenNull="true" textAdjust="ScaleFont">
           <reportElement x="58" y="4" width="188" height="24"/>
-          <textElement verticalAlignment="Middle">
-            <font fontName="SansSerif" size="9" isBold="true"/>
-          </textElement>
+          <textElement verticalAlignment="Middle"><font fontName="SansSerif" size="9" isBold="true"/></textElement>
           <textFieldExpression><![CDATA[$P{EMIT_NOME}]]></textFieldExpression>
         </textField>
         <textField isBlankWhenNull="true" textAdjust="ScaleFont">
@@ -165,35 +191,26 @@
         </textField>
         <staticText>
           <reportElement x="4" y="72" width="242" height="20" forecolor="#4A5A50"/>
-          <textElement textAlignment="Center" verticalAlignment="Middle">
-            <font fontName="SansSerif" size="5.5" isItalic="true"/>
-          </textElement>
+          <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="SansSerif" size="5.5" isItalic="true"/></textElement>
           <text><![CDATA[Emitido com o AgroContábil — gestão fiscal do produtor rural]]></text>
         </staticText>
       </frame>
-
-      <!-- ===== DANFE: entrada/saida, numero, serie, folha ===== -->
+      <!-- ===== DANFE ===== -->
       <frame>
-        <reportElement style="Celula" x="250" y="0" width="95" height="96"/>
+        <reportElement style="Celula" x="250" y="44" width="95" height="96"/>
         <staticText>
           <reportElement x="2" y="1" width="91" height="20"/>
-          <textElement textAlignment="Center" verticalAlignment="Middle">
-            <font fontName="SansSerif" size="13" isBold="true"/>
-          </textElement>
+          <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="SansSerif" size="13" isBold="true"/></textElement>
           <text><![CDATA[DANFE]]></text>
         </staticText>
         <staticText>
           <reportElement x="2" y="21" width="91" height="16"/>
-          <textElement textAlignment="Center">
-            <font fontName="SansSerif" size="5.5"/>
-          </textElement>
+          <textElement textAlignment="Center"><font fontName="SansSerif" size="5.5"/></textElement>
           <text><![CDATA[Documento Auxiliar da Nota Fiscal Eletrônica]]></text>
         </staticText>
         <textField isBlankWhenNull="true">
           <reportElement x="2" y="38" width="91" height="12"/>
-          <textElement textAlignment="Center" verticalAlignment="Middle">
-            <font fontName="SansSerif" size="8" isBold="true"/>
-          </textElement>
+          <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="SansSerif" size="8" isBold="true"/></textElement>
           <textFieldExpression><![CDATA[$P{TIPO_OPERACAO}]]></textFieldExpression>
         </textField>
         <textField isBlankWhenNull="true">
@@ -212,33 +229,26 @@
           <textFieldExpression><![CDATA["Folha " + $V{PAGINA_ATUAL} + "/" + $V{PAGE_NUMBER}]]></textFieldExpression>
         </textField>
       </frame>
-
       <!-- ===== Chave de acesso ===== -->
       <frame>
-        <reportElement style="Celula" x="345" y="0" width="190" height="96"/>
+        <reportElement style="Celula" x="345" y="44" width="190" height="96"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="3" width="184" height="8"/>
           <text><![CDATA[CHAVE DE ACESSO]]></text>
         </staticText>
         <textField isBlankWhenNull="true" textAdjust="ScaleFont">
           <reportElement x="3" y="18" width="184" height="14"/>
-          <textElement textAlignment="Center" verticalAlignment="Middle">
-            <font fontName="SansSerif" size="6.5" isBold="true"/>
-          </textElement>
+          <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="SansSerif" size="6.5" isBold="true"/></textElement>
           <textFieldExpression><![CDATA[$P{CHAVE_ACESSO}]]></textFieldExpression>
         </textField>
         <textField isBlankWhenNull="true">
           <reportElement x="3" y="44" width="184" height="48"/>
-          <textElement textAlignment="Center" verticalAlignment="Middle">
-            <font fontName="SansSerif" size="6"/>
-          </textElement>
+          <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="SansSerif" size="6"/></textElement>
           <textFieldExpression><![CDATA[$P{CONSULTA_CHAVE}]]></textFieldExpression>
         </textField>
       </frame>
-
-      <!-- ===== Natureza da operacao | Protocolo ===== -->
       <frame>
-        <reportElement style="Celula" x="0" y="96" width="345" height="22"/>
+        <reportElement style="Celula" x="0" y="140" width="345" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="339" height="7"/>
           <text><![CDATA[NATUREZA DA OPERAÇÃO]]></text>
@@ -249,7 +259,7 @@
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="345" y="96" width="190" height="22"/>
+        <reportElement style="Celula" x="345" y="140" width="190" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="184" height="7"/>
           <text><![CDATA[PROTOCOLO DE AUTORIZAÇÃO DE USO]]></text>
@@ -259,50 +269,65 @@
           <textFieldExpression><![CDATA[$P{PROTOCOLO}]]></textFieldExpression>
         </textField>
       </frame>
-
-      <!-- ===== IE | CPF/CNPJ do emitente | Situacao ===== -->
       <frame>
-        <reportElement style="Celula" x="0" y="118" width="170" height="22"/>
+        <reportElement style="Celula" x="0" y="162" width="178" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="164" height="7"/>
+          <reportElement style="Rotulo" x="3" y="2" width="172" height="7"/>
           <text><![CDATA[INSCRIÇÃO ESTADUAL]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="164" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="172" height="12"/>
           <textFieldExpression><![CDATA[$P{EMIT_IE}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="170" y="118" width="175" height="22"/>
+        <reportElement style="Celula" x="178" y="162" width="178" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="169" height="7"/>
-          <text><![CDATA[CPF / CNPJ DO EMITENTE]]></text>
+          <reportElement style="Rotulo" x="3" y="2" width="172" height="7"/>
+          <text><![CDATA[INSCRIÇÃO ESTADUAL DO SUBST. TRIBUTÁRIO]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="169" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="172" height="12"/>
+          <textFieldExpression><![CDATA[""]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="356" y="162" width="179" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="173" height="7"/>
+          <text><![CDATA[CNPJ / CPF]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="173" height="12"/>
           <textFieldExpression><![CDATA[$P{EMIT_CPF_CNPJ}]]></textFieldExpression>
         </textField>
       </frame>
+      <!-- NT 2026.010, item 4.2: CRT (C21) e o tipo de regime de apuracao do IBS/CBS, campo
+           reservado que fica vazio enquanto nao houver tag no XML. -->
       <frame>
-        <reportElement style="Celula" x="345" y="118" width="190" height="22"/>
+        <reportElement style="Celula" x="0" y="184" width="267" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="184" height="7"/>
-          <text><![CDATA[DOCUMENTO / SITUAÇÃO]]></text>
+          <reportElement style="Rotulo" x="3" y="2" width="261" height="7"/>
+          <text><![CDATA[CÓDIGO DE REGIME TRIBUTÁRIO (CRT)]]></text>
         </staticText>
         <textField isBlankWhenNull="true" textAdjust="ScaleFont">
-          <reportElement style="Valor" x="3" y="9" width="184" height="12"/>
-          <textFieldExpression><![CDATA[$P{TIPO_DOCUMENTO} + " — " + $P{SITUACAO}]]></textFieldExpression>
+          <reportElement style="Valor" x="3" y="9" width="261" height="12"/>
+          <textFieldExpression><![CDATA[$P{EMIT_CRT}]]></textFieldExpression>
         </textField>
       </frame>
-
-      <!-- ===== Destinatario ===== -->
+      <frame>
+        <reportElement style="Celula" x="267" y="184" width="268" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="262" height="7"/>
+          <text><![CDATA[TIPO DE REGIME DE APURAÇÃO DO IBS/CBS]]></text>
+        </staticText>
+      </frame>
       <staticText>
-        <reportElement style="Secao" x="0" y="144" width="535" height="10"/>
+        <reportElement style="Secao" x="0" y="210" width="535" height="10"/>
         <text><![CDATA[DESTINATÁRIO / REMETENTE]]></text>
       </staticText>
-
       <frame>
-        <reportElement style="Celula" x="0" y="154" width="300" height="22"/>
+        <reportElement style="Celula" x="0" y="220" width="300" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="294" height="7"/>
           <text><![CDATA[NOME / RAZÃO SOCIAL]]></text>
@@ -313,245 +338,349 @@
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="300" y="154" width="125" height="22"/>
+        <reportElement style="Celula" x="300" y="220" width="125" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="119" height="7"/>
-          <text><![CDATA[CPF / CNPJ]]></text>
+          <text><![CDATA[CNPJ / CPF]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
           <reportElement style="Valor" x="3" y="9" width="119" height="12"/>
           <textFieldExpression><![CDATA[$P{DEST_CPF_CNPJ}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="425" y="154" width="110" height="22"/>
+        <reportElement style="Celula" x="425" y="220" width="110" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="104" height="7"/>
           <text><![CDATA[DATA DA EMISSÃO]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
           <reportElement style="Valor" x="3" y="9" width="104" height="12"/>
           <textFieldExpression><![CDATA[$P{DATA_EMISSAO}]]></textFieldExpression>
         </textField>
       </frame>
-
       <frame>
-        <reportElement style="Celula" x="0" y="176" width="230" height="22"/>
+        <reportElement style="Celula" x="0" y="242" width="210" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="224" height="7"/>
+          <reportElement style="Rotulo" x="3" y="2" width="204" height="7"/>
           <text><![CDATA[ENDEREÇO]]></text>
         </staticText>
         <textField isBlankWhenNull="true" textAdjust="ScaleFont">
-          <reportElement style="Valor" x="3" y="9" width="224" height="12"/>
+          <reportElement style="Valor" x="3" y="9" width="204" height="12"/>
           <textFieldExpression><![CDATA[$P{DEST_ENDERECO}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="230" y="176" width="115" height="22"/>
+        <reportElement style="Celula" x="210" y="242" width="120" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="109" height="7"/>
-          <text><![CDATA[MUNICÍPIO]]></text>
+          <reportElement style="Rotulo" x="3" y="2" width="114" height="7"/>
+          <text><![CDATA[BAIRRO / DISTRITO]]></text>
         </staticText>
         <textField isBlankWhenNull="true" textAdjust="ScaleFont">
-          <reportElement style="Valor" x="3" y="9" width="109" height="12"/>
-          <textFieldExpression><![CDATA[$P{DEST_MUNICIPIO}]]></textFieldExpression>
+          <reportElement style="Valor" x="3" y="9" width="114" height="12"/>
+          <textFieldExpression><![CDATA[$P{DEST_BAIRRO}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="345" y="176" width="25" height="22"/>
+        <reportElement style="Celula" x="330" y="242" width="95" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="19" height="7"/>
-          <text><![CDATA[UF]]></text>
-        </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="19" height="12"/>
-          <textFieldExpression><![CDATA[$P{DEST_UF}]]></textFieldExpression>
-        </textField>
-      </frame>
-      <frame>
-        <reportElement style="Celula" x="370" y="176" width="55" height="22"/>
-        <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="49" height="7"/>
+          <reportElement style="Rotulo" x="3" y="2" width="89" height="7"/>
           <text><![CDATA[CEP]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="49" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="89" height="12"/>
           <textFieldExpression><![CDATA[$P{DEST_CEP}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="425" y="176" width="110" height="22"/>
+        <reportElement style="Celula" x="425" y="242" width="110" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="104" height="7"/>
           <text><![CDATA[DATA DA SAÍDA / ENTRADA]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
           <reportElement style="Valor" x="3" y="9" width="104" height="12"/>
           <textFieldExpression><![CDATA[$P{DATA_SAIDA}]]></textFieldExpression>
         </textField>
       </frame>
-
       <frame>
-        <reportElement style="Celula" x="0" y="198" width="170" height="22"/>
+        <reportElement style="Celula" x="0" y="264" width="185" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="164" height="7"/>
+          <reportElement style="Rotulo" x="3" y="2" width="179" height="7"/>
+          <text><![CDATA[MUNICÍPIO]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="179" height="12"/>
+          <textFieldExpression><![CDATA[$P{DEST_MUNICIPIO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="185" y="264" width="90" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="84" height="7"/>
+          <text><![CDATA[FONE / FAX]]></text>
+        </staticText>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="275" y="264" width="30" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="24" height="7"/>
+          <text><![CDATA[UF]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="24" height="12"/>
+          <textFieldExpression><![CDATA[$P{DEST_UF}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="305" y="264" width="120" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="114" height="7"/>
           <text><![CDATA[INSCRIÇÃO ESTADUAL]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="164" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="114" height="12"/>
           <textFieldExpression><![CDATA[$P{DEST_IE}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="170" y="198" width="175" height="22"/>
+        <reportElement style="Celula" x="425" y="264" width="110" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="169" height="7"/>
-          <text><![CDATA[CÓDIGO DO MUNICÍPIO (IBGE)]]></text>
+          <reportElement style="Rotulo" x="3" y="2" width="104" height="7"/>
+          <text><![CDATA[HORA DA SAÍDA / ENTRADA]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="169" height="12"/>
-          <textFieldExpression><![CDATA[$P{DEST_IBGE}]]></textFieldExpression>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="104" height="12"/>
+          <textFieldExpression><![CDATA[$P{HORA_SAIDA}]]></textFieldExpression>
         </textField>
       </frame>
-      <frame>
-        <reportElement style="Celula" x="345" y="198" width="190" height="22"/>
-        <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="184" height="7"/>
-          <text><![CDATA[ORIGEM DA NOTA]]></text>
-        </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="9" width="184" height="12"/>
-          <textFieldExpression><![CDATA[$P{ORIGEM}]]></textFieldExpression>
-        </textField>
-      </frame>
-
-      <!-- ===== Calculo do imposto (IBS/CBS) ===== -->
       <staticText>
-        <reportElement style="Secao" x="0" y="224" width="535" height="10"/>
-        <text><![CDATA[CÁLCULO DO IMPOSTO — IBS / CBS (LC 214/2025)]]></text>
+        <reportElement style="Secao" x="0" y="290" width="535" height="10"/>
+        <text><![CDATA[CÁLCULO DO IMPOSTO]]></text>
       </staticText>
-
+      <!-- Total do ICMS/IPI: o XML leva zero (ICMS e Funrural por guia, docs/premissas-e-escopo.md). -->
       <frame>
-        <reportElement style="Celula" x="0" y="234" width="107" height="24"/>
+        <reportElement style="Celula" x="0" y="300" width="107" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="101" height="7"/>
-          <text><![CDATA[BASE DE CÁLCULO IBS/CBS]]></text>
+          <text><![CDATA[BASE DE CÁLC. DO ICMS]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="10" width="101" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="101" height="12"/>
           <textElement textAlignment="Right"/>
-          <textFieldExpression><![CDATA[$P{BASE_IBS_CBS}]]></textFieldExpression>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="107" y="234" width="107" height="24"/>
+        <reportElement style="Celula" x="107" y="300" width="107" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="101" height="7"/>
-          <text><![CDATA[VALOR DO IBS]]></text>
+          <text><![CDATA[VALOR DO ICMS]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="10" width="101" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="101" height="12"/>
           <textElement textAlignment="Right"/>
-          <textFieldExpression><![CDATA[$P{TOTAL_IBS}]]></textFieldExpression>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="214" y="234" width="107" height="24"/>
+        <reportElement style="Celula" x="214" y="300" width="107" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="101" height="7"/>
-          <text><![CDATA[VALOR DA CBS]]></text>
+          <text><![CDATA[BASE DE CÁLC. ICMS S.T.]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="10" width="101" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="101" height="12"/>
           <textElement textAlignment="Right"/>
-          <textFieldExpression><![CDATA[$P{TOTAL_CBS}]]></textFieldExpression>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" x="321" y="234" width="107" height="24"/>
+        <reportElement style="Celula" x="321" y="300" width="107" height="22"/>
         <staticText>
           <reportElement style="Rotulo" x="3" y="2" width="101" height="7"/>
+          <text><![CDATA[VALOR DO ICMS SUBST.]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="101" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="428" y="300" width="107" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="101" height="7"/>
+          <text><![CDATA[VALOR TOTAL DO IPI]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="101" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="0" y="322" width="89" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="83" height="7"/>
           <text><![CDATA[VALOR TOTAL DOS PRODUTOS]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement style="Valor" x="3" y="10" width="101" height="12"/>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="83" height="12"/>
           <textElement textAlignment="Right"/>
           <textFieldExpression><![CDATA[$P{TOTAL_PRODUTOS}]]></textFieldExpression>
         </textField>
       </frame>
       <frame>
-        <reportElement style="Celula" mode="Opaque" x="428" y="234" width="107" height="24"
-                       backcolor="#EAF4EE"/>
+        <reportElement style="Celula" x="89" y="322" width="89" height="22"/>
         <staticText>
-          <reportElement style="Rotulo" x="3" y="2" width="101" height="7"/>
+          <reportElement style="Rotulo" x="3" y="2" width="83" height="7"/>
+          <text><![CDATA[VALOR DO FRETE]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="83" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="178" y="322" width="89" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="83" height="7"/>
+          <text><![CDATA[VALOR DO SEGURO]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="83" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="267" y="322" width="89" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="83" height="7"/>
+          <text><![CDATA[DESCONTO]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="83" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="356" y="322" width="89" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="83" height="7"/>
+          <text><![CDATA[OUTRAS DESP. ACESSÓRIAS]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="83" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{ZERO}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" mode="Opaque" backcolor="#EAF4EE" x="445" y="322" width="90" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="84" height="7"/>
           <text><![CDATA[VALOR TOTAL DA NOTA]]></text>
         </staticText>
-        <textField isBlankWhenNull="true">
-          <reportElement x="3" y="10" width="101" height="12"/>
-          <textElement textAlignment="Right">
-            <font fontName="SansSerif" size="9" isBold="true"/>
-          </textElement>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement x="3" y="9" width="84" height="12"/>
+          <textElement textAlignment="Right"><font fontName="SansSerif" size="9" isBold="true"/></textElement>
           <textFieldExpression><![CDATA[$P{TOTAL_NOTA}]]></textFieldExpression>
         </textField>
       </frame>
-
+      <staticText>
+        <reportElement style="Secao" x="0" y="348" width="535" height="10"/>
+        <text><![CDATA[TOTAL DO IBS / CBS / IS]]></text>
+      </staticText>
+      <!-- NT 2026.010, item 4.1: vCBS (W56), vIBSUF (W41), vIBSMun (W46), vIS (W33). O XML nao
+           tem o grupo do IS: o campo fica vazio (item 4.4: nada de informacao inexistente). -->
+      <frame>
+        <reportElement style="Celula" x="0" y="358" width="134" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="128" height="7"/>
+          <text><![CDATA[VALOR DA CBS]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="128" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{TOTAL_CBS}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="134" y="358" width="134" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="128" height="7"/>
+          <text><![CDATA[VALOR DO IBS UF]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="128" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{TOTAL_IBS_UF}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="268" y="358" width="134" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="128" height="7"/>
+          <text><![CDATA[VALOR DO IBS MUNICÍPIO]]></text>
+        </staticText>
+        <textField isBlankWhenNull="true" textAdjust="ScaleFont">
+          <reportElement style="Valor" x="3" y="9" width="128" height="12"/>
+          <textElement textAlignment="Right"/>
+          <textFieldExpression><![CDATA[$P{TOTAL_IBS_MUN}]]></textFieldExpression>
+        </textField>
+      </frame>
+      <frame>
+        <reportElement style="Celula" x="402" y="358" width="133" height="22"/>
+        <staticText>
+          <reportElement style="Rotulo" x="3" y="2" width="127" height="7"/>
+          <text><![CDATA[VALOR DO IMPOSTO SELETIVO]]></text>
+        </staticText>
+      </frame>
     </band>
   </title>
 
-  <!-- =====================================================================
-       Cabecalho da tabela de itens (repete em toda pagina)
-       ===================================================================== -->
   <columnHeader>
     <band height="30" splitType="Stretch">
       <staticText>
         <reportElement style="Secao" x="0" y="4" width="535" height="10"/>
         <text><![CDATA[DADOS DOS PRODUTOS / SERVIÇOS]]></text>
       </staticText>
-      <staticText><reportElement style="CabecalhoItem" x="0"   y="14" width="40"  height="16"/><text><![CDATA[CÓDIGO]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="40"  y="14" width="130" height="16"/><text><![CDATA[DESCRIÇÃO DO PRODUTO]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="170" y="14" width="42"  height="16"/><textElement textAlignment="Center"/><text><![CDATA[NCM]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="212" y="14" width="26"  height="16"/><textElement textAlignment="Center"/><text><![CDATA[CFOP]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="238" y="14" width="22"  height="16"/><textElement textAlignment="Center"/><text><![CDATA[UN]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="260" y="14" width="40"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[QTD.]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="300" y="14" width="45"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[V. UNIT.]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="345" y="14" width="50"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[V. TOTAL]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="395" y="14" width="28"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[ALÍQ. IBS]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="423" y="14" width="42"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[V. IBS]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="465" y="14" width="28"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[ALÍQ. CBS]]></text></staticText>
-      <staticText><reportElement style="CabecalhoItem" x="493" y="14" width="42"  height="16"/><textElement textAlignment="Right"/><text><![CDATA[V. CBS]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="0" y="14" width="165" height="16"/><text><![CDATA[DESCRIÇÃO DO PRODUTO / SERVIÇO]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="165" y="14" width="45" height="16"/><textElement textAlignment="Center"/><text><![CDATA[CST / CFOP]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="210" y="14" width="45" height="16"/><textElement textAlignment="Right"/><text><![CDATA[QTD. / UN]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="255" y="14" width="50" height="16"/><textElement textAlignment="Right"/><text><![CDATA[VLR. UNIT.]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="305" y="14" width="55" height="16"/><textElement textAlignment="Right"/><text><![CDATA[VLR. TOTAL]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="360" y="14" width="60" height="16"/><textElement textAlignment="Right"/><text><![CDATA[BASE IBS/CBS]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="420" y="14" width="60" height="16"/><textElement textAlignment="Right"/><text><![CDATA[ALÍQUOTAS]]></text></staticText>
+      <staticText><reportElement style="CabecalhoItem" x="480" y="14" width="55" height="16"/><textElement textAlignment="Right"/><text><![CDATA[VALOR DOS TRIBUTOS]]></text></staticText>
     </band>
   </columnHeader>
 
-  <!-- =====================================================================
-       Detalhe — uma linha por item (a descricao longa estica a linha toda)
-       ===================================================================== -->
+  <!-- Uma linha por item; as celulas de varias linhas (descricao com [NCM][cClassTrib], CST/CFOP,
+       aliquotas e valores de CBS, IBS UF e IBS Municipio) esticam a linha toda, sem reduzir a
+       fonte (NT 2026.010, diretriz 3). -->
   <detail>
     <band height="13" splitType="Prevent">
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="0"   y="0" width="40"  height="13"/><textFieldExpression><![CDATA[$F{codigo}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="40"  y="0" width="130" height="13"/><textFieldExpression><![CDATA[$F{descricao}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="170" y="0" width="42"  height="13"/><textElement textAlignment="Center"/><textFieldExpression><![CDATA[$F{ncm}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="212" y="0" width="26"  height="13"/><textElement textAlignment="Center"/><textFieldExpression><![CDATA[$F{cfop}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="238" y="0" width="22"  height="13"/><textElement textAlignment="Center"/><textFieldExpression><![CDATA[$F{unidade}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="260" y="0" width="40"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{quantidade}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="300" y="0" width="45"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valorUnitario}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="345" y="0" width="50"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valorTotal}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="395" y="0" width="28"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{aliquotaIbs}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="423" y="0" width="42"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valorIbs}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="465" y="0" width="28"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{aliquotaCbs}]]></textFieldExpression></textField>
-      <textField isBlankWhenNull="true"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="493" y="0" width="42"  height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valorCbs}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="0" y="0" width="165" height="13"/><textFieldExpression><![CDATA[$F{descricao}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="165" y="0" width="45" height="13"/><textElement textAlignment="Center"/><textFieldExpression><![CDATA[$F{cstCfop}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="210" y="0" width="45" height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{quantidadeUnidade}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="255" y="0" width="50" height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valorUnitario}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="305" y="0" width="55" height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valorTotal}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="360" y="0" width="60" height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{baseIbsCbs}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="420" y="0" width="60" height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{aliquotas}]]></textFieldExpression></textField>
+      <textField isBlankWhenNull="true" textAdjust="StretchHeight"><reportElement style="LinhaItem" stretchType="RelativeToTallestObject" x="480" y="0" width="55" height="13"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{valores}]]></textFieldExpression></textField>
     </band>
   </detail>
 
-  <!-- =====================================================================
-       Rodape da pagina
-       ===================================================================== -->
   <pageFooter>
     <band height="16" splitType="Stretch">
       <line>
         <reportElement x="0" y="2" width="535" height="1"/>
-        <graphicElement>
-          <pen lineWidth="0.5" lineColor="#7A8A80"/>
-        </graphicElement>
+        <graphicElement><pen lineWidth="0.5" lineColor="#7A8A80"/></graphicElement>
       </line>
       <textField isBlankWhenNull="true">
         <reportElement x="0" y="5" width="400" height="10" forecolor="#4A5A50"/>
@@ -566,9 +695,6 @@
     </band>
   </pageFooter>
 
-  <!-- =====================================================================
-       Dados adicionais (uma vez, depois do ultimo item)
-       ===================================================================== -->
   <summary>
     <band height="84" splitType="Prevent">
       <staticText>
@@ -596,6 +722,4 @@
       </frame>
     </band>
   </summary>
-
-
 </jasperReport>
