@@ -217,11 +217,17 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
    * @throws IllegalStateException se alguma pergunta do gabarito está em {@code treino}
    */
   static void exigirTreinoSeparado(Gabarito gabarito, Path treino) {
+    if (!Files.isDirectory(treino)) {
+      // Sem o diretorio a conferencia passaria sem conferir nada: rode da raiz do repositorio.
+      throw new IllegalStateException("Diretorio de treino nao encontrado (" + treino.toAbsolutePath()
+          + "): rode o comando na raiz do repositorio");
+    }
     List<SeparacaoTreinoTeste.Contaminacao> contaminacoes =
         SeparacaoTreinoTeste.contaminacoes(gabarito, treino);
-    if (!contaminacoes.isEmpty()) {
+    List<String> noPrompt = SeparacaoTreinoTeste.noPromptDoClassificador(gabarito);
+    if (!contaminacoes.isEmpty() || !noPrompt.isEmpty()) {
       throw new IllegalStateException("Pergunta do gabarito no treino (o gabarito e teste, nunca "
-          + "treino): " + contaminacoes);
+          + "treino): " + contaminacoes + ", no prompt do classificador: " + noPrompt);
     }
   }
 

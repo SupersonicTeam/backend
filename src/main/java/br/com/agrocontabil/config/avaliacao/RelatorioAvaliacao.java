@@ -265,8 +265,16 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
    * latência; a coluna existe para a comparação daquela etapa.
    */
   static String tabelaPorRota(Map<String, IndicadoresRota> porRota) {
+    return tabelaPorRota(porRota, "Perguntas");
+  }
+
+  /**
+   * Mesma tabela com outro rótulo para a contagem: com as rodadas juntas, cada linha conta
+   * respostas (perguntas × rodadas), não perguntas.
+   */
+  static String tabelaPorRota(Map<String, IndicadoresRota> porRota, String rotuloContagem) {
     StringBuilder md = new StringBuilder();
-    md.append("| Rota esperada | Perguntas | Rota | Número | Citação | p50 | p95 | 1ª parte p50 | "
+    md.append("| Rota esperada | ").append(rotuloContagem).append(" | Rota | Número | Citação | p50 | p95 | 1ª parte p50 | "
         + "1ª parte p95 | Palavras/frase | Sigla sem explicação |\n");
     md.append("|---|---|---|---|---|---|---|---|---|---|---|\n");
     porRota.forEach((rota, i) -> md.append("| ").append(rota)

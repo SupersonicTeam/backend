@@ -1,13 +1,9 @@
 package br.com.agrocontabil.config.avaliacao;
 
-import java.text.Normalizer;
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -22,23 +18,46 @@ import java.util.regex.Pattern;
 public final class ClarezaTexto {
 
   /**
-   * Siglas que o produtor rural não precisa conhecer, com as explicações aceitas (já sem acento e
-   * em minúsculas). A lista inicial é a da issue #264 e vira o glossário da etapa 5.
+   * Uma sigla que o produtor rural não precisa conhecer.
+   *
+   * @param nome        sigla, como aparece no relatório
+   * @param padrao      como ela aparece no texto
+   * @param explicacoes explicações aceitas, já sem acento e em minúsculas
    */
-  static final Map<String, List<String>> GLOSSARIO = glossario();
+  record Sigla(String nome, Pattern padrao, List<String> explicacoes) {}
 
-  private static final Map<String, Pattern> PADRAO_SIGLA = padroes();
+  /** Glossário inicial da issue #264; vira o glossário da etapa 5. */
+  static final List<Sigla> GLOSSARIO = List.of(
+      new Sigla("IBS", Pattern.compile("\\bIBS\\b"), List.of("imposto sobre bens e servicos")),
+      new Sigla("CBS", Pattern.compile("\\bCBS\\b"), List.of("contribuicao sobre bens e servicos",
+          "contribuicao social sobre bens e servicos")),
+      new Sigla("NF-e", Pattern.compile("\\bNF-?e\\b", Pattern.CASE_INSENSITIVE),
+          List.of("nota fiscal eletronica")),
+      new Sigla("NCM", Pattern.compile("\\bNCM\\b"), List.of("nomenclatura comum do mercosul",
+          "codigo do produto", "codigo de classificacao do produto")),
+      new Sigla("CFOP", Pattern.compile("\\bCFOP\\b"), List.of("codigo fiscal de operacoes",
+          "codigo da operacao", "codigo fiscal da operacao")),
+      new Sigla("Funrural", Pattern.compile("\\bfunrural\\b", Pattern.CASE_INSENSITIVE),
+          List.of("contribuicao previdenciaria", "previdencia rural", "previdencia do produtor",
+              "inss")),
+      new Sigla("DANFE", Pattern.compile("\\bDANFE\\b", Pattern.CASE_INSENSITIVE),
+          List.of("documento auxiliar")),
+      new Sigla("SEFAZ", Pattern.compile("\\bSEFAZ\\b", Pattern.CASE_INSENSITIVE),
+          List.of("secretaria da fazenda", "secretaria de fazenda", "secretaria de estado de fazenda",
+              "secretaria de estado da fazenda", "secretaria estadual da fazenda")));
 
   /** Abreviações cujo ponto não termina a frase ("art. 164", "inc. IV", "n. 214"). */
   private static final Pattern ABREVIACAO = Pattern.compile(
-      "\\b(arts?|incs?|al|n|nº|par|pag|p|sr|sra|dr|dra|etc|ex|obs|aprox)\\.",
+      "\\b(arts?|incs?|al|n|nº|par|pag|p|sr|sra|dr|dra|ex|obs|aprox)\\.",
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
   /** Fim de frase: . ! ? seguidos de espaço ou do fim, ou quebra de linha. */
   private static final Pattern FIM_DE_FRASE = Pattern.compile("[.!?]+(?=\\s|$)|\\n+");
 
+  /** Marcador de item numerado no começo da linha ("1. ", "2) "): não é uma frase. */
+  private static final Pattern ITEM_NUMERADO = Pattern.compile("(?m)^\\s*\\d{1,3}[.)]\\s+");
+
   private static final Pattern PALAVRA = Pattern.compile("[\\p{L}\\p{N}]");
-  private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
 
   private ClarezaTexto() {}
 
@@ -72,7 +91,8 @@ public final class ClarezaTexto {
     if (texto == null || texto.isBlank()) {
       return new Medida(0, 0, List.of());
     }
-    String semAbreviacao = ABREVIACAO.matcher(texto).replaceAll("$1");
+    String semMarcador = ITEM_NUMERADO.matcher(texto).replaceAll("");
+    String semAbreviacao = ABREVIACAO.matcher(semMarcador).replaceAll("$1");
     int frases = 0;
     int palavras = 0;
     for (String frase : FIM_DE_FRASE.split(semAbreviacao)) {
@@ -90,47 +110,17 @@ public final class ClarezaTexto {
   static List<String> siglasSemExplicacao(String texto) {
     String normalizado = normalizar(texto);
     List<String> semExplicacao = new ArrayList<>();
-    GLOSSARIO.forEach((sigla, explicacoes) -> {
-      if (PADRAO_SIGLA.get(sigla).matcher(texto).find()
-          && explicacoes.stream().noneMatch(normalizado::contains)) {
-        semExplicacao.add(sigla);
+    for (Sigla sigla : GLOSSARIO) {
+      if (sigla.padrao().matcher(texto).find()
+          && sigla.explicacoes().stream().noneMatch(normalizado::contains)) {
+        semExplicacao.add(sigla.nome());
       }
-    });
+    }
     return semExplicacao;
   }
 
-  /** Minúsculas, sem acento e com espaços simples. */
+  /** Minúsculas, sem acento e com espaços simples (a mesma normalização da busca, #174). */
   static String normalizar(String texto) {
-    return ACENTOS.matcher(Normalizer.normalize(texto, Normalizer.Form.NFD)).replaceAll("")
-        .toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
-  }
-
-  private static Map<String, List<String>> glossario() {
-    Map<String, List<String>> g = new LinkedHashMap<>();
-    g.put("IBS", List.of("imposto sobre bens e servicos"));
-    g.put("CBS", List.of("contribuicao sobre bens e servicos"));
-    g.put("NF-e", List.of("nota fiscal eletronica"));
-    g.put("NCM", List.of("nomenclatura comum do mercosul", "codigo do produto",
-        "codigo de classificacao do produto"));
-    g.put("CFOP", List.of("codigo fiscal de operacoes", "codigo da operacao",
-        "codigo fiscal da operacao"));
-    g.put("Funrural", List.of("contribuicao previdenciaria", "previdencia rural",
-        "previdencia do produtor", "inss"));
-    g.put("DANFE", List.of("documento auxiliar"));
-    g.put("SEFAZ", List.of("secretaria da fazenda", "secretaria estadual da fazenda"));
-    return Collections.unmodifiableMap(g);
-  }
-
-  private static Map<String, Pattern> padroes() {
-    Map<String, Pattern> p = new LinkedHashMap<>();
-    p.put("IBS", Pattern.compile("\\bIBS\\b"));
-    p.put("CBS", Pattern.compile("\\bCBS\\b"));
-    p.put("NF-e", Pattern.compile("\\bNF-?e\\b", Pattern.CASE_INSENSITIVE));
-    p.put("NCM", Pattern.compile("\\bNCM\\b"));
-    p.put("CFOP", Pattern.compile("\\bCFOP\\b"));
-    p.put("Funrural", Pattern.compile("\\bfunrural\\b", Pattern.CASE_INSENSITIVE));
-    p.put("DANFE", Pattern.compile("\\bDANFE\\b", Pattern.CASE_INSENSITIVE));
-    p.put("SEFAZ", Pattern.compile("\\bSEFAZ\\b", Pattern.CASE_INSENSITIVE));
-    return p;
+    return NormalizacaoBusca.normalizar(texto);
   }
 }

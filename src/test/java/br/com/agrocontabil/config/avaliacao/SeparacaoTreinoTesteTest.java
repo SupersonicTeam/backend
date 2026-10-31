@@ -29,6 +29,26 @@ class SeparacaoTreinoTesteTest {
         Path.of("docs/avaliacao/gabarito-ceres.json").toFile(), Gabarito.class);
 
     assertThat(SeparacaoTreinoTeste.contaminacoes(real, SeparacaoTreinoTeste.TREINO)).isEmpty();
+    assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(real)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Escape \\u00e9 de JSON (json.dumps do Python) não esconde a cópia")
+  void escapeUnicode(@TempDir Path treino) throws IOException {
+    Files.writeString(treino.resolve("exemplos.json"),
+        "{\"texto\": \"Tenho algum d\\u00e9bito pendente?\"}");
+
+    assertThat(SeparacaoTreinoTeste.contaminacoes(gabarito("Tenho algum debito pendente?"), treino))
+        .extracting(SeparacaoTreinoTeste.Contaminacao::id).containsExactly("D01");
+  }
+
+  @Test
+  @DisplayName("O comando recusa rodar sem achar o diretório de treino (falharia aberto)")
+  void runnerSemTreino(@TempDir Path raiz) {
+    assertThatThrownBy(() -> AvaliacaoCeresRunner.exigirTreinoSeparado(
+        gabarito("x y"), raiz.resolve("nao-existe")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("raiz do repositorio");
   }
 
   @Test

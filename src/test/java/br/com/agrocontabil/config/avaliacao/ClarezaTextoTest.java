@@ -20,6 +20,17 @@ class ClarezaTextoTest {
   }
 
   @Test
+  @DisplayName("Item numerado não vira frase; CBS pelo nome da lei conta como explicada")
+  void listaENomeLegal() {
+    ClarezaTexto.Medida m = ClarezaTexto.medir("1. Emita a nota\n2. Pague a guia");
+
+    assertThat(m.frases()).isEqualTo(2);
+    assertThat(m.palavrasPorFrase()).isEqualTo(3.0);
+    assertThat(ClarezaTexto.medir("A Contribuição Social sobre Bens e Serviços (CBS) vale.")
+        .siglasSemExplicacao()).isEmpty();
+  }
+
+  @Test
   @DisplayName("Texto vazio ou nulo mede zero")
   void vazio() {
     assertThat(ClarezaTexto.medir(null).frases()).isZero();

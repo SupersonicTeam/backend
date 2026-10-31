@@ -29,14 +29,18 @@ ASSISTENTE_OCUPADO, espera o Retry-After e tenta de novo.
 import base64
 import datetime
 import json
+import socket
 import os
 import statistics
 import sys
 import time
 import urllib.error
 import urllib.request
+import zoneinfo
 
-TIMEOUT_S = 120
+# Maior que o timeout da pergunta no servidor (app.assistente.timeout-pergunta, 5 min).
+TIMEOUT_S = 330
+FUSO = zoneinfo.ZoneInfo("America/Sao_Paulo")
 MAX_ESPERAS = 5
 
 
@@ -60,6 +64,10 @@ def requisitar(url, corpo, cabecalhos):
         except ValueError:
             corpo_erro = {}
         return erro.code, corpo_erro, erro.headers
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, ValueError) as erro:
+        # Rede, tempo esgotado ou corpo que nao e JSON: vira resultado da pergunta, nunca derruba
+        # a medicao inteira (o que ja foi medido seria perdido).
+        return 0, {"errors": [{"code": "FALHA_" + type(erro).__name__}]}, {}
 
 
 def codigo_erro(corpo):
@@ -90,7 +98,7 @@ def perguntar(base, token, pergunta):
         latencia_ms = round((time.monotonic() - inicio) * 1000)
         codigo = codigo_erro(corpo) if status >= 400 else ""
         if codigo == "LIMITE_USO_ASSISTENTE":
-            sys.exit("Cota semanal da Ceres esgotada (429 LIMITE_USO_ASSISTENTE): medicao parada")
+            raise CotaEsgotada()
         if status in (429, 503) and codigo in ("MUITAS_TENTATIVAS", "ASSISTENTE_OCUPADO"):
             time.sleep(int(cabecalhos.get("Retry-After", "5")))
             continue
@@ -100,6 +108,10 @@ def perguntar(base, token, pergunta):
                 "fontesDados": len(corpo.get("fontesDados") or []),
                 "resposta": corpo.get("resposta")}
     return {"status": status, "codigo": codigo, "latenciaMs": latencia_ms, "rota": None}
+
+
+class CotaEsgotada(Exception):
+    """429 LIMITE_USO_ASSISTENTE: a medicao para, gravando o que ja foi medido."""
 
 
 def percentil(valores, p):
@@ -123,20 +135,35 @@ def main():
         gabarito = json.load(arquivo)
     perguntas = [p for p in gabarito["perguntas"] if not ids or p["id"] in ids]
 
+    agora = datetime.datetime.now(FUSO).strftime("%Y-%m-%d-%H%M")
+    os.makedirs(saida, exist_ok=True)
+    destino = os.path.join(saida, f"{agora}-harness-api.json")
+    resultados = []
+    interrompida = None
     token = login(base, email, senha)
     inicio_token = time.monotonic()
-    resultados = []
-    for rodada in range(1, repeticoes + 1):
-        for p in perguntas:
-            if time.monotonic() - inicio_token > 12 * 60:  # access token de 15 min (#206)
-                token = login(base, email, senha)
-                inicio_token = time.monotonic()
-            r = perguntar(base, token, p["pergunta"])
-            r.update({"id": p["id"], "rodada": rodada, "rotaEsperada": p.get("rotaEsperada")})
-            resultados.append(r)
-            print(f"rodada {rodada}/{repeticoes} {p['id']} HTTP {r['status']} rota={r['rota']} "
-                  f"{r['latenciaMs']} ms", flush=True)
+    try:
+        for rodada in range(1, repeticoes + 1):
+            for p in perguntas:
+                if time.monotonic() - inicio_token > 12 * 60:  # access token de 15 min (#206)
+                    token = login(base, email, senha)
+                    inicio_token = time.monotonic()
+                r = perguntar(base, token, p["pergunta"])
+                r.update({"id": p["id"], "rodada": rodada, "rotaEsperada": p.get("rotaEsperada")})
+                resultados.append(r)
+                print(f"rodada {rodada}/{repeticoes} {p['id']} HTTP {r['status']} "
+                      f"rota={r['rota']} {r['latenciaMs']} ms", flush=True)
+    except CotaEsgotada:
+        interrompida = "Cota semanal da Ceres esgotada (429 LIMITE_USO_ASSISTENTE)"
+    except (KeyboardInterrupt, SystemExit) as erro:
+        interrompida = f"Interrompida ({type(erro).__name__})"
+    finally:
+        gravar(destino, agora, gabarito["versao"], repeticoes, resultados, interrompida)
+    if interrompida:
+        sys.exit(interrompida + f": o que foi medido esta em {destino}")
 
+
+def gravar(destino, agora, versao, repeticoes, resultados, interrompida):
     por_rota = {}
     for r in resultados:
         chave = r.get("rotaEsperada") or "SEM_ROTA"
@@ -145,21 +172,17 @@ def main():
         if r.get("rotaEsperada"):
             grupo["total"] += 1
             grupo["acertos"] += int(r.get("rota") == r["rotaEsperada"])
-    resumo = {rota: {"perguntas": len(g["latencias"]),
+    resumo = {rota: {"respostas": len(g["latencias"]),
                      "p50Ms": percentil(g["latencias"], 50),
                      "p95Ms": percentil(g["latencias"], 95),
                      "mediaMs": round(statistics.mean(g["latencias"])),
                      "acertoRota": f"{g['acertos']}/{g['total']}" if g["total"] else "-"}
               for rota, g in por_rota.items()}
-
-    os.makedirs(saida, exist_ok=True)
-    agora = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
-    destino = os.path.join(saida, f"{agora}-harness-api.json")
     with open(destino, "w", encoding="utf-8") as arquivo:
         # Sem URL nem e-mail no arquivo: ele pode ser versionado.
-        json.dump({"executadoEm": agora, "versaoGabarito": gabarito["versao"],
-                   "repeticoes": repeticoes, "porRota": resumo, "resultados": resultados},
-                  arquivo, ensure_ascii=False, indent=2)
+        json.dump({"executadoEm": agora, "fuso": "America/Sao_Paulo", "versaoGabarito": versao,
+                   "repeticoes": repeticoes, "interrompida": interrompida, "porRota": resumo,
+                   "resultados": resultados}, arquivo, ensure_ascii=False, indent=2)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
     print(f"Gravado em {destino}")
 

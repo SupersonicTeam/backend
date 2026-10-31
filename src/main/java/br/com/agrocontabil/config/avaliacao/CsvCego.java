@@ -12,13 +12,20 @@ import java.util.Random;
  *
  * <p>O CSV só tem item, pergunta, resposta e a coluna da nota, em ordem embaralhada: sem rota,
  * variante, rodada nem resultado do gabarito, que enviesariam a nota. A chave vai num arquivo
- * separado, que não é entregue ao avaliador. Entram só as respostas redigidas que chegaram ao
- * produtor (texto não vazio); falha técnica não tem o que avaliar.
+ * separado, que não é entregue ao avaliador. Entram só as respostas que chegaram ao produtor sem
+ * falha técnica: modo fallback (trecho de lei ou atalho, sem o modelo), tempo esgotado e erro não
+ * medem a redação da Ceres.
+ *
+ * <p>Formato para o Excel em português: separador {@code ;} e UTF-8 com BOM (sem o BOM ele lê o
+ * arquivo como ANSI e os acentos quebram).
  */
 public final class CsvCego {
 
   /** Cabeçalho do CSV entregue ao avaliador. */
-  static final String CABECALHO = "item,pergunta,resposta,nota_1_a_5,comentario";
+  static final String CABECALHO = "item;pergunta;resposta;nota_1_a_5;comentario";
+
+  /** Marca de ordem de bytes do UTF-8, primeiro caractere do arquivo. */
+  static final String BOM = "\uFEFF";
 
   private CsvCego() {}
 
@@ -34,7 +41,7 @@ public final class CsvCego {
   /**
    * CSV e chave.
    *
-   * @param csv   conteúdo do CSV (RFC 4180, UTF-8, separador vírgula)
+   * @param csv   conteúdo do CSV (aspas da RFC 4180, separador {@code ;}, começa com o BOM)
    * @param chave item → pergunta e rodada
    */
   public record Instrumento(String csv, List<Chave> chave) {}
@@ -54,18 +61,19 @@ public final class CsvCego {
     for (int r = 0; r < repeticoes.rodadas().size(); r++) {
       for (ResultadoPergunta resultado : repeticoes.rodadas().get(r).resultados()) {
         String texto = resultado.execucao().texto();
-        if (texto != null && !texto.isBlank()) {
+        if (texto != null && !texto.isBlank()
+            && !RelatorioAvaliacao.falhaTecnica(resultado.execucao())) {
           linhas.add(new Linha(resultado.id(), r + 1, texto));
         }
       }
     }
     Collections.shuffle(linhas, aleatorio);
-    StringBuilder csv = new StringBuilder(CABECALHO).append("\r\n");
+    StringBuilder csv = new StringBuilder(BOM).append(CABECALHO).append("\r\n");
     List<Chave> chave = new ArrayList<>();
     for (int i = 0; i < linhas.size(); i++) {
       Linha linha = linhas.get(i);
-      csv.append(i + 1).append(',').append(campo(perguntas.getOrDefault(linha.id(), "")))
-          .append(',').append(campo(linha.texto())).append(",,\r\n");
+      csv.append(i + 1).append(';').append(campo(perguntas.getOrDefault(linha.id(), "")))
+          .append(';').append(campo(linha.texto())).append(";;\r\n");
       chave.add(new Chave(i + 1, linha.id(), linha.rodada()));
     }
     return new Instrumento(csv.toString(), List.copyOf(chave));
@@ -73,10 +81,11 @@ public final class CsvCego {
 
   /**
    * Campo entre aspas, com as aspas internas dobradas (RFC 4180). Texto que começa com
-   * {@code = + - @} ganha um apóstrofo: a planilha do avaliador o leria como fórmula.
+   * {@code = + - @}, tabulação ou retorno de carro ganha um apóstrofo: a planilha do avaliador o
+   * leria como fórmula.
    */
   static String campo(String valor) {
-    boolean formula = !valor.isEmpty() && "=+-@".indexOf(valor.charAt(0)) >= 0;
+    boolean formula = !valor.isEmpty() && "=+-@\t\r".indexOf(valor.charAt(0)) >= 0;
     String seguro = formula ? "'" + valor : valor;
     return "\"" + seguro.replace("\"", "\"\"") + "\"";
   }

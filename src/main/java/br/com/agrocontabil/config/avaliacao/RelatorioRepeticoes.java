@@ -183,8 +183,10 @@ public record RelatorioRepeticoes(List<RelatorioAvaliacao> rodadas) {
         .append(" | ").append(faixas.get("Rota").formatada())
         .append(" | ").append(faixas.get("Número").formatada())
         .append(" | ").append(faixas.get("Citação").formatada()).append(" |\n"));
-    md.append("\nLatência e clareza com as respostas de todas as rodadas juntas:\n\n");
-    md.append(RelatorioAvaliacao.tabelaPorRota(porRotaAgregado()));
+    md.append("\nLatência e clareza com as respostas de todas as rodadas juntas (cada linha conta "
+        + "respostas = perguntas × rodadas; as taxas aqui são do conjunto, a faixa está acima):"
+        + "\n\n");
+    md.append(RelatorioAvaliacao.tabelaPorRota(porRotaAgregado(), "Respostas"));
 
     md.append("\n## Perguntas instáveis entre rodadas\n\n");
     Map<String, List<String>> instaveis = instaveis();

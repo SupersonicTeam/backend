@@ -13,7 +13,8 @@ Só Python 3 da biblioteca padrão. **URL e credenciais só por variável de amb
 repositório:
 
 ```bash
-export AGRO_API_URL='https://<host da demonstração>'
+export AGRO_API_URL='https://<host da demonstração>'   # o nome final (www.), sem redirecionamento:
+                                                    # o urllib troca POST por GET num 301
 export AGRO_EMAIL='<conta de produtor>'
 read -rs AGRO_SENHA && export AGRO_SENHA
 # Só se o host tiver o Basic Auth do Caddy (deploy/Caddyfile): o login passa por ele.
@@ -24,8 +25,10 @@ python3 -I docs/avaliacao/harness-api/harness.py
 Opcionais: `AGRO_REPETICOES` (padrão 3), `AGRO_IDS` (ex.: `D01,T01,X03`), `AGRO_GABARITO`,
 `AGRO_SAIDA` (padrão `docs/avaliacao/resultados`).
 
-O resultado vai para `<saída>/<data>-<hora>-harness-api.json`, sem URL nem e-mail (pode ser
-versionado). As respostas são as da conta usada: use a conta de demonstração, nunca a de um
+O resultado vai para `<saída>/<data>-<hora>-harness-api.json` (hora de Brasília), sem URL nem
+e-mail (pode ser versionado). Ele é gravado mesmo se a medição parar no meio (cota esgotada,
+Ctrl+C), com o motivo em `interrompida`; falha de rede ou tempo esgotado de uma pergunta vira o
+resultado dela (`status` 0), sem derrubar as outras. As respostas são as da conta usada: use a conta de demonstração, nunca a de um
 cliente real.
 
 ## Cuidados

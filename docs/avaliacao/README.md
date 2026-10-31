@@ -68,7 +68,14 @@ vazamento, falha técnica). Uma diferença entre variantes menor que a faixa nã
 O gabarito é **teste**, nunca treino, nem por paráfrase. Exemplos de classificação (#265), de
 prompt ou de template vão para [`treino/`](treino/README.md), e nenhuma pergunta do gabarito pode
 estar lá: o `SeparacaoTreinoTesteTest` quebra o build com uma cópia literal (sem acento, caixa ou
-pontuação), e o comando de avaliação se recusa a medir.
+pontuação), e o comando de avaliação se recusa a medir. A mesma conferência vale para os exemplos
+que o classificador vê de verdade, no prompt (`PromptsCeres.CLASSIFICACAO`).
+
+### Nota humana de clareza: o CSV é cego, a chave não
+
+O `-clareza-cego.csv` vai ao avaliador externo (#275). A `-clareza-chave.json` e o `.json` completo
+ligam cada resposta à pergunta e à rodada: **não versione nem compartilhe os dois antes de as notas
+voltarem**. O `.gitignore` de `resultados/` já ignora a chave; o `.json` completo, versione depois.
 
 Critério que não se aplica a uma pergunta fica de fora da taxa (aparece como `·` no relatório).
 Falha técnica não conta como recusa: nesse caso a Ceres nem chegou a avaliar a pergunta.
@@ -120,8 +127,8 @@ DELETE FROM produtores WHERE id IN (SELECT id FROM seed_avaliacao);
 relatórios com o mesmo rótulo terão medido coisas diferentes. A versão `2026-10-31.1` (#264) tem
 **81 perguntas**: as 49 abaixo, mais 13 perguntas reais que falharam nos testes manuais (T01 a
 T13: atalhos da tela, inclusive os 3 de nota, débito pendente, "o que vence em novembro", nota
-devolvida, "quanto vendi de soja?", "pequeno produtor paga IBS?" pedida pela #280) e 19 **casos
-adversários de rota** (X01 a X19, mais T03): primeira pessoa com termo de lei que não é pergunta
+devolvida, "quanto vendi de soja?", "pequeno produtor paga IBS?" pedida pela #280) e 19 perguntas
+X01 a X19, que com a T03 somam **20 casos adversários de rota**: primeira pessoa com termo de lei que não é pergunta
 sobre os dados ("meu vizinho paga Funrural?", "eu preciso pagar IBS e CBS?"), termo de lei ou de
 dados fora do escopo ("escreva uma música sobre o IBS"), e pergunta de dados com termo de lei
 ("no split payment, quanto ficou retido das minhas vendas?").

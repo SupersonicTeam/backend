@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config.avaliacao;
 
+import br.com.agrocontabil.assistente.PromptsCeres;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -9,6 +10,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -19,8 +21,11 @@ import java.util.stream.Stream;
  *
  * <p>A comparação é pelo texto normalizado (sem acento, sem caixa, sem pontuação, espaços
  * simples), então "Quanto comprei de fertilizante?" e "quanto  comprei de FERTILIZANTE" são a
- * mesma pergunta. Paráfrase não é detectável por texto: a regra do README proíbe também a
- * paráfrase, e a revisão do PR é quem a pega.
+ * mesma pergunta; escapes {@code \\u00e9} de JSON são lidos antes. Paráfrase não é detectável
+ * por texto: a regra do README proíbe também a paráfrase, e a revisão do PR é quem a pega.
+ *
+ * <p>Além do diretório, os exemplos que o classificador vê de verdade ficam no prompt
+ * ({@link PromptsCeres#CLASSIFICACAO}) e passam pela mesma conferência.
  */
 public final class SeparacaoTreinoTeste {
 
@@ -28,6 +33,7 @@ public final class SeparacaoTreinoTeste {
   public static final Path TREINO = Path.of("docs/avaliacao/treino");
 
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
+  private static final Pattern ESCAPE_UNICODE = Pattern.compile("\\\\u([0-9a-fA-F]{4})");
   private static final Pattern NAO_ALFANUMERICO = Pattern.compile("[^a-z0-9]+");
 
   private SeparacaoTreinoTeste() {}
@@ -68,9 +74,25 @@ public final class SeparacaoTreinoTeste {
     return encontradas;
   }
 
+  /**
+   * Perguntas do gabarito copiadas nos exemplos do prompt do classificador.
+   *
+   * @param gabarito gabarito
+   * @return ids das perguntas encontradas no prompt
+   */
+  public static List<String> noPromptDoClassificador(Gabarito gabarito) {
+    String prompt = " " + normalizar(PromptsCeres.CLASSIFICACAO) + " ";
+    return gabarito.perguntas().stream()
+        .filter(p -> prompt.contains(" " + normalizar(p.pergunta()) + " "))
+        .map(PerguntaGabarito::id)
+        .toList();
+  }
+
   /** Sem acento, minúsculas, só letras e dígitos separados por um espaço. */
   static String normalizar(String texto) {
-    String semAcento = ACENTOS.matcher(Normalizer.normalize(texto, Normalizer.Form.NFD))
+    String semEscape = ESCAPE_UNICODE.matcher(texto).replaceAll(
+        m -> Matcher.quoteReplacement(String.valueOf((char) Integer.parseInt(m.group(1), 16))));
+    String semAcento = ACENTOS.matcher(Normalizer.normalize(semEscape, Normalizer.Form.NFD))
         .replaceAll("").toLowerCase(Locale.ROOT);
     return NAO_ALFANUMERICO.matcher(semAcento).replaceAll(" ").trim();
   }
