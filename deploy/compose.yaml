@@ -163,6 +163,7 @@ services:
       - '443:443/udp'
     environment:
       SITE_HOST: ${SITE_HOST:?defina SITE_HOST no .env}
+      SITE_REDIRECIONA: ${SITE_REDIRECIONA:?defina SITE_REDIRECIONA no .env}
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-banca}
       BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?gere com caddy hash-password}
     volumes:

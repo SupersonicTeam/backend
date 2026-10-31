@@ -61,3 +61,9 @@
 		reverse_proxy frontend:80
 	}
 }
+
+# Outros nomes do site (o dominio sem www, o endereco sslip.io antigo): redirecionam para o
+# principal, com certificado proprio. O redirecionamento nao expoe nada, entao fica sem senha.
+{$SITE_REDIRECIONA} {
+	redir https://{$SITE_HOST}{uri} permanent
+}
