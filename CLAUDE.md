@@ -56,7 +56,12 @@ Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 
 ```
 
 Avaliação da Ceres com gabarito (#158, modelo real, grava seed fictício; só com `dev`): ver
-`docs/avaliacao/README.md`. Linha de base em `docs/avaliacao/linha-de-base-2026-10-14.md`.
+`docs/avaliacao/README.md`. Desde a #264, 3 repetições por padrão (`--avaliacao.repeticoes`),
+casos adversários de rota, latência e clareza por rota, CSV cego para o avaliador externo e
+harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres 2.0 em
+`docs/avaliacao/linha-de-base-ceres-2-0.md` (**pendente de rodar com o modelo real**); a antiga em
+`docs/avaliacao/linha-de-base-2026-10-14.md`. O gabarito é teste, nunca treino:
+`docs/avaliacao/treino/` não pode conter pergunta dele (o build quebra).
 
 ## Arquitetura — regras inegociáveis
 
@@ -75,7 +80,9 @@ br.com.agrocontabil
 │                  # TributosProperties/Config, CertificadoDigitalProperties/Config,
 │                  # SefazProperties/Config, RetryConfig, SchedulingConfig, DataLoader
 │                  # avaliacao/: comando de avaliacao da Ceres com gabarito (#158, profile
-│                  #   avaliacao + dev): SeedAvaliacao, ValoresEsperados, AvaliadorResposta
+│                  #   avaliacao + dev): SeedAvaliacao, ValoresEsperados, AvaliadorResposta;
+│                  #   régua da Ceres 2.0 (#264): RelatorioRepeticoes (3 repetições, faixa,
+│                  #   instáveis), ClarezaTexto, CsvCego, SeparacaoTreinoTeste
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, GeracaoNotaFiscalService,
 │                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,

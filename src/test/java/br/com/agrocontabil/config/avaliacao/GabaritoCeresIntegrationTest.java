@@ -74,19 +74,25 @@ class GabaritoCeresIntegrationTest {
   }
 
   @Test
-  @DisplayName("Gabarito: 30 a 50 perguntas, as quatro rotas e perguntas de ataque")
+  @DisplayName("Gabarito: 30 a 100 perguntas, as quatro rotas, ataques e 15+ casos adversários")
   void estrutura() throws IOException {
     Gabarito gabarito = gabarito();
     Map<Categoria, Long> porCategoria = gabarito.perguntas().stream()
         .collect(Collectors.groupingBy(PerguntaGabarito::categoria, Collectors.counting()));
 
-    assertThat(gabarito.perguntas()).hasSizeBetween(30, 50);
+    assertThat(gabarito.perguntas()).hasSizeBetween(30, 100);
+    // Com menos de 15 casos adversários a precisão das regras de rota da #265 não diz nada.
+    assertThat(gabarito.perguntas().stream().filter(PerguntaGabarito::adversario))
+        .hasSizeGreaterThanOrEqualTo(15)
+        .allSatisfy(p -> assertThat(p.rotaEsperada()).as(p.id()).isNotNull());
     assertThat(porCategoria.keySet()).containsExactlyInAnyOrderElementsOf(
         EnumSet.allOf(Categoria.class));
     assertThat(porCategoria.get(Categoria.ATAQUE)).isGreaterThanOrEqualTo(5);
     for (PerguntaGabarito p : gabarito.perguntas()) {
       switch (p.categoria()) {
-        case DADOS -> assertThat(p.funcoesEsperadas()).as(p.id()).isNotEmpty();
+        // Pergunta pendente (função da #274 que ainda não existe) mede só a rota.
+        case DADOS -> assertThat(p.funcoesEsperadas().isEmpty() && p.pendente() == null)
+            .as(p.id()).isFalse();
         case LEGISLACAO -> assertThat(p.dispositivosEsperados()).as(p.id()).isNotEmpty();
         case MISTO -> assertThat(p.funcoesEsperadas().isEmpty()
             || p.dispositivosEsperados().isEmpty()).as(p.id()).isFalse();

@@ -14,6 +14,7 @@ import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -52,13 +53,20 @@ import org.springframework.web.client.RestClient;
  *   -Dspring-boot.run.arguments="--avaliacao.hardware='i5-12450H, 16 GB, RTX 3050 4 GB'"
  * </pre>
  *
+ * <p>{@code avaliacao.repeticoes} (padrão 3, issue #264) roda o gabarito inteiro N vezes: o
+ * relatório traz a média e a faixa de cada métrica e as perguntas que mudaram de resultado entre
+ * as rodadas. Toda comparação registrada em {@code docs/avaliacao/} usa 3. Antes de medir, o
+ * comando recusa um gabarito que tenha pergunta copiada no treino ({@link SeparacaoTreinoTeste}).
+ *
  * <p>Usa o modelo real (o configurado em {@code spring.ai.*}) e a legislação já ingerida. Cada
  * pergunta passa pelo mesmo {@link OrquestradorService} da API, com o mesmo timeout, mas sem a
  * fila do chat: as perguntas rodam uma por vez, e a latência medida é a da Ceres, não a de espera.
  * O "hoje" da Ceres é fixo ({@code avaliacao.hoje}), para o resultado não depender do dia.
  *
- * <p>Grava {@code <data>-<hora>-<modelo>.md} (tabela para o artigo) e {@code .json} (respostas completas,
- * para revisão manual) em {@code avaliacao.saida}. Encerra com código 0 se a avaliação rodou até o
+ * <p>Grava em {@code avaliacao.saida}: {@code <data>-<hora>-<modelo>.md} (tabela para o artigo),
+ * {@code .json} (respostas completas, para revisão manual), {@code -clareza-cego.csv} (pergunta e
+ * resposta embaralhadas, para o avaliador externo da #275) e {@code -clareza-chave.json} (a chave
+ * do CSV, que não vai ao avaliador). Encerra com código 0 se a avaliação rodou até o
  * fim, qualquer que seja o resultado; 1 se não rodou (gabarito inválido, seed, banco, ou modelo
  * que não respondeu à pergunta de aquecimento).
  */
@@ -71,6 +79,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
 
   private static final Logger log = LoggerFactory.getLogger(AvaliacaoCeresRunner.class);
   private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
+  private static final int MAXIMO_REPETICOES = 10;
   private static final Duration FOLGA_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration TIMEOUT_OLLAMA = Duration.ofSeconds(5);
   private static final DateTimeFormatter NOME_ARQUIVO =
@@ -89,6 +98,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
   private final LocalDate hoje;
   private final String hardwareInformado;
   private final Set<String> idsSelecionados;
+  private final int repeticoes;
 
   /** Constrói o comando com os parâmetros {@code avaliacao.*}. */
   public AvaliacaoCeresRunner(
@@ -104,7 +114,8 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
       @Value("${avaliacao.saida:docs/avaliacao/resultados}") String diretorioSaida,
       @Value("${avaliacao.hoje:2026-09-15}") String hoje,
       @Value("${avaliacao.hardware:}") String hardwareInformado,
-      @Value("${avaliacao.ids:}") String ids) {
+      @Value("${avaliacao.ids:}") String ids,
+      @Value("${avaliacao.repeticoes:3}") int repeticoes) {
     this.orquestrador = orquestrador;
     this.valoresEsperados = new ValoresEsperados(ferramentas);
     this.seed = seed;
@@ -119,6 +130,11 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
     this.hardwareInformado = hardwareInformado;
     this.idsSelecionados = Arrays.stream(ids.split(","))
         .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
+    if (repeticoes < 1 || repeticoes > MAXIMO_REPETICOES) {
+      throw new IllegalArgumentException(
+          "avaliacao.repeticoes deve estar entre 1 e " + MAXIMO_REPETICOES + ": " + repeticoes);
+    }
+    this.repeticoes = repeticoes;
   }
 
   /** Avalia e encerra a aplicação. */
@@ -129,6 +145,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
         orquestrador::responder, propriedades.getTimeoutPergunta().plus(FOLGA_TIMEOUT))) {
       exigirAmbienteDeDesenvolvimento(ambiente);
       Gabarito gabarito = carregarGabarito();
+      exigirTreinoSeparado(gabarito, SeparacaoTreinoTeste.TREINO);
       ProdutoresAvaliacao produtores = seed.semear();
       Map<String, List<String>> esperados =
           valoresEsperados.calcular(gabarito, produtores.avaliado(), hoje);
@@ -136,23 +153,28 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
       log.info("Aquecendo o modelo (pergunta descartada)");
       exigirModeloNoAr(execucao.executar(PERGUNTA_AQUECIMENTO, contextoNovo(produtores)));
 
-      OffsetDateTime inicio = OffsetDateTime.now(ZONE).truncatedTo(ChronoUnit.SECONDS);
-      long inicioNs = System.nanoTime();
-      List<ResultadoPergunta> resultados = new ArrayList<>();
-      for (PerguntaGabarito pergunta : gabarito.perguntas()) {
-        ExecucaoPergunta resposta =
-            execucao.executar(pergunta.pergunta(), contextoNovo(produtores));
-        resultados.add(AvaliadorResposta.avaliar(
-            pergunta, resposta, esperados.getOrDefault(pergunta.id(), List.of())));
-        log.info("{} rota={} desfecho={} {} ms", pergunta.id(), resposta.rota(),
-            resposta.erro() == null ? resposta.desfecho() : resposta.erro(),
-            resposta.latenciaMs());
+      List<String> hardware = hardware();
+      List<RelatorioAvaliacao> rodadas = new ArrayList<>();
+      for (int rodada = 1; rodada <= repeticoes; rodada++) {
+        OffsetDateTime inicio = OffsetDateTime.now(ZONE).truncatedTo(ChronoUnit.SECONDS);
+        long inicioNs = System.nanoTime();
+        List<ResultadoPergunta> resultados = new ArrayList<>();
+        for (PerguntaGabarito pergunta : gabarito.perguntas()) {
+          ExecucaoPergunta resposta =
+              execucao.executar(pergunta.pergunta(), contextoNovo(produtores));
+          resultados.add(AvaliadorResposta.avaliar(
+              pergunta, resposta, esperados.getOrDefault(pergunta.id(), List.of())));
+          log.info("rodada {}/{} {} rota={} desfecho={} {} ms", rodada, repeticoes,
+              pergunta.id(), resposta.rota(),
+              resposta.erro() == null ? resposta.desfecho() : resposta.erro(),
+              resposta.latenciaMs());
+        }
+        rodadas.add(new RelatorioAvaliacao(new RelatorioAvaliacao.Ambiente(
+            inicio, hoje, gabarito.versao(), SeedAvaliacao.VERSAO,
+            modeloLinguagem.identificacao(), modeloEmbedding(), hardware,
+            Duration.ofNanos(System.nanoTime() - inicioNs).toSeconds()), resultados));
       }
-
-      RelatorioAvaliacao relatorio = new RelatorioAvaliacao(new RelatorioAvaliacao.Ambiente(
-          inicio, hoje, gabarito.versao(), SeedAvaliacao.VERSAO, modeloLinguagem.identificacao(), modeloEmbedding(),
-          hardware(), Duration.ofNanos(System.nanoTime() - inicioNs).toSeconds()), resultados);
-      gravar(relatorio, gabarito);
+      gravar(new RelatorioRepeticoes(rodadas), gabarito);
       codigo = 0;
     } catch (IOException | RuntimeException e) {
       log.error("Avaliacao da Ceres falhou: {}", e.getMessage(), e);
@@ -186,6 +208,20 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
     if (RelatorioAvaliacao.falhaTecnica(aquecimento)) {
       throw new IllegalStateException("O modelo nao respondeu a pergunta de aquecimento (desfecho "
           + aquecimento.desfecho() + "): suba o modelo antes de avaliar");
+    }
+  }
+
+  /**
+   * Gabarito copiado no treino mede memória, não acerto: a avaliação para (issue #264).
+   *
+   * @throws IllegalStateException se alguma pergunta do gabarito está em {@code treino}
+   */
+  static void exigirTreinoSeparado(Gabarito gabarito, Path treino) {
+    List<SeparacaoTreinoTeste.Contaminacao> contaminacoes =
+        SeparacaoTreinoTeste.contaminacoes(gabarito, treino);
+    if (!contaminacoes.isEmpty()) {
+      throw new IllegalStateException("Pergunta do gabarito no treino (o gabarito e teste, nunca "
+          + "treino): " + contaminacoes);
     }
   }
 
@@ -263,26 +299,48 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
     return linhas;
   }
 
-  private void gravar(RelatorioAvaliacao relatorio, Gabarito gabarito) throws IOException {
+  private void gravar(RelatorioRepeticoes repeticoes, Gabarito gabarito) throws IOException {
     Path diretorio = Path.of(diretorioSaida);
     Files.createDirectories(diretorio);
-    String base = NOME_ARQUIVO.format(relatorio.ambiente().executadoEm()) + "-"
-        + relatorio.ambiente().modelo().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9.]+", "-");
+    RelatorioAvaliacao.Ambiente ambiente = repeticoes.rodadas().get(0).ambiente();
+    String base = NOME_ARQUIVO.format(ambiente.executadoEm()) + "-"
+        + ambiente.modelo().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9.]+", "-");
     Path markdown = diretorio.resolve(base + ".md");
     Path json = diretorio.resolve(base + ".json");
-    Files.writeString(markdown, relatorio.markdown(), StandardCharsets.UTF_8);
+    Files.writeString(markdown, repeticoes.markdown(), StandardCharsets.UTF_8);
 
     Map<String, String> perguntas = gabarito.perguntas().stream().collect(Collectors.toMap(
         PerguntaGabarito::id, PerguntaGabarito::pergunta, (a, b) -> a, LinkedHashMap::new));
+    RelatorioAvaliacao todas = repeticoes.todas();
     Map<String, Object> completo = new LinkedHashMap<>();
-    completo.put("ambiente", relatorio.ambiente());
-    completo.put("metricas", relatorio.metricas());
-    completo.put("latenciaP50Ms", RelatorioAvaliacao.percentil(relatorio.resultados(), 50));
-    completo.put("latenciaP95Ms", RelatorioAvaliacao.percentil(relatorio.resultados(), 95));
+    completo.put("ambiente", ambiente);
+    completo.put("repeticoes", repeticoes.rodadas().size());
+    completo.put("metricas", repeticoes.metricas());
+    completo.put("porRota", repeticoes.porRota());
+    completo.put("porRotaAgregado", repeticoes.porRotaAgregado());
+    completo.put("latenciaP50Ms", RelatorioAvaliacao.percentil(todas.resultados(), 50));
+    completo.put("latenciaP95Ms", RelatorioAvaliacao.percentil(todas.resultados(), 95));
+    completo.put("instaveis", repeticoes.instaveis());
     completo.put("perguntas", perguntas);
-    completo.put("resultados", relatorio.resultados());
+    List<Map<String, Object>> rodadas = new ArrayList<>();
+    for (RelatorioAvaliacao rodada : repeticoes.rodadas()) {
+      Map<String, Object> r = new LinkedHashMap<>();
+      r.put("ambiente", rodada.ambiente());
+      r.put("metricas", rodada.metricas());
+      r.put("resultados", rodada.resultados());
+      rodadas.add(r);
+    }
+    completo.put("rodadas", rodadas);
     objectMapper.writer().with(SerializationFeature.INDENT_OUTPUT)
         .writeValue(json.toFile(), completo);
-    log.info("Relatorio gravado em {} e {}", markdown, json);
+
+    CsvCego.Instrumento cego = CsvCego.gerar(repeticoes, perguntas, new SecureRandom());
+    Path csv = diretorio.resolve(base + "-clareza-cego.csv");
+    Path chave = diretorio.resolve(base + "-clareza-chave.json");
+    Files.writeString(csv, cego.csv(), StandardCharsets.UTF_8);
+    objectMapper.writer().with(SerializationFeature.INDENT_OUTPUT)
+        .writeValue(chave.toFile(), cego.chave());
+    log.info("Relatorio gravado em {} e {}; CSV cego em {} (chave em {}, nao entregue ao "
+        + "avaliador)", markdown, json, csv, chave);
   }
 }

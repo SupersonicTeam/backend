@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config.avaliacao;
 
+import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.config.avaliacao.PerguntaGabarito.Categoria;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.LocalDate;
@@ -65,6 +66,29 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     }
   }
 
+  /** Rótulo do grupo das perguntas sem rota esperada (ataques que só medem recusa e vazamento). */
+  static final String SEM_ROTA = "SEM_ROTA";
+
+  /**
+   * Indicadores de uma rota esperada (issue #264). Clareza só sobre as respostas redigidas pelo
+   * modelo (desfecho {@code RESPONDIDA}): a frase fixa de uma recusa não mede a redação.
+   *
+   * @param perguntas            perguntas com essa rota esperada
+   * @param rota                 acerto de rota
+   * @param numero               acerto de número
+   * @param citacao              citação válida
+   * @param latenciaP50Ms        latência p50
+   * @param latenciaP95Ms        latência p95
+   * @param primeiraParteP50Ms   p50 do tempo até a primeira parte da resposta
+   * @param primeiraParteP95Ms   p95 do tempo até a primeira parte da resposta
+   * @param respostasMedidas     respostas redigidas pelo modelo
+   * @param palavrasPorFrase     média de palavras por frase nessas respostas
+   * @param comSiglaSemExplicacao respostas com alguma sigla do glossário sem explicação
+   */
+  public record IndicadoresRota(int perguntas, Taxa rota, Taxa numero, Taxa citacao,
+      long latenciaP50Ms, long latenciaP95Ms, long primeiraParteP50Ms, long primeiraParteP95Ms,
+      long respostasMedidas, double palavrasPorFrase, long comSiglaSemExplicacao) {}
+
   /** Cópia defensiva. */
   public RelatorioAvaliacao {
     resultados = List.copyOf(resultados);
@@ -87,10 +111,58 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     return metricas;
   }
 
+  /** Acerto de rota nos casos adversários (issue #264). */
+  public Taxa rotaAdversarios() {
+    return taxa(resultados.stream().filter(ResultadoPergunta::adversario).toList(),
+        ResultadoPergunta::rotaCorreta);
+  }
+
+  /** Indicadores por rota esperada, na ordem das rotas; sem rota esperada no fim. */
+  public Map<String, IndicadoresRota> porRota() {
+    Map<String, IndicadoresRota> porRota = new LinkedHashMap<>();
+    for (Intencao rota : Intencao.values()) {
+      List<ResultadoPergunta> daRota =
+          resultados.stream().filter(r -> r.rotaEsperada() == rota).toList();
+      if (!daRota.isEmpty()) {
+        porRota.put(rota.name(), indicadores(daRota));
+      }
+    }
+    List<ResultadoPergunta> semRota =
+        resultados.stream().filter(r -> r.rotaEsperada() == null).toList();
+    if (!semRota.isEmpty()) {
+      porRota.put(SEM_ROTA, indicadores(semRota));
+    }
+    return porRota;
+  }
+
+  static IndicadoresRota indicadores(List<ResultadoPergunta> grupo) {
+    List<ClarezaTexto.Medida> medidas = grupo.stream()
+        .filter(r -> r.execucao().erro() == null
+            && r.execucao().desfecho() == DesfechoInteracao.RESPONDIDA)
+        .map(r -> ClarezaTexto.medir(r.execucao().texto()))
+        .filter(m -> m.frases() > 0)
+        .toList();
+    List<Long> primeiraParte = grupo.stream().map(ResultadoPergunta::primeiraParteMs).toList();
+    return new IndicadoresRota(grupo.size(),
+        taxa(grupo, ResultadoPergunta::rotaCorreta),
+        taxa(grupo, ResultadoPergunta::numeroCorreto),
+        taxa(grupo, ResultadoPergunta::citacaoValida),
+        percentil(grupo, 50), percentil(grupo, 95),
+        percentilDe(primeiraParte, 50), percentilDe(primeiraParte, 95),
+        medidas.size(),
+        medidas.stream().mapToDouble(ClarezaTexto.Medida::palavrasPorFrase).average().orElse(0),
+        medidas.stream().filter(m -> !m.siglasSemExplicacao().isEmpty()).count());
+  }
+
   /** Latência em milissegundos no percentil (nearest-rank); 0 sem perguntas. */
   public static long percentil(List<ResultadoPergunta> resultados, int percentil) {
-    List<Long> latencias = new ArrayList<>(
-        resultados.stream().map(r -> r.execucao().latenciaMs()).sorted().toList());
+    return percentilDe(resultados.stream().map(r -> r.execucao().latenciaMs()).toList(),
+        percentil);
+  }
+
+  /** Percentil (nearest-rank) de uma lista de tempos; 0 se vazia. */
+  static long percentilDe(List<Long> valores, int percentil) {
+    List<Long> latencias = new ArrayList<>(valores.stream().sorted().toList());
     if (latencias.isEmpty()) {
       return 0;
     }
@@ -107,7 +179,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
         || FALHAS_TECNICAS.contains(execucao.desfecho());
   }
 
-  private static Taxa taxa(
+  static Taxa taxa(
       List<ResultadoPergunta> resultados, Function<ResultadoPergunta, Boolean> criterio) {
     long total = resultados.stream().map(criterio).filter(v -> v != null).count();
     long acertos = resultados.stream().map(criterio).filter(Boolean.TRUE::equals).count();
@@ -158,6 +230,11 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
           .append(" | ").append(segundos(percentil(daCategoria, 95))).append(" |\n");
     }
 
+    md.append("\n## Por rota esperada\n\n");
+    md.append(tabelaPorRota(porRota()));
+    md.append("\nCasos adversários de rota: ").append(rotaAdversarios().formatada())
+        .append(" de acerto de rota.\n");
+
     md.append("\n## Por pergunta\n\n");
     md.append("Legenda: ✓ acertou, ✗ errou, · não se aplica. ");
     md.append("As respostas completas estão no JSON ao lado.\n\n");
@@ -182,6 +259,33 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     return md.toString();
   }
 
+  /**
+   * Tabela por rota esperada. "1ª parte" é o tempo até a primeira parte da resposta: até a etapa 6
+   * da Ceres 2.0 (resposta de dados em partes) ela é a resposta inteira, então coincide com a
+   * latência; a coluna existe para a comparação daquela etapa.
+   */
+  static String tabelaPorRota(Map<String, IndicadoresRota> porRota) {
+    StringBuilder md = new StringBuilder();
+    md.append("| Rota esperada | Perguntas | Rota | Número | Citação | p50 | p95 | 1ª parte p50 | "
+        + "1ª parte p95 | Palavras/frase | Sigla sem explicação |\n");
+    md.append("|---|---|---|---|---|---|---|---|---|---|---|\n");
+    porRota.forEach((rota, i) -> md.append("| ").append(rota)
+        .append(" | ").append(i.perguntas())
+        .append(" | ").append(i.rota().formatada())
+        .append(" | ").append(i.numero().formatada())
+        .append(" | ").append(i.citacao().formatada())
+        .append(" | ").append(segundos(i.latenciaP50Ms()))
+        .append(" | ").append(segundos(i.latenciaP95Ms()))
+        .append(" | ").append(segundos(i.primeiraParteP50Ms()))
+        .append(" | ").append(segundos(i.primeiraParteP95Ms()))
+        .append(" | ").append(i.respostasMedidas() == 0
+            ? "—" : String.format(Locale.ROOT, "%.1f", i.palavrasPorFrase()))
+        .append(" | ").append(i.respostasMedidas() == 0
+            ? "—" : i.comSiglaSemExplicacao() + "/" + i.respostasMedidas())
+        .append(" |\n"));
+    return md.toString();
+  }
+
   /** No MISTO, o desfecho de cada parte: mostra qual das duas foi descartada. */
   static String partesMisto(ExecucaoPergunta execucao) {
     if (execucao.desfechoDados() == null && execucao.desfechoLegislacao() == null) {
@@ -196,7 +300,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     return valor == null ? "·" : (valor ? "✓" : "✗");
   }
 
-  private static String segundos(long ms) {
+  static String segundos(long ms) {
     return String.format(Locale.ROOT, "%.1f s", ms / 1000.0);
   }
 

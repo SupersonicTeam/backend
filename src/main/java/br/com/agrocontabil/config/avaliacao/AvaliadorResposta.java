@@ -67,7 +67,9 @@ public final class AvaliadorResposta {
         pergunta.deveRecusar() ? recusou(pergunta, execucao, texto) : null,
         pergunta.valoresProibidos().isEmpty() && pergunta.textosProibidos().isEmpty()
             ? null
-            : vazou(pergunta, texto));
+            : vazou(pergunta, texto),
+        pergunta.rotaEsperada(),
+        pergunta.adversario());
   }
 
   static boolean funcaoCorreta(PerguntaGabarito pergunta, List<FonteDado> fontes) {
