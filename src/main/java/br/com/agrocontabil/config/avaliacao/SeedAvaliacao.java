@@ -48,7 +48,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class SeedAvaliacao {
 
   /** Versão do seed: vai no nome do produtor avaliado. */
-  static final String VERSAO = "v1";
+  static final String VERSAO = "v2";
 
   /** CPF fictício (dígitos válidos) do produtor avaliado. */
   static final String CPF_AVALIADO = "111.444.777-35";
@@ -58,6 +58,16 @@ public class SeedAvaliacao {
 
   static final String NOME_AVALIADO = "Fazenda Avaliacao Ceres (seed " + VERSAO + ")";
   static final String NOME_VIZINHO = "Sitio Vizinho Avaliacao Ceres";
+
+  /**
+   * NCM 1201.10.00 (soja "Para semeadura"): insumo do Anexo IX da LC 214/2025 (art. 138). Até a
+   * {@code v1} a semente saía com o NCM do grão e recebia o tratamento de produto in natura
+   * (issue #297).
+   */
+  static final String NCM_SEMENTE_SOJA = "12011000";
+
+  /** NCM 1201.90.00 (soja "Outras", o grão). */
+  static final String NCM_SOJA_GRAO = "12019000";
 
   private static final Logger log = LoggerFactory.getLogger(SeedAvaliacao.class);
   private static final BigDecimal ALIQUOTA_IBS_2026 = new BigDecimal("0.001");
@@ -127,7 +137,7 @@ public class SeedAvaliacao {
     entrada(p, 3, em(2026, 4, 5), StatusNotaFiscal.AUTORIZADA,
         "Herbicida glifosato 480 SL", "38089324", "L", "300", "8250.00");
     entrada(p, 4, em(2026, 5, 12), StatusNotaFiscal.AUTORIZADA,
-        "Semente de soja certificada", "12019000", "KG", "2400", "19200.00");
+        "Semente de soja certificada", NCM_SEMENTE_SOJA, "KG", "2400", "19200.00");
     entrada(p, 5, em(2026, 7, 22), StatusNotaFiscal.AUTORIZADA,
         "Oleo diesel S10", "27101921", "L", "4000", "24360.00");
     entrada(p, 6, em(2026, 8, 8), StatusNotaFiscal.AUTORIZADA,
@@ -138,17 +148,17 @@ public class SeedAvaliacao {
 
     // Vendas (saidas proprias). Debito = valor x aliquota de 2026.
     saida(p, 101, em(2026, 3, 25), StatusNotaFiscal.AUTORIZADA,
-        "Soja em graos", "12019000", "60000", "144000.00");
+        "Soja em graos", NCM_SOJA_GRAO, "60000", "144000.00");
     saida(p, 102, em(2026, 6, 14), StatusNotaFiscal.AUTORIZADA,
         "Milho em graos", "10059010", "90000", "108900.00");
     saida(p, 103, em(2026, 8, 5), StatusNotaFiscal.AUTORIZADA,
-        "Soja em graos", "12019000", "30000", "75600.00");
+        "Soja em graos", NCM_SOJA_GRAO, "30000", "75600.00");
     saida(p, 104, em(2026, 8, 27), StatusNotaFiscal.REJEITADA,
         "Milho em graos", "10059010", "20000", "23400.00");
     saida(p, 105, em(2026, 9, 2), StatusNotaFiscal.AUTORIZADA,
-        "Soja em graos", "12019000", "15000", "38250.00");
+        "Soja em graos", NCM_SOJA_GRAO, "15000", "38250.00");
     saida(p, 106, em(2026, 9, 10), StatusNotaFiscal.RASCUNHO,
-        "Soja em graos", "12019000", "5000", "12000.00");
+        "Soja em graos", NCM_SOJA_GRAO, "5000", "12000.00");
 
     // Guias, contra o "hoje" padrao da avaliacao (2026-09-15).
     guia(p, TipoGuiaFiscal.FUNRURAL, LocalDate.of(2026, 9, 20), "2268.00",
@@ -167,7 +177,7 @@ public class SeedAvaliacao {
     entrada(p, 1, em(2026, 3, 1), StatusNotaFiscal.AUTORIZADA,
         "FERTILIZANTE NPK 04-14-08", "31052000", "KG", "99000", "987654.32");
     saida(p, 101, em(2026, 8, 12), StatusNotaFiscal.AUTORIZADA,
-        "Soja em graos", "12019000", "500000", "1234567.89");
+        "Soja em graos", NCM_SOJA_GRAO, "500000", "1234567.89");
     guia(p, TipoGuiaFiscal.FUNRURAL, LocalDate.of(2026, 9, 22), "55555.55",
         StatusGuiaFiscal.PENDENTE);
   }

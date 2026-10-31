@@ -72,6 +72,10 @@ O seed é idempotente. Ao mudá-lo, troque `SeedAvaliacao.VERSAO`: com a versão
 comando para e pede que os produtores de avaliação sejam apagados, em vez de medir sobre dados
 misturados.
 
+Desde a `v2` (issue #297) a semente de soja sai com o NCM de semeadura (`12011000`, insumo do
+Anexo IX da LC 214/2025, art. 138); o grão segue com `12019000`. Quem tem o seed `v1` gravado
+apaga os dois produtores de avaliação, com notas e guias, antes de rodar de novo.
+
 ## Gabarito
 
 `gabarito-ceres.json`, versionado (`versao`): **ao alterar uma pergunta, mude a versão**, senão dois

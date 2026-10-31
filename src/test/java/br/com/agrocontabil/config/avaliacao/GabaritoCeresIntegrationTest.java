@@ -122,6 +122,22 @@ class GabaritoCeresIntegrationTest {
   }
 
   @Test
+  @DisplayName("Semente de soja sai com o NCM de semeadura; o grão segue com o do grão (#297)")
+  void ncmDaSementeDeSoja() {
+    seed.semear();
+
+    Map<String, java.util.Set<String>> ncmsPorDescricao = transactionTemplate.execute(status ->
+        notaFiscalRepository.findAll().stream()
+            .flatMap(nota -> nota.getItens().stream())
+            .collect(Collectors.groupingBy(item -> item.getDescricao(),
+                Collectors.mapping(item -> item.getNcm(), Collectors.toSet()))));
+
+    // 1201.10.00 = "Para semeadura" (Anexo IX, art. 138); 1201.90.00 = o grão (art. 137).
+    assertThat(ncmsPorDescricao.get("Semente de soja certificada")).containsExactly("12011000");
+    assertThat(ncmsPorDescricao.get("Soja em graos")).containsExactly("12019000");
+  }
+
+  @Test
   @DisplayName("Seed é idempotente e recusa versão antiga em vez de misturar dados")
   void seedIdempotente() {
     ProdutoresAvaliacao primeira = seed.semear();
@@ -131,7 +147,7 @@ class GabaritoCeresIntegrationTest {
     assertThat(notaFiscalRepository.count()).isEqualTo(notas);
 
     produtorRepository.findById(primeira.avaliado()).ifPresent(p -> {
-      p.setNomeCompleto("Fazenda Avaliacao Ceres (seed v0)");
+      p.setNomeCompleto("Fazenda Avaliacao Ceres (seed v1)");
       produtorRepository.save(p);
     });
     assertThatThrownBy(seed::semear)
