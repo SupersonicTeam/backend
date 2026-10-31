@@ -74,7 +74,21 @@ misturados.
 
 Desde a `v2` (issue #297) a semente de soja sai com o NCM de semeadura (`12011000`, insumo do
 Anexo IX da LC 214/2025, art. 138); o grão segue com `12019000`. Quem tem o seed `v1` gravado
-apaga os dois produtores de avaliação, com notas e guias, antes de rodar de novo.
+apaga os dois produtores de avaliação antes de rodar de novo. O CPF é cifrado no banco (#147):
+procure pelo nome, que fica em claro, e apague antes as tabelas que apontam para o produtor
+(a apuração do mês pode existir se o job de fechamento rodou no dev):
+
+```sql
+CREATE TEMP TABLE seed_avaliacao AS SELECT id FROM produtores
+  WHERE nome_completo LIKE 'Fazenda Avaliacao Ceres (seed %' OR nome_completo = 'Sitio Vizinho Avaliacao Ceres';
+DELETE FROM nota_fiscal_validacao WHERE nota_fiscal_id IN
+  (SELECT id FROM nota_fiscal WHERE produtor_id IN (SELECT id FROM seed_avaliacao));
+DELETE FROM nota_fiscal WHERE produtor_id IN (SELECT id FROM seed_avaliacao);
+DELETE FROM guias_fiscais WHERE produtor_id IN (SELECT id FROM seed_avaliacao);
+DELETE FROM apuracao_mensal WHERE produtor_id IN (SELECT id FROM seed_avaliacao);
+DELETE FROM assistente_interacao WHERE produtor_id IN (SELECT id FROM seed_avaliacao);
+DELETE FROM produtores WHERE id IN (SELECT id FROM seed_avaliacao);
+```
 
 ## Gabarito
 

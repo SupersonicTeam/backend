@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.config.avaliacao.PerguntaGabarito.Categoria;
 import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
+import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
@@ -126,11 +128,11 @@ class GabaritoCeresIntegrationTest {
   void ncmDaSementeDeSoja() {
     seed.semear();
 
-    Map<String, java.util.Set<String>> ncmsPorDescricao = transactionTemplate.execute(status ->
+    Map<String, Set<String>> ncmsPorDescricao = transactionTemplate.execute(status ->
         notaFiscalRepository.findAll().stream()
             .flatMap(nota -> nota.getItens().stream())
-            .collect(Collectors.groupingBy(item -> item.getDescricao(),
-                Collectors.mapping(item -> item.getNcm(), Collectors.toSet()))));
+            .collect(Collectors.groupingBy(NotaFiscalItem::getDescricao,
+                Collectors.mapping(NotaFiscalItem::getNcm, Collectors.toSet()))));
 
     // 1201.10.00 = "Para semeadura" (Anexo IX, art. 138); 1201.90.00 = o grão (art. 137).
     assertThat(ncmsPorDescricao.get("Semente de soja certificada")).containsExactly("12011000");

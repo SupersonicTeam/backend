@@ -109,8 +109,9 @@ public class SeedAvaliacao {
       Optional<Produtor> vizinhoExistente = produtorRepository.findByCpfCnpj(CPF_VIZINHO);
       if (existente.isPresent() && vizinhoExistente.isPresent()) {
         if (!NOME_AVALIADO.equals(existente.get().getNomeCompleto())) {
-          throw new IllegalStateException("O produtor de avaliacao (CPF " + CPF_AVALIADO
-              + ") e de outra versao do seed. Apague-o, com notas e guias, para semear a " + VERSAO);
+          throw new IllegalStateException("O produtor de avaliacao e de outra versao do seed ("
+              + existente.get().getNomeCompleto() + "). Apague os dois produtores de avaliacao ("
+              + "ver docs/avaliacao/README.md, o CPF e cifrado no banco) para semear a " + VERSAO);
         }
         return new ProdutoresAvaliacao(existente.get().getId(), vizinhoExistente.get().getId());
       }

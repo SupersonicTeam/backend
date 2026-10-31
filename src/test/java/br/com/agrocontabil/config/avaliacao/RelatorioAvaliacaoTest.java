@@ -26,7 +26,7 @@ class RelatorioAvaliacaoTest {
   private static RelatorioAvaliacao relatorio(List<ResultadoPergunta> resultados) {
     return new RelatorioAvaliacao(new RelatorioAvaliacao.Ambiente(
         OffsetDateTime.of(2026, 10, 14, 9, 0, 0, 0, ZoneOffset.ofHours(-3)),
-        LocalDate.of(2026, 9, 15), "v-teste", "ollama/qwen3:4b-instruct", "ollama/bge-m3",
+        LocalDate.of(2026, 9, 15), "v-teste", "v9", "ollama/qwen3:4b-instruct", "ollama/bge-m3",
         List.of("CPU de teste | 8 nucleos"), 60), resultados);
   }
 
@@ -100,7 +100,7 @@ class RelatorioAvaliacaoTest {
         resultado("D01", 1500, true, true, DesfechoInteracao.RESPONDIDA),
         resultado("D02", 2500, true, false, DesfechoInteracao.RESPONDIDA))).markdown();
 
-    assertThat(md).contains("ollama/qwen3:4b-instruct", "2026-09-15", "v-teste");
+    assertThat(md).contains("ollama/qwen3:4b-instruct", "2026-09-15", "v-teste", "| Seed | v9 |");
     assertThat(md).contains("| Exatidão numérica | 50.0% (1/2) |");
     assertThat(md).contains("| D01 | DADOS | RESPONDIDA | ✓ |", "| D02 |");
     // Barra vertical no hardware não pode quebrar a tabela.

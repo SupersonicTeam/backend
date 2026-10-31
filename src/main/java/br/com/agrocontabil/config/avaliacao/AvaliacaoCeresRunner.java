@@ -150,7 +150,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
       }
 
       RelatorioAvaliacao relatorio = new RelatorioAvaliacao(new RelatorioAvaliacao.Ambiente(
-          inicio, hoje, gabarito.versao(), modeloLinguagem.identificacao(), modeloEmbedding(),
+          inicio, hoje, gabarito.versao(), SeedAvaliacao.VERSAO, modeloLinguagem.identificacao(), modeloEmbedding(),
           hardware(), Duration.ofNanos(System.nanoTime() - inicioNs).toSeconds()), resultados);
       gravar(relatorio, gabarito);
       codigo = 0;
