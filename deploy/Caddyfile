@@ -18,7 +18,21 @@
 
 	# Senha no site inteiro (menos /healthz): o backend roda em dev (identidade declarada por
 	# X-Usuario-Id).
-	@protegido not path /healthz
+	#
+	# Excecao: chamada de /api com "Authorization: Bearer". Depois do login a SPA manda o JWT nesse
+	# header, e o navegador nao manda os dois; exigir o Basic ali derrubaria toda chamada logada.
+	# Quem confere o token e o backend (JwtAutenticacaoFilter: Bearer invalido = 401, e o mock
+	# ignora requisicao com Authorization), entao um Bearer falso so alcanca as rotas publicas de
+	# autenticacao. Cadastro e recuperacao de senha seguem atras do Basic: sao as que um estranho
+	# usaria para criar conta ou disparar e-mail na demonstracao.
+	@protegido {
+		not path /healthz
+		not {
+			path /api/*
+			header_regexp Authorization ^Bearer\s
+			not path /api/auth/cadastro* /api/auth/senha/esqueci /api/auth/senha/redefinir
+		}
+	}
 	basic_auth @protegido {
 		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
 	}
