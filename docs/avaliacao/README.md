@@ -103,6 +103,8 @@ O seed é idempotente. Ao mudá-lo, troque `SeedAvaliacao.VERSAO`: com a versão
 comando para e pede que os produtores de avaliação sejam apagados, em vez de medir sobre dados
 misturados.
 
+Desde a `v3` (#274) o avaliado tem guias em atraso (uma ainda `PENDENTE` com vencimento passado,
+outra `VENCIDA`) e uma que vence no próprio "hoje", para as perguntas de débito e de "este mês".
 Desde a `v2` (issue #297) a semente de soja sai com o NCM de semeadura (`12011000`, insumo do
 Anexo IX da LC 214/2025, art. 138); o grão segue com `12019000`. Quem tem o seed `v1` gravado
 apaga os dois produtores de avaliação antes de rodar de novo. O CPF é cifrado no banco (#147):
@@ -132,6 +134,10 @@ X01 a X19, que com a T03 somam **20 casos adversários de rota**: primeira pesso
 sobre os dados ("meu vizinho paga Funrural?", "eu preciso pagar IBS e CBS?"), termo de lei ou de
 dados fora do escopo ("escreva uma música sobre o IBS"), e pergunta de dados com termo de lei
 ("no split payment, quanto ficou retido das minhas vendas?").
+
+Na versão `2026-10-31.2` (#274, parte 1) T01, T07, T08, X17 e X18 deixaram de ser pendentes: as
+funções `guiasEmAtraso` e `vencimentosDoMes` existem e o valor esperado é calculado por elas,
+conferido à mão contra as regras da #274 no `GabaritoCeresIntegrationTest`.
 
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função

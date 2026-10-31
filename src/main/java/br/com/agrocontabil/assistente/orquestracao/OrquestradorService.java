@@ -60,6 +60,8 @@ public class OrquestradorService {
       "Nao encontrei compras desse tipo nas suas notas no periodo consultado.",
       "listarNotas", "Nao encontrei notas com esse filtro no periodo consultado.",
       "proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado.",
+      "guiasEmAtraso", "Nao encontrei guias em atraso.",
+      "vencimentosDoMes", "Nao encontrei guias para pagar no mes consultado.",
       "consultarCreditos", "Nao encontrei compras com credito no periodo consultado.",
       "consultarApuracao", "Nao encontrei notas na apuracao do mes consultado.",
       "listarAlertas", "Nao encontrei prazos vencendo nos proximos dias.",

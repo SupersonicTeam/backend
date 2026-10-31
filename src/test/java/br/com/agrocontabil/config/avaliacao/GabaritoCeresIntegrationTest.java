@@ -120,8 +120,20 @@ class GabaritoCeresIntegrationTest {
     assertThat(esperados.get("D11")).containsExactly("R$ 23.400,00");
     // D10: só a venda autorizada de agosto (a rejeitada não soma).
     assertThat(esperados.get("D10")).containsExactly("R$ 75.600,00");
-    // D13: guias não pagas de 15/09 a 15/10 (FUNRURAL 2.268 + ICMS 1.530 + DARF 980).
-    assertThat(esperados.get("D13")).containsExactly("R$ 4.778,00");
+    // D13: guias não pagas de 15/09 a 15/10 (GPS de hoje 310 + FUNRURAL 2.268 + ICMS 1.530 +
+    // DARF 980).
+    assertThat(esperados.get("D13")).containsExactly("R$ 5.088,00");
+    // Regras do comentário de decisões da #274, conferidas à mão (não a partir do código):
+    // débito pendente = só atraso, pela data: ICMS de 05/09 (ainda PENDENTE) 1.250 + DARF de
+    // julho (VENCIDA) 430. A GPS de hoje vence hoje: não é atraso.
+    assertThat(esperados.get("T07")).containsExactly("R$ 1.680,00");
+    assertThat(esperados.get("X17")).containsExactly("R$ 1.680,00");
+    // Este mês = atraso + a vencer até 30/09 (GPS 310 + FUNRURAL 2.268 + ICMS 1.530 = 4.108).
+    assertThat(esperados.get("T01"))
+        .containsExactly("R$ 1.680,00", "R$ 4.108,00", "R$ 5.788,00");
+    assertThat(esperados.get("X18")).containsExactly("R$ 5.788,00");
+    // Novembro: só a GPS de 20/11 (a guia paga e as de outros meses ficam fora).
+    assertThat(esperados.get("T08")).containsExactly("R$ 640,00");
     // D16: seis compras autorizadas; a cancelada não conta.
     assertThat(esperados.get("D16")).containsExactly("6");
     // Nenhum valor esperado do avaliado pode ser um valor do vizinho.

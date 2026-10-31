@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -215,6 +216,66 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.resposta").value(
             "Voce tem 2 guias a pagar, que somam R$ 5.050,55."))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("proximosVencimentos"));
+  }
+
+  @Test
+  @DisplayName("#259: debito pendente pela data, so do produtor da sessao, total da funcao")
+  void debitoPendentePelaData() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    // PENDENTE com vencimento passado conta (o job das 1h pode nao ter rodado); a de hoje nao e
+    // atraso; a paga e a do B ficam fora.
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusDays(10), "1250.00",
+        StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusDays(40), "430.00",
+        StatusGuiaFiscal.VENCIDA));
+    guiaFiscalRepository.save(guia(produtorA, hoje, "310.00", StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusDays(5), "999.00",
+        StatusGuiaFiscal.PAGA));
+    guiaFiscalRepository.save(guia(produtorB, hoje.minusDays(3), "777.00",
+        StatusGuiaFiscal.PENDENTE));
+    modelo.responderCom(prompt -> {
+      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
+        JsonNode resultado = lerJson(respostas.getResponses().get(0).responseData());
+        return ChatModelSimulado.texto("Voce tem " + resultado.at("/emAtraso/quantidade").asLong()
+            + " guias em atraso, que somam " + resultado.at("/emAtraso/valorTotal").asText()
+            + ".");
+      }
+      return pedirFuncao("guiasEmAtraso", Map.of());
+    });
+
+    perguntar(produtorA, "Tenho algum debito pendente?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(
+            "Voce tem 2 guias em atraso, que somam R$ 1.680,00."))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("guiasEmAtraso"));
+  }
+
+  @Test
+  @DisplayName("#257: este mes = atraso + a vencer ate o fim do mes, com os subtotais da funcao")
+  void esteMesComAtrasadas() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusMonths(2), "430.00",
+        StatusGuiaFiscal.VENCIDA));
+    guiaFiscalRepository.save(guia(produtorA, hoje, "310.00", StatusGuiaFiscal.PENDENTE));
+    // Mes que vem: fora de "este mes".
+    guiaFiscalRepository.save(guia(produtorA, YearMonth.from(hoje).plusMonths(1)
+        .atDay(10), "640.00", StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorB, hoje, "777.00", StatusGuiaFiscal.PENDENTE));
+    modelo.responderCom(prompt -> {
+      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
+        JsonNode r = lerJson(respostas.getResponses().get(0).responseData());
+        return ChatModelSimulado.texto("Em atraso: " + r.at("/emAtraso/valorTotal").asText()
+            + ". A vencer: " + r.at("/aVencer/valorTotal").asText() + ". Total: "
+            + r.get("valorTotal").asText() + ".");
+      }
+      return pedirFuncao("vencimentosDoMes", Map.of());
+    });
+
+    perguntar(produtorA, "Quanto eu tenho que pagar este mes?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(
+            "Em atraso: R$ 430,00. A vencer: R$ 310,00. Total: R$ 740,00."))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("vencimentosDoMes"));
   }
 
   @Test
