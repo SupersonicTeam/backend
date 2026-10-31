@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0049-base-ibs-cbs-cheia.xml
+         Issue #278.
+
+         A LC 214/2025 reduz a ALIQUOTA do IBS/CBS, nao a base: no XML, vBC e
+         o valor cheio e o tributo e vBC x pAliqEfet (grupo gRed). Desde a
+         #278, base_calculo_ibs_cbs do item e o valor cheio (antes, a base
+         reduzida). O valor do tributo nao muda.
+
+         Itens de notas AINDA NAO EMITIDAS calculados antes da #278 passam a
+         ter base = valor_total, para a API e a DANFE mostrarem a mesma base
+         do XML (que ja usa o valor cheio). Notas emitidas nao mudam: o XML
+         assinado e o documento fiscal.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0049-base-ibs-cbs-cheia" author="supersonic-team">
+        <sql>
+            UPDATE nota_fiscal_item
+               SET base_calculo_ibs_cbs = valor_total
+             WHERE base_calculo_ibs_cbs IS NOT NULL
+               AND base_calculo_ibs_cbs &lt;&gt; valor_total
+               AND nota_fiscal_id IN (SELECT id FROM nota_fiscal
+                     WHERE status IN ('RASCUNHO','COM_INCONSISTENCIAS','DEVOLVIDA',
+                                      'AGUARDANDO_APROVACAO','APROVADA'));
+        </sql>
+        <!-- Sem rollback: a base reduzida nao e reconstruivel e o tributo e o mesmo. -->
+        <rollback/>
+    </changeSet>
+
+</databaseChangeLog>

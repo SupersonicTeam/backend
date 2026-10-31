@@ -138,7 +138,8 @@ public class NotaFiscalItem {
   /**
    * Base de cálculo do IBS/CBS deste item, com 2 casas decimais.
    *
-   * <p>Calculado como: {@code valorTotal × (1 − percentualReducao / 100)}.
+   * <p>Igual ao {@code valorTotal}: a LC 214/2025 reduz a alíquota, não a base (grupo {@code gRed}
+   * do XML, issue #278). Antes da #278 era {@code valorTotal × (1 − reducao / 100)}.
    * EC 132/2023, art. 156-A, § 1.º; LC 214/2025, arts. 12–18.
    */
   @Column(name = "base_calculo_ibs_cbs", precision = 15, scale = 2)
@@ -157,7 +158,8 @@ public class NotaFiscalItem {
   /**
    * Valor do IBS calculado para este item, com 2 casas decimais.
    *
-   * <p>{@code valorIbs = baseCalculoIbsCbs × aliquotaIbs}, arredondamento HALF_UP.
+   * <p>{@code valorIbs = baseCalculoIbsCbs × aliquotaIbs × (1 − reducao / 100)}, arredondamento
+   * HALF_UP.
    */
   @Column(name = "valor_ibs", precision = 15, scale = 2)
   private BigDecimal valorIbs;
@@ -175,7 +177,8 @@ public class NotaFiscalItem {
   /**
    * Valor da CBS calculada para este item, com 2 casas decimais.
    *
-   * <p>{@code valorCbs = baseCalculoIbsCbs × aliquotaCbs}, arredondamento HALF_UP.
+   * <p>{@code valorCbs = baseCalculoIbsCbs × aliquotaCbs × (1 − reducao / 100)}, arredondamento
+   * HALF_UP.
    */
   @Column(name = "valor_cbs", precision = 15, scale = 2)
   private BigDecimal valorCbs;

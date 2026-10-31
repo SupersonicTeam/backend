@@ -107,14 +107,15 @@ class TributacaoServiceTest {
   // -------------------------------------------------------------------------
 
   @Test
-  @DisplayName("deve reduzir base em 60% quando o item informa percentualReducao — LC 214/2025")
+  @DisplayName("reduz a aliquota em 60% quando o item informa percentualReducao; base cheia (#278)")
   void shouldApplyItemReductionWhenProvided() {
     NotaFiscal nota = buildNotaComUmItem(new BigDecimal("1000.00"), new BigDecimal("60"), "6101");
 
     service.calcular(nota);
 
     NotaFiscalItem item = nota.getItens().get(0);
-    assertThat(item.getBaseCalculoIbsCbs()).isEqualByComparingTo("400.00");
+    // A LC 214 reduz a aliquota, nao a base: vBC cheio e tributo = vBC x aliquota efetiva.
+    assertThat(item.getBaseCalculoIbsCbs()).isEqualByComparingTo("1000.00");
     assertThat(item.getValorIbs()).isEqualByComparingTo("0.40");
     assertThat(item.getValorCbs()).isEqualByComparingTo("3.60");
   }
@@ -134,8 +135,8 @@ class TributacaoServiceTest {
     service.calcular(nota);
 
     NotaFiscalItem item = nota.getItens().get(0);
-    // base = 1000 * (1 - 0.40) = 600.00
-    assertThat(item.getBaseCalculoIbsCbs()).isEqualByComparingTo("600.00");
+    // base cheia 1000.00; aliquota efetiva = aliquota x (1 - 0.40)
+    assertThat(item.getBaseCalculoIbsCbs()).isEqualByComparingTo("1000.00");
     assertThat(item.getValorIbs()).isEqualByComparingTo("0.60");
     assertThat(item.getValorCbs()).isEqualByComparingTo("5.40");
   }

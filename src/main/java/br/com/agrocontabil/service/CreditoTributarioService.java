@@ -136,11 +136,12 @@ public class CreditoTributarioService {
       // O tratamento aplicado tambem na nota importada: a tela le estes campos (#272).
       item.setPercentualReducaoAplicado(aplicada.percentualReducao());
       item.setCClassTribAplicado(aplicada.cClassTrib());
-      BigDecimal baseCalculo = baseCalculo(item, aplicada.percentualReducao());
-      BigDecimal creditoIbs = baseCalculo.multiply(aliquotaIbs)
+      // Base cheia x aliquota efetiva, com um arredondamento so: mesma conta do debito (#278).
+      BigDecimal base = item.getValorTotal().multiply(fatorReducao(aplicada.percentualReducao()));
+      BigDecimal creditoIbs = base.multiply(aliquotaIbs)
           .multiply(fatorAproveitamento)
           .setScale(2, RoundingMode.HALF_UP);
-      BigDecimal creditoCbs = baseCalculo.multiply(aliquotaCbs)
+      BigDecimal creditoCbs = base.multiply(aliquotaCbs)
           .multiply(fatorAproveitamento)
           .setScale(2, RoundingMode.HALF_UP);
 
@@ -172,13 +173,12 @@ public class CreditoTributarioService {
   }
 
   /**
-   * Base de cálculo do crédito: mesma regra da base do débito em {@link TributacaoService}
-   * ({@code valorTotal × (1 − reducao / 100)}), com a {@code reducao} resolvida pelo
-   * {@link ReducaoNcmResolver} (precedência item → NCM → zero), garantindo simetria
-   * débito × crédito (issue Agrocontabil#52).
+   * Fator da alíquota efetiva do crédito, {@code 1 − reducao / 100}: mesma regra do débito em
+   * {@link TributacaoService}, com a {@code reducao} resolvida pelo {@link ReducaoNcmResolver}
+   * (issues #52 e #272), garantindo simetria débito × crédito. A LC 214/2025 reduz a
+   * <em>alíquota</em>, não a base (grupo {@code gRed} do XML, issue #278).
    */
-  private BigDecimal baseCalculo(NotaFiscalItem item, BigDecimal reducao) {
-    BigDecimal fatorReducao = BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
-    return item.getValorTotal().multiply(fatorReducao).setScale(2, RoundingMode.HALF_UP);
+  private static BigDecimal fatorReducao(BigDecimal reducao) {
+    return BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
   }
 }

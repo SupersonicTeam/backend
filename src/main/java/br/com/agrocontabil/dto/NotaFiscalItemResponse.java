@@ -65,7 +65,7 @@ public record NotaFiscalItemResponse(
         description =
             "Codigo de Classificacao Tributaria — cClassTrib (6 digitos). "
                 + "Nulo quando nao informado na entrada.",
-        example = "010100")
+        example = "200036")
     String cClassTrib,
 
     @Schema(
@@ -93,7 +93,7 @@ public record NotaFiscalItemResponse(
 
     @Schema(
         description =
-            "Base de calculo IBS/CBS = valorTotal * (1 - percentualReducao/100). "
+            "Base de calculo IBS/CBS = valorTotal (a reducao e da aliquota, nao da base; #278). "
                 + "Calculado pelo servidor. EC 132/2023; LC 214/2025, arts. 12-18.",
         example = "1250.00")
     BigDecimal baseCalculoIbsCbs,
@@ -107,7 +107,7 @@ public record NotaFiscalItemResponse(
 
     @Schema(
         description =
-            "Valor do IBS calculado = baseCalculoIbsCbs * aliquotaIbs. "
+            "Valor do IBS = baseCalculoIbsCbs * aliquotaIbs * (1 - percentualReducaoAplicado/100). "
                 + "Informativo em 2026 (ano-teste, LC 214/2025).",
         example = "1.25")
     BigDecimal valorIbs,
@@ -121,7 +121,7 @@ public record NotaFiscalItemResponse(
 
     @Schema(
         description =
-            "Valor da CBS calculada = baseCalculoIbsCbs * aliquotaCbs. "
+            "Valor da CBS = baseCalculoIbsCbs * aliquotaCbs * (1 - percentualReducaoAplicado/100). "
                 + "Informativo em 2026 (ano-teste, LC 214/2025).",
         example = "11.25")
     BigDecimal valorCbs,

@@ -91,8 +91,8 @@ public final class NfeImportTestFixtures {
         .quantidade(new BigDecimal("500.0000"))
         .valorUnitario(new BigDecimal("3.5000"))
         .valorTotal(new BigDecimal("1750.00"))
-        .cstIbsCbs("101")
-        .cClassTrib("010100")
+        .cstIbsCbs("000")
+        .cClassTrib("000001")
         .build();
 
     // Destinatario em SC (emitente em PR) para casar com o CFOP 6101 (interestadual).

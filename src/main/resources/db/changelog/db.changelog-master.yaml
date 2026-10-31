@@ -102,3 +102,5 @@ databaseChangeLog:
       file: db/changelog/changes/0047-ibs-2026-estadual.xml
   - include:
       file: db/changelog/changes/0048-classificacao-tributaria-oficial.xml
+  - include:
+      file: db/changelog/changes/0049-base-ibs-cbs-cheia.xml

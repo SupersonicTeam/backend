@@ -144,11 +144,13 @@ public class TributosLegadoRunner implements SmartInitializingSingleton {
     return true;
   }
 
-  /** Valores calculados que o contador viu: base, IBS e CBS de cada item, e os totais. */
+  /**
+   * Tributos que o contador aprovou: IBS e CBS de cada item e os totais. A base fica de fora: a
+   * #278 passou a gravá-la cheia sem mudar o tributo, e isso não derruba aprovação.
+   */
   private static List<String> valores(NotaFiscal nota) {
     List<String> valores = new ArrayList<>();
     nota.getItens().forEach(item -> {
-      valores.add(texto(item.getBaseCalculoIbsCbs()));
       valores.add(texto(item.getValorIbs()));
       valores.add(texto(item.getValorCbs()));
     });

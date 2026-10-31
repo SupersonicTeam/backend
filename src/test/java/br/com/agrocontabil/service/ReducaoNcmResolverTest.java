@@ -34,7 +34,7 @@ class ReducaoNcmResolverTest {
   }
 
   @Test
-  @DisplayName("percentual informado no item prevalece e nao consulta a tabela")
+  @DisplayName("percentual e cClassTrib informados prevalecem e nao consultam a tabela")
   void percentualDoItemPrevalece() {
     NotaFiscalItem item = NotaFiscalItem.builder()
         .ncm("12019000").percentualReducao(new BigDecimal("15")).cClassTrib("200036").build();
@@ -76,6 +76,26 @@ class ReducaoNcmResolverTest {
 
     assertThat(aplicada.percentualReducao()).isEqualByComparingTo("0");
     assertThat(aplicada.cClassTrib()).isEqualTo("000001");
+  }
+
+  @Test
+  @DisplayName("percentual informado sem cClassTrib: 0% e integral; igual a regra do NCM usa o codigo dela (#278)")
+  void percentualSemCClassTribRecebeCodigo() {
+    when(classificacao.tratamentoPorNcm(eq("12019000"), any(LocalDate.class)))
+        .thenReturn(new TratamentoTributarioNcm("12019000", "200036", "200",
+            new BigDecimal("60"), Origem.IN_NATURA, "art. 137", List.of(), "IT"));
+
+    ReducaoAplicada zero = resolver.tratamento(NotaFiscalItem.builder()
+        .ncm("12019000").percentualReducao(new BigDecimal("0.00")).build());
+    ReducaoAplicada daRegra = resolver.tratamento(NotaFiscalItem.builder()
+        .ncm("12019000").percentualReducao(new BigDecimal("60.00")).build());
+    ReducaoAplicada outro = resolver.tratamento(NotaFiscalItem.builder()
+        .ncm("12019000").percentualReducao(new BigDecimal("30")).build());
+
+    assertThat(zero.cClassTrib()).isEqualTo("000001");
+    assertThat(daRegra.cClassTrib()).isEqualTo("200036");
+    assertThat(outro.cClassTrib()).isNull();
+    assertThat(outro.percentualReducao()).isEqualByComparingTo("30");
   }
 
   @Test

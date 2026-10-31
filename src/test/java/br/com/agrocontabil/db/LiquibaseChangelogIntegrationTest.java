@@ -609,6 +609,49 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0049: base cheia so nas notas nao emitidas (#278)")
+  void changeSet0049BaseCheia() throws Exception {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    // O changeSet ja rodou (banco vazio); aqui, a mesma regra sobre linhas reais nao muda a
+    // nota emitida e alinha a nao emitida.
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor')",
+        produtorId);
+    String nota = "INSERT INTO nota_fiscal (id, produtor_id, numero, serie, modelo,"
+        + " natureza_operacao, data_emissao, destinatario_nome, destinatario_cpf_cnpj,"
+        + " valor_total_produtos, valor_total_nota, status, origem, tipo_documento)"
+        + " VALUES (?::uuid, ?::uuid, ?, 1, '55', 'Venda', now(), 'C', '52998224725', 1000,"
+        + " 1000, ?, 'PROPRIA', 'NFE')";
+    String item = "INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, descricao,"
+        + " ncm, cfop, unidade, quantidade, valor_unitario, valor_total, base_calculo_ibs_cbs)"
+        + " VALUES (gen_random_uuid(), ?::uuid, 1, 'Soja', '12019000', '5101', 'KG', 1, 1000,"
+        + " 1000, 400)";
+    String rascunho = UUID.randomUUID().toString();
+    String emitida = UUID.randomUUID().toString();
+    jdbc.update(nota, rascunho, produtorId, 1, "RASCUNHO");
+    jdbc.update(nota, emitida, produtorId, 2, "AUTORIZADA");
+    jdbc.update(item, rascunho);
+    jdbc.update(item, emitida);
+
+    String sql = new String(java.util.Objects.requireNonNull(getClass().getClassLoader()
+        .getResourceAsStream("db/changelog/changes/0049-base-ibs-cbs-cheia.xml"))
+        .readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    String update = sql.substring(sql.indexOf("UPDATE"), sql.indexOf("</sql>"))
+        .replace("&lt;&gt;", "<>");
+    jdbc.update(update);
+
+    String base = "SELECT base_calculo_ibs_cbs FROM nota_fiscal_item WHERE nota_fiscal_id ="
+        + " ?::uuid";
+    assertThat(jdbc.queryForObject(base, java.math.BigDecimal.class, rascunho))
+        .isEqualByComparingTo("1000");
+    assertThat(jdbc.queryForObject(base, java.math.BigDecimal.class, emitida))
+        .isEqualByComparingTo("400");
+    jdbc.update("DELETE FROM nota_fiscal WHERE produtor_id = ?::uuid", produtorId);
+    jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
   @DisplayName("changeSet 0048: tabela oficial de cClassTrib e anexos carregada dos CSVs (#272)")
   void changeSet0048ClassificacaoTributaria() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

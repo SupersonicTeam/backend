@@ -23,9 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
  *       tabela oficial pelo NCM ({@link ReducaoNcmResolver}: alíquota zero do Anexo I/XV = 100%,
  *       in natura e Anexos IX/VII = 60%, senão 0 — issue #272). A redução e o {@code cClassTrib}
  *       aplicados ficam no item ({@code percentualReducaoAplicado}/{@code cClassTribAplicado}).</li>
- *   <li>{@code baseCalculo = valorTotalItem × (1 − reducao / 100)}</li>
- *   <li>{@code valorIbs = baseCalculo × aliquotaIbs} — arredondamento HALF_UP, 2 casas</li>
- *   <li>{@code valorCbs = baseCalculo × aliquotaCbs} — arredondamento HALF_UP, 2 casas</li>
+ *   <li>{@code baseCalculo = valorTotalItem} (a LC 214/2025 reduz a alíquota, não a base —
+ *       issue #278)</li>
+ *   <li>{@code valorIbs = baseCalculo × aliquotaIbs × (1 − reducao / 100)} — um arredondamento
+ *       HALF_UP, 2 casas; idem a CBS. No XML: {@code vBC} cheio, {@code pIBSUF} cheia e
+ *       {@code gRed.pAliqEfet} = alíquota × (1 − reducao / 100)</li>
  * </ol>
  *
  * <p><strong>Alíquotas (RN002, issues Agrocontabil#31 e #86):</strong> a alíquota de IBS
@@ -109,16 +111,18 @@ public class TributacaoService {
       ReducaoNcmResolver.ReducaoAplicada aplicada = reducaoNcmResolver.tratamento(item);
       BigDecimal reducao = aplicada.percentualReducao();
       BigDecimal fatorReducao = BigDecimal.ONE.subtract(reducao.divide(CEM, 10, RoundingMode.HALF_UP));
-      BigDecimal baseCalculo = item.getValorTotal()
-          .multiply(fatorReducao)
-          .setScale(2, RoundingMode.HALF_UP);
+      // A LC 214/2025 reduz a ALIQUOTA, nao a base: no XML, vBC e o valor cheio e o tributo e
+      // vBC x pAliqEfet (grupo gRed, issue #278). Um arredondamento so, sobre a conta inteira.
+      BigDecimal baseCalculo = item.getValorTotal().setScale(2, RoundingMode.HALF_UP);
+      BigDecimal baseEfetiva = baseCalculo.multiply(fatorReducao);
 
-      BigDecimal valorIbs = baseCalculo.multiply(vigentes.ibsTotal()).setScale(2, RoundingMode.HALF_UP);
-      BigDecimal valorCbs = baseCalculo.multiply(aliquotaCbs).setScale(2, RoundingMode.HALF_UP);
+      BigDecimal valorIbs = baseEfetiva.multiply(vigentes.ibsTotal())
+          .setScale(2, RoundingMode.HALF_UP);
+      BigDecimal valorCbs = baseEfetiva.multiply(aliquotaCbs).setScale(2, RoundingMode.HALF_UP);
 
       // Parcela estadual pelo valor exato; a municipal fecha o total sem perda no arredondamento.
       BigDecimal valorIbsUf =
-          baseCalculo.multiply(vigentes.ibsEstadual()).setScale(2, RoundingMode.HALF_UP);
+          baseEfetiva.multiply(vigentes.ibsEstadual()).setScale(2, RoundingMode.HALF_UP);
       BigDecimal valorIbsMun = valorIbs.subtract(valorIbsUf);
 
       item.setPercentualReducaoAplicado(reducao);

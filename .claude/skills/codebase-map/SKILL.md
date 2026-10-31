@@ -117,8 +117,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 ### `nfe/`
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `FiscalRulesValidator` | Valida regras de negócio fiscal antes de gerar XML (inclui NCM/CFOP — issue #20) |
-| `NotaFiscalNfeMapper` | Entidade → classes JAXB (formatação fiscal) |
+| `FiscalRulesValidator` | Valida regras de negócio fiscal antes de gerar XML (inclui NCM/CFOP — issue #20; NCM na referência — #282; cClassTrib aplicado vigente na tabela oficial, CST = prefixo e redução = a oficial do código — #278) |
+| `NotaFiscalNfeMapper` | Entidade → classes JAXB (formatação fiscal). IBS/CBS (#278): CST/cClassTrib do tratamento aplicado (`cClassTribAplicado`, ou o informado; CST = prefixo), sem padrão fixo; `vBC` = valor cheio; com CST 011/200/515, `gRed` (`pRedAliq`, `pAliqEfet`) em `gIBSUF`, `gIBSMun` e `gCBS` |
 | `NfeToNotaFiscalMapper` | Mapper reverso: XML NF-e importado → entidade (issue #19), sempre em `PENDENTE_SEFAZ` (#223: o `protNFe` do upload não prova nada) |
 | `DigestAssinatura` | DigestValue da assinatura do XML e `confere(xml, digVal)` contra o protocolo da SEFAZ (#223) |
 | `NfeXmlImporter` | Parser XXE-safe do XML importado |
@@ -338,7 +338,7 @@ Bean Validation customizada (anotação + validator):
 | GET | `/api/calendario-fiscal/{produtorId}/vencimentos?de=&ate=` | Vencimentos do produtor na janela (padrão mês corrente ±12 meses; máx. 36 — issue #103) |
 
 ## Recursos em `src/main/resources/`
-- `xsd/` — XSD oficial NF-e layout 4.00
+- `xsd/` — XSD oficial NF-e layout 4.00, pacote de liberação **PL_010g v1.03** (NT 2025.002-RTC v1.50, NT 2026.006/2026.008; #278)
 - `reports/` — templates `.jrxml` do JasperReports (DANFE)
 - `application.yml` / `application-test.yml` / `application-dev.yml` / `application-homolog.yml` / `application-prod.yml`
 

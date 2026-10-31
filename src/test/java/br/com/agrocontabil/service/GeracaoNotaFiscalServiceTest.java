@@ -7,6 +7,7 @@ import java.util.List;
 import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -27,6 +28,7 @@ import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
 import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
+import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.nfe.XsdValidator;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
 import java.math.BigDecimal;
@@ -58,6 +60,8 @@ class GeracaoNotaFiscalServiceTest {
   private GeracaoNotaFiscalService service;
   private TributacaoService tributacaoService;
 
+  private AliquotaIbsCbsResolver aliquotaResolver;
+
   @BeforeEach
   void setUp() {
     TributosProperties props = new TributosProperties();
@@ -74,8 +78,9 @@ class GeracaoNotaFiscalServiceTest {
     // Sem vigencia de CBS nas fixtures: cai no fallback da aliquota parametrizada (issue #85).
     AliquotaCbsRepository cbsRepo = mock(AliquotaCbsRepository.class);
     when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
+    aliquotaResolver = new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props);
     tributacaoService = new TributacaoService(
-        ReducaoTestSupport.resolverSemReducao(), new AliquotaIbsCbsResolver(aliquotaRepo, cbsRepo, props));
+        ReducaoTestSupport.resolverSemReducao(), aliquotaResolver);
 
     ChaveAcessoGenerator chaveAcessoGenerator = new ChaveAcessoGenerator();
     FiscalRulesValidator validator = new FiscalRulesValidator();
@@ -108,6 +113,78 @@ class GeracaoNotaFiscalServiceTest {
     assertThat(xml).contains("<NFe ");
     assertThat(xml).contains("http://www.portalfiscal.inf.br/nfe");
     // Não deve lançar exceção (XsdValidator internamente já valida e lança se inválido)
+  }
+
+  // =========================================================================
+  // Issue #278: CST/cClassTrib da regra de reducao e grupo gRed, validados pelo XSD
+  // =========================================================================
+
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}% -> CST {1} / {2}")
+  @org.junit.jupiter.params.provider.CsvSource({
+      // reducao, CST, cClassTrib, pAliqEfet IBS UF, vIBS, vCBS (base 1000.00, IBS 0,1%, CBS 0,9%)
+      "0,   000, 000001, ,       1.00, 9.00",
+      "60,  200, 200036, 0.0400, 0.40, 3.60",
+      "100, 200, 200003, 0.0000, 0.00, 0.00"
+  })
+  @DisplayName("XML com CST/cClassTrib da regra e gRed com a aliquota efetiva (#278)")
+  void xmlComCstDaRegraEGRed(String reducao, String cst, String cClassTrib, String pAliqEfet,
+      String vIbs, String vCbs) {
+    ClassificacaoTributariaService classificacao = ReducaoTestSupport.classificacaoSemReducao();
+    ReducaoTestSupport.comReducao(classificacao, "12019000", reducao, cClassTrib);
+    TributacaoService calculo = new TributacaoService(new ReducaoNcmResolver(classificacao),
+        aliquotaResolver);
+    NotaFiscal nota = buildNotaCompleta();
+    nota.getItens().get(0).setCstIbsCbs(null);
+    nota.getItens().get(0).setCClassTrib(null);
+    calculo.calcular(nota);
+
+    // O pipeline valida o XML contra o XSD (PL_010g) antes de devolver.
+    String xml = service.gerarXml(nota);
+
+    assertThat(xml).contains("<CST>" + cst + "</CST>")
+        .contains("<cClassTrib>" + cClassTrib + "</cClassTrib>")
+        // vBC e o valor cheio: a reducao e da aliquota (gRed), nao da base.
+        .contains("<vBC>1000.00</vBC>")
+        .contains("<vIBS>" + vIbs + "</vIBS>")
+        .contains("<vCBS>" + vCbs + "</vCBS>")
+        .doesNotContain("<CST>101</CST>")
+        .doesNotContain("010100");
+    if (pAliqEfet == null) {
+      assertThat(xml).doesNotContain("<gRed>");
+    } else {
+      String red = new BigDecimal(reducao).setScale(4).toPlainString();
+      // gIBSUF (pIBSUF 0,1% em 2026), gIBSMun (0%) e gCBS (0,9%): todos com gRed.
+      assertThat(xml)
+          .contains("<pIBSUF>0.1000</pIBSUF><gRed><pRedAliq>" + red + "</pRedAliq><pAliqEfet>"
+              + pAliqEfet + "</pAliqEfet></gRed>")
+          .contains("<pCBS>0.9000</pCBS><gRed><pRedAliq>" + red + "</pRedAliq>");
+    }
+  }
+
+  @Test
+  @DisplayName("importacao aceita NF-e autorizada no pacote de schemas anterior (PL_010g, #278)")
+  void importacaoAceitaSchemaAnterior() {
+    NotaFiscal nota = buildNotaCompleta();
+    tributacaoService.calcular(nota);
+    String xml = service.gerarXml(nota);
+    // gIBSCBSMono na estrutura de antes do PL_010g (sem gIBSMonoAdRem/gCBSMonoAdRem): valido no
+    // pacote anterior, recusado no atual. A assinatura deixa de conferir, mas o XSD nao a checa.
+    String monofasicoAntigo = xml.replaceFirst(
+        "<CST>[0-9]{3}</CST><cClassTrib>[0-9]{6}</cClassTrib><gIBSCBS>.*?</gIBSCBS>",
+        "<CST>620</CST><cClassTrib>620001</cClassTrib><gIBSCBSMono><gMonoPadrao>"
+            + "<qBCMono>1.0000</qBCMono><adRemIBS>0.0000</adRemIBS><adRemCBS>0.0000</adRemCBS>"
+            + "<vIBSMono>0.00</vIBSMono><vCBSMono>0.00</vCBSMono></gMonoPadrao>"
+            + "<vTotIBSMonoItem>0.00</vTotIBSMonoItem><vTotCBSMonoItem>0.00</vTotCBSMonoItem>"
+            + "</gIBSCBSMono>");
+    assertThat(monofasicoAntigo).isNotEqualTo(xml);
+    XsdValidator xsd = new XsdValidator();
+
+    assertThatThrownBy(() -> xsd.validar(monofasicoAntigo))
+        .isInstanceOf(XmlGenerationException.class);
+    assertThatCode(() -> xsd.validarAceitandoAnterior(monofasicoAntigo))
+        .doesNotThrowAnyException();
+    assertThatThrownBy(() -> xsd.validarAceitandoAnterior(xml.replace("<CST>", "<CSTX>")))
+        .isInstanceOf(XmlGenerationException.class);
   }
 
   // =========================================================================
@@ -301,8 +378,8 @@ class GeracaoNotaFiscalServiceTest {
         .quantidade(new BigDecimal("1000.0000"))
         .valorUnitario(new BigDecimal("1.0000"))
         .valorTotal(new BigDecimal("1000.00"))
-        .cstIbsCbs("101")
-        .cClassTrib("010100")
+        .cstIbsCbs("000")
+        .cClassTrib("000001")
         .build();
 
     EnderecoDestinatario endDest = EnderecoDestinatario.builder()

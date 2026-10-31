@@ -195,7 +195,7 @@ class NotaFiscalNfeMapperTest {
         .aliquotaCbs(new BigDecimal("0.0090"))
         .valorCbs(new BigDecimal("9.00"))
         .cstIbsCbs("000")
-        .cClassTrib("010100")
+        .cClassTrib("000001")
         .build();
   }
 
