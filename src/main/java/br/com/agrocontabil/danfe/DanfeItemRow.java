@@ -12,29 +12,21 @@ import lombok.Getter;
  *
  * <p>Todos os valores numéricos já chegam <strong>formatados como String</strong> (o template
  * {@code danfe.jrxml} apenas exibe o texto), centralizando a formatação no
- * {@link DanfePdfService}.
+ * {@link DanfePdfService}. Colunas do quadro "Dados dos Produtos/Serviços" do leiaute retrato da
+ * NT 2026.010 (item 4.3); as células de várias linhas chegam com {@code \n}.
  */
 @Getter
 @AllArgsConstructor
 public class DanfeItemRow {
 
-  /** Código do produto informado pelo emitente; sem ele, o número do item. */
-  private final String codigo;
-
-  /** Descrição do produto/serviço. */
+  /** Código e descrição do produto, com {@code [NCM ...] [cClassTrib ...]} na linha de baixo. */
   private final String descricao;
 
-  /** NCM formatado ({@code 0000.00.00}). */
-  private final String ncm;
+  /** CST do IBS/CBS e CFOP, um por linha ({@code CST 200}, {@code CFOP 5101}). */
+  private final String cstCfop;
 
-  /** CFOP da operação do item. */
-  private final String cfop;
-
-  /** Unidade comercial (ex.: KG, UN). */
-  private final String unidade;
-
-  /** Quantidade já formatada. */
-  private final String quantidade;
+  /** Quantidade e unidade, uma por linha. */
+  private final String quantidadeUnidade;
 
   /** Valor unitário já formatado. */
   private final String valorUnitario;
@@ -42,15 +34,15 @@ public class DanfeItemRow {
   /** Valor total do item já formatado. */
   private final String valorTotal;
 
-  /** Alíquota do IBS em percentual já formatada. */
-  private final String aliquotaIbs;
+  /** Base de cálculo do IBS/CBS ({@code vBC}, UB16): o valor do item, sem redução de base. */
+  private final String baseIbsCbs;
 
-  /** Valor do IBS do item já formatado. */
-  private final String valorIbs;
+  /**
+   * Alíquotas de CBS, IBS UF e IBS Município, uma por linha: a efetiva ({@code pAliqEfet}) com
+   * redução ({@code gRed}), a vigente sem ela (NT 2026.010, item 4.3).
+   */
+  private final String aliquotas;
 
-  /** Alíquota da CBS em percentual já formatada. */
-  private final String aliquotaCbs;
-
-  /** Valor da CBS do item já formatado. */
-  private final String valorCbs;
+  /** Valores de CBS, IBS UF e IBS Município, um por linha. */
+  private final String valores;
 }

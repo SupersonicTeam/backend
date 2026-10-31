@@ -65,6 +65,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class NotaFiscalNfeMapper {
 
+  /**
+   * Bairro do destinatário no XML (débito técnico acima). Público para a DANFE imprimir o mesmo
+   * valor do XML.
+   */
+  public static final String BAIRRO_DESTINATARIO = "CENTRO";
+
   private static final String NFE_VERSAO = "4.00";
   private static final String TPAMB_HOMOLOGACAO = "2";
   private static final String TPEMIS_NORMAL = "1";
@@ -177,7 +183,7 @@ public class NotaFiscalNfeMapper {
     // NF-e modelo 55 o FiscalRulesValidator ja exigiu a IE antes de chegar aqui (issue #88).
     String ie = produtor.getInscricaoEstadual();
     emit.setIe(ie != null && !ie.isBlank() ? ie.trim() : "ISENTO");
-    emit.setCrt(resolveCrt(produtor.getRegimeTributario()));
+    emit.setCrt(crt(produtor.getRegimeTributario()));
     return emit;
   }
 
@@ -237,7 +243,7 @@ public class NotaFiscalNfeMapper {
     EnderDest enderDest = new EnderDest();
     enderDest.setXLgr(truncate(end.getLogradouro(), 60));
     enderDest.setNro(end.getNumero() != null ? truncate(end.getNumero(), 60) : "S/N");
-    enderDest.setXBairro("CENTRO");
+    enderDest.setXBairro(BAIRRO_DESTINATARIO);
     enderDest.setCMun(end.getCodigoMunicipioIbge());
     enderDest.setXMun(truncate(end.getMunicipio(), 60));
     enderDest.setUf(end.getUf().toUpperCase());
@@ -319,7 +325,7 @@ public class NotaFiscalNfeMapper {
   }
 
   /** cClassTrib que vai ao XML: o aplicado no cálculo ou o informado no item (#278). */
-  static String cClassTrib(NotaFiscalItem item) {
+  public static String cClassTrib(NotaFiscalItem item) {
     return item.getCClassTribAplicado() != null ? item.getCClassTribAplicado()
         : item.getCClassTrib();
   }
@@ -329,7 +335,7 @@ public class NotaFiscalNfeMapper {
    * sem classificação é resto de rascunho antigo, como o exemplo {@code 000} do OpenAPI); senão o
    * prefixo do cClassTrib.
    */
-  static String cst(NotaFiscalItem item) {
+  public static String cst(NotaFiscalItem item) {
     if (item.getCstIbsCbs() != null && item.getCClassTrib() != null) {
       return item.getCstIbsCbs();
     }
@@ -338,7 +344,7 @@ public class NotaFiscalNfeMapper {
   }
 
   /** Redução de alíquota aplicada ao item (0 a 100), nunca nula (#278). */
-  static BigDecimal reducao(NotaFiscalItem item) {
+  public static BigDecimal reducao(NotaFiscalItem item) {
     if (item.getPercentualReducaoAplicado() != null) {
       return item.getPercentualReducaoAplicado();
     }
@@ -353,45 +359,27 @@ public class NotaFiscalNfeMapper {
     // vBC e o valor cheio: a LC 214/2025 reduz a aliquota (gRed), nao a base (#278). Nota
     // calculada antes da #278 tem a base reduzida gravada, mas o mesmo valor do tributo.
     g.setVBC(formatDecimal2(item.getValorTotal()));
-    BigDecimal reducao = reducao(item);
-    boolean comGRed = CST_COM_GRED.contains(cst(item));
+    String cst = cst(item);
+    boolean comGRed = cst != null && CST_COM_GRED.contains(cst);
 
-    // Parcelas estadual/municipal reais de IBS (issue #31): resolvidas por UF no
-    // TributacaoService e gravadas no item. Item legado gravado antes da issue #31 (parcelas
-    // ausentes) usa a regra do fallback do resolvedor: todo estadual antes de 2027, 50/50 depois
-    // (issue #277).
-    BigDecimal alqIbs = item.getAliquotaIbs();
-    BigDecimal valorIbs = item.getValorIbs() != null
-        ? item.getValorIbs() : BigDecimal.ZERO;
-    boolean dividido = AliquotaIbsCbsResolver.temParcelaMunicipal(
-        item.getNotaFiscal() != null ? item.getNotaFiscal().getDataEmissao() : null);
-
-    BigDecimal alqIbsUf = item.getAliquotaIbsUf();
-    BigDecimal alqIbsMun = item.getAliquotaIbsMun();
-    if (alqIbsUf == null || alqIbsMun == null) {
-      alqIbsUf = dividido ? alqIbs.divide(BigDecimal.valueOf(2), 10, RoundingMode.HALF_UP) : alqIbs;
-      alqIbsMun = alqIbs.subtract(alqIbsUf);
-    }
-
-    BigDecimal valorIbsUf = item.getValorIbsUf();
-    BigDecimal valorIbsMun = item.getValorIbsMun();
-    if (valorIbsUf == null || valorIbsMun == null) {
-      valorIbsUf = dividido ? valorIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
-          : valorIbs;
-      valorIbsMun = valorIbs.subtract(valorIbsUf);
-    }
+    ParcelasIbs parcelas = parcelasIbs(item);
+    BigDecimal alqIbsUf = parcelas.aliquotaUf();
+    BigDecimal alqIbsMun = parcelas.aliquotaMun();
+    BigDecimal valorIbsUf = parcelas.valorUf();
+    BigDecimal valorIbsMun = parcelas.valorMun();
+    BigDecimal valorIbs = item.getValorIbs() != null ? item.getValorIbs() : BigDecimal.ZERO;
 
     IbsCbs.GIbsUf ibsUf = new IbsCbs.GIbsUf();
     ibsUf.setPIBSUF(formatAliquotaPercent(alqIbsUf));
     if (comGRed) {
-      ibsUf.setGRed(buildGRed(alqIbsUf, reducao));
+      ibsUf.setGRed(buildGRed(alqIbsUf, item));
     }
     ibsUf.setVIBSUF(formatDecimal2(valorIbsUf));
 
     IbsCbs.GIbsMun ibsMun = new IbsCbs.GIbsMun();
     ibsMun.setPIBSMun(formatAliquotaPercent(alqIbsMun));
     if (comGRed) {
-      ibsMun.setGRed(buildGRed(alqIbsMun, reducao));
+      ibsMun.setGRed(buildGRed(alqIbsMun, item));
     }
     ibsMun.setVIBSMun(formatDecimal2(valorIbsMun));
 
@@ -405,7 +393,7 @@ public class NotaFiscalNfeMapper {
     IbsCbs.GCbs gCbs = new IbsCbs.GCbs();
     gCbs.setPCBS(formatAliquotaPercent(alqCbs));
     if (comGRed) {
-      gCbs.setGRed(buildGRed(alqCbs, reducao));
+      gCbs.setGRed(buildGRed(alqCbs, item));
     }
     gCbs.setVCBS(formatDecimal2(valorCbs));
 
@@ -413,16 +401,68 @@ public class NotaFiscalNfeMapper {
     return g;
   }
 
+  /** Parcelas estadual e municipal do IBS de um item: alíquotas e valores. */
+  public record ParcelasIbs(BigDecimal aliquotaUf, BigDecimal aliquotaMun, BigDecimal valorUf,
+      BigDecimal valorMun) {
+  }
+
+  /**
+   * Parcelas do IBS que vão ao XML (issues #31 e #277): as gravadas no item; item legado gravado
+   * antes da #31 (sem parcelas) usa a regra do fallback do resolvedor — todo estadual antes de 2027,
+   * 50/50 depois. Fonte única do XML e da DANFE (#279).
+   *
+   * @param item item com IBS calculado
+   * @return parcelas, nunca nulas (zero sem IBS)
+   */
+  public static ParcelasIbs parcelasIbs(NotaFiscalItem item) {
+    BigDecimal alqIbs = item.getAliquotaIbs() != null ? item.getAliquotaIbs() : BigDecimal.ZERO;
+    BigDecimal valorIbs = item.getValorIbs() != null ? item.getValorIbs() : BigDecimal.ZERO;
+    boolean dividido = AliquotaIbsCbsResolver.temParcelaMunicipal(
+        item.getNotaFiscal() != null ? item.getNotaFiscal().getDataEmissao() : null);
+
+    BigDecimal alqIbsUf = item.getAliquotaIbsUf();
+    BigDecimal alqIbsMun = item.getAliquotaIbsMun();
+    if (alqIbsUf == null || alqIbsMun == null) {
+      alqIbsUf = dividido ? alqIbs.divide(BigDecimal.valueOf(2), 10, RoundingMode.HALF_UP) : alqIbs;
+      alqIbsMun = alqIbs.subtract(alqIbsUf);
+    }
+    BigDecimal valorIbsUf = item.getValorIbsUf();
+    BigDecimal valorIbsMun = item.getValorIbsMun();
+    if (valorIbsUf == null || valorIbsMun == null) {
+      valorIbsUf = dividido ? valorIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
+          : valorIbs;
+      valorIbsMun = valorIbs.subtract(valorIbsUf);
+    }
+    return new ParcelasIbs(alqIbsUf, alqIbsMun, valorIbsUf, valorIbsMun);
+  }
+
+  /**
+   * Alíquota impressa (NT 2026.010, item 4.3): com {@code gRed} (CST 011, 200 ou 515), a efetiva,
+   * {@code aliquota × (1 − redução / 100)}; sem, a vigente. Fonte única do {@code pAliqEfet} do XML
+   * e da DANFE (#279).
+   *
+   * @param aliquota alíquota vigente (proporção decimal, ex.: {@code 0.0010})
+   * @param item item da nota
+   * @return a alíquota a mostrar; nula se {@code aliquota} for nula
+   */
+  public static BigDecimal aliquotaEfetiva(BigDecimal aliquota, NotaFiscalItem item) {
+    String cst = cst(item);
+    if (aliquota == null || cst == null || !CST_COM_GRED.contains(cst)) {
+      return aliquota;
+    }
+    BigDecimal fator = BigDecimal.ONE.subtract(
+        reducao(item).divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
+    return aliquota.multiply(fator);
+  }
+
   /**
    * Grupo {@code gRed}: {@code pRedAliq} = redução e {@code pAliqEfet} = alíquota × (1 − redução
    * / 100), os dois em percentual com 4 casas (#278).
    */
-  private IbsCbs.GRed buildGRed(BigDecimal aliquota, BigDecimal reducao) {
+  private IbsCbs.GRed buildGRed(BigDecimal aliquota, NotaFiscalItem item) {
     IbsCbs.GRed gRed = new IbsCbs.GRed();
-    gRed.setPRedAliq(reducao.setScale(4, RoundingMode.HALF_UP).toPlainString());
-    BigDecimal fator = BigDecimal.ONE.subtract(
-        reducao.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
-    gRed.setPAliqEfet(formatAliquotaPercent(aliquota.multiply(fator)));
+    gRed.setPRedAliq(reducao(item).setScale(4, RoundingMode.HALF_UP).toPlainString());
+    gRed.setPAliqEfet(formatAliquotaPercent(aliquotaEfetiva(aliquota, item)));
     return gRed;
   }
 
@@ -462,6 +502,36 @@ public class NotaFiscalNfeMapper {
     return t;
   }
 
+  /** Totais das parcelas estadual e municipal do IBS da nota. */
+  public record TotaisIbs(BigDecimal valorUf, BigDecimal valorMun) {
+  }
+
+  /**
+   * Totais do IBS por esfera que vão ao {@code IBSCBSTot} (issue #31): a soma das parcelas reais
+   * dos itens; com algum item legado sem as parcelas, o total da nota dividido pela regra do
+   * fallback do resolvedor (todo estadual antes de 2027). Fonte única do XML e do preview da
+   * DANFE (#279).
+   *
+   * @param nota nota com itens
+   * @return os totais, nunca nulos
+   */
+  public static TotaisIbs totaisIbs(NotaFiscal nota) {
+    boolean parcelasReais = nota.getItens().stream()
+        .allMatch(i -> i.getValorIbsUf() != null && i.getValorIbsMun() != null);
+    if (parcelasReais) {
+      return new TotaisIbs(
+          nota.getItens().stream().map(NotaFiscalItem::getValorIbsUf)
+              .reduce(BigDecimal.ZERO, BigDecimal::add),
+          nota.getItens().stream().map(NotaFiscalItem::getValorIbsMun)
+              .reduce(BigDecimal.ZERO, BigDecimal::add));
+    }
+    BigDecimal totalIbs = nota.getValorTotalIbs() != null
+        ? nota.getValorTotalIbs() : BigDecimal.ZERO;
+    BigDecimal ibsUf = AliquotaIbsCbsResolver.temParcelaMunicipal(nota.getDataEmissao())
+        ? totalIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP) : totalIbs;
+    return new TotaisIbs(ibsUf, totalIbs.subtract(ibsUf));
+  }
+
   private IbsCbsTot buildIbsCbsTot(NotaFiscal nota) {
     BigDecimal totalIbs = nota.getValorTotalIbs() != null
         ? nota.getValorTotalIbs() : BigDecimal.ZERO;
@@ -478,24 +548,9 @@ public class NotaFiscalNfeMapper {
     IbsCbsTot tot = new IbsCbsTot();
     tot.setVBCIBSCBS(formatDecimal2(baseTotal));
 
-    // gIBS — soma das parcelas estadual/municipal reais dos itens (issue #31).
-    // Item legado sem as parcelas: regra do fallback do resolvedor (todo estadual antes de 2027).
-    boolean parcelasReais = nota.getItens().stream()
-        .allMatch(i -> i.getValorIbsUf() != null && i.getValorIbsMun() != null);
-    BigDecimal ibsUf;
-    BigDecimal ibsMun;
-    if (parcelasReais) {
-      ibsUf = nota.getItens().stream()
-          .map(NotaFiscalItem::getValorIbsUf)
-          .reduce(BigDecimal.ZERO, BigDecimal::add);
-      ibsMun = nota.getItens().stream()
-          .map(NotaFiscalItem::getValorIbsMun)
-          .reduce(BigDecimal.ZERO, BigDecimal::add);
-    } else {
-      ibsUf = AliquotaIbsCbsResolver.temParcelaMunicipal(nota.getDataEmissao())
-          ? totalIbs.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP) : totalIbs;
-      ibsMun = totalIbs.subtract(ibsUf);
-    }
+    TotaisIbs totaisIbs = totaisIbs(nota);
+    BigDecimal ibsUf = totaisIbs.valorUf();
+    BigDecimal ibsMun = totaisIbs.valorMun();
 
     IbsCbsTot.GIbsUfTot ufTot = new IbsCbsTot.GIbsUfTot();
     ufTot.setVDif("0.00");
@@ -641,14 +696,13 @@ public class NotaFiscalNfeMapper {
   }
 
   /**
-   * Mapeia {@link RegimeTributario} para o CRT da NF-e.
+   * Código do Regime Tributário (CRT, C21) do emitente: 1 Simples, 4 MEI, 3 regime normal. Fonte
+   * única do XML e da DANFE (#279).
    *
-   * <ul>
-   *   <li>SIMPLES_NACIONAL → "1"</li>
-   *   <li>outros / null → "3" (Regime Normal)</li>
-   * </ul>
+   * @param regime regime do produtor; nulo = regime normal
+   * @return o CRT
    */
-  private String resolveCrt(RegimeTributario regime) {
+  public static String crt(RegimeTributario regime) {
     if (regime == null) {
       return "3";
     }
