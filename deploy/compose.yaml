@@ -4,9 +4,9 @@ name: agrocontabil
 # do .env, do Caddyfile e de certs/. As imagens do backend e do frontend vem do GHCR, publicadas pelos
 # workflows docker-publish.yml de cada repositorio. Atualizar: docker compose pull && docker compose up -d
 #
-# Profile dev ATRAS DE SENHA: o frontend ainda se identifica pelo X-Usuario-Id (mock so do dev, #221),
-# entao o Caddy exige basic auth no site inteiro. So dados ficticios aqui — em dev a chave de cifra e
-# a publica de desenvolvimento e qualquer requisicao pode declarar qualquer identidade.
+# Profile homolog: so o JWT do login autentica (sem o mock do X-Usuario-Id, #221), com segredo JWT e
+# chave de cifra proprios do .env. Desde o login do frontend (frontend#93) o Caddy nao pede senha.
+# So dados ficticios aqui: o certificado da NF-e e o de teste (publico) e a SEFAZ e o mock.
 
 # Rotacao dos logs de todo servico: o json-file padrao do Docker cresce sem limite e enche o disco.
 x-logging: &logging
@@ -97,7 +97,7 @@ services:
     # Janela do graceful shutdown do Spring (30s, #101) + folga.
     stop_grace_period: 35s
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: homolog
       SPRING_DOCKER_COMPOSE_ENABLED: 'false'
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-agrocontabil}
       DB_NAME: ${DB_NAME:-agrocontabil}
@@ -108,9 +108,19 @@ services:
       REFRESH_COOKIE_SEGURO: 'true'
       REDEFINICAO_URL_FRONTEND: https://${SITE_HOST}/redefinir-senha
       SEED_SENHA: ${SEED_SENHA:-}
-      JWT_SECRET: ${JWT_SECRET:-}
-      # Certificado autoassinado de teste (publico) — SEFAZ segue mock em dev.
+      # Fora de dev a aplicacao recusa segredo ausente, placeholder ou publicado (#222) e a chave de
+      # cifra publica de desenvolvimento (#147). Trocar a CRIPTO_CHAVE torna ilegiveis os dados
+      # pessoais ja gravados: nunca troque sem zerar o banco ou recifrar.
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      CRIPTO_CHAVE: ${CRIPTO_CHAVE:?defina CRIPTO_CHAVE no .env}
+      # Certificado autoassinado de teste (publico); a SEFAZ segue o mock. A senha e o alias sao os
+      # do certificado de teste, que fora de dev nao tem valor padrao.
       NFE_CERT_PATH: file:/certs/nfe-teste.p12
+      NFE_CERT_PASSWORD: changeit
+      NFE_CERT_ALIAS: nfe-teste
+      # Sem SEFAZ real, a NF-e de terceiro importada na demonstracao nunca seria confirmada: o mock
+      # da a chave desconhecida como autorizada (#223; padrao so no application-dev.yml).
+      APP_NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS: 'true'
       AI_OLLAMA_BASE_URL: http://ollama:11434
       AI_CHAT_PROVIDER: ollama
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
@@ -152,7 +162,7 @@ services:
     depends_on:
       - backend
 
-  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST e senha no site inteiro.
+  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST.
   caddy:
     image: caddy:2.10-alpine
     logging: *logging
@@ -164,8 +174,6 @@ services:
     environment:
       SITE_HOST: ${SITE_HOST:?defina SITE_HOST no .env}
       SITE_REDIRECIONA: ${SITE_REDIRECIONA:?defina SITE_REDIRECIONA no .env}
-      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-banca}
-      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?gere com caddy hash-password}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

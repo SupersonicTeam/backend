@@ -12,17 +12,22 @@ ClamAV e Caddy (HTTPS automático) numa VM só.
 | Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `Caddyfile`, `.env` (600), `certs/nfe-teste.p12` |
 | Imagens | `ghcr.io/supersonicteam/backend` e `ghcr.io/supersonicteam/frontend` (workflow `docker-publish.yml` de cada repo, amd64 + arm64) |
 
-## Por que `dev` atrás de senha
+## Profile `homolog`, sem senha no Caddy
 
-O frontend ainda se identifica pelo header `X-Usuario-Id`, e desde a #221 esse mock só existe no
-profile `dev`. Em `prod` o Angular tomaria 401 em tudo até ganhar a tela de login. Então o backend
-sobe em `dev` e o Caddy exige **basic auth no site inteiro** — em dev qualquer requisição declara
-qualquer identidade e a chave de cifra é a pública de desenvolvimento. **Só dados fictícios.**
+Desde o login do frontend (frontend#93, 2026-10-30) o backend sobe em **`homolog`**: só o JWT do
+login autentica (o mock do `X-Usuario-Id` é só do `dev`, #221), com `JWT_SECRET` e `CRIPTO_CHAVE`
+próprios do `.env`. Por isso o Caddy não pede mais senha (o basic auth saiu em 2026-11-01). Até
+então o backend rodava em `dev`, onde qualquer requisição declarava qualquer identidade, e o basic
+auth era a única barreira.
 
-O Caddy tira o `Authorization: Basic` antes de repassar (o navegador o reenvia em toda chamada da
-SPA e o backend o leria como credencial); um `Bearer` do login real passa intacto. Quando o
-frontend tiver login, troque para `SPRING_PROFILES_ACTIVE: prod` com os segredos do
-`.env.example` da raiz (`JWT_SECRET`, `CRIPTO_CHAVE`, SMTP) e tire o `basic_auth`.
+Continua sendo **demonstração com dados fictícios**: o certificado da NF-e é o de teste (público),
+a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro) e não há
+SMTP (`EMAIL_MODO` = `DESLIGADO`: "esqueci minha senha" responde 202 e nada é enviado). As contas
+semeadas entram pelo login com a `SEED_SENHA`.
+
+**A `CRIPTO_CHAVE` não pode mudar com dados no banco**: CPF/CNPJ, e-mail e telefone estão cifrados
+com ela, e com outra chave ficam ilegíveis. Trocar = zerar o banco (preservando a base da Ceres,
+abaixo) e deixar o seed recriar as contas.
 
 ## Rede (já configurado)
 
@@ -40,8 +45,8 @@ frontend tiver login, troque para `SPRING_PROFILES_ACTIVE: prod` com os segredos
   vale a **política de backup do volume de boot** na Oracle (Always Free: até 5 backups).
 - **Logs:** todo serviço do compose usa `json-file` com 20 MB × 5 arquivos (âncora `x-logging`), e o
   `/etc/docker/daemon.json` repete o limite para qualquer container fora do compose.
-- **Monitor:** `GET /healthz` é a única rota sem senha e responde só `UP` (200) ou `DOWN` (503) pelo
-  health do backend, sem repassar o corpo do Actuator. É o alvo do UptimeRobot.
+- **Monitor:** `GET /healthz` responde só `UP` (200) ou `DOWN` (503) pelo health do backend, sem
+  repassar o corpo do Actuator. É o alvo do UptimeRobot.
 - **SSH:** só chave (sem senha, root sem senha) e `fail2ban` no jail `sshd` (5 falhas em 10 min →
   1 h de bloqueio). No Ubuntu 24.04 a unidade é `ssh.service`, então o
   `/etc/fail2ban/jail.d/sshd.local` fixa o `journalmatch` — o padrão do fail2ban nunca casaria.
@@ -52,8 +57,9 @@ frontend tiver login, troque para `SPRING_PROFILES_ACTIVE: prod` com os segredos
 
 ```bash
 cd /opt/agrocontabil
-cp .env.example .env && chmod 600 .env   # preencher; hash da senha do site:
-docker run --rm caddy:2.10-alpine caddy hash-password --plaintext '<senha>'
+cp .env.example .env && chmod 600 .env   # preencher; segredos:
+openssl rand -base64 48   # JWT_SECRET
+openssl rand -base64 32   # CRIPTO_CHAVE
 docker login ghcr.io -u <usuario-github>   # token clássico só com read:packages
 docker compose up -d
 ```
