@@ -23,8 +23,12 @@ import java.util.regex.Pattern;
  *
  * <p>Mascara CPF, CNPJ, e-mail e telefone. A chave de acesso da NF-e (44 dígitos) fica de fora de
  * propósito — não é dado pessoal e é o que a operação precisa ler no log para investigar uma
- * rejeição da SEFAZ. Os padrões exigem o número isolado (sem dígito colado), então chave de
- * acesso, UUID e valor monetário não são confundidos com documento.
+ * rejeição da SEFAZ. CPF e CNPJ exigem o número isolado: sem letra ou dígito colado (nem ponto
+ * antes), então chave de acesso, UUID, hash, {@code jti} e valor monetário não são confundidos
+ * com documento. Até o PR #310 só dígito e ponto contavam, e um token hex com 11 dígitos
+ * seguidos de letra (último grupo de UUID, por exemplo) saía {@code [CPF]a}. Limite aceito: CPF
+ * grudado em letra, sem separador ({@code cpf52998224725}), não é mascarado; qualquer outro
+ * separador ({@code _ : = ( " -} espaço) basta.
  *
  * <p>Diferente do {@code DataSanitizer} da Ceres, que mascara também a chave: lá o destino é o
  * provedor do modelo, onde nada fiscal precisa chegar.
@@ -40,9 +44,11 @@ public final class MascaraDadosPessoais {
   private static final List<Regra> REGRAS = List.of(
       // CNPJ antes do CPF (14 digitos contem 11).
       new Regra(Pattern.compile(
-          "(?<![\\d.])\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}(?![\\d])"), "[CNPJ]"),
+          "(?<![A-Za-z0-9.])\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}(?![A-Za-z0-9])"),
+          "[CNPJ]"),
       new Regra(Pattern.compile(
-          "(?<![\\d.])\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}-?\\d{2}(?![\\d])"), "[CPF]"),
+          "(?<![A-Za-z0-9.])\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}-?\\d{2}(?![A-Za-z0-9])"),
+          "[CPF]"),
       new Regra(Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"), "[EMAIL]"),
       // DDD entre parenteses, ou sem eles mas com o hifen do numero (sem o hifen, uma sequencia
       // de digitos qualquer — valor, id numerico — viraria telefone).
@@ -71,15 +77,23 @@ public final class MascaraDadosPessoais {
   }
 
   /**
-   * Referência curta de um id para log (#222): {@code ref:} + 12 hex do SHA-256 do UUID.
+   * Referência curta de um id para log (#222): {@code ref:} + 12 hex do SHA-256 do UUID, em duas
+   * metades de 6 separadas por hífen ({@code ref:6bbd4e-b564e9}).
    *
    * <p>Para o id da credencial, que é o {@code sub} do JWT: com ele no log, quem obtivesse o
    * segredo forjaria o token de uma conta específica. A referência correlaciona os eventos de uma
    * mesma conta (o hash é estável) e, com o UUID em mãos, a operação a recalcula; o caminho
    * inverso não existe.
    *
+   * <p>O hífen deixa a referência imune à {@link #mascarar} por construção, sem depender da
+   * fronteira das regras: no formato antigo (12 hex corridos), 11 dígitos seguidos de letra viravam
+   * {@code ref:[CPF]a}. Com no máximo 6 dígitos de cada lado do hífen nenhuma regra casa: CPF e
+   * CNPJ exigem 9 e 12 dígitos antes do hífen, e o telefone exige parênteses no DDD ou espaço
+   * depois dele. Para buscar uma conta em log anterior ao PR #310, tire o hífen
+   * ({@code 466962-69333f} → {@code 46696269333f}).
+   *
    * @param id id a referenciar
-   * @return {@code ref:<12 hex>}; nulo vira {@code ref:-}
+   * @return {@code ref:<6 hex>-<6 hex>}; nulo vira {@code ref:-}
    */
   public static String referencia(UUID id) {
     if (id == null) {
@@ -88,7 +102,8 @@ public final class MascaraDadosPessoais {
     try {
       byte[] hash = MessageDigest.getInstance("SHA-256")
           .digest(id.toString().getBytes(StandardCharsets.UTF_8));
-      return "ref:" + HexFormat.of().formatHex(hash, 0, 6);
+      HexFormat hex = HexFormat.of();
+      return "ref:" + hex.formatHex(hash, 0, 3) + "-" + hex.formatHex(hash, 3, 6);
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 indisponivel na JVM", e);
     }

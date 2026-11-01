@@ -306,7 +306,7 @@ Bean Validation customizada (anotação + validator):
 - `ErrorDetail` — `code` / `field` / `message` / `suggestion` / `rejectedValue` / `expectedValue`
 - `ErrorCode` — catálogo de códigos de erro
 - `NormalizacaoBusca` — minúsculas, sem acento (NFD sem marcas + NFC, para não expandir escritas como o coreano), espaços colapsados, até 600 caracteres; regra única do que vai para `nota_fiscal.busca_normalizada` e do termo buscado (#174) + `escaparLike`
-- `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148); `referencia(UUID)` = `ref:` + 12 hex do SHA-256, para o id da credencial nos logs (#222)
+- `MascaraDadosPessoais` — CPF/CNPJ/e-mail/telefone → marcadores em todo log (via `config/MensagemLogMascaradaConverter` + `logback-spring.xml`) e `truncarIp` (#148); `referencia(UUID)` = `ref:` + 12 hex do SHA-256 em duas metades com hífen (`ref:6bbd4e-b564e9`, imune à regra de CPF da máscara), para o id da credencial nos logs (#222)
 - `UfIbge` — cUF das 27 UFs (`Optional`, sem default silencioso) + `prefixoCoerente(codigoIbge, uf)` (issue #88)
 - `DocumentoFiscalValidator` — utilitário de validação de documento fiscal (CPF/CNPJ)
 

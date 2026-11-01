@@ -96,9 +96,82 @@ class MascaraDadosPessoaisTest {
 
     String ref = MascaraDadosPessoais.referencia(id);
 
-    assertThat(ref).matches("ref:[0-9a-f]{12}").isEqualTo(MascaraDadosPessoais.referencia(id))
+    assertThat(ref).matches("ref:[0-9a-f]{6}-[0-9a-f]{6}")
+        .isEqualTo(MascaraDadosPessoais.referencia(id))
         .doesNotContain("72f7d6a7");
     assertThat(MascaraDadosPessoais.referencia(java.util.UUID.randomUUID())).isNotEqualTo(ref);
     assertThat(MascaraDadosPessoais.referencia(null)).isEqualTo("ref:-");
+  }
+
+  @Test
+  @DisplayName("referencia passa intacta pela mascara mesmo com hash so de digitos (#222)")
+  void referenciaImuneAMascara() {
+    // SHA-256 deste UUID comeca com 46696269333f: 11 digitos e uma letra. Sem o separador, a
+    // regra de CPF trocava o trecho e o log saia "ref:[CPF]f", inutil para correlacao.
+    java.util.UUID id = java.util.UUID.fromString("00000000-0000-0000-0000-000000000191");
+
+    String ref = MascaraDadosPessoais.referencia(id);
+
+    assertThat(ref).isEqualTo("ref:466962-69333f");
+    assertThat(MascaraDadosPessoais.mascarar("login recusado " + ref + " bloqueada"))
+        .isEqualTo("login recusado " + ref + " bloqueada");
+  }
+
+  @Test
+  @DisplayName("referencia de qualquer hash nao casa CPF, CNPJ nem telefone")
+  void referenciaSoDeDigitosNaoCasaNenhumaRegra() {
+    // Pior caso de cada regra: as duas metades so de digitos.
+    for (String ref : new String[] {"ref:123456-789012", "ref:000000-000000",
+        "ref:529982-247250", "ref:119999-912345"}) {
+      assertThat(MascaraDadosPessoais.mascarar(ref)).isEqualTo(ref);
+      String linha = "conta " + ref + ".";
+      assertThat(MascaraDadosPessoais.mascarar(linha)).isEqualTo(linha);
+    }
+    // Sequencia fixa (nao randomUUID): uma falha aponta o UUID e se repete localmente.
+    for (long i = 0; i < 2_000; i++) {
+      java.util.UUID id = new java.util.UUID(0x222L, i);
+      String ref = MascaraDadosPessoais.referencia(id);
+      assertThat(MascaraDadosPessoais.mascarar(ref)).as("uuid %s", id).isEqualTo(ref);
+    }
+  }
+
+  @Test
+  @DisplayName("referencia sai intacta pelo conversor do Logback, o caminho real do log")
+  void referenciaPeloConversorDoLogback() {
+    java.util.UUID id = java.util.UUID.fromString("00000000-0000-0000-0000-000000000191");
+    LoggingEvent evento = new LoggingEvent("fqcn",
+        new LoggerContext().getLogger("teste"), Level.WARN,
+        "Login recusado: credencial={}", null, new Object[] {MascaraDadosPessoais.referencia(id)});
+
+    assertThat(new MensagemLogMascaradaConverter().convert(evento))
+        .isEqualTo("Login recusado: credencial=ref:466962-69333f");
+  }
+
+  @Test
+  @DisplayName("UUID e token hex com 11 digitos colados em letra nao viram [CPF]")
+  void tokenAlfanumericoNaoViraDocumento() {
+    // Antes, a fronteira so excluia digito e ponto: o ultimo grupo do UUID saia "[CPF]a".
+    String texto = "nota=72f7d6a7-c101-401b-a58b-12345678901a jti=ab12345678901"
+        + " hash=1122233300018bcd sha=ab11222333000181";
+
+    assertThat(MascaraDadosPessoais.mascarar(texto)).isEqualTo(texto);
+  }
+
+  @Test
+  @DisplayName("documento separado por qualquer nao alfanumerico segue mascarado")
+  void documentoComSeparadorSegueMascarado() {
+    assertThat(MascaraDadosPessoais.mascarar(
+        "cpf_52998224725 (52998224725) cpf:52998224725 \"52998224725\" -52998224725-"
+            + " cnpj_11222333000181 [11.222.333/0001-81]"))
+        .isEqualTo("cpf_[CPF] ([CPF]) cpf:[CPF] \"[CPF]\" -[CPF]-"
+            + " cnpj_[CNPJ] [[CNPJ]]");
+  }
+
+  @Test
+  @DisplayName("limite aceito: documento colado em letra ou digito nao e mascarado")
+  void documentoColadoEmLetraNaoEMascarado() {
+    // Decisao do PR #310: sem a fronteira alfanumerica, todo token hex/UUID/base64 com 11
+    // digitos colados em letra virava [CPF]. CPF grudado em texto, sem separador, e raro em log.
+    assertThat(MascaraDadosPessoais.mascarar("cpf52998224725")).isEqualTo("cpf52998224725");
   }
 }
