@@ -21,7 +21,9 @@ import org.springframework.stereotype.Component;
  *       ("LC 214/2025, art. 138, § 1º") e devolve as citações com link oficial. O modelo nunca
  *       escreve a referência legal, então não consegue inventar artigo.</li>
  * </ol>
- * Falhou: a resposta é descartada e vira "não encontrei fundamento legal para isso".
+ * Falhou: a resposta é descartada. Sem marca válida nenhuma ela vira "não encontrei fundamento
+ * legal para isso"; com alguma marca válida, a rota de lei mostra só esses trechos, sem afirmar
+ * que respondem ({@link #marcasValidas}, issue #258).
  *
  * <p>Aceita marcas agrupadas ({@code [T1, T3]} ou {@code [T1; T3]}).
  */
@@ -34,6 +36,7 @@ public class ValidadorCitacao {
   private static final Pattern MARCA =
       Pattern.compile("\\[\\s*(T\\d+(?:\\s*[,;]\\s*T\\d+)*)\\s*\\]");
   private static final Pattern NUMERO_MARCA = Pattern.compile("T(\\d+)");
+  private static final int DIGITOS_MAXIMOS_MARCA = 4;
 
   /**
    * Resultado da validação.
@@ -67,7 +70,7 @@ public class ValidadorCitacao {
       List<String> referencias = new ArrayList<>();
       Matcher numero = NUMERO_MARCA.matcher(m.group(1));
       while (numero.find()) {
-        int indice = Integer.parseInt(numero.group(1));
+        int indice = indice(numero.group(1));
         if (indice < 1 || indice > trechos.size()) {
           return invalida();
         }
@@ -86,6 +89,40 @@ public class ValidadorCitacao {
         saida.toString().strip(),
         citados.values().stream().map(TrechoRecuperado::comoCitacao).toList(),
         citados.values().stream().map(TrechoRecuperado::id).toList());
+  }
+
+  /**
+   * As citações das marcas que existem, mesmo numa resposta inválida (issue #258). Uma resposta
+   * com uma marca inventada é descartada inteira, mas os trechos que o modelo marcou certo ainda
+   * são os artigos que tratam do assunto e podem ser mostrados sem o texto dele.
+   *
+   * @param resposta texto do modelo
+   * @param trechos  trechos recuperados, na ordem das marcas
+   * @return citações e ids das marcas válidas, na ordem da primeira menção (vazias se não há)
+   */
+  public Resultado marcasValidas(String resposta, List<TrechoRecuperado> trechos) {
+    if (resposta == null || trechos.isEmpty()) {
+      return invalida();
+    }
+    Map<Integer, TrechoRecuperado> citados = new LinkedHashMap<>();
+    Matcher m = MARCA.matcher(resposta);
+    while (m.find()) {
+      Matcher numero = NUMERO_MARCA.matcher(m.group(1));
+      while (numero.find()) {
+        int indice = indice(numero.group(1));
+        if (indice >= 1 && indice <= trechos.size()) {
+          citados.putIfAbsent(indice, trechos.get(indice - 1));
+        }
+      }
+    }
+    return new Resultado(false, SEM_FUNDAMENTO,
+        citados.values().stream().map(TrechoRecuperado::comoCitacao).toList(),
+        citados.values().stream().map(TrechoRecuperado::id).toList());
+  }
+
+  /** Posição da marca; número grande demais (ex.: {@code T99999999999}) conta como inexistente. */
+  private static int indice(String digitos) {
+    return digitos.length() > DIGITOS_MAXIMOS_MARCA ? -1 : Integer.parseInt(digitos);
   }
 
   private static Resultado invalida() {

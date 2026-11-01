@@ -54,11 +54,23 @@ public class RotaLegislacao {
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
   /**
-   * Texto da parte de lei do MISTO quando o modelo falou dos dados do produtor (issue #170). As
-   * citações validadas seguem na resposta; sem dígitos, para não virar fonte de número.
+   * Texto da resposta de lei sem o texto do modelo, só com as citações validadas: no MISTO quando o
+   * modelo falou dos dados do produtor (issue #170), e em qualquer rota quando a resposta tinha
+   * número fora dos trechos ou marca inventada ao lado de marcas certas (issue #258). Sem
+   * dígitos, para não virar fonte de número.
    */
   public static final String SO_TRECHOS =
       "A regra legal que trata do assunto esta nos trechos de lei citados.";
+
+  /**
+   * Resposta de lei descartada (número fora dos trechos ou marca inventada) com trechos marcados
+   * certo (issue #258). <strong>Não afirma</strong> que os trechos respondem: numa pergunta de
+   * premissa falsa ("qual artigo isenta o celular?") o descarte é o sinal de que eles não
+   * respondem, e o {@link #SO_TRECHOS} diria o contrário. Sem dígitos, para não virar fonte.
+   */
+  public static final String TRECHOS_SEM_CONFIRMACAO =
+      "Nao consegui confirmar uma resposta com a legislacao. Estes sao os trechos de lei mais "
+          + "proximos da pergunta, para consulta.";
 
   private final ModeloLinguagem modelo;
   private final BuscaLegislacaoService busca;
@@ -155,12 +167,27 @@ public class RotaLegislacao {
     contexto.registrarUso(prompt, resposta);
     String texto = limpar(resposta.getResult().getOutput().getText());
 
-    ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
-    if (!citacao.valida()) {
-      // Sem marca (inclusive o NAO_ENCONTREI) ou com marca inventada.
-      log.info("Ceres: resposta de legislacao sem citacao valida descartada");
+    if (texto.contains(PromptsCeres.NAO_ENCONTREI)) {
+      // O modelo disse que os trechos nao respondem: vale isso, com ou sem marca no texto.
+      log.info("Ceres: modelo nao encontrou a resposta nos trechos");
       return ResultadoRota.descartada(
           ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+    }
+    ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
+    if (!citacao.valida()) {
+      // Sem marca (inclusive o NAO_ENCONTREI) ou com marca inventada. Com marca inventada e
+      // alguma certa, os trechos certos sao os mais proximos (#258): so eles, sem o texto, e sem
+      // afirmar que respondem.
+      ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, trechos);
+      if (validas.citacoes().isEmpty()) {
+        log.info("Ceres: resposta de legislacao sem citacao valida descartada");
+        return ResultadoRota.descartada(
+            ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+      }
+      log.info("Ceres: resposta de legislacao com marca inexistente; so os trechos validos");
+      contexto.registrarTrechosCitados(validas.idsCitados());
+      return new ResultadoRota(
+          TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.CITACAO_INVALIDA, validas.citacoes());
     }
 
     List<String> fontes = new ArrayList<>();
@@ -171,10 +198,14 @@ public class RotaLegislacao {
     ValidadorNumeros.Resultado numeros =
         validadorNumeros.verificar(semMarcas(texto), fontes, List.of(contexto.hoje()));
     if (!numeros.rastreavel()) {
-      log.warn("Ceres: resposta de legislacao descartada com {} numero(s) fora dos trechos",
-          numeros.quantidadeSemFonte());
-      return ResultadoRota.descartada(
-          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.NUMERO_SEM_FONTE);
+      // A citacao e valida: o texto sai (numero sem fonte), os trechos ficam (#258), sem afirmar
+      // que respondem. Antes o produtor lia "nao encontrei fundamento legal" sobre um assunto com
+      // artigos recuperados.
+      log.warn("Ceres: resposta de legislacao descartada com {} numero(s) fora dos trechos; so "
+          + "os trechos citados", numeros.quantidadeSemFonte());
+      contexto.registrarTrechosCitados(citacao.idsCitados());
+      return new ResultadoRota(
+          TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.NUMERO_SEM_FONTE, citacao.citacoes());
     }
 
     contexto.registrarTrechosCitados(citacao.idsCitados());

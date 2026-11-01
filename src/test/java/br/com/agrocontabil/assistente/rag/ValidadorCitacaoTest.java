@@ -68,4 +68,24 @@ class ValidadorCitacaoTest {
   void marcaZero() {
     assertThat(validador.validar("Isso [T0].", trechos).valida()).isFalse();
   }
+
+  @Test
+  @DisplayName("#258: marcasValidas devolve so os trechos que existem, sem o texto do modelo")
+  void marcasValidasNaRespostaInvalida() {
+    ValidadorCitacao.Resultado r =
+        validador.marcasValidas("Reducao [T2], isencao [T9] e de novo [T2; T1].", trechos);
+
+    assertThat(r.valida()).isFalse();
+    assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.idsCitados()).containsExactly("id-2", "id-1");
+    assertThat(validador.marcasValidas("Sem marca nenhuma.", trechos).citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Marca com numero enorme e inexistente, nao erro")
+  void marcaEnorme() {
+    assertThat(validador.validar("Isso [T99999999999].", trechos).valida()).isFalse();
+    assertThat(validador.marcasValidas("Isso [T99999999999] e [T1].", trechos).idsCitados())
+        .containsExactly("id-1");
+  }
 }

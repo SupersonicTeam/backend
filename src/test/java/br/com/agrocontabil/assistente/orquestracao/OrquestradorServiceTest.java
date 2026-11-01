@@ -155,6 +155,24 @@ class OrquestradorServiceTest {
   }
 
   @Test
+  @DisplayName("#258: MISTO com a lei descartada por numero sem fonte: trechos, nunca 'nao encontrei'")
+  void mistoLeiComNumeroSemFonteViraTrechos() {
+    classificarComo(Intencao.MISTO, 0.9);
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean())).thenReturn(
+        new ResultadoRota(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+            DesfechoInteracao.NUMERO_SEM_FONTE, List.of(CITACAO)));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).contains(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
+        .doesNotContain(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.citacoes()).containsExactly(CITACAO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.desfechoLegislacao()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE);
+  }
+
+  @Test
   @DisplayName("#170: MISTO sem compra encontrada: frase fixa do backend e regra 'de forma geral'")
   void mistoSemDadosFraseFixaSemContradicao() {
     classificarComo(Intencao.MISTO, 0.9);
