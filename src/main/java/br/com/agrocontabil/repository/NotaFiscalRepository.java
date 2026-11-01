@@ -400,6 +400,24 @@ public interface NotaFiscalRepository
    */
   List<NotaFiscal> findTop5ByProdutorIdOrderByDataEmissaoDesc(UUID produtorId);
 
+  /**
+   * Notas do produtor com um número, da mais recente para a mais antiga (issue #256, Ceres). O
+   * número não é único: a mesma numeração aparece em séries diferentes e nas notas recebidas de
+   * fornecedores. Só do produtor: nota de outro com o mesmo número não existe aqui (anti-IDOR).
+   *
+   * @param produtorId produtor da sessão
+   * @param numero     número da nota
+   * @param pagina     limite
+   * @return as notas com esse número
+   */
+  @Query("""
+      SELECT n FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId AND n.numero = :numero
+      ORDER BY n.dataEmissao DESC, n.id DESC
+      """)
+  List<NotaFiscal> findDoProdutorPorNumero(
+      @Param("produtorId") UUID produtorId, @Param("numero") Long numero, Pageable pagina);
+
   // --- Consultas da Ceres (issue #142). Fixas e parametrizadas: o modelo só escolhe a função e
   // preenche os parâmetros, nunca escreve SQL. Todas exigem o produtor (anti-IDOR, RN007).
 

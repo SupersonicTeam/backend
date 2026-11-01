@@ -6,6 +6,15 @@ import static br.com.agrocontabil.support.DadosCeresFixture.guia;
 import static br.com.agrocontabil.support.DadosCeresFixture.saida;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.model.AcaoRevisao;
+import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.NotaFiscalRevisao;
+import br.com.agrocontabil.model.NotaFiscalValidacao;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
+import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
@@ -232,5 +241,49 @@ class ConsultaDadosProdutorServiceIntegrationTest {
     // Curinga digitado e texto, como nas compras.
     assertThat(service.ncmsComprados(produtorA.getId(), "%", JAN, JUN, 3))
         .containsExactly("38089324");
+  }
+
+  @Autowired private NotaFiscalRevisaoRepository revisaoRepository;
+  @Autowired private NotaFiscalValidacaoRepository validacaoRepository;
+
+  @Test
+  @DisplayName("#256: nota pelo numero so do produtor, com o motivo e o ultimo lote")
+  void notaPorNumero() {
+    NotaFiscal minha = saida(produtorA, em(2026, 9, 8), "Milho", "10059010", "1000.00");
+    minha.setNumero(777_001L);
+    minha.setStatus(StatusNotaFiscal.DEVOLVIDA);
+    minha = notaFiscalRepository.save(minha);
+    NotaFiscal outra = saida(produtorB, em(2026, 9, 8), "Milho", "10059010", "9999.00");
+    outra.setNumero(777_001L);
+    notaFiscalRepository.save(outra);
+    revisaoRepository.save(NotaFiscalRevisao.builder()
+        .notaFiscalId(minha.getId()).acao(AcaoRevisao.DEVOLVIDA)
+        .motivo("motivo antigo").ocorridoEm(em(2026, 9, 9)).build());
+    revisaoRepository.save(NotaFiscalRevisao.builder()
+        .notaFiscalId(minha.getId()).acao(AcaoRevisao.DEVOLVIDA)
+        .motivo("motivo novo").ocorridoEm(em(2026, 9, 11)).build());
+    UUID loteVelho = UUID.randomUUID();
+    UUID loteNovo = UUID.randomUUID();
+    validacaoRepository.save(validacao(minha, loteVelho, "VELHO", em(2026, 9, 9)));
+    validacaoRepository.save(validacao(minha, loteNovo, "NOVO", em(2026, 9, 10)));
+
+    List<NotaPorNumeroResultado> notas = service.notasPorNumero(produtorA.getId(), 777_001L);
+
+    // A do B, com o mesmo numero, nao aparece (anti-IDOR).
+    assertThat(notas).singleElement().satisfies(n -> {
+      assertThat(n.status()).isEqualTo(StatusNotaFiscal.DEVOLVIDA);
+      assertThat(n.valorTotal()).isEqualByComparingTo("1000.00");
+      assertThat(n.motivoDevolucao()).isEqualTo("motivo novo");
+      assertThat(n.inconsistencias()).extracting(NotaPorNumeroResultado.Inconsistencia::codigo)
+          .containsExactly("NOVO");
+    });
+    assertThat(service.notasPorNumero(produtorA.getId(), 123_456_789L)).isEmpty();
+  }
+
+  private static NotaFiscalValidacao validacao(NotaFiscal nota,
+      UUID lote, String codigo, OffsetDateTime quando) {
+    return NotaFiscalValidacao.builder()
+        .notaFiscal(nota).loteValidacao(lote).code(codigo).message("m").validadoEm(quando)
+        .build();
   }
 }

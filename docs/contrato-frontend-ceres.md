@@ -294,6 +294,7 @@ envelope.
    | `proximosVencimentos` | Guias a vencer | `dias` |
    | `guiasEmAtraso` | Guias em atraso | nenhum |
    | `vencimentosDoMes` | Guias para pagar no mês | `mes` (AAAA-MM) |
+   | `consultarNota` | Nota fiscal | `numero` |
 
    Os valores de `parametros` já vêm mascarados (CPF, CNPJ etc. viram `[CPF]`...). Podem ser
    exibidos como estão.

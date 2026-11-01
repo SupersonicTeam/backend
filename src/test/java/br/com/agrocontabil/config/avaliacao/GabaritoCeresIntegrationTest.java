@@ -9,6 +9,8 @@ import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
+import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,6 +53,8 @@ class GabaritoCeresIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
+  @Autowired private NotaFiscalRevisaoRepository revisaoRepository;
+  @Autowired private NotaFiscalValidacaoRepository validacaoRepository;
   @Autowired private TransactionTemplate transactionTemplate;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private TestDatabaseCleaner cleaner;
@@ -61,7 +65,7 @@ class GabaritoCeresIntegrationTest {
   void setUp() {
     cleaner.limparTudo();
     seed = new SeedAvaliacao(produtorRepository, notaFiscalRepository, guiaFiscalRepository,
-        transactionTemplate);
+        revisaoRepository, validacaoRepository, transactionTemplate);
   }
 
   @AfterEach
@@ -134,6 +138,10 @@ class GabaritoCeresIntegrationTest {
     assertThat(esperados.get("X18")).containsExactly("R$ 5.788,00");
     // Novembro: só a GPS de 20/11 (a guia paga e as de outros meses ficam fora).
     assertThat(esperados.get("T08")).containsExactly("R$ 640,00");
+    // Nota pelo numero (#256): a 103 e a venda autorizada de agosto, 75.600 x 0,1% e x 0,9%.
+    assertThat(esperados.get("T06")).containsExactly("R$ 75,60", "R$ 680,40");
+    // Nota devolvida (#254): so a 107, nos ultimos 90 dias.
+    assertThat(esperados.get("T10")).containsExactly("1");
     // D16: seis compras autorizadas; a cancelada não conta.
     assertThat(esperados.get("D16")).containsExactly("6");
     // Nenhum valor esperado do avaliado pode ser um valor do vizinho.
@@ -167,7 +175,7 @@ class GabaritoCeresIntegrationTest {
     assertThat(notaFiscalRepository.count()).isEqualTo(notas);
 
     produtorRepository.findById(primeira.avaliado()).ifPresent(p -> {
-      p.setNomeCompleto("Fazenda Avaliacao Ceres (seed v1)");
+      p.setNomeCompleto("Fazenda Avaliacao Ceres (seed v0)");
       produtorRepository.save(p);
     });
     assertThatThrownBy(seed::semear)

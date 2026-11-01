@@ -142,10 +142,22 @@ public final class ValoresEsperados {
         .orElseThrow(() -> new IllegalArgumentException(id + ": funcao inexistente: " + nome));
   }
 
-  /** Campo do resultado; caminho com ponto entra em record aninhado ({@code funrural.total}). */
+  /**
+   * Campo do resultado; caminho com ponto entra em record aninhado ({@code funrural.total}) e
+   * número entra em lista ({@code notas.0.valorIbs}).
+   */
   private static String lerCampo(Object resultado, String campo, String id) {
     Object atual = resultado;
     for (String parte : campo.split("\\.")) {
+      if (atual instanceof List<?> lista && parte.chars().allMatch(Character::isDigit)) {
+        int indice = Integer.parseInt(parte);
+        if (indice >= lista.size()) {
+          throw new IllegalArgumentException(
+              id + ": a lista do resultado nao tem o item " + indice + " (" + campo + ")");
+        }
+        atual = lista.get(indice);
+        continue;
+      }
       if (atual == null || !atual.getClass().isRecord()) {
         throw new IllegalArgumentException(
             id + ": campo inexistente no resultado da funcao: " + campo);

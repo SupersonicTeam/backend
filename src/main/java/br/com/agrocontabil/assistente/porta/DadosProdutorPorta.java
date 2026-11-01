@@ -62,6 +62,12 @@ public interface DadosProdutorPorta {
   Totais totalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens, Set<StatusNotaFiscal> status,
       LocalDate inicio, LocalDate fim);
 
+  /**
+   * Notas do produtor com o número pedido (issue #256), no máximo 3 (séries diferentes e notas de
+   * fornecedor repetem número). Número de outro produtor = lista vazia, como número inexistente.
+   */
+  List<NotaDetalhe> notasPorNumero(UUID produtorId, long numero);
+
   /** Guias não pagas com vencimento em {@code [de, ate]}, da mais próxima para a mais distante. */
   Pagina<Vencimento> vencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate, int limite);
 
@@ -160,6 +166,25 @@ public interface DadosProdutorPorta {
   /** Uma nota, sem dado pessoal (issue #144). */
   record Nota(long numero, int serie, OffsetDateTime dataEmissao, OrigemNotaFiscal origem,
       StatusNotaFiscal status, BigDecimal valorTotal, BigDecimal valorIbs, BigDecimal valorCbs) {}
+
+  /**
+   * Uma nota consultada pelo número, sem dado pessoal (issue #256).
+   *
+   * @param motivoDevolucao motivo da última devolução pelo contador; nulo se nunca devolvida
+   * @param inconsistencias as do último lote de validação, se a nota ainda pode ser corrigida
+   */
+  record NotaDetalhe(long numero, int serie, OffsetDateTime dataEmissao, OrigemNotaFiscal origem,
+      StatusNotaFiscal status, BigDecimal valorTotal, BigDecimal valorIbs, BigDecimal valorCbs,
+      String motivoDevolucao, List<Inconsistencia> inconsistencias) {
+
+    /** Cópia defensiva. */
+    public NotaDetalhe {
+      inconsistencias = List.copyOf(inconsistencias);
+    }
+  }
+
+  /** Inconsistência de validação: código, campo, mensagem e sugestão do sistema. */
+  record Inconsistencia(String codigo, String campo, String mensagem, String sugestao) {}
 
   /** Uma guia não paga, sem as observações livres do contador. */
   record Vencimento(TipoGuiaFiscal tipo, LocalDate dataVencimento, BigDecimal valor,

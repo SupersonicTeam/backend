@@ -140,6 +140,17 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   }
 
   @Override
+  public List<NotaDetalhe> notasPorNumero(UUID produtorId, long numero) {
+    return comTimeout(() -> consultaService.notasPorNumero(produtorId, numero)).stream()
+        .map(n -> new NotaDetalhe(n.numero(), n.serie(), n.dataEmissao(), n.origem(), n.status(),
+            n.valorTotal(), n.valorIbs(), n.valorCbs(), n.motivoDevolucao(),
+            n.inconsistencias().stream()
+                .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
+                .toList()))
+        .toList();
+  }
+
+  @Override
   public Totais totalNotas(UUID produtorId, Set<OrigemNotaFiscal> origens,
       Set<StatusNotaFiscal> status, LocalDate inicio, LocalDate fim) {
     return totais(comTimeout(() ->

@@ -465,6 +465,68 @@ class FerramentasDadosProdutorTest {
   }
 
   @Test
+  @DisplayName("#256: nota pelo numero, situacao explicada, sinais vazios (para a #276)")
+  void consultarNota() {
+    when(dados.notasPorNumero(PRODUTOR, 107)).thenReturn(List.of(new DadosProdutorPorta.NotaDetalhe(
+        107, 1, OffsetDateTime.of(2026, 9, 8, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
+        OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.DEVOLVIDA, new BigDecimal("12100.00"),
+        BigDecimal.ZERO, BigDecimal.ZERO, "Corrija a natureza.",
+        List.of(new DadosProdutorPorta.Inconsistencia("C", "campo", "msg", "sug")))));
+
+    RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(107, toolContext);
+
+    assertThat(nota.encontradas()).isEqualTo(1);
+    assertThat(nota.observacao()).isNull();
+    assertThat(nota.notas()).singleElement().satisfies(n -> {
+      assertThat(n.tipo()).isEqualTo("SAIDA");
+      assertThat(n.situacao()).isEqualTo("DEVOLVIDA");
+      assertThat(n.explicacao()).contains("contador").contains("nao e rejeicao");
+      assertThat(n.valorTotal()).isEqualTo("R$ 12.100,00");
+      assertThat(n.motivoDevolucao()).isEqualTo("Corrija a natureza.");
+      assertThat(n.inconsistencias()).singleElement()
+          .satisfies(i -> assertThat(i.sugestao()).isEqualTo("sug"));
+      assertThat(n.sinais()).isEmpty();
+    });
+    assertThat(contexto.fontes()).singleElement()
+        .satisfies(f -> assertThat(f.parametros()).containsEntry("numero", "107"));
+  }
+
+  @Test
+  @DisplayName("#256: numero inexistente ou de outro produtor responde igual, sem revelar nada")
+  void consultarNotaInexistente() {
+    when(dados.notasPorNumero(PRODUTOR, 5)).thenReturn(List.of());
+
+    RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(5, toolContext);
+
+    assertThat(nota.encontradas()).isZero();
+    assertThat(nota.observacao()).isEqualTo("Nao encontrei a nota 5 nas suas notas.");
+  }
+
+  @Test
+  @DisplayName("#256: numero invalido nao consulta")
+  void consultarNotaInvalida() {
+    assertThatThrownBy(() -> ferramentas.consultarNota(0, toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
+    assertThatThrownBy(() -> ferramentas.consultarNota(null, toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
+    verifyNoInteractions(dados);
+  }
+
+  @Test
+  @DisplayName("#254: toda situacao da nota tem explicacao e aparece na descricao de listarNotas")
+  void todaSituacaoExplicada() {
+    for (StatusNotaFiscal status : StatusNotaFiscal.values()) {
+      assertThat(FerramentasDadosProdutor.EXPLICACAO_SITUACAO).as(status.name())
+          .containsKey(status);
+      assertThat(FerramentasDadosProdutor.DESCRICAO_SITUACAO).as(status.name())
+          .containsPattern("\\b" + status.name() + "\\b");
+    }
+    // Devolvida (contador) e rejeitada (SEFAZ) nao se confundem.
+    assertThat(FerramentasDadosProdutor.EXPLICACAO_SITUACAO.get(StatusNotaFiscal.REJEITADA))
+        .contains("SEFAZ");
+  }
+
+  @Test
   @DisplayName("#203: todo texto que as funcoes devolvem pode ir ao usuario como esta")
   void textosDasFuncoesSaoParaOUsuario() throws Exception {
     // O prompt manda repassar a observacao, e o modelo copia: recado ao modelo vira resposta.

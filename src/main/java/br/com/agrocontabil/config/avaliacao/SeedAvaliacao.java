@@ -1,10 +1,13 @@
 package br.com.agrocontabil.config.avaliacao;
 
+import br.com.agrocontabil.model.AcaoRevisao;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.NotaFiscalRevisao;
+import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
@@ -15,6 +18,8 @@ import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
+import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -49,7 +54,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class SeedAvaliacao {
 
   /** Versão do seed: vai no nome do produtor avaliado. */
-  static final String VERSAO = "v3";
+  static final String VERSAO = "v4";
 
   /** CPF fictício (dígitos válidos) do produtor avaliado. */
   static final String CPF_AVALIADO = "111.444.777-35";
@@ -58,6 +63,10 @@ public class SeedAvaliacao {
   static final String CPF_VIZINHO = "529.982.247-25";
 
   static final String NOME_AVALIADO = "Fazenda Avaliacao Ceres (seed " + VERSAO + ")";
+  /** Motivo da devolução da nota 107 (v4). */
+  static final String MOTIVO_DEVOLUCAO =
+      "Natureza da operacao diferente da venda combinada com a cooperativa. Corrija e envie de novo.";
+
   static final String NOME_VIZINHO = "Sitio Vizinho Avaliacao Ceres";
 
   /**
@@ -77,15 +86,20 @@ public class SeedAvaliacao {
   private final ProdutorRepository produtorRepository;
   private final NotaFiscalRepository notaFiscalRepository;
   private final GuiaFiscalRepository guiaFiscalRepository;
+  private final NotaFiscalRevisaoRepository revisaoRepository;
+  private final NotaFiscalValidacaoRepository validacaoRepository;
   private final TransactionTemplate transacao;
 
   /** Seed sobre os repositórios, numa transação só. */
   public SeedAvaliacao(ProdutorRepository produtorRepository,
       NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository,
-      TransactionTemplate transacao) {
+      NotaFiscalRevisaoRepository revisaoRepository,
+      NotaFiscalValidacaoRepository validacaoRepository, TransactionTemplate transacao) {
     this.produtorRepository = produtorRepository;
     this.notaFiscalRepository = notaFiscalRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
+    this.revisaoRepository = revisaoRepository;
+    this.validacaoRepository = validacaoRepository;
     this.transacao = transacao;
   }
 
@@ -161,6 +175,21 @@ public class SeedAvaliacao {
         "Soja em graos", NCM_SOJA_GRAO, "15000", "38250.00");
     saida(p, 106, em(2026, 9, 10), StatusNotaFiscal.RASCUNHO,
         "Soja em graos", NCM_SOJA_GRAO, "5000", "12000.00");
+    // Desde a v4 (#274): nota devolvida pelo contador, com motivo, e nota com inconsistencias,
+    // para as perguntas de nota pelo numero (#256) e de nota devolvida (#254).
+    NotaFiscal devolvida = saida(p, 107, em(2026, 9, 8), StatusNotaFiscal.DEVOLVIDA,
+        "Milho em graos", "10059010", "10000", "12100.00");
+    revisaoRepository.save(NotaFiscalRevisao.builder()
+        .notaFiscalId(devolvida.getId()).acao(AcaoRevisao.DEVOLVIDA)
+        .motivo(MOTIVO_DEVOLUCAO).papel("CONTADOR").ocorridoEm(em(2026, 9, 9)).build());
+    NotaFiscal inconsistente = saida(p, 108, em(2026, 9, 12),
+        StatusNotaFiscal.COM_INCONSISTENCIAS, "Soja em graos", NCM_SOJA_GRAO, "2000", "5100.00");
+    validacaoRepository.save(NotaFiscalValidacao.builder()
+        .notaFiscal(inconsistente).loteValidacao(UUID.randomUUID())
+        .code("DESTINATARIO_IE_OBRIGATORIA").field("destinatarioInscricaoEstadual")
+        .message("Inscricao estadual do destinatario obrigatoria para venda a contribuinte.")
+        .suggestion("Informe a inscricao estadual da cooperativa e gere o XML de novo.")
+        .validadoEm(em(2026, 9, 12)).build());
 
     // Guias, contra o "hoje" padrao da avaliacao (2026-09-15).
     guia(p, TipoGuiaFiscal.FUNRURAL, LocalDate.of(2026, 9, 20), "2268.00",
@@ -206,18 +235,19 @@ public class SeedAvaliacao {
     notaFiscalRepository.save(nota);
   }
 
-  private void saida(Produtor p, long numero, OffsetDateTime emissao, StatusNotaFiscal status,
+  private NotaFiscal saida(Produtor p, long numero, OffsetDateTime emissao, StatusNotaFiscal status,
       String descricao, String ncm, String quantidade, String valor) {
     NotaFiscal nota = base(p, numero, emissao, status, valor);
     nota.setOrigem(OrigemNotaFiscal.PROPRIA);
     nota.setNaturezaOperacao("Venda de producao do estabelecimento");
-    if (status != StatusNotaFiscal.RASCUNHO) {
+    if (status != StatusNotaFiscal.RASCUNHO && status != StatusNotaFiscal.DEVOLVIDA
+        && status != StatusNotaFiscal.COM_INCONSISTENCIAS) {
       nota.setChaveAcesso(chave(p, numero));
       nota.setValorTotalIbs(tributo(valor, ALIQUOTA_IBS_2026));
       nota.setValorTotalCbs(tributo(valor, ALIQUOTA_CBS_2026));
     }
     nota.addItem(item(descricao, ncm, "5101", "KG", quantidade, valor));
-    notaFiscalRepository.save(nota);
+    return notaFiscalRepository.save(nota);
   }
 
   private void guia(Produtor p, TipoGuiaFiscal tipo, LocalDate vencimento, String valor,

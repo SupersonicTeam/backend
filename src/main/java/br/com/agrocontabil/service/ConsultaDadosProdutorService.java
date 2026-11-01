@@ -1,11 +1,17 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.model.AcaoRevisao;
+import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.NotaFiscalRevisao;
+import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CompraInsumoAgregado;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
+import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
@@ -14,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -48,16 +55,70 @@ public class ConsultaDadosProdutorService {
   /** Maior lista que uma consulta devolve (minimização, issue #144). */
   public static final int LIMITE_MAXIMO = 10;
 
+  /** Situações em que a nota ainda pode ser corrigida pelo produtor. */
+  private static final Set<StatusNotaFiscal> CORRIGIVEIS = EnumSet.of(
+      StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA);
+
   private static final Pattern PREFIXO_NCM = Pattern.compile("\\d{2,8}");
+
+  /** Notas com o mesmo número que uma consulta devolve (séries e notas de fornecedor). */
+  public static final int LIMITE_NOTAS_POR_NUMERO = 3;
 
   private final NotaFiscalRepository notaFiscalRepository;
   private final GuiaFiscalRepository guiaFiscalRepository;
+  private final NotaFiscalRevisaoRepository revisaoRepository;
+  private final NotaFiscalValidacaoRepository validacaoRepository;
 
-  /** Constrói o serviço com os repositórios de notas e de guias. */
+  /** Constrói o serviço com os repositórios de notas, guias, revisões e validações. */
   public ConsultaDadosProdutorService(
-      NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository) {
+      NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository,
+      NotaFiscalRevisaoRepository revisaoRepository,
+      NotaFiscalValidacaoRepository validacaoRepository) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
+    this.revisaoRepository = revisaoRepository;
+    this.validacaoRepository = validacaoRepository;
+  }
+
+  /**
+   * Notas do produtor com o número pedido (issue #256), com o motivo da última devolução e as
+   * inconsistências do último lote de validação. Número de nota de outro produtor dá lista vazia,
+   * igual a número inexistente: não revela existência.
+   *
+   * @param produtorId produtor da sessão
+   * @param numero     número da nota
+   * @return no máximo {@link #LIMITE_NOTAS_POR_NUMERO}, da mais recente para a mais antiga
+   */
+  public List<NotaPorNumeroResultado> notasPorNumero(UUID produtorId, long numero) {
+    return notaFiscalRepository.findDoProdutorPorNumero(
+            produtorId, numero, PageRequest.of(0, LIMITE_NOTAS_POR_NUMERO)).stream()
+        .map(this::detalhe)
+        .toList();
+  }
+
+  private NotaPorNumeroResultado detalhe(NotaFiscal n) {
+    boolean compra = n.getOrigem() == OrigemNotaFiscal.IMPORTADA;
+    String motivo = revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(n.getId()).stream()
+        .filter(r -> r.getAcao() == AcaoRevisao.DEVOLVIDA)
+        .map(NotaFiscalRevisao::getMotivo)
+        .findFirst().orElse(null);
+    List<NotaFiscalValidacao> validacoes =
+        validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(n.getId());
+    // So o ultimo lote, e so enquanto a nota ainda pode ser corrigida: numa nota emitida o lote
+    // antigo ja foi resolvido e confundiria a resposta.
+    List<NotaPorNumeroResultado.Inconsistencia> inconsistencias =
+        validacoes.isEmpty() || !CORRIGIVEIS.contains(n.getStatus())
+            ? List.of()
+            : validacoes.stream()
+                .filter(v -> v.getLoteValidacao().equals(validacoes.get(0).getLoteValidacao()))
+                .map(v -> new NotaPorNumeroResultado.Inconsistencia(
+                    v.getCode(), v.getField(), v.getMessage(), v.getSuggestion()))
+                .toList();
+    return new NotaPorNumeroResultado(n.getNumero(), n.getSerie(), n.getDataEmissao(),
+        n.getOrigem(), n.getStatus(), duasCasas(n.getValorTotalNota()),
+        duasCasas(compra ? n.getValorTotalCreditoIbs() : n.getValorTotalIbs()),
+        duasCasas(compra ? n.getValorTotalCreditoCbs() : n.getValorTotalCbs()),
+        motivo, inconsistencias);
   }
 
   /**
