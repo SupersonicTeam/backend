@@ -71,10 +71,17 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
 
 - **IBS/CBS de 2026** são as alíquotas de teste (CBS 0,9%, IBS 0,1%), então os valores são
   pequenos.
-- **Ovos, leite, arroz e tomate saem com IBS/CBS zero**: redução de 100% da tabela oficial (Anexos I
-  e XV da LC 214). É o comportamento esperado, não falta de cálculo.
-- **Soja e milho em grão** ficam com a redução de 60% do art. 137 (in natura), ainda em validação
-  com o contador (#284). Não afirmar na banca que esse enquadramento é definitivo.
+Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-01:
+
+| Redução | Produtos |
+|---|---|
+| **100%** (IBS/CBS zero) | ovos, leite, arroz, tomate e café cru (Anexos I e XV da LC 214) |
+| **60%** | soja, milho, trigo e algodão em grão (in natura, art. 137), touro reprodutor, e os insumos: fertilizantes, defensivos, sementes e ração (Anexo IX) |
+| **0%** (alíquota cheia) | diesel e peças da colhedora |
+
+- O IBS/CBS zero é o comportamento esperado, não falta de cálculo.
+- O 60% da soja e do milho (art. 137) segue em validação com o contador (#284, pergunta 1). Não
+  afirmar na banca que esse enquadramento é definitivo.
 - **ICMS e Funrural** ficam por guia (premissa da #280): as guias mensais são de Funrural (PF) e
   ICMS (PJ).
 - **Regime:** os clientes novos são de regime normal (CRT 3), coerentes com a premissa do regime
