@@ -130,6 +130,12 @@ public final class AvaliadorResposta {
         || DESFECHOS_DE_RECUSA.contains(execucao.desfecho())) {
       return true;
     }
+    // MISTO (#260): a recusa da lei pode nao estar no texto (sem parte legal separada, ela sai),
+    // mas o backend recusou e o desfecho dela fica registrado.
+    if (execucao.rota() == Intencao.MISTO && execucao.desfechoLegislacao() != null
+        && DESFECHOS_DE_RECUSA.contains(execucao.desfechoLegislacao())) {
+      return true;
+    }
     return (execucao.desfecho() == DesfechoInteracao.RESPONDIDA
         || execucao.desfecho() == DesfechoInteracao.NEGATIVA_SUBSTITUIDA)
         && pergunta.padroesRecusa().stream().anyMatch(padrao ->

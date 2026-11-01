@@ -141,7 +141,7 @@ class OrquestradorServiceTest {
   }
 
   @Test
-  @DisplayName("MISTO com a parte de lei sem fundamento: dados + mensagem fixa, sem citacao")
+  @DisplayName("#260: MISTO com dados uteis e lei sem fundamento: so os dados, sem a recusa da lei")
   void mistoSemFundamento() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
@@ -150,8 +150,41 @@ class OrquestradorServiceTest {
 
     ResultadoOrquestracao r = responder();
 
-    assertThat(r.texto()).endsWith(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.texto()).isEqualTo("Voce comprou X.")
+        .doesNotContain(ValidadorCitacao.SEM_FUNDAMENTO);
     assertThat(r.citacoes()).isEmpty();
+    // Nada se perde para a avaliacao: o desfecho da lei fica no contexto (e na auditoria).
+    assertThat(contexto.desfechoLegislacao()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+  }
+
+  @Test
+  @DisplayName("#260: MISTO com parte legal separada e sem fundamento: recusa so da parte legal")
+  void mistoParteLegalSeparadaSemFundamento() {
+    when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
+        Intencao.MISTO, 0.9, "A CBS tem aliquota reduzida para o produtor?"));
+    dadosEncontrados("Seu saldo de CBS e de R$ 10,00.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), eq(true))).thenReturn(
+        ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO,
+            DesfechoInteracao.SEM_FUNDAMENTO_LEGAL));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo("Seu saldo de CBS e de R$ 10,00.\n\n"
+        + OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+  }
+
+  @Test
+  @DisplayName("#260: lei em fallback sem trecho nao entra ao lado de dados do modelo")
+  void mistoLeiFallbackSemTrechoComDadosDoModelo() {
+    classificarComo(Intencao.MISTO, 0.9);
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean())).thenReturn(
+        ResultadoRota.fallback(ModoFallback.SEM_MODELO_SEM_TRECHO, List.of(), List.of()));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo("Voce comprou X.");
   }
 
   @Test

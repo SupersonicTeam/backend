@@ -51,6 +51,13 @@ public class OrquestradorService {
   /** Ligação entre a parte de dados e a regra legal no MISTO (issue #170). */
   public static final String LIGACAO_REGRA = "Sobre a regra legal: ";
 
+  /**
+   * Parte de lei do MISTO sem trecho nenhum quando a pergunta tem uma parte legal (o classificador
+   * a separou, ou os dados vieram em fallback): a recusa fala só dela (#260).
+   */
+  public static final String SEM_FUNDAMENTO_PARTE_LEGAL =
+      "Sobre a parte de legislacao da pergunta, nao encontrei fundamento legal.";
+
   /** Ligação quando a parte de dados não encontrou nada: a regra vale em tese, não "para você". */
   public static final String LIGACAO_SEM_DADOS = "De forma geral, a legislacao preve: ";
 
@@ -207,8 +214,13 @@ public class OrquestradorService {
    *   <li>parte de dados aceita mas sem nada encontrado nas consultas (ou sem consulta nenhuma)
    *       vira {@link #fraseSemDados frase fixa do backend}, e a lei entra como "de forma geral" —
    *       nunca "não tenho a informação" seguido de "sim, as suas compras têm direito";</li>
-   *   <li>parte descartada não entra com texto do modelo: no lugar vai a mensagem fixa da rota;</li>
-   *   <li>parte em fallback entra com o texto dela (trechos verbatim ou atalhos);</li>
+   *   <li>parte descartada não entra com texto do modelo: a de dados entra com a mensagem fixa
+   *       da rota; a de lei com os trechos citados, se houver (#258), ou com
+   *       {@link #SEM_FUNDAMENTO_PARTE_LEGAL} quando a pergunta tem uma parte legal separada (ou os
+   *       dados vieram em fallback); sem parte legal separada e sem trecho, a lei não entra
+   *       (#260);</li>
+   *   <li>parte em fallback entra com o texto dela (trechos verbatim ou atalhos); fallback de lei
+   *       sem trecho segue a regra da lei descartada;</li>
    *   <li>lei que falou dos dados entra só como "veja os trechos citados".</li>
    * </ul>
    * Desfecho: {@code MODO_FALLBACK} se alguma parte veio sem modelo; {@code AFIRMACAO_SOBRE_DADOS}
@@ -224,19 +236,25 @@ public class OrquestradorService {
     // marca inventada ao lado de marcas certas, #258): entra o SO_TRECHOS com as citacoes, nunca
     // "nao encontrei fundamento legal" ao lado dos artigos.
     boolean leiSoTrechos = lei.soTrechos();
-    String parteLei;
+    String parteLei = null;
     if (lei.aceita()) {
       parteLei = (semDados ? LIGACAO_SEM_DADOS : LIGACAO_REGRA) + lei.texto();
-    } else if (lei.emFallback() || leiSoTrechos) {
+    } else if (leiSoTrechos || (lei.emFallback()
+        && (!lei.citacoes().isEmpty() || dados.emFallback()))) {
+      // Fallback de lei sem trecho so entra com os dados tambem em fallback: ao lado de uma
+      // resposta de dados do modelo, "estou sem o modelo" contradiria o texto.
       parteLei = lei.texto();
-    } else {
-      parteLei = ValidadorCitacao.SEM_FUNDAMENTO;
+    } else if (Boolean.TRUE.equals(contexto.perguntaLeiReescrita()) || dados.emFallback()) {
+      // Lei sem trecho nenhum (#260), mas com uma parte legal de verdade: o classificador separou
+      // a pergunta de lei, ou os dados vieram em fallback (o texto das telas nao responde a lei).
+      // A recusa fala so da parte legal, para nao soar como "isso nao tem base legal".
+      parteLei = SEM_FUNDAMENTO_PARTE_LEGAL;
     }
-    boolean dadosUtil = dados.aceita() || dados.emFallback();
-    boolean leiUtil = lei.aceita() || lei.emFallback() || leiSoTrechos;
-    String texto = dadosUtil || leiUtil
-        ? parteDados + "\n\n" + parteLei
-        : parteDados;
+    // Sem parte legal separada e sem trecho (#260): nada da lei entra. Colada na resposta de
+    // dados, "nao encontrei fundamento legal" soava como "o que voce perguntou nao tem base
+    // legal", sobre o que muitas vezes nem era pergunta de lei (a classificacao e da #265). O
+    // desfecho de cada parte segue no contexto e na auditoria.
+    String texto = parteLei == null ? parteDados : parteDados + "\n\n" + parteLei;
     boolean emFallback = dados.emFallback() || lei.emFallback();
     DesfechoInteracao desfecho;
     if (emFallback) {
