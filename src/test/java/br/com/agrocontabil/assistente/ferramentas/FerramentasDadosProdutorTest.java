@@ -580,6 +580,33 @@ class FerramentasDadosProdutorTest {
   }
 
   @Test
+  @DisplayName("#248: 'graos' com acento sem venda tenta sem acento antes de dizer que nao vendeu")
+  void vendasSemAcento() {
+    LocalDate inicio = LocalDate.of(2026, 1, 1);
+    when(dados.vendasDeProduto(PRODUTOR, "soja em grãos", false, inicio, HOJE))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(BigDecimal.ZERO, 0, List.of()));
+    when(dados.vendasDeProduto(PRODUTOR, "soja em graos", false, inicio, HOJE))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(new BigDecimal("100.00"), 1, List.of()));
+
+    RespostasFerramentas.VendasProduto vendas =
+        ferramentas.totalVendasPorProduto("soja em grãos", null, null, toolContext);
+
+    assertThat(vendas.valorTotal()).isEqualTo("R$ 100,00");
+    assertThat(vendas.produto()).isEqualTo("soja em graos");
+  }
+
+  @Test
+  @DisplayName("#248: so dataFim: o periodo comeca no 1o de janeiro do ano de dataFim")
+  void vendasSoComDataFim() {
+    when(dados.vendasDeProduto(PRODUTOR, "milho", false, LocalDate.of(2025, 1, 1),
+        LocalDate.of(2025, 3, 31)))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(BigDecimal.ZERO, 0, List.of()));
+
+    assertThat(ferramentas.totalVendasPorProduto("milho", null, "2025-03-31", toolContext)
+        .dataInicio()).isEqualTo("01/01/2025");
+  }
+
+  @Test
   @DisplayName("#248: termo curto ou periodo invertido nao consulta")
   void vendasInvalidas() {
     assertThatThrownBy(() -> ferramentas.totalVendasPorProduto("so", null, null, toolContext))
@@ -627,5 +654,7 @@ class FerramentasDadosProdutorTest {
         .startsWith("Nao encontrei compras").contains("codigo NCM").doesNotContainPattern("\\d");
     assertThat(FerramentasDadosProdutor.NADA_POR_NCM)
         .startsWith("Nao encontrei compras").doesNotContainPattern("\\d");
+    assertThat(FerramentasDadosProdutor.NADA_VENDIDO)
+        .startsWith("Nao encontrei vendas").doesNotContainPattern("\\d");
   }
 }

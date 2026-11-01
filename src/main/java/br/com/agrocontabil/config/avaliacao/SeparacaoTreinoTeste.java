@@ -1,6 +1,9 @@
 package br.com.agrocontabil.config.avaliacao;
 
 import br.com.agrocontabil.assistente.PromptsCeres;
+import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -13,6 +16,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 
 /**
  * O gabarito é <strong>teste</strong>, nunca treino (issue #264, da #201): nenhuma pergunta do
@@ -24,8 +29,9 @@ import java.util.stream.Stream;
  * mesma pergunta; escapes {@code \\u00e9} de JSON são lidos antes. Paráfrase não é detectável
  * por texto: a regra do README proíbe também a paráfrase, e a revisão do PR é quem a pega.
  *
- * <p>Além do diretório, os exemplos que o classificador vê de verdade ficam no prompt
- * ({@link PromptsCeres#CLASSIFICACAO}) e passam pela mesma conferência.
+ * <p>Além do diretório, os exemplos que o modelo vê de verdade ficam no prompt do classificador
+ * ({@link PromptsCeres#CLASSIFICACAO}) e nas descrições {@code @Tool} das funções de dados, e passam
+ * pela mesma conferência.
  */
 public final class SeparacaoTreinoTeste {
 
@@ -75,13 +81,28 @@ public final class SeparacaoTreinoTeste {
   }
 
   /**
-   * Perguntas do gabarito copiadas nos exemplos do prompt do classificador.
+   * Perguntas do gabarito copiadas nos exemplos do prompt do classificador ou das descrições das
+   * funções de dados (que também são prompt).
    *
    * @param gabarito gabarito
    * @return ids das perguntas encontradas no prompt
    */
   public static List<String> noPromptDoClassificador(Gabarito gabarito) {
-    String prompt = " " + normalizar(PromptsCeres.CLASSIFICACAO) + " ";
+    StringBuilder textos = new StringBuilder(PromptsCeres.CLASSIFICACAO);
+    // As descricoes das funcoes tambem vao ao modelo como prompt, com exemplos de pergunta.
+    for (Method metodo : FerramentasDadosProdutor.class.getDeclaredMethods()) {
+      Tool funcao = metodo.getAnnotation(Tool.class);
+      if (funcao != null) {
+        textos.append(' ').append(funcao.description());
+        for (Parameter parametro : metodo.getParameters()) {
+          ToolParam descricao = parametro.getAnnotation(ToolParam.class);
+          if (descricao != null) {
+            textos.append(' ').append(descricao.description());
+          }
+        }
+      }
+    }
+    String prompt = " " + normalizar(textos.toString()) + " ";
     return gabarito.perguntas().stream()
         .filter(p -> prompt.contains(" " + normalizar(p.pergunta()) + " "))
         .map(PerguntaGabarito::id)

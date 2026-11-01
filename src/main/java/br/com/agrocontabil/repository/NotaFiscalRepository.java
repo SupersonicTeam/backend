@@ -528,8 +528,9 @@ public interface NotaFiscalRepository
 
   /**
    * Vendas de um produto por NCM (issue #248): itens de notas de <strong>saída</strong> próprias
-   * ({@code PROPRIA}) autorizadas no período, agregados por unidade. Espelho de
-   * {@link #somarComprasPorNcm}, só com a outra origem.
+   * ({@code PROPRIA}) autorizadas no período, agregados por unidade. Só o grupo de vendas do CFOP
+   * ({@code x1xx}: 5101, 6102...): remessa para armazém, industrialização ou "outra saída"
+   * ({@code x9xx}) não é venda e contaria a mesma soja duas vezes.
    */
   @Query("""
       SELECT new br.com.agrocontabil.repository.CompraInsumoAgregado(
@@ -540,6 +541,7 @@ public interface NotaFiscalRepository
         AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
         AND n.dataEmissao >= :inicio
         AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
         AND i.ncm LIKE :prefixoNcm
       GROUP BY i.unidade
       ORDER BY SUM(i.valorTotal) DESC
@@ -560,6 +562,7 @@ public interface NotaFiscalRepository
         AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
         AND n.dataEmissao >= :inicio
         AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
         AND i.ncm LIKE :prefixoNcm
       """)
   CompraInsumoTotal totalizarVendasPorNcm(
@@ -578,6 +581,7 @@ public interface NotaFiscalRepository
         AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
         AND n.dataEmissao >= :inicio
         AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
         AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
       GROUP BY i.unidade
       ORDER BY SUM(i.valorTotal) DESC
@@ -598,6 +602,7 @@ public interface NotaFiscalRepository
         AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
         AND n.dataEmissao >= :inicio
         AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
         AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
       """)
   CompraInsumoTotal totalizarVendasPorDescricao(

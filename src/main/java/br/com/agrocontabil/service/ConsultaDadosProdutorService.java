@@ -171,8 +171,9 @@ public class ConsultaDadosProdutorService {
   }
 
   /**
-   * Vendas de um produto (issue #248): saídas próprias autorizadas no período, por NCM (2 a 8
-   * dígitos) ou pela descrição do item, com a mesma competência das compras. Mesmo resultado das
+   * Vendas de um produto (issue #248): saídas próprias autorizadas no período, só os itens com CFOP
+   * de venda ({@code x1xx}), por NCM (2 a 8 dígitos) ou pela descrição do item, com a mesma
+   * competência das compras. Mesmo resultado das
    * compras (total, notas e quebra por unidade).
    *
    * @param produtorId produtor da sessão
@@ -181,11 +182,15 @@ public class ConsultaDadosProdutorService {
    * @param inicio     primeiro dia (inclusivo)
    * @param fim        último dia (inclusivo)
    * @return total, notas e quebra por unidade
-   * @throws IllegalArgumentException se {@code porNcm} e o termo não tiver só 2 a 8 dígitos
+   * @throws IllegalArgumentException sem termo, ou se {@code porNcm} e o termo não tiver só 2 a 8
+   *                                  dígitos
    */
   public ComprasInsumoResultado vendasDeProduto(
       UUID produtorId, String termo, boolean porNcm, LocalDate inicio, LocalDate fim) {
-    if (porNcm && (termo == null || !PREFIXO_NCM.matcher(termo).matches())) {
+    if (termo == null || termo.isBlank()) {
+      throw new IllegalArgumentException("Informe o produto ou o NCM.");
+    }
+    if (porNcm && !PREFIXO_NCM.matcher(termo).matches()) {
       throw new IllegalArgumentException("Prefixo de NCM deve ter de 2 a 8 digitos.");
     }
     OffsetDateTime de = inicioDoDia(inicio);

@@ -69,7 +69,9 @@ O gabarito é **teste**, nunca treino, nem por paráfrase. Exemplos de classific
 prompt ou de template vão para [`treino/`](treino/README.md), e nenhuma pergunta do gabarito pode
 estar lá: o `SeparacaoTreinoTesteTest` quebra o build com uma cópia literal (sem acento, caixa ou
 pontuação), e o comando de avaliação se recusa a medir. A mesma conferência vale para os exemplos
-que o classificador vê de verdade, no prompt (`PromptsCeres.CLASSIFICACAO`).
+que o modelo vê de verdade: o prompt do classificador (`PromptsCeres.CLASSIFICACAO`) e, desde a
+`2026-11-01.3`, as descrições `@Tool` das funções de dados. Essa extensão pegou T01, T02, T07,
+T11 e X18 copiadas como exemplo nas descrições, que foram reescritas.
 
 ### Nota humana de clareza: o CSV é cego, a chave não
 
