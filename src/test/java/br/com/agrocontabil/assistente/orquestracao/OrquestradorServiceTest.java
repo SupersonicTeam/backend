@@ -158,6 +158,36 @@ class OrquestradorServiceTest {
   }
 
   @Test
+  @DisplayName("#260: MISTO com parte legal separada e sem fundamento: recusa so da parte legal")
+  void mistoParteLegalSeparadaSemFundamento() {
+    when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
+        Intencao.MISTO, 0.9, "A CBS tem aliquota reduzida para o produtor?"));
+    dadosEncontrados("Seu saldo de CBS e de R$ 10,00.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), eq(true))).thenReturn(
+        ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO,
+            DesfechoInteracao.SEM_FUNDAMENTO_LEGAL));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo("Seu saldo de CBS e de R$ 10,00.\n\n"
+        + OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+  }
+
+  @Test
+  @DisplayName("#260: lei em fallback sem trecho nao entra ao lado de dados do modelo")
+  void mistoLeiFallbackSemTrechoComDadosDoModelo() {
+    classificarComo(Intencao.MISTO, 0.9);
+    dadosEncontrados("Voce comprou X.");
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean())).thenReturn(
+        ResultadoRota.fallback(ModoFallback.SEM_MODELO_SEM_TRECHO, List.of(), List.of()));
+
+    ResultadoOrquestracao r = responder();
+
+    assertThat(r.texto()).isEqualTo("Voce comprou X.");
+  }
+
+  @Test
   @DisplayName("#258: MISTO com a lei descartada por numero sem fonte: trechos, nunca 'nao encontrei'")
   void mistoLeiComNumeroSemFonteViraTrechos() {
     classificarComo(Intencao.MISTO, 0.9);
