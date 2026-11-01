@@ -71,7 +71,8 @@ public class ModoFallback {
       TelaAtalho.CREDITOS, Pattern.compile("\\bcreditos?\\b"),
       TelaAtalho.CALENDARIO, Pattern.compile(
           "\\b(guia|guias|vencimento|vencimentos|vence|vencem|vencer|venceu|vencida|vencidas|"
-              + "prazo|prazos|calendario|pagar)\\b"));
+              + "prazo|prazos|calendario|pagar|atraso|atrasada|atrasadas|atrasado|devendo|"
+              + "debito|debitos)\\b"));
 
   private static final Pattern DIACRITICOS = Pattern.compile("\\p{M}+");
 

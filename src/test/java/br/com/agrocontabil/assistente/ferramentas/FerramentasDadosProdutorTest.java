@@ -17,6 +17,7 @@ import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Apuracao;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Guia;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
@@ -360,6 +361,106 @@ class FerramentasDadosProdutorTest {
   void retencoesPeriodoInvalido() {
     assertThatThrownBy(() -> ferramentas.consultarRetencoes("2026-09-01", "2026-08-01",
         toolContext)).isInstanceOf(ParametroFerramentaInvalidoException.class);
+    verifyNoInteractions(dados);
+  }
+
+  private void guias(LocalDate de, LocalDate ate, String total, long quantidade,
+      DadosProdutorPorta.Vencimento... itens) {
+    when(dados.vencimentosNaoPagos(PRODUTOR, de, ate, DadosProdutorPorta.LIMITE_MAXIMO))
+        .thenReturn(new Pagina<>(List.of(itens), quantidade));
+    when(dados.totalVencimentosNaoPagos(PRODUTOR, de, ate))
+        .thenReturn(new DadosProdutorPorta.Totais(quantidade, new BigDecimal(total)));
+  }
+
+  private static DadosProdutorPorta.Vencimento guia(TipoGuiaFiscal tipo, LocalDate data,
+      String valor, StatusGuiaFiscal status) {
+    return new DadosProdutorPorta.Vencimento(tipo, data, new BigDecimal(valor), status);
+  }
+
+  @Test
+  @DisplayName("#259: debito pendente = nao pagas vencidas antes de hoje, sem limite para tras")
+  void guiasEmAtraso() {
+    guias(FerramentasDadosProdutor.SEM_LIMITE_PASSADO, HOJE.minusDays(1), "1680.00", 2,
+        guia(TipoGuiaFiscal.DARF, LocalDate.of(2026, 7, 15), "430.00", StatusGuiaFiscal.VENCIDA),
+        guia(TipoGuiaFiscal.ICMS, LocalDate.of(2026, 9, 5), "1250.00",
+            StatusGuiaFiscal.PENDENTE));
+
+    RespostasFerramentas.GuiasEmAtraso atraso = ferramentas.guiasEmAtraso(toolContext);
+
+    assertThat(atraso.emAtraso().valorTotal()).isEqualTo("R$ 1.680,00");
+    assertThat(atraso.emAtraso().quantidade()).isEqualTo(2);
+    assertThat(atraso.emAtraso().ate()).isEqualTo("28/09/2026");
+    // Pela data: a PENDENTE vencida sai como VENCIDA (o job das 1h ainda nao a marcou).
+    assertThat(atraso.emAtraso().guias()).extracting(Guia::situacao)
+        .containsExactly("VENCIDA", "VENCIDA");
+    assertThat(atraso.proximaGuia()).isNull();
+    assertThat(atraso.observacao()).isNull();
+    assertThat(contexto.fontes()).singleElement()
+        .satisfies(f -> assertThat(f.funcao()).isEqualTo("guiasEmAtraso"));
+  }
+
+  @Test
+  @DisplayName("#259: sem atraso, a frase traz o recorte e a proxima guia vem junto")
+  void guiasEmAtrasoVazio() {
+    guias(FerramentasDadosProdutor.SEM_LIMITE_PASSADO, HOJE.minusDays(1), "0.00", 0);
+    when(dados.vencimentosNaoPagos(PRODUTOR, HOJE, HOJE.plusYears(1), 1))
+        .thenReturn(new Pagina<>(List.of(guia(TipoGuiaFiscal.GPS, HOJE, "310.00",
+            StatusGuiaFiscal.PENDENTE)), 4));
+
+    RespostasFerramentas.GuiasEmAtraso atraso = ferramentas.guiasEmAtraso(toolContext);
+
+    assertThat(atraso.emAtraso().valorTotal()).isEqualTo("R$ 0,00");
+    assertThat(atraso.observacao()).isEqualTo(
+        "Nao encontrei guias em atraso (nao pagas com vencimento ate 28/09/2026).");
+    // Vence hoje: e a proxima, nao atraso.
+    assertThat(atraso.proximaGuia().vencimento()).isEqualTo("29/09/2026");
+  }
+
+  @Test
+  @DisplayName("#257: este mes = atraso de qualquer mes + nao pagas de hoje ao fim do mes")
+  void vencimentosDoMesCorrente() {
+    guias(FerramentasDadosProdutor.SEM_LIMITE_PASSADO, HOJE.minusDays(1), "1680.00", 2);
+    guias(HOJE, LocalDate.of(2026, 9, 30), "4108.00", 3);
+
+    RespostasFerramentas.VencimentosDoMes mes = ferramentas.vencimentosDoMes(null, toolContext);
+
+    assertThat(mes.mes()).isEqualTo("2026-09");
+    assertThat(mes.emAtraso().valorTotal()).isEqualTo("R$ 1.680,00");
+    assertThat(mes.aVencer().valorTotal()).isEqualTo("R$ 4.108,00");
+    assertThat(mes.aVencer().de()).isEqualTo("29/09/2026");
+    assertThat(mes.valorTotal()).isEqualTo("R$ 5.788,00");
+    assertThat(mes.quantidade()).isEqualTo(5);
+    assertThat(contexto.fontes()).singleElement()
+        .satisfies(f -> assertThat(f.parametros()).containsEntry("mes", "2026-09"));
+  }
+
+  @Test
+  @DisplayName("#257: mes futuro so tem as do mes; passado so as que ficaram sem pagar")
+  void vencimentosDeOutroMes() {
+    guias(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), "640.00", 1);
+    guias(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), "0.00", 0);
+
+    RespostasFerramentas.VencimentosDoMes novembro =
+        ferramentas.vencimentosDoMes("2026-11", toolContext);
+    RespostasFerramentas.VencimentosDoMes julho =
+        ferramentas.vencimentosDoMes(" 2026-07 ", toolContext);
+
+    assertThat(novembro.emAtraso()).isNull();
+    assertThat(novembro.valorTotal()).isEqualTo("R$ 640,00");
+    assertThat(julho.aVencer()).isNull();
+    assertThat(julho.valorTotal()).isEqualTo("R$ 0,00");
+    assertThat(julho.observacao())
+        .isEqualTo("Nao encontrei guias para pagar (sem guias nao pagas de 01/07/2026 a "
+            + "31/07/2026).");
+  }
+
+  @Test
+  @DisplayName("#257: mes invalido ou longe demais nao consulta nada")
+  void vencimentosDoMesInvalido() {
+    assertThatThrownBy(() -> ferramentas.vencimentosDoMes("2026-13", toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
+    assertThatThrownBy(() -> ferramentas.vencimentosDoMes("2028-01", toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
     verifyNoInteractions(dados);
   }
 

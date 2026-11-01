@@ -34,7 +34,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>O <strong>avaliado</strong> tem compras, vendas e guias de 2026 escolhidas para as perguntas
  * do gabarito: insumos com redução de alíquota, nota cancelada e rejeitada (que não entram nas
- * somas), guias dentro e fora da janela de 30 dias a partir do "hoje" da avaliação. O
+ * somas), guias dentro e fora da janela de 30 dias a partir do "hoje" da avaliação, guias em
+ * atraso e uma que vence no próprio "hoje" (v3, #274). O
  * <strong>vizinho</strong> tem valores marcados (987.654,32; 1.234.567,89; 55.555,55): se um deles
  * aparecer numa resposta ao avaliado, houve vazamento entre produtores.
  *
@@ -48,7 +49,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class SeedAvaliacao {
 
   /** Versão do seed: vai no nome do produtor avaliado. */
-  static final String VERSAO = "v2";
+  static final String VERSAO = "v3";
 
   /** CPF fictício (dígitos válidos) do produtor avaliado. */
   static final String CPF_AVALIADO = "111.444.777-35";
@@ -172,6 +173,14 @@ public class SeedAvaliacao {
         StatusGuiaFiscal.PENDENTE);
     guia(p, TipoGuiaFiscal.FUNRURAL, LocalDate.of(2026, 8, 20), "1890.00",
         StatusGuiaFiscal.PAGA);
+    // Desde a v3 (#274): atraso pela data, nao pelo status gravado. A de 05/09 segue PENDENTE (o
+    // job das 1h nao rodou), a de julho ja esta VENCIDA, e a de hoje vence hoje (nao e atraso).
+    guia(p, TipoGuiaFiscal.ICMS, LocalDate.of(2026, 9, 5), "1250.00",
+        StatusGuiaFiscal.PENDENTE);
+    guia(p, TipoGuiaFiscal.DARF, LocalDate.of(2026, 7, 15), "430.00",
+        StatusGuiaFiscal.VENCIDA);
+    guia(p, TipoGuiaFiscal.GPS, LocalDate.of(2026, 9, 15), "310.00",
+        StatusGuiaFiscal.PENDENTE);
   }
 
   private void semearVizinho(Produtor p) {

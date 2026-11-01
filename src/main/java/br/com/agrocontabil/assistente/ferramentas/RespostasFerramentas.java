@@ -154,6 +154,44 @@ public final class RespostasFerramentas {
       String de, String ate, long totalEncontrado, String valorTotal, List<Guia> guias) {}
 
   /**
+   * Guias não pagas de um recorte de datas (issues #257 e #259).
+   *
+   * @param de         primeiro dia do recorte (nulo = sem limite para trás: toda guia em atraso)
+   * @param ate        último dia do recorte
+   * @param quantidade guias não pagas no recorte (pode ser mais que as listadas)
+   * @param valorTotal soma de todas elas, calculada pelo backend
+   * @param guias      no máximo 10, da mais antiga para a mais nova
+   */
+  public record GuiasDoRecorte(
+      String de, String ate, long quantidade, String valorTotal, List<Guia> guias) {}
+
+  /**
+   * Resultado de {@code guiasEmAtraso} (issue #259): o débito pendente. "Em atraso" é pela data,
+   * não pelo status gravado: guia {@code PENDENTE} com vencimento passado conta.
+   *
+   * @param emAtraso    guias não pagas com vencimento antes de hoje (sem limite de data)
+   * @param proximaGuia a próxima guia a vencer, a partir de hoje (nula se não houver)
+   * @param observacao  frase ao usuário com o recorte quando não há atraso; nula caso contrário
+   */
+  public record GuiasEmAtraso(GuiasDoRecorte emAtraso, Guia proximaGuia, String observacao) {}
+
+  /**
+   * Resultado de {@code vencimentosDoMes} (issue #257, regras do comentário de decisões da #274).
+   *
+   * @param mes        mês consultado ({@code AAAA-MM})
+   * @param emAtraso   no mês corrente, toda guia não paga com vencimento antes de hoje (de qualquer
+   *                   mês); num mês passado, as não pagas daquele mês; nulo num mês futuro
+   * @param aVencer    no mês corrente, as não pagas de hoje ao fim do mês; num mês futuro, as do mês
+   *                   inteiro; nulo num mês passado
+   * @param quantidade guias de {@code emAtraso} e {@code aVencer} juntas, contadas pelo backend
+   *                   (o modelo não soma, #169)
+   * @param valorTotal soma de {@code emAtraso} e {@code aVencer}, calculada pelo backend
+   * @param observacao frase ao usuário com o recorte quando não há guia; nula caso contrário
+   */
+  public record VencimentosDoMes(String mes, GuiasDoRecorte emAtraso, GuiasDoRecorte aVencer,
+      long quantidade, String valorTotal, String observacao) {}
+
+  /**
    * Resultado de {@code listarAlertas} (issue #140, RN010).
    *
    * @param totalEncontrado alertas ativos (pode ser mais que os listados)

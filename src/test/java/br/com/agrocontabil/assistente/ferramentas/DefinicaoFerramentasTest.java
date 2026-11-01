@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.support.ToolCallbacks;
@@ -31,11 +32,12 @@ class DefinicaoFerramentasTest {
       .toList();
 
   @Test
-  @DisplayName("As cinco funcoes da issue #142, a de alertas (#140) e a de retencoes (#145)")
+  @DisplayName("As cinco da #142, alertas (#140), retencoes (#145) e as guias da #274")
   void cincoFuncoes() {
     assertThat(definicoes).extracting(ToolDefinition::name).containsExactlyInAnyOrder(
         "totalComprasPorInsumo", "consultarApuracao", "consultarCreditos", "listarNotas",
-        "proximosVencimentos", "listarAlertas", "consultarRetencoes");
+        "proximosVencimentos", "listarAlertas", "consultarRetencoes", "guiasEmAtraso",
+        "vencimentosDoMes");
   }
 
   @Test
@@ -46,8 +48,9 @@ class DefinicaoFerramentasTest {
       List<String> nomes = new ArrayList<>();
       propriedades.fieldNames().forEachRemaining(nome -> nomes.add(nome.toLowerCase(Locale.ROOT)));
 
-      // listarAlertas nao tem parametro nenhum (#140): o schema existe, so nao ha propriedades.
-      if (!definicao.name().equals("listarAlertas")) {
+      // listarAlertas (#140) e guiasEmAtraso (#274) nao tem parametro: o schema existe, so nao ha
+      // propriedades.
+      if (!Set.of("listarAlertas", "guiasEmAtraso").contains(definicao.name())) {
         assertThat(nomes).as("parametros de %s", definicao.name()).isNotEmpty();
       }
       assertThat(nomes).as("parametros de %s", definicao.name())
@@ -65,7 +68,7 @@ class DefinicaoFerramentasTest {
         .filter(m -> m.isAnnotationPresent(Tool.class))
         .toList();
 
-    assertThat(funcoes).hasSize(7).allSatisfy(m ->
+    assertThat(funcoes).hasSize(9).allSatisfy(m ->
         assertThat(m.getAnnotation(Tool.class).resultConverter())
             .as("resultConverter de %s", m.getName())
             .isEqualTo(ResultadoSanitizadoConverter.class));

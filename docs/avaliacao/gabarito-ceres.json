@@ -1,5 +1,5 @@
 {
-  "versao": "2026-10-31.1",
+  "versao": "2026-10-31.2",
   "perguntas": [
     {
       "id": "D01", "categoria": "DADOS",
@@ -392,14 +392,14 @@
         "nenhum (artigo|dispositivo|trecho)"
       ]
     },
-    {"id": "T01", "categoria": "DADOS", "pergunta": "Quanto eu tenho que pagar este mes?", "rotaEsperada": "DADOS", "pendente": "#257 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
+    {"id": "T01", "categoria": "DADOS", "pergunta": "Quanto eu tenho que pagar este mes?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["vencimentosDoMes"], "camposValor": ["emAtraso.valorTotal", "aVencer.valorTotal", "valorTotal"]},
     {"id": "T02", "categoria": "DADOS", "pergunta": "Quando vence a minha proxima guia?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["proximosVencimentos"]},
     {"id": "T03", "categoria": "LEGISLACAO", "pergunta": "O que muda para mim com o IBS e o CBS?", "rotaEsperada": "LEGISLACAO", "adversario": true, "dispositivosEsperados": ["EC 132/2023, art. 1º (redação do art. 156-A", "EC 132/2023, art. 1º (redação do art. 195", "LC 214/2025, art. 1", "LC 214/2025, art. 164", "LC 214/2025, art. 165", "LC 214/2025, art. 346"]},
     {"id": "T04", "categoria": "DADOS", "pergunta": "Por que a nota 107 esta devolvida?", "rotaEsperada": "DADOS", "pendente": "#256 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274; o seed passa a ter a nota 107 DEVOLVIDA com motivo"},
     {"id": "T05", "categoria": "DADOS", "pergunta": "O que eu preciso corrigir na nota 108 para emitir?", "rotaEsperada": "DADOS", "pendente": "#256 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274; o seed passa a ter a nota 108 COM_INCONSISTENCIAS"},
     {"id": "T06", "categoria": "DADOS", "pergunta": "Quanto de IBS e CBS a nota 103 gera?", "rotaEsperada": "DADOS", "pendente": "#256 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
-    {"id": "T07", "categoria": "DADOS", "pergunta": "Tenho algum debito pendente?", "rotaEsperada": "DADOS", "pendente": "#259 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
-    {"id": "T08", "categoria": "DADOS", "pergunta": "Quais impostos vencem em novembro de 2026?", "rotaEsperada": "DADOS", "pendente": "#257 (janela por mes do calendario) #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
+    {"id": "T07", "categoria": "DADOS", "pergunta": "Tenho algum debito pendente?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["guiasEmAtraso"], "camposValor": ["emAtraso.valorTotal"]},
+    {"id": "T08", "categoria": "DADOS", "pergunta": "Quais impostos vencem em novembro de 2026?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["vencimentosDoMes"], "parametrosEsperados": {"mes": ["2026-11"]}, "camposValor": ["valorTotal"]},
     {"id": "T09", "categoria": "LEGISLACAO", "pergunta": "Me explique brevemente sobre split payment", "rotaEsperada": "LEGISLACAO", "dispositivosEsperados": ["LC 214/2025, art. 31", "LC 214/2025, art. 32", "LC 214/2025, art. 33"]},
     {"id": "T10", "categoria": "DADOS", "pergunta": "Tenho alguma nota devolvida?", "rotaEsperada": "DADOS", "pendente": "#254 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274; o seed passa a ter a nota 107 DEVOLVIDA"},
     {"id": "T11", "categoria": "DADOS", "pergunta": "Quanto vendi de soja?", "rotaEsperada": "DADOS", "pendente": "#248 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
@@ -421,8 +421,8 @@
     {"id": "X14", "categoria": "DADOS", "pergunta": "No split payment, quanto ficou retido de IBS e CBS das minhas vendas de agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["consultarRetencoes"], "parametrosEsperados": {"dataInicio": ["2026-08-01"], "dataFim": ["2026-08-31"]}, "camposValor": ["splitPaymentIbs", "splitPaymentCbs"]},
     {"id": "X15", "categoria": "DADOS", "pergunta": "Qual o saldo do IBS da LC 214 na minha apuracao de agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["consultarApuracao"], "parametrosEsperados": {"mes": ["2026-08"]}, "camposValor": ["saldoIbs"]},
     {"id": "X16", "categoria": "DADOS", "pergunta": "Pela Lei 8.212, quanto os compradores descontaram de Funrural das minhas vendas de janeiro a agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["consultarRetencoes"], "parametrosEsperados": {"dataInicio": ["2026-01-01"], "dataFim": ["2026-08-31"]}, "camposValor": ["funruralRetidoPeloComprador.total"]},
-    {"id": "X17", "categoria": "DADOS", "pergunta": "Tenho alguma guia atrasada?", "rotaEsperada": "DADOS", "adversario": true, "pendente": "#259 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
-    {"id": "X18", "categoria": "DADOS", "pergunta": "O que vence este mes?", "rotaEsperada": "DADOS", "adversario": true, "pendente": "#257 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
+    {"id": "X17", "categoria": "DADOS", "pergunta": "Tenho alguma guia atrasada?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["guiasEmAtraso"], "camposValor": ["emAtraso.valorTotal"]},
+    {"id": "X18", "categoria": "DADOS", "pergunta": "O que vence este mes?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["vencimentosDoMes"], "camposValor": ["valorTotal"]},
     {"id": "X19", "categoria": "DADOS", "pergunta": "Segundo o meu cadastro de notas, quantas compras autorizadas eu tive de janeiro a agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["listarNotas"], "parametrosEsperados": {"tipo": ["ENTRADA"], "dataInicio": ["2026-01-01"], "dataFim": ["2026-08-31"]}, "camposValor": ["quantidadeNoTotal"]}
   ]
 }

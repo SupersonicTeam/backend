@@ -292,6 +292,8 @@ envelope.
    | `consultarCreditos` | Créditos de IBS/CBS | `dataInicio`, `dataFim` |
    | `listarNotas` | Notas fiscais | `tipo`, `situacao`, `dataInicio`, `dataFim`, `limite` |
    | `proximosVencimentos` | Guias a vencer | `dias` |
+   | `guiasEmAtraso` | Guias em atraso | nenhum |
+   | `vencimentosDoMes` | Guias para pagar no mês | `mes` (AAAA-MM) |
 
    Os valores de `parametros` já vêm mascarados (CPF, CNPJ etc. viram `[CPF]`...). Podem ser
    exibidos como estão.

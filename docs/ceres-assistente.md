@@ -76,7 +76,9 @@ do Ollama nem de chave de API.
 | `consultarApuracao(mes)` | "quanto de IBS eu devo em julho?" | `ApuracaoService` |
 | `consultarCreditos(dataInicio, dataFim)` | "quanto tenho de crédito?" | `CreditoService` |
 | `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10), "quanto somam?" | consulta fixa top-N + `valorTotal` do filtro inteiro (sem `situacao`, só as autorizadas — #169) |
-| `proximosVencimentos(dias)` | "o que vence este mês?", "quanto somam?" (máx. 90 dias) | guias não pagas + `valorTotal` da janela inteira (#169) |
+| `proximosVencimentos(dias)` | "o que vence nos próximos 30 dias?", "quando vence a próxima guia?" (máx. 90 dias) | guias não pagas **a partir de hoje** + `valorTotal` da janela inteira (#169). Não traz atraso |
+| `guiasEmAtraso()` | "tenho algum débito pendente?", "tenho guia atrasada?" (#259) | guias não pagas com vencimento **antes de hoje**, de qualquer mês, pela data e não pelo status gravado (`PENDENTE` vencida conta); total do backend; sem atraso, a próxima guia a vencer e a frase com o recorte |
+| `vencimentosDoMes(mes)` | "quanto eu tenho que pagar este mês?", "quais impostos vencem em novembro?" (#257) | mês corrente (padrão): atraso de qualquer mês + não pagas de hoje ao fim do mês, com os dois subtotais e a soma do backend; mês futuro: as do mês; mês passado: as que ficaram sem pagar. Até 12 meses do atual. Obrigações do catálogo, pedidos do escritório e IBS/CBS apurado ficam fora (decisões da #274) |
 | `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
 | `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física ou no varejo (o produtor recolhe); venda ao exterior imune (Constituição, art. 149, § 2º, I); IBS/CBS separado pelo split payment |
 

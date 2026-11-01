@@ -8,15 +8,21 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.CompraPor
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Guia;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.GuiasDoRecorte;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.GuiasEmAtraso;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Nota;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VencimentosDoMes;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
+import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -116,6 +122,19 @@ public class FerramentasDadosProdutor {
           + " comprador.",
       AVISO_SPLIT_PAYMENT);
   private static final int DIAS_VENCIMENTO_PADRAO = 30;
+  /**
+   * "Sem limite de data" para trás na busca de guias em atraso (decisões da #274): o primeiro dia
+   * que o Postgres e o H2 aceitam sem cair em data antes de Cristo. A guia não tem limite inferior
+   * de vencimento, então um piso como 2000 deixaria de fora uma digitada com o ano errado.
+   */
+  static final LocalDate SEM_LIMITE_PASSADO = LocalDate.of(1, 1, 1);
+
+  /** Frase sem atraso; o recorte (a data) vai no fim. */
+  static final String SEM_ATRASO = "Nao encontrei guias em atraso (nao pagas com vencimento ate ";
+
+  /** Frase sem guia no mês; o recorte vai no fim. */
+  static final String SEM_GUIAS_NO_MES = "Nao encontrei guias para pagar ";
+  private static final int MAXIMO_MESES_VENCIMENTO = 12;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
 
   private final DadosProdutorPorta dados;
@@ -369,10 +388,12 @@ public class FerramentasDadosProdutor {
   @Tool(name = "proximosVencimentos", resultConverter = ResultadoSanitizadoConverter.class,
       description = """
       Lista as guias fiscais ainda nao pagas do produtor (ICMS, FUNRURAL, DARF, GPS...) que vencem \
-      a partir de hoje, da mais proxima para a mais distante, no maximo 10. Traz em valorTotal a \
-      soma de todas as guias nao pagas da janela, ja calculada pelo sistema. Use para perguntas \
-      como "o que vence este mes?", "tenho imposto para pagar na semana que vem?" ou "quanto \
-      somam minhas guias?". Para o total, repita o valorTotal: nunca some os valores da lista.""")
+      a partir de hoje, nos proximos dias, da mais proxima para a mais distante, no maximo 10. \
+      Traz em valorTotal a soma de todas as guias nao pagas da janela, ja calculada pelo sistema. \
+      Use para perguntas como "tenho imposto para pagar na semana que vem?", "quando vence a \
+      minha proxima guia?" ou "o que vence nos proximos 30 dias?". NAO traz guias em atraso: para \
+      debito, atraso ou "este mes", use guiasEmAtraso ou vencimentosDoMes. Para o total, repita o \
+      valorTotal: nunca some os valores da lista.""")
   public Vencimentos proximosVencimentos(
       @ToolParam(required = false,
           description = "Quantos dias a frente olhar, de 1 a 90. Omitido: 30.")
@@ -398,13 +419,136 @@ public class FerramentasDadosProdutor {
         FormatoBr.data(ate),
         pagina.total(),
         FormatoBr.moeda(totais.valor()),
-        pagina.itens().stream()
-            .map(g -> new Guia(
-                g.tipo().name(),
-                FormatoBr.data(g.dataVencimento()),
-                FormatoBr.moeda(g.valor()),
-                g.status().name()))
-            .toList());
+        pagina.itens().stream().map(g -> guia(g, contexto.hoje())).toList());
+  }
+
+  /**
+   * Débito pendente: guias não pagas com vencimento antes de hoje (issue #259). Pela data, não
+   * pelo status gravado: o job das 1h pode ainda não ter marcado a guia como {@code VENCIDA}. Guia
+   * que vence hoje não está em atraso. O IBS/CBS apurado não entra: em 2026 não há guia de
+   * recolhimento (decisões da #274).
+   */
+  @Tool(name = "guiasEmAtraso", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Lista as guias fiscais do produtor (ICMS, FUNRURAL, DARF, GPS...) em ATRASO: nao pagas e com \
+      vencimento antes de hoje, de qualquer mes, da mais antiga para a mais nova, no maximo 10, \
+      com a soma de todas em emAtraso.valorTotal, ja calculada pelo sistema. Sem atraso, traz a \
+      proxima guia a vencer. Use para perguntas como "tenho algum debito pendente?", "tenho guia \
+      atrasada?" ou "estou devendo algum imposto?". Guia que vence hoje nao esta em atraso. Para \
+      o total, repita o valorTotal: nunca some os valores da lista.""")
+  public GuiasEmAtraso guiasEmAtraso(ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    LocalDate ontem = contexto.hoje().minusDays(1);
+    GuiasDoRecorte emAtraso = recorte(contexto, null, ontem).resposta();
+    Guia proxima = null;
+    String observacao = null;
+    if (emAtraso.quantidade() == 0) {
+      proxima = dados.vencimentosNaoPagos(contexto.produtorId(), contexto.hoje(),
+              contexto.hoje().plusYears(1), 1).itens().stream()
+          .map(g -> guia(g, contexto.hoje())).findFirst().orElse(null);
+      observacao = SEM_ATRASO + FormatoBr.data(ontem) + ").";
+    }
+    contexto.registrarFonte("guiasEmAtraso", Map.of(), emAtraso.quantidade() == 0);
+    return new GuiasEmAtraso(emAtraso, proxima, observacao);
+  }
+
+  /**
+   * O que pagar num mês (issue #257, decisões da #274): no mês corrente, as guias em atraso (de
+   * qualquer mês) mais as que vencem até o fim do mês; num mês futuro, as do mês; num mês passado,
+   * as que ficaram sem pagar naquele mês. Obrigações do catálogo e pedidos do escritório ficam
+   * fora (só dinheiro), e o IBS/CBS apurado também.
+   */
+  @Tool(name = "vencimentosDoMes", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Diz quanto o produtor tem de guias fiscais para pagar num mes do calendario. No mes atual \
+      (mes omitido), soma as guias em ATRASO (nao pagas e vencidas antes de hoje, de qualquer \
+      mes) e as que vencem de hoje ate o ultimo dia do mes: traz os dois subtotais (emAtraso e \
+      aVencer) e a soma em valorTotal, ja calculados pelo sistema. Num mes futuro, traz as guias \
+      que vencem naquele mes. Use para perguntas como "quanto eu tenho que pagar este mes?", "o \
+      que vence este mes?" ou "quais impostos vencem em novembro?". Repita os valores: nunca some \
+      os valores da lista.""")
+  public VencimentosDoMes vencimentosDoMes(
+      @ToolParam(required = false,
+          description = "Mes, formato AAAA-MM. Omitido: o mes atual.")
+      String mes,
+      ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    LocalDate hoje = contexto.hoje();
+    YearMonth atual = YearMonth.from(hoje);
+    YearMonth consultado = vazio(mes) ? atual : mes(mes);
+    if (Math.abs(ChronoUnit.MONTHS.between(atual, consultado)) > MAXIMO_MESES_VENCIMENTO) {
+      throw new ParametroFerramentaInvalidoException(
+          "mes deve estar a no maximo 12 meses do mes atual.");
+    }
+    Recorte emAtraso = null;
+    Recorte aVencer = null;
+    if (consultado.equals(atual)) {
+      emAtraso = recorte(contexto, null, hoje.minusDays(1));
+      aVencer = recorte(contexto, hoje, consultado.atEndOfMonth());
+    } else if (consultado.isAfter(atual)) {
+      aVencer = recorte(contexto, consultado.atDay(1), consultado.atEndOfMonth());
+    } else {
+      emAtraso = recorte(contexto, consultado.atDay(1), consultado.atEndOfMonth());
+    }
+    BigDecimal soma = valor(emAtraso).add(valor(aVencer));
+    long quantidade = (emAtraso == null ? 0 : emAtraso.resposta().quantidade())
+        + (aVencer == null ? 0 : aVencer.resposta().quantidade());
+    String observacao = quantidade > 0 ? null
+        : SEM_GUIAS_NO_MES + descricaoRecorte(consultado, atual, hoje) + ".";
+    contexto.registrarFonte("vencimentosDoMes", parametros("mes", consultado.toString()),
+        quantidade == 0);
+    return new VencimentosDoMes(consultado.toString(),
+        emAtraso == null ? null : emAtraso.resposta(), aVencer == null ? null : aVencer.resposta(),
+        quantidade, FormatoBr.moeda(soma), observacao);
+  }
+
+  private static String descricaoRecorte(YearMonth mes, YearMonth atual, LocalDate hoje) {
+    if (mes.equals(atual)) {
+      return "(sem guias em atraso e sem guias nao pagas de " + FormatoBr.data(hoje) + " a "
+          + FormatoBr.data(mes.atEndOfMonth()) + ")";
+    }
+    return "(sem guias nao pagas de " + FormatoBr.data(mes.atDay(1)) + " a "
+        + FormatoBr.data(mes.atEndOfMonth()) + ")";
+  }
+
+  /** Um recorte de guias: o que vai ao modelo e a soma, para somar recortes no backend. */
+  private record Recorte(GuiasDoRecorte resposta, BigDecimal valor) {}
+
+  /** Guias não pagas de {@code [de, ate]}; {@code de} nulo = sem limite para trás. */
+  private Recorte recorte(ContextoAssistente contexto, LocalDate de, LocalDate ate) {
+    LocalDate inicio = de == null ? SEM_LIMITE_PASSADO : de;
+    Pagina<DadosProdutorPorta.Vencimento> pagina = dados.vencimentosNaoPagos(
+        contexto.produtorId(), inicio, ate, DadosProdutorPorta.LIMITE_MAXIMO);
+    DadosProdutorPorta.Totais totais =
+        dados.totalVencimentosNaoPagos(contexto.produtorId(), inicio, ate);
+    BigDecimal valor = totais.valor() == null ? BigDecimal.ZERO : totais.valor();
+    return new Recorte(new GuiasDoRecorte(de == null ? null : FormatoBr.data(de),
+        FormatoBr.data(ate), totais.quantidade(), FormatoBr.moeda(valor),
+        pagina.itens().stream().map(g -> guia(g, contexto.hoje())).toList()), valor);
+  }
+
+  private static BigDecimal valor(Recorte recorte) {
+    return recorte == null ? BigDecimal.ZERO : recorte.valor();
+  }
+
+  /**
+   * Guia como vai ao modelo. A situação é pela data (decisões da #274): não paga com vencimento
+   * antes de hoje sai {@code VENCIDA} mesmo que o job das 1h ainda não a tenha marcado; mostrar o
+   * {@code PENDENTE} gravado faria a Ceres chamar de "pendente" uma guia que ela lista como atraso.
+   */
+  private static Guia guia(DadosProdutorPorta.Vencimento g, LocalDate hoje) {
+    String situacao = g.status() != StatusGuiaFiscal.PAGA && g.dataVencimento().isBefore(hoje)
+        ? StatusGuiaFiscal.VENCIDA.name()
+        : g.status().name();
+    return new Guia(g.tipo().name(), FormatoBr.data(g.dataVencimento()),
+        FormatoBr.moeda(g.valor()), situacao);
+  }
+
+  private static YearMonth mes(String valor) {
+    if (!MES.matcher(valor.trim()).matches()) {
+      throw new ParametroFerramentaInvalidoException("mes deve estar no formato AAAA-MM.");
+    }
+    return YearMonth.parse(valor.trim());
   }
 
   /** Alertas tributários ativos: o que vence ou fecha em menos de 5 dias (issue #140, RN010). */
@@ -413,7 +557,8 @@ public class FerramentasDadosProdutor {
       Lista os alertas tributarios do produtor: guias pendentes, fechamento da apuracao do mes e \
       fim do prazo para cancelar NF-e que vencem em menos de 5 dias, do mais urgente ao mais \
       distante, no maximo 10. Use para perguntas como "tenho algo vencendo?", "o que preciso \
-      resolver esta semana?" ou "tenho algum prazo perto?".""")
+      resolver esta semana?" ou "tenho algum prazo perto?". NAO cobre o que ja venceu: guia em \
+      atraso e debito pendente sao da funcao guiasEmAtraso.""")
   public Alertas listarAlertas(ToolContext toolContext) {
     ContextoAssistente contexto = ContextoAssistente.de(toolContext);
     Pagina<DadosProdutorPorta.Alerta> pagina = dados.alertas(contexto.produtorId());
