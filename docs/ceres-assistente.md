@@ -306,7 +306,9 @@ com as citações dos trechos marcados certo, sem o texto do modelo. A frase **n
 trechos respondem: numa pergunta de premissa falsa (A05/A08) o descarte é o sinal de que não
 respondem. `SEM_FUNDAMENTO` fica sem trecho recuperado, sem marca nenhuma, só com marcas
 inventadas ou com o `NAO_ENCONTREI` no texto (que vale mesmo com marca). No MISTO a parte de lei com
-citações entra com essa frase; o desfecho de cada parte segue na auditoria. Na avaliação, esses
+citações entra com essa frase; sem trecho nenhum, a recusa da lei **fica de fora** da resposta
+(#260: colada nos dados, soava como "isso não tem base legal"). O desfecho de cada parte segue na
+auditoria; a classificação que manda pergunta só de dados ao MISTO é da #265. Na avaliação, esses
 desfechos seguem contando como recusa e **não** contam como citação válida (o texto do modelo
 saiu), para a taxa não subir com o descarte.
 

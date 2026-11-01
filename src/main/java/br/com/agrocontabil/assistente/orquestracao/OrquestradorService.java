@@ -207,7 +207,9 @@ public class OrquestradorService {
    *   <li>parte de dados aceita mas sem nada encontrado nas consultas (ou sem consulta nenhuma)
    *       vira {@link #fraseSemDados frase fixa do backend}, e a lei entra como "de forma geral" —
    *       nunca "não tenho a informação" seguido de "sim, as suas compras têm direito";</li>
-   *   <li>parte descartada não entra com texto do modelo: no lugar vai a mensagem fixa da rota;</li>
+   *   <li>parte descartada não entra com texto do modelo: no lugar vai a mensagem fixa da rota;
+   *       a recusa da lei ("não encontrei fundamento legal") só entra quando a parte de dados
+   *       também não foi útil (#260);</li>
    *   <li>parte em fallback entra com o texto dela (trechos verbatim ou atalhos);</li>
    *   <li>lei que falou dos dados entra só como "veja os trechos citados".</li>
    * </ul>
@@ -232,11 +234,12 @@ public class OrquestradorService {
     } else {
       parteLei = ValidadorCitacao.SEM_FUNDAMENTO;
     }
-    boolean dadosUtil = dados.aceita() || dados.emFallback();
     boolean leiUtil = lei.aceita() || lei.emFallback() || leiSoTrechos;
-    String texto = dadosUtil || leiUtil
-        ? parteDados + "\n\n" + parteLei
-        : parteDados;
+    // Lei descartada sem trecho nenhum (#260): a recusa dela fica de fora da resposta. Colada
+    // na resposta de dados, "nao encontrei fundamento legal" soava como "o que voce perguntou nao
+    // tem base legal", sobre o que muitas vezes nem era pergunta de lei. O desfecho de cada parte
+    // segue na auditoria.
+    String texto = leiUtil ? parteDados + "\n\n" + parteLei : parteDados;
     boolean emFallback = dados.emFallback() || lei.emFallback();
     DesfechoInteracao desfecho;
     if (emFallback) {

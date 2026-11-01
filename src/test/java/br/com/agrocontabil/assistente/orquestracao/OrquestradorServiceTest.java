@@ -141,7 +141,7 @@ class OrquestradorServiceTest {
   }
 
   @Test
-  @DisplayName("MISTO com a parte de lei sem fundamento: dados + mensagem fixa, sem citacao")
+  @DisplayName("#260: MISTO com dados uteis e lei sem fundamento: so os dados, sem a recusa da lei")
   void mistoSemFundamento() {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
@@ -150,8 +150,11 @@ class OrquestradorServiceTest {
 
     ResultadoOrquestracao r = responder();
 
-    assertThat(r.texto()).endsWith(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.texto()).isEqualTo("Voce comprou X.")
+        .doesNotContain(ValidadorCitacao.SEM_FUNDAMENTO);
     assertThat(r.citacoes()).isEmpty();
+    // Nada se perde para a avaliacao: o desfecho da lei fica no contexto (e na auditoria).
+    assertThat(contexto.desfechoLegislacao()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
   }
 
   @Test
