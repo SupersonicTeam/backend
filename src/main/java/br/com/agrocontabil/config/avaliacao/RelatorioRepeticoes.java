@@ -78,8 +78,11 @@ public record RelatorioRepeticoes(List<RelatorioAvaliacao> rodadas) {
   /** Média e faixa de rota, número e citação por rota esperada. */
   public Map<String, Map<String, Faixa>> porRota() {
     Map<String, Map<String, Faixa>> porRota = new LinkedHashMap<>();
-    for (String rota : rodadas.get(0).porRota().keySet()) {
-      List<IndicadoresRota> daRota = rodadas.stream().map(r -> r.porRota().get(rota)).toList();
+    // Uma vez por rodada: cada porRota() mede a clareza de todas as respostas de novo.
+    List<Map<String, IndicadoresRota>> porRodada =
+        rodadas.stream().map(RelatorioAvaliacao::porRota).toList();
+    for (String rota : porRodada.get(0).keySet()) {
+      List<IndicadoresRota> daRota = porRodada.stream().map(r -> r.get(rota)).toList();
       Map<String, Faixa> faixas = new LinkedHashMap<>();
       faixas.put("Rota", faixa(daRota.stream().map(IndicadoresRota::rota).toList()));
       faixas.put("Número", faixa(daRota.stream().map(IndicadoresRota::numero).toList()));
