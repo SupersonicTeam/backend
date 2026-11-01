@@ -62,6 +62,7 @@ public class OrquestradorService {
       Map.entry("proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado."),
       Map.entry("guiasEmAtraso", "Nao encontrei guias em atraso."),
       Map.entry("vencimentosDoMes", "Nao encontrei guias para pagar no mes consultado."),
+      Map.entry("consultarNota", "Nao encontrei essa nota nas suas notas."),
       Map.entry("consultarCreditos", "Nao encontrei compras com credito no periodo consultado."),
       Map.entry("consultarApuracao", "Nao encontrei notas na apuracao do mes consultado."),
       Map.entry("listarAlertas", "Nao encontrei prazos vencendo nos proximos dias."),

@@ -37,7 +37,7 @@ class DefinicaoFerramentasTest {
     assertThat(definicoes).extracting(ToolDefinition::name).containsExactlyInAnyOrder(
         "totalComprasPorInsumo", "consultarApuracao", "consultarCreditos", "listarNotas",
         "proximosVencimentos", "listarAlertas", "consultarRetencoes", "guiasEmAtraso",
-        "vencimentosDoMes");
+        "vencimentosDoMes", "consultarNota");
   }
 
   @Test
@@ -68,7 +68,7 @@ class DefinicaoFerramentasTest {
         .filter(m -> m.isAnnotationPresent(Tool.class))
         .toList();
 
-    assertThat(funcoes).hasSize(9).allSatisfy(m ->
+    assertThat(funcoes).hasSize(10).allSatisfy(m ->
         assertThat(m.getAnnotation(Tool.class).resultConverter())
             .as("resultConverter de %s", m.getName())
             .isEqualTo(ResultadoSanitizadoConverter.class));

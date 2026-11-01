@@ -400,6 +400,34 @@ public interface NotaFiscalRepository
    */
   List<NotaFiscal> findTop5ByProdutorIdOrderByDataEmissaoDesc(UUID produtorId);
 
+  /**
+   * Notas do produtor com um número (issue #256, Ceres): as próprias primeiro (a pergunta "a nota
+   * 118" quase sempre é sobre uma nota que o produtor emitiu), depois as recebidas, cada grupo da
+   * mais recente para a mais antiga. O número não é único: repete entre séries e nas notas de
+   * fornecedor. Só do produtor: nota de outro com o mesmo número não existe aqui (anti-IDOR).
+   * Projeção: nada de XML nem de destinatário.
+   *
+   * @param produtorId produtor da sessão
+   * @param numero     número da nota
+   * @param pagina     limite
+   * @return as notas com esse número
+   */
+  @Query(value = """
+      SELECT new br.com.agrocontabil.repository.NotaPorNumeroLinha(
+          n.id, n.numero, n.serie, n.dataEmissao, n.origem, n.status,
+          n.valorTotalNota, n.valorTotalIbs, n.valorTotalCbs)
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId AND n.numero = :numero
+      ORDER BY CASE WHEN n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+          THEN 0 ELSE 1 END, n.dataEmissao DESC, n.id DESC
+      """,
+      countQuery = """
+      SELECT COUNT(n) FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId AND n.numero = :numero
+      """)
+  Page<NotaPorNumeroLinha> findDoProdutorPorNumero(
+      @Param("produtorId") UUID produtorId, @Param("numero") Long numero, Pageable pagina);
+
   // --- Consultas da Ceres (issue #142). Fixas e parametrizadas: o modelo só escolhe a função e
   // preenche os parâmetros, nunca escreve SQL. Todas exigem o produtor (anti-IDOR, RN007).
 

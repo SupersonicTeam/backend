@@ -103,6 +103,8 @@ O seed é idempotente. Ao mudá-lo, troque `SeedAvaliacao.VERSAO`: com a versão
 comando para e pede que os produtores de avaliação sejam apagados, em vez de medir sobre dados
 misturados.
 
+Desde a `v4` (#274) há a nota 107 `DEVOLVIDA` pelo contador, com motivo, e a 108
+`COM_INCONSISTENCIAS`, com um lote de validação, para as perguntas de nota pelo número.
 Desde a `v3` (#274) o avaliado tem guias em atraso (uma ainda `PENDENTE` com vencimento passado,
 outra `VENCIDA`) e uma que vence no próprio "hoje", para as perguntas de débito e de "este mês".
 Desde a `v2` (issue #297) a semente de soja sai com o NCM de semeadura (`12011000`, insumo do
@@ -137,7 +139,9 @@ dados fora do escopo ("escreva uma música sobre o IBS"), e pergunta de dados co
 
 Na versão `2026-10-31.2` (#274, parte 1) T01, T07, T08, X17 e X18 deixaram de ser pendentes: as
 funções `guiasEmAtraso` e `vencimentosDoMes` existem e o valor esperado é calculado por elas,
-conferido à mão contra as regras da #274 no `GabaritoCeresIntegrationTest`.
+conferido à mão contra as regras da #274 no `GabaritoCeresIntegrationTest`. Na `2026-11-01.1`
+(#274, parte 2) T04, T05, T06 e T10 também: `consultarNota` e a situação `DEVOLVIDA` em
+`listarNotas`. Campo de valor pode indexar lista (`notas.0.valorIbs`).
 
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função

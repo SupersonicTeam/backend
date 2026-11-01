@@ -1,11 +1,17 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.model.AcaoRevisao;
+import br.com.agrocontabil.model.NotaFiscalRevisao;
+import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CompraInsumoAgregado;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
+import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
+import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
+import br.com.agrocontabil.repository.NotaPorNumeroLinha;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
@@ -50,14 +56,75 @@ public class ConsultaDadosProdutorService {
 
   private static final Pattern PREFIXO_NCM = Pattern.compile("\\d{2,8}");
 
+  /** Notas com o mesmo número que uma consulta devolve (séries e notas de fornecedor). */
+  public static final int LIMITE_NOTAS_POR_NUMERO = 3;
+
   private final NotaFiscalRepository notaFiscalRepository;
   private final GuiaFiscalRepository guiaFiscalRepository;
+  private final NotaFiscalRevisaoRepository revisaoRepository;
+  private final NotaFiscalValidacaoRepository validacaoRepository;
 
-  /** Constrói o serviço com os repositórios de notas e de guias. */
+  /** Constrói o serviço com os repositórios de notas, guias, revisões e validações. */
   public ConsultaDadosProdutorService(
-      NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository) {
+      NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository,
+      NotaFiscalRevisaoRepository revisaoRepository,
+      NotaFiscalValidacaoRepository validacaoRepository) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
+    this.revisaoRepository = revisaoRepository;
+    this.validacaoRepository = validacaoRepository;
+  }
+
+  /**
+   * Notas do produtor com o número pedido (issue #256). Número de nota de outro produtor dá lista
+   * vazia, igual a número inexistente: não revela existência.
+   *
+   * <p>O motivo da devolução só vem com a nota ainda {@code DEVOLVIDA}, e as inconsistências só com
+   * ela em {@code COM_INCONSISTENCIAS}: validação que passa não grava lote, então numa nota
+   * devolvida, de volta a rascunho ou já emitida o último lote pode ser de erros já corrigidos.
+   *
+   * @param produtorId produtor da sessão
+   * @param numero     número da nota
+   * @return as próprias primeiro, no máximo {@link #LIMITE_NOTAS_POR_NUMERO}, e quantas existem
+   */
+  public NotasPorNumero notasPorNumero(UUID produtorId, long numero) {
+    Page<NotaPorNumeroLinha> pagina = notaFiscalRepository.findDoProdutorPorNumero(
+        produtorId, numero, PageRequest.of(0, LIMITE_NOTAS_POR_NUMERO));
+    return new NotasPorNumero(
+        pagina.getContent().stream().map(this::detalhe).toList(), pagina.getTotalElements());
+  }
+
+  /**
+   * Notas consultadas pelo número.
+   *
+   * @param notas no máximo {@link #LIMITE_NOTAS_POR_NUMERO}
+   * @param total quantas o produtor tem com esse número
+   */
+  public record NotasPorNumero(List<NotaPorNumeroResultado> notas, long total) {}
+
+  private NotaPorNumeroResultado detalhe(NotaPorNumeroLinha n) {
+    String motivo = n.status() != StatusNotaFiscal.DEVOLVIDA ? null
+        : revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(n.id()).stream()
+            .filter(r -> r.getAcao() == AcaoRevisao.DEVOLVIDA)
+            .map(NotaFiscalRevisao::getMotivo)
+            .findFirst().orElse(null);
+    List<NotaPorNumeroResultado.Inconsistencia> inconsistencias = List.of();
+    if (n.status() == StatusNotaFiscal.COM_INCONSISTENCIAS) {
+      List<NotaFiscalValidacao> validacoes =
+          validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(n.id());
+      if (!validacoes.isEmpty()) {
+        UUID ultimoLote = validacoes.get(0).getLoteValidacao();
+        inconsistencias = validacoes.stream()
+            .filter(v -> v.getLoteValidacao().equals(ultimoLote))
+            .map(v -> new NotaPorNumeroResultado.Inconsistencia(
+                v.getCode(), v.getField(), v.getMessage(), v.getSuggestion()))
+            .toList();
+      }
+    }
+    // IBS/CBS destacados na nota, como em listarNotas (o credito da compra e outra coisa).
+    return new NotaPorNumeroResultado(n.numero(), n.serie(), n.dataEmissao(), n.origem(),
+        n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
+        motivo, inconsistencias);
   }
 
   /**

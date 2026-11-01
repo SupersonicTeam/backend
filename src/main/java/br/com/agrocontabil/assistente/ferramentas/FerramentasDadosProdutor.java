@@ -10,7 +10,10 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Guia;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.GuiasDoRecorte;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.GuiasEmAtraso;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Inconsistencia;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Nota;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaConsultada;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaDetalhada;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
@@ -26,6 +29,8 @@ import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -96,6 +101,24 @@ public class FerramentasDadosProdutor {
   static final String TOTAL_DO_FILTRO =
       "Soma de todas as notas do filtro pedido, inclusive as que nao aparecem na lista.";
 
+  /**
+   * O que cada situação da nota quer dizer (issues #254 e #256). Devolvida (pelo contador) e
+   * rejeitada (pela SEFAZ) são coisas diferentes: confundir as duas fazia a Ceres dizer "não há
+   * notas devolvidas" filtrando as rejeitadas. Um teste exige uma entrada por
+   * {@link StatusNotaFiscal}.
+   */
+  static final Map<StatusNotaFiscal, String> EXPLICACAO_SITUACAO = explicacoes();
+
+  /** Descrição do parâmetro {@code situacao} de {@code listarNotas}: todas as situações. */
+  static final String DESCRICAO_SITUACAO = "Situacao da nota. RASCUNHO = ainda nao emitida; "
+      + "COM_INCONSISTENCIAS = a validacao achou erros a corrigir; AGUARDANDO_APROVACAO = enviada "
+      + "ao contador para revisao; APROVADA = aprovada pelo contador, pronta para emitir; "
+      + "DEVOLVIDA = devolvida pelo contador para correcao (nao e rejeicao da SEFAZ); XML_GERADO "
+      + "= XML assinado, ainda nao enviado; ENVIANDO = sendo enviada a SEFAZ; AUTORIZADA = "
+      + "autorizada pela SEFAZ; REJEITADA = recusada pela SEFAZ (nao e devolucao do contador); "
+      + "PENDENTE_SEFAZ = aguardando a SEFAZ; CANCELANDO = cancelamento em andamento; CANCELADA = "
+      + "cancelada. Omita para todas.";
+
   private static final Pattern MES =Pattern.compile("\\d{4}-(0[1-9]|1[0-2])");
   private static final Pattern NCM = Pattern.compile("\\d{2,8}");
   private static final int TERMO_MINIMO = 3;
@@ -135,7 +158,12 @@ public class FerramentasDadosProdutor {
   /** Frase sem guia no mês; o recorte vai no fim. */
   static final String SEM_GUIAS_NO_MES = "Nao encontrei guias para pagar ";
   private static final int MAXIMO_MESES_VENCIMENTO = 12;
+  private static final int NUMERO_NOTA_MAXIMO = 999_999_999;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
+  /** Situações de nota ainda em aberto: sem datas, {@code listarNotas} olha 24 meses para trás. */
+  static final Set<StatusNotaFiscal> PENDENCIAS_ABERTAS = EnumSet.of(StatusNotaFiscal.RASCUNHO,
+      StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.AGUARDANDO_APROVACAO,
+      StatusNotaFiscal.APROVADA, StatusNotaFiscal.DEVOLVIDA);
 
   private final DadosProdutorPorta dados;
 
@@ -310,7 +338,8 @@ public class FerramentasDadosProdutor {
       Lista as notas fiscais mais recentes do produtor (no maximo 10) com numero, data, tipo, \
       situacao e valores, informa quantas existem no filtro e traz em valorTotal a soma ja \
       calculada pelo sistema (abrangenciaTotal e quantidadeNoTotal dizem quais e quantas notas \
-      entram nela). Sem datas, o periodo e dos ultimos 90 dias: informe sempre o periodo \
+      entram nela). Sem datas, o periodo e dos ultimos 90 dias (24 meses para nota em aberto: \
+      rascunho, com inconsistencias, em revisao, aprovada ou devolvida): informe sempre o periodo \
       (dataInicio a dataFim) junto com o total. Use para perguntas \
       como "quais foram minhas ultimas vendas?", "tenho nota rejeitada?" ou "quanto somam minhas \
       vendas do mes?". Para totais, repita o valorTotal: nunca some os valores da lista, que e \
@@ -320,9 +349,7 @@ public class FerramentasDadosProdutor {
           description = "SAIDA (vendas, notas emitidas pelo produtor) ou ENTRADA (compras "
               + "recebidas). Omita para os dois tipos.")
       String tipo,
-      @ToolParam(required = false,
-          description = "Situacao da nota: RASCUNHO, AUTORIZADA, REJEITADA, CANCELADA, "
-              + "PENDENTE_SEFAZ, COM_INCONSISTENCIAS, XML_GERADO. Omita para todas.")
+      @ToolParam(required = false, description = DESCRICAO_SITUACAO)
       String situacao,
       @ToolParam(required = false,
           description = "Primeiro dia, formato AAAA-MM-DD. Omitido: 90 dias atras.")
@@ -336,8 +363,11 @@ public class FerramentasDadosProdutor {
     Set<OrigemNotaFiscal> origens = origens(tipo);
     Set<StatusNotaFiscal> status = status(situacao);
     LocalDate fim = vazio(dataFim) ? contexto.hoje() : data(dataFim, "dataFim");
+    // Pendencia aberta (rascunho, devolvida, em revisao...) nao tem prazo: "tenho nota devolvida?"
+    // com a janela de 90 dias deixaria de fora a devolvida antiga e viraria negativa falsa (#254).
     LocalDate inicio = vazio(dataInicio)
-        ? fim.minusDays(DIAS_LISTAGEM_PADRAO)
+        ? fim.minusDays(PENDENCIAS_ABERTAS.containsAll(status)
+            ? MAXIMO_DIAS_PERIODO : DIAS_LISTAGEM_PADRAO)
         : data(dataInicio, "dataInicio");
     exigirPeriodo(inicio, fim);
     int quantidade = limite == null ? LIMITE_PADRAO : limite;
@@ -549,6 +579,63 @@ public class FerramentasDadosProdutor {
       throw new ParametroFerramentaInvalidoException("mes deve estar no formato AAAA-MM.");
     }
     return YearMonth.parse(valor.trim());
+  }
+
+  /**
+   * Uma nota pelo número (issue #256): situação explicada, IBS/CBS, motivo da última devolução e o
+   * que corrigir. Só do produtor do contexto; número de outro produtor responde como inexistente.
+   */
+  @Tool(name = "consultarNota", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Consulta UMA nota fiscal do produtor pelo numero: data, tipo, situacao com a explicacao, \
+      valor total, IBS e CBS da nota, o motivo da ultima devolucao pelo contador e as \
+      inconsistencias a corrigir. Use para perguntas sobre uma nota especifica, como "por que a \
+      nota 118 esta devolvida?", "o que preciso corrigir na nota 118 para emitir?" ou "quanto de \
+      IBS e CBS a nota 113 gera?". Se vier mais de uma nota com o mesmo numero, diga a serie e o \
+      tipo de cada uma.""")
+  public NotaConsultada consultarNota(
+      @ToolParam(description = "Numero da nota, de 1 a 999999999") Integer numero,
+      ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    if (numero == null || numero < 1 || numero > NUMERO_NOTA_MAXIMO) {
+      throw new ParametroFerramentaInvalidoException("numero deve estar entre 1 e 999999999.");
+    }
+    Pagina<DadosProdutorPorta.NotaDetalhe> pagina =
+        dados.notasPorNumero(contexto.produtorId(), numero);
+    List<DadosProdutorPorta.NotaDetalhe> notas = pagina.itens();
+    contexto.registrarFonte("consultarNota", parametros("numero", String.valueOf(numero)),
+        notas.isEmpty());
+    return new NotaConsultada(numero, pagina.total(), notas.stream()
+        .map(n -> new NotaDetalhada(n.numero(), n.serie(), FormatoBr.data(n.dataEmissao()),
+            n.origem() == OrigemNotaFiscal.IMPORTADA ? "ENTRADA" : "SAIDA", n.status().name(),
+            EXPLICACAO_SITUACAO.get(n.status()), FormatoBr.moeda(n.valorTotal()),
+            FormatoBr.moeda(n.valorIbs()), FormatoBr.moeda(n.valorCbs()), n.motivoDevolucao(),
+            n.inconsistencias().stream()
+                .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
+                .toList(),
+            List.of()))
+        .toList(),
+        notas.isEmpty() ? "Nao encontrei a nota " + numero + " nas suas notas." : null);
+  }
+
+  private static Map<StatusNotaFiscal, String> explicacoes() {
+    Map<StatusNotaFiscal, String> e = new EnumMap<>(StatusNotaFiscal.class);
+    e.put(StatusNotaFiscal.RASCUNHO, "Rascunho: a nota ainda nao foi emitida.");
+    e.put(StatusNotaFiscal.COM_INCONSISTENCIAS,
+        "Com inconsistencias: a validacao achou erros a corrigir antes de emitir.");
+    e.put(StatusNotaFiscal.AGUARDANDO_APROVACAO,
+        "Aguardando aprovacao: enviada ao contador para revisao.");
+    e.put(StatusNotaFiscal.APROVADA, "Aprovada pelo contador: pronta para gerar o XML e emitir.");
+    e.put(StatusNotaFiscal.DEVOLVIDA,
+        "Devolvida pelo contador para correcao (nao e rejeicao da SEFAZ).");
+    e.put(StatusNotaFiscal.XML_GERADO, "XML gerado e assinado, ainda nao enviado a SEFAZ.");
+    e.put(StatusNotaFiscal.ENVIANDO, "Sendo enviada a SEFAZ neste momento.");
+    e.put(StatusNotaFiscal.AUTORIZADA, "Autorizada pela SEFAZ: a nota vale.");
+    e.put(StatusNotaFiscal.REJEITADA, "Recusada pela SEFAZ (nao e devolucao do contador).");
+    e.put(StatusNotaFiscal.PENDENTE_SEFAZ, "Aguardando a resposta da SEFAZ.");
+    e.put(StatusNotaFiscal.CANCELANDO, "Cancelamento em andamento na SEFAZ.");
+    e.put(StatusNotaFiscal.CANCELADA, "Cancelada.");
+    return Collections.unmodifiableMap(e);
   }
 
   /** Alertas tributários ativos: o que vence ou fecha em menos de 5 dias (issue #140, RN010). */
