@@ -26,6 +26,13 @@ public enum DesfechoInteracao {
    * trocado pelos trechos citados (#170). Desfecho próprio para medir o problema na avaliação.
    */
   AFIRMACAO_SOBRE_DADOS,
+  /**
+   * Rota de dados: a resposta do modelo dizia que algo não existe ("não tem", "não há"...) sobre uma
+   * consulta que voltou vazia, sem dizer o recorte consultado. A negativa foi trocada pela frase
+   * fixa do backend com o período e o filtro reais (#274, {@code VerificadorNegativaDados}); o
+   * resto da resposta ficou. A resposta é entregue, com as fontes.
+   */
+  NEGATIVA_SUBSTITUIDA,
   /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
   FORA_DE_ESCOPO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */

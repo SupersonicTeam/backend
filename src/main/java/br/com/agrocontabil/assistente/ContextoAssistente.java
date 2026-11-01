@@ -53,6 +53,7 @@ public final class ContextoAssistente {
   private final UUID produtorId;
   private final LocalDate hoje;
   private final List<FonteDado> fontes = Collections.synchronizedList(new ArrayList<>());
+  private final List<FonteDado> fontesVazias = Collections.synchronizedList(new ArrayList<>());
   private final AtomicInteger tokensEntrada = new AtomicInteger();
   private final AtomicInteger tokensSaida = new AtomicInteger();
   private final AtomicBoolean usoInformado = new AtomicBoolean();
@@ -109,8 +110,12 @@ public final class ContextoAssistente {
    * @param vazio      {@code true} se a consulta não encontrou nada (sem nota, guia ou compra)
    */
   public void registrarFonte(String funcao, Map<String, String> parametros, boolean vazio) {
-    fontes.add(new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros))));
-    if (!vazio) {
+    FonteDado fonte =
+        new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros)));
+    fontes.add(fonte);
+    if (vazio) {
+      fontesVazias.add(fonte);
+    } else {
       consultasComResultado.incrementAndGet();
     }
   }
@@ -280,6 +285,16 @@ public final class ContextoAssistente {
 
   public LocalDate hoje() {
     return hoje;
+  }
+
+  /**
+   * Fontes que não encontraram nada, na ordem das chamadas (issue #274: o
+   * {@code VerificadorNegativaDados} troca a negativa absoluta sobre elas pela frase com o recorte).
+   */
+  public List<FonteDado> fontesVazias() {
+    synchronized (fontesVazias) {
+      return List.copyOf(fontesVazias);
+    }
   }
 
   /** Fontes registradas até agora, na ordem das chamadas. */

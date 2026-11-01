@@ -87,6 +87,7 @@ class RotaDadosOllamaFioTest {
             new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
                 java.time.Duration.ofSeconds(30), System::nanoTime)),
         new ValidadorNumeros(),
+        new VerificadorNegativaDados(),
         new FerramentasDadosProdutor(dados),
         new ProcessadorErroFerramenta(),
         new AssistenteProperties(),

@@ -279,6 +279,28 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("#274: 'nao tem notas devolvidas' sobre consulta vazia vira a frase com o recorte")
+  void negativaFalsaSubstituida() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    java.time.format.DateTimeFormatter br =
+        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    // O modelo escolhe o filtro errado (REJEITADA) e afirma uma negativa absoluta.
+    modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
+        ? ChatModelSimulado.texto("Voce nao tem notas devolvidas.")
+        : pedirFuncao("listarNotas", Map.of("situacao", "REJEITADA")));
+
+    perguntar(produtorA, "Tenho alguma nota devolvida pelo contador?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value("Nao encontrei notas rejeitadas pela SEFAZ entre "
+            + br.format(hoje.minusDays(90)) + " e " + br.format(hoje) + "."))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("listarNotas"));
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho())
+            .isEqualTo(DesfechoInteracao.NEGATIVA_SUBSTITUIDA));
+  }
+
+  @Test
   @DisplayName("#169: o modelo somando a lista por conta propria continua descartado")
   void somaFeitaPeloModeloDescartada() throws Exception {
     salvarGuiasDoAchadoDoPr168();
