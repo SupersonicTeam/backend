@@ -32,6 +32,8 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
    * @param executadoEm     início da execução
    * @param hojeReferencia  data que a Ceres tomou como "hoje"
    * @param versaoGabarito  versão do gabarito
+   * @param versaoSeed      versão do seed de avaliação ({@link SeedAvaliacao#VERSAO}): o mesmo
+   *                        gabarito sobre outro seed mede outra coisa
    * @param modelo          provedor/modelo de chat
    * @param modeloEmbedding modelo de embedding da busca de legislação
    * @param hardware        descrição do hardware (informada + detectada)
@@ -39,7 +41,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
    */
   public record Ambiente(
       OffsetDateTime executadoEm, LocalDate hojeReferencia, String versaoGabarito,
-      String modelo, String modeloEmbedding, List<String> hardware, long duracaoSegundos) {
+      String versaoSeed, String modelo, String modeloEmbedding, List<String> hardware, long duracaoSegundos) {
 
     /** Cópia defensiva. */
     public Ambiente {
@@ -124,6 +126,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     md.append("| \"Hoje\" da Ceres | ").append(ambiente.hojeReferencia()).append(" |\n");
     md.append("| Gabarito | ").append(ambiente.versaoGabarito())
         .append(" (").append(resultados.size()).append(" perguntas) |\n");
+    md.append("| Seed | ").append(ambiente.versaoSeed()).append(" |\n");
     md.append("| Modelo de chat | ").append(ambiente.modelo()).append(" |\n");
     md.append("| Embedding | ").append(ambiente.modeloEmbedding()).append(" |\n");
     for (String linha : ambiente.hardware()) {
