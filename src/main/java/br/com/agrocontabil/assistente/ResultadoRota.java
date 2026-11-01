@@ -59,6 +59,14 @@ public record ResultadoRota(
     return desfecho == DesfechoInteracao.RESPONDIDA;
   }
 
+  /**
+   * {@code true} se o texto do modelo foi descartado mas há trechos de lei citados a mostrar (issues
+   * #170 e #258): o texto é a frase fixa da rota de lei e as citações seguem na resposta.
+   */
+  public boolean soTrechos() {
+    return !aceita() && !emFallback() && !citacoes.isEmpty();
+  }
+
   /** {@code true} se a parte foi montada sem modelo — o texto é útil e deve ser entregue. */
   public boolean emFallback() {
     return desfecho == DesfechoInteracao.MODO_FALLBACK;

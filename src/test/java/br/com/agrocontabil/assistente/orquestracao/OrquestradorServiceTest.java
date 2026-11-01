@@ -160,12 +160,12 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.MISTO, 0.9);
     dadosEncontrados("Voce comprou X.");
     when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean())).thenReturn(
-        new ResultadoRota(RotaLegislacao.SO_TRECHOS, DesfechoInteracao.NUMERO_SEM_FONTE,
-            List.of(CITACAO)));
+        new ResultadoRota(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+            DesfechoInteracao.NUMERO_SEM_FONTE, List.of(CITACAO)));
 
     ResultadoOrquestracao r = responder();
 
-    assertThat(r.texto()).contains(RotaLegislacao.SO_TRECHOS)
+    assertThat(r.texto()).contains(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
         .doesNotContain(ValidadorCitacao.SEM_FUNDAMENTO);
     assertThat(r.citacoes()).containsExactly(CITACAO);
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);

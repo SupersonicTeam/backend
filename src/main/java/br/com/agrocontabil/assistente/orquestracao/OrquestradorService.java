@@ -225,7 +225,9 @@ public class OrquestradorService {
    *   <li>lei que falou dos dados entra só como "veja os trechos citados".</li>
    * </ul>
    * Desfecho: {@code MODO_FALLBACK} se alguma parte veio sem modelo; {@code AFIRMACAO_SOBRE_DADOS}
-   * se a lei foi trocada pelos trechos; senão {@code RESPONDIDA} se ao menos uma parte foi aceita.
+   * se a lei falou dos dados (#170); senão {@code RESPONDIDA} se ao menos uma parte foi aceita;
+   * senão o da parte de dados. Lei descartada com trechos (#258) entra com a frase fixa dela e as
+   * citações; o desfecho dela fica no contexto (e na auditoria).
    */
   private static ResultadoOrquestracao combinar(
       ResultadoRota dados, ResultadoRota lei, ContextoAssistente contexto) {
@@ -234,7 +236,7 @@ public class OrquestradorService {
     // Lei descartada mas com trechos citados (AFIRMACAO_SOBRE_DADOS, #170; numero sem fonte ou
     // marca inventada ao lado de marcas certas, #258): entra o SO_TRECHOS com as citacoes, nunca
     // "nao encontrei fundamento legal" ao lado dos artigos.
-    boolean leiSoTrechos = !lei.aceita() && !lei.emFallback() && !lei.citacoes().isEmpty();
+    boolean leiSoTrechos = lei.soTrechos();
     String parteLei;
     if (lei.aceita()) {
       parteLei = (semDados ? LIGACAO_SEM_DADOS : LIGACAO_REGRA) + lei.texto();
@@ -256,8 +258,6 @@ public class OrquestradorService {
       desfecho = DesfechoInteracao.AFIRMACAO_SOBRE_DADOS;
     } else if (dados.aceita() || lei.aceita()) {
       desfecho = DesfechoInteracao.RESPONDIDA;
-    } else if (leiSoTrechos) {
-      desfecho = lei.desfecho();
     } else {
       desfecho = dados.desfecho();
     }

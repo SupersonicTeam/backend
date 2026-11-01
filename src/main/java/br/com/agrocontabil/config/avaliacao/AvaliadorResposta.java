@@ -32,6 +32,10 @@ public final class AvaliadorResposta {
       DesfechoInteracao.SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA,
       DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.SEM_RESPOSTA);
 
+  /** Desfechos em que o texto do modelo foi descartado, mesmo que a resposta mostre trechos. */
+  static final Set<DesfechoInteracao> RESPOSTA_DESCARTADA = EnumSet.of(
+      DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.CITACAO_INVALIDA);
+
   private static final Pattern TOKEN_DOCUMENTO = Pattern.compile("[\\d][\\d./-]*[\\d]");
   private static final Pattern NAO_DIGITO = Pattern.compile("\\D");
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
@@ -63,7 +67,10 @@ public final class AvaliadorResposta {
         pergunta.camposValor().isEmpty() ? null : contemTodos(texto, valoresEsperados),
         pergunta.dispositivosEsperados().isEmpty()
             ? null
-            : citaAlgum(execucao.citacoes(), pergunta.dispositivosEsperados()),
+            // Resposta de lei descartada que mostra so os trechos (#258) nao conta como citacao
+            // valida: o texto do modelo saiu, e a taxa nao pode subir com isso.
+            : !RESPOSTA_DESCARTADA.contains(execucao.desfecho())
+                && citaAlgum(execucao.citacoes(), pergunta.dispositivosEsperados()),
         pergunta.deveRecusar() ? recusou(pergunta, execucao, texto) : null,
         pergunta.valoresProibidos().isEmpty() && pergunta.textosProibidos().isEmpty()
             ? null

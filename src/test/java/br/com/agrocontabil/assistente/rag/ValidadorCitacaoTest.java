@@ -80,4 +80,12 @@ class ValidadorCitacaoTest {
     assertThat(r.idsCitados()).containsExactly("id-2", "id-1");
     assertThat(validador.marcasValidas("Sem marca nenhuma.", trechos).citacoes()).isEmpty();
   }
+
+  @Test
+  @DisplayName("Marca com numero enorme e inexistente, nao erro")
+  void marcaEnorme() {
+    assertThat(validador.validar("Isso [T99999999999].", trechos).valida()).isFalse();
+    assertThat(validador.marcasValidas("Isso [T99999999999] e [T1].", trechos).idsCitados())
+        .containsExactly("id-1");
+  }
 }
