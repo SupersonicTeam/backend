@@ -48,6 +48,12 @@ o percentual do crédito presumido, fixado por ato anual. É trabalho de cálcul
   notas da VPS somam cerca de R$ 1,3 milhão por ano para o João. Os dois ficam abaixo do limite do
   art. 164, por isso a premissa de optante.
 
+- **Demonstração da banca (#315):** os clientes do escritório "Contabilidade Rural Oeste" são de
+  regime normal (`REAL`/`PRESUMIDO`, CRT 3), coerentes com esta premissa, e as observações de cada
+  vínculo dizem se o cliente é optante (art. 165) ou contribuinte obrigatório (acima do limite do
+  art. 164). Contas em [`demonstracao-banca.md`](demonstracao-banca.md). A inconsistência abaixo
+  segue só para os produtores do `DataLoader`.
+
 ### Inconsistência conhecida (decisão pendente, antes da banca)
 
 O seed cadastra os dois produtores como **pessoa física** com `regimeTributario = SIMPLES`. Isso

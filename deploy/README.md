@@ -23,7 +23,9 @@ auth era a única barreira.
 Continua sendo **demonstração com dados fictícios**: o certificado da NF-e é o de teste (público),
 a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro) e não há
 SMTP (`EMAIL_MODO` = `DESLIGADO`: "esqueci minha senha" responde 202 e nada é enviado). As contas
-semeadas entram pelo login com a `SEED_SENHA`.
+semeadas entram pelo login com a `SEED_SENHA`, inclusive as da **demonstração da banca**
+(`DEMONSTRACAO_HABILITADA`, #315): escritório com equipe, carteira e meses de notas. Contas e
+roteiro em [`docs/demonstracao-banca.md`](../docs/demonstracao-banca.md).
 
 **A `CRIPTO_CHAVE` não pode mudar com dados no banco**: CPF/CNPJ, e-mail e telefone estão cifrados
 com ela, e com outra chave ficam ilegíveis. Trocar = zerar o banco (preservando a base da Ceres,

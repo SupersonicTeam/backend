@@ -108,6 +108,8 @@ services:
       REFRESH_COOKIE_SEGURO: 'true'
       REDEFINICAO_URL_FRONTEND: https://${SITE_HOST}/redefinir-senha
       SEED_SENHA: ${SEED_SENHA:-}
+      # Escritorio, carteira e notas da banca (#315), com as contas na SEED_SENHA. Idempotente.
+      DEMONSTRACAO_HABILITADA: 'true'
       # Fora de dev a aplicacao recusa segredo ausente, placeholder ou publicado (#222) e a chave de
       # cifra publica de desenvolvimento (#147). Trocar a CRIPTO_CHAVE torna ilegiveis os dados
       # pessoais ja gravados: nunca troque sem zerar o banco ou recifrar.
