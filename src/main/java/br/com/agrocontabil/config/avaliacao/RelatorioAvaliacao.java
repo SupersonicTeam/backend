@@ -138,7 +138,8 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
   static IndicadoresRota indicadores(List<ResultadoPergunta> grupo) {
     List<ClarezaTexto.Medida> medidas = grupo.stream()
         .filter(r -> r.execucao().erro() == null
-            && r.execucao().desfecho() == DesfechoInteracao.RESPONDIDA)
+            && (r.execucao().desfecho() == DesfechoInteracao.RESPONDIDA
+                || r.execucao().desfecho() == DesfechoInteracao.NEGATIVA_SUBSTITUIDA))
         .map(r -> ClarezaTexto.medir(r.execucao().texto()))
         .filter(m -> m.frases() > 0)
         .toList();

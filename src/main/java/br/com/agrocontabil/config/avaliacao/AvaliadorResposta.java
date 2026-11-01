@@ -130,7 +130,8 @@ public final class AvaliadorResposta {
         || DESFECHOS_DE_RECUSA.contains(execucao.desfecho())) {
       return true;
     }
-    return execucao.desfecho() == DesfechoInteracao.RESPONDIDA
+    return (execucao.desfecho() == DesfechoInteracao.RESPONDIDA
+        || execucao.desfecho() == DesfechoInteracao.NEGATIVA_SUBSTITUIDA)
         && pergunta.padroesRecusa().stream().anyMatch(padrao ->
             Pattern.compile(padrao, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE)
                 .matcher(texto).find());
