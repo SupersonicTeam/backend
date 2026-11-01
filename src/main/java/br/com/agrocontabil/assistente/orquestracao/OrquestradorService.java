@@ -5,6 +5,7 @@ import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.VerificadorNegativaDados;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.fallback.TelaAtalho;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
@@ -13,9 +14,8 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -53,22 +53,6 @@ public class OrquestradorService {
 
   /** Ligação quando a parte de dados não encontrou nada: a regra vale em tese, não "para você". */
   public static final String LIGACAO_SEM_DADOS = "De forma geral, a legislacao preve: ";
-
-  /** Parte de dados do MISTO sem nada encontrado, pela primeira função consultada (#170). */
-  static final Map<String, String> SEM_DADOS_POR_FUNCAO = Map.ofEntries(
-      Map.entry("totalComprasPorInsumo",
-          "Nao encontrei compras desse tipo nas suas notas no periodo consultado."),
-      Map.entry("listarNotas", "Nao encontrei notas com esse filtro no periodo consultado."),
-      Map.entry("proximosVencimentos", "Nao encontrei guias a vencer no periodo consultado."),
-      Map.entry("guiasEmAtraso", "Nao encontrei guias em atraso."),
-      Map.entry("vencimentosDoMes", "Nao encontrei guias para pagar no mes consultado."),
-      Map.entry("consultarNota", "Nao encontrei essa nota nas suas notas."),
-      Map.entry("totalVendasPorProduto",
-          "Nao encontrei vendas desse produto nas suas notas no periodo consultado."),
-      Map.entry("consultarCreditos", "Nao encontrei compras com credito no periodo consultado."),
-      Map.entry("consultarApuracao", "Nao encontrei notas na apuracao do mes consultado."),
-      Map.entry("listarAlertas", "Nao encontrei prazos vencendo nos proximos dias."),
-      Map.entry("consultarRetencoes", "Nao encontrei vendas autorizadas no periodo consultado."));
 
   /** Parte de dados do MISTO sem consulta nenhuma: o modelo não buscou dado algum. */
   public static final String SEM_DADOS =
@@ -274,10 +258,12 @@ public class OrquestradorService {
    * poderia afirmar o que não viu.
    */
   static String fraseSemDados(ContextoAssistente contexto) {
-    return contexto.fontes().stream()
-        .map(fonte -> SEM_DADOS_POR_FUNCAO.get(fonte.funcao()))
-        .filter(Objects::nonNull)
-        .findFirst()
-        .orElse(SEM_DADOS);
+    // A mesma frase com o recorte e o filtro reais da rota de dados (#274): "no periodo
+    // consultado" nao conta como recorte.
+    String frases = contexto.fontesVazias().stream()
+        .map(fonte -> VerificadorNegativaDados.fraseFixa(fonte, contexto.hoje()))
+        .distinct()
+        .collect(Collectors.joining(" "));
+    return frases.isEmpty() ? SEM_DADOS : frases;
   }
 }

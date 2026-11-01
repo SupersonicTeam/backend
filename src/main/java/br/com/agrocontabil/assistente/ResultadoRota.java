@@ -40,6 +40,14 @@ public record ResultadoRota(
     return new ResultadoRota(texto, DesfechoInteracao.RESPONDIDA, citacoes);
   }
 
+  /**
+   * Resposta do modelo aprovada com a negativa sem recorte trocada pela frase do backend (#274).
+   * Conta como aceita: as fontes são as da resposta.
+   */
+  public static ResultadoRota comNegativaSubstituida(String texto) {
+    return new ResultadoRota(texto, DesfechoInteracao.NEGATIVA_SUBSTITUIDA, List.of());
+  }
+
   /** Resposta do modelo descartada; {@code mensagem} é texto fixo do backend. */
   public static ResultadoRota descartada(String mensagem, DesfechoInteracao motivo) {
     return new ResultadoRota(mensagem, motivo, List.of());
@@ -54,9 +62,10 @@ public record ResultadoRota(
     return new ResultadoRota(texto, DesfechoInteracao.MODO_FALLBACK, citacoes, atalhos);
   }
 
-  /** {@code true} se a resposta do modelo foi aprovada. */
+  /** {@code true} se a resposta do modelo foi aprovada (inclusive com a negativa trocada). */
   public boolean aceita() {
-    return desfecho == DesfechoInteracao.RESPONDIDA;
+    return desfecho == DesfechoInteracao.RESPONDIDA
+        || desfecho == DesfechoInteracao.NEGATIVA_SUBSTITUIDA;
   }
 
   /**

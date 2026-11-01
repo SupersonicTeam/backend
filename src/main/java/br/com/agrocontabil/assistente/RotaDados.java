@@ -75,6 +75,7 @@ public class RotaDados {
   private final ModeloLinguagem modelo;
   private final ToolCallingManager toolCallingManager;
   private final ValidadorNumeros validadorNumeros;
+  private final VerificadorNegativaDados verificadorNegativa;
   private final List<ToolCallback> ferramentas;
   private final Set<String> nomesPermitidos;
   private final int maxRodadas;
@@ -83,12 +84,14 @@ public class RotaDados {
   public RotaDados(
       ModeloLinguagem modelo,
       ValidadorNumeros validadorNumeros,
+      VerificadorNegativaDados verificadorNegativa,
       FerramentasDadosProdutor ferramentasDadosProdutor,
       ProcessadorErroFerramenta processadorErro,
       AssistenteProperties propriedades,
       ObjectProvider<ObservationRegistry> observacao) {
     this.modelo = modelo;
     this.validadorNumeros = validadorNumeros;
+    this.verificadorNegativa = verificadorNegativa;
     this.ferramentas = List.of(ToolCallbacks.from(ferramentasDadosProdutor));
     this.nomesPermitidos = ferramentas.stream()
         .map(f -> f.getToolDefinition().name())
@@ -166,7 +169,10 @@ public class RotaDados {
       return ResultadoRota.descartada(
           MENSAGEM_NUMERO_SEM_FONTE, DesfechoInteracao.NUMERO_SEM_FONTE);
     }
-    return ResultadoRota.aceita(texto);
+    // Negativa absoluta sobre consulta vazia, sem o recorte: vira a frase do backend (#274).
+    return verificadorNegativa.substituir(texto, contexto)
+        .map(ResultadoRota::comNegativaSubstituida)
+        .orElseGet(() -> ResultadoRota.aceita(texto));
   }
 
   private static int quantidadeDeChamadas(ChatResponse resposta) {

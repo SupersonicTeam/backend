@@ -310,6 +310,21 @@ citações entra com essa frase; o desfecho de cada parte segue na auditoria. Na
 desfechos seguem contando como recusa e **não** contam como citação válida (o texto do modelo
 saiu), para a taxa não subir com o descarte.
 
+**Resultado vazio nunca vira "não tem" absoluto (#274, item 6).** O pior erro medido na VPS era a
+negativa falsa: "não tem débito pendente" com guias vencidas (#259), "não há notas devolvidas"
+filtrando as rejeitadas (#254). A garantia é do backend, não do prompt: o
+`VerificadorNegativaDados` roda na `RotaDados` depois do `ValidadorNumeros` e, se alguma função
+voltou vazia (e cuja função não achou nada em outra chamada: nova tentativa com outro termo que
+achou dados não deixa negativa a trocar), troca toda frase sobre dados com negativa absoluta que não
+traz o **recorte completo** da consulta, isto é, o período (as datas, o mês, inclusive por
+extenso, ou o número, casados inteiros) **e** o filtro (a situação da nota, o produto), pela frase
+fixa de cada consulta vazia, com o período e o filtro reais ("Não encontrei notas rejeitadas pela
+SEFAZ entre 30/07/2026 e 28/10/2026."). "Entre 30/07 e 28/10 você não tem notas devolvidas", sobre
+uma consulta de rejeitadas, sai. O resto da resposta fica, com a formatação; a observação da
+função já repassada não duplica. No MISTO sem dado nenhum, a parte de dados usa a mesma frase.
+Limite conhecido: uma frase que nega duas coisas e traz o recorte de uma só fica inteira. Desfecho `NEGATIVA_SUBSTITUIDA` na auditoria (sem o texto, #144); a resposta é entregue com
+as fontes. Na etapa 4 (templates) ele continua como rede de segurança.
+
 **A parte de lei do MISTO não fala dos dados (#170).** Ela vê só trechos de lei, então:
 
 - recebe um prompt próprio (`PromptsCeres.sistemaLegislacaoRegraGeral`): só a regra geral, em
