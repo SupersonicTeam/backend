@@ -293,6 +293,16 @@ mudança no prompt do classificador pede uma medição do gabarito (`docs/avalia
 repetições desde a #264: uma rodada só não separa ganho de ruído. Os casos adversários de rota
 (`adversario: true`, 20 na versão `2026-10-31.1`) medem a precisão das regras de rota da #265.
 
+**Lei descartada com trechos não vira "não encontrei fundamento" (#258).** O `ValidadorNumeros`
+descarta a resposta de lei com número fora dos trechos (correto: o 4B completa perguntas amplas
+com anos e prazos de memória), e a marca inventada derruba o texto inteiro. Mas havia artigos
+recuperados, e o produtor lia "Não encontrei fundamento legal para isso." Agora, com
+`NUMERO_SEM_FONTE`, ou com `CITACAO_INVALIDA` quando ao menos uma marca existe
+(`ValidadorCitacao.marcasValidas`), a resposta é `RotaLegislacao.SO_TRECHOS` com as citações dos
+trechos marcados certo, sem o texto do modelo. `SEM_FUNDAMENTO` fica só sem trecho recuperado, sem
+marca nenhuma (inclusive o `NAO_ENCONTREI`) ou só com marcas inventadas. No MISTO a parte de lei com
+citações entra como `SO_TRECHOS`; o desfecho de cada parte segue na auditoria.
+
 **A parte de lei do MISTO não fala dos dados (#170).** Ela vê só trechos de lei, então:
 
 - recebe um prompt próprio (`PromptsCeres.sistemaLegislacaoRegraGeral`): só a regra geral, em

@@ -88,6 +88,35 @@ public class ValidadorCitacao {
         citados.values().stream().map(TrechoRecuperado::id).toList());
   }
 
+  /**
+   * As citações das marcas que existem, mesmo numa resposta inválida (issue #258). Uma resposta
+   * com uma marca inventada é descartada inteira, mas os trechos que o modelo marcou certo ainda
+   * são os artigos que tratam do assunto e podem ser mostrados sem o texto dele.
+   *
+   * @param resposta texto do modelo
+   * @param trechos  trechos recuperados, na ordem das marcas
+   * @return citações e ids das marcas válidas, na ordem da primeira menção (vazias se não há)
+   */
+  public Resultado marcasValidas(String resposta, List<TrechoRecuperado> trechos) {
+    if (resposta == null || trechos.isEmpty()) {
+      return invalida();
+    }
+    Map<Integer, TrechoRecuperado> citados = new LinkedHashMap<>();
+    Matcher m = MARCA.matcher(resposta);
+    while (m.find()) {
+      Matcher numero = NUMERO_MARCA.matcher(m.group(1));
+      while (numero.find()) {
+        int indice = Integer.parseInt(numero.group(1));
+        if (indice >= 1 && indice <= trechos.size()) {
+          citados.putIfAbsent(indice, trechos.get(indice - 1));
+        }
+      }
+    }
+    return new Resultado(false, SEM_FUNDAMENTO,
+        citados.values().stream().map(TrechoRecuperado::comoCitacao).toList(),
+        citados.values().stream().map(TrechoRecuperado::id).toList());
+  }
+
   private static Resultado invalida() {
     return new Resultado(false, SEM_FUNDAMENTO, List.of(), List.of());
   }

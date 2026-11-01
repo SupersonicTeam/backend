@@ -227,22 +227,37 @@ class RotaLegislacaoTest {
   }
 
   @Test
-  @DisplayName("DoD #156: citacao inventada pelo modelo e barrada")
+  @DisplayName("DoD #156 + #258: marca inventada derruba o texto; os trechos certos ficam")
   void citacaoInventadaBarrada() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
     chatModel.responderTexto("A reducao e de 60% [T1], e ha isencao total [T4].");
 
     ResultadoRota r = rota.responder("Qual a reducao?", contexto);
 
+    // O texto do modelo (e a "isencao total" do T4 inexistente) nunca chega ao produtor.
     assertThat(r.aceita()).isFalse();
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
-    assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
-    assertThat(r.citacoes()).isEmpty();
-    assertThat(contexto.trechosCitados()).isEmpty();
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.SO_TRECHOS);
+    assertThat(r.citacoes()).singleElement()
+        .satisfies(c -> assertThat(c.url()).isEqualTo(URL));
+    assertThat(contexto.trechosCitados()).containsExactly("id-1");
   }
 
   @Test
-  @DisplayName("Percentual que a lei nao diz e barrado, mesmo com marca valida")
+  @DisplayName("#258: so marcas inventadas continua 'nao encontrei fundamento legal'")
+  void soMarcaInventada() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("Ha isencao total [T4].");
+
+    ResultadoRota r = rota.responder("Qual a reducao?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+    assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#258: numero que a lei nao diz derruba o texto, mas os trechos citados ficam")
   void numeroForaDosTrechos() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
     chatModel.responderTexto("A reducao e de 70% [T1].");
@@ -251,8 +266,11 @@ class RotaLegislacaoTest {
 
     assertThat(r.aceita()).isFalse();
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE);
+    // Nem o 70% nem "nao encontrei fundamento": o produtor recebe o artigo certo.
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.SO_TRECHOS).doesNotContain("70");
     List<CitacaoLegal> citacoes = r.citacoes();
-    assertThat(citacoes).isEmpty();
+    assertThat(citacoes).singleElement().satisfies(c -> assertThat(c.url()).isEqualTo(URL));
+    assertThat(contexto.trechosCitados()).containsExactly("id-1");
   }
 
   @Test

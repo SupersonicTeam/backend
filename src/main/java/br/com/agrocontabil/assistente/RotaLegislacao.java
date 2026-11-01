@@ -54,8 +54,10 @@ public class RotaLegislacao {
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
   /**
-   * Texto da parte de lei do MISTO quando o modelo falou dos dados do produtor (issue #170). As
-   * citações validadas seguem na resposta; sem dígitos, para não virar fonte de número.
+   * Texto da resposta de lei sem o texto do modelo, só com as citações validadas: no MISTO quando o
+   * modelo falou dos dados do produtor (issue #170), e em qualquer rota quando a resposta tinha
+   * número fora dos trechos ou marca inventada ao lado de marcas certas (issue #258). Sem
+   * dígitos, para não virar fonte de número.
    */
   public static final String SO_TRECHOS =
       "A regra legal que trata do assunto esta nos trechos de lei citados.";
@@ -157,10 +159,18 @@ public class RotaLegislacao {
 
     ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
     if (!citacao.valida()) {
-      // Sem marca (inclusive o NAO_ENCONTREI) ou com marca inventada.
-      log.info("Ceres: resposta de legislacao sem citacao valida descartada");
-      return ResultadoRota.descartada(
-          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+      // Sem marca (inclusive o NAO_ENCONTREI) ou com marca inventada. Com marca inventada e
+      // alguma certa, os trechos certos ainda tratam do assunto (#258): so eles, sem o texto.
+      ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, trechos);
+      if (validas.citacoes().isEmpty()) {
+        log.info("Ceres: resposta de legislacao sem citacao valida descartada");
+        return ResultadoRota.descartada(
+            ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+      }
+      log.info("Ceres: resposta de legislacao com marca inexistente; so os trechos validos");
+      contexto.registrarTrechosCitados(validas.idsCitados());
+      return new ResultadoRota(
+          SO_TRECHOS, DesfechoInteracao.CITACAO_INVALIDA, validas.citacoes());
     }
 
     List<String> fontes = new ArrayList<>();
@@ -171,10 +181,13 @@ public class RotaLegislacao {
     ValidadorNumeros.Resultado numeros =
         validadorNumeros.verificar(semMarcas(texto), fontes, List.of(contexto.hoje()));
     if (!numeros.rastreavel()) {
-      log.warn("Ceres: resposta de legislacao descartada com {} numero(s) fora dos trechos",
-          numeros.quantidadeSemFonte());
-      return ResultadoRota.descartada(
-          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.NUMERO_SEM_FONTE);
+      // A citacao e valida: o texto sai (numero sem fonte), os trechos ficam (#258). Antes o
+      // produtor lia "nao encontrei fundamento legal" sobre um assunto com artigos recuperados.
+      log.warn("Ceres: resposta de legislacao descartada com {} numero(s) fora dos trechos; so "
+          + "os trechos citados", numeros.quantidadeSemFonte());
+      contexto.registrarTrechosCitados(citacao.idsCitados());
+      return new ResultadoRota(
+          SO_TRECHOS, DesfechoInteracao.NUMERO_SEM_FONTE, citacao.citacoes());
     }
 
     contexto.registrarTrechosCitados(citacao.idsCitados());

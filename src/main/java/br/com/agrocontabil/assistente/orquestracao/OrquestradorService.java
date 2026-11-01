@@ -231,7 +231,10 @@ public class OrquestradorService {
       ResultadoRota dados, ResultadoRota lei, ContextoAssistente contexto) {
     boolean semDados = dados.aceita() && contexto.nenhumDadoEncontrado();
     String parteDados = semDados ? fraseSemDados(contexto) : dados.texto();
-    boolean leiSoTrechos = lei.desfecho() == DesfechoInteracao.AFIRMACAO_SOBRE_DADOS;
+    // Lei descartada mas com trechos citados (AFIRMACAO_SOBRE_DADOS, #170; numero sem fonte ou
+    // marca inventada ao lado de marcas certas, #258): entra o SO_TRECHOS com as citacoes, nunca
+    // "nao encontrei fundamento legal" ao lado dos artigos.
+    boolean leiSoTrechos = !lei.aceita() && !lei.emFallback() && !lei.citacoes().isEmpty();
     String parteLei;
     if (lei.aceita()) {
       parteLei = (semDados ? LIGACAO_SEM_DADOS : LIGACAO_REGRA) + lei.texto();
@@ -249,10 +252,12 @@ public class OrquestradorService {
     DesfechoInteracao desfecho;
     if (emFallback) {
       desfecho = DesfechoInteracao.MODO_FALLBACK;
-    } else if (leiSoTrechos) {
+    } else if (lei.desfecho() == DesfechoInteracao.AFIRMACAO_SOBRE_DADOS) {
       desfecho = DesfechoInteracao.AFIRMACAO_SOBRE_DADOS;
     } else if (dados.aceita() || lei.aceita()) {
       desfecho = DesfechoInteracao.RESPONDIDA;
+    } else if (leiSoTrechos) {
+      desfecho = lei.desfecho();
     } else {
       desfecho = dados.desfecho();
     }
