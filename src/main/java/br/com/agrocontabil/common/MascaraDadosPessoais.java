@@ -71,15 +71,23 @@ public final class MascaraDadosPessoais {
   }
 
   /**
-   * Referência curta de um id para log (#222): {@code ref:} + 12 hex do SHA-256 do UUID.
+   * Referência curta de um id para log (#222): {@code ref:} + 12 hex do SHA-256 do UUID, em duas
+   * metades de 6 separadas por hífen ({@code ref:6bbd4e-b564e9}).
    *
    * <p>Para o id da credencial, que é o {@code sub} do JWT: com ele no log, quem obtivesse o
    * segredo forjaria o token de uma conta específica. A referência correlaciona os eventos de uma
    * mesma conta (o hash é estável) e, com o UUID em mãos, a operação a recalcula; o caminho
    * inverso não existe.
    *
+   * <p>O hífen é o que torna a referência imune à própria {@link #mascarar}: 12 hex corridos saem
+   * só com dígitos decimais em ~1% dos hashes, e com 11 dígitos e uma letra a regra de CPF trocava
+   * o trecho ({@code ref:[CPF]a}), quebrando a correlação. Com no máximo 6 dígitos de cada lado do
+   * hífen nenhuma regra casa: CPF e CNPJ exigem 9 e 12 dígitos antes do hífen, e o telefone exige
+   * parênteses no DDD ou espaço depois dele. Mexer na máscara para pular o token enfraqueceria a
+   * rede de segurança para todo o resto do log.
+   *
    * @param id id a referenciar
-   * @return {@code ref:<12 hex>}; nulo vira {@code ref:-}
+   * @return {@code ref:<6 hex>-<6 hex>}; nulo vira {@code ref:-}
    */
   public static String referencia(UUID id) {
     if (id == null) {
@@ -88,7 +96,8 @@ public final class MascaraDadosPessoais {
     try {
       byte[] hash = MessageDigest.getInstance("SHA-256")
           .digest(id.toString().getBytes(StandardCharsets.UTF_8));
-      return "ref:" + HexFormat.of().formatHex(hash, 0, 6);
+      HexFormat hex = HexFormat.of();
+      return "ref:" + hex.formatHex(hash, 0, 3) + "-" + hex.formatHex(hash, 3, 6);
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 indisponivel na JVM", e);
     }

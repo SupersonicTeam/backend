@@ -96,9 +96,40 @@ class MascaraDadosPessoaisTest {
 
     String ref = MascaraDadosPessoais.referencia(id);
 
-    assertThat(ref).matches("ref:[0-9a-f]{12}").isEqualTo(MascaraDadosPessoais.referencia(id))
+    assertThat(ref).matches("ref:[0-9a-f]{6}-[0-9a-f]{6}")
+        .isEqualTo(MascaraDadosPessoais.referencia(id))
         .doesNotContain("72f7d6a7");
     assertThat(MascaraDadosPessoais.referencia(java.util.UUID.randomUUID())).isNotEqualTo(ref);
     assertThat(MascaraDadosPessoais.referencia(null)).isEqualTo("ref:-");
+  }
+
+  @Test
+  @DisplayName("referencia passa intacta pela mascara mesmo com hash so de digitos (#222)")
+  void referenciaImuneAMascara() {
+    // SHA-256 deste UUID comeca com 46696269333f: 11 digitos e uma letra. Sem o separador, a
+    // regra de CPF trocava o trecho e o log saia "ref:[CPF]f", inutil para correlacao.
+    java.util.UUID id = java.util.UUID.fromString("00000000-0000-0000-0000-000000000191");
+
+    String ref = MascaraDadosPessoais.referencia(id);
+
+    assertThat(ref).isEqualTo("ref:466962-69333f");
+    assertThat(MascaraDadosPessoais.mascarar("login recusado " + ref + " bloqueada"))
+        .isEqualTo("login recusado " + ref + " bloqueada");
+  }
+
+  @Test
+  @DisplayName("referencia de qualquer hash nao casa CPF, CNPJ nem telefone")
+  void referenciaSoDeDigitosNaoCasaNenhumaRegra() {
+    // Pior caso de cada regra: as duas metades so de digitos.
+    for (String ref : new String[] {"ref:123456-789012", "ref:000000-000000",
+        "ref:529982-247250", "ref:119999-912345"}) {
+      assertThat(MascaraDadosPessoais.mascarar(ref)).isEqualTo(ref);
+      String linha = "conta " + ref + ".";
+      assertThat(MascaraDadosPessoais.mascarar(linha)).isEqualTo(linha);
+    }
+    for (int i = 0; i < 2_000; i++) {
+      String ref = MascaraDadosPessoais.referencia(java.util.UUID.randomUUID());
+      assertThat(MascaraDadosPessoais.mascarar(ref)).isEqualTo(ref);
+    }
   }
 }
