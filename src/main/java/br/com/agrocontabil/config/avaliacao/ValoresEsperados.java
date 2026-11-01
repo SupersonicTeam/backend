@@ -149,7 +149,8 @@ public final class ValoresEsperados {
   private static String lerCampo(Object resultado, String campo, String id) {
     Object atual = resultado;
     for (String parte : campo.split("\\.")) {
-      if (atual instanceof List<?> lista && parte.chars().allMatch(Character::isDigit)) {
+      if (atual instanceof List<?> lista && !parte.isEmpty()
+          && parte.chars().allMatch(Character::isDigit)) {
         int indice = Integer.parseInt(parte);
         if (indice >= lista.size()) {
           throw new IllegalArgumentException(

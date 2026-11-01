@@ -247,12 +247,17 @@ class ConsultaDadosProdutorServiceIntegrationTest {
   @Autowired private NotaFiscalValidacaoRepository validacaoRepository;
 
   @Test
-  @DisplayName("#256: nota pelo numero so do produtor, com o motivo e o ultimo lote")
+  @DisplayName("#256: nota pelo numero so do produtor, propria primeiro, com o motivo atual")
   void notaPorNumero() {
     NotaFiscal minha = saida(produtorA, em(2026, 9, 8), "Milho", "10059010", "1000.00");
     minha.setNumero(777_001L);
     minha.setStatus(StatusNotaFiscal.DEVOLVIDA);
     minha = notaFiscalRepository.save(minha);
+    // Compra de fornecedor com o mesmo numero, mais recente: vem depois da propria.
+    NotaFiscal recebida = entrada(produtorA, StatusNotaFiscal.AUTORIZADA, em(2026, 9, 20),
+        "Adubo", "31052000", "KG", "10", "50.00");
+    recebida.setNumero(777_001L);
+    notaFiscalRepository.save(recebida);
     NotaFiscal outra = saida(produtorB, em(2026, 9, 8), "Milho", "10059010", "9999.00");
     outra.setNumero(777_001L);
     notaFiscalRepository.save(outra);
@@ -262,22 +267,38 @@ class ConsultaDadosProdutorServiceIntegrationTest {
     revisaoRepository.save(NotaFiscalRevisao.builder()
         .notaFiscalId(minha.getId()).acao(AcaoRevisao.DEVOLVIDA)
         .motivo("motivo novo").ocorridoEm(em(2026, 9, 11)).build());
-    UUID loteVelho = UUID.randomUUID();
-    UUID loteNovo = UUID.randomUUID();
-    validacaoRepository.save(validacao(minha, loteVelho, "VELHO", em(2026, 9, 9)));
-    validacaoRepository.save(validacao(minha, loteNovo, "NOVO", em(2026, 9, 10)));
+    // Lote antigo de uma nota devolvida: pode ser de erros ja corrigidos, nao aparece.
+    validacaoRepository.save(validacao(minha, UUID.randomUUID(), "VELHO", em(2026, 9, 7)));
 
-    List<NotaPorNumeroResultado> notas = service.notasPorNumero(produtorA.getId(), 777_001L);
+    ConsultaDadosProdutorService.NotasPorNumero r =
+        service.notasPorNumero(produtorA.getId(), 777_001L);
 
-    // A do B, com o mesmo numero, nao aparece (anti-IDOR).
-    assertThat(notas).singleElement().satisfies(n -> {
-      assertThat(n.status()).isEqualTo(StatusNotaFiscal.DEVOLVIDA);
-      assertThat(n.valorTotal()).isEqualByComparingTo("1000.00");
-      assertThat(n.motivoDevolucao()).isEqualTo("motivo novo");
-      assertThat(n.inconsistencias()).extracting(NotaPorNumeroResultado.Inconsistencia::codigo)
-          .containsExactly("NOVO");
-    });
-    assertThat(service.notasPorNumero(produtorA.getId(), 123_456_789L)).isEmpty();
+    // A do B, com o mesmo numero, nao aparece nem conta (anti-IDOR).
+    assertThat(r.total()).isEqualTo(2);
+    assertThat(r.notas()).extracting(NotaPorNumeroResultado::origem)
+        .containsExactly(OrigemNotaFiscal.PROPRIA, OrigemNotaFiscal.IMPORTADA);
+    NotaPorNumeroResultado propria = r.notas().get(0);
+    assertThat(propria.valorTotal()).isEqualByComparingTo("1000.00");
+    assertThat(propria.motivoDevolucao()).isEqualTo("motivo novo");
+    assertThat(propria.inconsistencias()).isEmpty();
+    // A compra autorizada nunca foi devolvida.
+    assertThat(r.notas().get(1).motivoDevolucao()).isNull();
+    assertThat(service.notasPorNumero(produtorA.getId(), 123_456_789L).notas()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#256: com inconsistencias, so o ultimo lote")
+  void notaComInconsistencias() {
+    NotaFiscal nota = saida(produtorA, em(2026, 9, 8), "Milho", "10059010", "1000.00");
+    nota.setNumero(777_002L);
+    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
+    nota = notaFiscalRepository.save(nota);
+    validacaoRepository.save(validacao(nota, UUID.randomUUID(), "VELHO", em(2026, 9, 9)));
+    validacaoRepository.save(validacao(nota, UUID.randomUUID(), "NOVO", em(2026, 9, 10)));
+
+    assertThat(service.notasPorNumero(produtorA.getId(), 777_002L).notas()).singleElement()
+        .satisfies(n -> assertThat(n.inconsistencias())
+            .extracting(NotaPorNumeroResultado.Inconsistencia::codigo).containsExactly("NOVO"));
   }
 
   private static NotaFiscalValidacao validacao(NotaFiscal nota,

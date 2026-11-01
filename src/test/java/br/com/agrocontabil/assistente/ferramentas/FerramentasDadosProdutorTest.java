@@ -467,15 +467,17 @@ class FerramentasDadosProdutorTest {
   @Test
   @DisplayName("#256: nota pelo numero, situacao explicada, sinais vazios (para a #276)")
   void consultarNota() {
-    when(dados.notasPorNumero(PRODUTOR, 107)).thenReturn(List.of(new DadosProdutorPorta.NotaDetalhe(
-        107, 1, OffsetDateTime.of(2026, 9, 8, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
-        OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.DEVOLVIDA, new BigDecimal("12100.00"),
-        BigDecimal.ZERO, BigDecimal.ZERO, "Corrija a natureza.",
-        List.of(new DadosProdutorPorta.Inconsistencia("C", "campo", "msg", "sug")))));
+    when(dados.notasPorNumero(PRODUTOR, 107)).thenReturn(new Pagina<>(List.of(
+        new DadosProdutorPorta.NotaDetalhe(
+            107, 1, OffsetDateTime.of(2026, 9, 8, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
+            OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.DEVOLVIDA, new BigDecimal("12100.00"),
+            BigDecimal.ZERO, BigDecimal.ZERO, "Corrija a natureza.",
+            List.of(new DadosProdutorPorta.Inconsistencia("C", "campo", "msg", "sug")))), 4));
 
     RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(107, toolContext);
 
-    assertThat(nota.encontradas()).isEqualTo(1);
+    // Quantas existem, nao so as listadas.
+    assertThat(nota.encontradas()).isEqualTo(4);
     assertThat(nota.observacao()).isNull();
     assertThat(nota.notas()).singleElement().satisfies(n -> {
       assertThat(n.tipo()).isEqualTo("SAIDA");
@@ -494,7 +496,7 @@ class FerramentasDadosProdutorTest {
   @Test
   @DisplayName("#256: numero inexistente ou de outro produtor responde igual, sem revelar nada")
   void consultarNotaInexistente() {
-    when(dados.notasPorNumero(PRODUTOR, 5)).thenReturn(List.of());
+    when(dados.notasPorNumero(PRODUTOR, 5)).thenReturn(new Pagina<>(List.of(), 0));
 
     RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(5, toolContext);
 
@@ -510,6 +512,21 @@ class FerramentasDadosProdutorTest {
     assertThatThrownBy(() -> ferramentas.consultarNota(null, toolContext))
         .isInstanceOf(ParametroFerramentaInvalidoException.class);
     verifyNoInteractions(dados);
+  }
+
+  @Test
+  @DisplayName("#254: nota em aberto sem datas olha 24 meses, nao so 90 dias")
+  void listarNotasDevolvidasSemPrazo() {
+    when(dados.notas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
+        EnumSet.of(StatusNotaFiscal.DEVOLVIDA), HOJE.minusDays(731), HOJE, 5))
+        .thenReturn(new Pagina<>(List.of(), 0));
+    when(dados.totalNotas(PRODUTOR, EnumSet.allOf(OrigemNotaFiscal.class),
+        EnumSet.of(StatusNotaFiscal.DEVOLVIDA), HOJE.minusDays(731), HOJE))
+        .thenReturn(new DadosProdutorPorta.Totais(0, BigDecimal.ZERO));
+
+    Notas notas = ferramentas.listarNotas(null, "DEVOLVIDA", null, null, null, toolContext);
+
+    assertThat(notas.dataInicio()).isEqualTo(FormatoBr.data(HOJE.minusDays(731)));
   }
 
   @Test
@@ -541,6 +558,9 @@ class FerramentasDadosProdutorTest {
         textos.add(texto);
       } else if (valor instanceof List<?> lista) {
         lista.stream().filter(String.class::isInstance).map(String.class::cast).forEach(textos::add);
+      } else if (valor instanceof Map<?, ?> mapa) {
+        mapa.values().stream().filter(String.class::isInstance).map(String.class::cast)
+            .forEach(textos::add);
       }
     }
     assertThat(textos).contains(FerramentasDadosProdutor.NADA_POR_DESCRICAO,

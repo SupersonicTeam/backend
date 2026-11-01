@@ -66,7 +66,7 @@ public interface DadosProdutorPorta {
    * Notas do produtor com o número pedido (issue #256), no máximo 3 (séries diferentes e notas de
    * fornecedor repetem número). Número de outro produtor = lista vazia, como número inexistente.
    */
-  List<NotaDetalhe> notasPorNumero(UUID produtorId, long numero);
+  Pagina<NotaDetalhe> notasPorNumero(UUID produtorId, long numero);
 
   /** Guias não pagas com vencimento em {@code [de, ate]}, da mais próxima para a mais distante. */
   Pagina<Vencimento> vencimentosNaoPagos(UUID produtorId, LocalDate de, LocalDate ate, int limite);
@@ -170,8 +170,8 @@ public interface DadosProdutorPorta {
   /**
    * Uma nota consultada pelo número, sem dado pessoal (issue #256).
    *
-   * @param motivoDevolucao motivo da última devolução pelo contador; nulo se nunca devolvida
-   * @param inconsistencias as do último lote de validação, se a nota ainda pode ser corrigida
+   * @param motivoDevolucao motivo da última devolução, só com a nota ainda devolvida
+   * @param inconsistencias as do último lote, só com a nota em {@code COM_INCONSISTENCIAS}
    */
   record NotaDetalhe(long numero, int serie, OffsetDateTime dataEmissao, OrigemNotaFiscal origem,
       StatusNotaFiscal status, BigDecimal valorTotal, BigDecimal valorIbs, BigDecimal valorCbs,

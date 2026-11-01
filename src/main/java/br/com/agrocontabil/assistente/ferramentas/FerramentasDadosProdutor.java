@@ -8,12 +8,12 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.CompraPor
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Guia;
-import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Inconsistencia;
-import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaConsultada;
-import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaDetalhada;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.GuiasDoRecorte;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.GuiasEmAtraso;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Inconsistencia;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Nota;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaConsultada;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaDetalhada;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
@@ -160,6 +160,10 @@ public class FerramentasDadosProdutor {
   private static final int MAXIMO_MESES_VENCIMENTO = 12;
   private static final int NUMERO_NOTA_MAXIMO = 999_999_999;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
+  /** Situações de nota ainda em aberto: sem datas, {@code listarNotas} olha 24 meses para trás. */
+  static final Set<StatusNotaFiscal> PENDENCIAS_ABERTAS = EnumSet.of(StatusNotaFiscal.RASCUNHO,
+      StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.AGUARDANDO_APROVACAO,
+      StatusNotaFiscal.APROVADA, StatusNotaFiscal.DEVOLVIDA);
 
   private final DadosProdutorPorta dados;
 
@@ -334,7 +338,8 @@ public class FerramentasDadosProdutor {
       Lista as notas fiscais mais recentes do produtor (no maximo 10) com numero, data, tipo, \
       situacao e valores, informa quantas existem no filtro e traz em valorTotal a soma ja \
       calculada pelo sistema (abrangenciaTotal e quantidadeNoTotal dizem quais e quantas notas \
-      entram nela). Sem datas, o periodo e dos ultimos 90 dias: informe sempre o periodo \
+      entram nela). Sem datas, o periodo e dos ultimos 90 dias (24 meses para nota em aberto: \
+      rascunho, com inconsistencias, em revisao, aprovada ou devolvida): informe sempre o periodo \
       (dataInicio a dataFim) junto com o total. Use para perguntas \
       como "quais foram minhas ultimas vendas?", "tenho nota rejeitada?" ou "quanto somam minhas \
       vendas do mes?". Para totais, repita o valorTotal: nunca some os valores da lista, que e \
@@ -358,8 +363,11 @@ public class FerramentasDadosProdutor {
     Set<OrigemNotaFiscal> origens = origens(tipo);
     Set<StatusNotaFiscal> status = status(situacao);
     LocalDate fim = vazio(dataFim) ? contexto.hoje() : data(dataFim, "dataFim");
+    // Pendencia aberta (rascunho, devolvida, em revisao...) nao tem prazo: "tenho nota devolvida?"
+    // com a janela de 90 dias deixaria de fora a devolvida antiga e viraria negativa falsa (#254).
     LocalDate inicio = vazio(dataInicio)
-        ? fim.minusDays(DIAS_LISTAGEM_PADRAO)
+        ? fim.minusDays(PENDENCIAS_ABERTAS.containsAll(status)
+            ? MAXIMO_DIAS_PERIODO : DIAS_LISTAGEM_PADRAO)
         : data(dataInicio, "dataInicio");
     exigirPeriodo(inicio, fim);
     int quantidade = limite == null ? LIMITE_PADRAO : limite;
@@ -592,11 +600,12 @@ public class FerramentasDadosProdutor {
     if (numero == null || numero < 1 || numero > NUMERO_NOTA_MAXIMO) {
       throw new ParametroFerramentaInvalidoException("numero deve estar entre 1 e 999999999.");
     }
-    List<DadosProdutorPorta.NotaDetalhe> notas =
+    Pagina<DadosProdutorPorta.NotaDetalhe> pagina =
         dados.notasPorNumero(contexto.produtorId(), numero);
+    List<DadosProdutorPorta.NotaDetalhe> notas = pagina.itens();
     contexto.registrarFonte("consultarNota", parametros("numero", String.valueOf(numero)),
         notas.isEmpty());
-    return new NotaConsultada(numero, notas.size(), notas.stream()
+    return new NotaConsultada(numero, pagina.total(), notas.stream()
         .map(n -> new NotaDetalhada(n.numero(), n.serie(), FormatoBr.data(n.dataEmissao()),
             n.origem() == OrigemNotaFiscal.IMPORTADA ? "ENTRADA" : "SAIDA", n.status().name(),
             EXPLICACAO_SITUACAO.get(n.status()), FormatoBr.moeda(n.valorTotal()),

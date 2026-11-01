@@ -157,11 +157,12 @@ public final class RespostasFerramentas {
    * Resultado de {@code consultarNota} (issue #256).
    *
    * @param numeroPedido número consultado
-   * @param encontradas  notas do produtor com esse número (no máximo 3)
-   * @param notas        as notas, da mais recente para a mais antiga
+   * @param encontradas  quantas notas o produtor tem com esse número (pode ser mais que as 3
+   *                     listadas)
+   * @param notas        no máximo 3: as emitidas pelo produtor primeiro, depois as recebidas
    * @param observacao   frase ao usuário quando nenhuma nota foi encontrada; nula caso contrário
    */
-  public record NotaConsultada(long numeroPedido, int encontradas, List<NotaDetalhada> notas,
+  public record NotaConsultada(long numeroPedido, long encontradas, List<NotaDetalhada> notas,
       String observacao) {}
 
   /**
@@ -176,8 +177,9 @@ public final class RespostasFerramentas {
    * @param valorTotal       valor total
    * @param valorIbs         IBS da nota
    * @param valorCbs         CBS da nota
-   * @param motivoDevolucao  motivo da última devolução pelo contador; nulo se nunca devolvida
-   * @param inconsistencias  o que corrigir (último lote de validação); vazio se não há
+   * @param motivoDevolucao  motivo da devolução pelo contador, só com a nota ainda devolvida
+   * @param inconsistencias  o que corrigir (último lote de validação), só com a nota em
+   *                         {@code COM_INCONSISTENCIAS}
    * @param sinais           sinais de nota a conferir; sempre vazio por enquanto (a #276 os
    *                         preenche)
    */

@@ -186,9 +186,9 @@ public class SeedAvaliacao {
         StatusNotaFiscal.COM_INCONSISTENCIAS, "Soja em graos", NCM_SOJA_GRAO, "2000", "5100.00");
     validacaoRepository.save(NotaFiscalValidacao.builder()
         .notaFiscal(inconsistente).loteValidacao(UUID.randomUUID())
-        .code("DESTINATARIO_IE_OBRIGATORIA").field("destinatarioInscricaoEstadual")
-        .message("Inscricao estadual do destinatario obrigatoria para venda a contribuinte.")
-        .suggestion("Informe a inscricao estadual da cooperativa e gere o XML de novo.")
+        // O que o FiscalRulesValidator grava de fato (NOTA_INVALIDA_EMISSAO, sem sugestao).
+        .code("NOTA_INVALIDA_EMISSAO").field("destinatarioEndereco.logradouro")
+        .message("Logradouro do destinatario e obrigatorio")
         .validadoEm(em(2026, 9, 12)).build());
 
     // Guias, contra o "hoje" padrao da avaliacao (2026-09-15).
@@ -240,11 +240,13 @@ public class SeedAvaliacao {
     NotaFiscal nota = base(p, numero, emissao, status, valor);
     nota.setOrigem(OrigemNotaFiscal.PROPRIA);
     nota.setNaturezaOperacao("Venda de producao do estabelecimento");
-    if (status != StatusNotaFiscal.RASCUNHO && status != StatusNotaFiscal.DEVOLVIDA
+    // O IBS/CBS e calculado ao salvar, inclusive no rascunho (NotaFiscalService); a chave so
+    // existe depois de gerar o XML.
+    nota.setValorTotalIbs(tributo(valor, ALIQUOTA_IBS_2026));
+    nota.setValorTotalCbs(tributo(valor, ALIQUOTA_CBS_2026));
+    if (!StatusNotaFiscal.RASCUNHO.equals(status) && status != StatusNotaFiscal.DEVOLVIDA
         && status != StatusNotaFiscal.COM_INCONSISTENCIAS) {
       nota.setChaveAcesso(chave(p, numero));
-      nota.setValorTotalIbs(tributo(valor, ALIQUOTA_IBS_2026));
-      nota.setValorTotalCbs(tributo(valor, ALIQUOTA_CBS_2026));
     }
     nota.addItem(item(descricao, ncm, "5101", "KG", quantidade, valor));
     return notaFiscalRepository.save(nota);

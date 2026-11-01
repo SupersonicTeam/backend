@@ -1,7 +1,6 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.model.AcaoRevisao;
-import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalRevisao;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
@@ -12,6 +11,7 @@ import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
+import br.com.agrocontabil.repository.NotaPorNumeroLinha;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
@@ -20,7 +20,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -55,10 +54,6 @@ public class ConsultaDadosProdutorService {
   /** Maior lista que uma consulta devolve (minimização, issue #144). */
   public static final int LIMITE_MAXIMO = 10;
 
-  /** Situações em que a nota ainda pode ser corrigida pelo produtor. */
-  private static final Set<StatusNotaFiscal> CORRIGIVEIS = EnumSet.of(
-      StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA);
-
   private static final Pattern PREFIXO_NCM = Pattern.compile("\\d{2,8}");
 
   /** Notas com o mesmo número que uma consulta devolve (séries e notas de fornecedor). */
@@ -81,43 +76,54 @@ public class ConsultaDadosProdutorService {
   }
 
   /**
-   * Notas do produtor com o número pedido (issue #256), com o motivo da última devolução e as
-   * inconsistências do último lote de validação. Número de nota de outro produtor dá lista vazia,
-   * igual a número inexistente: não revela existência.
+   * Notas do produtor com o número pedido (issue #256). Número de nota de outro produtor dá lista
+   * vazia, igual a número inexistente: não revela existência.
+   *
+   * <p>O motivo da devolução só vem com a nota ainda {@code DEVOLVIDA}, e as inconsistências só com
+   * ela em {@code COM_INCONSISTENCIAS}: validação que passa não grava lote, então numa nota
+   * devolvida, de volta a rascunho ou já emitida o último lote pode ser de erros já corrigidos.
    *
    * @param produtorId produtor da sessão
    * @param numero     número da nota
-   * @return no máximo {@link #LIMITE_NOTAS_POR_NUMERO}, da mais recente para a mais antiga
+   * @return as próprias primeiro, no máximo {@link #LIMITE_NOTAS_POR_NUMERO}, e quantas existem
    */
-  public List<NotaPorNumeroResultado> notasPorNumero(UUID produtorId, long numero) {
-    return notaFiscalRepository.findDoProdutorPorNumero(
-            produtorId, numero, PageRequest.of(0, LIMITE_NOTAS_POR_NUMERO)).stream()
-        .map(this::detalhe)
-        .toList();
+  public NotasPorNumero notasPorNumero(UUID produtorId, long numero) {
+    Page<NotaPorNumeroLinha> pagina = notaFiscalRepository.findDoProdutorPorNumero(
+        produtorId, numero, PageRequest.of(0, LIMITE_NOTAS_POR_NUMERO));
+    return new NotasPorNumero(
+        pagina.getContent().stream().map(this::detalhe).toList(), pagina.getTotalElements());
   }
 
-  private NotaPorNumeroResultado detalhe(NotaFiscal n) {
-    boolean compra = n.getOrigem() == OrigemNotaFiscal.IMPORTADA;
-    String motivo = revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(n.getId()).stream()
-        .filter(r -> r.getAcao() == AcaoRevisao.DEVOLVIDA)
-        .map(NotaFiscalRevisao::getMotivo)
-        .findFirst().orElse(null);
-    List<NotaFiscalValidacao> validacoes =
-        validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(n.getId());
-    // So o ultimo lote, e so enquanto a nota ainda pode ser corrigida: numa nota emitida o lote
-    // antigo ja foi resolvido e confundiria a resposta.
-    List<NotaPorNumeroResultado.Inconsistencia> inconsistencias =
-        validacoes.isEmpty() || !CORRIGIVEIS.contains(n.getStatus())
-            ? List.of()
-            : validacoes.stream()
-                .filter(v -> v.getLoteValidacao().equals(validacoes.get(0).getLoteValidacao()))
-                .map(v -> new NotaPorNumeroResultado.Inconsistencia(
-                    v.getCode(), v.getField(), v.getMessage(), v.getSuggestion()))
-                .toList();
-    return new NotaPorNumeroResultado(n.getNumero(), n.getSerie(), n.getDataEmissao(),
-        n.getOrigem(), n.getStatus(), duasCasas(n.getValorTotalNota()),
-        duasCasas(compra ? n.getValorTotalCreditoIbs() : n.getValorTotalIbs()),
-        duasCasas(compra ? n.getValorTotalCreditoCbs() : n.getValorTotalCbs()),
+  /**
+   * Notas consultadas pelo número.
+   *
+   * @param notas no máximo {@link #LIMITE_NOTAS_POR_NUMERO}
+   * @param total quantas o produtor tem com esse número
+   */
+  public record NotasPorNumero(List<NotaPorNumeroResultado> notas, long total) {}
+
+  private NotaPorNumeroResultado detalhe(NotaPorNumeroLinha n) {
+    String motivo = n.status() != StatusNotaFiscal.DEVOLVIDA ? null
+        : revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(n.id()).stream()
+            .filter(r -> r.getAcao() == AcaoRevisao.DEVOLVIDA)
+            .map(NotaFiscalRevisao::getMotivo)
+            .findFirst().orElse(null);
+    List<NotaPorNumeroResultado.Inconsistencia> inconsistencias = List.of();
+    if (n.status() == StatusNotaFiscal.COM_INCONSISTENCIAS) {
+      List<NotaFiscalValidacao> validacoes =
+          validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(n.id());
+      if (!validacoes.isEmpty()) {
+        UUID ultimoLote = validacoes.get(0).getLoteValidacao();
+        inconsistencias = validacoes.stream()
+            .filter(v -> v.getLoteValidacao().equals(ultimoLote))
+            .map(v -> new NotaPorNumeroResultado.Inconsistencia(
+                v.getCode(), v.getField(), v.getMessage(), v.getSuggestion()))
+            .toList();
+      }
+    }
+    // IBS/CBS destacados na nota, como em listarNotas (o credito da compra e outra coisa).
+    return new NotaPorNumeroResultado(n.numero(), n.serie(), n.dataEmissao(), n.origem(),
+        n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
         motivo, inconsistencias);
   }
 
