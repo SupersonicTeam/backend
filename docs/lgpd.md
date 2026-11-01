@@ -36,7 +36,10 @@ A versão para o titular é servida em `GET /api/politica-dados`.
 - Toda mensagem de log **e todo stack trace** passam pela `MascaraDadosPessoais` (conversores do Logback em
   `logback-spring.xml`): CPF, CNPJ, e-mail e telefone viram `[CPF]`, `[CNPJ]`, `[EMAIL]`,
   `[TELEFONE]`. A chave de acesso da NF-e não é mascarada (não é dado pessoal e é necessária
-  para investigar rejeições da SEFAZ).
+  para investigar rejeições da SEFAZ). CPF e CNPJ só são mascarados isolados, sem letra ou dígito
+  colado (desde o PR #310): sem isso, UUID, hash e `jti` com 11 dígitos seguidos de letra viravam
+  `[CPF]`. Limite aceito: CPF grudado em letra sem separador (`cpf52998224725`) passa; qualquer
+  separador (`_`, `:`, `=`, parêntese, aspas, hífen, espaço) basta para mascarar.
 - O IP dos logs de limite de tentativas sai truncado pelos bytes (último octeto / após o /64; IPv4 mapeado em IPv6 vira IPv4 truncado).
 - Senha, token e hash nunca são logados nem ecoados em erro (`@Sensivel`, `toString` dos DTOs).
 
