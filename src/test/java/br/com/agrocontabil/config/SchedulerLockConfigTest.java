@@ -2,6 +2,7 @@ package br.com.agrocontabil.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.config.demonstracao.CotaDemonstracaoCeres;
 import br.com.agrocontabil.sefaz.SefazStatusSyncJob;
 import br.com.agrocontabil.service.AlertaTributarioJob;
 import br.com.agrocontabil.service.ApuracaoFechamentoJob;
@@ -35,7 +36,7 @@ class SchedulerLockConfigTest {
       SefazStatusSyncJob.class, ApuracaoFechamentoJob.class, GuiaFiscalStatusSyncJob.class,
       AlertaTributarioJob.class, SessaoRefreshLimpezaJob.class,
       ConviteCarteiraLimpezaJob.class, PendenciaAnexoRetencaoJob.class, VerificacaoAnexoJob.class,
-      AvisoVencimentoJob.class, NotificacaoRetencaoJob.class);
+      AvisoVencimentoJob.class, NotificacaoRetencaoJob.class, CotaDemonstracaoCeres.class);
 
   @Test
   @DisplayName("Todo metodo @Scheduled dos jobs tem @SchedulerLock com teto e piso declarados")
@@ -66,7 +67,8 @@ class SchedulerLockConfigTest {
         .containsExactlyInAnyOrder(SefazStatusSyncJob.LOCK, ApuracaoFechamentoJob.LOCK,
             GuiaFiscalStatusSyncJob.LOCK, AlertaTributarioJob.LOCK, SessaoRefreshLimpezaJob.LOCK,
             ConviteCarteiraLimpezaJob.LOCK, PendenciaAnexoRetencaoJob.LOCK,
-            VerificacaoAnexoJob.LOCK, AvisoVencimentoJob.LOCK, NotificacaoRetencaoJob.LOCK);
+            VerificacaoAnexoJob.LOCK, AvisoVencimentoJob.LOCK, NotificacaoRetencaoJob.LOCK,
+            CotaDemonstracaoCeres.LOCK);
   }
 
   @Test

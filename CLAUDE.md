@@ -83,6 +83,9 @@ br.com.agrocontabil
 │                  #   avaliacao + dev): SeedAvaliacao, ValoresEsperados, AvaliadorResposta;
 │                  #   régua da Ceres 2.0 (#264): RelatorioRepeticoes (3 repetições, faixa,
 │                  #   instáveis), ClarezaTexto, CsvCego, SeparacaoTreinoTeste
+│                  # demonstracao/: seed da banca (#315, DEMONSTRACAO_HABILITADA, nunca prod):
+│                  #   SeedDemonstracao (escritorio, carteira, notas pelo pipeline real),
+│                  #   CenarioDemonstracao (dados), CotaDemonstracaoCeres (cota no limite, job)
 ├── controller/    # REST controllers (HealthController, NotaFiscalController)
 ├── service/       # regras de negócio (NotaFiscalService, GeracaoNotaFiscalService,
 │                  # GeracaoNfaService, ImportacaoNotaFiscalService, SefazService,

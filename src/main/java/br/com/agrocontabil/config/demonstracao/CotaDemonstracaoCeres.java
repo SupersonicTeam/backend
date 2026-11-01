@@ -1,0 +1,111 @@
+package br.com.agrocontabil.config.demonstracao;
+
+import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.TipoTitularCota;
+import br.com.agrocontabil.model.UsoSemanalAssistente;
+import br.com.agrocontabil.model.UsoSemanalAssistenteId;
+import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.repository.UsoSemanalAssistenteRepository;
+import br.com.agrocontabil.service.CotaUsoAssistenteService;
+import br.com.agrocontabil.service.PlanoUsoProvider;
+import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.Optional;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+/**
+ * Deixa a cota semanal da Ceres (issue #166) de um produtor da demonstração com saldo para
+ * <strong>uma</strong> pergunta só (issue #315): a primeira responde, a segunda recebe 429
+ * {@code LIMITE_USO_ASSISTENTE} com o {@code Retry-After} da virada da semana.
+ *
+ * <p>O saldo fica em {@code teto da pergunta + 1}: a reserva do teto passa, e qualquer consumo real
+ * maior que zero deixa menos que um teto. No modo fallback (modelo fora) a pergunta custa zero e o
+ * limite não aparece, como no uso real.
+ *
+ * <p>A cota zera toda segunda-feira (Brasília), então o cenário é reposto pelo job a cada semana e
+ * pelo seed na subida. Só sobe o consumo (nunca o baixa), para não devolver crédito gasto de verdade
+ * durante um ensaio. Sem o produtor no banco, não faz nada.
+ */
+@Component
+@ConditionalOnProperty(name = "app.demonstracao.habilitada", havingValue = "true")
+public class CotaDemonstracaoCeres {
+
+  /** Nome do lock distribuído (ShedLock, #87). */
+  public static final String LOCK = "demonstracao-cota-ceres";
+
+  private static final Logger log = LoggerFactory.getLogger(CotaDemonstracaoCeres.class);
+
+  private final ProdutorRepository produtorRepository;
+  private final UsoSemanalAssistenteRepository usoRepository;
+  private final PlanoUsoProvider planoProvider;
+  private final CotaUsoAssistenteService cotaService;
+  private final ModeloLinguagem modelo;
+  private final Clock clock;
+
+  /** Construído pelo Spring. */
+  public CotaDemonstracaoCeres(ProdutorRepository produtorRepository,
+      UsoSemanalAssistenteRepository usoRepository, PlanoUsoProvider planoProvider,
+      CotaUsoAssistenteService cotaService, ModeloLinguagem modelo, Clock clock) {
+    this.produtorRepository = produtorRepository;
+    this.usoRepository = usoRepository;
+    this.planoProvider = planoProvider;
+    this.cotaService = cotaService;
+    this.modelo = modelo;
+    this.clock = clock;
+  }
+
+  /** Repõe o cenário logo depois da virada da semana. */
+  @Scheduled(cron = "${app.demonstracao.cota.cron:0 5 0 * * MON}", zone = "America/Sao_Paulo")
+  @SchedulerLock(name = LOCK, lockAtMostFor = "PT5M", lockAtLeastFor = "PT1M")
+  public void aoVirarASemana() {
+    prepararSemana();
+  }
+
+  /**
+   * Sobe o consumo da semana corrente do produtor da demonstração até sobrar uma pergunta.
+   *
+   * @return créditos que restam na semana, ou vazio sem o produtor no banco
+   */
+  public Optional<Long> prepararSemana() {
+    String documento = CenarioDemonstracao.cliente(CenarioDemonstracao.CHAVE_COTA_NO_FIM)
+        .documento();
+    Optional<Produtor> produtor = produtorRepository.findByCpfCnpj(documento);
+    if (produtor.isEmpty()) {
+      return Optional.empty();
+    }
+    OffsetDateTime agora = OffsetDateTime.now(clock);
+    LocalDate semana = agora.atZoneSameInstant(SeedDemonstracao.ZONA).toLocalDate()
+        .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    long limite = planoProvider.planoDe(TipoTitularCota.PRODUTOR, produtor.get().getId())
+        .creditosPorSemana();
+    long teto = cotaService.tetoDaPergunta(modelo.identificacao());
+    long alvo = Math.max(0, limite - teto - 1);
+
+    UsoSemanalAssistenteId id =
+        new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor.get().getId(), semana);
+    UsoSemanalAssistente uso = usoRepository.findById(id).orElseGet(() -> UsoSemanalAssistente
+        .builder().id(id).build());
+    if (uso.getCreditosConsumidos() < alvo) {
+      uso.setCreditosConsumidos(alvo);
+      // Perguntas e tokens de uma semana movimentada: a tela de uso mostra o histórico coerente.
+      uso.setPerguntas(Math.max(uso.getPerguntas(), 27));
+      uso.setTokensEntrada(Math.max(uso.getTokensEntrada(), alvo * 650));
+      uso.setTokensSaida(Math.max(uso.getTokensSaida(), alvo * 90));
+      uso.setAtualizadoEm(agora);
+      usoRepository.save(uso);
+    }
+    long restantes = limite - uso.getCreditosConsumidos() - uso.getCreditosReservados();
+    log.info("Demonstracao: cota da Ceres preparada para a semana de {} ({} creditos restantes, "
+        + "teto de uma pergunta {})", semana, restantes, teto);
+    return Optional.of(restantes);
+  }
+}

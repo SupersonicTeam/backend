@@ -221,6 +221,10 @@ management:
 
 # Configuracoes da aplicacao (namespace proprio)
 app:
+  # Demonstracao da banca (issue #315): escritorio, carteira, notas e a cota da Ceres no limite,
+  # com a SEED_SENHA. So em dev/homolog/test: com ela ligada em prod a aplicacao nao sobe.
+  demonstracao:
+    habilitada: ${DEMONSTRACAO_HABILITADA:false}
   # Busca das notas (issue #174): preenche na subida a busca_normalizada das notas gravadas antes
   # do changeSet 0037, com a mesma normalizacao Java da gravacao (NormalizacaoBusca).
   notas:
