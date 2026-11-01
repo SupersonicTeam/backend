@@ -1,8 +1,8 @@
 {$SITE_HOST} {
 	encode zstd gzip
 
-	# Monitor externo (UptimeRobot): unica rota sem senha. Responde so UP/DOWN pelo health do
-	# backend, sem repassar o corpo (em dev o Actuator detalha banco, Ollama e ClamAV).
+	# Monitor externo (UptimeRobot). Responde so UP/DOWN pelo health do backend, sem repassar o
+	# corpo: o Actuator nunca sai daqui (so /api e o frontend sao repassados).
 	handle /healthz {
 		rewrite * /actuator/health
 		reverse_proxy backend:8080 {
@@ -16,33 +16,8 @@
 		}
 	}
 
-	# Senha no site inteiro (menos /healthz): o backend roda em dev (identidade declarada por
-	# X-Usuario-Id).
-	#
-	# Excecao: chamada de /api com "Authorization: Bearer". Depois do login a SPA manda o JWT nesse
-	# header, e o navegador nao manda os dois; exigir o Basic ali derrubaria toda chamada logada.
-	# Quem confere o token e o backend (JwtAutenticacaoFilter: Bearer invalido = 401, e o mock
-	# ignora requisicao com Authorization), entao um Bearer falso so alcanca as rotas publicas de
-	# autenticacao. Cadastro e recuperacao de senha seguem atras do Basic: sao as que um estranho
-	# usaria para criar conta ou disparar e-mail na demonstracao.
-	@protegido {
-		not path /healthz
-		not {
-			path /api/*
-			header_regexp Authorization ^Bearer\s
-			not path /api/auth/cadastro* /api/auth/senha/esqueci /api/auth/senha/redefinir
-		}
-	}
-	basic_auth @protegido {
-		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
-	}
-
-	# O navegador reenvia o "Authorization: Basic" em toda chamada da SPA; o backend o leria como
-	# credencial (o JwtAutenticacaoFilter recusaria e o mock ignora requisicao com Authorization).
-	# Tira so o Basic: um Bearer do login real passa intacto.
-	@basic header_regexp Authorization ^Basic\s
-	request_header @basic -Authorization
-
+	# Sem senha no Caddy: o backend roda em homolog, onde so o JWT do login autentica (o mock do
+	# X-Usuario-Id existe so em dev, #221). Quem protege a API e o backend; aqui fica o HTTPS.
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
@@ -63,7 +38,7 @@
 }
 
 # Outros nomes do site (o dominio sem www, o endereco sslip.io antigo): redirecionam para o
-# principal, com certificado proprio. O redirecionamento nao expoe nada, entao fica sem senha.
+# principal, com certificado proprio.
 {$SITE_REDIRECIONA} {
 	redir https://{$SITE_HOST}{uri} permanent
 }
