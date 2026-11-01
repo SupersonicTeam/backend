@@ -141,7 +141,8 @@ Na versão `2026-10-31.2` (#274, parte 1) T01, T07, T08, X17 e X18 deixaram de s
 funções `guiasEmAtraso` e `vencimentosDoMes` existem e o valor esperado é calculado por elas,
 conferido à mão contra as regras da #274 no `GabaritoCeresIntegrationTest`. Na `2026-11-01.1`
 (#274, parte 2) T04, T05, T06 e T10 também: `consultarNota` e a situação `DEVOLVIDA` em
-`listarNotas`. Campo de valor pode indexar lista (`notas.0.valorIbs`).
+`listarNotas`. Campo de valor pode indexar lista (`notas.0.valorIbs`). Na `2026-11-01.2` (#274,
+parte 3) a T11 ("quanto vendi de soja?") também, com `totalVendasPorProduto`.
 
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função

@@ -34,6 +34,13 @@ public interface DadosProdutorPorta {
   ComprasInsumo comprasPorDescricao(UUID produtorId, String termo, LocalDate inicio, LocalDate fim);
 
   /**
+   * Vendas de um produto (issue #248): saídas próprias autorizadas, período inclusivo, por NCM ou
+   * pela descrição (curingas digitados são texto). Mesmo formato das compras.
+   */
+  ComprasInsumo vendasDeProduto(
+      UUID produtorId, String termo, boolean porNcm, LocalDate inicio, LocalDate fim);
+
+  /**
    * NCMs (8 dígitos) das compras de um insumo, pelo mesmo critério de {@link #comprasPorNcm} ou
    * {@link #comprasPorDescricao}, maior valor primeiro, no máximo {@code limite} (issue #170). Só
    * códigos de classificação: nenhum dado pessoal nem valor.

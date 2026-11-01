@@ -32,6 +32,22 @@ public final class RespostasFerramentas {
       long quantidadeNotas, List<CompraPorUnidade> porUnidade, String observacao) {}
 
   /**
+   * Resultado de {@code totalVendasPorProduto} (issue #248).
+   *
+   * @param produto         termo ou NCM consultado
+   * @param criterio        {@code NCM} ou {@code DESCRICAO}
+   * @param dataInicio      primeiro dia do período
+   * @param dataFim         último dia do período
+   * @param valorTotal      soma do valor dos itens vendidos (só notas autorizadas)
+   * @param quantidadeNotas notas de venda em que o produto aparece
+   * @param porUnidade      quantidade e valor por unidade de medida
+   * @param observacao      frase ao usuario quando nada foi encontrado; nulo caso contrario
+   */
+  public record VendasProduto(
+      String produto, String criterio, String dataInicio, String dataFim, String valorTotal,
+      long quantidadeNotas, List<CompraPorUnidade> porUnidade, String observacao) {}
+
+  /**
    * Compras de um insumo numa unidade de medida.
    *
    * @param unidade    unidade ({@code KG}, {@code L}...)

@@ -307,4 +307,31 @@ class ConsultaDadosProdutorServiceIntegrationTest {
         .notaFiscal(nota).loteValidacao(lote).code(codigo).message("m").validadoEm(quando)
         .build();
   }
+
+  @Test
+  @DisplayName("#248: vendas de um produto: so saidas autorizadas do produtor, por nome ou NCM")
+  void vendasDeProduto() {
+    notaFiscalRepository.save(saida(produtorA, em(2026, 8, 5), "Soja em graos", "12019000",
+        "75600.00"));
+    notaFiscalRepository.save(saida(produtorA, em(2026, 8, 6), "Milho em graos", "10059010",
+        "1000.00"));
+    NotaFiscal cancelada = saida(produtorA, em(2026, 8, 7), "Soja em graos", "12019000",
+        "500.00");
+    cancelada.setStatus(StatusNotaFiscal.CANCELADA);
+    notaFiscalRepository.save(cancelada);
+    notaFiscalRepository.save(saida(produtorB, em(2026, 8, 5), "Soja em graos", "12019000",
+        "1234567.89"));
+    // Compra de soja do proprio produtor: e entrada, nao venda.
+    notaFiscalRepository.save(entrada(produtorA, StatusNotaFiscal.AUTORIZADA, em(2026, 8, 5),
+        "Semente de soja", "12011000", "KG", "10", "800.00"));
+
+    ComprasInsumoResultado porNome = service.vendasDeProduto(produtorA.getId(), "SOJA", false,
+        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+    ComprasInsumoResultado porNcm = service.vendasDeProduto(produtorA.getId(), "1201", true,
+        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+
+    assertThat(porNome.valorTotal()).isEqualByComparingTo("75600.00");
+    assertThat(porNome.quantidadeNotas()).isEqualTo(1);
+    assertThat(porNcm.valorTotal()).isEqualByComparingTo("75600.00");
+  }
 }

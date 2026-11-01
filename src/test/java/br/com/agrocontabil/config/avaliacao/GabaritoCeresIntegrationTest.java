@@ -142,6 +142,9 @@ class GabaritoCeresIntegrationTest {
     assertThat(esperados.get("T06")).containsExactly("R$ 75,60", "R$ 680,40");
     // Nota devolvida (#254): so a 107, nos ultimos 90 dias.
     assertThat(esperados.get("T10")).containsExactly("1");
+    // "Quanto vendi de soja?" (#248): so as vendas autorizadas de soja de 01/01 a hoje (144.000 +
+    // 75.600 + 38.250); o rascunho e a nota com inconsistencias ficam fora.
+    assertThat(esperados.get("T11")).containsExactly("R$ 257.850,00");
     // D16: seis compras autorizadas; a cancelada não conta.
     assertThat(esperados.get("D16")).containsExactly("6");
     // Nenhum valor esperado do avaliado pode ser um valor do vizinho.
