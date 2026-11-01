@@ -37,7 +37,7 @@ diferimento (premissas, seção 1).
 | "Quem vende para pessoa física ou consumidor final não ganha nada com o crédito do comprador." | Correto: para esse produtor a opção faz menos sentido. É o caso do não contribuinte, fora do escopo atual (#281). |
 | "A opção é para sempre? O limite muda?" | A opção vale a partir do mês seguinte e é irretratável durante o ano-calendário (art. 165); a renúncia produz efeito em 1º de janeiro do ano seguinte (art. 166). O limite é atualizado todo ano pelo IPCA (art. 167). O sistema ainda não modela esse histórico (#281). |
 | "E o produtor integrado?" | Pelo art. 164 o integrado não é contribuinte qualquer que seja a receita, salvo opção (art. 165). Mesmo tratamento do pequeno produtor: fora do escopo atual. |
-| "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Hoje a redução vem da tabela de NCM, e a da soja em grão ainda não está aplicada: o enquadramento está em validação com o contador (#284, pergunta 1). Não afirmar que a demonstração já aplica a redução. |
+| "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso. O enquadramento segue em validação com o contador (#284, pergunta 1): não afirmar que ele é definitivo. |
 | "A nota diz que o emitente é do Simples Nacional (CRT 1)." | **Ponto fraco real**: o cadastro da demonstração está com regime `SIMPLES`, que vai para o CRT da NF-e. É inconsistência dos dados de teste, pendente de correção (premissas, seção 2). **Corrigir antes da banca.** |
 | "E o ICMS da nota, zerado?" | O sistema trata da reforma (IBS/CBS). ICMS e Funrural seguem por guia, com o contador (premissas, seção 3). |
 

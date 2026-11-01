@@ -111,7 +111,7 @@ class SeedDemonstracaoIntegrationTest {
       assertThat(nota.getChaveAcesso()).hasSize(44);
       assertThat(nota.getXmlGerado()).contains("Id=\"NFe" + nota.getChaveAcesso() + "\"");
       assertThat(nota.getProtocoloAutorizacao()).hasSize(15);
-      // Zero e valido: ovos, leite, arroz e tomate tem reducao de 100% (Anexos I e XV).
+      // Zero e valido: ovos, leite, arroz, tomate e cafe tem reducao de 100% (Anexos I e XV).
       assertThat(nota.getValorTotalCbs()).isNotNull().isNotNegative();
     });
     assertThat(autorizadas).filteredOn(n -> n.getValorTotalCbs().signum() > 0)
