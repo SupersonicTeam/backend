@@ -527,6 +527,91 @@ public interface NotaFiscalRepository
       @Param("fim") OffsetDateTime fim);
 
   /**
+   * Vendas de um produto por NCM (issue #248): itens de notas de <strong>saída</strong> próprias
+   * ({@code PROPRIA}) autorizadas no período, agregados por unidade. Só o grupo de vendas do CFOP
+   * ({@code x1xx}: 5101, 6102...): remessa para armazém, industrialização ou "outra saída"
+   * ({@code x9xx}) não é venda e contaria a mesma soja duas vezes.
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoAgregado(
+          i.unidade, SUM(i.quantidade), SUM(i.valorTotal))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
+        AND i.ncm LIKE :prefixoNcm
+      GROUP BY i.unidade
+      ORDER BY SUM(i.valorTotal) DESC
+      """)
+  List<CompraInsumoAgregado> somarVendasPorNcm(
+      @Param("produtorId") UUID produtorId,
+      @Param("prefixoNcm") String prefixoNcm,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /** Valor total e notas distintas das vendas por NCM — mesmo recorte de {@link #somarVendasPorNcm}. */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoTotal(
+          SUM(i.valorTotal), COUNT(DISTINCT n.id))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
+        AND i.ncm LIKE :prefixoNcm
+      """)
+  CompraInsumoTotal totalizarVendasPorNcm(
+      @Param("produtorId") UUID produtorId,
+      @Param("prefixoNcm") String prefixoNcm,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /** Vendas de um produto pela descrição (#248); padrão em minúsculas, escapado com {@code !}. */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoAgregado(
+          i.unidade, SUM(i.quantidade), SUM(i.valorTotal))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
+        AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
+      GROUP BY i.unidade
+      ORDER BY SUM(i.valorTotal) DESC
+      """)
+  List<CompraInsumoAgregado> somarVendasPorDescricao(
+      @Param("produtorId") UUID produtorId,
+      @Param("padraoDescricao") String padraoDescricao,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /** Valor total e notas distintas das vendas pela descrição. */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.CompraInsumoTotal(
+          SUM(i.valorTotal), COUNT(DISTINCT n.id))
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
+        AND LOWER(i.descricao) LIKE :padraoDescricao ESCAPE '!'
+      """)
+  CompraInsumoTotal totalizarVendasPorDescricao(
+      @Param("produtorId") UUID produtorId,
+      @Param("padraoDescricao") String padraoDescricao,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim);
+
+  /**
    * NCMs comprados de um insumo por prefixo de NCM — mesmo recorte de {@link #somarComprasPorNcm},
    * maior valor primeiro (issue #170: a Ceres busca na lei os itens de anexo desses NCMs).
    *

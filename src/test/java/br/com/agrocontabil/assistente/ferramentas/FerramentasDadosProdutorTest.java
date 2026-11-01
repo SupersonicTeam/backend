@@ -544,6 +544,80 @@ class FerramentasDadosProdutorTest {
   }
 
   @Test
+  @DisplayName("#248: vendas por produto, sem datas = do 1o de janeiro ate hoje")
+  void vendasPorProduto() {
+    when(dados.vendasDeProduto(PRODUTOR, "soja", false, LocalDate.of(2026, 1, 1), HOJE))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(new BigDecimal("257850.00"), 3,
+            List.of(new DadosProdutorPorta.CompraUnidade("KG", new BigDecimal("105000"),
+                new BigDecimal("257850.00")))));
+
+    RespostasFerramentas.VendasProduto vendas =
+        ferramentas.totalVendasPorProduto("  soja ", null, null, toolContext);
+
+    assertThat(vendas.valorTotal()).isEqualTo("R$ 257.850,00");
+    assertThat(vendas.dataInicio()).isEqualTo("01/01/2026");
+    assertThat(vendas.criterio()).isEqualTo("DESCRICAO");
+    assertThat(vendas.observacao()).isNull();
+    assertThat(contexto.fontes()).singleElement().satisfies(f -> {
+      assertThat(f.funcao()).isEqualTo("totalVendasPorProduto");
+      assertThat(f.parametros()).containsEntry("descricaoOuNcm", "soja")
+          .containsEntry("dataInicio", "2026-01-01");
+    });
+  }
+
+  @Test
+  @DisplayName("#248: por NCM e sem venda, a frase fala com o usuario")
+  void vendasPorNcmVazio() {
+    when(dados.vendasDeProduto(PRODUTOR, "1201", true, LocalDate.of(2026, 8, 1),
+        LocalDate.of(2026, 8, 31)))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(BigDecimal.ZERO, 0, List.of()));
+
+    RespostasFerramentas.VendasProduto vendas = ferramentas.totalVendasPorProduto(
+        "12.01", "2026-08-01", "2026-08-31", toolContext);
+
+    assertThat(vendas.criterio()).isEqualTo("NCM");
+    assertThat(vendas.observacao()).isEqualTo(FerramentasDadosProdutor.NADA_VENDIDO);
+  }
+
+  @Test
+  @DisplayName("#248: 'graos' com acento sem venda tenta sem acento antes de dizer que nao vendeu")
+  void vendasSemAcento() {
+    LocalDate inicio = LocalDate.of(2026, 1, 1);
+    when(dados.vendasDeProduto(PRODUTOR, "soja em grãos", false, inicio, HOJE))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(BigDecimal.ZERO, 0, List.of()));
+    when(dados.vendasDeProduto(PRODUTOR, "soja em graos", false, inicio, HOJE))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(new BigDecimal("100.00"), 1, List.of()));
+
+    RespostasFerramentas.VendasProduto vendas =
+        ferramentas.totalVendasPorProduto("soja em grãos", null, null, toolContext);
+
+    assertThat(vendas.valorTotal()).isEqualTo("R$ 100,00");
+    assertThat(vendas.produto()).isEqualTo("soja em graos");
+  }
+
+  @Test
+  @DisplayName("#248: so dataFim: o periodo comeca no 1o de janeiro do ano de dataFim")
+  void vendasSoComDataFim() {
+    when(dados.vendasDeProduto(PRODUTOR, "milho", false, LocalDate.of(2025, 1, 1),
+        LocalDate.of(2025, 3, 31)))
+        .thenReturn(new DadosProdutorPorta.ComprasInsumo(BigDecimal.ZERO, 0, List.of()));
+
+    assertThat(ferramentas.totalVendasPorProduto("milho", null, "2025-03-31", toolContext)
+        .dataInicio()).isEqualTo("01/01/2025");
+  }
+
+  @Test
+  @DisplayName("#248: termo curto ou periodo invertido nao consulta")
+  void vendasInvalidas() {
+    assertThatThrownBy(() -> ferramentas.totalVendasPorProduto("so", null, null, toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
+    assertThatThrownBy(() -> ferramentas.totalVendasPorProduto(
+        "soja", "2026-09-01", "2026-08-01", toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
+    verifyNoInteractions(dados);
+  }
+
+  @Test
   @DisplayName("#203: todo texto que as funcoes devolvem pode ir ao usuario como esta")
   void textosDasFuncoesSaoParaOUsuario() throws Exception {
     // O prompt manda repassar a observacao, e o modelo copia: recado ao modelo vira resposta.
@@ -580,5 +654,7 @@ class FerramentasDadosProdutorTest {
         .startsWith("Nao encontrei compras").contains("codigo NCM").doesNotContainPattern("\\d");
     assertThat(FerramentasDadosProdutor.NADA_POR_NCM)
         .startsWith("Nao encontrei compras").doesNotContainPattern("\\d");
+    assertThat(FerramentasDadosProdutor.NADA_VENDIDO)
+        .startsWith("Nao encontrei vendas").doesNotContainPattern("\\d");
   }
 }

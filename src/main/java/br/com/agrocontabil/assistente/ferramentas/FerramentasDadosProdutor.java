@@ -17,9 +17,11 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaDetal
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VendasProduto;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VencimentosDoMes;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -86,6 +88,12 @@ public class FerramentasDadosProdutor {
       "Nao encontrei compras com esse termo no periodo. A busca procura o termo exato na "
           + "descricao dos itens das notas (acentos e grafia contam): tente outro termo ou o "
           + "codigo NCM do insumo.";
+
+  /** Venda vazia: fala com o usuário, sem dígito (mesmo cuidado de NADA_POR_DESCRICAO). */
+  static final String NADA_VENDIDO =
+      "Nao encontrei vendas autorizadas desse produto no periodo. A busca procura o termo exato na "
+          + "descricao dos itens das notas de venda (grafia conta): tente outro termo, o codigo NCM "
+          + "do produto ou outro periodo.";
 
   /** Mesmo cuidado para a busca por NCM. */
   static final String NADA_POR_NCM =
@@ -216,6 +224,68 @@ public class FerramentasDadosProdutor {
                 u.unidade(), FormatoBr.quantidade(u.quantidade()), FormatoBr.moeda(u.valorTotal())))
             .toList(),
         resultado.quantidadeNotas() == 0 ? (porNcm ? NADA_POR_NCM : NADA_POR_DESCRICAO) : null);
+  }
+
+  /**
+   * Soma das vendas de um produto no período (issue #248): espelho de
+   * {@link #totalComprasPorInsumo}. Antes dela, "quanto vendi de soja?" ia para
+   * {@code listarNotas}, que soma todas as vendas.
+   */
+  @Tool(name = "totalVendasPorProduto", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Soma as VENDAS do produtor (notas de saida proprias autorizadas) de UM produto num periodo: \
+      valor total, numero de notas e quantidade por unidade de medida. Use para perguntas como \
+      "quanto faturei com milho no ano?" ou "quanto vendi de feijao em julho?". O produto pode \
+      ser um nome \
+      (ex.: soja, milho) ou um codigo NCM completo ou prefixo (ex.: 1201 para soja). Sem datas, o \
+      periodo e do primeiro dia do ano ate hoje: informe sempre o periodo junto com o total. Para \
+      o total de todas as vendas, sem produto, use listarNotas.""")
+  public VendasProduto totalVendasPorProduto(
+      @ToolParam(description = "Nome do produto (3 a 60 letras) ou codigo NCM (2 a 8 digitos)")
+      String descricaoOuNcm,
+      @ToolParam(required = false,
+          description = "Primeiro dia, formato AAAA-MM-DD. Omitido: 1o de janeiro do ano de "
+              + "dataFim.")
+      String dataInicio,
+      @ToolParam(required = false, description = "Ultimo dia, formato AAAA-MM-DD. Omitido: hoje.")
+      String dataFim,
+      ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    LocalDate fim = vazio(dataFim) ? contexto.hoje() : data(dataFim, "dataFim");
+    LocalDate inicio = vazio(dataInicio)
+        ? fim.withDayOfYear(1)
+        : data(dataInicio, "dataInicio");
+    exigirPeriodo(inicio, fim);
+
+    String ncm = descricaoOuNcm == null ? "" : descricaoOuNcm.replaceAll("[.\\s-]", "");
+    boolean porNcm = NCM.matcher(ncm).matches();
+    String termo = porNcm ? ncm : termoDescricao(descricaoOuNcm);
+    DadosProdutorPorta.ComprasInsumo resultado =
+        dados.vendasDeProduto(contexto.produtorId(), termo, porNcm, inicio, fim);
+    // Nota fiscal costuma vir sem acento ("SOJA EM GRAOS"); o modelo escreve "grãos". Sem venda
+    // com o acento, tenta o termo sem acento antes de dizer que nao vendeu.
+    String semAcento = NormalizacaoBusca.normalizar(termo);
+    if (!porNcm && resultado.quantidadeNotas() == 0 && !semAcento.equals(termo.toLowerCase(
+        Locale.ROOT))) {
+      termo = semAcento;
+      resultado = dados.vendasDeProduto(contexto.produtorId(), termo, false, inicio, fim);
+    }
+
+    contexto.registrarFonte("totalVendasPorProduto", parametros(
+        "descricaoOuNcm", termo, "dataInicio", inicio.toString(), "dataFim", fim.toString()),
+        resultado.quantidadeNotas() == 0);
+    return new VendasProduto(
+        termo,
+        porNcm ? "NCM" : "DESCRICAO",
+        FormatoBr.data(inicio),
+        FormatoBr.data(fim),
+        FormatoBr.moeda(resultado.valorTotal()),
+        resultado.quantidadeNotas(),
+        resultado.porUnidade().stream()
+            .map(u -> new CompraPorUnidade(
+                u.unidade(), FormatoBr.quantidade(u.quantidade()), FormatoBr.moeda(u.valorTotal())))
+            .toList(),
+        resultado.quantidadeNotas() == 0 ? NADA_VENDIDO : null);
   }
 
   /** Apuração mensal de IBS/CBS. */
@@ -420,8 +490,8 @@ public class FerramentasDadosProdutor {
       Lista as guias fiscais ainda nao pagas do produtor (ICMS, FUNRURAL, DARF, GPS...) que vencem \
       a partir de hoje, nos proximos dias, da mais proxima para a mais distante, no maximo 10. \
       Traz em valorTotal a soma de todas as guias nao pagas da janela, ja calculada pelo sistema. \
-      Use para perguntas como "tenho imposto para pagar na semana que vem?", "quando vence a \
-      minha proxima guia?" ou "o que vence nos proximos 30 dias?". NAO traz guias em atraso: para \
+      Use para perguntas como "tenho imposto para pagar na semana que vem?" ou "quais guias \
+      vencem nos proximos 15 dias?". NAO traz guias em atraso: para \
       debito, atraso ou "este mes", use guiasEmAtraso ou vencimentosDoMes. Para o total, repita o \
       valorTotal: nunca some os valores da lista.""")
   public Vencimentos proximosVencimentos(
@@ -463,8 +533,8 @@ public class FerramentasDadosProdutor {
       Lista as guias fiscais do produtor (ICMS, FUNRURAL, DARF, GPS...) em ATRASO: nao pagas e com \
       vencimento antes de hoje, de qualquer mes, da mais antiga para a mais nova, no maximo 10, \
       com a soma de todas em emAtraso.valorTotal, ja calculada pelo sistema. Sem atraso, traz a \
-      proxima guia a vencer. Use para perguntas como "tenho algum debito pendente?", "tenho guia \
-      atrasada?" ou "estou devendo algum imposto?". Guia que vence hoje nao esta em atraso. Para \
+      proxima guia a vencer. Use para perguntas sobre debito pendente ou atraso, como "estou \
+      devendo algum imposto?" ou "ficou alguma guia sem pagar?". Guia que vence hoje nao esta em atraso. Para \
       o total, repita o valorTotal: nunca some os valores da lista.""")
   public GuiasEmAtraso guiasEmAtraso(ToolContext toolContext) {
     ContextoAssistente contexto = ContextoAssistente.de(toolContext);
@@ -494,9 +564,9 @@ public class FerramentasDadosProdutor {
       (mes omitido), soma as guias em ATRASO (nao pagas e vencidas antes de hoje, de qualquer \
       mes) e as que vencem de hoje ate o ultimo dia do mes: traz os dois subtotais (emAtraso e \
       aVencer) e a soma em valorTotal, ja calculados pelo sistema. Num mes futuro, traz as guias \
-      que vencem naquele mes. Use para perguntas como "quanto eu tenho que pagar este mes?", "o \
-      que vence este mes?" ou "quais impostos vencem em novembro?". Repita os valores: nunca some \
-      os valores da lista.""")
+      que vencem naquele mes. Use para perguntas como "quanto preciso separar para as guias do \
+      mes?", "qual o total das guias deste mes, contando as atrasadas?" ou "quais guias vencem em \
+      dezembro?". Repita os valores: nunca some os valores da lista.""")
   public VencimentosDoMes vencimentosDoMes(
       @ToolParam(required = false,
           description = "Mes, formato AAAA-MM. Omitido: o mes atual.")

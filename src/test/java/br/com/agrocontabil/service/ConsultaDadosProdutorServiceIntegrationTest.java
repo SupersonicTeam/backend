@@ -307,4 +307,54 @@ class ConsultaDadosProdutorServiceIntegrationTest {
         .notaFiscal(nota).loteValidacao(lote).code(codigo).message("m").validadoEm(quando)
         .build();
   }
+
+  @Test
+  @DisplayName("#248: vendas de um produto: so saidas autorizadas do produtor, por nome ou NCM")
+  void vendasDeProduto() {
+    notaFiscalRepository.save(saida(produtorA, em(2026, 8, 5), "Soja em graos", "12019000",
+        "75600.00"));
+    notaFiscalRepository.save(saida(produtorA, em(2026, 8, 6), "Milho em graos", "10059010",
+        "1000.00"));
+    NotaFiscal cancelada = saida(produtorA, em(2026, 8, 7), "Soja em graos", "12019000",
+        "500.00");
+    cancelada.setStatus(StatusNotaFiscal.CANCELADA);
+    notaFiscalRepository.save(cancelada);
+    notaFiscalRepository.save(saida(produtorB, em(2026, 8, 5), "Soja em graos", "12019000",
+        "1234567.89"));
+    // Remessa para armazem (CFOP 5949) nao e venda; rejeitada pela SEFAZ tambem nao.
+    NotaFiscal remessa = saida(produtorA, em(2026, 8, 8), "Soja em graos", "12019000",
+        "30000.00");
+    remessa.getItens().get(0).setCfop("5949");
+    notaFiscalRepository.save(remessa);
+    NotaFiscal rejeitada = saida(produtorA, em(2026, 8, 9), "Soja em graos", "12019000",
+        "700.00");
+    rejeitada.setStatus(StatusNotaFiscal.REJEITADA);
+    notaFiscalRepository.save(rejeitada);
+    // Compra de soja do proprio produtor: e entrada, nao venda.
+    notaFiscalRepository.save(entrada(produtorA, StatusNotaFiscal.AUTORIZADA, em(2026, 8, 5),
+        "Semente de soja", "12011000", "KG", "10", "800.00"));
+
+    ComprasInsumoResultado porNome = service.vendasDeProduto(produtorA.getId(), "SOJA", false,
+        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+    ComprasInsumoResultado porNcm = service.vendasDeProduto(produtorA.getId(), "1201", true,
+        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+
+    assertThat(porNome.valorTotal()).isEqualByComparingTo("75600.00");
+    assertThat(porNome.quantidadeNotas()).isEqualTo(1);
+    assertThat(porNcm.valorTotal()).isEqualByComparingTo("75600.00");
+    assertThat(porNcm.quantidadeNotas()).isEqualTo(1);
+    // Ultimo dia inclusivo, no fuso de Brasilia: a venda de 31/08 as 23h entra.
+    notaFiscalRepository.save(saida(produtorA,
+        java.time.OffsetDateTime.of(2026, 8, 31, 23, 0, 0, 0, java.time.ZoneOffset.ofHours(-3)),
+        "Soja em graos", "12019000", "100.00"));
+    assertThat(service.vendasDeProduto(produtorA.getId(), "soja", false,
+        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)).valorTotal())
+        .isEqualByComparingTo("75700.00");
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.vendasDeProduto(
+            produtorA.getId(), "soja", true, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+        .isInstanceOf(IllegalArgumentException.class);
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.vendasDeProduto(
+            produtorA.getId(), null, false, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

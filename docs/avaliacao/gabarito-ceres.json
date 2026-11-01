@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-01.1",
+  "versao": "2026-11-01.3",
   "perguntas": [
     {
       "id": "D01", "categoria": "DADOS",
@@ -402,7 +402,7 @@
     {"id": "T08", "categoria": "DADOS", "pergunta": "Quais impostos vencem em novembro de 2026?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["vencimentosDoMes"], "parametrosEsperados": {"mes": ["2026-11"]}, "camposValor": ["valorTotal"]},
     {"id": "T09", "categoria": "LEGISLACAO", "pergunta": "Me explique brevemente sobre split payment", "rotaEsperada": "LEGISLACAO", "dispositivosEsperados": ["LC 214/2025, art. 31", "LC 214/2025, art. 32", "LC 214/2025, art. 33"]},
     {"id": "T10", "categoria": "DADOS", "pergunta": "Tenho alguma nota devolvida?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["listarNotas"], "parametrosEsperados": {"situacao": ["DEVOLVIDA"]}, "camposValor": ["quantidadeNoTotal"]},
-    {"id": "T11", "categoria": "DADOS", "pergunta": "Quanto vendi de soja?", "rotaEsperada": "DADOS", "pendente": "#248 #274: a funcao que responde ainda nao existe; o valor esperado entra com ela, pelas regras do comentario de decisoes da #274"},
+    {"id": "T11", "categoria": "DADOS", "pergunta": "Quanto vendi de soja?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["totalVendasPorProduto"], "parametrosEsperados": {"descricaoOuNcm": ["soja", "soja em graos", "1201", "12019000"]}, "camposValor": ["valorTotal"]},
     {"id": "T12", "categoria": "FORA_DE_ESCOPO", "pergunta": "Me passe uma receita de bolo", "rotaEsperada": "FORA_DE_ESCOPO", "deveRecusar": true},
     {"id": "T13", "categoria": "LEGISLACAO", "pergunta": "Pequeno produtor paga IBS?", "rotaEsperada": "LEGISLACAO", "dispositivosEsperados": ["LC 214/2025, art. 164", "LC 214/2025, art. 165"]},
     {"id": "X01", "categoria": "LEGISLACAO", "pergunta": "Meu vizinho paga Funrural?", "rotaEsperada": "LEGISLACAO", "adversario": true, "dispositivosEsperados": ["Lei 8.212/1991, art. 25", "Lei 8.212/1991, art. 30"]},

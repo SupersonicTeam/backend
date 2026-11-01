@@ -171,6 +171,42 @@ public class ConsultaDadosProdutorService {
   }
 
   /**
+   * Vendas de um produto (issue #248): saídas próprias autorizadas no período, só os itens com CFOP
+   * de venda ({@code x1xx}), por NCM (2 a 8 dígitos) ou pela descrição do item, com a mesma
+   * competência das compras. Mesmo resultado das
+   * compras (total, notas e quebra por unidade).
+   *
+   * @param produtorId produtor da sessão
+   * @param termo      NCM (2 a 8 dígitos) ou trecho da descrição
+   * @param porNcm     {@code true} se o termo é NCM
+   * @param inicio     primeiro dia (inclusivo)
+   * @param fim        último dia (inclusivo)
+   * @return total, notas e quebra por unidade
+   * @throws IllegalArgumentException sem termo, ou se {@code porNcm} e o termo não tiver só 2 a 8
+   *                                  dígitos
+   */
+  public ComprasInsumoResultado vendasDeProduto(
+      UUID produtorId, String termo, boolean porNcm, LocalDate inicio, LocalDate fim) {
+    if (termo == null || termo.isBlank()) {
+      throw new IllegalArgumentException("Informe o produto ou o NCM.");
+    }
+    if (porNcm && !PREFIXO_NCM.matcher(termo).matches()) {
+      throw new IllegalArgumentException("Prefixo de NCM deve ter de 2 a 8 digitos.");
+    }
+    OffsetDateTime de = inicioDoDia(inicio);
+    OffsetDateTime ate = fimExclusivo(fim);
+    if (porNcm) {
+      String prefixo = termo + "%";
+      return resultado(notaFiscalRepository.totalizarVendasPorNcm(produtorId, prefixo, de, ate),
+          notaFiscalRepository.somarVendasPorNcm(produtorId, prefixo, de, ate));
+    }
+    String padrao = "%" + escaparLike(termo.trim().toLowerCase(Locale.ROOT)) + "%";
+    return resultado(
+        notaFiscalRepository.totalizarVendasPorDescricao(produtorId, padrao, de, ate),
+        notaFiscalRepository.somarVendasPorDescricao(produtorId, padrao, de, ate));
+  }
+
+  /**
    * NCMs comprados de um insumo, pelo mesmo critério de {@link #comprasPorNcm} (termo de 2 a 8
    * dígitos) ou {@link #comprasPorDescricao} (texto), no mesmo recorte e maior valor primeiro.
    * Issue #170: no MISTO, a busca na lei inclui os itens de anexo desses NCMs.

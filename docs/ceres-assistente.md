@@ -73,6 +73,7 @@ do Ollama nem de chave de API.
 | Função | Responde | Reaproveita |
 |---|---|---|
 | `totalComprasPorInsumo(descricaoOuNcm, dataInicio, dataFim)` | "quanto comprei de fertilizante no semestre?" | recorte do crédito: entradas `IMPORTADA` + `AUTORIZADA` |
+| `totalVendasPorProduto(descricaoOuNcm, dataInicio, dataFim)` | "quanto vendi de soja?" (#248) | espelho de `totalComprasPorInsumo` sobre as **saídas próprias autorizadas**, só itens com CFOP de venda (`x1xx`: remessa `x9xx` não é venda), por nome ou NCM; sem datas, de 1º de janeiro do ano de `dataFim` até ela; termo com acento sem resultado tenta sem acento (a NF-e costuma vir sem). Antes, a pergunta ia a `listarNotas`, que soma **todas** as vendas |
 | `consultarApuracao(mes)` | "quanto de IBS eu devo em julho?" | `ApuracaoService` |
 | `consultarCreditos(dataInicio, dataFim)` | "quanto tenho de crédito?" | `CreditoService` |
 | `listarNotas(tipo, situacao, dataInicio, dataFim, limite)` | "minhas últimas vendas" (máx. 10), "quanto somam?", "tenho nota devolvida?" | consulta fixa top-N + `valorTotal` do filtro inteiro (sem `situacao`, só as autorizadas — #169). Sem datas, 90 dias; para nota em aberto (rascunho, com inconsistências, em revisão, aprovada, devolvida), 24 meses: pendência não tem prazo. A descrição de `situacao` explica **todas** as situações (#254): `DEVOLVIDA` (pelo contador) ≠ `REJEITADA` (pela SEFAZ); um teste exige uma por `StatusNotaFiscal` |

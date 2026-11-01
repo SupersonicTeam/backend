@@ -82,6 +82,13 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   }
 
   @Override
+  public ComprasInsumo vendasDeProduto(
+      UUID produtorId, String termo, boolean porNcm, LocalDate inicio, LocalDate fim) {
+    return comTimeout(() ->
+        compras(consultaService.vendasDeProduto(produtorId, termo, porNcm, inicio, fim)));
+  }
+
+  @Override
   public List<String> ncmsComprados(
       UUID produtorId, String descricaoOuNcm, LocalDate inicio, LocalDate fim, int limite) {
     return comTimeout(() ->
