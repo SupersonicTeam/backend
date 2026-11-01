@@ -27,8 +27,10 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.service.CotaUsoAssistenteService;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
@@ -197,6 +199,35 @@ class SeedDemonstracaoIntegrationTest {
     Produtor principal = produtor(CenarioDemonstracao.CHAVE_PRINCIPAL);
     assertThat(cotaService.consultar(TipoTitularCota.PRODUTOR, principal.getId()).consumidos())
         .isZero();
+  }
+
+  @Test
+  @Transactional(readOnly = true)
+  @DisplayName("a serie de cada produtor cresce com a data de emissao, sem numero repetido")
+  void numeracaoCronologica() {
+    Map<UUID, List<NotaFiscal>> porProdutor = notaRepository.findAll().stream()
+        .filter(n -> n.getOrigem() == OrigemNotaFiscal.PROPRIA)
+        .collect(Collectors.groupingBy(n -> n.getProdutor().getId()));
+
+    assertThat(porProdutor).hasSize(CenarioDemonstracao.CARTEIRA.size());
+    porProdutor.values().forEach(notas -> {
+      List<Long> pelaData = notas.stream()
+          .sorted(Comparator.comparing(NotaFiscal::getDataEmissao))
+          .map(NotaFiscal::getNumero).toList();
+      assertThat(pelaData).doesNotHaveDuplicates().isSorted();
+    });
+  }
+
+  @Test
+  @DisplayName("conta sem credencial ganha o login na proxima subida, sem zerar o banco")
+  void completaCredenciaisQueFaltam() {
+    String email = CenarioDemonstracao.cliente(CenarioDemonstracao.CHAVE_COTA_NO_FIM).email();
+    credencialRepository.findByEmail(email).ifPresent(credencialRepository::delete);
+    assertThat(credencialRepository.existsByEmail(email)).isFalse();
+
+    seed.completarCredenciais();
+
+    assertThat(credencialRepository.existsByEmail(email)).isTrue();
   }
 
   @Test

@@ -77,6 +77,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
@@ -241,18 +242,46 @@ public class SeedDemonstracao implements CommandLineRunner {
     }
   }
 
+  /**
+   * Semeia (ou só completa as credenciais) e prepara a cota da Ceres.
+   *
+   * <p>Falha aqui vira {@code ERROR} e a aplicação sobe sem a demonstração: um problema de dado de
+   * apresentação não pode derrubar o ambiente inteiro (o deploy faria rollback do backend).
+   */
   @Override
   public void run(String... args) {
-    if (jaSemeado()) {
-      log.info("Demonstracao da banca ja semeada: nada recriado.");
-    } else {
-      Resumo resumo = semear();
-      ultimoResumo = resumo;
-      log.info("Demonstracao da banca semeada: {} produtores, {} notas ({} recusadas), {} guias, "
-          + "{} pendencias, {} meses fechados", resumo.produtores(), resumo.notas(),
-          resumo.notasRecusadas(), resumo.guias(), resumo.pendencias(), resumo.mesesFechados());
+    try {
+      if (jaSemeado()) {
+        completarCredenciais();
+        log.info("Demonstracao da banca ja semeada: nada recriado.");
+      } else {
+        Resumo resumo = semear();
+        ultimoResumo = resumo;
+        log.info("Demonstracao da banca semeada: {} produtores, {} notas ({} recusadas), {} guias, "
+            + "{} pendencias, {} meses fechados", resumo.produtores(), resumo.notas(),
+            resumo.notasRecusadas(), resumo.guias(), resumo.pendencias(), resumo.mesesFechados());
+      }
+      cotaCeres.prepararSemana();
+    } catch (RuntimeException e) {
+      log.error("Demonstracao da banca nao semeada; a aplicacao segue sem ela.", e);
     }
-    cotaCeres.prepararSemana();
+  }
+
+  /**
+   * Dá credencial às contas da demonstração que ainda não têm, como o {@code DataLoader} faz a cada
+   * subida: banco semeado sem {@code SEED_SENHA} ganha o login quando a variável é definida, sem
+   * precisar zerar. Idempotente pelo e-mail.
+   */
+  void completarCredenciais() {
+    Execucao ex = new Execucao(hashDaSenhaSeed(), LocalDate.now(clock.withZone(ZONA)));
+    for (Membro membro : CenarioDemonstracao.EQUIPE) {
+      contadorRepository.findByCpfCnpj(membro.cpf()).ifPresent(contador -> credencial(ex,
+          membro.email(), PapelUsuario.CONTADOR, membro.cpf(), null, contador.getId()));
+    }
+    for (Cliente cliente : CenarioDemonstracao.CARTEIRA) {
+      produtorRepository.findByCpfCnpj(cliente.documento()).ifPresent(produtor -> credencial(ex,
+          cliente.email(), PapelUsuario.PRODUTOR, cliente.documento(), produtor.getId(), null));
+    }
   }
 
   /** O que a última semeadura desta instância gravou ({@code null} se nada foi semeado). */
@@ -325,34 +354,43 @@ public class SeedDemonstracao implements CommandLineRunner {
       boolean comEscritorio = cliente.situacao() == SituacaoVinculo.ATIVO;
       Contador revisor = responsavel != null ? responsavel : equipe.get(0);
 
+      // Numera depois de ordenar por data: a serie de uma NF-e real cresce com o tempo, e o laco
+      // por linha de produto (soja de todos os meses, depois milho) daria nota antiga com numero
+      // maior que a do mes corrente.
+      List<VendaPlanejada> vendas = new ArrayList<>();
       for (LinhaVenda linha : cliente.vendas()) {
         for (int m : linha.meses()) {
           for (int k = 0; k < linha.notasPorMes(); k++) {
-            Parte comprador = linha.compradores().get((m + k) % linha.compradores().size());
-            OffsetDateTime emissao = emissao(ex.hoje, m, 4 + k * 9 + aleatorio.nextInt(4));
-            NotaFiscal nota = venda(produtor, comprador, numero.getAndIncrement(), emissao,
-                linha.produto(), variar(linha.quantidade(), aleatorio),
-                preco(linha.produto(), m, aleatorio));
-            if (autorizar(ex, nota) && comEscritorio) {
-              historicoAprovado(nota, produtor, revisor);
-            }
+            vendas.add(new VendaPlanejada(emissao(ex.hoje, m, 4 + k * 9 + aleatorio.nextInt(4)),
+                linha.compradores().get((m + k) % linha.compradores().size()), linha.produto(),
+                variar(linha.quantidade(), aleatorio), preco(linha.produto(), m, aleatorio),
+                Especial.NENHUM));
           }
         }
       }
+      vendas.addAll(especiais(cliente, ex.hoje));
+      vendas.sort(Comparator.comparing(VendaPlanejada::emissao));
+      for (VendaPlanejada venda : vendas) {
+        emitir(ex, venda, produtor, numero.getAndIncrement(), comEscritorio, revisor);
+      }
 
-      AtomicLong numeroFornecedor = new AtomicLong(40_000 + Math.abs(aleatorio.nextInt(9000)));
+      List<CompraPlanejada> compras = new ArrayList<>();
       for (LinhaCompra linha : cliente.compras()) {
         for (int m : linha.meses()) {
-          OffsetDateTime emissao = emissao(ex.hoje, m, 6 + aleatorio.nextInt(18));
-          compra(ex, produtor, linha.fornecedor(), numeroFornecedor.getAndIncrement(), emissao,
-              linha.produto(), variar(linha.quantidade(), aleatorio));
+          compras.add(new CompraPlanejada(emissao(ex.hoje, m, 6 + aleatorio.nextInt(18)), linha,
+              variar(linha.quantidade(), aleatorio)));
         }
+      }
+      compras.sort(Comparator.comparing(CompraPlanejada::emissao));
+      AtomicLong numeroFornecedor = new AtomicLong(40_000 + Math.abs(aleatorio.nextInt(9000)));
+      for (CompraPlanejada compra : compras) {
+        compra(ex, produtor, compra.linha().fornecedor(), numeroFornecedor.getAndIncrement(),
+            compra.emissao(), compra.linha().produto(), compra.quantidade());
       }
 
       if (cliente.situacao() != SituacaoVinculo.ENCERRADO) {
         guias(ex, produtor, cliente);
       }
-      notasEspeciais(ex, cliente, produtor, numero, equipe, revisor);
       pendencias(ex, cliente, produtor, escritorio, revisor);
     }
   }
@@ -567,95 +605,118 @@ public class SeedDemonstracao implements CommandLineRunner {
         .build());
   }
 
+  /** O que a venda planejada vira: nota autorizada ou um dos estados da fila. */
+  enum Especial { NENHUM, NO_PRAZO, CANCELADA, AGUARDANDO, DEVOLVIDA, RASCUNHO, COM_INCONSISTENCIAS }
+
+  /** Compra antes de ganhar o número do fornecedor. */
+  private record CompraPlanejada(OffsetDateTime emissao, LinhaCompra linha,
+      BigDecimal quantidade) {}
+
+  /** Venda antes de ganhar número: o número só sai depois da ordenação por data. */
+  record VendaPlanejada(OffsetDateTime emissao, Parte comprador, Produto produto,
+      BigDecimal quantidade, BigDecimal preco, Especial especial) {}
+
   /** As notas que a apresentação procura: fila de revisão, erro de validação, cancelamento. */
-  private void notasEspeciais(Execucao ex, Cliente cliente, Produtor produtor, AtomicLong numero,
-      List<Contador> equipe, Contador revisor) {
-    switch (cliente.chave()) {
-      case CenarioDemonstracao.CHAVE_PRINCIPAL -> {
-        Produto soja = CenarioDemonstracao.soja();
-        // Dentro do prazo de cancelamento (RN006), perto do fim: gera o alerta da RN010.
-        NotaFiscal noPrazo = venda(produtor, CenarioDemonstracao.graneleiraTelesPires(),
-            numero.getAndIncrement(), noDia(ex.hoje.minusDays(27), 10), soja,
-            new BigDecimal("36850"), soja.preco());
-        if (autorizar(ex, noPrazo)) {
-          historicoAprovado(noPrazo, produtor, revisor);
-        }
-
-        // Cancelada: emitida em duplicidade para a mesma carga.
-        NotaFiscal cancelada = venda(produtor, CenarioDemonstracao.graneleiraTelesPires(),
-            numero.getAndIncrement(), noDia(ex.hoje.minusDays(52), 15), soja,
-            new BigDecimal("37120"), soja.preco());
-        if (autorizar(ex, cancelada)) {
-          historicoAprovado(cancelada, produtor, revisor);
-          cancelada.setStatus(StatusNotaFiscal.CANCELADA);
-          cancelada.setDataCancelamento(cancelada.getDataEmissao().plusHours(2));
-          cancelada.setMotivoCancelamento("Nota emitida em duplicidade para a mesma carga "
-              + "(romaneio 18442); a carga saiu na nota anterior.");
-          cancelada.setProtocoloCancelamento(protocolo(ex, cancelada.getChaveAcesso()));
-          notaRepository.save(cancelada);
-        }
-
-        NotaFiscal aguardando = venda(produtor, CenarioDemonstracao.exportadoraParanagua(),
-            numero.getAndIncrement(), noDia(ex.hoje.minusDays(1), 9), soja,
-            new BigDecimal("37400"), soja.preco());
-        emRevisao(ex, aguardando, produtor);
-
-        NotaFiscal devolvida = venda(produtor, CenarioDemonstracao.exportadoraParanagua(),
-            numero.getAndIncrement(), noDia(ex.hoje.minusDays(3), 14), soja,
-            new BigDecimal("37980"), soja.preco());
-        devolvida.setStatus(StatusNotaFiscal.DEVOLVIDA);
-        notaRepository.save(devolvida);
-        ex.notas++;
-        revisao(devolvida, AcaoRevisao.ENVIADA, null, produtor.getId(), PapelUsuario.PRODUTOR,
-            devolvida.getDataEmissao());
-        revisao(devolvida, AcaoRevisao.DEVOLVIDA, "Peso divergente do romaneio: a balanca do "
-            + "terminal registrou 36.420 kg. Corrija a quantidade antes de reenviar.",
-            revisor.getId(), PapelUsuario.CONTADOR, devolvida.getDataEmissao().plusHours(5));
-
-        NotaFiscal rascunho = venda(produtor, CenarioDemonstracao.graneleiraTelesPires(),
-            numero.getAndIncrement(), noDia(ex.hoje, 8), soja, new BigDecimal("36200"),
-            soja.preco());
-        notaRepository.save(rascunho);
-        ex.notas++;
-      }
-      case "santaclara" -> emRevisao(ex, venda(produtor, CenarioDemonstracao.torrefacaoUberlandia(),
-          numero.getAndIncrement(), noDia(ex.hoje, 8), CenarioDemonstracao.cafe(),
-          new BigDecimal("310"), CenarioDemonstracao.cafe().preco()), produtor);
-      case "luiz" -> emRevisao(ex, venda(produtor, CenarioDemonstracao.laticinioToledo(),
-          numero.getAndIncrement(), noDia(ex.hoje.minusDays(2), 7), CenarioDemonstracao.leite(),
-          new BigDecimal("20850"), CenarioDemonstracao.leite().preco()), produtor);
-      case "helena" -> comInconsistencias(ex, produtor, numero);
-      default -> {
-        // Os demais clientes só têm o movimento recorrente.
-      }
-    }
+  private static List<VendaPlanejada> especiais(Cliente cliente, LocalDate hoje) {
+    Produto soja = CenarioDemonstracao.soja();
+    return switch (cliente.chave()) {
+      case CenarioDemonstracao.CHAVE_PRINCIPAL -> List.of(
+          // Dentro do prazo de cancelamento (RN006), perto do fim: gera o alerta da RN010.
+          new VendaPlanejada(noDia(hoje.minusDays(27), 10),
+              CenarioDemonstracao.graneleiraTelesPires(), soja, new BigDecimal("36850"),
+              soja.preco(), Especial.NO_PRAZO),
+          new VendaPlanejada(noDia(hoje.minusDays(52), 15),
+              CenarioDemonstracao.graneleiraTelesPires(), soja, new BigDecimal("37120"),
+              soja.preco(), Especial.CANCELADA),
+          new VendaPlanejada(noDia(hoje.minusDays(3), 14),
+              CenarioDemonstracao.exportadoraParanagua(), soja, new BigDecimal("37980"),
+              soja.preco(), Especial.DEVOLVIDA),
+          new VendaPlanejada(noDia(hoje.minusDays(1), 9),
+              CenarioDemonstracao.exportadoraParanagua(), soja, new BigDecimal("37400"),
+              soja.preco(), Especial.AGUARDANDO),
+          new VendaPlanejada(noDia(hoje, 8), CenarioDemonstracao.graneleiraTelesPires(), soja,
+              new BigDecimal("36200"), soja.preco(), Especial.RASCUNHO));
+      case "santaclara" -> List.of(new VendaPlanejada(noDia(hoje, 8),
+          CenarioDemonstracao.torrefacaoUberlandia(), CenarioDemonstracao.cafe(),
+          new BigDecimal("310"), CenarioDemonstracao.cafe().preco(), Especial.AGUARDANDO));
+      case "luiz" -> List.of(new VendaPlanejada(noDia(hoje.minusDays(2), 7),
+          CenarioDemonstracao.laticinioToledo(), CenarioDemonstracao.leite(),
+          new BigDecimal("20850"), CenarioDemonstracao.leite().preco(), Especial.AGUARDANDO));
+      case "helena" -> List.of(new VendaPlanejada(noDia(hoje.minusDays(1), 6),
+          CenarioDemonstracao.distribuidoraSaoPaulo(), CenarioDemonstracao.tomate(),
+          new BigDecimal("640"), CenarioDemonstracao.tomate().preco(),
+          Especial.COM_INCONSISTENCIAS));
+      default -> List.of();
+    };
   }
 
-  private void emRevisao(Execucao ex, NotaFiscal nota, Produtor produtor) {
-    nota.setStatus(StatusNotaFiscal.AGUARDANDO_APROVACAO);
-    notaRepository.save(nota);
-    ex.notas++;
-    revisao(nota, AcaoRevisao.ENVIADA, null, produtor.getId(), PapelUsuario.PRODUTOR,
-        nota.getDataEmissao());
+  private void emitir(Execucao ex, VendaPlanejada venda, Produtor produtor, long numero,
+      boolean comEscritorio, Contador revisor) {
+    if (venda.especial() == Especial.COM_INCONSISTENCIAS) {
+      comInconsistencias(ex, produtor, venda, numero);
+      return;
+    }
+    NotaFiscal nota = venda(produtor, venda.comprador(), numero, venda.emissao(), venda.produto(),
+        venda.quantidade(), venda.preco());
+    switch (venda.especial()) {
+      case CANCELADA -> {
+        if (autorizar(ex, nota)) {
+          historicoAprovado(nota, produtor, revisor);
+          nota.setStatus(StatusNotaFiscal.CANCELADA);
+          nota.setDataCancelamento(nota.getDataEmissao().plusHours(2));
+          nota.setMotivoCancelamento("Nota emitida em duplicidade para a mesma carga "
+              + "(romaneio 18442); a carga saiu na nota anterior.");
+          nota.setProtocoloCancelamento(protocolo(ex, nota.getChaveAcesso()));
+          notaRepository.save(nota);
+        }
+      }
+      case AGUARDANDO -> {
+        nota.setStatus(StatusNotaFiscal.AGUARDANDO_APROVACAO);
+        notaRepository.save(nota);
+        ex.notas++;
+        revisao(nota, AcaoRevisao.ENVIADA, null, produtor.getId(), PapelUsuario.PRODUTOR,
+            nota.getDataEmissao());
+      }
+      case DEVOLVIDA -> {
+        nota.setStatus(StatusNotaFiscal.DEVOLVIDA);
+        notaRepository.save(nota);
+        ex.notas++;
+        revisao(nota, AcaoRevisao.ENVIADA, null, produtor.getId(), PapelUsuario.PRODUTOR,
+            nota.getDataEmissao());
+        revisao(nota, AcaoRevisao.DEVOLVIDA, "Peso divergente do romaneio: a balanca do "
+            + "terminal registrou 36.420 kg. Corrija a quantidade antes de reenviar.",
+            revisor.getId(), PapelUsuario.CONTADOR, nota.getDataEmissao().plusHours(5));
+      }
+      case RASCUNHO -> {
+        notaRepository.save(nota);
+        ex.notas++;
+      }
+      default -> {
+        // NENHUM e NO_PRAZO: autorizada, com o historico da aprovacao quando ha escritorio.
+        if (autorizar(ex, nota) && comEscritorio) {
+          historicoAprovado(nota, produtor, revisor);
+        }
+      }
+    }
   }
 
   /**
    * O erro mais comum de quem começa: CFOP interestadual (6101) para comprador do mesmo estado. A
-   * validação de verdade roda e o lote dela vai para o histórico, como no {@code gerar-xml}.
+   * validação de verdade roda e o lote dela vai para o histórico, como no {@code gerar-xml}. Se o
+   * validador um dia aceitar a nota, ela fica rascunho (o teste acusa), sem derrubar a semeadura.
    */
-  private void comInconsistencias(Execucao ex, Produtor produtor, AtomicLong numero) {
-    Produto tomate = CenarioDemonstracao.tomate();
-    NotaFiscal nota = nota(produtor, CenarioDemonstracao.distribuidoraSaoPaulo(),
-        numero.getAndIncrement(), noDia(ex.hoje.minusDays(1), 6), NATUREZA_VENDA,
-        item(1, tomate, "6101", new BigDecimal("640"), tomate.preco()));
-    List<ErrorDetail> erros;
+  private void comInconsistencias(Execucao ex, Produtor produtor, VendaPlanejada venda,
+      long numero) {
+    NotaFiscal nota = nota(produtor, venda.comprador(), numero, venda.emissao(), NATUREZA_VENDA,
+        item(1, venda.produto(), "6101", venda.quantidade(), venda.preco()));
+    List<ErrorDetail> erros = List.of();
     try {
       geracaoService.gerarXml(nota);
-      throw new IllegalStateException("A nota com CFOP 6101 interno deveria ser recusada");
+      log.warn("Demonstracao: a nota com CFOP 6101 interno passou na validacao; fica rascunho.");
     } catch (DomainException e) {
       erros = e.getErrors();
+      nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
     }
-    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
     notaRepository.save(nota);
     ex.notas++;
     UUID lote = UUID.randomUUID();
