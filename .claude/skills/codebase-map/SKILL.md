@@ -35,7 +35,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `RetryConfig` | Spring Retry para chamadas SEFAZ |
 | `SchedulingConfig` | Habilita `@Scheduled` e o lock distribuído ShedLock (`@EnableSchedulerLock`, `JdbcTemplateLockProvider` na tabela `shedlock`, relógio do banco — issue #87) |
 | `DataLoader` | Seed em dev/homolog: **dois** produtores (A = semente/fallback, B = outro dono) + referências NCM/CFOP |
-| `avaliacao/AvaliacaoCeresRunner` | Comando da avaliação da Ceres (issue #158, profiles `dev,avaliacao`, sem web): `SeedAvaliacao` (avaliado + vizinho fictícios), `ValoresEsperados` (valor esperado = função real com os parâmetros do gabarito), `AvaliadorResposta` (régua pura), `RelatorioAvaliacao` (.md + .json em `docs/avaliacao/resultados`). Gabarito em `docs/avaliacao/gabarito-ceres.json` |
+| `avaliacao/AvaliacaoCeresRunner` | Comando da avaliação da Ceres (issue #158, profiles `dev,avaliacao`, sem web): `SeedAvaliacao` (avaliado + vizinho fictícios), `ValoresEsperados` (valor esperado = função real com os parâmetros do gabarito), `AvaliadorResposta` (régua pura), `RelatorioAvaliacao` (uma rodada: métricas, por rota, adversários), `RelatorioRepeticoes` (#264: `avaliacao.repeticoes`, média/faixa e perguntas instáveis; .md + .json em `docs/avaliacao/resultados`), `ClarezaTexto` (palavras por frase, siglas sem explicação), `CsvCego` (CSV cego + chave da nota humana, #275), `SeparacaoTreinoTeste` (gabarito nunca em `docs/avaliacao/treino/`). Gabarito em `docs/avaliacao/gabarito-ceres.json`; harness da API publicada em `docs/avaliacao/harness-api/` |
 
 ### `controller/`
 | Classe | Endpoints |

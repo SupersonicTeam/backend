@@ -287,7 +287,9 @@ um teste garante que nenhuma pergunta legítima do gabarito é barrada.
 **Prompt do classificador: mudança pequena, medida.** Na #145, um parágrafo de regras a mais no
 prompt tirou de rota duas perguntas que acertavam (alertas foi para MISTO, crédito presumido para
 fora de escopo), de forma repetível. O que ficou foi um exemplo curto na linha de `DADOS`. Toda
-mudança no prompt do classificador pede uma rodada do gabarito (`docs/avaliacao/`).
+mudança no prompt do classificador pede uma medição do gabarito (`docs/avaliacao/`), com 3
+repetições desde a #264: uma rodada só não separa ganho de ruído. Os casos adversários de rota
+(`adversario: true`, 20 na versão `2026-10-31.1`) medem a precisão das regras de rota da #265.
 
 **A parte de lei do MISTO não fala dos dados (#170).** Ela vê só trechos de lei, então:
 
