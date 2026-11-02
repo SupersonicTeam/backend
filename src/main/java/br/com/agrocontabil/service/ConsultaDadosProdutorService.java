@@ -132,8 +132,8 @@ public class ConsultaDadosProdutorService {
     return new NotaPorNumeroResultado(n.numero(), n.serie(), n.dataEmissao(), n.origem(),
         n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
         motivo, inconsistencias,
-        n.origem() == OrigemNotaFiscal.PROPRIA ? sinaisService.sinais(produtorId, n.id())
-            : List.of());
+        sinaisService.sinais(produtorId, new SinaisNotaConferirService.NotaParaSinal(
+            n.id(), n.origem(), n.status(), n.dataEmissao())));
   }
 
   /**

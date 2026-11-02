@@ -1,8 +1,11 @@
 # Expressoes que tiram o sentido de servico de um termo da lista (issue #276): "semente para
-# plantio" e produto (semente), nao servico de plantio. Sem acento, em minusculas; a expressao e
-# retirada da descricao normalizada antes de procurar os termos.
+# plantio" e produto (semente), nao servico de plantio. Acento, caixa e pontuacao sao ignorados;
+# a expressao sai da descricao antes de procurar os termos. Nao incluir "de plantio": "operacao de
+# plantio" e servico.
 para plantio
 para semeadura
 para o plantio
-de plantio
+plantio direto
 para aplicacao
+de pulverizacao
+para pulverizacao

@@ -716,8 +716,8 @@ class FerramentasDadosProdutorTest {
             116, 1, OffsetDateTime.of(2026, 9, 8, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
             OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.RASCUNHO, new BigDecimal("800.00"),
             BigDecimal.ZERO, BigDecimal.ZERO, null, List.of(),
-            List.of(new DadosProdutorPorta.Sinal("PRODUTO_PARECE_SERVICO", 1,
-                "Servico de colheita do Joao", "5949", "12019000", null)))), 1));
+            List.of(new DadosProdutorPorta.Sinal("PRODUTO_PARECE_SERVICO", "CFOP_GENERICO",
+                "ANTES_DE_EMITIR", 1, "Servico de colheita do Joao", "5949", null)))), 1));
 
     RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(116, toolContext);
 

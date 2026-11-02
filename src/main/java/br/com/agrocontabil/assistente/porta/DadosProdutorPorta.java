@@ -197,14 +197,16 @@ public interface DadosProdutorPorta {
    * produtor: vai só ao texto fixo do backend, nunca ao modelo.
    *
    * @param codigo            código do sinal (ex.: {@code PRODUTO_PARECE_SERVICO})
+   * @param motivo            por que disparou ({@code CFOP_GENERICO}, {@code NCM_FORA_DA_REFERENCIA})
+   * @param momento           {@code ANTES_DE_EMITIR}, {@code AUTORIZADA_NO_PRAZO} ou
+   *                          {@code AUTORIZADA_FORA_DO_PRAZO}
    * @param numeroItem        item da nota; nulo num sinal da nota inteira
    * @param descricaoItem     descrição do item
    * @param cfop              CFOP do item
-   * @param ncm               NCM do item
-   * @param prazoCancelamento último dia para cancelar, só com a nota autorizada no prazo
+   * @param prazoCancelamento instante-limite para cancelar, só autorizada no prazo
    */
-  record Sinal(String codigo, Integer numeroItem, String descricaoItem, String cfop, String ncm,
-      LocalDate prazoCancelamento) {}
+  record Sinal(String codigo, String motivo, String momento, Integer numeroItem,
+      String descricaoItem, String cfop, OffsetDateTime prazoCancelamento) {}
 
   /** Inconsistência de validação: código, campo, mensagem e sugestão do sistema. */
   record Inconsistencia(String codigo, String campo, String mensagem, String sugestao) {}
