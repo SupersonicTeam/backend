@@ -19,16 +19,17 @@ import java.time.OffsetDateTime;
  * @param valor             valor unitário do item (valor fora do padrão)
  * @param referencia        mediana dos valores unitários de referência (valor fora do padrão)
  * @param outraNota         número da outra nota (duplicidade)
+ * @param outraSerie        série da outra nota (duplicidade)
  */
 public record SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento,
     Integer numeroItem, String descricaoItem, String cfop, OffsetDateTime prazoCancelamento,
-    String unidade, BigDecimal valor, BigDecimal referencia, Long outraNota) {
+    String unidade, BigDecimal valor, BigDecimal referencia, Long outraNota, Integer outraSerie) {
 
   /** Sinal de item sem valores (produto que parece serviço). */
   public SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento, Integer numeroItem,
       String descricaoItem, String cfop, OffsetDateTime prazoCancelamento) {
     this(codigo, motivo, momento, numeroItem, descricaoItem, cfop, prazoCancelamento, null, null,
-        null, null);
+        null, null, null);
   }
 
   /** Sinais conhecidos. Sinal novo = código aqui + regra no service + frase fixa na Ceres. */

@@ -19,7 +19,9 @@ import java.util.UUID;
  * @param valorTotal  valor total da nota
  * @param valorIbs    IBS destacado na nota
  * @param valorCbs    CBS destacada na nota
+ * @param destinatarioCpfCnpj documento do destinatário: só para o sinal de duplicidade (#276), no
+ *                    service; nunca vai ao resultado da Ceres
  */
 public record NotaPorNumeroLinha(UUID id, Long numero, Integer serie, OffsetDateTime dataEmissao,
     OrigemNotaFiscal origem, StatusNotaFiscal status, BigDecimal valorTotal, BigDecimal valorIbs,
-    BigDecimal valorCbs) {}
+    BigDecimal valorCbs, String destinatarioCpfCnpj) {}

@@ -159,7 +159,7 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
             n.sinais().stream()
                 .map(x -> new Sinal(x.codigo().name(), x.motivo().name(), x.momento().name(),
                     x.numeroItem(), x.descricaoItem(), x.cfop(), x.prazoCancelamento(),
-                    x.unidade(), x.valor(), x.referencia(), x.outraNota()))
+                    x.unidade(), x.valor(), x.referencia(), x.outraNota(), x.outraSerie()))
                 .toList()))
         .toList(), r.total());
   }

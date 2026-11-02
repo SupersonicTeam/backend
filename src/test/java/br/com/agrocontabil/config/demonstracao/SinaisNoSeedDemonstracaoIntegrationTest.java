@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -23,11 +25,11 @@ import org.springframework.test.context.ActiveProfiles;
  * nenhuma nota do cenário foi feita para estar errada, então todo sinal aqui é falso positivo. O
  * resultado vai ao log (para o PR) e o teste exige zero.
  *
- * <p>Banco H2 próprio, como o {@code SeedDemonstracaoIntegrationTest}: a semeadura contaminaria as
- * contagens dos outros testes.
+ * <p>Mesmas propriedades do {@code SeedDemonstracaoIntegrationTest}, de propósito: o Spring reusa o
+ * contexto (e o banco H2 próprio) já semeado, sem semear de novo. Este teste só lê.
  */
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:h2:mem:demonstracao276;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;"
+    "spring.datasource.url=jdbc:h2:mem:demonstracao315;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;"
         + "NON_KEYWORDS=VALUE",
     "spring.jpa.hibernate.ddl-auto=none",
     "spring.sql.init.mode=always",
@@ -37,8 +39,11 @@ import org.springframework.test.context.ActiveProfiles;
     "app.assistente.cota.habilitada=true",
     "app.seed.senha=Banca-AgroConIA-demonstracao-2026"})
 @ActiveProfiles("test")
-@DisplayName("Sinais de nota a conferir no seed da banca (#276)")
+@DisplayName("Seed da demonstracao da banca (#315)")
 class SinaisNoSeedDemonstracaoIntegrationTest {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(SinaisNoSeedDemonstracaoIntegrationTest.class);
 
   @Autowired private NotaFiscalRepository notaRepository;
   @Autowired private SinaisNotaConferirService sinaisService;
@@ -52,12 +57,13 @@ class SinaisNoSeedDemonstracaoIntegrationTest {
     List<SinalNota> sinais = new ArrayList<>();
     for (NotaFiscal n : proprias) {
       sinais.addAll(sinaisService.sinais(n.getProdutor().getId(),
-          new NotaParaSinal(n.getId(), n.getOrigem(), n.getStatus(), n.getDataEmissao())));
+          new NotaParaSinal(n.getId(), n.getOrigem(), n.getStatus(), n.getDataEmissao(),
+              n.getDestinatarioCpfCnpj(), n.getValorTotalNota())));
     }
     Map<SinalNota.CodigoSinalNota, Long> porSinal = sinais.stream()
         .collect(Collectors.groupingBy(SinalNota::codigo, Collectors.counting()));
-    System.out.println("#276 falso positivo no seed: " + proprias.size() + " notas proprias, "
-        + "sinais por codigo = " + porSinal);
+    log.info("#276 falso positivo no seed: {} notas proprias, sinais por codigo = {}",
+        proprias.size(), porSinal);
 
     assertThat(proprias).hasSizeGreaterThan(80);
     assertThat(sinais).isEmpty();

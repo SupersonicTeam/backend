@@ -208,18 +208,11 @@ public interface DadosProdutorPorta {
    * @param valor             valor unitário do item (valor fora do padrão)
    * @param referencia        mediana de referência (valor fora do padrão)
    * @param outraNota         número da outra nota (duplicidade)
+   * @param outraSerie        série da outra nota (duplicidade)
    */
   record Sinal(String codigo, String motivo, String momento, Integer numeroItem,
       String descricaoItem, String cfop, OffsetDateTime prazoCancelamento, String unidade,
-      BigDecimal valor, BigDecimal referencia, Long outraNota) {
-
-    /** Sinal de item sem valores. */
-    public Sinal(String codigo, String motivo, String momento, Integer numeroItem,
-        String descricaoItem, String cfop, OffsetDateTime prazoCancelamento) {
-      this(codigo, motivo, momento, numeroItem, descricaoItem, cfop, prazoCancelamento, null,
-          null, null, null);
-    }
-  }
+      BigDecimal valor, BigDecimal referencia, Long outraNota, Integer outraSerie) {}
 
   /** Inconsistência de validação: código, campo, mensagem e sugestão do sistema. */
   record Inconsistencia(String codigo, String campo, String mensagem, String sugestao) {}

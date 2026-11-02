@@ -87,6 +87,29 @@ class SinaisNotaConferirServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("review: unidade sem caixa; remessa (x9xx) nao entra na mediana nem e julgada")
+  void unidadeERemessa() {
+    for (int i = 1; i <= 5; i++) {
+      NotaFiscal venda = saida(produtorA, diasAtras(10 * i), "Milho", "10059010", "145.00");
+      venda.getItens().get(0).setUnidade(i % 2 == 0 ? "kg" : " Kg ");
+      notaFiscalRepository.save(venda);
+    }
+    for (int i = 1; i <= 5; i++) {
+      NotaFiscal remessa = saida(produtorA, diasAtras(10 * i + 1), "Milho", "10059010", "40.00");
+      remessa.getItens().get(0).setCfop("5901");
+      notaFiscalRepository.save(remessa);
+    }
+    NotaFiscal remessaHoje = saida(produtorA, diasAtras(1), "Milho", "10059010", "40.00");
+    remessaHoje.getItens().get(0).setCfop("5901");
+    NotaFiscal errada = rascunho(saida(produtorA, diasAtras(1), "Milho", "10059010",
+        "145000.00"));
+
+    assertThat(service.sinais(produtorA.getId(), paraSinal(errada)))
+        .extracting(SinalNota::motivo).containsExactly(Motivo.ACIMA_DO_PADRAO);
+    assertThat(service.sinais(produtorA.getId(), paraSinal(rascunho(remessaHoje)))).isEmpty();
+  }
+
+  @Test
   @DisplayName("com 4 notas de referencia nao ha mediana; cancelada nao conta")
   void poucasNotas() {
     for (int i = 1; i <= 4; i++) {
@@ -118,7 +141,17 @@ class SinaisNotaConferirServiceIntegrationTest {
     assertThat(service.sinais(produtorA.getId(), paraSinal(segunda)))
         .filteredOn(s -> s.codigo() == CodigoSinalNota.POSSIVEL_DUPLICIDADE)
         .singleElement()
-        .satisfies(s -> assertThat(s.outraNota()).isEqualTo(primeira.getNumero()));
+        .satisfies(s -> {
+          assertThat(s.outraNota()).isEqualTo(primeira.getNumero());
+          assertThat(s.outraSerie()).isEqualTo(primeira.getSerie());
+        });
+
+    // Rejeitada nunca e uma das duas: nem a outra, nem a consultada.
+    NotaFiscal rejeitada = saida(produtorA, dia.plusHours(4), "Soja", "12019000", "5000.00");
+    rejeitada.setStatus(StatusNotaFiscal.REJEITADA);
+    rejeitada = notaFiscalRepository.save(rejeitada);
+    assertThat(service.sinais(produtorA.getId(), paraSinal(rejeitada)))
+        .noneMatch(s -> s.codigo() == CodigoSinalNota.POSSIVEL_DUPLICIDADE);
 
     // Outro dia, ou outra quantidade: nao e a mesma venda.
     NotaFiscal outroDia = rascunho(saida(produtorA, dia.minusDays(1), "Soja", "12019000",
@@ -139,7 +172,7 @@ class SinaisNotaConferirServiceIntegrationTest {
 
   private static NotaParaSinal paraSinal(NotaFiscal nota) {
     return new NotaParaSinal(nota.getId(), nota.getOrigem(), nota.getStatus(),
-        nota.getDataEmissao());
+        nota.getDataEmissao(), nota.getDestinatarioCpfCnpj(), nota.getValorTotalNota());
   }
 
   private static OffsetDateTime diasAtras(int dias) {
