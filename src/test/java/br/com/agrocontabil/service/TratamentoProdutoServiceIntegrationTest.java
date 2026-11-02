@@ -78,8 +78,8 @@ class TratamentoProdutoServiceIntegrationTest {
   void sojaEmGraos() {
     assertThat(service.consultar("soja em graos", EM_2026).produtos())
         .extracting(TratamentoProduto::ncm).containsExactly("12011000", "12019000");
-    assertThat(service.consultar("milho soja", EM_2026).produtos())
-        .extracting(TratamentoProduto::ncm).doesNotContain("12011000", "12019000");
+    assertThat(service.consultar("graos de soja", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm).containsExactly("12011000", "12019000");
   }
 
   @Test
@@ -149,6 +149,49 @@ class TratamentoProdutoServiceIntegrationTest {
     assertThat(p.percentualReducao()).isEqualByComparingTo("0");
     assertThat(p.artigo()).isNull();
     assertThat(p.condicao()).isNull();
+  }
+
+  @Test
+  @DisplayName("review: plural em -oes casa o singular (feijoes, item do Anexo I)")
+  void feijao() {
+    TratamentoProduto feijao = service.consultar("feijao", EM_2026).produtos().get(0);
+
+    assertThat(feijao.descricao()).startsWith("Feij");
+    assertThat(feijao.cClassTrib()).isEqualTo("200003");
+    assertThat(feijao.percentualReducao()).isEqualByComparingTo("100");
+  }
+
+  @Test
+  @DisplayName("review: a palavra mais rara decide ('ovos fertilizados' e o item do Anexo IX)")
+  void palavraMaisRara() {
+    TratamentoProduto ovos = service.consultar("ovos fertilizados", EM_2026).produtos().get(0);
+
+    assertThat(ovos.descricao()).isEqualTo("Ovos fertilizados");
+    assertThat(ovos.cClassTrib()).isEqualTo("200038");
+  }
+
+  @Test
+  @DisplayName("review: 'NCM 1201.90.00' e o codigo, nao a palavra 'ncm' dos itens de anexo")
+  void prefixoNcm() {
+    ConsultaTratamentoProduto c = service.consultar("NCM 1201.90.00", EM_2026);
+
+    assertThat(c.tipo()).isEqualTo(TipoBusca.NCM);
+    assertThat(c.produtos()).extracting(TratamentoProduto::ncm).containsExactly("12019000");
+  }
+
+  @Test
+  @DisplayName("review: condicao de destino escrita no item do Anexo IX entra na condicao")
+  void condicaoNoTextoDoItem() {
+    assertThat(service.consultar("farelo", EM_2026).produtos())
+        .allSatisfy(p -> assertThat(p.condicao()).containsIgnoringCase("destinad"));
+  }
+
+  @Test
+  @DisplayName("review: NCM fora da referencia e de todo anexo sai como desconhecido")
+  void ncmDesconhecido() {
+    assertThat(service.consultar("99999999", EM_2026).produtos().get(0).ncmConhecido()).isFalse();
+    assertThat(service.consultar("12019000", EM_2026).produtos().get(0).ncmConhecido()).isTrue();
+    assertThat(service.consultar("31010000", EM_2026).produtos().get(0).ncmConhecido()).isTrue();
   }
 
   @ParameterizedTest

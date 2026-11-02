@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -99,7 +100,7 @@ public class ClassificacaoTributariaService {
    */
   @Transactional(readOnly = true)
   public TratamentoTributarioNcm tratamentoPorNcm(String ncm, LocalDate data) {
-    return escolher(ncm, enquadramentos(ncm, data), inNatura(ncm), data,
+    return escolher(ncm, enquadramentos(ncm, data), () -> inNatura(ncm), data,
         codigo -> classificacao(codigo, data));
   }
 
@@ -133,15 +134,18 @@ public class ClassificacaoTributariaService {
     for (String ncm : codigos) {
       List<EnquadramentoAnexo> enquadramentos =
           enquadramentosDe(linhasPorNcm.getOrDefault(ncm, List.of()));
-      tratamentos.put(ncm, escolher(ncm, enquadramentos, inNatura.contains(ncm), data,
+      tratamentos.put(ncm, escolher(ncm, enquadramentos, () -> inNatura.contains(ncm), data,
           classificacaoDoLote));
     }
     return tratamentos;
   }
 
-  /** A precedência da classe, sobre os enquadramentos já lidos. */
+  /**
+   * A precedência da classe, sobre os enquadramentos já lidos. O in natura só é consultado se
+   * nenhum anexo de alíquota zero venceu (no cálculo da nota, uma consulta a menos por item).
+   */
   private TratamentoTributarioNcm escolher(String ncm, List<EnquadramentoAnexo> enquadramentos,
-      boolean inNatura, LocalDate data,
+      BooleanSupplier inNatura, LocalDate data,
       Function<String, Optional<ClassificacaoTributaria>> classificacoes) {
     Set<String> enquadrados = enquadramentos.stream()
         .map(EnquadramentoAnexo::cClassTrib)
@@ -151,7 +155,7 @@ public class ClassificacaoTributariaService {
     if (zero.isPresent()) {
       return tratamento(ncm, zero.get(), Origem.ANEXO, data, enquadramentos, classificacoes);
     }
-    if (inNatura) {
+    if (inNatura.getAsBoolean()) {
       return tratamento(ncm, IN_NATURA, Origem.IN_NATURA, data, enquadramentos, classificacoes);
     }
     Optional<String> sessenta =

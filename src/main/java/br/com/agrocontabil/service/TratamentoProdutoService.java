@@ -10,15 +10,16 @@ import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
@@ -32,19 +33,25 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Como o produto é achado:</strong>
  * <ol>
- *   <li>código NCM de 8 dígitos: o próprio código, com o nome da referência de NCM (#282) quando
- *       ele está lá;</li>
- *   <li>nome: as palavras do termo no começo de palavras da descrição oficial dos NCMs da
- *       referência ("soja", "ovo" casa "Ovos frescos..."), sem acento nem caixa;</li>
- *   <li>sem NCM com esse nome: os itens dos anexos da LC 214/2025 pela mesma regra ("adubo" casa
- *       "Fertilizantes (adubos)..." do Anexo IX), com o tratamento de cada NCM do item agrupado.</li>
+ *   <li>código NCM de 8 dígitos (com ou sem pontos e o prefixo "NCM"): o próprio código, com o
+ *       nome da referência de NCM (#282) quando ele está lá. Código fora da referência e de todo
+ *       anexo sai {@linkplain TratamentoProduto#ncmConhecido() marcado}, para a resposta pedir a
+ *       conferência do código em vez de afirmar a alíquota cheia;</li>
+ *   <li>nome: as palavras do termo, sem acento, caixa nem plural ("feijões" = "feijão", "ovos" =
+ *       "ovo"), no começo de palavras da descrição oficial dos NCMs da referência e dos itens dos
+ *       anexos da LC 214/2025. Vence quem casa as palavras <strong>mais raras</strong> no conjunto
+ *       das descrições ("grãos de soja" acha a soja, não o café em grão; "ovos fertilizados" acha
+ *       o item do Anexo IX, não o ovo fresco). No empate, o NCM da referência vence o item de
+ *       anexo; o item de anexo traz o tratamento de cada NCM dele, agrupado.</li>
  * </ol>
  *
- * <p><strong>Condição que o dado não decide</strong> ("destinados à alimentação humana?", "in
- * natura?", "não cozidos?") vai em {@link TratamentoProduto#condicao()}, para a resposta dizê-la
- * em vez de afirmar. Vem do dado: a condição do item do anexo (só as que são condição de destino,
- * {@code DESTINAD...}; as demais células da coluna são o título do grupo do anexo), a cláusula
- * "desde que ..." da descrição oficial do {@code cClassTrib} e, no in natura, o próprio art. 137.
+ * <p><strong>Condição que o dado não decide</strong> vai em {@link TratamentoProduto#condicao()},
+ * para a resposta dizê-la em vez de afirmar. Vem do dado: no in natura, o próprio art. 137; a
+ * condição de destino do item ("destinados à alimentação humana"), da coluna de condição ou da
+ * descrição do item (no Anexo IX ela está no texto: "destinados diretamente à fabricação de
+ * ração"); a exceção do item; e a cláusula "desde que ..." da descrição oficial do
+ * {@code cClassTrib}. As demais células da coluna de condição são o título do grupo do anexo, não
+ * condição.
  *
  * <p>Leite cru, arroz em casca e cooperativa (#284, perguntas 2, 3 e 6) seguem o dado atual da
  * tabela, sem regra própria.
@@ -55,19 +62,32 @@ public class TratamentoProdutoService {
   /** Máximo de produtos devolvidos numa consulta (minimização, como as demais funções). */
   public static final int LIMITE_PRODUTOS = 3;
 
-  private static final Pattern NCM = Pattern.compile("\\d{8}");
-  private static final Pattern ARTIGO = Pattern.compile("observado o art\\. (\\d+)");
-  private static final Pattern DESDE_QUE = Pattern.compile("desde que ([^,.;]+)");
-  private static final Set<String> PALAVRAS_VAZIAS =
-      Set.of("de", "do", "da", "dos", "das", "em", "e", "o", "a", "os", "as", "para", "com");
-  private static final int PALAVRA_MINIMA = 3;
   static final String CONDICAO_IN_NATURA =
       "vendido in natura, sem industrializacao (LC 214/2025, art. 137)";
+
+  private static final Pattern NCM = Pattern.compile("\\d{8}");
+  private static final Pattern PREFIXO_NCM = Pattern.compile("(?i)^\\s*ncm\\b[:\\s]*");
+  /** "observado o art. 137 da Lei Complementar nº 214": a hipótese; outros "art." são contexto. */
+  private static final Pattern ARTIGO =
+      Pattern.compile("(?i)observad[oa]s? (?:o |os )?arts?\\. (\\d+)");
+  private static final Pattern DESDE_QUE = Pattern.compile("(?i)desde que ([^,.;]+)");
+  private static final Pattern DESTINO_NO_ITEM =
+      Pattern.compile("(?i)\\b((?:todos |todas )?destinad[oa]s? [^;.]+)");
+  private static final Set<String> PALAVRAS_VAZIAS = Set.of("de", "do", "da", "dos", "das",
+      "em", "e", "o", "a", "os", "as", "para", "com", "ncm", "sh", "nbs", "tem", "paga", "que");
+  private static final int PALAVRA_MINIMA = 3;
+  private static final int EXCECAO_MAXIMA = 160;
+  private static final double EMPATE = 1e-9;
 
   private final ClassificacaoTributariaService classificacaoService;
   private final NcmReferenciaRepository ncmReferenciaRepository;
   private final ClassificacaoTributariaAnexoItemRepository itemRepository;
   private final ClassificacaoTributariaAnexoNcmRepository anexoNcmRepository;
+
+  /**
+   * Descrições já normalizadas: tabelas estáticas, que só mudam com changeSet novo e nova subida.
+   */
+  private volatile Catalogo catalogo;
 
   /** Constrói o serviço sobre a tabela oficial e a referência de NCM. */
   public TratamentoProdutoService(ClassificacaoTributariaService classificacaoService,
@@ -83,71 +103,84 @@ public class TratamentoProdutoService {
   /**
    * Tratamento do produto na data.
    *
-   * @param termo nome do produto ou NCM de 8 dígitos (pontos e espaços ignorados)
+   * @param termo nome do produto ou NCM de 8 dígitos (pontos, espaços e o prefixo "NCM"
+   *              ignorados)
    * @param data  data de referência ({@code America/Sao_Paulo})
    * @return o que foi achado; lista vazia se nada casou
    */
   @Transactional(readOnly = true)
   public ConsultaTratamentoProduto consultar(String termo, LocalDate data) {
-    String limpo = termo == null ? "" : termo.replaceAll("[.\\s-]", "");
-    if (NCM.matcher(limpo).matches()) {
-      String descricao = ncmReferenciaRepository.findById(limpo)
-          .map(NcmReferencia::getDescricao).orElse(null);
-      TratamentoTributarioNcm t = classificacaoService.tratamentoPorNcm(limpo, data);
-      return new ConsultaTratamentoProduto(limpo, TipoBusca.NCM,
-          List.of(produto(limpo, descricao, 1, t)), t.versaoTabela());
+    String codigo = codigoNcm(termo);
+    if (codigo != null) {
+      return porNcm(codigo, data);
     }
     List<String> palavras = palavras(termo);
     if (palavras.isEmpty()) {
       return vazia(termo);
     }
-    List<NcmReferencia> ncms = melhores(ncmReferenciaRepository.findAll(), palavras,
-        NcmReferencia::getDescricao).stream()
-        .sorted(Comparator.comparing(NcmReferencia::getCodigo))
-        .limit(LIMITE_PRODUTOS)
-        .toList();
-    if (!ncms.isEmpty()) {
-      Map<String, TratamentoTributarioNcm> tratamentos = classificacaoService.tratamentosPorNcm(
-          ncms.stream().map(NcmReferencia::getCodigo).toList(), data);
-      List<TratamentoProduto> produtos = ncms.stream()
-          .map(n -> produto(n.getCodigo(), n.getDescricao(), 1, tratamentos.get(n.getCodigo())))
-          .toList();
-      return new ConsultaTratamentoProduto(termo.strip(), TipoBusca.NOME, produtos,
-          versao(tratamentos.values()));
+    Catalogo c = catalogo();
+    List<Descrito> escolhidos = melhores(c, palavras);
+    if (escolhidos.isEmpty()) {
+      return vazia(termo);
     }
-    List<ClassificacaoTributariaAnexoItem> itens = melhores(itemRepository.findAll(), palavras,
-        ClassificacaoTributariaAnexoItem::getDescricao).stream()
-        .sorted(Comparator.comparing(ClassificacaoTributariaAnexoItem::getId))
-        .toList();
+    List<String> ncms = new ArrayList<>();
+    Map<Integer, List<String>> ncmsPorItem = new LinkedHashMap<>();
+    for (Descrito d : escolhidos) {
+      if (d.ncm() != null) {
+        ncms.add(d.ncm());
+      } else {
+        List<String> doItem = anexoNcmRepository.findNcmsPermitidosDoItem(d.itemId(), data);
+        ncmsPorItem.put(d.itemId(), doItem);
+        ncms.addAll(doItem);
+      }
+    }
+    Map<String, TratamentoTributarioNcm> tratamentos =
+        classificacaoService.tratamentosPorNcm(ncms, data);
     List<TratamentoProduto> produtos = new ArrayList<>();
-    List<TratamentoTributarioNcm> todos = new ArrayList<>();
-    for (ClassificacaoTributariaAnexoItem item : itens) {
-      List<String> ncmsDoItem = anexoNcmRepository.findNcmsPermitidosDoItem(item.getId(), data);
-      if (ncmsDoItem.isEmpty()) {
+    for (Descrito d : escolhidos) {
+      if (d.ncm() != null) {
+        produtos.add(produto(d.ncm(), d.descricao(), 1, tratamentos.get(d.ncm()), true));
         continue;
       }
-      Map<String, TratamentoTributarioNcm> tratamentos =
-          classificacaoService.tratamentosPorNcm(ncmsDoItem, data);
-      todos.addAll(tratamentos.values());
       // NCMs do item com o mesmo tratamento viram um so produto, com a contagem.
       Map<String, List<TratamentoTributarioNcm>> porHipotese = new LinkedHashMap<>();
-      tratamentos.values().forEach(t ->
-          porHipotese.computeIfAbsent(t.cClassTrib(), c -> new ArrayList<>()).add(t));
+      for (String ncm : ncmsPorItem.getOrDefault(d.itemId(), List.of())) {
+        TratamentoTributarioNcm t = tratamentos.get(ncm);
+        porHipotese.computeIfAbsent(t.cClassTrib(), k -> new ArrayList<>()).add(t);
+      }
       for (List<TratamentoTributarioNcm> grupo : porHipotese.values()) {
         TratamentoTributarioNcm exemplo = grupo.get(0);
-        produtos.add(produto(grupo.size() == 1 ? exemplo.ncm() : null, item.getDescricao(),
-            grupo.size(), exemplo));
-      }
-      if (produtos.size() >= LIMITE_PRODUTOS) {
-        break;
+        produtos.add(produto(grupo.size() == 1 ? exemplo.ncm() : null, d.descricao(),
+            grupo.size(), exemplo, true));
       }
     }
     if (produtos.isEmpty()) {
       return vazia(termo);
     }
-    return new ConsultaTratamentoProduto(termo.strip(), TipoBusca.ITEM_ANEXO,
-        List.copyOf(produtos.subList(0, Math.min(LIMITE_PRODUTOS, produtos.size()))),
-        versao(todos));
+    TipoBusca tipo = escolhidos.get(0).ncm() != null ? TipoBusca.NOME : TipoBusca.ITEM_ANEXO;
+    return new ConsultaTratamentoProduto(termo.strip(), tipo,
+        produtos.subList(0, Math.min(LIMITE_PRODUTOS, produtos.size())),
+        versao(tratamentos.values()));
+  }
+
+  private ConsultaTratamentoProduto porNcm(String codigo, LocalDate data) {
+    Optional<NcmReferencia> referencia = ncmReferenciaRepository.findById(codigo);
+    TratamentoTributarioNcm t = classificacaoService.tratamentoPorNcm(codigo, data);
+    // Fora da referencia e de todo anexo: o codigo pode nem existir (o modelo pode ter chutado).
+    boolean conhecido = referencia.isPresent() || !t.enquadramentos().isEmpty();
+    return new ConsultaTratamentoProduto(codigo, TipoBusca.NCM,
+        List.of(produto(codigo, referencia.map(NcmReferencia::getDescricao).orElse(null), 1, t,
+            conhecido)),
+        t.versaoTabela());
+  }
+
+  /** NCM de 8 dígitos no termo ("1201.90.00", "NCM 1201.90.00"); nulo se não for um código. */
+  static String codigoNcm(String termo) {
+    if (termo == null) {
+      return null;
+    }
+    String limpo = PREFIXO_NCM.matcher(termo).replaceFirst("").replaceAll("[.\\s-]", "");
+    return NCM.matcher(limpo).matches() ? limpo : null;
   }
 
   private static ConsultaTratamentoProduto vazia(String termo) {
@@ -155,19 +188,19 @@ public class TratamentoProdutoService {
         List.of(), null);
   }
 
-  private static String versao(java.util.Collection<TratamentoTributarioNcm> tratamentos) {
+  private static String versao(Collection<TratamentoTributarioNcm> tratamentos) {
     return tratamentos.stream().map(TratamentoTributarioNcm::versaoTabela)
         .filter(Objects::nonNull).findFirst().orElse(null);
   }
 
-  private static TratamentoProduto produto(
-      String ncm, String descricao, int quantidadeNcms, TratamentoTributarioNcm t) {
+  private static TratamentoProduto produto(String ncm, String descricao, int quantidadeNcms,
+      TratamentoTributarioNcm t, boolean ncmConhecido) {
     Optional<EnquadramentoAnexo> escolhido = t.enquadramentos().stream()
         .filter(e -> e.cClassTrib().equals(t.cClassTrib()))
         .findFirst();
     return new TratamentoProduto(ncm, descricao, quantidadeNcms, t.cClassTrib(),
         t.percentualReducao(), t.origem(), escolhido.map(EnquadramentoAnexo::anexo).orElse(null),
-        artigo(t.fundamento()), condicao(t, escolhido));
+        artigo(t.fundamento()), condicao(t, escolhido), ncmConhecido);
   }
 
   /** Artigo da LC 214/2025 na descrição oficial ("observado o art. 137 da ..."). */
@@ -181,14 +214,23 @@ public class TratamentoProdutoService {
 
   /** Condição que o dado não decide; nula quando não há. */
   static String condicao(TratamentoTributarioNcm t, Optional<EnquadramentoAnexo> escolhido) {
-    List<String> partes = new ArrayList<>();
+    Set<String> partes = new LinkedHashSet<>();
     if (t.origem() == Origem.IN_NATURA) {
       partes.add(CONDICAO_IN_NATURA);
     }
-    escolhido.map(EnquadramentoAnexo::condicao)
-        .filter(c -> c.toUpperCase(Locale.ROOT).contains("DESTINAD"))
-        .map(c -> c.toLowerCase(new Locale("pt", "BR")))
-        .ifPresent(partes::add);
+    escolhido.ifPresent(e -> {
+      if (e.condicao() != null && e.condicao().toUpperCase(Locale.ROOT).contains("DESTINAD")) {
+        partes.add(e.condicao().strip().toLowerCase(Locale.forLanguageTag("pt-BR")));
+      } else if (e.descricaoItem() != null) {
+        Matcher m = DESTINO_NO_ITEM.matcher(e.descricaoItem());
+        if (m.find()) {
+          partes.add(m.group(1).strip());
+        }
+      }
+      if (e.excecao() != null) {
+        partes.add("exceto " + curta(e.excecao().strip(), EXCECAO_MAXIMA));
+      }
+    });
     if (t.fundamento() != null) {
       Matcher m = DESDE_QUE.matcher(t.fundamento());
       if (m.find()) {
@@ -198,40 +240,131 @@ public class TratamentoProdutoService {
     return partes.isEmpty() ? null : String.join("; ", partes);
   }
 
-  /** Palavras de busca: sem acento, sem as vazias, singular aproximado (tira o "s" final). */
-  static List<String> palavras(String termo) {
-    List<String> palavras = new ArrayList<>();
-    for (String p : NormalizacaoBusca.normalizar(termo).split("[^a-z0-9]+")) {
-      if (p.length() < PALAVRA_MINIMA || PALAVRAS_VAZIAS.contains(p)) {
-        continue;
-      }
-      palavras.add(p.length() > PALAVRA_MINIMA && p.endsWith("s")
-          ? p.substring(0, p.length() - 1) : p);
+  private static String curta(String texto, int maximo) {
+    if (texto.length() <= maximo) {
+      return texto;
     }
-    return palavras;
+    int corte = texto.lastIndexOf(' ', maximo);
+    return texto.substring(0, corte > 0 ? corte : maximo).replaceAll("[,;:]$", "") + "...";
+  }
+
+  /** Palavras de busca: sem acento, sem as vazias, no radical de singular. */
+  static List<String> palavras(String termo) {
+    Set<String> palavras = new LinkedHashSet<>();
+    for (String p : tokens(termo)) {
+      if (p.length() >= PALAVRA_MINIMA && !PALAVRAS_VAZIAS.contains(p)) {
+        palavras.add(singular(p));
+      }
+    }
+    return List.copyOf(palavras);
   }
 
   /**
-   * Os que casam todas as palavras; sem nenhum, os que casam a primeira (o produto: "soja em
-   * graos" acha a soja, mesmo sem "grao" na descrição oficial). A primeira palavra é obrigatória:
-   * "milho" nunca devolve a soja.
+   * Singular aproximado do português, o bastante para casar o começo das palavras: "feijoes",
+   * "paes" e "graos" → "feijao", "pao", "grao"; "flores" → "flor"; "ovos" → "ovo".
    */
-  static <T> List<T> melhores(List<T> candidatos, List<String> palavras,
-      Function<T, String> descricao) {
-    List<T> comAPrimeira = candidatos.stream()
-        .filter(c -> casa(palavras.subList(0, 1), descricao.apply(c)))
-        .toList();
-    List<T> comTodas = comAPrimeira.stream()
-        .filter(c -> casa(palavras, descricao.apply(c)))
-        .toList();
-    return comTodas.isEmpty() ? comAPrimeira : comTodas;
+  static String singular(String palavra) {
+    if (palavra.length() <= PALAVRA_MINIMA) {
+      return palavra;
+    }
+    if (palavra.endsWith("oes") || palavra.endsWith("aes") || palavra.endsWith("aos")) {
+      return palavra.substring(0, palavra.length() - 3) + "ao";
+    }
+    if (palavra.endsWith("ns")) {
+      return palavra.substring(0, palavra.length() - 2) + "m";
+    }
+    if (palavra.endsWith("res") || palavra.endsWith("zes")) {
+      return palavra.substring(0, palavra.length() - 2);
+    }
+    return palavra.endsWith("s") ? palavra.substring(0, palavra.length() - 1) : palavra;
   }
 
-  /** Toda palavra do termo começa alguma palavra da descrição. */
-  static boolean casa(List<String> palavras, String descricao) {
-    List<String> daDescricao =
-        List.of(NormalizacaoBusca.normalizar(descricao).split("[^a-z0-9]+"));
-    return palavras.stream().allMatch(p -> daDescricao.stream().anyMatch(d -> d.startsWith(p)));
+  private static List<String> tokens(String texto) {
+    return List.of(NormalizacaoBusca.normalizar(texto).split("[^a-z0-9]+"));
+  }
+
+  /**
+   * Os candidatos que casam as palavras mais raras: a pontuação de cada um é a soma, para cada
+   * palavra do termo que começa uma palavra da descrição, do inverso da quantidade de descrições
+   * em que ela aparece. Ficam só os de pontuação máxima; no empate entre a referência de NCM e um
+   * item de anexo, só a referência.
+   */
+  static List<Descrito> melhores(Catalogo catalogo, List<String> palavras) {
+    Map<String, Integer> frequencia = new HashMap<>();
+    for (String p : palavras) {
+      int vezes = 0;
+      for (Descrito d : catalogo.todos()) {
+        if (d.casa(p)) {
+          vezes++;
+        }
+      }
+      frequencia.put(p, vezes);
+    }
+    double maximo = 0;
+    Map<Descrito, Double> pontos = new LinkedHashMap<>();
+    for (Descrito d : catalogo.todos()) {
+      double soma = 0;
+      for (String p : palavras) {
+        if (d.casa(p)) {
+          soma += 1.0 / frequencia.get(p);
+        }
+      }
+      if (soma > 0) {
+        pontos.put(d, soma);
+        maximo = Math.max(maximo, soma);
+      }
+    }
+    List<Descrito> escolhidos = new ArrayList<>();
+    for (Map.Entry<Descrito, Double> e : pontos.entrySet()) {
+      if (e.getValue() >= maximo - EMPATE) {
+        escolhidos.add(e.getKey());
+      }
+    }
+    // Empate entre a referencia (NCM certo) e um item de anexo: fica a referencia.
+    if (escolhidos.stream().anyMatch(d -> d.ncm() != null)) {
+      escolhidos.removeIf(d -> d.ncm() == null);
+    }
+    // O catalogo ja esta na ordem: referencia (por codigo) e depois itens (por id).
+    return escolhidos.subList(0, Math.min(LIMITE_PRODUTOS, escolhidos.size()));
+  }
+
+  private Catalogo catalogo() {
+    Catalogo atual = catalogo;
+    if (atual == null) {
+      List<Descrito> todos = new ArrayList<>();
+      ncmReferenciaRepository.findAll().stream()
+          .sorted((a, b) -> a.getCodigo().compareTo(b.getCodigo()))
+          .forEach(n -> todos.add(Descrito.de(n.getCodigo(), null, n.getDescricao())));
+      itemRepository.findAll().stream()
+          .sorted((a, b) -> a.getId().compareTo(b.getId()))
+          .forEach(i -> todos.add(Descrito.de(null, i.getId(), i.getDescricao())));
+      atual = new Catalogo(List.copyOf(todos));
+      catalogo = atual;
+    }
+    return atual;
+  }
+
+  /** Descrições pesquisáveis: a referência de NCM e depois os itens dos anexos. */
+  record Catalogo(List<Descrito> todos) {}
+
+  /**
+   * Uma descrição pesquisável.
+   *
+   * @param ncm       código, se é da referência de NCM
+   * @param itemId    item do anexo, se é de um item
+   * @param descricao texto oficial
+   * @param palavras  palavras da descrição no radical de singular
+   */
+  record Descrito(String ncm, Integer itemId, String descricao, List<String> palavras) {
+
+    static Descrito de(String ncm, Integer itemId, String descricao) {
+      return new Descrito(ncm, itemId, descricao,
+          tokens(descricao).stream().map(TratamentoProdutoService::singular).toList());
+    }
+
+    boolean casa(String palavra) {
+      return palavras.stream().anyMatch(d -> d.startsWith(palavra));
+    }
   }
 
   /** Como o produto foi achado. */
@@ -272,10 +405,13 @@ public class TratamentoProdutoService {
    * @param origem            anexo, in natura ou sem redução
    * @param anexo             número do anexo da LC 214/2025; nulo fora de anexo
    * @param artigo            artigo da LC 214/2025 do {@code cClassTrib}; nulo na tributação
-   *                          integral
+   *                          integral ou se a descrição oficial não o nomeia
    * @param condicao          condição que o dado não decide; nula quando não há
+   * @param ncmConhecido      {@code false} para um NCM pedido que não está na referência nem em
+   *                          anexo nenhum: a tabela não diz nada dele, e a resposta pede para
+   *                          conferir o código
    */
   public record TratamentoProduto(String ncm, String descricao, int quantidadeNcms,
       String cClassTrib, BigDecimal percentualReducao, Origem origem, Integer anexo,
-      String artigo, String condicao) {}
+      String artigo, String condicao, boolean ncmConhecido) {}
 }

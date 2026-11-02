@@ -150,6 +150,26 @@ public final class ContextoAssistente {
   public record TextoDoBackend(String texto, List<String> dispositivos) {}
 
   /**
+   * Registra uma consulta a tabela pública (issue #283: a tabela oficial de classificação
+   * tributária). Entra nas fontes (o frontend a mostra e a auditoria a guarda) e, vazia, nas
+   * vazias; mas <strong>não</strong> conta como dado do produtor encontrado: no MISTO, achar a
+   * soja na tabela não é achar compras de soja ({@link #nenhumDadoEncontrado()}, #170).
+   *
+   * @param funcao     nome da função
+   * @param parametros parâmetros efetivamente usados
+   * @param vazio      {@code true} se nada foi achado
+   */
+  public void registrarConsultaDeTabela(
+      String funcao, Map<String, String> parametros, boolean vazio) {
+    FonteDado fonte =
+        new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros)));
+    fontes.add(fonte);
+    if (vazio) {
+      fontesVazias.add(fonte);
+    }
+  }
+
+  /**
    * Soma o uso de tokens de uma chamada ao modelo, para a auditoria (issue #144) e a cota semanal
    * (issue #166). Toda chamada conta, inclusive a classificação de intenção.
    *

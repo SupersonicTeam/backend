@@ -13,19 +13,19 @@ class TemplateTratamentoProdutoTest {
 
   private static final Produto SOJA = new Produto("12019000",
       "Soja, mesmo triturada, exceto para semeadura", 1, "200036", new BigDecimal("60.00"), true,
-      null, "137", "vendido in natura, sem industrializacao (LC 214/2025, art. 137)");
+      null, "137", "vendido in natura, sem industrializacao (LC 214/2025, art. 137)", true);
   private static final Produto ARROZ = new Produto("10063021", "Arroz polido", 1, "200003",
-      new BigDecimal("100.00"), false, 1, "125", "destinados à alimentação humana");
+      new BigDecimal("100.00"), false, 1, "125", "destinados à alimentação humana", true);
   private static final Produto ADUBO = new Produto(null, "Fertilizantes (adubos)", 35, "200038",
-      new BigDecimal("60.00"), false, 9, "138", null);
+      new BigDecimal("60.00"), false, 9, "138", null, true);
   private static final Produto INTEGRAL = new Produto("99999999", null, 1, "000001",
-      BigDecimal.ZERO, false, null, null, null);
+      BigDecimal.ZERO, false, null, null, null, true);
 
   @Test
   @DisplayName("in natura: percentual, artigo e cClassTrib do dado, e a condicao dita, nao afirmada")
   void inNatura() {
     String texto = TemplateTratamentoProduto.texto(
-        new TratamentoConsultado("soja", false, List.of(SOJA), "IT 2025.002 v1.70"));
+        new TratamentoConsultado("soja", List.of(SOJA), "IT 2025.002 v1.70"));
 
     assertThat(texto).isEqualTo("Soja, mesmo triturada, exceto para semeadura (NCM 1201.90.00):"
         + " reducao de 60% do IBS e da CBS, como produto agropecuario in natura (LC 214/2025, art."
@@ -55,7 +55,7 @@ class TemplateTratamentoProdutoTest {
   @Test
   @DisplayName("sem condicao, sem ressalva; dispositivos sem repetir; nada achado = frase fixa")
   void ressalvaDispositivosEVazio() {
-    TratamentoConsultado dois = new TratamentoConsultado("x", false, List.of(ADUBO, ADUBO,
+    TratamentoConsultado dois = new TratamentoConsultado("x", List.of(ADUBO, ADUBO,
         INTEGRAL), null);
     assertThat(TemplateTratamentoProduto.texto(dois))
         .doesNotContain(TemplateTratamentoProduto.RESSALVA)
@@ -63,7 +63,7 @@ class TemplateTratamentoProdutoTest {
     assertThat(TemplateTratamentoProduto.dispositivos(dois))
         .containsExactly("LC 214/2025|art. 138");
     assertThat(TemplateTratamentoProduto.texto(
-        new TratamentoConsultado("trator", false, List.of(), null)))
+        new TratamentoConsultado("trator", List.of(), null)))
         .isEqualTo(TemplateTratamentoProduto.naoEncontrado("trator"))
         .doesNotContainPattern("\\d");
   }
@@ -73,8 +73,27 @@ class TemplateTratamentoProdutoTest {
   void formato() {
     String longa = "Palavra ".repeat(30);
     assertThat(TemplateTratamentoProduto.frase(new Produto("12019000", longa, 1, "200036",
-        new BigDecimal("30.50"), true, null, "137", null)))
+        new BigDecimal("30.50"), true, null, "137", null, true)))
         .contains("... (NCM 1201.90.00)")
         .contains("reducao de 30,5%");
+  }
+
+  @Test
+  @DisplayName("review: NCM fora da referencia e dos anexos nao afirma a aliquota cheia")
+  void ncmDesconhecido() {
+    assertThat(TemplateTratamentoProduto.frase(new Produto("07133390", null, 1, "000001",
+        BigDecimal.ZERO, false, null, null, null, false)))
+        .startsWith("NCM 0713.33.90: nao encontrei esse codigo")
+        .contains("Se o codigo estiver certo")
+        .endsWith("Confira o NCM na nota fiscal do produto.");
+  }
+
+  @Test
+  @DisplayName("review: reducao sem artigo na descricao oficial nao imprime 'null'")
+  void semArtigo() {
+    assertThat(TemplateTratamentoProduto.frase(new Produto("12019000", "Soja", 1, "200038",
+        new BigDecimal("60"), false, 9, null, null, true)))
+        .contains("pelo Anexo IX (cClassTrib 200038).")
+        .doesNotContain("null");
   }
 }

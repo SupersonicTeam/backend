@@ -4,19 +4,13 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ContextoAssistente.TextoDoBackend;
 import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
-import br.com.agrocontabil.assistente.rag.CitacaoLegal;
-import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
-import br.com.agrocontabil.exception.AssistenteIndisponivelException;
+import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,9 +20,14 @@ import org.springframework.stereotype.Component;
  *
  * <ul>
  *   <li>Rota de dados em que o tratamento foi a única consulta: a resposta é o texto do backend,
- *       e o do modelo sai (ele só repetiria, com risco de trocar uma condição por afirmação).</li>
+ *       e o do modelo sai (ele só repetiria, com risco de trocar uma condição por afirmação). O
+ *       desfecho vira {@code RESPONDIDA} só quando o problema era o texto do modelo (número sem
+ *       fonte, resposta vazia, negativa trocada); sinais como função não permitida, teto de rodadas
+ *       e fallback ficam na auditoria.</li>
  *   <li>Com outras consultas (ou no MISTO): o texto do backend vem depois do que a rota
- *       respondeu.</li>
+ *       respondeu, sem repetir um texto que já está lá (a frase fixa da consulta vazia é a mesma da
+ *       negativa e do MISTO sem dados) e sem a recusa "não encontrei fundamento legal" ao lado de um
+ *       artigo citado.</li>
  * </ul>
  * As citações são os dispositivos do dado (o artigo do {@code cClassTrib}), com o texto da base de
  * legislação; sem a base, o texto segue sozinho (ele já nomeia o artigo).
@@ -39,7 +38,14 @@ public class TextosDoBackend {
   /** Funções cujo resultado vira texto do backend. */
   static final Set<String> FUNCOES = Set.of("consultarTratamentoProduto");
 
-  private static final Logger log = LoggerFactory.getLogger(TextosDoBackend.class);
+  /** Desfechos de texto do modelo que o texto do backend resolve. */
+  static final Set<DesfechoInteracao> SUBSTITUIVEIS = EnumSet.of(DesfechoInteracao.RESPONDIDA,
+      DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.SEM_RESPOSTA,
+      DesfechoInteracao.NEGATIVA_SUBSTITUIDA);
+
+  /** Recusas da lei que contradiriam um artigo citado logo depois. */
+  private static final List<String> RECUSAS_DA_LEI = List.of(
+      OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL, ValidadorCitacao.SEM_FUNDAMENTO);
 
   private final BuscaTextualLegislacaoService busca;
 
@@ -61,39 +67,35 @@ public class TextosDoBackend {
     if (textos.isEmpty() || resultado.rota() == Intencao.FORA_DE_ESCOPO) {
       return resultado;
     }
-    String doBackend = textos.stream().map(TextoDoBackend::texto).distinct()
-        .collect(Collectors.joining("\n\n"));
-    boolean soEstas = contexto.fontes().stream().map(FonteDado::funcao).allMatch(FUNCOES::contains);
-    boolean substitui = resultado.rota() == Intencao.DADOS && soEstas;
-    String texto = substitui || resultado.texto().isBlank()
-        ? doBackend : resultado.texto() + "\n\n" + doBackend;
-    DesfechoInteracao desfecho = substitui ? DesfechoInteracao.RESPONDIDA : resultado.desfecho();
+    boolean substitui = resultado.rota() == Intencao.DADOS
+        && contexto.fontes().stream().map(FonteDado::funcao).allMatch(FUNCOES::contains);
+    String daRota = resultado.texto();
+    List<TextoDoBackend> novos = textos.stream()
+        .filter(t -> substitui || !daRota.contains(t.texto()))
+        .distinct()
+        .toList();
+    if (novos.isEmpty()) {
+      return resultado;
+    }
     Set<String> dispositivos = new LinkedHashSet<>();
-    textos.forEach(t -> dispositivos.addAll(t.dispositivos()));
+    novos.forEach(t -> dispositivos.addAll(t.dispositivos()));
+    String doBackend = novos.stream().map(TextoDoBackend::texto).distinct()
+        .collect(Collectors.joining("\n\n"));
+    String base = dispositivos.isEmpty() ? daRota : semRecusaDaLei(daRota);
+    String texto = substitui || base.isBlank() ? doBackend : base + "\n\n" + doBackend;
+    DesfechoInteracao desfecho = substitui && SUBSTITUIVEIS.contains(resultado.desfecho())
+        ? DesfechoInteracao.RESPONDIDA : resultado.desfecho();
     return new ResultadoOrquestracao(resultado.rota(), texto, desfecho,
-        juntar(resultado.citacoes(), citacoes(List.copyOf(dispositivos), contexto)),
+        CitacoesFixas.juntar(resultado.citacoes(), CitacoesFixas.buscar(busca,
+            List.copyOf(dispositivos), contexto, "Tratamento do produto")),
         substitui || resultado.exibirFontes(), resultado.modoFallback(), resultado.atalhos());
   }
 
-  private List<CitacaoLegal> citacoes(List<String> dispositivos, ContextoAssistente contexto) {
-    if (dispositivos.isEmpty()) {
-      return List.of();
+  private static String semRecusaDaLei(String texto) {
+    String limpo = texto;
+    for (String recusa : RECUSAS_DA_LEI) {
+      limpo = limpo.replace(recusa, "");
     }
-    contexto.verificarAtiva();
-    try {
-      List<TrechoRecuperado> trechos = busca.buscarDispositivos(dispositivos, contexto.hoje());
-      contexto.registrarTrechosCitados(trechos.stream().map(TrechoRecuperado::id).toList());
-      return trechos.stream().map(TrechoRecuperado::comoCitacao).toList();
-    } catch (AssistenteIndisponivelException e) {
-      log.warn("Tratamento do produto sem citacoes: base de legislacao indisponivel");
-      return List.of();
-    }
-  }
-
-  private static List<CitacaoLegal> juntar(List<CitacaoLegal> daRota, List<CitacaoLegal> fixas) {
-    Map<String, CitacaoLegal> porReferencia = new LinkedHashMap<>();
-    daRota.forEach(c -> porReferencia.putIfAbsent(c.referencia(), c));
-    fixas.forEach(c -> porReferencia.putIfAbsent(c.referencia(), c));
-    return new ArrayList<>(porReferencia.values());
+    return limpo.replaceAll("\n{3,}", "\n\n").strip();
   }
 }

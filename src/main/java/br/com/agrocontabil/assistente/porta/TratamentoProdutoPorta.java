@@ -24,12 +24,10 @@ public interface TratamentoProdutoPorta {
    * Resultado da consulta.
    *
    * @param termo        termo consultado
-   * @param porItemAnexo {@code true} se o nome casou um item de anexo, não um NCM
    * @param produtos     produtos achados (no máximo 3)
    * @param versaoTabela versão da tabela oficial; nula sem tabela carregada
    */
-  record TratamentoConsultado(String termo, boolean porItemAnexo, List<Produto> produtos,
-      String versaoTabela) {
+  record TratamentoConsultado(String termo, List<Produto> produtos, String versaoTabela) {
 
     /** Cópia defensiva. */
     public TratamentoConsultado {
@@ -49,8 +47,10 @@ public interface TratamentoProdutoPorta {
    * @param anexo             número do anexo da LC 214/2025; nulo fora de anexo
    * @param artigo            artigo da LC 214/2025; nulo na tributação integral
    * @param condicao          condição que o dado não decide; nula quando não há
+   * @param ncmConhecido      {@code false}: NCM pedido fora da referência e de todo anexo (a
+   *                          resposta pede para conferir o código)
    */
   record Produto(String ncm, String descricao, int quantidadeNcms, String cClassTrib,
       BigDecimal percentualReducao, boolean inNatura, Integer anexo, String artigo,
-      String condicao) {}
+      String condicao, boolean ncmConhecido) {}
 }

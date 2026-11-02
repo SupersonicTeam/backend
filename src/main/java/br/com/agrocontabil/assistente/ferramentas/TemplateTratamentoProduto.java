@@ -31,8 +31,8 @@ public final class TemplateTratamentoProduto {
   /** Frase sem produto achado: também é a frase fixa da negativa (#274). */
   public static String naoEncontrado(String termo) {
     return "Nao encontrei " + (termo == null || termo.isBlank() ? "esse produto" : termo)
-        + " na tabela oficial de classificacao tributaria do IBS e da CBS. Tente o codigo NCM de"
-        + " oito digitos do produto.";
+        + " na tabela oficial de classificacao tributaria do IBS e da CBS. Tente outro nome do"
+        + " produto ou o codigo NCM que esta na nota fiscal dele.";
   }
 
   /**
@@ -72,6 +72,13 @@ public final class TemplateTratamentoProduto {
 
   static String frase(Produto p) {
     StringBuilder s = new StringBuilder(nome(p)).append(": ");
+    if (!p.ncmConhecido()) {
+      // Codigo fora da referencia e de todo anexo: pode nem existir. Nada de afirmar.
+      return s.append("nao encontrei esse codigo na referencia de NCM nem nos anexos de reducao"
+          + " da LC 214/2025. Se o codigo estiver certo, nao ha reducao e o IBS e a CBS sao"
+          + " cobrados pela aliquota cheia (cClassTrib ").append(p.cClassTrib())
+          .append("). Confira o NCM na nota fiscal do produto.").toString();
+    }
     if (p.percentualReducao().signum() == 0) {
       s.append("sem reducao; o IBS e a CBS sao cobrados pela aliquota cheia (cClassTrib ")
           .append(p.cClassTrib()).append(").");
@@ -81,8 +88,10 @@ public final class TemplateTratamentoProduto {
       if (p.percentualReducao().compareTo(BigDecimal.valueOf(100)) == 0) {
         s.append(" (aliquota zero)");
       }
-      s.append(", ").append(hipotese(p)).append(" (").append(fundamento(p))
-          .append("; cClassTrib ").append(p.cClassTrib()).append(").");
+      String fundamento = fundamento(p);
+      s.append(", ").append(hipotese(p)).append(" (")
+          .append(fundamento == null ? "" : fundamento + "; ")
+          .append("cClassTrib ").append(p.cClassTrib()).append(").");
     }
     if (p.condicao() != null) {
       s.append(" Condicao: ").append(p.condicao()).append('.');

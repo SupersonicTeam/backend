@@ -755,9 +755,11 @@ public class FerramentasDadosProdutor {
       String produtoOuNcm,
       ToolContext toolContext) {
     ContextoAssistente contexto = ContextoAssistente.de(toolContext);
-    String limpo = produtoOuNcm == null ? "" : produtoOuNcm.replaceAll("[.\\s-]", "");
+    // "NCM 1201.90.00", "1201.90.00" e "12019000" sao o mesmo codigo; o resto e nome.
+    String limpo = produtoOuNcm == null ? ""
+        : produtoOuNcm.replaceFirst("(?i)^\\s*ncm\\b[:\\s]*", "").replaceAll("[.\\s-]", "");
     String termo;
-    if (limpo.chars().allMatch(Character::isDigit) && !limpo.isEmpty()) {
+    if (!limpo.isEmpty() && limpo.chars().allMatch(Character::isDigit)) {
       if (limpo.length() != 8) {
         throw new ParametroFerramentaInvalidoException(
             "produtoOuNcm deve ser o nome do produto ou um NCM de 8 digitos.");
@@ -769,8 +771,9 @@ public class FerramentasDadosProdutor {
     TratamentoProdutoPorta.TratamentoConsultado consulta =
         tratamentos.consultar(termo, contexto.hoje());
 
-    contexto.registrarFonte("consultarTratamentoProduto", parametros("produtoOuNcm", termo),
-        consulta.produtos().isEmpty());
+    // Tabela publica, nao dado do produtor: nao conta como "dado encontrado" no MISTO (#170).
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto",
+        parametros("produtoOuNcm", termo), consulta.produtos().isEmpty());
     contexto.registrarTextoDoBackend(TemplateTratamentoProduto.texto(consulta),
         TemplateTratamentoProduto.dispositivos(consulta));
     return new TratamentoProduto(

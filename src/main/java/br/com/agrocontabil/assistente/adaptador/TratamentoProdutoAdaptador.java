@@ -4,7 +4,6 @@ import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.service.TratamentoProdutoService;
 import br.com.agrocontabil.service.TratamentoProdutoService.ConsultaTratamentoProduto;
-import br.com.agrocontabil.service.TratamentoProdutoService.TipoBusca;
 import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.time.LocalDate;
 import org.springframework.stereotype.Component;
@@ -34,11 +33,11 @@ public class TratamentoProdutoAdaptador implements TratamentoProdutoPorta {
   @Override
   public TratamentoConsultado consultar(String termo, LocalDate data) {
     ConsultaTratamentoProduto c = transacao.execute(status -> service.consultar(termo, data));
-    return new TratamentoConsultado(c.termo(), c.tipo() == TipoBusca.ITEM_ANEXO,
+    return new TratamentoConsultado(c.termo(),
         c.produtos().stream()
             .map(p -> new Produto(p.ncm(), p.descricao(), p.quantidadeNcms(), p.cClassTrib(),
                 p.percentualReducao(), p.origem() == Origem.IN_NATURA, p.anexo(), p.artigo(),
-                p.condicao()))
+                p.condicao(), p.ncmConhecido()))
             .toList(),
         c.versaoTabela());
   }

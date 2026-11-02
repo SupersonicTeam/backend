@@ -37,7 +37,7 @@ class TextosDoBackendTest {
   @Test
   @DisplayName("so o tratamento consultado: a resposta e o template, com a citacao do dado")
   void substituiTextoDoModelo() {
-    contexto.registrarFonte("consultarTratamentoProduto", Map.of("produtoOuNcm", "soja"), false);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of("produtoOuNcm", "soja"), false);
     contexto.registrarTextoDoBackend(TEMPLATE, List.of("LC 214/2025|art. 137"));
     when(busca.buscarDispositivos(eq(List.of("LC 214/2025|art. 137")), any()))
         .thenReturn(List.of(new TrechoRecuperado("[T1]", "t1", "LC 214/2025", "art. 137", "url",
@@ -58,7 +58,7 @@ class TextosDoBackendTest {
   @DisplayName("com outra consulta ou no MISTO: o template vem depois do texto da rota")
   void acrescentaDepois() {
     contexto.registrarFonte("totalVendasPorProduto", Map.of(), false);
-    contexto.registrarFonte("consultarTratamentoProduto", Map.of(), false);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), false);
     contexto.registrarTextoDoBackend(TEMPLATE, List.of());
 
     ResultadoOrquestracao r = textos.aplicar(new ResultadoOrquestracao(Intencao.DADOS,
@@ -84,7 +84,7 @@ class TextosDoBackendTest {
   @Test
   @DisplayName("base de legislacao fora: o texto segue sem citacoes")
   void semBase() {
-    contexto.registrarFonte("consultarTratamentoProduto", Map.of(), false);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), false);
     contexto.registrarTextoDoBackend(TEMPLATE, List.of("LC 214/2025|art. 137"));
     when(busca.buscarDispositivos(any(), any()))
         .thenThrow(new AssistenteIndisponivelException("fora", null));
@@ -94,5 +94,41 @@ class TextosDoBackendTest {
 
     assertThat(r.texto()).isEqualTo(TEMPLATE);
     assertThat(r.citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("review: texto do backend ja presente nao se repete; a recusa da lei sai")
+  void semRepetirNemContradizer() {
+    contexto.registrarFonte("totalComprasPorInsumo", Map.of(), true);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), true);
+    contexto.registrarTextoDoBackend("Nao encontrei trator na tabela.", List.of());
+
+    ResultadoOrquestracao repetido = new ResultadoOrquestracao(Intencao.MISTO,
+        "Nao encontrei trator na tabela.\n\nDe forma geral...", DesfechoInteracao.RESPONDIDA,
+        List.of(), false);
+    assertThat(textos.aplicar(repetido, contexto)).isSameAs(repetido);
+
+    contexto.registrarTextoDoBackend(TEMPLATE, List.of("LC 214/2025|art. 137"));
+    when(busca.buscarDispositivos(any(), any())).thenReturn(List.of());
+    ResultadoOrquestracao comRecusa = new ResultadoOrquestracao(Intencao.MISTO,
+        "Compras: R$ 1,00.\n\n" + OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL,
+        DesfechoInteracao.RESPONDIDA, List.of(), true);
+    assertThat(textos.aplicar(comRecusa, contexto).texto())
+        .isEqualTo("Compras: R$ 1,00.\n\nNao encontrei trator na tabela.\n\n" + TEMPLATE);
+  }
+
+  @Test
+  @DisplayName("review: o desfecho da auditoria so vira RESPONDIDA quando o problema era o texto")
+  void desfechoPreservado() {
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), false);
+    contexto.registrarTextoDoBackend(TEMPLATE, List.of());
+
+    for (DesfechoInteracao d : List.of(DesfechoInteracao.FUNCAO_NAO_PERMITIDA,
+        DesfechoInteracao.SEM_CONCLUSAO, DesfechoInteracao.MODO_FALLBACK)) {
+      ResultadoOrquestracao r = textos.aplicar(
+          new ResultadoOrquestracao(Intencao.DADOS, "x", d, List.of(), false), contexto);
+      assertThat(r.texto()).isEqualTo(TEMPLATE);
+      assertThat(r.desfecho()).isEqualTo(d);
+    }
   }
 }

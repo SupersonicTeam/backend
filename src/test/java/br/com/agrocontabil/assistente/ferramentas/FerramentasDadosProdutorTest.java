@@ -664,10 +664,10 @@ class FerramentasDadosProdutorTest {
   void tratamentoDoProduto() {
     var produto = new br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto(
         "12019000", "Soja", 1, "200036", new BigDecimal("60.00"), true, null, "137",
-        "vendido in natura");
+        "vendido in natura", true);
     when(tratamentos.consultar("soja", HOJE)).thenReturn(
         new br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado(
-            "soja", false, List.of(produto), "IT 2025.002 v1.70"));
+            "soja", List.of(produto), "IT 2025.002 v1.70"));
 
     var r = ferramentas.consultarTratamentoProduto("  soja ", toolContext);
 
@@ -678,6 +678,7 @@ class FerramentasDadosProdutorTest {
       assertThat(p.condicao()).isEqualTo("vendido in natura");
     });
     assertThat(r.observacao()).isNull();
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
     assertThat(contexto.fontes()).extracting(FonteDado::funcao)
         .containsExactly("consultarTratamentoProduto");
     assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
@@ -692,12 +693,14 @@ class FerramentasDadosProdutorTest {
   void tratamentoParametros() {
     when(tratamentos.consultar("12019000", HOJE)).thenReturn(
         new br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado(
-            "12019000", false, List.of(), null));
+            "12019000", List.of(), null));
 
-    var r = ferramentas.consultarTratamentoProduto("1201.90.00", toolContext);
+    var r = ferramentas.consultarTratamentoProduto("NCM 1201.90.00", toolContext);
 
     assertThat(r.observacao()).isEqualTo(TemplateTratamentoProduto.naoEncontrado("12019000"));
     assertThat(contexto.fontesVazias()).hasSize(1);
+    // Tabela publica nunca conta como dado do produtor encontrado (MISTO, #170).
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
     assertThatThrownBy(() -> ferramentas.consultarTratamentoProduto("1201", toolContext))
         .isInstanceOf(ParametroFerramentaInvalidoException.class);
     assertThatThrownBy(() -> ferramentas.consultarTratamentoProduto("ab", toolContext))
