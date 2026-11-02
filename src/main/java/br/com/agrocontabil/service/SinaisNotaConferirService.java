@@ -4,6 +4,8 @@ import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ItemParaSinal;
+import br.com.agrocontabil.repository.OutraNota;
+import br.com.agrocontabil.repository.ValorUnitarioReferencia;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.service.SinalNota.CodigoSinalNota;
@@ -13,18 +15,29 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +59,24 @@ import org.springframework.transaction.annotation.Transactional;
  * especificada") ou NCM ausente ou fora da referência. Este último só alcança nota antiga, de antes
  * de o código sair da referência (#282): a API e a emissão já barram NCM desconhecido. As listas
  * passam pela revisão do avaliador externo (#275) e do contador (#284, perguntas 13 e 14).
+ *
+ * <p><strong>{@link CodigoSinalNota#POSSIVEL_DUPLICIDADE}:</strong> outra nota própria do mesmo
+ * produtor, não cancelada nem rejeitada, com o mesmo destinatário, o mesmo valor total, os mesmos
+ * itens (NCM e quantidade, em qualquer ordem) e emitida no mesmo dia (Brasília). A frase cita o
+ * número e a série da outra nota. A nota consultada rejeitada também fica de fora: a regra é
+ * simétrica (rejeitada nunca é uma das duas).
+ *
+ * <p><strong>{@link CodigoSinalNota#VALOR_UNITARIO_FORA_PADRAO}:</strong> item de venda (CFOP
+ * {@code x1xx}; remessa não é venda) com valor unitário mais de {@value #FATOR_FORA_PADRAO} vezes
+ * acima ou abaixo da mediana do mesmo NCM e da mesma unidade (sem caixa nem espaços) nas vendas
+ * autorizadas do produtor nos 12 meses até a emissão da nota consultada, com no mínimo
+ * {@value #MINIMO_NOTAS_REFERENCIA} notas de referência (lidos no máximo
+ * {@value #MAXIMO_VALORES_REFERENCIA} itens, os mais recentes). A mediana é das notas (cada nota
+ * vale pela mediana dos itens dela), para uma nota de muitas linhas não pesar mais que as outras.
+ * Canceladas e rejeitadas ficam fora. Uma consulta por par (NCM, unidade), não por item.
+ *
+ * <p>Nenhuma regra compara com nota de outro produtor: toda consulta filtra pelo produtor da
+ * sessão.
  */
 @Service
 public class SinaisNotaConferirService {
@@ -57,6 +88,20 @@ public class SinaisNotaConferirService {
   static final Set<StatusNotaFiscal> SEM_SINAL = EnumSet.of(StatusNotaFiscal.ENVIANDO,
       StatusNotaFiscal.PENDENTE_SEFAZ, StatusNotaFiscal.CANCELANDO, StatusNotaFiscal.CANCELADA);
 
+  /** Situações que não entram na duplicidade, nem como a consultada nem como a outra. */
+  static final Set<StatusNotaFiscal> FORA_DA_DUPLICIDADE = EnumSet.of(StatusNotaFiscal.CANCELADA,
+      StatusNotaFiscal.CANCELANDO, StatusNotaFiscal.REJEITADA);
+
+  /** Situações que contam como a outra nota (lista positiva, para o índice da 0019). */
+  static final Set<StatusNotaFiscal> NA_DUPLICIDADE = EnumSet.complementOf(
+      EnumSet.copyOf(FORA_DA_DUPLICIDADE));
+
+  static final int FATOR_FORA_PADRAO = 3;
+  static final int MINIMO_NOTAS_REFERENCIA = 5;
+  static final int MAXIMO_VALORES_REFERENCIA = 200;
+  static final int MESES_REFERENCIA = 12;
+
+  private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final Pattern NAO_ALFANUMERICO = Pattern.compile("[^a-z0-9]+");
 
   private final NotaFiscalRepository notaFiscalRepository;
@@ -106,13 +151,131 @@ public class SinaisNotaConferirService {
     }
     Momento momento = momento(nota);
     OffsetDateTime prazo = momento == Momento.AUTORIZADA_NO_PRAZO ? limite(nota) : null;
+    List<ItemParaSinal> itens = notaFiscalRepository.findItensParaSinais(nota.id(), produtorId);
+    if (itens.isEmpty()) {
+      // Sem itens: nota de outro produtor (a leitura filtra pelo dono) ou ainda vazia.
+      return List.of();
+    }
     List<SinalNota> sinais = new ArrayList<>();
-    for (ItemParaSinal item : notaFiscalRepository.findItensParaSinais(nota.id(), produtorId)) {
+    for (ItemParaSinal item : itens) {
       motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
           item.descricao(), item.cfop(), prazo)));
     }
+    sinais.addAll(valoresForaDoPadrao(produtorId, nota, itens, momento, prazo));
+    // Do primeiro item ao ultimo; o sinal da nota inteira (duplicidade) por ultimo.
+    sinais.sort(Comparator.comparing(SinalNota::numeroItem,
+        Comparator.nullsLast(Comparator.naturalOrder())));
+    duplicidade(produtorId, nota, itens, momento, prazo).ifPresent(sinais::add);
     return List.copyOf(sinais);
+  }
+
+  /** Outra nota do mesmo produtor com o mesmo destinatário, valor, itens e dia. */
+  private Optional<SinalNota> duplicidade(UUID produtorId, NotaParaSinal nota,
+      List<ItemParaSinal> itens, Momento momento, OffsetDateTime prazo) {
+    if (nota.dataEmissao() == null || nota.destinatarioCpfCnpj() == null
+        || nota.valorTotal() == null || FORA_DA_DUPLICIDADE.contains(nota.status())) {
+      return Optional.empty();
+    }
+    LocalDate dia = nota.dataEmissao().atZoneSameInstant(FUSO).toLocalDate();
+    List<OutraNota> candidatas = notaFiscalRepository.findPossiveisDuplicadas(
+        produtorId, nota.id(), nota.destinatarioCpfCnpj(), nota.valorTotal(),
+        dia.atStartOfDay(FUSO).toOffsetDateTime(),
+        dia.plusDays(1).atStartOfDay(FUSO).toOffsetDateTime(), NA_DUPLICIDADE);
+    Map<String, Long> estesItens = assinatura(itens);
+    for (OutraNota outra : candidatas) {
+      if (estesItens.equals(
+          assinatura(notaFiscalRepository.findItensParaSinais(outra.id(), produtorId)))) {
+        return Optional.of(new SinalNota(CodigoSinalNota.POSSIVEL_DUPLICIDADE, Motivo.MESMA_VENDA,
+            momento, null, null, null, prazo, null, null, null, outra.numero(), outra.serie()));
+      }
+    }
+    return Optional.empty();
+  }
+
+  /** Itens como multiconjunto de (NCM, quantidade sem zeros à direita). */
+  private static Map<String, Long> assinatura(List<ItemParaSinal> itens) {
+    return itens.stream().collect(Collectors.groupingBy(
+        i -> (i.ncm() == null ? "" : i.ncm().strip()) + "|"
+            + (i.quantidade() == null ? "" : i.quantidade().stripTrailingZeros().toPlainString()),
+        TreeMap::new, Collectors.counting()));
+  }
+
+  /**
+   * Itens de venda com valor unitário mais de 3 vezes fora da mediana do mesmo NCM e unidade, com
+   * 5+ notas de referência na janela de 12 meses até a emissão da nota.
+   */
+  private List<SinalNota> valoresForaDoPadrao(UUID produtorId, NotaParaSinal nota,
+      List<ItemParaSinal> itens, Momento momento, OffsetDateTime prazo) {
+    OffsetDateTime ate = nota.dataEmissao() == null ? OffsetDateTime.now(clock)
+        : nota.dataEmissao();
+    OffsetDateTime desde = ate.minusMonths(MESES_REFERENCIA);
+    Map<String, Optional<BigDecimal>> medianas = new HashMap<>();
+    List<SinalNota> sinais = new ArrayList<>();
+    for (ItemParaSinal item : itens) {
+      if (!deVenda(item) || item.ncm() == null || item.unidade() == null
+          || item.valorUnitario() == null || item.valorUnitario().signum() <= 0) {
+        continue;
+      }
+      String ncm = item.ncm().strip();
+      String unidade = unidade(item.unidade());
+      Optional<BigDecimal> mediana = medianas.computeIfAbsent(ncm + "|" + unidade,
+          k -> medianaDeReferencia(produtorId, nota.id(), ncm, unidade, desde, ate));
+      if (mediana.isEmpty()) {
+        continue;
+      }
+      BigDecimal fator = BigDecimal.valueOf(FATOR_FORA_PADRAO);
+      Motivo motivo = null;
+      if (item.valorUnitario().compareTo(mediana.get().multiply(fator)) > 0) {
+        motivo = Motivo.ACIMA_DO_PADRAO;
+      } else if (item.valorUnitario().multiply(fator).compareTo(mediana.get()) < 0) {
+        motivo = Motivo.ABAIXO_DO_PADRAO;
+      }
+      if (motivo != null) {
+        sinais.add(new SinalNota(CodigoSinalNota.VALOR_UNITARIO_FORA_PADRAO, motivo, momento,
+            item.numeroItem(), item.descricao(), item.cfop(), prazo, item.unidade(),
+            item.valorUnitario(), mediana.get(), null, null));
+      }
+    }
+    return sinais;
+  }
+
+  /** Mediana das notas de referência (cada nota pela mediana dos itens dela); vazia com < 5. */
+  private Optional<BigDecimal> medianaDeReferencia(UUID produtorId, UUID notaId, String ncm,
+      String unidade, OffsetDateTime desde, OffsetDateTime ate) {
+    Map<UUID, List<BigDecimal>> porNota = new LinkedHashMap<>();
+    notaFiscalRepository.findValoresUnitariosDeReferencia(produtorId, notaId, ncm, unidade,
+            desde, ate, PageRequest.of(0, MAXIMO_VALORES_REFERENCIA))
+        .forEach(r -> porNota.computeIfAbsent(r.notaId(), k -> new ArrayList<>())
+            .add(r.valorUnitario()));
+    if (porNota.size() < MINIMO_NOTAS_REFERENCIA) {
+      return Optional.empty();
+    }
+    BigDecimal mediana = mediana(porNota.values().stream()
+        .map(valores -> mediana(valores.stream().sorted().toList()))
+        .sorted().toList());
+    return mediana.signum() > 0 ? Optional.of(mediana) : Optional.empty();
+  }
+
+  /** CFOP de venda: {@code x1xx} (5101, 6102, 7101...). Remessa ({@code x9xx}) não é venda. */
+  static boolean deVenda(ItemParaSinal item) {
+    String cfop = item.cfop() == null ? "" : item.cfop().strip();
+    return cfop.length() == 4 && cfop.charAt(1) == '1';
+  }
+
+  /** Unidade comparável: maiúsculas, sem espaços nas pontas ("kg " = "KG"). */
+  static String unidade(String unidade) {
+    return unidade.strip().toUpperCase(Locale.ROOT);
+  }
+
+  /** Mediana de valores já ordenados (média dos dois do meio com quantidade par). */
+  static BigDecimal mediana(List<BigDecimal> ordenados) {
+    int n = ordenados.size();
+    if (n % 2 == 1) {
+      return ordenados.get(n / 2);
+    }
+    return ordenados.get(n / 2 - 1).add(ordenados.get(n / 2))
+        .divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
   }
 
   /**
@@ -175,11 +338,13 @@ public class SinaisNotaConferirService {
    * O que os sinais precisam da nota, já lido por quem chama (a consulta da Ceres tem tudo isso
    * na projeção da #256).
    *
-   * @param id          nota
-   * @param origem      própria ou importada
-   * @param status      situação
-   * @param dataEmissao emissão
+   * @param id                  nota
+   * @param origem              própria ou importada
+   * @param status              situação
+   * @param dataEmissao         emissão
+   * @param destinatarioCpfCnpj documento do destinatário (só compara, nunca sai do service)
+   * @param valorTotal          valor total da nota
    */
   public record NotaParaSinal(UUID id, OrigemNotaFiscal origem, StatusNotaFiscal status,
-      OffsetDateTime dataEmissao) {}
+      OffsetDateTime dataEmissao, String destinatarioCpfCnpj, BigDecimal valorTotal) {}
 }

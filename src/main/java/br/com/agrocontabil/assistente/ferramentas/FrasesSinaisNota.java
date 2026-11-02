@@ -10,7 +10,8 @@ import java.util.stream.Collectors;
  * Frase fixa de cada sinal de nota a conferir (issue #276). Sempre "confira", nunca "está
  * errada": todo sinal é suspeita. Montada pelo backend e posta na resposta depois da validação
  * ({@code orquestracao/TextosDoBackend}): a descrição do item é texto livre do produtor e não vai
- * ao modelo (padrão da #305). A frase explica pelo {@code motivo} e pelo {@code momento} que o
+ * ao modelo (padrão da #305). Os valores dos sinais (preço, mediana, número da outra nota) também
+ * só aparecem aqui. A frase explica pelo {@code motivo} e pelo {@code momento} que o
  * domínio mandou — a regra (quais CFOPs são genéricos, o prazo de 30 dias) fica no service.
  */
 public final class FrasesSinaisNota {
@@ -53,6 +54,16 @@ public final class FrasesSinaisNota {
       case "PRODUTO_PARECE_SERVICO" -> nota + ", o item '" + curta(s.descricaoItem()) + "' "
           + motivoServico(s) + " Servico normalmente nao sai em nota de produto: confira com seu"
           + " contador" + ("ANTES_DE_EMITIR".equals(s.momento()) ? " antes de emitir." : ".");
+      case "VALOR_UNITARIO_FORA_PADRAO" -> nota + ", o preco do item '" + curta(s.descricaoItem())
+          + "' (" + FormatoBr.precoUnitario(s.valor()) + " por " + unidade(s.unidade())
+          + ") esta bem " + ("ABAIXO_DO_PADRAO".equals(s.motivo()) ? "abaixo" : "acima")
+          + " do que voce costuma cobrar (perto de " + FormatoBr.precoUnitario(s.referencia())
+          + " por " + unidade(s.unidade()) + "). Confira o valor e a unidade"
+          + ("ANTES_DE_EMITIR".equals(s.momento()) ? " antes de emitir." : ".");
+      case "POSSIVEL_DUPLICIDADE" -> nota.replaceFirst("^Na nota", "A nota")
+          + " tem o mesmo destinatario, valor e itens da nota " + s.outraNota()
+          + (s.outraSerie() == null ? "" : " (serie " + s.outraSerie() + ")")
+          + ", do mesmo dia. Confira se nao e a mesma venda emitida duas vezes.";
       default -> nota + ", ha um ponto para conferir com seu contador.";
     };
   }
@@ -67,6 +78,11 @@ public final class FrasesSinaisNota {
       return "saiu com CFOP de outra saida nao especificada e parece um servico.";
     }
     return "saiu com um NCM que nao esta na tabela de produtos agropecuarios e parece um servico.";
+  }
+
+  /** Unidade digitada pelo produtor, saneada como a descrição (sem controle nem aspas). */
+  private static String unidade(String unidade) {
+    return unidade == null || unidade.isBlank() ? "unidade" : curta(unidade);
   }
 
   /** Até 60 caracteres (por code point), sem quebra de linha nem caractere de controle. */

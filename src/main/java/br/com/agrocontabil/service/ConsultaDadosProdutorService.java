@@ -133,7 +133,8 @@ public class ConsultaDadosProdutorService {
         n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
         motivo, inconsistencias,
         sinaisService.sinais(produtorId, new SinaisNotaConferirService.NotaParaSinal(
-            n.id(), n.origem(), n.status(), n.dataEmissao())));
+            n.id(), n.origem(), n.status(), n.dataEmissao(), n.destinatarioCpfCnpj(),
+            n.valorTotal())));
   }
 
   /**

@@ -101,7 +101,7 @@ class SinaisNotaConferirServiceTest {
         });
 
     assertThat(service.sinais(PRODUTOR, new NotaParaSinal(NOTA, OrigemNotaFiscal.IMPORTADA,
-        StatusNotaFiscal.AUTORIZADA, EMISSAO))).isEmpty();
+        StatusNotaFiscal.AUTORIZADA, EMISSAO, null, null))).isEmpty();
     UUID outro = UUID.randomUUID();
     when(notas.findItensParaSinais(NOTA, outro)).thenReturn(List.of());
     assertThat(service.sinais(outro, nota(StatusNotaFiscal.RASCUNHO, EMISSAO))).isEmpty();
@@ -154,8 +154,28 @@ class SinaisNotaConferirServiceTest {
     verify(referencia, never()).existsByCodigo(anyString());
   }
 
+  @ParameterizedTest
+  @CsvSource(value = {"5101|true", "6102|true", "7101|true", "5901|false", "5949|false",
+      " 5101 |true", "51|false"}, delimiter = '|', ignoreLeadingAndTrailingWhitespace = false)
+  @DisplayName("CFOP de venda e x1xx; remessa nao e venda")
+  void deVenda(String cfop, boolean venda) {
+    assertThat(SinaisNotaConferirService.deVenda(item(1, "x", cfop, "1"))).isEqualTo(venda);
+  }
+
+  @Test
+  @DisplayName("mediana: o do meio, ou a media dos dois do meio")
+  void mediana() {
+    assertThat(SinaisNotaConferirService.mediana(List.of(
+        new java.math.BigDecimal("1"), new java.math.BigDecimal("2"),
+        new java.math.BigDecimal("9")))).isEqualByComparingTo("2");
+    assertThat(SinaisNotaConferirService.mediana(List.of(
+        new java.math.BigDecimal("1"), new java.math.BigDecimal("2"),
+        new java.math.BigDecimal("3"), new java.math.BigDecimal("10"))))
+        .isEqualByComparingTo("2.5");
+  }
+
   private NotaParaSinal nota(StatusNotaFiscal status, OffsetDateTime emissao) {
-    return new NotaParaSinal(NOTA, OrigemNotaFiscal.PROPRIA, status, emissao);
+    return new NotaParaSinal(NOTA, OrigemNotaFiscal.PROPRIA, status, emissao, null, null);
   }
 
   private void itens(ItemParaSinal... itens) {
@@ -163,6 +183,6 @@ class SinaisNotaConferirServiceTest {
   }
 
   private static ItemParaSinal item(int numero, String descricao, String cfop, String ncm) {
-    return new ItemParaSinal(numero, descricao, cfop, ncm);
+    return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null);
   }
 }

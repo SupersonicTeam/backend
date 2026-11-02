@@ -34,6 +34,16 @@ final class FormatoBr {
     return "R$ " + new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(PT_BR)).format(v);
   }
 
+  /**
+   * Preço unitário com 2 a 4 casas ({@code R$ 1.450,00}, {@code R$ 1,4537}, {@code R$ 0,001}):
+   * o valor unitário é gravado com 4 casas, e arredondar para 2 mostraria {@code R$ 0,00}.
+   */
+  static String precoUnitario(BigDecimal valor) {
+    BigDecimal v = valor == null ? BigDecimal.ZERO : valor;
+    return "R$ " + new DecimalFormat("#,##0.00##", DecimalFormatSymbols.getInstance(PT_BR))
+        .format(v);
+  }
+
   /** Quantidade com até 4 casas, sem zeros à direita ({@code 1.500} / {@code 12,5}). */
   static String quantidade(BigDecimal valor) {
     BigDecimal v = valor == null ? BigDecimal.ZERO : valor;

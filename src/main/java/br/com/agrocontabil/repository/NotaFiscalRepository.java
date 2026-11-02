@@ -415,7 +415,7 @@ public interface NotaFiscalRepository
   @Query(value = """
       SELECT new br.com.agrocontabil.repository.NotaPorNumeroLinha(
           n.id, n.numero, n.serie, n.dataEmissao, n.origem, n.status,
-          n.valorTotalNota, n.valorTotalIbs, n.valorTotalCbs)
+          n.valorTotalNota, n.valorTotalIbs, n.valorTotalCbs, n.destinatarioCpfCnpj)
       FROM NotaFiscal n
       WHERE n.produtor.id = :produtorId AND n.numero = :numero
       ORDER BY CASE WHEN n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
@@ -795,11 +795,76 @@ public interface NotaFiscalRepository
    */
   @Query("""
       SELECT new br.com.agrocontabil.repository.ItemParaSinal(
-          i.numeroItem, i.descricao, i.cfop, i.ncm)
+          i.numeroItem, i.descricao, i.cfop, i.ncm, i.unidade, i.quantidade, i.valorUnitario)
       FROM NotaFiscalItem i
       WHERE i.notaFiscal.id = :notaId AND i.notaFiscal.produtor.id = :produtorId
       ORDER BY i.numeroItem
       """)
   List<ItemParaSinal> findItensParaSinais(
       @Param("notaId") UUID notaId, @Param("produtorId") UUID produtorId);
+
+  /**
+   * Outras notas próprias do mesmo produtor, não canceladas nem rejeitadas, com o mesmo
+   * destinatário e o mesmo valor total, emitidas no mesmo dia (issue #276). Os itens são
+   * comparados no service. A lista positiva de situações deixa o índice
+   * {@code (produtor_id, status, data_emissao)} (0019) buscar o dia em cada situação.
+   *
+   * @param produtorId   produtor da sessão
+   * @param notaId       a nota consultada (fica de fora)
+   * @param destinatario documento do destinatário
+   * @param valorTotal   valor total
+   * @param inicio       começo do dia (BRT), inclusivo
+   * @param fim          começo do dia seguinte, exclusivo
+   * @param situacoes    situações que contam (todas menos cancelada e rejeitada)
+   * @return candidatas, a mais recente primeiro
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.OutraNota(n.id, n.numero, n.serie)
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.id <> :notaId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status IN :situacoes
+        AND n.destinatarioCpfCnpj = :destinatario
+        AND n.valorTotalNota = :valorTotal
+        AND n.dataEmissao >= :inicio AND n.dataEmissao < :fim
+      ORDER BY n.dataEmissao DESC, n.id DESC
+      """)
+  List<OutraNota> findPossiveisDuplicadas(@Param("produtorId") UUID produtorId,
+      @Param("notaId") UUID notaId, @Param("destinatario") String destinatario,
+      @Param("valorTotal") java.math.BigDecimal valorTotal, @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim, @Param("situacoes") Collection<StatusNotaFiscal> situacoes);
+
+  /**
+   * Valores unitários do mesmo NCM e unidade (sem caixa nem espaços) nas <strong>vendas</strong>
+   * autorizadas do produtor (CFOP de venda, {@code x1xx}; remessa não é venda) numa janela, fora a
+   * nota consultada (issue #276), das mais recentes para as mais antigas.
+   *
+   * @param produtorId produtor da sessão
+   * @param notaId     a nota consultada (fica de fora)
+   * @param ncm        NCM do item
+   * @param unidade    unidade do item, já em maiúsculas e sem espaços nas pontas
+   * @param desde      emissão mínima, inclusiva
+   * @param ate        emissão máxima, inclusiva
+   * @param pagina     teto de itens lidos
+   * @return valores com a nota de cada um
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.ValorUnitarioReferencia(
+          i.notaFiscal.id, i.valorUnitario)
+      FROM NotaFiscalItem i
+      WHERE i.notaFiscal.produtor.id = :produtorId
+        AND i.notaFiscal.id <> :notaId
+        AND i.notaFiscal.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND i.notaFiscal.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND i.ncm = :ncm AND UPPER(TRIM(i.unidade)) = :unidade
+        AND i.cfop LIKE '_1__'
+        AND i.valorUnitario IS NOT NULL
+        AND i.notaFiscal.dataEmissao >= :desde AND i.notaFiscal.dataEmissao <= :ate
+      ORDER BY i.notaFiscal.dataEmissao DESC, i.id DESC
+      """)
+  List<ValorUnitarioReferencia> findValoresUnitariosDeReferencia(
+      @Param("produtorId") UUID produtorId, @Param("notaId") UUID notaId,
+      @Param("ncm") String ncm, @Param("unidade") String unidade,
+      @Param("desde") OffsetDateTime desde, @Param("ate") OffsetDateTime ate, Pageable pagina);
 }

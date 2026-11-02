@@ -717,7 +717,8 @@ class FerramentasDadosProdutorTest {
             OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.RASCUNHO, new BigDecimal("800.00"),
             BigDecimal.ZERO, BigDecimal.ZERO, null, List.of(),
             List.of(new DadosProdutorPorta.Sinal("PRODUTO_PARECE_SERVICO", "CFOP_GENERICO",
-                "ANTES_DE_EMITIR", 1, "Servico de colheita do Joao", "5949", null)))), 1));
+                "ANTES_DE_EMITIR", 1, "Servico de colheita do Joao", "5949", null, null, null, null,
+                null, null)))), 1));
 
     RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(116, toolContext);
 

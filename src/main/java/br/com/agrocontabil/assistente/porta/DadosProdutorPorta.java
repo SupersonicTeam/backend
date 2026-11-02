@@ -204,9 +204,15 @@ public interface DadosProdutorPorta {
    * @param descricaoItem     descrição do item
    * @param cfop              CFOP do item
    * @param prazoCancelamento instante-limite para cancelar, só autorizada no prazo
+   * @param unidade           unidade do item (valor fora do padrão)
+   * @param valor             valor unitário do item (valor fora do padrão)
+   * @param referencia        mediana de referência (valor fora do padrão)
+   * @param outraNota         número da outra nota (duplicidade)
+   * @param outraSerie        série da outra nota (duplicidade)
    */
   record Sinal(String codigo, String motivo, String momento, Integer numeroItem,
-      String descricaoItem, String cfop, OffsetDateTime prazoCancelamento) {}
+      String descricaoItem, String cfop, OffsetDateTime prazoCancelamento, String unidade,
+      BigDecimal valor, BigDecimal referencia, Long outraNota, Integer outraSerie) {}
 
   /** Inconsistência de validação: código, campo, mensagem e sugestão do sistema. */
   record Inconsistencia(String codigo, String campo, String mensagem, String sugestao) {}
