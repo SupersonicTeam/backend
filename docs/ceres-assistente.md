@@ -83,7 +83,39 @@ do Ollama nem de chave de API.
 | `vencimentosDoMes(mes)` | "quanto eu tenho que pagar este mês?", "quais impostos vencem em novembro?" (#257) | mês corrente (padrão): atraso de qualquer mês + não pagas de hoje ao fim do mês, com os dois subtotais e a soma do backend; mês futuro: as do mês; mês passado: as que ficaram sem pagar. Até 12 meses do atual. Obrigações do catálogo, pedidos do escritório e IBS/CBS apurado ficam fora (decisões da #274) |
 | `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
 | `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física ou no varejo (o produtor recolhe); venda ao exterior imune (Constituição, art. 149, § 2º, I); IBS/CBS separado pelo split payment |
+| `resumoDoProdutor()` | "o que eu preciso saber?", "tem algo importante nos meus dados?" (#266) | agrega no backend, numa função só, as cinco partes de atenção: guias em atraso, prazos dos próximos dias (alertas da RN010), notas paradas (devolvidas, com inconsistências, aguardando aprovação ou rejeitadas, 24 meses), pedidos de documento do escritório ainda pendentes (vínculos ativos, #180) e notas a conferir (#276: as não emitidas e as autorizadas nos 30 dias do prazo de cancelamento, das 20 mais recentes). Ao modelo, **só as contagens**; o título do pedido (texto do escritório) e a descrição do item ficam no texto do backend |
 | `consultarTratamentoProduto(produtoOuNcm)` | "o feijão tem alíquota reduzida?", "quanto de CBS incide no milho?" (#283, parte 1) | `TratamentoProdutoService` sobre a **tabela oficial** (IT 2025.002 v1.70, changeSet 0048) pelo `ClassificacaoTributariaService` — a mesma fonte do `ReducaoNcmResolver` (teste de coerência NCM a NCM). NCM de 8 dígitos (com pontos ou "NCM" na frente) ou nome. O nome casa, sem acento nem plural ("feijões" = "feijão"), as descrições dos NCMs da referência (#282) e dos itens dos anexos ("adubo" → "Fertilizantes (adubos)" do Anexo IX, com o tratamento de cada NCM do item agrupado); vence quem casa as palavras **mais raras** ("grãos de soja" é soja, "ovos fertilizados" é o item do Anexo IX), e no empate a referência vence o item. NCM fora da referência e de todo anexo sai com a ressalva de conferir o código, nunca com a alíquota cheia afirmada. Até 3 produtos: cClassTrib, % de redução, artigo e anexo **do dado**, e a **condição** que o dado não decide (in natura, destinado à alimentação humana, não cozido). Não é dado do produtor (porta própria, `TratamentoProdutoPorta`; registrada por `registrarConsultaDeTabela`, que não conta como dado encontrado no MISTO) |
+
+**O modelo só escolhe a função; a resposta é do template (#266).** A rota de dados chama o modelo
+**uma vez**: ele escolhe as funções e os parâmetros (todas na mesma resposta), o backend as executa
+e os resultados **não voltam** a ele. Cada função registra no `ContextoAssistente` uma
+`SecaoResposta` redigida pelo `ferramentas/RedatorRespostaDados` — frases curtas, em segunda pessoa,
+sem jargão ("imposto a pagar", nunca "valorTotal"), valores e datas no formato brasileiro e
+**sempre o recorte** ("entre 01/09/2026 e 30/09/2026", "nos próximos dias", o filtro da nota);
+resultado vazio é a frase fixa do `VerificadorNegativaDados` com o recorte, nunca "não tem". A
+`ComposicaoRespostaDados` junta as seções:
+
+- **ordem de prioridade fixa:** guias em atraso → prazos dos próximos dias → notas paradas →
+  pedidos do escritório → notas a conferir (#276) → informativos (apuração, créditos, vendas,
+  compras, retenções, tratamento do produto);
+- com duas ou mais seções de atenção, a **primeira linha é o resumo** do backend ("Encontrei 3
+  pontos de atencao: 1 guia em atraso, 1 nota parada e 1 pedido do escritorio. Sem pendencias em:
+  notas a conferir."), ou "Nao encontrei pontos de atencao em: ..." com os recortes;
+- seção **vazia só aparece se foi pedida** (a função chamada direto pelo modelo); a do
+  `resumoDoProdutor` entra só no resumo;
+- até 5 itens por lista ("E mais N, na tela de X") e 6 seções;
+- cada sigla do glossário da #264 (IBS, CBS, Funrural, SEFAZ, NCM, CFOP, NF-e) ganha a explicação
+  na primeira vez que aparece.
+
+Sem função chamada (ou com todas falhando por parâmetro inválido), a resposta é honesta: "Nao
+consegui identificar qual dado consultar. Voce pode perguntar, por exemplo: ...", com os `atalhos`
+de tela, desfecho `SEM_RESPOSTA` — nunca negativa. O `ValidadorNumeros` continua como rede de
+segurança (passa por construção: os números são dos resultados das funções; os pedaços de texto
+livre e de cálculo do backend, como o título do pedido ou a data de ontem, entram como fonte), e o
+`VerificadorNegativaDados` também. **MISTO (#203):** a parte de dados é só template; não há texto
+livre do modelo para afirmar lei, contradizer a parte de lei ou vazar instrução de função. Os
+sinais da nota (#276) e o tratamento do produto (#283) seguem pelos textos do backend (abaixo),
+sem repetição: o `TextosDoBackend` não acrescenta o que a resposta já traz.
 
 **Tratamento do produto (#283): texto por template, citação do dado.** A função registra no
 `ContextoAssistente` o texto montado pelo backend (`TemplateTratamentoProduto`), e o
@@ -113,18 +145,19 @@ Garantias, todas em código:
   usuário autenticado **antes** de chamar o modelo e chega às funções pelo `ToolContext`
   (`ContextoAssistente`), que o modelo não vê. Sem contexto, a função falha fechado. Testado com
   prompt injection pedindo dados de outro produtor.
-- **Nenhum número inventado:** o laço de funções é do backend e guarda os resultados; o
-  `ValidadorNumeros` descarta a resposta que tiver número ou data que não veio das funções, da
-  pergunta ou do prompt de sistema. **Soma é do backend:** as funções de lista devolvem
-  `valorTotal`, calculado por consulta agregada sobre o filtro inteiro, e o modelo só o repete;
-  somar a lista por conta própria continua sendo descartado (#169).
+- **Nenhum número inventado:** o texto é do template (#266), com os números dos resultados das
+  funções; o `ValidadorNumeros` segue conferindo, como rede de segurança. **Soma é do backend:** as
+  funções de lista devolvem `valorTotal`, calculado por consulta agregada sobre o filtro inteiro
+  (#169), e o template o repete.
 - **Sem text-to-SQL:** consultas fixas e parametrizadas; texto digitado vira `LIKE` escapado.
 - **Minimização:** as funções devolvem totais, datas, contagens e listas curtas — nenhum nome,
   CPF/CNPJ, endereço, chave de acesso ou observação.
-- **Custo limitado:** no máximo `AI_MAX_RODADAS_FERRAMENTAS` (3) rodadas de funções por pergunta;
-  concorrência e tempos na seção de orquestração (#157).
-- **Erro de função:** o modelo recebe só a orientação de parâmetro inválido (escrita por nós) ou
-  uma mensagem genérica — nunca a mensagem do banco.
+- **Custo limitado:** uma chamada ao modelo e uma rodada de funções por pergunta (#266; o
+  `AI_MAX_RODADAS_FERRAMENTAS` deixou de ter efeito na rota de dados); concorrência e tempos na
+  seção de orquestração (#157).
+- **Erro de função:** sem segunda rodada, parâmetro inválido não volta ao modelo; a função falhada
+  não gera seção, e sem seção nenhuma a resposta é a honesta com os atalhos. A mensagem do banco
+  nunca sai.
 
 ## Sanitização e auditoria (issue #144)
 

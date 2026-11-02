@@ -357,4 +357,39 @@ class ConsultaDadosProdutorServiceIntegrationTest {
             produtorA.getId(), null, false, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  @DisplayName("#266: notas a conferir: so proprias com sinal, nao emitidas ou no prazo de cancelar")
+  void notasAConferir() {
+    NotaFiscal servico = saida(produtorA, java.time.OffsetDateTime.now(), "Servico de colheita",
+        "12019000", "800.00");
+    servico.setStatus(StatusNotaFiscal.RASCUNHO);
+    servico.setNumero(116L);
+    servico.getItens().get(0).setCfop("5949");
+    notaFiscalRepository.save(servico);
+    // Autorizada antiga, fora do prazo de cancelar: nao e candidata, mesmo com o sinal.
+    NotaFiscal antiga = saida(produtorA, em(2026, 1, 5), "Servico de plantio", "12019000",
+        "300.00");
+    antiga.setNumero(90L);
+    antiga.getItens().get(0).setCfop("5949");
+    notaFiscalRepository.save(antiga);
+    // Do produtor B, com o mesmo sinal: nunca entra.
+    NotaFiscal doB = saida(produtorB, java.time.OffsetDateTime.now(), "Servico de colheita",
+        "12019000", "800.00");
+    doB.setStatus(StatusNotaFiscal.RASCUNHO);
+    doB.getItens().get(0).setCfop("5949");
+    notaFiscalRepository.save(doB);
+
+    List<NotaPorNumeroResultado> notas = service.notasAConferir(produtorA.getId(),
+        java.time.OffsetDateTime.now().minusDays(30));
+
+    assertThat(notas).extracting(NotaPorNumeroResultado::numero).containsExactly(116L);
+    assertThat(notas.get(0).sinais()).isNotEmpty();
+  }
+
+  @Test
+  @DisplayName("#266: pedidos do escritorio sem vinculo ativo nao aparecem")
+  void pedidosSemVinculo() {
+    assertThat(service.pedidosPendentes(produtorA.getId())).isEmpty();
+  }
 }

@@ -260,6 +260,20 @@ public final class RespostasFerramentas {
   public record Alertas(long totalEncontrado, List<Alerta> alertas) {}
 
   /**
+   * Resultado de {@code resumoDoProdutor} (issue #266): só as contagens. O texto ao produtor, com
+   * os títulos dos pedidos e as descrições dos itens, é do backend e não volta ao modelo.
+   *
+   * @param guiasEmAtraso       guias não pagas com vencimento antes de hoje
+   * @param prazos              alertas com prazo nos próximos dias (RN010)
+   * @param notasParadas        notas devolvidas, com inconsistências, aguardando aprovação ou
+   *                            rejeitadas
+   * @param pedidosDoEscritorio pedidos de documento do escritório ainda sem resposta
+   * @param notasAConferir      notas com sinal a conferir (#276)
+   */
+  public record ResumoProdutor(long guiasEmAtraso, long prazos, long notasParadas,
+      long pedidosDoEscritorio, long notasAConferir) {}
+
+  /**
    * Um alerta tributário.
    *
    * @param tipo          VENCIMENTO_GUIA, FECHAMENTO_APURACAO ou PRAZO_CANCELAMENTO_NFE

@@ -143,7 +143,10 @@ br.com.agrocontabil
 │                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
-│                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros;
+│                  # RotaDados (#266: o modelo só escolhe as funções, numa chamada; a resposta é
+│                  #   do template: ferramentas/RedatorRespostaDados → SecaoResposta →
+│                  #   ComposicaoRespostaDados, ordem fixa + linha de resumo; resumoDoProdutor
+│                  #   agrega atraso, prazos, notas paradas, pedidos e notas a conferir); ValidadorNumeros;
 │                  # VerificadorAfirmacaoDados (lei do MISTO não fala dos dados, #170);
 │                  # consultarTratamentoProduto (#283): porta TratamentoProdutoPorta, texto por
 │                  #   template (TemplateTratamentoProduto) aplicado depois da validação

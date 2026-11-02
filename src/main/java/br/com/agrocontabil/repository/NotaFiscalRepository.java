@@ -428,6 +428,33 @@ public interface NotaFiscalRepository
   Page<NotaPorNumeroLinha> findDoProdutorPorNumero(
       @Param("produtorId") UUID produtorId, @Param("numero") Long numero, Pageable pagina);
 
+  /**
+   * Notas próprias candidatas a sinal a conferir (#276) no resumo da Ceres (#266): as não emitidas
+   * e as autorizadas desde {@code autorizadasDesde}, da mais recente para a mais antiga. Projeção
+   * sem XML.
+   *
+   * @param produtorId       produtor da sessão
+   * @param naoEmitidas      situações antes da emissão
+   * @param autorizadasDesde início do prazo de cancelamento
+   * @param pagina           limite
+   * @return as candidatas
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.NotaPorNumeroLinha(
+          n.id, n.numero, n.serie, n.dataEmissao, n.origem, n.status,
+          n.valorTotalNota, n.valorTotalIbs, n.valorTotalCbs, n.destinatarioCpfCnpj)
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND (n.status IN :naoEmitidas
+          OR (n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+            AND n.dataEmissao >= :autorizadasDesde))
+      ORDER BY n.dataEmissao DESC, n.id DESC
+      """)
+  List<NotaPorNumeroLinha> findCandidatasASinal(@Param("produtorId") UUID produtorId,
+      @Param("naoEmitidas") Collection<StatusNotaFiscal> naoEmitidas,
+      @Param("autorizadasDesde") OffsetDateTime autorizadasDesde, Pageable pagina);
+
   // --- Consultas da Ceres (issue #142). Fixas e parametrizadas: o modelo só escolhe a função e
   // preenche os parâmetros, nunca escreve SQL. Todas exigem o produtor (anti-IDOR, RN007).
 

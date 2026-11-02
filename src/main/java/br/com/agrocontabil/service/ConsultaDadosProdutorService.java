@@ -5,6 +5,7 @@ import br.com.agrocontabil.model.NotaFiscalRevisao;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.repository.CompraInsumoAgregado;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
@@ -13,6 +14,7 @@ import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.NotaPorNumeroLinha;
 import br.com.agrocontabil.repository.NotaResumo;
+import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.TotalAgregado;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
 import java.math.BigDecimal;
@@ -64,6 +66,7 @@ public class ConsultaDadosProdutorService {
   private final NotaFiscalRevisaoRepository revisaoRepository;
   private final NotaFiscalValidacaoRepository validacaoRepository;
   private final SinaisNotaConferirService sinaisService;
+  private final PendenciaRepository pendenciaRepository;
 
   /**
    * Constrói o serviço com os repositórios de notas, guias, revisões e validações, e os sinais de
@@ -73,13 +76,66 @@ public class ConsultaDadosProdutorService {
       NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository,
       NotaFiscalRevisaoRepository revisaoRepository,
       NotaFiscalValidacaoRepository validacaoRepository,
-      SinaisNotaConferirService sinaisService) {
+      SinaisNotaConferirService sinaisService, PendenciaRepository pendenciaRepository) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.revisaoRepository = revisaoRepository;
     this.validacaoRepository = validacaoRepository;
     this.sinaisService = sinaisService;
+    this.pendenciaRepository = pendenciaRepository;
   }
+
+  /** Notas ainda não emitidas que podem ter sinal a conferir. */
+  static final Set<StatusNotaFiscal> NAO_EMITIDAS = java.util.EnumSet.of(
+      StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS,
+      StatusNotaFiscal.DEVOLVIDA, StatusNotaFiscal.AGUARDANDO_APROVACAO,
+      StatusNotaFiscal.APROVADA);
+
+  /** Candidatas a sinal que o resumo da Ceres examina (#266): o teto de consultas por pergunta. */
+  public static final int LIMITE_CANDIDATAS_A_SINAL = 20;
+
+  /**
+   * Notas próprias com sinal a conferir (#276), para o resumo da Ceres (#266): as ainda não
+   * emitidas (rascunho até aprovada) e as autorizadas desde {@code autorizadasDesde} (dentro do
+   * prazo de cancelamento), das {@value #LIMITE_CANDIDATAS_A_SINAL} mais recentes. Só as que têm
+   * sinal saem.
+   *
+   * @param produtorId       produtor da sessão
+   * @param autorizadasDesde início do prazo de cancelamento das autorizadas
+   * @return as notas com sinal, da mais recente para a mais antiga
+   */
+  public List<NotaPorNumeroResultado> notasAConferir(UUID produtorId,
+      OffsetDateTime autorizadasDesde) {
+    return notaFiscalRepository.findCandidatasASinal(produtorId,
+            NAO_EMITIDAS, autorizadasDesde,
+            PageRequest.of(0, LIMITE_CANDIDATAS_A_SINAL))
+        .stream()
+        .map(n -> detalhe(produtorId, n))
+        .filter(n -> !n.sinais().isEmpty())
+        .toList();
+  }
+
+  /**
+   * Pedidos de documento do escritório ainda sem resposta (#180), dos escritórios com vínculo
+   * {@code ATIVO}, do mais recente para o mais antigo.
+   *
+   * @param produtorId produtor da sessão
+   * @return título e prazo de cada pedido
+   */
+  public List<PedidoPendente> pedidosPendentes(UUID produtorId) {
+    return pendenciaRepository.findDoProdutor(produtorId, List.of(StatusPendencia.PENDENTE))
+        .stream()
+        .map(p -> new PedidoPendente(p.getTitulo(), p.getDataLimite()))
+        .toList();
+  }
+
+  /**
+   * Um pedido do escritório.
+   *
+   * @param titulo     título escrito pelo escritório
+   * @param dataLimite prazo, ou nulo
+   */
+  public record PedidoPendente(String titulo, LocalDate dataLimite) {}
 
   /**
    * Notas do produtor com o número pedido (issue #256). Número de nota de outro produtor dá lista

@@ -141,4 +141,33 @@ public class ChatModelSimulado implements ChatModel {
   public static ChatResponse texto(String conteudo) {
     return new ChatResponse(List.of(new Generation(new AssistantMessage(conteudo))));
   }
+
+  /**
+   * O modelo pedindo funções, todas na mesma resposta (#266: a rota de dados tem uma chamada só).
+   *
+   * @param chamadas pares nome da função → argumentos, na ordem
+   */
+  @SafeVarargs
+  public static ChatResponse funcoes(java.util.Map.Entry<String, java.util.Map<String, Object>>...
+      chamadas) {
+    List<AssistantMessage.ToolCall> pedidos = new java.util.ArrayList<>();
+    try {
+      for (int i = 0; i < chamadas.length; i++) {
+        pedidos.add(new AssistantMessage.ToolCall("chamada-" + (i + 1), "function",
+            chamadas[i].getKey(), JSON.writeValueAsString(chamadas[i].getValue())));
+      }
+    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+      throw new IllegalStateException(e);
+    }
+    return new ChatResponse(List.of(new Generation(
+        AssistantMessage.builder().content("").toolCalls(pedidos).build())));
+  }
+
+  /** O modelo pedindo uma função. */
+  public static ChatResponse funcao(String nome, java.util.Map<String, Object> argumentos) {
+    return funcoes(java.util.Map.entry(nome, argumentos));
+  }
+
+  private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
 }

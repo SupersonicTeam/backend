@@ -131,7 +131,7 @@ public class ModoFallback {
   }
 
   /** Telas que a pergunta menciona; nenhuma reconhecida, todas. */
-  static List<TelaAtalho> atalhos(String pergunta) {
+  public static List<TelaAtalho> atalhos(String pergunta) {
     String texto = normalizar(pergunta);
     Set<TelaAtalho> telas = EnumSet.noneOf(TelaAtalho.class);
     ATALHOS.forEach((tela, padrao) -> {

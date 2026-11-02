@@ -61,7 +61,7 @@ X-Usuario-Id: <uuid do produtor>
 
 ```json
 {
-  "resposta": "A guia de FUNRURAL vence em 20/10/2026 e tem valor de R$ 1.840,55.",
+  "resposta": "De 02/11/2026 a 02/12/2026 vence 1 guia nao paga, somando R$ 1.840,55:\n- FUNRURAL (contribuicao previdenciaria do produtor rural), vence em 20/11/2026: R$ 1.840,55.",
   "rota": "DADOS",
   "citacoes": [],
   "fontesDados": [
@@ -79,7 +79,24 @@ X-Usuario-Id: <uuid do produtor>
 | `citacoes` | `Citacao[]` | Trechos de lei citados, na ordem da resposta. Vazio fora de `LEGISLACAO`/`MISTO` |
 | `fontesDados` | `FonteDado[]` | Consultas aos dados do produtor usadas. **Vazio quando a resposta foi descartada**: sem selo "calculado a partir das suas notas" |
 | `modoFallback` | `boolean` | `true` quando o modelo estava fora e a resposta foi montada **sem ele** (#146). Exiba um aviso ("assistente em modo limitado") |
-| `atalhos` | `("NOTAS" \| "APURACAO" \| "CREDITOS" \| "CALENDARIO")[]` | Só no modo fallback, para perguntas de dados: telas onde o dado está. Mapeie cada valor para a rota do Angular e mostre como botões. Vazio fora do fallback |
+| `atalhos` | `("NOTAS" \| "APURACAO" \| "CREDITOS" \| "CALENDARIO")[]` | Telas onde o dado está, para perguntas de dados: no modo fallback e, desde a #266, quando a Ceres não identificou qual dado consultar (`modoFallback: false`). Mapeie cada valor para a rota do Angular e mostre como botões. Vazio nos outros casos |
+
+#### Resposta de dados por template (#266)
+
+Na rota `DADOS` (e na parte de dados do `MISTO`), o texto é montado pelo backend, não pelo modelo:
+
+- **Formato:** parágrafos separados por linha em branco (`\n\n`), um por assunto, e listas com
+  itens começando por `- ` (no máximo 5; o resto vira "E mais N, na tela de X."). Renderize as
+  quebras de linha e, se quiser, as linhas `- ` como lista. Continua texto puro, nunca HTML.
+- **Ordem fixa:** guias em atraso → prazos dos próximos dias → notas paradas → pedidos do
+  escritório → notas a conferir → informativos. Com mais de um assunto de atenção, a primeira
+  linha é um resumo ("Encontrei 3 pontos de atencao: ...").
+- **Pergunta geral** ("o que eu preciso saber?"): nova função `resumoDoProdutor` em
+  `fontesDados[].funcao`. Rótulo sugerido para o selo: "Resumo dos seus pontos de atenção".
+- **Sem dado identificado:** "Nao consegui identificar qual dado consultar..." com `atalhos`
+  preenchidos e `modoFallback: false`. Mostre os botões das telas também nesse caso.
+- Siglas (IBS, CBS, Funrural, SEFAZ, NCM, CFOP, NF-e) vêm explicadas entre parênteses na primeira
+  vez.
 
 #### Modo fallback (#146)
 
@@ -297,6 +314,7 @@ envelope.
    | `consultarNota` | Nota fiscal | `numero` |
    | `totalVendasPorProduto` | Vendas de produto | `descricaoOuNcm`, `dataInicio`, `dataFim` |
    | `consultarTratamentoProduto` | Tabela oficial de classificação tributária (#283) | `produtoOuNcm` |
+   | `resumoDoProdutor` | Resumo dos seus pontos de atenção (#266) | nenhum |
 
    `consultarTratamentoProduto` **não** é dado do produtor: é a tabela oficial (IT 2025.002), igual
    para todos. Para ela, o rótulo "Calculado a partir das suas notas" não serve; mostre "Consultado
@@ -341,7 +359,7 @@ export interface CeresResposta {
   citacoes: CeresCitacao[];
   fontesDados: CeresFonteDado[];
   modoFallback: boolean;
-  atalhos: ('NOTAS' | 'APURACAO' | 'CREDITOS' | 'CALENDARIO')[];  // só no modo fallback
+  atalhos: ('NOTAS' | 'APURACAO' | 'CREDITOS' | 'CALENDARIO')[];  // modo fallback e pergunta de dados sem dado identificado (#266)
 }
 
 export interface ApiErrorDetail {

@@ -731,4 +731,41 @@ class FerramentasDadosProdutorTest {
       assertThat(t.dispositivos()).isEmpty();
     });
   }
+
+  @Test
+  @DisplayName("#266: resumo do produtor: so contagens ao modelo, cinco secoes, a vazia nao pedida")
+  void resumoDoProdutor() {
+    when(dados.vencimentosNaoPagos(eq(PRODUTOR), any(), eq(HOJE.minusDays(1)), anyInt()))
+        .thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Vencimento(
+            br.com.agrocontabil.model.TipoGuiaFiscal.FUNRURAL, HOJE.minusDays(9),
+            new BigDecimal("430.00"), br.com.agrocontabil.model.StatusGuiaFiscal.VENCIDA)), 1));
+    when(dados.totalVencimentosNaoPagos(eq(PRODUTOR), any(), eq(HOJE.minusDays(1))))
+        .thenReturn(new DadosProdutorPorta.Totais(1, new BigDecimal("430.00")));
+    when(dados.alertas(PRODUTOR)).thenReturn(new Pagina<>(List.of(), 0));
+    when(dados.notas(eq(PRODUTOR), any(), eq(FerramentasDadosProdutor.NOTAS_PARADAS), any(),
+        eq(HOJE), anyInt())).thenReturn(new Pagina<>(List.of(new DadosProdutorPorta.Nota(118, 1,
+            OffsetDateTime.of(2026, 9, 20, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
+            OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.DEVOLVIDA, new BigDecimal("500.00"),
+            BigDecimal.ZERO, BigDecimal.ZERO)), 1));
+    when(dados.pedidosDoEscritorio(PRODUTOR)).thenReturn(List.of(
+        new DadosProdutorPorta.Pedido("Extrato do Joao", HOJE.plusDays(5))));
+    when(dados.notasAConferir(PRODUTOR, HOJE)).thenReturn(List.of());
+
+    RespostasFerramentas.ResumoProdutor resumo = ferramentas.resumoDoProdutor(toolContext);
+
+    assertThat(resumo).isEqualTo(new RespostasFerramentas.ResumoProdutor(1, 0, 1, 1, 0));
+    // O titulo do pedido (texto livre do escritorio) nao vai no resultado da funcao.
+    assertThat(resumo.toString()).doesNotContain("Joao");
+    assertThat(contexto.secoes()).hasSize(5).allSatisfy(secao ->
+        assertThat(secao.pedida()).isFalse());
+    String texto = br.com.agrocontabil.assistente.ComposicaoRespostaDados.compor(
+        contexto.secoes());
+    assertThat(texto).startsWith("Encontrei 3 pontos de atencao: 1 guia em atraso, 1 nota"
+        + " parada e 1 pedido do escritorio. Sem pendencias em: prazos dos proximos dias e notas"
+        + " a conferir.")
+        .contains("- Extrato do Joao, ate 04/10/2026.")
+        .doesNotContain("Nao encontrei alertas");
+    assertThat(contexto.fontes()).extracting(br.com.agrocontabil.assistente.FonteDado::funcao)
+        .containsExactly("resumoDoProdutor");
+  }
 }
