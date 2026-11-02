@@ -33,6 +33,7 @@ class RegrasClassificacaoTest {
       "O que vence este mes?                                      | DADOS",
       "Quais impostos vencem na semana que vem?                   | DADOS",
       "Quantas vendas fiz em outubro?                             | DADOS",
+      "Quanto gastei com defensivos em abril?                     | DADOS",
       // os dois lados: nao decide
       "Quanto de IBS eu devo neste mes?                           | NADA",
       "Minhas vendas tem split payment?                           | NADA",
@@ -46,6 +47,22 @@ class RegrasClassificacaoTest {
       // nenhum sinal
       "Me passa uma receita de bolo                               | NADA",
       "Tem algo de novo?                                          | NADA",
+      // palavra generica de lei ou de dados, sem ancora do dominio (review do #328)
+      "Qual era o preco do dolar em marco de 2026?                | NADA",
+      "Quem ganhou a eleicao em outubro de 2026?                  | NADA",
+      "O que devo fazer para trocar o pneu do trator?             | NADA",
+      "Quanto eu devo ao banco do financiamento?                  | NADA",
+      "Quanto tenho que estudar para ser contador?                | NADA",
+      "Tenho algum direito trabalhista como empregado rural?      | NADA",
+      "o que vence em dezembro de 2026 na bolsa?                  | NADA",
+      "quantas vendas de ingressos houve no show?                 | NADA",
+      "Quanto paguei no ingresso do show?                         | NADA",
+      "Como faco reducao de custos na fazenda?                    | NADA",
+      "Qual a lei de Murphy?                                      | NADA",
+      "O que diz a lei do inquilinato?                            | NADA",
+      "Qual a aliquota do imposto de renda?                       | NADA",
+      "Qual a aliquota do ICMS em MT?                             | NADA",
+      "Ha isencao de IPVA para trator?                            | NADA",
       "                                                           | NADA"
   })
   @DisplayName("so decide com sinal de um lado so")

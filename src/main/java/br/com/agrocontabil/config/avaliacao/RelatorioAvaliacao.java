@@ -264,16 +264,11 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
   }
 
   /**
-   * Tabela por rota esperada. "1ª parte" é o tempo até a primeira parte da resposta: até a etapa 6
-   * da Ceres 2.0 (resposta de dados em partes) ela é a resposta inteira, então coincide com a
-   * latência; a coluna existe para a comparação daquela etapa.
-   */
-  /**
    * Precisão de cada camada da classificação (#265): quantas perguntas com rota esperada ela
    * decidiu e quantas acertou. A regra precisa de zero erros; o desempate pelo modelo vira
    * proporção do total.
    *
-   * @return camada → [decididas, acertos]; "sem camada" para pergunta que falhou antes
+   * @return camada → [decididas, acertos]; {@value #SEM_ROTA} para pergunta que falhou antes da classificação
    */
   public Map<String, int[]> porCamada() {
     Map<String, int[]> porCamada = new LinkedHashMap<>();
@@ -306,6 +301,11 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     return md.toString();
   }
 
+  /**
+   * Tabela por rota esperada. "1ª parte" é o tempo até a primeira parte da resposta: até a etapa 6
+   * da Ceres 2.0 (resposta de dados em partes) ela é a resposta inteira, então coincide com a
+   * latência; a coluna existe para a comparação daquela etapa.
+   */
   static String tabelaPorRota(Map<String, IndicadoresRota> porRota) {
     return tabelaPorRota(porRota, "Perguntas");
   }

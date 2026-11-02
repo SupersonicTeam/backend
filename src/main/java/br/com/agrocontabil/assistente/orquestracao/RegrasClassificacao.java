@@ -31,30 +31,58 @@ public final class RegrasClassificacao {
 
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}+");
 
-  /** Termos de lei inequívocos da reforma e do Funrural. */
+  /**
+   * Termos de lei inequívocos <strong>da reforma e do Funrural</strong>. Palavra de lei genérica
+   * ("lei", "artigo", "alíquota", "redução", "isenção", "fato gerador") não conta sozinha: "qual a
+   * alíquota do ICMS?", "há isenção de IPVA?" e "qual a lei de Murphy?" não são da base da Ceres, e
+   * a regra as mandaria ao RAG com confiança 1, sem o desempate pelo modelo.
+   */
   private static final Pattern TERMO_LEI = Pattern.compile("\\b(ibs|cbs|split payment|funrural"
-      + "|senar|credito presumido|anexo [ivxl]+|fato gerador|aliquotas?|lc 214|lei complementar"
-      + " 214|ec 132|emenda constitucional|nao contribuintes?|regime regular|cesta basica"
-      + "|reforma tributaria|imposto seletivo|lei 8[ .]?212|lei 9[ .]?528|reducao|reduzidas?"
-      + "|isencao|isent[oa]s?|imunidade|imunes?|insumos? agropecuarios?|lei|legislacao|artigo"
-      + "|art)\\b");
+      + "|senar|credito presumido|anexo [ivxl]+|lc 214|lei complementar 214|ec 132"
+      + "|emenda constitucional 132|regime regular|cesta basica|reforma tributaria"
+      + "|imposto seletivo|lei 8[ .]?212|lei 9[ .]?528|insumos? agropecuarios?)\\b");
 
-  /** O produtor falando dos dados dele no sistema. */
+  /**
+   * Palavra de lei genérica: não decide LEGISLACAO, mas impede a regra de decidir DADOS — "quanto
+   * vendi de café e café tem redução?" é candidato a MISTO.
+   */
+  private static final Pattern LEI_GENERICA = Pattern.compile("\\b(lei|legislacao|artigo|art"
+      + "|aliquotas?|reducao|reduzidas?|isencao|isent[oa]s?|imunidade|imunes?|fato gerador"
+      + "|contribuintes?|regra|permite|pode)\\b");
+
+  /**
+   * Quantia ou período do próprio produtor ("quanto de IBS eu devo?", "o saldo de CBS de agosto
+   * de 2026"): com termo de lei, pode ser dado dele ou MISTO — a regra não decide LEGISLACAO.
+   */
+  private static final Pattern QUANTIA_PESSOAL = Pattern.compile("\\b(quanto|quanta|devo"
+      + "|paguei|retido|retida|ficou|saldo|apuracao|(janeiro|fevereiro|marco|abril|maio|junho"
+      + "|julho|agosto|setembro|outubro|novembro|dezembro) de \\d{4})\\b");
+
+  /** Insumo, imposto ou documento do produtor: a âncora dos verbos de gasto e pagamento. */
+  private static final String OBJETO_DADOS = "(insumos?|defensivos?|fertilizantes?|adubos?"
+      + "|sementes?|diesel|oleo diesel|racao|guias?|impostos?|notas?)";
+
+  /**
+   * O produtor falando dos dados dele no sistema, sempre ancorado no domínio: possessivo ou verbo
+   * do produtor junto de nota, guia, venda, compra, crédito ou apuração. Mês com ano, "que devo",
+   * "quanto tenho" e "tenho algum" soltos não contam: "o preço do dólar em março de 2026", "quanto
+   * eu devo ao banco" e "tenho algum direito trabalhista" iriam à rota de dados com confiança 1.
+   */
   private static final Pattern MARCADOR_DADOS = Pattern.compile(String.join("|",
       "\\bminh[ao]s? (\\d+ )?(ultim[ao]s? )?(notas?|vendas?|compras?|guias?|apuracao|apuracoes"
           + "|creditos?|alertas?|pendencias?|retencoes|debitos?|proxima guia)\\b",
       "\\bmeus? (\\d+ )?(ultim[ao]s? )?(creditos?|debitos?|alertas?|vencimentos?|pedidos?)\\b",
-      "\\bquanto (eu )?(paguei|vendi|comprei|gastei|devo|faturei|recebi)\\b",
-      "\\bquanto (eu )?tenho\\b",
-      "\\b(eu|que) devo\\b",
-      "\\b(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro"
-          + "|dezembro) de \\d{4}\\b",
-      "\\bo que eu (comprei|vendi|paguei)\\b",
+      "\\bquanto (eu )?(vendi|comprei|faturei)\\b",
+      "\\bquanto (eu )?(gastei|paguei|recebi) (com|de|em) (o |a |os |as )?" + OBJETO_DADOS
+          + "\\b",
+      "\\bo que eu (comprei|vendi)\\b",
       "\\bnotas? (n[or]?\\s?)?\\d{2,9}\\b",
-      "\\btenho (algum|alguma|algo|imposto|guias?|notas?|debitos?)\\b",
-      "\\b(o que|quais impostos|que impostos|quais guias|guias? que) vence[m]?\\b",
-      "\\bvence[m]? (este|esse|neste|nesse) mes\\b",
-      "\\bquantas (notas|vendas|compras|guias)\\b"));
+      "\\btenho (algum |alguma )?(guias?|notas?|creditos?|debitos?|alertas?|pendencias?)\\b",
+      "\\btenho impostos? (a|para) pagar\\b",
+      "\\b(quais impostos|que impostos|quais guias|guias? que) vence[m]?\\b",
+      "\\bo que vence (este|esse|neste|nesse) mes\\b",
+      "\\bquantas (notas|guias)\\b",
+      "\\bquantas (vendas|compras) (eu )?(fiz|tive|emiti)\\b"));
 
   /** Produto específico: com termo de lei, a fronteira dados (#283) × lei fica para depois. */
   private static final Pattern PRODUTO = Pattern.compile("\\b(soja|milho|arroz|feijao|feijoes"
@@ -84,9 +112,10 @@ public final class RegrasClassificacao {
     boolean lei = TERMO_LEI.matcher(texto).find();
     boolean dados = MARCADOR_DADOS.matcher(texto).find();
     if (lei && !dados) {
-      return PRODUTO.matcher(texto).find() ? Optional.empty() : Optional.of(Intencao.LEGISLACAO);
+      return PRODUTO.matcher(texto).find() || QUANTIA_PESSOAL.matcher(texto).find()
+          ? Optional.empty() : Optional.of(Intencao.LEGISLACAO);
     }
-    if (dados && !lei) {
+    if (dados && !lei && !LEI_GENERICA.matcher(texto).find()) {
       return Optional.of(Intencao.DADOS);
     }
     return Optional.empty();

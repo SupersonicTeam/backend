@@ -90,6 +90,55 @@ class EmbeddingClassificadorIntencaoTest {
   }
 
   @Test
+  @DisplayName("embedding lento: prazo curto vence, nao decide e pausa; passada a pausa, tenta de novo")
+  void prazoEPausa() {
+    java.util.concurrent.atomic.AtomicBoolean lento = new java.util.concurrent.atomic.AtomicBoolean();
+    java.util.concurrent.atomic.AtomicInteger chamadas =
+        new java.util.concurrent.atomic.AtomicInteger();
+    EmbeddingModel modelo = new EmbeddingModelSimulado() {
+      @Override
+      public float[] embed(String texto) {
+        chamadas.incrementAndGet();
+        if (lento.get()) {
+          try {
+            Thread.sleep(5_000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+        return EmbeddingModelSimulado.vetor(texto);
+      }
+    };
+    AssistenteProperties.Classificacao p = propriedades();
+    p.setTimeoutEmbedding(java.time.Duration.ofMillis(100));
+    p.setPausaAposFalha(java.time.Duration.ofSeconds(30));
+    java.util.concurrent.atomic.AtomicLong agora = new java.util.concurrent.atomic.AtomicLong();
+    EmbeddingClassificadorIntencao knn =
+        new EmbeddingClassificadorIntencao(com(modelo), p, TREINO, agora::get);
+    try {
+      assertThat(knn.aquecer()).isTrue();
+
+      lento.set(true);
+      long inicio = System.nanoTime();
+      assertThat(knn.classificar("quanto vendi de soja no mes")).isEmpty();
+      assertThat(java.time.Duration.ofNanos(System.nanoTime() - inicio))
+          .isLessThan(java.time.Duration.ofSeconds(2));
+      assertThat(chamadas.get()).isEqualTo(1);
+
+      // Em pausa: nem chama o embedding.
+      lento.set(false);
+      assertThat(knn.classificar("quanto vendi de soja no mes")).isEmpty();
+      assertThat(chamadas.get()).isEqualTo(1);
+
+      agora.addAndGet(java.time.Duration.ofSeconds(31).toNanos());
+      assertThat(knn.classificar("quanto vendi de soja no mes")).isPresent();
+      assertThat(chamadas.get()).isEqualTo(2);
+    } finally {
+      knn.destroy();
+    }
+  }
+
+  @Test
   @DisplayName("o treino do classpath carrega, com as quatro rotas e centenas de exemplos")
   void treinoDoClasspath() {
     List<Exemplo> exemplos = EmbeddingClassificadorIntencao.carregar(new ObjectMapper());
