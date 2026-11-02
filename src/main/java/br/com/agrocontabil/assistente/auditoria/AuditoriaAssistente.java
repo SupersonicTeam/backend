@@ -60,6 +60,7 @@ public class AuditoriaAssistente {
         contexto.desfechoDados(),
         contexto.desfechoLegislacao(),
         contexto.perguntaLeiReescrita(),
+        contexto.camadaClassificacao(),
         funcoesJson(contexto.fontes()),
         contexto.chamadasDeFuncao(),
         contexto.trechosCitados().isEmpty() ? null : json(contexto.trechosCitados()),

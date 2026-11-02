@@ -191,6 +191,20 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0050: camada que decidiu a rota, nula para as antigas, sem texto (#265)")
+  void changeSet0050CamadaClassificacao() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name = 'camada_classificacao'");
+
+    assertThat(colunas).extracting(c -> c.get("data_type"), c -> c.get("is_nullable"),
+        c -> ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(tuple("character varying", "YES", 20));
+  }
+
+  @Test
   @DisplayName("changeSet 0030: desfecho por parte do MISTO, nulo fora dele, sem texto")
   void changeSet0030PartesDoMisto() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -911,7 +925,8 @@ class LiquibaseChangelogIntegrationTest {
         String.class);
 
     assertThat(colunas).containsExactly(
-        "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados", "desfecho_legislacao",
+        "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
+        "desfecho_legislacao",
         "funcoes", "id", "latencia_ms", "modelo", "pergunta_lei_reescrita", "produtor_id", "rota",
         "tamanho_pergunta", "tokens_entrada", "tokens_estimados", "tokens_saida",
         "trechos_citados");

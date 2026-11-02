@@ -236,6 +236,9 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     md.append("\nCasos adversários de rota: ").append(rotaAdversarios().formatada())
         .append(" de acerto de rota.\n");
 
+    md.append("\n## Por camada da classificação (#265)\n\n");
+    md.append(tabelaPorCamada(porCamada()));
+
     md.append("\n## Por pergunta\n\n");
     md.append("Legenda: ✓ acertou, ✗ errou, · não se aplica. ");
     md.append("As respostas completas estão no JSON ao lado.\n\n");
@@ -257,6 +260,44 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
           .append(" | ").append(r.vazamento() == null ? "·" : (r.vazamento() ? "**sim**" : "não"))
           .append(" | ").append(segundos(r.execucao().latenciaMs())).append(" |\n");
     }
+    return md.toString();
+  }
+
+  /**
+   * Precisão de cada camada da classificação (#265): quantas perguntas com rota esperada ela
+   * decidiu e quantas acertou. A regra precisa de zero erros; o desempate pelo modelo vira
+   * proporção do total.
+   *
+   * @return camada → [decididas, acertos]; {@value #SEM_ROTA} para pergunta que falhou antes da classificação
+   */
+  public Map<String, int[]> porCamada() {
+    Map<String, int[]> porCamada = new LinkedHashMap<>();
+    for (ResultadoPergunta r : resultados) {
+      if (r.rotaCorreta() == null) {
+        continue;
+      }
+      String camada = r.execucao().camadaClassificacao() == null
+          ? SEM_ROTA : r.execucao().camadaClassificacao();
+      int[] contagem = porCamada.computeIfAbsent(camada, k -> new int[2]);
+      contagem[0]++;
+      if (Boolean.TRUE.equals(r.rotaCorreta())) {
+        contagem[1]++;
+      }
+    }
+    return porCamada;
+  }
+
+  static String tabelaPorCamada(Map<String, int[]> porCamada) {
+    int total = porCamada.values().stream().mapToInt(c -> c[0]).sum();
+    StringBuilder md = new StringBuilder(
+        "| Camada | Decidiu | Acertou | Erros | Parcela do total |\n|---|---|---|---|---|\n");
+    porCamada.forEach((camada, c) -> md.append("| ").append(camada)
+        .append(" | ").append(c[0])
+        .append(" | ").append(c[1])
+        .append(" | ").append(c[0] - c[1])
+        .append(" | ").append(total == 0 ? "-" : String.format(java.util.Locale.ROOT, "%.0f%%",
+            100.0 * c[0] / total))
+        .append(" |\n"));
     return md.toString();
   }
 

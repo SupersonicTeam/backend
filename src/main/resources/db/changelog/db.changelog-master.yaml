@@ -104,3 +104,5 @@ databaseChangeLog:
       file: db/changelog/changes/0048-classificacao-tributaria-oficial.xml
   - include:
       file: db/changelog/changes/0049-base-ibs-cbs-cheia.xml
+  - include:
+      file: db/changelog/changes/0050-assistente-interacao-camada-classificacao.xml

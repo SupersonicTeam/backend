@@ -71,6 +71,13 @@ public class AssistenteInteracao {
   @Column(name = "pergunta_lei_reescrita", updatable = false)
   private Boolean perguntaLeiReescrita;
 
+  /**
+   * Camada que decidiu a rota (#265, changeSet 0050): {@code REGRA}, {@code EMBEDDING},
+   * {@code LLM}... Nula se a pergunta acabou antes da classificação.
+   */
+  @Column(name = "camada_classificacao", length = 20, updatable = false)
+  private String camadaClassificacao;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;

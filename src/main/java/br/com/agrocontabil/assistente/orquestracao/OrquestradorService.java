@@ -123,23 +123,36 @@ public class OrquestradorService {
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }
 
-  /** Intenção da pergunta; confiança abaixo do mínimo vira fora de escopo. */
+  /**
+   * Intenção da pergunta; confiança abaixo do mínimo vira fora de escopo. A camada que decidiu vai
+   * ao contexto, para a auditoria (#265).
+   */
   private ClassificacaoIntencao classificar(String pergunta, ContextoAssistente contexto) {
+    ClassificacaoIntencao classificacao = classificarSemRegistro(pergunta, contexto);
+    contexto.registrarCamadaClassificacao(classificacao.camada().name());
+    return classificacao;
+  }
+
+  private ClassificacaoIntencao classificarSemRegistro(
+      String pergunta, ContextoAssistente contexto) {
     if (FiltroInjecao.pareceInjecao(pergunta)) {
       log.info("Ceres: pergunta com forma de prompt injection tratada como fora de escopo");
-      return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1);
+      return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1, null,
+          CamadaClassificacao.FILTRO_INJECAO);
     }
-    if (disponibilidade.disponivel()) {
-      try {
-        ClassificacaoIntencao classificacao = classificador.classificar(pergunta, contexto);
-        return classificacao.confianca() < confiancaMinima
-            ? new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, classificacao.confianca())
-            : classificacao;
-      } catch (AssistenteIndisponivelException e) {
-        semModelo(contexto, "classificacao");
-      }
+    try {
+      // Regras e embeddings decidem mesmo com o modelo em pausa; o desempate pelo modelo, nao
+      // (ClassificadorEmCamadas lanca AssistenteIndisponivelException).
+      ClassificacaoIntencao classificacao = classificador.classificar(pergunta, contexto);
+      return classificacao.confianca() < confiancaMinima
+          ? new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, classificacao.confianca(), null,
+              classificacao.camada())
+          : classificacao;
+    } catch (AssistenteIndisponivelException e) {
+      semModelo(contexto, "classificacao");
     }
-    return new ClassificacaoIntencao(fallback.classificar(pergunta), 1);
+    return new ClassificacaoIntencao(fallback.classificar(pergunta), 1, null,
+        CamadaClassificacao.PALAVRAS_CHAVE);
   }
 
   /**

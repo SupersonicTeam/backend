@@ -70,6 +70,9 @@ public class AssistenteProperties implements InitializingBean {
   /** Modo fallback, sem modelo (issue #146). */
   private Fallback fallback = new Fallback();
 
+  /** Classificação de intenção em camadas (issue #265). */
+  private Classificacao classificacao = new Classificacao();
+
   /** Cota semanal de créditos (issue #166). */
   private Cota cota = new Cota();
 
@@ -96,6 +99,16 @@ public class AssistenteProperties implements InitializingBean {
           "app.assistente.rag.similaridade-minima deve estar em [0, 1), recebido: "
               + rag.getSimilaridadeMinima());
     }
+    if (classificacao.getLimiarConfianca() < 0 || classificacao.getLimiarConfianca() > 1
+        || classificacao.getSimilaridadeMinima() < -1 || classificacao.getSimilaridadeMinima() > 1
+        || classificacao.getVizinhos() < 1 || classificacao.getVizinhos() > 50) {
+      throw new IllegalStateException("app.assistente.classificacao fora de faixa: limiar e"
+          + " similaridade-minima entre 0 e 1, vizinhos entre 1 e 50");
+    }
+    exigirPositivo(classificacao.getTimeoutEmbedding(),
+        "app.assistente.classificacao.timeout-embedding");
+    exigirPositivo(classificacao.getPausaAposFalha(),
+        "app.assistente.classificacao.pausa-apos-falha");
     if (orquestracao.getConfiancaMinima() < 0 || orquestracao.getConfiancaMinima() > 1) {
       throw new IllegalStateException(
           "app.assistente.orquestracao.confianca-minima deve estar em [0, 1], recebido: "
@@ -210,6 +223,14 @@ public class AssistenteProperties implements InitializingBean {
     return fallback;
   }
 
+  public Classificacao getClassificacao() {
+    return classificacao;
+  }
+
+  public void setClassificacao(Classificacao classificacao) {
+    this.classificacao = classificacao;
+  }
+
   public void setFallback(Fallback fallback) {
     this.fallback = fallback;
   }
@@ -228,6 +249,87 @@ public class AssistenteProperties implements InitializingBean {
 
   public void setSaude(Saude saude) {
     this.saude = saude;
+  }
+
+  /**
+   * Classificação de intenção em camadas (issue #265): regras → embeddings → modelo de linguagem
+   * só no desempate e na separação da pergunta de lei do MISTO.
+   */
+  public static class Classificacao {
+
+    /**
+     * Liga as regras e as embeddings. Desligado, toda pergunta vai ao classificador por modelo de
+     * linguagem (Fase 1) — o profile {@code test} desliga para os testes de rota não dependerem
+     * do conjunto de treino.
+     */
+    private boolean camadas = true;
+
+    /** Confiança mínima do voto das embeddings; abaixo dela, o modelo desempata. */
+    private double limiarConfianca = 0.6;
+
+    /** Vizinhos que votam no kNN. */
+    private int vizinhos = 7;
+
+    /** Similaridade de cosseno mínima do vizinho mais próximo; abaixo, as embeddings não decidem. */
+    private double similaridadeMinima = 0.5;
+
+    /**
+     * Prazo do embedding da pergunta na classificação. Venceu (Ollama ocupado numa geração ou
+     * fora do ar), a camada não decide e a pergunta segue para o desempate; o read-timeout do
+     * cliente de IA (minutos) não serve aqui.
+     */
+    private Duration timeoutEmbedding = Duration.ofMillis(500);
+
+    /** Depois de uma falha ou prazo vencido, a camada fica sem chamar o embedding por este tempo. */
+    private Duration pausaAposFalha = Duration.ofSeconds(30);
+
+    public Duration getTimeoutEmbedding() {
+      return timeoutEmbedding;
+    }
+
+    public void setTimeoutEmbedding(Duration timeoutEmbedding) {
+      this.timeoutEmbedding = timeoutEmbedding;
+    }
+
+    public Duration getPausaAposFalha() {
+      return pausaAposFalha;
+    }
+
+    public void setPausaAposFalha(Duration pausaAposFalha) {
+      this.pausaAposFalha = pausaAposFalha;
+    }
+
+    public boolean isCamadas() {
+      return camadas;
+    }
+
+    public void setCamadas(boolean camadas) {
+      this.camadas = camadas;
+    }
+
+    public double getLimiarConfianca() {
+      return limiarConfianca;
+    }
+
+    public void setLimiarConfianca(double limiarConfianca) {
+      this.limiarConfianca = limiarConfianca;
+    }
+
+    public int getVizinhos() {
+      return vizinhos;
+    }
+
+    public void setVizinhos(int vizinhos) {
+      this.vizinhos = vizinhos;
+    }
+
+    public double getSimilaridadeMinima() {
+      return similaridadeMinima;
+    }
+
+    public void setSimilaridadeMinima(double similaridadeMinima) {
+      this.similaridadeMinima = similaridadeMinima;
+    }
   }
 
   /** Orquestração (issue #157). */

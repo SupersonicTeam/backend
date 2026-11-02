@@ -3,6 +3,7 @@ package br.com.agrocontabil.config.avaliacao;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.orquestracao.EmbeddingClassificadorIntencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
@@ -99,6 +100,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
   private final String hardwareInformado;
   private final Set<String> idsSelecionados;
   private final int repeticoes;
+  private final EmbeddingClassificadorIntencao embeddings;
 
   /** Constrói o comando com os parâmetros {@code avaliacao.*}. */
   public AvaliacaoCeresRunner(
@@ -106,6 +108,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
       FerramentasDadosProdutor ferramentas,
       SeedAvaliacao seed,
       ModeloLinguagem modeloLinguagem,
+      EmbeddingClassificadorIntencao embeddings,
       AssistenteProperties propriedades,
       ObjectMapper objectMapper,
       Environment ambiente,
@@ -120,6 +123,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
     this.valoresEsperados = new ValoresEsperados(ferramentas);
     this.seed = seed;
     this.modeloLinguagem = modeloLinguagem;
+    this.embeddings = embeddings;
     this.propriedades = propriedades;
     this.objectMapper = objectMapper;
     this.ambiente = ambiente;
@@ -146,10 +150,12 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
       exigirAmbienteDeDesenvolvimento(ambiente);
       Gabarito gabarito = carregarGabarito();
       exigirTreinoSeparado(gabarito, SeparacaoTreinoTeste.TREINO);
+      exigirTreinoSeparado(gabarito, SeparacaoTreinoTeste.TREINO_EMBUTIDO);
       ProdutoresAvaliacao produtores = seed.semear();
       Map<String, List<String>> esperados =
           valoresEsperados.calcular(gabarito, produtores.avaliado(), hoje);
 
+      exigirTreinoDoClassificador(propriedades, embeddings);
       log.info("Aquecendo o modelo (pergunta descartada)");
       exigirModeloNoAr(execucao.executar(PERGUNTA_AQUECIMENTO, contextoNovo(produtores)));
 
@@ -204,6 +210,21 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
    *
    * @throws IllegalStateException se o aquecimento não foi respondido pelo modelo
    */
+  /**
+   * Com a classificação em camadas (#265), calcula os vetores do treino antes da 1ª rodada: em
+   * segundo plano, as primeiras perguntas iriam ao modelo enquanto o treino carrega e a tabela
+   * "Por camada" e as latências da 1ª rodada sairiam diferentes das outras.
+   *
+   * @throws IllegalStateException se os vetores não puderam ser calculados
+   */
+  static void exigirTreinoDoClassificador(AssistenteProperties propriedades,
+      EmbeddingClassificadorIntencao embeddings) {
+    if (propriedades.getClassificacao().isCamadas() && !embeddings.aquecer()) {
+      throw new IllegalStateException("O treino do classificador de rota nao foi carregado"
+          + " (modelo de embedding fora do ar?): suba o modelo antes de avaliar");
+    }
+  }
+
   static void exigirModeloNoAr(ExecucaoPergunta aquecimento) {
     if (RelatorioAvaliacao.falhaTecnica(aquecimento)) {
       throw new IllegalStateException("O modelo nao respondeu a pergunta de aquecimento (desfecho "

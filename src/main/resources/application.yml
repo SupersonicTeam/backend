@@ -447,6 +447,16 @@ app:
     # escopo" (resposta fixa, sem nova chamada ao modelo).
     orquestracao:
       confianca-minima: ${AI_CONFIANCA_MINIMA:0.5}
+    # Classificacao em camadas (issue #265): regras -> embeddings (kNN no BGE-M3 sobre o treino
+    # em ceres/treino/) -> modelo so no desempate e na pergunta de lei do MISTO.
+    classificacao:
+      camadas: ${AI_CLASSIFICACAO_CAMADAS:true}
+      limiar-confianca: ${AI_CLASSIFICACAO_LIMIAR:0.6}
+      vizinhos: ${AI_CLASSIFICACAO_VIZINHOS:7}
+      similaridade-minima: ${AI_CLASSIFICACAO_SIMILARIDADE_MINIMA:0.5}
+      # Prazo do embedding da pergunta; vencido, o modelo desempata e a camada pausa.
+      timeout-embedding: ${AI_CLASSIFICACAO_TIMEOUT_EMBEDDING:500ms}
+      pausa-apos-falha: ${AI_CLASSIFICACAO_PAUSA_APOS_FALHA:30s}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Semana de segunda a domingo (Brasilia),
     # sem acumulo. Antes de cada pergunta reserva-se o teto dela; no fim, o consumo real.
