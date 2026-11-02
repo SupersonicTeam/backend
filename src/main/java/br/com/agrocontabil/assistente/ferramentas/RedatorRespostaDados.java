@@ -111,7 +111,8 @@ public final class RedatorRespostaDados {
     return SecaoResposta.informativa("Na apuracao de " + mes + " (" + situacao + "), " + saldo
         + ". Imposto das suas vendas: " + a.debitoIbs() + " de IBS e " + a.debitoCbs()
         + " de CBS. Credito das suas compras: " + a.creditoIbs() + " de IBS e " + a.creditoCbs()
-        + " de CBS. Entraram " + notas(a.totalNotas(), "") + ".", false, List.of(mes));
+        + " de CBS. " + (a.totalNotas() == 1 ? "Entrou " : "Entraram ")
+        + notas(a.totalNotas(), "") + ".", false, List.of(mes));
   }
 
   /** {@code consultarCreditos}. */
@@ -270,6 +271,13 @@ public final class RedatorRespostaDados {
       guias(t, v.aVencer().guias(), "vence em");
       maisNaTela(t, v.aVencer().quantidade(),
           Math.min(MAXIMO_ITENS, v.aVencer().guias().size()), "Calendario");
+    }
+    long atrasadas = v.emAtraso() == null ? 0 : v.emAtraso().quantidade();
+    if (atrasadas > 0) {
+      // Dinheiro em atraso e o assunto mais urgente; no resumo, conta uma vez com guiasEmAtraso.
+      return new SecaoResposta(Assunto.GUIAS_EM_ATRASO, t.toString(), (int) atrasadas,
+          plural(atrasadas, "guia em atraso", "guias em atraso"), recorte, false, true,
+          List.of(mes));
     }
     return new SecaoResposta(Assunto.PRAZOS, t.toString(), (int) v.quantidade(),
         plural(v.quantidade(), "guia", "guias") + " para pagar em " + mes, recorte, false, true,

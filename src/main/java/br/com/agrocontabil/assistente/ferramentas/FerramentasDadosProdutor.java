@@ -807,7 +807,7 @@ public class FerramentasDadosProdutor {
       Junta numa consulta so os pontos de atencao do produtor: guias em atraso, prazos dos \
       proximos dias, notas paradas (devolvidas, com inconsistencias, aguardando aprovacao ou \
       rejeitadas), pedidos de documento do escritorio e notas a conferir. Use para perguntas \
-      gerais, como "o que eu preciso saber?", "tem algo importante nos meus dados?" ou "como \
+      gerais, como "tem algo me esperando?", "tem algo importante nos meus dados?" ou "como \
       estao as minhas pendencias?". Para um assunto so (uma nota, as guias do mes), use a funcao \
       propria dele.""")
   public ResumoProdutor resumoDoProdutor(ToolContext toolContext) {
@@ -819,14 +819,14 @@ public class FerramentasDadosProdutor {
     GuiasDoRecorte atraso = recorte(contexto, null, ontem).resposta();
     contexto.registrarSecao(RedatorRespostaDados.guiasEmAtraso(new GuiasEmAtraso(atraso, null,
         atraso.quantidade() == 0 ? SEM_ATRASO + FormatoBr.data(ontem) + ")." : null), hoje)
-        .naoPedida());
+        .naoPedida().comTextoComoFonte());
 
     Pagina<DadosProdutorPorta.Alerta> alertas = dados.alertas(produtorId);
     contexto.registrarSecao(RedatorRespostaDados.alertas(new Alertas(alertas.total(),
         alertas.itens().stream()
             .map(a -> new Alerta(a.tipo(), a.descricao(), FormatoBr.data(a.dataLimite()),
                 a.diasRestantes()))
-            .toList()), hoje).naoPedida());
+            .toList()), hoje).naoPedida().comTextoComoFonte());
 
     LocalDate desde = hoje.minusDays(MAXIMO_DIAS_PERIODO);
     Pagina<DadosProdutorPorta.Nota> paradas = dados.notas(produtorId,
@@ -834,18 +834,18 @@ public class FerramentasDadosProdutor {
         DadosProdutorPorta.LIMITE_MAXIMO);
     contexto.registrarSecao(RedatorRespostaDados.notasParadas(
         paradas.itens().stream().map(FerramentasDadosProdutor::nota).toList(), paradas.total(),
-        FormatoBr.data(desde)));
+        FormatoBr.data(desde)).comTextoComoFonte());
 
     List<DadosProdutorPorta.Pedido> pedidos = dados.pedidosDoEscritorio(produtorId);
     contexto.registrarSecao(RedatorRespostaDados.pedidos(pedidos.stream()
         .map(p -> new String[] {p.titulo(), FormatoBr.data(p.dataLimite())})
-        .toList(), pedidos.size()));
+        .toList(), pedidos.size()).comTextoComoFonte());
 
     List<String> aConferir = dados.notasAConferir(produtorId, hoje).stream()
         .map(n -> FrasesSinaisNota.texto(n.numero(), n.serie(), n.sinais()))
         .filter(texto -> !texto.isEmpty())
         .toList();
-    contexto.registrarSecao(RedatorRespostaDados.notasAConferir(aConferir));
+    contexto.registrarSecao(RedatorRespostaDados.notasAConferir(aConferir).comTextoComoFonte());
 
     long pontos = atraso.quantidade() + alertas.total() + paradas.total() + pedidos.size()
         + aConferir.size();
@@ -895,9 +895,8 @@ public class FerramentasDadosProdutor {
         parametros("produtoOuNcm", termo), consulta.produtos().isEmpty());
     String texto = TemplateTratamentoProduto.texto(consulta);
     contexto.registrarTextoDoBackend(texto, TemplateTratamentoProduto.dispositivos(consulta));
-    // Texto da tabela oficial, montado pelo backend: entra inteiro nas fontes do validador.
-    contexto.registrarSecao(
-        SecaoResposta.informativa(texto, consulta.produtos().isEmpty(), List.of(texto)));
+    // Sem secao de proposito: o texto (com as citacoes do cClassTrib) entra so pelo
+    // TextosDoBackend, depois da validacao; uma secao igual sairia em dobro ou sem a citacao.
     return new TratamentoProduto(
         termo,
         consulta.produtos().stream()

@@ -97,4 +97,39 @@ class ComposicaoRespostaDadosTest {
   void semSecao() {
     assertThat(ComposicaoRespostaDados.compor(List.of())).isEmpty();
   }
+
+  @Test
+  @DisplayName("todas as de atencao pedidas e vazias: sem linha de resumo repetindo as frases")
+  void vaziasPedidasSemResumo() {
+    String texto = ComposicaoRespostaDados.compor(List.of(
+        secao(Assunto.GUIAS_EM_ATRASO, "Sem atraso.", 0, null, "guias em atraso", true),
+        secao(Assunto.PRAZOS, "Sem prazo.", 0, null, "prazos", true)));
+
+    assertThat(texto).isEqualTo("Sem atraso.\n\nSem prazo.");
+  }
+
+  @Test
+  @DisplayName("guias em atraso de duas funcoes contam uma vez no resumo")
+  void atrasoContaUmaVez() {
+    String texto = ComposicaoRespostaDados.compor(List.of(
+        secao(Assunto.GUIAS_EM_ATRASO, "Atraso.", 2, "2 guias em atraso", "atraso", true),
+        secao(Assunto.GUIAS_EM_ATRASO, "Mes com atraso.", 1, "1 guia em atraso", "atraso", true),
+        secao(Assunto.NOTAS_PARADAS, "Parada.", 1, "1 nota parada", "paradas", true)));
+
+    assertThat(texto).startsWith("Encontrei 3 pontos de atencao: 2 guias em atraso e 1 nota"
+        + " parada.");
+  }
+
+  @Test
+  @DisplayName("fontes do validador: a linha de resumo e o 'E mais N' calculados pelo backend")
+  void fontesCalculadas() {
+    List<SecaoResposta> secoes = List.of(
+        secao(Assunto.GUIAS_EM_ATRASO, "Atraso:\n- x\nE mais 7, na tela de Calendario.", 9,
+            "9 guias em atraso", "atraso", true),
+        secao(Assunto.NOTAS_PARADAS, "Parada.", 2, "2 notas paradas", "paradas", true));
+
+    assertThat(ComposicaoRespostaDados.textosLivres(secoes)).contains(
+        "E mais 7, na tela de Calendario.",
+        "Encontrei 11 pontos de atencao: 9 guias em atraso e 2 notas paradas.");
+  }
 }

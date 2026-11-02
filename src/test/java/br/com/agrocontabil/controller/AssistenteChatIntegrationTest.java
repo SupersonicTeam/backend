@@ -686,6 +686,62 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("#266: tratamento com outra funcao: o texto da tabela sai uma vez so, depois")
+  void tratamentoComOutraFuncaoSemDuplicar() throws Exception {
+    modelo.responderCom(prompt -> ChatModelSimulado.funcoes(
+        Map.entry("consultarTratamentoProduto", Map.of("produtoOuNcm", "soja")),
+        Map.entry("guiasEmAtraso", Map.of())));
+
+    String resposta = JSON.readTree(perguntar(produtorA, "A soja tem reducao e tenho atraso?")
+        .andExpect(status().isOk())
+        .andReturn().getResponse().getContentAsString()).path("resposta").asText();
+
+    assertThat(resposta.split("IT 2025.002 v1.70", -1)).hasSize(2);
+    assertThat(resposta.indexOf("Nao encontrei guias em atraso"))
+        .isLessThan(resposta.indexOf("NCM 1201.90.00"));
+  }
+
+  @Test
+  @DisplayName("#266: o resumo do produtor passa no validador de numeros, com valores e datas")
+  void resumoPeloChatPassaNoValidador() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusDays(12), "2300.67",
+        StatusGuiaFiscal.VENCIDA));
+    NotaFiscal devolvida = br.com.agrocontabil.support.DadosCeresFixture.saida(produtorA,
+        em(hoje.getYear(), hoje.getMonthValue(), 1), "Soja em grao", "12019000", "500.00");
+    devolvida.setStatus(StatusNotaFiscal.DEVOLVIDA);
+    devolvida.setNumero(3222L);
+    notaFiscalRepository.save(devolvida);
+    modelo.responderCom(prompt -> pedirFuncao("resumoDoProdutor", Map.of()));
+
+    perguntar(produtorA, "Tem algo me esperando?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.stringContainsInOrder(
+            "Encontrei 2 pontos de atencao: 1 guia em atraso e 1 nota parada.",
+            "venceu em " + br(hoje.minusDays(12)) + ": R$ 2.300,67.", "Nota 3222 (serie 1)")))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("resumoDoProdutor"));
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA));
+  }
+
+  @Test
+  @DisplayName("#266: 'E mais N' das listas e conta do backend: passa no validador")
+  void maisNaTelaPassaNoValidador() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    for (int i = 1; i <= 8; i++) {
+      guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(i), "10" + i + ".00",
+          StatusGuiaFiscal.PENDENTE));
+    }
+    modelo.responderCom(prompt -> pedirFuncao("proximosVencimentos", Map.of("dias", 30)));
+
+    perguntar(produtorA, "O que vence?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.endsWith(
+            "E mais 3, na tela de Calendario.")));
+  }
+
+  @Test
   @DisplayName("#276: nota com item de servico em CFOP 5949 traz a frase fixa do sinal, pelo backend")
   void notaComSinalDeServico() throws Exception {
     NotaFiscal nota = br.com.agrocontabil.support.DadosCeresFixture.saida(produtorA,

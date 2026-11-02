@@ -35,6 +35,17 @@ public record SecaoResposta(Assunto assunto, String texto, int pontos, String re
         textosLivres);
   }
 
+  /**
+   * A mesma seção com o próprio texto como fonte do {@code ValidadorNumeros}: para as partes do
+   * resumo do produtor (#266), cujo resultado ao modelo só tem contagens. Todo o texto saiu das
+   * consultas do backend; o modelo não escreveu nada dele.
+   */
+  public SecaoResposta comTextoComoFonte() {
+    List<String> livres = new java.util.ArrayList<>(textosLivres);
+    livres.add(texto);
+    return new SecaoResposta(assunto, texto, pontos, resumo, semPendencia, vazia, pedida, livres);
+  }
+
   /** A mesma seção, marcada como vinda do resumo (não pedida diretamente). */
   public SecaoResposta naoPedida() {
     return new SecaoResposta(assunto, texto, pontos, resumo, semPendencia, vazia, false,

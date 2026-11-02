@@ -84,7 +84,7 @@ class RedatorRespostaDadosTest {
     assertThat(s.texto()).isEqualTo("Na apuracao de 08/2026 (ainda aberta: o valor pode mudar"
         + " ate o fechamento), o imposto a pagar e de R$ 120,00 de IBS e R$ 1.080,00 de CBS."
         + " Imposto das suas vendas: R$ 150,00 de IBS e R$ 1.350,00 de CBS. Credito das suas"
-        + " compras: R$ 30,00 de IBS e R$ 270,00 de CBS. Entraram 1 nota.");
+        + " compras: R$ 30,00 de IBS e R$ 270,00 de CBS. Entrou 1 nota.");
   }
 
   @Test

@@ -66,7 +66,7 @@ public class RotaDados {
    */
   static final String MENSAGEM_SEM_FUNCAO = "Nao consegui identificar qual dado consultar. Voce"
       + " pode perguntar, por exemplo: \"tenho guia em atraso?\", \"quanto vendi de soja em"
-      + " outubro?\" ou \"o que eu preciso saber?\". Ou veja direto na tela indicada.";
+      + " outubro?\" ou \"tem algo me esperando?\". Ou veja direto na tela indicada.";
 
   /** A resposta tinha número que não veio de nenhuma função. */
   static final String MENSAGEM_NUMERO_SEM_FONTE =
@@ -149,6 +149,10 @@ public class RotaDados {
 
     List<SecaoResposta> secoes = contexto.secoes();
     String texto = ComposicaoRespostaDados.compor(secoes);
+    if (texto.isBlank() && !contexto.textosDoBackend().isEmpty()) {
+      // So o tratamento do produto (#283): o texto e as citacoes vem do TextosDoBackend.
+      return ResultadoRota.aceita("");
+    }
     if (texto.isBlank()) {
       // Toda funcao pedida falhou (parametro invalido, tempo da funcao): sem dado, sem negativa.
       return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.SEM_RESPOSTA, List.of(),

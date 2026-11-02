@@ -92,7 +92,7 @@ public class ConsultaDadosProdutorService {
       StatusNotaFiscal.APROVADA);
 
   /** Candidatas a sinal que o resumo da Ceres examina (#266): o teto de consultas por pergunta. */
-  public static final int LIMITE_CANDIDATAS_A_SINAL = 20;
+  public static final int LIMITE_CANDIDATAS_A_SINAL = 10;
 
   /**
    * Notas próprias com sinal a conferir (#276), para o resumo da Ceres (#266): as ainda não
@@ -110,9 +110,22 @@ public class ConsultaDadosProdutorService {
             NAO_EMITIDAS, autorizadasDesde,
             PageRequest.of(0, LIMITE_CANDIDATAS_A_SINAL))
         .stream()
-        .map(n -> detalhe(produtorId, n))
+        .map(n -> soSinais(produtorId, n))
         .filter(n -> !n.sinais().isEmpty())
         .toList();
+  }
+
+  /**
+   * A nota só com os sinais: o resumo não usa o motivo da devolução nem as inconsistências, e
+   * carregá-los custaria duas consultas a mais por candidata.
+   */
+  private NotaPorNumeroResultado soSinais(UUID produtorId, NotaPorNumeroLinha n) {
+    return new NotaPorNumeroResultado(n.numero(), n.serie(), n.dataEmissao(), n.origem(),
+        n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
+        null, List.of(),
+        sinaisService.sinais(produtorId, new SinaisNotaConferirService.NotaParaSinal(
+            n.id(), n.origem(), n.status(), n.dataEmissao(), n.destinatarioCpfCnpj(),
+            n.valorTotal())));
   }
 
   /**

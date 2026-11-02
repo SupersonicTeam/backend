@@ -30,7 +30,7 @@ public final class PromptsCeres {
         Regras:
         - Chame NA MESMA RESPOSTA todas as funcoes de que a pergunta precisar: voce nao vera o \
         resultado delas nem tera outra chance.
-        - Para perguntas gerais ("o que eu preciso saber?", "tem algo importante?"), use \
+        - Para perguntas gerais ("tem algo me esperando?", "tem algo importante?"), use \
         resumoDoProdutor.
         - Preencha datas no formato AAAA-MM-DD e meses no formato AAAA-MM, a partir de hoje.
         - Use so os termos da pergunta nos parametros: nunca a parte sobre a regra legal.

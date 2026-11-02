@@ -70,16 +70,45 @@ public final class ComposicaoRespostaDados {
     return explicarSiglas(String.join("\n\n", partes));
   }
 
-  /** Pedaços de texto livre de todas as seções, para as fontes do {@code ValidadorNumeros}. */
+  /** Linha do template com contagem calculada pelo backend ("E mais 7, na tela de Notas."). */
+  private static final Pattern MAIS_NA_TELA =
+      Pattern.compile("(?m)^E mais \\d+, na tela de \\w+\\.$");
+
+  /**
+   * Fontes do {@code ValidadorNumeros} que não estão nos resultados das funções: os pedaços de
+   * texto livre das seções e as contagens que a própria composição calcula (a linha de resumo e o
+   * "E mais N" das listas).
+   */
   public static List<String> textosLivres(List<SecaoResposta> secoes) {
     List<String> livres = new ArrayList<>();
-    secoes.forEach(s -> livres.addAll(s.textosLivres()));
+    secoes.forEach(s -> {
+      livres.addAll(s.textosLivres());
+      Matcher m = MAIS_NA_TELA.matcher(s.texto());
+      while (m.find()) {
+        livres.add(m.group());
+      }
+    });
+    List<SecaoResposta> unicas = new ArrayList<>(new LinkedHashSet<>(secoes));
+    unicas.sort(Comparator.comparing(SecaoResposta::assunto));
+    resumo(unicas).ifPresent(livres::add);
     return livres;
   }
 
-  /** Linha de resumo: só com duas ou mais seções de atenção consultadas. */
+  /**
+   * Linha de resumo: só com duas ou mais seções de atenção consultadas. Guias em atraso contam uma
+   * vez: {@code guiasEmAtraso} e {@code vencimentosDoMes} chamadas juntas falam das mesmas guias, e
+   * vale a seção de maior contagem.
+   */
   static java.util.Optional<String> resumo(List<SecaoResposta> secoes) {
-    List<SecaoResposta> atencao = secoes.stream().filter(s -> s.assunto().deAtencao()).toList();
+    List<SecaoResposta> atencao = new ArrayList<>(
+        secoes.stream().filter(s -> s.assunto().deAtencao()).toList());
+    List<SecaoResposta> atrasos = atencao.stream()
+        .filter(s -> s.assunto() == Assunto.GUIAS_EM_ATRASO).toList();
+    if (atrasos.size() > 1) {
+      SecaoResposta maior = atrasos.stream()
+          .max(Comparator.comparingInt(SecaoResposta::pontos)).orElseThrow();
+      atencao.removeIf(s -> s.assunto() == Assunto.GUIAS_EM_ATRASO && s != maior);
+    }
     Set<Assunto> assuntos = new LinkedHashSet<>();
     atencao.forEach(s -> assuntos.add(s.assunto()));
     if (assuntos.size() < 2) {
@@ -90,8 +119,12 @@ public final class ComposicaoRespostaDados {
         .filter(s -> s.pontos() == 0 && s.semPendencia() != null)
         .map(SecaoResposta::semPendencia).distinct().toList();
     if (comPontos.isEmpty()) {
-      return java.util.Optional.of("Nao encontrei pontos de atencao em: " + lista(semPendencia)
-          + ".");
+      // Todas pedidas e vazias: as frases de cada uma ja dizem o recorte; o resumo so repetiria.
+      boolean algumaSoNoResumo = atencao.stream().anyMatch(s -> !s.pedida());
+      return algumaSoNoResumo
+          ? java.util.Optional.of("Nao encontrei pontos de atencao em: " + lista(semPendencia)
+              + ".")
+          : java.util.Optional.empty();
     }
     int total = comPontos.stream().mapToInt(SecaoResposta::pontos).sum();
     StringBuilder linha = new StringBuilder("Encontrei ").append(total)
