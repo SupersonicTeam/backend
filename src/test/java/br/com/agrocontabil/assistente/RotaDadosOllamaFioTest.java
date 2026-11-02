@@ -88,7 +88,8 @@ class RotaDadosOllamaFioTest {
                 java.time.Duration.ofSeconds(30), System::nanoTime)),
         new ValidadorNumeros(),
         new VerificadorNegativaDados(),
-        new FerramentasDadosProdutor(dados),
+        new FerramentasDadosProdutor(dados,
+            org.mockito.Mockito.mock(br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.class)),
         new ProcessadorErroFerramenta(),
         new AssistenteProperties(),
         new StaticListableBeanFactory().getBeanProvider(ObservationRegistry.class));

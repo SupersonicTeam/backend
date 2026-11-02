@@ -27,17 +27,19 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 class DefinicaoFerramentasTest {
 
   private final List<ToolDefinition> definicoes = Arrays.stream(ToolCallbacks.from(
-          new FerramentasDadosProdutor(mock(DadosProdutorPorta.class))))
+          new FerramentasDadosProdutor(mock(DadosProdutorPorta.class),
+              mock(br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.class))))
       .map(callback -> callback.getToolDefinition())
       .toList();
 
   @Test
-  @DisplayName("As cinco da #142, alertas (#140), retencoes (#145) e as guias da #274")
+  @DisplayName("As cinco da #142, alertas (#140), retencoes (#145), as da #274 e o tratamento (#283)")
   void cincoFuncoes() {
     assertThat(definicoes).extracting(ToolDefinition::name).containsExactlyInAnyOrder(
         "totalComprasPorInsumo", "consultarApuracao", "consultarCreditos", "listarNotas",
         "proximosVencimentos", "listarAlertas", "consultarRetencoes", "guiasEmAtraso",
-        "vencimentosDoMes", "consultarNota", "totalVendasPorProduto");
+        "vencimentosDoMes", "consultarNota", "totalVendasPorProduto",
+        "consultarTratamentoProduto");
   }
 
   @Test
@@ -68,7 +70,7 @@ class DefinicaoFerramentasTest {
         .filter(m -> m.isAnnotationPresent(Tool.class))
         .toList();
 
-    assertThat(funcoes).hasSize(11).allSatisfy(m ->
+    assertThat(funcoes).hasSize(12).allSatisfy(m ->
         assertThat(m.getAnnotation(Tool.class).resultConverter())
             .as("resultConverter de %s", m.getName())
             .isEqualTo(ResultadoSanitizadoConverter.class));

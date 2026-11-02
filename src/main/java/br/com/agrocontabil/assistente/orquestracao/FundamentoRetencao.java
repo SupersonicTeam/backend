@@ -3,18 +3,11 @@ package br.com.agrocontabil.assistente.orquestracao;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
-import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
-import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import java.text.Normalizer;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -64,7 +57,6 @@ public class FundamentoRetencao {
   private static final Pattern OUTRA_RETENCAO = Pattern.compile(
       "\\b(icms|irrf|irpj|imposto de renda|ir|iss|csll|pis|cofins)\\b");
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
-  private static final Logger log = LoggerFactory.getLogger(FundamentoRetencao.class);
 
   private final BuscaTextualLegislacaoService busca;
 
@@ -90,7 +82,7 @@ public class FundamentoRetencao {
     String texto = resultado.texto().replace(ValidadorCitacao.SEM_FUNDAMENTO, "").strip();
     texto = texto.isEmpty() ? TEXTO : texto + "\n\n" + TEXTO;
     return new ResultadoOrquestracao(resultado.rota(), texto, resultado.desfecho(),
-        juntar(resultado.citacoes(), citacoes(contexto)), resultado.exibirFontes(),
+        CitacoesFixas.juntar(resultado.citacoes(), citacoes(contexto)), resultado.exibirFontes(),
         resultado.modoFallback(), resultado.atalhos());
   }
 
@@ -110,31 +102,6 @@ public class FundamentoRetencao {
 
   /** Citações com o texto da base; sem banco, o parágrafo segue sozinho (ele já nomeia a lei). */
   private List<CitacaoLegal> citacoes(ContextoAssistente contexto) {
-    contexto.verificarAtiva();
-    try {
-      List<TrechoRecuperado> trechos = busca.buscarDispositivos(DISPOSITIVOS, contexto.hoje());
-      // Auditoria (#144): os trechos citados entram como os do RAG, pelo id.
-      contexto.registrarTrechosCitados(trechos.stream().map(TrechoRecuperado::id).toList());
-      if (trechos.size() < DISPOSITIVOS.size()) {
-        log.warn("Fundamento de retencao: {} de {} dispositivos na base de legislacao",
-            trechos.size(), DISPOSITIVOS.size());
-      }
-      return trechos.stream().map(TrechoRecuperado::comoCitacao).toList();
-    } catch (AssistenteIndisponivelException e) {
-      log.warn("Fundamento de retencao sem citacoes: base de legislacao indisponivel");
-      return List.of();
-    }
-  }
-
-  /** Citações da rota primeiro, sem repetir a mesma referência. */
-  private static List<CitacaoLegal> juntar(List<CitacaoLegal> daRota, List<CitacaoLegal> fixas) {
-    Map<String, CitacaoLegal> porReferencia = new LinkedHashMap<>();
-    for (CitacaoLegal c : daRota) {
-      porReferencia.putIfAbsent(c.referencia(), c);
-    }
-    for (CitacaoLegal c : fixas) {
-      porReferencia.putIfAbsent(c.referencia(), c);
-    }
-    return new ArrayList<>(porReferencia.values());
+    return CitacoesFixas.buscar(busca, DISPOSITIVOS, contexto, "Fundamento de retencao");
   }
 }

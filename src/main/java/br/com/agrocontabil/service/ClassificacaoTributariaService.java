@@ -10,12 +10,16 @@ import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,24 +100,70 @@ public class ClassificacaoTributariaService {
    */
   @Transactional(readOnly = true)
   public TratamentoTributarioNcm tratamentoPorNcm(String ncm, LocalDate data) {
-    List<EnquadramentoAnexo> enquadramentos = enquadramentos(ncm, data);
+    return escolher(ncm, enquadramentos(ncm, data), () -> inNatura(ncm), data,
+        codigo -> classificacao(codigo, data));
+  }
+
+  /**
+   * Tratamento de vários NCMs na mesma data, com a mesma precedência de
+   * {@link #tratamentoPorNcm}, em três consultas em vez de três por NCM (issue #283: a Ceres
+   * explica um item de anexo inteiro, com dezenas de NCMs).
+   *
+   * @param ncms códigos NCM de 8 dígitos (vazios e repetidos são ignorados)
+   * @param data data de referência
+   * @return NCM → tratamento, na ordem recebida
+   */
+  @Transactional(readOnly = true)
+  public Map<String, TratamentoTributarioNcm> tratamentosPorNcm(
+      Collection<String> ncms, LocalDate data) {
+    List<String> codigos = ncms.stream()
+        .filter(n -> n != null && !n.isBlank())
+        .distinct()
+        .toList();
+    if (codigos.isEmpty()) {
+      return Map.of();
+    }
+    Map<String, List<ClassificacaoTributariaAnexoNcm>> linhasPorNcm = anexoNcmRepository
+        .findVigentesEm(codigos, data).stream()
+        .collect(Collectors.groupingBy(ClassificacaoTributariaAnexoNcm::getNcm));
+    Set<String> inNatura = Set.copyOf(ncmReferenciaRepository.findCodigosInNatura(codigos));
+    Map<String, Optional<ClassificacaoTributaria>> classificacoes = new HashMap<>();
+    Function<String, Optional<ClassificacaoTributaria>> classificacaoDoLote =
+        codigo -> classificacoes.computeIfAbsent(codigo, c -> classificacao(c, data));
+    Map<String, TratamentoTributarioNcm> tratamentos = new LinkedHashMap<>();
+    for (String ncm : codigos) {
+      List<EnquadramentoAnexo> enquadramentos =
+          enquadramentosDe(linhasPorNcm.getOrDefault(ncm, List.of()));
+      tratamentos.put(ncm, escolher(ncm, enquadramentos, () -> inNatura.contains(ncm), data,
+          classificacaoDoLote));
+    }
+    return tratamentos;
+  }
+
+  /**
+   * A precedência da classe, sobre os enquadramentos já lidos. O in natura só é consultado se
+   * nenhum anexo de alíquota zero venceu (no cálculo da nota, uma consulta a menos por item).
+   */
+  private TratamentoTributarioNcm escolher(String ncm, List<EnquadramentoAnexo> enquadramentos,
+      BooleanSupplier inNatura, LocalDate data,
+      Function<String, Optional<ClassificacaoTributaria>> classificacoes) {
     Set<String> enquadrados = enquadramentos.stream()
         .map(EnquadramentoAnexo::cClassTrib)
         .collect(Collectors.toSet());
 
     Optional<String> zero = ANEXOS_ZERO.stream().filter(enquadrados::contains).findFirst();
     if (zero.isPresent()) {
-      return tratamento(ncm, zero.get(), Origem.ANEXO, data, enquadramentos);
+      return tratamento(ncm, zero.get(), Origem.ANEXO, data, enquadramentos, classificacoes);
     }
-    if (inNatura(ncm)) {
-      return tratamento(ncm, IN_NATURA, Origem.IN_NATURA, data, enquadramentos);
+    if (inNatura.getAsBoolean()) {
+      return tratamento(ncm, IN_NATURA, Origem.IN_NATURA, data, enquadramentos, classificacoes);
     }
     Optional<String> sessenta =
         ANEXOS_SESSENTA.stream().filter(enquadrados::contains).findFirst();
     if (sessenta.isPresent()) {
-      return tratamento(ncm, sessenta.get(), Origem.ANEXO, data, enquadramentos);
+      return tratamento(ncm, sessenta.get(), Origem.ANEXO, data, enquadramentos, classificacoes);
     }
-    return tratamento(ncm, INTEGRAL, Origem.SEM_REDUCAO, data, enquadramentos);
+    return tratamento(ncm, INTEGRAL, Origem.SEM_REDUCAO, data, enquadramentos, classificacoes);
   }
 
   /**
@@ -129,7 +179,12 @@ public class ClassificacaoTributariaService {
     if (ncm == null || ncm.isBlank()) {
       return List.of();
     }
-    List<ClassificacaoTributariaAnexoNcm> linhas = anexoNcmRepository.findVigentes(ncm, data);
+    return enquadramentosDe(anexoNcmRepository.findVigentes(ncm, data));
+  }
+
+  /** Itens permitidos e não vedados, na ordem de precedência, a partir das linhas de um NCM. */
+  private static List<EnquadramentoAnexo> enquadramentosDe(
+      List<ClassificacaoTributariaAnexoNcm> linhas) {
     Set<String> vedados = linhas.stream()
         .filter(l -> l.getPermissao() == Permissao.VEDADO)
         .map(l -> l.getItem().getCClassTrib())
@@ -162,8 +217,9 @@ public class ClassificacaoTributariaService {
   }
 
   private TratamentoTributarioNcm tratamento(String ncm, String codigo, Origem origem,
-      LocalDate data, List<EnquadramentoAnexo> enquadramentos) {
-    Optional<ClassificacaoTributaria> classificacao = classificacao(codigo, data);
+      LocalDate data, List<EnquadramentoAnexo> enquadramentos,
+      Function<String, Optional<ClassificacaoTributaria>> classificacoes) {
+    Optional<ClassificacaoTributaria> classificacao = classificacoes.apply(codigo);
     BigDecimal reducao = classificacao
         .map(ClassificacaoTributaria::getPercentualReducaoIbs)
         .orElse(BigDecimal.ZERO);

@@ -5,6 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.model.ClassificacaoTributaria;
@@ -113,6 +116,41 @@ class ClassificacaoTributariaServiceTest {
       // As 4 ultimas colunas nao tem virgula: pRedIBS, pRedCBS, inicio, fim, versao.
       assertThat(campos[n - 5]).as(linha).isEqualTo(campos[n - 4]);
     }
+  }
+
+  @Test
+  @DisplayName("#283: anexo de aliquota zero vence sem consultar o in natura (uma query a menos)")
+  void inNaturaSoQuandoPreciso() {
+    when(anexos.findVigentes(eq("04072100"), any())).thenReturn(List.of(
+        linha("200014", 15, "04072100", Permissao.PERMITIDO, null)));
+    classificacao("200014", "100");
+
+    service.tratamentoPorNcm("04072100", DATA);
+
+    verify(referencia, never()).existsByCodigoAndInNaturaTrue(anyString());
+  }
+
+  @Test
+  @DisplayName("#283: lote = um a um, em uma consulta de anexos, uma de in natura e uma por codigo")
+  void lote() {
+    when(anexos.findVigentesEm(any(), any())).thenReturn(List.of(
+        linha("200014", 15, "04072100", Permissao.PERMITIDO, null),
+        linha("200038", 9, "12019000", Permissao.PERMITIDO, null),
+        linha("200038", 9, "31010000", Permissao.PERMITIDO, null)));
+    when(referencia.findCodigosInNatura(any())).thenReturn(List.of("12019000"));
+    classificacao("200014", "100");
+    classificacao("200036", "60");
+    classificacao("200038", "60");
+
+    var lote = service.tratamentosPorNcm(
+        List.of("04072100", "12019000", "31010000", "99999999", "04072100", ""), DATA);
+
+    assertThat(lote.keySet()).containsExactly("04072100", "12019000", "31010000", "99999999");
+    assertThat(lote.values()).extracting(TratamentoTributarioNcm::cClassTrib)
+        .containsExactly("200014", "200036", "200038", "000001");
+    verify(classificacoes, times(1)).findVigente(eq("200038"), any());
+    verify(anexos, never()).findVigentes(anyString(), any());
+    assertThat(service.tratamentosPorNcm(List.of(), DATA)).isEmpty();
   }
 
   private void classificacao(String codigo, String reducao) {

@@ -592,6 +592,51 @@ class AssistenteChatIntegrationTest {
    * Modelo "fiel": na primeira chamada pede {@code totalComprasPorInsumo}; ao receber o resultado,
    * redige a resposta copiando os números dele.
    */
+  @Test
+  @DisplayName("#283: 'a soja tem reducao?' responde pelo template da tabela oficial, nao pelo modelo")
+  void tratamentoDoProdutoPeloTemplate() throws Exception {
+    modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
+        ? ChatModelSimulado.texto("Sim, a soja e isenta.")
+        : pedirFuncao("consultarTratamentoProduto", Map.of("produtoOuNcm", "soja")));
+
+    perguntar(produtorA, "A soja tem reducao?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.allOf(
+            org.hamcrest.Matchers.containsString("(NCM 1201.90.00): reducao de 60% do IBS e da CBS,"
+                + " como produto agropecuario in natura (LC 214/2025, art. 137; cClassTrib"
+                + " 200036)"),
+            org.hamcrest.Matchers.containsString("Condicao: vendido in natura"),
+            org.hamcrest.Matchers.containsString("IT 2025.002 v1.70"),
+            org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("isenta")))))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("consultarTratamentoProduto"))
+        .andExpect(jsonPath("$.fontesDados[0].parametros.produtoOuNcm").value("soja"));
+  }
+
+  @Test
+  @DisplayName("#283: 'e o adubo?' acha o item do Anexo IX; produto desconhecido vira a frase fixa")
+  void tratamentoAduboEDesconhecido() throws Exception {
+    modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
+        ? ChatModelSimulado.texto("Confira a tabela.")
+        : pedirFuncao("consultarTratamentoProduto", Map.of("produtoOuNcm", "adubo")));
+    perguntar(produtorA, "E o adubo?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
+            "Fertilizantes (adubos)")))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
+            "reducao de 60% do IBS e da CBS, pelo Anexo IX (LC 214/2025, art. 138, Anexo IX;"
+                + " cClassTrib 200038)")));
+
+    modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
+        ? ChatModelSimulado.texto("O trator nao paga nada.")
+        : pedirFuncao("consultarTratamentoProduto", Map.of("produtoOuNcm", "trator")));
+    perguntar(produtorA, "Trator tem reducao?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(
+            br.com.agrocontabil.assistente.ferramentas.TemplateTratamentoProduto
+                .naoEncontrado("trator")));
+  }
+
   private static java.util.function.Function<Prompt, ChatResponse> modeloFiel(
       Map<String, Object> argumentos) {
     return prompt -> {

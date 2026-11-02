@@ -27,6 +27,8 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Só `assistente.adaptador` chama services — e **nunca** repository (é no service que vivem o anti-IDOR e a regra fiscal).
 - Fora do módulo, só `controller` e `config` dependem dele. Nada no módulo é `@Transactional`: a chamada ao modelo nunca roda dentro de transação.
 - Nova necessidade de dado na Ceres = método novo na porta + adaptador chamando um service. Nunca injetar service/repository numa classe do módulo.
+- **Texto que tem de sair do dado** (tratamento de produto, #283; as seções do "o que eu preciso saber?", #266): a função registra o texto pronto no `ContextoAssistente.registrarTextoDoBackend(texto, dispositivos)` e o `orquestracao/TextosDoBackend` o aplica **depois** da validação, com as citações dos dispositivos do dado. Nunca confiar ao modelo um texto que precisa sair igual ao dado.
+- Exemplo em prompt ou descrição de `@Tool` **nunca** é pergunta do gabarito (`SeparacaoTreinoTesteTest` quebra).
 - Extrair a Ceres como serviço (só quando um critério de `memory: ceres-extracao-microsservico-futuro` aparecer) = trocar os adaptadores por clientes HTTP.
 
 ## Fluxo para adicionar um endpoint (checklist)

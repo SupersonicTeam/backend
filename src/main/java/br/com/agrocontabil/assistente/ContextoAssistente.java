@@ -65,6 +65,8 @@ public final class ContextoAssistente {
   private final AtomicReference<DesfechoInteracao> desfechoDados = new AtomicReference<>();
   private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
+  private final List<TextoDoBackend> textosDoBackend =
+      Collections.synchronizedList(new ArrayList<>());
 
   /**
    * Cria o contexto de uma pergunta.
@@ -117,6 +119,53 @@ public final class ContextoAssistente {
       fontesVazias.add(fonte);
     } else {
       consultasComResultado.incrementAndGet();
+    }
+  }
+
+  /**
+   * Registra um texto montado pelo backend a partir do dado (issue #283: o tratamento de um
+   * produto pela tabela oficial). O orquestrador o põe na resposta depois da validação, com as
+   * citações dos dispositivos; o texto do modelo não o substitui.
+   *
+   * @param texto        parágrafo pronto para o usuário
+   * @param dispositivos dispositivos citados, {@code "norma|dispositivo"}
+   */
+  public void registrarTextoDoBackend(String texto, List<String> dispositivos) {
+    textosDoBackend.add(new TextoDoBackend(texto, List.copyOf(dispositivos)));
+  }
+
+  /** Textos do backend desta pergunta, na ordem das funções. */
+  public List<TextoDoBackend> textosDoBackend() {
+    synchronized (textosDoBackend) {
+      return List.copyOf(textosDoBackend);
+    }
+  }
+
+  /**
+   * Texto montado pelo backend.
+   *
+   * @param texto        parágrafo pronto
+   * @param dispositivos dispositivos citados, {@code "norma|dispositivo"}
+   */
+  public record TextoDoBackend(String texto, List<String> dispositivos) {}
+
+  /**
+   * Registra uma consulta a tabela pública (issue #283: a tabela oficial de classificação
+   * tributária). Entra nas fontes (o frontend a mostra e a auditoria a guarda) e, vazia, nas
+   * vazias; mas <strong>não</strong> conta como dado do produtor encontrado: no MISTO, achar a
+   * soja na tabela não é achar compras de soja ({@link #nenhumDadoEncontrado()}, #170).
+   *
+   * @param funcao     nome da função
+   * @param parametros parâmetros efetivamente usados
+   * @param vazio      {@code true} se nada foi achado
+   */
+  public void registrarConsultaDeTabela(
+      String funcao, Map<String, String> parametros, boolean vazio) {
+    FonteDado fonte =
+        new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros)));
+    fontes.add(fonte);
+    if (vazio) {
+      fontesVazias.add(fonte);
     }
   }
 

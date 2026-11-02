@@ -15,12 +15,15 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Nota;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaConsultada;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaDetalhada;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ProdutoTratamento;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.TratamentoProduto;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VendasProduto;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VencimentosDoMes;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
+import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
@@ -174,13 +177,18 @@ public class FerramentasDadosProdutor {
       StatusNotaFiscal.APROVADA, StatusNotaFiscal.DEVOLVIDA);
 
   private final DadosProdutorPorta dados;
+  private final TratamentoProdutoPorta tratamentos;
 
   /**
-   * Constrói as funções sobre a porta de dados do produtor (issue #141: o módulo não enxerga
-   * services nem repositories).
+   * Constrói as funções sobre as portas do módulo (issue #141: o módulo não enxerga services nem
+   * repositories).
+   *
+   * @param dados       dados do produtor
+   * @param tratamentos tabela oficial de classificação tributária (#283)
    */
-  public FerramentasDadosProdutor(DadosProdutorPorta dados) {
+  public FerramentasDadosProdutor(DadosProdutorPorta dados, TratamentoProdutoPorta tratamentos) {
     this.dados = dados;
+    this.tratamentos = tratamentos;
   }
 
   /** Soma das compras de um insumo no período. */
@@ -729,7 +737,71 @@ public class FerramentasDadosProdutor {
             .toList());
   }
 
+  /**
+   * Tratamento do IBS/CBS de um produto pela tabela oficial (issue #283, parte 1): o mesmo dado
+   * que o cálculo da nota usa. A resposta ao usuário é o template do backend
+   * ({@link TemplateTratamentoProduto}), registrado no contexto; o texto do modelo não a troca.
+   */
+  @Tool(name = "consultarTratamentoProduto", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Consulta na tabela oficial de classificacao tributaria se um PRODUTO tem reducao de IBS e \
+      CBS e de quanto: percentual, classificacao (cClassTrib), artigo e anexo da LC 214/2025 e a \
+      condicao. Use para perguntas sobre um produto especifico, como "o feijao tem aliquota \
+      reduzida?", "quanto de CBS incide no milho?" ou "tomate tem desconto no IBS?". O produto \
+      pode ser um nome (ex.: feijao, milho, tomate, calcario) ou um codigo NCM de 8 digitos. Nao \
+      e dado do produtor: vale para qualquer venda do produto.""")
+  public TratamentoProduto consultarTratamentoProduto(
+      @ToolParam(description = "Nome do produto (3 a 60 letras) ou codigo NCM de 8 digitos")
+      String produtoOuNcm,
+      ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    // "NCM 1201.90.00", "1201.90.00" e "12019000" sao o mesmo codigo; o resto e nome.
+    String limpo = produtoOuNcm == null ? ""
+        : produtoOuNcm.replaceFirst("(?i)^\\s*ncm\\b[:\\s]*", "").replaceAll("[.\\s-]", "");
+    String termo;
+    if (!limpo.isEmpty() && limpo.chars().allMatch(Character::isDigit)) {
+      if (limpo.length() != 8) {
+        throw new ParametroFerramentaInvalidoException(
+            "produtoOuNcm deve ser o nome do produto ou um NCM de 8 digitos.");
+      }
+      termo = limpo;
+    } else {
+      termo = termoProduto(produtoOuNcm);
+    }
+    TratamentoProdutoPorta.TratamentoConsultado consulta =
+        tratamentos.consultar(termo, contexto.hoje());
+
+    // Tabela publica, nao dado do produtor: nao conta como "dado encontrado" no MISTO (#170).
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto",
+        parametros("produtoOuNcm", termo), consulta.produtos().isEmpty());
+    contexto.registrarTextoDoBackend(TemplateTratamentoProduto.texto(consulta),
+        TemplateTratamentoProduto.dispositivos(consulta));
+    return new TratamentoProduto(
+        termo,
+        consulta.produtos().stream()
+            .map(p -> new ProdutoTratamento(
+                p.ncm() == null ? null : TemplateTratamentoProduto.ncm(p.ncm()),
+                p.descricao(),
+                p.quantidadeNcms(),
+                TemplateTratamentoProduto.percentual(p.percentualReducao()),
+                p.cClassTrib(),
+                TemplateTratamentoProduto.fundamento(p),
+                p.condicao()))
+            .toList(),
+        consulta.versaoTabela(),
+        consulta.produtos().isEmpty() ? TemplateTratamentoProduto.naoEncontrado(termo) : null);
+  }
+
   // --- validação dos parâmetros vindos do modelo ---
+
+  private static String termoProduto(String valor) {
+    String termo = valor == null ? "" : valor.trim().replaceAll("\\s+", " ");
+    if (termo.length() < TERMO_MINIMO || termo.length() > TERMO_MAXIMO) {
+      throw new ParametroFerramentaInvalidoException(
+          "produtoOuNcm deve ter de 3 a 60 caracteres, ou ser um NCM de 8 digitos.");
+    }
+    return termo;
+  }
 
   private static LocalDate data(String valor, String nome) {
     if (vazio(valor)) {

@@ -55,6 +55,7 @@ class FerramentasDadosProdutorTest {
   private static final LocalDate HOJE = LocalDate.of(2026, 9, 29);
 
   @Mock private DadosProdutorPorta dados;
+  @Mock private br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta tratamentos;
 
   private FerramentasDadosProdutor ferramentas;
   private ContextoAssistente contexto;
@@ -62,7 +63,7 @@ class FerramentasDadosProdutorTest {
 
   @BeforeEach
   void setUp() {
-    ferramentas = new FerramentasDadosProdutor(dados);
+    ferramentas = new FerramentasDadosProdutor(dados, tratamentos);
     contexto = new ContextoAssistente(PRODUTOR, HOJE);
     toolContext = new ToolContext(contexto.comoToolContext());
   }
@@ -656,5 +657,53 @@ class FerramentasDadosProdutorTest {
         .startsWith("Nao encontrei compras").doesNotContainPattern("\\d");
     assertThat(FerramentasDadosProdutor.NADA_VENDIDO)
         .startsWith("Nao encontrei vendas").doesNotContainPattern("\\d");
+  }
+
+  @Test
+  @DisplayName("#283: tratamento do produto pela porta, com fonte, template no contexto e citacao")
+  void tratamentoDoProduto() {
+    var produto = new br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto(
+        "12019000", "Soja", 1, "200036", new BigDecimal("60.00"), true, null, "137",
+        "vendido in natura", true);
+    when(tratamentos.consultar("soja", HOJE)).thenReturn(
+        new br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado(
+            "soja", List.of(produto), "IT 2025.002 v1.70"));
+
+    var r = ferramentas.consultarTratamentoProduto("  soja ", toolContext);
+
+    assertThat(r.produtos()).singleElement().satisfies(p -> {
+      assertThat(p.ncm()).isEqualTo("1201.90.00");
+      assertThat(p.reducao()).isEqualTo("60%");
+      assertThat(p.fundamento()).isEqualTo("LC 214/2025, art. 137");
+      assertThat(p.condicao()).isEqualTo("vendido in natura");
+    });
+    assertThat(r.observacao()).isNull();
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
+    assertThat(contexto.fontes()).extracting(FonteDado::funcao)
+        .containsExactly("consultarTratamentoProduto");
+    assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
+      assertThat(t.texto()).contains("reducao de 60%").contains("Condicao: vendido in natura");
+      assertThat(t.dispositivos()).containsExactly("LC 214/2025|art. 137");
+    });
+    verifyNoInteractions(dados);
+  }
+
+  @Test
+  @DisplayName("#283: NCM com pontos vira 8 digitos; NCM curto e termo curto voltam ao modelo")
+  void tratamentoParametros() {
+    when(tratamentos.consultar("12019000", HOJE)).thenReturn(
+        new br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado(
+            "12019000", List.of(), null));
+
+    var r = ferramentas.consultarTratamentoProduto("NCM 1201.90.00", toolContext);
+
+    assertThat(r.observacao()).isEqualTo(TemplateTratamentoProduto.naoEncontrado("12019000"));
+    assertThat(contexto.fontesVazias()).hasSize(1);
+    // Tabela publica nunca conta como dado do produtor encontrado (MISTO, #170).
+    assertThat(contexto.nenhumDadoEncontrado()).isTrue();
+    assertThatThrownBy(() -> ferramentas.consultarTratamentoProduto("1201", toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
+    assertThatThrownBy(() -> ferramentas.consultarTratamentoProduto("ab", toolContext))
+        .isInstanceOf(ParametroFerramentaInvalidoException.class);
   }
 }

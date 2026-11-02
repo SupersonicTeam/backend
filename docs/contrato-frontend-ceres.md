@@ -296,6 +296,12 @@ envelope.
    | `vencimentosDoMes` | Guias para pagar no mês | `mes` (AAAA-MM) |
    | `consultarNota` | Nota fiscal | `numero` |
    | `totalVendasPorProduto` | Vendas de produto | `descricaoOuNcm`, `dataInicio`, `dataFim` |
+   | `consultarTratamentoProduto` | Tabela oficial de classificação tributária (#283) | `produtoOuNcm` |
+
+   `consultarTratamentoProduto` **não** é dado do produtor: é a tabela oficial (IT 2025.002), igual
+   para todos. Para ela, o rótulo "Calculado a partir das suas notas" não serve; mostre "Consultado
+   na tabela oficial do IBS/CBS". A resposta vem com `citacoes` (o artigo da LC 214/2025 do
+   tratamento). Sugestão de atalho do chat: "O [produto] tem redução de IBS e CBS?".
 
    Os valores de `parametros` já vêm mascarados (CPF, CNPJ etc. viram `[CPF]`...). Podem ser
    exibidos como estão.

@@ -49,9 +49,12 @@ public final class PromptsCeres {
       Classifique a pergunta de um produtor rural ao AgroContabil em UMA intencao:
       - DADOS: pede os dados dele no sistema - valores, compras, vendas, notas fiscais, IBS/CBS \
       apurados, creditos, retencoes nas vendas, guias e vencimentos (ex.: "quanto de Funrural \
-      foi retido nas minhas vendas?").
+      foi retido nas minhas vendas?"); ou se um PRODUTO especifico tem reducao de IBS/CBS, que \
+      o sistema consulta na tabela oficial (ex.: "o feijao tem aliquota reduzida?", "quanto de \
+      CBS incide no milho?").
       - LEGISLACAO: pergunta sobre a lei da reforma tributaria (IBS, CBS, EC 132/2023, \
-      LC 214/2025) ou do Funrural: regras, aliquotas, reducoes, isencoes, creditos, obrigacoes.
+      LC 214/2025) ou do Funrural: regras, aliquotas, reducoes, isencoes, creditos, obrigacoes, \
+      sem nomear um produto especifico.
       - MISTO: precisa dos dados dele E da regra legal (ex.: "tenho direito a credito nessas \
       compras?", "minha apuracao esta de acordo com a reducao para insumos?").
       - FORA_DE_ESCOPO: qualquer outro assunto.
