@@ -49,4 +49,19 @@ class FrasesSinaisNotaTest {
     assertThat(FrasesSinaisNota.curta(emoji)).endsWith("\uD83D\uDE9C...");
     assertThat(FrasesSinaisNota.texto(9, null, List.of())).isEmpty();
   }
+
+  @Test
+  @DisplayName("#276 PR 2: valor fora do padrao e duplicidade, com os valores do dado")
+  void valorEDuplicidade() {
+    assertThat(FrasesSinaisNota.texto(116, null, List.of(new Sinal("VALOR_UNITARIO_FORA_PADRAO",
+        "ACIMA_DO_PADRAO", "ANTES_DE_EMITIR", 1, "Milho em grao", "5101", null, "KG",
+        new java.math.BigDecimal("1450.00"), new java.math.BigDecimal("1.45"), null))))
+        .isEqualTo("Na nota 116, o preco do item 'Milho em grao' (R$ 1.450,00 por KG) esta bem"
+            + " acima do que voce costuma cobrar (perto de R$ 1,45 por KG). Confira o valor e a"
+            + " unidade antes de emitir.");
+    assertThat(FrasesSinaisNota.texto(116, 2, List.of(new Sinal("POSSIVEL_DUPLICIDADE",
+        "MESMA_VENDA", "ANTES_DE_EMITIR", null, null, null, null, null, null, null, 112L))))
+        .isEqualTo("A nota 116 (serie 2) tem o mesmo destinatario, valor e itens da nota 112, do"
+            + " mesmo dia. Confira se nao e a mesma venda emitida duas vezes.");
+  }
 }

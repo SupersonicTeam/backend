@@ -795,11 +795,89 @@ public interface NotaFiscalRepository
    */
   @Query("""
       SELECT new br.com.agrocontabil.repository.ItemParaSinal(
-          i.numeroItem, i.descricao, i.cfop, i.ncm)
+          i.numeroItem, i.descricao, i.cfop, i.ncm, i.unidade, i.quantidade, i.valorUnitario)
       FROM NotaFiscalItem i
       WHERE i.notaFiscal.id = :notaId AND i.notaFiscal.produtor.id = :produtorId
       ORDER BY i.numeroItem
       """)
   List<ItemParaSinal> findItensParaSinais(
       @Param("notaId") UUID notaId, @Param("produtorId") UUID produtorId);
+
+  /**
+   * A nota do produtor com o que o sinal de duplicidade compara (issue #276).
+   *
+   * @param notaId     nota
+   * @param produtorId dono esperado
+   * @return vazio se a nota não é do produtor
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.NotaParaDuplicidade(
+          n.id, n.numero, n.destinatarioCpfCnpj, n.valorTotalNota)
+      FROM NotaFiscal n
+      WHERE n.id = :notaId AND n.produtor.id = :produtorId
+      """)
+  Optional<NotaParaDuplicidade> findParaDuplicidade(
+      @Param("notaId") UUID notaId, @Param("produtorId") UUID produtorId);
+
+  /**
+   * Outras notas próprias do mesmo produtor, não canceladas nem rejeitadas, com o mesmo
+   * destinatário e o mesmo valor total, emitidas no mesmo dia (issue #276). Os itens são
+   * comparados no service. Usa o índice {@code (produtor_id, status, data_emissao)} (0019).
+   *
+   * @param produtorId   produtor da sessão
+   * @param notaId       a nota consultada (fica de fora)
+   * @param destinatario documento do destinatário
+   * @param valorTotal   valor total
+   * @param inicio       começo do dia (BRT), inclusivo
+   * @param fim          começo do dia seguinte, exclusivo
+   * @param excluidos    situações que não contam
+   * @return candidatas, a mais recente primeiro
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.NotaParaDuplicidade(
+          n.id, n.numero, n.destinatarioCpfCnpj, n.valorTotalNota)
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.id <> :notaId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status NOT IN :excluidos
+        AND n.destinatarioCpfCnpj = :destinatario
+        AND n.valorTotalNota = :valorTotal
+        AND n.dataEmissao >= :inicio AND n.dataEmissao < :fim
+      ORDER BY n.dataEmissao DESC, n.id DESC
+      """)
+  List<NotaParaDuplicidade> findPossiveisDuplicadas(@Param("produtorId") UUID produtorId,
+      @Param("notaId") UUID notaId, @Param("destinatario") String destinatario,
+      @Param("valorTotal") java.math.BigDecimal valorTotal, @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim, @Param("excluidos") Collection<StatusNotaFiscal> excluidos);
+
+  /**
+   * Valores unitários do mesmo NCM e unidade nas vendas autorizadas do produtor desde uma data,
+   * fora a nota consultada (issue #276), das mais recentes para as mais antigas.
+   *
+   * @param produtorId produtor da sessão
+   * @param notaId     a nota consultada (fica de fora)
+   * @param ncm        NCM do item
+   * @param unidade    unidade do item
+   * @param desde      emissão mínima
+   * @param pagina     teto de itens lidos
+   * @return valores com a nota de cada um
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.ValorUnitarioReferencia(
+          i.notaFiscal.id, i.valorUnitario)
+      FROM NotaFiscalItem i
+      WHERE i.notaFiscal.produtor.id = :produtorId
+        AND i.notaFiscal.id <> :notaId
+        AND i.notaFiscal.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND i.notaFiscal.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND i.ncm = :ncm AND i.unidade = :unidade
+        AND i.valorUnitario IS NOT NULL
+        AND i.notaFiscal.dataEmissao >= :desde
+      ORDER BY i.notaFiscal.dataEmissao DESC
+      """)
+  List<ValorUnitarioReferencia> findValoresUnitariosDeReferencia(
+      @Param("produtorId") UUID produtorId, @Param("notaId") UUID notaId,
+      @Param("ncm") String ncm, @Param("unidade") String unidade,
+      @Param("desde") OffsetDateTime desde, Pageable pagina);
 }

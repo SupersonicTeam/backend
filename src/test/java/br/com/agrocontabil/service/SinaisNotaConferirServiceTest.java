@@ -154,6 +154,18 @@ class SinaisNotaConferirServiceTest {
     verify(referencia, never()).existsByCodigo(anyString());
   }
 
+  @Test
+  @DisplayName("mediana: o do meio, ou a media dos dois do meio")
+  void mediana() {
+    assertThat(SinaisNotaConferirService.mediana(List.of(
+        new java.math.BigDecimal("1"), new java.math.BigDecimal("2"),
+        new java.math.BigDecimal("9")))).isEqualByComparingTo("2");
+    assertThat(SinaisNotaConferirService.mediana(List.of(
+        new java.math.BigDecimal("1"), new java.math.BigDecimal("2"),
+        new java.math.BigDecimal("3"), new java.math.BigDecimal("10"))))
+        .isEqualByComparingTo("2.5");
+  }
+
   private NotaParaSinal nota(StatusNotaFiscal status, OffsetDateTime emissao) {
     return new NotaParaSinal(NOTA, OrigemNotaFiscal.PROPRIA, status, emissao);
   }
@@ -163,6 +175,6 @@ class SinaisNotaConferirServiceTest {
   }
 
   private static ItemParaSinal item(int numero, String descricao, String cfop, String ncm) {
-    return new ItemParaSinal(numero, descricao, cfop, ncm);
+    return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null);
   }
 }
