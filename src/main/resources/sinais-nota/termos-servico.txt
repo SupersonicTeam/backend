@@ -1,0 +1,33 @@
+# Termos que, na descricao de um item de NF-e de produto, sugerem servico (issue #276,
+# sinal PRODUTO_PARECE_SERVICO). Um por linha; acento, caixa e pontuacao sao ignorados
+# ("mao-de-obra" = "mao de obra"). Casam palavra inteira (ou expressao inteira), entao o plural
+# entra como linha propria. Revisao do avaliador externo: #275; validacao do contador: #284,
+# perguntas 13 e 14.
+#
+# Fora de proposito: "transporte" e "armazenagem" sozinhos (aparecem em produto: "big bag para
+# transporte", "soja - remessa para armazenagem"); servico de transporte entra por "frete" ou
+# "servico".
+servico
+servicos
+prestacao
+prestacoes
+colheita
+colheitas
+plantio
+pulverizacao
+pulverizacoes
+aplicacao
+aplicacoes
+frete
+fretes
+aluguel
+alugueis
+locacao
+locacoes
+mao de obra
+hora maquina
+horas maquina
+diaria
+diarias
+empreitada
+empreitadas

@@ -196,8 +196,8 @@ public final class RespostasFerramentas {
    * @param motivoDevolucao  motivo da devolução pelo contador, só com a nota ainda devolvida
    * @param inconsistencias  o que corrigir (último lote de validação), só com a nota em
    *                         {@code COM_INCONSISTENCIAS}
-   * @param sinais           sinais de nota a conferir; sempre vazio por enquanto (a #276 os
-   *                         preenche)
+   * @param sinais           códigos dos sinais de nota a conferir (#276), sem a descrição do
+   *                         item: a frase ao usuário é do backend
    */
   public record NotaDetalhada(long numero, int serie, String dataEmissao, String tipo,
       String situacao, String explicacao, String valorTotal, String valorIbs, String valorCbs,

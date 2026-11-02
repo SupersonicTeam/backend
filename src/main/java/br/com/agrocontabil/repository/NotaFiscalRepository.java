@@ -784,4 +784,22 @@ public interface NotaFiscalRepository
    */
   @Query("SELECT n.status FROM NotaFiscal n WHERE n.id = :id")
   Optional<StatusNotaFiscal> findStatusById(@Param("id") UUID id);
+
+  /**
+   * Itens de uma nota do produtor, só os campos dos sinais de nota a conferir (issue #276). Nota de
+   * outro produtor = lista vazia.
+   *
+   * @param notaId     nota
+   * @param produtorId dono esperado
+   * @return itens na ordem do número
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.ItemParaSinal(
+          i.numeroItem, i.descricao, i.cfop, i.ncm)
+      FROM NotaFiscalItem i
+      WHERE i.notaFiscal.id = :notaId AND i.notaFiscal.produtor.id = :produtorId
+      ORDER BY i.numeroItem
+      """)
+  List<ItemParaSinal> findItensParaSinais(
+      @Param("notaId") UUID notaId, @Param("produtorId") UUID produtorId);
 }

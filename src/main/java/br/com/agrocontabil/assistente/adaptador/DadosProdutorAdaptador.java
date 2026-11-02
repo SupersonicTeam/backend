@@ -155,6 +155,10 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
             n.valorTotal(), n.valorIbs(), n.valorCbs(), n.motivoDevolucao(),
             n.inconsistencias().stream()
                 .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
+                .toList(),
+            n.sinais().stream()
+                .map(x -> new Sinal(x.codigo().name(), x.motivo().name(), x.momento().name(),
+                    x.numeroItem(), x.descricaoItem(), x.cfop(), x.prazoCancelamento()))
                 .toList()))
         .toList(), r.total());
   }

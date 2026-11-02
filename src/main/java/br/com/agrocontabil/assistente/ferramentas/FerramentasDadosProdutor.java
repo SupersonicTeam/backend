@@ -670,7 +670,10 @@ public class FerramentasDadosProdutor {
       inconsistencias a corrigir. Use para perguntas sobre uma nota especifica, como "por que a \
       nota 118 esta devolvida?", "o que preciso corrigir na nota 118 para emitir?" ou "quanto de \
       IBS e CBS a nota 113 gera?". Se vier mais de uma nota com o mesmo numero, diga a serie e o \
-      tipo de cada uma.""")
+      tipo de cada uma. O campo sinais traz codigos de pontos a conferir na nota: o sistema \
+      acrescenta a explicacao de cada um depois da sua resposta, entao nao cite os codigos, nao \
+      diga que a nota esta errada e nao diga que nao ha nada a conferir quando sinais vier \
+      preenchido.""")
   public NotaConsultada consultarNota(
       @ToolParam(description = "Numero da nota, de 1 a 999999999") Integer numero,
       ToolContext toolContext) {
@@ -683,6 +686,13 @@ public class FerramentasDadosProdutor {
     List<DadosProdutorPorta.NotaDetalhe> notas = pagina.itens();
     contexto.registrarFonte("consultarNota", parametros("numero", String.valueOf(numero)),
         notas.isEmpty());
+    // Sinais de nota a conferir (#276): ao modelo, so os codigos; a frase, com a descricao do
+    // item (texto livre), entra na resposta pelo backend depois da validacao.
+    notas.stream()
+        .map(n -> FrasesSinaisNota.texto(n.numero(), notas.size() > 1 ? n.serie() : null,
+            n.sinais()))
+        .filter(texto -> !texto.isEmpty())
+        .forEach(texto -> contexto.registrarTextoDoBackend(texto, List.of()));
     return new NotaConsultada(numero, pagina.total(), notas.stream()
         .map(n -> new NotaDetalhada(n.numero(), n.serie(), FormatoBr.data(n.dataEmissao()),
             n.origem() == OrigemNotaFiscal.IMPORTADA ? "ENTRADA" : "SAIDA", n.status().name(),
@@ -691,7 +701,7 @@ public class FerramentasDadosProdutor {
             n.inconsistencias().stream()
                 .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
                 .toList(),
-            List.of()))
+            n.sinais().stream().map(DadosProdutorPorta.Sinal::codigo).distinct().toList()))
         .toList(),
         notas.isEmpty() ? "Nao encontrei a nota " + numero + " nas suas notas." : null);
   }

@@ -18,6 +18,7 @@ import br.com.agrocontabil.repository.AssistenteInteracaoRepository;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
+import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.ContadorRepository;
@@ -635,6 +636,33 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.resposta").value(
             br.com.agrocontabil.assistente.ferramentas.TemplateTratamentoProduto
                 .naoEncontrado("trator")));
+  }
+
+  @Test
+  @DisplayName("#276: nota com item de servico em CFOP 5949 traz a frase fixa do sinal, pelo backend")
+  void notaComSinalDeServico() throws Exception {
+    NotaFiscal nota = br.com.agrocontabil.support.DadosCeresFixture.saida(produtorA,
+        em(2026, 10, 20), "Servico de colheita de soja", "12019000", "800.00");
+    nota.setStatus(StatusNotaFiscal.RASCUNHO);
+    nota.setNumero(116L);
+    nota.getItens().get(0).setCfop("5949");
+    notaFiscalRepository.save(nota);
+    modelo.responderCom(prompt -> {
+      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
+        // O modelo so ve o codigo do sinal, nunca a descricao do item.
+        assertThat(respostas.getResponses().get(0).responseData())
+            .contains("PRODUTO_PARECE_SERVICO").doesNotContain("colheita");
+        return ChatModelSimulado.texto("A nota 116 e um rascunho.");
+      }
+      return pedirFuncao("consultarNota", Map.of("numero", 116));
+    });
+
+    perguntar(produtorA, "Tem algo para conferir na nota 116?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value("A nota 116 e um rascunho.\n\nNa nota 116, o item"
+            + " 'Servico de colheita de soja' saiu com CFOP 5.949 (outra saida nao especificada) e"
+            + " parece um servico. Servico normalmente nao sai em nota de produto: confira com seu"
+            + " contador antes de emitir."));
   }
 
   private static java.util.function.Function<Prompt, ChatResponse> modeloFiel(

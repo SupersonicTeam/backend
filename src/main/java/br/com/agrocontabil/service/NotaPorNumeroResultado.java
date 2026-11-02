@@ -23,14 +23,17 @@ import java.util.List;
  * @param inconsistencias  as do último lote de validação (#22), só com a nota em
  *                         {@code COM_INCONSISTENCIAS}; só código, campo, mensagem e sugestão (o
  *                         valor rejeitado pode ser dado pessoal e fica fora)
+ * @param sinais           sinais de nota a conferir (#276), só nas notas próprias
  */
 public record NotaPorNumeroResultado(long numero, int serie, OffsetDateTime dataEmissao,
     OrigemNotaFiscal origem, StatusNotaFiscal status, BigDecimal valorTotal, BigDecimal valorIbs,
-    BigDecimal valorCbs, String motivoDevolucao, List<Inconsistencia> inconsistencias) {
+    BigDecimal valorCbs, String motivoDevolucao, List<Inconsistencia> inconsistencias,
+    List<SinalNota> sinais) {
 
-  /** Cópia defensiva. */
+  /** Cópias defensivas. */
   public NotaPorNumeroResultado {
     inconsistencias = List.copyOf(inconsistencias);
+    sinais = List.copyOf(sinais);
   }
 
   /**

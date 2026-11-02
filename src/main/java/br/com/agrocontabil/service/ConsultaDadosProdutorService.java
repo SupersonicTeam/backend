@@ -63,16 +63,22 @@ public class ConsultaDadosProdutorService {
   private final GuiaFiscalRepository guiaFiscalRepository;
   private final NotaFiscalRevisaoRepository revisaoRepository;
   private final NotaFiscalValidacaoRepository validacaoRepository;
+  private final SinaisNotaConferirService sinaisService;
 
-  /** Constrói o serviço com os repositórios de notas, guias, revisões e validações. */
+  /**
+   * Constrói o serviço com os repositórios de notas, guias, revisões e validações, e os sinais de
+   * nota a conferir (#276).
+   */
   public ConsultaDadosProdutorService(
       NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository,
       NotaFiscalRevisaoRepository revisaoRepository,
-      NotaFiscalValidacaoRepository validacaoRepository) {
+      NotaFiscalValidacaoRepository validacaoRepository,
+      SinaisNotaConferirService sinaisService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.revisaoRepository = revisaoRepository;
     this.validacaoRepository = validacaoRepository;
+    this.sinaisService = sinaisService;
   }
 
   /**
@@ -91,7 +97,8 @@ public class ConsultaDadosProdutorService {
     Page<NotaPorNumeroLinha> pagina = notaFiscalRepository.findDoProdutorPorNumero(
         produtorId, numero, PageRequest.of(0, LIMITE_NOTAS_POR_NUMERO));
     return new NotasPorNumero(
-        pagina.getContent().stream().map(this::detalhe).toList(), pagina.getTotalElements());
+        pagina.getContent().stream().map(n -> detalhe(produtorId, n)).toList(),
+        pagina.getTotalElements());
   }
 
   /**
@@ -102,7 +109,7 @@ public class ConsultaDadosProdutorService {
    */
   public record NotasPorNumero(List<NotaPorNumeroResultado> notas, long total) {}
 
-  private NotaPorNumeroResultado detalhe(NotaPorNumeroLinha n) {
+  private NotaPorNumeroResultado detalhe(UUID produtorId, NotaPorNumeroLinha n) {
     String motivo = n.status() != StatusNotaFiscal.DEVOLVIDA ? null
         : revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(n.id()).stream()
             .filter(r -> r.getAcao() == AcaoRevisao.DEVOLVIDA)
@@ -124,7 +131,9 @@ public class ConsultaDadosProdutorService {
     // IBS/CBS destacados na nota, como em listarNotas (o credito da compra e outra coisa).
     return new NotaPorNumeroResultado(n.numero(), n.serie(), n.dataEmissao(), n.origem(),
         n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
-        motivo, inconsistencias);
+        motivo, inconsistencias,
+        sinaisService.sinais(produtorId, new SinaisNotaConferirService.NotaParaSinal(
+            n.id(), n.origem(), n.status(), n.dataEmissao())));
   }
 
   /**
