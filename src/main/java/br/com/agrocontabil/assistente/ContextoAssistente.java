@@ -65,6 +65,7 @@ public final class ContextoAssistente {
   private final AtomicReference<DesfechoInteracao> desfechoDados = new AtomicReference<>();
   private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
+  private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
   private final List<TextoDoBackend> textosDoBackend =
       Collections.synchronizedList(new ArrayList<>());
 
@@ -120,6 +121,20 @@ public final class ContextoAssistente {
     } else {
       consultasComResultado.incrementAndGet();
     }
+  }
+
+  /**
+   * Registra qual camada decidiu a rota (#265): regra, embedding, modelo... Vai à auditoria.
+   *
+   * @param camada nome da camada
+   */
+  public void registrarCamadaClassificacao(String camada) {
+    camadaClassificacao.set(camada);
+  }
+
+  /** Camada que decidiu a rota; nula se a pergunta acabou antes da classificação. */
+  public String camadaClassificacao() {
+    return camadaClassificacao.get();
   }
 
   /**

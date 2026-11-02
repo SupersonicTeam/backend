@@ -104,5 +104,9 @@ app:
   # Cota semanal da Ceres (#166): desligada nos testes da Ceres em geral (dezenas de perguntas por
   # produtor); os testes da cota a ligam com @TestPropertySource.
   assistente:
+    # Os testes de rota programam o classificador (ChatModelSimulado.classificarComo); as camadas
+    # da #265 tem testes proprios, que as ligam.
+    classificacao:
+      camadas: false
     cota:
       habilitada: false

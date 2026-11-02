@@ -280,9 +280,37 @@ dar zero.
 
 ### Rotas
 
-O `ClassificadorIntencao` (Fase 1: `LlmClassificadorIntencao`, saída JSON do próprio modelo; a
-Fase 2 troca a implementação sem mexer no orquestrador) devolve a intenção e a confiança. O
-`OrquestradorService` decide:
+O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada decidiu**. Desde a #265
+(Fase 2) a implementação é o `ClassificadorEmCamadas`, da camada mais barata para a mais cara:
+
+1. **`FiltroInjecao`** (no orquestrador, antes de tudo): injeção → `FORA_DE_ESCOPO`.
+2. **`RegrasClassificacao`**: só decide com **sinal de um lado só**. Termo de lei inequívoco (IBS,
+   CBS, split payment, Funrural, crédito presumido, Anexo, alíquota, redução, LC 214...) sem marcador
+   de dados → `LEGISLACAO`. Marcador de dados do produtor ("minhas notas", "quanto vendi", "a nota
+   107", "tenho alguma guia", "o que vence este mês", mês e ano) sem termo de lei → `DADOS`.
+   Pronome solto não é marcador ("meu vizinho paga Funrural?"). Não decide: os dois lados
+   (candidato a MISTO), lei com produto específico ("arroz paga IBS?", fronteira com a #283) e
+   pedidos criativos, de recomendação ou de cotação ("escreva uma música sobre o IBS"). O
+   `RegrasClassificacaoTest` exige **zero erros** nas perguntas do gabarito que a regra decide
+   (hoje mais de 30, com 5 ou mais adversárias).
+3. **`EmbeddingClassificadorIntencao`**: kNN sobre o BGE-M3 contra o **conjunto de treino**
+   (`src/main/resources/ceres/treino/classificacao-rota.json`, ~260 perguntas da equipe, nenhuma do
+   gabarito nem paráfrase dela, com a mesma guarda da #264). Os 7 vizinhos votam com peso
+   similaridade⁸; decide se o mais próximo passar de `AI_CLASSIFICACAO_SIMILARIDADE_MINIMA` (0,5) e a
+   confiança passar de `AI_CLASSIFICACAO_LIMIAR` (0,6). Vetores do treino calculados uma vez, em
+   segundo plano depois da subida (a subida nunca espera o Ollama); até lá, a camada não decide.
+4. **`LlmClassificadorIntencao`** (Fase 1): **só no desempate**, e no MISTO decidido pelas
+   embeddings para separar a `perguntaLei` (as camadas 1 e 2 decidem só a rota). Sem decisão das
+   camadas com o modelo em pausa: palavras-chave do `ModoFallback` (`PALAVRAS_CHAVE`).
+
+Com o modelo fora, regras e embeddings seguem decidindo. A camada vai à auditoria
+(`assistente_interacao.camada_classificacao`, changeSet 0050, sem o texto) e ao relatório da
+avaliação ("Por camada da classificação": decididas, acertos, erros e a parcela de cada uma,
+inclusive a do desempate). `AI_CLASSIFICACAO_CAMADAS=false` volta à Fase 1 (o profile `test` usa
+assim, para os testes de rota programarem o classificador; o `ClassificacaoEmCamadasIntegrationTest`
+liga as camadas).
+
+O `OrquestradorService` decide:
 
 | Intenção | Camada |
 |---|---|

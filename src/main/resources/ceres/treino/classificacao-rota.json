@@ -1,0 +1,1034 @@
+{
+ "versao": "2026-11-02.1",
+ "descricao": "Conjunto de treino do classificador de rota da Ceres (#265). Escrito pela equipe, DIFERENTE do gabarito (docs/avaliacao/gabarito-ceres.json): nenhuma pergunta do gabarito nem parafrase dela. Revisao humana pedida no PR.",
+ "exemplos": [
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi a despesa com ração para o gado no último trimestre?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Calcário: quanto eu desembolsei no ano passado?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Somando as notas de ureia de março a maio, quanto deu?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Me mostra minhas compras de sal mineral deste ano"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto saiu de combustível nas minhas notas de setembro?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quais compras de vacina para o rebanho eu lancei em 2025?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto paguei em lona e arame no mês passado?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi meu gasto com herbicida 2,4-D na safrinha?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi a nota de compra de maior valor do ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "De quantos fornecedores diferentes eu comprei este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto faturei com café no ano passado?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi o faturamento com algodão em pluma este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Me mostra minhas vendas de leite de setembro"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual o total das minhas vendas de boi gordo no trimestre?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quantas vendas eu fiz para a cooperativa este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi a primeira nota que emiti este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi a minha maior venda deste mês?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Lista as notas que eu emiti na semana passada"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Me mostra as notas que estão em rascunho"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Tenho nota parada esperando o contador aprovar?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual nota minha foi recusada pela SEFAZ?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Em que situação está a nota 512?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A nota 330 já foi enviada para a SEFAZ?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A nota 77 já foi autorizada?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A nota 245 foi emitida em que dia?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A nota 1890 já foi aprovada pelo escritório?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Em qual mês do ano eu recolhi mais IBS?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A apuração de setembro foi reaberta pelo contador?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A apuração de setembro já fechou?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Como ficou a minha apuração de IBS mês a mês neste ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Em qual mês eu tive mais crédito de IBS?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Tenho saldo credor de IBS?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quais compras de outubro geraram crédito?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Paguei a guia de setembro?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quantas guias eu paguei este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto paguei de guias no ano passado?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual o maior valor de guia que já paguei?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual guia de Funrural eu paguei por último?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual foi o valor da última guia que eu paguei?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Minhas guias de outubro já foram pagas?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quais guias eu já paguei em outubro?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual o histórico de avisos que o sistema me mandou?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quantos avisos de vencimento eu recebi no mês?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "O contador me pediu algum documento?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quais pedidos do escritório estão pendentes?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "O que eu preciso resolver hoje?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Tem alguma pendência na minha conta?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quantas notas eu tenho no total este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual o valor médio das minhas notas de venda?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto eu recebi de vendas no ano passado?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto rendeu a venda de milho da safrinha?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Me mostra o resumo das minhas notas do mês"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto vendi para fora do estado este ano?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quais notas de compra eu importei ontem?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Alguma venda minha foi cancelada em outubro?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "O feijão tem desconto no imposto?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Na venda de cana-de-açúcar o IBS é reduzido?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quanto de CBS incide no tomate?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "O leite que eu vendo tem alíquota reduzida?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "A mandioca paga imposto cheio?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "E a ração animal, tem benefício?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "O calcário entra com redução?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual o tratamento do trigo na tabela?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "O NCM 0713.33.19 tem redução?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Laranja vendida in natura fica livre de IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como funciona o fato gerador do IBS na venda de mercadoria?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que é a base de cálculo da CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quando começa a cobrança integral do IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como vai ser a transição do ICMS para o IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que é o imposto seletivo e quem paga?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como funciona o cashback do IBS para famílias de baixa renda?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que acontece com o crédito de IBS que sobra no fim do mês?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como pedir ressarcimento de saldo credor de CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Cooperativa paga IBS no ato cooperativo?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O produtor integrado com a agroindústria tem regra especial?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como funciona o diferimento do IBS para insumos agropecuários?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Qual é o prazo para recolher o IBS e a CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quem é responsável solidário pelo IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como fica a Zona Franca de Manaus com a reforma?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que diz a EC 132 sobre a não cumulatividade?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que significa não cumulatividade plena?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O IBS incide sobre exportação?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Serviço prestado ao exterior paga CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como a reforma trata a importação de máquinas agrícolas?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Doação de produtos agrícolas paga IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que é o comitê gestor do IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quem administra a CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como é feita a devolução do IBS ao consumidor?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como fica o Simples Nacional depois da reforma?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Produtor rural pessoa física precisa se inscrever no cadastro do IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quais receitas entram no cálculo do faturamento do produtor rural?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O crédito presumido tem limite de valor?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como é calculado o valor do crédito presumido?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quais itens estão listados no Anexo IX da LC 214?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O artigo 138 trata de quê?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O Anexo I trata de quais produtos?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como funciona a alíquota de referência do IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como será definida a alíquota da CBS depois da transição?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como o IBS é dividido entre estado e município?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Qual a diferença entre IBS e CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "A reforma acaba com o PIS e a Cofins?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quando o ICMS deixa de existir?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O split payment começa a valer em que ano?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O produtor precisa ter conta em banco para o split payment?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O split payment vale para pagamento em dinheiro?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que é o Funrural pela Lei 8.212?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O Funrural incide sobre a venda de sementes para plantio?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O produtor pode optar por contribuir sobre a folha em vez do Funrural?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Qual a alíquota do SENAR?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "A exportação de soja paga Funrural?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "A Lei 9.528 trata do quê?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como a LC 214 define produtor rural?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Arrendamento de terra paga IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Venda de imóvel rural tem IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quem está no regime regular emite nota com destaque de imposto?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O produtor pode desistir do regime regular depois de optar?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como funciona a nota fiscal de entrada emitida pelo comprador?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Qual o tratamento da devolução de mercadoria na reforma?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que diz a reforma sobre bens de uso e consumo?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Combustível dá direito a crédito de IBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Energia elétrica usada na fazenda gera crédito de CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como fica o crédito na compra de trator?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Qual a regra de transição das alíquotas entre 2027 e 2033?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Como será a cobrança da CBS em 2027?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O IBS de 2026 é compensado com o PIS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Quais obrigações acessórias o produtor terá com a reforma?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Precisa destacar IBS e CBS na nota de venda de gado?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que é o cClassTrib?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que é o CST do IBS e da CBS?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Cogumelo está entre os hortícolas da alíquota zero?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "A cesta básica nacional foi criada por qual norma?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Insumo veterinário tem redução de alíquota?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "Qual artigo trata da redução para alimentos destinados ao consumo humano?"
+  },
+  {
+   "rota": "LEGISLACAO",
+   "pergunta": "O que a Constituição fala sobre o IBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Ração animal está no Anexo IX? Me diz também o total que comprei dela em outubro."
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas compras de calcário deste ano dão direito a crédito?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "A redução de alíquota vale para o café que vendi neste trimestre? E quanto foi?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto paguei de diesel no ano e diesel gera crédito de CBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "O saldo da minha apuração de setembro está certo com a regra do Anexo IX?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto de IBS municipal saiu nas minhas notas e quem fica com esse dinheiro?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas vendas de leite de setembro têm alíquota zero? Quanto vendi?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Vacina para o rebanho entra como insumo com redução? E quanto foi meu gasto com isso?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Tenho crédito de IBS acumulado? A lei deixa pedir ressarcimento?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi para a cooperativa e como fica o Funrural nessas vendas?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minha nota 812 de venda de milho tem a redução certa da LC 214?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "As minhas compras de ureia de outubro geram crédito presumido?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Qual o débito de IBS das minhas vendas de café e qual alíquota foi usada?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto recolhi de Funrural este ano e qual a alíquota da lei?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de algodão e algodão in natura tem redução?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Meus créditos do trimestre seguem a não cumulatividade da reforma?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto paguei de energia elétrica e posso tomar crédito disso?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Tenho guia de IBS para pagar e qual o prazo legal de recolhimento?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de boi gordo e gado vivo tem redução de IBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Qual o total das minhas compras de fertilizante orgânico e esse adubo tem benefício?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei de máquina este ano e a lei dá crédito na compra de máquina?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "O IBS da minha apuração de outubro considera a redução dos insumos? Quanto deu?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas notas de venda de tomate saíram com alíquota zero como a lei prevê?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto paguei de frete nas compras e frete gera crédito?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Vendi soja para outro estado; quanto foi e o IBS fica com qual estado?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de ovos no mês e ovos têm alíquota zero?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quantas notas eu emiti com CBS destacada e todo produtor precisa destacar a CBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei de sal mineral e sal mineral é insumo agropecuário?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minha apuração do mês tem saldo credor; a lei permite transferir esse crédito?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei de embalagens e embalagem dá crédito de IBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "As vendas de frutas que eu fiz em setembro têm isenção? Quanto foram?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto de CBS paguei em outubro e como a CBS de 2026 é compensada?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei da cooperativa e a compra de cooperativa tem crédito?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas notas de outubro estão com o cClassTrib certo para a soja? Quanto vendi?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto paguei de arrendamento e arrendamento tem IBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de mel este ano e mel tem redução de alíquota?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto gastei com mudas de eucalipto e muda é insumo com redução?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "O valor de IBS das minhas vendas de milho respeita a redução do produto in natura?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Tenho guia de Funrural vencida e qual a multa prevista na lei?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de trigo e o trigo entra na cesta básica?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei de adubo foliar este ano e adubo foliar tem redução?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto foi o crédito presumido das minhas compras de produtor rural e qual a regra?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas vendas de laranja do trimestre: quanto foram e laranja tem alíquota zero?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto paguei de IBS em setembro e esse valor pode ser devolvido no cashback?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de cana e cana-de-açúcar tem tratamento especial no IBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Qual o total das minhas compras de peças e peça de máquina gera crédito de CBS?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto vendi de sorgo e o sorgo tem redução de 60%?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "A redução que aparece nas minhas notas de café está certa pela LC 214?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto ficou de saldo a pagar de IBS e quando vence pela lei?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei de medicamento veterinário e tem redução de alíquota?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Minhas vendas de arroz em casca: quanto deu e arroz em casca tem alíquota zero?"
+  },
+  {
+   "rota": "MISTO",
+   "pergunta": "Quanto comprei de lona e lona é insumo do Anexo IX?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Por que o céu é azul?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a melhor época para plantar feijão?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como faço para curar mastite no gado?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual trator é melhor para uma fazenda pequena?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como calcular o peso do boi pela fita?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Quanto custa um hectare de terra no Mato Grosso?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me conta uma piada de fazendeiro"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Escreva uma carta de amor para minha esposa"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como se diz obrigado em japonês?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Quem é o presidente do Brasil?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a altura do Everest?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como afiar uma faca?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como emagrecer rápido?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a capital da Austrália?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Recomende um filme para o fim de semana"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como programar em Python?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me ajuda a escrever um currículo"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual remédio tomar para dor de cabeça?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como consertar o motor da caminhonete?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como fazer análise de solo?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Vale a pena investir em ações da Petrobras?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como faço um empréstimo no banco?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o melhor seguro para a lavoura?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como funciona o Pix?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me fala sobre a história do Brasil colônia"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a distância entre Cuiabá e Goiânia?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como plantar alface hidropônico?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Faça um resumo do livro Dom Casmurro"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a raça de vaca que dá mais leite?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como controlar a ferrugem asiática na soja?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Que horas são agora?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me dá uma ideia de presente de aniversário"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Invente um nome para minha fazenda"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o significado da palavra resiliência?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como cuidar de cavalos?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o maior deserto do mundo?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Sugira um nome para um bezerro"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como fazer queijo minas?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Que dia cai o Carnaval do ano que vem?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me ensina a calcular a dosagem de calcário pela análise de solo"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a cotação do dólar hoje?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como regular o pulverizador?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Onde comprar semente barata?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Quem inventou o trator?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como fazer um churrasco perfeito?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como funciona o inventário de bens?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como está o trânsito na rodovia?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual é a previsão de safra de soja do país?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como se tornar um influenciador do agro?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Quantos ossos tem o corpo humano?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Quantos litros tem um barril de petróleo?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como conservar queijo por mais tempo?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o melhor celular para usar na roça?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como tirar mancha de graxa da roupa?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como montar uma horta em casa?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Escreva um texto de despedida para um colega"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o horário de funcionamento do banco?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como funciona o horóscopo?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual a melhor ração para cachorro?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como aumentar a produtividade do pasto?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "O que significa a palavra harvest?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o maior rio do mundo?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me explique a teoria da relatividade"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como abrir uma conta no Instagram?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Qual o preço do diesel no posto hoje?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Conte uma história para criança dormir"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Quem descobriu o Brasil?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como fazer compostagem?"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Me fale sobre a vida de Santos Dumont"
+  },
+  {
+   "rota": "FORA_DE_ESCOPO",
+   "pergunta": "Como faço para tirar CNH?"
+  }
+ ]
+}

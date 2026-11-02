@@ -479,14 +479,15 @@ class AssistenteChatIntegrationTest {
   void auditoriaGravaPartesDoMisto() {
     auditoriaPorta.registrar(new AuditoriaPorta.RegistroInteracao(produtorA.getId(), "MISTO",
         DesfechoInteracao.RESPONDIDA, DesfechoInteracao.RESPONDIDA,
-        DesfechoInteracao.CITACAO_INVALIDA, true, "[]", 1, null, "none/simulado", 10, 20, 5,
-        false, 80, OffsetDateTime.now()));
+        DesfechoInteracao.CITACAO_INVALIDA, true, "EMBEDDING", "[]", 1, null, "none/simulado",
+        10, 20, 5, false, 80, OffsetDateTime.now()));
 
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement().satisfies(i -> {
           assertThat(i.getDesfechoDados()).isEqualTo(DesfechoInteracao.RESPONDIDA);
           assertThat(i.getDesfechoLegislacao()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
           assertThat(i.getPerguntaLeiReescrita()).isTrue();
+          assertThat(i.getCamadaClassificacao()).isEqualTo("EMBEDDING");
         });
   }
 

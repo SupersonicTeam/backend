@@ -38,6 +38,12 @@ public final class SeparacaoTreinoTeste {
   /** Diretório dos exemplos de treino. */
   public static final Path TREINO = Path.of("docs/avaliacao/treino");
 
+  /**
+   * Treino que vai dentro do JAR (#265): o conjunto do classificador de rota precisa estar no
+   * classpath, e a imagem só copia {@code src}. Mesma guarda que o diretório de treino.
+   */
+  public static final Path TREINO_EMBUTIDO = Path.of("src/main/resources/ceres/treino");
+
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");
   private static final Pattern ESCAPE_UNICODE = Pattern.compile("\\\\u([0-9a-fA-F]{4})");
   private static final Pattern NAO_ALFANUMERICO = Pattern.compile("[^a-z0-9]+");

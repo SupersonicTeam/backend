@@ -146,6 +146,7 @@ public class AvaliacaoCeresRunner implements ApplicationRunner {
       exigirAmbienteDeDesenvolvimento(ambiente);
       Gabarito gabarito = carregarGabarito();
       exigirTreinoSeparado(gabarito, SeparacaoTreinoTeste.TREINO);
+      exigirTreinoSeparado(gabarito, SeparacaoTreinoTeste.TREINO_EMBUTIDO);
       ProdutoresAvaliacao produtores = seed.semear();
       Map<String, List<String>> esperados =
           valoresEsperados.calcular(gabarito, produtores.avaliado(), hoje);

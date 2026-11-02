@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0050-assistente-interacao-camada-classificacao.xml
+         Ceres 2.0, etapa 3 (issue #265) - qual camada decidiu a rota.
+
+         A classificacao passa a ser em camadas: filtro de injecao, regras,
+         embeddings (kNN no conjunto de treino) e o modelo so no desempate.
+         - camada_classificacao: FILTRO_INJECAO, REGRA, EMBEDDING, LLM ou
+           PALAVRAS_CHAVE (modo fallback). Nula nas perguntas que acabaram
+           antes da classificacao e nas gravadas antes desta mudanca.
+           So o nome da camada: o texto da pergunta nunca e gravado (#144).
+         ================================================================ -->
+
+    <changeSet id="0050-add-camada-classificacao" author="supersonic-team">
+        <comment>Camada que decidiu a rota da pergunta a Ceres (#265).</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="camada_classificacao" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

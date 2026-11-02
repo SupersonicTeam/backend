@@ -29,6 +29,11 @@ class SeparacaoTreinoTesteTest {
         Path.of("docs/avaliacao/gabarito-ceres.json").toFile(), Gabarito.class);
 
     assertThat(SeparacaoTreinoTeste.contaminacoes(real, SeparacaoTreinoTeste.TREINO)).isEmpty();
+    assertThat(SeparacaoTreinoTeste.contaminacoes(real, SeparacaoTreinoTeste.TREINO_EMBUTIDO))
+        .isEmpty();
+    // O conjunto do classificador (#265) existe de fato: a guarda nao passa por diretorio vazio.
+    assertThat(SeparacaoTreinoTeste.TREINO_EMBUTIDO.resolve("classificacao-rota.json"))
+        .exists();
     assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(real)).isEmpty();
   }
 

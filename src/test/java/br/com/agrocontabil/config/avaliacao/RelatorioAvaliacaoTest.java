@@ -84,7 +84,7 @@ class RelatorioAvaliacaoTest {
   void partesDoMisto() {
     ExecucaoPergunta misto = new ExecucaoPergunta(Intencao.MISTO, "texto",
         DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null,
-        DesfechoInteracao.RESPONDIDA, DesfechoInteracao.CITACAO_INVALIDA, true);
+        DesfechoInteracao.RESPONDIDA, DesfechoInteracao.CITACAO_INVALIDA, true, "LLM");
     ExecucaoPergunta dados = new ExecucaoPergunta(Intencao.DADOS, "texto",
         DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null);
 
@@ -105,5 +105,31 @@ class RelatorioAvaliacaoTest {
     assertThat(md).contains("| D01 | DADOS | RESPONDIDA | ✓ |", "| D02 |");
     // Barra vertical no hardware não pode quebrar a tabela.
     assertThat(md).contains("CPU de teste \\| 8 nucleos");
+  }
+
+  @Test
+  @DisplayName("#265: precisao por camada, com a parcela de cada uma no total")
+  void porCamada() {
+    List<ResultadoPergunta> resultados = List.of(
+        comCamada("a", "REGRA", true), comCamada("b", "REGRA", true),
+        comCamada("c", "EMBEDDING", false), comCamada("d", "LLM", true));
+
+    var porCamada = relatorio(resultados).porCamada();
+
+    assertThat(porCamada.keySet()).containsExactly("REGRA", "EMBEDDING", "LLM");
+    assertThat(porCamada.get("REGRA")).containsExactly(2, 2);
+    assertThat(porCamada.get("EMBEDDING")).containsExactly(1, 0);
+    assertThat(relatorio(resultados).markdown())
+        .contains("## Por camada da classificação (#265)")
+        .contains("| REGRA | 2 | 2 | 0 | 50% |")
+        .contains("| EMBEDDING | 1 | 0 | 1 | 25% |");
+  }
+
+  private static ResultadoPergunta comCamada(String id, String camada, boolean acertou) {
+    ExecucaoPergunta execucao = new ExecucaoPergunta(Intencao.DADOS, "texto",
+        DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null, null, null, null,
+        camada);
+    return new ResultadoPergunta(id, Categoria.DADOS, execucao, List.of(), acertou, null, null,
+        null, null, null, null);
   }
 }

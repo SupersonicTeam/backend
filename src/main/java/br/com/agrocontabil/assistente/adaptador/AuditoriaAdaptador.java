@@ -27,6 +27,7 @@ public class AuditoriaAdaptador implements AuditoriaPorta {
         .desfechoDados(r.desfechoDados())
         .desfechoLegislacao(r.desfechoLegislacao())
         .perguntaLeiReescrita(r.perguntaLeiReescrita())
+        .camadaClassificacao(r.camadaClassificacao())
         .funcoes(r.funcoesJson())
         .chamadasFuncao(r.chamadasFuncao())
         .trechosCitados(r.trechosCitadosJson())

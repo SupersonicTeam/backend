@@ -21,6 +21,7 @@ import java.util.List;
  * @param desfechoLegislacao no MISTO, desfecho da parte de lei
  * @param perguntaLeiReescrita no MISTO, se a parte de lei recebeu a pergunta legal separada pelo
  *                     classificador
+ * @param camadaClassificacao camada que decidiu a rota (#265); nula se a pergunta acabou antes
  */
 public record ExecucaoPergunta(
     Intencao rota,
@@ -33,7 +34,8 @@ public record ExecucaoPergunta(
     String erro,
     DesfechoInteracao desfechoDados,
     DesfechoInteracao desfechoLegislacao,
-    Boolean perguntaLeiReescrita) {
+    Boolean perguntaLeiReescrita,
+    String camadaClassificacao) {
 
   /** Cópias defensivas. */
   public ExecucaoPergunta {
@@ -46,6 +48,6 @@ public record ExecucaoPergunta(
       List<CitacaoLegal> citacoes, List<FonteDado> fontes, boolean modoFallback, long latenciaMs,
       String erro) {
     this(rota, texto, desfecho, citacoes, fontes, modoFallback, latenciaMs, erro, null, null,
-        null);
+        null, null);
   }
 }

@@ -30,6 +30,7 @@ public interface AuditoriaPorta {
    * @param desfechoLegislacao desfecho da parte de lei do MISTO; nulo nas outras rotas
    * @param perguntaLeiReescrita a parte de lei do MISTO recebeu a pergunta legal separada pelo
    *                         classificador (só o fato, nunca o texto); nulo nas outras rotas
+   * @param camadaClassificacao camada que decidiu a rota (#265); nula se a pergunta acabou antes
    * @param funcoesJson      funções usadas e parâmetros, mascarados (JSON)
    * @param chamadasFuncao   funções pedidas pelo modelo, inclusive as que falharam
    * @param trechosCitadosJson ids dos trechos de lei citados (JSON) ou nulo
@@ -45,7 +46,7 @@ public interface AuditoriaPorta {
   record RegistroInteracao(
       UUID produtorId, String rota, DesfechoInteracao desfecho,
       DesfechoInteracao desfechoDados, DesfechoInteracao desfechoLegislacao,
-      Boolean perguntaLeiReescrita, String funcoesJson,
+      Boolean perguntaLeiReescrita, String camadaClassificacao, String funcoesJson,
       int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
       Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
       OffsetDateTime criadoEm) {}

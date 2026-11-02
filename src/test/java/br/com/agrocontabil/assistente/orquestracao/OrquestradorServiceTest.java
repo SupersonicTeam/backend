@@ -101,6 +101,7 @@ class OrquestradorServiceTest {
     assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FORA_DE_ESCOPO);
     verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("FILTRO_INJECAO");
   }
 
   @Test
@@ -385,14 +386,18 @@ class OrquestradorServiceTest {
   @DisplayName("#146: disjuntor aberto: nenhuma chamada ao modelo, trechos da busca textual")
   void disjuntorAbertoVaiDiretoAoFallback() {
     disponibilidade.registrarFalha();
+    // O classificador em camadas sem decisao de regra/embedding e com o modelo em pausa (#265).
+    when(classificador.classificar(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("modelo em pausa", null));
     when(buscaTextual.buscar(anyString(), eq(contexto.hoje()), anyInt()))
         .thenReturn(List.of(TRECHO_TEXTUAL));
 
     ResultadoOrquestracao r = orquestrador.responder(
         "Qual a reducao de aliquota para insumos agropecuarios?", contexto, rotasAvisadas::add);
 
-    verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+    verifyNoInteractions(rotaDados, rotaLegislacao);
     assertThat(rotasAvisadas).containsExactly(Intencao.LEGISLACAO);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("PALAVRAS_CHAVE");
     assertThat(r.modoFallback()).isTrue();
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.MODO_FALLBACK);
     assertThat(r.texto()).startsWith(ModoFallback.SEM_MODELO_LEI)
@@ -459,6 +464,9 @@ class OrquestradorServiceTest {
   @DisplayName("#146: busca textual sem trecho: mensagem fixa, nada citado")
   void fallbackSemTrecho() {
     disponibilidade.registrarFalha();
+    // O classificador em camadas sem decisao de regra/embedding e com o modelo em pausa (#265).
+    when(classificador.classificar(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("modelo em pausa", null));
     when(buscaTextual.buscar(anyString(), any(), anyInt())).thenReturn(List.of());
 
     ResultadoOrquestracao r = responder();
@@ -485,6 +493,9 @@ class OrquestradorServiceTest {
   @DisplayName("#146: base fora junto com o modelo: 503, sem resposta inventada")
   void baseForaPropaga503() {
     disponibilidade.registrarFalha();
+    // O classificador em camadas sem decisao de regra/embedding e com o modelo em pausa (#265).
+    when(classificador.classificar(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("modelo em pausa", null));
     when(buscaTextual.buscar(anyString(), any(), anyInt()))
         .thenThrow(new AssistenteIndisponivelException("banco fora", null));
 
