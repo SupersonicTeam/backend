@@ -65,6 +65,8 @@ public final class ContextoAssistente {
   private final AtomicReference<DesfechoInteracao> desfechoDados = new AtomicReference<>();
   private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
+  private final List<TextoDoBackend> textosDoBackend =
+      Collections.synchronizedList(new ArrayList<>());
 
   /**
    * Cria o contexto de uma pergunta.
@@ -119,6 +121,33 @@ public final class ContextoAssistente {
       consultasComResultado.incrementAndGet();
     }
   }
+
+  /**
+   * Registra um texto montado pelo backend a partir do dado (issue #283: o tratamento de um
+   * produto pela tabela oficial). O orquestrador o põe na resposta depois da validação, com as
+   * citações dos dispositivos; o texto do modelo não o substitui.
+   *
+   * @param texto        parágrafo pronto para o usuário
+   * @param dispositivos dispositivos citados, {@code "norma|dispositivo"}
+   */
+  public void registrarTextoDoBackend(String texto, List<String> dispositivos) {
+    textosDoBackend.add(new TextoDoBackend(texto, List.copyOf(dispositivos)));
+  }
+
+  /** Textos do backend desta pergunta, na ordem das funções. */
+  public List<TextoDoBackend> textosDoBackend() {
+    synchronized (textosDoBackend) {
+      return List.copyOf(textosDoBackend);
+    }
+  }
+
+  /**
+   * Texto montado pelo backend.
+   *
+   * @param texto        parágrafo pronto
+   * @param dispositivos dispositivos citados, {@code "norma|dispositivo"}
+   */
+  public record TextoDoBackend(String texto, List<String> dispositivos) {}
 
   /**
    * Soma o uso de tokens de uma chamada ao modelo, para a auditoria (issue #144) e a cota semanal

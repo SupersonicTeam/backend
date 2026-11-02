@@ -278,4 +278,30 @@ public final class RespostasFerramentas {
    * @param situacao   PENDENTE ou VENCIDA
    */
   public record Guia(String tipo, String vencimento, String valor, String situacao) {}
+
+  /**
+   * Resultado de {@code consultarTratamentoProduto} (issue #283): a tabela oficial, não dado do
+   * produtor. A resposta ao usuário sai do template do backend, não do texto do modelo.
+   *
+   * @param produtoConsultado termo ou NCM consultado
+   * @param produtos          até 3 produtos achados
+   * @param tabela            versão da tabela oficial
+   * @param observacao        frase ao usuário quando nada foi achado; nulo caso contrário
+   */
+  public record TratamentoProduto(String produtoConsultado, List<ProdutoTratamento> produtos,
+      String tabela, String observacao) {}
+
+  /**
+   * Tratamento de um produto.
+   *
+   * @param ncm        NCM formatado ({@code 1201.90.00}); nulo num grupo de NCMs
+   * @param descricao  descrição oficial
+   * @param ncms       NCMs do grupo (1 para um NCM só)
+   * @param reducao    redução da alíquota do IBS e da CBS ({@code 60%})
+   * @param cClassTrib classificação tributária
+   * @param fundamento dispositivo da LC 214/2025, ou nulo sem redução
+   * @param condicao   condição que o dado não decide; nula quando não há
+   */
+  public record ProdutoTratamento(String ncm, String descricao, int ncms, String reducao,
+      String cClassTrib, String fundamento, String condicao) {}
 }

@@ -74,13 +74,15 @@ public class OrquestradorService {
   private final DisponibilidadeModelo disponibilidade;
   private final TrechosDasCompras trechosDasCompras;
   private final FundamentoRetencao fundamentoRetencao;
+  private final TextosDoBackend textosDoBackend;
   private final double confiancaMinima;
 
   /** Constrói o orquestrador. */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
       RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
-      FundamentoRetencao fundamentoRetencao, ModoFallback fallback,
-      DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
+      FundamentoRetencao fundamentoRetencao, TextosDoBackend textosDoBackend,
+      ModoFallback fallback, DisponibilidadeModelo disponibilidade,
+      AssistenteProperties propriedades) {
     this.classificador = classificador;
     this.rotaDados = rotaDados;
     this.rotaLegislacao = rotaLegislacao;
@@ -88,6 +90,7 @@ public class OrquestradorService {
     this.disponibilidade = disponibilidade;
     this.trechosDasCompras = trechosDasCompras;
     this.fundamentoRetencao = fundamentoRetencao;
+    this.textosDoBackend = textosDoBackend;
     this.confiancaMinima = propriedades.getOrquestracao().getConfiancaMinima();
   }
 
@@ -114,6 +117,8 @@ public class OrquestradorService {
       case FORA_DE_ESCOPO -> new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO,
           PromptsCeres.FORA_DE_ESCOPO, DesfechoInteracao.FORA_DE_ESCOPO, List.of(), false);
     };
+    // Tratamento do produto pela tabela oficial (#283): texto e citacao do dado, nao do modelo.
+    resultado = textosDoBackend.aplicar(resultado, contexto);
     // Retencao (RN009): as duas regras e as citacoes vem do backend, nao da memoria do modelo.
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }

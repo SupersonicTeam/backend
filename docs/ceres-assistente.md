@@ -83,6 +83,19 @@ do Ollama nem de chave de API.
 | `vencimentosDoMes(mes)` | "quanto eu tenho que pagar este mês?", "quais impostos vencem em novembro?" (#257) | mês corrente (padrão): atraso de qualquer mês + não pagas de hoje ao fim do mês, com os dois subtotais e a soma do backend; mês futuro: as do mês; mês passado: as que ficaram sem pagar. Até 12 meses do atual. Obrigações do catálogo, pedidos do escritório e IBS/CBS apurado ficam fora (decisões da #274) |
 | `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
 | `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física ou no varejo (o produtor recolhe); venda ao exterior imune (Constituição, art. 149, § 2º, I); IBS/CBS separado pelo split payment |
+| `consultarTratamentoProduto(produtoOuNcm)` | "o feijão tem alíquota reduzida?", "quanto de CBS incide no milho?" (#283, parte 1) | `TratamentoProdutoService` sobre a **tabela oficial** (IT 2025.002 v1.70, changeSet 0048) pelo `ClassificacaoTributariaService` — a mesma fonte do `ReducaoNcmResolver` (teste de coerência NCM a NCM). NCM de 8 dígitos ou nome: o nome casa a descrição dos NCMs da referência (#282) e, sem nenhum, os itens dos anexos ("adubo" → "Fertilizantes (adubos)" do Anexo IX, com o tratamento de cada NCM do item agrupado). Até 3 produtos: cClassTrib, % de redução, artigo e anexo **do dado**, e a **condição** que o dado não decide (in natura, destinado à alimentação humana, não cozido). Não é dado do produtor (porta própria, `TratamentoProdutoPorta`) |
+
+**Tratamento do produto (#283): texto por template, citação do dado.** A função registra no
+`ContextoAssistente` o texto montado pelo backend (`TemplateTratamentoProduto`), e o
+`orquestracao/TextosDoBackend` o põe na resposta **depois** da validação: na rota de dados em que o
+tratamento foi a única consulta, a resposta **é** o template (o texto do modelo sai, desfecho
+`RESPONDIDA`); com outras consultas ou no MISTO, vem depois do texto da rota. As citações são o
+artigo do `cClassTrib` (da descrição oficial, "observado o art. N"), com o texto da base de
+legislação; sem a base, o template segue sozinho. Condição que o dado não decide é **dita**
+("Condição: destinados à alimentação humana."), nunca afirmada, com a ressalva fixa de conferir com
+o contador. Leite cru, arroz em casca e cooperativa (#284) seguem o dado atual, sem regra própria.
+O classificador manda "produto específico tem redução?" para DADOS (antes ia ao RAG, que lia o art.
+137 e redigia — e às vezes contradizia o cálculo). No modo fallback a função não roda.
 
 **Retenção (RN009, #145): as duas regras, sempre.** Decisão do Murillo de 2026-10-14: quando o
 assunto é retenção, a Ceres fala do Funrural retido pelo comprador **e** do split payment, com

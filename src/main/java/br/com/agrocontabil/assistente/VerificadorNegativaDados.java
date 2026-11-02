@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.ferramentas.TemplateTratamentoProduto;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -274,6 +275,8 @@ public class VerificadorNegativaDados {
           + mes(p.get("mes")).map(MES::format).orElse("mes consultado") + ".";
       case "consultarNota" -> "Nao encontrei a nota " + p.get("numero") + " nas suas notas.";
       case "listarAlertas" -> "Nao encontrei alertas com prazo nos proximos dias.";
+      case "consultarTratamentoProduto" ->
+          TemplateTratamentoProduto.naoEncontrado(p.get("produtoOuNcm"));
       default -> "Nao encontrei dados para essa consulta.";
     };
   }
