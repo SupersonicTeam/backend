@@ -275,6 +275,9 @@ public class VerificadorNegativaDados {
           + mes(p.get("mes")).map(MES::format).orElse("mes consultado") + ".";
       case "consultarNota" -> "Nao encontrei a nota " + p.get("numero") + " nas suas notas.";
       case "listarAlertas" -> "Nao encontrei alertas com prazo nos proximos dias.";
+      case "resumoDoProdutor" -> "Nao encontrei pontos de atencao nos seus dados: guias em"
+          + " atraso, prazos dos proximos dias, notas paradas, pedidos do escritorio e notas a"
+          + " conferir.";
       case "consultarTratamentoProduto" ->
           TemplateTratamentoProduto.naoEncontrado(p.get("produtoOuNcm"));
       default -> "Nao encontrei dados para essa consulta.";

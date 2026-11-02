@@ -108,17 +108,13 @@ class AssistenteEscopoTransacionalIntegrationTest {
   }
 
   @Test
-  @DisplayName("Com o modelo 'pensando' depois de uma funcao, outra requisicao consegue a unica "
+  @DisplayName("Com o modelo 'pensando' na escolha da funcao, outra requisicao consegue a unica "
       + "conexao do pool")
   void modeloPensandoNaoPrendeConexao() throws Exception {
     modelo.classificarComo("DADOS");
     CountDownLatch pensando = new CountDownLatch(1);
+    // #266: o modelo e chamado uma vez so, para escolher a funcao; e ali que ele "pensa".
     modelo.responderCom(prompt -> {
-      if (!(ultimaMensagem(prompt) instanceof ToolResponseMessage)) {
-        return pedirFuncao("totalComprasPorInsumo", Map.of("descricaoOuNcm", "fertilizante",
-            "dataInicio", "2026-01-01", "dataFim", "2026-06-30"));
-      }
-      // A funcao ja rodou (usou o banco); agora o modelo "pensa".
       pensando.countDown();
       try {
         liberarModelo.await(30, TimeUnit.SECONDS);
@@ -126,13 +122,14 @@ class AssistenteEscopoTransacionalIntegrationTest {
         Thread.currentThread().interrupt();
         throw new IllegalStateException(e);
       }
-      return ChatModelSimulado.texto("Voce comprou fertilizante em 1 nota.");
+      return pedirFuncao("totalComprasPorInsumo", Map.of("descricaoOuNcm", "fertilizante",
+          "dataInicio", "2026-01-01", "dataFim", "2026-06-30"));
     });
 
     CompletableFuture<HttpResponse<String>> pergunta = http.sendAsync(
         post("/api/assistente/chat", produtorA, "{\"pergunta\":\"Quanto comprei de adubo?\"}"),
         HttpResponse.BodyHandlers.ofString());
-    assertThat(pensando.await(10, TimeUnit.SECONDS)).as("modelo chamado apos a funcao").isTrue();
+    assertThat(pensando.await(10, TimeUnit.SECONDS)).as("modelo chamado").isTrue();
 
     long inicio = System.nanoTime();
     HttpResponse<String> notas = http.send(get("/api/notas", produtorB),

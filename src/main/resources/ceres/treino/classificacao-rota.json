@@ -1029,6 +1029,26 @@
   {
    "rota": "FORA_DE_ESCOPO",
    "pergunta": "Como faço para tirar CNH?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Tem alguma coisa pendente comigo no sistema?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Qual a minha situacao geral hoje?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Me da um panorama do que esta em aberto na minha conta"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Tem algo urgente para eu resolver?"
+  },
+  {
+   "rota": "DADOS",
+   "pergunta": "Quais sao os meus pontos de atencao?"
   }
  ]
 }

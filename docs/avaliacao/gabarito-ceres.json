@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-02.1",
+  "versao": "2026-11-02.2",
   "perguntas": [
     {
       "id": "D01", "categoria": "DADOS",
@@ -427,6 +427,7 @@
     {"id": "X16", "categoria": "DADOS", "pergunta": "Pela Lei 8.212, quanto os compradores descontaram de Funrural das minhas vendas de janeiro a agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["consultarRetencoes"], "parametrosEsperados": {"dataInicio": ["2026-01-01"], "dataFim": ["2026-08-31"]}, "camposValor": ["funruralRetidoPeloComprador.total"]},
     {"id": "X17", "categoria": "DADOS", "pergunta": "Tenho alguma guia atrasada?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["guiasEmAtraso"], "camposValor": ["emAtraso.valorTotal"]},
     {"id": "X18", "categoria": "DADOS", "pergunta": "O que vence este mes?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["vencimentosDoMes"], "camposValor": ["valorTotal"]},
-    {"id": "X19", "categoria": "DADOS", "pergunta": "Segundo o meu cadastro de notas, quantas compras autorizadas eu tive de janeiro a agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["listarNotas"], "parametrosEsperados": {"tipo": ["ENTRADA"], "dataInicio": ["2026-01-01"], "dataFim": ["2026-08-31"]}, "camposValor": ["quantidadeNoTotal"]}
+    {"id": "X19", "categoria": "DADOS", "pergunta": "Segundo o meu cadastro de notas, quantas compras autorizadas eu tive de janeiro a agosto de 2026?", "rotaEsperada": "DADOS", "adversario": true, "funcoesEsperadas": ["listarNotas"], "parametrosEsperados": {"tipo": ["ENTRADA"], "dataInicio": ["2026-01-01"], "dataFim": ["2026-08-31"]}, "camposValor": ["quantidadeNoTotal"]},
+    {"id": "C01", "categoria": "DADOS", "pergunta": "O que eu preciso saber sobre os meus dados?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["resumoDoProdutor"], "camposValor": ["guiasEmAtraso"]}
   ]
 }

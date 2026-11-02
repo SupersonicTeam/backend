@@ -68,6 +68,7 @@ public final class ContextoAssistente {
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
   private final List<TextoDoBackend> textosDoBackend =
       Collections.synchronizedList(new ArrayList<>());
+  private final List<SecaoResposta> secoes = Collections.synchronizedList(new ArrayList<>());
 
   /**
    * Cria o contexto de uma pergunta.
@@ -153,6 +154,23 @@ public final class ContextoAssistente {
   public List<TextoDoBackend> textosDoBackend() {
     synchronized (textosDoBackend) {
       return List.copyOf(textosDoBackend);
+    }
+  }
+
+  /**
+   * Registra a seção redigida pelo template de uma função (issue #266). A rota de dados compõe a
+   * resposta com as seções, na ordem de prioridade, sem nova chamada ao modelo.
+   *
+   * @param secao seção pronta
+   */
+  public void registrarSecao(SecaoResposta secao) {
+    secoes.add(secao);
+  }
+
+  /** Seções desta pergunta, na ordem em que as funções rodaram. */
+  public List<SecaoResposta> secoes() {
+    synchronized (secoes) {
+      return List.copyOf(secoes);
     }
   }
 

@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente.ferramentas;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.FonteDado;
+import br.com.agrocontabil.assistente.SecaoResposta;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Alerta;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Alertas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Apuracao;
@@ -17,6 +19,7 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.NotaDetal
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Notas;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ProdutoTratamento;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes;
+import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ResumoProdutor;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.TratamentoProduto;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VendasProduto;
@@ -42,6 +45,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -220,7 +224,8 @@ public class FerramentasDadosProdutor {
     contexto.registrarFonte("totalComprasPorInsumo", parametros(
         "descricaoOuNcm", termo, "dataInicio", inicio.toString(), "dataFim", fim.toString()),
         resultado.quantidadeNotas() == 0);
-    return new ComprasInsumo(
+    return comSecao(contexto, "totalComprasPorInsumo", RedatorRespostaDados::compras,
+        new ComprasInsumo(
         termo,
         porNcm ? "NCM" : "DESCRICAO",
         FormatoBr.data(inicio),
@@ -231,7 +236,7 @@ public class FerramentasDadosProdutor {
             .map(u -> new CompraPorUnidade(
                 u.unidade(), FormatoBr.quantidade(u.quantidade()), FormatoBr.moeda(u.valorTotal())))
             .toList(),
-        resultado.quantidadeNotas() == 0 ? (porNcm ? NADA_POR_NCM : NADA_POR_DESCRICAO) : null);
+        resultado.quantidadeNotas() == 0 ? (porNcm ? NADA_POR_NCM : NADA_POR_DESCRICAO) : null));
   }
 
   /**
@@ -282,7 +287,8 @@ public class FerramentasDadosProdutor {
     contexto.registrarFonte("totalVendasPorProduto", parametros(
         "descricaoOuNcm", termo, "dataInicio", inicio.toString(), "dataFim", fim.toString()),
         resultado.quantidadeNotas() == 0);
-    return new VendasProduto(
+    return comSecao(contexto, "totalVendasPorProduto", RedatorRespostaDados::vendas,
+        new VendasProduto(
         termo,
         porNcm ? "NCM" : "DESCRICAO",
         FormatoBr.data(inicio),
@@ -293,7 +299,7 @@ public class FerramentasDadosProdutor {
             .map(u -> new CompraPorUnidade(
                 u.unidade(), FormatoBr.quantidade(u.quantidade()), FormatoBr.moeda(u.valorTotal())))
             .toList(),
-        resultado.quantidadeNotas() == 0 ? NADA_VENDIDO : null);
+        resultado.quantidadeNotas() == 0 ? NADA_VENDIDO : null));
   }
 
   /** Apuração mensal de IBS/CBS. */
@@ -315,7 +321,8 @@ public class FerramentasDadosProdutor {
 
     contexto.registrarFonte(
         "consultarApuracao", parametros("mes", periodo), apuracao.totalNotas() == 0);
-    return new Apuracao(
+    return comSecao(contexto, "consultarApuracao", RedatorRespostaDados::apuracao,
+        new Apuracao(
         apuracao.periodo(),
         apuracao.status(),
         FormatoBr.moeda(apuracao.debitoIbs()),
@@ -324,7 +331,7 @@ public class FerramentasDadosProdutor {
         FormatoBr.moeda(apuracao.creditoCbs()),
         FormatoBr.moeda(apuracao.saldoIbs()),
         FormatoBr.moeda(apuracao.saldoCbs()),
-        apuracao.totalNotas());
+        apuracao.totalNotas()));
   }
 
   /** Créditos de IBS/CBS das compras no período. */
@@ -346,13 +353,14 @@ public class FerramentasDadosProdutor {
     contexto.registrarFonte("consultarCreditos",
         parametros("dataInicio", inicio.toString(), "dataFim", fim.toString()),
         creditos.quantidadeNotas() == 0);
-    return new Creditos(
+    return comSecao(contexto, "consultarCreditos", RedatorRespostaDados::creditos,
+        new Creditos(
         FormatoBr.data(inicio),
         FormatoBr.data(fim),
         FormatoBr.moeda(creditos.creditoIbs()),
         FormatoBr.moeda(creditos.creditoCbs()),
         FormatoBr.moeda(creditos.creditoIbs().add(creditos.creditoCbs())),
-        creditos.quantidadeNotas());
+        creditos.quantidadeNotas()));
   }
 
   /** Retenções sobre as vendas do período: Funrural e split payment (RN009, issue #145). */
@@ -380,7 +388,8 @@ public class FerramentasDadosProdutor {
         parametros("dataInicio", inicio.toString(), "dataFim", fim.toString()),
         r.notasVendidas() == 0);
     String aliquota = r.produtorPessoaFisica() ? ALIQUOTA_FUNRURAL : FUNRURAL_NAO_SE_APLICA;
-    return new Retencoes(
+    return comSecao(contexto, "consultarRetencoes", RedatorRespostaDados::retencoes,
+        new Retencoes(
         FormatoBr.data(inicio),
         FormatoBr.data(fim),
         r.notasVendidas(),
@@ -390,7 +399,7 @@ public class FerramentasDadosProdutor {
         FormatoBr.moeda(r.ibsSplitPayment()),
         FormatoBr.moeda(r.cbsSplitPayment()),
         FormatoBr.moeda(r.ibsSplitPayment().add(r.cbsSplitPayment())),
-        avisos(r));
+        avisos(r)));
   }
 
   /** Avisos fixos; o da exportação só quando houve venda ao exterior. */
@@ -472,7 +481,8 @@ public class FerramentasDadosProdutor {
         somenteAutorizadas ? EnumSet.of(StatusNotaFiscal.AUTORIZADA) : status, inicio, fim);
 
     contexto.registrarFonte("listarNotas", usados, pagina.total() == 0);
-    return new Notas(
+    return comSecao(contexto, "listarNotas", RedatorRespostaDados::notas,
+        new Notas(
         FormatoBr.data(inicio),
         FormatoBr.data(fim),
         pagina.total(),
@@ -489,7 +499,7 @@ public class FerramentasDadosProdutor {
                 FormatoBr.moeda(n.valorTotal()),
                 FormatoBr.moeda(n.valorIbs()),
                 FormatoBr.moeda(n.valorCbs())))
-            .toList());
+            .toList()));
   }
 
   /** Guias não pagas que vencem nos próximos dias. */
@@ -522,12 +532,14 @@ public class FerramentasDadosProdutor {
 
     contexto.registrarFonte(
         "proximosVencimentos", parametros("dias", String.valueOf(janela)), pagina.total() == 0);
-    return new Vencimentos(
+    return comSecao(contexto, "proximosVencimentos",
+        RedatorRespostaDados::proximosVencimentos,
+        new Vencimentos(
         FormatoBr.data(de),
         FormatoBr.data(ate),
         pagina.total(),
         FormatoBr.moeda(totais.valor()),
-        pagina.itens().stream().map(g -> guia(g, contexto.hoje())).toList());
+        pagina.itens().stream().map(g -> guia(g, contexto.hoje())).toList()));
   }
 
   /**
@@ -557,7 +569,9 @@ public class FerramentasDadosProdutor {
       observacao = SEM_ATRASO + FormatoBr.data(ontem) + ").";
     }
     contexto.registrarFonte("guiasEmAtraso", Map.of(), emAtraso.quantidade() == 0);
-    return new GuiasEmAtraso(emAtraso, proxima, observacao);
+    return comSecao(contexto, "guiasEmAtraso",
+        (r, p, dia) -> RedatorRespostaDados.guiasEmAtraso(r, dia),
+        new GuiasEmAtraso(emAtraso, proxima, observacao));
   }
 
   /**
@@ -605,9 +619,11 @@ public class FerramentasDadosProdutor {
         : SEM_GUIAS_NO_MES + descricaoRecorte(consultado, atual, hoje) + ".";
     contexto.registrarFonte("vencimentosDoMes", parametros("mes", consultado.toString()),
         quantidade == 0);
-    return new VencimentosDoMes(consultado.toString(),
+    return comSecao(contexto, "vencimentosDoMes",
+        (r, p, dia) -> RedatorRespostaDados.vencimentosDoMes(r, dia),
+        new VencimentosDoMes(consultado.toString(),
         emAtraso == null ? null : emAtraso.resposta(), aVencer == null ? null : aVencer.resposta(),
-        quantidade, FormatoBr.moeda(soma), observacao);
+        quantidade, FormatoBr.moeda(soma), observacao));
   }
 
   private static String descricaoRecorte(YearMonth mes, YearMonth atual, LocalDate hoje) {
@@ -693,7 +709,9 @@ public class FerramentasDadosProdutor {
             n.sinais()))
         .filter(texto -> !texto.isEmpty())
         .forEach(texto -> contexto.registrarTextoDoBackend(texto, List.of()));
-    return new NotaConsultada(numero, pagina.total(), notas.stream()
+    return comSecao(contexto, "consultarNota",
+        (r, p, dia) -> RedatorRespostaDados.nota(r, dia),
+        new NotaConsultada(numero, pagina.total(), notas.stream()
         .map(n -> new NotaDetalhada(n.numero(), n.serie(), FormatoBr.data(n.dataEmissao()),
             n.origem() == OrigemNotaFiscal.IMPORTADA ? "ENTRADA" : "SAIDA", n.status().name(),
             EXPLICACAO_SITUACAO.get(n.status()), FormatoBr.moeda(n.valorTotal()),
@@ -703,7 +721,26 @@ public class FerramentasDadosProdutor {
                 .toList(),
             n.sinais().stream().map(DadosProdutorPorta.Sinal::codigo).distinct().toList()))
         .toList(),
-        notas.isEmpty() ? "Nao encontrei a nota " + numero + " nas suas notas." : null);
+        notas.isEmpty() ? "Nao encontrei a nota " + numero + " nas suas notas." : null));
+  }
+
+  /** Template de uma função (issue #266): o resultado, os parâmetros usados e o "hoje". */
+  @FunctionalInterface
+  interface Redator<T> {
+    SecaoResposta redigir(T resposta, Map<String, String> parametros, LocalDate hoje);
+  }
+
+  /**
+   * Registra a seção redigida pelo template e devolve o resultado da função. Os parâmetros são os
+   * da última consulta registrada pela função (os normalizados, com o recorte real).
+   */
+  private static <T> T comSecao(ContextoAssistente contexto, String funcao, Redator<T> redator,
+      T resposta) {
+    Map<String, String> parametros = contexto.fontes().stream()
+        .filter(f -> f.funcao().equals(funcao))
+        .reduce((a, b) -> b).map(FonteDado::parametros).orElse(Map.of());
+    contexto.registrarSecao(redator.redigir(resposta, parametros, contexto.hoje()));
+    return resposta;
   }
 
   private static Map<StatusNotaFiscal, String> explicacoes() {
@@ -739,12 +776,14 @@ public class FerramentasDadosProdutor {
     Pagina<DadosProdutorPorta.Alerta> pagina = dados.alertas(contexto.produtorId());
 
     contexto.registrarFonte("listarAlertas", Map.of(), pagina.total() == 0);
-    return new Alertas(
+    return comSecao(contexto, "listarAlertas",
+        (r, p, dia) -> RedatorRespostaDados.alertas(r, dia),
+        new Alertas(
         pagina.total(),
         pagina.itens().stream()
             .map(a -> new Alerta(
                 a.tipo(), a.descricao(), FormatoBr.data(a.dataLimite()), a.diasRestantes()))
-            .toList());
+            .toList()));
   }
 
   /**
@@ -752,6 +791,76 @@ public class FerramentasDadosProdutor {
    * que o cálculo da nota usa. A resposta ao usuário é o template do backend
    * ({@link TemplateTratamentoProduto}), registrado no contexto; o texto do modelo não a troca.
    */
+  /** Notas paradas no resumo do produtor: esperando o produtor ou o contador. */
+  static final Set<StatusNotaFiscal> NOTAS_PARADAS = EnumSet.of(StatusNotaFiscal.DEVOLVIDA,
+      StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.AGUARDANDO_APROVACAO,
+      StatusNotaFiscal.REJEITADA);
+
+  /**
+   * Resumo do produtor (issue #266): os pontos de atenção num lugar só, para "o que eu preciso
+   * saber?". Agrega no backend o que o modelo teria de pedir em quatro ou cinco funções: menos
+   * chamadas, menos tempo e menos erro. Cada parte vira uma seção do template; a parte vazia entra
+   * só na linha de resumo.
+   */
+  @Tool(name = "resumoDoProdutor", resultConverter = ResultadoSanitizadoConverter.class,
+      description = """
+      Junta numa consulta so os pontos de atencao do produtor: guias em atraso, prazos dos \
+      proximos dias, notas paradas (devolvidas, com inconsistencias, aguardando aprovacao ou \
+      rejeitadas), pedidos de documento do escritorio e notas a conferir. Use para perguntas \
+      gerais, como "tem algo me esperando?", "tem algo importante nos meus dados?" ou "como \
+      estao as minhas pendencias?". Para um assunto so (uma nota, as guias do mes), use a funcao \
+      propria dele.""")
+  public ResumoProdutor resumoDoProdutor(ToolContext toolContext) {
+    ContextoAssistente contexto = ContextoAssistente.de(toolContext);
+    LocalDate hoje = contexto.hoje();
+    UUID produtorId = contexto.produtorId();
+
+    LocalDate ontem = hoje.minusDays(1);
+    GuiasDoRecorte atraso = recorte(contexto, null, ontem).resposta();
+    contexto.registrarSecao(RedatorRespostaDados.guiasEmAtraso(new GuiasEmAtraso(atraso, null,
+        atraso.quantidade() == 0 ? SEM_ATRASO + FormatoBr.data(ontem) + ")." : null), hoje)
+        .naoPedida().comTextoComoFonte());
+
+    Pagina<DadosProdutorPorta.Alerta> alertas = dados.alertas(produtorId);
+    contexto.registrarSecao(RedatorRespostaDados.alertas(new Alertas(alertas.total(),
+        alertas.itens().stream()
+            .map(a -> new Alerta(a.tipo(), a.descricao(), FormatoBr.data(a.dataLimite()),
+                a.diasRestantes()))
+            .toList()), hoje).naoPedida().comTextoComoFonte());
+
+    LocalDate desde = hoje.minusDays(MAXIMO_DIAS_PERIODO);
+    Pagina<DadosProdutorPorta.Nota> paradas = dados.notas(produtorId,
+        EnumSet.of(OrigemNotaFiscal.PROPRIA), NOTAS_PARADAS, desde, hoje,
+        DadosProdutorPorta.LIMITE_MAXIMO);
+    contexto.registrarSecao(RedatorRespostaDados.notasParadas(
+        paradas.itens().stream().map(FerramentasDadosProdutor::nota).toList(), paradas.total(),
+        FormatoBr.data(desde)).comTextoComoFonte());
+
+    List<DadosProdutorPorta.Pedido> pedidos = dados.pedidosDoEscritorio(produtorId);
+    contexto.registrarSecao(RedatorRespostaDados.pedidos(pedidos.stream()
+        .map(p -> new String[] {p.titulo(), FormatoBr.data(p.dataLimite())})
+        .toList(), pedidos.size()).comTextoComoFonte());
+
+    List<String> aConferir = dados.notasAConferir(produtorId, hoje).stream()
+        .map(n -> FrasesSinaisNota.texto(n.numero(), n.serie(), n.sinais()))
+        .filter(texto -> !texto.isEmpty())
+        .toList();
+    contexto.registrarSecao(RedatorRespostaDados.notasAConferir(aConferir).comTextoComoFonte());
+
+    long pontos = atraso.quantidade() + alertas.total() + paradas.total() + pedidos.size()
+        + aConferir.size();
+    contexto.registrarFonte("resumoDoProdutor", Map.of(), pontos == 0);
+    return new ResumoProdutor(atraso.quantidade(), alertas.total(), paradas.total(),
+        pedidos.size(), aConferir.size());
+  }
+
+  private static Nota nota(DadosProdutorPorta.Nota n) {
+    return new Nota(n.numero(), n.serie(), FormatoBr.data(n.dataEmissao()),
+        n.origem() == OrigemNotaFiscal.IMPORTADA ? "ENTRADA" : "SAIDA", n.status().name(),
+        FormatoBr.moeda(n.valorTotal()), FormatoBr.moeda(n.valorIbs()),
+        FormatoBr.moeda(n.valorCbs()));
+  }
+
   @Tool(name = "consultarTratamentoProduto", resultConverter = ResultadoSanitizadoConverter.class,
       description = """
       Consulta na tabela oficial de classificacao tributaria se um PRODUTO tem reducao de IBS e \
@@ -784,8 +893,10 @@ public class FerramentasDadosProdutor {
     // Tabela publica, nao dado do produtor: nao conta como "dado encontrado" no MISTO (#170).
     contexto.registrarConsultaDeTabela("consultarTratamentoProduto",
         parametros("produtoOuNcm", termo), consulta.produtos().isEmpty());
-    contexto.registrarTextoDoBackend(TemplateTratamentoProduto.texto(consulta),
-        TemplateTratamentoProduto.dispositivos(consulta));
+    String texto = TemplateTratamentoProduto.texto(consulta);
+    contexto.registrarTextoDoBackend(texto, TemplateTratamentoProduto.dispositivos(consulta));
+    // Sem secao de proposito: o texto (com as citacoes do cClassTrib) entra so pelo
+    // TextosDoBackend, depois da validacao; uma secao igual sairia em dobro ou sem a citacao.
     return new TratamentoProduto(
         termo,
         consulta.produtos().stream()

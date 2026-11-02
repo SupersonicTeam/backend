@@ -16,8 +16,11 @@ import br.com.agrocontabil.service.ApuracaoService;
 import br.com.agrocontabil.service.ComprasInsumoResultado;
 import br.com.agrocontabil.service.ConsultaDadosProdutorService;
 import br.com.agrocontabil.service.CreditoService;
+import br.com.agrocontabil.service.NotaPorNumeroResultado;
 import br.com.agrocontabil.service.RetencaoService;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -45,6 +48,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Component
 public class DadosProdutorAdaptador implements DadosProdutorPorta {
+
+  private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
+
+  /** Prazo de cancelamento da NF-e autorizada (RN006). */
+  private static final int PRAZO_CANCELAMENTO_DIAS = 30;
+
 
   private final ConsultaDadosProdutorService consultaService;
   private final ApuracaoService apuracaoService;
@@ -150,18 +159,37 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   public Pagina<NotaDetalhe> notasPorNumero(UUID produtorId, long numero) {
     ConsultaDadosProdutorService.NotasPorNumero r =
         comTimeout(() -> consultaService.notasPorNumero(produtorId, numero));
-    return new Pagina<>(r.notas().stream()
-        .map(n -> new NotaDetalhe(n.numero(), n.serie(), n.dataEmissao(), n.origem(), n.status(),
-            n.valorTotal(), n.valorIbs(), n.valorCbs(), n.motivoDevolucao(),
-            n.inconsistencias().stream()
-                .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
-                .toList(),
-            n.sinais().stream()
-                .map(x -> new Sinal(x.codigo().name(), x.motivo().name(), x.momento().name(),
-                    x.numeroItem(), x.descricaoItem(), x.cfop(), x.prazoCancelamento(),
-                    x.unidade(), x.valor(), x.referencia(), x.outraNota(), x.outraSerie()))
-                .toList()))
-        .toList(), r.total());
+    return new Pagina<>(r.notas().stream().map(DadosProdutorAdaptador::detalhe).toList(),
+        r.total());
+  }
+
+  private static NotaDetalhe detalhe(NotaPorNumeroResultado n) {
+    return new NotaDetalhe(n.numero(), n.serie(), n.dataEmissao(), n.origem(), n.status(),
+        n.valorTotal(), n.valorIbs(), n.valorCbs(), n.motivoDevolucao(),
+        n.inconsistencias().stream()
+            .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
+            .toList(),
+        n.sinais().stream()
+            .map(x -> new Sinal(x.codigo().name(), x.motivo().name(), x.momento().name(),
+                x.numeroItem(), x.descricaoItem(), x.cfop(), x.prazoCancelamento(),
+                x.unidade(), x.valor(), x.referencia(), x.outraNota(), x.outraSerie()))
+            .toList());
+  }
+
+  @Override
+  public List<NotaDetalhe> notasAConferir(UUID produtorId, LocalDate hoje) {
+    OffsetDateTime desde = hoje.minusDays(PRAZO_CANCELAMENTO_DIAS).atStartOfDay(BRASILIA)
+        .toOffsetDateTime();
+    return comTimeout(() -> consultaService.notasAConferir(produtorId, desde)).stream()
+        .map(DadosProdutorAdaptador::detalhe)
+        .toList();
+  }
+
+  @Override
+  public List<Pedido> pedidosDoEscritorio(UUID produtorId) {
+    return comTimeout(() -> consultaService.pedidosPendentes(produtorId)).stream()
+        .map(p -> new Pedido(p.titulo(), p.dataLimite()))
+        .toList();
   }
 
   @Override

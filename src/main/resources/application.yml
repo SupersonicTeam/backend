@@ -432,7 +432,8 @@ app:
       timeout: ${AI_HEALTH_TIMEOUT:2s}
       # O /actuator/health e publico: sem cache, cada visitante dispararia uma chamada ao Ollama.
       cache: ${AI_HEALTH_CACHE:10s}
-    # Teto do laco modelo -> funcao -> modelo numa mesma pergunta (issue #142).
+    # Teto de rodadas de funcoes de uma pergunta (issue #142). Desde a #266 a rota de dados faz uma
+    # so; o valor segue no calculo da reserva da cota semanal (#166).
     max-rodadas-ferramentas: ${AI_MAX_RODADAS_FERRAMENTAS:3}
     # Perguntas processadas ao mesmo tempo (= tamanho do pool agro-ceres-); acima disso 503
     # ASSISTENTE_OCUPADO com Retry-After. Alem do teto global, no maximo uma por produtor (#157).

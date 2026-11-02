@@ -143,7 +143,10 @@ br.com.agrocontabil
 │                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; OllamaHealthIndicator
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
-│                  # RotaDados (laço de funções do backend, com teto); ValidadorNumeros;
+│                  # RotaDados (#266: o modelo só escolhe as funções, numa chamada; a resposta é
+│                  #   do template: ferramentas/RedatorRespostaDados → SecaoResposta →
+│                  #   ComposicaoRespostaDados, ordem fixa + linha de resumo; resumoDoProdutor
+│                  #   agrega atraso, prazos, notas paradas, pedidos e notas a conferir); ValidadorNumeros;
 │                  # VerificadorAfirmacaoDados (lei do MISTO não fala dos dados, #170);
 │                  # consultarTratamentoProduto (#283): porta TratamentoProdutoPorta, texto por
 │                  #   template (TemplateTratamentoProduto) aplicado depois da validação
@@ -327,7 +330,7 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 1.846 testes, todos passando** (2026-11-02) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 1.880 testes, todos passando** (2026-11-02) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 8 concluída (2026-10-20)

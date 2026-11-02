@@ -91,6 +91,23 @@ public interface DadosProdutorPorta {
   Pagina<Alerta> alertas(UUID produtorId);
 
   /**
+   * Notas próprias com sinal a conferir (#276) para o resumo do produtor (#266): as ainda não
+   * emitidas e as autorizadas dentro do prazo de cancelamento (RN006), as mais recentes primeiro.
+   */
+  List<NotaDetalhe> notasAConferir(UUID produtorId, LocalDate hoje);
+
+  /** Pedidos de documento do escritório ainda sem resposta (#180), dos vínculos ativos. */
+  List<Pedido> pedidosDoEscritorio(UUID produtorId);
+
+  /**
+   * Um pedido de documento do escritório.
+   *
+   * @param titulo     título escrito pelo escritório (texto livre: nunca vai ao modelo)
+   * @param dataLimite prazo, ou nulo
+   */
+  record Pedido(String titulo, LocalDate dataLimite) {}
+
+  /**
    * Retenções sobre as vendas autorizadas do período (RN009, issue #145): Funrural retido pelo
    * comprador e IBS/CBS separado no pagamento (split payment). Valores calculados pelo backend.
    */

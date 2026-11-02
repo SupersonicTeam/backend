@@ -105,14 +105,15 @@ class RotaDadosOllamaFioTest {
   void payloadNaoCarregaProdutor() {
     respostas.add(ollama("", "{\"function\":{\"name\":\"consultarApuracao\","
         + "\"arguments\":{\"mes\":\"2026-07\"}}}"));
-    respostas.add(ollama("Seu saldo de IBS em 2026-07 e R$ 120,00.", null));
 
     ResultadoRota resultado = rota.responder("Qual meu saldo de IBS em julho?",
         new ContextoAssistente(PRODUTOR, LocalDate.of(2026, 9, 29)));
 
     assertThat(resultado.aceita()).isTrue();
-    assertThat(resultado.texto()).isEqualTo("Seu saldo de IBS em 2026-07 e R$ 120,00.");
-    assertThat(corpos).hasSize(2);
+    // #266: a resposta e do template; o modelo so escolheu a funcao, numa chamada so.
+    assertThat(resultado.texto()).startsWith("Na apuracao de 07/2026 (ainda aberta")
+        .contains("o imposto a pagar e de R$ 120,00 de IBS");
+    assertThat(corpos).hasSize(1);
     for (String corpo : corpos) {
       assertThat(corpo).doesNotContain(PRODUTOR.toString(), "contextoAssistente", "produtorId");
     }
@@ -122,8 +123,8 @@ class RotaDadosOllamaFioTest {
         "\"listarAlertas\"");
     // Opcoes padrao preservadas ao mesclar com as opcoes da chamada: modelo e thinking desligado.
     assertThat(corpos.get(0)).contains("\"model\":\"qwen3:4b\"", "\"think\":false");
-    // O resultado da funcao foi devolvido ao modelo na segunda chamada.
-    assertThat(corpos.get(1)).contains("R$ 120,00");
+    // O resultado da funcao nunca vai ao provedor: nao ha segunda chamada.
+    assertThat(corpos.get(0)).doesNotContain("R$ 120,00");
   }
 
   @Test

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
+import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.ferramentas.ProcessadorErroFerramenta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.config.AssistenteProperties;
@@ -9,7 +10,6 @@ import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +30,17 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * Rota de dados da Ceres (issue #142): o modelo escolhe funções de
- * {@link FerramentasDadosProdutor}, o backend as executa e o modelo redige a resposta com o
- * resultado.
+ * Rota de dados da Ceres (issues #142 e #266): o modelo <strong>só escolhe</strong> as funções de
+ * {@link FerramentasDadosProdutor}; o backend as executa e a resposta sai dos templates
+ * ({@code RedatorRespostaDados}), compostos pela {@link ComposicaoRespostaDados}. Os resultados não
+ * voltam ao modelo: uma chamada só por pergunta, e o texto ao produtor nunca é do modelo (as
+ * negativas falsas, os totais trocados e a instrução de função vazando nasciam na redação).
  *
  * <p><strong>O laço é do backend</strong> ({@code internalToolExecutionEnabled=false} +
  * {@link ToolCallingManager}), não do Spring AI. Isso dá:
  * <ul>
- *   <li><strong>teto de rodadas</strong> ({@code app.assistente.max-rodadas-ferramentas}): sem
- *       ele, um modelo confuso ou induzido por prompt injection chamaria funções sem fim;</li>
+ *   <li><strong>uma rodada só</strong>: as funções pedidas na primeira resposta rodam uma vez, e
+ *       nada mais é pedido ao modelo;</li>
  *   <li><strong>lista fechada de funções:</strong> o {@link ToolCallingManager} é próprio, com um
  *       {@link StaticToolCallbackResolver} só das funções de dados. O autoconfigurado também
  *       resolve qualquer bean {@code Function}/{@code Supplier} do contexto <em>pelo nome</em> — um
@@ -58,9 +60,13 @@ public class RotaDados {
   static final String MENSAGEM_SEM_CONCLUSAO =
       "Nao consegui concluir a consulta. Tente reformular a pergunta de forma mais especifica.";
 
-  /** O modelo não redigiu nada. */
-  static final String MENSAGEM_SEM_RESPOSTA =
-      "Nao consegui formular uma resposta. Tente reformular a pergunta.";
+  /**
+   * O modelo não escolheu nenhuma função (ou todas falharam): resposta honesta, nunca negativa
+   * (issue #266). Vai com os atalhos de tela.
+   */
+  static final String MENSAGEM_SEM_FUNCAO = "Nao consegui identificar qual dado consultar. Voce"
+      + " pode perguntar, por exemplo: \"tenho guia em atraso?\", \"quanto vendi de soja em"
+      + " outubro?\" ou \"tem algo me esperando?\". Ou veja direto na tela indicada.";
 
   /** A resposta tinha número que não veio de nenhuma função. */
   static final String MENSAGEM_NUMERO_SEM_FONTE =
@@ -69,16 +75,12 @@ public class RotaDados {
 
   private static final Logger log = LoggerFactory.getLogger(RotaDados.class);
 
-  /** Raciocínio que alguns modelos (qwen3) escrevem no texto quando o thinking não é separado. */
-  private static final Pattern RACIOCINIO = Pattern.compile("(?s)<think>.*?</think>");
-
   private final ModeloLinguagem modelo;
   private final ToolCallingManager toolCallingManager;
   private final ValidadorNumeros validadorNumeros;
   private final VerificadorNegativaDados verificadorNegativa;
   private final List<ToolCallback> ferramentas;
   private final Set<String> nomesPermitidos;
-  private final int maxRodadas;
 
   /** Constrói a rota com um {@link ToolCallingManager} restrito às funções de dados. */
   public RotaDados(
@@ -101,7 +103,6 @@ public class RotaDados {
         .toolExecutionExceptionProcessor(processadorErro)
         .observationRegistry(observacao.getIfAvailable(() -> ObservationRegistry.NOOP))
         .build();
-    this.maxRodadas = propriedades.getMaxRodadasFerramentas();
   }
 
   /**
@@ -124,52 +125,55 @@ public class RotaDados {
         new SystemMessage(PromptsCeres.sistemaDados(contexto.hoje())),
         new UserMessage(perguntaAoModelo)), opcoes);
 
-    List<String> resultados = new ArrayList<>();
+    // Uma chamada so (#266): o modelo escolhe as funcoes; o texto e do template do backend.
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
-    int rodadas = 0;
-    while (resposta.hasToolCalls()) {
-      if (rodadas >= maxRodadas) {
-        log.warn("Ceres: teto de {} rodadas de funcoes atingido", maxRodadas);
-        return ResultadoRota.descartada(MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.SEM_CONCLUSAO);
-      }
-      contexto.registrarChamadasDeFuncao(quantidadeDeChamadas(resposta));
-      if (!somenteFuncoesPermitidas(resposta)) {
-        // Nome alucinado ou injetado: nada e executado. O nome nao vai ao log (vem do modelo).
-        log.warn("Ceres: modelo pediu funcao fora da lista de funcoes de dados");
-        return ResultadoRota.descartada(
-            MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
-      }
-      contexto.verificarAtiva();
-      ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, resposta);
-      coletarResultados(execucao.conversationHistory(), resultados);
-      prompt = new Prompt(execucao.conversationHistory(), opcoes);
-      contexto.verificarAtiva();
-      resposta = modelo.chamar(prompt);
-      contexto.registrarUso(prompt, resposta);
-      rodadas++;
+    if (!resposta.hasToolCalls()) {
+      // Sem funcao, nao ha dado para afirmar nada: nunca "nao tem" (#266, item 3).
+      return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.SEM_RESPOSTA, List.of(),
+          ModoFallback.atalhos(pergunta));
     }
+    contexto.registrarChamadasDeFuncao(quantidadeDeChamadas(resposta));
+    if (!somenteFuncoesPermitidas(resposta)) {
+      // Nome alucinado ou injetado: nada e executado. O nome nao vai ao log (vem do modelo).
+      log.warn("Ceres: modelo pediu funcao fora da lista de funcoes de dados");
+      return ResultadoRota.descartada(
+          MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
+    }
+    contexto.verificarAtiva();
+    ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, resposta);
+    List<String> resultados = new ArrayList<>();
+    coletarResultados(execucao.conversationHistory(), resultados);
+    contexto.verificarAtiva();
 
-    String texto = limpar(resposta.getResult().getOutput().getText());
-    if (texto.isBlank()) {
-      return ResultadoRota.descartada(MENSAGEM_SEM_RESPOSTA, DesfechoInteracao.SEM_RESPOSTA);
+    List<SecaoResposta> secoes = contexto.secoes();
+    String texto = ComposicaoRespostaDados.compor(secoes);
+    if (texto.isBlank() && !contexto.textosDoBackend().isEmpty()) {
+      // So o tratamento do produto (#283): o texto e as citacoes vem do TextosDoBackend.
+      return ResultadoRota.aceita("");
     }
-    // Fontes de numeros: so os resultados das funcoes e a pergunta. O prompt de sistema NAO entra
-    // (a data de hoje e as referencias legais liberariam 29, 2026, 214... como "com fonte"); dele
-    // vale apenas a data de hoje, como data.
+    if (texto.isBlank()) {
+      // Toda funcao pedida falhou (parametro invalido, tempo da funcao): sem dado, sem negativa.
+      return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.SEM_RESPOSTA, List.of(),
+          ModoFallback.atalhos(pergunta));
+    }
+    // Rede de seguranca (#266, item 6): o texto e do template, entao os numeros vem dos resultados
+    // das funcoes; os pedacos de texto livre e de calculo do backend entram como fonte. O prompt
+    // de sistema NAO entra (a data de hoje e as referencias legais liberariam 29, 2026, 214...).
     List<String> fontes = new ArrayList<>(resultados);
+    fontes.addAll(ComposicaoRespostaDados.textosLivres(secoes));
     fontes.add(perguntaAoModelo);
     ValidadorNumeros.Resultado verificacao =
         validadorNumeros.verificar(texto, fontes, List.of(contexto.hoje()));
     if (!verificacao.rastreavel()) {
       // So a contagem: os numeros em si podem ser dados do produtor.
-      log.warn("Ceres: resposta descartada com {} numero(s) sem fonte",
+      log.warn("Ceres: resposta de template descartada com {} numero(s) sem fonte",
           verificacao.quantidadeSemFonte());
       return ResultadoRota.descartada(
           MENSAGEM_NUMERO_SEM_FONTE, DesfechoInteracao.NUMERO_SEM_FONTE);
     }
-    // Negativa absoluta sobre consulta vazia, sem o recorte: vira a frase do backend (#274).
+    // Negativa sem recorte: o template sempre traz o recorte, mas a rede fica (#274).
     return verificadorNegativa.substituir(texto, contexto)
         .map(ResultadoRota::comNegativaSubstituida)
         .orElseGet(() -> ResultadoRota.aceita(texto));
@@ -193,7 +197,4 @@ public class RotaDados {
     }
   }
 
-  private static String limpar(String texto) {
-    return texto == null ? "" : RACIOCINIO.matcher(texto).replaceAll("").strip();
-  }
 }
