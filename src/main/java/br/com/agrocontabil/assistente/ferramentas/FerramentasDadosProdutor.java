@@ -683,6 +683,12 @@ public class FerramentasDadosProdutor {
     List<DadosProdutorPorta.NotaDetalhe> notas = pagina.itens();
     contexto.registrarFonte("consultarNota", parametros("numero", String.valueOf(numero)),
         notas.isEmpty());
+    // Sinais de nota a conferir (#276): ao modelo, so os codigos; a frase, com a descricao do
+    // item (texto livre), entra na resposta pelo backend depois da validacao.
+    notas.stream()
+        .map(n -> FrasesSinaisNota.texto(n.numero(), n.sinais()))
+        .filter(texto -> !texto.isEmpty())
+        .forEach(texto -> contexto.registrarTextoDoBackend(texto, List.of()));
     return new NotaConsultada(numero, pagina.total(), notas.stream()
         .map(n -> new NotaDetalhada(n.numero(), n.serie(), FormatoBr.data(n.dataEmissao()),
             n.origem() == OrigemNotaFiscal.IMPORTADA ? "ENTRADA" : "SAIDA", n.status().name(),
@@ -691,7 +697,7 @@ public class FerramentasDadosProdutor {
             n.inconsistencias().stream()
                 .map(i -> new Inconsistencia(i.codigo(), i.campo(), i.mensagem(), i.sugestao()))
                 .toList(),
-            List.of()))
+            n.sinais().stream().map(DadosProdutorPorta.Sinal::codigo).distinct().toList()))
         .toList(),
         notas.isEmpty() ? "Nao encontrei a nota " + numero + " nas suas notas." : null);
   }

@@ -179,16 +179,32 @@ public interface DadosProdutorPorta {
    *
    * @param motivoDevolucao motivo da última devolução, só com a nota ainda devolvida
    * @param inconsistencias as do último lote, só com a nota em {@code COM_INCONSISTENCIAS}
+   * @param sinais          sinais de nota a conferir (#276), só nas notas próprias
    */
   record NotaDetalhe(long numero, int serie, OffsetDateTime dataEmissao, OrigemNotaFiscal origem,
       StatusNotaFiscal status, BigDecimal valorTotal, BigDecimal valorIbs, BigDecimal valorCbs,
-      String motivoDevolucao, List<Inconsistencia> inconsistencias) {
+      String motivoDevolucao, List<Inconsistencia> inconsistencias, List<Sinal> sinais) {
 
-    /** Cópia defensiva. */
+    /** Cópias defensivas. */
     public NotaDetalhe {
       inconsistencias = List.copyOf(inconsistencias);
+      sinais = List.copyOf(sinais);
     }
   }
+
+  /**
+   * Sinal de nota a conferir (#276): suspeita, nunca certeza. A descrição do item é texto livre do
+   * produtor: vai só ao texto fixo do backend, nunca ao modelo.
+   *
+   * @param codigo            código do sinal (ex.: {@code PRODUTO_PARECE_SERVICO})
+   * @param numeroItem        item da nota; nulo num sinal da nota inteira
+   * @param descricaoItem     descrição do item
+   * @param cfop              CFOP do item
+   * @param ncm               NCM do item
+   * @param prazoCancelamento último dia para cancelar, só com a nota autorizada no prazo
+   */
+  record Sinal(String codigo, Integer numeroItem, String descricaoItem, String cfop, String ncm,
+      LocalDate prazoCancelamento) {}
 
   /** Inconsistência de validação: código, campo, mensagem e sugestão do sistema. */
   record Inconsistencia(String codigo, String campo, String mensagem, String sugestao) {}

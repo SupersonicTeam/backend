@@ -473,7 +473,8 @@ class FerramentasDadosProdutorTest {
             107, 1, OffsetDateTime.of(2026, 9, 8, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
             OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.DEVOLVIDA, new BigDecimal("12100.00"),
             BigDecimal.ZERO, BigDecimal.ZERO, "Corrija a natureza.",
-            List.of(new DadosProdutorPorta.Inconsistencia("C", "campo", "msg", "sug")))), 4));
+            List.of(new DadosProdutorPorta.Inconsistencia("C", "campo", "msg", "sug")),
+            List.of())), 4));
 
     RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(107, toolContext);
 
@@ -705,5 +706,28 @@ class FerramentasDadosProdutorTest {
         .isInstanceOf(ParametroFerramentaInvalidoException.class);
     assertThatThrownBy(() -> ferramentas.consultarTratamentoProduto("ab", toolContext))
         .isInstanceOf(ParametroFerramentaInvalidoException.class);
+  }
+
+  @Test
+  @DisplayName("#276: sinal da nota vai ao modelo so como codigo; a frase com o item e do backend")
+  void consultarNotaComSinal() {
+    when(dados.notasPorNumero(PRODUTOR, 116)).thenReturn(new Pagina<>(List.of(
+        new DadosProdutorPorta.NotaDetalhe(
+            116, 1, OffsetDateTime.of(2026, 9, 8, 12, 0, 0, 0, ZoneOffset.ofHours(-3)),
+            OrigemNotaFiscal.PROPRIA, StatusNotaFiscal.RASCUNHO, new BigDecimal("800.00"),
+            BigDecimal.ZERO, BigDecimal.ZERO, null, List.of(),
+            List.of(new DadosProdutorPorta.Sinal("PRODUTO_PARECE_SERVICO", 1,
+                "Servico de colheita do Joao", "5949", "12019000", null)))), 1));
+
+    RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(116, toolContext);
+
+    assertThat(nota.notas().get(0).sinais()).containsExactly("PRODUTO_PARECE_SERVICO");
+    assertThat(nota.toString()).doesNotContain("Joao");
+    assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
+      assertThat(t.texto()).isEqualTo("Na nota 116, o item 'Servico de colheita do Joao' saiu"
+          + " com CFOP 5.949 (outra saida nao especificada) e parece um servico. Servico"
+          + " normalmente nao sai em nota de produto: confira com seu contador antes de emitir.");
+      assertThat(t.dispositivos()).isEmpty();
+    });
   }
 }

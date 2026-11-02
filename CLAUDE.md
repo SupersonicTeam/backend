@@ -93,6 +93,8 @@ br.com.agrocontabil
 │                  # AliquotaIbsCbsResolver + ReducaoNcmResolver (resolvedores únicos débito×crédito),
 │                  # ClassificacaoTributariaService (tabela oficial cClassTrib + anexos da LC 214 por NCM, #272),
 │                  # TratamentoProdutoService (tratamento de um produto por nome ou NCM, para a Ceres, #283),
+│                  # SinaisNotaConferirService (sinais de nota a conferir: PRODUTO_PARECE_SERVICO, #276;
+│                  #   listas versionadas em resources/sinais-nota/),
 │                  # NotaFiscalValidacaoService, AuthenticatedProdutorProvider,
 │                  # RetencaoService (RN009: Funrural retido pelo comprador + split payment, #145),
 │                  # VerificacaoAnexoService + ClamdCliente (antivirus dos anexos, ClamAV, #227),
@@ -320,7 +322,7 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 1.747 testes, todos passando** (2026-11-02) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 1.766 testes** (2026-11-02) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 8 concluída (2026-10-20)
