@@ -151,7 +151,9 @@ class ProtecaoApiIntegrationTest {
         .andExpect(header().exists("Content-Security-Policy"));
     mockMvc.perform(doIp(get("/v3/api-docs"), ipNovo()))
         .andExpect(header().doesNotExist("Content-Security-Policy"))
-        .andExpect(jsonPath("$.info.title").value("AgroConIA API")); // #336
+        .andExpect(jsonPath("$.info.title").value("AgroConIA API")) // #336
+        .andExpect(jsonPath("$.info.contact.name").value("GWNext"))
+        .andExpect(jsonPath("$.info.contact.email").value("contato@gwnext.com.br"));
   }
 
   @Test
