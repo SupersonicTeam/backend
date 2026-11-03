@@ -2,6 +2,7 @@ package br.com.agrocontabil.danfe;
 
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.SecureXmlFactories;
 import java.io.ByteArrayInputStream;
@@ -32,9 +33,12 @@ import org.w3c.dom.Node;
  * @param totalIbsUf {@code IBSCBSTot/gIBS/gIBSUF/vIBSUF}; nulo sem o grupo
  * @param totalIbsMun {@code IBSCBSTot/gIBS/gIBSMun/vIBSMun}; nulo sem o grupo
  * @param itens itens na ordem do documento
+ * @param funrural trecho do Funrural/Senar retido pelo adquirente nas informações complementares
+ *                 ({@code infAdic/infCpl}, a partir do
+ *                 {@link NotaFiscalNfeMapper#MARCADOR_FUNRURAL}, issue #332); nulo sem retenção
  */
 record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDecimal totalCbs,
-    BigDecimal totalIbsUf, BigDecimal totalIbsMun, List<Item> itens) {
+    BigDecimal totalIbsUf, BigDecimal totalIbsMun, List<Item> itens, String funrural) {
 
   /** Totais do grupo {@code ICMSTot}. */
   record Totais(BigDecimal vBC, BigDecimal vICMS, BigDecimal vBCST, BigDecimal vST,
@@ -87,7 +91,17 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
         numero(filho(ibsCbsTot, "gCBS"), "vCBS"),
         numero(filho(gIbsTot, "gIBSUF"), "vIBSUF"),
         numero(filho(gIbsTot, "gIBSMun"), "vIBSMun"),
-        List.copyOf(itens));
+        List.copyOf(itens),
+        trechoFunrural(texto(filho(inf, "infAdic"), "infCpl")));
+  }
+
+  /** O trecho do Funrural vai do marcador ao fim do {@code infCpl} (o mapper o põe por último). */
+  private static String trechoFunrural(String infCpl) {
+    if (infCpl == null) {
+      return null;
+    }
+    int inicio = infCpl.indexOf(NotaFiscalNfeMapper.MARCADOR_FUNRURAL);
+    return inicio < 0 ? null : infCpl.substring(inicio);
   }
 
   private static Item itemDoXml(Element det) {
@@ -140,7 +154,9 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
         comIbsCbsTot ? orZero(nota.getValorTotalCbs()) : null,
         comIbsCbsTot ? ibs.valorUf() : null,
         comIbsCbsTot ? ibs.valorMun() : null,
-        List.copyOf(itens));
+        List.copyOf(itens),
+        nota.getOrigem() == OrigemNotaFiscal.IMPORTADA || nota.getProdutor() == null ? null
+            : NotaFiscalNfeMapper.textoFunrural(nota).orElse(null));
   }
 
   private static Item itemDaNota(NotaFiscalItem item) {

@@ -98,6 +98,18 @@ class RetencaoServiceTest {
     assertThat(service.detectarRetencao(nota)).isEqualTo(Optional.empty());
   }
 
+  @ParameterizedTest
+  @EnumSource(value = StatusNotaFiscal.class, names = {"RASCUNHO", "APROVADA", "XML_GERADO"})
+  @DisplayName("Funrural da venda sai em qualquer status, igual ao da nota autorizada (#332)")
+  void funruralDaVendaAntesDaAutorizacao(StatusNotaFiscal status) {
+    NotaFiscal nota = venda(TipoProdutor.PESSOA_FISICA, "11444777000161", "PR", "144000.00");
+    RetencaoService.Funrural autorizada = service.detectarRetencao(nota).orElseThrow().funrural();
+    nota.setStatus(status);
+
+    assertThat(RetencaoService.funruralDaVenda(nota)).isEqualTo(autorizada);
+    assertThat(autorizada.situacao()).isEqualTo(SituacaoFunrural.RETIDO_PELO_ADQUIRENTE);
+  }
+
   @Test
   @DisplayName("Compra (nota importada) não tem retenção para o produtor")
   void compraNaoTemRetencao() {

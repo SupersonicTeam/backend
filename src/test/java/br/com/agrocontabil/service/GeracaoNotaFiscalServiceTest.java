@@ -115,6 +115,19 @@ class GeracaoNotaFiscalServiceTest {
     // Não deve lançar exceção (XsdValidator internamente já valida e lança se inválido)
   }
 
+  @Test
+  @DisplayName("Funrural/Senar retido no infCpl passa no XSD e na assinatura (#332)")
+  void funruralNoInfCplValidaXsd() {
+    NotaFiscal nota = buildNotaCompleta(); // produtor PF vendendo a CNPJ
+    tributacaoService.calcular(nota);
+
+    String xml = service.gerarXml(nota); // assina e valida no XSD; lancaria se invalido
+
+    assertThat(xml).contains("<infCpl>NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO")
+        .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 1.000,00")
+        .contains("TOTAL 1,5% = R$ 15,00");
+  }
+
   // =========================================================================
   // Issue #278: CST/cClassTrib da regra de reducao e grupo gRed, validados pelo XSD
   // =========================================================================
