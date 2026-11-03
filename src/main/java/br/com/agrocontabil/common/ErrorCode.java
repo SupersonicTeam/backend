@@ -156,8 +156,8 @@ public enum ErrorCode {
    */
   OBRIGACAO_INVALIDA,
   /**
-   * Produtor pessoa física com regime do Simples Nacional ou do MEI (issue #298): os dois são de
-   * microempresa e empresa de pequeno porte (LC 123/2006, art. 3º). HTTP 422.
+   * Produtor pessoa física com regime do Simples Nacional ou do MEI (issue #298; LC 123/2006,
+   * arts. 3º e 18-A). HTTP 422.
    */
   REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR,
   /**

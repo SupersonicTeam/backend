@@ -701,8 +701,8 @@ public class NotaFiscalNfeMapper {
    * única do XML e da DANFE (#279).
    *
    * <p>Produtor <strong>pessoa física</strong> é sempre 3, qualquer que seja o regime gravado
-   * (issue #298): o Simples Nacional e o MEI são de microempresa e empresa de pequeno porte
-   * (LC 123/2006, art. 3º), e o produtor rural pessoa física não se inscreve neles. Um cadastro
+   * (issue #298): o produtor rural pessoa física não se inscreve no Simples Nacional nem no MEI
+   * (LC 123/2006, arts. 3º e 18-A). Um cadastro
    * antigo com {@code SIMPLES} não pode fazer a NF-e dizer que o emitente é do Simples.
    *
    * @param tipo   tipo do produtor; nulo = decide pelo regime

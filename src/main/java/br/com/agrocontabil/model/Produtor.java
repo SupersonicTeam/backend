@@ -140,10 +140,16 @@ public class Produtor {
   /**
    * Pessoa física nunca em {@code SIMPLES} nem {@code MEI} (issue #298), no cadastro e na troca de
    * tipo ou de regime.
+   *
+   * <p>Invariante da entidade, e não regra de um service, de propósito: nenhuma rota da API grava
+   * o regime (o cadastro não o pede) e os caminhos que o gravam são os seeds; a entidade é o único
+   * ponto que todos atravessam. Limite: o 422 sai inteiro quando o erro nasce no {@code persist}
+   * ou num {@code flush} explícito; no flush do commit de um {@code @Transactional} o JPA o
+   * embrulha no rollback e a resposta seria 500. Rota futura que edite o regime confere
+   * {@link RegimeTributario#incompativel} no service antes de gravar.
    */
   private void conferirRegime() {
-    if (tipoProdutor == TipoProdutor.PESSOA_FISICA && regimeTributario != null
-        && !regimeTributario.admitidoParaPessoaFisica()) {
+    if (RegimeTributario.incompativel(tipoProdutor, regimeTributario)) {
       throw new RegimeIncompativelComTipoProdutorException(regimeTributario);
     }
   }

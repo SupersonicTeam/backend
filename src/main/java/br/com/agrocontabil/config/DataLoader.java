@@ -196,9 +196,7 @@ public class DataLoader implements CommandLineRunner {
     Optional<Produtor> existente = produtorRepository.findByCpfCnpj(produtor.getCpfCnpj());
     if (existente.isPresent()) {
       Produtor salvo = existente.get();
-      if (salvo.getTipoProdutor() == TipoProdutor.PESSOA_FISICA
-          && salvo.getRegimeTributario() != null
-          && !salvo.getRegimeTributario().admitidoParaPessoaFisica()) {
+      if (RegimeTributario.incompativel(salvo.getTipoProdutor(), salvo.getRegimeTributario())) {
         // O seed nao reescreve produtor ja gravado; a correcao e manual (issue #298). A NF-e e o
         // calendario ja tratam a pessoa fisica como regime normal.
         log.warn("Produtor semeado {} e pessoa fisica com regime {}: corrija pelo passo de "

@@ -35,9 +35,12 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
 - **Produtor pessoa física nunca no Simples nem no MEI (#298, LC 123/2006, art. 3º):** CRT **3**
   na NF-e e no DANFE pelo `tipoProdutor` (`NotaFiscalNfeMapper.crt(tipo, regime)`), qualquer que
   seja o regime gravado; o calendário nunca lhe mostra obrigação só do Simples/MEI
-  (`ObrigacaoFiscal.aplicaA`); o `Produtor` recusa gravá-lo em `SIMPLES`/`MEI` (422
-  `REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR`, só na criação e na troca de tipo/regime). Seeds em
-  `REAL`. Dado já gravado na VPS: passo manual em `docs/demonstracao-banca.md`, nunca changeSet.
+  (`ObrigacaoFiscal.aplicaA` lê o regime incompatível como desconhecido); o `Produtor` recusa
+  gravá-lo em `SIMPLES`/`MEI` (`RegimeTributario.incompativel`, regra única; 422
+  `REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR` no persist/flush explícito, só na criação e na troca de
+  tipo/regime; invariante da entidade porque nenhuma rota grava o regime — rota futura confere no
+  service). Seeds em `REAL`. Dado já gravado na VPS: passo manual em
+  `docs/demonstracao-banca.md`, nunca changeSet.
 
 ## Stack fixada
 

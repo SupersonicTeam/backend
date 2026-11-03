@@ -46,6 +46,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 
 - **Sempre** Bean Validation (`@Valid` + anotações no DTO). **Nunca** validar manualmente o que a anotação resolve.
 - Regra fiscal/de-negócio (não expressável por anotação) → no service.
+- **Exceção registrada (#298):** pessoa física nunca em `SIMPLES`/`MEI` é invariante do `Produtor` (`@PrePersist`/`@PreUpdate`, regra única em `RegimeTributario.incompativel`), porque nenhuma rota grava o regime. Rota nova que edite o regime confere a regra **no service** antes de gravar: no flush do commit o erro da entidade sairia 500, não 422.
 - **Limites do layout NF-e = defesa em profundidade:** `@Max` no DTO (400) **e** regra no `FiscalRulesValidator` (422). O DTO não alcança notas importadas/legadas, que entram por XML.
 
 ## Contrato de erro (obrigatório)

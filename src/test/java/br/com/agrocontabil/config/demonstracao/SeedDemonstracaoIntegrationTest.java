@@ -8,10 +8,10 @@ import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
-import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.nfe.AssinaturaValidator;
@@ -125,9 +125,9 @@ class SeedDemonstracaoIntegrationTest {
     assertThat(NotaFiscalNfeMapper.crt(principal.getTipoProdutor(),
         principal.getRegimeTributario())).isEqualTo("3");
     // Pessoa fisica nunca no Simples nem no MEI (#298).
-    assertThat(produtorRepository.findAll()).filteredOn(
-        p -> p.getTipoProdutor() == TipoProdutor.PESSOA_FISICA && p.getRegimeTributario() != null)
-        .allMatch(p -> p.getRegimeTributario().admitidoParaPessoaFisica());
+    assertThat(produtorRepository.findAll())
+        .noneMatch(p -> RegimeTributario.incompativel(p.getTipoProdutor(),
+            p.getRegimeTributario()));
   }
 
   @Test

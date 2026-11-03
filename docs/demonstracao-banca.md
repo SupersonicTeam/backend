@@ -97,16 +97,24 @@ pessoa física em `SIMPLES`. Desde a #298 a NF-e, o DANFE e o calendário já os
 normal; o passo abaixo corrige o regime gravado, que aparece na carteira e na ficha. Enquanto ele
 não roda, a subida loga um `WARN` "Produtor semeado ... e pessoa fisica com regime SIMPLES".
 
-1. Na pasta do `deploy/` da VPS, conferir quem será alterado (o CPF é cifrado; o nome não):
+1. Na pasta do `deploy/` da VPS, conferir quem será alterado (o CPF é cifrado; o nome não). O
+   `psql` usa o usuário e o banco do próprio container (`POSTGRES_USER`/`POSTGRES_DB`, que vêm de
+   `DB_USER`/`DB_NAME` do `.env`):
 
    ```bash
-   docker compose exec -T postgres psql -U agrocontabil -d agrocontabil -c "SELECT id, nome_completo, regime_tributario FROM produtores WHERE tipo_produtor = 'PESSOA_FISICA' AND regime_tributario IN ('SIMPLES', 'MEI');"
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+   SELECT id, nome_completo, regime_tributario FROM produtores
+    WHERE tipo_produtor = 'PESSOA_FISICA' AND regime_tributario IN ('SIMPLES', 'MEI');
+   SQL
    ```
 
 2. Corrigir para o regime normal (idempotente: na segunda vez não altera nada):
 
    ```bash
-   docker compose exec -T postgres psql -U agrocontabil -d agrocontabil -c "UPDATE produtores SET regime_tributario = 'REAL', updated_at = NOW() WHERE tipo_produtor = 'PESSOA_FISICA' AND regime_tributario IN ('SIMPLES', 'MEI');"
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+   UPDATE produtores SET regime_tributario = 'REAL', updated_at = NOW()
+    WHERE tipo_produtor = 'PESSOA_FISICA' AND regime_tributario IN ('SIMPLES', 'MEI');
+   SQL
    ```
 
 3. Conferir: o `SELECT` do passo 1 volta vazio; a ficha do João
