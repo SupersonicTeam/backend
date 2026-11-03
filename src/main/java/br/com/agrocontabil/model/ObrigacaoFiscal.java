@@ -130,13 +130,20 @@ public class ObrigacaoFiscal {
    * obrigações que valem para todos: mostrar as de todo regime ao mesmo tempo (MEI, Simples e
    * Presumido juntos) seria pior que faltar. Cadastrar o regime acende as específicas.
    *
+   * <p>Pessoa física com regime gravado {@code SIMPLES} ou {@code MEI} (cadastro anterior à issue
+   * #298) conta como regime desconhecido: o produtor rural pessoa física não se inscreve nesses
+   * regimes (LC 123/2006, arts. 3º e 18-A). Assim ele nunca recebe obrigação só do Simples ou do
+   * MEI (DAS, DEFIS, DAS-MEI, DASN-SIMEI), nem pela versão do escritório que tirou o tipo, e o
+   * calendário o lê como o CRT da NF-e, que já o trata como regime normal.
+   *
    * @param tipo   tipo do produtor
    * @param regime regime do produtor
    * @return {@code true} se a obrigação se aplica
    */
   public boolean aplicaA(TipoProdutor tipo, RegimeTributario regime) {
+    RegimeTributario efetivo = RegimeTributario.incompativel(tipo, regime) ? null : regime;
     boolean tipoCasa = tipoProdutor == null || tipoProdutor == tipo;
-    boolean regimeCasa = regimes == null || regimes.isEmpty() || regimes.contains(regime);
+    boolean regimeCasa = regimes == null || regimes.isEmpty() || regimes.contains(efetivo);
     return tipoCasa && regimeCasa;
   }
 }

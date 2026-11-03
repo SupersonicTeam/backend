@@ -12,7 +12,9 @@ import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.SituacaoVinculo;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
@@ -25,12 +27,14 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 @DisplayName("DataLoader — seed dos produtores de dev/homolog")
 class DataLoaderTest {
 
@@ -180,6 +184,42 @@ class DataLoaderTest {
                           semeado.getEndereco().getCodigoMunicipioIbge(), semeado.getEstado()))
                   .isTrue();
             });
+  }
+
+  @Test
+  @DisplayName("produtor semeado antigo em SIMPLES nao e reescrito; o seed so avisa (#298)")
+  void naoReescreveProdutorAntigoEmSimples(CapturedOutput saida) {
+    Produtor antigo = produtorExistente(CPF_A);
+    antigo.setTipoProdutor(TipoProdutor.PESSOA_FISICA);
+    antigo.setRegimeTributario(RegimeTributario.SIMPLES);
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.of(antigo));
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.of(produtorExistente(CPF_B)));
+    when(contadorRepository.findByCpfCnpj(CNPJ_CONTADOR))
+        .thenReturn(Optional.of(Contador.builder().id(UUID.randomUUID()).build()));
+
+    dataLoader.run();
+
+    verify(produtorRepository, never()).save(any(Produtor.class));
+    assertThat(antigo.getRegimeTributario()).isEqualTo(RegimeTributario.SIMPLES);
+    assertThat(saida.getOut()).contains("pessoa fisica com regime SIMPLES")
+        .contains("docs/demonstracao-banca.md");
+  }
+
+  @Test
+  @DisplayName("seed novo grava pessoa fisica no regime normal, nunca no Simples (#298)")
+  void semeiaPessoaFisicaNoRegimeNormal() {
+    stubarSave();
+    stubarSaveContador();
+    when(produtorRepository.findByCpfCnpj(CPF_A)).thenReturn(Optional.empty());
+    when(produtorRepository.findByCpfCnpj(CPF_B)).thenReturn(Optional.empty());
+
+    dataLoader.run();
+
+    assertThat(capturarSemeados(2)).allSatisfy(semeado -> {
+      assertThat(semeado.getTipoProdutor()).isEqualTo(TipoProdutor.PESSOA_FISICA);
+      assertThat(RegimeTributario.incompativel(semeado.getTipoProdutor(),
+          semeado.getRegimeTributario())).isFalse();
+    });
   }
 
   @Test

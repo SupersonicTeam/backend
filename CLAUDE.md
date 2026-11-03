@@ -32,8 +32,15 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
 - **ICMS e Funrural por guia:** a NF-e não tem o grupo de ICMS por item (total zerado); o sistema
   trata da reforma e os tributos atuais ficam com o contador.
 - **Demonstração:** o produtor semeado é optante (art. 165), nas observações do vínculo semeado.
-  **Pendente:** o seed é `PESSOA_FISICA` com `regimeTributario = SIMPLES`, que sai como CRT 1 na
-  NF-e e liga DAS/DEFIS no calendário — contradiz a premissa (ver o doc, seção 2).
+- **Produtor pessoa física nunca no Simples nem no MEI (#298, LC 123/2006, art. 3º):** CRT **3**
+  na NF-e e no DANFE pelo `tipoProdutor` (`NotaFiscalNfeMapper.crt(tipo, regime)`), qualquer que
+  seja o regime gravado; o calendário nunca lhe mostra obrigação só do Simples/MEI
+  (`ObrigacaoFiscal.aplicaA` lê o regime incompatível como desconhecido); o `Produtor` recusa
+  gravá-lo em `SIMPLES`/`MEI` (`RegimeTributario.incompativel`, regra única; 422
+  `REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR` no persist/flush explícito, só na criação e na troca de
+  tipo/regime; invariante da entidade porque nenhuma rota grava o regime — rota futura confere no
+  service). Seeds em `REAL`. Dado já gravado na VPS: passo manual em
+  `docs/demonstracao-banca.md`, nunca changeSet.
 
 ## Stack fixada
 

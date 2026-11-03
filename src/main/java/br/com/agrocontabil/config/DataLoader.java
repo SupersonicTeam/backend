@@ -195,7 +195,15 @@ public class DataLoader implements CommandLineRunner {
   private Produtor semear(Produtor produtor) {
     Optional<Produtor> existente = produtorRepository.findByCpfCnpj(produtor.getCpfCnpj());
     if (existente.isPresent()) {
-      return existente.get();
+      Produtor salvo = existente.get();
+      if (RegimeTributario.incompativel(salvo.getTipoProdutor(), salvo.getRegimeTributario())) {
+        // O seed nao reescreve produtor ja gravado; a correcao e manual (issue #298). A NF-e e o
+        // calendario ja tratam a pessoa fisica como regime normal.
+        log.warn("Produtor semeado {} e pessoa fisica com regime {}: corrija pelo passo de "
+            + "docs/demonstracao-banca.md (issue #298).", salvo.getId(),
+            salvo.getRegimeTributario());
+      }
+      return salvo;
     }
 
     Produtor salvo = produtorRepository.save(produtor);
@@ -277,7 +285,8 @@ public class DataLoader implements CommandLineRunner {
         .nomeCompleto("João da Silva Produtor")
         .cpfCnpj(CPF_PRODUTOR_SEMENTE)
         .tipoProdutor(TipoProdutor.PESSOA_FISICA)
-        .regimeTributario(RegimeTributario.SIMPLES)
+        // Regime normal (CRT 3): pessoa fisica nao entra no Simples nem no MEI (issue #298).
+        .regimeTributario(RegimeTributario.REAL)
         .porteEmpresa(PorteEmpresa.ME)
         .culturas(new String[] {"soja", "milho", "algodao"})
         .faturamentoAnual(new BigDecimal("2500000.00"))
@@ -304,7 +313,7 @@ public class DataLoader implements CommandLineRunner {
         .nomeCompleto("Maria Agricultora")
         .cpfCnpj(CPF_PRODUTOR_B)
         .tipoProdutor(TipoProdutor.PESSOA_FISICA)
-        .regimeTributario(RegimeTributario.SIMPLES)
+        .regimeTributario(RegimeTributario.REAL)
         .porteEmpresa(PorteEmpresa.ME)
         .culturas(new String[] {"soja", "girassol"})
         .faturamentoAnual(new BigDecimal("1800000.00"))

@@ -122,7 +122,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | Classe | Responsabilidade |
 |--------|-----------------|
 | `FiscalRulesValidator` | Valida regras de negócio fiscal antes de gerar XML (inclui NCM/CFOP — issue #20; NCM na referência — #282; cClassTrib aplicado vigente na tabela oficial, CST = prefixo e redução = a oficial do código — #278) |
-| `NotaFiscalNfeMapper` | Entidade → classes JAXB (formatação fiscal). IBS/CBS (#278): CST/cClassTrib do tratamento aplicado (`cClassTribAplicado`, ou o informado; CST = prefixo), sem padrão fixo; `vBC` = valor cheio; com CST 011/200/515, `gRed` (`pRedAliq`, `pAliqEfet`) em `gIBSUF`, `gIBSMun` e `gCBS` |
+| `NotaFiscalNfeMapper` | Entidade → classes JAXB (formatação fiscal). IBS/CBS (#278): CST/cClassTrib do tratamento aplicado (`cClassTribAplicado`, ou o informado; CST = prefixo), sem padrão fixo; `vBC` = valor cheio; com CST 011/200/515, `gRed` (`pRedAliq`, `pAliqEfet`) em `gIBSUF`, `gIBSMun` e `gCBS`; `crt(tipo, regime)` = fonte única do CRT do XML e da DANFE: pessoa física sempre 3, pessoa jurídica 1 Simples / 4 MEI / 3 normal (#298) |
 | `NfeToNotaFiscalMapper` | Mapper reverso: XML NF-e importado → entidade (issue #19), sempre em `PENDENTE_SEFAZ` (#223: o `protNFe` do upload não prova nada) |
 | `DigestAssinatura` | DigestValue da assinatura do XML e `confere(xml, digVal)` contra o protocolo da SEFAZ (#223) |
 | `NfeXmlImporter` | Parser XXE-safe do XML importado |
@@ -230,7 +230,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `NotaFiscal` | Entidade principal (tabela `notas_fiscais`) |
 | `NotaFiscalItem` | Itens da nota (tabela `nota_fiscal_itens`) |
 | `EnderecoDestinatario` | Embedded address do destinatário |
-| `Produtor` | Produtor rural autenticado |
+| `Produtor` | Produtor rural autenticado. Invariante (#298): pessoa física nunca em `SIMPLES`/`MEI` (`RegimeTributario.incompativel`, regra única), conferida no `@PrePersist` e no `@PreUpdate` só quando tipo ou regime mudam (snapshot no `@PostLoad`) → `RegimeIncompativelComTipoProdutorException` (422) |
 | `NotaFiscalValidacao` | Histórico de inconsistências de validação (issue #22) |
 | `ClassificacaoTributaria` / `ClassificacaoTributariaAnexoItem` / `ClassificacaoTributariaAnexoNcm` | Tabela oficial do IBS/CBS (#272, changeSet 0048, carregada dos CSVs em `db/changelog/data/`, que o espelho H2 lê por `CSVREAD`): 104 cClassTrib da NF-e; itens dos Anexos I, VII, IX e XV; NCM PERMITIDO/VEDADO com vigência |
 | `CfopReferencia` / `NcmReferencia` | Tabelas de referência p/ validação NCM/CFOP (issue #20). Todo NCM semeado precisa existir na nomenclatura oficial versionada em `src/test/resources/ncm/nomenclatura-ncm-oficial.txt` (`NcmSemeadoExisteNaNomenclaturaTest`, #282) |
@@ -241,7 +241,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `AlertaTributario` | Alerta RN010 (issue #140): tipo (`TipoAlertaTributario`), referência (guia/nota/apuração do produtor), data-limite, descrição sem PII, status (`StatusAlertaTributario`). Tabela `alerta_tributario` (0028), única por `(tipo, referencia_id, data_limite)` |
 | `Contador` | Escritório de contabilidade — 2ª identidade do sistema (issue #93); a carteira é `VinculoCarteira` desde a #177 |
 | `Escritorio` / `FuncaoEscritorio` | Escritório (#228, `escritorio`, 0039): dono da carteira, catálogos e convites; o `Contador` é membro (`escritorioId` + `funcao` ADMINISTRADOR/CONTADOR/ASSISTENTE). Cadastro de contador cria o unipessoal; a 0039 migra cada contador para um com o **mesmo id** |
-| `ObrigacaoFiscal` | Obrigação do calendário (#181, `obrigacao_fiscal`, 0040): modelo (sem escritório, 11 semeados com ids fixos `00000000-0000-4000-8181-0000000000NN`), versão do escritório (`modeloId`) ou própria; `Periodicidade`, `AjusteFimDeSemana`, `tipoProdutor`, `regimes` (`RegimesTributariosConverter`: lista na coluna), `aplicaA(tipo, regime)` |
+| `ObrigacaoFiscal` | Obrigação do calendário (#181, `obrigacao_fiscal`, 0040): modelo (sem escritório, 11 semeados com ids fixos `00000000-0000-4000-8181-0000000000NN`), versão do escritório (`modeloId`) ou própria; `Periodicidade`, `AjusteFimDeSemana`, `tipoProdutor`, `regimes` (`RegimesTributariosConverter`: lista na coluna), `aplicaA(tipo, regime)` (pessoa física em `SIMPLES`/`MEI` conta como regime desconhecido: nunca recebe obrigação só do Simples/MEI, #298) |
 | `ConviteMembro` | Convite de equipe (#228, `convite_membro`): e-mail cifrado, função, só o SHA-256 do token, uso único, validade |
 | `VinculoCarteira` | Vínculo escritório × produtor (`carteira_vinculo`, 0038, #177, substitui `contador_produtor`; dono = `escritorioId` + `responsavelId` desde a 0039): `SituacaoVinculo` ATIVO/SUSPENSO/ENCERRADO, início/fim, observações internas (ficha) e etiquetas (N:N `carteira_vinculo_etiqueta`). Só ATIVO autoriza; um não encerrado por par (índice parcial PG) |
 | `ConviteCarteira` / `EtiquetaCarteira` | Convite por e-mail cifrado (`SituacaoConvite` PENDENTE/ACEITO/RECUSADO, validade) e catálogo de etiquetas do escritório (único pelo nome normalizado) — #177 |
@@ -303,6 +303,7 @@ Bean Validation customizada (anotação + validator):
 | `AssistenteIndisponivelException` | 503 | Modelo da Ceres não respondeu / não configurado (issue #141) |
 | `AssistenteOcupadoException` | 503 + `Retry-After` | Sem vaga: limite `app.assistente.max-conversas-simultaneas` ou pergunta do mesmo produtor em andamento (#142, #157) |
 | `AssistenteTempoEsgotadoException` | 503 | Pergunta além de `app.assistente.timeout-pergunta` (#157) |
+| `RegimeIncompativelComTipoProdutorException` | 422 | Produtor pessoa física gravado em `SIMPLES`/`MEI` (issue #298) |
 | `NaoAutenticadoException` | 401 | Requisição sem identidade válida: header `X-Usuario-Id` que não resolve, ou profile sem filtro de identidade (issue #92) |
 | `DomainException` | configurável | Base para exceções de domínio |
 | `ComMensagemCliente` | — | 4xx cujo `getMessage()` é texto de log define o `message` de topo do envelope (`XmlGenerationException`, `LimiteUsoAssistenteException`); 5xx usam o `errors[0]` (#251) |

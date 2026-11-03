@@ -38,7 +38,7 @@ diferimento (premissas, seção 1).
 | "A opção é para sempre? O limite muda?" | A opção vale a partir do mês seguinte e é irretratável durante o ano-calendário (art. 165); a renúncia produz efeito em 1º de janeiro do ano seguinte (art. 166). O limite é atualizado todo ano pelo IPCA (art. 167). O sistema ainda não modela esse histórico (#281). |
 | "E o produtor integrado?" | Pelo art. 164 o integrado não é contribuinte qualquer que seja a receita, salvo opção (art. 165). Mesmo tratamento do pequeno produtor: fora do escopo atual. |
 | "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso. O enquadramento segue em validação com o contador (#284, pergunta 1): não afirmar que ele é definitivo. |
-| "A nota diz que o emitente é do Simples Nacional (CRT 1)." | **Ponto fraco real**: o cadastro da demonstração está com regime `SIMPLES`, que vai para o CRT da NF-e. É inconsistência dos dados de teste, pendente de correção (premissas, seção 2). **Corrigir antes da banca.** |
+| "A nota diz que o emitente é do Simples Nacional (CRT 1)." | Não diz mais (#298): produtor rural pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º), então a NF-e e o DANFE dele saem com **CRT 3 (regime normal)** e o cadastro com `SIMPLES` é recusado. Nota autorizada antes da correção guarda o CRT da emissão: não usar uma delas na banca. |
 | "E o ICMS da nota, zerado?" | O sistema trata da reforma (IBS/CBS). ICMS e Funrural seguem por guia, com o contador (premissas, seção 3). |
 
 ## Pendências que podem mudar este texto
@@ -47,6 +47,7 @@ diferimento (premissas, seção 1).
   se há outro motivo comum para optar ou não.
 - **#284, perguntas 1 e 9:** redução da soja em grão e tratamento de ICMS na venda interna de soja
   em MT.
-- **Dados da demonstração:** regime `SIMPLES` no cadastro (CRT 1 na NF-e).
+- **Dados da demonstração:** o regime gravado do João e da Maria na VPS, corrigido pelo passo manual
+  de [`demonstracao-banca.md`](demonstracao-banca.md) (#298). A #284, pergunta 16, confirma o CRT 3.
 - **Ceres:** a pergunta "pequeno produtor paga IBS?" deve citar os arts. 164 e 165 (base já
   ingerida); pedida para o gabarito ampliado na #264.

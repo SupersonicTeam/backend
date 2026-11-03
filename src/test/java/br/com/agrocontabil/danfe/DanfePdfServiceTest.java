@@ -10,6 +10,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
 import br.com.agrocontabil.nfe.XmlGenerator;
@@ -383,6 +384,23 @@ class DanfePdfServiceTest {
     assertThat(texto).contains("RASCUNHO").contains("SEM VALOR FISCAL")
         .contains("CST 200").contains("[cClassTrib 200036]").contains("CBS 0,36%")
         .contains("TOTAL DO IBS / CBS / IS");
+  }
+
+  @Test
+  @DisplayName("Produtor pessoa física em SIMPLES (cadastro antigo) sai como CRT 3 no XML e no preview (#298)")
+  void pessoaFisicaComRegimeSimplesSaiRegimeNormal() throws IOException {
+    NotaFiscal nota = notaComTratamento(Tratamento.REDUCAO_60);
+    nota.getProdutor().setRegimeTributario(RegimeTributario.SIMPLES);
+
+    String preview = texto(service.gerarPreview(nota));
+    assertThat(valorDoRotulo(preview, "CÓDIGO DE REGIME TRIBUTÁRIO (CRT)"))
+        .isEqualTo("3 - REGIME NORMAL");
+
+    String xml = xml(nota);
+    nota.setXmlGerado(xml);
+    assertThat(tag(xml, "CRT", 0)).isEqualTo("3");
+    assertThat(valorDoRotulo(texto(service.gerarPdf(nota)), "CÓDIGO DE REGIME TRIBUTÁRIO (CRT)"))
+        .isEqualTo("3 - REGIME NORMAL");
   }
 
   /** Nota de soja de 1.000,00 em 2026, com o tratamento já aplicado ao item (como o cálculo grava). */

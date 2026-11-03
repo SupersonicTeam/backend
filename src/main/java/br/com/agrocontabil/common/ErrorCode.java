@@ -156,6 +156,11 @@ public enum ErrorCode {
    */
   OBRIGACAO_INVALIDA,
   /**
+   * Produtor pessoa física com regime do Simples Nacional ou do MEI (issue #298; LC 123/2006,
+   * arts. 3º e 18-A). HTTP 422.
+   */
+  REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR,
+  /**
    * Convite de equipe inválido, vencido, já usado ou de outro e-mail (issue #228). HTTP 400, sem
    * dizer qual dos casos.
    */

@@ -1,5 +1,6 @@
 package br.com.agrocontabil.model;
 
+import br.com.agrocontabil.exception.RegimeIncompativelComTipoProdutorException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Embedded;
@@ -9,9 +10,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
@@ -20,7 +23,9 @@ import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "produtores")
@@ -96,14 +101,56 @@ public class Produtor {
   @Column(name = "updated_at")
   private OffsetDateTime updatedAt;
 
+  /**
+   * Tipo e regime como vieram do banco: o {@link #onUpdate} só confere o regime quando um dos dois
+   * muda. Um cadastro antigo de pessoa física em {@code SIMPLES} (anterior à issue #298) continua
+   * podendo ser gravado em outra coluna (anonimização da LGPD, por exemplo) até ser corrigido.
+   */
+  @Transient
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private TipoProdutor tipoCarregado;
+
+  @Transient
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private RegimeTributario regimeCarregado;
+
+  @PostLoad
+  protected void onLoad() {
+    tipoCarregado = tipoProdutor;
+    regimeCarregado = regimeTributario;
+  }
+
   @PrePersist
   protected void onCreate() {
+    conferirRegime();
     createdAt = OffsetDateTime.now();
     updatedAt = OffsetDateTime.now();
   }
 
   @PreUpdate
   protected void onUpdate() {
+    if (tipoProdutor != tipoCarregado || regimeTributario != regimeCarregado) {
+      conferirRegime();
+    }
     updatedAt = OffsetDateTime.now();
+  }
+
+  /**
+   * Pessoa física nunca em {@code SIMPLES} nem {@code MEI} (issue #298), no cadastro e na troca de
+   * tipo ou de regime.
+   *
+   * <p>Invariante da entidade, e não regra de um service, de propósito: nenhuma rota da API grava
+   * o regime (o cadastro não o pede) e os caminhos que o gravam são os seeds; a entidade é o único
+   * ponto que todos atravessam. Limite: o 422 sai inteiro quando o erro nasce no {@code persist}
+   * ou num {@code flush} explícito; no flush do commit de um {@code @Transactional} o JPA o
+   * embrulha no rollback e a resposta seria 500. Rota futura que edite o regime confere
+   * {@link RegimeTributario#incompativel} no service antes de gravar.
+   */
+  private void conferirRegime() {
+    if (RegimeTributario.incompativel(tipoProdutor, regimeTributario)) {
+      throw new RegimeIncompativelComTipoProdutorException(regimeTributario);
+    }
   }
 }

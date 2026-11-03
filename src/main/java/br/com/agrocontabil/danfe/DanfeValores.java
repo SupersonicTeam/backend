@@ -130,7 +130,8 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
     BigDecimal zero = new BigDecimal("0.00");
     return new DanfeValores(
         nota.getProdutor() != null
-            ? NotaFiscalNfeMapper.crt(nota.getProdutor().getRegimeTributario()) : null,
+            ? NotaFiscalNfeMapper.crt(nota.getProdutor().getTipoProdutor(),
+                nota.getProdutor().getRegimeTributario()) : null,
         nota.getDestinatarioEndereco() != null ? NotaFiscalNfeMapper.BAIRRO_DESTINATARIO : null,
         // O ICMSTot da nota própria leva zero no que não é produto/nota (ICMS e Funrural por
         // guia; docs/premissas-e-escopo.md), como o buildIcmsTot do mapper.

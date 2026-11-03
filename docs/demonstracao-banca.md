@@ -84,5 +84,45 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
   afirmar na banca que esse enquadramento é definitivo.
 - **ICMS e Funrural** ficam por guia (premissa da #280): as guias mensais são de Funrural (PF) e
   ICMS (PJ).
-- **Regime:** os clientes novos são de regime normal (CRT 3), coerentes com a premissa do regime
-  regular. O João do `DataLoader` segue `SIMPLES` até a decisão da #284.
+- **Regime:** todo produtor pessoa física é de regime normal (CRT 3), coerente com a premissa do
+  regime regular. Pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º;
+  issue #298): a NF-e e o DANFE saem com CRT 3 pelo tipo do produtor, o calendário nunca mostra DAS,
+  DEFIS nem as obrigações do MEI a ela, e o cadastro com `SIMPLES`/`MEI` é recusado.
+
+## Passo manual na VPS: regime dos produtores pessoa física (issue #298)
+
+O `DataLoader` não reescreve produtor já gravado, e a correção não pode ir num changeSet (rodaria em
+`prod`, em dado de produtor real). Na VPS, o João e a Maria do `DataLoader` foram gravados como
+pessoa física em `SIMPLES`. Desde a #298 a NF-e, o DANFE e o calendário já os tratam como regime
+normal; o passo abaixo corrige o regime gravado, que aparece na carteira e na ficha. Enquanto ele
+não roda, a subida loga um `WARN` "Produtor semeado ... e pessoa fisica com regime SIMPLES".
+
+1. Na pasta do `deploy/` da VPS, conferir quem será alterado (o CPF é cifrado; o nome não). O
+   `psql` usa o usuário e o banco do próprio container (`POSTGRES_USER`/`POSTGRES_DB`, que vêm de
+   `DB_USER`/`DB_NAME` do `.env`):
+
+   ```bash
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+   SELECT id, nome_completo, regime_tributario FROM produtores
+    WHERE tipo_produtor = 'PESSOA_FISICA' AND regime_tributario IN ('SIMPLES', 'MEI');
+   SQL
+   ```
+
+2. Corrigir para o regime normal (idempotente: na segunda vez não altera nada):
+
+   ```bash
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+   UPDATE produtores SET regime_tributario = 'REAL', updated_at = NOW()
+    WHERE tipo_produtor = 'PESSOA_FISICA' AND regime_tributario IN ('SIMPLES', 'MEI');
+   SQL
+   ```
+
+3. Conferir: o `SELECT` do passo 1 volta vazio; a ficha do João
+   (`GET /api/contador/produtores/{produtorId}/ficha`) mostra `REAL`; o preview do DANFE de uma
+   nota dele mostra "3 - REGIME NORMAL"; o calendário dele não tem DAS nem DEFIS.
+4. Se o vínculo do João com o escritório do `DataLoader` foi criado antes da #280, registrar a
+   observação de optante pela ficha (`PATCH /api/contador/produtores/{produtorId}/ficha`, campo
+   `observacoes`, texto do `DataLoader.OBSERVACAO_OPTANTE`).
+
+Nota fiscal já autorizada não muda: o XML assinado guarda o CRT da emissão. A NF-e com CRT 1 que já
+existir na VPS continua com ele; as novas saem com CRT 3.
