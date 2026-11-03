@@ -138,14 +138,27 @@ public class RetencaoService {
         || nota.getStatus() != StatusNotaFiscal.AUTORIZADA) {
       return Optional.empty();
     }
-    Adquirente adquirente = adquirente(
+    BigDecimal split = valor(nota.getValorTotalIbs()).add(valor(nota.getValorTotalCbs()));
+    return Optional.of(new RetencaoInfo(adquirente(nota), funruralDaVenda(nota), split));
+  }
+
+  /**
+   * Funrural da nota como venda do produtor emitente, pela mesma regra da RN009, em qualquer
+   * status: é o que a NF-e leva nas informações complementares desde a geração do XML, antes da
+   * autorização (issue #332). Quem decide se a nota é venda própria é quem chama.
+   *
+   * @param nota nota própria, com o produtor carregado
+   * @return o Funrural da venda, por parcela, e quem o paga
+   */
+  public static Funrural funruralDaVenda(NotaFiscal nota) {
+    TipoProdutor tipo = nota.getProdutor() == null ? null : nota.getProdutor().getTipoProdutor();
+    return funrural(tipo, adquirente(nota), valor(nota.getValorTotalProdutos()));
+  }
+
+  private static Adquirente adquirente(NotaFiscal nota) {
+    return adquirente(
         nota.getDestinatarioEndereco() == null ? null : nota.getDestinatarioEndereco().getUf(),
         nota.getDestinatarioCpfCnpj());
-    BigDecimal split = valor(nota.getValorTotalIbs()).add(valor(nota.getValorTotalCbs()));
-    return Optional.of(new RetencaoInfo(adquirente,
-        funrural(nota.getProdutor().getTipoProdutor(), adquirente,
-            valor(nota.getValorTotalProdutos())),
-        split));
   }
 
   /**

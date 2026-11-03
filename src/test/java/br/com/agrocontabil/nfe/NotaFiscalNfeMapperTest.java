@@ -207,6 +207,74 @@ class NotaFiscalNfeMapperTest {
     assertThat(NotaFiscalNfeMapper.crt(null, RegimeTributario.SIMPLES)).isEqualTo("1");
   }
 
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.CsvSource({
+      "empresa, 11444777000161, PR",
+      "cooperativa, 11222333000181, PR"})
+  @DisplayName("venda de PF a empresa ou cooperativa leva o Funrural/Senar no infCpl (#332)")
+  void funruralRetidoNoInfCpl(String caso, String cnpj, String uf) {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.setDestinatarioCpfCnpj(cnpj);
+    nota.getDestinatarioEndereco().setUf(uf);
+    nota.setValorTotalProdutos(new BigDecimal("144000.00"));
+
+    String infCpl = mapper.toNfe(nota).getInfNFe().getInfAdic().getInfCpl();
+
+    // Os valores sao os do RetencaoService (RN009), a mesma conta.
+    br.com.agrocontabil.service.RetencaoService.Funrural f =
+        br.com.agrocontabil.service.RetencaoService.funruralDaVenda(nota);
+    assertThat(f.total()).isEqualByComparingTo("2160.00");
+    assertThat(infCpl)
+        .startsWith("NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO")
+        .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 144.000,00")
+        .contains("PREVIDENCIA 1,2% R$ 1.728,00 (LEI 8.212/1991, ART. 25, I)")
+        .contains("RAT 0,1% R$ 144,00 (ART. 25, II)")
+        .contains("SENAR 0,2% R$ 288,00 (LEI 9.528/1997, ART. 6)")
+        .contains("TOTAL 1,5% R$ 2.160,00, A RECOLHER PELO ADQUIRENTE")
+        .endsWith("(LEI 8.212/1991, ART. 30, III E IV).")
+        .endsWith(NotaFiscalNfeMapper.textoFunrural(nota).orElseThrow())
+        .doesNotContain("\n")
+        .hasSizeLessThanOrEqualTo(5000);
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.CsvSource({
+      "pessoa fisica, 98765432100, MG",
+      "exportacao, '', EX"})
+  @DisplayName("venda a pessoa fisica ou ao exterior nao leva o Funrural no infCpl (#332)")
+  void semRetencaoSemFunrural(String caso, String documento, String uf) {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.setDestinatarioCpfCnpj(documento);
+    nota.getDestinatarioEndereco().setUf(uf);
+
+    assertThat(mapper.toNfe(nota).getInfNFe().getInfAdic().getInfCpl())
+        .doesNotContain("FUNRURAL");
+    assertThat(NotaFiscalNfeMapper.textoFunrural(nota)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("venda a empresa sem valor de produtos nao leva o trecho do Funrural zerado (#332)")
+  void semBaseSemFunrural() {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.setDestinatarioCpfCnpj("11444777000161");
+    nota.setValorTotalProdutos(null);
+
+    assertThat(NotaFiscalNfeMapper.textoFunrural(nota)).isEmpty();
+    nota.setValorTotalProdutos(BigDecimal.ZERO);
+    assertThat(NotaFiscalNfeMapper.textoFunrural(nota)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("produtor pessoa juridica nao leva o Funrural no infCpl, nem vendendo a empresa (#332)")
+  void produtorPessoaJuridicaSemFunrural() {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.getProdutor().setTipoProdutor(TipoProdutor.PESSOA_JURIDICA);
+    nota.setDestinatarioCpfCnpj("11444777000161");
+
+    assertThat(mapper.toNfe(nota).getInfNFe().getInfAdic().getInfCpl())
+        .doesNotContain("FUNRURAL");
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------

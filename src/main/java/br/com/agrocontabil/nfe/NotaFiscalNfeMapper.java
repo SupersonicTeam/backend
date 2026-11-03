@@ -27,12 +27,17 @@ import br.com.agrocontabil.nfe.model.Total;
 import br.com.agrocontabil.nfe.model.Transp;
 import br.com.agrocontabil.service.AliquotaIbsCbsResolver;
 import br.com.agrocontabil.service.ChaveAcessoGenerator;
+import br.com.agrocontabil.service.RetencaoService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**
@@ -126,7 +131,7 @@ public class NotaFiscalNfeMapper {
     infNFe.setTotal(buildTotal(nota));
     infNFe.setTransp(buildTransp());
     infNFe.setPag(buildPag(nota));
-    infNFe.setInfAdic(buildInfAdic());
+    infNFe.setInfAdic(buildInfAdic(nota));
     nfe.setInfNFe(infNFe);
     return nfe;
   }
@@ -607,12 +612,75 @@ public class NotaFiscalNfeMapper {
     return pag;
   }
 
-  private InfAdic buildInfAdic() {
+  private InfAdic buildInfAdic(NotaFiscal nota) {
     InfAdic infAdic = new InfAdic();
-    infAdic.setInfCpl(
-        "NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL. "
-            + "IBS/CBS INFORMATIVOS - ANO-TESTE 2026 - EC 132/2023 / LC 214/2025.");
+    infAdic.setInfCpl(informacoesComplementares(nota));
     return infAdic;
+  }
+
+  /** Início do trecho do Funrural/Senar no {@code infCpl}; a DANFE o lê do XML por ele. */
+  public static final String MARCADOR_FUNRURAL = "FUNRURAL/SENAR RETIDO PELO ADQUIRENTE";
+
+  /** Fim do trecho do Funrural/Senar no {@code infCpl}: a DANFE recorta do marcador até aqui. */
+  public static final String FIM_FUNRURAL = "(LEI 8.212/1991, ART. 30, III E IV).";
+
+  /**
+   * Conteúdo do {@code infAdic/infCpl}: o aviso da homologação e, quando o comprador retém o
+   * Funrural, o trecho do Funrural/Senar (issue #332), sempre por último. Fonte única do XML e do
+   * preview da DANFE.
+   *
+   * @param nota nota própria
+   * @return o texto das informações complementares
+   */
+  public static String informacoesComplementares(NotaFiscal nota) {
+    String aviso = "NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL. "
+        + "IBS/CBS INFORMATIVOS - ANO-TESTE 2026 - EC 132/2023 / LC 214/2025.";
+    return textoFunrural(nota).map(funrural -> aviso + " " + funrural).orElse(aviso);
+  }
+
+  /**
+   * Trecho do Funrural/Senar das informações complementares (issue #332): só quando o comprador
+   * retém (produtor pessoa física vendendo a empresa ou cooperativa, RN009). Os valores são os do
+   * {@link RetencaoService#funruralDaVenda}, a mesma conta da RN009; os percentuais, as
+   * constantes dele (1,2% + 0,1% + 0,2% = 1,5%).
+   *
+   * <p>Venda a pessoa física (o produtor recolhe), exportação (imune) e produtor pessoa jurídica
+   * não levam o trecho: não há retenção a informar ao comprador. Nota sem valor de produtos
+   * (totais ainda não calculados) também não: o trecho sairia todo em zero.
+   *
+   * <p>Texto curto de propósito: o quadro de Dados Adicionais da DANFE tem altura fixa e encolhe a
+   * fonte para caber.
+   *
+   * @param nota nota própria
+   * @return o trecho, ou vazio sem retenção
+   */
+  public static Optional<String> textoFunrural(NotaFiscal nota) {
+    RetencaoService.Funrural f = RetencaoService.funruralDaVenda(nota);
+    if (f.situacao() != RetencaoService.SituacaoFunrural.RETIDO_PELO_ADQUIRENTE
+        || f.base().signum() <= 0) {
+      return Optional.empty();
+    }
+    BigDecimal aliquotaTotal = RetencaoService.ALIQUOTA_PREVIDENCIA
+        .add(RetencaoService.ALIQUOTA_RAT).add(RetencaoService.ALIQUOTA_SENAR);
+    return Optional.of(MARCADOR_FUNRURAL + ": BASE R$ " + reais(f.base()) + "; PREVIDENCIA "
+        + percentual(RetencaoService.ALIQUOTA_PREVIDENCIA) + " R$ " + reais(f.previdencia())
+        + " (LEI 8.212/1991, ART. 25, I); RAT " + percentual(RetencaoService.ALIQUOTA_RAT)
+        + " R$ " + reais(f.rat()) + " (ART. 25, II); SENAR "
+        + percentual(RetencaoService.ALIQUOTA_SENAR) + " R$ " + reais(f.senar())
+        + " (LEI 9.528/1997, ART. 6); TOTAL " + percentual(aliquotaTotal) + " R$ "
+        + reais(f.total()) + ", A RECOLHER PELO ADQUIRENTE " + FIM_FUNRURAL);
+  }
+
+  /** Valor em reais no formato brasileiro ({@code 10.000,00}). */
+  private static String reais(BigDecimal valor) {
+    DecimalFormat formato = new DecimalFormat("#,##0.00",
+        DecimalFormatSymbols.getInstance(Locale.forLanguageTag("pt-BR")));
+    return formato.format(valor.setScale(2, RoundingMode.HALF_UP));
+  }
+
+  /** Alíquota em percentual no formato brasileiro ({@code 0.012} → {@code 1,2%}). */
+  private static String percentual(BigDecimal aliquota) {
+    return aliquota.movePointRight(2).stripTrailingZeros().toPlainString().replace('.', ',') + "%";
   }
 
   // =========================================================================

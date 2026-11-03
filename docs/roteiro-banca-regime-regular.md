@@ -39,7 +39,7 @@ diferimento (premissas, seção 1).
 | "E o produtor integrado?" | Pelo art. 164 o integrado não é contribuinte qualquer que seja a receita, salvo opção (art. 165). Mesmo tratamento do pequeno produtor: fora do escopo atual. |
 | "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso. O enquadramento segue em validação com o contador (#284, pergunta 1): não afirmar que ele é definitivo. |
 | "A nota diz que o emitente é do Simples Nacional (CRT 1)." | Não diz mais (#298): produtor rural pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º), então a NF-e e o DANFE dele saem com **CRT 3 (regime normal)** e o cadastro com `SIMPLES` é recusado. Nota autorizada antes da correção guarda o CRT da emissão: não usar uma delas na banca. |
-| "E o ICMS da nota, zerado?" | O sistema trata da reforma (IBS/CBS). ICMS e Funrural seguem por guia, com o contador (premissas, seção 3). |
+| "E o ICMS da nota, zerado?" | O sistema trata da reforma (IBS/CBS). ICMS e Funrural seguem por guia, com o contador (premissas, seção 3); o Funrural/Senar retido pelo comprador sai destacado nas informações complementares da nota (#332). |
 
 ## Pendências que podem mudar este texto
 

@@ -30,7 +30,10 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   [#281](https://github.com/SupersonicTeam/backend/issues/281). Não criar campo de situação fora
   dela.
 - **ICMS e Funrural por guia:** a NF-e não tem o grupo de ICMS por item (total zerado); o sistema
-  trata da reforma e os tributos atuais ficam com o contador.
+  trata da reforma e os tributos atuais ficam com o contador. O Funrural/Senar retido pelo
+  adquirente (RN009) sai **destacado no `infCpl`** e nos Dados Adicionais do DANFE (#332):
+  `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta
+  da RN009, em qualquer status); 1,5% até a pergunta A da #284 (o contador citou 1,63%).
 - **Demonstração:** o produtor semeado é optante (art. 165), nas observações do vínculo semeado.
 - **Produtor pessoa física nunca no Simples nem no MEI (#298, LC 123/2006, art. 3º):** CRT **3**
   na NF-e e no DANFE pelo `tipoProdutor` (`NotaFiscalNfeMapper.crt(tipo, regime)`), qualquer que

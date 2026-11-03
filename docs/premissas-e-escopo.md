@@ -83,8 +83,14 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
   tratamento de ICMS da operação (diferimento, isenção, CST por UF) é do contador, que lança a guia
   de ICMS no módulo de guias (`/api/contador/guias`, tipo `ICMS`).
 - **Funrural:** a retenção pelo comprador e o recolhimento pelo produtor são **calculados para
-  informar** (RN009, `RetencaoService`, função `consultarRetencoes` da Ceres), mas não são
-  destacados na NF-e. O recolhimento segue por guia (tipo `FUNRURAL` ou `GPS`).
+  informar** (RN009, `RetencaoService`, função `consultarRetencoes` da Ceres). Desde a #332
+  (resposta 9 do contador na #284), quando o comprador retém (produtor pessoa física vendendo a
+  empresa ou cooperativa), a NF-e leva o **Funrural/Senar destacado nas informações
+  complementares** (`infCpl`) e nos Dados Adicionais do DANFE: base, 1,2% + 0,1% + 0,2% por
+  parcela, total e a base legal, com o recolhimento pelo adquirente. Venda a pessoa física,
+  exportação e produtor pessoa jurídica não levam o texto. O recolhimento segue por guia (tipo
+  `FUNRURAL` ou `GPS`). O contador falou em 1,63%; o sistema segue com 1,5% e a base legal até a
+  resposta da pergunta A da #284.
 
 ## 4. O que pode mudar
 

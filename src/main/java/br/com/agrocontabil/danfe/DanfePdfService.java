@@ -253,6 +253,11 @@ public class DanfePdfService {
     params.put("TOTAL_CBS", moeda(v.totalCbs()));
     params.put("TOTAL_IBS_UF", moeda(v.totalIbsUf()));
     params.put("TOTAL_IBS_MUN", moeda(v.totalIbsMun()));
+    // Funrural/Senar retido pelo adquirente (issue #332): o mesmo texto do infCpl, só na nota
+    // própria (na importada o comprador é o produtor; o texto do terceiro não é nosso).
+    if (v.funrural() != null && "S".equals(params.get("PROPRIA"))) {
+      params.put("INFO_COMPLEMENTAR", params.get("INFO_COMPLEMENTAR") + " " + v.funrural());
+    }
   }
 
   /**

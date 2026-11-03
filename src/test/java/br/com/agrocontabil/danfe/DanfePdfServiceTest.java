@@ -403,6 +403,51 @@ class DanfePdfServiceTest {
         .isEqualTo("3 - REGIME NORMAL");
   }
 
+  @Test
+  @DisplayName("Venda de PF a empresa: Dados Adicionais com o Funrural/Senar no preview e do XML (#332)")
+  void funruralNosDadosAdicionais() throws IOException {
+    NotaFiscal nota = notaComTratamento(Tratamento.REDUCAO_60);
+    nota.setDestinatarioCpfCnpj("11444777000161");
+    String esperado = NotaFiscalNfeMapper.textoFunrural(nota).orElseThrow();
+
+    assertThat(semQuebra(texto(service.gerarPreview(nota))))
+        .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 1.000,00")
+        .contains("TOTAL 1,5% R$ 15,00");
+
+    String xml = xml(nota);
+    nota.setXmlGerado(xml);
+    nota.setStatus(StatusNotaFiscal.AUTORIZADA);
+    assertThat(xml).contains(esperado);
+    assertThat(semQuebra(texto(service.gerarPdf(nota))))
+        .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 1.000,00")
+        .contains("ART. 30, III E IV");
+  }
+
+  @Test
+  @DisplayName("Venda de PF a pessoa física: Dados Adicionais sem o Funrural (#332)")
+  void semFunruralVendaAPessoaFisica() throws IOException {
+    NotaFiscal nota = notaComTratamento(Tratamento.REDUCAO_60); // destinatário com CPF
+
+    assertThat(texto(service.gerarPreview(nota))).doesNotContain("FUNRURAL");
+  }
+
+  @Test
+  @DisplayName("Nota importada: o Funrural do XML do terceiro não entra nos Dados Adicionais (#332)")
+  void importadaNaoImprimeFunrural() throws IOException {
+    NotaFiscal nota = notaComTratamento(Tratamento.REDUCAO_60);
+    nota.setDestinatarioCpfCnpj("11444777000161");
+    nota.setXmlGerado(xml(nota));
+    nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
+    nota.setEmitenteNome("Fornecedor Ltda");
+    nota.setEmitenteCpfCnpj("11222333000181");
+
+    assertThat(texto(service.gerarPdf(nota))).doesNotContain("FUNRURAL");
+  }
+
+  private static String semQuebra(String texto) {
+    return texto.replaceAll("\\s+", " ");
+  }
+
   /** Nota de soja de 1.000,00 em 2026, com o tratamento já aplicado ao item (como o cálculo grava). */
   private NotaFiscal notaComTratamento(Tratamento tratamento) {
     NotaFiscal nota = buildNota();
