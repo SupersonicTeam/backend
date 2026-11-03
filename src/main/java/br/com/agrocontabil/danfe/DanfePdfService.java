@@ -65,7 +65,7 @@ public class DanfePdfService {
   public static final String MARCA_DAGUA_CANCELADA = "NF-e CANCELADA";
 
   /** Marca do AgroContábil no cabeçalho (classpath; o JasperReports carrega pelo nome). */
-  private static final String LOGO = "reports/agrocontabil-logo.png";
+  private static final String LOGO = "reports/agroconia-logo.png";
 
   /** Base legal do bloco de imposto, nas informações complementares. */
   private static final String INFO_REFORMA = "Tributos da reforma tributária do consumo:"

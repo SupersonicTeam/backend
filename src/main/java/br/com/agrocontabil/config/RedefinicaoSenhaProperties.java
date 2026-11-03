@@ -20,7 +20,7 @@ public record RedefinicaoSenhaProperties(
     @DefaultValue("PT30M") Duration validade,
     @DefaultValue("http://localhost:4200/redefinir-senha") String urlFrontend,
     @DefaultValue("DESLIGADO") ModoEmail modoEmail,
-    @DefaultValue("nao-responda@agrocontabil.local") String remetente) {
+    @DefaultValue("nao-responda@agroconia.local") String remetente) {
 
   /** Como o link de redefinição chega ao titular. */
   public enum ModoEmail {

@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  */
 @ConfigurationProperties(prefix = "app.lgpd")
 public record LgpdProperties(
-    @DefaultValue("AgroContabil - Supersonic Team") String controlador,
-    @DefaultValue("privacidade@agrocontabil.local") String contatoEncarregado,
+    @DefaultValue("AgroConIA - Supersonic Team") String controlador,
+    @DefaultValue("privacidade@agroconia.local") String contatoEncarregado,
     @DefaultValue("2026-10-20") String versaoPolitica) {
 }

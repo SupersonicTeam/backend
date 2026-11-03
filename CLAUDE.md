@@ -18,6 +18,11 @@ Este repositório tem skills fixas em `.claude/skills/`. **Antes** de ler arquiv
 
 Backend do **AgroContabil** — software de auxílio ao produtor rural e ao escritório de contabilidade na reforma tributária do agronegócio (IBS/CBS — EC 132/2023 + LC 214/2025). TCC 2026, Supersonic Team (Murillo Weiss, Luiz Feliz Gervazio, Herick Eduardo Vavassori).
 
+**Marca: AgroConIA** (`AgroCon` + `IA`, www.agroconia.com.br). Todo texto que chega ao usuário
+(notificação, e-mail, DANFE, relatório, política de dados, Swagger, respostas da Ceres) usa
+`AgroConIA` (#336). O nome técnico `agrocontabil` fica: pacote, `iss`/`aud` do JWT, realm do
+`WWW-Authenticate`, prefixo `agrocontabil.tributos`, chaves de derivação da cifra, banco e pool.
+
 ## Premissas e escopo (issue #280, até a #281)
 
 Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em

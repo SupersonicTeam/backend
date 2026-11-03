@@ -312,8 +312,8 @@ app:
         at-most-for: PT30M
         at-least-for: PT5M
   lgpd:
-    controlador: ${LGPD_CONTROLADOR:AgroContabil - Supersonic Team}
-    contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:privacidade@agrocontabil.local}
+    controlador: ${LGPD_CONTROLADOR:AgroConIA - Supersonic Team}
+    contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:privacidade@agroconia.local}
     versao-politica: 2026-10-20
   # Autenticacao (Sprint 8).
   seguranca:
@@ -355,7 +355,7 @@ app:
       validade: ${REDEFINICAO_VALIDADE:PT30M}
       url-frontend: ${REDEFINICAO_URL_FRONTEND:http://localhost:4200/redefinir-senha}
       modo-email: ${EMAIL_MODO:DESLIGADO}
-      remetente: ${EMAIL_REMETENTE:nao-responda@agrocontabil.local}
+      remetente: ${EMAIL_REMETENTE:nao-responda@agroconia.local}
     # Refresh token rotativo em cookie HttpOnly (#207).
     refresh:
       validade: ${REFRESH_VALIDADE:P7D}

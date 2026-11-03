@@ -210,6 +210,7 @@ class NotificacaoIntegrationTest {
     String[] linhas = objectMapper.readTree(lista.getResponse().getContentAsString())
         .at("/0/texto").asText().split("\n");
     assertThat(linhas).hasSize(3);
+    assertThat(linhas[0]).isEqualTo("AgroConIA: vencimentos dos proximos 7 dias."); // #336
     assertThat(linhas[1]).startsWith("[URGENTE] 04/03/2026");
     assertThat(linhas[2]).startsWith("08/03/2026");
 
@@ -278,6 +279,7 @@ class NotificacaoIntegrationTest {
         .andExpect(jsonPath("$.enviados").value(3))
         .andExpect(jsonPath("$.urgentes").value(0));
     assertThat(jdbcTemplate.queryForObject("SELECT texto FROM notificacao", String.class))
+        .startsWith("AgroConIA: itens em atraso.") // #336
         .contains("[ATRASADO]", "Extrato de fevereiro");
   }
 
@@ -386,6 +388,8 @@ class NotificacaoIntegrationTest {
 
     assertThat(jdbcTemplate.queryForList("SELECT tipo FROM notificacao WHERE produtor_id = ?",
         String.class, produtorA.usuarioId())).containsExactly("AVISO_URGENTE", "AVISO_URGENTE");
+    assertThat(jdbcTemplate.queryForList("SELECT texto FROM notificacao WHERE produtor_id = ?",
+        String.class, produtorA.usuarioId())).allMatch(t -> t.startsWith("AgroConIA: vence amanha"));
     assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notificacao WHERE produtor_id"
         + " = ?", Integer.class, produtorB.usuarioId())).isZero();
     assertThat(ENTREGUES).hasSize(2).allMatch(e -> e.endsWith("tx=false"));

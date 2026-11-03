@@ -129,7 +129,7 @@ class DanfePdfServiceTest {
   }
 
   @Test
-  @DisplayName("A logo do AgroContábil vai embutida no PDF")
+  @DisplayName("A logo do AgroConIA vai embutida no PDF")
   void logoEmbutida() {
     String bruto = new String(service.gerarPdf(buildNota()), StandardCharsets.ISO_8859_1);
 
@@ -293,8 +293,8 @@ class DanfePdfServiceTest {
         .contains("[cClassTrib 000001]").doesNotContain("200036")
         .contains("CBS 0,90%").contains("CBS 9,00")
         .contains("Origem: importada (nota de terceiro)")
-        // A nota de terceiro não leva a assinatura do AgroContábil.
-        .doesNotContain("Emitido com o AgroContábil");
+        // A nota de terceiro não leva a assinatura do AgroConIA.
+        .doesNotContain("Emitido com o AgroConIA");
     assertThat(valorDoRotulo(texto, "VALOR DA CBS")).isEqualTo("9,00");
   }
 
@@ -325,7 +325,7 @@ class DanfePdfServiceTest {
     String texto = texto(service.gerarPdf(buildNota()));
 
     assertThat(texto).contains("Documento: NF-e").contains("Situação: XML GERADO")
-        .contains("Origem: emitida pelo produtor").contains("Emitido com o AgroContábil")
+        .contains("Origem: emitida pelo produtor").contains("Emitido com o AgroConIA")
         .doesNotContain("NF-e CANCELADA");
   }
 
