@@ -267,7 +267,7 @@
       <staticText>
         <reportElement x="0" y="4" width="400" height="12"/>
         <textElement><font fontName="SansSerif" size="7" isItalic="true"/></textElement>
-        <text><![CDATA[AgroContabil — Documento gerado automaticamente. Consulte a SEFAZ para a apuração oficial.]]></text>
+        <text><![CDATA[AgroConIA — Documento gerado automaticamente. Consulte a SEFAZ para a apuração oficial.]]></text>
       </staticText>
     </band>
   </pageFooter>

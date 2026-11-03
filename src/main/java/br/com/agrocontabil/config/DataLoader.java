@@ -90,7 +90,7 @@ public class DataLoader implements CommandLineRunner {
    */
   static final String OBSERVACAO_OPTANTE = "Optante pelo regime regular do IBS/CBS (LC 214/2025, "
       + "art. 165): receita abaixo do limite do art. 164, inscrito como contribuinte por opção. O "
-      + "AgroContábil calcula o IBS/CBS do regime regular (premissa da issue #280).";
+      + "AgroConIA calcula o IBS/CBS do regime regular (premissa da issue #280).";
 
   /** Modelos de obrigação do changeSet 0040 que o seed personaliza (issue #181). */
   static final UUID MODELO_DAS = UUID.fromString("00000000-0000-4000-8181-000000000001");

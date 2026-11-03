@@ -24,7 +24,7 @@ public class CarteiraConfig {
 
   private static final Logger log = LoggerFactory.getLogger(CarteiraConfig.class);
 
-  private static final String ASSUNTO = "Convite de escritorio de contabilidade - AgroContabil";
+  private static final String ASSUNTO = "Convite de escritorio de contabilidade - AgroConIA";
 
   /**
    * Implementação do envio do convite conforme o modo de e-mail.
@@ -68,9 +68,9 @@ public class CarteiraConfig {
           SimpleMailMessage mensagem = new SimpleMailMessage();
           mensagem.setFrom(remetente);
           mensagem.setTo(destinatario);
-          mensagem.setSubject("Convite para a equipe do escritorio - AgroContabil");
+          mensagem.setSubject("Convite para a equipe do escritorio - AgroConIA");
           mensagem.setText("""
-              Voce foi convidado para a equipe do escritorio "%s" no AgroContabil.
+              Voce foi convidado para a equipe do escritorio "%s" no AgroConIA.
 
               Para aceitar, abra o link abaixo em ate %d dias e entre (ou crie sua conta) com
               este e-mail:
@@ -101,9 +101,9 @@ public class CarteiraConfig {
       mensagem.setSubject(ASSUNTO);
       mensagem.setText("""
           O escritorio de contabilidade "%s" convidou voce para a carteira de clientes dele no
-          AgroContabil.
+          AgroConIA.
 
-          Para responder, entre no AgroContabil com este e-mail (ou crie sua conta com ele) e
+          Para responder, entre no AgroConIA com este e-mail (ou crie sua conta com ele) e
           abra a pagina de convites em ate %d dias:
 
           %s

@@ -123,6 +123,18 @@ não roda, a subida loga um `WARN` "Produtor semeado ... e pessoa fisica com reg
 4. Se o vínculo do João com o escritório do `DataLoader` foi criado antes da #280, registrar a
    observação de optante pela ficha (`PATCH /api/contador/produtores/{produtorId}/ficha`, campo
    `observacoes`, texto do `DataLoader.OBSERVACAO_OPTANTE`).
+5. Marca nova na observação (issue #336): o vínculo semeado antes da #336 guarda "O AgroContábil
+   calcula..." (o `DataLoader` não reescreve banco já semeado). Trocar a marca, idempotente:
+
+   ```bash
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+   UPDATE carteira_vinculo
+      SET observacoes = REPLACE(observacoes, 'AgroContábil calcula', 'AgroConIA calcula')
+    WHERE observacoes LIKE '%AgroContábil calcula o IBS/CBS%';
+   SQL
+   ```
+
+   Notificações já registradas ficam com o texto da época (histórico).
 
 Nota fiscal já autorizada não muda: o XML assinado guarda o CRT da emissão. A NF-e com CRT 1 que já
 existir na VPS continua com ele; as novas saem com CRT 3.

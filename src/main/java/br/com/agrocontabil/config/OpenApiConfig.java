@@ -37,7 +37,7 @@ public class OpenApiConfig {
                                 .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList(ESQUEMA_BEARER))
                 .info(new Info()
-                        .title("AgroContabil API")
+                        .title("AgroConIA API")
                         .description("""
                                 API de auxílio ao produtor rural e ao escritório de contabilidade \
                                 na reforma tributária do agronegócio (IBS/CBS — EC 132/2023 + LC \

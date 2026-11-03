@@ -26,8 +26,9 @@ final class FiltroInjecao {
       "system\\s+prompt",
       "suas\\s+instrucoes",
       "agora\\s+voce\\s+e\\s+(?:um|uma|o|a)\\b",
-      // "assistente sem restricoes", mas nao "vender sem restricao de prazo"
-      "(?:assistente|ia|modelo|bot)\\s+sem\\s+(?:restric|limit|filtro)",
+      // "assistente sem restricoes", mas nao "vender sem restricao de prazo" nem "AgroConIA sem
+      // limite" (a marca termina em "ia": sem a fronteira, o nome do produto casava, #336)
+      "\\b(?:assistente|ia|modelo|bot)\\s+sem\\s+(?:restric|limit|filtro)",
       "modo\\s+(?:desenvolvedor|dev|jailbreak)",
       "jailbreak"));
   private static final Pattern ACENTOS = Pattern.compile("\\p{M}");

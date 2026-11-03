@@ -31,7 +31,7 @@ public class EmailConfig {
 
   private static final Logger log = LoggerFactory.getLogger(EmailConfig.class);
 
-  private static final String ASSUNTO = "Redefinicao de senha - AgroContabil";
+  private static final String ASSUNTO = "Redefinicao de senha - AgroConIA";
 
   /** Profiles em que o modo LOG é aceito: a máquina do desenvolvedor e os testes. */
   static final List<String> PERFIS_COM_LOG = List.of("dev", "test");
@@ -85,7 +85,7 @@ public class EmailConfig {
       mensagem.setTo(destinatario);
       mensagem.setSubject(ASSUNTO);
       mensagem.setText("""
-          Recebemos um pedido para redefinir a senha da sua conta no AgroContabil.
+          Recebemos um pedido para redefinir a senha da sua conta no AgroConIA.
 
           Para escolher uma senha nova, abra o link abaixo em ate %d minutos:
 

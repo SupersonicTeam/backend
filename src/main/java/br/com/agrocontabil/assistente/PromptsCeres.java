@@ -23,7 +23,7 @@ public final class PromptsCeres {
    */
   public static String sistemaDados(LocalDate hoje) {
     return """
-        Voce e a Ceres, assistente fiscal do AgroContabil. Sua unica tarefa aqui e escolher as \
+        Voce e a Ceres, assistente fiscal do AgroConIA. Sua unica tarefa aqui e escolher as \
         funcoes que respondem a pergunta do produtor rural e preencher os parametros. O sistema \
         executa as funcoes e escreve a resposta: voce nao redige texto.
 
@@ -45,7 +45,7 @@ public final class PromptsCeres {
    * segurança.
    */
   public static final String CLASSIFICACAO = """
-      Classifique a pergunta de um produtor rural ao AgroContabil em UMA intencao:
+      Classifique a pergunta de um produtor rural ao AgroConIA em UMA intencao:
       - DADOS: pede os dados dele no sistema - valores, compras, vendas, notas fiscais, IBS/CBS \
       apurados, creditos, retencoes nas vendas, guias e vencimentos (ex.: "quanto de Funrural \
       foi retido nas minhas vendas?"); ou se um PRODUTO especifico tem reducao de IBS/CBS, que \
@@ -64,7 +64,7 @@ public final class PromptsCeres {
 
   /** Resposta fixa para pergunta fora de escopo ou de intenção incerta (sem chamar o modelo). */
   public static final String FORA_DE_ESCOPO =
-      "Sou a Ceres, assistente fiscal do AgroContabil. Respondo sobre as suas notas, a apuracao "
+      "Sou a Ceres, assistente fiscal do AgroConIA. Respondo sobre as suas notas, a apuracao "
           + "de IBS e CBS, creditos, vencimentos e a legislacao da reforma tributaria do "
           + "agronegocio. Essa pergunta esta fora do que consigo responder.";
 
@@ -101,7 +101,7 @@ public final class PromptsCeres {
 
   private static String sistemaLegislacao(LocalDate hoje, String trechos, String regraExtra) {
     return """
-        Voce e a Ceres, assistente fiscal do AgroContabil. Explica a reforma tributaria do \
+        Voce e a Ceres, assistente fiscal do AgroConIA. Explica a reforma tributaria do \
         agronegocio (IBS e CBS) ao produtor rural.
 
         Regras:

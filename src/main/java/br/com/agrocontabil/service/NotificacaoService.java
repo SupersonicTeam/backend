@@ -299,7 +299,7 @@ public class NotificacaoService {
           .tipo(TipoNotificacao.AVISO_URGENTE)
           .canal(CanalNotificacao.WHATSAPP)
           .status(StatusNotificacao.REGISTRADA)
-          .texto(limitar("AgroContabil: vence amanha (" + DATA.format(v.dataVencimento())
+          .texto(limitar("AgroConIA: vence amanha (" + DATA.format(v.dataVencimento())
               + ").\n" + linha(new Item(v, UrgenciaVencimento.URGENTE))))
           .quantidadeItens(1)
           .urgentes(1)
@@ -318,7 +318,7 @@ public class NotificacaoService {
     LocalDate hoje = LocalDate.now(clock);
     List<Item> itens = itens(produtor, escritorios, hoje, hoje.plusDays(DIAS_PROXIMOS),
         v -> !pago(v), hoje);
-    StringBuilder texto = new StringBuilder("AgroContabil: vencimentos dos proximos ")
+    StringBuilder texto = new StringBuilder("AgroConIA: vencimentos dos proximos ")
         .append(DIAS_PROXIMOS).append(" dias.");
     return registrarItens(produtor, disparo, TipoNotificacao.PROXIMAS_OBRIGACOES, texto, itens);
   }
@@ -331,7 +331,7 @@ public class NotificacaoService {
     List<Item> itens = itens(produtor, escritorios, hoje.minusMonths(MESES_ATRASADOS),
         hoje.minusDays(1), v -> ("imposto".equals(v.tipo()) && !pago(v))
             || "solicitacao".equals(v.tipo()), hoje);
-    StringBuilder texto = new StringBuilder("AgroContabil: itens em atraso.");
+    StringBuilder texto = new StringBuilder("AgroConIA: itens em atraso.");
     return registrarItens(produtor, disparo, TipoNotificacao.ATRASADOS, texto, itens);
   }
 

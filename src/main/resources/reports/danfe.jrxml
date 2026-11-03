@@ -5,7 +5,7 @@
      logo apos o TOTAL DO ICMS/IPI e, por item, CST/CFOP, cClassTrib, base e aliquota/valor de
      CBS, IBS UF e IBS Municipio (aliquota efetiva quando ha gRed).
      Valores fiscais do XML da nota (DanfeValores); sem XML (preview), da nota.
-     Logo e assinatura do AgroContabil so na nota propria (PROPRIA), nunca na de terceiro.
+     Logo e assinatura do AgroConIA so na nota propria (PROPRIA), nunca na de terceiro.
      Quadros facultativos (item 4.4: fatura/duplicatas, transportador, ISSQN, monofasicos, FCP,
      DIFAL) ficam de fora: o XML gerado nao os tem, e a NT proibe imprimir informacao
      inexistente no XML. O Imposto Seletivo (IS) tambem nao esta no XML: o campo sai vazio.
@@ -204,7 +204,7 @@
             <printWhenExpression><![CDATA[$P{PROPRIA} != null]]></printWhenExpression>
           </reportElement>
           <textElement textAlignment="Center" verticalAlignment="Middle"><font fontName="SansSerif" size="5.5" isItalic="true"/></textElement>
-          <text><![CDATA[Emitido com o AgroContábil — gestão fiscal do produtor rural]]></text>
+          <text><![CDATA[Emitido com o AgroConIA — gestão fiscal do produtor rural]]></text>
         </staticText>
       </frame>
       <!-- ===== DANFE ===== -->
@@ -698,7 +698,7 @@
       <textField isBlankWhenNull="true">
         <reportElement x="0" y="5" width="400" height="10" forecolor="#4A5A50"/>
         <textElement><font fontName="SansSerif" size="6" isItalic="true"/></textElement>
-        <textFieldExpression><![CDATA["AgroContábil — documento gerado em " + $P{GERADO_EM} + ". A validade da NF-e é confirmada na SEFAZ pela chave de acesso."]]></textFieldExpression>
+        <textFieldExpression><![CDATA["AgroConIA — documento gerado em " + $P{GERADO_EM} + ". A validade da NF-e é confirmada na SEFAZ pela chave de acesso."]]></textFieldExpression>
       </textField>
       <textField evaluationTime="Auto">
         <reportElement x="400" y="5" width="135" height="10" forecolor="#4A5A50"/>
