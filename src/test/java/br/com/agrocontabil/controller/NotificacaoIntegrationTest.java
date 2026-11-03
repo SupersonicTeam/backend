@@ -389,7 +389,8 @@ class NotificacaoIntegrationTest {
     assertThat(jdbcTemplate.queryForList("SELECT tipo FROM notificacao WHERE produtor_id = ?",
         String.class, produtorA.usuarioId())).containsExactly("AVISO_URGENTE", "AVISO_URGENTE");
     assertThat(jdbcTemplate.queryForList("SELECT texto FROM notificacao WHERE produtor_id = ?",
-        String.class, produtorA.usuarioId())).allMatch(t -> t.startsWith("AgroConIA: vence amanha"));
+        String.class, produtorA.usuarioId()))
+        .allMatch(t -> t.startsWith("AgroConIA: vence amanha")); // #336
     assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notificacao WHERE produtor_id"
         + " = ?", Integer.class, produtorB.usuarioId())).isZero();
     assertThat(ENTREGUES).hasSize(2).allMatch(e -> e.endsWith("tx=false"));
