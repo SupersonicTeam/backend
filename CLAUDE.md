@@ -22,6 +22,9 @@ Backend do **AgroContabil** — software de auxílio ao produtor rural e ao escr
 (notificação, e-mail, DANFE, relatório, política de dados, Swagger, respostas da Ceres) usa
 `AgroConIA` (#336). O nome técnico `agrocontabil` fica: pacote, `iss`/`aud` do JWT, realm do
 `WWW-Authenticate`, prefixo `agrocontabil.tributos`, chaves de derivação da cifra, banco e pool.
+A dona do sistema é a **GWNext** (contato@gwnext.com.br): controlador da política de dados
+(`app.lgpd.controlador`/`contato-encarregado`) e contato do Swagger. A Supersonic Team é a equipe do
+TCC, não a dona.
 
 ## Premissas e escopo (issue #280, até a #281)
 
