@@ -34,8 +34,8 @@ import org.w3c.dom.Node;
  * @param totalIbsMun {@code IBSCBSTot/gIBS/gIBSMun/vIBSMun}; nulo sem o grupo
  * @param itens itens na ordem do documento
  * @param funrural trecho do Funrural/Senar retido pelo adquirente nas informações complementares
- *                 ({@code infAdic/infCpl}, a partir do
- *                 {@link NotaFiscalNfeMapper#MARCADOR_FUNRURAL}, issue #332); nulo sem retenção
+ *                 ({@code infAdic/infCpl}, do {@link NotaFiscalNfeMapper#MARCADOR_FUNRURAL} ao
+ *                 {@link NotaFiscalNfeMapper#FIM_FUNRURAL}, issue #332); nulo sem retenção
  */
 record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDecimal totalCbs,
     BigDecimal totalIbsUf, BigDecimal totalIbsMun, List<Item> itens, String funrural) {
@@ -95,13 +95,15 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
         trechoFunrural(texto(filho(inf, "infAdic"), "infCpl")));
   }
 
-  /** O trecho do Funrural vai do marcador ao fim do {@code infCpl} (o mapper o põe por último). */
+  /** O trecho do Funrural vai do marcador ao fim fixo dele, onde quer que esteja no {@code infCpl}. */
   private static String trechoFunrural(String infCpl) {
     if (infCpl == null) {
       return null;
     }
     int inicio = infCpl.indexOf(NotaFiscalNfeMapper.MARCADOR_FUNRURAL);
-    return inicio < 0 ? null : infCpl.substring(inicio);
+    int fim = inicio < 0 ? -1 : infCpl.indexOf(NotaFiscalNfeMapper.FIM_FUNRURAL, inicio);
+    return fim < 0 ? null
+        : infCpl.substring(inicio, fim + NotaFiscalNfeMapper.FIM_FUNRURAL.length());
   }
 
   private static Item itemDoXml(Element det) {

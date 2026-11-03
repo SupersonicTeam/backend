@@ -412,7 +412,7 @@ class DanfePdfServiceTest {
 
     assertThat(semQuebra(texto(service.gerarPreview(nota))))
         .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 1.000,00")
-        .contains("TOTAL 1,5% = R$ 15,00");
+        .contains("TOTAL 1,5% R$ 15,00");
 
     String xml = xml(nota);
     nota.setXmlGerado(xml);

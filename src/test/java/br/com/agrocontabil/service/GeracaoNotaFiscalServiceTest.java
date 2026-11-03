@@ -125,7 +125,7 @@ class GeracaoNotaFiscalServiceTest {
 
     assertThat(xml).contains("<infCpl>NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO")
         .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 1.000,00")
-        .contains("TOTAL 1,5% = R$ 15,00");
+        .contains("TOTAL 1,5% R$ 15,00, A RECOLHER PELO ADQUIRENTE");
   }
 
   // =========================================================================

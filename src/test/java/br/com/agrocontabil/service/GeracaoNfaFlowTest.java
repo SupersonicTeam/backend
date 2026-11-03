@@ -120,6 +120,18 @@ class GeracaoNfaFlowTest {
   }
 
   @Test
+  @DisplayName("NFA de PF vendendo a empresa leva o Funrural/Senar no infCpl e passa no XSD (#332)")
+  void nfaComFunruralNoInfCpl() {
+    NotaFiscal nota = buildNfaCompleta(TipoProdutor.PESSOA_FISICA, CPF_VALIDO); // dest CNPJ
+    tributacaoService.calcular(nota);
+
+    String xml = geracaoNfaService.gerarXml(nota); // valida no XSD; lancaria se invalido
+
+    assertThat(xml).contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 1.000,00")
+        .contains("TOTAL 1,5% R$ 15,00");
+  }
+
+  @Test
   @DisplayName("NFA de PF com CPF de DV invalido deve falhar com 422 (DOCUMENTO_INVALIDO)")
   void nfaComCpfInvalidoDeveFalhar() {
     NotaFiscal nota = buildNfaCompleta(TipoProdutor.PESSOA_FISICA, "12345678901");

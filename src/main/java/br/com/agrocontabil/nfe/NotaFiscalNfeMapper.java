@@ -621,6 +621,9 @@ public class NotaFiscalNfeMapper {
   /** Início do trecho do Funrural/Senar no {@code infCpl}; a DANFE o lê do XML por ele. */
   public static final String MARCADOR_FUNRURAL = "FUNRURAL/SENAR RETIDO PELO ADQUIRENTE";
 
+  /** Fim do trecho do Funrural/Senar no {@code infCpl}: a DANFE recorta do marcador até aqui. */
+  public static final String FIM_FUNRURAL = "(LEI 8.212/1991, ART. 30, III E IV).";
+
   /**
    * Conteúdo do {@code infAdic/infCpl}: o aviso da homologação e, quando o comprador retém o
    * Funrural, o trecho do Funrural/Senar (issue #332), sempre por último. Fonte única do XML e do
@@ -642,27 +645,30 @@ public class NotaFiscalNfeMapper {
    * constantes dele (1,2% + 0,1% + 0,2% = 1,5%).
    *
    * <p>Venda a pessoa física (o produtor recolhe), exportação (imune) e produtor pessoa jurídica
-   * não levam o trecho: não há retenção a informar ao comprador.
+   * não levam o trecho: não há retenção a informar ao comprador. Nota sem valor de produtos
+   * (totais ainda não calculados) também não: o trecho sairia todo em zero.
+   *
+   * <p>Texto curto de propósito: o quadro de Dados Adicionais da DANFE tem altura fixa e encolhe a
+   * fonte para caber.
    *
    * @param nota nota própria
    * @return o trecho, ou vazio sem retenção
    */
   public static Optional<String> textoFunrural(NotaFiscal nota) {
     RetencaoService.Funrural f = RetencaoService.funruralDaVenda(nota);
-    if (f.situacao() != RetencaoService.SituacaoFunrural.RETIDO_PELO_ADQUIRENTE) {
+    if (f.situacao() != RetencaoService.SituacaoFunrural.RETIDO_PELO_ADQUIRENTE
+        || f.base().signum() <= 0) {
       return Optional.empty();
     }
     BigDecimal aliquotaTotal = RetencaoService.ALIQUOTA_PREVIDENCIA
         .add(RetencaoService.ALIQUOTA_RAT).add(RetencaoService.ALIQUOTA_SENAR);
-    return Optional.of(MARCADOR_FUNRURAL + ": BASE R$ " + reais(f.base())
-        + " (VALOR DOS PRODUTOS); PREVIDENCIA " + percentual(RetencaoService.ALIQUOTA_PREVIDENCIA)
-        + " = R$ " + reais(f.previdencia()) + " (LEI 8.212/1991, ART. 25, I); RAT "
-        + percentual(RetencaoService.ALIQUOTA_RAT) + " = R$ " + reais(f.rat())
-        + " (LEI 8.212/1991, ART. 25, II); SENAR " + percentual(RetencaoService.ALIQUOTA_SENAR)
-        + " = R$ " + reais(f.senar()) + " (LEI 9.528/1997, ART. 6); TOTAL "
-        + percentual(aliquotaTotal) + " = R$ " + reais(f.total())
-        + ". RECOLHIMENTO PELO ADQUIRENTE, SUB-ROGADO NAS OBRIGACOES DO PRODUTOR RURAL PESSOA "
-        + "FISICA (LEI 8.212/1991, ART. 30, III E IV).");
+    return Optional.of(MARCADOR_FUNRURAL + ": BASE R$ " + reais(f.base()) + "; PREVIDENCIA "
+        + percentual(RetencaoService.ALIQUOTA_PREVIDENCIA) + " R$ " + reais(f.previdencia())
+        + " (LEI 8.212/1991, ART. 25, I); RAT " + percentual(RetencaoService.ALIQUOTA_RAT)
+        + " R$ " + reais(f.rat()) + " (ART. 25, II); SENAR "
+        + percentual(RetencaoService.ALIQUOTA_SENAR) + " R$ " + reais(f.senar())
+        + " (LEI 9.528/1997, ART. 6); TOTAL " + percentual(aliquotaTotal) + " R$ "
+        + reais(f.total()) + ", A RECOLHER PELO ADQUIRENTE " + FIM_FUNRURAL);
   }
 
   /** Valor em reais no formato brasileiro ({@code 10.000,00}). */

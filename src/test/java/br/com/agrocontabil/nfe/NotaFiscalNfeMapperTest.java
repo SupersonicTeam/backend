@@ -227,12 +227,11 @@ class NotaFiscalNfeMapperTest {
     assertThat(infCpl)
         .startsWith("NOTA FISCAL EM AMBIENTE DE HOMOLOGACAO")
         .contains("FUNRURAL/SENAR RETIDO PELO ADQUIRENTE: BASE R$ 144.000,00")
-        .contains("PREVIDENCIA 1,2% = R$ 1.728,00 (LEI 8.212/1991, ART. 25, I)")
-        .contains("RAT 0,1% = R$ 144,00 (LEI 8.212/1991, ART. 25, II)")
-        .contains("SENAR 0,2% = R$ 288,00 (LEI 9.528/1997, ART. 6)")
-        .contains("TOTAL 1,5% = R$ 2.160,00")
-        .contains("RECOLHIMENTO PELO ADQUIRENTE")
-        .contains("ART. 30, III E IV")
+        .contains("PREVIDENCIA 1,2% R$ 1.728,00 (LEI 8.212/1991, ART. 25, I)")
+        .contains("RAT 0,1% R$ 144,00 (ART. 25, II)")
+        .contains("SENAR 0,2% R$ 288,00 (LEI 9.528/1997, ART. 6)")
+        .contains("TOTAL 1,5% R$ 2.160,00, A RECOLHER PELO ADQUIRENTE")
+        .endsWith("(LEI 8.212/1991, ART. 30, III E IV).")
         .endsWith(NotaFiscalNfeMapper.textoFunrural(nota).orElseThrow())
         .doesNotContain("\n")
         .hasSizeLessThanOrEqualTo(5000);
@@ -250,6 +249,18 @@ class NotaFiscalNfeMapperTest {
 
     assertThat(mapper.toNfe(nota).getInfNFe().getInfAdic().getInfCpl())
         .doesNotContain("FUNRURAL");
+    assertThat(NotaFiscalNfeMapper.textoFunrural(nota)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("venda a empresa sem valor de produtos nao leva o trecho do Funrural zerado (#332)")
+  void semBaseSemFunrural() {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.setDestinatarioCpfCnpj("11444777000161");
+    nota.setValorTotalProdutos(null);
+
+    assertThat(NotaFiscalNfeMapper.textoFunrural(nota)).isEmpty();
+    nota.setValorTotalProdutos(BigDecimal.ZERO);
     assertThat(NotaFiscalNfeMapper.textoFunrural(nota)).isEmpty();
   }
 
