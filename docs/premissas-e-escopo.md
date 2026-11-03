@@ -51,24 +51,29 @@ o percentual do crédito presumido, fixado por ato anual. É trabalho de cálcul
 - **Demonstração da banca (#315):** os clientes do escritório "Contabilidade Rural Oeste" são de
   regime normal (`REAL`/`PRESUMIDO`, CRT 3), coerentes com esta premissa, e as observações de cada
   vínculo dizem se o cliente é optante (art. 165) ou contribuinte obrigatório (acima do limite do
-  art. 164). Contas em [`demonstracao-banca.md`](demonstracao-banca.md). A inconsistência abaixo
-  segue só para os produtores do `DataLoader`.
+  art. 164). Contas em [`demonstracao-banca.md`](demonstracao-banca.md).
 
-### Inconsistência conhecida (decisão pendente, antes da banca)
+### Regime do produtor pessoa física (resolvido na #298)
 
-O seed cadastra os dois produtores como **pessoa física** com `regimeTributario = SIMPLES`. Isso
-não é só rótulo de tela:
+O seed cadastrava os dois produtores como **pessoa física** com `regimeTributario = SIMPLES`, o que
+saía como **CRT 1 (Simples Nacional)** na NF-e e no DANFE. Mas produtor rural pessoa física **não
+pode** estar no Simples Nacional nem no MEI, que são de microempresa e empresa de pequeno porte
+(LC 123/2006, art. 3º). Desde a #298:
 
-- o `NotaFiscalNfeMapper` traduz `SIMPLES` em **CRT = 1 (Simples Nacional)**: toda NF-e e DANFE da
-  demonstração diz que o emitente é do Simples, enquanto a premissa diz regime regular do IBS/CBS;
-- o catálogo de obrigações aplica DAS/PGDAS-D e DEFIS a `SIMPLES`, e o calendário do João mostra
-  essas obrigações;
-- o Simples Nacional tem tratamento próprio de IBS/CBS, diferente do regime regular.
+- o `NotaFiscalNfeMapper.crt` devolve **3 (regime normal)** para todo produtor pessoa física,
+  qualquer que seja o regime gravado; pessoa jurídica segue o regime (1 Simples, 4 MEI, 3 normal);
+- o calendário nunca mostra a pessoa física obrigação só do Simples ou do MEI (DAS, DEFIS, DAS-MEI,
+  DASN-SIMEI), nem pela versão do escritório que tirou o tipo de produtor
+  (`ObrigacaoFiscal.aplicaA`);
+- o `Produtor` recusa gravar pessoa física em `SIMPLES`/`MEI` no cadastro e na troca de tipo ou de
+  regime (422 `REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR`); cadastro antigo segue gravável em outra
+  coluna até ser corrigido;
+- o `DataLoader` semeia os dois em `REAL`. Na VPS, o regime já gravado é corrigido pelo passo
+  manual de [`demonstracao-banca.md`](demonstracao-banca.md).
 
-O campo `RegimeTributario` (MEI/SIMPLES/PRESUMIDO/REAL) não representa a situação dos arts. 164 e
-165. Corrigir exige decidir com o contador (#284) o valor certo para um produtor pessoa física e
-atualizar os produtores **já gravados** na VPS (o seed é idempotente pelo CPF e não altera produtor
-existente). Este PR não muda o dado.
+O campo `RegimeTributario` (MEI/SIMPLES/PRESUMIDO/REAL) é do imposto de renda e do Simples e não
+representa a situação dos arts. 164 e 165 (a #281). A #284, pergunta 16, segue para o contador
+confirmar o CRT 3.
 
 ## 3. ICMS e Funrural seguem por guia
 

@@ -7,7 +7,9 @@ import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.nfe.model.IbsCbs;
 import br.com.agrocontabil.nfe.model.IbsCbsTot;
 import br.com.agrocontabil.nfe.model.NFe;
@@ -174,6 +176,35 @@ class NotaFiscalNfeMapperTest {
     // A validacao contra o XSD 4.00 nao cabe aqui: o schema exige <Signature>, que so e
     // adicionada adiante no pipeline. Ela e coberta ponta a ponta por
     // GeracaoNotaFiscalServiceTest, que usa a mesma fixture de emitente.
+  }
+
+  @Test
+  @DisplayName("produtor pessoa fisica sai com CRT 3 mesmo com regime antigo SIMPLES ou MEI (#298)")
+  void pessoaFisicaSempreCrt3() {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.getProdutor().setRegimeTributario(RegimeTributario.SIMPLES);
+
+    assertThat(mapper.toNfe(nota).getInfNFe().getEmit().getCrt()).isEqualTo("3");
+    assertThat(NotaFiscalNfeMapper.crt(TipoProdutor.PESSOA_FISICA, RegimeTributario.MEI))
+        .isEqualTo("3");
+    assertThat(NotaFiscalNfeMapper.crt(TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL))
+        .isEqualTo("3");
+    assertThat(NotaFiscalNfeMapper.crt(TipoProdutor.PESSOA_FISICA, null)).isEqualTo("3");
+  }
+
+  @Test
+  @DisplayName("pessoa juridica segue o regime no CRT: 1 Simples, 4 MEI, 3 regime normal (#298)")
+  void pessoaJuridicaCrtPeloRegime() {
+    NotaFiscal nota = notaCom(itemBase());
+    nota.getProdutor().setTipoProdutor(TipoProdutor.PESSOA_JURIDICA);
+    nota.getProdutor().setRegimeTributario(RegimeTributario.SIMPLES);
+
+    assertThat(mapper.toNfe(nota).getInfNFe().getEmit().getCrt()).isEqualTo("1");
+    assertThat(NotaFiscalNfeMapper.crt(TipoProdutor.PESSOA_JURIDICA, RegimeTributario.MEI))
+        .isEqualTo("4");
+    assertThat(NotaFiscalNfeMapper.crt(TipoProdutor.PESSOA_JURIDICA, RegimeTributario.PRESUMIDO))
+        .isEqualTo("3");
+    assertThat(NotaFiscalNfeMapper.crt(null, RegimeTributario.SIMPLES)).isEqualTo("1");
   }
 
   // -------------------------------------------------------------------------

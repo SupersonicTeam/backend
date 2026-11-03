@@ -17,8 +17,8 @@ import java.util.List;
  * empresa real: uma razão social conhecida com CNPJ inventado seria uma nota falsa de alguém.
  *
  * <p>Os clientes novos são de <strong>regime normal</strong> (CRT 3), coerentes com a premissa do
- * regime regular do IBS/CBS (issue #280). O produtor semeado pelo {@code DataLoader} segue
- * {@code SIMPLES}: a correção dele espera a decisão do contador (#284).
+ * regime regular do IBS/CBS (issue #280). Pessoa física nunca fica em {@code SIMPLES} nem
+ * {@code MEI} (issue #298): o {@code Produtor} recusa a gravação.
  */
 final class CenarioDemonstracao {
 

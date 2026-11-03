@@ -7,6 +7,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.nfe.model.Dest;
 import br.com.agrocontabil.nfe.model.Det;
 import br.com.agrocontabil.nfe.model.Emit;
@@ -183,7 +184,7 @@ public class NotaFiscalNfeMapper {
     // NF-e modelo 55 o FiscalRulesValidator ja exigiu a IE antes de chegar aqui (issue #88).
     String ie = produtor.getInscricaoEstadual();
     emit.setIe(ie != null && !ie.isBlank() ? ie.trim() : "ISENTO");
-    emit.setCrt(crt(produtor.getRegimeTributario()));
+    emit.setCrt(crt(produtor.getTipoProdutor(), produtor.getRegimeTributario()));
     return emit;
   }
 
@@ -699,11 +700,17 @@ public class NotaFiscalNfeMapper {
    * Código do Regime Tributário (CRT, C21) do emitente: 1 Simples, 4 MEI, 3 regime normal. Fonte
    * única do XML e da DANFE (#279).
    *
+   * <p>Produtor <strong>pessoa física</strong> é sempre 3, qualquer que seja o regime gravado
+   * (issue #298): o Simples Nacional e o MEI são de microempresa e empresa de pequeno porte
+   * (LC 123/2006, art. 3º), e o produtor rural pessoa física não se inscreve neles. Um cadastro
+   * antigo com {@code SIMPLES} não pode fazer a NF-e dizer que o emitente é do Simples.
+   *
+   * @param tipo   tipo do produtor; nulo = decide pelo regime
    * @param regime regime do produtor; nulo = regime normal
    * @return o CRT
    */
-  public static String crt(RegimeTributario regime) {
-    if (regime == null) {
+  public static String crt(TipoProdutor tipo, RegimeTributario regime) {
+    if (tipo == TipoProdutor.PESSOA_FISICA || regime == null) {
       return "3";
     }
     return switch (regime) {

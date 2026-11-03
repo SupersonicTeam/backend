@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.StatusApuracao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.nfe.AssinaturaValidator;
@@ -121,7 +122,12 @@ class SeedDemonstracaoIntegrationTest {
 
     // Regime normal: a premissa do regime regular (#280) no CRT da nota.
     Produtor principal = produtor(CenarioDemonstracao.CHAVE_PRINCIPAL);
-    assertThat(NotaFiscalNfeMapper.crt(principal.getRegimeTributario())).isEqualTo("3");
+    assertThat(NotaFiscalNfeMapper.crt(principal.getTipoProdutor(),
+        principal.getRegimeTributario())).isEqualTo("3");
+    // Pessoa fisica nunca no Simples nem no MEI (#298).
+    assertThat(produtorRepository.findAll()).filteredOn(
+        p -> p.getTipoProdutor() == TipoProdutor.PESSOA_FISICA && p.getRegimeTributario() != null)
+        .allMatch(p -> p.getRegimeTributario().admitidoParaPessoaFisica());
   }
 
   @Test

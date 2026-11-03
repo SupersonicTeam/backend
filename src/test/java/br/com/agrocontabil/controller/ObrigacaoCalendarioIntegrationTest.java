@@ -164,6 +164,35 @@ class ObrigacaoCalendarioIntegrationTest {
   }
 
   @Test
+  @DisplayName("pessoa fisica nunca ve DAS, DEFIS nem MEI, nem com regime antigo SIMPLES (#298)")
+  void pessoaFisicaSemObrigacoesDoSimples() throws Exception {
+    // Cadastro anterior a #298, gravado por fora da entidade (como na VPS): pessoa fisica em
+    // SIMPLES. A versao do escritorio sem tipo de produtor tambem nao pode alcanca-la.
+    jdbcTemplate.update("UPDATE produtores SET regime_tributario = 'SIMPLES',"
+        + " tipo_produtor = 'PESSOA_FISICA' WHERE id = ?", produtor.usuarioId());
+    mockMvc.perform(put("/api/contador/obrigacoes/{id}", DAS)
+            .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
+            .content(json("DAS do escritorio A", "MENSAL", 18, null)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.tipoProdutor").value(org.hamcrest.Matchers.nullValue()));
+
+    assertThat(titulosDeObrigacao(tokenProdutor, produtor.usuarioId()))
+        .contains("Funrural (recolhimento)@2026-03-20", "Fechamento da apuracao do mes@2026-03-31")
+        .noneMatch(t -> t.startsWith("DAS") || t.startsWith("DEFIS"));
+
+    jdbcTemplate.update("UPDATE produtores SET regime_tributario = 'MEI' WHERE id = ?",
+        produtor.usuarioId());
+    assertThat(titulosDeObrigacao(tokenA, produtor.usuarioId()))
+        .noneMatch(t -> t.startsWith("DAS") || t.startsWith("DEFIS"));
+
+    // A mesma versao sem tipo segue valendo para a pessoa juridica do Simples.
+    jdbcTemplate.update("UPDATE produtores SET regime_tributario = 'SIMPLES',"
+        + " tipo_produtor = 'PESSOA_JURIDICA' WHERE id = ?", produtor.usuarioId());
+    assertThat(titulosDeObrigacao(tokenA, produtor.usuarioId()))
+        .contains("DAS do escritorio A@2026-03-18", "DEFIS@2026-03-31");
+  }
+
+  @Test
   @DisplayName("editar modelo cria a versao do escritorio; o outro escritorio segue no modelo")
   void personalizarModelo() throws Exception {
     vincular(contadorB);

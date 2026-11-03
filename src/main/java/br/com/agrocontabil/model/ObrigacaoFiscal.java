@@ -130,13 +130,26 @@ public class ObrigacaoFiscal {
    * obrigações que valem para todos: mostrar as de todo regime ao mesmo tempo (MEI, Simples e
    * Presumido juntos) seria pior que faltar. Cadastrar o regime acende as específicas.
    *
+   * <p>Obrigação só do Simples Nacional ou do MEI (DAS, DEFIS, DAS-MEI, DASN-SIMEI) nunca vale
+   * para o produtor <strong>pessoa física</strong> (issue #298), mesmo que o regime gravado dele
+   * seja {@code SIMPLES} ou que a versão do escritório tenha tirado o tipo: os dois regimes são de
+   * microempresa e empresa de pequeno porte (LC 123/2006, art. 3º).
+   *
    * @param tipo   tipo do produtor
    * @param regime regime do produtor
    * @return {@code true} se a obrigação se aplica
    */
   public boolean aplicaA(TipoProdutor tipo, RegimeTributario regime) {
+    if (tipo == TipoProdutor.PESSOA_FISICA && soDoSimplesOuMei()) {
+      return false;
+    }
     boolean tipoCasa = tipoProdutor == null || tipoProdutor == tipo;
     boolean regimeCasa = regimes == null || regimes.isEmpty() || regimes.contains(regime);
     return tipoCasa && regimeCasa;
+  }
+
+  private boolean soDoSimplesOuMei() {
+    return regimes != null && !regimes.isEmpty()
+        && regimes.stream().noneMatch(RegimeTributario::admitidoParaPessoaFisica);
   }
 }
