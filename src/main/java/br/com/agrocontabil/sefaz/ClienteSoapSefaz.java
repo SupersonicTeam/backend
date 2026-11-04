@@ -60,7 +60,10 @@ final class ClienteSoapSefaz {
   /**
    * @param ssl            contexto TLS com o certificado do emitente (mTLS) e a cadeia da SEFAZ
    * @param timeoutConexao tempo máximo para conectar
-   * @param timeoutLeitura tempo máximo para a resposta, depois de conectado
+   * @param timeoutLeitura tempo máximo para a resposta, contado desde o envio: o timeout da
+   *                       requisição do {@code HttpClient} inclui a conexão e o handshake TLS e,
+   *                       vencido antes de conectar, sai como {@code HttpConnectTimeoutException}
+   *                       (conexão, #335)
    */
   ClienteSoapSefaz(SSLContext ssl, Duration timeoutConexao, Duration timeoutLeitura) {
     SSLParameters parametros = ssl.getDefaultSSLParameters();

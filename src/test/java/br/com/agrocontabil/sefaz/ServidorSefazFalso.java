@@ -14,6 +14,7 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -34,8 +35,14 @@ final class ServidorSefazFalso implements AutoCloseable {
   private final List<Recebida> recebidas = new CopyOnWriteArrayList<>();
   private volatile int status = 200;
   private volatile String corpo = "";
-  private volatile long atrasoMs;
-  private volatile long travaCorpoMs;
+  private volatile boolean segurarResposta;
+  private volatile boolean travarCorpo;
+  /**
+   * Sinal que solta a resposta segura ({@link #segurarResposta()}, {@link #travarNoCorpo()}). Só o
+   * {@link #close()} dá o sinal: a resposta nunca chega dentro do prazo do cliente, por mais lenta
+   * que esteja a máquina — nada de {@code sleep} cronometrado contra o prazo.
+   */
+  private final CountDownLatch soltar = new CountDownLatch(1);
 
   ServidorSefazFalso() throws Exception {
     servidor = HttpsServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -64,12 +71,8 @@ final class ServidorSefazFalso implements AutoCloseable {
       }
       recebidas.add(new Recebida(troca.getRequestURI().getPath(),
           troca.getRequestHeaders().getFirst("Content-Type"), recebido, certificado));
-      if (atrasoMs > 0) {
-        try {
-          Thread.sleep(atrasoMs);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
+      if (segurarResposta) {
+        aguardarSinal();
       }
       byte[] resposta = corpo.getBytes(StandardCharsets.UTF_8);
       troca.getResponseHeaders().add("Content-Type", "application/soap+xml; charset=utf-8");
@@ -77,17 +80,15 @@ final class ServidorSefazFalso implements AutoCloseable {
         troca.sendResponseHeaders(status, resposta.length == 0 ? -1 : resposta.length);
         if (resposta.length > 0) {
           try (OutputStream out = troca.getResponseBody()) {
-            if (travaCorpoMs > 0) {
+            if (travarCorpo) {
               // Cabecalhos e metade do corpo saem; o resto trava (SEFAZ que para no meio).
               out.write(resposta, 0, resposta.length / 2);
               out.flush();
-              Thread.sleep(travaCorpoMs);
+              aguardarSinal();
               out.write(resposta, resposta.length / 2, resposta.length - resposta.length / 2);
             } else {
               out.write(resposta);
             }
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
           }
         }
       } catch (IOException e) {
@@ -107,16 +108,27 @@ final class ServidorSefazFalso implements AutoCloseable {
     return this;
   }
 
-  /** Atraso antes de responder (para estourar o tempo de leitura do cliente). */
-  ServidorSefazFalso atrasar(long ms) {
-    this.atrasoMs = ms;
+  /**
+   * Recebe a requisição e segura a resposta até o {@link #close()}: o cliente estoura o tempo de
+   * leitura depois de enviar, qualquer que seja a velocidade da máquina.
+   */
+  ServidorSefazFalso segurarResposta() {
+    this.segurarResposta = true;
     return this;
   }
 
-  /** Manda os cabeçalhos e metade do corpo, e trava antes do resto. */
-  ServidorSefazFalso travarNoCorpo(long ms) {
-    this.travaCorpoMs = ms;
+  /** Manda os cabeçalhos e metade do corpo, e trava antes do resto até o {@link #close()}. */
+  ServidorSefazFalso travarNoCorpo() {
+    this.travarCorpo = true;
     return this;
+  }
+
+  private void aguardarSinal() {
+    try {
+      soltar.await();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /** Endereço de um caminho neste servidor. */
@@ -138,6 +150,7 @@ final class ServidorSefazFalso implements AutoCloseable {
 
   @Override
   public void close() {
+    soltar.countDown();
     servidor.stop(0);
   }
 

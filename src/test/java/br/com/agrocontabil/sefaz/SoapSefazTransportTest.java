@@ -3,6 +3,7 @@ package br.com.agrocontabil.sefaz;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import br.com.agrocontabil.config.CertificadoDigitalProperties;
 import br.com.agrocontabil.config.SefazProperties;
@@ -34,6 +35,9 @@ class SoapSefazTransportTest {
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?><NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\">"
           + "<infNFe Id=\"NFe" + CHAVE + "\" versao=\"4.00\"/></NFe>";
 
+  /** Prazo de conexao e de leitura do transporte nos testes: cobre o handshake mTLS frio. */
+  private static final long FOLGA_HANDSHAKE_MS = 5_000;
+
   private ServidorSefazFalso servidor;
 
   @BeforeEach
@@ -49,10 +53,13 @@ class SoapSefazTransportTest {
   private SefazProperties propriedades(String base, boolean comTruststore) {
     SefazProperties p = new SefazProperties();
     p.getMock().setEnabled(false);
-    // Folga para o handshake TLS com certificado de cliente numa JVM fria: estourar a conexao
-    // aqui e falha antes do envio (HttpConnectTimeoutException), o que mudaria a classificacao.
-    p.getTimeout().setConnectMs(5_000);
-    p.getTimeout().setReadMs(1_000);
+    // Folga para o handshake TLS com certificado de cliente numa JVM fria e CPU disputada (runner
+    // de 2 vCPU): estourar aqui e falha antes do envio (HttpConnectTimeoutException), o que mudaria
+    // a classificacao. A folga vale para os dois prazos porque o timeout da requisicao do
+    // HttpClient (o read-ms) conta desde o envio, com conexao e handshake dentro: com 1 s de
+    // read-ms, um handshake de mais de 1 s virava conexao (#335).
+    p.getTimeout().setConnectMs(FOLGA_HANDSHAKE_MS);
+    p.getTimeout().setReadMs(FOLGA_HANDSHAKE_MS);
     Endpoints padrao = new Endpoints();
     padrao.setAutorizacao(base + "/autorizacao");
     padrao.setConsulta(base + "/consulta");
@@ -300,7 +307,9 @@ class SoapSefazTransportTest {
     @Test
     @DisplayName("Tempo de resposta estourado depois de enviar: indeterminada")
     void tempoDeLeitura() {
-      servidor.atrasar(3_000).responder(200, retEnviNFe("104", "<cStat>100</cStat>"));
+      // A resposta so sai no fim do teste: o prazo de leitura estoura com a requisicao ja
+      // recebida pelo servidor, sem depender de quanto o handshake demorou.
+      servidor.segurarResposta().responder(200, retEnviNFe("104", "<cStat>100</cStat>"));
 
       assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
           SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class);
@@ -310,14 +319,14 @@ class SoapSefazTransportTest {
     @Test
     @DisplayName("Cabecalhos chegam e o corpo trava: o prazo cobre a resposta inteira")
     void corpoTravado() {
-      servidor.travarNoCorpo(10_000).responder(200, retEnviNFe("104", "<cStat>100</cStat>"));
+      // O corpo trava ate o fim do teste: sem o prazo total (connect-ms + read-ms = 10 s) cobrindo
+      // o corpo, o envio ficaria preso para sempre. O limite e esse prazo mais uma folga de
+      // escalonamento (5 s): um prazo maior que o total tambem falha.
+      servidor.travarNoCorpo().responder(200, retEnviNFe("104", "<cStat>100</cStat>"));
 
-      long inicio = System.nanoTime();
-      assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
-          SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class);
-      // Abaixo dos 10 s do travamento: o prazo (read-ms, no maximo connect-ms + read-ms) cortou.
-      assertThat(java.time.Duration.ofNanos(System.nanoTime() - inicio).toMillis())
-          .isLessThan(8_000);
+      assertTimeoutPreemptively(java.time.Duration.ofMillis(3 * FOLGA_HANDSHAKE_MS), () ->
+          assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
+              SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class));
     }
 
     @Test
