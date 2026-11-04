@@ -319,11 +319,12 @@ class SoapSefazTransportTest {
     @Test
     @DisplayName("Cabecalhos chegam e o corpo trava: o prazo cobre a resposta inteira")
     void corpoTravado() {
-      // O corpo trava ate o fim do teste: sem o prazo total (connect-ms + read-ms) cobrindo o
-      // corpo, o envio ficaria preso para sempre e o assertTimeoutPreemptively falharia.
+      // O corpo trava ate o fim do teste: sem o prazo total (connect-ms + read-ms = 10 s) cobrindo
+      // o corpo, o envio ficaria preso para sempre. O limite e esse prazo mais uma folga de
+      // escalonamento (5 s): um prazo maior que o total tambem falha.
       servidor.travarNoCorpo().responder(200, retEnviNFe("104", "<cStat>100</cStat>"));
 
-      assertTimeoutPreemptively(java.time.Duration.ofMillis(4 * FOLGA_HANDSHAKE_MS), () ->
+      assertTimeoutPreemptively(java.time.Duration.ofMillis(3 * FOLGA_HANDSHAKE_MS), () ->
           assertThatThrownBy(() -> transporte().enviar(NFE_ASSINADA, CHAVE,
               SefazAmbiente.HOMOLOGACAO)).isInstanceOf(SefazRespostaIndeterminadaException.class));
     }

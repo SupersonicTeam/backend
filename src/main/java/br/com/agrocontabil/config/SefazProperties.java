@@ -352,11 +352,12 @@ public class SefazProperties implements InitializingBean {
    *
    * <p>Separar conexão de leitura é o que dá ao transporte a informação para classificar a falha:
    * estouro de {@code connect-ms} vira {@code SefazConexaoException} (nada saiu); estouro de
-   * {@code read-ms} vira {@code SefazRespostaIndeterminadaException} (pode ter sido processado).
+   * {@code read-ms} com a conexão já feita vira {@code SefazRespostaIndeterminadaException} (pode
+   * ter sido processado).
    *
    * <p>O {@code read-ms} é o timeout da requisição do {@code HttpClient}, que conta desde o envio,
-   * com a conexão e o handshake dentro: se ele vence antes de a conexão se estabelecer, a falha é de
-   * conexão (nada saiu). Na prática, a conexão tem o menor dos dois prazos (#335).
+   * com a conexão e o handshake dentro: se ele vence antes de a conexão se estabelecer, a falha é
+   * de conexão (nada saiu). Na prática, a conexão tem o menor dos dois prazos (#335).
    */
   public static class Timeout {
 
