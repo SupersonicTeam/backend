@@ -53,9 +53,11 @@ app:
 - **mTLS:** o certificado do cliente é o mesmo A1 que assina a NF-e (`NFE_CERT_*`).
 - **Truststore:** o padrão da JVM não traz a AC raiz ICP-Brasil; em homologação real é preciso
   configurá-lo. Só TLS 1.2 e 1.3; redirecionamento desligado.
-- **Timeouts:** `app.nfe.sefaz.timeout.connect-ms` e `read-ms`. O tempo total de uma chamada é
-  limitado a `connect-ms + read-ms`, o valor que a validação de subida usa no pior caso da
-  transmissão.
+- **Timeouts:** `app.nfe.sefaz.timeout.connect-ms` e `read-ms`. O `read-ms` conta desde o envio,
+  com a conexão e o handshake dentro (é o timeout da requisição do `HttpClient`): vencido antes de
+  conectar, a falha é de conexão. Na prática a conexão tem o menor dos dois prazos (#335). O tempo
+  total de uma chamada é limitado a `connect-ms + read-ms`, o valor que a validação de subida usa
+  no pior caso da transmissão.
 
 ## Classificação de falhas
 
