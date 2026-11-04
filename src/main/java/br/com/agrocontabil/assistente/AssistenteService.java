@@ -377,7 +377,7 @@ public class AssistenteService implements DisposableBean {
       if (interrupcao.isPresent()) {
         log.info("Streaming da Ceres encerrado por interrupcao: {}", interrupcao.get());
         if (interrupcao.get() != DesfechoInteracao.TEMPO_ESGOTADO) {
-          // Cliente desconectado. No tempo esgotado quem envia o erro e encerra e o onTimeout.
+          // Cliente desconectado. No tempo esgotado quem envia o erro e encerra e o esgotarPrazo.
           emissor.complete();
         }
       } else if (e instanceof DomainException dominio) {

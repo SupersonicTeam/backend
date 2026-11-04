@@ -475,7 +475,7 @@ em dois passos, e o `finally` do `DispatcherServlet.doService` remove esse atrib
 remoção caía entre os dois, o envio da `rota` falhava (`IllegalArgumentException`) depois de
 escrever `event:rota` e `data:` vazio, a pergunta virava `CANCELADA` e o stream fechava sem
 `resposta`, `fim` nem `erro` — o chat parado no meio. Provado pelo
-`AssistenteStreamingCorridaIntegrationTest`, que força essa ordem com travas (falha sem o
+`AssistenteStreamingIntegrationTest.envioDaCeresDuranteASaidaDoDispatcher`, que força essa ordem com travas (falha sem o
 comentário). Regra: **a Ceres nunca faz o commit da resposta**; qualquer mudança no começo do
 stream mantém um primeiro envio no buffer antes do `iniciar`. As falhas de envio e o erro avisado
 pelo container vão ao log em `INFO`, com a classe da exceção e da causa (nunca a mensagem, que traz
