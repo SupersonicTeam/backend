@@ -19,6 +19,7 @@ import br.com.agrocontabil.exception.DomainException;
 import br.com.agrocontabil.exception.GlobalExceptionHandler;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -238,10 +239,16 @@ public class AssistenteService implements DisposableBean {
     CotaUsoPorta.ReservaCota reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
     Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
     SseEmitter emissor = new SseEmitter(timeoutPergunta.plus(FOLGA_TIMEOUT_SSE).toMillis());
+    abrirNaThreadDaRequisicao(emissor);
     // Rede de seguranca: o prazo proprio abaixo dispara antes.
     emissor.onTimeout(() -> execucao.interromper(DesfechoInteracao.TEMPO_ESGOTADO));
     // Cliente foi embora (o container percebeu): para de gastar modelo e banco com ele.
-    emissor.onError(falha -> execucao.interromper(DesfechoInteracao.CANCELADA));
+    emissor.onError(falha -> {
+      // Sem a classe da falha, um stream que para no meio nao deixa rastro no log (#335).
+      log.info("Streaming da Ceres: o container avisou falha na conexao ({})",
+          falha == null ? "sem causa" : falha.getClass().getSimpleName());
+      execucao.interromper(DesfechoInteracao.CANCELADA);
+    });
     ScheduledFuture<?> prazo;
     try {
       prazo = prazos.schedule(() -> esgotarPrazo(emissor, execucao, caminho),
@@ -252,12 +259,24 @@ public class AssistenteService implements DisposableBean {
       throw AssistenteOcupadoException.limiteGlobal();
     }
     try {
-      iniciar(produtorId, () -> transmitir(emissor, execucao, caminho), () -> { });
+      // O prazo e cancelado quando a pergunta termina, e nao so no onCompletion do emissor: se a
+      // Ceres encerra o stream antes de o Spring assumir o emissor (pergunta rapida, como fora de
+      // escopo ou fallback), o Spring nunca registra o onCompletion, e o prazo ficava agendado
+      // ate vencer, segurando o emissor e registrando um tempo esgotado falso (#335). Cancelado
+      // antes de a vaga voltar: quem pergunta de novo ja nao encontra o prazo da anterior.
+      iniciar(produtorId, () -> {
+        try {
+          transmitir(emissor, execucao, caminho);
+        } finally {
+          prazo.cancel(false);
+        }
+      }, () -> { });
     } catch (RuntimeException e) {
       prazo.cancel(false);
       encerrarCota(execucao, false);
       throw e;
     }
+    // Cliente que foi embora antes de a pergunta terminar: o prazo nao tem mais a quem avisar.
     emissor.onCompletion(() -> prazo.cancel(false));
     return emissor;
   }
@@ -273,6 +292,30 @@ public class AssistenteService implements DisposableBean {
     CotaUsoPorta.UsoCota uso = cota.consultar(identidade.produtorAutenticado());
     return new AssistenteUsoResponse(uso.plano(), uso.habilitada(), uso.creditosSemana(),
         uso.consumidos(), uso.restantes(), uso.renovaEm());
+  }
+
+  /**
+   * Abre o stream com um comentário SSE ({@code :ceres}), que fica no buffer do emissor até o
+   * Spring assumi-lo. O {@code initialize} do Spring escreve esse buffer e faz o flush ainda na
+   * thread da requisição: o commit da resposta (status, cabeçalhos e os cabeçalhos de segurança do
+   * {@code HeaderWriterFilter}) acontece ali, e não na thread da Ceres (#335).
+   *
+   * <p>Antes, o primeiro envio da Ceres fazia o commit e rodava os escritores de cabeçalho do
+   * Spring Security enquanto a thread da requisição ainda saía do {@code DispatcherServlet}. O
+   * escritor da CSP lê o caminho analisado da requisição em dois passos, e o {@code finally} do
+   * {@code DispatcherServlet} remove esse atributo: quando a remoção caía entre os dois, o envio
+   * da {@code rota} falhava ({@code IllegalArgumentException}) depois de escrever metade do evento,
+   * e o stream fechava sem {@code resposta}, {@code fim} nem {@code erro}. Com o commit na thread
+   * da requisição, a Ceres só escreve corpo. Clientes SSE ignoram comentário; de brinde, o cliente
+   * recebe os cabeçalhos na hora, sem esperar a classificação.
+   */
+  private static void abrirNaThreadDaRequisicao(SseEmitter emissor) {
+    try {
+      emissor.send(SseEmitter.event().comment("ceres"));
+    } catch (IOException e) {
+      // Emissor recem-criado, sem handler: o envio so vai para o buffer e nao faz I/O.
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -332,9 +375,9 @@ public class AssistenteService implements DisposableBean {
     } catch (RuntimeException e) {
       Optional<DesfechoInteracao> interrupcao = execucao.contexto.interrupcao();
       if (interrupcao.isPresent()) {
-        log.debug("Streaming da Ceres encerrado por interrupcao: {}", interrupcao.get());
+        log.info("Streaming da Ceres encerrado por interrupcao: {}", interrupcao.get());
         if (interrupcao.get() != DesfechoInteracao.TEMPO_ESGOTADO) {
-          // Cliente desconectado. No tempo esgotado quem envia o erro e encerra e o onTimeout.
+          // Cliente desconectado. No tempo esgotado quem envia o erro e encerra e o esgotarPrazo.
           emissor.complete();
         }
       } else if (e instanceof DomainException dominio) {
@@ -471,7 +514,11 @@ public class AssistenteService implements DisposableBean {
     try {
       emissor.send(SseEmitter.event().name(evento).data(dado, MediaType.APPLICATION_JSON));
     } catch (IOException | IllegalStateException e) {
-      // Cliente foi embora (ou o emissor ja foi encerrado): nao adianta seguir gerando.
+      // Cliente foi embora (ou o emissor ja foi encerrado): nao adianta seguir gerando. So as
+      // classes vao ao log: a mensagem do Spring ("Failed to send ...") traz o dado do evento.
+      log.info("Streaming da Ceres: evento {} nao enviado ({}, causa {})", evento,
+          e.getClass().getSimpleName(),
+          e.getCause() == null ? "nenhuma" : e.getCause().getClass().getSimpleName());
       execucao.contexto.interromper(DesfechoInteracao.CANCELADA);
       throw new PerguntaInterrompidaException();
     }
@@ -498,6 +545,11 @@ public class AssistenteService implements DisposableBean {
 
   private static long decorridoMs(long inicioNanos) {
     return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicioNanos);
+  }
+
+  /** Prazos de streaming ainda agendados (para teste: pergunta encerrada não deixa prazo). */
+  int prazosAgendados() {
+    return prazos.getQueue().size();
   }
 
   /** Espera as respostas em andamento terminarem (graceful shutdown). */

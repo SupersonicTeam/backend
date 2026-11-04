@@ -162,9 +162,13 @@ próprio: não troque `/chat` por `Accept: text/event-stream`.
 | `fim` | `{}` | O stream termina |
 | `erro` | envelope `ApiError` (seção 5) | Falha depois de o stream abrir (modelo fora, tempo esgotado). Encerra o stream |
 
-Sequência real:
+Sequência real (a primeira linha é um comentário SSE, `:ceres`, que **não é evento**: ignore
+toda linha que começa com `:`; o exemplo de consumo abaixo já faz isso, porque só trata blocos com
+`event:`):
 
 ```text
+:ceres
+
 event:rota
 data:{"rota":"DADOS"}
 
@@ -177,6 +181,13 @@ data:{}
 
 **Não há tokens parciais**, e é de propósito: números e citações só saem depois de conferidos. O
 texto chega inteiro no evento `resposta`.
+
+**Nota de integração (#335):** o stream agora abre com o comentário `:ceres` e os cabeçalhos da
+resposta chegam na hora, antes da classificação, então o `fetch` resolve logo. Um cliente que trate
+qualquer bloco como evento (sem conferir `event:`) quebra nessa linha. Corrigido junto um defeito
+que, de vez em quando, fechava o stream depois da `rota` sem `resposta`, `fim` nem `erro`. Se ainda
+acontecer de o stream terminar sem `fim` nem `erro`, trate como falha de conexão e mostre o botão
+de tentar de novo.
 
 **Erros antes de o stream abrir** (400, 401, 403, 413 e 503 `ASSISTENTE_OCUPADO`) vêm como resposta
 HTTP comum, **em JSON**, mesmo com `Accept: text/event-stream`. Confira `response.ok` antes de ler o

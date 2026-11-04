@@ -385,6 +385,24 @@ class AssistenteServiceTest {
   }
 
   @Test
+  @DisplayName("#335: stream encerrado antes de o Spring assumir o emissor nao deixa o prazo "
+      + "agendado")
+  void streamRapidoCancelaOPrazo() {
+    // Prazo longo: o que se prova e que a pergunta encerrada cancela o prazo, nao que ele vence.
+    criar(1, Duration.ofMinutes(5));
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(anyString(), any(), any())).thenReturn(ok());
+
+    // Sem o Spring MVC, ninguem inicializa o emissor: e o caso da pergunta rapida, que termina
+    // antes de o controller devolver o emissor. O onCompletion nunca roda.
+    service.conversarEmStream(new AssistenteChatRequest("oi"), "/x");
+
+    // A vaga volta no fim da tarefa, e o prazo e cancelado no mesmo ponto.
+    perguntarQuandoHouverVaga("de novo");
+    assertThat(service.prazosAgendados()).isZero();
+  }
+
+  @Test
   @DisplayName("#166: sem vaga (pergunta anterior em andamento) a reserva volta na hora")
   void semVagaEstorna() throws Exception {
     criar();
