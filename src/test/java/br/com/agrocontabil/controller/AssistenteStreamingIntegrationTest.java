@@ -294,8 +294,8 @@ class AssistenteStreamingIntegrationTest {
 
     // A thread da Ceres foi interrompida e devolveu a vaga do produtor.
     modelo.responderTexto("Sem notas no periodo.");
-    assertThat(eventos(streamEmConexaoNova(produtorA, "de novo").body())).extracting(Evento::nome)
-        .containsExactly("rota", "resposta", "fim");
+    assertThat(eventos(streamQuandoHouverVaga(produtorA, "de novo").body()))
+        .extracting(Evento::nome).containsExactly("rota", "resposta", "fim");
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -350,6 +350,25 @@ class AssistenteStreamingIntegrationTest {
 
   private HttpResponse<String> stream(Produtor produtor, String pergunta) throws Exception {
     return enviar(produtor.getId(), "/api/assistente/chat/stream", "text/event-stream", pergunta);
+  }
+
+  /**
+   * Stream de uma nova pergunta assim que a vaga do produtor voltar. O erro de tempo esgotado sai
+   * pelo prazo, antes de a thread da Ceres terminar: ela ainda é interrompida, audita e só então
+   * devolve a vaga. Pergunta nesse intervalo recebe, com razão, 503 {@code ASSISTENTE_OCUPADO}
+   * (a auditoria já gravada não quer dizer vaga livre — #335).
+   */
+  private HttpResponse<String> streamQuandoHouverVaga(Produtor produtor, String pergunta)
+      throws Exception {
+    long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+    while (true) {
+      HttpResponse<String> resposta = streamEmConexaoNova(produtor, pergunta);
+      if (resposta.statusCode() != 503 || System.nanoTime() > limite) {
+        return resposta;
+      }
+      assertOcupado(resposta, "pergunta anterior");
+      Thread.onSpinWait();
+    }
   }
 
   /**

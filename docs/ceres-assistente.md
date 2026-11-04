@@ -465,6 +465,22 @@ em caso de falha, `erro` com o envelope `errors[]`. **Não há tokens parciais:*
 só saem depois de conferidos pelos validadores. 400/401/403 e `ASSISTENTE_OCUPADO` são respondidos
 antes de o stream abrir, como JSON comum.
 
+**O stream abre com o comentário SSE `:ceres` (#335).** Ele é enviado antes de a Ceres começar e
+o Spring o escreve na **thread da requisição**, ao assumir o emissor: o commit da resposta (status
+e cabeçalhos, inclusive os de segurança do `HeaderWriterFilter`) acontece ali, e a thread da Ceres
+só escreve corpo. Antes, o primeiro envio da Ceres fazia o commit e rodava os escritores de
+cabeçalho do Spring Security enquanto a thread da requisição ainda saía do `DispatcherServlet`. O
+escritor da CSP (`PathPatternRequestMatcher` de `/api/**`) lê o caminho analisado da requisição
+em dois passos, e o `finally` do `DispatcherServlet.doService` remove esse atributo: quando a
+remoção caía entre os dois, o envio da `rota` falhava (`IllegalArgumentException`) depois de
+escrever `event:rota` e `data:` vazio, a pergunta virava `CANCELADA` e o stream fechava sem
+`resposta`, `fim` nem `erro` — o chat parado no meio. Provado pelo
+`AssistenteStreamingCorridaIntegrationTest`, que força essa ordem com travas (falha sem o
+comentário). Regra: **a Ceres nunca faz o commit da resposta**; qualquer mudança no começo do
+stream mantém um primeiro envio no buffer antes do `iniciar`. As falhas de envio e o erro avisado
+pelo container vão ao log em `INFO`, com a classe da exceção e da causa (nunca a mensagem, que traz
+o dado do evento).
+
 ### Isolamento de recursos: o chat não derruba a emissão
 
 - **Nenhuma transação durante a chamada ao modelo.** Nada no módulo é `@Transactional` nem usa
@@ -487,4 +503,8 @@ antes de o stream abrir, como JSON comum.
 
 > **Spring 6.2:** quando o `onTimeout` de um `SseEmitter` roda, o emissor já está encerrado e não
 > aceita eventos. Por isso o prazo da pergunta em streaming é um agendamento próprio, que dispara
-> antes do timeout do container (que fica 10 s depois, como rede de segurança).
+> antes do timeout do container (que fica 10 s depois, como rede de segurança). O prazo é
+> cancelado quando a pergunta termina, antes de a vaga voltar (#335): o `onCompletion` do emissor
+> não basta, porque a pergunta rápida (fora de escopo, fallback) encerra o emissor antes de o
+> Spring assumi-lo, e aí o Spring nunca registra o callback. Sem isso o prazo ficava agendado até
+> vencer (5 min em produção), segurando o emissor e registrando um tempo esgotado falso no log.
