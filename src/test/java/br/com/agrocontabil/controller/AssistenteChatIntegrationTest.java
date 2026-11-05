@@ -354,14 +354,18 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
-  @DisplayName("#343: atalho de legislacao da tela: texto curado, rota LEGISLACAO, zero chamadas "
-      + "ao modelo e nunca 'nao encontrei fundamento legal'")
-  void atalhoReformaSemModelo() throws Exception {
+  @DisplayName("#343/#347: atalho de legislacao da tela: texto explicado do backend, rota "
+      + "LEGISLACAO, zero chamadas ao modelo e nunca 'nao encontrei fundamento legal'")
+  void atalhoReformaSemBase() throws Exception {
     perguntar(produtorA, "O que muda para mim com o IBS e o CBS?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.rota").value("LEGISLACAO"))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
+            "O que muda para voce com o IBS e a CBS")))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
+            "O CALENDARIO")))
         .andExpect(jsonPath("$.resposta").value(
-            br.com.agrocontabil.assistente.orquestracao.AtalhoReformaTributaria.TEXTO))
+            org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("nao encontrei"))))
         .andExpect(jsonPath("$.modoFallback").value(false))
         .andExpect(jsonPath("$.fontesDados").isEmpty());
     assertThat(modelo.promptsRecebidos()).isEmpty();

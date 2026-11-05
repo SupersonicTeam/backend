@@ -1,71 +1,105 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.PerguntaInterrompidaException;
+import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
+import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta;
+import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Resposta curada do atalho "O que muda para mim com o IBS e o CBS?" (#343): texto do backend com
- * citações fixas, sem passar pelo modelo — mesmo padrão do {@link FundamentoRetencao} (#145).
+ * Resposta do atalho "O que muda para mim com o IBS e o CBS?" (#343, explicada na #347): o texto
+ * explicado do {@link TextoReformaTributaria}, com o dispositivo de cada afirmação, personalizado
+ * com o tipo do produtor, o escritório e o tratamento dos produtos que ele mais vendeu no ano,
+ * pela tabela oficial.
  *
- * <p>A pergunta é ampla demais para a busca por similaridade: os trechos mais próximos de "o que
- * muda para mim" não respondem a nada específico, e o modelo, com razão, não achava resposta neles
- * ({@code CITACAO_INVALIDA} na VPS em 2026-11-04). Aqui a resposta é correta por construção: cada
- * afirmação tem um dispositivo, e cada número é o do dispositivo. Os dispositivos foram
- * conferidos um a um na base de legislação (8.304 trechos, a mesma da VPS) em 2026-11-04;
- * {@link CitacoesFixas} avisa no log se algum sumir. Texto a revisar pela equipe a cada mudança.
- *
- * <p>Responde com o modelo fora do ar: zero chamadas ao modelo. Fica fora da cota da Ceres (o
- * {@code AssistenteService} não reserva o teto para atalho), então não gasta crédito.
+ * <p>A pergunta é ampla demais para a busca por similaridade (na VPS em 2026-11-04 saía "não
+ * encontrei fundamento legal"), e um parágrafo do modelo sobre trechos fixos foi testado na #347 e
+ * descartado: com o {@code qwen3:4b-instruct} toda rodada trazia uma frase errada que os
+ * validadores não pegam. A resposta é do backend, correta por construção, e responde com o modelo
+ * fora do ar: zero chamadas ao modelo, fora da cota da Ceres (o {@code AssistenteService} não
+ * reserva o teto para atalho).
  */
 @Component
 public class AtalhoReformaTributaria {
 
-  /** Texto curado, em linguagem do produtor (sem acento, como os demais textos da Ceres). */
-  public static final String TEXTO = String.join("\n",
-      "O que muda para o produtor rural com o IBS e a CBS:",
-      "- 2026 e um ano de teste. A CBS (contribuicao federal) e cobrada a 0,9% e o IBS (imposto de"
-          + " estados e municipios) a 0,1%, so na parcela estadual (LC 214/2025, arts. 346 e 343;"
-          + " EC 132/2023, art. 125 do ADCT). Quem cumpre as obrigacoes acessorias previstas na"
-          + " legislacao fica dispensado de recolher esses valores em 2026 (LC 214/2025, art. 348,"
-          + " § 1º).",
-      "- Produto agropecuario in natura tem reducao de 60% nas aliquotas do IBS e da CBS"
-          + " (LC 214/2025, art. 137).",
-      "- O produtor rural com receita abaixo de R$ 3,6 milhoes no ano nao e contribuinte do IBS e"
-          + " da CBS, a nao ser que opte pelo regime regular (LC 214/2025, arts. 164 e 165).",
-      "- A lei preve o split payment: nos pagamentos eletronicos, a instituicao de pagamento separa"
-          + " e recolhe o IBS e a CBS no momento da liquidacao (LC 214/2025, arts. 31 e 32).");
+  /** Quantos produtos mais vendidos entram no texto. */
+  static final int MAX_PRODUTOS = 3;
 
-  /** Dispositivos citados, na ordem do texto ({@code norma|dispositivo}, como na base). */
-  static final List<String> DISPOSITIVOS = List.of(
-      "LC 214/2025|art. 346",
-      "LC 214/2025|art. 343",
-      "EC 132/2023|art. 2º (redação do art. 125)",
-      "LC 214/2025|art. 348, § 1º",
-      "LC 214/2025|art. 137",
-      "LC 214/2025|art. 164",
-      "LC 214/2025|art. 165",
-      "LC 214/2025|art. 31",
-      "LC 214/2025|art. 32");
+  private static final Logger log = LoggerFactory.getLogger(AtalhoReformaTributaria.class);
 
   private final BuscaTextualLegislacaoService busca;
+  private final DadosProdutorPorta dados;
+  private final TratamentoProdutoPorta tratamento;
 
-  /** Constrói sobre a busca por dispositivo exato. */
-  public AtalhoReformaTributaria(BuscaTextualLegislacaoService busca) {
+  /** Constrói sobre a busca por dispositivo exato e as portas de dados e de tratamento. */
+  public AtalhoReformaTributaria(BuscaTextualLegislacaoService busca, DadosProdutorPorta dados,
+      TratamentoProdutoPorta tratamento) {
     this.busca = busca;
+    this.dados = dados;
+    this.tratamento = tratamento;
   }
 
   /**
-   * A resposta do atalho: o texto curado e as citações com o texto da base (sem a base, o texto
-   * segue sozinho: ele já nomeia cada dispositivo).
+   * A resposta do atalho: o texto e as citações com o texto da base (sem a base, o texto segue
+   * sozinho: ele já nomeia cada dispositivo).
    *
-   * @param contexto contexto da pergunta ("hoje" da vigência e trechos citados da auditoria)
+   * @param contexto contexto da pergunta (produtor, "hoje" da vigência, trechos da auditoria)
    * @return resposta de legislação aceita, sem fontes de dados
    */
   public ResultadoOrquestracao responder(ContextoAssistente contexto) {
-    return new ResultadoOrquestracao(Intencao.LEGISLACAO, TEXTO, DesfechoInteracao.RESPONDIDA,
-        CitacoesFixas.buscar(busca, DISPOSITIVOS, contexto, "Atalho IBS/CBS"), false);
+    TextoReformaTributaria.Texto texto = TextoReformaTributaria.montar(perfil(contexto));
+    return new ResultadoOrquestracao(Intencao.LEGISLACAO, texto.texto(),
+        DesfechoInteracao.RESPONDIDA,
+        CitacoesFixas.buscar(busca, texto.dispositivos(), contexto, "Atalho IBS/CBS"), false);
+  }
+
+  /**
+   * O que o texto sabe do produtor. Cada parte que falhar fica de fora, sem derrubar o atalho;
+   * interrupção da pergunta sobe.
+   */
+  TextoReformaTributaria.Perfil perfil(ContextoAssistente contexto) {
+    contexto.verificarAtiva();
+    LocalDate hoje = contexto.hoje();
+    DadosProdutorPorta.PerfilAtalho perfil;
+    try {
+      perfil = dados.perfilDoAtalho(
+          contexto.produtorId(), hoje.withDayOfYear(1), hoje, MAX_PRODUTOS);
+    } catch (PerguntaInterrompidaException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      // So o tipo: a mensagem pode trazer dados da consulta.
+      log.warn("Ceres: perfil do atalho IBS/CBS indisponivel: {}", e.getClass().getName());
+      return TextoReformaTributaria.Perfil.DESCONHECIDO;
+    }
+    return new TextoReformaTributaria.Perfil(perfil.tipo(), perfil.atendidoPorEscritorio(),
+        produtos(perfil.ncmsMaisVendidos(), contexto));
+  }
+
+  /** Tratamento de cada NCM pela tabela oficial; o que falhar ou não for conhecido fica de fora. */
+  private List<Produto> produtos(List<String> ncms, ContextoAssistente contexto) {
+    List<Produto> produtos = new ArrayList<>();
+    for (String ncm : ncms) {
+      contexto.verificarAtiva();
+      try {
+        tratamento.consultar(ncm, contexto.hoje()).produtos().stream()
+            .filter(p -> p.ncmConhecido() && ncm.equals(p.ncm()))
+            .findFirst()
+            .ifPresent(produtos::add);
+      } catch (PerguntaInterrompidaException e) {
+        throw e;
+      } catch (RuntimeException e) {
+        log.warn("Ceres: tratamento de produto do atalho IBS/CBS indisponivel: {}",
+            e.getClass().getName());
+      }
+    }
+    return produtos;
   }
 }

@@ -57,6 +57,8 @@ class ConsultaDadosProdutorServiceIntegrationTest {
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private NotaFiscalRepository notaFiscalRepository;
   @Autowired private GuiaFiscalRepository guiaFiscalRepository;
+  @Autowired private br.com.agrocontabil.repository.EscritorioRepository escritorioRepository;
+  @Autowired private br.com.agrocontabil.repository.VinculoCarteiraRepository vinculoRepository;
   @Autowired private TestDatabaseCleaner cleaner;
 
   private Produtor produtorA;
@@ -391,5 +393,51 @@ class ConsultaDadosProdutorServiceIntegrationTest {
   @DisplayName("#266: pedidos do escritorio sem vinculo ativo nao aparecem")
   void pedidosSemVinculo() {
     assertThat(service.pedidosPendentes(produtorA.getId())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#347: perfil do atalho: tipo, escritorio com vinculo ativo e NCMs mais vendidos "
+      + "(so vendas autorizadas do produtor no periodo, do maior valor ao menor, ate o limite)")
+  void perfilDoAtalho() {
+    produtorA.setTipoProdutor(br.com.agrocontabil.model.TipoProdutor.PESSOA_FISICA);
+    produtorRepository.save(produtorA);
+    notaFiscalRepository.save(saida(produtorA, em(2026, 3, 5), "Milho", "10059010", "900.00"));
+    notaFiscalRepository.save(saida(produtorA, em(2026, 4, 5), "Soja", "12019000", "500.00"));
+    notaFiscalRepository.save(saida(produtorA, em(2026, 5, 5), "Soja", "12019000", "600.00"));
+    notaFiscalRepository.save(saida(produtorA, em(2026, 5, 6), "Trigo", "10019900", "100.00"));
+    // Nao contam: cancelada, remessa (CFOP 5949), fora do periodo, de outro produtor, compra.
+    NotaFiscal cancelada = saida(produtorA, em(2026, 5, 7), "Feijao", "07133319", "99999.00");
+    cancelada.setStatus(StatusNotaFiscal.CANCELADA);
+    notaFiscalRepository.save(cancelada);
+    NotaFiscal remessa = saida(produtorA, em(2026, 5, 8), "Arroz", "10063021", "88888.00");
+    remessa.getItens().get(0).setCfop("5949");
+    notaFiscalRepository.save(remessa);
+    notaFiscalRepository.save(saida(produtorA, em(2026, 7, 1), "Cafe", "09011110", "77777.00"));
+    notaFiscalRepository.save(saida(produtorB, em(2026, 4, 1), "Algodao", "52010020",
+        "66666.00"));
+
+    ConsultaDadosProdutorService.PerfilAtalho perfil =
+        service.perfilDoAtalho(produtorA.getId(), JAN, JUN, 2);
+
+    assertThat(perfil.tipo()).isEqualTo(br.com.agrocontabil.model.TipoProdutor.PESSOA_FISICA);
+    assertThat(perfil.atendidoPorEscritorio()).isFalse();
+    // Soja soma 1.100,00 e passa o milho (900,00); o trigo fica fora do limite.
+    assertThat(perfil.ncmsMaisVendidos()).containsExactly("12019000", "10059010");
+
+    br.com.agrocontabil.model.Escritorio escritorio = escritorioRepository.save(
+        br.com.agrocontabil.model.Escritorio.builder().nome("Escritorio do Atalho").build());
+    vinculoRepository.save(br.com.agrocontabil.model.VinculoCarteira.builder()
+        .escritorioId(escritorio.getId()).produtorId(produtorA.getId())
+        .situacao(br.com.agrocontabil.model.SituacaoVinculo.ATIVO)
+        .inicio(OffsetDateTime.now()).build());
+    assertThat(service.perfilDoAtalho(produtorA.getId(), JAN, JUN, 2).atendidoPorEscritorio())
+        .isTrue();
+    // O vinculo do A nao vale para o B; produtor inexistente: tipo nulo e nenhum NCM.
+    assertThat(service.perfilDoAtalho(produtorB.getId(), JAN, JUN, 2).atendidoPorEscritorio())
+        .isFalse();
+    ConsultaDadosProdutorService.PerfilAtalho inexistente =
+        service.perfilDoAtalho(UUID.randomUUID(), JAN, JUN, 2);
+    assertThat(inexistente.tipo()).isNull();
+    assertThat(inexistente.ncmsMaisVendidos()).isEmpty();
   }
 }

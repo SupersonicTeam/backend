@@ -98,6 +98,14 @@ public class DadosProdutorAdaptador implements DadosProdutorPorta {
   }
 
   @Override
+  public PerfilAtalho perfilDoAtalho(UUID produtorId, LocalDate inicio, LocalDate fim,
+      int limite) {
+    ConsultaDadosProdutorService.PerfilAtalho p =
+        comTimeout(() -> consultaService.perfilDoAtalho(produtorId, inicio, fim, limite));
+    return new PerfilAtalho(p.tipo(), p.atendidoPorEscritorio(), p.ncmsMaisVendidos());
+  }
+
+  @Override
   public List<String> ncmsComprados(
       UUID produtorId, String descricaoOuNcm, LocalDate inicio, LocalDate fim, int limite) {
     return comTimeout(() ->

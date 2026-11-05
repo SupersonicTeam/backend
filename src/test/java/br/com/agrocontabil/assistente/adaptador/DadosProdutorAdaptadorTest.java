@@ -14,6 +14,7 @@ import br.com.agrocontabil.service.CreditoService;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -82,5 +83,25 @@ class DadosProdutorAdaptadorTest {
     assertThatThrownBy(() -> adaptador.apuracao(produtorId, "2026-07"))
         .isInstanceOf(TransactionTimedOutException.class);
     verify(transactionManager).rollback(status);
+  }
+
+  @Test
+  @DisplayName("#347: perfil do atalho vem do service, na transacao com timeout, so com tipo, "
+      + "escritorio e NCMs")
+  void perfilDoAtalho() {
+    UUID produtorId = UUID.randomUUID();
+    LocalDate inicio = LocalDate.of(2026, 1, 1);
+    LocalDate fim = LocalDate.of(2026, 11, 5);
+    when(consultaService.perfilDoAtalho(produtorId, inicio, fim, 3)).thenReturn(
+        new br.com.agrocontabil.service.ConsultaDadosProdutorService.PerfilAtalho(
+            br.com.agrocontabil.model.TipoProdutor.PESSOA_JURIDICA, true, List.of("12019000")));
+
+    br.com.agrocontabil.assistente.porta.DadosProdutorPorta.PerfilAtalho perfil =
+        adaptador.perfilDoAtalho(produtorId, inicio, fim, 3);
+
+    assertThat(perfil.tipo()).isEqualTo(br.com.agrocontabil.model.TipoProdutor.PESSOA_JURIDICA);
+    assertThat(perfil.atendidoPorEscritorio()).isTrue();
+    assertThat(perfil.ncmsMaisVendidos()).containsExactly("12019000");
+    verify(transactionManager).commit(status);
   }
 }
