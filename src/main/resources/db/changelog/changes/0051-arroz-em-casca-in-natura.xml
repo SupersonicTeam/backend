@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0051-arroz-em-casca-in-natura.xml
+         Issue #365 (#284, pergunta 3), sobre a tabela oficial da #272.
+
+         O escritorio de contabilidade respondeu que o arroz em casca vendido
+         pelo produtor e produto agropecuario in natura: LC 214/2025, art. 137,
+         cClassTrib 200036 (60%). O art. 137, par. 1o, I mantem in natura o
+         grao so submetido a secagem, limpeza, debulha ou descarocamento; o
+         Anexo I so cobre o arroz beneficiado (1006.20, 1006.30 e 1006.40.00).
+
+         Nomenclatura oficial (Siscomex, conferida em 2026-11-05):
+           1006.10.10  Para semeadura (sementeira)
+           1006.10.91  Parboilizado
+           1006.10.92  Nao parboilizado
+
+           10061092 -> entra na referencia, in natura (art. 137, 200036).
+           10061010 -> entra na referencia SEM a marca: semente, Anexo IX
+                       (art. 138, 200038), como a soja e o milho para
+                       semeadura. Fora da referencia o @ValidNcm recusava a
+                       nota de semente de arroz.
+           10061091 -> NAO entra. A parboilizacao (encharcamento, vapor e
+                       secagem) nao esta no rol do par. 1o, I: o arroz em
+                       casca parboilizado e beneficiado pela industria, nao o
+                       que o produtor vende. Fica como estava, ate o contador
+                       decidir.
+
+         A precedencia do ClassificacaoTributariaService (Anexo I/XV -> in
+         natura -> Anexo IX/VII) e a mesma da soja; antes desta mudanca os
+         codigos 1006.10 caiam no Anexo IX (200038, sementes), que vem antes
+         do VII.
+
+         As descricoes evitam termo negado ("nao parboilizado", "exceto para
+         semeadura"): a busca por nome da Ceres casa palavra por prefixo e nao
+         le a negacao.
+
+         Fora da referencia o @ValidNcm recusava estes codigos, entao nao ha
+         nota propria nao emitida com eles para recalcular. Nota importada nao
+         muda (o XML do terceiro e o documento).
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0051-arroz-em-casca-in-natura" author="supersonic-team">
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10061010"/>
+            <column name="descricao" value="Arroz com casca (paddy) para semeadura"/>
+            <column name="in_natura" valueBoolean="false"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10061092"/>
+            <column name="descricao" value="Arroz com casca (paddy), sem parboilizacao"/>
+            <column name="in_natura" valueBoolean="true"/>
+        </insert>
+        <rollback>
+            <delete tableName="ncm_agropecuario">
+                <where>codigo IN ('10061010', '10061092')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

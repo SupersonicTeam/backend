@@ -569,13 +569,16 @@ CREATE TABLE IF NOT EXISTS cfop_referencia (
 );
 
 -- Codigos conferidos contra a nomenclatura oficial (changeset 0046, issue #282); in_natura do
--- changeset 0048 (issue #272). NcmSemeadoExisteNaNomenclaturaTest trava o espelho.
+-- changeset 0048 (issue #272); arroz em casca in natura no 0051 (#284).
+-- NcmSemeadoExisteNaNomenclaturaTest trava o espelho.
 MERGE INTO ncm_agropecuario (codigo, descricao, in_natura) KEY (codigo) VALUES
     ('12019000', 'Soja, mesmo triturada, exceto para semeadura', TRUE),
     ('12011000', 'Soja para semeadura', FALSE),
     ('10059010', 'Milho em grao (exceto para semeadura)', TRUE),
     ('10051000', 'Milho para semeadura', FALSE),
     ('10011900', 'Trigo duro (exceto para semeadura)', TRUE),
+    ('10061010', 'Arroz com casca (paddy) para semeadura', FALSE),
+    ('10061092', 'Arroz com casca (paddy), sem parboilizacao', TRUE),
     ('10063021', 'Arroz semibranqueado ou branqueado, polido', FALSE),
     ('09011110', 'Cafe nao torrado, nao descafeinado, em grao', FALSE),
     ('17011400', 'Outros acucares de cana, em bruto', FALSE),

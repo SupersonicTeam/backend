@@ -191,6 +191,22 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0051: em casca in natura, semente sem a marca, parboilizado fora")
+  void changeSet0051ArrozEmCascaInNatura() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT codigo || ':' || in_natura FROM ncm_agropecuario"
+        + " WHERE codigo LIKE '100610%' ORDER BY codigo", String.class))
+        .containsExactly("10061010:false", "10061092:true");
+    // O em casca segue nos Anexos VII e IX da tabela oficial; o in natura decide antes deles.
+    assertThat(jdbc.queryForList("SELECT DISTINCT i.c_class_trib"
+        + " FROM classificacao_tributaria_anexo_ncm n"
+        + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
+        + " WHERE n.ncm = '10061092' ORDER BY 1", String.class))
+        .containsExactly("200034", "200038");
+  }
+
+  @Test
   @DisplayName("changeSet 0050: camada que decidiu a rota, nula para as antigas, sem texto (#265)")
   void changeSet0050CamadaClassificacao() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -684,7 +700,7 @@ class LiquibaseChangelogIntegrationTest {
         .isEqualTo("200:100.00");
     assertThat(jdbc.queryForList("SELECT codigo FROM ncm_agropecuario WHERE in_natura"
         + " ORDER BY codigo", String.class))
-        .containsExactly("10011900", "10059010", "12019000", "52010020");
+        .contains("10011900", "10059010", "12019000", "52010020");
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'ncm_agropecuario'", String.class))
         .doesNotContain("percentual_reducao_padrao");

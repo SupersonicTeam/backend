@@ -53,8 +53,9 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code cClassTrib}. As demais células da coluna de condição são o título do grupo do anexo, não
  * condição.
  *
- * <p>Leite cru, arroz em casca e cooperativa (#284, perguntas 2, 3 e 6) seguem o dado atual da
- * tabela, sem regra própria.
+ * <p>Leite cru e cooperativa (#284, perguntas 2 e 6) seguem o dado atual da tabela, sem regra
+ * própria; o arroz em casca não parboilizado (pergunta 3) é in natura pela marca da referência
+ * (changeSet 0051).
  */
 @Service
 public class TratamentoProdutoService {

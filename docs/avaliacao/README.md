@@ -172,6 +172,14 @@ crédito do art. 47 fica para as demais compras. A lista espelha o texto; o crit
 continua "cita algum dos esperados" (`AvaliadorResposta.citaAlgum`, por prefixo), então ela não
 detecta, sozinha, a falta dessa citação na base.
 
+Na versão `2026-11-05.3` (#365, #284 pergunta 3), entraram na referência de NCM o arroz em casca
+não parboilizado (1006.10.92, in natura, art. 137) e o para semeadura (1006.10.10, Anexo IX, art.
+138), no changeSet 0051. A busca por "arroz" da P02 passa a trazer a semente, o em casca e o
+polido, nessa ordem, e `produtos.0.reducao` vira o da semente (60%). O valor esperado continua
+sendo o da função real com o primeiro parâmetro aceito; por isso o `10063021` saiu dos
+parâmetros aceitos (ele daria o polido, zero, e reprovaria uma resposta que o gabarito aceita). Os
+arts. 137 e 138 entram nas citações aceitas, ao lado do 125.
+
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função
 da #274 que ainda não existe (nota pelo número, nota devolvida, vendas por produto; as de débito e
