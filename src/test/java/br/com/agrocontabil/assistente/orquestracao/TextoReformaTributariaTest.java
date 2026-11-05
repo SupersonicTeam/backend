@@ -28,7 +28,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 /**
  * Texto explicado do atalho de legislação (#347): correto por construção. O texto da lei vem do
  * fixture {@code ceres/atalho-reforma-trechos.json}, copiado da base de legislação (a mesma da
- * VPS) em 2026-11-04 — se um dispositivo mudar de redação, o fixture e o texto mudam juntos.
+ * VPS) em 2026-11-04 — se um dispositivo mudar de redação, o fixture e o texto mudam juntos. Os
+ * parágrafos do art. 138 (§§ 1º, 2º, 5º, 6º e 7º) vieram da consulta à base da VPS em 2026-11-05.
  */
 class TextoReformaTributariaTest {
 
@@ -93,6 +94,32 @@ class TextoReformaTributariaTest {
     });
     // A reducao dos insumos e a do Anexo IX, nao a do in natura.
     assertThat(lei.get("LC 214/2025|art. 138")).contains("60%").contains("Anexo IX");
+  }
+
+  @Test
+  @DisplayName("Insumo do Anexo IX: diz o que a lei diz (reducao, registro, diferimento e o seu "
+      + "encerramento) e deixa o efeito no credito com o contador")
+  void insumoDoAnexoIxDiferido() {
+    String texto = TextoReformaTributaria.COMPRAS;
+    assertThat(lei.get("LC 214/2025|art. 138, § 1º")).contains("registrados como insumos");
+    assertThat(lei.get("LC 214/2025|art. 138, § 2º, inciso I, alínea a"))
+        .contains("Fica diferido o recolhimento do IBS e da CBS")
+        .contains("fornecimento realizado por contribuinte sujeito ao regime regular")
+        .endsWith("a) contribuinte sujeito ao regime regular do IBS e da CBS; e");
+    assertThat(lei.get("LC 214/2025|art. 138, § 5º")).contains("o diferimento será encerrado");
+    assertThat(lei.get("LC 214/2025|art. 138, § 6º"))
+        .contains("encerrar a fase do diferimento");
+    assertThat(texto).contains("fica diferido (art. 138, § 2º, inciso I, alinea a)")
+        .contains("(art. 138, §§ 5º a 7º), e o efeito disso no seu credito, sao para conferir"
+            + " com o contador")
+        .contains("nas demais compras, fora desse diferimento");
+    // Os §§ 5º a 7º encerram o diferimento: o texto nao afirma o efeito liquido no credito.
+    assertThat(normalizado(texto)).doesNotContain("nao ha imposto pago")
+        .doesNotContain("nao gera credito").doesNotContain("sem credito");
+    assertThat(TextoReformaTributaria.DA_NOTA_AO_PAGAMENTO).containsSubsequence(
+        "LC 214/2025|art. 138", "LC 214/2025|art. 138, § 1º",
+        "LC 214/2025|art. 138, § 2º, inciso I, alínea a", "LC 214/2025|art. 138, § 5º",
+        "LC 214/2025|art. 138, § 6º", "LC 214/2025|art. 138, § 7º", "LC 214/2025|art. 47");
   }
 
   @ParameterizedTest
@@ -198,7 +225,8 @@ class TextoReformaTributariaTest {
         .doesNotContain("voce e contribuinte").doesNotContain("simples nacional")
         .doesNotContainPattern("\\bmei\\b").doesNotContain("lc 123").doesNotContain("diesel")
         .doesNotContain("1,63").doesNotContain("1,5%").doesNotContain("exportacao")
-        // Insumo nao gera credito (diferimento do art. 138, § 2º, fora do escopo).
+        // Insumo do Anexo IX: diferido (art. 138, § 2º); o efeito no credito e com o contador, e
+        // o sistema nao modela o diferimento (premissas, secao 1).
         .doesNotContain("insumos geram credito").doesNotContain("credito dos insumos")
         // Split payment e o que a lei preve; o sistema nao calcula.
         .contains("a lei preve o split payment")

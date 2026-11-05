@@ -26,10 +26,12 @@ O que a #281 precisa modelar e o sistema hoje **não** trata (todos no texto da 
   sugere a situação a partir das vendas.
 - **Opção e renúncia** (arts. 165 e 166): a opção vale a partir do mês seguinte, é irretratável
   durante o ano-calendário e a renúncia produz efeito em 1º de janeiro do ano seguinte.
-- **Diferimento dos insumos** (art. 138, § 2º): o IBS/CBS na venda de insumos agropecuários do
-  Anexo IX (fertilizantes, defensivos, sementes etc.) a contribuinte do regime regular fica
-  diferido. O `CreditoTributarioService` não modela o diferimento: numa compra de insumo do
-  Anexo IX ele estima crédito que o produtor não teria.
+- **Diferimento dos insumos** (art. 138, § 2º, inciso I, alínea a): na venda de insumo
+  agropecuário do Anexo IX (fertilizantes, defensivos, sementes etc.) entre contribuintes do
+  regime regular, o recolhimento do IBS/CBS fica diferido. O encerramento do diferimento, quem
+  recolhe (§§ 5º a 7º) e o efeito sobre o crédito estão com o contador (#284, pergunta C). O
+  `CreditoTributarioService` não modela o diferimento: numa compra de insumo do Anexo IX ele estima
+  crédito como numa compra comum, o que pode não corresponder ao caso (#356).
 
 Por que assim até a banca: modelar a situação exige histórico por ano-calendário, as regras de
 opção e renúncia, nota sem destaque para o não contribuinte (CST/cClassTrib, relacionada à #278) e

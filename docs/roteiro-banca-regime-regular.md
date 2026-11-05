@@ -23,11 +23,13 @@ vende a trading, cerealista ou agroindústria, ser contribuinte põe o crédito 
 em vez de depender do percentual presumido. Se isso vale preço melhor depende do percentual
 presumido do ano e do produto: é argumento de negociação, não ganho garantido.
 
-**O que não usar como argumento:** "o optante recupera o IBS/CBS dos insumos". Os insumos
-agropecuários do Anexo IX (fertilizantes, defensivos, sementes) têm o IBS/CBS **diferido** na venda
-a contribuinte do regime regular (art. 138, § 2º): não há imposto pago a recuperar. O argumento só
-vale para compras fora do diferimento (máquinas, serviços), e o sistema ainda não modela o
-diferimento (premissas, seção 1).
+**O que não usar como argumento:** "o optante recupera o IBS/CBS dos insumos". A compra de insumo
+agropecuário do Anexo IX (fertilizantes, defensivos, sementes) entre contribuintes do regime regular
+tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea a). Quando o
+diferimento se encerra, quem recolhe (§§ 5º a 7º) e o efeito sobre o crédito estão com o contador
+(#284, pergunta C). Por isso o argumento fica fora; o crédito do art. 47 nas demais compras
+(máquinas, serviços) continua valendo, e o sistema ainda não modela o diferimento (premissas,
+seção 1).
 
 ## Contrapontos que a banca pode levantar
 
