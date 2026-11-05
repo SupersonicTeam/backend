@@ -140,7 +140,7 @@ public class RotaDados {
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
-    if (ModeloLinguagem.cortadaPeloTeto(resposta)) {
+    if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
       // Cortada no teto (#270): a ultima chamada pode ter se perdido e as outras sairiam como a
       // resposta inteira. Nada e executado.
       log.warn("Ceres: escolha de funcoes cortada pelo teto de {} tokens", tetoSaida);

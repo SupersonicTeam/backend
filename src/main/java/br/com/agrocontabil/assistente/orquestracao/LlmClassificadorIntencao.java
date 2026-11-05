@@ -64,12 +64,17 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
-    if (ModeloLinguagem.cortadaPeloTeto(resposta)) {
-      // JSON cortado pode fechar antes da perguntaLei ou parecer completo: nunca vale (#270).
+    ClassificacaoIntencao classificacao = interpretar(resposta.getResult().getOutput().getText());
+    if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
+      // Cortada no teto (#270). Se o JSON fechou antes do corte (o modelo seguiu escrevendo depois
+      // dele), ele esta inteiro e vale. Cortado dentro do JSON, nao ha chave de fechamento e a
+      // leitura ja da indeterminada: a pergunta sai como fora de escopo, auditada como cortada.
       log.warn("Classificador de intencao: resposta cortada pelo teto de {} tokens", tetoSaida);
-      return ClassificacaoIntencao.indeterminada();
+      if (classificacao.confianca() <= 0) {
+        contexto.registrarClassificacaoCortada();
+      }
     }
-    return interpretar(resposta.getResult().getOutput().getText());
+    return classificacao;
   }
 
   /**

@@ -79,8 +79,13 @@ class TetoSaidaOllamaFioTest {
     assertThat(numPredict(1)).isEqualTo(200);
     assertThat(numPredict(2)).isEqualTo(700);
     for (String corpo : ollama.corpos()) {
-      assertThat(corpo).contains("\"model\":\"" + OllamaHttpSimulado.MODELO + "\"",
-          "\"think\":false");
+      JsonNode json = JSON.readTree(corpo);
+      assertThat(json.get("model").asText()).isEqualTo(OllamaHttpSimulado.MODELO);
+      assertThat(json.get("think").asBoolean(true)).isFalse();
+      // A opcao da chamada nao apaga o contexto nem a temperatura padrao (mescla do Spring AI).
+      assertThat(json.get("options").get("num_ctx").asInt()).isEqualTo(OllamaHttpSimulado.NUM_CTX);
+      assertThat(json.get("options").get("temperature").asDouble())
+          .isEqualTo(OllamaHttpSimulado.TEMPERATURA);
     }
   }
 
@@ -129,19 +134,47 @@ class TetoSaidaOllamaFioTest {
   }
 
   @Test
-  @DisplayName("Classificacao cortada no teto: indeterminada, mesmo com JSON que parece completo")
-  void classificacaoCortadaIndeterminada() {
-    // O JSON fecha, mas o MISTO perdeu a perguntaLei no corte.
-    ollama.responder(OllamaHttpSimulado.resposta(
-        "{\\\"intencao\\\": \\\"MISTO\\\", \\\"confianca\\\": 0.9}", null, CORTADA));
-    LlmClassificadorIntencao classificador =
-        new LlmClassificadorIntencao(ollama.modelo(), JSON, propriedades);
+  @DisplayName("Classificacao: JSON inteiro antes do corte vale (o modelo seguiu escrevendo)")
+  void classificacaoComJsonInteiroAntesDoCorteVale() {
+    ollama.responder(OllamaHttpSimulado.resposta("{\\\"intencao\\\": \\\"LEGISLACAO\\\", "
+        + "\\\"confianca\\\": 0.9} Explicacao: a pergunta trata da lei e", null, CORTADA));
+    ContextoAssistente contexto = contexto();
 
     ClassificacaoIntencao classificacao =
-        classificador.classificar("Tenho credito nessas compras?", contexto());
+        new LlmClassificadorIntencao(ollama.modelo(), JSON, propriedades)
+            .classificar("O que diz a lei sobre insumos?", contexto);
+
+    assertThat(classificacao.intencao()).isEqualTo(Intencao.LEGISLACAO);
+    assertThat(contexto.classificacaoCortada()).isFalse();
+  }
+
+  @Test
+  @DisplayName("Classificacao cortada dentro do JSON: indeterminada e marcada como cortada")
+  void classificacaoCortadaDentroDoJson() {
+    ollama.responder(OllamaHttpSimulado.resposta("{\\\"intencao\\\": \\\"MISTO\\\", "
+        + "\\\"confianca\\\": 0.9, \\\"perguntaLei\\\": \\\"insumo da direito a", null, CORTADA));
+    ContextoAssistente contexto = contexto();
+
+    ClassificacaoIntencao classificacao =
+        new LlmClassificadorIntencao(ollama.modelo(), JSON, propriedades)
+            .classificar("Tenho credito nessas compras?", contexto);
 
     assertThat(classificacao.intencao()).isEqualTo(Intencao.FORA_DE_ESCOPO);
     assertThat(classificacao.confianca()).isZero();
+    // O orquestrador audita a pergunta como RESPOSTA_CORTADA, nao como fora de escopo comum.
+    assertThat(contexto.classificacaoCortada()).isTrue();
+  }
+
+  @Test
+  @DisplayName("Sem done_reason, tokens gerados no teto tambem contam como corte")
+  void semMotivoDoFimContaPelosTokens() {
+    String cortado = "Os insumos agropecuarios tem reducao de aliquota [T1]. Alem disso, o";
+    ollama.responder(OllamaHttpSimulado.resposta(cortado, null, "", 700));
+
+    ResultadoRota resultado = rotaLegislacao().responder("Insumo tem reducao?", contexto());
+
+    assertThat(resultado.desfecho()).isEqualTo(DesfechoInteracao.RESPOSTA_CORTADA);
+    assertThat(resultado.texto()).doesNotContain("Alem disso");
   }
 
   @Test

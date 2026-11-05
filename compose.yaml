@@ -128,6 +128,12 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.openai.com}
       AI_API_COMPLETIONS_PATH: ${AI_API_COMPLETIONS_PATH:-/v1/chat/completions}
+      # Contexto, teto geral e tetos por tipo de chamada (#270); padroes = os do yml.
+      AI_OLLAMA_NUM_CTX: ${AI_OLLAMA_NUM_CTX:-8192}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1024}
+      AI_TETO_FUNCOES: ${AI_TETO_FUNCOES:-512}
+      AI_TETO_CLASSIFICACAO: ${AI_TETO_CLASSIFICACAO:-256}
+      AI_TETO_LEGISLACAO: ${AI_TETO_LEGISLACAO:-1024}
       ANTIVIRUS_MODO: CLAMAV
       ANTIVIRUS_HOST: clamav
     ports:

@@ -124,8 +124,11 @@ public class OrquestradorService {
       case DADOS -> deRota(rota, dados(pergunta, contexto));
       case LEGISLACAO -> deRota(rota, lei(pergunta, contexto));
       case MISTO -> misto(pergunta, classificacao.perguntaLei(), contexto);
+      // Classificacao cortada pelo teto (#270): mesma resposta fixa, desfecho proprio na auditoria.
       case FORA_DE_ESCOPO -> new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO,
-          PromptsCeres.FORA_DE_ESCOPO, DesfechoInteracao.FORA_DE_ESCOPO, List.of(), false);
+          PromptsCeres.FORA_DE_ESCOPO, contexto.classificacaoCortada()
+              ? DesfechoInteracao.RESPOSTA_CORTADA : DesfechoInteracao.FORA_DE_ESCOPO,
+          List.of(), false);
     };
     // Tratamento do produto pela tabela oficial (#283): texto e citacao do dado, nao do modelo.
     resultado = textosDoBackend.aplicar(resultado, contexto);

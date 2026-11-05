@@ -32,11 +32,17 @@ public final class AvaliadorResposta {
       DesfechoInteracao.FORA_DE_ESCOPO, DesfechoInteracao.SEM_FUNDAMENTO_LEGAL,
       DesfechoInteracao.CITACAO_INVALIDA, DesfechoInteracao.NUMERO_SEM_FONTE,
       DesfechoInteracao.SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA,
-      DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.SEM_RESPOSTA);
+      DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.SEM_RESPOSTA,
+      DesfechoInteracao.RESPOSTA_CORTADA);
 
-  /** Desfechos em que o texto do modelo foi descartado, mesmo que a resposta mostre trechos. */
+  /**
+   * Desfechos em que o texto do modelo foi descartado, mesmo que a resposta mostre trechos. A lei
+   * cortada pelo teto (#270) mostra os trechos mais próximos da busca, não citados pelo modelo:
+   * contá-los como citação faria o teto menor subir o acerto de citação.
+   */
   static final Set<DesfechoInteracao> RESPOSTA_DESCARTADA = EnumSet.of(
-      DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.CITACAO_INVALIDA);
+      DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.CITACAO_INVALIDA,
+      DesfechoInteracao.RESPOSTA_CORTADA);
 
   private static final Pattern TOKEN_DOCUMENTO = Pattern.compile("[\\d][\\d./-]*[\\d]");
   private static final Pattern NAO_DIGITO = Pattern.compile("\\D");

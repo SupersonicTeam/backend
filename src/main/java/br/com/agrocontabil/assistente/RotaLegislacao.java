@@ -179,7 +179,7 @@ public class RotaLegislacao {
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
-    if (ModeloLinguagem.cortadaPeloTeto(resposta)) {
+    if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
       // Cortada no teto (#270): a frase pela metade passaria no ValidadorCitacao se a marca veio
       // antes do corte. O texto sai; os trechos mais proximos ficam, sem afirmar que respondem.
       log.warn("Ceres: resposta de legislacao cortada pelo teto de {} tokens", tetoSaida);

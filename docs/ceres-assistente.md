@@ -646,18 +646,26 @@ pelo `TetoSaidaOllamaFioTest`.
 - **A "explicação em 2 ou 3 frases" do item 3 da #270 não tem mais onde se aplicar:** desde a #266
   a rota de dados não redige pelo modelo (o texto é do template). As chamadas que sobram são as
   três acima.
-- **Validação na subida:** cada teto entre 16 e a metade do contexto (`tetos.contexto`, lido da
+- **Validação na subida:** contexto de pelo menos 6.144 (maior prompt estimado da rota de dados
+  mais o teto das funções), cada teto entre 16 e a metade do contexto (`tetos.contexto`, lido da
   mesma propriedade do `num-ctx`) e no máximo o `AI_MAX_TOKENS`, que continua sendo o teto geral
   do provedor e o teto de saída da reserva da cota (#166) — passar dele faria a chamada gerar mais
   do que foi reservado.
-- **Resposta cortada nunca sai como completa.** O motivo do fim (`done_reason`/`finish_reason`
-  `length`, `ModeloLinguagem.cortadaPeloTeto`) é conferido antes de qualquer validação, porque o
-  texto cortado pode passar nelas: uma resposta de lei com a marca `[T1]` antes do corte passa no
-  `ValidadorCitacao` (o teste de controle mostra isso); um JSON da classificação pode fechar antes
-  da `perguntaLei`; a primeira de duas chamadas de função sairia como a resposta inteira. Desfecho
-  `RESPOSTA_CORTADA` na auditoria (dados e lei; na lei, os trechos mais próximos sem afirmar que
-  respondem). A classificação cortada vira indeterminada (resposta fixa de fora de escopo) e só
-  aparece no log em WARN.
+- **Resposta cortada nunca sai como completa.** `ModeloLinguagem.cortadaPeloTeto` confere, antes
+  de qualquer validação, o motivo do fim (`done_reason`/`finish_reason` `length`) **ou** os tokens
+  gerados no teto (cobre o motivo ausente). O texto cortado pode passar nos validadores: uma
+  resposta de lei com a marca `[T1]` antes do corte passa no `ValidadorCitacao` (o teste de
+  controle mostra isso), e a primeira de duas chamadas de função sairia como a resposta inteira.
+  Dados e lei cortados têm desfecho `RESPOSTA_CORTADA` (na lei, os trechos mais próximos sem
+  afirmar que respondem). Na classificação, um JSON que fechou antes do corte (o modelo seguiu
+  escrevendo) está inteiro e vale; cortada dentro do JSON, a pergunta recebe a resposta fixa de
+  fora de escopo e o desfecho `RESPOSTA_CORTADA`.
+- **Raciocínio ligado** (`AI_OLLAMA_THINK` diferente de `false`, ou a tag `qwen3:4b`, que pensa
+  sempre): os tokens de raciocínio contam no teto e estes padrões cortam quase toda chamada. Suba
+  os tetos junto.
+- **Avaliação:** `RESPOSTA_CORTADA` conta como recusa e como texto descartado no
+  `AvaliadorResposta`; os trechos relacionados da lei cortada não contam como citação, senão um
+  teto menor subiria o acerto de citação.
 - **Para calibrar:** `SELECT count(*) FROM assistente_interacao WHERE desfecho = 'RESPOSTA_CORTADA'
   OR desfecho_dados = 'RESPOSTA_CORTADA' OR desfecho_legislacao = 'RESPOSTA_CORTADA';` depois de uma
   rodada da régua. Zero com o teto menor = o teto cabe.

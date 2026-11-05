@@ -113,23 +113,33 @@ public class ModeloLinguagem {
 
   /**
    * {@code true} se a geração parou pelo teto de tokens, não porque o modelo terminou (#270). O
-   * texto cortado pode ainda parecer válido para os validadores: um JSON que fecha antes da
-   * {@code perguntaLei}, uma resposta de lei com a marca certa e a frase pela metade, a primeira de
-   * duas chamadas de função. Por isso quem chama descarta, em vez de conferir o texto.
+   * texto cortado pode ainda parecer válido para os validadores: uma resposta de lei com a marca
+   * certa e a frase pela metade, a primeira de duas chamadas de função. Por isso quem chama
+   * descarta, em vez de conferir o texto.
    *
-   * <p>O Ollama informa {@code done_reason: "length"}; a API da OpenAI, {@code finish_reason:
-   * "length"} (o Spring AI o expõe como {@code LENGTH}).
+   * <p>Dois sinais, qualquer um basta: o motivo do fim ({@code done_reason: "length"} no Ollama,
+   * {@code finish_reason: "length"} na API da OpenAI, que o Spring AI expõe como {@code LENGTH}) e
+   * os tokens gerados no teto ou acima. O segundo cobre o motivo ausente: o {@code OllamaChatModel}
+   * só o preenche quando o Ollama manda as contagens, e um provedor compatível pode mandar um
+   * motivo que o Spring AI não conhece.
    *
    * @param resposta resposta do modelo
+   * @param teto     teto de tokens gerados mandado nesta chamada
    * @return se a resposta foi cortada pelo teto
    */
-  public static boolean cortadaPeloTeto(ChatResponse resposta) {
-    if (resposta == null || resposta.getResult() == null
-        || resposta.getResult().getMetadata() == null) {
+  public static boolean cortadaPeloTeto(ChatResponse resposta, int teto) {
+    if (resposta == null || resposta.getResult() == null) {
       return false;
     }
-    String motivo = resposta.getResult().getMetadata().getFinishReason();
-    return motivo != null && motivo.strip().equalsIgnoreCase("length");
+    if (resposta.getResult().getMetadata() != null) {
+      String motivo = resposta.getResult().getMetadata().getFinishReason();
+      if (motivo != null && motivo.strip().equalsIgnoreCase("length")) {
+        return true;
+      }
+    }
+    Integer gerados = resposta.getMetadata() == null || resposta.getMetadata().getUsage() == null
+        ? null : resposta.getMetadata().getUsage().getCompletionTokens();
+    return gerados != null && gerados >= teto;
   }
 
   /**

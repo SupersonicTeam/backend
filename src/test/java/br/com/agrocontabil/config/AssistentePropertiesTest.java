@@ -74,8 +74,8 @@ class AssistentePropertiesTest {
     AssistenteProperties minusculo = new AssistenteProperties();
     minusculo.getTetos().setClassificacao(AssistenteProperties.Tetos.MINIMO - 1);
     AssistenteProperties grande = new AssistenteProperties();
-    grande.getTetos().setContexto(2048);
-    grande.getTetos().setLegislacao(1025);
+    grande.getTetos().setContexto(6144);
+    grande.getTetos().setLegislacao(3073);
 
     assertThatThrownBy(zero::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.funcoes");
@@ -83,7 +83,7 @@ class AssistentePropertiesTest {
         .hasMessageContaining("app.assistente.tetos.classificacao");
     assertThatThrownBy(grande::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.legislacao")
-        .hasMessageContaining("metade do contexto (1024)");
+        .hasMessageContaining("metade do contexto (3072)");
   }
 
   @Test
@@ -106,7 +106,8 @@ class AssistentePropertiesTest {
   @DisplayName("#270: contexto abaixo do minimo e recusado")
   void contextoPequeno() {
     AssistenteProperties p = new AssistenteProperties();
-    p.getTetos().setContexto(1024);
+    // Abaixo do maior prompt estimado da rota de dados mais o teto das funcoes.
+    p.getTetos().setContexto(AssistenteProperties.Tetos.CONTEXTO_MINIMO - 1);
 
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.contexto");

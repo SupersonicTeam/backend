@@ -104,7 +104,8 @@ class PrefixoPromptOllamaFioTest {
   void classificacaoSemFuncoes() throws IOException {
     ollama.responder(resposta("{\\\"intencao\\\": \\\"DADOS\\\", \\\"confianca\\\": 0.9}"));
     ollama.responder(resposta("{\\\"intencao\\\": \\\"LEGISLACAO\\\", \\\"confianca\\\": 0.9}"));
-    LlmClassificadorIntencao classificador = new LlmClassificadorIntencao(modelo, JSON, new AssistenteProperties());
+    LlmClassificadorIntencao classificador =
+        new LlmClassificadorIntencao(modelo, JSON, new AssistenteProperties());
 
     classificador.classificar("Quanto paguei de CBS?",
         new ContextoAssistente(UUID.randomUUID(), DIA_1));

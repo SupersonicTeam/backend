@@ -579,9 +579,9 @@ public class AssistenteProperties implements InitializingBean {
   }
 
   /**
-   * Teto de tokens gerados por tipo de chamada ao modelo (#270), no lugar de um {@code AI_MAX_TOKENS}
-   * único para tudo. Cada chamada leva o seu no {@code num_predict} (Ollama) ou {@code max_tokens}
-   * (API compatível com a da OpenAI). O {@code AI_MAX_TOKENS} segue como teto geral: padrão do
+   * Teto de tokens gerados por tipo de chamada ao modelo (#270), no lugar de um
+   * {@code AI_MAX_TOKENS} único para tudo. Cada chamada leva o seu no {@code num_predict} (Ollama)
+   * ou {@code max_tokens} (API compatível com a da OpenAI). O {@code AI_MAX_TOKENS} segue como teto geral: padrão do
    * provedor e teto de saída da reserva da cota (#166), por isso nenhum teto daqui passa dele.
    *
    * <p>Não há teto separado para a {@code perguntaLei} do MISTO: ela é um campo do mesmo JSON da
@@ -590,14 +590,25 @@ public class AssistenteProperties implements InitializingBean {
    *
    * <p>Resposta cortada pelo teto nunca é entregue como se estivesse completa: quem chama confere o
    * motivo do fim ({@code ModeloLinguagem.cortadaPeloTeto}).
+   *
+   * <p>Com o raciocínio ligado ({@code AI_OLLAMA_THINK} diferente de {@code false}, ou a tag
+   * {@code qwen3:4b}, que pensa sempre), os tokens de raciocínio contam no teto e estes padrões
+   * cortam quase toda chamada (desfecho {@code RESPOSTA_CORTADA}): suba os tetos junto.
+   *
+   * <p>O {@code contexto} vem do {@code num-ctx} do Ollama; com provedor por API ele só limita os
+   * tetos a 4.096 (metade do padrão), o que nenhuma chamada da Ceres precisa passar.
    */
   public static class Tetos {
 
     /** Menor teto aceito: abaixo disso nem o JSON da classificação cabe. */
     public static final int MINIMO = 16;
 
-    /** Menor contexto aceito: a parte fixa da rota de dados sozinha passa de 3 mil tokens. */
-    public static final int CONTEXTO_MINIMO = 2048;
+    /**
+     * Menor contexto aceito: o maior prompt estimado (rota de dados: parte fixa, pergunta e
+     * template, até ~4.900 tokens) mais o teto de saída das funções (512), arredondado. Abaixo
+     * disso o Ollama descartaria o início do prompt, onde ficam as regras e as funções.
+     */
+    public static final int CONTEXTO_MINIMO = 6144;
 
     /**
      * Escolha das funções de dados: só as chamadas de função, em JSON. Cada uma tem algumas dezenas
@@ -605,12 +616,12 @@ public class AssistenteProperties implements InitializingBean {
      */
     private int funcoes = 512;
 
-    /** Classificação: o JSON com a intenção, a confiança e a {@code perguntaLei} (até 300 caracteres). */
+    /** Classificação: JSON com intenção, confiança e {@code perguntaLei} (até 300 caracteres). */
     private int classificacao = 256;
 
     /**
      * Lei: texto curto com as marcas de citação. Padrão = o teto único de antes (conservador, sem
-     * medição); o valor menor recomendado, a confirmar na VPS, está em {@code docs/ceres-assistente.md}.
+     * medição); o candidato menor, a medir na VPS, está em {@code docs/ceres-assistente.md}.
      */
     private int legislacao = 1024;
 

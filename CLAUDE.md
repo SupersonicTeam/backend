@@ -166,8 +166,9 @@ br.com.agrocontabil
 │                  # auditoria/ (AuditoriaAssistente), orquestracao/ (ClassificadorIntencao +
 │                  # OrquestradorService: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO), memoria/ (esqueleto).
 │                  # llm/ (ModeloLinguagem = porta única
-│                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; teto de tokens por chamada em
-│                  #   app.assistente.tetos + cortadaPeloTeto → RESPOSTA_CORTADA, #270; OllamaHealthIndicator
+│                  # para o modelo, falha → 503 ASSISTENTE_INDISPONIVEL; teto de tokens por
+│                  #   chamada em app.assistente.tetos + cortadaPeloTeto → RESPOSTA_CORTADA,
+│                  #   #270; OllamaHealthIndicator
 │                  # → DEGRADED, nunca DOWN); ferramentas/ (FerramentasDadosProdutor: @Tool sem
 │                  # parâmetro de produtor, produtor só pelo ContextoAssistente no ToolContext);
 │                  # RotaDados (#266: o modelo só escolhe as funções, numa chamada; a resposta é
