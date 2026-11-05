@@ -172,6 +172,12 @@ crédito do art. 47 fica para as demais compras. A lista espelha o texto; o crit
 continua "cita algum dos esperados" (`AvaliadorResposta.citaAlgum`, por prefixo), então ela não
 detecta, sozinha, a falta dessa citação na base.
 
+Na versão `2026-11-05.3` (#284, pergunta 3), o arroz em casca (1006.10.91/92) entrou na referência
+de NCM como in natura (art. 137, changeSet 0051). A busca por "arroz" da P02 passa a trazer o em
+casca (60%) antes do polido (Anexo I, zero): o valor esperado de `produtos.0.reducao` segue sendo
+o da função real com os parâmetros do gabarito, e o art. 137 entra nas citações aceitas, ao lado
+do art. 125.
+
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função
 da #274 que ainda não existe (nota pelo número, nota devolvida, vendas por produto; as de débito e

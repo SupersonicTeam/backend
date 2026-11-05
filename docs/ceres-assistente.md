@@ -125,7 +125,7 @@ tratamento foi a única consulta, a resposta **é** o template (o texto do model
 artigo do `cClassTrib` (da descrição oficial, "observado o art. N"), com o texto da base de
 legislação; sem a base, o template segue sozinho. Condição que o dado não decide é **dita**
 ("Condição: destinados à alimentação humana."), nunca afirmada, com a ressalva fixa de conferir com
-o contador. Leite cru, arroz em casca e cooperativa (#284) seguem o dado atual, sem regra própria.
+o contador. Leite cru e cooperativa (#284) seguem o dado atual, sem regra própria; o arroz em casca é in natura (art. 137, changeSet 0051, #284 pergunta 3).
 O classificador manda "produto específico tem redução?" para DADOS (antes ia ao RAG, que lia o art.
 137 e redigia — e às vezes contradizia o cálculo). No modo fallback a função não roda.
 

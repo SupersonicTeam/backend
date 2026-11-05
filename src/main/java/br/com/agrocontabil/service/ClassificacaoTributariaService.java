@@ -47,9 +47,9 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code VEDADO} vigente para ele (a tabela veda, por exemplo, no Anexo VII o que está no Anexo I).
  *
  * <p><strong>Pendências de validação (#284):</strong> leite cru vendido ao laticínio (pergunta 2:
- * o Anexo I traz o leite "para consumo direto"), arroz em casca (pergunta 3: 1006.10 não está no
- * Anexo I) e venda a cooperativa optante (pergunta 6: cClassTrib 200020 depende da opção da
- * cooperativa, não do NCM). Aqui vale o dado oficial por NCM, sem regra própria para essas
+ * o Anexo I traz o leite "para consumo direto") e venda a cooperativa optante (pergunta 6:
+ * cClassTrib 200020 depende da opção da cooperativa, não do NCM). O arroz em casca (pergunta 3)
+ * foi confirmado in natura pelo escritório: marca da referência no changeSet 0051. Aqui vale o dado oficial por NCM, sem regra própria para essas
  * situações.
  */
 @Service

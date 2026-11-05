@@ -85,7 +85,7 @@ class TratamentoProdutoServiceIntegrationTest {
   @Test
   @DisplayName("arroz polido: Anexo I, 100%, art. 125, destinado a alimentacao humana")
   void arroz() {
-    TratamentoProduto arroz = service.consultar("arroz", EM_2026).produtos().get(0);
+    TratamentoProduto arroz = service.consultar("arroz polido", EM_2026).produtos().get(0);
 
     assertThat(arroz.ncm()).isEqualTo("10063021");
     assertThat(arroz.cClassTrib()).isEqualTo("200003");
@@ -93,6 +93,21 @@ class TratamentoProdutoServiceIntegrationTest {
     assertThat(arroz.artigo()).isEqualTo("125");
     assertThat(arroz.anexo()).isEqualTo(1);
     assertThat(arroz.condicao()).isEqualTo("destinados à alimentação humana");
+  }
+
+  @Test
+  @DisplayName("#284 p. 3: 'arroz' traz o em casca in natura (art. 137) e o polido (Anexo I)")
+  void arrozEmCascaEPolido() {
+    assertThat(service.consultar("arroz", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm, TratamentoProduto::cClassTrib,
+            p -> p.percentualReducao().intValue(), TratamentoProduto::artigo,
+            TratamentoProduto::anexo)
+        .containsExactly(
+            tuple("10061091", "200036", 60, "137", null),
+            tuple("10061092", "200036", 60, "137", null),
+            tuple("10063021", "200003", 100, "125", 1));
+    assertThat(service.consultar("10061091", EM_2026).produtos().get(0).condicao())
+        .contains("in natura");
   }
 
   @Test

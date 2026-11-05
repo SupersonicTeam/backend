@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0051-arroz-em-casca-in-natura.xml
+         Issue #284 (pergunta 3), sobre a tabela oficial da #272.
+
+         O escritorio de contabilidade respondeu que o arroz em casca vendido
+         pelo produtor e produto agropecuario in natura: LC 214/2025, art. 137,
+         cClassTrib 200036 (60%). O art. 137, par. 1o, I mantem in natura o
+         grao so submetido a secagem, limpeza, debulha ou descarocamento; o
+         Anexo I so cobre o arroz beneficiado (1006.20, 1006.30 e 1006.40.00).
+
+           10061091 (1006.10.91 arroz com casca, parboilizado)
+           10061092 (1006.10.92 arroz com casca, nao parboilizado)
+
+         Os dois nao estavam na referencia: entram ja marcados in natura. A
+         precedencia do ClassificacaoTributariaService (Anexo I/XV -> in
+         natura -> Anexo IX/VII) e a mesma da soja; antes desta mudanca os dois
+         codigos caiam no Anexo IX (200038, sementes), que vem antes do VII.
+
+         10061010 (arroz com casca para semeadura) NAO entra: semente fica no
+         Anexo IX (200038), como a soja para semeadura.
+
+         Fora da referencia o @ValidNcm recusava estes codigos, entao nao ha
+         nota propria nao emitida com eles para recalcular. Nota importada nao
+         muda (o XML do terceiro e o documento).
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0051-arroz-em-casca-in-natura" author="supersonic-team">
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10061091"/>
+            <column name="descricao" value="Arroz com casca (paddy), parboilizado, exceto para semeadura"/>
+            <column name="in_natura" valueBoolean="true"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="10061092"/>
+            <column name="descricao" value="Arroz com casca (paddy), nao parboilizado, exceto para semeadura"/>
+            <column name="in_natura" valueBoolean="true"/>
+        </insert>
+        <rollback>
+            <delete tableName="ncm_agropecuario">
+                <where>codigo IN ('10061091', '10061092')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

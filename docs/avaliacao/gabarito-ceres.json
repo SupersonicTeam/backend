@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-05.2",
+  "versao": "2026-11-05.3",
   "perguntas": [
     {
       "id": "D01", "categoria": "DADOS",
@@ -407,7 +407,7 @@
     {"id": "T13", "categoria": "LEGISLACAO", "pergunta": "Pequeno produtor paga IBS?", "rotaEsperada": "LEGISLACAO", "dispositivosEsperados": ["LC 214/2025, art. 164", "LC 214/2025, art. 165"]},
     {"id": "T14", "categoria": "LEGISLACAO", "pergunta": "O que muda pra mim com IBS e CBS na reforma?", "rotaEsperada": "LEGISLACAO", "adversario": true, "semBecoSemSaida": true, "dispositivosEsperados": ["EC 132/2023, art. 1º (redação do art. 156-A", "EC 132/2023, art. 1º (redação do art. 195", "EC 132/2023, art. 2º (redação do art. 125", "LC 214/2025, art. 1º", "LC 214/2025, art. 343", "LC 214/2025, art. 346", "LC 214/2025, art. 348", "LC 214/2025, art. 137", "LC 214/2025, art. 164", "LC 214/2025, art. 165"]},
     {"id": "P01", "categoria": "DADOS", "pergunta": "A soja tem reducao?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["consultarTratamentoProduto"], "parametrosEsperados": {"produtoOuNcm": ["soja", "soja em grao", "soja em graos", "12019000"]}, "camposValor": ["produtos.0.reducao"], "dispositivosEsperados": ["LC 214/2025, art. 137"]},
-    {"id": "P02", "categoria": "DADOS", "pergunta": "Arroz paga IBS?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["consultarTratamentoProduto"], "parametrosEsperados": {"produtoOuNcm": ["arroz", "10063021"]}, "camposValor": ["produtos.0.reducao"], "dispositivosEsperados": ["LC 214/2025, art. 125"]},
+    {"id": "P02", "categoria": "DADOS", "pergunta": "Arroz paga IBS?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["consultarTratamentoProduto"], "parametrosEsperados": {"produtoOuNcm": ["arroz", "10063021"]}, "camposValor": ["produtos.0.reducao"], "dispositivosEsperados": ["LC 214/2025, art. 125", "LC 214/2025, art. 137"]},
     {"id": "P03", "categoria": "DADOS", "pergunta": "Ovo tem imposto?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["consultarTratamentoProduto"], "parametrosEsperados": {"produtoOuNcm": ["ovo", "ovos", "04072100"]}, "camposValor": ["produtos.0.reducao"], "dispositivosEsperados": ["LC 214/2025, art. 148"]},
     {"id": "P04", "categoria": "DADOS", "pergunta": "E o adubo?", "rotaEsperada": "DADOS", "funcoesEsperadas": ["consultarTratamentoProduto"], "parametrosEsperados": {"produtoOuNcm": ["adubo", "adubos", "fertilizante", "fertilizantes"]}, "camposValor": ["produtos.0.reducao"], "dispositivosEsperados": ["LC 214/2025, art. 138"]},
     {"id": "X01", "categoria": "LEGISLACAO", "pergunta": "Meu vizinho paga Funrural?", "rotaEsperada": "LEGISLACAO", "adversario": true, "dispositivosEsperados": ["Lei 8.212/1991, art. 25", "Lei 8.212/1991, art. 30"]},
