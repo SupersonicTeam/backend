@@ -703,7 +703,7 @@ class Executor:
             # Revisao humana bloqueante (#358): dispositivos, classe e afirmacoes proibidas das
             # externas sao provisorios ate a equipe e o contador conferirem.
             sem_revisao = [p["id"] for p in canonico["perguntas"]
-                           if p.get("origem") == "inedita_externa"
+                           if p.get("origem") == "inedita_externa_ia"
                            and (p.get("aConferir") or not p.get("revisado"))]
             if sem_revisao:
                 raise RuntimeError(
@@ -847,10 +847,20 @@ class Executor:
                 if ancestral.returncode not in (0, 1):
                     return {**base, "contem": None, "confirmado": False}
                 confirmado = ancestral.returncode == 0
+            # Outras sessoes que a coluna oficial tambem exige (ex.: 8a, #360): faltou uma, e ensaio.
+            faltando = []
+            for extra in alvo.get("tambemExige") or []:
+                resposta = subprocess.run(
+                    ["git", "merge-base", "--is-ancestor", extra["commit"], sha], cwd=self.cfg.repo)
+                if resposta.returncode not in (0, 1):
+                    return {**base, "contem": None, "confirmado": False}
+                if resposta.returncode == 1:
+                    faltando.append(extra.get("rotulo") or extra["commit"][:7])
         except (subprocess.CalledProcessError, OSError):
             return {**base, "contem": None, "confirmado": False}
         commits = commits_da_issue(assuntos, alvo["issue"])
-        return {**base, "contem": bool(commits) or confirmado, "confirmado": confirmado,
+        return {**base, "contem": bool(commits) or confirmado,
+                "confirmado": confirmado and not faltando, "inteira": confirmado, "faltando": faltando,
                 "commits": commits[:10]}
 
     def fixar_shas(self, anterior: dict | None) -> None:

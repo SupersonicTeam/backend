@@ -141,7 +141,7 @@ def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None
             continue
         for r in c.rodadas[0]:
             p = canonico.get(r["id"])
-            if p is None or p.get("origem") != "inedita_externa" or p.get("contaminada"):
+            if p is None or p.get("origem") != "inedita_externa_ia" or p.get("contaminada"):
                 continue
             texto = (r.get("execucao") or {}).get("texto") or ""
             if falha_tecnica(r) or not texto.strip():

@@ -244,6 +244,22 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         self.assertEqual(ex.commits_da_issue(assuntos, "#270"), ["aaa1111 feat(ceres): prompts por rota (#270) (#360)"])
         self.assertEqual(ex.commits_da_issue(assuntos[:1] + assuntos[2:], "#270"), [])
 
+    def test_coluna_oficial_exige_a_sessao_7_e_a_8a(self):
+        from unittest import mock
+        e = ex.Executor(config())
+        e.capturar = lambda comando, cwd=None: ""
+        e.cfg.todas_arquiteturas[-1]["sha"] = "b" * 40
+        sete = e.cfg.matriz["sessaoParalela"]["commit"]
+        oito = e.cfg.matriz["sessaoParalela"]["tambemExige"][0]["commit"]
+        for presentes, confirmado, inteira in (({sete, oito}, True, True), ({sete}, False, True),
+                                               (set(), False, False)):
+            def run(comando, cwd=None, _p=presentes):
+                return mock.Mock(returncode=0 if comando[3] in _p else 1)
+            with mock.patch.object(ex.subprocess, "run", run):
+                sessao = e.sessao_paralela()
+            self.assertEqual((sessao["confirmado"], sessao["inteira"]), (confirmado, inteira))
+            self.assertEqual(bool(sessao["faltando"]), oito not in presentes)
+
     def test_retomada_recusa_rodada_antiga_conjunto_ou_embedding_diferente(self):
         e = ex.Executor(config())
         atual = ex.sha256_arquivo(self.REPO / e.cfg.matriz["perguntas"])

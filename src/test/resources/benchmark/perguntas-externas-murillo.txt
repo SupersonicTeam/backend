@@ -1,4 +1,4 @@
-# As 40 perguntas externas do benchmark (#358), literais, na ordem do Murillo. NAO EDITAR:
+# As 40 perguntas externas do benchmark (#358), geradas por IA (ChatGPT) a pedido do Murillo, literais, na ordem dele. NAO EDITAR:
 # o PerguntasBenchmarkIntegrationTest confere que o conjunto as traz byte a byte.
 Sou produtor de soja e milho. Quando eu vender minha produção diretamente para uma cooperativa, qual será a alíquota de IBS e CBS aplicada nessa operação?
 A venda de soja em grãos terá uma tributação diferente da venda de soja triturada ou processada? Como fica a classificação dessas operações?

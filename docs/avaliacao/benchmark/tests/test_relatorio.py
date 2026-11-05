@@ -400,7 +400,7 @@ class ExternasNoRelatorioTest(Base):
     def _marcar(self):
         canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
         for p in canonico["perguntas"]:
-            p["origem"] = {"L01": "inedita_externa", "P01": "inedita_equipe"}.get(p["id"], "gabarito")
+            p["origem"] = {"L01": "inedita_externa_ia", "P01": "inedita_equipe"}.get(p["id"], "gabarito")
         alvo = next(p for p in canonico["perguntas"] if p["id"] == "L01")
         alvo.update({"classeTratamento": "ZERO", "afirmacoesProibidas": [r"\bconfirmar\b"],
                      "aConferir": True, "dispositivosEsperados": [], "revisado": False,
@@ -410,9 +410,12 @@ class ExternasNoRelatorioTest(Base):
     def test_recortes_ineditas_externas_secao_e_csv(self):
         self._marcar()
         texto = rel.gerar(self.pasta)
-        self.assertIn("## (c) Inéditas (equipe + externas) — generalização", texto)
-        self.assertIn("## (d) Só as externas", texto)
-        self.assertIn("## Perguntas externas: critérios automáticos (#358)", texto)
+        self.assertIn("## (c) Inéditas (equipe + geradas por IA) — generalização", texto)
+        self.assertIn("## (d) Só as geradas por IA (externas)", texto)
+        self.assertIn("## Perguntas geradas por IA: critérios automáticos (#358)", texto)
+        self.assertIn("não medem a linguagem real do produtor", texto)
+        self.assertNotIn("perguntas de produtores", texto)
+        self.assertNotIn("internet e produtores", texto)
         self.assertIn("Fundamentação **a conferir** em 1 perguntas", texto)
         self.assertIn("### L01 (pergunta ? do Murillo)", texto)
         # Ceres 1 m-small: "Nao consegui confirmar a citacao." e frase fixa (CITACAO_INVALIDA), nao
@@ -431,7 +434,7 @@ class ExternasNoRelatorioTest(Base):
         (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
         texto = rel.gerar(self.pasta)
         self.assertIn("**Contaminadas**", texto)
-        self.assertNotIn("## (d) Só as externas", texto)
+        self.assertNotIn("## (d) Só as geradas por IA (externas)", texto)
 
     def test_resposta_cortada_recusa_limpa_e_celula_invalida(self):
         arquivo = self.pasta / "ceres-2--m-small" / "ceres-2--m-small.json"

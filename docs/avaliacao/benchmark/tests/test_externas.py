@@ -79,7 +79,7 @@ class CriteriosTest(unittest.TestCase):
 class CsvCegoTest(unittest.TestCase):
     def test_csv_cego_das_externas_com_chave_separada(self):
         from ceres_benchmark.relatorio import Celula
-        canonico = {"E01": {"pergunta": "Pergunta externa?", "origem": "inedita_externa"},
+        canonico = {"E01": {"pergunta": "Pergunta externa?", "origem": "inedita_externa_ia"},
                     "D01": {"pergunta": "Do gabarito?", "origem": "gabarito"}}
         rodada = [{"id": "E01", "execucao": {"texto": "Resposta da E01"}},
                   {"id": "D01", "execucao": {"texto": "nao entra"}}]
@@ -96,9 +96,9 @@ class CsvCegoTest(unittest.TestCase):
 
     def test_csv_cego_protege_formula_e_pula_vazia_e_contaminada(self):
         from ceres_benchmark.relatorio import Celula
-        canonico = {"E01": {"pergunta": "=HYPERLINK(1)", "origem": "inedita_externa"},
-                    "E02": {"pergunta": "Vazia?", "origem": "inedita_externa"},
-                    "E03": {"pergunta": "Contaminada?", "origem": "inedita_externa", "contaminada": True}}
+        canonico = {"E01": {"pergunta": "=HYPERLINK(1)", "origem": "inedita_externa_ia"},
+                    "E02": {"pergunta": "Vazia?", "origem": "inedita_externa_ia"},
+                    "E03": {"pergunta": "Contaminada?", "origem": "inedita_externa_ia", "contaminada": True}}
         rodada = [{"id": "E01", "execucao": {"texto": "-1 resposta", "desfecho": "RESPONDIDA"}},
                   {"id": "E02", "execucao": {"texto": "  ", "desfecho": "RESPONDIDA"}},
                   {"id": "E03", "execucao": {"texto": "algo", "desfecho": "RESPONDIDA"}}]

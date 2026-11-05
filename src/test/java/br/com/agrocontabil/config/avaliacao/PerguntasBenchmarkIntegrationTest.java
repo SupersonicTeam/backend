@@ -101,7 +101,7 @@ class PerguntasBenchmarkIntegrationTest {
       assertThat(temas).as(id).contains(p.path("tema").asText());
       assertThat(p.path("capacidade").asText()).as(id).isIn("comum", "so_ceres_2");
       assertThat(p.path("origem").asText()).as(id)
-          .isIn("gabarito", "inedita_equipe", "inedita_externa");
+          .isIn("gabarito", "inedita_equipe", "inedita_equipe_dados", "inedita_externa_ia");
       porTema.merge(p.path("tema").asText(), 1, Integer::sum);
     }
     assertThat(ids).hasSize(140);
@@ -136,7 +136,7 @@ class PerguntasBenchmarkIntegrationTest {
     for (JsonNode p : objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas")) {
       assertThat(p.path("origem").asText()).as(p.path("id").asText())
           .isIn(gabarito.containsKey(p.path("id").asText())
-              ? List.of("gabarito") : List.of("inedita_equipe", "inedita_externa"));
+              ? List.of("gabarito") : List.of("inedita_equipe", "inedita_equipe_dados", "inedita_externa_ia"));
     }
   }
 
@@ -148,7 +148,7 @@ class PerguntasBenchmarkIntegrationTest {
         .stream().filter(l -> !l.startsWith("#")).toList();
     List<JsonNode> externas = new java.util.ArrayList<>();
     objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas").forEach(p -> {
-      if ("inedita_externa".equals(p.path("origem").asText())) {
+      if ("inedita_externa_ia".equals(p.path("origem").asText())) {
         externas.add(p);
       }
     });

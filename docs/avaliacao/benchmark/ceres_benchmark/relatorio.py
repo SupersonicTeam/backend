@@ -631,6 +631,13 @@ def _celula_md(texto: str, limite: int = 420) -> str:
     return texto.replace("|", "\\|")
 
 
+#: Limitacao das 40 externas (#358): escrita no relatorio sempre que elas aparecem.
+AVISO_IA = (
+    "**Limitação:** as externas foram **geradas por IA** (ChatGPT, a pedido do Murillo), não são "
+    "perguntas reais. Medem generalização (ninguém da equipe as escreveu e a Ceres não foi ajustada a "
+    "elas), mas **não medem a linguagem real do produtor**: são longas e formais."
+)
+
 AVISO_TESTE = (
     "> ⚠️ **RODADA DE TESTE — NÃO VALE PARA A BANCA.** Menos de 3 repetições (ou `--teste`): "
     "serve para conferir o executor. A comparação registrada usa 3 repetições.\n"
@@ -730,13 +737,21 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     if sessao and not sessao.get("confirmado", sessao.get("contem") is True):
         nome7 = f"{_celula_md(sessao.get('rotulo') or 'sessão paralela')} ({sessao.get('issue')})"
         ja = sessao.get("commits") or []
-        md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} não é a de depois da {nome7} "
-                  "inteira.** "
-                  + (f"O SHA medido já tem {len(ja)} PR(s) dela ({_celula_md(', '.join(ja), 300)}), "
-                     "mas o merge do último não está configurado em `sessaoParalela.commit`. "
-                     if ja else "O SHA medido não tem nenhum PR dela. ")
-                  + "A rodada oficial usa o SHA da `main` depois do merge do último PR: esta não "
-                  "entra no relatório final.\n")
+        faltando = sessao.get("faltando") or []
+        if sessao.get("inteira") and faltando:
+            md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} tem a {nome7} inteira, mas não "
+                      f"tem: {_celula_md('; '.join(faltando), 300)}.** A rodada oficial usa um SHA da "
+                      "`main` que contenha todos (`sessaoParalela.commit` e `tambemExige`): esta não "
+                      "entra no relatório final.\n")
+        else:
+            md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} não é a de depois da {nome7} "
+                    "inteira" + (" e de " + _celula_md("; ".join(faltando), 300) if faltando else "")
+                    + ".** "
+                    + (f"O SHA medido já tem {len(ja)} PR(s) dela ({_celula_md(', '.join(ja), 300)}), "
+                       "mas o merge do último não está configurado em `sessaoParalela.commit`. "
+                       if ja else "O SHA medido não tem nenhum PR dela. ")
+                    + "A rodada oficial usa o SHA da `main` depois do merge do último PR: esta não "
+                    "entra no relatório final.\n")
     md.append("Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à "
               "mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) "
               "entre parênteses; n = perguntas avaliadas no critério em cada rodada.\n")
@@ -842,15 +857,15 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     # "inedita" (do #355) = inedita_equipe; contaminada sai do recorte inedito (#358).
     ids_ineditas = [p["id"] for p in canonico_json["perguntas"]
                     if str(p.get("origem", "")).startswith("inedita") and not p.get("contaminada")]
-    ids_externas = [i for i in ids_ineditas if canonico[i].get("origem") == "inedita_externa"]
+    ids_externas = [i for i in ids_ineditas if canonico[i].get("origem") == "inedita_externa_ia"]
     recortes = [(RECORTE_COMUM, ids_comum, "(a) Capacidade comum — a comparação justa"),
                 (RECORTE_INTEIRO, ids_inteiro, "(b) Conjunto inteiro")]
     if ids_ineditas:
         recortes.append((RECORTE_INEDITAS, ids_ineditas,
-                         "(c) Inéditas (equipe + externas) — generalização"
+                         "(c) Inéditas (equipe + geradas por IA) — generalização"
                          if ids_externas else "(c) Inéditas — generalização"))
     if ids_externas:
-        recortes.append((RECORTE_INEDITAS, ids_externas, "(d) Só as externas"))
+        recortes.append((RECORTE_INEDITAS, ids_externas, "(d) Só as geradas por IA (externas)"))
     if contaminadas:
         md.append("**Contaminadas** (alguém mexeu na Ceres olhando a resposta delas; fora dos recortes "
                   "inéditos): " + ", ".join(contaminadas) + ".\n")
@@ -858,10 +873,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append(f"## {rotulo}\n")
         if recorte == RECORTE_INEDITAS:
             so2 = [i for i in ids if canonico[i].get("capacidade") == "so_ceres_2"]
-            descricao = (f"As {len(ids)} perguntas externas compiladas pelo Murillo (internet e "
-                         "produtores), com o texto literal" if ids == ids_externas else
+            descricao = (f"As {len(ids)} perguntas geradas por IA (ChatGPT, a pedido do Murillo), com o "
+                         "texto literal" if ids == ids_externas else
                          f"As {len(ids)} perguntas fora do gabarito"
-                         + (" (equipe e externas)" if ids_externas else " escritas para o benchmark"))
+                         + (" (equipe e geradas por IA)" if ids_externas else " escritas para o benchmark"))
             md.append(f"{descricao}, fora do gabarito contra o "
                       "qual a Ceres 2.0 foi desenvolvida (regras da #265 com \"zero erros no "
                       "gabarito\", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede "
@@ -870,7 +885,8 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                       + f" pontos percentuais por pergunta (n={len(ids)}), diferença menor que isso "
                       "é uma pergunta só; leia com a faixa."
                       + (f" {len(so2)} delas são `so_ceres_2` ({', '.join(so2)}) e penalizam a Ceres 1 "
-                         "por capacidade, como no conjunto inteiro." if so2 else "") + "\n")
+                         "por capacidade, como no conjunto inteiro." if so2 else "")
+                      + (f" {AVISO_IA}" if ids_externas else "") + "\n")
         if recorte == RECORTE_INTEIRO:
             md.append("As perguntas `so_ceres_2` dependem de função que só existe na Ceres 2.0: o "
                       "ganho nelas é **de capacidade da arquitetura, não de modelo**.\n")
@@ -1069,7 +1085,8 @@ def _secao_externas(celulas, ids, canonico) -> str:
     a_conferir = [p["id"] for p in perguntas if p.get("aConferir")]
     pendentes = [f"{p['id']} ({p['pendenteContador']})" for p in perguntas if p.get("pendenteContador")]
     nao_revisadas = [p["id"] for p in perguntas if not p.get("revisado")]
-    linhas = ["## Perguntas externas: critérios automáticos (#358)\n",
+    linhas = ["## Perguntas geradas por IA: critérios automáticos (#358)\n",
+              AVISO_IA + "\n",
               "Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; "
               "fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento "
               "ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` (contextualização, "

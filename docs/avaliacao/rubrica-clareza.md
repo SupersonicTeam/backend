@@ -50,7 +50,8 @@ redação (4, 5 e 7 da Ceres 2.0) e da linha de base.
 ## Perguntas externas: os 5 critérios do Murillo (#358)
 
 As 40 perguntas externas do benchmark (`benchmark/perguntas-benchmark.json`, origem
-`inedita_externa`) são avaliadas pelos 5 critérios do Murillo. Dois são **automáticos** e saem no
+`inedita_externa_ia`: geradas por IA, ChatGPT, a pedido do Murillo; não são perguntas reais de
+produtores) são avaliadas pelos 5 critérios do Murillo. Dois são **automáticos** e saem no
 relatório do benchmark: **alíquotas** (classe de tratamento dita na resposta) e **fundamentação**
 (dispositivo aceito citado, depois de conferido na base). Os outros três são **humanos**, no
 arquivo `externas-avaliacao-cego.csv` que o gerador do relatório grava na pasta da rodada: as colunas

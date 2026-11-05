@@ -110,8 +110,8 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 
 ### O conjunto de perguntas (#352)
 
-`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito `2026-11-05.1`
-inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
+`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.2`,
+com a T03 de 33 dispositivos da Sessão 8a, #360) inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
 hash fica em `perguntas-benchmark.json.sha256`: mudou uma pergunta, mude a `versao` e o hash (o
 `PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). As células leem
 **esse arquivo**; a Ceres 2.0 lê ele próprio, a Ceres 1 lê a cópia adaptada (abaixo), e os dois
@@ -140,9 +140,13 @@ Cada pergunta tem `tema` e `capacidade`: `comum` (as duas arquiteturas têm a fu
 (`ConjuntoRealTest`). **Leia a banca pela capacidade comum por tema**: o tema de linguagem do dia
 a dia tem 10 perguntas no conjunto, mas só 4 na comparação justa.
 
-### As 40 perguntas externas (#358)
+### As 40 perguntas externas, geradas por IA (#358)
 
-O Murillo compilou **40 perguntas externas** (internet e produtores), que entraram com o **texto
+São **40 perguntas geradas pelo ChatGPT a pedido do Murillo** (`origem: inedita_externa_ia`). **Não
+são perguntas reais de produtores.** Medem generalização (ninguém da equipe as escreveu e a Ceres
+não foi ajustada a elas), mas **não medem a linguagem real do produtor**: são longas e formais. O
+relatório escreve essa limitação sempre que elas aparecem; a linguagem do produtor fica com o tema
+"Linguagem do dia a dia" e com as inéditas de dados da equipe (abaixo). Entraram com o **texto
 literal**: nada reescrito, corrigido ou normalizado, porque reescrever destrói o valor de pergunta
 inédita (o `PerguntasBenchmarkIntegrationTest` confere os 40 textos contra a lista dele). Com elas o
 conjunto tem **140 perguntas** e o recorte de inéditas, **53** (13 da equipe + 40 externas): cada
@@ -150,7 +154,7 @@ pergunta vale ~1,9 ponto percentual.
 
 | Campo | Nas externas |
 |---|---|
-| `origem` | `inedita_externa`, com `fonte` ("externa, compilada pelo Murillo (internet e produtores)"); as 13 do #355 são `inedita_equipe` |
+| `origem` | `inedita_externa_ia`, com `fonte` ("gerada por IA (ChatGPT), a pedido do Murillo; não são perguntas reais de produtores"); as 13 do #355 são `inedita_equipe`; as de dados da equipe (abaixo), `inedita_equipe_dados` |
 | `tema` | as 4 categorias do Murillo (10 cada): alíquotas de produtos, insumos, situações práticas, planejamento/notas/transição |
 | `rotaEsperada` | `LEGISLACAO` em todas, com `justificativaRota` de uma linha: todas pedem a regra da lei, nenhuma pede um dado do produtor |
 | `adversario` | 30 delas: pronome ou situação do produtor com termo de lei ("Sou produtor de soja e milho..."), o caso que as regras da #265 têm de mandar para a lei, não para os dados. É o mesmo campo que o comando de avaliação já mede ("Rota nos casos adversários") |
@@ -180,7 +184,7 @@ do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. 
 **Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
 descrições `@Tool` ou as outras perguntas do conjunto.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.5` está congelado (versão e
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.6` está congelado (versão e
 hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
 respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
 perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o
@@ -194,12 +198,32 @@ da banca** enquanto alguma externa estiver com `aConferir` ou sem `revisado`. Pa
 (conferir o executor, ver o formato), use `--ensaio`: o relatório sai marcado como ensaio e a pasta
 não pode ser retomada como rodada da banca.
 
+### Inéditas de dados da equipe (#358)
+
+O Luiz e o Herick escrevem perguntas inéditas sobre os **dados do produtor**, com as próprias
+palavras, em `ineditas-dados/perguntas.txt` (`AAAA-MM-DD | Autor | pergunta`). Para eles há uma
+página só, `ineditas-dados/LEIA-ME.md`, com as regras e **só o cenário de negócio** do
+`SeedAvaliacao` v4 (o que o produtor comprou e vendeu, as notas e as guias, com o "hoje" da
+avaliação), sem nome de função nem campo. Regras:
+
+- escrever **sem ler** as descrições `@Tool`, o treino do classificador (`resources/ceres/treino/`),
+  o gabarito, este README nem o conjunto;
+- escrever como o produtor fala no WhatsApp, sem corrigir depois;
+- mirar nos dados que existem no seed; cada pergunta leva **autor e data**.
+
+Depois, a sessão do benchmark põe cada uma no conjunto com `origem: inedita_equipe_dados`, `autor`
+e `escritaEm`, texto literal, e calcula o valor esperado a partir do seed **com teste**, como nas
+N01–N13 (`PerguntasBenchmarkIntegrationTest`). A que não tiver dado no seed fica **só de rota**,
+marcada (`soRota: true`); **o seed não muda por causa delas**. Entram no mesmo congelamento: versão
+nova e hash antes de qualquer rodada. O `test_ineditas_dados.py` confere o formato do arquivo e que
+toda pergunta de dados do conjunto está nele com o mesmo texto, autor e data.
+
 **Limitação de método: o gabarito foi usado no desenvolvimento da Ceres 2.0.** 87 das 100
 perguntas são o gabarito, e a Ceres 2.0 foi desenvolvida contra ele: as regras de rota da #265
 têm "zero erros no gabarito" como critério, a T03 foi ajustada às citações da #347 e as etapas 2 a
 8 mediram o próprio progresso nele. A Ceres 1 e os modelos menores nunca foram ajustados a ele.
 Comparar arquiteturas só nessas perguntas favorece a Ceres 2.0 por construção. Por isso cada
-pergunta tem `origem` (`gabarito`, `inedita_equipe` ou `inedita_externa`), e o relatório tem os
+pergunta tem `origem` (`gabarito`, `inedita_equipe` ou `inedita_externa_ia`), e o relatório tem os
 recortes **(c) Inéditas** (as 53: 13 da equipe, N01–N13, e as 40 externas) e **(d) Só as
 externas**: **são eles que medem generalização**. Com 53, cada pergunta vale ~1,9 ponto percentual
 (com só as 40 externas, 2,5); o relatório calcula o número de cada recorte. Leia sempre com a faixa. Pelo mesmo motivo, o relatório mostra o acerto da
@@ -377,6 +401,11 @@ Decisão do Murillo: a coluna "Ceres 2.0" da banca é medida **depois** da Sess�
 e 3: só as funções da rota, prompt com prefixo fixo, teto de tokens por chamada, `num_ctx` por
 propriedade). Na prática:
 
+- **E também depois da Sessão 8a** (#360, `54f02ee`): o texto do atalho de IBS/CBS mudou (explica
+  o diferimento dos insumos do Anexo IX) e a T03 passou a 33 dispositivos. A coluna oficial é medida
+  num SHA que contenha **os dois**, `54a4201` (Sessão 7) e `54f02ee` (8a); a `main` de hoje contém.
+  O `54f02ee` está em `sessaoParalela.tambemExige`: sem ele, o relatório sai como ensaio e diz o que
+  falta.
 - **A Sessão 7 terminou** (#351 e #354): `sessaoParalela.commit` na `matriz.json` é
   `54a4201`, o merge do último PR. A rodada oficial usa a `main` (o padrão `origin/main`) ou
   `--ref-ceres2 <SHA>` de um commit que contenha o `54a4201`; o relatório confere pela

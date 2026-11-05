@@ -13,8 +13,8 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `5b8b1e1e48c0c312ff10f25885fbbba987f41086` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.5 (140 perguntas, sha256 `23f3379aaf91…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Ceres 2.0 | `54f02ee0c1de525b7ef99ee8a2a18c6982a15827` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Conjunto de perguntas | 2026-11-05.6 (140 perguntas, sha256 `d3141bb319ce…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |
@@ -243,9 +243,9 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:1.7b`: 83 — D13, D14, T01, T02, T07, X17, C01, D11, D16, T04, T05, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, T11, X04, N05, D06, D08, D09, X15, N07, R01, X14, X01, L09, L10, T14, X02, L11, L01, L02, L04, L05, L06, L07, X03, X05, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F04, T12, X09, X11, X12, A02, A05, A06, P02, P03, P04, N08, N09, N10, N11, N12, E03, E04, E05, E06, E08, E15, E17, E19, E22, E29, E36, E38
 - Ceres 2.0 · `qwen3:4b-instruct`: 67 — D14, D15, T08, X17, C01, D11, D16, T04, T05, T06, T10, D01, D02, N01, N02, P01, X04, N04, N05, N06, D05, D06, D07, D09, X15, N07, R01, L03, T09, L08, L11, L02, L06, L07, X03, R02, M01, M02, M03, M04, M05, F02, F03, T12, X09, A02, A05, T13, P02, P03, N09, N10, N11, E01, E04, E06, E07, E08, E11, E14, E15, E21, E32, E33, E35, E36, E40
 
-## (c) Inéditas (equipe + externas) — generalização
+## (c) Inéditas (equipe + geradas por IA) — generalização
 
-As 53 perguntas fora do gabarito (equipe e externas), fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 1,9 pontos percentuais por pergunta (n=53), diferença menor que isso é uma pergunta só; leia com a faixa. 4 delas são `so_ceres_2` (N04, N08, N09, N12) e penalizam a Ceres 1 por capacidade, como no conjunto inteiro.
+As 53 perguntas fora do gabarito (equipe e geradas por IA), fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 1,9 pontos percentuais por pergunta (n=53), diferença menor que isso é uma pergunta só; leia com a faixa. 4 delas são `so_ceres_2` (N04, N08, N09, N12) e penalizam a Ceres 1 por capacidade, como no conjunto inteiro. **Limitação:** as externas foram **geradas por IA** (ChatGPT, a pedido do Murillo), não são perguntas reais. Medem generalização (ninguém da equipe as escreveu e a Ceres não foi ajustada a elas), mas **não medem a linguagem real do produtor**: são longas e formais.
 
 | Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -307,9 +307,9 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:1.7b`: 22 — N01, N02, N03, N05, N07, N08, N09, N10, N11, N12, E03, E04, E05, E06, E08, E15, E17, E19, E22, E29, E36, E38
 - Ceres 2.0 · `qwen3:4b-instruct`: 23 — N01, N02, N04, N05, N06, N07, N09, N10, N11, E01, E04, E06, E07, E08, E11, E14, E15, E21, E32, E33, E35, E36, E40
 
-## (d) Só as externas
+## (d) Só as geradas por IA (externas)
 
-As 40 perguntas externas compiladas pelo Murillo (internet e produtores), com o texto literal, fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 2,5 pontos percentuais por pergunta (n=40), diferença menor que isso é uma pergunta só; leia com a faixa.
+As 40 perguntas geradas por IA (ChatGPT, a pedido do Murillo), com o texto literal, fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 2,5 pontos percentuais por pergunta (n=40), diferença menor que isso é uma pergunta só; leia com a faixa. **Limitação:** as externas foram **geradas por IA** (ChatGPT, a pedido do Murillo), não são perguntas reais. Medem generalização (ninguém da equipe as escreveu e a Ceres não foi ajustada a elas), mas **não medem a linguagem real do produtor**: são longas e formais.
 
 | Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -371,7 +371,9 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:1.7b`: 12 — E03, E04, E05, E06, E08, E15, E17, E19, E22, E29, E36, E38
 - Ceres 2.0 · `qwen3:4b-instruct`: 14 — E01, E04, E06, E07, E08, E11, E14, E15, E21, E32, E33, E35, E36, E40
 
-## Perguntas externas: critérios automáticos (#358)
+## Perguntas geradas por IA: critérios automáticos (#358)
+
+**Limitação:** as externas foram **geradas por IA** (ChatGPT, a pedido do Murillo), não são perguntas reais. Medem generalização (ninguém da equipe as escreveu e a Ceres não foi ajustada a elas), mas **não medem a linguagem real do produtor**: são longas e formais.
 
 Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` (contextualização, orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). **A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão é a humana.
 

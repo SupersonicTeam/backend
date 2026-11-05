@@ -92,11 +92,15 @@ células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-bench
 perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
 pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo
 `SeparacaoTreinoTesteTest`; o relatório traz o acerto por tema e a rodada local com GPU (latência
-local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca). Desde a #358 o conjunto tem 140 perguntas: + **40 externas do
-Murillo, texto literal** (`origem: inedita_externa`, conferidas contra
+local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca). Desde a #358 o conjunto tem 140 perguntas: + **40 externas geradas
+por IA (ChatGPT, a pedido do Murillo), texto literal** (`origem: inedita_externa_ia`; medem
+generalização, não a linguagem real do produtor; conferidas contra
 `src/test/resources/benchmark/perguntas-externas-murillo.txt`; dispositivos `aConferir` até a
 conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando as respostas às
-inéditas**; quem mudar marca a pergunta `contaminada`.
+inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`) **e** a 8a
+(`54f02ee`, `sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
+`docs/avaliacao/benchmark/ineditas-dados/` (`inedita_equipe_dados`, autor e data, valor esperado
+calculado do seed com teste).
 
 ## Arquitetura — regras inegociáveis
 
