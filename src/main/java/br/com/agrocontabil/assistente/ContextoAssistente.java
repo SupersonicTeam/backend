@@ -67,6 +67,7 @@ public final class ContextoAssistente {
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
   private final AtomicBoolean trechosRelacionados = new AtomicBoolean();
+  private final AtomicBoolean classificacaoCortada = new AtomicBoolean();
   private final List<TextoDoBackend> textosDoBackend =
       Collections.synchronizedList(new ArrayList<>());
   private final List<SecaoResposta> secoes = Collections.synchronizedList(new ArrayList<>());
@@ -331,6 +332,20 @@ public final class ContextoAssistente {
   /** {@code true} se as citações da lei são os trechos relacionados, não citados pelo modelo. */
   public boolean trechosRelacionados() {
     return trechosRelacionados.get();
+  }
+
+  /**
+   * A classificação pelo modelo parou no teto de tokens sem um JSON legível (#270): a pergunta sai
+   * com a resposta fixa de fora de escopo, mas o desfecho na auditoria é {@code RESPOSTA_CORTADA},
+   * para o teto curto aparecer na calibração.
+   */
+  public void registrarClassificacaoCortada() {
+    classificacaoCortada.set(true);
+  }
+
+  /** {@code true} se a classificação foi cortada pelo teto e não pôde ser lida. */
+  public boolean classificacaoCortada() {
+    return classificacaoCortada.get();
   }
 
   /** Ids dos trechos de lei citados, na ordem da citação. */

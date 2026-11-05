@@ -33,6 +33,12 @@ public enum DesfechoInteracao {
    * resto da resposta ficou. A resposta é entregue, com as fontes.
    */
   NEGATIVA_SUBSTITUIDA,
+  /**
+   * A geração parou no teto de tokens da chamada (#270, {@code app.assistente.tetos}): o texto
+   * cortado foi descartado, sem nada executado nem afirmado a partir dele. Na lei, saem os trechos
+   * mais próximos sem afirmar que respondem. Desfecho próprio para medir se o teto está curto.
+   */
+  RESPOSTA_CORTADA,
   /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
   FORA_DE_ESCOPO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */

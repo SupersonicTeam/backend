@@ -136,7 +136,8 @@ spring:
           # Janela de contexto explicita. Estourada, o Ollama descarta o INICIO do prompt — onde
           # fica a instrucao de sistema com as regras da Ceres. O qwen3 suporta 32k.
           num-ctx: ${AI_OLLAMA_NUM_CTX:8192}
-          # Teto de tokens gerados por chamada: limita latencia e custo de uma pergunta.
+          # Teto GERAL de tokens gerados: cada chamada da Ceres manda o seu, menor ou igual
+          # (app.assistente.tetos, #270); este vale para chamada sem teto proprio e para a cota.
           num-predict: ${AI_MAX_TOKENS:1024}
           # O qwen3 raciocina por padrao; os tokens de raciocinio consomem o num-predict (resposta
           # cortada) e multiplicam a latencia em CPU. Os numeros da Ceres vem das funcoes, nao do
@@ -474,6 +475,18 @@ app:
       # O mesmo teto que limita o modelo (num-predict / max-tokens): a reserva so e um teto de
       # verdade se a saida do modelo tambem for limitada.
       teto-tokens-saida-por-chamada: ${AI_MAX_TOKENS:1024}
+    # Teto de tokens gerados por tipo de chamada ao modelo (#270), cada um <= AI_MAX_TOKENS (teto
+    # de saida da cota) e <= metade do contexto; fora disso a aplicacao nao sobe. Resposta cortada
+    # pelo teto nunca sai como completa (classificacao vira indeterminada, dados e lei descartam).
+    tetos:
+      # Escolha das funcoes de dados: so o JSON das chamadas.
+      funcoes: ${AI_TETO_FUNCOES:512}
+      # JSON da classificacao, inclusive a perguntaLei do MISTO (mesma chamada).
+      classificacao: ${AI_TETO_CLASSIFICACAO:256}
+      # Resposta de lei. Padrao = o teto unico de antes; 512 e o recomendado a confirmar na VPS.
+      legislacao: ${AI_TETO_LEGISLACAO:1024}
+      # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
+      contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
     # atalhos para as telas. Depois de uma falha, as perguntas pulam o modelo durante a pausa.
     fallback:

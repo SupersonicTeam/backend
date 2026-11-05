@@ -30,6 +30,12 @@ public final class OllamaHttpSimulado implements AutoCloseable {
   /** Modelo das opções padrão, como no {@code application.yml}. */
   public static final String MODELO = "qwen3:4b";
 
+  /** Temperatura das opções padrão, como no {@code application.yml}. */
+  public static final double TEMPERATURA = 0.2;
+
+  /** Janela de contexto das opções padrão ({@code AI_OLLAMA_NUM_CTX}). */
+  public static final int NUM_CTX = 8192;
+
   private final HttpServer servidor;
   private final List<String> corpos = new CopyOnWriteArrayList<>();
   private final Deque<String> respostas = new ArrayDeque<>();
@@ -51,8 +57,10 @@ public final class OllamaHttpSimulado implements AutoCloseable {
     });
     servidor.start();
 
-    // Opcoes padrao como as de producao: o modelo e o thinking desligado.
-    OllamaChatOptions opcoes = OllamaChatOptions.builder().model(MODELO).build();
+    // Opcoes padrao como as de producao (application.yml): modelo, temperatura, contexto e o
+    // thinking desligado. Os testes de fio conferem que a opcao da chamada nao as apaga.
+    OllamaChatOptions opcoes = OllamaChatOptions.builder()
+        .model(MODELO).temperature(TEMPERATURA).numCtx(NUM_CTX).build();
     opcoes.setThinkOption(ThinkOption.ThinkBoolean.DISABLED);
     OllamaChatModel ollama = OllamaChatModel.builder()
         .ollamaApi(OllamaApi.builder()
@@ -96,12 +104,24 @@ public final class OllamaHttpSimulado implements AutoCloseable {
    * @return corpo JSON
    */
   public static String resposta(String conteudo, String chamada, String doneReason) {
+    return resposta(conteudo, chamada, doneReason, 5);
+  }
+
+  /**
+   * Resposta com a contagem de tokens gerados ({@code eval_count}) escolhida.
+   *
+   * @param doneReason motivo do fim; vazio = o Ollama não informou
+   * @param gerados    tokens gerados
+   * @return corpo JSON
+   */
+  public static String resposta(String conteudo, String chamada, String doneReason, int gerados) {
     String toolCalls = chamada == null ? "" : ",\"tool_calls\":[" + chamada + "]";
     return "{\"model\":\"" + MODELO + "\",\"created_at\":\"2026-09-29T12:00:00Z\","
         + "\"message\":{\"role\":\"assistant\",\"content\":\"" + conteudo + "\"" + toolCalls
-        + "},\"done_reason\":\"" + doneReason + "\",\"done\":true,\"total_duration\":1,"
+        + "}," + (doneReason.isEmpty() ? "" : "\"done_reason\":\"" + doneReason + "\",")
+        + "\"done\":true,\"total_duration\":1,"
         + "\"load_duration\":1,\"prompt_eval_count\":10,\"prompt_eval_duration\":1,"
-        + "\"eval_count\":5,\"eval_duration\":1}";
+        + "\"eval_count\":" + gerados + ",\"eval_duration\":1}";
   }
 
   /** Resposta encerrada normalmente ({@code done_reason: stop}). */

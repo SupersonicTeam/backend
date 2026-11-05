@@ -31,7 +31,8 @@ class LlmClassificadorIntencaoTest {
     classificador = new LlmClassificadorIntencao(
         new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
             new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
-                java.time.Duration.ofSeconds(30), System::nanoTime)), new ObjectMapper());
+                java.time.Duration.ofSeconds(30), System::nanoTime)), new ObjectMapper(),
+        new br.com.agrocontabil.config.AssistenteProperties());
   }
 
   @Test

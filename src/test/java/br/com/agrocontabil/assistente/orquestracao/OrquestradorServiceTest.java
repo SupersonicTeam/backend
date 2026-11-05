@@ -156,6 +156,24 @@ class OrquestradorServiceTest {
   }
 
   @Test
+  @DisplayName("#270: classificacao cortada pelo teto sai como fora de escopo, auditada como cortada")
+  void classificacaoCortadaAuditadaComoCortada() {
+    when(classificador.classificar(anyString(), any())).thenAnswer(chamada -> {
+      chamada.<br.com.agrocontabil.assistente.ContextoAssistente>getArgument(1)
+          .registrarClassificacaoCortada();
+      return ClassificacaoIntencao.indeterminada();
+    });
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Quanto vou pagar de imposto?", contexto, rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
+    assertThat(r.texto()).isEqualTo(br.com.agrocontabil.assistente.PromptsCeres.FORA_DE_ESCOPO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPOSTA_CORTADA);
+    verifyNoInteractions(rotaDados, rotaLegislacao);
+  }
+
+  @Test
   @DisplayName("Prompt injection vai a fora de escopo sem chamar classificador nem rotas")
   void injecaoNaoChegaAoModelo() {
     ResultadoOrquestracao r = orquestrador.responder(

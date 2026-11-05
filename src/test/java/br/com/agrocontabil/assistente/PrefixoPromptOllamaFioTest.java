@@ -104,7 +104,8 @@ class PrefixoPromptOllamaFioTest {
   void classificacaoSemFuncoes() throws IOException {
     ollama.responder(resposta("{\\\"intencao\\\": \\\"DADOS\\\", \\\"confianca\\\": 0.9}"));
     ollama.responder(resposta("{\\\"intencao\\\": \\\"LEGISLACAO\\\", \\\"confianca\\\": 0.9}"));
-    LlmClassificadorIntencao classificador = new LlmClassificadorIntencao(modelo, JSON);
+    LlmClassificadorIntencao classificador =
+        new LlmClassificadorIntencao(modelo, JSON, new AssistenteProperties());
 
     classificador.classificar("Quanto paguei de CBS?",
         new ContextoAssistente(UUID.randomUUID(), DIA_1));
@@ -127,7 +128,8 @@ class PrefixoPromptOllamaFioTest {
         List.of(trecho("T1", "id-1", "Os insumos agropecuarios tem reducao.")),
         List.of(trecho("T1", "id-2", "O produtor rural pode optar pelo regime regular.")));
     RotaLegislacao rota = new RotaLegislacao(modelo, busca, new ValidadorCitacao(),
-        new ValidadorNumeros(), new VerificadorAfirmacaoDados());
+        new ValidadorNumeros(), new VerificadorAfirmacaoDados(),
+        new AssistenteProperties());
     ollama.responder(resposta("Os insumos tem reducao [T1]."));
     ollama.responder(resposta("O produtor pode optar [T1]."));
 
@@ -157,7 +159,8 @@ class PrefixoPromptOllamaFioTest {
         List.of(trecho("T1", "id-2", "O produtor rural pode optar pelo regime regular.")),
         List.of(trecho("T1", "id-3", "Os insumos agropecuarios tem reducao.")));
     RotaLegislacao rota = new RotaLegislacao(modelo, busca, new ValidadorCitacao(),
-        new ValidadorNumeros(), new VerificadorAfirmacaoDados());
+        new ValidadorNumeros(), new VerificadorAfirmacaoDados(),
+        new AssistenteProperties());
     ollama.responder(resposta("Os insumos tem reducao [T1]."));
     ollama.responder(resposta("O produtor pode optar [T1]."));
     ollama.responder(resposta("Os insumos tem reducao [T1]."));

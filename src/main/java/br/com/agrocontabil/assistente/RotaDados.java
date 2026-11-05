@@ -84,6 +84,7 @@ public class RotaDados {
   private final ValidadorNumeros validadorNumeros;
   private final VerificadorNegativaDados verificadorNegativa;
   private final List<ToolCallback> ferramentas;
+  private final int tetoSaida;
   private final Set<String> nomesPermitidos;
 
   /** Constrói a rota com um {@link ToolCallingManager} restrito às funções de dados. */
@@ -96,6 +97,7 @@ public class RotaDados {
       AssistenteProperties propriedades,
       ObjectProvider<ObservationRegistry> observacao) {
     this.modelo = modelo;
+    this.tetoSaida = propriedades.getTetos().getFuncoes();
     this.validadorNumeros = validadorNumeros;
     this.verificadorNegativa = verificadorNegativa;
     // Ordem pelo nome (#270): o ToolCallbacks.from segue a ordem da reflexao, sem garantia da
@@ -128,6 +130,7 @@ public class RotaDados {
         .toolCallbacks(ferramentas)
         .internalToolExecutionEnabled(false)
         .toolContext(contexto.comoToolContext())
+        .maxTokens(tetoSaida)
         .build();
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.SISTEMA_DADOS),
@@ -137,6 +140,13 @@ public class RotaDados {
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
+    if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
+      // Cortada no teto (#270): a ultima chamada pode ter se perdido e as outras sairiam como a
+      // resposta inteira. Nada e executado.
+      log.warn("Ceres: escolha de funcoes cortada pelo teto de {} tokens", tetoSaida);
+      return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.RESPOSTA_CORTADA, List.of(),
+          ModoFallback.atalhos(pergunta));
+    }
     if (!resposta.hasToolCalls()) {
       // Sem funcao, nao ha dado para afirmar nada: nunca "nao tem" (#266, item 3).
       return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.SEM_RESPOSTA, List.of(),
