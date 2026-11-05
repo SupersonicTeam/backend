@@ -29,6 +29,8 @@ def main() -> int:
                    help="worktrees e JARs (fora do repositorio)")
     p.add_argument("--teste", action="store_true",
                    help="1 repeticao, para conferir o executor: NAO vale para a banca")
+    p.add_argument("--ensaio", action="store_true",
+                   help="roda antes da revisao humana das externas (#358): NAO vale para a banca")
     p.add_argument("--embedding-cpu", action="store_true",
                    help="bge-m3 sem GPU (cria bge-m3-cpu, num_gpu 0): VRAM pequena, ver README")
     p.add_argument("--comparar-com", help="rodada anterior (ex.: ensaio antes da #270) para o "

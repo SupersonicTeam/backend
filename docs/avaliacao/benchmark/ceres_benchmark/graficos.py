@@ -142,8 +142,13 @@ def mapa_tema_celula(titulo: str, subtitulo: str, temas: list[str], colunas: lis
                      valores: list[list[tuple[float | None, int]]], marca: str | None = None) -> str:
     """Tabela-mapa tema x celula: o percentual escrito em cada casa (o tom de cinza so reforca,
     nunca e a unica informacao). ``valores[tema][coluna] = (media, n)``."""
-    largura, altura = 1600, 900
-    esquerda, topo = 470, 230
+    largura, topo = 1600, 230
+    altura = max(900, topo + 40 + 40 * len(temas))  # 16+ temas: a linha nao fica menor que 40 px
+    # Rotulo do tema a ~13,5 px por caractere (Arial 24): a margem cresce com o maior, ate 800 px;
+    # alem disso o rotulo e encurtado com reticencias, nunca sai da imagem.
+    maior = max((len(t) for t in temas), default=0)
+    esquerda = int(min(800, max(470, 56 + 13.5 * maior)))
+    limite_rotulo = int((esquerda - 56) / 13.5)
     largura_col = (largura - esquerda - 40) / max(1, len(colunas))
     altura_lin = min(52.0, (altura - topo - 40) / max(1, len(temas)))
     partes = [
@@ -163,7 +168,8 @@ def mapa_tema_celula(titulo: str, subtitulo: str, temas: list[str], colunas: lis
     for ti, tema in enumerate(temas):
         y = topo + ti * altura_lin
         partes.append(f'<text x="{esquerda - 16}" y="{y + altura_lin * 0.68:.1f}" font-size="24" '
-                      f'text-anchor="end" fill="#111111">{escape(tema)}</text>')
+                      f'text-anchor="end" fill="#111111">'
+                      f'{escape(tema if len(tema) <= limite_rotulo else tema[:limite_rotulo - 1] + "…")}</text>')
         for ci in range(len(colunas)):
             media, n = valores[ti][ci]
             x = esquerda + largura_col * ci
@@ -208,10 +214,13 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     marca = "DADOS FICTÍCIOS" if ficticio else ("RODADA DE TESTE" if teste else None)
 
     ordem = list(temas or {}) or sorted({p.get("tema") or "sem_tema" for p in canonico.values()})
-    por_celula = [rel.por_tema(c, ids_comum, canonico, adaptacoes, rel.RECORTE_COMUM) for c in celulas]
+    # Celula invalida (pensamento ativo) nao entra no grafico: "—" em todas as casas.
+    por_celula = [{} if c.invalida else rel.por_tema(c, ids_comum, canonico, adaptacoes, rel.RECORTE_COMUM)
+                  for c in celulas]
     valores_tema = [[(pc[t].media, pc[t].total) if t in pc else (None, 0) for pc in por_celula]
                     for t in ordem]
-    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" for c in celulas]
+    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" + (" (inválida)" if c.invalida else "")
+               for c in celulas]
     rodadas_txt = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
     arquivo = destino / "acerto-por-tema.svg"
     arquivo.write_text(mapa_tema_celula(
@@ -222,7 +231,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     arquivos.append(arquivo)
 
     def celula(modelo, arq):
-        return next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
+        c = next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
+        return None if c is None or c.invalida else c
 
     for criterio in ("rota", "numero", "citacao", "recusa", "vazamento", "falha"):
         valores = []

@@ -4,3 +4,5 @@
 # Benchmark da banca (#348): logs do comando e da criacao do schema ficam fora do git.
 benchmark/**/comando.log
 benchmark/*/logs/
+# Chave do CSV cego das perguntas externas (#358): liga a resposta a celula; nao vai ao avaliador.
+*-avaliacao-chave.json

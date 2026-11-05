@@ -43,8 +43,15 @@
   "perguntas": "docs/avaliacao/benchmark/perguntas-benchmark.json",
   "sessaoParalela": {
     "issue": "#270",
-    "rotulo": "Sessão 7 (prompts por rota e teto de tokens)",
-    "commitNota": "Quando a #270 for mergeada, ponha o SHA do merge em 'commit': a conferencia passa a ser pela ancestralidade, sem depender do titulo do squash."
+    "rotulo": "Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade)",
+    "commitNota": "Merge do ultimo PR da #270 (#354; antes, #351), informado pela sessao que a coordenou em 2026-11-05. A coluna Ceres 2.0 so e oficial num SHA que o contenha. Desde o 54f02ee (Sessao 8a, #360) o texto do atalho de IBS/CBS mudou (explica o diferimento dos insumos do Anexo IX): a coluna oficial tambem precisa dele (tambemExige).",
+    "commit": "54a4201ad908cfa1181578b531685b0bb06da17e",
+    "tambemExige": [
+      {
+        "commit": "54f02ee0c1de525b7ef99ee8a2a18c6982a15827",
+        "rotulo": "Sessão 8a (#360: atalho IBS/CBS explica o diferimento dos insumos do Anexo IX; T03 com 33 dispositivos, gabarito 2026-11-05.2)"
+      }
+    ]
   },
   "divergentesConhecidos": [
     "D13",

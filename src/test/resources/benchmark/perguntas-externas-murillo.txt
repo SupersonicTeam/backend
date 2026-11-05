@@ -1,0 +1,42 @@
+# As 40 perguntas externas do benchmark (#358), geradas por IA (ChatGPT) a pedido do Murillo, literais, na ordem dele. NAO EDITAR:
+# o PerguntasBenchmarkIntegrationTest confere que o conjunto as traz byte a byte.
+Sou produtor de soja e milho. Quando eu vender minha produção diretamente para uma cooperativa, qual será a alíquota de IBS e CBS aplicada nessa operação?
+A venda de soja em grãos terá uma tributação diferente da venda de soja triturada ou processada? Como fica a classificação dessas operações?
+Produzo leite na minha propriedade e vendo diretamente para um laticínio. Essa operação terá redução de 60% nas alíquotas ou poderá ter alíquota zero?
+A venda de ovos, frutas e hortaliças produzidos na minha propriedade terá incidência de IBS e CBS?
+Se eu vender milho seco e limpo, sem realizar nenhum processamento industrial, ele continua sendo considerado produto in natura para fins da redução tributária?
+A venda de gado vivo para um frigorífico terá o mesmo tratamento tributário da venda de carne bovina já abatida?
+Produzo mandioca e vendo parte da produção in natura e outra parte congelada e embalada. As duas operações terão a mesma tributação?
+A venda de madeira proveniente de reflorestamento próprio terá algum benefício na nova tributação?
+Se eu comercializar café em grãos e posteriormente vender café torrado e moído, as alíquotas de IBS e CBS serão diferentes?
+Como descubro se determinado produto agrícola possui alíquota reduzida ou alíquota zero? Existe uma tabela oficial para consultar isso?
+Compro fertilizantes NPK, ureia e cloreto de potássio para minha lavoura. Esses produtos terão redução de 60% no IBS e na CBS?
+Os defensivos agrícolas utilizados na plantação de soja terão a mesma redução tributária dos fertilizantes?
+A compra de sementes certificadas terá tributação diferente da compra de sementes convencionais?
+Compro calcário agrícola para correção do solo. Esse produto está contemplado na redução de 60% das alíquotas?
+A ração utilizada na alimentação do meu rebanho terá algum benefício tributário ou será tributada pela alíquota padrão?
+Compro medicamentos veterinários, vacinas e suplementos minerais para meus animais. Todos esses produtos recebem o mesmo tratamento tributário?
+Se eu comprar um produto agrícola que não esteja relacionado no Anexo IX da Lei Complementar 214/2025, posso mesmo assim aproveitar a redução de 60%?
+A compra de peças para manutenção de tratores e colheitadeiras terá alguma redução de IBS e CBS?
+Os serviços de pulverização agrícola contratados de terceiros terão a mesma redução tributária aplicada aos defensivos utilizados na lavoura?
+Se eu comprar fertilizantes de uma empresa que não possui o registro necessário no Ministério da Agricultura, ainda posso receber o benefício da alíquota reduzida?
+Sou produtor rural pessoa física e minha receita anual é inferior a R$ 3,6 milhões. Sou obrigado a recolher IBS e CBS sobre todas as minhas vendas?
+Se eu optar por não ser contribuinte do IBS e da CBS, meu comprador poderá aproveitar algum crédito tributário na compra da minha produção?
+Tenho uma propriedade rural em sociedade com meus irmãos. A receita de cada um será considerada individualmente ou será somada para verificar o enquadramento tributário?
+Arrendo parte da minha propriedade para outro produtor plantar soja. O valor que recebo pelo arrendamento terá incidência de IBS e CBS?
+Faço uma troca de sacas de soja por fertilizantes com uma revenda agrícola, sem movimentação de dinheiro. Essa operação também será tributada?
+Vendo minha produção diretamente para uma pessoa física que utiliza os produtos para consumo próprio. A tributação será diferente de uma venda para uma empresa?
+Tenho uma propriedade rural e também presto serviços de colheita para outros produtores utilizando minhas máquinas. Como serão tributadas essas duas atividades?
+Vendo minha produção para uma cooperativa e recebo o pagamento somente depois da entrega dos grãos. Em qual momento será considerado o fato gerador do IBS e da CBS?
+Recebo parte do pagamento da safra em dinheiro e outra parte em insumos agrícolas. Como devo registrar essas operações para fins tributários?
+Tenho uma propriedade rural em dois estados diferentes e comercializo minha produção nos dois locais. O IBS será calculado considerando o estado onde está a fazenda ou onde o comprador está localizado?
+Em 2026, preciso destacar os 0,9% de CBS e 0,1% de IBS nas minhas notas fiscais mesmo que esses valores sejam compensados com PIS e Cofins?
+A partir de 2027, quando PIS e Cofins forem extintos, como ficará a tributação das minhas vendas de soja, milho e trigo?
+Tenho notas fiscais de fertilizantes emitidas em 2026, mas só vou utilizar esses produtos na safra de 2027. Como ficará o aproveitamento dos créditos tributários?
+Se eu comprar uma colheitadeira nova em 2027, poderei recuperar integralmente os valores pagos de IBS e CBS ou existe alguma limitação para bens utilizados na atividade rural?
+Com a substituição gradual do ICMS pelo IBS entre 2029 e 2032, como ficará a tributação das vendas interestaduais de produtos agrícolas?
+Se eu vender minha produção para uma indústria que fabrica alimentos, a empresa poderá aproveitar créditos de IBS e CBS mesmo quando eu for um produtor rural não contribuinte?
+Como ficará a tributação da venda de animais para reprodução, como touros e matrizes, em comparação com a venda de animais destinados ao abate?
+Tenho uma produção de milho que será utilizada tanto para venda quanto para alimentação do meu próprio rebanho. Existe alguma incidência de IBS e CBS quando utilizo minha própria produção dentro da fazenda?
+Se eu vender minha propriedade rural e as máquinas utilizadas na atividade agrícola junto com ela, essas operações estarão sujeitas ao IBS e à CBS?
+Estou pensando em abrir uma empresa rural (CNPJ) em vez de continuar trabalhando como produtor rural pessoa física. Com as novas regras, qual modelo pode ser mais vantajoso considerando IBS, CBS, créditos tributários e faturamento?

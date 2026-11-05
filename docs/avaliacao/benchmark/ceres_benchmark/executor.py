@@ -204,6 +204,12 @@ class Config:
     todas_arquiteturas: list[dict] = None
     teste: bool = False
     embedding_cpu: bool = False
+    #: Rodada antes da revisao humana das externas (#358): vale para conferir, nao para a banca.
+    ensaio: bool = False
+
+    @property
+    def tipo(self) -> str:
+        return "teste" if self.teste else "ensaio" if self.ensaio else "banca"
 
     @property
     def embedding(self) -> str:
@@ -221,6 +227,7 @@ class Executor:
         self.perguntas_info: dict = {}
         self.opcoes: dict = {}
         self.parecidas: list[str] = []
+        self.parecidas_gabarito: list[str] = []
 
     # ------------------------------------------------------------------ utilitarios
 
@@ -541,6 +548,7 @@ class Executor:
         self.config_rodada = self.conferir_configuracao(self.config_rodada)
         self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
         pensamento = self.provar_pensamento(modelo)
+        pensamento["raciocinouInicio"] = bool(pensamento.get("raciocinou"))
         log(f"{nome}: pensamento {pensamento['resumo']}")
 
         lido = {"arquivoLido": gabarito.name, "sha256Lido": sha256_arquivo(gabarito)}
@@ -559,6 +567,21 @@ class Executor:
             parar.set()
             amostrador.join(timeout=30)
         duracao = round(time.monotonic() - inicio)
+        # A prova vale para a celula inteira: repetida no fim (o Ollama pode ter recarregado o
+        # modelo com outro template no meio). Raciocinou em qualquer uma = celula invalida.
+        final = self.provar_pensamento(modelo)
+        pensamento = {**pensamento, "final": final,
+                      "raciocinou": bool(pensamento.get("raciocinou") or final.get("raciocinou"))}
+        if final.get("raciocinou") and not pensamento.get("raciocinouInicio"):
+            pensamento["resumo"] = resumo_pensamento(final) + " (na prova do fim da célula)"
+        if pensamento["raciocinou"]:
+            log(f"AVISO: {nome} raciocinou apesar de think=false: celula invalida para comparar")
+        avisos = avisos_da_amostra(memoria)
+        if final.get("erro"):
+            # Sem a prova do fim a celula so tem a do inicio: o relatorio diz, nao esconde.
+            avisos.append(f"a prova do pensamento no fim da célula falhou ({final['erro']}); "
+                          "vale só a do início")
+            log(f"AVISO: {nome}: {avisos[-1]}")
         arquivos = self._renomear_saida(temporario, destino, nome)
         manifesto = {
             "celula": nome,
@@ -568,14 +591,14 @@ class Executor:
             "modelo": modelo,
             "embedding": self.cfg.embedding,
             "repeticoes": self.cfg.repeticoes,
-            "tipo": "teste" if self.cfg.teste else "banca",
+            "tipo": self.cfg.tipo,
             "perguntas": {**self.perguntas_info, **lido},
             "hardware": self.cfg.hardware,
             "banco": banco,
             "gabarito": gabarito.name,
             "pensamento": pensamento,
             "memoria": memoria,
-            "avisos": avisos_da_amostra(memoria),
+            "avisos": avisos,
             "duracaoSegundos": duracao,
             "codigoSaida": codigo,
             "arquivos": arquivos,
@@ -613,8 +636,9 @@ class Executor:
         arquivo_rodada = rodada_dir / "rodada.json"
         anterior = (json.loads(arquivo_rodada.read_text(encoding="utf-8"))
                     if arquivo_rodada.exists() else None)
-        if anterior and anterior.get("tipo", "banca") != ("teste" if cfg.teste else "banca"):
-            raise RuntimeError("nao misture rodada de teste com rodada da banca: use uma pasta nova")
+        if anterior and anterior.get("tipo", "banca") != cfg.tipo:
+            raise RuntimeError(f"nao misture rodada de {anterior.get('tipo', 'banca')} com rodada de "
+                               f"{cfg.tipo}: use uma pasta nova")
         self.fixar_shas(anterior)
         if anterior:
             self.conferir_retomada(anterior)
@@ -675,6 +699,17 @@ class Executor:
         preparo.mkdir()
         (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         canonico = json.loads(canonico_txt)
+        if cfg.tipo == "banca":
+            # Revisao humana bloqueante (#358): dispositivos, classe e afirmacoes proibidas das
+            # externas sao provisorios ate a equipe e o contador conferirem.
+            sem_revisao = [p["id"] for p in canonico["perguntas"]
+                           if p.get("origem") == "inedita_externa_ia"
+                           and (p.get("aConferir") or not p.get("revisado"))]
+            if sem_revisao:
+                raise RuntimeError(
+                    f"{len(sem_revisao)} perguntas externas sem a revisao humana (aConferir ou "
+                    f"revisado false: {', '.join(sem_revisao[:5])}{'...' if len(sem_revisao) > 5 else ''})"
+                    ": a rodada da banca espera a revisao; para conferir antes, use --ensaio")
         self.perguntas_info = {"arquivo": cfg.matriz.get("perguntas") or GABARITO_REPO,
                                "versao": canonico.get("versao"), "sha256": sha,
                                "total": len(canonico["perguntas"])}
@@ -743,9 +778,19 @@ class Executor:
         canonico = json.loads((rodada_dir / "gabarito-canonico.json").read_text(encoding="utf-8"))
         pares = similaridade.pares_semelhantes(canonico["perguntas"],
                                                similaridade.textos_de_treino(self.cfg.repo))
-        (rodada_dir / "similaridade-treino.md").write_text(similaridade.markdown(pares),
+        # Ineditas tambem contra o resto do conjunto (o gabarito): parafrase de uma pergunta que a
+        # Ceres 2.0 ja "viu" no desenvolvimento nao mede generalizacao.
+        ineditas = [p for p in canonico["perguntas"] if str(p.get("origem", "")).startswith("inedita")]
+        do_conjunto = [(f"conjunto/{p['id']}", p["pergunta"]) for p in canonico["perguntas"]
+                       if p.get("origem") == "gabarito"]
+        com_gabarito = similaridade.pares_semelhantes(ineditas, do_conjunto)
+        (rodada_dir / "similaridade-treino.md").write_text(similaridade.markdown(pares + com_gabarito),
                                                            encoding="utf-8")
+        # Separadas: a do treino e exemplo que o modelo ve; a do gabarito e inedita que parafraseia
+        # uma pergunta usada no desenvolvimento (o relatorio trata cada uma no seu recorte).
         self.parecidas = sorted({p["id"] for p in pares})
+        self.parecidas_gabarito = sorted({p["id"] for p in com_gabarito})
+        pares = pares + com_gabarito
         if pares:
             log(f"AVISO: {len(pares)} perguntas parecidas com o treino; ver similaridade-treino.md")
 
@@ -802,10 +847,20 @@ class Executor:
                 if ancestral.returncode not in (0, 1):
                     return {**base, "contem": None, "confirmado": False}
                 confirmado = ancestral.returncode == 0
+            # Outras sessoes que a coluna oficial tambem exige (ex.: 8a, #360): faltou uma, e ensaio.
+            faltando = []
+            for extra in alvo.get("tambemExige") or []:
+                resposta = subprocess.run(
+                    ["git", "merge-base", "--is-ancestor", extra["commit"], sha], cwd=self.cfg.repo)
+                if resposta.returncode not in (0, 1):
+                    return {**base, "contem": None, "confirmado": False}
+                if resposta.returncode == 1:
+                    faltando.append(extra.get("rotulo") or extra["commit"][:7])
         except (subprocess.CalledProcessError, OSError):
             return {**base, "contem": None, "confirmado": False}
         commits = commits_da_issue(assuntos, alvo["issue"])
-        return {**base, "contem": bool(commits) or confirmado, "confirmado": confirmado,
+        return {**base, "contem": bool(commits) or confirmado,
+                "confirmado": confirmado and not faltando, "inteira": confirmado, "faltando": faltando,
                 "commits": commits[:10]}
 
     def fixar_shas(self, anterior: dict | None) -> None:
@@ -852,7 +907,7 @@ class Executor:
             "hardware": [cfg.hardware],
             "ollama": estado["ollama"],
             "trechosLegislacao": estado["trechosLegislacao"],
-            "tipo": "teste" if cfg.teste else "banca",
+            "tipo": cfg.tipo,
             "repeticoes": cfg.repeticoes,
             "embedding": cfg.embedding,
             "perguntas": self.perguntas_info,
@@ -861,6 +916,7 @@ class Executor:
             "sessao7": self.sessao_paralela(),
             "divergentesConhecidos": cfg.matriz.get("divergentesConhecidos", []),
             "parecidasComTreino": self.parecidas,
+            "parecidasComGabarito": self.parecidas_gabarito,
             "modeloReferencia": cfg.matriz.get("modeloReferencia", "qwen3:4b-instruct"),
             "gabaritoCanonico": "gabarito-canonico.json",
             "arquiteturas": [
@@ -943,6 +999,7 @@ def montar_config(argumentos, repo: Path) -> Config:
         teste=bool(getattr(argumentos, "teste", False))
         or (argumentos.repeticoes or matriz.get("repeticoes", 3)) < 3,
         embedding_cpu=bool(getattr(argumentos, "embedding_cpu", False)),
+        ensaio=bool(getattr(argumentos, "ensaio", False)),
     )
 
 
