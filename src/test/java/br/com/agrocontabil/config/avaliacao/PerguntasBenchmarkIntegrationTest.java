@@ -1,6 +1,7 @@
 package br.com.agrocontabil.config.avaliacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
@@ -107,11 +108,16 @@ class PerguntasBenchmarkIntegrationTest {
   }
 
   @Test
-  @DisplayName("Pergunta herdada do gabarito não diverge dele (só ganha tema e capacidade)")
+  @DisplayName("Pergunta herdada do gabarito não diverge dele enquanto ele estiver na versão de baseadoEm")
   void herdadasIguaisAoGabarito() throws IOException {
+    JsonNode raizGabarito = objectMapper.readTree(GABARITO.toFile());
+    // O conjunto e congelado: depois que o gabarito muda de versao, ele deixa de acompanhar (a
+    // conferencia so vale enquanto o gabarito e o mesmo de "baseadoEm").
+    assumeTrue(raizGabarito.path("versao").asText().equals(
+        objectMapper.readTree(PERGUNTAS.toFile()).path("baseadoEm").asText()),
+        "gabarito em outra versao: o conjunto congelado nao o acompanha");
     Map<String, JsonNode> gabarito = new HashMap<>();
-    objectMapper.readTree(GABARITO.toFile()).path("perguntas")
-        .forEach(p -> gabarito.put(p.path("id").asText(), p));
+    raizGabarito.path("perguntas").forEach(p -> gabarito.put(p.path("id").asText(), p));
     int herdadas = 0;
     for (JsonNode p : objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas")) {
       JsonNode original = gabarito.get(p.path("id").asText());

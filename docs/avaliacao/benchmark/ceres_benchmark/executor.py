@@ -153,6 +153,14 @@ def avisos_da_amostra(memoria: dict) -> list[str]:
     return avisos
 
 
+def commits_da_issue(assuntos: list[str], issue: str) -> list[str]:
+    """``<hash> <assunto>`` cujo assunto e o squash de um PR da issue: termina em
+    ``(#270) (#NNN)`` ou ``(#270)`` seguido so do numero do PR."""
+    numero = re.escape(issue.lstrip("#"))
+    padrao = re.compile(rf"\(#{numero}\)\s*\(#\d+\)\s*$")
+    return [a for a in assuntos if padrao.search(a)]
+
+
 @dataclass
 class Config:
     """Parametros da execucao (``matriz.json`` + linha de comando + ambiente)."""
@@ -339,12 +347,25 @@ class Executor:
     def _tabela_existe(self, banco: str) -> bool:
         return self.psql(banco, "select to_regclass('public.legislacao_trecho') is not null") == "t"
 
+    def modelos_locais(self) -> set[str]:
+        nomes = set()
+        for m in self.ollama("/api/tags").get("models", []):
+            nome = m.get("name") or ""
+            nomes.update({nome, nome.removesuffix(":latest")})
+        return nomes
+
     def baixar_modelos(self) -> None:
+        """``pull`` so do que falta. Puxar de novo um modelo presente trocaria os pesos por uma
+        republicacao do upstream no meio da rodada, e a conferencia de digest a recusaria sem volta."""
         base = self.cfg.matriz.get("embedding", "bge-m3")
+        locais = self.modelos_locais()
         for modelo in self.cfg.modelos + [base]:
+            if modelo in locais:
+                log(f"{modelo} ja esta no Ollama: sem pull")
+                continue
             log(f"ollama pull {modelo}")
             self.ollama("/api/pull", {"model": modelo, "stream": False}, timeout=3600)
-        if self.cfg.embedding_cpu:
+        if self.cfg.embedding_cpu and self.cfg.embedding not in locais:
             # Mesmos pesos do bge-m3 (os vetores da base de lei continuam valendo), sem camada na
             # GPU: a VRAM fica toda para o modelo de chat. Equivale ao Modelfile do README.
             log(f"criando {self.cfg.embedding} (num_gpu 0) a partir de {base}")
@@ -375,17 +396,21 @@ class Executor:
         if gravada is None:
             return atual
         diferencas = []
+        mesclada = {"versao": gravada.get("versao"), "modelos": dict(gravada.get("modelos") or {})}
         if atual["versao"] != gravada.get("versao"):
             diferencas.append(f"Ollama {gravada.get('versao')} -> {atual['versao']}")
         for modelo, detalhe in atual["modelos"].items():
             antes = (gravada.get("modelos") or {}).get(modelo)
-            if antes is not None and antes != detalhe:
+            if antes is None:
+                # Modelo que entrou numa retomada (--modelos): trava a partir de agora.
+                mesclada["modelos"][modelo] = detalhe
+            elif antes != detalhe:
                 diferencas.append(f"{modelo}: {antes} -> {detalhe}")
         if diferencas:
             raise RuntimeError("a configuracao do Ollama mudou desde o inicio da rodada ("
                                + "; ".join(diferencas) + "): as celulas nao seriam comparaveis. "
                                "Volte a configuracao ou comece uma rodada nova")
-        return gravada
+        return mesclada
 
     def descarregar_outros(self, manter: set[str]) -> None:
         """Tira da memoria os modelos de chat de outras celulas: a memoria medida e so a deste."""
@@ -471,24 +496,26 @@ class Executor:
         manifesto_arquivo = destino / "celula.json"
         if manifesto_arquivo.exists():
             anterior = json.loads(manifesto_arquivo.read_text(encoding="utf-8"))
-            mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes")) == (
-                arquitetura["sha"], modelo, self.cfg.repeticoes)
+            mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes"),
+                     anterior.get("embedding", self.cfg.embedding)) == (
+                arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding)
             if anterior.get("codigoSaida") == 0 and mesma:
                 log(f"{nome}: ja medida nesta rodada, pulando")
                 return anterior
             if anterior.get("codigoSaida") == 0:
-                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo ou numero de "
-                                   "repeticoes: use uma rodada nova em vez de --retomar")
+                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding ou "
+                                   "numero de repeticoes: use uma rodada nova em vez de --retomar")
         destino.mkdir(parents=True, exist_ok=True)
         temporario = destino / "saida-do-comando"
         shutil.rmtree(temporario, ignore_errors=True)
         temporario.mkdir()
 
-        self.conferir_configuracao(self.config_rodada)
+        self.config_rodada = self.conferir_configuracao(self.config_rodada)
         self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
         pensamento = self.provar_pensamento(modelo)
         log(f"{nome}: pensamento {pensamento['resumo']}")
 
+        lido = {"arquivoLido": gabarito.name, "sha256Lido": sha256_arquivo(gabarito)}
         memoria: dict = {}
         parar = threading.Event()
         amostrador = threading.Thread(target=self.amostrar_memoria, args=(modelo, parar, memoria),
@@ -514,8 +541,7 @@ class Executor:
             "embedding": self.cfg.embedding,
             "repeticoes": self.cfg.repeticoes,
             "tipo": "teste" if self.cfg.teste else "banca",
-            "perguntas": {**self.perguntas_info, "arquivoLido": str(gabarito),
-                          "sha256Lido": sha256_arquivo(gabarito)},
+            "perguntas": {**self.perguntas_info, **lido},
             "hardware": self.cfg.hardware,
             "banco": banco,
             "gabarito": gabarito.name,
@@ -562,13 +588,10 @@ class Executor:
         if anterior and anterior.get("tipo", "banca") != ("teste" if cfg.teste else "banca"):
             raise RuntimeError("nao misture rodada de teste com rodada da banca: use uma pasta nova")
         self.fixar_shas(anterior)
+        if anterior:
+            self.conferir_retomada(anterior)
 
         self.preparar_gabaritos(rodada_dir)
-        gravado = ((anterior or {}).get("perguntas") or {}).get("sha256")
-        if gravado and gravado != self.perguntas_info["sha256"]:
-            raise RuntimeError("o conjunto de perguntas mudou desde o inicio da rodada (sha256 "
-                               f"{gravado[:12]} -> {self.perguntas_info['sha256'][:12]}): use uma "
-                               "rodada nova")
         self.gravar_similaridade(rodada_dir)
 
         self.baixar_modelos()
@@ -604,7 +627,10 @@ class Executor:
             arquivo = cfg.repo / cfg.matriz["perguntas"]
             sha = sha256_arquivo(arquivo)
             lado = arquivo.with_name(arquivo.name + ".sha256")
-            if lado.exists() and lado.read_text(encoding="utf-8").split()[0] != sha:
+            partes = lado.read_text(encoding="utf-8").split() if lado.exists() else []
+            if not partes:
+                raise RuntimeError(f"{lado.name} ausente ou vazio: o conjunto congelado exige o hash")
+            if partes[0] != sha:
                 raise RuntimeError(f"{arquivo.name} nao confere com {lado.name}: mudou o conjunto "
                                    "sem mudar a versao e o hash")
             canonico_txt = arquivo.read_text(encoding="utf-8")
@@ -613,7 +639,13 @@ class Executor:
             canonico_txt = self.capturar(["git", "show", f"{todas[-1]['sha']}:{GABARITO_REPO}"],
                                          cfg.repo) + "\n"
             sha = hashlib.sha256(canonico_txt.encode()).hexdigest()
-        (rodada_dir / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
+        # Tudo vai primeiro para uma pasta de preparo e so entra na rodada depois de todas as
+        # conferencias: uma recusa nao deixa a pasta com o gabarito de uma medicao e as celulas de
+        # outra.
+        preparo = rodada_dir / ".preparo"
+        shutil.rmtree(preparo, ignore_errors=True)
+        preparo.mkdir()
+        (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         canonico = json.loads(canonico_txt)
         self.perguntas_info = {"arquivo": cfg.matriz.get("perguntas") or GABARITO_REPO,
                                "versao": canonico.get("versao"), "sha256": sha,
@@ -632,17 +664,19 @@ class Executor:
                 canonico, funcoes, arquitetura.get("remocoesExtras"),
                 arquitetura.get("indiceDeLista", True))
             adaptacoes_por_arq[arquitetura["nome"]] = adaptacoes
-            arquivo_adapt = rodada_dir / f"adaptacao-{arquitetura['nome']}.json"
+            arquivo_adapt = preparo / f"adaptacao-{arquitetura['nome']}.json"
             arquivo_adapt.write_text(json.dumps(adaptacoes, ensure_ascii=False, indent=2) + "\n",
                                      encoding="utf-8")
             arquitetura["adaptacao"] = arquivo_adapt.name
-            if not adaptacoes and arquivo is not None:
-                arquitetura["gabarito"] = arquivo
+            if not adaptacoes:
+                # Le a copia congelada da rodada (os mesmos bytes do conjunto): um checkout no meio
+                # de uma rodada de horas nao troca as perguntas das celulas seguintes.
+                arquitetura["gabarito"] = rodada_dir / "gabarito-canonico.json"
             else:
-                arquivo_gab = rodada_dir / f"gabarito-{arquitetura['nome']}.json"
+                arquivo_gab = preparo / f"gabarito-{arquitetura['nome']}.json"
                 arquivo_gab.write_text(json.dumps(adaptado, ensure_ascii=False, indent=2) + "\n",
                                        encoding="utf-8")
-                arquitetura["gabarito"] = arquivo_gab
+                arquitetura["gabarito"] = rodada_dir / arquivo_gab.name
             log(f"{arquitetura['rotulo']} ({arquitetura['sha'][:7]}): {len(adaptacoes)} perguntas "
                 "adaptadas")
         if adaptacoes_por_arq[todas[-1]["nome"]]:
@@ -652,6 +686,29 @@ class Executor:
         problemas = gab.conferir_capacidade(canonico, adaptacoes_por_arq)
         if problemas:
             raise RuntimeError("campo capacidade errado no conjunto: " + "; ".join(problemas))
+        for arquivo_preparo in preparo.iterdir():
+            os.replace(arquivo_preparo, rodada_dir / arquivo_preparo.name)
+        preparo.rmdir()
+
+    def conferir_retomada(self, anterior: dict) -> None:
+        """Retomar so a mesma rodada: o mesmo conjunto (hash), o mesmo embedding, e nunca uma rodada
+        anterior ao conjunto congelado. Conferido **antes** de reescrever qualquer arquivo da pasta.
+
+        :raises RuntimeError: se a retomada misturaria duas medicoes diferentes
+        """
+        cfg = self.cfg
+        gravado = (anterior.get("perguntas") or {}).get("sha256")
+        if cfg.matriz.get("perguntas"):
+            if not gravado:
+                raise RuntimeError("a rodada e anterior ao conjunto congelado (#352): nao da para "
+                                   "retomar com o conjunto novo; use uma pasta nova")
+            atual = sha256_arquivo(cfg.repo / cfg.matriz["perguntas"])
+            if atual != gravado:
+                raise RuntimeError("o conjunto de perguntas mudou desde o inicio da rodada (sha256 "
+                                   f"{gravado[:12]} -> {atual[:12]}): use uma rodada nova")
+        if anterior.get("embedding", cfg.embedding) != cfg.embedding:
+            raise RuntimeError(f"a rodada usou o embedding {anterior.get('embedding')}, nao "
+                               f"{cfg.embedding} (--embedding-cpu): use a mesma opcao ou uma pasta nova")
 
     def gravar_similaridade(self, rodada_dir: Path) -> None:
         """Aviso (nao bloqueia) das perguntas parecidas com o treino, para a revisao humana."""
@@ -681,18 +738,29 @@ class Executor:
         return valores[0]
 
     def sessao_paralela(self) -> dict | None:
-        """O SHA da Ceres 2.0 ja tem a sessao que muda a main em paralelo (ex.: #270)?"""
+        """O SHA da Ceres 2.0 ja tem a sessao que muda a main em paralelo (ex.: #270)?
+
+        Com ``commit`` na matriz (o merge da sessao), pela ancestralidade. Sem ele, por um commit
+        de merge **da propria issue** no historico: assunto terminado em ``(#270) (#NNN)``, o padrao
+        do squash dos PRs do repositorio. Commit que so cita a issue no corpo nao conta.
+        """
         alvo = self.cfg.matriz.get("sessaoParalela")
         if not alvo:
             return None
         sha = self.cfg.todas_arquiteturas[-1]["sha"]
+        base = {"issue": alvo["issue"], "rotulo": alvo.get("rotulo")}
         try:
-            commits = self.capturar(["git", "log", "--format=%h %s", f"--grep={alvo['issue']}",
-                                     "--fixed-strings", sha], self.cfg.repo).splitlines()
+            if alvo.get("commit"):
+                ancestral = subprocess.run(
+                    ["git", "merge-base", "--is-ancestor", alvo["commit"], sha], cwd=self.cfg.repo)
+                if ancestral.returncode not in (0, 1):
+                    return {**base, "contem": None}
+                return {**base, "contem": ancestral.returncode == 0, "commits": [alvo["commit"]]}
+            assuntos = self.capturar(["git", "log", "--format=%h %s", sha], self.cfg.repo).splitlines()
         except (subprocess.CalledProcessError, OSError):
-            return {"issue": alvo["issue"], "rotulo": alvo.get("rotulo"), "contem": None}
-        return {"issue": alvo["issue"], "rotulo": alvo.get("rotulo"), "contem": bool(commits),
-                "commits": commits[:5]}
+            return {**base, "contem": None}
+        commits = commits_da_issue(assuntos, alvo["issue"])
+        return {**base, "contem": bool(commits), "commits": commits[:5]}
 
     def fixar_shas(self, anterior: dict | None) -> None:
         """SHA de cada arquitetura da matriz; numa retomada, o da rodada (a main pode ter andado).
@@ -745,6 +813,7 @@ class Executor:
             "configuracaoOllama": self.config_rodada,
             "opcoesChat": self.opcoes,
             "sessao7": self.sessao_paralela(),
+            "divergentesConhecidos": cfg.matriz.get("divergentesConhecidos", []),
             "modeloReferencia": cfg.matriz.get("modeloReferencia", "qwen3:4b-instruct"),
             "gabaritoCanonico": "gabarito-canonico.json",
             "arquiteturas": [
@@ -822,9 +891,10 @@ def montar_config(argumentos, repo: Path) -> Config:
         hardware=argumentos.hardware or detectar_hardware(),
         retomar=Path(argumentos.retomar).resolve() if argumentos.retomar else None,
         todas_arquiteturas=todas,
-        # Menos de 3 repeticoes nunca vale para a banca, com ou sem --teste.
+        # Menos de 3 repeticoes nunca vale para a banca, com ou sem --teste (da linha de comando
+        # ou da matriz).
         teste=bool(getattr(argumentos, "teste", False))
-        or bool(argumentos.repeticoes and argumentos.repeticoes < 3),
+        or (argumentos.repeticoes or matriz.get("repeticoes", 3)) < 3,
         embedding_cpu=bool(getattr(argumentos, "embedding_cpu", False)),
     )
 

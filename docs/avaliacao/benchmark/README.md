@@ -161,13 +161,28 @@ que fica com **78 perguntas** (guias e vencimentos: 2). As de nota devolvida/inc
 (`src/main/resources/ceres/treino/`, `docs/avaliacao/treino/`), no prompt dele ou nas descrições
 das funções. O `SeparacaoTreinoTesteTest` passou a conferir o conjunto (cópia literal quebra o
 build). Paráfrase, a guarda não pega: o executor grava `similaridade-treino.md`, um **aviso que
-não bloqueia** com os pares pergunta × exemplo de treino de Jaccard das palavras ≥ 0,5. Hoje não
-há par acima do limiar; o mais próximo (0,43) foi reescrito (N10).
+não bloqueia** com os pares pergunta × exemplo de Jaccard das palavras ≥ 0,5. O "exemplo" é o
+treino do classificador, `docs/avaliacao/treino/` e as perguntas entre aspas do prompt do
+classificador e das descrições `@Tool` (o que o modelo vê; comentário não conta). Duas perguntas
+novas parecidas foram reescritas (N10 e N04, versão `2026-11-05.2`). **Hoje o aviso lista 4 pares,
+todos de perguntas herdadas do gabarito** contra exemplos das descrições `@Tool`:
+
+| Pergunta | Exemplo na descrição `@Tool` | Jaccard |
+|---|---|---|
+| D12 "Quais foram as minhas 3 ultimas vendas?" | "quais foram minhas ultimas vendas?" (`listarNotas`) | 0,80 |
+| D01 "Quanto comprei de fertilizante no primeiro semestre de 2026?" | "quanto comprei de fertilizante no semestre?" (`totalComprasPorInsumo`) | 0,67 |
+| T05 "O que eu preciso corrigir na nota 108 para emitir?" | "o que preciso corrigir na nota 118 para emitir?" (`consultarNota`) | 0,67 |
+| D15 "Tenho algum alerta tributario ou prazo perto de vencer?" | "tenho algum prazo perto?" (`listarAlertas`) | 0,57 |
+
+Elas favorecem as duas arquiteturas que têm aquela descrição (as quatro funções existem nos dois
+commits, com descrições parecidas). A decisão é da equipe, na revisão: manter e registrar, ou tirar
+do conjunto (nova versão e hash). Mudar a descrição `@Tool` muda a Ceres e fica fora do benchmark.
 
 **Revisão humana — tarefa da equipe, bloqueante para a rodada da banca:**
 
 - [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados (o contador pode
       revisar junto, #284, pergunta 15);
+- [ ] decidir os 4 pares do aviso de semelhança (D12, D01, T05, D15; tabela acima);
 - [ ] **tema de linguagem do dia a dia: obrigatória.** Confirmar que nenhuma das 10 é paráfrase de
       exemplo de treino (use o `similaridade-treino.md` e leia o treino do classificador).
 

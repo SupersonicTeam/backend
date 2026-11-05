@@ -594,11 +594,15 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
         ids_comum = gab.recorte_comum(canonico_json, _ler_json(pasta / rodada["gabaritoAntigo"]),
                                       adaptacoes_todas)
     else:
-        ids_comum = gab.recorte_capacidade_comum(canonico_json, adaptacoes_todas)
+        # Os divergentes conhecidos vem da matriz (conferidos rodando os dois commits): a pasta so
+        # da Ceres 2.0 tem de ter a mesma capacidade comum que a matriz inteira.
+        ids_comum = gab.recorte_capacidade_comum(
+            canonico_json, adaptacoes_todas, set(rodada.get("divergentesConhecidos") or []))
     ids_inteiro = list(canonico)
     referencia = rodada.get("modeloReferencia", "qwen3:4b-instruct")
     celulas = carregar_celulas(pasta)
     # So entre perguntas nao adaptadas: a adaptada ja saiu do recorte, sem valor na Ceres 1.
+    conhecidos = set(rodada.get("divergentesConhecidos") or [])
     divergentes = {i: v for i, v in valores_divergentes(celulas).items() if i in ids_comum}
     ids_comum = [i for i in ids_comum if i not in divergentes]
     ficticio = any(c.ficticia for c in celulas)
@@ -666,6 +670,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
               "`2463c27` (#272, #277, #298); pergunta cujo valor esperado difere entre as "
               "arquiteturas sai do recorte de capacidade comum.\n")
 
+    if conhecidos:
+        md.append("Fora da capacidade comum por valor esperado diferente entre os seeds dos commits, "
+                  "conferido na preparação (`divergentesConhecidos` da matriz): "
+                  + ", ".join(sorted(conhecidos)) + ".\n")
     if divergentes:
         md.append("Fora da capacidade comum por valor esperado diferente entre os dois "
                   "commits: " + ", ".join(

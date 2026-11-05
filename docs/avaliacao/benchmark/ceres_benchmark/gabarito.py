@@ -221,23 +221,18 @@ def aplicavel(pergunta: dict, criterio: str) -> bool:
     }.get(criterio, False)
 
 
-def recorte_capacidade_comum(canonico: dict, adaptacoes: dict[str, dict]) -> list[str]:
-    """Ids da comparacao justa do conjunto do benchmark (#352): ``capacidade`` = ``comum``.
+def recorte_capacidade_comum(canonico: dict, adaptacoes: dict[str, dict],
+                             divergentes: set[str] | frozenset[str] = frozenset()) -> list[str]:
+    """Ids da comparacao justa do conjunto do benchmark (#352).
 
-    Pergunta sem o campo (gabarito antigo) conta como comum se nenhuma arquitetura a perdeu por
-    falta de funcao. Remocao por seed (``remocoesExtras``) nao tira do recorte aqui: quem tira e a
-    conferencia de valor esperado divergente, feita no relatorio com os resultados.
+    Entra a pergunta ``comum`` (ou sem o campo, no gabarito antigo) que **nenhuma** arquitetura
+    precisou adaptar e que nao esta em ``divergentes`` (valor esperado diferente entre os seeds dos
+    commits). Adaptada por qualquer motivo, mede menos criterios numa arquitetura que na outra e
+    fica so no conjunto inteiro. O executor ja recusa ``comum`` com adaptacao por capacidade.
     """
-    ids = []
-    for p in canonico["perguntas"]:
-        capacidade = p.get("capacidade")
-        penalizada = bool(criterios_penalizados(adaptacoes[p["id"]])) if p["id"] in adaptacoes else False
-        if capacidade == "comum" or (capacidade is None and not penalizada):
-            if p["id"] in adaptacoes and not penalizada:
-                # Adaptada por seed: o criterio que saiu mede outra coisa numa das arquiteturas.
-                continue
-            ids.append(p["id"])
-    return ids
+    return [p["id"] for p in canonico["perguntas"]
+            if p.get("capacidade", "comum") == "comum"
+            and p["id"] not in adaptacoes and p["id"] not in divergentes]
 
 
 def conferir_capacidade(canonico: dict, adaptacoes_por_arq: dict[str, dict[str, dict]]) -> list[str]:

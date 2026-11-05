@@ -171,8 +171,8 @@ def mapa_tema_celula(titulo: str, subtitulo: str, temas: list[str], colunas: lis
                 cinza, texto, cor_texto = 255, "—", "#333333"
             else:
                 cinza = int(245 - 1.6 * media)  # 245 (0%) a 85 (100%)
-                # Texto branco so no cinza escuro: contraste >= 4,5:1 nos dois tons.
-                texto, cor_texto = f"{media:.0f}%", "#ffffff" if cinza < 115 else "#111111"
+                # Branco abaixo de 118 e preto puro a partir dele: >= 4,5:1 nos dois lados (WCAG AA).
+                texto, cor_texto = f"{media:.0f}%", "#ffffff" if cinza < 118 else "#000000"
             partes.append(f'<rect x="{x + 3:.1f}" y="{y + 3:.1f}" width="{largura_col - 6:.1f}" '
                           f'height="{altura_lin - 6:.1f}" fill="rgb({cinza},{cinza},{cinza})" '
                           f'stroke="#999999" stroke-width="1"/>')

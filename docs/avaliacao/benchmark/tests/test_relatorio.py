@@ -295,3 +295,13 @@ class TemasTest(Base):
         rodada["gabaritoAntigo"] = "gabarito-antigo.json"
         (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
         self.assertIn("| Capacidade comum | 3 perguntas", rel.gerar(self.pasta))
+
+
+class DivergentesConhecidosTest(Base):
+    def test_divergente_conhecido_sai_mesmo_sem_a_ceres_1_na_pasta(self):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["divergentesConhecidos"] = ["D01"]
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| Capacidade comum | 2 perguntas", texto)
+        self.assertIn("`divergentesConhecidos` da matriz): D01", texto)

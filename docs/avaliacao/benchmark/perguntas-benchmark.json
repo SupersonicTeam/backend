@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-05.1",
+  "versao": "2026-11-05.2",
   "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352): o gabarito 2026-11-04.1 inteiro mais 13 perguntas novas, em 12 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado.",
   "baseadoEm": "2026-11-04.1",
   "temas": {
@@ -626,7 +626,7 @@
     {
       "id": "N04",
       "categoria": "DADOS",
-      "pergunta": "Quanto faturei vendendo milho em 2026?",
+      "pergunta": "Qual foi a receita das vendas de milho de 2026?",
       "rotaEsperada": "DADOS",
       "funcoesEsperadas": [
         "totalVendasPorProduto"

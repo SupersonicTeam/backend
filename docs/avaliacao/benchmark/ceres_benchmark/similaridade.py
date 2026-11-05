@@ -9,6 +9,7 @@ da equipe, que e obrigatoria no tema de linguagem do dia a dia.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from .gabarito import normalizar
@@ -32,21 +33,56 @@ def jaccard(a: str, b: str) -> float:
     return len(ta & tb) / len(ta | tb)
 
 
+#: Prompts que o modelo ve de verdade, com exemplos de pergunta (a mesma lista da guarda do Java).
+PROMPTS = ("src/main/java/br/com/agrocontabil/assistente/PromptsCeres.java",
+           "src/main/java/br/com/agrocontabil/assistente/ferramentas/FerramentasDadosProdutor.java")
+_PERGUNTA_ENTRE_ASPAS = re.compile(r'"([^"\n]{8,}?\?)"')
+
+
+def _ler(arquivo: Path) -> str:
+    return arquivo.read_text(encoding="utf-8", errors="replace")
+
+
+def _textos_json(dados) -> list[str]:
+    """Todos os textos de um JSON (valores, nao chaves): estrutura nao dilui o Jaccard."""
+    if isinstance(dados, str):
+        return [dados]
+    if isinstance(dados, dict):
+        return [t for v in dados.values() for t in _textos_json(v)]
+    if isinstance(dados, list):
+        return [t for v in dados for t in _textos_json(v)]
+    return []
+
+
 def textos_de_treino(raiz: Path) -> list[tuple[str, str]]:
-    """(arquivo, texto) dos exemplos de treino: o JSON do classificador e o que houver em
-    ``docs/avaliacao/treino`` (exceto o README)."""
+    """(arquivo, texto) do que o classificador e o modelo veem como exemplo: o JSON do
+    classificador, ``docs/avaliacao/treino`` (exceto o README) e as perguntas entre aspas do prompt
+    do classificador e das descricoes ``@Tool``."""
     textos = []
     embutido = raiz / "src/main/resources/ceres/treino"
     for arquivo in sorted(embutido.glob("*.json")):
-        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados = json.loads(_ler(arquivo))
         for exemplo in dados.get("exemplos", []):
             if exemplo.get("pergunta"):
                 textos.append((str(arquivo.relative_to(raiz)), exemplo["pergunta"]))
     docs = raiz / "docs/avaliacao/treino"
     for arquivo in sorted(p for p in docs.rglob("*") if p.is_file() and p.name != "README.md"):
-        for linha in arquivo.read_text(encoding="utf-8").splitlines():
+        conteudo = _ler(arquivo)
+        try:
+            linhas = _textos_json(json.loads(conteudo)) if arquivo.suffix == ".json" else None
+        except ValueError:
+            linhas = None
+        for linha in linhas if linhas is not None else conteudo.splitlines():
             if linha.strip():
                 textos.append((str(arquivo.relative_to(raiz)), linha.strip()))
+    for relativo in PROMPTS:
+        arquivo = raiz / relativo
+        if arquivo.exists():
+            # Comentario e Javadoc nao vao ao modelo: so o codigo (strings, text blocks, @Tool).
+            codigo = "\n".join(l for l in _ler(arquivo).splitlines()
+                                if not l.lstrip().startswith(("*", "//", "/*")))
+            for m in _PERGUNTA_ENTRE_ASPAS.finditer(codigo):
+                textos.append((relativo, m.group(1)))
     return textos
 
 

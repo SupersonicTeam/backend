@@ -230,3 +230,69 @@ class ConjuntoRealTest(unittest.TestCase):
         arquivo = self.REPO / matriz["perguntas"]
         lado = arquivo.with_name(arquivo.name + ".sha256").read_text(encoding="utf-8").split()[0]
         self.assertEqual(ex.sha256_arquivo(arquivo), lado)
+
+
+class RevisaoSegundoPrTest(unittest.TestCase):
+    REPO = AQUI.parents[3]
+
+    def test_sessao_paralela_so_pelo_merge_da_issue(self):
+        assuntos = ["fe83a01 feat(avaliacao): conjunto (#352)",
+                    "aaa1111 feat(ceres): prompts por rota (#270) (#360)",
+                    "bbb2222 fix: algo (#2701) (#361)",
+                    "ccc3333 docs: cita a #270 no meio"]
+        self.assertEqual(ex.commits_da_issue(assuntos, "#270"), ["aaa1111 feat(ceres): prompts por rota (#270) (#360)"])
+        self.assertEqual(ex.commits_da_issue(assuntos[:1] + assuntos[2:], "#270"), [])
+
+    def test_retomada_recusa_rodada_antiga_conjunto_ou_embedding_diferente(self):
+        e = ex.Executor(config())
+        atual = ex.sha256_arquivo(self.REPO / e.cfg.matriz["perguntas"])
+        e.conferir_retomada({"perguntas": {"sha256": atual}, "embedding": "bge-m3"})
+        with self.assertRaises(RuntimeError):
+            e.conferir_retomada({"embedding": "bge-m3"})  # rodada do #349, sem o conjunto
+        with self.assertRaises(RuntimeError):
+            e.conferir_retomada({"perguntas": {"sha256": "0" * 64}})
+        with self.assertRaises(RuntimeError):
+            ex.Executor(config(embedding_cpu=True)).conferir_retomada(
+                {"perguntas": {"sha256": atual}, "embedding": "bge-m3"})
+
+    def test_preparo_recusado_nao_mexe_na_pasta_da_rodada(self):
+        from ceres_benchmark import gabarito as gab
+        e = ex.Executor(config())
+        antiga, nova = e.cfg.todas_arquiteturas
+        antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
+        fonte = (self.REPO / ex.FERRAMENTAS_REPO).read_text(encoding="utf-8")
+        assinaturas = gab.assinaturas_ferramentas(fonte)
+        # O 2463c27 de mentira: so as funcoes da matriz, com os parametros de hoje.
+        stub = "\n".join(
+            f'@Tool(description = "x")\npublic X {f}(' + ", ".join(f"String {p}" for p in assinaturas[f]) + ") {}"
+            for f in antiga["funcoesConhecidas"])
+        e.capturar = lambda comando, cwd=None: stub if comando[-1].startswith("a" * 40) else fonte
+        with tempfile.TemporaryDirectory() as d:
+            pasta = Path(d)
+            (pasta / "gabarito-canonico.json").write_text("ANTIGO", encoding="utf-8")
+            original = gab.conferir_capacidade
+            gab.conferir_capacidade = lambda *a: ["X: errado"]
+            try:
+                with self.assertRaises(RuntimeError):
+                    e.preparar_gabaritos(pasta)
+            finally:
+                gab.conferir_capacidade = original
+            self.assertEqual((pasta / "gabarito-canonico.json").read_text(encoding="utf-8"), "ANTIGO")
+            self.assertFalse((pasta / "adaptacao-ceres-1.json").exists())
+            # Sem a recusa, entra tudo e a Ceres 2.0 le a copia congelada da pasta.
+            e.preparar_gabaritos(pasta)
+            self.assertEqual(e.cfg.todas_arquiteturas[-1]["gabarito"], pasta / "gabarito-canonico.json")
+            self.assertEqual(ex.sha256_arquivo(pasta / "gabarito-canonico.json"),
+                             ex.sha256_arquivo(self.REPO / e.cfg.matriz["perguntas"]))
+            self.assertFalse((pasta / ".preparo").exists())
+
+    def test_matriz_com_menos_de_3_repeticoes_e_teste(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            matriz = json.loads((AQUI.parent / "matriz.json").read_text(encoding="utf-8"))
+            matriz["repeticoes"] = 1
+            arquivo = Path(d) / "m.json"
+            arquivo.write_text(json.dumps(matriz), encoding="utf-8")
+            cfg = config(matriz=str(arquivo))
+            self.assertTrue(cfg.teste)
+            self.assertEqual(cfg.repeticoes, 1)

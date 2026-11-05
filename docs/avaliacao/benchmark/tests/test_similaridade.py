@@ -38,3 +38,23 @@ class SimilaridadeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FontesDoAvisoTest(unittest.TestCase):
+    def test_prompt_e_tool_entram_comentario_e_json_estrutural_nao(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            raiz = Path(d)
+            (raiz / "src/main/resources/ceres/treino").mkdir(parents=True)
+            (raiz / "docs/avaliacao/treino").mkdir(parents=True)
+            (raiz / "docs/avaliacao/treino/t.json").write_text(
+                json.dumps({"pergunta": "quanto tenho de credito?"}), encoding="utf-8")
+            prompts = raiz / sim.PROMPTS[1]
+            prompts.parent.mkdir(parents=True)
+            prompts.write_text('/** "pergunta so do javadoc aqui?" */\n'
+                               '  @Tool(description = "use para \\"quanto vendi de soja no ano?\\"")\n'
+                               '  // "outra so de comentario aqui?"\n', encoding="utf-8")
+            textos = [t for _, t in sim.textos_de_treino(raiz)]
+            self.assertIn("quanto tenho de credito?", textos)
+            self.assertNotIn("pergunta", textos)
+            self.assertFalse(any("javadoc" in t or "comentario" in t for t in textos))
