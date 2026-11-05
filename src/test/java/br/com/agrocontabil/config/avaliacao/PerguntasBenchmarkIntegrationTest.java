@@ -160,9 +160,14 @@ class PerguntasBenchmarkIntegrationTest {
       assertThat(p.path("rotaEsperada").asText()).as(id).isEqualTo("LEGISLACAO");
       assertThat(p.path("justificativaRota").asText()).as(id).isNotBlank();
       assertThat(p.path("capacidade").asText()).as(id).isEqualTo("comum");
-      // Sem a base de lei, nenhum dispositivo aceito de memoria.
-      assertThat(p.path("dispositivosEsperados").isEmpty() || !p.path("aConferir").asBoolean())
-          .as(id).isTrue();
+      // Nenhum dispositivo de memoria: enquanto a base nao confirma (aConferir), cada um vem de uma
+      // fonte conferida (fonteConferencia) e a chave segue o formato da base.
+      if (!p.path("dispositivosEsperados").isEmpty() && p.path("aConferir").asBoolean()) {
+        assertThat(p.path("fonteConferencia").asText()).as(id).startsWith("normas.leg.br");
+      }
+      p.path("dispositivosEsperados").forEach(d -> assertThat(d.asText()).as(id)
+          .matches("(LC 214/2025, (art\\. \\d+(º|-[A-Z])?(, .+)?|Anexo [IVX]+, item \\d+)"
+              + "|EC 132/2023, art\\. [12]º \\(redação do art\\. .+)"));
       assertThat(p.path("classeTratamento").asText()).as(id).isIn("ZERO", "REDUCAO_60", "PADRAO",
           "CONDICIONAL", "NAO_SE_APLICA", "FORA_DO_ESCOPO_SISTEMA");
       p.path("afirmacoesProibidas").forEach(r -> java.util.regex.Pattern.compile(r.asText()));

@@ -159,3 +159,42 @@ def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None
                            "", "", "", ""])
         chave[codigo] = {"celula": linha["celula"], "id": linha["id"]}
     return "\ufeff" + saida.getvalue(), json.dumps(chave, ensure_ascii=False, indent=2) + "\n"
+
+
+def sql_conferencia(conjunto: dict) -> str:
+    """Uma consulta que lista, para cada chave dos ``dispositivosEsperados`` das externas, se ela
+    existe em ``legislacao_trecho`` (igual ou com subdivisoes, a mesma regra do ``citaAlgum``).
+
+    Rodar na VPS (``/opt/agrocontabil``):
+    ``docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < arquivo``.
+    A chave que faltar na base sai dos aceitos.
+    """
+    usos: dict[str, list[str]] = {}
+    for p in conjunto["perguntas"]:
+        if p.get("origem") == "inedita_externa_ia":
+            for chave in p.get("dispositivosEsperados") or []:
+                usos.setdefault(chave, []).append(p["id"])
+    linhas = []
+    for chave in sorted(usos):
+        norma, dispositivo = chave.split(", ", 1)
+        q = lambda s: "'" + s.replace("'", "''") + "'"  # noqa: E731
+        linhas.append(f"  ({q(chave)}, {q(norma)}, {q(dispositivo)}, {q(', '.join(usos[chave]))})")
+    return (
+        "-- Gerado por ceres_benchmark.externas.sql_conferencia (#358): nao editar a mao.\n"
+        "-- Chaves dos dispositivosEsperados das perguntas externas contra a base de lei.\n"
+        "-- exato = trecho com a chave inteira; com_subdivisoes = trechos que comecam por ela\n"
+        "-- seguida de ',' ou ')' (a regra do AvaliadorResposta.citaAlgum). Zero nos dois = sai dos aceitos.\n"
+        f"-- Conjunto {conjunto.get('versao')}.\n"
+        "WITH chaves(chave, norma, dispositivo, perguntas) AS (VALUES\n"
+        + ",\n".join(linhas) + "\n)\n"
+        "SELECT c.chave, c.perguntas,\n"
+        "       count(t.*) FILTER (WHERE t.dispositivo = c.dispositivo) AS exato,\n"
+        "       count(t.*) FILTER (WHERE t.dispositivo LIKE c.dispositivo || ',%'\n"
+        "                            OR t.dispositivo LIKE c.dispositivo || ')%') AS com_subdivisoes\n"
+        "FROM chaves c\n"
+        "LEFT JOIN legislacao_trecho t ON t.norma = c.norma\n"
+        "  AND (t.dispositivo = c.dispositivo OR t.dispositivo LIKE c.dispositivo || ',%'\n"
+        "       OR t.dispositivo LIKE c.dispositivo || ')%')\n"
+        "GROUP BY c.chave, c.perguntas\n"
+        "ORDER BY (count(t.*) = 0) DESC, c.chave;\n"
+    )

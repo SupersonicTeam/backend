@@ -159,11 +159,11 @@ pergunta vale ~1,9 ponto percentual.
 | `rotaEsperada` | `LEGISLACAO` em todas, com `justificativaRota` de uma linha: todas pedem a regra da lei, nenhuma pede um dado do produtor |
 | `adversario` | 30 delas: pronome ou situação do produtor com termo de lei ("Sou produtor de soja e milho..."), o caso que as regras da #265 têm de mandar para a lei, não para os dados. É o mesmo campo que o comando de avaliação já mede ("Rota nos casos adversários") |
 | `capacidade` | `comum` em todas (a rota de lei existe nas duas arquiteturas): a comparação justa ganha 40 perguntas |
-| `dispositivosEsperados` | `[]` com `aConferir: true` em **todas**: a base de lei não está no ambiente em que o conjunto foi montado, e dispositivo não se preenche de memória. `dispositivosSugeridos` lista, para a revisão, dispositivos já conferidos na base por perguntas do gabarito (`conferidoEm`) |
+| `dispositivosEsperados` | preenchidos a partir do texto da lei no **normas.leg.br** (LC 214/2025 compilada e EC 132/2023; os anexos no texto atualizado da Câmara), com as chaves no formato da base e `fonteConferencia: "normas.leg.br, 2026-11-05"`; nada de memória. Seguem `aConferir: true` até o Murillo rodar `conferir-dispositivos-externas.sql` na VPS (uma consulta, gerada do conjunto e travada por teste): a chave que faltar em `legislacao_trecho` sai dos aceitos. A E18 (peças de trator) fica sem dispositivo: é a regra geral, sem redução. `dispositivosSugeridos` (do gabarito) ficam para a revisão. As citações do parecer anexado na #284 **não** entram sem conferir (erra o art. 353, os arts. 43 a 45, o art. 15 para a CBS e o § 3º do art. 168) |
 | `classeTratamento` | `ZERO`, `REDUCAO_60`, `PADRAO`, `CONDICIONAL`, `NAO_SE_APLICA` ou `FORA_DO_ESCOPO_SISTEMA`, **provisória** (`revisado: false`) |
 | `afirmacoesProibidas` | expressões que seriam erro (ex.: E17 "sim, pode aproveitar a redução"; E22 "o comprador não tem crédito", existe o presumido do art. 168; E33 "pode aproveitar o crédito") |
 | `encaminharContador` | 9 delas (E21, E22, E23, E24, E27, E29, E36, E39, E40): a resposta certa depende da situação do produtor |
-| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa) e E03 (#284, pergunta 2: leite ao laticínio): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas |
+| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa), E03 (#284, pergunta 2: leite ao laticínio; a lei já sustenta 60%, Anexo I, item 2, e art. 137, § 1º, II, mas o sistema dá zero e a correção é decisão do Murillo) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas |
 
 **Critérios das externas** (os 5 do Murillo, rubrica em `../rubrica-clareza.md`): **automáticos**
 no relatório — rota, fundamentação (só depois de conferidos os dispositivos), alíquota/classe e
@@ -184,7 +184,7 @@ do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. 
 **Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
 descrições `@Tool` ou as outras perguntas do conjunto.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.6` está congelado (versão e
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.7` está congelado (versão e
 hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
 respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
 perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o

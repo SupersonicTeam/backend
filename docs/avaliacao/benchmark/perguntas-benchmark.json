@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-05.6",
+  "versao": "2026-11-05.7",
   "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352, #358): o gabarito 2026-11-05.2 inteiro, 13 perguntas ineditas da equipe e 40 geradas por IA (ChatGPT, a pedido do Murillo; texto literal), em 16 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado. Campo origem: gabarito (usado no desenvolvimento da Ceres 2.0), inedita_equipe, inedita_equipe_dados ou inedita_externa_ia (medem generalizacao; as de IA nao medem a linguagem real do produtor).",
   "baseadoEm": "2026-11-05.2",
   "temas": {
@@ -1957,7 +1957,11 @@
       "encaminharContador": false,
       "revisado": false,
       "pendenteContador": "#284, pergunta 6",
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137",
+        "LC 214/2025, art. 271"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E02",
@@ -1981,7 +1985,10 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E03",
@@ -2011,7 +2018,13 @@
       "encaminharContador": false,
       "revisado": false,
       "pendenteContador": "#284, pergunta 2",
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137, § 1º, inciso II",
+        "LC 214/2025, Anexo I, item 2",
+        "LC 214/2025, art. 125"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05",
+      "observacao": "A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). O sistema ainda dá zero; a correção depende de decisão do Murillo (#284)."
     },
     {
       "id": "E04",
@@ -2038,7 +2051,13 @@
       ],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 148",
+        "LC 214/2025, Anexo XV, item 1",
+        "LC 214/2025, Anexo XV, item 2",
+        "LC 214/2025, Anexo XV, item 3"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E05",
@@ -2064,7 +2083,11 @@
       ],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137, § 1º, inciso I",
+        "LC 214/2025, art. 137"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E06",
@@ -2092,7 +2115,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137",
+        "LC 214/2025, art. 125",
+        "LC 214/2025, Anexo I, item 19"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E07",
@@ -2121,7 +2149,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 148",
+        "LC 214/2025, Anexo XV, item 5"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E08",
@@ -2146,7 +2178,10 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E09",
@@ -2175,7 +2210,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 125",
+        "LC 214/2025, Anexo I, item 8",
+        "LC 214/2025, art. 137"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E10",
@@ -2211,7 +2251,13 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 125",
+        "LC 214/2025, art. 137",
+        "LC 214/2025, art. 138",
+        "LC 214/2025, art. 148"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E11",
@@ -2240,7 +2286,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 2"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E12",
@@ -2264,7 +2314,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 6"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E13",
@@ -2292,7 +2346,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 10"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E14",
@@ -2317,7 +2375,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 3"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E15",
@@ -2342,7 +2404,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 18"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E16",
@@ -2367,7 +2433,13 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 12",
+        "LC 214/2025, Anexo IX, item 18",
+        "LC 214/2025, Anexo IX, item 21"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E17",
@@ -2395,7 +2467,10 @@
       ],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E18",
@@ -2414,7 +2489,8 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [],
+      "fonteConferencia": "normas.leg.br, 2026-11-05: nenhum dispositivo trata do caso (regra geral, sem redução)"
     },
     {
       "id": "E19",
@@ -2438,7 +2514,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 28"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E20",
@@ -2465,7 +2545,10 @@
       ],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138, § 1º"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E21",
@@ -2496,7 +2579,11 @@
       ],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 164",
+        "LC 214/2025, art. 165"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E22",
@@ -2528,7 +2615,11 @@
       ],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 168",
+        "LC 214/2025, art. 164"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E23",
@@ -2553,7 +2644,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 164, § 6º",
+        "LC 214/2025, art. 164"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E24",
@@ -2573,7 +2668,13 @@
       "afirmacoesProibidas": [],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 252, inciso III",
+        "LC 214/2025, art. 251",
+        "LC 214/2025, art. 261, parágrafo único",
+        "LC 214/2025, art. 164"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E25",
@@ -2595,7 +2696,11 @@
       ],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 4º, § 2º, inciso I",
+        "LC 214/2025, art. 4º"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E26",
@@ -2615,7 +2720,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 47",
+        "LC 214/2025, art. 168"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E27",
@@ -2635,7 +2744,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 29",
+        "LC 214/2025, art. 137"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E28",
@@ -2655,7 +2769,10 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 10"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E29",
@@ -2675,7 +2792,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 4º",
+        "LC 214/2025, art. 12"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E30",
@@ -2702,7 +2823,11 @@
       ],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 11",
+        "EC 132/2023, art. 1º (redação do art. 156-A"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E31",
@@ -2731,7 +2856,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 343",
+        "LC 214/2025, art. 346",
+        "LC 214/2025, art. 348"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E32",
@@ -2756,7 +2886,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 137",
+        "LC 214/2025, art. 344",
+        "LC 214/2025, art. 347"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E33",
@@ -2785,7 +2920,11 @@
       "encaminharContador": false,
       "revisado": false,
       "observacao": "Com o diferimento do art. 138, § 2º, o fertilizante comprado por contribuinte do regime regular não tem IBS/CBS pago: não há crédito a aproveitar. Errar aqui é o defeito da #356.",
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05",
+      "pendenteContador": "#284, pergunta C (diferimento do art. 138, §§ 2º a 8º)"
     },
     {
       "id": "E34",
@@ -2805,7 +2944,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 47",
+        "LC 214/2025, art. 57"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E35",
@@ -2829,7 +2972,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "EC 132/2023, art. 2º (redação do art. 128",
+        "EC 132/2023, art. 1º (redação do art. 156-A",
+        "LC 214/2025, art. 11"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E36",
@@ -2860,7 +3008,11 @@
       ],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 168",
+        "LC 214/2025, art. 164"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E37",
@@ -2884,7 +3036,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138",
+        "LC 214/2025, Anexo IX, item 15",
+        "LC 214/2025, art. 137"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
     },
     {
       "id": "E38",
@@ -2904,7 +3061,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 4º",
+        "LC 214/2025, art. 5º"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E39",
@@ -2924,7 +3085,12 @@
       "afirmacoesProibidas": [],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 251",
+        "LC 214/2025, art. 252",
+        "LC 214/2025, art. 4º"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     },
     {
       "id": "E40",
@@ -2953,7 +3119,11 @@
       "afirmacoesProibidas": [],
       "encaminharContador": true,
       "revisado": false,
-      "dispositivosEsperados": []
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 164",
+        "LC 214/2025, art. 165"
+      ],
+      "fonteConferencia": "normas.leg.br, 2026-11-05"
     }
   ]
 }

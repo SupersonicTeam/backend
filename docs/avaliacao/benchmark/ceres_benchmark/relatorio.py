@@ -1094,8 +1094,12 @@ def _secao_externas(celulas, ids, canonico) -> str:
               "**A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão "
               "é a humana.\n"]
     if a_conferir:
-        linhas.append(f"- Fundamentação **a conferir** em {len(a_conferir)} perguntas "
-                      "(`dispositivosEsperados` vazio até a conferência na base de lei): sai como n/d.")
+        sem = [p["id"] for p in perguntas if p.get("aConferir") and not p.get("dispositivosEsperados")]
+        linhas.append(f"- Fundamentação **a conferir** em {len(a_conferir)} perguntas: os "
+                      "`dispositivosEsperados` vêm do texto da lei (`fonteConferencia`) e ainda não foram "
+                      "confirmados na base (`conferir-dispositivos-externas.sql`); a chave que faltar sai dos "
+                      "aceitos. Leia a fundamentação delas como provisória."
+                      + (f" Sem dispositivo (n/d): {', '.join(sem)}." if sem else ""))
     if pendentes:
         linhas.append("- Pendentes do contador (fora da métrica de classe): " + ", ".join(pendentes) + ".")
     if nao_revisadas:

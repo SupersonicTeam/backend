@@ -109,5 +109,22 @@ class CsvCegoTest(unittest.TestCase):
         self.assertEqual(linhas[1][1:3], ["'=HYPERLINK(1)", "'-1 resposta"])
 
 
+
+class SqlConferenciaTest(unittest.TestCase):
+    def test_sql_versionado_e_o_gerado_pelo_conjunto(self):
+        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
+        gerado = ext.sql_conferencia(conjunto)
+        versionado = (AQUI.parent / "conferir-dispositivos-externas.sql").read_text(encoding="utf-8")
+        self.assertEqual(versionado, gerado, "regere o .sql: python3 -c 'from ceres_benchmark ...'")
+        chaves = {c for p in conjunto["perguntas"] if p.get("origem") == "inedita_externa_ia"
+                  for c in p.get("dispositivosEsperados") or []}
+        self.assertTrue(all(f"('{c}'" in gerado for c in chaves))
+
+    def test_aspas_escapadas(self):
+        sql = ext.sql_conferencia({"perguntas": [{"origem": "inedita_externa_ia", "id": "X",
+                                                  "dispositivosEsperados": ["LC 1/2000, art. 1º d'x"]}]})
+        self.assertIn("'art. 1º d''x'", sql)
+
+
 if __name__ == "__main__":
     unittest.main()
