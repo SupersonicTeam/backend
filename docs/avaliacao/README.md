@@ -164,6 +164,13 @@ atalho de legislação (`TextoReformaTributaria.DISPOSITIVOS_FIXOS`: as nove de 
 calendário do ADCT, os arts. 125, 138, 148, 47, 60 § 1º, 168, 344 e 347 e o art. 1º, I e II, da
 LC 214/2025), cada uma conferida na base. Ela segue sem chamar o modelo.
 
+Na versão `2026-11-05.2` (#347, parte da #356), a lista da T03 passa a 29 dispositivos: entra o
+art. 138, § 2º, inciso I, alínea a, da LC 214/2025, logo depois do art. 138 — o texto das compras
+diz que o IBS/CBS dos insumos do Anexo IX fica diferido entre contribuintes do regime regular e
+que, sem imposto pago, não há crédito (art. 47). A lista espelha o texto; o critério de citação
+continua "cita algum dos esperados" (`AvaliadorResposta.citaAlgum`, por prefixo), então ela não
+detecta, sozinha, a falta dessa citação na base.
+
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função
 da #274 que ainda não existe (nota pelo número, nota devolvida, vendas por produto; as de débito e

@@ -186,7 +186,7 @@ br.com.agrocontabil
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo e fora da cota; dados → RotaDados.responderAtalho, lei →
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
-│                  #   personalizado por DadosProdutorPorta.perfilDoAtalho, 28 citações fixas;
+│                  #   personalizado por DadosProdutorPorta.perfilDoAtalho, 29 citações fixas;
 │                  #   revisar o texto com a equipe);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,

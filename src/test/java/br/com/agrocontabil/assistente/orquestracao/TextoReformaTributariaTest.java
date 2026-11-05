@@ -28,7 +28,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 /**
  * Texto explicado do atalho de legislação (#347): correto por construção. O texto da lei vem do
  * fixture {@code ceres/atalho-reforma-trechos.json}, copiado da base de legislação (a mesma da
- * VPS) em 2026-11-04 — se um dispositivo mudar de redação, o fixture e o texto mudam juntos.
+ * VPS) em 2026-11-04 — se um dispositivo mudar de redação, o fixture e o texto mudam juntos. A
+ * exceção, até a conferência com a base da VPS, é o art. 138, § 2º, inciso I, alínea a, copiado
+ * do normas.leg.br (a chave {@code _fonte} do fixture diz isso).
  */
 class TextoReformaTributariaTest {
 
@@ -93,6 +95,25 @@ class TextoReformaTributariaTest {
     });
     // A reducao dos insumos e a do Anexo IX, nao a do in natura.
     assertThat(lei.get("LC 214/2025|art. 138")).contains("60%").contains("Anexo IX");
+  }
+
+  @Test
+  @DisplayName("Insumo do Anexo IX: diferido entre contribuintes do regime regular, sem credito "
+      + "a recuperar, e o credito do art. 47 so fora do diferimento")
+  void insumoDoAnexoIxDiferido() {
+    String texto = TextoReformaTributaria.COMPRAS;
+    String alinea = lei.get("LC 214/2025|art. 138, § 2º, inciso I, alínea a");
+    assertThat(alinea).contains("Fica diferido o recolhimento do IBS e da CBS")
+        .contains("fornecimento realizado por contribuinte sujeito ao regime regular")
+        .endsWith("a) contribuinte sujeito ao regime regular do IBS e da CBS; e");
+    // O art. 47 so da credito com o debito extinto: recolhimento diferido nao e imposto pago.
+    assertThat(lei.get("LC 214/2025|art. 47")).contains("quando ocorrer a extinção");
+    assertThat(texto).contains("fica diferido (art. 138, § 2º, inciso I, alinea a)")
+        .contains("(art. 47). No insumo com o recolhimento diferido nao ha imposto pago na compra"
+            + " para virar credito");
+    assertThat(TextoReformaTributaria.DA_NOTA_AO_PAGAMENTO).containsSubsequence(
+        "LC 214/2025|art. 138", "LC 214/2025|art. 138, § 2º, inciso I, alínea a",
+        "LC 214/2025|art. 47");
   }
 
   @ParameterizedTest
@@ -198,7 +219,8 @@ class TextoReformaTributariaTest {
         .doesNotContain("voce e contribuinte").doesNotContain("simples nacional")
         .doesNotContainPattern("\\bmei\\b").doesNotContain("lc 123").doesNotContain("diesel")
         .doesNotContain("1,63").doesNotContain("1,5%").doesNotContain("exportacao")
-        // Insumo nao gera credito (diferimento do art. 138, § 2º, fora do escopo).
+        // Insumo do Anexo IX nao gera credito (diferido, art. 138, § 2º): o texto diz isso, e o
+        // sistema nao modela o diferimento (premissas, secao 1).
         .doesNotContain("insumos geram credito").doesNotContain("credito dos insumos")
         // Split payment e o que a lei preve; o sistema nao calcula.
         .contains("a lei preve o split payment")
