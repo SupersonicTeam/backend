@@ -10,6 +10,7 @@ relatorio ganha o aviso no topo e a marca d'agua nos graficos.
 
 from __future__ import annotations
 
+import argparse
 import json
 import random
 import subprocess
@@ -22,7 +23,6 @@ sys.path.insert(0, str(AQUI))
 from ceres_benchmark import executor, gabarito as gab, relatorio  # noqa: E402
 
 REPO = AQUI.parents[2]
-SHA_ANTIGO = "2463c27"
 #: Qualidade e latencia inventadas por (arquitetura, modelo): so para o exemplo ter contraste.
 PERFIL = {
     ("ceres-1", "qwen3:0.6b"): (0.50, 3.5, 0.6), ("ceres-1", "qwen3:1.7b"): (0.66, 8.0, 1.5),
@@ -102,62 +102,53 @@ PRESENTES_CERES1: set[str] = set()
 
 
 def gerar(pasta: Path) -> Path:
+    """Monta a rodada com as mesmas pecas do executor (SHAs, gabaritos adaptados, rodada.json)."""
     rng = random.Random(348)
     pasta.mkdir(parents=True, exist_ok=True)
-    canonico = json.loads((REPO / "docs/avaliacao/gabarito-ceres.json").read_text(encoding="utf-8"))
-    antigo = json.loads(_git("show", f"{SHA_ANTIGO}:docs/avaliacao/gabarito-ceres.json"))
-    funcoes_antigas = gab.assinaturas_ferramentas(_git("show", f"{SHA_ANTIGO}:{executor.FERRAMENTAS_REPO}"))
+    argumentos = argparse.Namespace(
+        matriz=str(AQUI / "matriz.json"), arquiteturas=None, modelos=None, ref_ceres2=None,
+        saida=str(pasta), trabalho=str(pasta), repeticoes=None,
+        hardware="FICTÍCIO: máquina inventada", retomar=str(pasta))
+    cfg = executor.montar_config(argumentos, REPO)
+    ex = executor.Executor(cfg)
+    ex.fixar_shas(None)
+    ex.preparar_gabaritos(pasta)
+    canonico = json.loads((pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+    funcoes_antigas = gab.assinaturas_ferramentas(
+        _git("show", f"{cfg.todas_arquiteturas[0]['sha']}:{executor.FERRAMENTAS_REPO}"))
     PRESENTES_CERES1.update(funcoes_antigas)
-    _, adaptacoes = gab.adaptar(canonico, funcoes_antigas, indice_de_lista=False)
-    (pasta / "gabarito-canonico.json").write_text(json.dumps(canonico, ensure_ascii=False), encoding="utf-8")
-    (pasta / "gabarito-antigo.json").write_text(json.dumps(antigo, ensure_ascii=False), encoding="utf-8")
-    (pasta / "adaptacao-ceres-1.json").write_text(json.dumps(adaptacoes, ensure_ascii=False, indent=2),
-                                                  encoding="utf-8")
-    (pasta / "adaptacao-ceres-2.json").write_text("{}\n", encoding="utf-8")
-    matriz = json.loads((AQUI / "matriz.json").read_text(encoding="utf-8"))
-    arquiteturas = [{"nome": a["nome"], "rotulo": a["rotulo"], "ref": a["ref"],
-                     "sha": "0000000-ficticio-" + a["nome"], "descricao": a["descricao"],
-                     "adaptacao": f"adaptacao-{a['nome']}.json"} for a in matriz["arquiteturas"]]
-    celulas = []
-    for a in arquiteturas:
-        for modelo in matriz["modelos"]:
-            nome = executor.nome_celula(a["nome"], modelo)
-            celulas.append({"nome": nome, "arquitetura": a["nome"], "rotuloArquitetura": a["rotulo"],
-                            "modelo": modelo})
-            q, latencia, gb = PERFIL[(a["nome"], modelo)]
-            rodadas = []
-            for _ in range(3):
-                rodadas.append({"resultados": [
-                    _resultado(rng, p, q, a["nome"],
-                               adaptacoes.get(p["id"]) if a["nome"] == "ceres-1" else None, latencia)
-                    for p in canonico["perguntas"]]})
-            avaliacao = {
-                "ambiente": {"modelo": "ollama/" + modelo, "versaoGabarito": canonico["versao"]},
-                "repeticoes": 3,
-                "perguntas": {p["id"]: p["pergunta"] for p in canonico["perguntas"]},
-                "porRotaAgregado": {"DADOS": {"respostasMedidas": 60, "palavrasPorFrase": 14 + 10 * (1 - q),
-                                              "comSiglaSemExplicacao": int(30 * (1 - q))}},
-                "rodadas": rodadas,
-            }
-            destino = pasta / nome
-            destino.mkdir(exist_ok=True)
-            (destino / f"{nome}.json").write_text(json.dumps(avaliacao, ensure_ascii=False), encoding="utf-8")
-            manifesto = {
-                "ficticio": True, "celula": nome, "arquitetura": a["nome"], "rotuloArquitetura": a["rotulo"],
-                "sha": a["sha"], "modelo": modelo, "codigoSaida": 0,
-                "duracaoSegundos": int(latencia * len(canonico["perguntas"]) * 3),
-                "pensamento": {"resumo": "FICTÍCIO: desligado (think=false; nenhum raciocínio na prova)"},
-                "memoria": {"modeloBytes": int(gb * 1_073_741_824),
-                            "processoPicoBytes": int((gb + 1.4) * 1_073_741_824)},
-            }
-            (destino / "celula.json").write_text(json.dumps(manifesto, ensure_ascii=False, indent=2),
-                                                 encoding="utf-8")
-    rodada = {
-        "ficticio": True, "iniciadaEm": "FICTÍCIO", "hardware": ["FICTÍCIO: máquina inventada"],
-        "repeticoes": 3, "embedding": "bge-m3", "modeloReferencia": matriz["modeloReferencia"],
-        "gabaritoCanonico": "gabarito-canonico.json", "gabaritoAntigo": "gabarito-antigo.json",
-        "arquiteturas": arquiteturas, "modelos": matriz["modelos"], "celulas": celulas,
-    }
+    rodada = ex.manifesto_rodada(None, {"ollama": "FICTÍCIO", "trechosLegislacao": 0})
+    rodada.update({"ficticio": True, "iniciadaEm": "FICTÍCIO"})
+    adaptacoes = {a["nome"]: json.loads((pasta / a["adaptacao"]).read_text(encoding="utf-8"))
+                  for a in rodada["arquiteturas"]}
+    for item in rodada["celulas"]:
+        nome, arq, modelo = item["nome"], item["arquitetura"], item["modelo"]
+        q, latencia, gb = PERFIL[(arq, modelo)]
+        rodadas = [{"resultados": [
+            _resultado(rng, p, q, arq, adaptacoes[arq].get(p["id"]), latencia)
+            for p in canonico["perguntas"]]} for _ in range(cfg.repeticoes)]
+        avaliacao = {
+            "ambiente": {"modelo": "ollama/" + modelo, "versaoGabarito": canonico["versao"]},
+            "repeticoes": cfg.repeticoes,
+            "perguntas": {p["id"]: p["pergunta"] for p in canonico["perguntas"]},
+            "porRotaAgregado": {"DADOS": {"respostasMedidas": 60, "palavrasPorFrase": 14 + 10 * (1 - q),
+                                          "comSiglaSemExplicacao": int(30 * (1 - q))}},
+            "rodadas": rodadas,
+        }
+        destino = pasta / nome
+        destino.mkdir(exist_ok=True)
+        (destino / f"{nome}.json").write_text(json.dumps(avaliacao, ensure_ascii=False), encoding="utf-8")
+        manifesto = {
+            "ficticio": True, "celula": nome, "arquitetura": arq, "rotuloArquitetura": item["rotuloArquitetura"],
+            "sha": next(a["sha"] for a in rodada["arquiteturas"] if a["nome"] == arq), "modelo": modelo,
+            "repeticoes": cfg.repeticoes, "codigoSaida": 0,
+            "duracaoSegundos": int(latencia * len(canonico["perguntas"]) * cfg.repeticoes),
+            "pensamento": {"resumo": "FICTÍCIO: desligado (think=false; nenhum raciocínio na prova)"},
+            "memoria": {"modeloBytes": int(gb * 1_073_741_824),
+                        "processoPicoBytes": int((gb + 1.4) * 1_073_741_824)},
+        }
+        (destino / "celula.json").write_text(json.dumps(manifesto, ensure_ascii=False, indent=2),
+                                             encoding="utf-8")
     (pasta / "rodada.json").write_text(json.dumps(rodada, ensure_ascii=False, indent=2), encoding="utf-8")
     relatorio.gerar(pasta)
     return pasta

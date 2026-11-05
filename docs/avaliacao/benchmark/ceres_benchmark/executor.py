@@ -12,6 +12,7 @@ Nenhum segredo vem do repositorio: senha do banco por ``DB_PASSWORD`` (a mesma d
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import platform
@@ -37,6 +38,8 @@ FERRAMENTAS_REPO = "src/main/java/br/com/agrocontabil/assistente/ferramentas/Fer
 #: Pergunta curta da prova de pensamento: so mede se o modelo raciocina com think=false.
 PERGUNTA_PROVA = "Responda apenas com a palavra: pronto"
 _GIB = 1_073_741_824
+#: Falhas de rede que o urllib nao embrulha em URLError (conexao cortada no meio da resposta).
+ERROS_HTTP = (OSError, http.client.HTTPException, ValueError)
 _UNIDADES = {"b": 1, "kib": 1024, "mib": 1024**2, "gib": 1024**3, "tib": 1024**4,
              "kb": 1000, "mb": 1000**2, "gb": 1000**3, "tb": 1000**4}
 
@@ -73,10 +76,13 @@ def avaliar_prova(resposta: dict) -> dict:
     mensagem = resposta.get("message") or {}
     pensamento = mensagem.get("thinking") or ""
     conteudo = mensagem.get("content") or ""
-    no_texto = "<think>" in conteudo
+    # O qwen3 devolve "<think>\n\n</think>" vazio com o raciocinio desligado: so conta o que
+    # houver dentro das marcas.
+    dentro = "".join(re.findall(r"<think>(.*?)(?:</think>|$)", conteudo, re.DOTALL))
+    no_texto = bool(dentro.strip())
     return {
         "raciocinou": bool(pensamento.strip()) or no_texto,
-        "caracteresPensamento": len(pensamento) + (len(conteudo) if no_texto else 0),
+        "caracteresPensamento": len(pensamento.strip()) + len(dentro.strip()),
         "thinkNoTexto": no_texto,
         "tokensGerados": resposta.get("eval_count"),
         "duracaoMs": round((resposta.get("total_duration") or 0) / 1e6),
@@ -102,7 +108,7 @@ class Config:
     db_prefixo: str
     hardware: str
     retomar: Path | None
-    ficticio: bool = False
+    todas_arquiteturas: list[dict] = None
 
 
 class Executor:
@@ -213,7 +219,9 @@ class Executor:
 
     def preparar_banco(self, arquitetura: dict, worktree: Path, jar: Path, logs: Path) -> str:
         """Banco proprio da arquitetura: Liquibase do commit + base de lei copiada da origem."""
-        banco = f"{self.cfg.db_prefixo}_{arquitetura['nome'].replace('-', '_')}"
+        # Um banco por commit: o schema e o seed sao do commit, e um banco de outro SHA (main que
+        # andou, --ref-ceres2) pararia no seed de outra versao ou num schema de outro commit.
+        banco = f"{self.cfg.db_prefixo}_{arquitetura['nome'].replace('-', '_')}_{arquitetura['sha'][:7]}"
         trechos = self.psql(banco, "select count(*) from legislacao_trecho") \
             if self._banco_existe(banco) and self._tabela_existe(banco) else ""
         origem = self.psql(self.cfg.db_origem, "select count(*) from legislacao_trecho")
@@ -234,9 +242,16 @@ class Executor:
         exportar = self.cfg.psql + ["-d", self.cfg.db_origem, "-c",
                                     "\\copy (select id, content, metadata, embedding from "
                                     "legislacao_trecho) to stdout"]
-        dados = subprocess.run(exportar, check=True, capture_output=True).stdout
-        self.rodar(self.cfg.psql + ["-d", banco, "-c", "\\copy legislacao_trecho(id, content, "
-                                    "metadata, embedding) from stdin"], entrada=dados)
+        importar = self.cfg.psql + ["-d", banco, "-c", "\\copy legislacao_trecho(id, content, "
+                                    "metadata, embedding) from stdin"]
+        # Em stream (os vetores em texto passam de 100 MB): nada fica na memoria do Python, que e
+        # a da maquina medida.
+        log("copiando a base de lei de " + self.cfg.db_origem + " para " + banco)
+        origem_proc = subprocess.Popen(exportar, stdout=subprocess.PIPE)
+        destino_proc = subprocess.Popen(importar, stdin=origem_proc.stdout)
+        origem_proc.stdout.close()
+        if destino_proc.wait() != 0 or origem_proc.wait() != 0:
+            raise RuntimeError(f"copia da base de lei para {banco} falhou")
         copiados = self.psql(banco, "select count(*) from legislacao_trecho")
         if copiados != origem:
             raise RuntimeError(f"copia da base de lei incompleta: {copiados} de {origem}")
@@ -267,11 +282,11 @@ class Executor:
                  "options": {"num_predict": 256, "temperature": 0.2}}
         try:
             prova = avaliar_prova(self.ollama("/api/chat", corpo, timeout=600))
-        except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        except ERROS_HTTP as e:
             prova = {"erro": f"{type(e).__name__}: {e}"}
         try:
             capacidades = self.ollama("/api/show", {"model": modelo}).get("capabilities")
-        except (urllib.error.URLError, TimeoutError, ValueError):
+        except ERROS_HTTP:
             capacidades = None
         prova["capacidades"] = capacidades
         prova["resumo"] = resumo_pensamento(prova)
@@ -288,10 +303,11 @@ class Executor:
             total = sum(int(l.split(None, 1)[0]) * 1024 for l in saida.splitlines()
                         if "ollama" in l.lower() and l.split(None, 1)[0].isdigit())
             return total or None
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (subprocess.CalledProcessError, OSError, ValueError):
             return None
 
     def amostrar_memoria(self, modelo: str, parar: threading.Event, resultado: dict) -> None:
+        resultado["falhasAmostra"] = 0
         while not parar.wait(5):
             try:
                 for m in self.ollama("/api/ps", timeout=5).get("models", []):
@@ -300,8 +316,10 @@ class Executor:
                         resultado["modeloVramBytes"] = max(resultado.get("modeloVramBytes", 0),
                                                            m.get("size_vram", 0))
                         resultado["contexto"] = m.get("context_length")
-            except (urllib.error.URLError, TimeoutError, ValueError):
-                pass
+            except ERROS_HTTP:
+                # Conta a falha em vez de morrer: uma thread morta deixaria o pico subestimado
+                # sem aviso no relatorio.
+                resultado["falhasAmostra"] += 1
             rss = self.memoria_processo()
             if rss:
                 resultado["processoPicoBytes"] = max(resultado.get("processoPicoBytes", 0), rss)
@@ -315,9 +333,14 @@ class Executor:
         manifesto_arquivo = destino / "celula.json"
         if manifesto_arquivo.exists():
             anterior = json.loads(manifesto_arquivo.read_text(encoding="utf-8"))
-            if anterior.get("codigoSaida") == 0:
+            mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes")) == (
+                arquitetura["sha"], modelo, self.cfg.repeticoes)
+            if anterior.get("codigoSaida") == 0 and mesma:
                 log(f"{nome}: ja medida nesta rodada, pulando")
                 return anterior
+            if anterior.get("codigoSaida") == 0:
+                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo ou numero de "
+                                   "repeticoes: use uma rodada nova em vez de --retomar")
         destino.mkdir(parents=True, exist_ok=True)
         temporario = destino / "saida-do-comando"
         shutil.rmtree(temporario, ignore_errors=True)
@@ -387,23 +410,46 @@ class Executor:
     def executar(self) -> Path:
         cfg = self.cfg
         estado = self.conferir_pre_requisitos()
-        for arquitetura in cfg.arquiteturas:
-            arquitetura["sha"] = self.resolver_sha(arquitetura["ref"])
         rodada_dir = cfg.retomar or (cfg.saida / datetime.now(ZONA).strftime("%Y-%m-%d-%H%M"))
         rodada_dir.mkdir(parents=True, exist_ok=True)
         logs = rodada_dir / "logs"
         logs.mkdir(exist_ok=True)
+        arquivo_rodada = rodada_dir / "rodada.json"
+        anterior = (json.loads(arquivo_rodada.read_text(encoding="utf-8"))
+                    if arquivo_rodada.exists() else None)
+        self.fixar_shas(anterior)
 
-        canonica = cfg.arquiteturas[-1]
-        canonico_txt = self.capturar(["git", "show", f"{canonica['sha']}:{GABARITO_REPO}"], cfg.repo)
+        self.preparar_gabaritos(rodada_dir)
+
+        arquivo_rodada.write_text(json.dumps(
+            self.manifesto_rodada(anterior, estado), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+
+        self.baixar_modelos()
+        for arquitetura in cfg.arquiteturas:
+            worktree = self.worktree(arquitetura)
+            jar = self.construir(worktree)
+            banco = self.preparar_banco(arquitetura, worktree, jar, logs)
+            for modelo in cfg.modelos:
+                self.rodar_celula(rodada_dir, arquitetura, worktree, jar, banco,
+                                  arquitetura["gabarito"], modelo)
+        return rodada_dir
+
+    def preparar_gabaritos(self, rodada_dir: Path) -> None:
+        """Gabarito canonico, o antigo e a copia (adaptada) de cada arquitetura da matriz.
+
+        O gabarito e o da ultima arquitetura da MATRIZ (nao da lista filtrada por
+        ``--arquiteturas``), e o antigo e o da primeira: rodar uma arquitetura so nao muda a regua.
+        """
+        cfg = self.cfg
+        todas = cfg.todas_arquiteturas
+        canonico_txt = self.capturar(["git", "show", f"{todas[-1]['sha']}:{GABARITO_REPO}"], cfg.repo)
         (rodada_dir / "gabarito-canonico.json").write_text(canonico_txt + "\n", encoding="utf-8")
         canonico = json.loads(canonico_txt)
-        antigo_txt = self.capturar(["git", "show", f"{cfg.arquiteturas[0]['sha']}:{GABARITO_REPO}"],
-                                   cfg.repo)
+        antigo_txt = self.capturar(["git", "show", f"{todas[0]['sha']}:{GABARITO_REPO}"], cfg.repo)
         (rodada_dir / "gabarito-antigo.json").write_text(antigo_txt + "\n", encoding="utf-8")
 
-        celulas = []
-        for arquitetura in cfg.arquiteturas:
+        for arquitetura in todas:
             fonte = self.capturar(["git", "show", f"{arquitetura['sha']}:{FERRAMENTAS_REPO}"], cfg.repo)
             adaptado, adaptacoes = gab.adaptar(
                 canonico, gab.assinaturas_ferramentas(fonte),
@@ -418,13 +464,48 @@ class Executor:
             arquitetura["adaptacao"] = arquivo_adapt.name
             log(f"{arquitetura['rotulo']} ({arquitetura['sha'][:7]}): {len(adaptacoes)} perguntas "
                 "adaptadas")
-            for modelo in cfg.modelos:
-                celulas.append({"nome": nome_celula(arquitetura["nome"], modelo),
-                                "arquitetura": arquitetura["nome"],
-                                "rotuloArquitetura": arquitetura["rotulo"], "modelo": modelo})
 
-        rodada = {
-            "iniciadaEm": datetime.now(ZONA).isoformat(timespec="seconds"),
+    def fixar_shas(self, anterior: dict | None) -> None:
+        """SHA de cada arquitetura da matriz; numa retomada, o da rodada (a main pode ter andado).
+
+        :raises RuntimeError: se a retomada pede um commit diferente do que a rodada mediu
+        """
+        guardados = {a["nome"]: a["sha"] for a in (anterior or {}).get("arquiteturas", [])}
+        for arquitetura in self.cfg.todas_arquiteturas:
+            guardado = guardados.get(arquitetura["nome"])
+            if guardado and not arquitetura.get("refExplicita"):
+                arquitetura["sha"] = guardado
+                continue
+            sha = self.resolver_sha(arquitetura["ref"])
+            if guardado and sha != guardado:
+                raise RuntimeError(f"a rodada mediu {arquitetura['nome']} em {guardado[:7]}, nao em "
+                                   f"{sha[:7]}: use uma rodada nova")
+            arquitetura["sha"] = sha
+
+    def manifesto_rodada(self, anterior: dict | None, estado: dict) -> dict:
+        """``rodada.json``: todas as arquiteturas da matriz e a uniao das celulas ja pedidas.
+
+        Retomar com ``--modelos`` ou ``--arquiteturas`` nao tira do relatorio as celulas medidas
+        antes.
+        """
+        cfg = self.cfg
+        celulas = list((anterior or {}).get("celulas", []))
+        nomes = {c["nome"] for c in celulas}
+        modelos = list((anterior or {}).get("modelos", []))
+        for arquitetura in cfg.arquiteturas:
+            for modelo in cfg.modelos:
+                nome = nome_celula(arquitetura["nome"], modelo)
+                if nome not in nomes:
+                    nomes.add(nome)
+                    celulas.append({"nome": nome, "arquitetura": arquitetura["nome"],
+                                    "rotuloArquitetura": arquitetura["rotulo"], "modelo": modelo})
+                if modelo not in modelos:
+                    modelos.append(modelo)
+        ordem_arq = [a["nome"] for a in cfg.todas_arquiteturas]
+        celulas.sort(key=lambda c: (ordem_arq.index(c["arquitetura"]), modelos.index(c["modelo"])))
+        return {
+            "iniciadaEm": (anterior or {}).get(
+                "iniciadaEm", datetime.now(ZONA).isoformat(timespec="seconds")),
             "hardware": [cfg.hardware],
             "ollama": estado["ollama"],
             "trechosLegislacao": estado["trechosLegislacao"],
@@ -435,25 +516,11 @@ class Executor:
             "gabaritoAntigo": "gabarito-antigo.json",
             "arquiteturas": [
                 {"nome": a["nome"], "rotulo": a["rotulo"], "ref": a["ref"], "sha": a["sha"],
-                 "descricao": a.get("descricao", ""), "adaptacao": a["adaptacao"]}
-                for a in cfg.arquiteturas],
-            "modelos": cfg.modelos,
+                 "descricao": a.get("descricao", ""), "adaptacao": a.get("adaptacao")}
+                for a in cfg.todas_arquiteturas],
+            "modelos": modelos,
             "celulas": celulas,
         }
-        anterior = rodada_dir / "rodada.json"
-        if anterior.exists():
-            rodada["iniciadaEm"] = json.loads(anterior.read_text(encoding="utf-8"))["iniciadaEm"]
-        anterior.write_text(json.dumps(rodada, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-        self.baixar_modelos()
-        for arquitetura in cfg.arquiteturas:
-            worktree = self.worktree(arquitetura)
-            jar = self.construir(worktree)
-            banco = self.preparar_banco(arquitetura, worktree, jar, logs)
-            for modelo in cfg.modelos:
-                self.rodar_celula(rodada_dir, arquitetura, worktree, jar, banco,
-                                  arquitetura["gabarito"], modelo)
-        return rodada_dir
 
 
 def detectar_hardware() -> str:
@@ -493,15 +560,16 @@ def detectar_hardware() -> str:
 
 def montar_config(argumentos, repo: Path) -> Config:
     matriz = json.loads((Path(argumentos.matriz)).read_text(encoding="utf-8"))
-    arquiteturas = [dict(a) for a in matriz["arquiteturas"]]
+    todas = [dict(a) for a in matriz["arquiteturas"]]
+    if argumentos.ref_ceres2:
+        todas[-1]["ref"] = argumentos.ref_ceres2
+        todas[-1]["refExplicita"] = True
+    arquiteturas = todas
     if argumentos.arquiteturas:
         pedidas = argumentos.arquiteturas.split(",")
-        arquiteturas = [a for a in arquiteturas if a["nome"] in pedidas]
+        arquiteturas = [a for a in todas if a["nome"] in pedidas]
         if len(arquiteturas) != len(pedidas):
             raise SystemExit(f"arquitetura desconhecida em {pedidas}")
-    for a in arquiteturas:
-        if a["nome"] == matriz["arquiteturas"][-1]["nome"] and argumentos.ref_ceres2:
-            a["ref"] = argumentos.ref_ceres2
     modelos = argumentos.modelos.split(",") if argumentos.modelos else list(matriz["modelos"])
     return Config(
         repo=repo,
@@ -519,6 +587,7 @@ def montar_config(argumentos, repo: Path) -> Config:
         db_prefixo=os.environ.get("BENCH_DB_PREFIXO", "agro_bench"),
         hardware=argumentos.hardware or detectar_hardware(),
         retomar=Path(argumentos.retomar).resolve() if argumentos.retomar else None,
+        todas_arquiteturas=todas,
     )
 
 

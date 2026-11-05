@@ -124,3 +124,15 @@ class RecorteTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PenalizaTest(unittest.TestCase):
+    def test_remocao_extra_nao_penaliza_e_capacidade_penaliza(self):
+        g = {"versao": "v", "perguntas": [
+            pergunta("SEED", funcoesEsperadas=["listarNotas"], camposValor=["quantidadeNoTotal"]),
+            pergunta("CAP", funcoesEsperadas=["guiasEmAtraso"], camposValor=["emAtraso.valorTotal"])]}
+        _, adapt = gab.adaptar(g, {"listarNotas": ["toolContext"]}, {"SEED": ["camposValor"]})
+        self.assertEqual(gab.criterios_penalizados(adapt["SEED"]), [])
+        self.assertEqual(gab.criterios_penalizados(adapt["CAP"]), ["funcao", "numero"])
+        # Arquivo de adaptacao sem o campo (gravado antes dele): deduz das chaves removidas.
+        self.assertEqual(gab.criterios_penalizados({"removido": {"camposValor": []}}), ["numero"])

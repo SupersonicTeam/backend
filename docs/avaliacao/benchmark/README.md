@@ -58,7 +58,9 @@ Ao fim, o relatório comparativo está em
 `docs/avaliacao/resultados/benchmark/<AAAA-MM-DD-HHmm>/relatorio.md`, com os gráficos em
 `graficos/`. Uma rodada interrompida continua de onde parou com
 `--retomar docs/avaliacao/resultados/benchmark/<rodada>` (as células com código 0 são puladas).
-Para regenerar só o relatório: `python3 docs/avaliacao/benchmark/gerar_relatorio.py <rodada>`.
+A retomada reusa os SHAs gravados na rodada (a `main` pode ter andado), recusa uma célula já
+medida com outro SHA, modelo ou número de repetições, e o relatório soma as células das execuções
+anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avaliacao/benchmark/gerar_relatorio.py <rodada>`.
 
 | Opção / variável | Padrão | Para quê |
 |---|---|---|
@@ -70,7 +72,7 @@ Para regenerar só o relatório: `python3 docs/avaliacao/benchmark/gerar_relator
 | `--trabalho` | `~/.cache/agroconia-benchmark` | worktrees e JARs, fora do repositório |
 | `BENCH_PSQL` | `docker exec -i agrocontabil-postgres psql -U agrocontabil -v ON_ERROR_STOP=1` | como chamar o `psql` |
 | `BENCH_DB_ORIGEM` | `agrocontabil` | banco que tem a base de lei |
-| `BENCH_DB_PREFIXO` | `agro_bench` | bancos criados: `agro_bench_ceres_1`, `agro_bench_ceres_2` |
+| `BENCH_DB_PREFIXO` | `agro_bench` | bancos criados, um por commit: `agro_bench_ceres_1_2463c27`, `agro_bench_ceres_2_<sha7>` (apague os antigos com `DROP DATABASE`) |
 | `BENCH_OLLAMA_URL` | `http://localhost:11434` | |
 | `BENCH_OLLAMA_CONTAINER` | vazio | container do Ollama, para medir a memória pelo `docker stats` |
 
@@ -111,20 +113,22 @@ que saiu em `adaptacao-ceres-1.json`):
 
 As funções de cada commit são lidas do próprio `FerramentasDadosProdutor.java` do commit. A
 adaptação de hoje foi conferida rodando o `ValoresEsperados` e a guarda de treino do `2463c27`
-contra o gabarito adaptado (87 perguntas aceitas, 15 adaptadas). O campo novo `semBecoSemSaida` é
-ignorado pelo leitor antigo.
+contra o gabarito adaptado (87 perguntas aceitas, 16 adaptadas: 15 por função que não existia e
+a T10 pelo seed). O campo novo `semBecoSemSaida` é ignorado pelo leitor antigo.
 
 O relatório mostra **dois recortes**:
 
 - **(a) Recorte comum — a comparação justa:** perguntas presentes no gabarito do `2463c27` com o
   mesmo texto, **sem adaptação** e com o **mesmo valor esperado** nas duas arquiteturas (o gerador
   confere e lista as que divergirem por causa do seed);
-- **(b) Gabarito inteiro:** as 87. Nas adaptadas, função, parâmetros e número que o gabarito pede
-  e a Ceres 1 não tinha como entregar contam como **erro por capacidade da arquitetura, não do
-  modelo** (coluna "pen." da tabela).
+- **(b) Gabarito inteiro:** as 87. Nas adaptadas por falta de função, função, parâmetros e número
+  que o gabarito pede e a Ceres 1 não tinha como entregar contam como **erro por capacidade da
+  arquitetura, não do modelo** ("pen." na tabela). A remoção da T10 (seed) não penaliza.
 
-Atenção ao ler: T01–T03 estão no recorte comum, mas na Ceres 2.0 são respondidas pelos atalhos
-fixos (#343), sem modelo. É efeito de arquitetura e entra na conta dela de propósito.
+Com o gabarito `2026-11-04.1`, o recorte comum tem **70 perguntas**. Atenção ao ler: T02 e T03
+estão nele, mas na Ceres 2.0 são respondidas pelos atalhos fixos (#343), sem modelo; é efeito de
+arquitetura e entra na conta dela de propósito. A T01 (também atalho) ficou de fora: a função
+`vencimentosDoMes` não existia no `2463c27`.
 
 ### Pensamento desligado, conferido
 

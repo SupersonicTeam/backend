@@ -140,7 +140,7 @@ def _rotulo(valor: float, unidade: str) -> str:
 
 
 def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canonico, adaptacoes,
-                ficticio: bool) -> list[Path]:
+                ficticio: bool, repeticoes: int | None = None) -> list[Path]:
     """Os graficos do relatorio (recorte comum); devolve os arquivos gravados."""
     from . import relatorio as rel  # import tardio: relatorio importa este modulo
 
@@ -164,7 +164,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
                 n = max(n, f.total if f else 0)
             valores.append(linha)
         nome = rel.CRITERIOS[criterio][0]
-        svg = barras_agrupadas(nome, f"Recorte comum, n={n} por rodada, média de 3 rodadas",
+        rodadas = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
+        svg = barras_agrupadas(nome, f"Recorte comum, n={n} por rodada, {rodadas}",
                                modelos, series, valores, "%", 100.0, ficticio)
         arquivo = destino / f"{criterio}.svg"
         arquivo.write_text(svg, encoding="utf-8")

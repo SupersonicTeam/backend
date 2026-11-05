@@ -88,3 +88,53 @@ class ExecutorTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RetomadaTest(unittest.TestCase):
+    def executor(self, **extra):
+        e = ex.Executor(config(**extra))
+        e.resolver_sha = lambda ref: {"2463c27": "a" * 40, "origin/main": "b" * 40, "x": "c" * 40}[ref]
+        return e
+
+    def test_retomada_reusa_os_shas_da_rodada(self):
+        e = self.executor()
+        e.fixar_shas({"arquiteturas": [{"nome": "ceres-1", "sha": "a" * 40},
+                                       {"nome": "ceres-2", "sha": "d" * 40}]})
+        self.assertEqual([a["sha"] for a in e.cfg.todas_arquiteturas], ["a" * 40, "d" * 40])
+
+    def test_retomada_com_outro_commit_explicito_e_recusada(self):
+        e = self.executor(ref_ceres2="x")
+        with self.assertRaises(RuntimeError):
+            e.fixar_shas({"arquiteturas": [{"nome": "ceres-2", "sha": "d" * 40}]})
+
+    def test_gabarito_canonico_e_da_matriz_mesmo_com_uma_arquitetura(self):
+        e = self.executor(arquiteturas="ceres-1")
+        e.fixar_shas(None)
+        self.assertEqual([a["nome"] for a in e.cfg.arquiteturas], ["ceres-1"])
+        self.assertEqual(e.cfg.todas_arquiteturas[-1]["nome"], "ceres-2")
+        self.assertEqual(e.cfg.todas_arquiteturas[-1]["sha"], "b" * 40)
+
+    def test_rodada_retomada_com_um_modelo_mantem_as_outras_celulas(self):
+        e = self.executor(modelos="qwen3:1.7b")
+        e.fixar_shas(None)
+        for a in e.cfg.todas_arquiteturas:
+            a["adaptacao"] = f"adaptacao-{a['nome']}.json"
+        anterior = {"iniciadaEm": "2026-11-20T22:00:00-03:00",
+                    "modelos": ["qwen3:0.6b", "qwen3:1.7b", "qwen3:4b-instruct"],
+                    "celulas": [{"nome": ex.nome_celula(a, m), "arquitetura": a,
+                                 "rotuloArquitetura": a, "modelo": m}
+                                for a in ("ceres-1", "ceres-2")
+                                for m in ("qwen3:0.6b", "qwen3:4b-instruct")]}
+        rodada = e.manifesto_rodada(anterior, {"ollama": "0.12", "trechosLegislacao": 8304})
+        self.assertEqual(rodada["iniciadaEm"], "2026-11-20T22:00:00-03:00")
+        self.assertEqual([c["nome"] for c in rodada["celulas"]], [
+            "ceres-1--qwen3-0.6b", "ceres-1--qwen3-1.7b", "ceres-1--qwen3-4b-instruct",
+            "ceres-2--qwen3-0.6b", "ceres-2--qwen3-1.7b", "ceres-2--qwen3-4b-instruct"])
+        self.assertEqual(len(rodada["arquiteturas"]), 2)
+
+
+class PensamentoVazioTest(unittest.TestCase):
+    def test_bloco_think_vazio_nao_conta_como_raciocinio(self):
+        prova = ex.avaliar_prova({"message": {"content": "<think>\n\n</think>\n\npronto"}})
+        self.assertFalse(prova["raciocinou"])
+        self.assertEqual(prova["caracteresPensamento"], 0)

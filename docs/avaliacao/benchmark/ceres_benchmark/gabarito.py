@@ -20,6 +20,20 @@ _IDENTIFICADOR = re.compile(r"(\w+)\s*$")
 
 #: Criterios que a adaptacao pode tirar de uma pergunta (e que o recorte inteiro penaliza).
 CRITERIOS_ADAPTAVEIS = ("funcao", "parametros", "numero")
+#: Chave do gabarito -> criterio que ela liga.
+CRITERIO_DA_CHAVE = {"funcoesEsperadas": "funcao", "parametrosEsperados": "parametros",
+                     "camposValor": "numero"}
+
+
+def criterios_penalizados(adaptacao: dict) -> list[str]:
+    """Criterios que a arquitetura nao tinha como entregar (capacidade), na ordem canonica.
+
+    Remocao de ``remocoesExtras`` (seed diferente, nao falta de funcao) nao penaliza. Adaptacao
+    gravada antes deste campo: deduzida das chaves removidas.
+    """
+    if "penaliza" in adaptacao:
+        return list(adaptacao["penaliza"])
+    return [CRITERIO_DA_CHAVE[k] for k in CRITERIO_DA_CHAVE if k in adaptacao.get("removido", {})]
 
 
 def normalizar(texto: str) -> str:
@@ -133,7 +147,8 @@ def adaptar(
     lista sai quando ``indice_de_lista`` e falso; ``remocoes_extras`` (id -> chaves) tira o que
     so a execucao contra o commit revelou (ex.: valor de parametro que a funcao antiga recusa).
 
-    :return: (gabarito adaptado, id -> {"removido": {chave: valor original}, "motivos": [...]})
+    :return: (gabarito adaptado, id -> {"removido": {chave: valor original}, "motivos": [...],
+             "penaliza": [criterios removidos por capacidade, fora as remocoes extras]})
     """
     remocoes_extras = remocoes_extras or {}
     adaptado = copy.deepcopy(gabarito)
@@ -166,12 +181,14 @@ def adaptar(
             if not all(_campo_suportado(c) for c in pergunta["camposValor"]):
                 removido["camposValor"] = pergunta.pop("camposValor")
                 motivos.append("campo com indice de lista")
+        penaliza = [CRITERIO_DA_CHAVE[k] for k in CRITERIO_DA_CHAVE if k in removido]
         for chave in remocoes_extras.get(pergunta["id"], []):
             if pergunta.get(chave):
                 removido[chave] = pergunta.pop(chave)
                 motivos.append(f"remocao registrada na matriz: {chave}")
         if removido:
-            adaptacoes[pergunta["id"]] = {"removido": removido, "motivos": motivos}
+            adaptacoes[pergunta["id"]] = {"removido": removido, "motivos": motivos,
+                                          "penaliza": penaliza}
     if adaptacoes:
         adaptado["versao"] = gabarito["versao"] + "-adaptado"
     return adaptado, adaptacoes

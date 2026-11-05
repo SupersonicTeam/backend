@@ -189,3 +189,56 @@ class ExemploFicticioTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RevisaoTest(Base):
+    def test_sem_a_referencia_nenhum_modelo_e_declarado_viavel(self):
+        for nome in ("ceres-1--m-ref", "ceres-2--m-ref"):
+            manifesto = self.pasta / nome / "celula.json"
+            dados = json.loads(manifesto.read_text(encoding="utf-8"))
+            dados["codigoSaida"] = 1
+            manifesto.write_text(json.dumps(dados), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertNotIn("**viável**", texto)
+        self.assertNotIn("Com todas as letras", texto)
+        self.assertIn("não há com o que comparar", texto)
+
+    def test_regressao_quando_so_a_arquitetura_antiga_tinha_modelo_viavel(self):
+        celulas = [rel.Celula("a", "ceres-1", "Ceres 1", "m-small", {}, {}, [[]]),
+                   rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", {}, {}, [])]
+        original = rel.viabilidade
+        rel.viabilidade = lambda das, *a: [rel.Viabilidade(
+            "m-small", das[0].arquitetura == "ceres-1", [] if das[0].arquitetura == "ceres-1" else ["x"])]
+        try:
+            texto = rel.conclusao(celulas, [("ceres-1", "Ceres 1"), ("ceres-2", "Ceres 2.0")], "m-ref",
+                                  [], {}, {})
+        finally:
+            rel.viabilidade = original
+        self.assertIn("**Regressão:** `m-small` era viável na Ceres 1 e não é na Ceres 2.0", texto)
+
+    def test_vazamento_de_nome_do_vizinho_nao_e_instrucao(self):
+        pergunta = {"textosProibidos": ["Sitio Vizinho", "Termine cada afirmacao com a marca"]}
+        vizinho = {"execucao": {"desfecho": "RESPONDIDA", "texto": "O Sitio Vizinho comprou soja."},
+                   "vazamento": True}
+        prompt = {"execucao": {"desfecho": "RESPONDIDA", "texto": "termine cada afirmação com a marca"},
+                  "vazamento": True}
+        self.assertEqual(rel.classificar_falhas(vizinho, pergunta), ["vazamento_vizinho"])
+        self.assertEqual(rel.classificar_falhas(prompt, pergunta), ["instrucao_vazada"])
+
+    def test_remocao_por_seed_nao_penaliza_no_gabarito_inteiro(self):
+        adapt = dict(self.adapt)
+        adapt["D01"] = {"removido": {"camposValor": ["valorTotal"]}, "motivos": ["seed"], "penaliza": []}
+        celula = self.celulas["ceres-1--m-ref"]
+        for rodada in celula.rodadas:
+            rodada[0]["numeroCorreto"] = None
+        numero = rel.faixa(celula, "numero", self.inteiro, self.canonico, adapt, rel.RECORTE_INTEIRO)
+        self.assertEqual((numero.total, numero.penalizadas), (2, 2))
+
+    def test_camada_de_palavras_chave_ganha_coluna(self):
+        arquivo = self.pasta / "ceres-2--m-ref" / "ceres-2--m-ref.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados["rodadas"][0]["resultados"][0]["execucao"]["camadaClassificacao"] = "PALAVRAS_CHAVE"
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| EMBEDDING | LLM | PALAVRAS_CHAVE |", texto)
+        self.assertIn("| Ceres 2.0 · `m-ref` | 0% | 0% | 90% | 0% | 0% | 10% |", texto)
