@@ -64,9 +64,10 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    2033, venda, compras, pagamento, quem paga e o próximo passo, cada item com o dispositivo.
    **Entrar como o Carlos** (pessoa
    física): o texto mostra a soja, o milho e o algodão que ele mais vendeu, com o tratamento da
-   tabela oficial, e o Funrural retido pelo comprador. O texto já explica que o IBS/CBS dos insumos
-   do Anexo IX fica diferido entre contribuintes do regime regular (LC 214/2025, art. 138, § 2º,
-   inciso I, alínea a) e que não há imposto pago a recuperar. **Limitação declarada (#356):** a
+   tabela oficial, e o Funrural retido pelo comprador. O texto já explica que o recolhimento do
+   IBS/CBS dos insumos do Anexo IX fica diferido entre contribuintes do regime regular (LC 214/2025,
+   art. 138, § 2º, inciso I, alínea a) e deixa o encerramento (§§ 5º a 7º) e o efeito no crédito
+   com o contador (#284). **Limitação declarada (#356):** a
    tela de créditos do Carlos (e a apuração, na tela e na Ceres) ainda estima crédito de
    fertilizante, semente e defensivo, porque o sistema não modela o diferimento (premissas, seção
    1). Não apontar esses créditos junto com o atalho; se a banca perguntar, é essa a resposta. Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
@@ -117,7 +118,7 @@ SQL
 **Esperado: 8.304 trechos** — EC 132/2023 538, LC 214/2025 5.004, LC 227/2026 2.211, Lei
 8.212/1991 547 e Lei 9.528/1997 4 (conferido na VPS e no banco local em 2026-11-04). Contagem
 diferente = recopiar a base. Depois, testar na tela o atalho "O que muda para mim com o IBS e o
-CBS?" (#347): a resposta lista 29 citações (30 para produtor pessoa física, com o Funrural, mais
+CBS?" (#347): a resposta lista 33 citações (34 para produtor pessoa física, com o Funrural, mais
 as dos produtos vendidos que não se repetem); com dispositivo faltando, o log do backend
 mostra, na pergunta, `Atalho IBS/CBS: x de N dispositivos na base de legislacao`.
 

@@ -79,14 +79,15 @@ public final class TextoReformaTributaria {
   static final String COMPRAS = String.join("\n",
       "NAS SUAS COMPRAS",
       "- Os insumos agropecuarios e aquicolas do Anexo IX tem reducao de 60% nas aliquotas do"
-          + " IBS e da CBS (LC 214/2025, art. 138). Quando o fornecedor e quem compra estao no"
-          + " regime regular, o recolhimento do IBS e da CBS desses insumos fica diferido (art."
-          + " 138, § 2º, inciso I, alinea a).",
-      "- No regime regular, o credito vem do IBS e da CBS pagos nas compras, exceto o que for de"
-          + " uso ou consumo pessoal (art. 47). No insumo com o recolhimento diferido nao ha"
-          + " imposto pago na compra para virar credito; nas outras compras (por exemplo,"
-          + " maquinas, pecas e servicos), o IBS e a CBS pagos podem virar credito. O que conta"
-          + " como credito na sua atividade e com o contador.");
+          + " IBS e da CBS (LC 214/2025, art. 138), se estiverem registrados como insumos no"
+          + " Ministerio da Agricultura e Pecuaria, quando a lei exige (art. 138, § 1º).",
+      "- Na compra desses insumos de fornecedor do regime regular por quem tambem esta no regime"
+          + " regular, o recolhimento do IBS e da CBS fica diferido (art. 138, § 2º, inciso I,"
+          + " alinea a). Quando o diferimento se encerra e quem recolhe (art. 138, §§ 5º a 7º), e"
+          + " o efeito disso no seu credito, sao para conferir com o contador.",
+      "- No regime regular, o IBS e a CBS pagos nas demais compras, fora desse diferimento, podem"
+          + " virar credito, exceto o que for de uso ou consumo pessoal (art. 47). O que conta como"
+          + " credito na sua atividade e com o contador.");
 
   static final String PAGAMENTO = String.join("\n",
       "NO PAGAMENTO",
@@ -154,7 +155,11 @@ public final class TextoReformaTributaria {
   static final List<String> DA_NOTA_AO_PAGAMENTO = List.of(
       "LC 214/2025|art. 60, § 1º",
       "LC 214/2025|art. 138",
+      "LC 214/2025|art. 138, § 1º",
       "LC 214/2025|art. 138, § 2º, inciso I, alínea a",
+      "LC 214/2025|art. 138, § 5º",
+      "LC 214/2025|art. 138, § 6º",
+      "LC 214/2025|art. 138, § 7º",
       "LC 214/2025|art. 47",
       "LC 214/2025|art. 31",
       "LC 214/2025|art. 32");

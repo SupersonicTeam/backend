@@ -394,10 +394,10 @@ contador"), se um escritório o atende (vínculo ativo) e os até 3 NCMs que ele
 (saídas próprias autorizadas, CFOP de venda), com a frase da tabela oficial
 (`TemplateTratamentoProduto.frase`) e "o enquadramento final de cada venda é com o seu contador".
 Nunca afirma a situação do produtor (optante ou não contribuinte, premissas da #280). Cada
-afirmação tem o dispositivo, e cada número está escrito nele: 29 citações fixas (30 com o
-Funrural, mais as dos produtos). As 28 de antes foram conferidas na base em 2026-11-05; a do art.
-138, § 2º, inciso I, alínea a (diferimento dos insumos do Anexo IX), no normas.leg.br, e falta
-conferi-la com a base da VPS; o `TextoReformaTributariaTest`
+afirmação tem o dispositivo, e cada número está escrito nele: 33 citações fixas (34 com o
+Funrural, mais as dos produtos), conferidas na base em 2026-11-05 (os §§ 1º, 2º, inciso I, alínea
+a, 5º, 6º e 7º do art. 138, sobre o registro e o diferimento dos insumos do Anexo IX, pela consulta
+à base da VPS); o `TextoReformaTributariaTest`
 confere texto × citações contra o fixture `ceres/atalho-reforma-trechos.json`, copiado da base.
 Parte do perfil que falha sai do texto, e o resto segue. Continua sem modelo e fora da cota.
 
