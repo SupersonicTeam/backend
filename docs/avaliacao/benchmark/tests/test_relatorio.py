@@ -481,6 +481,29 @@ class ExternasNoRelatorioTest(Base):
         self.assertTrue((self.pasta / "externas-avaliacao-cego-2.csv").exists())
         self.assertTrue(all(v["lote"] == 2 for k, v in chave2.items() if k not in chave1))
 
+    def test_celula_refeita_vai_num_lote_novo_e_o_antigo_fica_substituido(self):
+        self._marcar()
+        rel.gerar(self.pasta)
+        chave1 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        celula = next(v["celula"] for v in chave1.values())
+        arquivo = self.pasta / celula / f"{celula}.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        for r in dados["rodadas"][0]["resultados"]:
+            if (r.get("execucao") or {}).get("texto"):
+                r["execucao"]["texto"] += " (refeita)"
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        rel.gerar(self.pasta)
+        chave2 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        self.assertTrue(all(chave2[k].get("substituida") for k, v in chave1.items() if v["celula"] == celula))
+        self.assertTrue(any(v["celula"] == celula and v["lote"] == 2 for v in chave2.values()))
+        rel.gerar(self.pasta)  # sem mudanca, nao abre lote novo
+        self.assertEqual(json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(
+            encoding="utf-8")), chave2)
+
+    def test_citacao_de_texto_descartado_nao_conta_no_criterio_principal(self):
+        r = {"citacaoValida": True, "execucao": {"desfecho": "CITACAO_INVALIDA"}}
+        self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
+
     def test_origem_antiga_das_externas_ainda_e_externa(self):
         self._marcar()
         canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))

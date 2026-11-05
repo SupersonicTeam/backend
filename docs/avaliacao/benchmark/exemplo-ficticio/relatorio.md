@@ -119,12 +119,12 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 
 | Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 49,6% (47,8–53,1) n=113 | 48,6% (37,1–57,1) n=35 | 46,5% (30,3–60,6) n=33 | 52,1% (43,8–56,2) n=32 | 48,5% (39,4–63,6) n=33 | 42,9% (35,7–57,1) n=14 | 42,9% (35,7–57,1) n=14 | 83,3% (66,7–100,0) n=6 | n/d | 95,8% (94,9–96,6) n=118 |
-| Ceres 1 · `qwen3:1.7b` | 66,7% (64,6–68,1) n=113 | 77,1% (71,4–82,9) n=35 | 56,6% (51,5–60,6) n=33 | 62,5% (59,4–65,6) n=32 | 70,7% (66,7–75,8) n=33 | 59,5% (50,0–71,4) n=14 | 59,5% (50,0–71,4) n=14 | 88,9% (83,3–100,0) n=6 | n/d | 97,5% (95,8–99,2) n=118 |
-| Ceres 1 · `qwen3:4b-instruct` | 82,6% (76,1–85,8) n=113 | 90,5% (85,7–94,3) n=35 | 81,8% n=33 | 80,2% (75,0–87,5) n=32 | 80,8% (72,7–87,9) n=33 | 78,6% n=14 | 78,6% n=14 | 100,0% n=6 | n/d | 99,2% (98,3–100,0) n=118 |
-| Ceres 2.0 · `qwen3:0.6b` | 74,0% (72,6–75,2) n=113 | 76,2% (71,4–82,9) n=35 | 71,7% (69,7–75,8) n=33 | 66,7% (62,5–68,8) n=32 | 68,7% (57,6–75,8) n=33 | 73,8% (71,4–78,6) n=14 | 73,8% (71,4–78,6) n=14 | 88,9% (83,3–100,0) n=6 | 66,7% (50,0–100,0) n=2 | 98,3% (97,5–99,2) n=118 |
+| Ceres 1 · `qwen3:0.6b` | 49,6% (47,8–53,1) n=113 | 48,6% (37,1–57,1) n=35 | 46,5% (30,3–60,6) n=33 | 52,1% (43,8–56,2) n=32 | 45,5% (36,4–57,6) n=33 | 42,9% (35,7–57,1) n=14 | 42,9% (35,7–57,1) n=14 | 83,3% (66,7–100,0) n=6 | n/d | 95,8% (94,9–96,6) n=118 |
+| Ceres 1 · `qwen3:1.7b` | 66,7% (64,6–68,1) n=113 | 77,1% (71,4–82,9) n=35 | 56,6% (51,5–60,6) n=33 | 62,5% (59,4–65,6) n=32 | 69,7% (66,7–72,7) n=33 | 59,5% (50,0–71,4) n=14 | 59,5% (50,0–71,4) n=14 | 88,9% (83,3–100,0) n=6 | n/d | 97,5% (95,8–99,2) n=118 |
+| Ceres 1 · `qwen3:4b-instruct` | 82,6% (76,1–85,8) n=113 | 90,5% (85,7–94,3) n=35 | 81,8% n=33 | 80,2% (75,0–87,5) n=32 | 78,8% (69,7–84,8) n=33 | 78,6% n=14 | 78,6% n=14 | 100,0% n=6 | n/d | 99,2% (98,3–100,0) n=118 |
+| Ceres 2.0 · `qwen3:0.6b` | 74,0% (72,6–75,2) n=113 | 76,2% (71,4–82,9) n=35 | 71,7% (69,7–75,8) n=33 | 66,7% (62,5–68,8) n=32 | 67,7% (54,5–75,8) n=33 | 73,8% (71,4–78,6) n=14 | 73,8% (71,4–78,6) n=14 | 88,9% (83,3–100,0) n=6 | 66,7% (50,0–100,0) n=2 | 98,3% (97,5–99,2) n=118 |
 | Ceres 2.0 · `qwen3:1.7b` | 89,1% (87,6–90,3) n=113 | 83,8% (77,1–88,6) n=35 | 85,9% (78,8–90,9) n=33 | 83,3% (81,2–84,4) n=32 | 82,8% (75,8–90,9) n=33 | 85,7% (78,6–92,9) n=14 | 85,7% (78,6–92,9) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 98,6% (97,5–100,0) n=118 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 93,8% (92,9–95,6) n=113 | 92,4% (88,6–94,3) n=35 | 97,0% (93,9–100,0) n=33 | 91,7% (87,5–96,9) n=32 | 84,8% (78,8–87,9) n=33 | 95,2% (92,9–100,0) n=14 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 83,3% (50,0–100,0) n=2 | 100,0% n=118 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 93,8% (92,9–95,6) n=113 | 92,4% (88,6–94,3) n=35 | 97,0% (93,9–100,0) n=33 | 91,7% (87,5–96,9) n=32 | 82,8% (78,8–87,9) n=33 | 95,2% (92,9–100,0) n=14 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 83,3% (50,0–100,0) n=2 | 100,0% n=118 |
 
 ### Tabela modelo × arquitetura
 
@@ -133,7 +133,7 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 | `qwen3:0.6b` | Acurácia de rota | 49,6% (47,8–53,1) n=113 | 74,0% (72,6–75,2) n=113 | +24,5 p.p. |
 | `qwen3:0.6b` | Acerto de função | 48,6% (37,1–57,1) n=35 | 76,2% (71,4–82,9) n=35 | +27,6 p.p. |
 | `qwen3:0.6b` | Exatidão numérica | 52,1% (43,8–56,2) n=32 | 66,7% (62,5–68,8) n=32 | +14,6 p.p. |
-| `qwen3:0.6b` | Citação válida | 48,5% (39,4–63,6) n=33 | 68,7% (57,6–75,8) n=33 | +20,2 p.p. |
+| `qwen3:0.6b` | Citação válida | 45,5% (36,4–57,6) n=33 | 67,7% (54,5–75,8) n=33 | +22,2 p.p. |
 | `qwen3:0.6b` | Recusa correta | 42,9% (35,7–57,1) n=14 | 73,8% (71,4–78,6) n=14 | +31,0 p.p. |
 | `qwen3:0.6b` | Sem vazamento | 83,3% (66,7–100,0) n=6 | 88,9% (83,3–100,0) n=6 | +5,6 p.p. |
 | `qwen3:0.6b` | Sem falha técnica | 95,8% (94,9–96,6) n=118 | 98,3% (97,5–99,2) n=118 | +2,5 p.p. |
@@ -141,7 +141,7 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 | `qwen3:1.7b` | Acurácia de rota | 66,7% (64,6–68,1) n=113 | 89,1% (87,6–90,3) n=113 | +22,4 p.p. |
 | `qwen3:1.7b` | Acerto de função | 77,1% (71,4–82,9) n=35 | 83,8% (77,1–88,6) n=35 | +6,7 p.p. |
 | `qwen3:1.7b` | Exatidão numérica | 62,5% (59,4–65,6) n=32 | 83,3% (81,2–84,4) n=32 | +20,8 p.p. |
-| `qwen3:1.7b` | Citação válida | 70,7% (66,7–75,8) n=33 | 82,8% (75,8–90,9) n=33 | +12,1 p.p. |
+| `qwen3:1.7b` | Citação válida | 69,7% (66,7–72,7) n=33 | 82,8% (75,8–90,9) n=33 | +13,1 p.p. |
 | `qwen3:1.7b` | Recusa correta | 59,5% (50,0–71,4) n=14 | 85,7% (78,6–92,9) n=14 | +26,2 p.p. |
 | `qwen3:1.7b` | Sem vazamento | 88,9% (83,3–100,0) n=6 | 94,4% (83,3–100,0) n=6 | +5,6 p.p. |
 | `qwen3:1.7b` | Sem falha técnica | 97,5% (95,8–99,2) n=118 | 98,6% (97,5–100,0) n=118 | +1,1 p.p. |
@@ -149,7 +149,7 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 | `qwen3:4b-instruct` | Acurácia de rota | 82,6% (76,1–85,8) n=113 | 93,8% (92,9–95,6) n=113 | +11,2 p.p. |
 | `qwen3:4b-instruct` | Acerto de função | 90,5% (85,7–94,3) n=35 | 92,4% (88,6–94,3) n=35 | +1,9 p.p. |
 | `qwen3:4b-instruct` | Exatidão numérica | 80,2% (75,0–87,5) n=32 | 91,7% (87,5–96,9) n=32 | +11,5 p.p. |
-| `qwen3:4b-instruct` | Citação válida | 80,8% (72,7–87,9) n=33 | 84,8% (78,8–87,9) n=33 | +4,0 p.p. |
+| `qwen3:4b-instruct` | Citação válida | 78,8% (69,7–84,8) n=33 | 82,8% (78,8–87,9) n=33 | +4,0 p.p. |
 | `qwen3:4b-instruct` | Recusa correta | 78,6% n=14 | 95,2% (92,9–100,0) n=14 | +16,7 p.p. |
 | `qwen3:4b-instruct` | Sem vazamento | 100,0% n=6 | 94,4% (83,3–100,0) n=6 | -5,6 p.p. |
 | `qwen3:4b-instruct` | Sem falha técnica | 99,2% (98,3–100,0) n=118 | 100,0% n=118 | +0,8 p.p. |
@@ -170,12 +170,12 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 ### Perguntas instáveis entre rodadas
 
-- Ceres 1 · `qwen3:0.6b`: 111 — D15, T02, D11, D12, D16, X19, D01, D02, D03, D04, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L08, L11, L01, L02, L04, L05, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, T12, X09, X10, X11, X12, X13, A02, A05, A06, A07, A08, T13, N10, N11, N13, E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E13, E14, E15, E16, E17, E18, E19, E20, E21, E23, E24, E25, E26, E27, E28, E29, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:1.7b`: 113 — D15, T02, D11, D12, D16, X19, D01, D02, D03, D04, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, X02, L08, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F02, F03, F04, T12, X09, X10, X11, X12, X13, A01, A02, A03, A05, A06, A08, T13, N10, N11, N13, E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E12, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:4b-instruct`: 85 — D15, T02, D11, D12, D16, X19, D01, D02, D03, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, L03, L09, L10, L12, T09, T14, X02, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M04, M05, M06, F01, F02, F04, X10, X11, X12, X13, A02, A05, A08, N10, N11, N13, E01, E03, E05, E08, E10, E14, E15, E17, E18, E19, E21, E22, E25, E27, E28, E29, E31, E32, E34, E36, E37, E38, E40
-- Ceres 2.0 · `qwen3:0.6b`: 102 — D15, T02, D11, D12, D16, X19, D01, D02, D03, D04, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, X10, X11, X12, X13, A02, A04, A05, A06, A08, T13, N10, N11, E01, E02, E03, E04, E05, E07, E08, E09, E10, E11, E12, E13, E14, E15, E16, E19, E22, E23, E24, E26, E27, E28, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 2.0 · `qwen3:1.7b`: 73 — D16, X19, D02, D03, D04, N01, N02, N03, N05, D05, D06, D07, D08, D09, R01, X14, X16, R03, X01, L03, L09, L10, L01, L04, L05, L07, X03, X05, R02, M01, M03, M04, M05, M06, F01, F04, T12, X11, X12, A03, A04, A06, A08, T13, N10, N13, E02, E03, E05, E06, E07, E08, E10, E11, E13, E14, E15, E16, E17, E21, E22, E23, E24, E26, E27, E28, E30, E31, E32, E33, E36, E38, E39
-- Ceres 2.0 · `qwen3:4b-instruct`: 43 — D15, D11, X19, D01, D03, N02, D10, N06, D06, D07, N07, R01, X14, X06, X01, T03, T09, T14, X02, L08, L04, L06, X03, X07, R02, M01, M03, M06, T12, X09, X12, A02, A08, N11, E07, E11, E14, E17, E20, E24, E28, E33, E38
+- Ceres 1 · `qwen3:0.6b`: 103 — D15, T02, D11, D12, D16, X19, D01, D02, D03, D04, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L08, L11, L01, L02, L04, L05, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, T12, X09, X10, X11, X12, X13, A02, A05, A06, A07, A08, T13, N10, N11, N13, E02, E03, E04, E05, E06, E07, E08, E09, E10, E13, E14, E15, E16, E17, E18, E21, E24, E25, E26, E28, E29, E31, E32, E34, E35, E36, E37, E38, E39
+- Ceres 1 · `qwen3:1.7b`: 102 — D15, T02, D11, D12, D16, X19, D01, D02, D03, D04, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, X02, L08, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F02, F03, F04, T12, X09, X10, X11, X12, X13, A01, A02, A03, A05, A06, A08, T13, N10, N11, N13, E01, E03, E04, E06, E07, E08, E09, E10, E11, E12, E15, E16, E17, E18, E19, E20, E21, E23, E26, E29, E30, E32, E34, E35, E36, E37, E38, E40
+- Ceres 1 · `qwen3:4b-instruct`: 77 — D15, T02, D11, D12, D16, X19, D01, D02, D03, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, L03, L09, L10, L12, T09, T14, X02, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M04, M05, M06, F01, F02, F04, X10, X11, X12, X13, A02, A05, A08, N10, N11, N13, E01, E10, E15, E18, E21, E22, E25, E27, E28, E29, E31, E32, E36, E37, E38
+- Ceres 2.0 · `qwen3:0.6b`: 92 — D15, T02, D11, D12, D16, X19, D01, D02, D03, D04, N01, N02, N03, D10, N05, N06, D05, D06, D07, D08, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, X10, X11, X12, X13, A02, A04, A05, A06, A08, T13, N10, N11, E01, E02, E03, E04, E07, E10, E14, E15, E19, E22, E23, E24, E26, E27, E28, E31, E33, E34, E35, E36, E39, E40
+- Ceres 2.0 · `qwen3:1.7b`: 62 — D16, X19, D02, D03, D04, N01, N02, N03, N05, D05, D06, D07, D08, D09, R01, X14, X16, R03, X01, L03, L09, L10, L01, L04, L05, L07, X03, X05, R02, M01, M03, M04, M05, M06, F01, F04, T12, X11, X12, A03, A04, A06, A08, T13, N10, N13, E03, E05, E06, E08, E11, E14, E15, E16, E22, E23, E26, E27, E30, E31, E36, E39
+- Ceres 2.0 · `qwen3:4b-instruct`: 40 — D15, D11, X19, D01, D03, N02, D10, N06, D06, D07, N07, R01, X14, X06, X01, T03, T09, T14, X02, L08, L04, L06, X03, X07, R02, M01, M03, M06, T12, X09, X12, A02, A08, N11, E07, E11, E14, E20, E24, E33
 
 ## (b) Conjunto inteiro
 
@@ -185,12 +185,12 @@ Inclui as 20 perguntas adaptadas para a Ceres 1. Em 19 delas (T01, T07, T08, X17
 
 | Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 49,1% (47,4–51,9) n=135 | 33,3% (24,6–38,6) n=57 (pen. 18) | 36,1% (27,1–43,8) n=48 (pen. 12) | 34,7% (30,0–38,0) n=50 (pen. 16) | 49,1% (44,7–55,3) n=38 | 42,9% (35,7–57,1) n=14 | 42,9% (35,7–57,1) n=14 | 83,3% (66,7–100,0) n=6 | n/d | 95,2% (95,0–95,7) n=140 |
-| Ceres 1 · `qwen3:1.7b` | 66,2% (65,9–66,7) n=135 | 52,6% (49,1–57,9) n=57 (pen. 18) | 43,8% (39,6–47,9) n=48 (pen. 12) | 42,0% (40,0–44,0) n=50 (pen. 16) | 73,7% (71,1–78,9) n=38 | 59,5% (50,0–71,4) n=14 | 59,5% (50,0–71,4) n=14 | 88,9% (83,3–100,0) n=6 | n/d | 96,7% (94,3–98,6) n=140 |
-| Ceres 1 · `qwen3:4b-instruct` | 82,0% (75,6–85,9) n=135 | 61,4% (57,9–64,9) n=57 (pen. 18) | 62,5% n=48 (pen. 12) | 54,7% (50,0–60,0) n=50 (pen. 16) | 80,7% (73,7–86,8) n=38 | 78,6% n=14 | 78,6% n=14 | 100,0% n=6 | n/d | 99,0% (97,9–100,0) n=140 |
-| Ceres 2.0 · `qwen3:0.6b` | 73,6% (72,6–74,8) n=135 | 76,6% (70,2–84,2) n=57 | 72,2% (68,8–75,0) n=48 | 72,5% (68,6–76,5) n=51 | 68,4% (57,9–76,3) n=38 | 73,8% (71,4–78,6) n=14 | 73,8% (71,4–78,6) n=14 | 88,9% (83,3–100,0) n=6 | 66,7% (50,0–100,0) n=2 | 98,3% (97,1–99,3) n=140 |
+| Ceres 1 · `qwen3:0.6b` | 49,1% (47,4–51,9) n=135 | 33,3% (24,6–38,6) n=57 (pen. 18) | 36,1% (27,1–43,8) n=48 (pen. 12) | 34,7% (30,0–38,0) n=50 (pen. 16) | 46,5% (44,7–50,0) n=38 | 42,9% (35,7–57,1) n=14 | 42,9% (35,7–57,1) n=14 | 83,3% (66,7–100,0) n=6 | n/d | 95,2% (95,0–95,7) n=140 |
+| Ceres 1 · `qwen3:1.7b` | 66,2% (65,9–66,7) n=135 | 52,6% (49,1–57,9) n=57 (pen. 18) | 43,8% (39,6–47,9) n=48 (pen. 12) | 42,0% (40,0–44,0) n=50 (pen. 16) | 72,8% (71,1–76,3) n=38 | 59,5% (50,0–71,4) n=14 | 59,5% (50,0–71,4) n=14 | 88,9% (83,3–100,0) n=6 | n/d | 96,7% (94,3–98,6) n=140 |
+| Ceres 1 · `qwen3:4b-instruct` | 82,0% (75,6–85,9) n=135 | 61,4% (57,9–64,9) n=57 (pen. 18) | 62,5% n=48 (pen. 12) | 54,7% (50,0–60,0) n=50 (pen. 16) | 78,9% (71,1–84,2) n=38 | 78,6% n=14 | 78,6% n=14 | 100,0% n=6 | n/d | 99,0% (97,9–100,0) n=140 |
+| Ceres 2.0 · `qwen3:0.6b` | 73,6% (72,6–74,8) n=135 | 76,6% (70,2–84,2) n=57 | 72,2% (68,8–75,0) n=48 | 72,5% (68,6–76,5) n=51 | 66,7% (52,6–76,3) n=38 | 73,8% (71,4–78,6) n=14 | 73,8% (71,4–78,6) n=14 | 88,9% (83,3–100,0) n=6 | 66,7% (50,0–100,0) n=2 | 98,3% (97,1–99,3) n=140 |
 | Ceres 2.0 · `qwen3:1.7b` | 89,1% (88,1–90,4) n=135 | 84,8% (78,9–89,5) n=57 | 86,1% (79,2–91,7) n=48 | 81,0% (74,5–88,2) n=51 | 83,3% (76,3–89,5) n=38 | 85,7% (78,6–92,9) n=14 | 85,7% (78,6–92,9) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 98,3% (97,1–99,3) n=140 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 92,6% (90,4–95,6) n=135 | 91,2% (87,7–93,0) n=57 | 96,5% (95,8–97,9) n=48 | 90,8% (86,3–94,1) n=51 | 86,0% (81,6–89,5) n=38 | 95,2% (92,9–100,0) n=14 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 83,3% (50,0–100,0) n=2 | 99,8% (99,3–100,0) n=140 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 92,6% (90,4–95,6) n=135 | 91,2% (87,7–93,0) n=57 | 96,5% (95,8–97,9) n=48 | 90,8% (86,3–94,1) n=51 | 83,3% (81,6–86,8) n=38 | 95,2% (92,9–100,0) n=14 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 83,3% (50,0–100,0) n=2 | 99,8% (99,3–100,0) n=140 |
 
 ### Tabela modelo × arquitetura
 
@@ -199,7 +199,7 @@ Inclui as 20 perguntas adaptadas para a Ceres 1. Em 19 delas (T01, T07, T08, X17
 | `qwen3:0.6b` | Acurácia de rota | 49,1% (47,4–51,9) n=135 | 73,6% (72,6–74,8) n=135 | +24,4 p.p. |
 | `qwen3:0.6b` | Acerto de função | 33,3% (24,6–38,6) n=57 | 76,6% (70,2–84,2) n=57 | +43,3 p.p. |
 | `qwen3:0.6b` | Exatidão numérica | 34,7% (30,0–38,0) n=50 | 72,5% (68,6–76,5) n=51 | +37,9 p.p. |
-| `qwen3:0.6b` | Citação válida | 49,1% (44,7–55,3) n=38 | 68,4% (57,9–76,3) n=38 | +19,3 p.p. |
+| `qwen3:0.6b` | Citação válida | 46,5% (44,7–50,0) n=38 | 66,7% (52,6–76,3) n=38 | +20,2 p.p. |
 | `qwen3:0.6b` | Recusa correta | 42,9% (35,7–57,1) n=14 | 73,8% (71,4–78,6) n=14 | +31,0 p.p. |
 | `qwen3:0.6b` | Sem vazamento | 83,3% (66,7–100,0) n=6 | 88,9% (83,3–100,0) n=6 | +5,6 p.p. |
 | `qwen3:0.6b` | Sem falha técnica | 95,2% (95,0–95,7) n=140 | 98,3% (97,1–99,3) n=140 | +3,1 p.p. |
@@ -207,7 +207,7 @@ Inclui as 20 perguntas adaptadas para a Ceres 1. Em 19 delas (T01, T07, T08, X17
 | `qwen3:1.7b` | Acurácia de rota | 66,2% (65,9–66,7) n=135 | 89,1% (88,1–90,4) n=135 | +23,0 p.p. |
 | `qwen3:1.7b` | Acerto de função | 52,6% (49,1–57,9) n=57 | 84,8% (78,9–89,5) n=57 | +32,2 p.p. |
 | `qwen3:1.7b` | Exatidão numérica | 42,0% (40,0–44,0) n=50 | 81,0% (74,5–88,2) n=51 | +39,0 p.p. |
-| `qwen3:1.7b` | Citação válida | 73,7% (71,1–78,9) n=38 | 83,3% (76,3–89,5) n=38 | +9,6 p.p. |
+| `qwen3:1.7b` | Citação válida | 72,8% (71,1–76,3) n=38 | 83,3% (76,3–89,5) n=38 | +10,5 p.p. |
 | `qwen3:1.7b` | Recusa correta | 59,5% (50,0–71,4) n=14 | 85,7% (78,6–92,9) n=14 | +26,2 p.p. |
 | `qwen3:1.7b` | Sem vazamento | 88,9% (83,3–100,0) n=6 | 94,4% (83,3–100,0) n=6 | +5,6 p.p. |
 | `qwen3:1.7b` | Sem falha técnica | 96,7% (94,3–98,6) n=140 | 98,3% (97,1–99,3) n=140 | +1,7 p.p. |
@@ -215,7 +215,7 @@ Inclui as 20 perguntas adaptadas para a Ceres 1. Em 19 delas (T01, T07, T08, X17
 | `qwen3:4b-instruct` | Acurácia de rota | 82,0% (75,6–85,9) n=135 | 92,6% (90,4–95,6) n=135 | +10,6 p.p. |
 | `qwen3:4b-instruct` | Acerto de função | 61,4% (57,9–64,9) n=57 | 91,2% (87,7–93,0) n=57 | +29,8 p.p. |
 | `qwen3:4b-instruct` | Exatidão numérica | 54,7% (50,0–60,0) n=50 | 90,8% (86,3–94,1) n=51 | +36,2 p.p. |
-| `qwen3:4b-instruct` | Citação válida | 80,7% (73,7–86,8) n=38 | 86,0% (81,6–89,5) n=38 | +5,3 p.p. |
+| `qwen3:4b-instruct` | Citação válida | 78,9% (71,1–84,2) n=38 | 83,3% (81,6–86,8) n=38 | +4,4 p.p. |
 | `qwen3:4b-instruct` | Recusa correta | 78,6% n=14 | 95,2% (92,9–100,0) n=14 | +16,7 p.p. |
 | `qwen3:4b-instruct` | Sem vazamento | 100,0% n=6 | 94,4% (83,3–100,0) n=6 | -5,6 p.p. |
 | `qwen3:4b-instruct` | Sem falha técnica | 99,0% (97,9–100,0) n=140 | 99,8% (99,3–100,0) n=140 | +0,7 p.p. |
@@ -236,12 +236,12 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 ### Perguntas instáveis entre rodadas
 
-- Ceres 1 · `qwen3:0.6b`: 128 — D13, D14, D15, T01, T02, T08, X18, C01, D11, D12, D16, T04, T06, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, P01, X04, N04, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L08, L11, L01, L02, L04, L05, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, T12, X09, X10, X11, X12, X13, A02, A05, A06, A07, A08, T13, P02, P03, P04, N08, N09, N10, N11, N13, E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E13, E14, E15, E16, E17, E18, E19, E20, E21, E23, E24, E25, E26, E27, E28, E29, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:1.7b`: 131 — D13, D14, D15, T02, T07, T08, X17, D11, D12, D16, T04, T05, T06, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, T11, P01, X04, N04, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, X02, L08, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F02, F03, F04, T12, X09, X10, X11, X12, X13, A01, A02, A03, A05, A06, A08, T13, P03, P04, N08, N09, N10, N11, N12, N13, E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E12, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:4b-instruct`: 99 — D13, D15, T02, T08, X18, C01, D11, D12, D16, T05, T06, T10, X19, D01, D02, D03, N01, N02, N03, D10, T11, X04, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, L03, L09, L10, L12, T09, T14, X02, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M04, M05, M06, F01, F02, F04, X10, X11, X12, X13, A02, A05, A08, P02, P03, P04, N09, N10, N11, N12, N13, E01, E03, E05, E08, E10, E14, E15, E17, E18, E19, E21, E22, E25, E27, E28, E29, E31, E32, E34, E36, E37, E38, E40
-- Ceres 2.0 · `qwen3:0.6b`: 121 — D13, D14, D15, T02, T07, T08, X18, C01, D11, D12, D16, T04, T05, T06, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, T11, P01, X04, N04, N05, N06, D05, D06, D07, D08, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, X10, X11, X12, X13, A02, A04, A05, A06, A08, T13, P02, P04, N08, N09, N10, N11, N12, E01, E02, E03, E04, E05, E07, E08, E09, E10, E11, E12, E13, E14, E15, E16, E19, E22, E23, E24, E26, E27, E28, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 2.0 · `qwen3:1.7b`: 91 — D13, D14, T01, T08, X17, X18, C01, D16, T04, T05, T06, X19, D02, D03, D04, N01, N02, N03, T11, P01, X04, N04, N05, D05, D06, D07, D08, D09, R01, X14, X16, R03, X01, L03, L09, L10, L01, L04, L05, L07, X03, X05, R02, M01, M03, M04, M05, M06, F01, F04, T12, X11, X12, A03, A04, A06, A08, T13, P02, P03, N08, N10, N12, N13, E02, E03, E05, E06, E07, E08, E10, E11, E13, E14, E15, E16, E17, E21, E22, E23, E24, E26, E27, E28, E30, E31, E32, E33, E36, E38, E39
-- Ceres 2.0 · `qwen3:4b-instruct`: 57 — D14, D15, T01, T07, T08, X18, C01, D11, T04, T06, X19, D01, D03, N02, D10, X04, N06, D06, D07, N07, R01, X14, X06, X01, T03, T09, T14, X02, L08, L04, L06, X03, X07, R02, M01, M03, M06, T12, X09, X12, A02, A08, P02, P03, P04, N08, N09, N11, E07, E11, E14, E17, E20, E24, E28, E33, E38
+- Ceres 1 · `qwen3:0.6b`: 120 — D13, D14, D15, T01, T02, T08, X18, C01, D11, D12, D16, T04, T06, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, P01, X04, N04, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L08, L11, L01, L02, L04, L05, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, T12, X09, X10, X11, X12, X13, A02, A05, A06, A07, A08, T13, P02, P03, P04, N08, N09, N10, N11, N13, E02, E03, E04, E05, E06, E07, E08, E09, E10, E13, E14, E15, E16, E17, E18, E21, E24, E25, E26, E28, E29, E31, E32, E34, E35, E36, E37, E38, E39
+- Ceres 1 · `qwen3:1.7b`: 120 — D13, D14, D15, T02, T07, T08, X17, D11, D12, D16, T04, T05, T06, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, T11, P01, X04, N04, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, X02, L08, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F02, F03, F04, T12, X09, X10, X11, X12, X13, A01, A02, A03, A05, A06, A08, T13, P03, P04, N08, N09, N10, N11, N12, N13, E01, E03, E04, E06, E07, E08, E09, E10, E11, E12, E15, E16, E17, E18, E19, E20, E21, E23, E26, E29, E30, E32, E34, E35, E36, E37, E38, E40
+- Ceres 1 · `qwen3:4b-instruct`: 91 — D13, D15, T02, T08, X18, C01, D11, D12, D16, T05, T06, T10, X19, D01, D02, D03, N01, N02, N03, D10, T11, X04, N05, N06, D05, D06, D07, D08, D09, X15, N07, R01, X14, X16, R03, X06, L03, L09, L10, L12, T09, T14, X02, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M04, M05, M06, F01, F02, F04, X10, X11, X12, X13, A02, A05, A08, P02, P03, P04, N09, N10, N11, N12, N13, E01, E10, E15, E18, E21, E22, E25, E27, E28, E29, E31, E32, E36, E37, E38
+- Ceres 2.0 · `qwen3:0.6b`: 111 — D13, D14, D15, T02, T07, T08, X18, C01, D11, D12, D16, T04, T05, T06, T10, X19, D01, D02, D03, D04, N01, N02, N03, D10, T11, P01, X04, N04, N05, N06, D05, D06, D07, D08, X15, N07, R01, X14, X16, R03, X06, X01, L03, L09, L10, L12, T03, T09, T14, X02, L11, L01, L02, L04, L05, L06, L07, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F03, F04, X10, X11, X12, X13, A02, A04, A05, A06, A08, T13, P02, P04, N08, N09, N10, N11, N12, E01, E02, E03, E04, E07, E10, E14, E15, E19, E22, E23, E24, E26, E27, E28, E31, E33, E34, E35, E36, E39, E40
+- Ceres 2.0 · `qwen3:1.7b`: 80 — D13, D14, T01, T08, X17, X18, C01, D16, T04, T05, T06, X19, D02, D03, D04, N01, N02, N03, T11, P01, X04, N04, N05, D05, D06, D07, D08, D09, R01, X14, X16, R03, X01, L03, L09, L10, L01, L04, L05, L07, X03, X05, R02, M01, M03, M04, M05, M06, F01, F04, T12, X11, X12, A03, A04, A06, A08, T13, P02, P03, N08, N10, N12, N13, E03, E05, E06, E08, E11, E14, E15, E16, E22, E23, E26, E27, E30, E31, E36, E39
+- Ceres 2.0 · `qwen3:4b-instruct`: 54 — D14, D15, T01, T07, T08, X18, C01, D11, T04, T06, X19, D01, D03, N02, D10, X04, N06, D06, D07, N07, R01, X14, X06, X01, T03, T09, T14, X02, L08, L04, L06, X03, X07, R02, M01, M03, M06, T12, X09, X12, A02, A08, P02, P03, P04, N08, N09, N11, E07, E11, E14, E20, E24, E33
 
 ## (c) Inéditas (equipe + geradas por IA) — generalização
 
@@ -300,12 +300,12 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 ### Perguntas instáveis entre rodadas
 
-- Ceres 1 · `qwen3:0.6b`: 49 — N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N13, E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E13, E14, E15, E16, E17, E18, E19, E20, E21, E23, E24, E25, E26, E27, E28, E29, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:1.7b`: 52 — N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N12, N13, E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E12, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:4b-instruct`: 34 — N01, N02, N03, N05, N06, N07, N09, N10, N11, N12, N13, E01, E03, E05, E08, E10, E14, E15, E17, E18, E19, E21, E22, E25, E27, E28, E29, E31, E32, E34, E36, E37, E38, E40
-- Ceres 2.0 · `qwen3:0.6b`: 44 — N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N12, E01, E02, E03, E04, E05, E07, E08, E09, E10, E11, E12, E13, E14, E15, E16, E19, E22, E23, E24, E26, E27, E28, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 2.0 · `qwen3:1.7b`: 36 — N01, N02, N03, N04, N05, N08, N10, N12, N13, E02, E03, E05, E06, E07, E08, E10, E11, E13, E14, E15, E16, E17, E21, E22, E23, E24, E26, E27, E28, E30, E31, E32, E33, E36, E38, E39
-- Ceres 2.0 · `qwen3:4b-instruct`: 15 — N02, N06, N07, N08, N09, N11, E07, E11, E14, E17, E20, E24, E28, E33, E38
+- Ceres 1 · `qwen3:0.6b`: 41 — N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N13, E02, E03, E04, E05, E06, E07, E08, E09, E10, E13, E14, E15, E16, E17, E18, E21, E24, E25, E26, E28, E29, E31, E32, E34, E35, E36, E37, E38, E39
+- Ceres 1 · `qwen3:1.7b`: 41 — N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N12, N13, E01, E03, E04, E06, E07, E08, E09, E10, E11, E12, E15, E16, E17, E18, E19, E20, E21, E23, E26, E29, E30, E32, E34, E35, E36, E37, E38, E40
+- Ceres 1 · `qwen3:4b-instruct`: 26 — N01, N02, N03, N05, N06, N07, N09, N10, N11, N12, N13, E01, E10, E15, E18, E21, E22, E25, E27, E28, E29, E31, E32, E36, E37, E38
+- Ceres 2.0 · `qwen3:0.6b`: 34 — N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N12, E01, E02, E03, E04, E07, E10, E14, E15, E19, E22, E23, E24, E26, E27, E28, E31, E33, E34, E35, E36, E39, E40
+- Ceres 2.0 · `qwen3:1.7b`: 25 — N01, N02, N03, N04, N05, N08, N10, N12, N13, E03, E05, E06, E08, E11, E14, E15, E16, E22, E23, E26, E27, E30, E31, E36, E39
+- Ceres 2.0 · `qwen3:4b-instruct`: 12 — N02, N06, N07, N08, N09, N11, E07, E11, E14, E20, E24, E33
 
 ## (d) Só as geradas por IA (externas)
 
@@ -364,12 +364,12 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 ### Perguntas instáveis entre rodadas
 
-- Ceres 1 · `qwen3:0.6b`: 37 — E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E13, E14, E15, E16, E17, E18, E19, E20, E21, E23, E24, E25, E26, E27, E28, E29, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:1.7b`: 39 — E01, E02, E03, E04, E05, E06, E07, E08, E09, E10, E11, E12, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28, E29, E30, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 1 · `qwen3:4b-instruct`: 23 — E01, E03, E05, E08, E10, E14, E15, E17, E18, E19, E21, E22, E25, E27, E28, E29, E31, E32, E34, E36, E37, E38, E40
-- Ceres 2.0 · `qwen3:0.6b`: 32 — E01, E02, E03, E04, E05, E07, E08, E09, E10, E11, E12, E13, E14, E15, E16, E19, E22, E23, E24, E26, E27, E28, E31, E32, E33, E34, E35, E36, E37, E38, E39, E40
-- Ceres 2.0 · `qwen3:1.7b`: 27 — E02, E03, E05, E06, E07, E08, E10, E11, E13, E14, E15, E16, E17, E21, E22, E23, E24, E26, E27, E28, E30, E31, E32, E33, E36, E38, E39
-- Ceres 2.0 · `qwen3:4b-instruct`: 9 — E07, E11, E14, E17, E20, E24, E28, E33, E38
+- Ceres 1 · `qwen3:0.6b`: 29 — E02, E03, E04, E05, E06, E07, E08, E09, E10, E13, E14, E15, E16, E17, E18, E21, E24, E25, E26, E28, E29, E31, E32, E34, E35, E36, E37, E38, E39
+- Ceres 1 · `qwen3:1.7b`: 28 — E01, E03, E04, E06, E07, E08, E09, E10, E11, E12, E15, E16, E17, E18, E19, E20, E21, E23, E26, E29, E30, E32, E34, E35, E36, E37, E38, E40
+- Ceres 1 · `qwen3:4b-instruct`: 15 — E01, E10, E15, E18, E21, E22, E25, E27, E28, E29, E31, E32, E36, E37, E38
+- Ceres 2.0 · `qwen3:0.6b`: 22 — E01, E02, E03, E04, E07, E10, E14, E15, E19, E22, E23, E24, E26, E27, E28, E31, E33, E34, E35, E36, E39, E40
+- Ceres 2.0 · `qwen3:1.7b`: 16 — E03, E05, E06, E08, E11, E14, E15, E16, E22, E23, E26, E27, E30, E31, E36, E39
+- Ceres 2.0 · `qwen3:4b-instruct`: 6 — E07, E11, E14, E20, E24, E33
 
 ## Perguntas geradas por IA: critérios automáticos (#358)
 
@@ -624,11 +624,11 @@ A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só 
 Montada pelo gerador a partir dos números acima (capacidade comum), com os critérios de viabilidade do README: sem vazamento em nenhuma rodada, sem falha técnica em ao menos 95% e, em rota, número, citação e recusa limpa (sem as recusas que vieram de `RESPOSTA_CORTADA`), média não abaixo do mínimo da faixa do `qwen3:4b-instruct` na mesma arquitetura menos uma pergunta (o piso). Revise o texto antes da banca; os números não mudam.
 
 **Ceres 1.**
-- `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 66,7%); acurácia de rota 49,6% contra 76,1–85,8% do `qwen3:4b-instruct` (piso 75,2%); exatidão numérica 52,1% contra 75,0–87,5% do `qwen3:4b-instruct` (piso 71,9%); citação válida 48,5% contra 72,7–87,9% do `qwen3:4b-instruct` (piso 69,7%); recusa limpa 42,9% contra 78,6–78,6% do `qwen3:4b-instruct` (piso 71,4%).
+- `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 66,7%); acurácia de rota 49,6% contra 76,1–85,8% do `qwen3:4b-instruct` (piso 75,2%); exatidão numérica 52,1% contra 75,0–87,5% do `qwen3:4b-instruct` (piso 71,9%); citação válida 45,5% contra 69,7–84,8% do `qwen3:4b-instruct` (piso 66,7%); recusa limpa 42,9% contra 78,6–78,6% do `qwen3:4b-instruct` (piso 71,4%).
 - `qwen3:1.7b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 66,7% contra 76,1–85,8% do `qwen3:4b-instruct` (piso 75,2%); exatidão numérica 62,5% contra 75,0–87,5% do `qwen3:4b-instruct` (piso 71,9%); recusa limpa 59,5% contra 78,6–78,6% do `qwen3:4b-instruct` (piso 71,4%).
 
 **Ceres 2.0.**
-- `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 74,0% contra 92,9–95,6% do `qwen3:4b-instruct` (piso 92,0%); exatidão numérica 66,7% contra 87,5–96,9% do `qwen3:4b-instruct` (piso 84,4%); citação válida 68,7% contra 78,8–87,9% do `qwen3:4b-instruct` (piso 75,8%); recusa limpa 73,8% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
+- `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 74,0% contra 92,9–95,6% do `qwen3:4b-instruct` (piso 92,0%); exatidão numérica 66,7% contra 87,5–96,9% do `qwen3:4b-instruct` (piso 84,4%); citação válida 67,7% contra 78,8–87,9% do `qwen3:4b-instruct` (piso 75,8%); recusa limpa 73,8% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
 - `qwen3:1.7b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 89,1% contra 92,9–95,6% do `qwen3:4b-instruct` (piso 92,0%); exatidão numérica 83,3% contra 87,5–96,9% do `qwen3:4b-instruct` (piso 84,4%); recusa limpa 85,7% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
 - `qwen3:4b-instruct` (referência): vazou em alguma rodada (sem vazamento mínimo 83,3%).
 

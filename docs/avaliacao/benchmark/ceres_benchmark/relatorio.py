@@ -186,6 +186,11 @@ def valor_criterio(
         return False, True, True
     if valor is None:
         return None, True, False
+    if criterio == "citacao" and valor and (resultado.get("execucao") or {}).get("desfecho") \
+            in ext.DESCARTADAS:
+        # Regra da main nas duas arquiteturas: o AvaliadorResposta do 2463c27 da citacao valida a
+        # texto descartado (citacao invalida, numero sem fonte, corte), o da main nao.
+        return False, True, False
     if criterio == "recusa_limpa" and valor and ext.cortada(resultado)["qualquer"]:
         return False, True, False
     return (not valor) if inverte else bool(valor), True, False
@@ -319,8 +324,9 @@ def valores_divergentes(celulas: list[Celula]) -> dict[str, dict[str, list[str]]
     }
 
 
-def instaveis(celula: Celula, ids: list[str]) -> list[str]:
-    """Perguntas que mudaram de resultado entre rodadas em algum criterio."""
+def instaveis(celula: Celula, ids: list[str], canonico: dict[str, dict] | None = None) -> list[str]:
+    """Perguntas que mudaram de resultado entre rodadas em algum criterio que conta (a citacao de
+    pergunta ``aConferir`` nao conta em nenhuma metrica principal)."""
     if len(celula.rodadas) < 2:
         return []
     alvo, saida = set(ids), []
@@ -329,8 +335,10 @@ def instaveis(celula: Celula, ids: list[str]) -> list[str]:
     for resultados in celula.rodadas:
         for r in resultados:
             if r["id"] in alvo:
+                fora = (canonico or {}).get(r["id"], {}).get("aConferir")
                 por_id.setdefault(r["id"], []).append(
-                    tuple(r.get(k) for k in chaves) + (falha_tecnica(r),))
+                    tuple(None if (fora and k == "citacaoValida") else r.get(k) for k in chaves)
+                    + (falha_tecnica(r),))
     for id_, valores in por_id.items():
         if len(set(valores)) > 1:
             saida.append(id_)
@@ -478,7 +486,8 @@ def viabilidade(
             continue
         if c.invalida:
             saida.append(Viabilidade(c.modelo, False, [
-                "célula **inválida para comparar**: o pensamento não desligou na prova"]))
+                "célula **inválida para comparar**: o pensamento não desligou na prova, ou "
+                "nenhuma prova valeu"]))
             continue
         if ref is None and c.modelo != referencia:
             # Sem a referencia nao ha com o que comparar: nunca declarar viavel.
@@ -561,37 +570,29 @@ def conclusao(
         (arq1, rot1), (arq2, rot2) = arquiteturas
         ref1 = next((c for c in celulas if c.arquitetura == arq1 and c.modelo == referencia), None)
         ref2 = next((c for c in celulas if c.arquitetura == arq2 and c.modelo == referencia), None)
-        invalidas_ref = [c for c in (ref1, ref2) if c is not None and c.invalida]
-        if invalidas_ref:
-            linhas.append(
-                f"**Efeito da arquitetura no `{referencia}`: não medido** — célula inválida ("
-                + ", ".join(c.rotulo_arquitetura for c in invalidas_ref)
-                + ": o pensamento não desligou). Refaça a célula antes de comparar.")
-            linhas.append("")
-        elif ref1 and ref2 and ref1.rodadas and ref2.rodadas:
-            partes = []
-            for criterio in CRITERIOS_VIABILIDADE:
-                a = faixa(ref2, criterio, ids_comum, canonico, adaptacoes, RECORTE_COMUM).media
-                b = faixa(ref1, criterio, ids_comum, canonico, adaptacoes, RECORTE_COMUM).media
-                partes.append(f"{CRITERIOS[criterio][0].lower()} {_pontos(a, b)}")
-            lat1 = latencias(ref1, ids_comum, canonico).get("TODAS", (None,))[0]
-            lat2 = latencias(ref2, ids_comum, canonico).get("TODAS", (None,))[0]
-            linhas.append(
-                f"**Efeito da arquitetura no `{referencia}`** ({rot2} menos {rot1}): "
-                + ", ".join(partes) + f"; latência p50 {_s(lat1)} → {_s(lat2)}.")
-            linhas.append("")
         def _valida(arq, modelo):
             cel = next((c for c in celulas if c.arquitetura == arq and c.modelo == modelo), None)
             return cel is not None and bool(cel.rodadas) and not cel.invalida
         if not (_valida(arq1, referencia) and _valida(arq2, referencia)):
             # Sem a referencia valida numa das colunas, "nao viavel" la quer dizer "sem com o que
-            # comparar": nenhum ganho nem regressao entre arquiteturas pode ser afirmado.
+            # comparar": nem o efeito da arquitetura nem ganho ou regressao podem ser afirmados.
             sem = [rot for arq, rot in arquiteturas if not _valida(arq, referencia)]
             linhas.append(
                 f"**Comparação entre as arquiteturas: não medida** — a célula do `{referencia}` "
-                f"não rodou ou é inválida na {' e na '.join(sem)}. Refaça-a antes de afirmar ganho "
-                "ou regressão.")
+                f"não rodou ou é inválida na {' e na '.join(sem)} (pensamento ligado ou não provado). "
+                "Refaça-a antes de afirmar efeito, ganho ou regressão.")
             return "\n".join(linhas) + "\n"
+        partes = []
+        for criterio in CRITERIOS_VIABILIDADE:
+            a = faixa(ref2, criterio, ids_comum, canonico, adaptacoes, RECORTE_COMUM).media
+            b = faixa(ref1, criterio, ids_comum, canonico, adaptacoes, RECORTE_COMUM).media
+            partes.append(f"{CRITERIOS[criterio][0].lower()} {_pontos(a, b)}")
+        lat1 = latencias(ref1, ids_comum, canonico).get("TODAS", (None,))[0]
+        lat2 = latencias(ref2, ids_comum, canonico).get("TODAS", (None,))[0]
+        linhas.append(
+            f"**Efeito da arquitetura no `{referencia}`** ({rot2} menos {rot1}): "
+            + ", ".join(partes) + f"; latência p50 {_s(lat1)} → {_s(lat2)}.")
+        linhas.append("")
         # So compara com a outra arquitetura quando a celula de la e valida: invalida nao e "nao viavel".
         novos = [m for m in viaveis_por_arq.get(arq2, [])
                  if m not in viaveis_por_arq.get(arq1, []) and _valida(arq1, m)]
@@ -954,7 +955,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append("\nCada casa é p50 / p95 (nearest-rank, como o comando de avaliação).\n")
         md.append("### Perguntas instáveis entre rodadas\n")
         for c in celulas:
-            lista = instaveis(c, ids)
+            lista = instaveis(c, ids, canonico)
             md.append(f"- {c.rotulo_arquitetura} · `{c.modelo}`: "
                       + (f"{len(lista)} — " + ", ".join(lista) if lista else "nenhuma"))
         md.append("")
@@ -1076,19 +1077,38 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
 
 def _gravar_csv_cego(pasta: Path, celulas, canonico) -> None:
-    """CSV cego das externas: o primeiro lote uma vez so; celula medida depois (``--retomar``,
-    celula refeita) vai num lote novo, com codigos que continuam a numeracao.
+    """CSV cego das externas em lotes: o primeiro uma vez so; celula medida depois (``--retomar``)
+    ou refeita (respostas diferentes das do lote dela) vai num lote novo, com codigos que continuam
+    a numeracao. Os codigos antigos da celula refeita ficam marcados ``substituida``.
 
     Regerar o relatorio nunca reembaralha um CSV que ja foi ao avaliador (a chave antiga deixaria
-    de casar as notas). Para refazer tudo, apague os ``externas-avaliacao-*``.
+    de casar as notas). Limite: o lote novo so tem as celulas que entraram depois, e o avaliador as
+    corrige noutro momento; para comparar celulas na mesma sessao, apague os
+    ``externas-avaliacao-*`` e gere tudo de novo antes de mandar.
     """
     arquivo_chave = pasta / "externas-avaliacao-chave.json"
     chave_atual = json.loads(arquivo_chave.read_text(encoding="utf-8")) if arquivo_chave.exists() else {}
-    cobertas = {v["celula"] for v in chave_atual.values()}
-    novas = [c for c in celulas if c.nome not in cobertas]
-    if chave_atual and not any(c.rodadas and not c.invalida for c in novas):
+    vigentes = {}
+    for v in chave_atual.values():
+        if not v.get("substituida"):
+            vigentes.setdefault(v["celula"], set()).add(v.get("resposta"))
+    novas = []
+    for c in celulas:
+        if not c.rodadas or c.invalida:
+            continue
+        atuais = {ext.assinatura(r) for r in c.rodadas[0]}
+        if c.nome not in vigentes:
+            novas.append(c)
+        elif None not in vigentes[c.nome] and not vigentes[c.nome] <= atuais:
+            # Celula refeita: as respostas do lote dela mudaram (chave antiga, sem assinatura, nao
+            # da para saber e fica como esta).
+            for v in chave_atual.values():
+                if v["celula"] == c.nome:
+                    v["substituida"] = True
+            novas.append(c)
+    if not novas:
         return
-    lote = 1 + len({v.get("lote", 1) for v in chave_atual.values()}) if chave_atual else 1
+    lote = max((v.get("lote", 1) for v in chave_atual.values()), default=0) + 1
     cego, chave = ext.csv_cego(novas, canonico, inicio=len(chave_atual) + 1)
     chave_nova = json.loads(chave)
     if not chave_nova:

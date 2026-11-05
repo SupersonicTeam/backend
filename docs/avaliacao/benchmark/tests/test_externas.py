@@ -143,6 +143,21 @@ class AchadosReviewDelta361Test(unittest.TestCase):
         self.assertTrue(ext.classe_dita("Isso não muda nada. Alíquota zero para o ovo.", "ZERO"))
         self.assertFalse(ext.afirma(proibida, "Você não pode aproveitar o crédito."))
 
+    def test_casos_do_segundo_review(self):
+        casos = [("Não há redução de 60% para esse produto.", "PADRAO", True),
+                 ("O adubo não terá direito à alíquota zero.", "ZERO", False),
+                 ("Para o trator a redução não se aplica e vale a alíquota cheia.", "PADRAO", True),
+                 ("Sobre a venda do trator incide a alíquota padrão.", "PADRAO", True),
+                 ("Não há, neste caso, alíquota zero.", "ZERO", False),
+                 ("A alíquota de 26,5% é a alíquota padrão.", "PADRAO", True),
+                 ("A alíquota não varia: é zero para todos.", "CONDICIONAL", False)]
+        for texto, classe, esperado in casos:
+            self.assertEqual(ext.classe_dita(texto, classe), esperado, texto)
+        self.assertTrue(ext.encaminha("Você não precisa pagar nada agora, mas procure o contador."))
+        self.assertTrue(ext.encaminha("Sem precisar de nada, fale com seu contador."))
+        self.assertFalse(ext.classe_dita("Você não precisa procurar o contador: a regra é a mesma.",
+                                         "FORA_DO_ESCOPO_SISTEMA"))
+
     def test_varia_conforme_e_condicional_mas_conforme_o_artigo_nao(self):
         self.assertTrue(ext.classe_dita("A alíquota varia conforme o produto: o milho em grão tem "
                                         "redução de 60%.", "CONDICIONAL"))

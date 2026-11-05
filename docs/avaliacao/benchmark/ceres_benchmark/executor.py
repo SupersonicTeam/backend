@@ -534,10 +534,14 @@ class Executor:
             mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes"),
                      anterior.get("embedding", self.cfg.embedding)) == (
                 arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding)
-            if anterior.get("codigoSaida") == 0 and mesma:
+            sem_prova = (anterior.get("pensamento") or {}).get("semProva")
+            if sem_prova and mesma:
+                # Falha das duas provas costuma ser passageira (Ollama ocupado): refaz a celula.
+                log(f"{nome}: medida sem nenhuma prova do pensamento, medindo de novo")
+            elif anterior.get("codigoSaida") == 0 and mesma:
                 log(f"{nome}: ja medida nesta rodada, pulando")
                 return anterior
-            if anterior.get("codigoSaida") == 0:
+            if anterior.get("codigoSaida") == 0 and not mesma:
                 raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding ou "
                                    "numero de repeticoes: use uma rodada nova em vez de --retomar")
         destino.mkdir(parents=True, exist_ok=True)
@@ -591,6 +595,7 @@ class Executor:
             else:
                 avisos.append(f"a prova do pensamento no início da célula falhou "
                               f"({pensamento['erro']}); vale só a do fim")
+                pensamento["resumo"] = resumo_pensamento(final) + " (na prova do fim da célula)"
             log(f"AVISO: {nome}: {avisos[-1]}")
         arquivos = self._renomear_saida(temporario, destino, nome)
         manifesto = {

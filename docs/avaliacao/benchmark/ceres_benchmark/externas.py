@@ -16,6 +16,7 @@ comparar celulas na mesma regua; a nota que vale para a precisao e a humana.
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import random
@@ -34,19 +35,29 @@ _PADROES_CLASSE = {
 _DEPENDE = re.compile(r"\bdepend|\bvaria\b|\bconforme (o|a) (produto|caso|ncm|tipo|destino|uso|"
                       r"finalidade|situa[cç][aã]o|comprador|adquirente)\b|\bcaso a caso\b", re.IGNORECASE)
 _CONTADOR = re.compile(r"\bcontador|\bcontabilista|\bescrit[oó]rio (de )?contab", re.IGNORECASE)
-#: "Voce nao precisa procurar o contador" fala do contador sem encaminhar a ele.
+#: "Voce nao precisa pagar o contador" fala do contador sem encaminhar a ele (so na mesma oracao).
 _SEM_CONTADOR = re.compile(r"\b(n[aã]o|sem) (precisa|precisar|[eé] necess[aá]rio|h[aá] necessidade)"
-                           r"[^.;:!?]{0,40}(contador|contabilista|contab)", re.IGNORECASE)
-#: Negacao que governa a expressao: "nao"/"nem"/"nunca" logo antes (no maximo uma palavra entre:
-#: "nao tem aliquota zero", "nao pode aproveitar") e na mesma oracao (pontuacao corta).
-_NEGACAO_ANTES = re.compile(r"\b(n[aã]o|nem|nunca)\b(\s+[^\s.,;:!?]+)?\s*$", re.IGNORECASE)
-#: Fim de oracao: o que vem antes dele nao nega nem qualifica o que vem depois.
-_ORACAO = re.compile(r"[.,;:!?\n]")
-#: "Aliquota padrao" como base de uma reducao ("reducao de 60% da aliquota padrao") nao e PADRAO.
-_REDUCAO_ANTES = re.compile(r"redu[cç][aã]o|reduzid|%|\bzero\b|\bsobre\b", re.IGNORECASE)
+                           r"[^.;:!?,\n]{0,40}?(contador|contabilista|contab)", re.IGNORECASE)
+#: Negacao que governa a expressao, na mesma oracao: "nao"/"nem"/"nunca" logo antes ("nao pode
+#: aproveitar") ou seguido de um verbo (ou artigo) e ate mais 2 palavras ("nao ha reducao de 60%",
+#: "nao tera direito a aliquota zero", "nem a aliquota zero"). "Nao processados tem aliquota zero"
+#: nao nega: o "nao" qualifica outra palavra.
+_VERBO_NEGADO = (r"h[aá]|haver[aá]|tem|t[eê]m|ter[aá]|ter[aã]o|teria|[eé]|s[aã]o|ser[aá]|est[aá]|"
+                 r"se|possui|recebe|receber[aá]|incide|incidir[aá]|cabe|existe|pode|poder[aá]|vai|"
+                 r"aplica|entra|gera|d[aá]|dar[aá]|faz|precisa|a|o|as|os|[aà]|ao")
+_NEGACAO_ANTES = re.compile(rf"\b(n[aã]o|nem|nunca)\b(\s+(?:{_VERBO_NEGADO})\b,?(\s+\S+){{0,2}})?\s*$",
+                            re.IGNORECASE)
+#: Fim de oracao: ponto, ponto e virgula, dois-pontos, exclamacao, interrogacao, quebra de linha e a
+#: virgula que abre outra oracao (", voce", ", mas"); a virgula decimal (26,5%) e o aposto (", neste
+#: caso,") nao cortam.
+_ORACAO = re.compile(r"[.;:!?\n]|,\s+(?=(voc[eê]|mas|por[eé]m|ent[aã]o|e|o|a|os|as|ele|ela|isso|esse|essa|"
+                     r"este|esta|ou|j[aá]|pois|portanto|logo)\b)", re.IGNORECASE)
+#: "Aliquota padrao" como base de uma reducao: "reducao de 60% da aliquota padrao".
+_BASE_DE_REDUCAO = re.compile(r"(redu[cç][aã]o|reduzid\w*|%|\bzero\b)[^.;:!?\n]{0,60}"
+                              r"\b(da|sobre a|em rela[cç][aã]o [aà]|frente [aà])\s*$", re.IGNORECASE)
 #: Desfechos em que o comando descarta o texto: a citacao dele nao conta (regra do AvaliadorResposta
 #: da main; o do 2463c27 nao a aplica, e as duas arquiteturas tem de ser medidas pela mesma regua).
-_DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"}
+DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"}
 _DESFECHOS_CORTE = {"RESPOSTA_CORTADA"}
 #: Resposta redigida pelo modelo (as outras sao frase fixa do backend: recusa ou descarte).
 _REDIGIDAS = {"RESPONDIDA", "NEGATIVA_SUBSTITUIDA"}
@@ -60,28 +71,31 @@ CRITERIOS_EXTERNAS = {
 }
 
 
-def afirma(padrao: re.Pattern | str, texto: str) -> bool:
-    """O texto **afirma** o padrao: alguma ocorrencia sem negacao logo antes.
+def afirma(padrao: re.Pattern | str, texto: str, exceto: re.Pattern | None = None) -> bool:
+    """O texto **afirma** o padrao: alguma ocorrencia sem negacao antes na mesma oracao.
 
-    "Voce nao pode aproveitar o credito" nao afirma "pode aproveitar o credito".
+    "Voce nao pode aproveitar o credito" nao afirma "pode aproveitar o credito". ``exceto``: o que,
+    logo antes na oracao, tira a ocorrencia (a "aliquota padrao" base de uma reducao).
     """
     regex = padrao if isinstance(padrao, re.Pattern) else re.compile(padrao, re.IGNORECASE)
-    return any(not _NEGACAO_ANTES.search(_oracao_antes(texto, m.start()))
-               for m in regex.finditer(texto))
+    for m in regex.finditer(texto):
+        antes = _oracao_antes(texto, m.start())
+        if not _NEGACAO_ANTES.search(antes) and not (exceto and exceto.search(antes)):
+            return True
+    return False
 
 
 def _oracao_antes(texto: str, inicio: int) -> str:
-    """O trecho da mesma oracao antes de ``inicio`` (ate a ultima pontuacao)."""
-    antes = texto[max(0, inicio - 80):inicio]
+    """O trecho da mesma oracao antes de ``inicio`` (ate o ultimo fim de oracao)."""
+    antes = texto[max(0, inicio - 120):inicio]
     cortes = list(_ORACAO.finditer(antes))
     return antes[cortes[-1].end():] if cortes else antes
 
 
-def _afirma_padrao(texto: str) -> bool:
-    """PADRAO afirmado: sem negacao e sem ser a base de uma reducao na mesma oracao."""
-    return any(not _NEGACAO_ANTES.search(_oracao_antes(texto, m.start()))
-               and not _REDUCAO_ANTES.search(_oracao_antes(texto, m.start()))
-               for m in _PADROES_CLASSE["PADRAO"].finditer(texto))
+def encaminha(texto: str) -> bool:
+    """A resposta manda ao contador: alguma mencao fora de um "nao precisa ... contador"."""
+    fora = [(m.start(), m.end()) for m in _SEM_CONTADOR.finditer(texto)]
+    return any(not any(a <= m.start() < b for a, b in fora) for m in _CONTADOR.finditer(texto))
 
 
 def classe_dita(texto: str, classe: str) -> bool | None:
@@ -92,13 +106,13 @@ def classe_dita(texto: str, classe: str) -> bool | None:
     afirmadas, ou "depende".
     """
     afirmadas = {c for c, p in _PADROES_CLASSE.items()
-                 if (_afirma_padrao(texto) if c == "PADRAO" else afirma(p, texto))}
+                 if afirma(p, texto, _BASE_DE_REDUCAO if c == "PADRAO" else None)}
     if classe in _PADROES_CLASSE:
         return afirmadas == {classe}
     if classe == "CONDICIONAL":
-        return len(afirmadas) >= 2 or bool(_DEPENDE.search(texto))
+        return len(afirmadas) >= 2 or afirma(_DEPENDE, texto)
     if classe == "FORA_DO_ESCOPO_SISTEMA":
-        return bool(_CONTADOR.search(texto))
+        return encaminha(texto)
     return None
 
 
@@ -121,8 +135,7 @@ def avaliar(resultado: dict, pergunta: dict) -> dict[str, bool | None]:
         # Pendente do contador (#284): sem valor esperado firme, fora da metrica de tratamento.
         "classe": None if classe is None else (redigida and classe),
         "proibidas": (redigida and not any(afirma(p, texto) for p in proibidas)) if proibidas else None,
-        "encaminhamento": (redigida and bool(_CONTADOR.search(texto))
-                           and not _SEM_CONTADOR.search(texto))
+        "encaminhamento": (redigida and encaminha(texto))
         if pergunta.get("encaminharContador") else None,
     }
 
@@ -131,7 +144,7 @@ def _fundamentacao(resultado: dict) -> bool | None:
     """``citacaoValida`` do comando, com a regra da main nas duas arquiteturas: texto descartado
     (citacao invalida, numero sem fonte, corte) nao ganha credito de citacao."""
     valor = resultado.get("citacaoValida")
-    if valor and (resultado.get("execucao") or {}).get("desfecho") in _DESCARTADAS:
+    if valor and (resultado.get("execucao") or {}).get("desfecho") in DESCARTADAS:
         return False
     return valor
 
@@ -161,6 +174,12 @@ def _celula_csv(valor: str) -> str:
     return "'" + valor if valor[:1] in ("=", "+", "-", "@") else valor
 
 
+def assinatura(resultado: dict) -> str:
+    """Hash curto de (pergunta, resposta): diz se a celula foi refeita desde o lote do CSV cego."""
+    texto = (resultado.get("execucao") or {}).get("texto") or ""
+    return hashlib.sha256(f"{resultado.get('id')}\n{texto}".encode()).hexdigest()[:16]
+
+
 def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None = None,
              inicio: int = 1):
     """CSV cego das externas para o avaliador externo (#275) e a chave, que nao vai a ele.
@@ -185,7 +204,8 @@ def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None
             texto = (r.get("execucao") or {}).get("texto") or ""
             if falha_tecnica(r) or not texto.strip():
                 continue
-            linhas.append({"celula": c.nome, "id": r["id"], "pergunta": p["pergunta"], "resposta": texto})
+            linhas.append({"celula": c.nome, "id": r["id"], "pergunta": p["pergunta"], "resposta": texto,
+                           "assinatura": assinatura(r)})
     aleatorio.shuffle(linhas)
     saida = io.StringIO()
     escritor = csv.writer(saida, delimiter=";", lineterminator="\n")
@@ -196,7 +216,7 @@ def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None
         codigo = f"R{i:03d}"
         escritor.writerow([codigo, _celula_csv(linha["pergunta"]), _celula_csv(linha["resposta"]),
                            "", "", "", ""])
-        chave[codigo] = {"celula": linha["celula"], "id": linha["id"]}
+        chave[codigo] = {"celula": linha["celula"], "id": linha["id"], "resposta": linha["assinatura"]}
     return "\ufeff" + saida.getvalue(), json.dumps(chave, ensure_ascii=False, indent=2) + "\n"
 
 
