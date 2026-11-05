@@ -305,3 +305,36 @@ class DivergentesConhecidosTest(Base):
         texto = rel.gerar(self.pasta)
         self.assertIn("| Capacidade comum | 2 perguntas", texto)
         self.assertIn("`divergentesConhecidos` da matriz): D01", texto)
+
+
+class Sessao7Test(Base):
+    def test_cortadas_ensaio_e_comparacao_com_queda(self):
+        celula = self.celulas["ceres-1--m-ref"]
+        antes, total = rel.possivelmente_cortadas(celula)
+        # A D01 da rodada 1 termina em ponto; cortada no meio, conta.
+        celula.rodadas[0][0]["execucao"]["texto"] = "O total das suas compras de fertilizante foi de"
+        self.assertEqual(rel.possivelmente_cortadas(celula), (antes + 1, total))
+        anterior = Path(tempfile.mkdtemp()) / "ensaio"
+        shutil.copytree(self.pasta, anterior)
+        arquivo = self.pasta / "ceres-2--m-ref" / "ceres-2--m-ref.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        for rodada in dados["rodadas"]:
+            rodada["resultados"][0]["numeroCorreto"] = False
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta, comparar_com=anterior)
+        self.assertNotIn("ENSAIO", texto)
+        self.assertIn("a coluna inclui as mudanças dela", texto)
+        self.assertIn("## Comparação com a rodada `ensaio`", texto)
+        self.assertIn("| Ceres 2.0 · `m-ref` | Exatidão numérica | 100,0% n=1 | 0,0% n=1 | **QUEDA** |", texto)
+        self.assertIn("**1 queda(s) fora da faixa.**", texto)
+        self.assertIn("## Respostas possivelmente cortadas", texto)
+        shutil.rmtree(anterior.parent, ignore_errors=True)
+
+    def test_ceres_2_antes_da_sessao_7_e_ensaio(self):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": False}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        self.assertIn("**ENSAIO — a coluna Ceres 2.0 é de antes da Sessão 7 (#270).**", rel.gerar(self.pasta))

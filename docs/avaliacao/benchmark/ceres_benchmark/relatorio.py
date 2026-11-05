@@ -247,6 +247,27 @@ def clareza(celula: Celula) -> tuple[float | None, float | None, int]:
     return palavras, 100.0 * siglas / medidas, medidas
 
 
+_FIM_DE_FRASE = re.compile(r"[.!?…:)\]\"'*»]\s*$")
+
+
+def possivelmente_cortadas(celula: Celula) -> tuple[int, int]:
+    """(respostas redigidas que terminam sem fim de frase, respostas redigidas).
+
+    Heuristica do corte pelo teto de tokens (``num_predict``): a resposta para no meio da frase.
+    Nao prova o corte (o JSON nao tem os tokens), mas uma subida entre rodadas aponta para ele.
+    """
+    cortadas = total = 0
+    for resultados in celula.rodadas:
+        for r in resultados:
+            execucao = r.get("execucao") or {}
+            texto = (execucao.get("texto") or "").strip()
+            if execucao.get("desfecho") not in REDIGIDAS or not texto or falha_tecnica(r):
+                continue
+            total += 1
+            cortadas += 0 if _FIM_DE_FRASE.search(texto) else 1
+    return cortadas, total
+
+
 def camadas(celula: Celula) -> dict[str, int]:
     """Camada da classificacao (#265) -> respostas; vazio no esquema do 2463c27."""
     contagem: dict[str, int] = {}
@@ -576,7 +597,44 @@ AVISO_FICTICIO = (
 )
 
 
-def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
+def comparar_rodadas(atual: list[Celula], anterior: list[Celula], ids: list[str],
+                     canonico: dict[str, dict], adaptacoes: dict[str, dict]) -> list[dict]:
+    """Mesma celula (arquitetura x modelo) em duas rodadas, na capacidade comum: a diferenca de
+    cada criterio e se ela sai da faixa das rodadas (queda que nao e ruido)."""
+    linhas = []
+    por_nome = {c.nome: c for c in anterior if c.rodadas}
+    for c in atual:
+        antes = por_nome.get(c.nome)
+        if not c.rodadas or antes is None:
+            continue
+        for criterio in ("rota", "funcao", "numero", "citacao", "recusa", "vazamento", "falha"):
+            f = faixa(c, criterio, ids, canonico, adaptacoes, RECORTE_COMUM)
+            fa = faixa(antes, criterio, ids, canonico, adaptacoes, RECORTE_COMUM)
+            if f.media is None or fa.media is None:
+                continue
+            linhas.append({"celula": c.nome, "rotulo": f"{c.rotulo_arquitetura} · `{c.modelo}`",
+                           "criterio": criterio, "antes": fa, "agora": f,
+                           "queda": f.maximo < fa.minimo})
+    return linhas
+
+
+def _secao_comparacao(linhas: list[dict], rotulo_anterior: str) -> str:
+    md = [f"## Comparação com a rodada {rotulo_anterior}\n",
+          "Mesma célula nas duas rodadas, capacidade comum. **Queda** = a faixa desta rodada fica "
+          "inteira abaixo da faixa da anterior (não é ruído entre repetições). Com queda na Ceres "
+          "2.0 depois da Sessão 7 (#270), o primeiro suspeito é o teto de tokens: veja as respostas "
+          "possivelmente cortadas.\n",
+          "| Célula | Critério | Antes | Agora | |\n|---|---|---|---|---|"]
+    for l in linhas:
+        md.append(f"| {l['rotulo']} | {CRITERIOS[l['criterio']][0]} | {l['antes'].formatada()} "
+                  f"| {l['agora'].formatada()} | {'**QUEDA**' if l['queda'] else ''} |")
+    quedas = [l for l in linhas if l["queda"]]
+    md.append("")
+    md.append(f"**{len(quedas)} queda(s) fora da faixa.**" if quedas else "Nenhuma queda fora da faixa.")
+    return "\n".join(md) + "\n"
+
+
+def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | None = None) -> str:
     """Gera ``relatorio.md`` e os gráficos SVG na pasta da rodada; devolve o Markdown."""
     rodada = _ler_json(pasta / "rodada.json")
     canonico_json = _ler_json(pasta / rodada["gabaritoCanonico"])
@@ -618,6 +676,13 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
     teste = rodada.get("tipo") == "teste" or (rodada.get("repeticoes") or 3) < 3
     if teste:
         md.append(AVISO_TESTE)
+    sessao = rodada.get("sessao7") or {}
+    if sessao and sessao.get("contem") is not True:
+        md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} é de antes da "
+                  f"{_celula_md(sessao.get('rotulo') or 'sessão paralela')} ({sessao.get('issue')})"
+                  + (" ou não foi possível conferir" if sessao.get("contem") is None else "")
+                  + ".** A rodada oficial usa o SHA da `main` depois do merge dela: esta não entra "
+                  "no relatório final.\n")
     md.append("Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à "
               "mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) "
               "entre parênteses; n = perguntas avaliadas no critério em cada rodada.\n")
@@ -641,7 +706,8 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
         situacao = ("não foi possível conferir pelo git" if sessao7.get("contem") is None else
                     "**depois** dela (o SHA medido já tem commits que a citam)" if sessao7["contem"]
                     else "**antes** dela (nenhum commit do SHA medido a cita)")
-        md.append(f"| {arquiteturas[-1][1]} e a {_celula_md(rotulo7)} | {situacao} |")
+        md.append(f"| {arquiteturas[-1][1]} e a {_celula_md(rotulo7)} | {situacao}"
+                  + (" — a coluna inclui as mudanças dela" if sessao7.get("contem") else "") + " |")
     md.append(f"| Repetições | {rodada.get('repeticoes', '?')}"
               + (" — **rodada de teste, não vale para a banca**" if teste else "") + " |")
     md.append(f"| Embedding | {rodada.get('embedding', 'bge-m3')} |")
@@ -654,9 +720,21 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
                   f"{detalhe.get('parametros', '?')} parâmetros, digest "
                   f"`{(detalhe.get('digest') or '?')[:12]}` |")
     opcoes = rodada.get("opcoesChat") or {}
-    if opcoes:
-        md.append("| Opções do chat | " + ", ".join(f"{k}={v}" for k, v in opcoes.items())
-                  + " (as mesmas nos dois commits) |")
+    if opcoes and all(isinstance(v, dict) and "chat" in v for v in opcoes.values()):
+        rotulos = dict(arquiteturas)
+        chaves = sorted({k for v in opcoes.values() for k in list(v["chat"]) + list(v["publicada"])})
+        for arq, v in opcoes.items():
+            todas = {**v["publicada"], **v["chat"]}
+            diferentes = {k for k in chaves
+                          if len({{**o["publicada"], **o["chat"]}.get(k) for o in opcoes.values()}) > 1}
+            md.append(f"| Configuração da {rotulos.get(arq, arq)} | " + ", ".join(
+                (f"**{k}={todas.get(k, '—')}**" if k in diferentes else f"{k}={todas.get(k, '—')}")
+                for k in chaves) + " |")
+        md.append("| | A configuração de cada coluna é a **publicada** no `.env.example` do próprio "
+                  "commit, sem ajuste à mão. Em negrito, o que difere entre os commits: faz parte "
+                  "da arquitetura medida. |")
+    elif opcoes:
+        md.append("| Opções do chat | " + ", ".join(f"{k}={v}" for k, v in opcoes.items()) + " |")
     md.append("")
     md.append("Todas as células rodaram **na mesma máquina**, uma por vez. **A latência é local e "
               "relativa**: serve para comparar modelos e arquiteturas entre si nesta máquina"
@@ -770,6 +848,18 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
                   + f" | {medidas} |")
     md.append("")
 
+    md.append("## Respostas possivelmente cortadas (teto de tokens)\n")
+    md.append("Respostas redigidas que terminam no meio da frase. É heurística (o JSON não traz os "
+              "tokens), mas é o primeiro suspeito de uma queda de acerto depois de mudar o teto de "
+              "tokens (Sessão 7, #270).\n")
+    md.append("| Célula | Possivelmente cortadas | Respostas redigidas |\n|---|---|---|")
+    for c in celulas:
+        cortadas, total = possivelmente_cortadas(c)
+        md.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {cortadas}"
+                  + (f" ({100.0 * cortadas / total:.0f}%)".replace(".", ",") if total else "")
+                  + f" | {total} |")
+    md.append("")
+
     md.append("## Quem decidiu a rota (Ceres 2.0, #265)\n")
     conhecidas = ["ATALHO_FIXO", "FILTRO_INJECAO", "REGRA", "EMBEDDING", "LLM", "PALAVRAS_CHAVE"]
     todas_camadas = {k for c in celulas for k in camadas(c)}
@@ -801,6 +891,19 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
         if not algum:
             md.append("- nenhuma falha típica encontrada")
         md.append("")
+
+    if comparar_com is not None:
+        anterior_rodada = _ler_json(comparar_com / "rodada.json")
+        mesmo = ((anterior_rodada.get("perguntas") or {}).get("sha256")
+                 == (rodada.get("perguntas") or {}).get("sha256"))
+        if mesmo:
+            md.append(_secao_comparacao(
+                comparar_rodadas(celulas, carregar_celulas(comparar_com), ids_comum, canonico,
+                                 adaptacoes_todas),
+                f"`{comparar_com.name}`"))
+        else:
+            md.append(f"## Comparação com a rodada `{comparar_com.name}`\n\nNão comparada: o "
+                      "conjunto de perguntas (hash) é outro.\n")
 
     md.append("## Latência na VPS (produção)\n")
     md.append("A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na "

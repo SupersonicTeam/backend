@@ -296,3 +296,44 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             cfg = config(matriz=str(arquivo))
             self.assertTrue(cfg.teste)
             self.assertEqual(cfg.repeticoes, 1)
+
+
+class ConfiguracaoPublicadaTest(unittest.TestCase):
+    REPO = AQUI.parents[3]
+
+    def test_le_a_configuracao_publicada_do_env_example_real(self):
+        publicada = ex.configuracao_publicada((self.REPO / ".env.example").read_text(encoding="utf-8"))
+        self.assertEqual(publicada["AI_MAX_TOKENS"], "1024")
+        self.assertEqual(publicada["AI_OLLAMA_NUM_CTX"], "8192")
+        for fora in ("AI_API_KEY", "AI_CHAT_MODEL", "AI_OLLAMA_BASE_URL", "AI_CHAT_PROVIDER"):
+            self.assertNotIn(fora, publicada)
+
+    def test_ambiente_nao_herda_ai_do_shell_e_aplica_a_publicada(self):
+        import os
+        e = ex.Executor(config())
+        os.environ["AI_MAX_TOKENS"] = "64"
+        try:
+            env = e.ambiente_java("b", "qwen3:0.6b", {"configuracaoPublicada": {"AI_MAX_TOKENS": "512"}})
+            self.assertEqual(env["AI_MAX_TOKENS"], "512")
+            self.assertNotIn("AI_MAX_TOKENS", e.ambiente_java("b", "qwen3:0.6b"))
+        finally:
+            del os.environ["AI_MAX_TOKENS"]
+        self.assertEqual(env["AI_CHAT_MODEL"], "qwen3:0.6b")
+        self.assertEqual(env["AI_OLLAMA_THINK"], "false")
+
+    def test_opcoes_diferentes_entre_commits_sao_registradas_sem_recusar(self):
+        e = ex.Executor(config())
+        antiga, nova = e.cfg.todas_arquiteturas
+        antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
+        yml = (self.REPO / "src/main/resources/application.yml").read_text(encoding="utf-8")
+
+        def capturar(comando, cwd=None):
+            alvo = comando[-1]
+            if alvo.endswith(":.env.example"):
+                return "AI_MAX_TOKENS=1024\n" if alvo.startswith("a") else "AI_MAX_TOKENS=512\n"
+            return yml
+        e.capturar = capturar
+        por_arq = e.conferir_opcoes_chat()
+        self.assertEqual(por_arq["ceres-1"]["chat"]["num-predict"], "1024")
+        self.assertEqual(por_arq["ceres-2"]["chat"]["num-predict"], "512")
+        self.assertEqual(nova["configuracaoPublicada"], {"AI_MAX_TOKENS": "512"})

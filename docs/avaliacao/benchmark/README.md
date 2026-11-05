@@ -85,10 +85,11 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
    adaptada para a Ceres 1, confere o campo `capacidade` contra as funções reais de cada commit
    (`funcoesConhecidas` da matriz) e grava o aviso de semelhança com o treino
    (`similaridade-treino.md`). Qualquer divergência para a rodada antes de começar.
-3. Baixa os modelos, lê a configuração do Ollama (versão; quantização e digest de cada modelo) e
-   as opções do chat no `application.yml` dos dois commits (temperatura, `num_ctx`, `num_predict`,
-   pensamento). Opções diferentes entre os commits param a rodada; a configuração do Ollama é
-   conferida de novo antes de cada célula.
+3. Baixa os modelos que faltam (os presentes não são puxados de novo), lê a configuração do Ollama
+   (versão; quantização e digest de cada modelo) e a configuração publicada de cada commit (os
+   `AI_*` do `.env.example` e as opções do chat do `application.yml`). A do Ollama é conferida de
+   novo antes de cada célula e, se mudar, para a rodada; a de cada commit é a que aquela coluna
+   usa, e a diferença entre os commits vai para o relatório.
 4. Para cada arquitetura: `git worktree add --detach` no commit, `mvnw package` ali dentro, e um
    **banco próprio**. O schema do `2463c27` não é o da `main` (changeSets novos, seed `v2` × `v4`):
    o banco é recriado, o Liquibase do commit cria o schema (o comando de avaliação sobe com um id
@@ -236,8 +237,8 @@ backend, ClamAV e o BGE-M3.
 ## Rodada local com GPU
 
 A matriz roda na máquina do time (com GPU), não na VPS. O **acerto** (rota, número, citação)
-vale para a banca, porque modelo, quantização, temperatura, `num_ctx` e seed são os mesmos e o
-hardware vai no relatório. A **latência não**: ela é local e relativa (compara as células entre
+vale para a banca, porque modelo, quantização e seed são os mesmos, cada coluna usa a configuração
+publicada do seu commit e o hardware vai no relatório. A **latência não**: ela é local e relativa (compara as células entre
 si). A latência de produção vem da VPS (abaixo).
 
 ### O que é registrado e conferido
@@ -246,8 +247,8 @@ si). A latência de produção vem da VPS (abaixo).
 - **Ollama:** versão e, por modelo, quantização, tamanho e digest (`/api/show`, `/api/tags`). Se
   algo mudar entre uma célula e outra (atualizou o Ollama, baixou outra tag), o executor **recusa
   continuar**; a rodada recomeça numa pasta nova.
-- **Opções do chat** dos dois commits (temperatura, `num_ctx`, `num_predict`, pensamento): iguais,
-  senão a rodada nem começa.
+- **Configuração publicada** de cada commit (`.env.example` + opções do chat): cada coluna usa a
+  sua; o que difere entre os commits aparece em negrito no relatório.
 - **Onde cada modelo rodou** (o `/api/ps` amostrado a cada 5 s: GPU, CPU ou dividido) e
   **descarga no meio da célula** (o modelo de chat ou o embedding saiu da memória e voltou).
   Os dois viram aviso no log e no relatório.
@@ -299,12 +300,29 @@ real vai no `celula.json`. Por célula = 100 perguntas × 3 rodadas + 1–2 min 
 executor e o `ollama ps` e para recalibrar o tempo. O relatório e os gráficos saem marcados como
 "RODADA DE TESTE", e uma pasta de teste não pode ser retomada como rodada da banca.
 
-### A Sessão 7 (#270) e a coluna Ceres 2.0
+### A coluna Ceres 2.0 oficial é a de depois da Sessão 7 (#270)
 
-A Sessão 7 (#270: prompts por rota e teto de tokens) muda a `main` em paralelo. O relatório grava
-o SHA medido e diz se a coluna "Ceres 2.0" é **de antes ou de depois** dela (procura commits que
-citem a #270 no histórico do SHA). Para comparar as duas, rode a Ceres 2.0 de novo com
-`--arquiteturas ceres-2 --ref-ceres2 <sha>` numa pasta nova.
+Decisão do Murillo: a coluna "Ceres 2.0" da banca é medida **depois** da Sessão 7 (#270, itens 2
+e 3: só as funções da rota, prompt com prefixo fixo, teto de tokens por chamada, `num_ctx` por
+propriedade). Na prática:
+
+- **A rodada oficial** usa `--ref-ceres2 <SHA da main depois do merge do último PR da #270>`.
+  Antes disso, qualquer rodada é **ensaio**: o relatório sai com o aviso "ENSAIO — a coluna Ceres
+  2.0 é de antes da Sessão 7" e não entra no relatório final. A conferência é pelo histórico do SHA
+  medido; quando a #270 terminar, ponha o SHA do merge em `sessaoParalela.commit` na `matriz.json`
+  (a conferência passa a ser pela ancestralidade).
+- **Configuração publicada, sem ajuste à mão.** Cada coluna roda com os `AI_*` do `.env.example`
+  **do próprio commit** (teto de tokens, `num_ctx`, timeouts); o executor não herda nenhum `AI_*`
+  do seu shell (um `export AI_MAX_TOKENS` esquecido mediria outra configuração). Só o modelo (o da
+  célula), o endereço do Ollama e `AI_OLLAMA_THINK=false` vêm do executor. As duas configurações
+  vão no relatório, com o que difere entre os commits em negrito: é parte da arquitetura medida,
+  não um erro de configuração.
+- **Queda de acerto em relação a um ensaio anterior:** gere o relatório com
+  `--comparar-com <pasta do ensaio>` (no `executar_matriz.py` ou no `gerar_relatorio.py`). A seção
+  "Comparação" marca **QUEDA** quando a faixa das 3 rodadas fica inteira abaixo da do ensaio. O
+  primeiro suspeito é o teto de tokens (resposta cortada): a seção "Respostas possivelmente
+  cortadas" conta as respostas que terminam no meio da frase (heurística; o JSON não traz os
+  tokens). A Sessão 7 não tem como medir isso sem Ollama; este relatório tem.
 
 ## Latência na VPS (produção)
 

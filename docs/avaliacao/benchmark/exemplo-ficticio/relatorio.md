@@ -2,6 +2,8 @@
 
 > ⚠️ **DADOS FICTÍCIOS DE TESTE.** Este relatório foi gerado a partir de JSONs inventados pelo `gerar_exemplo_ficticio.py`, só para mostrar o formato. **Nenhum número aqui foi medido.** Não use em slide, artigo nem banca.
 
+> ⚠️ **ENSAIO — a coluna Ceres 2.0 é de antes da Sessão 7 (prompts por rota e teto de tokens) (#270).** A rodada oficial usa o SHA da `main` depois do merge dela: esta não entra no relatório final.
+
 Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) entre parênteses; n = perguntas avaliadas no critério em cada rodada.
 
 ## Condições
@@ -21,7 +23,7 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | `qwen3:0.6b` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
 | `qwen3:1.7b` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
 | `qwen3:4b-instruct` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
-| Opções do chat | temperature=0.2, num-ctx=8192, num-predict=1024, think-option=false (as mesmas nos dois commits) |
+| Opções do chat | temperature=0.2, num-ctx=8192, num-predict=1024, think-option=false |
 
 Todas as células rodaram **na mesma máquina**, uma por vez. **A latência é local e relativa**: serve para comparar modelos e arquiteturas entre si nesta máquina. **Não é a latência de produção**: a da VPS (CPU ARM, sem GPU) fica na seção "Latência na VPS", medida pelo harness da API.
 
@@ -241,6 +243,19 @@ Da `ClarezaTexto` do próprio comando, só nas respostas redigidas. Na Ceres 2.0
 | Ceres 2.0 · `qwen3:0.6b` | 16,6 | 11,7% | 60 |
 | Ceres 2.0 · `qwen3:1.7b` | 15,4 | 6,7% | 60 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 14,8 | 3,3% | 60 |
+
+## Respostas possivelmente cortadas (teto de tokens)
+
+Respostas redigidas que terminam no meio da frase. É heurística (o JSON não traz os tokens), mas é o primeiro suspeito de uma queda de acerto depois de mudar o teto de tokens (Sessão 7, #270).
+
+| Célula | Possivelmente cortadas | Respostas redigidas |
+|---|---|---|
+| Ceres 1 · `qwen3:0.6b` | 0 (0%) | 256 |
+| Ceres 1 · `qwen3:1.7b` | 0 (0%) | 258 |
+| Ceres 1 · `qwen3:4b-instruct` | 4 (2%) | 257 |
+| Ceres 2.0 · `qwen3:0.6b` | 1 (0%) | 255 |
+| Ceres 2.0 · `qwen3:1.7b` | 0 (0%) | 260 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 0 (0%) | 259 |
 
 ## Quem decidiu a rota (Ceres 2.0, #265)
 

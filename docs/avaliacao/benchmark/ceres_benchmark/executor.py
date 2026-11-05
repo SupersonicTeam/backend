@@ -153,6 +153,28 @@ def avisos_da_amostra(memoria: dict) -> list[str]:
     return avisos
 
 
+#: Variaveis do ``.env.example`` que nao sao configuracao da Ceres medida: endereco, chave, modelo
+#: (o da celula) e estrategia de pull (o executor baixa). O resto vale como publicado no commit.
+FORA_DA_CONFIGURACAO = {"AI_API_KEY", "AI_API_BASE_URL", "AI_API_COMPLETIONS_PATH",
+                        "AI_OLLAMA_BASE_URL", "AI_OLLAMA_PORT", "AI_CHAT_MODEL",
+                        "AI_CHAT_PROVIDER", "AI_OLLAMA_PULL_STRATEGY"}
+
+
+def configuracao_publicada(env_example: str) -> dict[str, str]:
+    """``AI_*`` do ``.env.example`` de um commit: a configuracao publicada da Ceres naquele SHA
+    (teto de tokens, ``num_ctx``, timeouts...). A rodada usa exatamente ela, sem ajuste a mao."""
+    publicada = {}
+    for linha in env_example.splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or "=" not in linha:
+            continue
+        chave, _, valor = linha.partition("=")
+        chave = chave.strip()
+        if chave.startswith("AI_") and chave not in FORA_DA_CONFIGURACAO:
+            publicada[chave] = valor.split(" #")[0].strip().strip('"').strip("'")
+    return publicada
+
+
 def commits_da_issue(assuntos: list[str], issue: str) -> list[str]:
     """``<hash> <assunto>`` cujo assunto e o squash de um PR da issue: termina em
     ``(#270) (#NNN)`` ou ``(#270)`` seguido so do numero do PR."""
@@ -276,8 +298,12 @@ class Executor:
             raise RuntimeError(f"JAR nao gerado em {worktree}/target")
         return jars[0]
 
-    def ambiente_java(self, banco: str, modelo: str) -> dict:
-        env = dict(os.environ)
+    def ambiente_java(self, banco: str, modelo: str, arquitetura: dict | None = None) -> dict:
+        """Ambiente da JVM: sem nenhum ``AI_*`` herdado do shell (um ``export AI_MAX_TOKENS``
+        esquecido mediria outra configuracao) e com a configuracao publicada do commit."""
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AI_")}
+        if arquitetura is not None:
+            env.update(arquitetura.get("configuracaoPublicada") or {})
         env.update({
             "SPRING_PROFILES_ACTIVE": "dev,avaliacao",
             "DB_NAME": banco,
@@ -317,7 +343,8 @@ class Executor:
         # antes do seed (codigo 1 esperado): e a forma de criar o schema daquele commit sem web.
         self.rodar(["java", "-jar", str(jar), "--spring.docker.compose.enabled=false",
                     "--avaliacao.ids=__schema_apenas__"], worktree,
-                   env=self.ambiente_java(banco, "nenhum"), saida=logs / f"schema-{banco}.log",
+                   env=self.ambiente_java(banco, "nenhum", arquitetura),
+                   saida=logs / f"schema-{banco}.log",
                    checar=False)
         if not self._tabela_existe(banco):
             raise RuntimeError(f"Liquibase nao criou legislacao_trecho em {banco}: ver "
@@ -525,7 +552,7 @@ class Executor:
         try:
             codigo = self.rodar(["java", "-jar", str(jar)]
                                 + self.argumentos_avaliacao(gabarito, temporario),
-                                worktree, env=self.ambiente_java(banco, modelo),
+                                worktree, env=self.ambiente_java(banco, modelo, arquitetura),
                                 saida=destino / "comando.log", checar=False)
         finally:
             parar.set()
@@ -721,21 +748,34 @@ class Executor:
             log(f"AVISO: {len(pares)} perguntas parecidas com o treino; ver similaridade-treino.md")
 
     def conferir_opcoes_chat(self) -> dict:
-        """Temperatura, ``num_ctx``, ``num_predict`` e pensamento iguais nos commits da matriz.
+        """Configuracao publicada (``.env.example``) e opcoes efetivas do chat de cada commit.
 
-        :raises RuntimeError: se um commit muda uma delas (a celula mediria outra configuracao)
+        Diferenca entre os commits **nao** e recusada: a Ceres 2.0 e medida com a configuracao
+        publicada dela (a Sessao 7, #270, muda o teto de tokens e o ``num_ctx``), e isso faz parte
+        da arquitetura. O relatorio mostra as duas. O que tem de ser igual e o que vem do Ollama
+        (versao, quantizacao), conferido em cada celula.
         """
-        env = self.ambiente_java("x", "x")
         por_arq = {}
         for arquitetura in self.cfg.todas_arquiteturas:
+            try:
+                env_example = self.capturar(["git", "show", f"{arquitetura['sha']}:.env.example"],
+                                            self.cfg.repo)
+            except subprocess.CalledProcessError:
+                env_example = ""
+            arquitetura["configuracaoPublicada"] = configuracao_publicada(env_example)
+            env = self.ambiente_java("x", "x", arquitetura)
             yml = self.capturar(["git", "show", f"{arquitetura['sha']}:src/main/resources/application.yml"],
                                 self.cfg.repo)
-            por_arq[arquitetura["nome"]] = {k: resolver_placeholder(v, env)
-                                           for k, v in opcoes_chat_ollama(yml).items()}
-        valores = list(por_arq.values())
-        if any(v != valores[0] for v in valores):
-            raise RuntimeError(f"opcoes do chat diferentes entre os commits: {por_arq}")
-        return valores[0]
+            por_arq[arquitetura["nome"]] = {
+                "publicada": arquitetura["configuracaoPublicada"],
+                "chat": {k: resolver_placeholder(v, env) for k, v in opcoes_chat_ollama(yml).items()},
+            }
+        diferentes = {k for d in por_arq.values() for k in d["chat"]
+                      if len({d2["chat"].get(k) for d2 in por_arq.values()}) > 1}
+        if diferentes:
+            log("opcoes do chat diferentes entre os commits (parte da arquitetura medida): "
+                + ", ".join(sorted(diferentes)))
+        return por_arq
 
     def sessao_paralela(self) -> dict | None:
         """O SHA da Ceres 2.0 ja tem a sessao que muda a main em paralelo (ex.: #270)?
