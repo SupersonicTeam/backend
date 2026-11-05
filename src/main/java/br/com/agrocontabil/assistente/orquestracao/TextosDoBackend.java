@@ -3,7 +3,9 @@ package br.com.agrocontabil.assistente.orquestracao;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ContextoAssistente.TextoDoBackend;
 import br.com.agrocontabil.assistente.FonteDado;
+import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
+import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.EnumSet;
@@ -45,7 +47,8 @@ public class TextosDoBackend {
 
   /** Recusas da lei que contradiriam um artigo citado logo depois. */
   private static final List<String> RECUSAS_DA_LEI = List.of(
-      OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL, ValidadorCitacao.SEM_FUNDAMENTO);
+      OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL, ValidadorCitacao.SEM_FUNDAMENTO,
+      RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
 
   private final BuscaTextualLegislacaoService busca;
 
@@ -85,8 +88,13 @@ public class TextosDoBackend {
     String texto = substitui || base.isBlank() ? doBackend : base + "\n\n" + doBackend;
     DesfechoInteracao desfecho = substitui && SUBSTITUIVEIS.contains(resultado.desfecho())
         ? DesfechoInteracao.RESPONDIDA : resultado.desfecho();
+    // Os trechos "mais proximos" so fazem sentido com a frase que os apresenta (#258, #343): sem
+    // ela, ao lado do artigo do dado, seriam artigos soltos.
+    List<CitacaoLegal> daLei = !dispositivos.isEmpty()
+        && daRota.contains(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
+            ? List.of() : resultado.citacoes();
     return new ResultadoOrquestracao(resultado.rota(), texto, desfecho,
-        CitacoesFixas.juntar(resultado.citacoes(), CitacoesFixas.buscar(busca,
+        CitacoesFixas.juntar(daLei, CitacoesFixas.buscar(busca,
             List.copyOf(dispositivos), contexto, "Tratamento do produto")),
         substitui || resultado.exibirFontes(), resultado.modoFallback(), resultado.atalhos());
   }

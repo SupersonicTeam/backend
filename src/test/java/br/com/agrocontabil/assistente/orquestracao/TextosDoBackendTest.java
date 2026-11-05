@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
@@ -115,6 +116,25 @@ class TextosDoBackendTest {
         DesfechoInteracao.RESPONDIDA, List.of(), true);
     assertThat(textos.aplicar(comRecusa, contexto).texto())
         .isEqualTo("Compras: R$ 1,00.\n\nNao encontrei trator na tabela.\n\n" + TEMPLATE);
+  }
+
+  @Test
+  @DisplayName("#343: no MISTO, 'nao consegui confirmar' da lei sai junto com os trechos que ele "
+      + "apresentava, ao lado do artigo do dado")
+  void trechosSemConfirmacaoSaem() {
+    contexto.registrarFonte("totalComprasPorInsumo", Map.of(), false);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), true);
+    contexto.registrarTextoDoBackend(TEMPLATE, List.of("LC 214/2025|art. 137"));
+    when(busca.buscarDispositivos(any(), any())).thenReturn(List.of());
+    ResultadoOrquestracao misto = new ResultadoOrquestracao(Intencao.MISTO,
+        "Compras: R$ 1,00.\n\n" + RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+        DesfechoInteracao.RESPONDIDA,
+        List.of(new CitacaoLegal("LC 214/2025", "art. 99", "u", "t")), true);
+
+    ResultadoOrquestracao r = textos.aplicar(misto, contexto);
+
+    assertThat(r.texto()).isEqualTo("Compras: R$ 1,00.\n\n" + TEMPLATE);
+    assertThat(r.citacoes()).isEmpty();
   }
 
   @Test

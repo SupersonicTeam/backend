@@ -18,6 +18,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.DefaultToolCallingManager;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
@@ -25,6 +26,7 @@ import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.execution.ToolExecutionException;
 import org.springframework.ai.tool.resolution.StaticToolCallbackResolver;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
@@ -146,7 +148,52 @@ public class RotaDados {
     List<String> resultados = new ArrayList<>();
     coletarResultados(execucao.conversationHistory(), resultados);
     contexto.verificarAtiva();
+    return redigir(pergunta, perguntaAoModelo, resultados, contexto);
+  }
 
+  /**
+   * Atalho fixo da tela (#343): a função é chamada direto pelo backend, sem modelo e sem tool
+   * calling, e a resposta sai pelo mesmo template, a mesma composição e as mesmas conferências da
+   * rota normal. Sem parâmetros: cada função tem o seu padrão (mês atual, próximos 30 dias). O
+   * resultado passa pelo mesmo conversor das funções ({@code ResultadoSanitizadoConverter}), então
+   * a fonte do {@link ValidadorNumeros} é a mesma do tool calling.
+   *
+   * @param funcao   nome da função de dados
+   * @param pergunta pergunta do usuário (atalhos de tela na falha)
+   * @param contexto contexto da pergunta
+   * @return texto do template, ou a mensagem honesta se a consulta falhou
+   * @throws IllegalArgumentException se a função não é de dados
+   */
+  public ResultadoRota responderAtalho(String funcao, String pergunta, ContextoAssistente contexto) {
+    ToolCallback callback = ferramentas.stream()
+        .filter(f -> f.getToolDefinition().name().equals(funcao))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("Funcao de dados inexistente: " + funcao));
+    contexto.verificarAtiva();
+    String resultado;
+    try {
+      resultado = callback.call("{}", new ToolContext(contexto.comoToolContext()));
+    } catch (ToolExecutionException e) {
+      if (e.getCause() instanceof ContextoAssistenteAusenteException ausente) {
+        throw ausente;
+      }
+      contexto.verificarAtiva();
+      // Mesma regra do tool calling: consulta falhada nao vira negativa (#266).
+      log.warn("Ceres: falha na funcao {} do atalho: {}", funcao,
+          e.getCause() == null ? "?" : e.getCause().getClass().getName());
+      return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.SEM_RESPOSTA, List.of(),
+          ModoFallback.atalhos(pergunta));
+    }
+    contexto.verificarAtiva();
+    return redigir(pergunta, DataSanitizer.mascarar(pergunta), List.of(resultado), contexto);
+  }
+
+  /**
+   * Texto do template a partir das seções registradas pelas funções, com as redes de segurança
+   * (#266): número sem fonte descarta, negativa sem recorte é trocada.
+   */
+  private ResultadoRota redigir(String pergunta, String perguntaAoModelo, List<String> resultados,
+      ContextoAssistente contexto) {
     List<SecaoResposta> secoes = contexto.secoes();
     String texto = ComposicaoRespostaDados.compor(secoes);
     if (texto.isBlank() && !contexto.textosDoBackend().isEmpty()) {

@@ -364,6 +364,24 @@ O `OrquestradorService` decide:
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com
 números da lei, e nenhum validador saberia de onde cada um veio.
 
+**Atalhos fixos da tela, antes de tudo (#343).** As três perguntas sugeridas ao abrir o chat —
+"Quanto eu tenho que pagar este mês?", "Quando vence a minha próxima guia?" e "O que muda para mim
+com o IBS e o CBS?" — são reconhecidas pelo **texto normalizado exato** (`AtalhosFixos`, com a
+normalização das `RegrasClassificacao`: sem acento, caixa nem pontuação) e respondem **sem nenhuma
+chamada ao modelo**, inclusive com ele fora do ar e sem gastar crédito da cota (camada
+`ATALHO_FIXO` na auditoria). As de dados chamam a função direto (`vencimentosDoMes`,
+`proximosVencimentos`) por `RotaDados.responderAtalho`, sem tool calling, e saem pelo template da
+#266 com as mesmas conferências. A de legislação responde com o texto curado do
+`AtalhoReformaTributaria` (padrão do `FundamentoRetencao`): ano de teste de 2026 (CBS 0,9% e IBS
+0,1%, dispensa do recolhimento para quem cumpre as obrigações acessórias), redução de 60% do in
+natura, receita abaixo de R$ 3,6 milhões fora do IBS/CBS salvo opção, e o split payment — nove
+citações fixas, cada uma conferida na base (LC 214/2025, arts. 343, 346, 348 § 1º, 137, 164, 165,
+31 e 32; EC 132/2023, art. 125 do ADCT). Na VPS em 2026-11-04 essa pergunta, ampla demais para a
+busca por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALIDA`, 19 e 42 s).
+Pergunta parecida, mas não igual, segue o fluxo normal. **Texto curado = revisão da equipe a cada
+mudança**; as frases dos atalhos ficam fora do prompt do classificador e das descrições das
+funções (o gabarito as mede: T01–T03).
+
 **Antes do classificador, um filtro determinístico de prompt injection** (`FiltroInjecao`, #145):
 "ignore as instruções", "prompt de sistema", "agora você é um...", "sem restrições", "modo
 desenvolvedor" vão direto para `FORA_DE_ESCOPO`, sem chamar o modelo. Na avaliação de 2026-10-14 o
@@ -387,8 +405,16 @@ recuperados, e o produtor lia "Não encontrei fundamento legal para isso." Agora
 consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos...")
 com as citações dos trechos marcados certo, sem o texto do modelo. A frase **não afirma** que os
 trechos respondem: numa pergunta de premissa falsa (A05/A08) o descarte é o sinal de que não
-respondem. `SEM_FUNDAMENTO` fica sem trecho recuperado, sem marca nenhuma, só com marcas
-inventadas ou com o `NAO_ENCONTREI` no texto (que vale mesmo com marca). No MISTO a parte de lei com
+respondem. **Desde a #343, `SEM_FUNDAMENTO` fica só para quando não há trecho recuperado.** Com
+trechos e o modelo sem nenhuma marca válida (sem marca, só marcas inventadas ou o `NAO_ENCONTREI`,
+que vale mesmo com marca), a resposta também é a `TRECHOS_SEM_CONFIRMACAO`, com os **três trechos
+mais próximos da busca** (`RotaLegislacao.TRECHOS_RELACIONADOS`), na ordem dela, como "trechos
+relacionados": o texto do modelo sai, os trechos ficam, e a frase segue sem afirmar que respondem
+(premissa falsa continua recusada: o desfecho é `CITACAO_INVALIDA`, como antes, e a avaliação o
+conta como recusa). Exceção: no MISTO com a pergunta inteira (sem parte legal separada) a lei
+descartada não leva artigos para o lado dos dados (#260). O `FundamentoRetencao` e o
+`TextosDoBackend` tiram essa frase **e** os trechos que ela apresentava quando põem o texto do
+backend com o artigo certo. No MISTO a parte de lei com
 citações entra com essa frase; sem trecho nenhum, a recusa da lei só entra quando a pergunta tem
 uma parte legal de verdade (o classificador a separou, ou os dados vieram em fallback), e fala só
 dela ("Sobre a parte de legislação da pergunta, não encontrei fundamento legal."). Sem parte legal

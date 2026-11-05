@@ -146,6 +146,19 @@ conferido à mão contra as regras da #274 no `GabaritoCeresIntegrationTest`. Na
 `listarNotas`. Campo de valor pode indexar lista (`notas.0.valorIbs`). Na `2026-11-01.2` (#274,
 parte 3) a T11 ("quanto vendi de soja?") também, com `totalVendasPorProduto`.
 
+Na versão `2026-11-04.1` (#343), **T01, T02 e T03 passam a medir os atalhos fixos da tela, não o
+classificador**: a frase exata (normalizada) é reconhecida antes dele (`AtalhosFixos`). T01 e T02
+chamam a função direto pelo backend e respondem pelo template da #266; T03 responde com o texto
+curado do `AtalhoReformaTributaria`, e os `dispositivosEsperados` são as citações fixas dele, cada
+uma conferida na base (o esperado antigo `LC 214/2025, art. 1` nunca casava: na base o rótulo é
+`art. 1º`). A **T14** é o caso adversário do buraco 2/3: a mesma pergunta dita de outro jeito
+("pra mim", "na reforma"), que **não** pode cair no atalho, vai à rota de lei normal e não pode
+terminar em "não encontrei fundamento legal" — com trechos recuperados, a resposta é a do modelo
+ou os trechos relacionados. Critério novo, opcional por pergunta: `semBecoSemSaida` (métrica "Sem
+beco sem saída"), que falha quando o texto é a recusa da lei sem nenhum trecho
+(`ValidadorCitacao.SEM_FUNDAMENTO` ou, no MISTO, `SEM_FUNDAMENTO_PARTE_LEGAL`); "não consegui
+confirmar" com os trechos não conta como beco sem saída. São 87 perguntas e 21 casos adversários.
+
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função
 da #274 que ainda não existe (nota pelo número, nota devolvida, vendas por produto; as de débito e

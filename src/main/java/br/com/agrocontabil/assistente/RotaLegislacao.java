@@ -72,6 +72,12 @@ public class RotaLegislacao {
       "Nao consegui confirmar uma resposta com a legislacao. Estes sao os trechos de lei mais "
           + "proximos da pergunta, para consulta.";
 
+  /**
+   * Trechos mostrados quando o modelo não marca nenhum válido (#343): os primeiros da busca, já
+   * ordenados do mais para o menos próximo.
+   */
+  static final int TRECHOS_RELACIONADOS = 3;
+
   private final ModeloLinguagem modelo;
   private final BuscaLegislacaoService busca;
   private final ValidadorCitacao validadorCitacao;
@@ -168,21 +174,20 @@ public class RotaLegislacao {
     String texto = limpar(resposta.getResult().getOutput().getText());
 
     if (texto.contains(PromptsCeres.NAO_ENCONTREI)) {
-      // O modelo disse que os trechos nao respondem: vale isso, com ou sem marca no texto.
-      log.info("Ceres: modelo nao encontrou a resposta nos trechos");
-      return ResultadoRota.descartada(
-          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+      // O modelo disse que os trechos nao respondem: o texto dele sai, com ou sem marca. Os mais
+      // proximos ficam para consulta (#343), sem afirmar que respondem.
+      log.info("Ceres: modelo nao encontrou a resposta nos trechos; trechos relacionados");
+      return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada);
     }
     ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
     if (!citacao.valida()) {
-      // Sem marca (inclusive o NAO_ENCONTREI) ou com marca inventada. Com marca inventada e
-      // alguma certa, os trechos certos sao os mais proximos (#258): so eles, sem o texto, e sem
-      // afirmar que respondem.
+      // Sem marca ou com marca inventada. Com marca inventada e alguma certa, os trechos certos
+      // sao os mais proximos (#258); sem nenhuma certa, os mais proximos da busca (#343). Nos dois
+      // casos sem o texto e sem afirmar que respondem.
       ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, trechos);
       if (validas.citacoes().isEmpty()) {
-        log.info("Ceres: resposta de legislacao sem citacao valida descartada");
-        return ResultadoRota.descartada(
-            ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+        log.info("Ceres: resposta de legislacao sem citacao valida; trechos relacionados");
+        return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada);
       }
       log.info("Ceres: resposta de legislacao com marca inexistente; so os trechos validos");
       contexto.registrarTrechosCitados(validas.idsCitados());
@@ -218,6 +223,30 @@ public class RotaLegislacao {
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
     return ResultadoRota.aceita(regra, citacao.citacoes());
+  }
+
+  /**
+   * Resposta de lei descartada com trechos recuperados, sem nenhuma marca válida do modelo (ou com
+   * o {@code NAO_ENCONTREI}): {@link #TRECHOS_SEM_CONFIRMACAO} com os {@link #TRECHOS_RELACIONADOS}
+   * mais próximos da busca, na ordem dela, em vez de "não encontrei fundamento legal" sobre um
+   * assunto com artigos na base (#343). A frase não afirma que eles respondem: numa pergunta de
+   * premissa falsa o descarte continua sendo o sinal de que não respondem, e o desfecho segue
+   * {@code CITACAO_INVALIDA} (recusa na avaliação, como antes).
+   *
+   * <p>No MISTO com a pergunta inteira (o classificador não separou uma parte legal), a lei
+   * descartada não entra (#260): três artigos ao lado de uma resposta de dados seriam ruído.
+   */
+  private static ResultadoRota trechosRelacionados(List<TrechoRecuperado> trechos,
+      ContextoAssistente contexto, boolean soRegraGeral, boolean perguntaSeparada) {
+    if (soRegraGeral && !perguntaSeparada) {
+      return ResultadoRota.descartada(
+          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+    }
+    List<TrechoRecuperado> relacionados =
+        trechos.subList(0, Math.min(TRECHOS_RELACIONADOS, trechos.size()));
+    contexto.registrarTrechosCitados(relacionados.stream().map(TrechoRecuperado::id).toList());
+    return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.CITACAO_INVALIDA,
+        relacionados.stream().map(TrechoRecuperado::comoCitacao).toList());
   }
 
   /**

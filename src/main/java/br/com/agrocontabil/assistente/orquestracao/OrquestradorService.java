@@ -9,11 +9,13 @@ import br.com.agrocontabil.assistente.VerificadorNegativaDados;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.fallback.TelaAtalho;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
+import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos.AtalhoFixo;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -75,14 +77,16 @@ public class OrquestradorService {
   private final TrechosDasCompras trechosDasCompras;
   private final FundamentoRetencao fundamentoRetencao;
   private final TextosDoBackend textosDoBackend;
+  private final AtalhoReformaTributaria atalhoReforma;
   private final double confiancaMinima;
 
   /** Constrói o orquestrador. */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
       RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
       FundamentoRetencao fundamentoRetencao, TextosDoBackend textosDoBackend,
-      ModoFallback fallback, DisponibilidadeModelo disponibilidade,
-      AssistenteProperties propriedades) {
+      AtalhoReformaTributaria atalhoReforma, ModoFallback fallback,
+      DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
+    this.atalhoReforma = atalhoReforma;
     this.classificador = classificador;
     this.rotaDados = rotaDados;
     this.rotaLegislacao = rotaLegislacao;
@@ -105,6 +109,12 @@ public class OrquestradorService {
    */
   public ResultadoOrquestracao responder(
       String pergunta, ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota) {
+    // Atalho da tela (#343): texto exato, antes do classificador e sem o modelo decidir nada. Uma
+    // frase fixa da tela nunca tem forma de injecao, entao a ordem com o FiltroInjecao nao importa.
+    Optional<AtalhoFixo> atalho = AtalhosFixos.reconhecer(pergunta);
+    if (atalho.isPresent()) {
+      return responderAtalho(atalho.get(), pergunta, contexto, aoDecidirRota);
+    }
     ClassificacaoIntencao classificacao = classificar(pergunta, contexto);
     Intencao rota = classificacao.intencao();
     aoDecidirRota.accept(rota);
@@ -120,6 +130,24 @@ public class OrquestradorService {
     // Tratamento do produto pela tabela oficial (#283): texto e citacao do dado, nao do modelo.
     resultado = textosDoBackend.aplicar(resultado, contexto);
     // Retencao (RN009): as duas regras e as citacoes vem do backend, nao da memoria do modelo.
+    return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
+  }
+
+  /**
+   * Atalho fixo da tela (#343), sem nenhuma chamada ao modelo e sem depender do disjuntor: o de
+   * legislação responde com o texto curado do {@link AtalhoReformaTributaria}; os de dados chamam a
+   * função direto ({@link RotaDados#responderAtalho}) e saem pelo template da #266. A camada
+   * {@code ATALHO_FIXO} vai à auditoria; o evento {@code rota} do SSE sai como nas outras.
+   */
+  private ResultadoOrquestracao responderAtalho(AtalhoFixo atalho, String pergunta,
+      ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota) {
+    contexto.registrarCamadaClassificacao(CamadaClassificacao.ATALHO_FIXO.name());
+    aoDecidirRota.accept(atalho.rota());
+    contexto.verificarAtiva();
+    ResultadoOrquestracao resultado = atalho.funcao() == null
+        ? atalhoReforma.responder(contexto)
+        : deRota(Intencao.DADOS, rotaDados.responderAtalho(atalho.funcao(), pergunta, contexto));
+    resultado = textosDoBackend.aplicar(resultado, contexto);
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }
 

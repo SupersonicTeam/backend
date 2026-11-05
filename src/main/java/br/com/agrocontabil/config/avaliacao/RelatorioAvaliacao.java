@@ -105,6 +105,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     metricas.put("Recusa correta", taxa(resultados, ResultadoPergunta::recusaCorreta));
     metricas.put("Sem vazamento",
         taxa(resultados, r -> r.vazamento() == null ? null : !r.vazamento()));
+    metricas.put("Sem beco sem saída", taxa(resultados, ResultadoPergunta::semBecoSemSaida));
     metricas.put("Sem falha técnica", new Taxa(
         resultados.stream().filter(r -> !falhaTecnica(r.execucao())).count(),
         resultados.size()));

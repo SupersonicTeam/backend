@@ -37,6 +37,9 @@ import java.util.Objects;
  * @param pendente              o que falta para a pergunta ter valor esperado (ex.: a função da
  *                              #274 que ainda não existe). Com ela a pergunta mede só rota, e a
  *                              categoria DADOS pode ficar sem função esperada
+ * @param semBecoSemSaida       {@code true} se a resposta não pode ser "não encontrei fundamento
+ *                              legal" (#343): a pergunta tem artigos na base, e a Ceres deve
+ *                              responder ou mostrar os trechos relacionados
  */
 public record PerguntaGabarito(
     String id,
@@ -52,7 +55,8 @@ public record PerguntaGabarito(
     List<String> valoresProibidos,
     List<String> textosProibidos,
     boolean adversario,
-    String pendente) {
+    String pendente,
+    boolean semBecoSemSaida) {
 
   /** Categoria da pergunta no relatório. */
   public enum Categoria { DADOS, LEGISLACAO, MISTO, FORA_DE_ESCOPO, ATAQUE }
@@ -91,6 +95,17 @@ public record PerguntaGabarito(
     this(id, categoria, pergunta, rotaEsperada, funcoesEsperadas, parametrosEsperados, camposValor,
         dispositivosEsperados, deveRecusar, padroesRecusa, valoresProibidos, textosProibidos, false,
         null);
+  }
+
+  /** Pergunta sem o critério de beco sem saída (#343). */
+  public PerguntaGabarito(String id, Categoria categoria, String pergunta, Intencao rotaEsperada,
+      List<String> funcoesEsperadas, Map<String, List<String>> parametrosEsperados,
+      List<String> camposValor, List<String> dispositivosEsperados, boolean deveRecusar,
+      List<String> padroesRecusa, List<String> valoresProibidos, List<String> textosProibidos,
+      boolean adversario, String pendente) {
+    this(id, categoria, pergunta, rotaEsperada, funcoesEsperadas, parametrosEsperados, camposValor,
+        dispositivosEsperados, deveRecusar, padroesRecusa, valoresProibidos, textosProibidos,
+        adversario, pendente, false);
   }
 
   /** Função cujo resultado define o valor esperado. */

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
@@ -100,6 +101,24 @@ class FundamentoRetencaoTest {
         "Como funciona a retencao do Funrural?", contexto);
 
     assertThat(r.texto()).isEqualTo(FundamentoRetencao.TEXTO);
+  }
+
+  @Test
+  @DisplayName("#343: 'nao consegui confirmar' sai com os trechos que ele apresentava; ficam so "
+      + "as citacoes fixas das duas regras")
+  void substituiTrechosSemConfirmacao() {
+    CitacaoLegal relacionado = new CitacaoLegal("LC 214/2025", "art. 99", "u", "t");
+    when(busca.buscarDispositivos(any(), any()))
+        .thenReturn(List.of(trecho("LC 214/2025", "art. 31")));
+
+    ResultadoOrquestracao r = fundamento.aplicar(
+        resposta(Intencao.LEGISLACAO, RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+            List.of(relacionado)),
+        "Como funciona a retencao do Funrural?", contexto);
+
+    assertThat(r.texto()).isEqualTo(FundamentoRetencao.TEXTO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 31");
   }
 
   @Test
