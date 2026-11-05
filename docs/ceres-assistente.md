@@ -583,11 +583,23 @@ régua da #264 na VPS, nunca às cegas.
   funções em ordem fixa (pelo nome: o `ToolCallbacks.from` segue a reflexão, que a JVM não
   ordena). O template do Qwen3 põe as definições **depois** da instrução de sistema, então a data,
   que antes fechava a instrução, invalidava todas as definições a cada dia: agora ela vai na
-  mensagem do usuário (`PromptsCeres.mensagemDados`), junto da pergunta.
-- **Lei:** regras no início; data e trechos no fim. A parte reaproveitada é pequena (~1.000
-  caracteres): os trechos mudam a cada pergunta.
+  mensagem do usuário (`PromptsCeres.mensagemDados`), na linha "Hoje e" antes da pergunta. A
+  instrução de sistema diz que só essa linha vale como data de hoje: uma data escrita na pergunta
+  não a substitui. A garantia continua em código onde ela importa: o período consultado sai
+  sempre escrito na resposta (recorte do template, #266) e o produtor só alcança os próprios dados
+  (`ContextoAssistente`).
+- **Lei:** regras no início; data e trechos no fim. A regra extra da variante do MISTO vem
+  depois das regras comuns, então as duas variantes dividem o prefixo das regras. A parte
+  reaproveitada é pequena (~1.000 caracteres): os trechos mudam a cada pergunta.
 - **Classificação:** já era constante.
 - **Limite:** com uma vaga só, o cache é o da **última** requisição. Duas perguntas de dados
   seguidas reaproveitam o prefixo inteiro; uma classificação ou uma lei no meio (o MISTO faz dados
   e lei na mesma pergunta) o substitui. `OLLAMA_NUM_PARALLEL=2` daria duas vagas, ao custo do
   dobro da memória do contexto: hipótese a medir na VPS, não configuração adotada.
+- **Tokens com cache (a conferir na VPS):** a cota (#166) e a auditoria usam o `prompt_eval_count`
+  que o Ollama informa. Se, com o prefixo no cache, ele contar só os tokens processados (a parte
+  nova), a mesma pergunta custa menos crédito quando a anterior foi de dados. Conferir comparando
+  `tokens_entrada` de duas perguntas de dados seguidas em `assistente_interacao`.
+- **Acerto:** a ordem das definições e a redação da regra da data mudam o que o modelo vê. A
+  comparação na VPS mede tempo **e** acerto (gabarito da #158 pelo comando `dev,avaliacao` e
+  harness da #264, 3 repetições).

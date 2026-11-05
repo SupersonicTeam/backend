@@ -98,8 +98,8 @@ public class RotaDados {
     this.modelo = modelo;
     this.validadorNumeros = validadorNumeros;
     this.verificadorNegativa = verificadorNegativa;
-    // Ordem pelo nome (#270): o ToolCallbacks.from segue a ordem da reflexao, que a JVM nao garante.
-    // As definicoes fazem parte do prefixo fixo do prompt, e outra ordem invalidaria o cache.
+    // Ordem pelo nome (#270): o ToolCallbacks.from segue a ordem da reflexao, sem garantia da
+    // JVM. As definicoes fazem parte do prefixo fixo do prompt; outra ordem invalidaria o cache.
     this.ferramentas = Stream.of(ToolCallbacks.from(ferramentasDadosProdutor))
         .sorted(Comparator.comparing(f -> f.getToolDefinition().name()))
         .toList();
@@ -214,8 +214,9 @@ public class RotaDados {
           ModoFallback.atalhos(pergunta));
     }
     // Rede de seguranca (#266, item 6): o texto e do template, entao os numeros vem dos resultados
-    // das funcoes; os pedacos de texto livre e de calculo do backend entram como fonte. O prompt
-    // de sistema NAO entra (a data de hoje e as referencias legais liberariam 29, 2026, 214...).
+    // das funcoes; os pedacos de texto livre e de calculo do backend entram como fonte, e da
+    // mensagem ao modelo so a pergunta mascarada. O prompt de sistema e a linha "Hoje e" da
+    // mensagem do usuario (#270) NAO entram: liberariam 29, 2026, 214...
     List<String> fontes = new ArrayList<>(resultados);
     fontes.addAll(ComposicaoRespostaDados.textosLivres(secoes));
     fontes.add(perguntaAoModelo);
