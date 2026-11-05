@@ -3,6 +3,7 @@ package br.com.agrocontabil.config.avaliacao;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,6 +36,21 @@ class SeparacaoTreinoTesteTest {
     assertThat(SeparacaoTreinoTeste.TREINO_EMBUTIDO.resolve("classificacao-rota.json"))
         .exists();
     assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(real)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Guarda real: nenhuma pergunta do benchmark da banca (#352) está no treino nem no prompt")
+  void perguntasDoBenchmarkForaDoTreino() throws IOException {
+    Gabarito benchmark = new ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .readValue(PerguntasBenchmarkIntegrationTest.PERGUNTAS.toFile(), Gabarito.class);
+
+    assertThat(benchmark.perguntas()).hasSizeGreaterThan(90);
+    assertThat(SeparacaoTreinoTeste.contaminacoes(benchmark, SeparacaoTreinoTeste.TREINO))
+        .isEmpty();
+    assertThat(SeparacaoTreinoTeste.contaminacoes(benchmark, SeparacaoTreinoTeste.TREINO_EMBUTIDO))
+        .isEmpty();
+    assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(benchmark)).isEmpty();
   }
 
   @Test

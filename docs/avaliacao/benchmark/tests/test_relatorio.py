@@ -127,8 +127,8 @@ class ValoresDivergentesTest(Base):
         celulas = rel.carregar_celulas(self.pasta)
         self.assertEqual(set(rel.valores_divergentes(celulas)), {"D01", "T07", "P01"})
         texto = rel.gerar(self.pasta)
-        self.assertIn("Fora do recorte comum por valor esperado diferente", texto)
-        self.assertIn("| Recorte comum | 2 perguntas", texto)
+        self.assertIn("Fora da capacidade comum por valor esperado diferente", texto)
+        self.assertIn("| Capacidade comum | 2 perguntas", texto)
 
 
 class ConclusaoERelatorioTest(Base):
@@ -145,8 +145,8 @@ class ConclusaoERelatorioTest(Base):
     def test_relatorio_completo(self):
         texto = rel.gerar(self.pasta)
         self.assertNotIn("DADOS FICTÍCIOS", texto)
-        self.assertIn("## (a) Recorte comum", texto)
-        self.assertIn("## (b) Gabarito inteiro", texto)
+        self.assertIn("## (a) Capacidade comum", texto)
+        self.assertIn("## (b) Conjunto inteiro", texto)
         self.assertIn("(pen. 2)", texto)
         self.assertIn("Com todas as letras: na Ceres 2.0, um modelo menor passa a ser viável", texto)
         self.assertIn("`m-small` (0,5 GB contra 3,0 GB do `m-ref`)", texto)
@@ -242,3 +242,129 @@ class RevisaoTest(Base):
         texto = rel.gerar(self.pasta)
         self.assertIn("| EMBEDDING | LLM | PALAVRAS_CHAVE |", texto)
         self.assertIn("| Ceres 2.0 · `m-ref` | 0% | 0% | 90% | 0% | 0% | 10% |", texto)
+
+
+class TemasTest(Base):
+    def test_acerto_por_tema_no_recorte_e_no_conjunto(self):
+        celula = self.celulas["ceres-1--m-ref"]
+        comum = rel.por_tema(celula, self.comum, self.canonico, self.adapt, rel.RECORTE_COMUM)
+        self.assertEqual(set(comum), {"compras", "lei", "seguranca"})
+        self.assertEqual((comum["compras"].media, comum["compras"].total), (50.0, 1))
+        inteiro = rel.por_tema(celula, self.inteiro, self.canonico, self.adapt, rel.RECORTE_INTEIRO)
+        # P01 (compras) e T07 (guias) penalizadas por capacidade: erradas nas duas rodadas.
+        self.assertEqual((inteiro["compras"].media, inteiro["compras"].total), (25.0, 2))
+        self.assertEqual(inteiro["guias"].media, 0.0)
+
+    def test_secao_por_tema_e_grafico_principal(self):
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| Compras e insumos | 2 | 1 | 1 | 0 |", texto)
+        self.assertIn("| **Total** | 5 | 3 | 2 | 0 |", texto)
+        self.assertIn("### Acerto por tema × célula — capacidade comum", texto)
+        svg = (self.pasta / "graficos" / "acerto-por-tema.svg").read_text(encoding="utf-8")
+        self.assertIn("Acerto por tema × célula", svg)
+        self.assertIn(">50%<", svg)
+        self.assertIn("Compras e insumos", svg)
+        self.assertTrue(texto.index("acerto-por-tema.svg") < texto.index("rota.svg"))
+
+    def test_rodada_de_teste_marcada_e_latencia_local_separada_da_vps(self):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada.update({"repeticoes": 1, "sessao7": {"issue": "#270", "rotulo": "Sessão 7", "contem": False},
+                       "hardware": ["Ryzen 5, 32 GB RAM, GPU NVIDIA GeForce RTX 3050, 4096 MiB"]})
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        manifesto = self.pasta / "ceres-2--m-ref" / "celula.json"
+        dados = json.loads(manifesto.read_text(encoding="utf-8"))
+        dados["avisos"] = ["bge-m3 saiu da memória 3 vez(es) no meio da célula"]
+        dados["memoria"]["ondeRodou"] = {"m-ref": ["GPU"], "bge-m3": ["CPU"]}
+        manifesto.write_text(json.dumps(dados), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("RODADA DE TESTE — NÃO VALE PARA A BANCA", texto)
+        self.assertIn("**antes** dela", texto)
+        self.assertIn("nesta máquina (com GPU)", texto)
+        self.assertIn("**Não é a latência de produção**", texto)
+        self.assertIn("## Latência na VPS (produção)", texto)
+        self.assertIn("bge-m3 saiu da memória 3 vez(es)", texto)
+        self.assertIn("m-ref: GPU; bge-m3: CPU", texto)
+        self.assertIn("RODADA DE TESTE", (self.pasta / "graficos" / "acerto-por-tema.svg").read_text(encoding="utf-8"))
+
+    def test_rodada_antiga_sem_capacidade_usa_o_gabarito_antigo(self):
+        canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        for p in canonico["perguntas"]:
+            p.pop("capacidade")
+        (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["gabaritoAntigo"] = "gabarito-antigo.json"
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        self.assertIn("| Capacidade comum | 3 perguntas", rel.gerar(self.pasta))
+
+
+class DivergentesConhecidosTest(Base):
+    def test_divergente_conhecido_sai_mesmo_sem_a_ceres_1_na_pasta(self):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["divergentesConhecidos"] = ["D01"]
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| Capacidade comum | 2 perguntas", texto)
+        self.assertIn("`divergentesConhecidos` da matriz): D01", texto)
+
+
+class Sessao7Test(Base):
+    def test_cortadas_ensaio_e_comparacao_com_queda(self):
+        celula = self.celulas["ceres-1--m-ref"]
+        antes, total = rel.possivelmente_cortadas(celula)
+        # A D01 da rodada 1 termina em ponto; cortada no meio, conta.
+        celula.rodadas[0][0]["execucao"]["texto"] = "O total das suas compras de fertilizante foi de"
+        self.assertEqual(rel.possivelmente_cortadas(celula), (antes + 1, total))
+        anterior = Path(tempfile.mkdtemp()) / "ensaio"
+        shutil.copytree(self.pasta, anterior)
+        arquivo = self.pasta / "ceres-2--m-ref" / "ceres-2--m-ref.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        for rodada in dados["rodadas"]:
+            rodada["resultados"][0]["numeroCorreto"] = False
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True, "confirmado": True}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta, comparar_com=anterior)
+        self.assertNotIn("ENSAIO", texto)
+        self.assertIn("a coluna inclui as mudanças dela", texto)
+        # Com PRs da sessao, mas sem o ultimo configurado: ensaio parcial.
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True, "confirmado": False,
+                             "commits": ["003624f perf(ceres): prompt (#270) (#351)"]}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        parcial = rel.gerar(self.pasta)
+        self.assertIn("O SHA medido já tem 1 PR(s) dela", parcial)
+        self.assertIn("**parcial**", parcial)
+        self.assertIn("## Comparação com a rodada `ensaio`", texto)
+        self.assertIn("| Ceres 2.0 · `m-ref` | Exatidão numérica | 100,0% n=1 | 0,0% n=1 | **QUEDA** |", texto)
+        self.assertIn("**1 queda(s) fora da faixa.**", texto)
+        self.assertIn("## Respostas possivelmente cortadas", texto)
+        shutil.rmtree(anterior.parent, ignore_errors=True)
+
+    def test_ceres_2_antes_da_sessao_7_e_ensaio(self):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": False}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("**ENSAIO — a coluna Ceres 2.0 não é a de depois da Sessão 7 (#270) inteira.**", texto)
+        self.assertIn("O SHA medido não tem nenhum PR dela", texto)
+
+
+class IneditasEParecidasTest(Base):
+    def test_recorte_de_ineditas_e_acerto_sem_as_parecidas(self):
+        canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        for p in canonico["perguntas"]:
+            p["origem"] = "inedita" if p["id"] in ("P01", "L01") else "gabarito"
+        (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["parecidasComTreino"] = ["D01"]
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("## (c) Inéditas — generalização", texto)
+        self.assertIn("Com 50 pontos percentuais por pergunta (n=2)", texto)
+        self.assertIn("1 delas são `so_ceres_2` (P01)", texto)
+        self.assertIn("## Com e sem as perguntas parecidas com o treino", texto)
+        # Ceres 1 m-ref: D01 erra na rodada 2; sem ela, L01 e A01 certas nas duas.
+        self.assertIn("| Ceres 1 · `m-ref` | 83,3% (66,7–100,0) n=3 | 100,0% n=2 | +16,7 p.p. |", texto)
+        celula = self.celulas["ceres-1--m-ref"]
+        ineditas = rel.faixa(celula, "numero", ["P01"], self.canonico, self.adapt, rel.RECORTE_INEDITAS)
+        self.assertEqual((ineditas.media, ineditas.penalizadas), (0.0, 1))

@@ -27,11 +27,17 @@ def main() -> int:
     p.add_argument("--saida", default=str(repo / "docs/avaliacao/resultados/benchmark"))
     p.add_argument("--trabalho", default="~/.cache/agroconia-benchmark",
                    help="worktrees e JARs (fora do repositorio)")
+    p.add_argument("--teste", action="store_true",
+                   help="1 repeticao, para conferir o executor: NAO vale para a banca")
+    p.add_argument("--embedding-cpu", action="store_true",
+                   help="bge-m3 sem GPU (cria bge-m3-cpu, num_gpu 0): VRAM pequena, ver README")
+    p.add_argument("--comparar-com", help="rodada anterior (ex.: ensaio antes da #270) para o "
+                   "relatorio apontar queda de acerto")
     p.add_argument("--retomar", help="pasta de uma rodada interrompida: pula as celulas medidas")
     args = p.parse_args()
     cfg = executor.montar_config(args, repo)
     rodada = executor.Executor(cfg).executar()
-    relatorio.gerar(rodada)
+    relatorio.gerar(rodada, comparar_com=Path(args.comparar_com) if args.comparar_com else None)
     executor.log(f"relatorio em {rodada / 'relatorio.md'}")
     return 0
 

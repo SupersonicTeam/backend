@@ -2,3 +2,5 @@
 *.cmd text eol=crlf
 # Scripts de deploy rodam no bash da VPS: CRLF quebraria o shebang e os "if".
 *.sh text eol=lf
+# Conjunto congelado do benchmark (#352): o hash .sha256 e dos bytes, CRLF o quebraria.
+docs/avaliacao/benchmark/perguntas-benchmark.json -text

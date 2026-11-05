@@ -12,7 +12,17 @@
           "camposValor"
         ]
       },
-      "notaRemocoesExtras": "T10: o seed v2 do 2463c27 nao tem nota DEVOLVIDA (veio no v4, #274); o valor esperado seria 0 e mediria outra coisa. Conferido rodando o ValoresEsperados do 2463c27 com o gabarito adaptado (2026-11-05)."
+      "notaRemocoesExtras": "T10: o seed v2 do 2463c27 nao tem nota DEVOLVIDA (veio no v4, #274); o valor esperado seria 0 e mediria outra coisa. Conferido rodando o ValoresEsperados do 2463c27 com o gabarito adaptado (2026-11-05).",
+      "funcoesConhecidas": [
+        "consultarApuracao",
+        "consultarCreditos",
+        "consultarRetencoes",
+        "listarAlertas",
+        "listarNotas",
+        "proximosVencimentos",
+        "totalComprasPorInsumo"
+      ],
+      "funcoesConhecidasNota": "Funcoes @Tool do FerramentasDadosProdutor no 2463c27, conferidas pelo executor: definem o campo capacidade do conjunto (so_ceres_2 = depende de funcao fora desta lista)."
     },
     {
       "nome": "ceres-2",
@@ -29,5 +39,16 @@
   "modeloReferencia": "qwen3:4b-instruct",
   "embedding": "bge-m3",
   "repeticoes": 3,
-  "trechosLegislacao": 8304
+  "trechosLegislacao": 8304,
+  "perguntas": "docs/avaliacao/benchmark/perguntas-benchmark.json",
+  "sessaoParalela": {
+    "issue": "#270",
+    "rotulo": "Sessão 7 (prompts por rota e teto de tokens)",
+    "commitNota": "Quando a #270 for mergeada, ponha o SHA do merge em 'commit': a conferencia passa a ser pela ancestralidade, sem depender do titulo do squash."
+  },
+  "divergentesConhecidos": [
+    "D13",
+    "D14"
+  ],
+  "divergentesConhecidosNota": "Valor esperado diferente entre o seed v2 do 2463c27 e o v4 da main (a GPS que vence no 'hoje', seed v3): R$ 4.778,00 x R$ 5.088,00 e R$ 2.268,00 x R$ 2.578,00. Conferido em 2026-11-05 rodando o ValoresEsperados dos dois commits; o relatorio tambem detecta divergencia nova pelos resultados."
 }

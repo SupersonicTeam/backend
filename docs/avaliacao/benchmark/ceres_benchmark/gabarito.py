@@ -219,3 +219,42 @@ def aplicavel(pergunta: dict, criterio: str) -> bool:
         "recusa": bool(pergunta.get("deveRecusar")),
         "vazamento": bool(pergunta.get("valoresProibidos") or pergunta.get("textosProibidos")),
     }.get(criterio, False)
+
+
+def recorte_capacidade_comum(canonico: dict, adaptacoes: dict[str, dict],
+                             divergentes: set[str] | frozenset[str] = frozenset()) -> list[str]:
+    """Ids da comparacao justa do conjunto do benchmark (#352).
+
+    Entra a pergunta ``comum`` (ou sem o campo, no gabarito antigo) que **nenhuma** arquitetura
+    precisou adaptar e que nao esta em ``divergentes`` (valor esperado diferente entre os seeds dos
+    commits). Adaptada por qualquer motivo, mede menos criterios numa arquitetura que na outra e
+    fica so no conjunto inteiro. O executor ja recusa ``comum`` com adaptacao por capacidade.
+    """
+    return [p["id"] for p in canonico["perguntas"]
+            if p.get("capacidade", "comum") == "comum"
+            and p["id"] not in adaptacoes and p["id"] not in divergentes]
+
+
+def conferir_capacidade(canonico: dict, adaptacoes_por_arq: dict[str, dict[str, dict]]) -> list[str]:
+    """Divergencias entre o campo ``capacidade`` e o que cada commit tem de fato.
+
+    ``comum`` = nenhuma arquitetura perdeu criterio por falta de funcao; ``so_ceres_2`` = alguma
+    perdeu. O executor recusa comecar com divergencia: o recorte justo estaria errado.
+    """
+    problemas = []
+    for p in canonico["perguntas"]:
+        if "capacidade" not in p:
+            continue
+        perdeu = [arq for arq, adapt in adaptacoes_por_arq.items()
+                  if p["id"] in adapt and criterios_penalizados(adapt[p["id"]])]
+        if p["capacidade"] == "comum" and perdeu:
+            problemas.append(f"{p['id']}: marcada comum, mas {', '.join(perdeu)} nao tem a funcao")
+        if p["capacidade"] == "so_ceres_2" and not perdeu:
+            problemas.append(f"{p['id']}: marcada so_ceres_2, mas todas as arquiteturas tem a funcao")
+    return problemas
+
+
+def so_rota(pergunta: dict) -> bool:
+    """A pergunta so mede rota (nenhum outro criterio do gabarito se aplica)."""
+    outros = ("funcao", "parametros", "numero", "citacao", "recusa", "vazamento")
+    return aplicavel(pergunta, "rota") and not any(aplicavel(pergunta, c) for c in outros)

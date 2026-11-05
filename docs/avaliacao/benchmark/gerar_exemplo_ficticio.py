@@ -113,6 +113,10 @@ def gerar(pasta: Path) -> Path:
     ex = executor.Executor(cfg)
     ex.fixar_shas(None)
     ex.preparar_gabaritos(pasta)
+    ex.gravar_similaridade(pasta)
+    ex.config_rodada = {"versao": "FICTÍCIO", "modelos": {
+        m: {"quantizacao": "FICTÍCIO", "parametros": "?", "digest": "0" * 12} for m in cfg.modelos}}
+    ex.opcoes = {"temperature": "0.2", "num-ctx": "8192", "num-predict": "1024", "think-option": "false"}
     canonico = json.loads((pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
     funcoes_antigas = gab.assinaturas_ferramentas(
         _git("show", f"{cfg.todas_arquiteturas[0]['sha']}:{executor.FERRAMENTAS_REPO}"))
@@ -145,7 +149,8 @@ def gerar(pasta: Path) -> Path:
             "duracaoSegundos": int(latencia * len(canonico["perguntas"]) * cfg.repeticoes),
             "pensamento": {"resumo": "FICTÍCIO: desligado (think=false; nenhum raciocínio na prova)"},
             "memoria": {"modeloBytes": int(gb * 1_073_741_824),
-                        "processoPicoBytes": int((gb + 1.4) * 1_073_741_824)},
+                        "processoPicoBytes": int((gb + 1.4) * 1_073_741_824),
+                        "ondeRodou": {modelo: ["GPU"], "bge-m3": ["CPU"]}},
         }
         (destino / "celula.json").write_text(json.dumps(manifesto, ensure_ascii=False, indent=2),
                                              encoding="utf-8")

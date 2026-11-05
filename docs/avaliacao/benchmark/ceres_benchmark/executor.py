@@ -12,6 +12,7 @@ Nenhum segredo vem do repositorio: senha do banco por ``DB_PASSWORD`` (a mesma d
 
 from __future__ import annotations
 
+import hashlib
 import http.client
 import json
 import os
@@ -31,6 +32,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import gabarito as gab
+from . import similaridade
 
 ZONA = ZoneInfo("America/Sao_Paulo")
 GABARITO_REPO = "docs/avaliacao/gabarito-ceres.json"
@@ -90,6 +92,97 @@ def avaliar_prova(resposta: dict) -> dict:
     }
 
 
+def sha256_arquivo(caminho: Path) -> str:
+    return hashlib.sha256(caminho.read_bytes()).hexdigest()
+
+
+def opcoes_chat_ollama(application_yml: str) -> dict[str, str]:
+    """Opcoes do chat do Ollama no ``application.yml`` de um commit (o bloco
+    ``spring.ai.ollama.chat.options``), como texto: ``temperature``, ``num-ctx``,
+    ``num-predict``, ``think-option``. So as que mudam a resposta; o modelo vem do executor."""
+    linhas = application_yml.splitlines()
+    caminho: list[tuple[int, str]] = []
+    opcoes: dict[str, str] = {}
+    for linha in linhas:
+        if not linha.strip() or linha.lstrip().startswith("#"):
+            continue
+        recuo = len(linha) - len(linha.lstrip())
+        chave, _, valor = linha.strip().partition(":")
+        while caminho and caminho[-1][0] >= recuo:
+            caminho.pop()
+        nomes = [c[1] for c in caminho]
+        if nomes[-3:] == ["ollama", "chat", "options"] and chave in (
+                "temperature", "num-ctx", "num-predict", "think-option"):
+            opcoes[chave] = valor.split(" #")[0].strip()
+        caminho.append((recuo, chave))
+    return opcoes
+
+
+def resolver_placeholder(valor: str, env: dict) -> str:
+    """``${AI_OLLAMA_NUM_CTX:8192}`` -> o valor da variavel no ambiente da celula, ou o padrao."""
+    m = re.fullmatch(r"\$\{([A-Z0-9_]+):([^}]*)\}", valor)
+    return env.get(m.group(1), m.group(2)) if m else valor
+
+
+def onde_rodou(modelo_ps: dict) -> str:
+    """GPU, CPU ou dividido, pela fracao do modelo na VRAM (``/api/ps``)."""
+    total, vram = modelo_ps.get("size") or 0, modelo_ps.get("size_vram") or 0
+    if not total:
+        return "?"
+    fracao = vram / total
+    if fracao >= 0.99:
+        return "GPU"
+    if fracao <= 0.01:
+        return "CPU"
+    return f"dividido ({round(100 * fracao)}% na GPU)"
+
+
+def avisos_da_amostra(memoria: dict) -> list[str]:
+    """Avisos que mudam a leitura da latencia: descarga/recarga e modelo dividido."""
+    avisos = []
+    for modelo, vezes in (memoria.get("descargas") or {}).items():
+        if vezes:
+            avisos.append(f"{modelo} saiu da memória {vezes} vez(es) no meio da célula (descarga e "
+                          "recarga: a latência inclui o recarregamento)")
+    for modelo, locais in (memoria.get("ondeRodou") or {}).items():
+        if any(l.startswith("dividido") for l in locais) or len(set(locais)) > 1:
+            avisos.append(f"{modelo} não ficou inteiro num lugar só ({', '.join(locais)})")
+    if memoria.get("falhasAmostra"):
+        avisos.append(f"{memoria['falhasAmostra']} amostras de memória falharam: o pico pode estar "
+                      "subestimado")
+    return avisos
+
+
+#: Variaveis do ``.env.example`` que nao sao configuracao da Ceres medida: endereco, chave, modelo
+#: (o da celula) e estrategia de pull (o executor baixa). O resto vale como publicado no commit.
+FORA_DA_CONFIGURACAO = {"AI_API_KEY", "AI_API_BASE_URL", "AI_API_COMPLETIONS_PATH",
+                        "AI_OLLAMA_BASE_URL", "AI_OLLAMA_PORT", "AI_CHAT_MODEL",
+                        "AI_CHAT_PROVIDER", "AI_OLLAMA_PULL_STRATEGY"}
+
+
+def configuracao_publicada(env_example: str) -> dict[str, str]:
+    """``AI_*`` do ``.env.example`` de um commit: a configuracao publicada da Ceres naquele SHA
+    (teto de tokens, ``num_ctx``, timeouts...). A rodada usa exatamente ela, sem ajuste a mao."""
+    publicada = {}
+    for linha in env_example.splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or "=" not in linha:
+            continue
+        chave, _, valor = linha.partition("=")
+        chave = chave.strip()
+        if chave.startswith("AI_") and chave not in FORA_DA_CONFIGURACAO:
+            publicada[chave] = valor.split(" #")[0].strip().strip('"').strip("'")
+    return publicada
+
+
+def commits_da_issue(assuntos: list[str], issue: str) -> list[str]:
+    """``<hash> <assunto>`` cujo assunto e o squash de um PR da issue: termina em
+    ``(#270) (#NNN)`` ou ``(#270)`` seguido so do numero do PR."""
+    numero = re.escape(issue.lstrip("#"))
+    padrao = re.compile(rf"\(#{numero}\)\s*\(#\d+\)\s*$")
+    return [a for a in assuntos if padrao.search(a)]
+
+
 @dataclass
 class Config:
     """Parametros da execucao (``matriz.json`` + linha de comando + ambiente)."""
@@ -109,6 +202,14 @@ class Config:
     hardware: str
     retomar: Path | None
     todas_arquiteturas: list[dict] = None
+    teste: bool = False
+    embedding_cpu: bool = False
+
+    @property
+    def embedding(self) -> str:
+        """Nome do embedding que a celula usa (``bge-m3-cpu`` com ``--embedding-cpu``)."""
+        base = self.matriz.get("embedding", "bge-m3")
+        return f"{base}-cpu" if self.embedding_cpu else base
 
 
 class Executor:
@@ -116,6 +217,10 @@ class Executor:
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        self.config_rodada: dict | None = None
+        self.perguntas_info: dict = {}
+        self.opcoes: dict = {}
+        self.parecidas: list[str] = []
 
     # ------------------------------------------------------------------ utilitarios
 
@@ -194,8 +299,12 @@ class Executor:
             raise RuntimeError(f"JAR nao gerado em {worktree}/target")
         return jars[0]
 
-    def ambiente_java(self, banco: str, modelo: str) -> dict:
-        env = dict(os.environ)
+    def ambiente_java(self, banco: str, modelo: str, arquitetura: dict | None = None) -> dict:
+        """Ambiente da JVM: sem nenhum ``AI_*`` herdado do shell (um ``export AI_MAX_TOKENS``
+        esquecido mediria outra configuracao) e com a configuracao publicada do commit."""
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AI_")}
+        if arquitetura is not None:
+            env.update(arquitetura.get("configuracaoPublicada") or {})
         env.update({
             "SPRING_PROFILES_ACTIVE": "dev,avaliacao",
             "DB_NAME": banco,
@@ -215,7 +324,8 @@ class Executor:
             f"--avaliacao.saida={saida}",
             f"--avaliacao.repeticoes={self.cfg.repeticoes}",
             f"--avaliacao.hardware={self.cfg.hardware}",
-        ]
+        ] + ([f"--spring.ai.ollama.embedding.options.model={self.cfg.embedding}"]
+             if self.cfg.embedding_cpu else [])
 
     def preparar_banco(self, arquitetura: dict, worktree: Path, jar: Path, logs: Path) -> str:
         """Banco proprio da arquitetura: Liquibase do commit + base de lei copiada da origem."""
@@ -234,7 +344,8 @@ class Executor:
         # antes do seed (codigo 1 esperado): e a forma de criar o schema daquele commit sem web.
         self.rodar(["java", "-jar", str(jar), "--spring.docker.compose.enabled=false",
                     "--avaliacao.ids=__schema_apenas__"], worktree,
-                   env=self.ambiente_java(banco, "nenhum"), saida=logs / f"schema-{banco}.log",
+                   env=self.ambiente_java(banco, "nenhum", arquitetura),
+                   saida=logs / f"schema-{banco}.log",
                    checar=False)
         if not self._tabela_existe(banco):
             raise RuntimeError(f"Liquibase nao criou legislacao_trecho em {banco}: ver "
@@ -264,10 +375,70 @@ class Executor:
     def _tabela_existe(self, banco: str) -> bool:
         return self.psql(banco, "select to_regclass('public.legislacao_trecho') is not null") == "t"
 
+    def modelos_locais(self) -> set[str]:
+        nomes = set()
+        for m in self.ollama("/api/tags").get("models", []):
+            nome = m.get("name") or ""
+            nomes.update({nome, nome.removesuffix(":latest")})
+        return nomes
+
     def baixar_modelos(self) -> None:
-        for modelo in self.cfg.modelos + [self.cfg.matriz.get("embedding", "bge-m3")]:
+        """``pull`` so do que falta. Puxar de novo um modelo presente trocaria os pesos por uma
+        republicacao do upstream no meio da rodada, e a conferencia de digest a recusaria sem volta."""
+        base = self.cfg.matriz.get("embedding", "bge-m3")
+        locais = self.modelos_locais()
+        for modelo in self.cfg.modelos + [base]:
+            if modelo in locais:
+                log(f"{modelo} ja esta no Ollama: sem pull")
+                continue
             log(f"ollama pull {modelo}")
             self.ollama("/api/pull", {"model": modelo, "stream": False}, timeout=3600)
+        if self.cfg.embedding_cpu and self.cfg.embedding not in locais:
+            # Mesmos pesos do bge-m3 (os vetores da base de lei continuam valendo), sem camada na
+            # GPU: a VRAM fica toda para o modelo de chat. Equivale ao Modelfile do README.
+            log(f"criando {self.cfg.embedding} (num_gpu 0) a partir de {base}")
+            self.ollama("/api/create", {"model": self.cfg.embedding, "from": base,
+                                        "parameters": {"num_gpu": 0}, "stream": False}, timeout=600)
+
+    def configuracao_ollama(self) -> dict:
+        """Versao do Ollama e, por modelo, quantizacao, tamanho e digest: o que tem de ser igual nas
+        celulas."""
+        digests = {m.get("name"): m.get("digest") for m in self.ollama("/api/tags").get("models", [])}
+        modelos = {}
+        for modelo in self.cfg.modelos + [self.cfg.embedding]:
+            detalhes = self.ollama("/api/show", {"model": modelo}).get("details") or {}
+            nome = modelo if ":" in modelo else modelo + ":latest"
+            modelos[modelo] = {"quantizacao": detalhes.get("quantization_level"),
+                               "parametros": detalhes.get("parameter_size"),
+                               "formato": detalhes.get("format"),
+                               "digest": digests.get(nome) or digests.get(modelo)}
+        return {"versao": self.ollama("/api/version").get("version"), "modelos": modelos}
+
+    def conferir_configuracao(self, gravada: dict | None) -> dict:
+        """A configuracao atual do Ollama e a gravada na rodada sao iguais (mesma versao, mesma
+        quantizacao e digest por modelo); a primeira vez, grava.
+
+        :raises RuntimeError: se mudou: as celulas nao seriam comparaveis
+        """
+        atual = self.configuracao_ollama()
+        if gravada is None:
+            return atual
+        diferencas = []
+        mesclada = {"versao": gravada.get("versao"), "modelos": dict(gravada.get("modelos") or {})}
+        if atual["versao"] != gravada.get("versao"):
+            diferencas.append(f"Ollama {gravada.get('versao')} -> {atual['versao']}")
+        for modelo, detalhe in atual["modelos"].items():
+            antes = (gravada.get("modelos") or {}).get(modelo)
+            if antes is None:
+                # Modelo que entrou numa retomada (--modelos): trava a partir de agora.
+                mesclada["modelos"][modelo] = detalhe
+            elif antes != detalhe:
+                diferencas.append(f"{modelo}: {antes} -> {detalhe}")
+        if diferencas:
+            raise RuntimeError("a configuracao do Ollama mudou desde o inicio da rodada ("
+                               + "; ".join(diferencas) + "): as celulas nao seriam comparaveis. "
+                               "Volte a configuracao ou comece uma rodada nova")
+        return mesclada
 
     def descarregar_outros(self, manter: set[str]) -> None:
         """Tira da memoria os modelos de chat de outras celulas: a memoria medida e so a deste."""
@@ -308,14 +479,34 @@ class Executor:
 
     def amostrar_memoria(self, modelo: str, parar: threading.Event, resultado: dict) -> None:
         resultado["falhasAmostra"] = 0
+        acompanhados = {modelo: modelo, self.cfg.embedding: self.cfg.embedding,
+                        self.cfg.embedding + ":latest": self.cfg.embedding}
+        presentes: dict[str, bool] = {}
+        resultado["descargas"] = {modelo: 0, self.cfg.embedding: 0}
+        resultado["ondeRodou"] = {}
         while not parar.wait(5):
             try:
+                carregados = set()
                 for m in self.ollama("/api/ps", timeout=5).get("models", []):
-                    if (m.get("name") or m.get("model")) == modelo:
+                    nome = acompanhados.get(m.get("name") or m.get("model"))
+                    if nome is None:
+                        continue
+                    carregados.add(nome)
+                    lugar = onde_rodou(m)
+                    lugares = resultado["ondeRodou"].setdefault(nome, [])
+                    if lugar not in lugares:
+                        lugares.append(lugar)
+                    if nome == modelo:
                         resultado["modeloBytes"] = max(resultado.get("modeloBytes", 0), m.get("size", 0))
                         resultado["modeloVramBytes"] = max(resultado.get("modeloVramBytes", 0),
                                                            m.get("size_vram", 0))
                         resultado["contexto"] = m.get("context_length")
+                for nome in (modelo, self.cfg.embedding):
+                    # Estava na memoria e saiu: o Ollama descarregou (falta de VRAM, keep_alive).
+                    if presentes.get(nome) and nome not in carregados:
+                        resultado["descargas"][nome] += 1
+                        log(f"AVISO: {nome} saiu da memoria no meio da celula")
+                    presentes[nome] = nome in carregados
             except ERROS_HTTP:
                 # Conta a falha em vez de morrer: uma thread morta deixaria o pico subestimado
                 # sem aviso no relatorio.
@@ -333,24 +524,26 @@ class Executor:
         manifesto_arquivo = destino / "celula.json"
         if manifesto_arquivo.exists():
             anterior = json.loads(manifesto_arquivo.read_text(encoding="utf-8"))
-            mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes")) == (
-                arquitetura["sha"], modelo, self.cfg.repeticoes)
+            mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes"),
+                     anterior.get("embedding", self.cfg.embedding)) == (
+                arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding)
             if anterior.get("codigoSaida") == 0 and mesma:
                 log(f"{nome}: ja medida nesta rodada, pulando")
                 return anterior
             if anterior.get("codigoSaida") == 0:
-                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo ou numero de "
-                                   "repeticoes: use uma rodada nova em vez de --retomar")
+                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding ou "
+                                   "numero de repeticoes: use uma rodada nova em vez de --retomar")
         destino.mkdir(parents=True, exist_ok=True)
         temporario = destino / "saida-do-comando"
         shutil.rmtree(temporario, ignore_errors=True)
         temporario.mkdir()
 
-        self.descarregar_outros({self.cfg.matriz.get("embedding", "bge-m3"),
-                                 self.cfg.matriz.get("embedding", "bge-m3") + ":latest"})
+        self.config_rodada = self.conferir_configuracao(self.config_rodada)
+        self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
         pensamento = self.provar_pensamento(modelo)
         log(f"{nome}: pensamento {pensamento['resumo']}")
 
+        lido = {"arquivoLido": gabarito.name, "sha256Lido": sha256_arquivo(gabarito)}
         memoria: dict = {}
         parar = threading.Event()
         amostrador = threading.Thread(target=self.amostrar_memoria, args=(modelo, parar, memoria),
@@ -360,7 +553,7 @@ class Executor:
         try:
             codigo = self.rodar(["java", "-jar", str(jar)]
                                 + self.argumentos_avaliacao(gabarito, temporario),
-                                worktree, env=self.ambiente_java(banco, modelo),
+                                worktree, env=self.ambiente_java(banco, modelo, arquitetura),
                                 saida=destino / "comando.log", checar=False)
         finally:
             parar.set()
@@ -373,13 +566,16 @@ class Executor:
             "rotuloArquitetura": arquitetura["rotulo"],
             "sha": arquitetura["sha"],
             "modelo": modelo,
-            "embedding": self.cfg.matriz.get("embedding", "bge-m3"),
+            "embedding": self.cfg.embedding,
             "repeticoes": self.cfg.repeticoes,
+            "tipo": "teste" if self.cfg.teste else "banca",
+            "perguntas": {**self.perguntas_info, **lido},
             "hardware": self.cfg.hardware,
             "banco": banco,
             "gabarito": gabarito.name,
             "pensamento": pensamento,
             "memoria": memoria,
+            "avisos": avisos_da_amostra(memoria),
             "duracaoSegundos": duracao,
             "codigoSaida": codigo,
             "arquivos": arquivos,
@@ -417,15 +613,22 @@ class Executor:
         arquivo_rodada = rodada_dir / "rodada.json"
         anterior = (json.loads(arquivo_rodada.read_text(encoding="utf-8"))
                     if arquivo_rodada.exists() else None)
+        if anterior and anterior.get("tipo", "banca") != ("teste" if cfg.teste else "banca"):
+            raise RuntimeError("nao misture rodada de teste com rodada da banca: use uma pasta nova")
         self.fixar_shas(anterior)
+        if anterior:
+            self.conferir_retomada(anterior)
 
         self.preparar_gabaritos(rodada_dir)
+        self.gravar_similaridade(rodada_dir)
 
+        self.baixar_modelos()
+        self.config_rodada = self.conferir_configuracao((anterior or {}).get("configuracaoOllama"))
+        self.opcoes = self.conferir_opcoes_chat()
         arquivo_rodada.write_text(json.dumps(
             self.manifesto_rodada(anterior, estado), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8")
 
-        self.baixar_modelos()
         for arquitetura in cfg.arquiteturas:
             worktree = self.worktree(arquitetura)
             jar = self.construir(worktree)
@@ -436,34 +639,174 @@ class Executor:
         return rodada_dir
 
     def preparar_gabaritos(self, rodada_dir: Path) -> None:
-        """Gabarito canonico, o antigo e a copia (adaptada) de cada arquitetura da matriz.
+        """Conjunto congelado (#352) e a copia adaptada de cada arquitetura da matriz.
 
-        O gabarito e o da ultima arquitetura da MATRIZ (nao da lista filtrada por
-        ``--arquiteturas``), e o antigo e o da primeira: rodar uma arquitetura so nao muda a regua.
+        O conjunto e ``matriz["perguntas"]`` (o arquivo do repositorio, conferido contra o
+        ``.sha256`` ao lado), o mesmo para todas as celulas: a arquitetura que nao precisa de
+        adaptacao le **o proprio arquivo**; a outra, a copia adaptada (o hash dela tambem vai na
+        celula). Sem ``perguntas`` na matriz, vale o gabarito do commit da ultima arquitetura.
+
+        :raises RuntimeError: hash que nao confere, capacidade marcada errada, ou a arquitetura
+            canonica (a ultima) sem saber medir alguma pergunta
         """
         cfg = self.cfg
         todas = cfg.todas_arquiteturas
-        canonico_txt = self.capturar(["git", "show", f"{todas[-1]['sha']}:{GABARITO_REPO}"], cfg.repo)
-        (rodada_dir / "gabarito-canonico.json").write_text(canonico_txt + "\n", encoding="utf-8")
+        if cfg.matriz.get("perguntas"):
+            arquivo = cfg.repo / cfg.matriz["perguntas"]
+            sha = sha256_arquivo(arquivo)
+            lado = arquivo.with_name(arquivo.name + ".sha256")
+            partes = lado.read_text(encoding="utf-8").split() if lado.exists() else []
+            if not partes:
+                raise RuntimeError(f"{lado.name} ausente ou vazio: o conjunto congelado exige o hash")
+            if partes[0] != sha:
+                raise RuntimeError(f"{arquivo.name} nao confere com {lado.name}: mudou o conjunto "
+                                   "sem mudar a versao e o hash")
+            canonico_txt = arquivo.read_text(encoding="utf-8")
+        else:
+            arquivo = None
+            canonico_txt = self.capturar(["git", "show", f"{todas[-1]['sha']}:{GABARITO_REPO}"],
+                                         cfg.repo) + "\n"
+            sha = hashlib.sha256(canonico_txt.encode()).hexdigest()
+        # Tudo vai primeiro para uma pasta de preparo e so entra na rodada depois de todas as
+        # conferencias: uma recusa nao deixa a pasta com o gabarito de uma medicao e as celulas de
+        # outra.
+        preparo = rodada_dir / ".preparo"
+        shutil.rmtree(preparo, ignore_errors=True)
+        preparo.mkdir()
+        (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         canonico = json.loads(canonico_txt)
-        antigo_txt = self.capturar(["git", "show", f"{todas[0]['sha']}:{GABARITO_REPO}"], cfg.repo)
-        (rodada_dir / "gabarito-antigo.json").write_text(antigo_txt + "\n", encoding="utf-8")
+        self.perguntas_info = {"arquivo": cfg.matriz.get("perguntas") or GABARITO_REPO,
+                               "versao": canonico.get("versao"), "sha256": sha,
+                               "total": len(canonico["perguntas"])}
 
+        adaptacoes_por_arq = {}
         for arquitetura in todas:
             fonte = self.capturar(["git", "show", f"{arquitetura['sha']}:{FERRAMENTAS_REPO}"], cfg.repo)
+            funcoes = gab.assinaturas_ferramentas(fonte)
+            conhecidas = arquitetura.get("funcoesConhecidas")
+            if conhecidas is not None and sorted(conhecidas) != sorted(funcoes):
+                raise RuntimeError(f"funcoes do {arquitetura['sha'][:7]} diferentes das da matriz "
+                                   f"({sorted(funcoes)} x {sorted(conhecidas)}): atualize "
+                                   "funcoesConhecidas e o campo capacidade do conjunto")
             adaptado, adaptacoes = gab.adaptar(
-                canonico, gab.assinaturas_ferramentas(fonte),
-                arquitetura.get("remocoesExtras"), arquitetura.get("indiceDeLista", True))
-            arquivo_gab = rodada_dir / f"gabarito-{arquitetura['nome']}.json"
-            arquivo_gab.write_text(json.dumps(adaptado, ensure_ascii=False, indent=2) + "\n",
-                                   encoding="utf-8")
-            arquivo_adapt = rodada_dir / f"adaptacao-{arquitetura['nome']}.json"
+                canonico, funcoes, arquitetura.get("remocoesExtras"),
+                arquitetura.get("indiceDeLista", True))
+            adaptacoes_por_arq[arquitetura["nome"]] = adaptacoes
+            arquivo_adapt = preparo / f"adaptacao-{arquitetura['nome']}.json"
             arquivo_adapt.write_text(json.dumps(adaptacoes, ensure_ascii=False, indent=2) + "\n",
                                      encoding="utf-8")
-            arquitetura["gabarito"] = arquivo_gab
             arquitetura["adaptacao"] = arquivo_adapt.name
+            if not adaptacoes:
+                # Le a copia congelada da rodada (os mesmos bytes do conjunto): um checkout no meio
+                # de uma rodada de horas nao troca as perguntas das celulas seguintes.
+                arquitetura["gabarito"] = rodada_dir / "gabarito-canonico.json"
+            else:
+                arquivo_gab = preparo / f"gabarito-{arquitetura['nome']}.json"
+                arquivo_gab.write_text(json.dumps(adaptado, ensure_ascii=False, indent=2) + "\n",
+                                       encoding="utf-8")
+                arquitetura["gabarito"] = rodada_dir / arquivo_gab.name
             log(f"{arquitetura['rotulo']} ({arquitetura['sha'][:7]}): {len(adaptacoes)} perguntas "
                 "adaptadas")
+        if adaptacoes_por_arq[todas[-1]["nome"]]:
+            raise RuntimeError(f"a {todas[-1]['rotulo']} nao sabe medir "
+                               f"{sorted(adaptacoes_por_arq[todas[-1]['nome']])}: o conjunto tem de "
+                               "caber inteiro na arquitetura canonica")
+        problemas = gab.conferir_capacidade(canonico, adaptacoes_por_arq)
+        if problemas:
+            raise RuntimeError("campo capacidade errado no conjunto: " + "; ".join(problemas))
+        for arquivo_preparo in preparo.iterdir():
+            os.replace(arquivo_preparo, rodada_dir / arquivo_preparo.name)
+        preparo.rmdir()
+
+    def conferir_retomada(self, anterior: dict) -> None:
+        """Retomar so a mesma rodada: o mesmo conjunto (hash), o mesmo embedding, e nunca uma rodada
+        anterior ao conjunto congelado. Conferido **antes** de reescrever qualquer arquivo da pasta.
+
+        :raises RuntimeError: se a retomada misturaria duas medicoes diferentes
+        """
+        cfg = self.cfg
+        gravado = (anterior.get("perguntas") or {}).get("sha256")
+        if cfg.matriz.get("perguntas"):
+            if not gravado:
+                raise RuntimeError("a rodada e anterior ao conjunto congelado (#352): nao da para "
+                                   "retomar com o conjunto novo; use uma pasta nova")
+            atual = sha256_arquivo(cfg.repo / cfg.matriz["perguntas"])
+            if atual != gravado:
+                raise RuntimeError("o conjunto de perguntas mudou desde o inicio da rodada (sha256 "
+                                   f"{gravado[:12]} -> {atual[:12]}): use uma rodada nova")
+        if anterior.get("embedding", cfg.embedding) != cfg.embedding:
+            raise RuntimeError(f"a rodada usou o embedding {anterior.get('embedding')}, nao "
+                               f"{cfg.embedding} (--embedding-cpu): use a mesma opcao ou uma pasta nova")
+
+    def gravar_similaridade(self, rodada_dir: Path) -> None:
+        """Aviso (nao bloqueia) das perguntas parecidas com o treino, para a revisao humana."""
+        canonico = json.loads((rodada_dir / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        pares = similaridade.pares_semelhantes(canonico["perguntas"],
+                                               similaridade.textos_de_treino(self.cfg.repo))
+        (rodada_dir / "similaridade-treino.md").write_text(similaridade.markdown(pares),
+                                                           encoding="utf-8")
+        self.parecidas = sorted({p["id"] for p in pares})
+        if pares:
+            log(f"AVISO: {len(pares)} perguntas parecidas com o treino; ver similaridade-treino.md")
+
+    def conferir_opcoes_chat(self) -> dict:
+        """Configuracao publicada (``.env.example``) e opcoes efetivas do chat de cada commit.
+
+        Diferenca entre os commits **nao** e recusada: a Ceres 2.0 e medida com a configuracao
+        publicada dela (a Sessao 7, #270, muda o teto de tokens e o ``num_ctx``), e isso faz parte
+        da arquitetura. O relatorio mostra as duas. O que tem de ser igual e o que vem do Ollama
+        (versao, quantizacao), conferido em cada celula.
+        """
+        por_arq = {}
+        for arquitetura in self.cfg.todas_arquiteturas:
+            try:
+                env_example = self.capturar(["git", "show", f"{arquitetura['sha']}:.env.example"],
+                                            self.cfg.repo)
+            except subprocess.CalledProcessError:
+                env_example = ""
+            arquitetura["configuracaoPublicada"] = configuracao_publicada(env_example)
+            env = self.ambiente_java("x", "x", arquitetura)
+            yml = self.capturar(["git", "show", f"{arquitetura['sha']}:src/main/resources/application.yml"],
+                                self.cfg.repo)
+            por_arq[arquitetura["nome"]] = {
+                "publicada": arquitetura["configuracaoPublicada"],
+                "chat": {k: resolver_placeholder(v, env) for k, v in opcoes_chat_ollama(yml).items()},
+            }
+        diferentes = {k for d in por_arq.values() for k in d["chat"]
+                      if len({d2["chat"].get(k) for d2 in por_arq.values()}) > 1}
+        if diferentes:
+            log("opcoes do chat diferentes entre os commits (parte da arquitetura medida): "
+                + ", ".join(sorted(diferentes)))
+        return por_arq
+
+    def sessao_paralela(self) -> dict | None:
+        """O SHA da Ceres 2.0 ja tem a sessao que muda a main em paralelo (ex.: #270)?
+
+        ``confirmado`` so com ``commit`` na matriz (o merge do **ultimo** PR da sessao) e o SHA
+        medido o contendo: a sessao entra em varios PRs, e ter um deles no historico nao e ter a
+        sessao inteira. ``commits`` lista os merges da issue ja presentes (assunto terminado em
+        ``(#270) (#NNN)``, o squash dos PRs do repositorio; commit que so cita a issue no corpo nao
+        conta), para o relatorio dizer o que o ensaio ja tem.
+        """
+        alvo = self.cfg.matriz.get("sessaoParalela")
+        if not alvo:
+            return None
+        sha = self.cfg.todas_arquiteturas[-1]["sha"]
+        base = {"issue": alvo["issue"], "rotulo": alvo.get("rotulo")}
+        try:
+            assuntos = self.capturar(["git", "log", "--format=%h %s", sha], self.cfg.repo).splitlines()
+            confirmado = False
+            if alvo.get("commit"):
+                ancestral = subprocess.run(
+                    ["git", "merge-base", "--is-ancestor", alvo["commit"], sha], cwd=self.cfg.repo)
+                if ancestral.returncode not in (0, 1):
+                    return {**base, "contem": None, "confirmado": False}
+                confirmado = ancestral.returncode == 0
+        except (subprocess.CalledProcessError, OSError):
+            return {**base, "contem": None, "confirmado": False}
+        commits = commits_da_issue(assuntos, alvo["issue"])
+        return {**base, "contem": bool(commits) or confirmado, "confirmado": confirmado,
+                "commits": commits[:10]}
 
     def fixar_shas(self, anterior: dict | None) -> None:
         """SHA de cada arquitetura da matriz; numa retomada, o da rodada (a main pode ter andado).
@@ -509,11 +852,17 @@ class Executor:
             "hardware": [cfg.hardware],
             "ollama": estado["ollama"],
             "trechosLegislacao": estado["trechosLegislacao"],
+            "tipo": "teste" if cfg.teste else "banca",
             "repeticoes": cfg.repeticoes,
-            "embedding": cfg.matriz.get("embedding", "bge-m3"),
+            "embedding": cfg.embedding,
+            "perguntas": self.perguntas_info,
+            "configuracaoOllama": self.config_rodada,
+            "opcoesChat": self.opcoes,
+            "sessao7": self.sessao_paralela(),
+            "divergentesConhecidos": cfg.matriz.get("divergentesConhecidos", []),
+            "parecidasComTreino": self.parecidas,
             "modeloReferencia": cfg.matriz.get("modeloReferencia", "qwen3:4b-instruct"),
             "gabaritoCanonico": "gabarito-canonico.json",
-            "gabaritoAntigo": "gabarito-antigo.json",
             "arquiteturas": [
                 {"nome": a["nome"], "rotulo": a["rotulo"], "ref": a["ref"], "sha": a["sha"],
                  "descricao": a.get("descricao", ""), "adaptacao": a.get("adaptacao")}
@@ -578,7 +927,8 @@ def montar_config(argumentos, repo: Path) -> Config:
         trabalho=Path(argumentos.trabalho).expanduser().resolve(),
         modelos=modelos,
         arquiteturas=arquiteturas,
-        repeticoes=argumentos.repeticoes or matriz.get("repeticoes", 3),
+        repeticoes=(1 if getattr(argumentos, "teste", False) else
+                    argumentos.repeticoes or matriz.get("repeticoes", 3)),
         ollama_url=os.environ.get("BENCH_OLLAMA_URL", "http://localhost:11434"),
         ollama_container=os.environ.get("BENCH_OLLAMA_CONTAINER") or None,
         psql=shlex.split(os.environ.get(
@@ -588,6 +938,11 @@ def montar_config(argumentos, repo: Path) -> Config:
         hardware=argumentos.hardware or detectar_hardware(),
         retomar=Path(argumentos.retomar).resolve() if argumentos.retomar else None,
         todas_arquiteturas=todas,
+        # Menos de 3 repeticoes nunca vale para a banca, com ou sem --teste (da linha de comando
+        # ou da matriz).
+        teste=bool(getattr(argumentos, "teste", False))
+        or (argumentos.repeticoes or matriz.get("repeticoes", 3)) < 3,
+        embedding_cpu=bool(getattr(argumentos, "embedding_cpu", False)),
     )
 
 

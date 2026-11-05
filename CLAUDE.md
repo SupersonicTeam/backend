@@ -87,7 +87,12 @@ harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres
 banco próprio por arquitetura e prova do pensamento desligado; o gerador (Python, só stdlib,
 testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia em
 `docs/avaliacao/benchmark/README.md`. **Rodada real pendente** (precisa de Ollama e da base de lei);
-o exemplo versionado é de dados fictícios. O comando de avaliação não mudou.
+o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. Desde a #352 as 6
+células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-benchmark.json` (100
+perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
+pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo
+`SeparacaoTreinoTesteTest`; o relatório traz o acerto por tema e a rodada local com GPU (latência
+local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca).
 
 ## Arquitetura — regras inegociáveis
 
