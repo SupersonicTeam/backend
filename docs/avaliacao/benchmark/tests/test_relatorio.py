@@ -347,3 +347,24 @@ class Sessao7Test(Base):
         texto = rel.gerar(self.pasta)
         self.assertIn("**ENSAIO — a coluna Ceres 2.0 não é a de depois da Sessão 7 (#270) inteira.**", texto)
         self.assertIn("O SHA medido não tem nenhum PR dela", texto)
+
+
+class IneditasEParecidasTest(Base):
+    def test_recorte_de_ineditas_e_acerto_sem_as_parecidas(self):
+        canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        for p in canonico["perguntas"]:
+            p["origem"] = "inedita" if p["id"] in ("P01", "L01") else "gabarito"
+        (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["parecidasComTreino"] = ["D01"]
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("## (c) Inéditas — generalização", texto)
+        self.assertIn("Com 50 pontos percentuais por pergunta (n=2)", texto)
+        self.assertIn("1 delas são `so_ceres_2` (P01)", texto)
+        self.assertIn("## Com e sem as perguntas parecidas com o treino", texto)
+        # Ceres 1 m-ref: D01 erra na rodada 2; sem ela, L01 e A01 certas nas duas.
+        self.assertIn("| Ceres 1 · `m-ref` | 83,3% (66,7–100,0) n=3 | 100,0% n=2 | +16,7 p.p. |", texto)
+        celula = self.celulas["ceres-1--m-ref"]
+        ineditas = rel.faixa(celula, "numero", ["P01"], self.canonico, self.adapt, rel.RECORTE_INEDITAS)
+        self.assertEqual((ineditas.media, ineditas.penalizadas), (0.0, 1))

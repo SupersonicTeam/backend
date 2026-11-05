@@ -220,6 +220,7 @@ class Executor:
         self.config_rodada: dict | None = None
         self.perguntas_info: dict = {}
         self.opcoes: dict = {}
+        self.parecidas: list[str] = []
 
     # ------------------------------------------------------------------ utilitarios
 
@@ -744,6 +745,7 @@ class Executor:
                                                similaridade.textos_de_treino(self.cfg.repo))
         (rodada_dir / "similaridade-treino.md").write_text(similaridade.markdown(pares),
                                                            encoding="utf-8")
+        self.parecidas = sorted({p["id"] for p in pares})
         if pares:
             log(f"AVISO: {len(pares)} perguntas parecidas com o treino; ver similaridade-treino.md")
 
@@ -858,6 +860,7 @@ class Executor:
             "opcoesChat": self.opcoes,
             "sessao7": self.sessao_paralela(),
             "divergentesConhecidos": cfg.matriz.get("divergentesConhecidos", []),
+            "parecidasComTreino": self.parecidas,
             "modeloReferencia": cfg.matriz.get("modeloReferencia", "qwen3:4b-instruct"),
             "gabaritoCanonico": "gabarito-canonico.json",
             "arquiteturas": [

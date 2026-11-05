@@ -56,7 +56,7 @@ class PerguntasBenchmarkIntegrationTest {
   private static final Path GABARITO = Path.of("docs/avaliacao/gabarito-ceres.json");
   private static final LocalDate HOJE = LocalDate.of(2026, 9, 15);
   /** Campos que só o benchmark tem: o resto de uma pergunta herdada é igual ao do gabarito. */
-  private static final Set<String> CAMPOS_DO_BENCHMARK = Set.of("tema", "capacidade");
+  private static final Set<String> CAMPOS_DO_BENCHMARK = Set.of("tema", "capacidade", "origem");
 
   @Autowired private FerramentasDadosProdutor ferramentas;
   @Autowired private ProdutorRepository produtorRepository;
@@ -100,6 +100,7 @@ class PerguntasBenchmarkIntegrationTest {
       assertThat(ids.add(id)).as("id repetido: " + id).isTrue();
       assertThat(temas).as(id).contains(p.path("tema").asText());
       assertThat(p.path("capacidade").asText()).as(id).isIn("comum", "so_ceres_2");
+      assertThat(p.path("origem").asText()).as(id).isIn("gabarito", "inedita");
       porTema.merge(p.path("tema").asText(), 1, Integer::sum);
     }
     assertThat(ids).hasSizeBetween(95, 105);
@@ -129,6 +130,12 @@ class PerguntasBenchmarkIntegrationTest {
       assertThat(semCamposNovos).as(p.path("id").asText()).isEqualTo(original);
     }
     assertThat(herdadas).isEqualTo(gabarito.size());
+    // origem = gabarito exatamente nas herdadas: as ineditas medem generalizacao (a Ceres 2.0 foi
+    // desenvolvida contra o gabarito).
+    for (JsonNode p : objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas")) {
+      assertThat(p.path("origem").asText()).as(p.path("id").asText())
+          .isEqualTo(gabarito.containsKey(p.path("id").asText()) ? "gabarito" : "inedita");
+    }
   }
 
   @Test

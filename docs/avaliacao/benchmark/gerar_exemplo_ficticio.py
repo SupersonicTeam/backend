@@ -113,6 +113,7 @@ def gerar(pasta: Path) -> Path:
     ex = executor.Executor(cfg)
     ex.fixar_shas(None)
     ex.preparar_gabaritos(pasta)
+    ex.gravar_similaridade(pasta)
     ex.config_rodada = {"versao": "FICTÍCIO", "modelos": {
         m: {"quantizacao": "FICTÍCIO", "parametros": "?", "digest": "0" * 12} for m in cfg.modelos}}
     ex.opcoes = {"temperature": "0.2", "num-ctx": "8192", "num-predict": "1024", "think-option": "false"}

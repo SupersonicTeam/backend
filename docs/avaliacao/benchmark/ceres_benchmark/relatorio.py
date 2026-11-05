@@ -45,6 +45,10 @@ CRITERIOS = {
 
 RECORTE_COMUM = "comum"
 RECORTE_INTEIRO = "inteiro"
+#: Perguntas ineditas (#352): fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida. Mesma
+#: regra do conjunto inteiro (``so_ceres_2`` penaliza por capacidade).
+RECORTE_INEDITAS = "ineditas"
+_RECORTES_QUE_PENALIZAM = (RECORTE_INTEIRO, RECORTE_INEDITAS)
 
 #: Criterios de viabilidade da "Conclusao para a banca" (README do benchmark).
 LIMIAR_SEM_FALHA = 95.0
@@ -160,7 +164,7 @@ def valor_criterio(
     valor = resultado[chave]
     if (
         valor is None
-        and recorte == RECORTE_INTEIRO
+        and recorte in _RECORTES_QUE_PENALIZAM
         and criterio in penalizados
         and gab.aplicavel(pergunta, criterio)
     ):
@@ -788,11 +792,24 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     md.append(_secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq))
 
-    for recorte, ids, rotulo in (
-        (RECORTE_COMUM, ids_comum, "(a) Capacidade comum — a comparação justa"),
-        (RECORTE_INTEIRO, ids_inteiro, "(b) Conjunto inteiro"),
-    ):
+    ids_ineditas = [p["id"] for p in canonico_json["perguntas"] if p.get("origem") == "inedita"]
+    recortes = [(RECORTE_COMUM, ids_comum, "(a) Capacidade comum — a comparação justa"),
+                (RECORTE_INTEIRO, ids_inteiro, "(b) Conjunto inteiro")]
+    if ids_ineditas:
+        recortes.append((RECORTE_INEDITAS, ids_ineditas, "(c) Inéditas — generalização"))
+    for recorte, ids, rotulo in recortes:
         md.append(f"## {rotulo}\n")
+        if recorte == RECORTE_INEDITAS:
+            so2 = [i for i in ids if canonico[i].get("capacidade") == "so_ceres_2"]
+            md.append(f"As {len(ids)} perguntas escritas para o benchmark, fora do gabarito contra o "
+                      "qual a Ceres 2.0 foi desenvolvida (regras da #265 com \"zero erros no "
+                      "gabarito\", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede "
+                      "generalização.** Com "
+                      + _n(100.0 / len(ids)).rstrip("0").rstrip(",")
+                      + f" pontos percentuais por pergunta (n={len(ids)}), diferença menor que isso "
+                      "é uma pergunta só; leia com a faixa."
+                      + (f" {len(so2)} delas são `so_ceres_2` ({', '.join(so2)}) e penalizam a Ceres 1 "
+                         "por capacidade, como no conjunto inteiro." if so2 else "") + "\n")
         if recorte == RECORTE_INTEIRO:
             md.append("As perguntas `so_ceres_2` dependem de função que só existe na Ceres 2.0: o "
                       "ganho nelas é **de capacidade da arquitetura, não de modelo**.\n")
@@ -841,6 +858,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
             md.append(f"- {c.rotulo_arquitetura} · `{c.modelo}`: "
                       + (f"{len(lista)} — " + ", ".join(lista) if lista else "nenhuma"))
         md.append("")
+
+    parecidas = [i for i in rodada.get("parecidasComTreino") or [] if i in canonico]
+    if parecidas:
+        md.append(_secao_parecidas(celulas, parecidas, ids_comum, canonico, adaptacoes_por_arq))
 
     md.append("## Clareza automática (gabarito inteiro)\n")
     md.append("Da `ClarezaTexto` do próprio comando, só nas respostas redigidas. Na Ceres 2.0 a "
@@ -935,6 +956,44 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     texto = "\n".join(md)
     (pasta / "relatorio.md").write_text(texto, encoding="utf-8")
     return texto
+
+
+def acerto_geral(celula: Celula, ids: list[str], canonico: dict[str, dict],
+                 adaptacoes: dict[str, dict], recorte: str) -> Faixa:
+    """Pergunta certa (todos os criterios que se aplicam) nas perguntas ``ids``, rodada a rodada."""
+    if not celula.rodadas:
+        return Faixa(None, None, None, 0, disponivel=False)
+    alvo, taxas, total = set(ids), [], 0
+    for resultados in celula.rodadas:
+        doRecorte = [r for r in resultados if r["id"] in alvo and r["id"] in canonico]
+        if not doRecorte:
+            continue
+        certas = sum(acerto_pergunta(
+            r, canonico[r["id"]],
+            gab.criterios_penalizados(adaptacoes[r["id"]]) if r["id"] in adaptacoes else [],
+            recorte) for r in doRecorte)
+        taxas.append(100.0 * certas / len(doRecorte))
+        total = len(doRecorte)
+    if not taxas:
+        return Faixa(None, None, None, 0)
+    return Faixa(statistics.fmean(taxas), min(taxas), max(taxas), total)
+
+
+def _secao_parecidas(celulas, parecidas, ids_comum, canonico, adaptacoes_por_arq) -> str:
+    """Acerto da capacidade comum com e sem as perguntas parecidas com exemplos que o modelo ve."""
+    sem = [i for i in ids_comum if i not in set(parecidas)]
+    linhas = ["## Com e sem as perguntas parecidas com o treino\n",
+              f"{', '.join(parecidas)} têm Jaccard ≥ 0,5 com exemplos que o modelo vê (treino do "
+              "classificador, prompt ou descrições `@Tool`; `similaridade-treino.md`). Se o acerto "
+              "cai sem elas, parte do resultado é memória do exemplo, não compreensão.\n",
+              "| Célula | Capacidade comum | Sem as parecidas | Diferença |\n|---|---|---|---|"]
+    for c in celulas:
+        adapt = adaptacoes_por_arq.get(c.arquitetura, {})
+        com_f = acerto_geral(c, ids_comum, canonico, adapt, RECORTE_COMUM)
+        sem_f = acerto_geral(c, sem, canonico, adapt, RECORTE_COMUM)
+        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {com_f.formatada()} | "
+                      f"{sem_f.formatada()} | {_pontos(sem_f.media, com_f.media)} |")
+    return "\n".join(linhas) + "\n"
 
 
 def _secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq) -> str:

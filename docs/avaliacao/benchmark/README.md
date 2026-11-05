@@ -140,6 +140,18 @@ Cada pergunta tem `tema` e `capacidade`: `comum` (as duas arquiteturas têm a fu
 (`ConjuntoRealTest`). **Leia a banca pela capacidade comum por tema**: o tema de linguagem do dia
 a dia tem 10 perguntas no conjunto, mas só 4 na comparação justa.
 
+**Limitação de método: o gabarito foi usado no desenvolvimento da Ceres 2.0.** 87 das 100
+perguntas são o gabarito, e a Ceres 2.0 foi desenvolvida contra ele: as regras de rota da #265
+têm "zero erros no gabarito" como critério, a T03 foi ajustada às citações da #347 e as etapas 2 a
+8 mediram o próprio progresso nele. A Ceres 1 e os modelos menores nunca foram ajustados a ele.
+Comparar arquiteturas só nessas perguntas favorece a Ceres 2.0 por construção. Por isso cada
+pergunta tem `origem` (`gabarito` ou `inedita`), e o relatório tem o recorte **(c) Inéditas**, as
+13 perguntas escritas para o benchmark (N01–N13): **é ele que mede generalização**. Com 13
+perguntas, cada uma vale ~7,7 pontos percentuais; leia sempre com a faixa. Aumentar esse recorte é
+decisão do Murillo (não foi feito nesta versão). Pelo mesmo motivo, o relatório mostra o acerto da
+capacidade comum **com e sem** as 4 perguntas parecidas com exemplos que o modelo vê (D12, D01,
+T05, D15, abaixo).
+
 **Valor esperado:** calculado pelo backend sobre o seed, como no gabarito (#158). O seed **não
 mudou**: as 13 novas usam os dados do `SeedAvaliacao` v4, e os valores delas foram conferidos à
 mão no `PerguntasBenchmarkIntegrationTest`. Nenhum tema ficou "só rota" (o relatório conta as
@@ -209,6 +221,8 @@ O relatório mostra **dois recortes**:
 
 - **(a) Capacidade comum — a comparação justa** entre modelos e arquiteturas: `capacidade` =
   `comum`, sem adaptação e com o mesmo valor esperado nas duas;
+- **(c) Inéditas — generalização:** as 13 de `origem` `inedita` (regra do conjunto inteiro: as 4
+  `so_ceres_2` entre elas penalizam a Ceres 1 por capacidade);
 - **(b) Conjunto inteiro:** as 100. As `so_ceres_2` medem **ganho de capacidade da arquitetura,
   não de modelo**: função, parâmetros e número que a Ceres 1 não tinha como entregar contam como
   erro de capacidade ("pen." na tabela). A remoção da T10 (seed) não penaliza.
