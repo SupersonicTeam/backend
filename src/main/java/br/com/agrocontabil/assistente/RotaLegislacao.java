@@ -100,7 +100,11 @@ public class RotaLegislacao {
    *
    * @param pergunta pergunta do usuário
    * @param contexto contexto da pergunta (data de referência, auditoria)
-   * @return resposta com citações validadas, ou mensagem fixa de "sem fundamento legal"
+   * @return resposta com citações validadas; {@link #TRECHOS_SEM_CONFIRMACAO} quando o texto do
+   *         modelo é descartado com trechos recuperados — com os trechos que ele marcou certo
+   *         (marca inventada ao lado ou número sem fonte, #258) ou, sem marca válida ou com
+   *         {@code NAO_ENCONTREI}, com os mais próximos da busca (#343); sem trecho, a mensagem
+   *         fixa de "sem fundamento legal"
    * @throws br.com.agrocontabil.exception.AssistenteIndisponivelException se a busca ou o modelo
    *         falharem
    */
@@ -245,6 +249,7 @@ public class RotaLegislacao {
     List<TrechoRecuperado> relacionados =
         trechos.subList(0, Math.min(TRECHOS_RELACIONADOS, trechos.size()));
     contexto.registrarTrechosCitados(relacionados.stream().map(TrechoRecuperado::id).toList());
+    contexto.registrarTrechosRelacionados();
     return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.CITACAO_INVALIDA,
         relacionados.stream().map(TrechoRecuperado::comoCitacao).toList());
   }

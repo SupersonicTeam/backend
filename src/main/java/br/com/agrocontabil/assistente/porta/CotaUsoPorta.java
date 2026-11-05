@@ -43,7 +43,9 @@ public interface CotaUsoPorta {
    * @param titularId titular da cota
    * @param semana    segunda-feira da semana da reserva
    * @param creditos  teto reservado
-   * @param ativa     {@code false} com a cota desligada
+   * @param ativa     {@code false} com a cota desligada ou no atalho fixo da tela (#343, sem
+   *                  modelo); inativa, só {@code titularId} vale (semana nula no atalho): acerto
+   *                  e estorno não mexem na cota
    */
   record ReservaCota(UUID titularId, LocalDate semana, long creditos, boolean ativa) {}
 

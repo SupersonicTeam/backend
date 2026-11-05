@@ -62,8 +62,8 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    este mês?" e "Quando vence a minha próxima guia?" pelas funções de guias, e "O que muda para
    mim com o IBS e o CBS?" com o texto curado e nove citações (ano de teste de 2026, art. 137,
    arts. 164 e 165, split payment). Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
-   IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**: a
-   primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
+   IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**, digitando perguntas que não sejam as três da tela (o
+   texto exato de um atalho, clicado ou digitado, fica fora da cota e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.

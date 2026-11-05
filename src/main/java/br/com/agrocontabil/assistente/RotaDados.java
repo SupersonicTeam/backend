@@ -170,6 +170,8 @@ public class RotaDados {
         .findFirst()
         .orElseThrow(() -> new IllegalArgumentException("Funcao de dados inexistente: " + funcao));
     contexto.verificarAtiva();
+    // Uma chamada de funcao, como no tool calling: a auditoria conta o que rodou nos dados.
+    contexto.registrarChamadasDeFuncao(1);
     String resultado;
     try {
       resultado = callback.call("{}", new ToolContext(contexto.comoToolContext()));

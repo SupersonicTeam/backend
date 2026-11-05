@@ -125,6 +125,7 @@ class TextosDoBackendTest {
     contexto.registrarFonte("totalComprasPorInsumo", Map.of(), false);
     contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), true);
     contexto.registrarTextoDoBackend(TEMPLATE, List.of("LC 214/2025|art. 137"));
+    contexto.registrarTrechosRelacionados();
     when(busca.buscarDispositivos(any(), any())).thenReturn(List.of());
     ResultadoOrquestracao misto = new ResultadoOrquestracao(Intencao.MISTO,
         "Compras: R$ 1,00.\n\n" + RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
@@ -135,6 +136,27 @@ class TextosDoBackendTest {
 
     assertThat(r.texto()).isEqualTo("Compras: R$ 1,00.\n\n" + TEMPLATE);
     assertThat(r.citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#258/#343: trechos que o modelo citou certo (nao os relacionados) ficam, com a "
+      + "frase que os apresenta, ao lado do artigo do dado")
+  void trechosCitadosPeloModeloFicam() {
+    contexto.registrarFonte("totalComprasPorInsumo", Map.of(), false);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), true);
+    contexto.registrarTextoDoBackend(TEMPLATE, List.of("LC 214/2025|art. 137"));
+    when(busca.buscarDispositivos(any(), any())).thenReturn(List.of());
+    ResultadoOrquestracao misto = new ResultadoOrquestracao(Intencao.MISTO,
+        "Compras: R$ 1,00.\n\n" + RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+        DesfechoInteracao.RESPONDIDA,
+        List.of(new CitacaoLegal("LC 214/2025", "art. 99", "u", "t")), true);
+
+    ResultadoOrquestracao r = textos.aplicar(misto, contexto);
+
+    assertThat(r.texto()).isEqualTo("Compras: R$ 1,00.\n\n"
+        + RotaLegislacao.TRECHOS_SEM_CONFIRMACAO + "\n\n" + TEMPLATE);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 99");
   }
 
   @Test

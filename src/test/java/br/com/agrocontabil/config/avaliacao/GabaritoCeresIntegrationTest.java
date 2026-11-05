@@ -107,6 +107,10 @@ class GabaritoCeresIntegrationTest {
       }
       p.padroesRecusa().forEach(Pattern::compile);
     }
+    // #343: o criterio novo chega do JSON (o record tem mais de um construtor; o Jackson usa o
+    // canonico). Sem isso, a T14 deixaria de medir o buraco 2/3 em silencio.
+    assertThat(gabarito.perguntas().stream().filter(PerguntaGabarito::semBecoSemSaida)
+        .map(PerguntaGabarito::id)).containsExactlyInAnyOrder("T03", "T14");
   }
 
   @Test

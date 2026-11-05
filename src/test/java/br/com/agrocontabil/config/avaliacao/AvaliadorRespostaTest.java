@@ -252,6 +252,14 @@ class AvaliadorRespostaTest {
         br.com.agrocontabil.assistente.rag.ValidadorCitacao.SEM_FUNDAMENTO, NENHUM_F, NENHUM_C),
         List.of());
     assertThat(r.semBecoSemSaida()).isFalse();
+
+    // Modelo fora do ar (fallback sem trecho): falha tecnica, que tem metrica propria; o criterio
+    // nao se aplica, e a mesma resposta nao conta duas vezes.
+    ExecucaoPergunta emFallback = new ExecucaoPergunta(Intencao.LEGISLACAO,
+        br.com.agrocontabil.assistente.fallback.ModoFallback.SEM_MODELO_SEM_TRECHO,
+        DesfechoInteracao.MODO_FALLBACK, NENHUM_C, NENHUM_F, true, 10, null);
+    assertThat(AvaliadorResposta.avaliar(ampla, emFallback, List.of()).semBecoSemSaida())
+        .isNull();
   }
 
   private static final List<CitacaoLegal> NENHUM_C = List.of();

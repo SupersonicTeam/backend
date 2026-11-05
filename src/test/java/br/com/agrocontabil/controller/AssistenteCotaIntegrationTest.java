@@ -134,6 +134,47 @@ class AssistenteCotaIntegrationTest {
   }
 
   @Test
+  @DisplayName("#343: atalho da tela sem saldo responde: sem modelo, nao reserva nem gasta credito")
+  void atalhoSemSaldoResponde() throws Exception {
+    gastar(50); // 50 + 73 de teto > 100: pergunta digitada levaria 429
+
+    perguntar("/api/assistente/chat", "O que muda para mim com o IBS e o CBS?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("LEGISLACAO"));
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    UsoSemanalAssistente uso = uso();
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(50);
+    assertThat(uso.getCreditosReservados()).isZero();
+  }
+
+  @Test
+  @DisplayName("#343: atalho da tela sem saldo no streaming: o stream abre e responde, sem 429")
+  void atalhoSemSaldoNoStream() throws Exception {
+    gastar(50);
+
+    org.springframework.test.web.servlet.MvcResult inicio = mockMvc.perform(
+            post("/api/assistente/chat/stream")
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .content("{\"pergunta\":\"O que muda para mim com o IBS e o CBS?\"}"))
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request()
+            .asyncStarted())
+        .andReturn();
+    // Espera o fim do stream (o emissor completa), com prazo: nada de sleep fixo.
+    inicio.getAsyncResult(10_000);
+
+    assertThat(inicio.getResponse().getContentAsString())
+        .contains("event:rota").contains("LEGISLACAO").contains("event:resposta")
+        .doesNotContain("LIMITE_USO_ASSISTENTE");
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    UsoSemanalAssistente uso = uso();
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(50);
+    assertThat(uso.getCreditosReservados()).isZero();
+  }
+
+  @Test
   @DisplayName("Sem saldo no streaming: 429 JSON antes de o stream abrir")
   void semSaldoAntesDoStream() throws Exception {
     gastar(50);

@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * <p>As frases ficam fora do {@code PromptsCeres.CLASSIFICACAO} e das descrições das funções: o
  * gabarito as mede (T01–T03) e a {@code SeparacaoTreinoTeste} proíbe pergunta dele no treino.
  */
-final class AtalhosFixos {
+public final class AtalhosFixos {
 
   /** Um atalho: a rota que a tela promete e, nos de dados, a função que responde. */
   enum AtalhoFixo {
@@ -62,6 +62,17 @@ final class AtalhosFixos {
           a -> RegrasClassificacao.normalizar(a.pergunta()), Function.identity()));
 
   private AtalhosFixos() {}
+
+  /**
+   * {@code true} se a pergunta é um atalho fixo: responde sem o modelo, então fica fora da cota
+   * da Ceres (o {@code AssistenteService} não reserva o teto para ela).
+   *
+   * @param pergunta pergunta do usuário
+   * @return se a pergunta cai num atalho
+   */
+  public static boolean ehAtalho(String pergunta) {
+    return reconhecer(pergunta).isPresent();
+  }
 
   /**
    * O atalho cuja frase é, normalizada, igual à pergunta.

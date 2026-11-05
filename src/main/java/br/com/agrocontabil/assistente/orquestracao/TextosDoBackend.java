@@ -4,6 +4,7 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ContextoAssistente.TextoDoBackend;
 import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
@@ -48,7 +49,7 @@ public class TextosDoBackend {
   /** Recusas da lei que contradiriam um artigo citado logo depois. */
   private static final List<String> RECUSAS_DA_LEI = List.of(
       OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL, ValidadorCitacao.SEM_FUNDAMENTO,
-      RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+      ModoFallback.SEM_MODELO_SEM_TRECHO);
 
   private final BuscaTextualLegislacaoService busca;
 
@@ -84,25 +85,48 @@ public class TextosDoBackend {
     novos.forEach(t -> dispositivos.addAll(t.dispositivos()));
     String doBackend = novos.stream().map(TextoDoBackend::texto).distinct()
         .collect(Collectors.joining("\n\n"));
-    String base = dispositivos.isEmpty() ? daRota : semRecusaDaLei(daRota);
+    boolean relacionados = comTrechosRelacionados(daRota, contexto);
+    String base = dispositivos.isEmpty() ? daRota : semRecusaDaLei(daRota, relacionados);
     String texto = substitui || base.isBlank() ? doBackend : base + "\n\n" + doBackend;
     DesfechoInteracao desfecho = substitui && SUBSTITUIVEIS.contains(resultado.desfecho())
         ? DesfechoInteracao.RESPONDIDA : resultado.desfecho();
-    // Os trechos "mais proximos" so fazem sentido com a frase que os apresenta (#258, #343): sem
-    // ela, ao lado do artigo do dado, seriam artigos soltos.
-    List<CitacaoLegal> daLei = !dispositivos.isEmpty()
-        && daRota.contains(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
-            ? List.of() : resultado.citacoes();
+    // Os trechos relacionados (#343) so fazem sentido com a frase que os apresenta: sem ela, ao
+    // lado do artigo do dado, seriam artigos soltos. Os que o modelo citou (#258) ficam.
+    List<CitacaoLegal> daLei = !dispositivos.isEmpty() && relacionados
+        ? List.of() : resultado.citacoes();
     return new ResultadoOrquestracao(resultado.rota(), texto, desfecho,
         CitacoesFixas.juntar(daLei, CitacoesFixas.buscar(busca,
             List.copyOf(dispositivos), contexto, "Tratamento do produto")),
         substitui || resultado.exibirFontes(), resultado.modoFallback(), resultado.atalhos());
   }
 
-  private static String semRecusaDaLei(String texto) {
+  /**
+   * As citações da rota são os trechos relacionados da lei (#343), ainda com a frase que os
+   * apresenta: o sinal do contexto e a frase no texto. Depois que um fundamento do backend tirou a
+   * frase (o {@code TextosDoBackend} roda antes do {@code FundamentoRetencao}), as citações já são
+   * as dele e ficam.
+   */
+  static boolean comTrechosRelacionados(String texto, ContextoAssistente contexto) {
+    return contexto.trechosRelacionados()
+        && texto.contains(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+  }
+
+  /**
+   * O texto sem as recusas da lei, para um fundamento do backend entrar logo depois sem
+   * contradição. Lista única, usada também pelo {@link FundamentoRetencao} (#343).
+   *
+   * @param texto               texto da rota
+   * @param trechosRelacionados a lei respondeu só com os trechos relacionados
+   *                            ({@link ContextoAssistente#trechosRelacionados()}): a frase que os
+   *                            apresenta sai junto
+   */
+  static String semRecusaDaLei(String texto, boolean trechosRelacionados) {
     String limpo = texto;
     for (String recusa : RECUSAS_DA_LEI) {
       limpo = limpo.replace(recusa, "");
+    }
+    if (trechosRelacionados) {
+      limpo = limpo.replace(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO, "");
     }
     return limpo.replaceAll("\n{3,}", "\n\n").strip();
   }

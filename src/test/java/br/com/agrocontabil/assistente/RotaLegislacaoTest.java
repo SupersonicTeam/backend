@@ -241,6 +241,8 @@ class RotaLegislacaoTest {
     assertThat(r.citacoes()).singleElement()
         .satisfies(c -> assertThat(c.url()).isEqualTo(URL));
     assertThat(contexto.trechosCitados()).containsExactly("id-1");
+    // Citados pelo modelo (#258), nao relacionados: um fundamento do backend nao os tira.
+    assertThat(contexto.trechosRelacionados()).isFalse();
   }
 
   @Test
@@ -259,6 +261,7 @@ class RotaLegislacaoTest {
     assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
         .containsExactly("LC 214/2025, art. 138, § 1º");
     assertThat(contexto.trechosCitados()).containsExactly("id-1");
+    assertThat(contexto.trechosRelacionados()).isTrue();
   }
 
   @Test
@@ -291,6 +294,7 @@ class RotaLegislacaoTest {
         .containsExactly("art. 1", "art. 2", "art. 3");
     assertThat(contexto.trechosCitados()).containsExactly("id-1", "id-2", "id-3");
     assertThat(r.soTrechos()).isTrue();
+    assertThat(contexto.trechosRelacionados()).isTrue();
   }
 
   @Test
@@ -321,6 +325,7 @@ class RotaLegislacaoTest {
     assertThat(r.citacoes()).isEmpty();
     assertThat(r.soTrechos()).isFalse();
     assertThat(contexto.trechosCitados()).isEmpty();
+    assertThat(contexto.trechosRelacionados()).isFalse();
   }
 
   @Test

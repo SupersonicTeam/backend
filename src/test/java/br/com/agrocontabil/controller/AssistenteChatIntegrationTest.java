@@ -298,7 +298,38 @@ class AssistenteChatIntegrationTest {
         .singleElement().satisfies(i -> {
           assertThat(i.getCamadaClassificacao()).isEqualTo("ATALHO_FIXO");
           assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+          assertThat(i.getChamadasFuncao()).isEqualTo(1);
         });
+  }
+
+  @Test
+  @DisplayName("#257: fora do atalho, o modelo escolhe vencimentosDoMes e a resposta sai pelo "
+      + "template, com os subtotais da funcao")
+  void esteMesPeloModelo() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusMonths(2), "430.00",
+        StatusGuiaFiscal.VENCIDA));
+    guiaFiscalRepository.save(guia(produtorA, hoje, "310.00", StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, YearMonth.from(hoje).plusMonths(1)
+        .atDay(10), "640.00", StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorB, hoje, "777.00", StatusGuiaFiscal.PENDENTE));
+    modelo.responderCom(prompt -> pedirFuncao("vencimentosDoMes", Map.of()));
+
+    perguntar(produtorA, "Quanto preciso separar para as guias deste mes?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value("Em " + YearMonth.from(hoje).format(
+            java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")) + ": 2 guias para pagar,"
+            + " somando R$ 740,00.\nEm atraso: 1 guia, R$ 430,00:\n- FUNRURAL (contribuicao"
+            + " previdenciaria do produtor rural), venceu em " + br(hoje.minusMonths(2))
+            + ": R$ 430,00.\nA vencer de " + br(hoje) + " a " + br(YearMonth.from(hoje)
+            .atEndOfMonth()) + ": 1 guia, R$ 310,00:\n- FUNRURAL, vence em " + br(hoje)
+            + ": R$ 310,00."))
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("vencimentosDoMes"));
+    assertThat(modelo.promptsRecebidos()).isNotEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement().satisfies(i ->
+            assertThat(i.getCamadaClassificacao()).isNotEqualTo("ATALHO_FIXO"));
   }
 
   @Test

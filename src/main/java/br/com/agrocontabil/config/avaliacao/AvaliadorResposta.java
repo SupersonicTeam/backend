@@ -79,13 +79,17 @@ public final class AvaliadorResposta {
             : vazou(pergunta, texto),
         pergunta.rotaEsperada(),
         pergunta.adversario(),
-        pergunta.semBecoSemSaida() ? !becoSemSaida(texto) : null);
+        // Falha tecnica (erro, modo fallback) ja conta na metrica dela: o criterio mede o
+        // conteudo da resposta com o modelo no ar.
+        pergunta.semBecoSemSaida() && !RelatorioAvaliacao.falhaTecnica(execucao)
+            ? !becoSemSaida(texto) : null);
   }
 
   /**
    * A resposta é a recusa da lei sem nenhum trecho ("não encontrei fundamento legal"), na rota de
    * lei ou na parte legal do MISTO (#343). "Não consegui confirmar", com os trechos relacionados,
-   * não é beco sem saída: o produtor tem por onde seguir.
+   * não é beco sem saída: o produtor tem por onde seguir. O fallback sem trecho não entra aqui: é
+   * falha técnica, e o critério não se aplica a ela ({@link RelatorioAvaliacao#falhaTecnica}).
    */
   static boolean becoSemSaida(String texto) {
     return texto.contains(ValidadorCitacao.SEM_FUNDAMENTO)

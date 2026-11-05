@@ -17,7 +17,8 @@ import org.springframework.stereotype.Component;
  * conferidos um a um na base de legislação (8.304 trechos, a mesma da VPS) em 2026-11-04;
  * {@link CitacoesFixas} avisa no log se algum sumir. Texto a revisar pela equipe a cada mudança.
  *
- * <p>Responde com o modelo fora do ar e não gasta crédito da cota: zero chamadas ao modelo.
+ * <p>Responde com o modelo fora do ar: zero chamadas ao modelo. Fica fora da cota da Ceres (o
+ * {@code AssistenteService} não reserva o teto para atalho), então não gasta crédito.
  */
 @Component
 public class AtalhoReformaTributaria {

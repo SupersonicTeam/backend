@@ -1,10 +1,8 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
-import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
-import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
@@ -79,14 +77,15 @@ public class FundamentoRetencao {
     if (resultado.rota() == Intencao.FORA_DE_ESCOPO || !trataDeRetencao(pergunta, contexto)) {
       return resultado;
     }
-    // "Nao encontrei fundamento" (ou "nao consegui confirmar", com os trechos mais proximos) ao
-    // lado do fundamento seria contraditorio: a frase sai, e os trechos que ela apresentava
-    // tambem (#343); ficam as citacoes fixas das duas regras.
-    boolean semConfirmacao = resultado.texto().contains(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
-    String texto = resultado.texto().replace(ValidadorCitacao.SEM_FUNDAMENTO, "")
-        .replace(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO, "").replaceAll("\n{3,}", "\n\n").strip();
+    // "Nao encontrei fundamento" (da rota de lei, da parte legal do MISTO ou do fallback sem
+    // trecho) ao lado do fundamento
+    // seria contraditorio: a frase sai (mesma lista do TextosDoBackend). Com os trechos
+    // relacionados (#343), a frase que os apresenta e eles tambem saem; ficam as citacoes fixas.
+    // As citacoes que o modelo marcou certo (#258) ficam.
+    boolean relacionados = TextosDoBackend.comTrechosRelacionados(resultado.texto(), contexto);
+    String texto = TextosDoBackend.semRecusaDaLei(resultado.texto(), relacionados);
     texto = texto.isEmpty() ? TEXTO : texto + "\n\n" + TEXTO;
-    List<CitacaoLegal> daRota = semConfirmacao ? List.of() : resultado.citacoes();
+    List<CitacaoLegal> daRota = relacionados ? List.of() : resultado.citacoes();
     return new ResultadoOrquestracao(resultado.rota(), texto, resultado.desfecho(),
         CitacoesFixas.juntar(daRota, citacoes(contexto)), resultado.exibirFontes(),
         resultado.modoFallback(), resultado.atalhos());

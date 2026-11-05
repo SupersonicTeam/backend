@@ -368,8 +368,11 @@ números da lei, e nenhum validador saberia de onde cada um veio.
 "Quanto eu tenho que pagar este mês?", "Quando vence a minha próxima guia?" e "O que muda para mim
 com o IBS e o CBS?" — são reconhecidas pelo **texto normalizado exato** (`AtalhosFixos`, com a
 normalização das `RegrasClassificacao`: sem acento, caixa nem pontuação) e respondem **sem nenhuma
-chamada ao modelo**, inclusive com ele fora do ar e sem gastar crédito da cota (camada
-`ATALHO_FIXO` na auditoria). As de dados chamam a função direto (`vencimentosDoMes`,
+chamada ao modelo**, inclusive com ele fora do ar, e ficam fora da cota (#166): o
+`AssistenteService` não reserva o teto para eles, então nem gastam crédito nem recebem 429
+`LIMITE_USO_ASSISTENTE` com a semana esgotada (o rate limit do chat e a vaga do bulkhead continuam
+valendo). Camada `ATALHO_FIXO` na auditoria; nos dois de dados, a função conta em
+`chamadas_funcao`. As de dados chamam a função direto (`vencimentosDoMes`,
 `proximosVencimentos`) por `RotaDados.responderAtalho`, sem tool calling, e saem pelo template da
 #266 com as mesmas conferências. A de legislação responde com o texto curado do
 `AtalhoReformaTributaria` (padrão do `FundamentoRetencao`): ano de teste de 2026 (CBS 0,9% e IBS
@@ -381,6 +384,15 @@ busca por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALI
 Pergunta parecida, mas não igual, segue o fluxo normal. **Texto curado = revisão da equipe a cada
 mudança**; as frases dos atalhos ficam fora do prompt do classificador e das descrições das
 funções (o gabarito as mede: T01–T03).
+
+**Trechos relacionados ao lado de um fundamento do backend (#343).** Quando a lei responde com
+os trechos relacionados (abaixo, na seção da #258), a `RotaLegislacao` liga
+`ContextoAssistente.trechosRelacionados()`. O `TextosDoBackend` e o `FundamentoRetencao` tiram a
+frase e esses trechos só enquanto a frase ainda está no texto (`TextosDoBackend
+.comTrechosRelacionados`): o primeiro que acrescenta um fundamento os tira, e o seguinte mantém as
+citações que esse fundamento pôs. As recusas da lei (a da rota, a da parte legal do MISTO e a do
+fallback sem trecho) saem por uma lista só (`TextosDoBackend.semRecusaDaLei`); as citações que o
+modelo marcou certo (#258) ficam.
 
 **Antes do classificador, um filtro determinístico de prompt injection** (`FiltroInjecao`, #145):
 "ignore as instruções", "prompt de sistema", "agora você é um...", "sem restrições", "modo
