@@ -374,16 +374,39 @@ chamada ao modelo**, inclusive com ele fora do ar, e ficam fora da cota (#166): 
 valendo). Camada `ATALHO_FIXO` na auditoria; nos dois de dados, a função conta em
 `chamadas_funcao`. As de dados chamam a função direto (`vencimentosDoMes`,
 `proximosVencimentos`) por `RotaDados.responderAtalho`, sem tool calling, e saem pelo template da
-#266 com as mesmas conferências. A de legislação responde com o texto curado do
-`AtalhoReformaTributaria` (padrão do `FundamentoRetencao`): ano de teste de 2026 (CBS 0,9% e IBS
-0,1%, dispensa do recolhimento para quem cumpre as obrigações acessórias), redução de 60% do in
-natura, receita abaixo de R$ 3,6 milhões fora do IBS/CBS salvo opção, e o split payment — nove
-citações fixas, cada uma conferida na base (LC 214/2025, arts. 343, 346, 348 § 1º, 137, 164, 165,
-31 e 32; EC 132/2023, art. 125 do ADCT). Na VPS em 2026-11-04 essa pergunta, ampla demais para a
-busca por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALIDA`, 19 e 42 s).
-Pergunta parecida, mas não igual, segue o fluxo normal. **Texto curado = revisão da equipe a cada
-mudança**; as frases dos atalhos ficam fora do prompt do classificador e das descrições das
-funções (o gabarito as mede: T01–T03).
+#266 com as mesmas conferências. Na VPS em 2026-11-04 a de legislação, ampla demais para a busca
+por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALIDA`, 19 e 42 s). Pergunta
+parecida, mas não igual, segue o fluxo normal. As frases dos atalhos ficam fora do prompt do
+classificador e das descrições das funções (o gabarito as mede: T01–T03).
+
+**O atalho de legislação explicado (#347).** O texto curado da #343 (quatro itens) ficou
+engessado para o produtor. O `AtalhoReformaTributaria` responde agora com o texto explicado do
+`TextoReformaTributaria`, em seções: o que são o IBS e a CBS e o que eles substituem; o calendário
+(2026 de teste e a dispensa, 2027–2028, a redução do ICMS e do ISS de 2029 a 2032, a extinção em
+2033); na venda (60% do in natura, alíquota zero da cesta básica e dos hortícolas, a nota como
+confissão); nas compras (60% dos insumos do Anexo IX e o crédito do regime regular, sem afirmar
+que o insumo gera crédito: o diferimento está fora do escopo); no pagamento (o split payment "que
+a lei prevê"); quem é contribuinte (arts. 164, 165 e 168, mais a premissa de que o AgroConIA
+calcula pelo regime regular); e o próximo passo. **Personalizado** com o que o sistema sabe do
+produtor, pela porta `DadosProdutorPorta.perfilDoAtalho`: o tipo (pessoa física ganha o Funrural
+retido pelo comprador, Lei 8.212, art. 30, IV; os outros, "o Funrural e o ICMS ficam com o
+contador"), se um escritório o atende (vínculo ativo) e os até 3 NCMs que ele mais vendeu no ano
+(saídas próprias autorizadas, CFOP de venda), com a frase da tabela oficial
+(`TemplateTratamentoProduto.frase`) e "o enquadramento final de cada venda é com o seu contador".
+Nunca afirma a situação do produtor (optante ou não contribuinte, premissas da #280). Cada
+afirmação tem o dispositivo, e cada número está escrito nele: 28 citações fixas (29 com o
+Funrural, mais as dos produtos), conferidas na base em 2026-11-05; o `TextoReformaTributariaTest`
+confere texto × citações contra o fixture `ceres/atalho-reforma-trechos.json`, copiado da base.
+Parte do perfil que falha sai do texto, e o resto segue. Continua sem modelo e fora da cota.
+
+**Parágrafo do modelo testado e descartado (#347).** Um "Em resumo" do modelo sobre trechos
+fixos de regra geral, conferido pelas redes da rota de lei, foi medido com o `qwen3:4b-instruct`
+em 2026-11-05: passava nas conferências de citação e de número, mas toda rodada (10 de 10, com
+três recortes de trechos) trazia uma frase errada que nenhum validador pega — as alíquotas de
+teste de 2026 "já reduzidas para o agronegócio", "o IBS cai para 0,05% em 2027" citando o art. 343,
+"quem cumpre as obrigações não precisa pagar" sem o ano. Decisão do Murillo: sem o parágrafo; a
+resposta é só do backend. Rever com um modelo maior. **Texto do backend = revisão da equipe a
+cada mudança.**
 
 **Trechos relacionados ao lado de um fundamento do backend (#343).** Quando a lei responde com
 os trechos relacionados (abaixo, na seção da #258), a `RotaLegislacao` liga

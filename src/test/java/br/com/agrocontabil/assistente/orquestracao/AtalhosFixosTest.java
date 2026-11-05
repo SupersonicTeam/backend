@@ -3,18 +3,14 @@ package br.com.agrocontabil.assistente.orquestracao;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos.AtalhoFixo;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Atalhos fixos da tela da Ceres (#343): reconhecimento pelo texto normalizado exato e coerência
- * do texto curado com as citações.
+ * Atalhos fixos da tela da Ceres (#343): reconhecimento pelo texto normalizado exato. A coerência
+ * do texto do atalho de legislação com as citações está no {@code TextoReformaTributariaTest}.
  */
 class AtalhosFixosTest {
 
@@ -55,29 +51,5 @@ class AtalhosFixosTest {
   @DisplayName("Pergunta nula nao e atalho")
   void nula() {
     assertThat(AtalhosFixos.reconhecer(null)).isEmpty();
-  }
-
-  @Test
-  @DisplayName("Todo artigo nomeado no texto curado esta nas citacoes, e vice-versa")
-  void textoCuradoCoerenteComAsCitacoes() {
-    Matcher artigos = Pattern.compile("arts?\\. (\\d+)(?: e (\\d+))?")
-        .matcher(AtalhoReformaTributaria.TEXTO);
-    Set<String> nomeados = new TreeSet<>();
-    while (artigos.find()) {
-      nomeados.add(artigos.group(1));
-      if (artigos.group(2) != null) {
-        nomeados.add(artigos.group(2));
-      }
-    }
-    Set<String> citados = new TreeSet<>();
-    for (String dispositivo : AtalhoReformaTributaria.DISPOSITIVOS) {
-      String rotulo = dispositivo.substring(dispositivo.indexOf('|') + 1);
-      // EC 132: "art. 2º (redação do art. 125)" é o art. 125 do ADCT, o nomeado no texto.
-      Matcher citado = Pattern.compile("art\\. (\\d+)\\)?$|^art\\. (\\d+)(?:,|$)").matcher(rotulo);
-      if (citado.find()) {
-        citados.add(citado.group(1) != null ? citado.group(1) : citado.group(2));
-      }
-    }
-    assertThat(nomeados).isEqualTo(citados);
   }
 }

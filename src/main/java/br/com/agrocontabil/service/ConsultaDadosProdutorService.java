@@ -4,8 +4,10 @@ import br.com.agrocontabil.model.AcaoRevisao;
 import br.com.agrocontabil.model.NotaFiscalRevisao;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
+import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.StatusPendencia;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.CompraInsumoAgregado;
 import br.com.agrocontabil.repository.CompraInsumoTotal;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
@@ -15,7 +17,9 @@ import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
 import br.com.agrocontabil.repository.NotaPorNumeroLinha;
 import br.com.agrocontabil.repository.NotaResumo;
 import br.com.agrocontabil.repository.PendenciaRepository;
+import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.TotalAgregado;
+import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.repository.VencimentoGuiaResumo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -67,16 +71,21 @@ public class ConsultaDadosProdutorService {
   private final NotaFiscalValidacaoRepository validacaoRepository;
   private final SinaisNotaConferirService sinaisService;
   private final PendenciaRepository pendenciaRepository;
+  private final ProdutorRepository produtorRepository;
+  private final VinculoCarteiraRepository vinculoRepository;
 
   /**
-   * Constrói o serviço com os repositórios de notas, guias, revisões e validações, e os sinais de
-   * nota a conferir (#276).
+   * Constrói o serviço com os repositórios de notas, guias, revisões e validações, os sinais de
+   * nota a conferir (#276), e o produtor e os vínculos para o perfil do atalho (#347).
    */
   public ConsultaDadosProdutorService(
       NotaFiscalRepository notaFiscalRepository, GuiaFiscalRepository guiaFiscalRepository,
       NotaFiscalRevisaoRepository revisaoRepository,
       NotaFiscalValidacaoRepository validacaoRepository,
-      SinaisNotaConferirService sinaisService, PendenciaRepository pendenciaRepository) {
+      SinaisNotaConferirService sinaisService, PendenciaRepository pendenciaRepository,
+      ProdutorRepository produtorRepository, VinculoCarteiraRepository vinculoRepository) {
+    this.produtorRepository = produtorRepository;
+    this.vinculoRepository = vinculoRepository;
     this.notaFiscalRepository = notaFiscalRepository;
     this.guiaFiscalRepository = guiaFiscalRepository;
     this.revisaoRepository = revisaoRepository;
@@ -307,6 +316,42 @@ public class ConsultaDadosProdutorService {
     String padrao = "%" + escaparLike(descricaoOuNcm.trim().toLowerCase(Locale.ROOT)) + "%";
     return notaFiscalRepository.listarNcmsCompradosPorDescricao(
         produtorId, padrao, inicioDoDia(inicio), fimExclusivo(fim), pagina);
+  }
+
+  /**
+   * O que o atalho "O que muda para mim com o IBS e o CBS?" usa para personalizar o texto (issue
+   * #347): o tipo do produtor, se um escritório o atende (vínculo {@code ATIVO}) e os NCMs que ele
+   * mais vendeu no período. Nada de dado pessoal, valor ou comprador.
+   *
+   * @param tipo                  tipo cadastrado; nulo se não cadastrado
+   * @param atendidoPorEscritorio algum escritório com vínculo ativo
+   * @param ncmsMaisVendidos      NCMs de 8 dígitos, do maior valor vendido ao menor
+   */
+  public record PerfilAtalho(
+      TipoProdutor tipo, boolean atendidoPorEscritorio, List<String> ncmsMaisVendidos) {
+
+    /** Cópia defensiva. */
+    public PerfilAtalho {
+      ncmsMaisVendidos = List.copyOf(ncmsMaisVendidos);
+    }
+  }
+
+  /**
+   * Perfil do produtor para o atalho de legislação da Ceres (issue #347).
+   *
+   * @param produtorId produtor da sessão
+   * @param inicio     primeiro dia das vendas (inclusivo)
+   * @param fim        último dia das vendas (inclusivo)
+   * @param limite     quantos NCMs (1 a {@link #LIMITE_MAXIMO})
+   * @return o perfil; produtor inexistente = tipo nulo e nenhum NCM
+   */
+  public PerfilAtalho perfilDoAtalho(UUID produtorId, LocalDate inicio, LocalDate fim, int limite) {
+    TipoProdutor tipo = produtorRepository.findById(produtorId)
+        .map(Produtor::getTipoProdutor).orElse(null);
+    boolean atendido = !vinculoRepository.findEscritoriosAtivosDoProdutor(produtorId).isEmpty();
+    List<String> ncms = notaFiscalRepository.listarNcmsVendidos(produtorId, inicioDoDia(inicio),
+        fimExclusivo(fim), PageRequest.of(0, limitar(limite)));
+    return new PerfilAtalho(tipo, atendido, ncms);
   }
 
   /**

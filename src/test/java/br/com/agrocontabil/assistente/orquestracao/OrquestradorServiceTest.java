@@ -56,6 +56,7 @@ class OrquestradorServiceTest {
   @Mock private RotaLegislacao rotaLegislacao;
   @Mock private BuscaTextualLegislacaoService buscaTextual;
   @Mock private TrechosDasCompras trechosDasCompras;
+  @Mock private AtalhoReformaTributaria atalhoReforma;
 
   private OrquestradorService orquestrador;
   private DisponibilidadeModelo disponibilidade;
@@ -68,7 +69,7 @@ class OrquestradorServiceTest {
     disponibilidade = new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L);
     orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
         trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
-        new AtalhoReformaTributaria(buscaTextual), new ModoFallback(buscaTextual, propriedades),
+        atalhoReforma, new ModoFallback(buscaTextual, propriedades),
         disponibilidade, propriedades);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }
@@ -93,28 +94,25 @@ class OrquestradorServiceTest {
   }
 
   @Test
-  @DisplayName("#343: atalho de legislacao da tela: texto curado e citacoes fixas, sem classificador "
-      + "nem rota de lei (zero chamadas ao modelo), mesmo com o modelo fora do ar")
+  @DisplayName("#343/#347: atalho de legislacao da tela vai direto ao AtalhoReformaTributaria, sem "
+      + "classificador nem rota de lei, mesmo com o modelo fora do ar")
   void atalhoDeLegislacao() {
     disponibilidade.registrarFalha();
-    when(buscaTextual.buscarDispositivos(eq(AtalhoReformaTributaria.DISPOSITIVOS), any()))
-        .thenReturn(List.of(
-            new TrechoRecuperado("T1", "id-346", "LC 214/2025", "art. 346", "u", "t", 0),
-            new TrechoRecuperado("T2", "id-137", "LC 214/2025", "art. 137", "u", "t", 0)));
+    ResultadoOrquestracao doAtalho = new ResultadoOrquestracao(Intencao.LEGISLACAO,
+        "texto do atalho", DesfechoInteracao.RESPONDIDA, List.of(CITACAO), false);
+    when(atalhoReforma.responder(contexto)).thenReturn(doAtalho);
 
     ResultadoOrquestracao r = orquestrador.responder(
         "O que muda para mim com o IBS e o CBS?", contexto, rotasAvisadas::add);
 
     assertThat(r.rota()).isEqualTo(Intencao.LEGISLACAO);
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
-    assertThat(r.texto()).isEqualTo(AtalhoReformaTributaria.TEXTO);
-    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
-        .containsExactly("LC 214/2025, art. 346", "LC 214/2025, art. 137");
+    assertThat(r.texto()).isEqualTo("texto do atalho");
+    assertThat(r.citacoes()).containsExactly(CITACAO);
     assertThat(r.exibirFontes()).isFalse();
     assertThat(r.modoFallback()).isFalse();
     assertThat(rotasAvisadas).containsExactly(Intencao.LEGISLACAO);
     assertThat(contexto.camadaClassificacao()).isEqualTo("ATALHO_FIXO");
-    assertThat(contexto.trechosCitados()).containsExactly("id-346", "id-137");
     verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
   }
 
