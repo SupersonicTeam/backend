@@ -152,9 +152,9 @@ Garantias, todas em código:
 - **Sem text-to-SQL:** consultas fixas e parametrizadas; texto digitado vira `LIKE` escapado.
 - **Minimização:** as funções devolvem totais, datas, contagens e listas curtas — nenhum nome,
   CPF/CNPJ, endereço, chave de acesso ou observação.
-- **Custo limitado:** uma chamada ao modelo e uma rodada de funções por pergunta (#266; o
-  `AI_MAX_RODADAS_FERRAMENTAS` deixou de ter efeito na rota de dados); concorrência e tempos na
-  seção de orquestração (#157).
+- **Custo limitado:** uma chamada ao modelo e uma rodada de funções por pergunta (#266; a
+  propriedade `max-rodadas-ferramentas` saiu, junto com o lugar que ainda a usava, a reserva da
+  cota); concorrência e tempos na seção de orquestração (#157).
 - **Erro de função:** sem segunda rodada, parâmetro inválido não volta ao modelo; a função falhada
   não gera seção, e sem seção nenhuma a resposta é a honesta com os atalhos. A mensagem do banco
   nunca sai.
@@ -588,9 +588,9 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 
 | Chamada | Quem chama | Quando | Parte fixa (início) | Parte variável (fim) | Funções | Teto de saída |
 |---|---|---|---|---|---|---|
-| Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `AI_MAX_TOKENS` (1.024) |
-| Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `AI_MAX_TOKENS` (1.024) |
-| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `AI_MAX_TOKENS` (1.024) |
+| Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
+| Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
+| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);
@@ -650,9 +650,9 @@ pelo `TetoSaidaOllamaFioTest`.
   três acima.
 - **Validação na subida:** contexto de pelo menos 6.144 (maior prompt estimado da rota de dados
   mais o teto das funções), cada teto entre 16 e a metade do contexto (`tetos.contexto`, lido da
-  mesma propriedade do `num-ctx`) e no máximo o `AI_MAX_TOKENS`, que continua sendo o teto geral
-  do provedor e o teto de saída da reserva da cota (#166) — passar dele faria a chamada gerar mais
-  do que foi reservado.
+  mesma propriedade do `num-ctx`). O `AI_MAX_TOKENS` ficou só como padrão do provedor para chamada
+  sem teto próprio (hoje nenhuma) e não limita mais estes tetos: a reserva da cota soma os três
+  diretamente (próxima seção).
 - **Resposta cortada nunca sai como completa.** `ModeloLinguagem.cortadaPeloTeto` confere, antes
   de qualquer validação, o motivo do fim (`done_reason`/`finish_reason` `length`) **ou** os tokens
   gerados no teto (cobre o motivo ausente). O texto cortado pode passar nos validadores: uma
@@ -671,6 +671,52 @@ pelo `TetoSaidaOllamaFioTest`.
 - **Para calibrar:** `SELECT count(*) FROM assistente_interacao WHERE desfecho = 'RESPOSTA_CORTADA'
   OR desfecho_dados = 'RESPOSTA_CORTADA' OR desfecho_legislacao = 'RESPOSTA_CORTADA';` depois de uma
   rodada da régua. Zero com o teto menor = o teto cabe.
+
+### Reserva da cota semanal (#166) a partir das chamadas reais
+
+Antes de cada pergunta, `CotaUsoAssistenteService.reservar` reserva o custo máximo dela
+(`AssistenteProperties.Cota.tetoDaPergunta`); no fim, o acerto debita o real e devolve a diferença.
+A fórmula antiga vinha da Fase 1 — classificação + lei + o laço de funções (1 + 3 rodadas) = **6
+chamadas**, todas com o `AI_MAX_TOKENS` (1.024) de saída. Depois da #266 (uma chamada de dados) e da
+#270 (teto por chamada), ela reservava mais que o dobro do possível, e um produtor perto do limite
+recebia 429 `LIMITE_USO_ASSISTENTE` com crédito para qualquer pergunta.
+
+Hoje são no máximo **3 chamadas** (`Cota.CHAMADAS_POR_PERGUNTA`), cada uma no máximo uma vez:
+classificação (só no desempate das camadas ou na `perguntaLei` do MISTO decidido pelas embeddings —
+os dois caminhos são exclusivos), escolha das funções e lei. O pior caso é o MISTO com desempate.
+
+```
+teto = ⌈(3 × teto-tokens-entrada-por-chamada × peso-entrada
+        + (tetos.classificacao + tetos.funcoes + tetos.legislacao) × peso-saida)
+        × maior fator ÷ tokens-por-credito⌉
+```
+
+Com os padrões: 3 × 8.192 + (256 + 512 + 1.024) × 4 = 31.744 → **32 créditos** (eram 73). O ganho é
+~2,3×, não 3–4×: a entrada (24.576 dos 31.744 ponderados) passou a dominar a reserva. Reduzi-la exige
+tetos de entrada por tipo de chamada, que dependem do maior `prompt_eval_count` medido na VPS (a
+classificação tem ~700 tokens, a lei não tem teto de tamanho para os trechos); sem medição, nada
+mudou ali.
+
+**Por que continua sendo um teto de verdade:**
+
+- **Saída:** a reserva usa o mesmo `maxTokens` que a chamada manda ao modelo (`num_predict` /
+  `max_tokens`), e o provedor não gera além dele.
+- **Entrada:** `teto-tokens-entrada-por-chamada` tem como padrão a janela do Ollama (`num-ctx`,
+  8.192; antes eram 8.000, abaixo do maior prompt que o Ollama aceita), e a aplicação não sobe com
+  ele abaixo de `tetos.contexto`. Com provedor por API o backend não limita o prompt; aí vale a
+  terceira garantia.
+- **Acerto:** `acertar` cobra no máximo o reservado e registra WARN quando o real passa — o titular
+  nunca ultrapassa o limite da semana, mesmo com uma estimativa errada.
+- **Número de chamadas:** o `TetoDaCotaCobreChamadasTest` (ArchUnit) exige exatamente três pontos
+  que chamam `ModeloLinguagem.chamar` (`LlmClassificadorIntencao`, `RotaDados`, `RotaLegislacao`),
+  um em cada, e nenhum `ChatModel.call` fora da porta. Uma chamada nova quebra o build até alguém
+  rever `CHAMADAS_POR_PERGUNTA` e a fórmula. Limite: o teste conta pontos de chamada, não execuções;
+  um laço em volta de um deles passaria (revisão de código).
+- **Subida:** com a cota ligada, o teto (com o maior fator) acima do menor plano impede a subida — a
+  mesma fórmula do `reservar`, então "sobe" quer dizer "toda pergunta cabe num plano vazio".
+
+Retry do Spring AI (`AI_RETRY_MAX_ATTEMPTS`) não muda a conta: uma tentativa que falha não devolve
+uso, e só a resposta final é somada.
 
 ### `num_ctx`
 

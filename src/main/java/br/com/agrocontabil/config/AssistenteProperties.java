@@ -18,7 +18,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     saude:
  *       timeout: 2s     # timeout do health do Ollama
  *       cache: 10s      # por quanto tempo o último resultado do health é reaproveitado
- *     max-rodadas-ferramentas: 3     # teto do laço modelo → função → modelo (issue #142)
  *     max-conversas-simultaneas: 4   # perguntas em andamento ao mesmo tempo (issues #142, #157)
  *     timeout-pergunta: 5m           # tempo total de uma pergunta (issue #157)
  *     timeout-funcao: 10s            # tempo de cada consulta aos dados do produtor (issue #157)
@@ -37,13 +36,6 @@ public class AssistenteProperties implements InitializingBean {
 
   /** Health indicator do Ollama. */
   private Saude saude = new Saude();
-
-  /**
-   * Quantas vezes, numa mesma pergunta, o modelo pode pedir funções antes de o backend desistir
-   * (issue #142). O laço de ferramentas é do backend justamente para ter este teto: sem ele, um
-   * modelo confuso (ou induzido por prompt injection) chamaria funções indefinidamente.
-   */
-  private int maxRodadasFerramentas = 3;
 
   /**
    * Perguntas processadas ao mesmo tempo (issues #142 e #157); é também o tamanho do pool de
@@ -93,11 +85,6 @@ public class AssistenteProperties implements InitializingBean {
   public void afterPropertiesSet() {
     exigirPositivo(saude.getTimeout(), "app.assistente.saude.timeout");
     exigirPositivo(saude.getCache(), "app.assistente.saude.cache");
-    if (maxRodadasFerramentas < 1 || maxRodadasFerramentas > 10) {
-      throw new IllegalStateException(
-          "app.assistente.max-rodadas-ferramentas deve estar entre 1 e 10, recebido: "
-              + maxRodadasFerramentas);
-    }
     if (rag.getTopK() < 1 || rag.getTopK() > 10) {
       throw new IllegalStateException(
           "app.assistente.rag.top-k deve estar entre 1 e 10, recebido: " + rag.getTopK());
@@ -134,27 +121,32 @@ public class AssistenteProperties implements InitializingBean {
               + fallback.getTamanhoMaximoTrecho());
     }
     if (cota.getCreditosPorSemanaProdutor() < 1 || cota.getCreditosPorSemanaEscritorio() < 1
-        || cota.getTokensPorCredito() < 1 || cota.getTetoTokensEntradaPorChamada() < 1
-        || cota.getTetoTokensSaidaPorChamada() < 1) {
+        || cota.getTokensPorCredito() < 1) {
       throw new IllegalStateException(
-          "app.assistente.cota: creditos por semana, tokens-por-credito e tetos de tokens devem "
-              + "ser >= 1");
+          "app.assistente.cota: creditos por semana e tokens-por-credito devem ser >= 1");
     }
     if (cota.getPesoEntrada() < 0 || cota.getPesoSaida() <= 0 || cota.getFatorPadrao() <= 0
         || cota.getFatorPorModelo().values().stream().anyMatch(f -> f == null || f <= 0)) {
       throw new IllegalStateException(
           "app.assistente.cota: peso-saida e fatores devem ser > 0 e peso-entrada >= 0");
     }
-    long teto = cota.tetoDaPergunta(maxRodadasFerramentas, cota.maiorFator());
+    tetos.validar();
+    if (cota.getTetoTokensEntradaPorChamada() < tetos.getContexto()) {
+      // O Ollama aceita um prompt do tamanho da janela inteira: abaixo dela, uma chamada de prompt
+      // longo (a lei, com os trechos) consumiria mais entrada do que a cota reservou.
+      throw new IllegalStateException("app.assistente.cota.teto-tokens-entrada-por-chamada ("
+          + cota.getTetoTokensEntradaPorChamada() + ") deve ser >= app.assistente.tetos.contexto ("
+          + tetos.getContexto() + ")");
+    }
+    long teto = cota.tetoDaPergunta(tetos, cota.maiorFator());
     long menorPlano = Math.min(
         cota.getCreditosPorSemanaProdutor(), cota.getCreditosPorSemanaEscritorio());
     if (cota.isHabilitada() && teto > menorPlano) {
       // Sem isto a aplicacao sobe e toda pergunta recebe 429 "creditos esgotados".
       throw new IllegalStateException("app.assistente.cota: o teto de uma pergunta (" + teto
           + " creditos, com o maior fator) passa do menor plano (" + menorPlano + "). Aumente os "
-          + "creditos por semana ou reduza os tetos de tokens (AI_MAX_TOKENS).");
+          + "creditos por semana ou reduza os tetos de app.assistente.tetos.");
     }
-    tetos.validar(cota.getTetoTokensSaidaPorChamada());
     exigirPositivo(timeoutPergunta, "app.assistente.timeout-pergunta");
     exigirPositivo(timeoutFuncao, "app.assistente.timeout-funcao");
     if (timeoutFuncao.toSeconds() < 1) {
@@ -186,14 +178,6 @@ public class AssistenteProperties implements InitializingBean {
     if (valor == null || valor.isNegative() || valor.isZero()) {
       throw new IllegalStateException(nome + " deve ser maior que zero, recebido: " + valor);
     }
-  }
-
-  public int getMaxRodadasFerramentas() {
-    return maxRodadasFerramentas;
-  }
-
-  public void setMaxRodadasFerramentas(int maxRodadasFerramentas) {
-    this.maxRodadasFerramentas = maxRodadasFerramentas;
   }
 
   public int getMaxConversasSimultaneas() {
@@ -406,14 +390,19 @@ public class AssistenteProperties implements InitializingBean {
    * </pre>
    *
    * <p>A semana vai de segunda 00:00 a domingo 23:59 em {@code America/Sao_Paulo}; sobra não
-   * acumula. Antes de cada pergunta é reservado o teto possível dela, derivado dos limites da
-   * própria pergunta (classificação + rodadas de função + legislação, cada uma com o teto de
-   * entrada e de saída); no fim, o consumo real é acertado e a diferença volta.
+   * acumula. Antes de cada pergunta é reservado o teto possível dela ({@link #tetoDaPergunta});
+   * no fim, o consumo real é acertado e a diferença volta.
    */
   public static class Cota {
 
-    /** Chamadas ao modelo fora do laço de funções: a classificação e a parte de legislação. */
-    public static final int CHAMADAS_FORA_DO_LACO = 2;
+    /**
+     * Chamadas ao modelo que uma pergunta pode fazer, no máximo: classificação (só no desempate
+     * das camadas e na {@code perguntaLei} do MISTO, #265), escolha das funções de dados (uma
+     * só desde a #266) e lei. O pior caso é o MISTO com desempate. Uma chamada nova ao modelo
+     * exige rever este número e {@link #tetoDaPergunta}: o {@code TetoDaCotaCobreChamadasTest}
+     * quebra se aparecer outro ponto que chame o modelo.
+     */
+    public static final int CHAMADAS_POR_PERGUNTA = 3;
 
     /** Desliga a cota (demonstração do TCC): nada é reservado nem bloqueado. */
     private boolean habilitada = true;
@@ -433,13 +422,15 @@ public class AssistenteProperties implements InitializingBean {
     }
 
     /**
-     * Custo máximo possível de uma pergunta: classificação + parte de legislação + o laço de
-     * funções (a primeira chamada e uma por rodada), cada chamada com os tetos de entrada e saída.
+     * Custo máximo possível de uma pergunta (#166, revisto depois da #270): as
+     * {@value #CHAMADAS_POR_PERGUNTA} chamadas, cada uma com o teto de entrada e com o próprio
+     * teto de saída ({@code app.assistente.tetos}: classificação + funções + lei). O teto de saída
+     * é o {@code maxTokens} que a própria chamada manda ao modelo, então a saída real nunca passa
+     * dele.
      */
-    public long tetoDaPergunta(int maxRodadasFerramentas, double fator) {
-      long chamadas = CHAMADAS_FORA_DO_LACO + 1L + maxRodadasFerramentas;
-      return creditos(chamadas * tetoTokensEntradaPorChamada,
-          chamadas * tetoTokensSaidaPorChamada, fator);
+    public long tetoDaPergunta(Tetos tetos, double fator) {
+      long saida = (long) tetos.getClassificacao() + tetos.getFuncoes() + tetos.getLegislacao();
+      return creditos(CHAMADAS_POR_PERGUNTA * tetoTokensEntradaPorChamada, saida, fator);
     }
 
     /** Maior fator configurado (o padrão ou o de algum modelo). */
@@ -480,14 +471,13 @@ public class AssistenteProperties implements InitializingBean {
      */
     private Map<String, Double> fatorPorModelo = new HashMap<>();
 
-    /** Teto de tokens de entrada de uma chamada ao modelo, para a reserva. */
-    private long tetoTokensEntradaPorChamada = 8000;
-
     /**
-     * Teto de tokens de saída de uma chamada — o mesmo {@code AI_MAX_TOKENS} que limita o modelo
-     * ({@code num-predict} / {@code max-tokens}), obrigatório para a reserva ser um teto de verdade.
+     * Teto de tokens de entrada de uma chamada ao modelo, para a reserva. Padrão = a janela do
+     * Ollama ({@code num-ctx}), o maior prompt que ele aceita; abaixo dela a aplicação não sobe.
+     * Com provedor por API o backend não limita o prompt (a lei não tem teto de tamanho para os
+     * trechos): o acerto cobra no máximo o reservado e registra WARN se o real passar.
      */
-    private long tetoTokensSaidaPorChamada = 1024;
+    private long tetoTokensEntradaPorChamada = 8192;
 
     public boolean isHabilitada() {
       return habilitada;
@@ -568,21 +558,14 @@ public class AssistenteProperties implements InitializingBean {
     public void setTetoTokensEntradaPorChamada(long tetoTokensEntradaPorChamada) {
       this.tetoTokensEntradaPorChamada = tetoTokensEntradaPorChamada;
     }
-
-    public long getTetoTokensSaidaPorChamada() {
-      return tetoTokensSaidaPorChamada;
-    }
-
-    public void setTetoTokensSaidaPorChamada(long tetoTokensSaidaPorChamada) {
-      this.tetoTokensSaidaPorChamada = tetoTokensSaidaPorChamada;
-    }
   }
 
   /**
    * Teto de tokens gerados por tipo de chamada ao modelo (#270), no lugar de um
    * {@code AI_MAX_TOKENS} único para tudo. Cada chamada leva o seu no {@code num_predict} (Ollama)
-   * ou {@code max_tokens} (API compatível com a da OpenAI). O {@code AI_MAX_TOKENS} segue como teto geral: padrão do
-   * provedor e teto de saída da reserva da cota (#166), por isso nenhum teto daqui passa dele.
+   * ou {@code max_tokens} (API compatível com a da OpenAI). São também a saída da reserva da cota
+   * (#166, {@link Cota#tetoDaPergunta}); o {@code AI_MAX_TOKENS} ficou só como padrão do provedor
+   * para chamada sem teto próprio, que hoje não existe.
    *
    * <p>Não há teto separado para a {@code perguntaLei} do MISTO: ela é um campo do mesmo JSON da
    * classificação, na mesma chamada, e no desempate o modelo também pode responder MISTO com ela.
@@ -631,26 +614,20 @@ public class AssistenteProperties implements InitializingBean {
      */
     private int contexto = 8192;
 
-    void validar(long tetoSaidaDaCota) {
+    void validar() {
       if (contexto < CONTEXTO_MINIMO) {
         throw new IllegalStateException("app.assistente.tetos.contexto deve ser >= "
             + CONTEXTO_MINIMO + ", recebido: " + contexto);
       }
-      exigirTeto("funcoes", funcoes, tetoSaidaDaCota);
-      exigirTeto("classificacao", classificacao, tetoSaidaDaCota);
-      exigirTeto("legislacao", legislacao, tetoSaidaDaCota);
+      exigirTeto("funcoes", funcoes);
+      exigirTeto("classificacao", classificacao);
+      exigirTeto("legislacao", legislacao);
     }
 
-    private void exigirTeto(String nome, int valor, long tetoSaidaDaCota) {
+    private void exigirTeto(String nome, int valor) {
       if (valor < MINIMO || valor > contexto / 2) {
         throw new IllegalStateException("app.assistente.tetos." + nome + " deve estar entre "
             + MINIMO + " e a metade do contexto (" + contexto / 2 + "), recebido: " + valor);
-      }
-      if (valor > tetoSaidaDaCota) {
-        // Sem isto a reserva da cota deixaria de ser um teto: a chamada geraria mais do que o
-        // reservado.
-        throw new IllegalStateException("app.assistente.tetos." + nome + " (" + valor
-            + ") passa do teto de saida da cota (AI_MAX_TOKENS = " + tetoSaidaDaCota + ")");
       }
     }
 

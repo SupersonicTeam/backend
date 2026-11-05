@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -54,9 +55,10 @@ class AssistentePropertiesTest {
   @DisplayName("#166: teto de uma pergunta maior que o plano e recusado na subida")
   void tetoMaiorQueOPlano() {
     AssistenteProperties p = new AssistenteProperties();
-    // Modelo maior: AI_MAX_TOKENS 8192 -> teto de ~245 creditos, plano de 200.
-    p.getCota().setTetoTokensSaidaPorChamada(8192);
-    p.getCota().setCreditosPorSemanaProdutor(200);
+    // Lei com teto de 4.096: 3 x 8.192 + (256 + 512 + 4.096) x 4 = 44.032 -> 45 creditos, plano
+    // de 40.
+    p.getTetos().setLegislacao(4096);
+    p.getCota().setCreditosPorSemanaProdutor(40);
 
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("teto de uma pergunta");
@@ -87,18 +89,49 @@ class AssistentePropertiesTest {
   }
 
   @Test
-  @DisplayName("#270: teto por chamada acima do AI_MAX_TOKENS quebraria a reserva da cota")
-  void tetoAcimaDoTetoDaCota() {
+  @DisplayName("#166/#270: o teto da pergunta soma as 3 chamadas reais, cada uma com o seu teto")
+  void tetoDaPerguntaSegueAsChamadasReais() {
     AssistenteProperties p = new AssistenteProperties();
-    p.getCota().setTetoTokensSaidaPorChamada(400);
-    p.getTetos().setFuncoes(400);
+    AssistenteProperties.Cota cota = p.getCota();
 
-    // Padrao da lei = 1024 > 400.
+    // 3 x 8.192 de entrada + (256 + 512 + 1.024) de saida x 4 = 31.744 ponderados -> 32.
+    // A formula antiga (2 + 1 + 3 rodadas = 6 chamadas x 1.024 de saida) dava 73.
+    assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA).isEqualTo(3);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(32);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 2.0)).isEqualTo(64);
+
+    // Cada teto entra uma vez, com o peso da saida: +250 tokens na lei = +1.000 ponderados.
+    p.getTetos().setLegislacao(1274);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(33);
+    p.getTetos().setClassificacao(506);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(34);
+    p.getTetos().setFuncoes(762);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(35);
+  }
+
+  @Test
+  @DisplayName("#270: teto por chamada acima do AI_MAX_TOKENS sobe: a reserva usa o proprio teto")
+  void tetoAcimaDoAiMaxTokensSobe() {
+    AssistenteProperties p = new AssistenteProperties();
+    // AI_MAX_TOKENS (padrao do provedor) nao entra mais na reserva: cada chamada manda o seu
+    // maxTokens, e e esse que a reserva soma.
+    p.getTetos().setLegislacao(2048);
+
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+    assertThat(p.getCota().tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(36);
+  }
+
+  @Test
+  @DisplayName("#166: teto de entrada abaixo da janela do Ollama deixaria a reserva abaixo do real")
+  void tetoEntradaAbaixoDoContexto() {
+    AssistenteProperties p = new AssistenteProperties();
+    p.getCota().setTetoTokensEntradaPorChamada(8000);
+
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("app.assistente.tetos.legislacao")
-        .hasMessageContaining("AI_MAX_TOKENS");
+        .hasMessageContaining("app.assistente.cota.teto-tokens-entrada-por-chamada");
 
-    p.getTetos().setLegislacao(400);
+    // Contexto menor (o minimo aceito) volta a caber.
+    p.getTetos().setContexto(AssistenteProperties.Tetos.CONTEXTO_MINIMO);
     assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
   }
 

@@ -136,8 +136,8 @@ spring:
           # Janela de contexto explicita. Estourada, o Ollama descarta o INICIO do prompt — onde
           # fica a instrucao de sistema com as regras da Ceres. O qwen3 suporta 32k.
           num-ctx: ${AI_OLLAMA_NUM_CTX:8192}
-          # Teto GERAL de tokens gerados: cada chamada da Ceres manda o seu, menor ou igual
-          # (app.assistente.tetos, #270); este vale para chamada sem teto proprio e para a cota.
+          # Teto GERAL de tokens gerados: cada chamada da Ceres manda o seu (app.assistente.tetos,
+          # #270), que tambem entra na reserva da cota (#166); este so vale para chamada sem teto.
           num-predict: ${AI_MAX_TOKENS:1024}
           # O qwen3 raciocina por padrao; os tokens de raciocinio consomem o num-predict (resposta
           # cortada) e multiplicam a latencia em CPU. Os numeros da Ceres vem das funcoes, nao do
@@ -433,9 +433,6 @@ app:
       timeout: ${AI_HEALTH_TIMEOUT:2s}
       # O /actuator/health e publico: sem cache, cada visitante dispararia uma chamada ao Ollama.
       cache: ${AI_HEALTH_CACHE:10s}
-    # Teto de rodadas de funcoes de uma pergunta (issue #142). Desde a #266 a rota de dados faz uma
-    # so; o valor segue no calculo da reserva da cota semanal (#166).
-    max-rodadas-ferramentas: ${AI_MAX_RODADAS_FERRAMENTAS:3}
     # Perguntas processadas ao mesmo tempo (= tamanho do pool agro-ceres-); acima disso 503
     # ASSISTENTE_OCUPADO com Retry-After. Alem do teto global, no maximo uma por produtor (#157).
     max-conversas-simultaneas: ${AI_MAX_CONVERSAS_SIMULTANEAS:4}
@@ -461,7 +458,9 @@ app:
       pausa-apos-falha: ${AI_CLASSIFICACAO_PAUSA_APOS_FALHA:30s}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Semana de segunda a domingo (Brasilia),
-    # sem acumulo. Antes de cada pergunta reserva-se o teto dela; no fim, o consumo real.
+    # sem acumulo. Antes de cada pergunta reserva-se o teto dela; no fim, o consumo real. Teto = 3
+    # chamadas (classificacao, funcoes, lei; o pior caso e o MISTO com desempate), cada uma com o
+    # teto de entrada abaixo e o proprio teto de saida de app.assistente.tetos (#270).
     cota:
       habilitada: ${AI_COTA_HABILITADA:true}
       plano: ${AI_COTA_PLANO:padrao}
@@ -471,12 +470,10 @@ app:
       peso-saida: ${AI_COTA_PESO_SAIDA:4.0}
       tokens-por-credito: ${AI_COTA_TOKENS_POR_CREDITO:1000}
       fator-padrao: ${AI_COTA_FATOR_PADRAO:1.0}
-      teto-tokens-entrada-por-chamada: ${AI_COTA_TETO_ENTRADA:8000}
-      # O mesmo teto que limita o modelo (num-predict / max-tokens): a reserva so e um teto de
-      # verdade se a saida do modelo tambem for limitada.
-      teto-tokens-saida-por-chamada: ${AI_MAX_TOKENS:1024}
-    # Teto de tokens gerados por tipo de chamada ao modelo (#270), cada um <= AI_MAX_TOKENS (teto
-    # de saida da cota) e <= metade do contexto; fora disso a aplicacao nao sobe. Resposta cortada
+      # Padrao = a janela do Ollama (o maior prompt que ele aceita); abaixo dela nao sobe.
+      teto-tokens-entrada-por-chamada: ${AI_COTA_TETO_ENTRADA:${spring.ai.ollama.chat.options.num-ctx:8192}}
+    # Teto de tokens gerados por tipo de chamada ao modelo (#270), cada um <= metade do contexto;
+    # fora disso a aplicacao nao sobe. Sao tambem a saida da reserva da cota (#166). Resposta cortada
     # pelo teto nunca sai como completa (classificacao vira indeterminada, dados e lei descartam).
     tetos:
       # Escolha das funcoes de dados: so o JSON das chamadas.
