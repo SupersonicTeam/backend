@@ -54,7 +54,8 @@ import org.springframework.transaction.annotation.Transactional;
  * condição.
  *
  * <p>Leite cru e cooperativa (#284, perguntas 2 e 6) seguem o dado atual da tabela, sem regra
- * própria; o arroz em casca (pergunta 3) é in natura pela marca da referência (changeSet 0051).
+ * própria; o arroz em casca não parboilizado (pergunta 3) é in natura pela marca da referência
+ * (changeSet 0051).
  */
 @Service
 public class TratamentoProdutoService {

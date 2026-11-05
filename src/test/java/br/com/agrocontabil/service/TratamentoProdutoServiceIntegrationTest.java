@@ -96,18 +96,29 @@ class TratamentoProdutoServiceIntegrationTest {
   }
 
   @Test
-  @DisplayName("#284 p. 3: 'arroz' traz o em casca in natura (art. 137) e o polido (Anexo I)")
+  @DisplayName("#284 p. 3: 'arroz' traz a semente (Anexo IX), o em casca (art. 137) e o polido")
   void arrozEmCascaEPolido() {
     assertThat(service.consultar("arroz", EM_2026).produtos())
         .extracting(TratamentoProduto::ncm, TratamentoProduto::cClassTrib,
             p -> p.percentualReducao().intValue(), TratamentoProduto::artigo,
             TratamentoProduto::anexo)
         .containsExactly(
-            tuple("10061091", "200036", 60, "137", null),
+            tuple("10061010", "200038", 60, "138", 9),
             tuple("10061092", "200036", 60, "137", null),
             tuple("10063021", "200003", 100, "125", 1));
-    assertThat(service.consultar("10061091", EM_2026).produtos().get(0).condicao())
+    assertThat(service.consultar("10061092", EM_2026).produtos().get(0).condicao())
         .contains("in natura");
+  }
+
+  @Test
+  @DisplayName("#365: semente de arroz e a semente; 'parboilizado' nao casa o em casca natural")
+  void arrozSementeEParboilizado() {
+    assertThat(service.consultar("arroz para semeadura", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm, TratamentoProduto::cClassTrib)
+        .containsExactly(tuple("10061010", "200038"));
+    assertThat(service.consultar("arroz parboilizado", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm)
+        .containsExactly("10061010", "10061092", "10063021");
   }
 
   @Test

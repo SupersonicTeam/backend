@@ -191,21 +191,18 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("changeSet 0051: arroz em casca in natura, o de semeadura fica de fora (#284)")
+  @DisplayName("changeSet 0051: em casca in natura, semente sem a marca, parboilizado fora")
   void changeSet0051ArrozEmCascaInNatura() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
-    assertThat(jdbc.queryForList("SELECT codigo FROM ncm_agropecuario WHERE in_natura"
-        + " ORDER BY codigo", String.class))
-        .containsExactly("10011900", "10059010", "10061091", "10061092", "12019000",
-            "52010020");
-    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ncm_agropecuario"
-        + " WHERE codigo = '10061010'", Integer.class)).isZero();
-    // O em casca continua nos Anexos VII e IX da tabela oficial; o in natura decide antes.
+    assertThat(jdbc.queryForList("SELECT codigo || ':' || in_natura FROM ncm_agropecuario"
+        + " WHERE codigo LIKE '100610%' ORDER BY codigo", String.class))
+        .containsExactly("10061010:false", "10061092:true");
+    // O em casca segue nos Anexos VII e IX da tabela oficial; o in natura decide antes deles.
     assertThat(jdbc.queryForList("SELECT DISTINCT i.c_class_trib"
         + " FROM classificacao_tributaria_anexo_ncm n"
         + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
-        + " WHERE n.ncm = '10061091' ORDER BY 1", String.class))
+        + " WHERE n.ncm = '10061092' ORDER BY 1", String.class))
         .containsExactly("200034", "200038");
   }
 

@@ -48,9 +48,10 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Pendências de validação (#284):</strong> leite cru vendido ao laticínio (pergunta 2:
  * o Anexo I traz o leite "para consumo direto") e venda a cooperativa optante (pergunta 6:
- * cClassTrib 200020 depende da opção da cooperativa, não do NCM). O arroz em casca (pergunta 3)
- * foi confirmado in natura pelo escritório: marca da referência no changeSet 0051. Aqui vale o dado oficial por NCM, sem regra própria para essas
- * situações.
+ * cClassTrib 200020 depende da opção da cooperativa, não do NCM). Aqui vale o dado oficial por
+ * NCM, sem regra própria para essas situações. A marca in natura não é dado oficial: é da
+ * referência do projeto (o art. 137 não tem lista); o arroz em casca não parboilizado
+ * (pergunta 3) a recebeu pela resposta do escritório (changeSet 0051).
  */
 @Service
 public class ClassificacaoTributariaService {
