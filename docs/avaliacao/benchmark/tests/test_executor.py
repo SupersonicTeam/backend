@@ -15,7 +15,8 @@ from ceres_benchmark import executor as ex  # noqa: E402
 def config(**extra):
     args = argparse.Namespace(matriz=str(AQUI.parent / "matriz.json"), arquiteturas=None, modelos=None,
                               ref_ceres2=None, saida="saida", trabalho="trabalho", repeticoes=None,
-                              hardware="maquina X", retomar=None, teste=False, embedding_cpu=False)
+                              hardware="maquina X", retomar=None, teste=False, embedding_cpu=False,
+                              ensaio=False)
     for k, v in extra.items():
         setattr(args, k, v)
     return ex.montar_config(args, AQUI.parents[3])
@@ -255,9 +256,33 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             ex.Executor(config(embedding_cpu=True)).conferir_retomada(
                 {"perguntas": {"sha256": atual}, "embedding": "bge-m3"})
 
+    def _executor_com_stub(self, **extra):
+        from ceres_benchmark import gabarito as gab
+        e = ex.Executor(config(**extra))
+        antiga, nova = e.cfg.todas_arquiteturas
+        antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
+        fonte = (self.REPO / ex.FERRAMENTAS_REPO).read_text(encoding="utf-8")
+        assinaturas = gab.assinaturas_ferramentas(fonte)
+        stub = "\n".join(
+            f'@Tool(description = "x")\npublic X {f}(' + ", ".join(f"String {p}" for p in assinaturas[f]) + ") {}"
+            for f in antiga["funcoesConhecidas"])
+        e.capturar = lambda comando, cwd=None: stub if comando[-1].startswith("a" * 40) else fonte
+        return e
+
+    def test_rodada_da_banca_espera_a_revisao_das_externas(self):
+        # O conjunto versionado ainda tem as 40 externas sem revisao: so --ensaio (ou --teste) roda.
+        e = self._executor_com_stub()
+        self.assertEqual(e.cfg.tipo, "banca")
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaisesRegex(RuntimeError, "revisao humana.*--ensaio"):
+                e.preparar_gabaritos(Path(d))
+            self.assertFalse((Path(d) / "gabarito-canonico.json").exists())
+        self.assertEqual(self._executor_com_stub(ensaio=True).cfg.tipo, "ensaio")
+        self.assertEqual(self._executor_com_stub(teste=True, ensaio=True).cfg.tipo, "teste")
+
     def test_preparo_recusado_nao_mexe_na_pasta_da_rodada(self):
         from ceres_benchmark import gabarito as gab
-        e = ex.Executor(config())
+        e = ex.Executor(config(ensaio=True))
         antiga, nova = e.cfg.todas_arquiteturas
         antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
         fonte = (self.REPO / ex.FERRAMENTAS_REPO).read_text(encoding="utf-8")

@@ -155,7 +155,7 @@ pergunta vale ~1,9 ponto percentual.
 | `rotaEsperada` | `LEGISLACAO` em todas, com `justificativaRota` de uma linha: todas pedem a regra da lei, nenhuma pede um dado do produtor |
 | `adversario` | 30 delas: pronome ou situação do produtor com termo de lei ("Sou produtor de soja e milho..."), o caso que as regras da #265 têm de mandar para a lei, não para os dados. É o mesmo campo que o comando de avaliação já mede ("Rota nos casos adversários") |
 | `capacidade` | `comum` em todas (a rota de lei existe nas duas arquiteturas): a comparação justa ganha 40 perguntas |
-| `dispositivosAceitos` | `[]` com `aConferir: true` em **todas**: a base de lei não está no ambiente em que o conjunto foi montado, e dispositivo não se preenche de memória. `dispositivosSugeridos` lista, para a revisão, dispositivos já conferidos na base por perguntas do gabarito (`conferidoEm`) |
+| `dispositivosEsperados` | `[]` com `aConferir: true` em **todas**: a base de lei não está no ambiente em que o conjunto foi montado, e dispositivo não se preenche de memória. `dispositivosSugeridos` lista, para a revisão, dispositivos já conferidos na base por perguntas do gabarito (`conferidoEm`) |
 | `classeTratamento` | `ZERO`, `REDUCAO_60`, `PADRAO`, `CONDICIONAL`, `NAO_SE_APLICA` ou `FORA_DO_ESCOPO_SISTEMA`, **provisória** (`revisado: false`) |
 | `afirmacoesProibidas` | expressões que seriam erro (ex.: E17 "sim, pode aproveitar a redução"; E22 "o comprador não tem crédito", existe o presumido do art. 168; E33 "pode aproveitar o crédito") |
 | `encaminharContador` | 9 delas (E21, E22, E23, E24, E27, E29, E36, E39, E40): a resposta certa depende da situação do produtor |
@@ -165,7 +165,13 @@ pergunta vale ~1,9 ponto percentual.
 no relatório — rota, fundamentação (só depois de conferidos os dispositivos), alíquota/classe e
 precisão por heurística de texto (classe dita e afirmações proibidas) e encaminhamento ao contador;
 **humanos** no CSV cego `externas-avaliacao-cego.csv` — contextualização, orientação prática e
-precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio.
+precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio: "não" (ou "nem",
+"nunca") até três palavras antes da expressão a nega; a classe só conta quando é a única afirmada (a
+resposta que lista todas as classes não acerta nenhuma); e a resposta que não foi redigida pelo
+modelo (recusa, descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. O CSV
+(`;`, BOM UTF-8, protegido contra fórmula, como o `CsvCego` do Java) sai **uma vez** por rodada:
+regerar o relatório não reembaralha o que já foi ao avaliador. Para refazer, apague
+`externas-avaliacao-cego.csv` e `externas-avaliacao-chave.json` (a chave fica fora do Git).
 
 **E33 (pergunta 33):** com o diferimento do art. 138, § 2º, o fertilizante comprado por contribuinte
 do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. Errar nela é o defeito da
@@ -182,8 +188,11 @@ relatório as lista.
 
 **Revisão humana bloqueante antes da rodada da banca:** a lista das 40 com rota, dispositivos e
 classe esperados vai para a equipe e para o contador (#284, pergunta 15): conferir e preencher
-`dispositivosAceitos` na base (`legislacao_trecho`), revisar `classeTratamento` e
-`afirmacoesProibidas`, marcar `revisado: true` e tirar `aConferir`.
+`dispositivosEsperados` na base (`legislacao_trecho`), revisar `classeTratamento` e
+`afirmacoesProibidas`, marcar `revisado: true` e tirar `aConferir`. **O executor recusa a rodada
+da banca** enquanto alguma externa estiver com `aConferir` ou sem `revisado`. Para rodar antes
+(conferir o executor, ver o formato), use `--ensaio`: o relatório sai marcado como ensaio e a pasta
+não pode ser retomada como rodada da banca.
 
 **Limitação de método: o gabarito foi usado no desenvolvimento da Ceres 2.0.** 87 das 100
 perguntas são o gabarito, e a Ceres 2.0 foi desenvolvida contra ele: as regras de rota da #265
@@ -195,7 +204,9 @@ recortes **(c) Inéditas** (as 53: 13 da equipe, N01–N13, e as 40 externas) e 
 externas**: **são eles que medem generalização**. Com 53, cada pergunta vale ~1,9 ponto percentual
 (com só as 40 externas, 2,5); o relatório calcula o número de cada recorte. Leia sempre com a faixa. Pelo mesmo motivo, o relatório mostra o acerto da
 capacidade comum **com e sem** as 4 perguntas parecidas com exemplos que o modelo vê (D12, D01,
-T05, D15, abaixo).
+T05, D15, abaixo). A inédita parecida com uma pergunta do gabarito (paráfrase do que a Ceres 2.0 já
+"viu" no desenvolvimento) é outra lista (`parecidasComGabarito` na rodada), que o relatório mostra à
+parte; hoje nenhuma.
 
 **Valor esperado:** calculado pelo backend sobre o seed, como no gabarito (#158). O seed **não
 mudou**: as 13 novas usam os dados do `SeedAvaliacao` v4, e os valores delas foram conferidos à
@@ -426,7 +437,8 @@ time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
   Os dados do seed de avaliação são fictícios.
 - **Conclusão para a banca**, montada a partir dos números da capacidade comum. Um modelo é
   **viável** numa arquitetura se: não vazou em nenhuma rodada; não teve falha técnica em ao menos
-  95%; e, em rota, número, citação e recusa, a média não fica abaixo do **mínimo da faixa do
+  95%; e, em rota, número, citação e **recusa limpa** (sem as recusas que vieram de
+  `RESPOSTA_CORTADA`), a média não fica abaixo do **mínimo da faixa do
   `qwen3:4b-instruct` na mesma arquitetura menos uma pergunta** (100/n pontos — a faixa das 3
   rodadas e uma pergunta de diferença são ruído, não perda). Se a Ceres 2.0 tornar um modelo menor
   viável, o relatório diz isso com todas as letras e mostra a memória economizada. O texto é

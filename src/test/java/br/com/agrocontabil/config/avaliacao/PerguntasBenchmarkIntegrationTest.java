@@ -161,7 +161,7 @@ class PerguntasBenchmarkIntegrationTest {
       assertThat(p.path("justificativaRota").asText()).as(id).isNotBlank();
       assertThat(p.path("capacidade").asText()).as(id).isEqualTo("comum");
       // Sem a base de lei, nenhum dispositivo aceito de memoria.
-      assertThat(p.path("dispositivosAceitos").isEmpty() || !p.path("aConferir").asBoolean())
+      assertThat(p.path("dispositivosEsperados").isEmpty() || !p.path("aConferir").asBoolean())
           .as(id).isTrue();
       assertThat(p.path("classeTratamento").asText()).as(id).isIn("ZERO", "REDUCAO_60", "PADRAO",
           "CONDICIONAL", "NAO_SE_APLICA", "FORA_DO_ESCOPO_SISTEMA");

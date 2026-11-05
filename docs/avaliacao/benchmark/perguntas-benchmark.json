@@ -1940,7 +1940,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 1,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -1952,7 +1951,8 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "pendenteContador": "#284, pergunta 6"
+      "pendenteContador": "#284, pergunta 6",
+      "dispositivosEsperados": []
     },
     {
       "id": "E02",
@@ -1965,7 +1965,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 2,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -1976,7 +1975,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E03",
@@ -1990,7 +1990,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 3,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2006,7 +2005,8 @@
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "pendenteContador": "#284, pergunta 2"
+      "pendenteContador": "#284, pergunta 2",
+      "dispositivosEsperados": []
     },
     {
       "id": "E04",
@@ -2020,7 +2020,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 4,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2030,10 +2029,11 @@
       ],
       "classeTratamento": "ZERO",
       "afirmacoesProibidas": [
-        "\\bal[ií]quota (padr[aã]o|cheia|integral)\\b"
+        "\\bincide(m)? (a )?al[ií]quota (padr[aã]o|cheia|integral)\\b"
       ],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E05",
@@ -2046,7 +2046,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 5,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2059,7 +2058,8 @@
         "\\bn[aã]o (é|e) (mais )?(considerado )?in natura\\b"
       ],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E06",
@@ -2072,7 +2072,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 6,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2087,7 +2086,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E07",
@@ -2101,7 +2101,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 7,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2116,7 +2115,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E08",
@@ -2130,7 +2130,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 8,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2141,7 +2140,8 @@
       "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E09",
@@ -2155,7 +2155,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 9,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2170,7 +2169,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E10",
@@ -2183,7 +2183,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 10,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2206,7 +2205,8 @@
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E11",
@@ -2220,7 +2220,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 11,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2235,7 +2234,8 @@
       "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E12",
@@ -2248,7 +2248,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 12,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2259,7 +2258,8 @@
       "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E13",
@@ -2272,7 +2272,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 13,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2287,7 +2286,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E14",
@@ -2301,7 +2301,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 14,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2312,7 +2311,8 @@
       "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E15",
@@ -2326,7 +2326,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 15,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2337,7 +2336,8 @@
       "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E16",
@@ -2351,7 +2351,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 16,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2362,7 +2361,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E17",
@@ -2376,7 +2376,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 17,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2390,7 +2389,8 @@
         "\\btamb[eé]m tem (direito [aà] )?redu[cç][aã]o de 60"
       ],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E18",
@@ -2403,13 +2403,13 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 18,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "PADRAO",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E19",
@@ -2422,7 +2422,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 19,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2433,7 +2432,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E20",
@@ -2447,7 +2447,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 20,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2460,7 +2459,8 @@
         "\\bsim,? (voc[eê] )?(ainda )?pode receber o benef[ií]cio\\b"
       ],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E21",
@@ -2474,7 +2474,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 21,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2491,7 +2490,8 @@
         "\\bsim,? (voc[eê] )?(é|e|est[aá]) obrigad"
       ],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E22",
@@ -2505,7 +2505,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 22,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2523,7 +2522,8 @@
         "\\bo comprador n[aã]o (ter[aá]|tem) cr[eé]dito\\b"
       ],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E23",
@@ -2537,7 +2537,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 23,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2548,7 +2547,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E24",
@@ -2562,13 +2562,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 24,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E25",
@@ -2582,7 +2582,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 25,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "CONDICIONAL",
@@ -2590,7 +2589,8 @@
         "\\bn[aã]o (ser[aá]|é|e) tributad"
       ],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E26",
@@ -2604,13 +2604,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 26,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E27",
@@ -2624,13 +2624,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 27,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E28",
@@ -2644,13 +2644,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 28,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E29",
@@ -2664,13 +2664,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 29,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E30",
@@ -2684,7 +2684,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 30,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2697,7 +2696,8 @@
         "\\bestado onde est[aá] a fazenda\\b.{0,40}\\b(é|e|ser[aá]) (o|a) (que vale|considerad)"
       ],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E31",
@@ -2711,7 +2711,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 31,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2726,7 +2725,8 @@
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E32",
@@ -2740,7 +2740,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 32,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2751,7 +2750,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E33",
@@ -2765,7 +2765,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 33,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2775,12 +2774,13 @@
       ],
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [
-        "\\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]dito",
+        "\\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\\b",
         "\\bcr[eé]dito (integral|normal) d(o|e) IBS"
       ],
       "encaminharContador": false,
       "revisado": false,
-      "observacao": "Com o diferimento do art. 138, § 2º, o fertilizante comprado por contribuinte do regime regular não tem IBS/CBS pago: não há crédito a aproveitar. Errar aqui é o defeito da #356."
+      "observacao": "Com o diferimento do art. 138, § 2º, o fertilizante comprado por contribuinte do regime regular não tem IBS/CBS pago: não há crédito a aproveitar. Errar aqui é o defeito da #356.",
+      "dispositivosEsperados": []
     },
     {
       "id": "E34",
@@ -2794,13 +2794,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 34,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E35",
@@ -2813,7 +2813,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 35,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2824,7 +2823,8 @@
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E36",
@@ -2838,7 +2838,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 36,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2855,7 +2854,8 @@
         "\\bn[aã]o poder[aá] aproveitar (nenhum|qualquer) cr[eé]dito\\b"
       ],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E37",
@@ -2868,7 +2868,6 @@
       "origem": "inedita_externa",
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 37,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2879,7 +2878,8 @@
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E38",
@@ -2893,13 +2893,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 38,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "NAO_SE_APLICA",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E39",
@@ -2913,13 +2913,13 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 39,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [],
       "classeTratamento": "CONDICIONAL",
       "afirmacoesProibidas": [],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     },
     {
       "id": "E40",
@@ -2933,7 +2933,6 @@
       "fonte": "externa, compilada pelo Murillo (internet e produtores)",
       "numeroOriginal": 40,
       "adversario": true,
-      "dispositivosAceitos": [],
       "aConferir": true,
       "dispositivosSugeridos": [
         {
@@ -2948,7 +2947,8 @@
       "classeTratamento": "FORA_DO_ESCOPO_SISTEMA",
       "afirmacoesProibidas": [],
       "encaminharContador": true,
-      "revisado": false
+      "revisado": false,
+      "dispositivosEsperados": []
     }
   ]
 }

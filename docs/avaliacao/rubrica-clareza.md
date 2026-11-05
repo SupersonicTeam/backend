@@ -63,7 +63,7 @@ avaliador** (o `.gitignore` de `resultados/` já o ignora).
 | **Precisão tributária** | Afirma regra errada (tratamento, incidência, crédito) ou contradiz a lei | Tudo o que afirma está certo e não promete o que a lei não dá | heurística no relatório (`afirmacoesProibidas`) + **nota humana final** (`precisao_final_1a5`) |
 | **Alíquotas** | Diz a classe errada (zero, redução de 60%, padrão) ou nenhuma quando a pergunta pede | Diz a classe certa e, quando depende do produto ou da situação, diz do que depende | automático (`classeTratamento`, heurística) |
 | **Contextualização** | Responde em abstrato, ignora o que o produtor contou (cultura, comprador, situação) | Aplica a regra ao caso descrito na pergunta, com as condições que mudam a resposta | **humano** (`contextualizacao_1a5`) |
-| **Fundamentação** | Sem citação, ou citação que não sustenta o que diz | Cita o dispositivo que sustenta a resposta (artigo, anexo) | automático (`dispositivosAceitos`, depois de conferidos) |
+| **Fundamentação** | Sem citação, ou citação que não sustenta o que diz | Cita o dispositivo que sustenta a resposta (artigo, anexo) | automático (`dispositivosEsperados`, depois de conferidos) |
 | **Orientação prática** | Não diz o que fazer; deixa o produtor sem próximo passo | Diz o próximo passo concreto (o que conferir, onde, e quando procurar o contador) | **humano** (`orientacao_pratica_1a5`) |
 
 Julgue a resposta como um contador julgaria a orientação dada a um cliente produtor rural. Uma

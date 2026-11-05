@@ -2,6 +2,8 @@
 
 > ⚠️ **DADOS FICTÍCIOS DE TESTE.** Este relatório foi gerado a partir de JSONs inventados pelo `gerar_exemplo_ficticio.py`, só para mostrar o formato. **Nenhum número aqui foi medido.** Não use em slide, artigo nem banca.
 
+> ⚠️ **ENSAIO antes da revisão humana das perguntas externas (#358)** (`--ensaio`): dispositivos, classe e afirmações proibidas delas ainda são provisórios. Não vale para a banca.
+
 Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) entre parênteses; n = perguntas avaliadas no critério em cada rodada.
 
 ## Condições
@@ -12,7 +14,7 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
 | Ceres 2.0 | `5b8b1e1e48c0c312ff10f25885fbbba987f41086` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.5 (140 perguntas, sha256 `64d7855c6bca…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Conjunto de perguntas | 2026-11-05.5 (140 perguntas, sha256 `23f3379aaf91…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |
@@ -115,14 +117,14 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 
 ## (a) Capacidade comum — a comparação justa
 
-| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Sem vazamento | Sem beco sem saída | Sem falha técnica |
-|---|---|---|---|---|---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 55,8% (50,4–63,7) n=113 | 56,2% (48,6–62,9) n=35 | 48,5% (45,5–51,5) n=33 | 47,9% (43,8–56,2) n=32 | 50,5% (39,4–66,7) n=33 | 52,4% (35,7–64,3) n=14 | 100,0% n=6 | n/d | 96,0% (94,9–97,5) n=118 |
-| Ceres 1 · `qwen3:1.7b` | 64,9% (61,9–68,1) n=113 | 61,9% (57,1–65,7) n=35 | 61,6% (48,5–75,8) n=33 | 59,4% (46,9–75,0) n=32 | 66,7% (60,6–72,7) n=33 | 54,8% (28,6–78,6) n=14 | 100,0% n=6 | n/d | 96,6% (94,9–97,5) n=118 |
-| Ceres 1 · `qwen3:4b-instruct` | 79,6% (71,7–88,5) n=113 | 86,7% (74,3–94,3) n=35 | 81,8% (66,7–90,9) n=33 | 80,2% (71,9–84,4) n=32 | 77,8% (69,7–84,8) n=33 | 92,9% (85,7–100,0) n=14 | 100,0% n=6 | n/d | 98,9% (97,5–100,0) n=118 |
-| Ceres 2.0 · `qwen3:0.6b` | 74,6% (69,0–77,9) n=113 | 74,3% (65,7–85,7) n=35 | 80,8% (72,7–87,9) n=33 | 74,0% (65,6–81,2) n=32 | 73,7% (57,6–87,9) n=33 | 61,9% (57,1–71,4) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 97,7% (95,8–100,0) n=118 |
-| Ceres 2.0 · `qwen3:1.7b` | 88,2% (84,1–92,9) n=113 | 81,0% (71,4–91,4) n=35 | 91,9% (87,9–93,9) n=33 | 85,4% (81,2–90,6) n=32 | 81,8% (75,8–84,8) n=33 | 83,3% (78,6–92,9) n=14 | 100,0% n=6 | 83,3% (50,0–100,0) n=2 | 98,6% (97,5–100,0) n=118 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 89,1% (85,0–92,9) n=113 | 93,3% (91,4–94,3) n=35 | 93,9% (90,9–97,0) n=33 | 88,5% (84,4–93,8) n=32 | 96,0% (93,9–97,0) n=33 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 99,4% (98,3–100,0) n=118 |
+| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ceres 1 · `qwen3:0.6b` | 55,8% (50,4–63,7) n=113 | 56,2% (48,6–62,9) n=35 | 48,5% (45,5–51,5) n=33 | 47,9% (43,8–56,2) n=32 | 50,5% (39,4–66,7) n=33 | 52,4% (35,7–64,3) n=14 | 52,4% (35,7–64,3) n=14 | 100,0% n=6 | n/d | 96,0% (94,9–97,5) n=118 |
+| Ceres 1 · `qwen3:1.7b` | 64,9% (61,9–68,1) n=113 | 61,9% (57,1–65,7) n=35 | 61,6% (48,5–75,8) n=33 | 59,4% (46,9–75,0) n=32 | 66,7% (60,6–72,7) n=33 | 54,8% (28,6–78,6) n=14 | 54,8% (28,6–78,6) n=14 | 100,0% n=6 | n/d | 96,6% (94,9–97,5) n=118 |
+| Ceres 1 · `qwen3:4b-instruct` | 79,6% (71,7–88,5) n=113 | 86,7% (74,3–94,3) n=35 | 81,8% (66,7–90,9) n=33 | 80,2% (71,9–84,4) n=32 | 77,8% (69,7–84,8) n=33 | 92,9% (85,7–100,0) n=14 | 92,9% (85,7–100,0) n=14 | 100,0% n=6 | n/d | 98,9% (97,5–100,0) n=118 |
+| Ceres 2.0 · `qwen3:0.6b` | 74,6% (69,0–77,9) n=113 | 74,3% (65,7–85,7) n=35 | 80,8% (72,7–87,9) n=33 | 74,0% (65,6–81,2) n=32 | 73,7% (57,6–87,9) n=33 | 61,9% (57,1–71,4) n=14 | 61,9% (57,1–71,4) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 97,7% (95,8–100,0) n=118 |
+| Ceres 2.0 · `qwen3:1.7b` | 88,2% (84,1–92,9) n=113 | 81,0% (71,4–91,4) n=35 | 91,9% (87,9–93,9) n=33 | 85,4% (81,2–90,6) n=32 | 81,8% (75,8–84,8) n=33 | 83,3% (78,6–92,9) n=14 | 83,3% (78,6–92,9) n=14 | 100,0% n=6 | 83,3% (50,0–100,0) n=2 | 98,6% (97,5–100,0) n=118 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 89,1% (85,0–92,9) n=113 | 93,3% (91,4–94,3) n=35 | 93,9% (90,9–97,0) n=33 | 88,5% (84,4–93,8) n=32 | 96,0% (93,9–97,0) n=33 | 95,2% (92,9–100,0) n=14 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 99,4% (98,3–100,0) n=118 |
 
 ### Tabela modelo × arquitetura
 
@@ -181,14 +183,14 @@ As perguntas `so_ceres_2` dependem de função que só existe na Ceres 2.0: o ga
 
 Inclui as 20 perguntas adaptadas para a Ceres 1. Em 19 delas (T01, T07, T08, X17, X18, C01, T04, T05, T06, T11, P01, X04, N04, P02, P03, P04, N08, N09, N12) faltava a função: função, parâmetros e número que o gabarito pede e a Ceres 1 não tinha como entregar contam como **erro por capacidade da arquitetura, não do modelo** ("pen." na tabela). T10: critério tirado por diferença de seed, não conta.
 
-| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Sem vazamento | Sem beco sem saída | Sem falha técnica |
-|---|---|---|---|---|---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 53,3% (47,4–60,0) n=135 | 38,6% (35,1–42,1) n=57 (pen. 18) | 36,8% (35,4–37,5) n=48 (pen. 12) | 32,7% (30,0–36,0) n=50 (pen. 16) | 52,6% (47,4–63,2) n=38 | 52,4% (35,7–64,3) n=14 | 100,0% n=6 | n/d | 96,2% (95,7–96,4) n=140 |
-| Ceres 1 · `qwen3:1.7b` | 65,9% (64,4–66,7) n=135 | 40,9% (35,1–43,9) n=57 (pen. 18) | 45,1% (35,4–54,2) n=48 (pen. 12) | 38,7% (30,0–50,0) n=50 (pen. 16) | 66,7% (63,2–68,4) n=38 | 54,8% (28,6–78,6) n=14 | 100,0% n=6 | n/d | 96,2% (94,3–97,9) n=140 |
-| Ceres 1 · `qwen3:4b-instruct` | 82,0% (76,3–88,1) n=135 | 60,2% (52,6–64,9) n=57 (pen. 18) | 60,4% (47,9–66,7) n=48 (pen. 12) | 54,0% (50,0–56,0) n=50 (pen. 16) | 77,2% (71,1–81,6) n=38 | 92,9% (85,7–100,0) n=14 | 100,0% n=6 | n/d | 98,6% (96,4–100,0) n=140 |
-| Ceres 2.0 · `qwen3:0.6b` | 74,6% (69,6–77,8) n=135 | 73,7% (71,9–77,2) n=57 | 81,2% (77,1–85,4) n=48 | 77,1% (66,7–82,4) n=51 | 73,7% (60,5–86,8) n=38 | 61,9% (57,1–71,4) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 97,9% (95,7–100,0) n=140 |
-| Ceres 2.0 · `qwen3:1.7b` | 88,6% (85,2–92,6) n=135 | 81,9% (73,7–93,0) n=57 | 91,7% (87,5–93,8) n=48 | 85,6% (78,4–90,2) n=51 | 84,2% (78,9–86,8) n=38 | 83,3% (78,6–92,9) n=14 | 100,0% n=6 | 83,3% (50,0–100,0) n=2 | 98,8% (97,9–100,0) n=140 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 90,1% (86,7–93,3) n=135 | 90,6% (86,0–94,7) n=57 | 93,8% (91,7–95,8) n=48 | 90,2% (88,2–92,2) n=51 | 95,6% (92,1–97,4) n=38 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 99,3% (97,9–100,0) n=140 |
+| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ceres 1 · `qwen3:0.6b` | 53,3% (47,4–60,0) n=135 | 38,6% (35,1–42,1) n=57 (pen. 18) | 36,8% (35,4–37,5) n=48 (pen. 12) | 32,7% (30,0–36,0) n=50 (pen. 16) | 52,6% (47,4–63,2) n=38 | 52,4% (35,7–64,3) n=14 | 52,4% (35,7–64,3) n=14 | 100,0% n=6 | n/d | 96,2% (95,7–96,4) n=140 |
+| Ceres 1 · `qwen3:1.7b` | 65,9% (64,4–66,7) n=135 | 40,9% (35,1–43,9) n=57 (pen. 18) | 45,1% (35,4–54,2) n=48 (pen. 12) | 38,7% (30,0–50,0) n=50 (pen. 16) | 66,7% (63,2–68,4) n=38 | 54,8% (28,6–78,6) n=14 | 54,8% (28,6–78,6) n=14 | 100,0% n=6 | n/d | 96,2% (94,3–97,9) n=140 |
+| Ceres 1 · `qwen3:4b-instruct` | 82,0% (76,3–88,1) n=135 | 60,2% (52,6–64,9) n=57 (pen. 18) | 60,4% (47,9–66,7) n=48 (pen. 12) | 54,0% (50,0–56,0) n=50 (pen. 16) | 77,2% (71,1–81,6) n=38 | 92,9% (85,7–100,0) n=14 | 92,9% (85,7–100,0) n=14 | 100,0% n=6 | n/d | 98,6% (96,4–100,0) n=140 |
+| Ceres 2.0 · `qwen3:0.6b` | 74,6% (69,6–77,8) n=135 | 73,7% (71,9–77,2) n=57 | 81,2% (77,1–85,4) n=48 | 77,1% (66,7–82,4) n=51 | 73,7% (60,5–86,8) n=38 | 61,9% (57,1–71,4) n=14 | 61,9% (57,1–71,4) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 97,9% (95,7–100,0) n=140 |
+| Ceres 2.0 · `qwen3:1.7b` | 88,6% (85,2–92,6) n=135 | 81,9% (73,7–93,0) n=57 | 91,7% (87,5–93,8) n=48 | 85,6% (78,4–90,2) n=51 | 84,2% (78,9–86,8) n=38 | 83,3% (78,6–92,9) n=14 | 83,3% (78,6–92,9) n=14 | 100,0% n=6 | 83,3% (50,0–100,0) n=2 | 98,8% (97,9–100,0) n=140 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 90,1% (86,7–93,3) n=135 | 90,6% (86,0–94,7) n=57 | 93,8% (91,7–95,8) n=48 | 90,2% (88,2–92,2) n=51 | 95,6% (92,1–97,4) n=38 | 95,2% (92,9–100,0) n=14 | 95,2% (92,9–100,0) n=14 | 94,4% (83,3–100,0) n=6 | 100,0% n=2 | 99,3% (97,9–100,0) n=140 |
 
 ### Tabela modelo × arquitetura
 
@@ -245,14 +247,14 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 As 53 perguntas fora do gabarito (equipe e externas), fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 1,9 pontos percentuais por pergunta (n=53), diferença menor que isso é uma pergunta só; leia com a faixa. 4 delas são `so_ceres_2` (N04, N08, N09, N12) e penalizam a Ceres 1 por capacidade, como no conjunto inteiro.
 
-| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Sem vazamento | Sem beco sem saída | Sem falha técnica |
-|---|---|---|---|---|---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 54,1% (49,1–62,3) n=53 | 38,9% (33,3–50,0) n=12 (pen. 3) | 40,0% (30,0–50,0) n=10 (pen. 2) | 36,4% (18,2–54,5) n=11 (pen. 3) | 66,7% (0,0–100,0) n=1 | — | — | n/d | 97,5% (96,2–98,1) n=53 |
-| Ceres 1 · `qwen3:1.7b` | 59,1% (50,9–64,2) n=53 | 50,0% (41,7–58,3) n=12 (pen. 3) | 50,0% (30,0–70,0) n=10 (pen. 2) | 42,4% (36,4–45,5) n=11 (pen. 3) | 100,0% n=1 | — | — | n/d | 96,9% (96,2–98,1) n=53 |
-| Ceres 1 · `qwen3:4b-instruct` | 79,2% (69,8–92,5) n=53 | 66,7% n=12 (pen. 3) | 70,0% n=10 (pen. 2) | 57,6% (45,5–63,6) n=11 (pen. 3) | 66,7% (0,0–100,0) n=1 | — | — | n/d | 98,7% (96,2–100,0) n=53 |
-| Ceres 2.0 · `qwen3:0.6b` | 71,7% (67,9–75,5) n=53 | 61,1% (41,7–83,3) n=12 | 66,7% (50,0–80,0) n=10 | 78,8% (72,7–90,9) n=11 | 66,7% (0,0–100,0) n=1 | — | — | — | 96,9% (92,5–100,0) n=53 |
-| Ceres 2.0 · `qwen3:1.7b` | 88,7% (83,0–94,3) n=53 | 75,0% (66,7–83,3) n=12 | 93,3% (80,0–100,0) n=10 | 87,9% (81,8–90,9) n=11 | 100,0% n=1 | — | — | — | 99,4% (98,1–100,0) n=53 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 89,9% (83,0–94,3) n=53 | 91,7% (83,3–100,0) n=12 | 90,0% (80,0–100,0) n=10 | 84,8% (81,8–90,9) n=11 | 100,0% n=1 | — | — | — | 98,1% (94,3–100,0) n=53 |
+| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ceres 1 · `qwen3:0.6b` | 54,1% (49,1–62,3) n=53 | 38,9% (33,3–50,0) n=12 (pen. 3) | 40,0% (30,0–50,0) n=10 (pen. 2) | 36,4% (18,2–54,5) n=11 (pen. 3) | 66,7% (0,0–100,0) n=1 | — | — | — | n/d | 97,5% (96,2–98,1) n=53 |
+| Ceres 1 · `qwen3:1.7b` | 59,1% (50,9–64,2) n=53 | 50,0% (41,7–58,3) n=12 (pen. 3) | 50,0% (30,0–70,0) n=10 (pen. 2) | 42,4% (36,4–45,5) n=11 (pen. 3) | 100,0% n=1 | — | — | — | n/d | 96,9% (96,2–98,1) n=53 |
+| Ceres 1 · `qwen3:4b-instruct` | 79,2% (69,8–92,5) n=53 | 66,7% n=12 (pen. 3) | 70,0% n=10 (pen. 2) | 57,6% (45,5–63,6) n=11 (pen. 3) | 66,7% (0,0–100,0) n=1 | — | — | — | n/d | 98,7% (96,2–100,0) n=53 |
+| Ceres 2.0 · `qwen3:0.6b` | 71,7% (67,9–75,5) n=53 | 61,1% (41,7–83,3) n=12 | 66,7% (50,0–80,0) n=10 | 78,8% (72,7–90,9) n=11 | 66,7% (0,0–100,0) n=1 | — | — | — | — | 96,9% (92,5–100,0) n=53 |
+| Ceres 2.0 · `qwen3:1.7b` | 88,7% (83,0–94,3) n=53 | 75,0% (66,7–83,3) n=12 | 93,3% (80,0–100,0) n=10 | 87,9% (81,8–90,9) n=11 | 100,0% n=1 | — | — | — | — | 99,4% (98,1–100,0) n=53 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 89,9% (83,0–94,3) n=53 | 91,7% (83,3–100,0) n=12 | 90,0% (80,0–100,0) n=10 | 84,8% (81,8–90,9) n=11 | 100,0% n=1 | — | — | — | — | 98,1% (94,3–100,0) n=53 |
 
 ### Tabela modelo × arquitetura
 
@@ -307,16 +309,16 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 ## (d) Só as externas
 
-As 40 perguntas compiladas pelo Murillo (internet e produtores), com o texto literal, fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 2,5 pontos percentuais por pergunta (n=40), diferença menor que isso é uma pergunta só; leia com a faixa.
+As 40 perguntas externas compiladas pelo Murillo (internet e produtores), com o texto literal, fora do gabarito contra o qual a Ceres 2.0 foi desenvolvida (regras da #265 com "zero erros no gabarito", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede generalização.** Com 2,5 pontos percentuais por pergunta (n=40), diferença menor que isso é uma pergunta só; leia com a faixa.
 
-| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Sem vazamento | Sem beco sem saída | Sem falha técnica |
-|---|---|---|---|---|---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 55,0% (50,0–65,0) n=40 | — | — | — | — | — | — | n/d | 97,5% (95,0–100,0) n=40 |
-| Ceres 1 · `qwen3:1.7b` | 61,7% (55,0–72,5) n=40 | — | — | — | — | — | — | n/d | 97,5% (95,0–100,0) n=40 |
-| Ceres 1 · `qwen3:4b-instruct` | 77,5% (67,5–92,5) n=40 | — | — | — | — | — | — | n/d | 99,2% (97,5–100,0) n=40 |
-| Ceres 2.0 · `qwen3:0.6b` | 70,8% (67,5–75,0) n=40 | — | — | — | — | — | — | — | 96,7% (92,5–100,0) n=40 |
-| Ceres 2.0 · `qwen3:1.7b` | 88,3% (85,0–92,5) n=40 | — | — | — | — | — | — | — | 100,0% n=40 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 90,0% (85,0–92,5) n=40 | — | — | — | — | — | — | — | 98,3% (95,0–100,0) n=40 |
+| Célula | Acurácia de rota | Acerto de função | Acerto de parâmetros | Exatidão numérica | Citação válida | Recusa correta | Recusa limpa | Sem vazamento | Sem beco sem saída | Sem falha técnica |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ceres 1 · `qwen3:0.6b` | 55,0% (50,0–65,0) n=40 | — | — | — | — | — | — | — | n/d | 97,5% (95,0–100,0) n=40 |
+| Ceres 1 · `qwen3:1.7b` | 61,7% (55,0–72,5) n=40 | — | — | — | — | — | — | — | n/d | 97,5% (95,0–100,0) n=40 |
+| Ceres 1 · `qwen3:4b-instruct` | 77,5% (67,5–92,5) n=40 | — | — | — | — | — | — | — | n/d | 99,2% (97,5–100,0) n=40 |
+| Ceres 2.0 · `qwen3:0.6b` | 70,8% (67,5–75,0) n=40 | — | — | — | — | — | — | — | — | 96,7% (92,5–100,0) n=40 |
+| Ceres 2.0 · `qwen3:1.7b` | 88,3% (85,0–92,5) n=40 | — | — | — | — | — | — | — | — | 100,0% n=40 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 90,0% (85,0–92,5) n=40 | — | — | — | — | — | — | — | — | 98,3% (95,0–100,0) n=40 |
 
 ### Tabela modelo × arquitetura
 
@@ -373,11 +375,11 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` (contextualização, orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). **A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão é a humana.
 
-- Fundamentação **a conferir** em 40 perguntas (`dispositivosAceitos` vazio até a conferência na base de lei): sai como n/d.
+- Fundamentação **a conferir** em 40 perguntas (`dispositivosEsperados` vazio até a conferência na base de lei): sai como n/d.
 - Pendentes do contador (fora da métrica de classe): E01 (#284, pergunta 6), E03 (#284, pergunta 2).
 - Classe e afirmações proibidas **provisórias** em 40 perguntas (ainda não revisadas pela equipe e pelo contador).
 
-| Célula | Fundamentação (dispositivo aceito citado) | Alíquota / classe de tratamento | Sem afirmação proibida (precisão) | Encaminha ao contador quando deve |
+| Célula | Fundamentação (citação válida) | Alíquota / classe de tratamento | Precisão: responde sem afirmação proibida | Encaminha ao contador quando deve |
 |---|---|---|---|---|
 | Ceres 1 · `qwen3:0.6b` | n/d | 0,0% n=27 | 100,0% n=9 | 0,0% n=9 |
 | Ceres 1 · `qwen3:1.7b` | n/d | 0,0% n=27 | 100,0% n=9 | 0,0% n=8 |
@@ -396,7 +398,7 @@ Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima;
 |---|---|---|---|---|
 | Ceres 1 · `qwen3:0.6b` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 | Ceres 1 · `qwen3:0.6b` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
-| Ceres 1 · `qwen3:0.6b` | 3 | `TEMPO_ESGOTADO` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:0.6b` | 3 | `TEMPO_ESGOTADO` | — (frase fixa) | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 | Ceres 1 · `qwen3:1.7b` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 | Ceres 1 · `qwen3:1.7b` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 | Ceres 1 · `qwen3:1.7b` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
@@ -553,18 +555,18 @@ A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só 
 
 > ⚠️ Conclusão sobre **dados fictícios**: mostra só o formato.
 
-Montada pelo gerador a partir dos números acima (capacidade comum), com os critérios de viabilidade do README: sem vazamento em nenhuma rodada, sem falha técnica em ao menos 95% e, em rota, número, citação e recusa, média não abaixo do mínimo da faixa do `qwen3:4b-instruct` na mesma arquitetura menos uma pergunta (o piso). Revise o texto antes da banca; os números não mudam.
+Montada pelo gerador a partir dos números acima (capacidade comum), com os critérios de viabilidade do README: sem vazamento em nenhuma rodada, sem falha técnica em ao menos 95% e, em rota, número, citação e recusa limpa (sem as recusas que vieram de `RESPOSTA_CORTADA`), média não abaixo do mínimo da faixa do `qwen3:4b-instruct` na mesma arquitetura menos uma pergunta (o piso). Revise o texto antes da banca; os números não mudam.
 
 **Ceres 1.**
-- `qwen3:0.6b`: não viável — acurácia de rota 55,8% contra 71,7–88,5% do `qwen3:4b-instruct` (piso 70,8%); exatidão numérica 47,9% contra 71,9–84,4% do `qwen3:4b-instruct` (piso 68,8%); citação válida 50,5% contra 69,7–84,8% do `qwen3:4b-instruct` (piso 66,7%); recusa correta 52,4% contra 85,7–100,0% do `qwen3:4b-instruct` (piso 78,6%).
-- `qwen3:1.7b`: não viável — acurácia de rota 64,9% contra 71,7–88,5% do `qwen3:4b-instruct` (piso 70,8%); exatidão numérica 59,4% contra 71,9–84,4% do `qwen3:4b-instruct` (piso 68,8%); recusa correta 54,8% contra 85,7–100,0% do `qwen3:4b-instruct` (piso 78,6%).
+- `qwen3:0.6b`: não viável — acurácia de rota 55,8% contra 71,7–88,5% do `qwen3:4b-instruct` (piso 70,8%); exatidão numérica 47,9% contra 71,9–84,4% do `qwen3:4b-instruct` (piso 68,8%); citação válida 50,5% contra 69,7–84,8% do `qwen3:4b-instruct` (piso 66,7%); recusa limpa 52,4% contra 85,7–100,0% do `qwen3:4b-instruct` (piso 78,6%).
+- `qwen3:1.7b`: não viável — acurácia de rota 64,9% contra 71,7–88,5% do `qwen3:4b-instruct` (piso 70,8%); exatidão numérica 59,4% contra 71,9–84,4% do `qwen3:4b-instruct` (piso 68,8%); recusa limpa 54,8% contra 85,7–100,0% do `qwen3:4b-instruct` (piso 78,6%).
 
 **Ceres 2.0.**
-- `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 74,6% contra 85,0–92,9% do `qwen3:4b-instruct` (piso 84,1%); exatidão numérica 74,0% contra 84,4–93,8% do `qwen3:4b-instruct` (piso 81,2%); citação válida 73,7% contra 93,9–97,0% do `qwen3:4b-instruct` (piso 90,9%); recusa correta 61,9% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
-- `qwen3:1.7b`: não viável — citação válida 81,8% contra 93,9–97,0% do `qwen3:4b-instruct` (piso 90,9%); recusa correta 83,3% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
+- `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 74,6% contra 85,0–92,9% do `qwen3:4b-instruct` (piso 84,1%); exatidão numérica 74,0% contra 84,4–93,8% do `qwen3:4b-instruct` (piso 81,2%); citação válida 73,7% contra 93,9–97,0% do `qwen3:4b-instruct` (piso 90,9%); recusa limpa 61,9% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
+- `qwen3:1.7b`: não viável — citação válida 81,8% contra 93,9–97,0% do `qwen3:4b-instruct` (piso 90,9%); recusa limpa 83,3% contra 92,9–100,0% do `qwen3:4b-instruct` (piso 85,7%).
 - `qwen3:4b-instruct` (referência): vazou em alguma rodada (sem vazamento mínimo 83,3%).
 
-**Efeito da arquitetura no `qwen3:4b-instruct`** (Ceres 2.0 menos Ceres 1): acurácia de rota +9,4 p.p., exatidão numérica +8,3 p.p., citação válida +18,2 p.p., recusa correta +2,4 p.p.; latência p50 18,8 s → 6,8 s.
+**Efeito da arquitetura no `qwen3:4b-instruct`** (Ceres 2.0 menos Ceres 1): acurácia de rota +9,4 p.p., exatidão numérica +8,3 p.p., citação válida +18,2 p.p., recusa limpa +2,4 p.p.; latência p50 18,8 s → 6,8 s.
 
 **Nenhum modelo menor é viável em nenhuma das duas arquiteturas**: os números sustentam o `qwen3:4b-instruct`.
 

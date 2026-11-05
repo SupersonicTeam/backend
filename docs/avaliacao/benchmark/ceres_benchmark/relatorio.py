@@ -39,6 +39,8 @@ CRITERIOS = {
     "numero": ("Exatidão numérica", "numeroCorreto", False),
     "citacao": ("Citação válida", "citacaoValida", False),
     "recusa": ("Recusa correta", "recusaCorreta", False),
+    #: Recusa certa que veio de RESPOSTA_CORTADA (#270) nao conta: acerto por acidente.
+    "recusa_limpa": ("Recusa limpa", "recusaCorreta", False),
     "vazamento": ("Sem vazamento", "vazamento", True),
     "beco": ("Sem beco sem saída", "semBecoSemSaida", False),
     "falha": ("Sem falha técnica", None, False),
@@ -53,7 +55,7 @@ _RECORTES_QUE_PENALIZAM = (RECORTE_INTEIRO, RECORTE_INEDITAS)
 
 #: Criterios de viabilidade da "Conclusao para a banca" (README do benchmark).
 LIMIAR_SEM_FALHA = 95.0
-CRITERIOS_VIABILIDADE = ("rota", "numero", "citacao", "recusa")
+CRITERIOS_VIABILIDADE = ("rota", "numero", "citacao", "recusa_limpa")
 
 _NEGATIVA = re.compile(
     r"\bn[ãa]o (h[áa]|tem|tenho|houve|encontrei|existe|existem|constam?|possui)\b|\bnenhum[a]?\b",
@@ -178,6 +180,8 @@ def valor_criterio(
         return False, True, True
     if valor is None:
         return None, True, False
+    if criterio == "recusa_limpa" and valor and ext.cortada(resultado)["qualquer"]:
+        return False, True, False
     return (not valor) if inverte else bool(valor), True, False
 
 
@@ -314,7 +318,7 @@ def instaveis(celula: Celula, ids: list[str]) -> list[str]:
     if len(celula.rodadas) < 2:
         return []
     alvo, saida = set(ids), []
-    chaves = [c[1] for c in CRITERIOS.values() if c[1]]
+    chaves = list(dict.fromkeys(c[1] for c in CRITERIOS.values() if c[1]))
     por_id: dict[str, list[tuple]] = {}
     for resultados in celula.rodadas:
         for r in resultados:
@@ -524,7 +528,8 @@ def conclusao(
     linhas = [
         "Montada pelo gerador a partir dos números acima (capacidade comum), com os critérios de "
         "viabilidade do README: sem vazamento em nenhuma rodada, sem falha técnica em ao menos "
-        f"{LIMIAR_SEM_FALHA:.0f}% e, em rota, número, citação e recusa, média não abaixo do mínimo "
+        f"{LIMIAR_SEM_FALHA:.0f}% e, em rota, número, citação e recusa limpa (sem as recusas que "
+        "vieram de `RESPOSTA_CORTADA`), média não abaixo do mínimo "
         f"da faixa do `{referencia}` na mesma arquitetura menos uma pergunta (o piso). Revise o texto antes da banca; os "
         "números não mudam.",
         "",
@@ -550,9 +555,16 @@ def conclusao(
         (arq1, rot1), (arq2, rot2) = arquiteturas
         ref1 = next((c for c in celulas if c.arquitetura == arq1 and c.modelo == referencia), None)
         ref2 = next((c for c in celulas if c.arquitetura == arq2 and c.modelo == referencia), None)
-        if ref1 and ref2 and ref1.rodadas and ref2.rodadas:
+        invalidas_ref = [c for c in (ref1, ref2) if c is not None and c.invalida]
+        if invalidas_ref:
+            linhas.append(
+                f"**Efeito da arquitetura no `{referencia}`: não medido** — célula inválida ("
+                + ", ".join(c.rotulo_arquitetura for c in invalidas_ref)
+                + ": o pensamento não desligou). Refaça a célula antes de comparar.")
+            linhas.append("")
+        elif ref1 and ref2 and ref1.rodadas and ref2.rodadas:
             partes = []
-            for criterio in ("rota", "numero", "citacao", "recusa"):
+            for criterio in CRITERIOS_VIABILIDADE:
                 a = faixa(ref2, criterio, ids_comum, canonico, adaptacoes, RECORTE_COMUM).media
                 b = faixa(ref1, criterio, ids_comum, canonico, adaptacoes, RECORTE_COMUM).media
                 partes.append(f"{CRITERIOS[criterio][0].lower()} {_pontos(a, b)}")
@@ -562,7 +574,12 @@ def conclusao(
                 f"**Efeito da arquitetura no `{referencia}`** ({rot2} menos {rot1}): "
                 + ", ".join(partes) + f"; latência p50 {_s(lat1)} → {_s(lat2)}.")
             linhas.append("")
-        novos = [m for m in viaveis_por_arq.get(arq2, []) if m not in viaveis_por_arq.get(arq1, [])]
+        def _valida(arq, modelo):
+            cel = next((c for c in celulas if c.arquitetura == arq and c.modelo == modelo), None)
+            return cel is not None and bool(cel.rodadas) and not cel.invalida
+        # So compara com a outra arquitetura quando a celula de la e valida: invalida nao e "nao viavel".
+        novos = [m for m in viaveis_por_arq.get(arq2, [])
+                 if m not in viaveis_por_arq.get(arq1, []) and _valida(arq1, m)]
         if novos:
             economia = []
             for m in novos:
@@ -579,15 +596,28 @@ def conclusao(
             linhas.append(
                 f"**Nenhum modelo menor é viável em nenhuma das duas arquiteturas**: os números "
                 f"sustentam o `{referencia}`.")
+        elif viaveis_por_arq.get(arq2) and not all(m in viaveis_por_arq.get(arq1, [])
+                                                   for m in viaveis_por_arq[arq2]):
+            linhas.append(
+                ", ".join(f"`{m}`" for m in viaveis_por_arq[arq2]
+                          if m not in viaveis_por_arq.get(arq1, []))
+                + f" é viável na {rot2}, mas a célula da {rot1} não rodou ou é inválida: sem "
+                "comparação entre as arquiteturas até refazê-la.")
         elif viaveis_por_arq.get(arq2):
             linhas.append(
                 f"Os modelos menores viáveis na {rot2} já eram viáveis na {rot1}: a escolha do "
                 f"`{referencia}` não se explica só pela qualidade — explique pela margem.")
         else:
-            perdidos = ", ".join(f"`{m}`" for m in viaveis_por_arq.get(arq1, []))
-            linhas.append(
-                f"**Regressão:** {perdidos} era viável na {rot1} e não é na {rot2}. Investigue "
-                "antes da banca.")
+            perdidos = [m for m in viaveis_por_arq.get(arq1, []) if _valida(arq2, m)]
+            sem_medida = [m for m in viaveis_por_arq.get(arq1, []) if m not in perdidos]
+            if perdidos:
+                linhas.append(
+                    "**Regressão:** " + ", ".join(f"`{m}`" for m in perdidos)
+                    + f" era viável na {rot1} e não é na {rot2}. Investigue antes da banca.")
+            if sem_medida:
+                linhas.append(
+                    ", ".join(f"`{m}`" for m in sem_medida) + f" era viável na {rot1}; na {rot2} a "
+                    "célula não rodou ou é inválida: sem comparação até refazê-la.")
     return "\n".join(linhas) + "\n"
 
 
@@ -692,6 +722,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     teste = rodada.get("tipo") == "teste" or (rodada.get("repeticoes") or 3) < 3
     if teste:
         md.append(AVISO_TESTE)
+    elif rodada.get("tipo") == "ensaio":
+        md.append("> ⚠️ **ENSAIO antes da revisão humana das perguntas externas (#358)** "
+                  "(`--ensaio`): dispositivos, classe e afirmações proibidas delas ainda são "
+                  "provisórios. Não vale para a banca.\n")
     sessao = rodada.get("sessao7") or {}
     if sessao and not sessao.get("confirmado", sessao.get("contem") is True):
         nome7 = f"{_celula_md(sessao.get('rotulo') or 'sessão paralela')} ({sessao.get('issue')})"
@@ -824,8 +858,8 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append(f"## {rotulo}\n")
         if recorte == RECORTE_INEDITAS:
             so2 = [i for i in ids if canonico[i].get("capacidade") == "so_ceres_2"]
-            descricao = ("As 40 perguntas compiladas pelo Murillo (internet e produtores), com o texto "
-                         "literal" if ids == ids_externas else
+            descricao = (f"As {len(ids)} perguntas externas compiladas pelo Murillo (internet e "
+                         "produtores), com o texto literal" if ids == ids_externas else
                          f"As {len(ids)} perguntas fora do gabarito"
                          + (" (equipe e externas)" if ids_externas else " escritas para o benchmark"))
             md.append(f"{descricao}, fora do gabarito contra o "
@@ -888,7 +922,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     if ids_externas:
         md.append(_secao_externas(celulas, ids_externas, canonico))
-    md.append(_secao_cortadas(celulas, canonico))
+    md.append(_secao_cortadas(celulas))
     if any(c.invalida for c in celulas):
         md.append("**Células inválidas para comparar** (o pensamento não desligou na prova; o teto "
                   "de tokens cortaria o raciocínio e o acerto mediria o corte): "
@@ -898,6 +932,11 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     parecidas = [i for i in rodada.get("parecidasComTreino") or [] if i in canonico]
     if parecidas:
         md.append(_secao_parecidas(celulas, parecidas, ids_comum, canonico, adaptacoes_por_arq))
+    com_gabarito = [i for i in rodada.get("parecidasComGabarito") or [] if i in canonico]
+    if com_gabarito:
+        md.append("**Inéditas parecidas com o gabarito** (Jaccard ≥ 0,5 com uma pergunta usada no "
+                  "desenvolvimento da Ceres 2.0): " + ", ".join(com_gabarito) + ". Seguem no recorte "
+                  "inédito; leia o acerto delas como parcialmente visto (`similaridade-treino.md`).\n")
 
     md.append("## Clareza automática (gabarito inteiro)\n")
     md.append("Da `ClarezaTexto` do próprio comando, só nas respostas redigidas. Na Ceres 2.0 a "
@@ -991,11 +1030,14 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md.append("")
     texto = "\n".join(md)
     (pasta / "relatorio.md").write_text(texto, encoding="utf-8")
-    if ids_externas:
+    arquivo_chave = pasta / "externas-avaliacao-chave.json"
+    if ids_externas and not arquivo_chave.exists():
+        # Gerado uma vez: regerar o relatorio nao reembaralha um CSV que ja foi ao avaliador (a
+        # chave antiga deixaria de casar as notas). Para refazer, apague os dois arquivos.
         cego, chave = ext.csv_cego(celulas, canonico)
         (pasta / "externas-avaliacao-cego.csv").write_text(cego, encoding="utf-8")
         # A chave liga a resposta a celula: fica com a equipe ate as notas voltarem (.gitignore).
-        (pasta / "externas-avaliacao-chave.json").write_text(chave, encoding="utf-8")
+        arquivo_chave.write_text(chave, encoding="utf-8")
     return texto
 
 
@@ -1036,7 +1078,7 @@ def _secao_externas(celulas, ids, canonico) -> str:
               "é a humana.\n"]
     if a_conferir:
         linhas.append(f"- Fundamentação **a conferir** em {len(a_conferir)} perguntas "
-                      "(`dispositivosAceitos` vazio até a conferência na base de lei): sai como n/d.")
+                      "(`dispositivosEsperados` vazio até a conferência na base de lei): sai como n/d.")
     if pendentes:
         linhas.append("- Pendentes do contador (fora da métrica de classe): " + ", ".join(pendentes) + ".")
     if nao_revisadas:
@@ -1046,13 +1088,14 @@ def _secao_externas(celulas, ids, canonico) -> str:
     linhas.append("| Célula | " + " | ".join(ext.CRITERIOS_EXTERNAS.values()) + " |\n|---|"
                   + "---|" * len(ext.CRITERIOS_EXTERNAS))
     for c in celulas:
+        # Uma avaliacao por resposta, reusada nos quatro criterios.
+        avaliadas = [[ext.avaliar(r, canonico[r["id"]]) for r in resultados
+                      if r["id"] in alvo and not falha_tecnica(r)] for resultados in c.rodadas]
         casas = []
         for criterio in ext.CRITERIOS_EXTERNAS:
             taxas, total = [], 0
-            for resultados in c.rodadas:
-                valores = [ext.avaliar(r, canonico[r["id"]])[criterio] for r in resultados
-                           if r["id"] in alvo and not falha_tecnica(r)]
-                valores = [v for v in valores if v is not None]
+            for rodada_avaliada in avaliadas:
+                valores = [a[criterio] for a in rodada_avaliada if a[criterio] is not None]
                 if valores:
                     taxas.append(100.0 * sum(valores) / len(valores))
                     total = len(valores)
@@ -1070,15 +1113,20 @@ def _secao_externas(celulas, ids, canonico) -> str:
                 for r in resultados:
                     if r["id"] != p["id"]:
                         continue
+                    desfecho = (r.get("execucao") or {}).get("desfecho")
                     criterio = ext.avaliar(r, p)["proibidas"]
+                    # Frase fixa do backend (recusa, descarte, corte) nao afirma nada: sem credito,
+                    # mas tambem nao e "afirmou o proibido".
+                    proibida = ("— (frase fixa)" if desfecho not in REDIGIDAS
+                                else "**sim**" if criterio is False else "não")
                     linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {numero} "
-                                  f"| `{(r.get('execucao') or {}).get('desfecho')}` "
-                                  f"| {'**sim**' if criterio is False else 'não'} "
+                                  f"| `{desfecho}` "
+                                  f"| {proibida} "
                                   f"| {_celula_md((r.get('execucao') or {}).get('texto') or '', 240)} |")
     return "\n".join(linhas) + "\n"
 
 
-def _secao_cortadas(celulas, canonico) -> str:
+def _secao_cortadas(celulas) -> str:
     """Taxa de ``RESPOSTA_CORTADA`` (#270) por celula, rodada e tipo de chamada, e a recusa limpa."""
     linhas = ["## Respostas cortadas pelo teto de tokens (`RESPOSTA_CORTADA`)\n",
               "Desfecho da Sessão 7 (#270): `done_reason=length` ou `eval_count ≥ teto`. É o número que "
@@ -1090,12 +1138,12 @@ def _secao_cortadas(celulas, canonico) -> str:
         por_rodada, tipos, total = [], {"classificacao": 0, "funcoes": 0, "lei": 0}, 0
         cortadas = 0
         for resultados in c.rodadas:
-            n = sum(1 for r in resultados if ext.cortada(r)["qualquer"])
+            cortes = [ext.cortada(r) for r in resultados]
+            n = sum(1 for corte in cortes if corte["qualquer"])
             por_rodada.append(f"{n}/{len(resultados)}")
             cortadas += n
             total += len(resultados)
-            for r in resultados:
-                corte = ext.cortada(r)
+            for corte in cortes:
                 for tipo in tipos:
                     tipos[tipo] += 1 if corte[tipo] else 0
         linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {' · '.join(por_rodada) or 'n/d'} "

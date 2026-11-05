@@ -205,7 +205,7 @@ class RevisaoTest(Base):
 
     def test_regressao_quando_so_a_arquitetura_antiga_tinha_modelo_viavel(self):
         celulas = [rel.Celula("a", "ceres-1", "Ceres 1", "m-small", {}, {}, [[]]),
-                   rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", {}, {}, [])]
+                   rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", {}, {}, [[]])]
         original = rel.viabilidade
         rel.viabilidade = lambda das, *a: [rel.Viabilidade(
             "m-small", das[0].arquitetura == "ceres-1", [] if das[0].arquitetura == "ceres-1" else ["x"])]
@@ -215,6 +215,32 @@ class RevisaoTest(Base):
         finally:
             rel.viabilidade = original
         self.assertIn("**Regressão:** `m-small` era viável na Ceres 1 e não é na Ceres 2.0", texto)
+
+    def test_celula_invalida_nao_vira_regressao_nem_ganho(self):
+        invalida = {"pensamento": {"raciocinou": True}}
+        for antiga, nova, esperado, proibido in (
+                ({}, invalida, "célula não rodou ou é inválida", "**Regressão:**"),
+                (invalida, {}, "a célula da Ceres 1 não rodou ou é inválida", "Com todas as letras")):
+            celulas = [rel.Celula("a", "ceres-1", "Ceres 1", "m-small", antiga, {}, [[]]),
+                       rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", nova, {}, [[]])]
+            original = rel.viabilidade
+            rel.viabilidade = lambda das, *a: [rel.Viabilidade(
+                "m-small", not das[0].invalida, [] if not das[0].invalida else ["inválida"])]
+            try:
+                texto = rel.conclusao(celulas, [("ceres-1", "Ceres 1"), ("ceres-2", "Ceres 2.0")],
+                                      "m-ref", [], {}, {})
+            finally:
+                rel.viabilidade = original
+            self.assertIn(esperado, texto)
+            self.assertNotIn(proibido, texto)
+
+    def test_recusa_limpa_nao_conta_recusa_por_corte(self):
+        cortada = {"id": "F1", "recusaCorreta": True,
+                   "execucao": {"desfecho": "RESPOSTA_CORTADA", "rota": "FORA_DE_ESCOPO"}}
+        limpa = {"id": "F1", "recusaCorreta": True, "execucao": {"desfecho": "FORA_DE_ESCOPO"}}
+        self.assertEqual(rel.valor_criterio(cortada, "recusa", {}, [], rel.RECORTE_COMUM)[0], True)
+        self.assertEqual(rel.valor_criterio(cortada, "recusa_limpa", {}, [], rel.RECORTE_COMUM)[0], False)
+        self.assertEqual(rel.valor_criterio(limpa, "recusa_limpa", {}, [], rel.RECORTE_COMUM)[0], True)
 
     def test_vazamento_de_nome_do_vizinho_nao_e_instrucao(self):
         pergunta = {"textosProibidos": ["Sitio Vizinho", "Termine cada afirmacao com a marca"]}
@@ -377,7 +403,7 @@ class ExternasNoRelatorioTest(Base):
             p["origem"] = {"L01": "inedita_externa", "P01": "inedita_equipe"}.get(p["id"], "gabarito")
         alvo = next(p for p in canonico["perguntas"] if p["id"] == "L01")
         alvo.update({"classeTratamento": "ZERO", "afirmacoesProibidas": [r"\bconfirmar\b"],
-                     "aConferir": True, "dispositivosAceitos": [], "revisado": False,
+                     "aConferir": True, "dispositivosEsperados": [], "revisado": False,
                      "observacao": "Atenção de teste."})
         (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
 
@@ -389,10 +415,14 @@ class ExternasNoRelatorioTest(Base):
         self.assertIn("## Perguntas externas: critérios automáticos (#358)", texto)
         self.assertIn("Fundamentação **a conferir** em 1 perguntas", texto)
         self.assertIn("### L01 (pergunta ? do Murillo)", texto)
-        # Ceres 1 m-small: "Nao consegui confirmar a citacao." casa a afirmacao proibida de teste.
-        self.assertIn("| Ceres 1 · `m-small` | 1 | `CITACAO_INVALIDA` | **sim** |", texto)
+        # Ceres 1 m-small: "Nao consegui confirmar a citacao." e frase fixa (CITACAO_INVALIDA), nao
+        # afirmacao do modelo.
+        self.assertIn("| Ceres 1 · `m-small` | 1 | `CITACAO_INVALIDA` | — (frase fixa) |", texto)
         self.assertTrue((self.pasta / "externas-avaliacao-cego.csv").exists())
-        self.assertTrue((self.pasta / "externas-avaliacao-chave.json").exists())
+        chave = (self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8")
+        # Regerar o relatorio nao reembaralha o CSV que ja foi ao avaliador.
+        rel.gerar(self.pasta)
+        self.assertEqual((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"), chave)
 
     def test_contaminada_sai_do_inedito(self):
         self._marcar()

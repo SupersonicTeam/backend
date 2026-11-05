@@ -3,7 +3,7 @@
 Os 5 criterios do Murillo para as 40 perguntas compiladas por ele:
 
 - **automaticos** (aqui, sobre a resposta entregue, iguais para as duas arquiteturas):
-  fundamentacao (dispositivo aceito citado; so depois de ``dispositivosAceitos`` conferidos na
+  fundamentacao (dispositivo aceito citado; so depois de ``dispositivosEsperados`` conferidos na
   base), aliquota/classe de tratamento e precisao por heuristica (``classeTratamento`` e
   ``afirmacoesProibidas``) e encaminhamento ao contador;
 - **humanos** (CSV cego para o avaliador externo da #275): contextualizacao, orientacao pratica e
@@ -20,7 +20,6 @@ import io
 import json
 import random
 import re
-import unicodedata
 
 #: Classe de tratamento -> padrao que a resposta precisa ter para a classe estar dita.
 _PADROES_CLASSE = {
@@ -31,66 +30,71 @@ _PADROES_CLASSE = {
                          r"sem (nenhuma |qualquer )?redu[cç][aã]o|n[aã]o (tem|ter[aá]|h[aá]|recebe|"
                          r"receber[aá]) (direito [aà] )?(redu[cç][aã]o|benef[ií]cio)", re.IGNORECASE),
 }
-_DEPENDE = re.compile(r"\bdepend|\bvaria\b|\bconforme\b|\bcaso a caso\b", re.IGNORECASE)
+_DEPENDE = re.compile(r"\bdepend|\bvaria de acordo\b|\bcaso a caso\b", re.IGNORECASE)
 _CONTADOR = re.compile(r"\bcontador|\bcontabilista|\bescrit[oó]rio (de )?contab", re.IGNORECASE)
+#: "nao" (ou "nem") ate ~3 palavras antes da expressao a nega: "nao tem aliquota zero".
+_NEGACAO_ANTES = re.compile(r"\b(n[aã]o|nem|nunca)\b(\s+\S+){0,3}\s*$", re.IGNORECASE)
 _DESFECHOS_CORTE = {"RESPOSTA_CORTADA"}
+#: Resposta redigida pelo modelo (as outras sao frase fixa do backend: recusa ou descarte).
+_REDIGIDAS = {"RESPONDIDA", "NEGATIVA_SUBSTITUIDA"}
 
 #: Criterios automaticos das externas: chave -> rotulo no relatorio.
 CRITERIOS_EXTERNAS = {
-    "fundamentacao": "Fundamentação (dispositivo aceito citado)",
+    "fundamentacao": "Fundamentação (citação válida)",
     "classe": "Alíquota / classe de tratamento",
-    "proibidas": "Sem afirmação proibida (precisão)",
+    "proibidas": "Precisão: responde sem afirmação proibida",
     "encaminhamento": "Encaminha ao contador quando deve",
 }
 
 
-def _referencias(execucao: dict) -> list[str]:
-    refs = []
-    for c in execucao.get("citacoes") or []:
-        norma, dispositivo = c.get("norma") or "", c.get("dispositivo") or ""
-        refs.append(c.get("referencia") or f"{norma}, {dispositivo}".strip(", "))
-    return refs
+def afirma(padrao: re.Pattern | str, texto: str) -> bool:
+    """O texto **afirma** o padrao: alguma ocorrencia sem negacao logo antes.
 
-
-def cita_algum(referencias: list[str], aceitos: list[str]) -> bool:
-    """Igual ao ``AvaliadorResposta.citaAlgum``: aceita paragrafo do artigo, nao o ``164-A``."""
-    for ref in referencias:
-        for esperado in aceitos:
-            if ref == esperado or (ref.startswith(esperado) and len(ref) > len(esperado)
-                                   and ref[len(esperado)] in ", )"):
-                return True
-    return False
+    "Voce nao pode aproveitar o credito" nao afirma "pode aproveitar o credito".
+    """
+    regex = padrao if isinstance(padrao, re.Pattern) else re.compile(padrao, re.IGNORECASE)
+    return any(not _NEGACAO_ANTES.search(texto[max(0, m.start() - 40):m.start()])
+               for m in regex.finditer(texto))
 
 
 def classe_dita(texto: str, classe: str) -> bool | None:
-    """A resposta diz a classe esperada? ``None`` para classe sem padrao (``NAO_SE_APLICA``)."""
+    """A resposta diz a classe esperada, e so ela? ``None`` para ``NAO_SE_APLICA``.
+
+    Para ZERO, REDUCAO_60 e PADRAO: a classe afirmada (sem negacao) e nenhuma outra afirmada; a
+    resposta que lista todas as classes nao acerta nenhuma. CONDICIONAL: duas ou mais classes
+    afirmadas, ou "depende".
+    """
+    afirmadas = {c for c, p in _PADROES_CLASSE.items() if afirma(p, texto)}
     if classe in _PADROES_CLASSE:
-        return bool(_PADROES_CLASSE[classe].search(texto))
+        return afirmadas == {classe}
     if classe == "CONDICIONAL":
-        ditas = sum(1 for p in _PADROES_CLASSE.values() if p.search(texto))
-        return ditas >= 2 or bool(_DEPENDE.search(texto))
+        return len(afirmadas) >= 2 or bool(_DEPENDE.search(texto))
     if classe == "FORA_DO_ESCOPO_SISTEMA":
         return bool(_CONTADOR.search(texto))
     return None
 
 
 def avaliar(resultado: dict, pergunta: dict) -> dict[str, bool | None]:
-    """Criterio -> acertou? ``None`` quando nao se aplica (ou ainda nao da para medir)."""
+    """Criterio -> acertou? ``None`` quando nao se aplica (ou ainda nao da para medir).
+
+    A fundamentacao e o ``citacaoValida`` do proprio comando (o ``AvaliadorResposta`` mede o
+    ``dispositivosEsperados``; vazio enquanto ``aConferir``): uma regra so de citacao. Resposta que
+    nao foi redigida pelo modelo (recusa, descarte, corte) nao ganha credito de precisao, classe
+    nem encaminhamento: a frase fixa do backend nao responde a pergunta.
+    """
     execucao = resultado.get("execucao") or {}
     texto = execucao.get("texto") or ""
-    aceitos = pergunta.get("dispositivosAceitos") or []
+    redigida = execucao.get("desfecho") in _REDIGIDAS
     proibidas = pergunta.get("afirmacoesProibidas") or []
+    classe = None if pergunta.get("pendenteContador") else classe_dita(
+        texto, pergunta.get("classeTratamento", ""))
     return {
-        "fundamentacao": (cita_algum(_referencias(execucao), aceitos)
-                          and execucao.get("desfecho") not in ("CITACAO_INVALIDA", "NUMERO_SEM_FONTE",
-                                                               "RESPOSTA_CORTADA"))
-        if aceitos else None,
+        "fundamentacao": resultado.get("citacaoValida"),
         # Pendente do contador (#284): sem valor esperado firme, fora da metrica de tratamento.
-        "classe": None if pergunta.get("pendenteContador")
-        else classe_dita(texto, pergunta.get("classeTratamento", "")),
-        "proibidas": (not any(re.search(p, texto, re.IGNORECASE) for p in proibidas))
-        if proibidas else None,
-        "encaminhamento": bool(_CONTADOR.search(texto)) if pergunta.get("encaminharContador") else None,
+        "classe": None if classe is None else (redigida and classe),
+        "proibidas": (redigida and not any(afirma(p, texto) for p in proibidas)) if proibidas else None,
+        "encaminhamento": (redigida and bool(_CONTADOR.search(texto)))
+        if pergunta.get("encaminharContador") else None,
     }
 
 
@@ -114,35 +118,44 @@ def cortada(resultado: dict) -> dict[str, bool]:
     }
 
 
-def _normalizar(texto: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
+def _celula_csv(valor: str) -> str:
+    """Celula de texto segura no Excel: ``= + - @`` no inicio viraria formula (como no ``CsvCego``)."""
+    return "'" + valor if valor[:1] in ("=", "+", "-", "@") else valor
 
 
 def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None = None):
     """CSV cego das externas para o avaliador externo (#275) e a chave, que nao vai a ele.
 
     Uma linha por (celula, pergunta) da 1a rodada, embaralhadas; colunas de nota 1 a 5 em branco
-    para contextualizacao, orientacao pratica e precisao final.
+    para contextualizacao, orientacao pratica e precisao final. Ficam de fora: pergunta
+    contaminada, celula invalida e resposta com falha tecnica ou vazia (nao ha o que avaliar).
+    Mesmo formato do ``CsvCego`` do Java: separador ``;``, BOM UTF-8 (Excel em portugues) e
+    protecao contra formula.
     """
+    from .relatorio import falha_tecnica  # import tardio: relatorio importa este modulo
+
     aleatorio = aleatorio or random.SystemRandom()
     linhas = []
     for c in celulas:
-        if not c.rodadas:
+        if not c.rodadas or c.invalida:
             continue
         for r in c.rodadas[0]:
             p = canonico.get(r["id"])
-            if p is None or p.get("origem") != "inedita_externa":
+            if p is None or p.get("origem") != "inedita_externa" or p.get("contaminada"):
                 continue
-            linhas.append({"celula": c.nome, "id": r["id"], "pergunta": p["pergunta"],
-                           "resposta": (r.get("execucao") or {}).get("texto") or ""})
+            texto = (r.get("execucao") or {}).get("texto") or ""
+            if falha_tecnica(r) or not texto.strip():
+                continue
+            linhas.append({"celula": c.nome, "id": r["id"], "pergunta": p["pergunta"], "resposta": texto})
     aleatorio.shuffle(linhas)
     saida = io.StringIO()
-    escritor = csv.writer(saida)
+    escritor = csv.writer(saida, delimiter=";", lineterminator="\n")
     escritor.writerow(["codigo", "pergunta", "resposta", "contextualizacao_1a5",
                        "orientacao_pratica_1a5", "precisao_final_1a5", "comentario"])
     chave = {}
     for i, linha in enumerate(linhas, 1):
         codigo = f"R{i:03d}"
-        escritor.writerow([codigo, linha["pergunta"], linha["resposta"], "", "", "", ""])
+        escritor.writerow([codigo, _celula_csv(linha["pergunta"]), _celula_csv(linha["resposta"]),
+                           "", "", "", ""])
         chave[codigo] = {"celula": linha["celula"], "id": linha["id"]}
-    return saida.getvalue(), json.dumps(chave, ensure_ascii=False, indent=2) + "\n"
+    return "\ufeff" + saida.getvalue(), json.dumps(chave, ensure_ascii=False, indent=2) + "\n"
