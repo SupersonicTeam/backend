@@ -30,10 +30,23 @@ _PADROES_CLASSE = {
                          r"sem (nenhuma |qualquer )?redu[cç][aã]o|n[aã]o (tem|ter[aá]|h[aá]|recebe|"
                          r"receber[aá]) (direito [aà] )?(redu[cç][aã]o|benef[ií]cio)", re.IGNORECASE),
 }
-_DEPENDE = re.compile(r"\bdepend|\bvaria de acordo\b|\bcaso a caso\b", re.IGNORECASE)
+#: "conforme" so com o que varia ("conforme o produto"): "conforme o art. 138" e citacao, nao condicao.
+_DEPENDE = re.compile(r"\bdepend|\bvaria\b|\bconforme (o|a) (produto|caso|ncm|tipo|destino|uso|"
+                      r"finalidade|situa[cç][aã]o|comprador|adquirente)\b|\bcaso a caso\b", re.IGNORECASE)
 _CONTADOR = re.compile(r"\bcontador|\bcontabilista|\bescrit[oó]rio (de )?contab", re.IGNORECASE)
-#: "nao" (ou "nem") ate ~3 palavras antes da expressao a nega: "nao tem aliquota zero".
-_NEGACAO_ANTES = re.compile(r"\b(n[aã]o|nem|nunca)\b(\s+\S+){0,3}\s*$", re.IGNORECASE)
+#: "Voce nao precisa procurar o contador" fala do contador sem encaminhar a ele.
+_SEM_CONTADOR = re.compile(r"\b(n[aã]o|sem) (precisa|precisar|[eé] necess[aá]rio|h[aá] necessidade)"
+                           r"[^.;:!?]{0,40}(contador|contabilista|contab)", re.IGNORECASE)
+#: Negacao que governa a expressao: "nao"/"nem"/"nunca" logo antes (no maximo uma palavra entre:
+#: "nao tem aliquota zero", "nao pode aproveitar") e na mesma oracao (pontuacao corta).
+_NEGACAO_ANTES = re.compile(r"\b(n[aã]o|nem|nunca)\b(\s+[^\s.,;:!?]+)?\s*$", re.IGNORECASE)
+#: Fim de oracao: o que vem antes dele nao nega nem qualifica o que vem depois.
+_ORACAO = re.compile(r"[.,;:!?\n]")
+#: "Aliquota padrao" como base de uma reducao ("reducao de 60% da aliquota padrao") nao e PADRAO.
+_REDUCAO_ANTES = re.compile(r"redu[cç][aã]o|reduzid|%|\bzero\b|\bsobre\b", re.IGNORECASE)
+#: Desfechos em que o comando descarta o texto: a citacao dele nao conta (regra do AvaliadorResposta
+#: da main; o do 2463c27 nao a aplica, e as duas arquiteturas tem de ser medidas pela mesma regua).
+_DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"}
 _DESFECHOS_CORTE = {"RESPOSTA_CORTADA"}
 #: Resposta redigida pelo modelo (as outras sao frase fixa do backend: recusa ou descarte).
 _REDIGIDAS = {"RESPONDIDA", "NEGATIVA_SUBSTITUIDA"}
@@ -53,8 +66,22 @@ def afirma(padrao: re.Pattern | str, texto: str) -> bool:
     "Voce nao pode aproveitar o credito" nao afirma "pode aproveitar o credito".
     """
     regex = padrao if isinstance(padrao, re.Pattern) else re.compile(padrao, re.IGNORECASE)
-    return any(not _NEGACAO_ANTES.search(texto[max(0, m.start() - 40):m.start()])
+    return any(not _NEGACAO_ANTES.search(_oracao_antes(texto, m.start()))
                for m in regex.finditer(texto))
+
+
+def _oracao_antes(texto: str, inicio: int) -> str:
+    """O trecho da mesma oracao antes de ``inicio`` (ate a ultima pontuacao)."""
+    antes = texto[max(0, inicio - 80):inicio]
+    cortes = list(_ORACAO.finditer(antes))
+    return antes[cortes[-1].end():] if cortes else antes
+
+
+def _afirma_padrao(texto: str) -> bool:
+    """PADRAO afirmado: sem negacao e sem ser a base de uma reducao na mesma oracao."""
+    return any(not _NEGACAO_ANTES.search(_oracao_antes(texto, m.start()))
+               and not _REDUCAO_ANTES.search(_oracao_antes(texto, m.start()))
+               for m in _PADROES_CLASSE["PADRAO"].finditer(texto))
 
 
 def classe_dita(texto: str, classe: str) -> bool | None:
@@ -64,7 +91,8 @@ def classe_dita(texto: str, classe: str) -> bool | None:
     resposta que lista todas as classes nao acerta nenhuma. CONDICIONAL: duas ou mais classes
     afirmadas, ou "depende".
     """
-    afirmadas = {c for c, p in _PADROES_CLASSE.items() if afirma(p, texto)}
+    afirmadas = {c for c, p in _PADROES_CLASSE.items()
+                 if (_afirma_padrao(texto) if c == "PADRAO" else afirma(p, texto))}
     if classe in _PADROES_CLASSE:
         return afirmadas == {classe}
     if classe == "CONDICIONAL":
@@ -89,13 +117,23 @@ def avaliar(resultado: dict, pergunta: dict) -> dict[str, bool | None]:
     classe = None if pergunta.get("pendenteContador") else classe_dita(
         texto, pergunta.get("classeTratamento", ""))
     return {
-        "fundamentacao": resultado.get("citacaoValida"),
+        "fundamentacao": _fundamentacao(resultado),
         # Pendente do contador (#284): sem valor esperado firme, fora da metrica de tratamento.
         "classe": None if classe is None else (redigida and classe),
         "proibidas": (redigida and not any(afirma(p, texto) for p in proibidas)) if proibidas else None,
-        "encaminhamento": (redigida and bool(_CONTADOR.search(texto)))
+        "encaminhamento": (redigida and bool(_CONTADOR.search(texto))
+                           and not _SEM_CONTADOR.search(texto))
         if pergunta.get("encaminharContador") else None,
     }
+
+
+def _fundamentacao(resultado: dict) -> bool | None:
+    """``citacaoValida`` do comando, com a regra da main nas duas arquiteturas: texto descartado
+    (citacao invalida, numero sem fonte, corte) nao ganha credito de citacao."""
+    valor = resultado.get("citacaoValida")
+    if valor and (resultado.get("execucao") or {}).get("desfecho") in _DESCARTADAS:
+        return False
+    return valor
 
 
 def cortada(resultado: dict) -> dict[str, bool]:
@@ -123,7 +161,8 @@ def _celula_csv(valor: str) -> str:
     return "'" + valor if valor[:1] in ("=", "+", "-", "@") else valor
 
 
-def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None = None):
+def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None = None,
+             inicio: int = 1):
     """CSV cego das externas para o avaliador externo (#275) e a chave, que nao vai a ele.
 
     Uma linha por (celula, pergunta) da 1a rodada, embaralhadas; colunas de nota 1 a 5 em branco
@@ -153,7 +192,7 @@ def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None
     escritor.writerow(["codigo", "pergunta", "resposta", "contextualizacao_1a5",
                        "orientacao_pratica_1a5", "precisao_final_1a5", "comentario"])
     chave = {}
-    for i, linha in enumerate(linhas, 1):
+    for i, linha in enumerate(linhas, inicio):
         codigo = f"R{i:03d}"
         escritor.writerow([codigo, _celula_csv(linha["pergunta"]), _celula_csv(linha["resposta"]),
                            "", "", "", ""])
@@ -183,18 +222,20 @@ def sql_conferencia(conjunto: dict) -> str:
         "-- Gerado por ceres_benchmark.externas.sql_conferencia (#358): nao editar a mao.\n"
         "-- Chaves dos dispositivosEsperados das perguntas externas contra a base de lei.\n"
         "-- exato = trecho com a chave inteira; com_subdivisoes = trechos que comecam por ela\n"
-        "-- seguida de ',' ou ')' (a regra do AvaliadorResposta.citaAlgum). Zero nos dois = sai dos aceitos.\n"
+        "-- seguida de ',', ')' ou espaco (a regra do AvaliadorResposta.citaAlgum). Zero nos dois = sai dos\n"
+        "-- aceitos.\n"
         f"-- Conjunto {conjunto.get('versao')}.\n"
         "WITH chaves(chave, norma, dispositivo, perguntas) AS (VALUES\n"
         + ",\n".join(linhas) + "\n)\n"
         "SELECT c.chave, c.perguntas,\n"
         "       count(t.*) FILTER (WHERE t.dispositivo = c.dispositivo) AS exato,\n"
         "       count(t.*) FILTER (WHERE t.dispositivo LIKE c.dispositivo || ',%'\n"
-        "                            OR t.dispositivo LIKE c.dispositivo || ')%') AS com_subdivisoes\n"
+        "                            OR t.dispositivo LIKE c.dispositivo || ')%'\n"
+        "                            OR t.dispositivo LIKE c.dispositivo || ' %') AS com_subdivisoes\n"
         "FROM chaves c\n"
         "LEFT JOIN legislacao_trecho t ON t.norma = c.norma\n"
         "  AND (t.dispositivo = c.dispositivo OR t.dispositivo LIKE c.dispositivo || ',%'\n"
-        "       OR t.dispositivo LIKE c.dispositivo || ')%')\n"
+        "       OR t.dispositivo LIKE c.dispositivo || ')%' OR t.dispositivo LIKE c.dispositivo || ' %')\n"
         "GROUP BY c.chave, c.perguntas\n"
         "ORDER BY (count(t.*) = 0) DESC, c.chave;\n"
     )

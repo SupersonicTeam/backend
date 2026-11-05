@@ -126,5 +126,53 @@ class SqlConferenciaTest(unittest.TestCase):
         self.assertIn("'art. 1º d''x'", sql)
 
 
+class AchadosReviewDelta361Test(unittest.TestCase):
+    """Regressoes do review do delta do #361 (#368)."""
+
+    def test_aliquota_padrao_como_base_da_reducao_nao_e_padrao(self):
+        texto = "Sim, esse insumo tem redução de 60% da alíquota padrão (Anexo IX)."
+        self.assertTrue(ext.classe_dita(texto, "REDUCAO_60"))
+        self.assertFalse(ext.classe_dita(texto, "CONDICIONAL"))
+        self.assertTrue(ext.classe_dita("Não tem redução: vale a alíquota padrão.", "PADRAO"))
+
+    def test_negacao_de_outra_oracao_nao_apaga_a_afirmacao(self):
+        proibida = r"\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\b"
+        self.assertTrue(ext.afirma(proibida, "Mesmo que o insumo não seja tributado, você pode "
+                                             "aproveitar o crédito do IBS e da CBS."))
+        self.assertTrue(ext.classe_dita("Os produtos hortícolas não processados têm alíquota zero.", "ZERO"))
+        self.assertTrue(ext.classe_dita("Isso não muda nada. Alíquota zero para o ovo.", "ZERO"))
+        self.assertFalse(ext.afirma(proibida, "Você não pode aproveitar o crédito."))
+
+    def test_varia_conforme_e_condicional_mas_conforme_o_artigo_nao(self):
+        self.assertTrue(ext.classe_dita("A alíquota varia conforme o produto: o milho em grão tem "
+                                        "redução de 60%.", "CONDICIONAL"))
+        self.assertFalse(ext.classe_dita("Tem redução de 60%, conforme o art. 138.", "CONDICIONAL"))
+
+    def test_descartar_o_contador_nao_e_encaminhar(self):
+        pergunta = {"encaminharContador": True}
+        self.assertFalse(ext.avaliar(resultado("Você não precisa procurar o contador: a regra é a "
+                                               "mesma para todos."), pergunta)["encaminhamento"])
+        self.assertTrue(ext.avaliar(resultado("Procure o seu contador."), pergunta)["encaminhamento"])
+
+    def test_fundamentacao_de_texto_descartado_nao_conta_nas_duas_arquiteturas(self):
+        # O AvaliadorResposta do 2463c27 da citacaoValida=true a uma CITACAO_INVALIDA com citacao.
+        for desfecho in ("CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"):
+            self.assertFalse(ext.avaliar(resultado("x", desfecho, citacao_valida=True), {})["fundamentacao"])
+        self.assertTrue(ext.avaliar(resultado("x", citacao_valida=True), {})["fundamentacao"])
+
+    def test_sql_aceita_espaco_depois_da_chave_como_o_cita_algum(self):
+        sql = ext.sql_conferencia({"perguntas": [{"origem": "inedita_externa_ia", "id": "X",
+                                                  "dispositivosEsperados": ["LC 214/2025, art. 138"]}]})
+        self.assertIn("LIKE c.dispositivo || ' %'", sql)
+
+    def test_ineditas_de_dados_aceita_arquivo_com_bom(self):
+        import tempfile
+        from ceres_benchmark import ineditas_dados as ind
+        with tempfile.TemporaryDirectory() as d:
+            caminho = Path(d) / "perguntas.txt"
+            caminho.write_bytes("\ufeff# cabecalho\r\n2026-11-06 | Luiz | oq vence?\r\n".encode("utf-8"))
+            self.assertEqual([e["pergunta"] for e in ind.ler(caminho)], ["oq vence?"])
+
+
 if __name__ == "__main__":
     unittest.main()

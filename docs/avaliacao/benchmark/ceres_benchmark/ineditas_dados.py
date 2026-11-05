@@ -22,8 +22,9 @@ def ler(caminho: Path = ARQUIVO) -> list[dict]:
     :raises ValueError: linha fora do formato, data invalida ou pergunta repetida (com o numero da
         linha), para o erro aparecer antes de a pergunta entrar no conjunto
     """
+    # utf-8-sig: o Bloco de Notas do Windows salva com BOM.
     saida, vistas = [], set()
-    for numero, linha in enumerate(caminho.read_text(encoding="utf-8").splitlines(), 1):
+    for numero, linha in enumerate(caminho.read_text(encoding="utf-8-sig").splitlines(), 1):
         if not linha.strip() or linha.lstrip().startswith("#"):
             continue
         m = _LINHA.match(linha)

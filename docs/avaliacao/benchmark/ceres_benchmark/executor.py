@@ -577,10 +577,20 @@ class Executor:
         if pensamento["raciocinou"]:
             log(f"AVISO: {nome} raciocinou apesar de think=false: celula invalida para comparar")
         avisos = avisos_da_amostra(memoria)
-        if final.get("erro"):
-            # Sem a prova do fim a celula so tem a do inicio: o relatorio diz, nao esconde.
-            avisos.append(f"a prova do pensamento no fim da célula falhou ({final['erro']}); "
-                          "vale só a do início")
+        inicio_falhou = bool(pensamento.get("erro"))
+        if final.get("erro") or inicio_falhou:
+            # Prova que falhou nao prova nada: o relatorio diz qual valeu, e sem nenhuma a celula
+            # nao tem como mostrar que o pensamento estava desligado.
+            if final.get("erro") and inicio_falhou:
+                pensamento["semProva"] = True
+                avisos.append(f"as duas provas do pensamento falharam (início: {pensamento['erro']}; "
+                              f"fim: {final['erro']}): a célula não prova o think=false")
+            elif final.get("erro"):
+                avisos.append(f"a prova do pensamento no fim da célula falhou ({final['erro']}); "
+                              "vale só a do início")
+            else:
+                avisos.append(f"a prova do pensamento no início da célula falhou "
+                              f"({pensamento['erro']}); vale só a do fim")
             log(f"AVISO: {nome}: {avisos[-1]}")
         arquivos = self._renomear_saida(temporario, destino, nome)
         manifesto = {

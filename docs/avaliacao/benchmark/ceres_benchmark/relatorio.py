@@ -101,9 +101,11 @@ class Celula:
 
     @property
     def invalida(self) -> bool:
-        """Pensamento ativo apesar de ``think=false``: a celula nao e comparavel (o teto de tokens
-        da Sessao 7 cortaria o raciocinio, e o acerto mediria o corte, nao o modelo)."""
-        return bool((self.manifesto.get("pensamento") or {}).get("raciocinou"))
+        """Pensamento ativo apesar de ``think=false``, ou nenhuma prova que mostre o contrario (as
+        duas falharam): a celula nao e comparavel (o teto de tokens da Sessao 7 cortaria o
+        raciocinio, e o acerto mediria o corte, nao o modelo)."""
+        pensamento = self.manifesto.get("pensamento") or {}
+        return bool(pensamento.get("raciocinou") or pensamento.get("semProva"))
 
     @property
     def ficticia(self) -> bool:
@@ -167,6 +169,10 @@ def valor_criterio(
     """
     if criterio == "falha":
         return (not falha_tecnica(resultado)), True, False
+    if criterio == "citacao" and pergunta.get("aConferir"):
+        # Dispositivos ainda nao confirmados na base (#358): ficam so na secao das externas, como
+        # provisorios; nao entram no criterio principal nem na viabilidade.
+        return None, True, False
     _, chave, inverte = CRITERIOS[criterio]
     if chave not in resultado:
         return None, False, False
@@ -577,6 +583,15 @@ def conclusao(
         def _valida(arq, modelo):
             cel = next((c for c in celulas if c.arquitetura == arq and c.modelo == modelo), None)
             return cel is not None and bool(cel.rodadas) and not cel.invalida
+        if not (_valida(arq1, referencia) and _valida(arq2, referencia)):
+            # Sem a referencia valida numa das colunas, "nao viavel" la quer dizer "sem com o que
+            # comparar": nenhum ganho nem regressao entre arquiteturas pode ser afirmado.
+            sem = [rot for arq, rot in arquiteturas if not _valida(arq, referencia)]
+            linhas.append(
+                f"**Comparação entre as arquiteturas: não medida** — a célula do `{referencia}` "
+                f"não rodou ou é inválida na {' e na '.join(sem)}. Refaça-a antes de afirmar ganho "
+                "ou regressão.")
+            return "\n".join(linhas) + "\n"
         # So compara com a outra arquitetura quando a celula de la e valida: invalida nao e "nao viavel".
         novos = [m for m in viaveis_por_arq.get(arq2, [])
                  if m not in viaveis_por_arq.get(arq1, []) and _valida(arq1, m)]
@@ -691,6 +706,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     """Gera ``relatorio.md`` e os gráficos SVG na pasta da rodada; devolve o Markdown."""
     rodada = _ler_json(pasta / "rodada.json")
     canonico_json = _ler_json(pasta / rodada["gabaritoCanonico"])
+    for p in canonico_json["perguntas"]:
+        # Rodada anterior ao 2026-11-05.6 grava a origem antiga das externas (#358).
+        if p.get("origem") == "inedita_externa":
+            p["origem"] = "inedita_externa_ia"
     canonico = {p["id"]: p for p in canonico_json["perguntas"]}
     arquiteturas = [(a["nome"], a["rotulo"]) for a in rodada["arquiteturas"]]
     adaptacoes_por_arq = {
@@ -774,7 +793,11 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         rotulo7 = f"{sessao7.get('rotulo') or 'sessão paralela'} ({sessao7.get('issue')})"
         confirmado = sessao7.get("confirmado", sessao7.get("contem") is True)
         ja = sessao7.get("commits") or []
+        faltando = sessao7.get("faltando") or []
         situacao = ("não foi possível conferir pelo git" if sessao7.get("contem") is None else
+                    "**depois** dela inteira, mas **sem** "
+                    + _celula_md("; ".join(faltando), 300) + " — ensaio, não a coluna oficial"
+                    if sessao7.get("inteira") and faltando else
                     "**depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna "
                     "inclui as mudanças dela" if confirmado else
                     f"**parcial**: {len(ja)} PR(s) dela no SHA medido, sem o último confirmado"
@@ -940,7 +963,8 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append(_secao_externas(celulas, ids_externas, canonico))
     md.append(_secao_cortadas(celulas))
     if any(c.invalida for c in celulas):
-        md.append("**Células inválidas para comparar** (o pensamento não desligou na prova; o teto "
+        md.append("**Células inválidas para comparar** (o pensamento não desligou na prova, ou as duas "
+                  "provas falharam; o teto "
                   "de tokens cortaria o raciocínio e o acerto mediria o corte): "
                   + ", ".join(f"{c.rotulo_arquitetura} · `{c.modelo}`" for c in celulas if c.invalida)
                   + ". Ficam nas tabelas, fora da conclusão e dos gráficos.\n")
@@ -1046,15 +1070,36 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md.append("")
     texto = "\n".join(md)
     (pasta / "relatorio.md").write_text(texto, encoding="utf-8")
-    arquivo_chave = pasta / "externas-avaliacao-chave.json"
-    if ids_externas and not arquivo_chave.exists():
-        # Gerado uma vez: regerar o relatorio nao reembaralha um CSV que ja foi ao avaliador (a
-        # chave antiga deixaria de casar as notas). Para refazer, apague os dois arquivos.
-        cego, chave = ext.csv_cego(celulas, canonico)
-        (pasta / "externas-avaliacao-cego.csv").write_text(cego, encoding="utf-8")
-        # A chave liga a resposta a celula: fica com a equipe ate as notas voltarem (.gitignore).
-        arquivo_chave.write_text(chave, encoding="utf-8")
+    if ids_externas:
+        _gravar_csv_cego(pasta, celulas, canonico)
     return texto
+
+
+def _gravar_csv_cego(pasta: Path, celulas, canonico) -> None:
+    """CSV cego das externas: o primeiro lote uma vez so; celula medida depois (``--retomar``,
+    celula refeita) vai num lote novo, com codigos que continuam a numeracao.
+
+    Regerar o relatorio nunca reembaralha um CSV que ja foi ao avaliador (a chave antiga deixaria
+    de casar as notas). Para refazer tudo, apague os ``externas-avaliacao-*``.
+    """
+    arquivo_chave = pasta / "externas-avaliacao-chave.json"
+    chave_atual = json.loads(arquivo_chave.read_text(encoding="utf-8")) if arquivo_chave.exists() else {}
+    cobertas = {v["celula"] for v in chave_atual.values()}
+    novas = [c for c in celulas if c.nome not in cobertas]
+    if chave_atual and not any(c.rodadas and not c.invalida for c in novas):
+        return
+    lote = 1 + len({v.get("lote", 1) for v in chave_atual.values()}) if chave_atual else 1
+    cego, chave = ext.csv_cego(novas, canonico, inicio=len(chave_atual) + 1)
+    chave_nova = json.loads(chave)
+    if not chave_nova:
+        return
+    for v in chave_nova.values():
+        v["lote"] = lote
+    nome = "externas-avaliacao-cego.csv" if lote == 1 else f"externas-avaliacao-cego-{lote}.csv"
+    (pasta / nome).write_text(cego, encoding="utf-8")
+    # A chave liga a resposta a celula: fica com a equipe ate as notas voltarem (.gitignore).
+    arquivo_chave.write_text(json.dumps({**chave_atual, **chave_nova}, ensure_ascii=False, indent=2)
+                             + "\n", encoding="utf-8")
 
 
 def acerto_geral(celula: Celula, ids: list[str], canonico: dict[str, dict],
