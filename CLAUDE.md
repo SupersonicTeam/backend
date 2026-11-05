@@ -189,8 +189,10 @@ br.com.agrocontabil
 │                  # orquestracao/FundamentoRetencao (RN009, #145: retenção sempre com as duas
 │                  #   regras e citações fixas — Funrural da Lei 8.212 e split payment da LC 214);
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
-│                  #   modelo; dados → RotaDados.responderAtalho, lei → AtalhoReformaTributaria,
-│                  #   texto curado + 9 citações fixas; revisar o texto com a equipe);
+│                  #   modelo e fora da cota; dados → RotaDados.responderAtalho, lei →
+│                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
+│                  #   personalizado por DadosProdutorPorta.perfilDoAtalho, 28 citações fixas;
+│                  #   revisar o texto com a equipe);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;
@@ -268,7 +270,7 @@ br.com.agrocontabil
 | GET | `/api/alertas` | Alertas tributários do produtor (RN010, #140): guia pendente, fechamento da apuração do mês e fim do prazo de cancelamento de NF-e (RN006) que vencem em **menos de 5 dias**; gerados por job diário às 9h, e o motivo é conferido na leitura (guia paga some na hora). Só produtor (contador 403) |
 | POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[], modoFallback, atalhos[]}`; rota decidida pelo orquestrador: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO (#157); só produtor (contador 403); 503 `ASSISTENTE_OCUPADO` + `Retry-After` sem vaga (limite global ou pergunta anterior do mesmo produtor em andamento), 503 `ASSISTENTE_TEMPO_ESGOTADO`; com o modelo fora, **200 com `modoFallback: true`** (trechos de lei verbatim ou `atalhos` de tela, #146) — 503 `ASSISTENTE_INDISPONIVEL` só com o banco também fora |
 | POST | `/api/assistente/chat/stream` | Mesma pergunta em SSE (#157): eventos `rota` → `resposta` → `fim`, ou `erro` (envelope `errors[]`); sem tokens parciais (só a resposta já validada). Abre com o comentário `:ceres`, escrito pela thread da requisição: o commit da resposta nunca é da Ceres (#335) |
-| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm}`. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir |
+| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm}`. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir — exceto as três perguntas de atalho da tela, que não usam o modelo nem crédito (#343) |
 
 ## Segurança
 
@@ -364,7 +366,7 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 1.880 testes, todos passando** (2026-11-02) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 1.965 testes, todos passando** (2026-11-05) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 8 concluída (2026-10-20)

@@ -664,6 +664,32 @@ public interface NotaFiscalRepository
       Pageable pagina);
 
   /**
+   * NCMs mais vendidos pelo produtor — mesmo recorte das vendas ({@link #totalizarVendasPorNcm}:
+   * saídas próprias autorizadas, CFOP de venda), maior valor primeiro (issue #347: o atalho da
+   * Ceres explica o tratamento dos produtos que ele vende). Só o código: nenhum valor nem comprador.
+   *
+   * @param pagina limite (top-N)
+   */
+  @Query("""
+      SELECT i.ncm
+      FROM NotaFiscalItem i JOIN i.notaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND n.dataEmissao >= :inicio
+        AND n.dataEmissao < :fim
+        AND SUBSTRING(i.cfop, 2, 1) = '1'
+        AND i.ncm IS NOT NULL
+      GROUP BY i.ncm
+      ORDER BY SUM(i.valorTotal) DESC, i.ncm
+      """)
+  List<String> listarNcmsVendidos(
+      @Param("produtorId") UUID produtorId,
+      @Param("inicio") OffsetDateTime inicio,
+      @Param("fim") OffsetDateTime fim,
+      Pageable pagina);
+
+  /**
    * NCMs comprados de um insumo pela descrição — mesmo recorte de
    * {@link #somarComprasPorDescricao}, maior valor primeiro (issue #170).
    *

@@ -58,10 +58,16 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    enviar para revisão.
 5. **Reabertura (RN005, #224).** Como Patrícia ou Rafael, reabrir um mês fechado de até três meses
    atrás de um cliente; além disso, 422 `REABERTURA_FORA_PRAZO`.
-6. **Ceres.** Os três atalhos da tela respondem sem o modelo (#343): "Quanto eu tenho que pagar
-   este mês?" e "Quando vence a minha próxima guia?" pelas funções de guias, e "O que muda para
-   mim com o IBS e o CBS?" com o texto curado e nove citações (ano de teste de 2026, art. 137,
-   arts. 164 e 165, split payment). Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
+6. **Ceres.** Os três atalhos da tela respondem mesmo sem o modelo (#343): "Quanto eu tenho que
+   pagar este mês?" e "Quando vence a minha próxima guia?" pelas funções de guias, e "O que muda
+   para mim com o IBS e o CBS?" com o texto explicado (#347): o que são, o calendário de 2026 a
+   2033, venda, compras, pagamento, quem paga e o próximo passo, cada item com o dispositivo.
+   **Entrar como o Carlos** (pessoa
+   física): o texto mostra a soja, o milho e o algodão que ele mais vendeu, com o tratamento da
+   tabela oficial, e o Funrural retido pelo comprador. Cuidado: a tela de créditos do Carlos mostra
+   crédito de fertilizante, semente e defensivo, e o texto não diz que insumo gera crédito (o
+   diferimento do Anexo IX está fora do escopo, premissas, seção 1): não apontar esses créditos
+   junto com o atalho. Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
    IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**, digitando perguntas que não sejam as três da tela (o
    texto exato de um atalho, clicado ou digitado, fica fora da cota e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
@@ -109,8 +115,9 @@ SQL
 **Esperado: 8.304 trechos** — EC 132/2023 538, LC 214/2025 5.004, LC 227/2026 2.211, Lei
 8.212/1991 547 e Lei 9.528/1997 4 (conferido na VPS e no banco local em 2026-11-04). Contagem
 diferente = recopiar a base. Depois, testar na tela o atalho "O que muda para mim com o IBS e o
-CBS?": a resposta lista as nove citações; com menos, o log do backend mostra, na pergunta,
-`Atalho IBS/CBS: x de 9 dispositivos na base de legislacao`.
+CBS?" (#347): a resposta lista 28 citações (29 para produtor pessoa física, com o Funrural, mais
+as dos produtos vendidos que não se repetem); com dispositivo faltando, o log do backend
+mostra, na pergunta, `Atalho IBS/CBS: x de N dispositivos na base de legislacao`.
 
 ## Passo manual na VPS: regime dos produtores pessoa física (issue #298)
 

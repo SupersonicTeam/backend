@@ -4,6 +4,7 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusGuiaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
+import br.com.agrocontabil.model.TipoProdutor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -39,6 +40,30 @@ public interface DadosProdutorPorta {
    */
   ComprasInsumo vendasDeProduto(
       UUID produtorId, String termo, boolean porNcm, LocalDate inicio, LocalDate fim);
+
+  /**
+   * Perfil do produtor para o atalho "O que muda para mim com o IBS e o CBS?" (issue #347): o
+   * tipo, se um escritório o atende e os NCMs que ele mais vendeu no período (saídas próprias
+   * autorizadas), no máximo {@code limite}. Só códigos e indicadores: nenhum dado pessoal, valor
+   * nem comprador, e nada disso vai ao modelo.
+   */
+  PerfilAtalho perfilDoAtalho(UUID produtorId, LocalDate inicio, LocalDate fim, int limite);
+
+  /**
+   * Perfil do atalho de legislação (issue #347).
+   *
+   * @param tipo                  tipo cadastrado; nulo se não cadastrado
+   * @param atendidoPorEscritorio algum escritório de contabilidade com vínculo ativo
+   * @param ncmsMaisVendidos      NCMs de 8 dígitos, do maior valor vendido ao menor
+   */
+  record PerfilAtalho(
+      TipoProdutor tipo, boolean atendidoPorEscritorio, List<String> ncmsMaisVendidos) {
+
+    /** Cópia defensiva. */
+    public PerfilAtalho {
+      ncmsMaisVendidos = List.copyOf(ncmsMaisVendidos);
+    }
+  }
 
   /**
    * NCMs (8 dígitos) das compras de um insumo, pelo mesmo critério de {@link #comprasPorNcm} ou

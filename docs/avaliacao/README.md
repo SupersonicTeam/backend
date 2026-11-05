@@ -159,6 +159,11 @@ beco sem saída"), que falha quando o texto é a recusa da lei sem nenhum trecho
 (`ValidadorCitacao.SEM_FUNDAMENTO` ou, no MISTO, `SEM_FUNDAMENTO_PARTE_LEGAL`); "não consegui
 confirmar" com os trechos não conta como beco sem saída. São 87 perguntas e 21 casos adversários.
 
+Na versão `2026-11-05.1` (#347), a T03 passa a esperar as 28 citações fixas do texto explicado do
+atalho de legislação (`TextoReformaTributaria.DISPOSITIVOS_FIXOS`: as nove de antes mais o
+calendário do ADCT, os arts. 125, 138, 148, 47, 60 § 1º, 168, 344 e 347 e o art. 1º, I e II, da
+LC 214/2025), cada uma conferida na base. Ela segue sem chamar o modelo.
+
 Campos novos da pergunta: `adversario` (caso adversário; exige `rotaEsperada`) e `pendente` (o
 que falta para a pergunta ter valor esperado). As perguntas com `pendente` dependem de uma função
 da #274 que ainda não existe (nota pelo número, nota devolvida, vendas por produto; as de débito e

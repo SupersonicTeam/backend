@@ -14,6 +14,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProdutorRepository extends JpaRepository<Produtor, UUID> {
 
+  /**
+   * Só o tipo do produtor (issue #347), sem carregar a entidade: nada de decifrar CPF/CNPJ,
+   * e-mail e telefone para ler um enum.
+   *
+   * @param id produtor
+   * @return o tipo; vazio se o produtor não existe ou não tem tipo cadastrado
+   */
+  @Query("SELECT p.tipoProdutor FROM Produtor p WHERE p.id = :id")
+  Optional<br.com.agrocontabil.model.TipoProdutor> findTipoProdutorById(@Param("id") UUID id);
+
   Optional<Produtor> findByCpfCnpj(String cpfCnpj);
 
   /**

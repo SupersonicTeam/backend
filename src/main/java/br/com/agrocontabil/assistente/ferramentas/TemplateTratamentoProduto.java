@@ -70,7 +70,8 @@ public final class TemplateTratamentoProduto {
     return List.copyOf(dispositivos);
   }
 
-  static String frase(Produto p) {
+  /** Frase de um produto (também usada pelo atalho de legislação, #347). */
+  public static String frase(Produto p) {
     StringBuilder s = new StringBuilder(nome(p)).append(": ");
     if (!p.ncmConhecido()) {
       // Codigo fora da referencia e de todo anexo: pode nem existir. Nada de afirmar.

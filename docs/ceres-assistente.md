@@ -374,16 +374,39 @@ chamada ao modelo**, inclusive com ele fora do ar, e ficam fora da cota (#166): 
 valendo). Camada `ATALHO_FIXO` na auditoria; nos dois de dados, a função conta em
 `chamadas_funcao`. As de dados chamam a função direto (`vencimentosDoMes`,
 `proximosVencimentos`) por `RotaDados.responderAtalho`, sem tool calling, e saem pelo template da
-#266 com as mesmas conferências. A de legislação responde com o texto curado do
-`AtalhoReformaTributaria` (padrão do `FundamentoRetencao`): ano de teste de 2026 (CBS 0,9% e IBS
-0,1%, dispensa do recolhimento para quem cumpre as obrigações acessórias), redução de 60% do in
-natura, receita abaixo de R$ 3,6 milhões fora do IBS/CBS salvo opção, e o split payment — nove
-citações fixas, cada uma conferida na base (LC 214/2025, arts. 343, 346, 348 § 1º, 137, 164, 165,
-31 e 32; EC 132/2023, art. 125 do ADCT). Na VPS em 2026-11-04 essa pergunta, ampla demais para a
-busca por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALIDA`, 19 e 42 s).
-Pergunta parecida, mas não igual, segue o fluxo normal. **Texto curado = revisão da equipe a cada
-mudança**; as frases dos atalhos ficam fora do prompt do classificador e das descrições das
-funções (o gabarito as mede: T01–T03).
+#266 com as mesmas conferências. Na VPS em 2026-11-04 a de legislação, ampla demais para a busca
+por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALIDA`, 19 e 42 s). Pergunta
+parecida, mas não igual, segue o fluxo normal. As frases dos atalhos ficam fora do prompt do
+classificador e das descrições das funções (o gabarito as mede: T01–T03).
+
+**O atalho de legislação explicado (#347).** O texto curado da #343 (quatro itens) ficou
+engessado para o produtor. O `AtalhoReformaTributaria` responde agora com o texto explicado do
+`TextoReformaTributaria`, em seções: o que são o IBS e a CBS e o que eles substituem; o calendário
+(2026 de teste e a dispensa, 2027–2028, a redução do ICMS e do ISS de 2029 a 2032, a extinção em
+2033); na venda (60% do in natura, alíquota zero da cesta básica e dos hortícolas, a nota como
+confissão); nas compras (60% dos insumos do Anexo IX e o crédito do regime regular, sem afirmar
+que o insumo gera crédito: o diferimento está fora do escopo); no pagamento (o split payment "que
+a lei prevê"); quem é contribuinte (arts. 164, 165 e 168, mais a premissa de que o AgroConIA
+calcula pelo regime regular); e o próximo passo. **Personalizado** com o que o sistema sabe do
+produtor, pela porta `DadosProdutorPorta.perfilDoAtalho`: o tipo (pessoa física ganha o Funrural
+retido pelo comprador, Lei 8.212, art. 30, IV; os outros, "o Funrural e o ICMS ficam com o
+contador"), se um escritório o atende (vínculo ativo) e os até 3 NCMs que ele mais vendeu no ano
+(saídas próprias autorizadas, CFOP de venda), com a frase da tabela oficial
+(`TemplateTratamentoProduto.frase`) e "o enquadramento final de cada venda é com o seu contador".
+Nunca afirma a situação do produtor (optante ou não contribuinte, premissas da #280). Cada
+afirmação tem o dispositivo, e cada número está escrito nele: 28 citações fixas (29 com o
+Funrural, mais as dos produtos), conferidas na base em 2026-11-05; o `TextoReformaTributariaTest`
+confere texto × citações contra o fixture `ceres/atalho-reforma-trechos.json`, copiado da base.
+Parte do perfil que falha sai do texto, e o resto segue. Continua sem modelo e fora da cota.
+
+**Parágrafo do modelo testado e descartado (#347).** Um "Em resumo" do modelo sobre trechos
+fixos de regra geral, conferido pelas redes da rota de lei, foi medido com o `qwen3:4b-instruct`
+em 2026-11-05: passava nas conferências de citação e de número, mas toda rodada (10 de 10, com
+três recortes de trechos) trazia uma frase errada que nenhum validador pega — as alíquotas de
+teste de 2026 "já reduzidas para o agronegócio", "o IBS cai para 0,05% em 2027" citando o art. 343,
+"quem cumpre as obrigações não precisa pagar" sem o ano. Decisão do Murillo: sem o parágrafo; a
+resposta é só do backend. Rever com um modelo maior. **Texto do backend = revisão da equipe a
+cada mudança.**
 
 **Trechos relacionados ao lado de um fundamento do backend (#343).** Quando a lei responde com
 os trechos relacionados (abaixo, na seção da #258), a `RotaLegislacao` liga
@@ -546,3 +569,60 @@ o dado do evento).
 > não basta, porque a pergunta rápida (fora de escopo, fallback) encerra o emissor antes de o
 > Spring assumi-lo, e aí o Spring nunca registra o callback. Sem isso o prazo ficava agendado até
 > vencer (5 min em produção), segurando o emissor e registrando um tempo esgotado falso no log.
+
+## Inferência local na VPS: chamadas ao modelo e cache do prefixo (#270)
+
+Na VPS (4 núcleos ARM, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
+geração. O Ollama reaproveita o processamento de uma requisição para a seguinte **até o primeiro
+byte diferente** (cache do prefixo, um por vaga; o compose usa `OLLAMA_NUM_PARALLEL=1`, então uma
+vaga só). Por isso a parte fixa de cada chamada fica no início e igual byte a byte entre
+perguntas, travada pelo `PrefixoPromptOllamaFioTest` (requisição real do `OllamaChatModel`).
+
+### Toda chamada ao modelo
+
+São três, todas pela porta `llm/ModeloLinguagem`. Tamanhos em caracteres, contados no código em
+2026-11-05; tokens são **estimativa** (caracteres ÷ 4; o português com JSON costuma tokenizar mais
+perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
+
+| Chamada | Quem chama | Quando | Parte fixa (início) | Parte variável (fim) | Funções | Teto de saída |
+|---|---|---|---|---|---|---|
+| Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `AI_MAX_TOKENS` (1.024) |
+| Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `AI_MAX_TOKENS` (1.024) |
+| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `AI_MAX_TOKENS` (1.024) |
+
+Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
+classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);
+lei = ~1.050 + pergunta + trechos — o tamanho dos trechos só se mede na base:
+`SELECT max(length(content)), percentile_cont(0.95) WITHIN GROUP (ORDER BY length(content)) FROM legislacao_trecho;`.
+
+**O que pesa é a definição das funções:** 86% do prompt de dados (a maior, `listarNotas`, tem
+2.081 caracteres). O cache do prefixo existe justamente para não pagar esse prefill a cada
+pergunta. Encurtar as descrições reduz o prompt, mas mexe no acerto da escolha de função: só com a
+régua da #264 na VPS, nunca às cegas.
+
+### O que o prefixo estável garante e o que não garante
+
+- **Dados:** instrução de sistema constante (`PromptsCeres.SISTEMA_DADOS`) e definições das
+  funções em ordem fixa (pelo nome: o `ToolCallbacks.from` segue a reflexão, que a JVM não
+  ordena). O template do Qwen3 põe as definições **depois** da instrução de sistema, então a data,
+  que antes fechava a instrução, invalidava todas as definições a cada dia: agora ela vai na
+  mensagem do usuário (`PromptsCeres.mensagemDados`), na linha "Hoje e" antes da pergunta. A
+  instrução de sistema diz que só essa linha vale como data de hoje: uma data escrita na pergunta
+  não a substitui. A garantia continua em código onde ela importa: o período consultado sai
+  sempre escrito na resposta (recorte do template, #266) e o produtor só alcança os próprios dados
+  (`ContextoAssistente`).
+- **Lei:** regras no início; data e trechos no fim. A regra extra da variante do MISTO vem
+  depois das regras comuns, então as duas variantes dividem o prefixo das regras. A parte
+  reaproveitada é pequena (~1.000 caracteres): os trechos mudam a cada pergunta.
+- **Classificação:** já era constante.
+- **Limite:** com uma vaga só, o cache é o da **última** requisição. Duas perguntas de dados
+  seguidas reaproveitam o prefixo inteiro; uma classificação ou uma lei no meio (o MISTO faz dados
+  e lei na mesma pergunta) o substitui. `OLLAMA_NUM_PARALLEL=2` daria duas vagas, ao custo do
+  dobro da memória do contexto: hipótese a medir na VPS, não configuração adotada.
+- **Tokens com cache (a conferir na VPS):** a cota (#166) e a auditoria usam o `prompt_eval_count`
+  que o Ollama informa. Se, com o prefixo no cache, ele contar só os tokens processados (a parte
+  nova), a mesma pergunta custa menos crédito quando a anterior foi de dados. Conferir comparando
+  `tokens_entrada` de duas perguntas de dados seguidas em `assistente_interacao`.
+- **Acerto:** a ordem das definições e a redação da regra da data mudam o que o modelo vê. A
+  comparação na VPS mede tempo **e** acerto (gabarito da #158 pelo comando `dev,avaliacao` e
+  harness da #264, 3 repetições).
