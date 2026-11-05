@@ -28,6 +28,10 @@ jobs:
       - name: Build and test
         run: ./mvnw verify --batch-mode --no-transfer-progress
 
+      # Gerador do relatorio do benchmark da Ceres (#348): so biblioteca padrao do Python.
+      - name: Benchmark da Ceres (testes do gerador)
+        run: python3 -m unittest discover -s docs/avaliacao/benchmark/tests -t docs/avaliacao/benchmark
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()

@@ -1,0 +1,33 @@
+{
+  "T07": {
+    "removido": {
+      "funcoesEsperadas": [
+        "guiasEmAtraso"
+      ],
+      "camposValor": [
+        "emAtraso.valorTotal"
+      ]
+    },
+    "motivos": [
+      "funcao inexistente: guiasEmAtraso"
+    ]
+  },
+  "P01": {
+    "removido": {
+      "funcoesEsperadas": [
+        "consultarTratamentoProduto"
+      ],
+      "parametrosEsperados": {
+        "produtoOuNcm": [
+          "soja"
+        ]
+      },
+      "camposValor": [
+        "produtos.0.reducao"
+      ]
+    },
+    "motivos": [
+      "funcao inexistente: consultarTratamentoProduto"
+    ]
+  }
+}

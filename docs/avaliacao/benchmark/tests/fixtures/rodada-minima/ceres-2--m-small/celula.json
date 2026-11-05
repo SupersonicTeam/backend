@@ -1,0 +1,16 @@
+{
+  "celula": "ceres-2--m-small",
+  "arquitetura": "ceres-2",
+  "rotuloArquitetura": "Ceres 2.0",
+  "modelo": "m-small",
+  "sha": "def5678",
+  "codigoSaida": 0,
+  "duracaoSegundos": 60,
+  "pensamento": {
+    "resumo": "desligado (think=false; nenhum raciocínio na prova)"
+  },
+  "memoria": {
+    "modeloBytes": 536870912,
+    "processoPicoBytes": 1610612736
+  }
+}

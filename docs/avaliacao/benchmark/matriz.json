@@ -1,0 +1,33 @@
+{
+  "descricao": "Matriz do benchmark da Ceres para a banca (issue #348). A ultima arquitetura e a canonica: o gabarito dela vale para todas.",
+  "arquiteturas": [
+    {
+      "nome": "ceres-1",
+      "rotulo": "Ceres 1",
+      "ref": "2463c27",
+      "descricao": "merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266",
+      "indiceDeLista": false,
+      "remocoesExtras": {
+        "T10": [
+          "camposValor"
+        ]
+      },
+      "notaRemocoesExtras": "T10: o seed v2 do 2463c27 nao tem nota DEVOLVIDA (veio no v4, #274); o valor esperado seria 0 e mediria outra coisa. Conferido rodando o ValoresEsperados do 2463c27 com o gabarito adaptado (2026-11-05)."
+    },
+    {
+      "nome": "ceres-2",
+      "rotulo": "Ceres 2.0",
+      "ref": "origin/main",
+      "descricao": "main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao"
+    }
+  ],
+  "modelos": [
+    "qwen3:0.6b",
+    "qwen3:1.7b",
+    "qwen3:4b-instruct"
+  ],
+  "modeloReferencia": "qwen3:4b-instruct",
+  "embedding": "bge-m3",
+  "repeticoes": 3,
+  "trechosLegislacao": 8304
+}

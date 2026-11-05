@@ -178,6 +178,13 @@ Os dispositivos esperados foram conferidos na base ingerida (LC 214/2025 compila
 O gabarito foi escrito pela equipe; a revisão pelo orientador ou por um contador é da #275 e não
 bloqueia a medição. Se ela mudar alguma pergunta, a versão muda e a linha de base é rodada de novo.
 
+## Benchmark de modelos e arquiteturas (#348)
+
+A comparação `qwen3:0.6b` × `qwen3:1.7b` × `qwen3:4b-instruct` na Ceres 1 (`2463c27`) e na Ceres 2.0
+(`main`), para a banca, roda este mesmo comando seis vezes pelo executor de
+[`benchmark/`](benchmark/README.md), com o gabarito da `main` nas duas arquiteturas e o relatório
+nos dois recortes (perguntas comuns e gabarito inteiro).
+
 ## Limites conhecidos
 
 - **Recusa a pergunta com premissa falsa** ("qual artigo isenta o celular?") é detectada por
