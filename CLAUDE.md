@@ -92,7 +92,11 @@ células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-bench
 perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
 pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo
 `SeparacaoTreinoTesteTest`; o relatório traz o acerto por tema e a rodada local com GPU (latência
-local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca).
+local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca). Desde a #358 o conjunto tem 140 perguntas: + **40 externas do
+Murillo, texto literal** (`origem: inedita_externa`, conferidas contra
+`src/test/resources/benchmark/perguntas-externas-murillo.txt`; dispositivos `aConferir` até a
+conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando as respostas às
+inéditas**; quem mudar marca a pergunta `contaminada`.
 
 ## Arquitetura — regras inegociáveis
 

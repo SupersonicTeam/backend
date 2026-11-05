@@ -368,3 +368,56 @@ class IneditasEParecidasTest(Base):
         celula = self.celulas["ceres-1--m-ref"]
         ineditas = rel.faixa(celula, "numero", ["P01"], self.canonico, self.adapt, rel.RECORTE_INEDITAS)
         self.assertEqual((ineditas.media, ineditas.penalizadas), (0.0, 1))
+
+
+class ExternasNoRelatorioTest(Base):
+    def _marcar(self):
+        canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        for p in canonico["perguntas"]:
+            p["origem"] = {"L01": "inedita_externa", "P01": "inedita_equipe"}.get(p["id"], "gabarito")
+        alvo = next(p for p in canonico["perguntas"] if p["id"] == "L01")
+        alvo.update({"classeTratamento": "ZERO", "afirmacoesProibidas": [r"\bconfirmar\b"],
+                     "aConferir": True, "dispositivosAceitos": [], "revisado": False,
+                     "observacao": "Atenção de teste."})
+        (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
+
+    def test_recortes_ineditas_externas_secao_e_csv(self):
+        self._marcar()
+        texto = rel.gerar(self.pasta)
+        self.assertIn("## (c) Inéditas (equipe + externas) — generalização", texto)
+        self.assertIn("## (d) Só as externas", texto)
+        self.assertIn("## Perguntas externas: critérios automáticos (#358)", texto)
+        self.assertIn("Fundamentação **a conferir** em 1 perguntas", texto)
+        self.assertIn("### L01 (pergunta ? do Murillo)", texto)
+        # Ceres 1 m-small: "Nao consegui confirmar a citacao." casa a afirmacao proibida de teste.
+        self.assertIn("| Ceres 1 · `m-small` | 1 | `CITACAO_INVALIDA` | **sim** |", texto)
+        self.assertTrue((self.pasta / "externas-avaliacao-cego.csv").exists())
+        self.assertTrue((self.pasta / "externas-avaliacao-chave.json").exists())
+
+    def test_contaminada_sai_do_inedito(self):
+        self._marcar()
+        canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        next(p for p in canonico["perguntas"] if p["id"] == "L01")["contaminada"] = True
+        (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("**Contaminadas**", texto)
+        self.assertNotIn("## (d) Só as externas", texto)
+
+    def test_resposta_cortada_recusa_limpa_e_celula_invalida(self):
+        arquivo = self.pasta / "ceres-2--m-small" / "ceres-2--m-small.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        for rodada in dados["rodadas"]:
+            a01 = rodada["resultados"][4]
+            a01["execucao"].update({"desfecho": "RESPOSTA_CORTADA", "rota": "FORA_DE_ESCOPO"})
+            a01["recusaCorreta"] = True
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        manifesto = self.pasta / "ceres-1--m-ref" / "celula.json"
+        m = json.loads(manifesto.read_text(encoding="utf-8"))
+        m["pensamento"] = {"raciocinou": True, "resumo": "ATIVO apesar de think=false"}
+        manifesto.write_text(json.dumps(m), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| Ceres 2.0 · `m-small` | 1/5 · 1/5 | 2 | 0 | 0 | 2/10 (20,0%) |", texto)
+        self.assertIn("| Ceres 2.0 · `m-small` | 100,0% | 0,0% | 2 |", texto)
+        self.assertIn("**Células inválidas para comparar**", texto)
+        self.assertIn("célula **inválida para comparar**", texto)
+        self.assertIn("(inválida)", (self.pasta / "graficos" / "acerto-por-tema.svg").read_text(encoding="utf-8"))

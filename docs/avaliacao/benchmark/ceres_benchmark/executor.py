@@ -541,6 +541,7 @@ class Executor:
         self.config_rodada = self.conferir_configuracao(self.config_rodada)
         self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
         pensamento = self.provar_pensamento(modelo)
+        pensamento["raciocinouInicio"] = bool(pensamento.get("raciocinou"))
         log(f"{nome}: pensamento {pensamento['resumo']}")
 
         lido = {"arquivoLido": gabarito.name, "sha256Lido": sha256_arquivo(gabarito)}
@@ -559,6 +560,15 @@ class Executor:
             parar.set()
             amostrador.join(timeout=30)
         duracao = round(time.monotonic() - inicio)
+        # A prova vale para a celula inteira: repetida no fim (o Ollama pode ter recarregado o
+        # modelo com outro template no meio). Raciocinou em qualquer uma = celula invalida.
+        final = self.provar_pensamento(modelo)
+        pensamento = {**pensamento, "final": final,
+                      "raciocinou": bool(pensamento.get("raciocinou") or final.get("raciocinou"))}
+        if final.get("raciocinou") and not pensamento.get("raciocinouInicio"):
+            pensamento["resumo"] = resumo_pensamento(final) + " (na prova do fim da célula)"
+        if pensamento["raciocinou"]:
+            log(f"AVISO: {nome} raciocinou apesar de think=false: celula invalida para comparar")
         arquivos = self._renomear_saida(temporario, destino, nome)
         manifesto = {
             "celula": nome,
@@ -743,6 +753,12 @@ class Executor:
         canonico = json.loads((rodada_dir / "gabarito-canonico.json").read_text(encoding="utf-8"))
         pares = similaridade.pares_semelhantes(canonico["perguntas"],
                                                similaridade.textos_de_treino(self.cfg.repo))
+        # Ineditas tambem contra o resto do conjunto (o gabarito): parafrase de uma pergunta que a
+        # Ceres 2.0 ja "viu" no desenvolvimento nao mede generalizacao.
+        ineditas = [p for p in canonico["perguntas"] if str(p.get("origem", "")).startswith("inedita")]
+        do_conjunto = [(f"conjunto/{p['id']}", p["pergunta"]) for p in canonico["perguntas"]
+                       if p.get("origem") == "gabarito"]
+        pares += similaridade.pares_semelhantes(ineditas, do_conjunto)
         (rodada_dir / "similaridade-treino.md").write_text(similaridade.markdown(pares),
                                                            encoding="utf-8")
         self.parecidas = sorted({p["id"] for p in pares})

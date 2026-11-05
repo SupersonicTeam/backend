@@ -22,6 +22,7 @@ import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import externas as ext
 from . import gabarito as gab
 from . import graficos
 
@@ -95,6 +96,12 @@ class Celula:
     manifesto: dict
     avaliacao: dict
     rodadas: list[list[dict]] = field(default_factory=list)
+
+    @property
+    def invalida(self) -> bool:
+        """Pensamento ativo apesar de ``think=false``: a celula nao e comparavel (o teto de tokens
+        da Sessao 7 cortaria o raciocinio, e o acerto mediria o corte, nao o modelo)."""
+        return bool((self.manifesto.get("pensamento") or {}).get("raciocinou"))
 
     @property
     def ficticia(self) -> bool:
@@ -452,11 +459,16 @@ def viabilidade(
     (100/n pontos): a faixa das 3 rodadas e uma pergunta de diferenca sao ruido, nao perda.
     A referencia passa pelos dois criterios absolutos.
     """
-    ref = next((c for c in celulas_arq if c.modelo == referencia and c.rodadas), None)
+    ref = next((c for c in celulas_arq if c.modelo == referencia and c.rodadas and not c.invalida),
+               None)
     saida = []
     for c in celulas_arq:
         if not c.rodadas:
             saida.append(Viabilidade(c.modelo, False, ["a célula não rodou até o fim"]))
+            continue
+        if c.invalida:
+            saida.append(Viabilidade(c.modelo, False, [
+                "célula **inválida para comparar**: o pensamento não desligou na prova"]))
             continue
         if ref is None and c.modelo != referencia:
             # Sem a referencia nao ha com o que comparar: nunca declarar viavel.
@@ -792,16 +804,31 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     md.append(_secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq))
 
-    ids_ineditas = [p["id"] for p in canonico_json["perguntas"] if p.get("origem") == "inedita"]
+    contaminadas = [p["id"] for p in canonico_json["perguntas"] if p.get("contaminada")]
+    # "inedita" (do #355) = inedita_equipe; contaminada sai do recorte inedito (#358).
+    ids_ineditas = [p["id"] for p in canonico_json["perguntas"]
+                    if str(p.get("origem", "")).startswith("inedita") and not p.get("contaminada")]
+    ids_externas = [i for i in ids_ineditas if canonico[i].get("origem") == "inedita_externa"]
     recortes = [(RECORTE_COMUM, ids_comum, "(a) Capacidade comum — a comparação justa"),
                 (RECORTE_INTEIRO, ids_inteiro, "(b) Conjunto inteiro")]
     if ids_ineditas:
-        recortes.append((RECORTE_INEDITAS, ids_ineditas, "(c) Inéditas — generalização"))
+        recortes.append((RECORTE_INEDITAS, ids_ineditas,
+                         "(c) Inéditas (equipe + externas) — generalização"
+                         if ids_externas else "(c) Inéditas — generalização"))
+    if ids_externas:
+        recortes.append((RECORTE_INEDITAS, ids_externas, "(d) Só as externas"))
+    if contaminadas:
+        md.append("**Contaminadas** (alguém mexeu na Ceres olhando a resposta delas; fora dos recortes "
+                  "inéditos): " + ", ".join(contaminadas) + ".\n")
     for recorte, ids, rotulo in recortes:
         md.append(f"## {rotulo}\n")
         if recorte == RECORTE_INEDITAS:
             so2 = [i for i in ids if canonico[i].get("capacidade") == "so_ceres_2"]
-            md.append(f"As {len(ids)} perguntas escritas para o benchmark, fora do gabarito contra o "
+            descricao = ("As 40 perguntas compiladas pelo Murillo (internet e produtores), com o texto "
+                         "literal" if ids == ids_externas else
+                         f"As {len(ids)} perguntas fora do gabarito"
+                         + (" (equipe e externas)" if ids_externas else " escritas para o benchmark"))
+            md.append(f"{descricao}, fora do gabarito contra o "
                       "qual a Ceres 2.0 foi desenvolvida (regras da #265 com \"zero erros no "
                       "gabarito\", T03 ajustada à #347, etapas medidas nele). **É o recorte que mede "
                       "generalização.** Com "
@@ -858,6 +885,15 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
             md.append(f"- {c.rotulo_arquitetura} · `{c.modelo}`: "
                       + (f"{len(lista)} — " + ", ".join(lista) if lista else "nenhuma"))
         md.append("")
+
+    if ids_externas:
+        md.append(_secao_externas(celulas, ids_externas, canonico))
+    md.append(_secao_cortadas(celulas, canonico))
+    if any(c.invalida for c in celulas):
+        md.append("**Células inválidas para comparar** (o pensamento não desligou na prova; o teto "
+                  "de tokens cortaria o raciocínio e o acerto mediria o corte): "
+                  + ", ".join(f"{c.rotulo_arquitetura} · `{c.modelo}`" for c in celulas if c.invalida)
+                  + ". Ficam nas tabelas, fora da conclusão e dos gráficos.\n")
 
     parecidas = [i for i in rodada.get("parecidasComTreino") or [] if i in canonico]
     if parecidas:
@@ -955,6 +991,11 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md.append("")
     texto = "\n".join(md)
     (pasta / "relatorio.md").write_text(texto, encoding="utf-8")
+    if ids_externas:
+        cego, chave = ext.csv_cego(celulas, canonico)
+        (pasta / "externas-avaliacao-cego.csv").write_text(cego, encoding="utf-8")
+        # A chave liga a resposta a celula: fica com a equipe ate as notas voltarem (.gitignore).
+        (pasta / "externas-avaliacao-chave.json").write_text(chave, encoding="utf-8")
     return texto
 
 
@@ -977,6 +1018,116 @@ def acerto_geral(celula: Celula, ids: list[str], canonico: dict[str, dict],
     if not taxas:
         return Faixa(None, None, None, 0)
     return Faixa(statistics.fmean(taxas), min(taxas), max(taxas), total)
+
+
+def _secao_externas(celulas, ids, canonico) -> str:
+    """Os criterios automaticos das externas, a pergunta 33 e o que falta conferir."""
+    alvo = set(ids)
+    perguntas = [canonico[i] for i in ids]
+    a_conferir = [p["id"] for p in perguntas if p.get("aConferir")]
+    pendentes = [f"{p['id']} ({p['pendenteContador']})" for p in perguntas if p.get("pendenteContador")]
+    nao_revisadas = [p["id"] for p in perguntas if not p.get("revisado")]
+    linhas = ["## Perguntas externas: critérios automáticos (#358)\n",
+              "Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; "
+              "fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento "
+              "ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` (contextualização, "
+              "orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). "
+              "**A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão "
+              "é a humana.\n"]
+    if a_conferir:
+        linhas.append(f"- Fundamentação **a conferir** em {len(a_conferir)} perguntas "
+                      "(`dispositivosAceitos` vazio até a conferência na base de lei): sai como n/d.")
+    if pendentes:
+        linhas.append("- Pendentes do contador (fora da métrica de classe): " + ", ".join(pendentes) + ".")
+    if nao_revisadas:
+        linhas.append(f"- Classe e afirmações proibidas **provisórias** em {len(nao_revisadas)} perguntas "
+                      "(ainda não revisadas pela equipe e pelo contador).")
+    linhas.append("")
+    linhas.append("| Célula | " + " | ".join(ext.CRITERIOS_EXTERNAS.values()) + " |\n|---|"
+                  + "---|" * len(ext.CRITERIOS_EXTERNAS))
+    for c in celulas:
+        casas = []
+        for criterio in ext.CRITERIOS_EXTERNAS:
+            taxas, total = [], 0
+            for resultados in c.rodadas:
+                valores = [ext.avaliar(r, canonico[r["id"]])[criterio] for r in resultados
+                           if r["id"] in alvo and not falha_tecnica(r)]
+                valores = [v for v in valores if v is not None]
+                if valores:
+                    taxas.append(100.0 * sum(valores) / len(valores))
+                    total = len(valores)
+            casas.append(Faixa(statistics.fmean(taxas), min(taxas), max(taxas), total).formatada()
+                         if taxas else "n/d")
+        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | " + " | ".join(casas) + " |")
+    especiais = [p for p in perguntas if p.get("observacao")]
+    for p in especiais:
+        linhas.append(f"\n### {p['id']} (pergunta {p.get('numeroOriginal', '?')} do Murillo)\n")
+        linhas.append(f"*{_celula_md(p['pergunta'], 300)}*\n")
+        linhas.append(f"**Atenção:** {p['observacao']}\n")
+        linhas.append("| Célula | Rodada | Desfecho | Afirmação proibida? | Resposta |\n|---|---|---|---|---|")
+        for c in celulas:
+            for numero, resultados in enumerate(c.rodadas, 1):
+                for r in resultados:
+                    if r["id"] != p["id"]:
+                        continue
+                    criterio = ext.avaliar(r, p)["proibidas"]
+                    linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {numero} "
+                                  f"| `{(r.get('execucao') or {}).get('desfecho')}` "
+                                  f"| {'**sim**' if criterio is False else 'não'} "
+                                  f"| {_celula_md((r.get('execucao') or {}).get('texto') or '', 240)} |")
+    return "\n".join(linhas) + "\n"
+
+
+def _secao_cortadas(celulas, canonico) -> str:
+    """Taxa de ``RESPOSTA_CORTADA`` (#270) por celula, rodada e tipo de chamada, e a recusa limpa."""
+    linhas = ["## Respostas cortadas pelo teto de tokens (`RESPOSTA_CORTADA`)\n",
+              "Desfecho da Sessão 7 (#270): `done_reason=length` ou `eval_count ≥ teto`. É o número que "
+              "separa \"o modelo errou\" de \"o teto cortou\". O tipo de chamada sai da rota e do "
+              "desfecho de cada parte (o JSON não diz a chamada): classificação cortada aparece como "
+              "FORA_DE_ESCOPO. A Ceres 1 (`2463c27`) não tem esse desfecho.\n",
+              "| Célula | Por rodada | Classificação | Funções | Lei | Total |\n|---|---|---|---|---|---|"]
+    for c in celulas:
+        por_rodada, tipos, total = [], {"classificacao": 0, "funcoes": 0, "lei": 0}, 0
+        cortadas = 0
+        for resultados in c.rodadas:
+            n = sum(1 for r in resultados if ext.cortada(r)["qualquer"])
+            por_rodada.append(f"{n}/{len(resultados)}")
+            cortadas += n
+            total += len(resultados)
+            for r in resultados:
+                corte = ext.cortada(r)
+                for tipo in tipos:
+                    tipos[tipo] += 1 if corte[tipo] else 0
+        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {' · '.join(por_rodada) or 'n/d'} "
+                      f"| {tipos['classificacao']} | {tipos['funcoes']} | {tipos['lei']} "
+                      f"| {cortadas}/{total}"
+                      + (f" ({_n(100.0 * cortadas / total)}%)" if total else "") + " |")
+    linhas.append("\n### Recusa limpa\n")
+    linhas.append("Nas perguntas que devem ser recusadas, o acerto com e **sem** as recusas que vieram "
+                  "de `RESPOSTA_CORTADA`: um modelo pequeno cortado na classificação cai em "
+                  "FORA_DE_ESCOPO e \"acerta\" a recusa por acidente.\n")
+    linhas.append("| Célula | Recusa correta | Recusa limpa (sem as cortadas) | Recusas por corte |\n"
+                  "|---|---|---|---|")
+    for c in celulas:
+        acertos = limpas = por_corte = aplicaveis = 0
+        for resultados in c.rodadas:
+            for r in resultados:
+                if r.get("recusaCorreta") is None:
+                    continue
+                aplicaveis += 1
+                if r["recusaCorreta"]:
+                    acertos += 1
+                    if ext.cortada(r)["qualquer"]:
+                        por_corte += 1
+                    else:
+                        limpas += 1
+        if not aplicaveis:
+            linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | — | — | — |")
+            continue
+        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {_n(100.0 * acertos / aplicaveis)}% "
+                      f"| {_n(100.0 * limpas / aplicaveis)}% | {por_corte} |")
+    linhas.append("\nTodas as rodadas juntas (respostas = perguntas × rodadas).")
+    return "\n".join(linhas) + "\n"
 
 
 def _secao_parecidas(celulas, parecidas, ids_comum, canonico, adaptacoes_por_arq) -> str:

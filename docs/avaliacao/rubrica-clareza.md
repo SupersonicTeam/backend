@@ -46,3 +46,27 @@ O relatório de toda rodada já traz, por rota, a média de **palavras por frase
 usam **sigla do glossário sem explicação** (IBS, CBS, NF-e, NCM, CFOP, Funrural, DANFE, SEFAZ;
 `ClarezaTexto`). São um indicador barato para toda etapa; a nota humana é o critério das etapas de
 redação (4, 5 e 7 da Ceres 2.0) e da linha de base.
+
+## Perguntas externas: os 5 critérios do Murillo (#358)
+
+As 40 perguntas externas do benchmark (`benchmark/perguntas-benchmark.json`, origem
+`inedita_externa`) são avaliadas pelos 5 critérios do Murillo. Dois são **automáticos** e saem no
+relatório do benchmark: **alíquotas** (classe de tratamento dita na resposta) e **fundamentação**
+(dispositivo aceito citado, depois de conferido na base). Os outros três são **humanos**, no
+arquivo `externas-avaliacao-cego.csv` que o gerador do relatório grava na pasta da rodada: as colunas
+`contextualizacao_1a5`, `orientacao_pratica_1a5` e `precisao_final_1a5`, de 1 a 5, e `comentario`.
+O `externas-avaliacao-chave.json` liga cada `codigo` à célula e à pergunta e **não vai ao
+avaliador** (o `.gitignore` de `resultados/` já o ignora).
+
+| Critério | Vale 1 | Vale 5 | Onde |
+|---|---|---|---|
+| **Precisão tributária** | Afirma regra errada (tratamento, incidência, crédito) ou contradiz a lei | Tudo o que afirma está certo e não promete o que a lei não dá | heurística no relatório (`afirmacoesProibidas`) + **nota humana final** (`precisao_final_1a5`) |
+| **Alíquotas** | Diz a classe errada (zero, redução de 60%, padrão) ou nenhuma quando a pergunta pede | Diz a classe certa e, quando depende do produto ou da situação, diz do que depende | automático (`classeTratamento`, heurística) |
+| **Contextualização** | Responde em abstrato, ignora o que o produtor contou (cultura, comprador, situação) | Aplica a regra ao caso descrito na pergunta, com as condições que mudam a resposta | **humano** (`contextualizacao_1a5`) |
+| **Fundamentação** | Sem citação, ou citação que não sustenta o que diz | Cita o dispositivo que sustenta a resposta (artigo, anexo) | automático (`dispositivosAceitos`, depois de conferidos) |
+| **Orientação prática** | Não diz o que fazer; deixa o produtor sem próximo passo | Diz o próximo passo concreto (o que conferir, onde, e quando procurar o contador) | **humano** (`orientacao_pratica_1a5`) |
+
+Julgue a resposta como um contador julgaria a orientação dada a um cliente produtor rural. Uma
+recusa ou um "procure o seu contador" pode valer 5 em orientação prática quando a pergunta depende
+da situação do produtor (marcadas com `encaminharContador`), mas vale 1 quando a lei responde
+direto.

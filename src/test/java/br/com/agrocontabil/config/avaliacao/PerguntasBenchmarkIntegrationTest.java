@@ -100,11 +100,12 @@ class PerguntasBenchmarkIntegrationTest {
       assertThat(ids.add(id)).as("id repetido: " + id).isTrue();
       assertThat(temas).as(id).contains(p.path("tema").asText());
       assertThat(p.path("capacidade").asText()).as(id).isIn("comum", "so_ceres_2");
-      assertThat(p.path("origem").asText()).as(id).isIn("gabarito", "inedita");
+      assertThat(p.path("origem").asText()).as(id)
+          .isIn("gabarito", "inedita_equipe", "inedita_externa");
       porTema.merge(p.path("tema").asText(), 1, Integer::sum);
     }
-    assertThat(ids).hasSizeBetween(95, 105);
-    assertThat(porTema.keySet()).isEqualTo(temas).hasSize(12);
+    assertThat(ids).hasSize(140);
+    assertThat(porTema.keySet()).isEqualTo(temas).hasSize(16);
     assertThat(porTema.values()).allSatisfy(n -> assertThat(n).isBetween(6, 10));
   }
 
@@ -134,8 +135,38 @@ class PerguntasBenchmarkIntegrationTest {
     // desenvolvida contra o gabarito).
     for (JsonNode p : objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas")) {
       assertThat(p.path("origem").asText()).as(p.path("id").asText())
-          .isEqualTo(gabarito.containsKey(p.path("id").asText()) ? "gabarito" : "inedita");
+          .isIn(gabarito.containsKey(p.path("id").asText())
+              ? List.of("gabarito") : List.of("inedita_equipe", "inedita_externa"));
     }
+  }
+
+  @Test
+  @DisplayName("As 40 externas (#358) são o texto literal do Murillo, todas de lei, comuns e a conferir")
+  void externasLiterais() throws IOException {
+    List<String> literais = Files.readAllLines(
+        Path.of("src/test/resources/benchmark/perguntas-externas-murillo.txt"), StandardCharsets.UTF_8)
+        .stream().filter(l -> !l.startsWith("#")).toList();
+    List<JsonNode> externas = new java.util.ArrayList<>();
+    objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas").forEach(p -> {
+      if ("inedita_externa".equals(p.path("origem").asText())) {
+        externas.add(p);
+      }
+    });
+    assertThat(externas.stream().map(p -> p.path("pergunta").asText()).toList())
+        .containsExactlyElementsOf(literais).hasSize(40);
+    assertThat(externas).allSatisfy(p -> {
+      String id = p.path("id").asText();
+      assertThat(p.path("fonte").asText()).as(id).contains("Murillo");
+      assertThat(p.path("rotaEsperada").asText()).as(id).isEqualTo("LEGISLACAO");
+      assertThat(p.path("justificativaRota").asText()).as(id).isNotBlank();
+      assertThat(p.path("capacidade").asText()).as(id).isEqualTo("comum");
+      // Sem a base de lei, nenhum dispositivo aceito de memoria.
+      assertThat(p.path("dispositivosAceitos").isEmpty() || !p.path("aConferir").asBoolean())
+          .as(id).isTrue();
+      assertThat(p.path("classeTratamento").asText()).as(id).isIn("ZERO", "REDUCAO_60", "PADRAO",
+          "CONDICIONAL", "NAO_SE_APLICA", "FORA_DO_ESCOPO_SISTEMA");
+      p.path("afirmacoesProibidas").forEach(r -> java.util.regex.Pattern.compile(r.asText()));
+    });
   }
 
   @Test

@@ -43,8 +43,9 @@
   "perguntas": "docs/avaliacao/benchmark/perguntas-benchmark.json",
   "sessaoParalela": {
     "issue": "#270",
-    "rotulo": "Sessão 7 (prompts por rota e teto de tokens)",
-    "commitNota": "Quando a #270 for mergeada, ponha o SHA do merge em 'commit': a conferencia passa a ser pela ancestralidade, sem depender do titulo do squash."
+    "rotulo": "Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade)",
+    "commitNota": "Merge do ultimo PR da #270 (#354; antes, #351), informado pela sessao que a coordenou em 2026-11-05. A coluna Ceres 2.0 so e oficial num SHA que o contenha.",
+    "commit": "54a4201ad908cfa1181578b531685b0bb06da17e"
   },
   "divergentesConhecidos": [
     "D13",

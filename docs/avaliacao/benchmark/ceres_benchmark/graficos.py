@@ -208,10 +208,13 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     marca = "DADOS FICTÍCIOS" if ficticio else ("RODADA DE TESTE" if teste else None)
 
     ordem = list(temas or {}) or sorted({p.get("tema") or "sem_tema" for p in canonico.values()})
-    por_celula = [rel.por_tema(c, ids_comum, canonico, adaptacoes, rel.RECORTE_COMUM) for c in celulas]
+    # Celula invalida (pensamento ativo) nao entra no grafico: "—" em todas as casas.
+    por_celula = [{} if c.invalida else rel.por_tema(c, ids_comum, canonico, adaptacoes, rel.RECORTE_COMUM)
+                  for c in celulas]
     valores_tema = [[(pc[t].media, pc[t].total) if t in pc else (None, 0) for pc in por_celula]
                     for t in ordem]
-    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" for c in celulas]
+    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" + (" (inválida)" if c.invalida else "")
+               for c in celulas]
     rodadas_txt = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
     arquivo = destino / "acerto-por-tema.svg"
     arquivo.write_text(mapa_tema_celula(
@@ -222,7 +225,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     arquivos.append(arquivo)
 
     def celula(modelo, arq):
-        return next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
+        c = next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
+        return None if c is None or c.invalida else c
 
     for criterio in ("rota", "numero", "citacao", "recusa", "vazamento", "falha"):
         valores = []
