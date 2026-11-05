@@ -546,3 +546,60 @@ o dado do evento).
 > não basta, porque a pergunta rápida (fora de escopo, fallback) encerra o emissor antes de o
 > Spring assumi-lo, e aí o Spring nunca registra o callback. Sem isso o prazo ficava agendado até
 > vencer (5 min em produção), segurando o emissor e registrando um tempo esgotado falso no log.
+
+## Inferência local na VPS: chamadas ao modelo e cache do prefixo (#270)
+
+Na VPS (4 núcleos ARM, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
+geração. O Ollama reaproveita o processamento de uma requisição para a seguinte **até o primeiro
+byte diferente** (cache do prefixo, um por vaga; o compose usa `OLLAMA_NUM_PARALLEL=1`, então uma
+vaga só). Por isso a parte fixa de cada chamada fica no início e igual byte a byte entre
+perguntas, travada pelo `PrefixoPromptOllamaFioTest` (requisição real do `OllamaChatModel`).
+
+### Toda chamada ao modelo
+
+São três, todas pela porta `llm/ModeloLinguagem`. Tamanhos em caracteres, contados no código em
+2026-11-05; tokens são **estimativa** (caracteres ÷ 4; o português com JSON costuma tokenizar mais
+perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
+
+| Chamada | Quem chama | Quando | Parte fixa (início) | Parte variável (fim) | Funções | Teto de saída |
+|---|---|---|---|---|---|---|
+| Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `AI_MAX_TOKENS` (1.024) |
+| Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `AI_MAX_TOKENS` (1.024) |
+| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `AI_MAX_TOKENS` (1.024) |
+
+Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
+classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);
+lei = ~1.050 + pergunta + trechos — o tamanho dos trechos só se mede na base:
+`SELECT max(length(content)), percentile_cont(0.95) WITHIN GROUP (ORDER BY length(content)) FROM legislacao_trecho;`.
+
+**O que pesa é a definição das funções:** 86% do prompt de dados (a maior, `listarNotas`, tem
+2.081 caracteres). O cache do prefixo existe justamente para não pagar esse prefill a cada
+pergunta. Encurtar as descrições reduz o prompt, mas mexe no acerto da escolha de função: só com a
+régua da #264 na VPS, nunca às cegas.
+
+### O que o prefixo estável garante e o que não garante
+
+- **Dados:** instrução de sistema constante (`PromptsCeres.SISTEMA_DADOS`) e definições das
+  funções em ordem fixa (pelo nome: o `ToolCallbacks.from` segue a reflexão, que a JVM não
+  ordena). O template do Qwen3 põe as definições **depois** da instrução de sistema, então a data,
+  que antes fechava a instrução, invalidava todas as definições a cada dia: agora ela vai na
+  mensagem do usuário (`PromptsCeres.mensagemDados`), na linha "Hoje e" antes da pergunta. A
+  instrução de sistema diz que só essa linha vale como data de hoje: uma data escrita na pergunta
+  não a substitui. A garantia continua em código onde ela importa: o período consultado sai
+  sempre escrito na resposta (recorte do template, #266) e o produtor só alcança os próprios dados
+  (`ContextoAssistente`).
+- **Lei:** regras no início; data e trechos no fim. A regra extra da variante do MISTO vem
+  depois das regras comuns, então as duas variantes dividem o prefixo das regras. A parte
+  reaproveitada é pequena (~1.000 caracteres): os trechos mudam a cada pergunta.
+- **Classificação:** já era constante.
+- **Limite:** com uma vaga só, o cache é o da **última** requisição. Duas perguntas de dados
+  seguidas reaproveitam o prefixo inteiro; uma classificação ou uma lei no meio (o MISTO faz dados
+  e lei na mesma pergunta) o substitui. `OLLAMA_NUM_PARALLEL=2` daria duas vagas, ao custo do
+  dobro da memória do contexto: hipótese a medir na VPS, não configuração adotada.
+- **Tokens com cache (a conferir na VPS):** a cota (#166) e a auditoria usam o `prompt_eval_count`
+  que o Ollama informa. Se, com o prefixo no cache, ele contar só os tokens processados (a parte
+  nova), a mesma pergunta custa menos crédito quando a anterior foi de dados. Conferir comparando
+  `tokens_entrada` de duas perguntas de dados seguidas em `assistente_interacao`.
+- **Acerto:** a ordem das definições e a redação da regra da data mudam o que o modelo vê. A
+  comparação na VPS mede tempo **e** acerto (gabarito da #158 pelo comando `dev,avaliacao` e
+  harness da #264, 3 repetições).
