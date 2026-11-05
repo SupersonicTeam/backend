@@ -4,6 +4,7 @@ import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
+import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -83,16 +84,18 @@ public class RotaLegislacao {
   private final ValidadorCitacao validadorCitacao;
   private final ValidadorNumeros validadorNumeros;
   private final VerificadorAfirmacaoDados verificadorDados;
+  private final int tetoSaida;
 
-  /** Constrói a rota. */
+  /** Constrói a rota; o teto de tokens da resposta vem de {@code app.assistente.tetos} (#270). */
   public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
       ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
-      VerificadorAfirmacaoDados verificadorDados) {
+      VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades) {
     this.modelo = modelo;
     this.busca = busca;
     this.validadorCitacao = validadorCitacao;
     this.validadorNumeros = validadorNumeros;
     this.verificadorDados = verificadorDados;
+    this.tetoSaida = propriedades.getTetos().getLegislacao();
   }
 
   /**
@@ -171,10 +174,18 @@ public class RotaLegislacao {
         ? PromptsCeres.sistemaLegislacaoRegraGeral(contexto.hoje(), formatar(trechos))
         : PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos));
     Prompt prompt = new Prompt(List.<Message>of(
-        new SystemMessage(sistema), new UserMessage(perguntaAoModelo)));
+        new SystemMessage(sistema), new UserMessage(perguntaAoModelo)),
+        ModeloLinguagem.comTeto(tetoSaida));
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
+    if (ModeloLinguagem.cortadaPeloTeto(resposta)) {
+      // Cortada no teto (#270): a frase pela metade passaria no ValidadorCitacao se a marca veio
+      // antes do corte. O texto sai; os trechos mais proximos ficam, sem afirmar que respondem.
+      log.warn("Ceres: resposta de legislacao cortada pelo teto de {} tokens", tetoSaida);
+      return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada,
+          DesfechoInteracao.RESPOSTA_CORTADA);
+    }
     String texto = limpar(resposta.getResult().getOutput().getText());
 
     if (texto.contains(PromptsCeres.NAO_ENCONTREI)) {
@@ -242,15 +253,21 @@ public class RotaLegislacao {
    */
   private static ResultadoRota trechosRelacionados(List<TrechoRecuperado> trechos,
       ContextoAssistente contexto, boolean soRegraGeral, boolean perguntaSeparada) {
+    return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada,
+        DesfechoInteracao.CITACAO_INVALIDA);
+  }
+
+  private static ResultadoRota trechosRelacionados(List<TrechoRecuperado> trechos,
+      ContextoAssistente contexto, boolean soRegraGeral, boolean perguntaSeparada,
+      DesfechoInteracao desfecho) {
     if (soRegraGeral && !perguntaSeparada) {
-      return ResultadoRota.descartada(
-          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.CITACAO_INVALIDA);
+      return ResultadoRota.descartada(ValidadorCitacao.SEM_FUNDAMENTO, desfecho);
     }
     List<TrechoRecuperado> relacionados =
         trechos.subList(0, Math.min(TRECHOS_RELACIONADOS, trechos.size()));
     contexto.registrarTrechosCitados(relacionados.stream().map(TrechoRecuperado::id).toList());
     contexto.registrarTrechosRelacionados();
-    return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.CITACAO_INVALIDA,
+    return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, desfecho,
         relacionados.stream().map(TrechoRecuperado::comoCitacao).toList());
   }
 

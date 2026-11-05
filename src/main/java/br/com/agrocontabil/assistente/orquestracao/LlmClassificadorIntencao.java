@@ -4,6 +4,7 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.DataSanitizer;
 import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.config.AssistenteProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -39,20 +40,35 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
 
   private final ModeloLinguagem modelo;
   private final ObjectMapper objectMapper;
+  private final int tetoSaida;
 
-  public LlmClassificadorIntencao(ModeloLinguagem modelo, ObjectMapper objectMapper) {
+  /**
+   * Constrói o classificador.
+   *
+   * @param modelo       porta do modelo
+   * @param objectMapper leitor do JSON da resposta
+   * @param propriedades teto de tokens da classificação ({@code app.assistente.tetos}, #270)
+   */
+  public LlmClassificadorIntencao(ModeloLinguagem modelo, ObjectMapper objectMapper,
+      AssistenteProperties propriedades) {
     this.modelo = modelo;
     this.objectMapper = objectMapper;
+    this.tetoSaida = propriedades.getTetos().getClassificacao();
   }
 
   @Override
   public ClassificacaoIntencao classificar(String pergunta, ContextoAssistente contexto) {
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.CLASSIFICACAO),
-        new UserMessage(DataSanitizer.mascarar(pergunta))));
+        new UserMessage(DataSanitizer.mascarar(pergunta))), ModeloLinguagem.comTeto(tetoSaida));
     contexto.verificarAtiva();
     ChatResponse resposta = modelo.chamar(prompt);
     contexto.registrarUso(prompt, resposta);
+    if (ModeloLinguagem.cortadaPeloTeto(resposta)) {
+      // JSON cortado pode fechar antes da perguntaLei ou parecer completo: nunca vale (#270).
+      log.warn("Classificador de intencao: resposta cortada pelo teto de {} tokens", tetoSaida);
+      return ClassificacaoIntencao.indeterminada();
+    }
     return interpretar(resposta.getResult().getOutput().getText());
   }
 

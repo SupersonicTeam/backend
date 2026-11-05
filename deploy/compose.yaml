@@ -126,6 +126,11 @@ services:
       AI_OLLAMA_BASE_URL: http://ollama:11434
       AI_CHAT_PROVIDER: ollama
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
+      # Janela de contexto e teto de tokens por tipo de chamada (#270); padroes = os do yml.
+      AI_OLLAMA_NUM_CTX: ${AI_OLLAMA_NUM_CTX:-8192}
+      AI_TETO_FUNCOES: ${AI_TETO_FUNCOES:-512}
+      AI_TETO_CLASSIFICACAO: ${AI_TETO_CLASSIFICACAO:-256}
+      AI_TETO_LEGISLACAO: ${AI_TETO_LEGISLACAO:-1024}
       ANTIVIRUS_MODO: CLAMAV
       ANTIVIRUS_HOST: clamav
       # Atras do Caddy: sem isto o backend ve todo cliente com o IP do Caddy e o limite por IP de

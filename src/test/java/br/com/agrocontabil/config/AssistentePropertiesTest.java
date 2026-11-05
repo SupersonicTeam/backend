@@ -65,4 +65,50 @@ class AssistentePropertiesTest {
     p.getCota().setHabilitada(false);
     p.afterPropertiesSet();
   }
+
+  @Test
+  @DisplayName("#270: teto por chamada zero, abaixo do minimo ou acima da metade do contexto")
+  void tetoForaDeFaixa() {
+    AssistenteProperties zero = new AssistenteProperties();
+    zero.getTetos().setFuncoes(0);
+    AssistenteProperties minusculo = new AssistenteProperties();
+    minusculo.getTetos().setClassificacao(AssistenteProperties.Tetos.MINIMO - 1);
+    AssistenteProperties grande = new AssistenteProperties();
+    grande.getTetos().setContexto(2048);
+    grande.getTetos().setLegislacao(1025);
+
+    assertThatThrownBy(zero::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.funcoes");
+    assertThatThrownBy(minusculo::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.classificacao");
+    assertThatThrownBy(grande::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.legislacao")
+        .hasMessageContaining("metade do contexto (1024)");
+  }
+
+  @Test
+  @DisplayName("#270: teto por chamada acima do AI_MAX_TOKENS quebraria a reserva da cota")
+  void tetoAcimaDoTetoDaCota() {
+    AssistenteProperties p = new AssistenteProperties();
+    p.getCota().setTetoTokensSaidaPorChamada(400);
+    p.getTetos().setFuncoes(400);
+
+    // Padrao da lei = 1024 > 400.
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.legislacao")
+        .hasMessageContaining("AI_MAX_TOKENS");
+
+    p.getTetos().setLegislacao(400);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("#270: contexto abaixo do minimo e recusado")
+  void contextoPequeno() {
+    AssistenteProperties p = new AssistenteProperties();
+    p.getTetos().setContexto(1024);
+
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.contexto");
+  }
 }

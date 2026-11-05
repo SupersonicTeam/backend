@@ -152,7 +152,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 
 | Classe | Responsabilidade |
 |--------|-----------------|
-| `llm/ModeloLinguagem` | **Porta única** para o `ChatModel` (Ollama ou API compatível com a da OpenAI, por `spring.ai.model.chat`). Falha do provedor → `AssistenteIndisponivelException` (503); `identificacao()` = `provedor/modelo` para auditoria (issue #141) |
+| `llm/ModeloLinguagem` | **Porta única** para o `ChatModel` (Ollama ou API compatível com a da OpenAI, por `spring.ai.model.chat`). Falha do provedor → `AssistenteIndisponivelException` (503); `identificacao()` = `provedor/modelo` para auditoria (issue #141); `comTeto(n)` = opções da chamada só com o teto de tokens, `cortadaPeloTeto(resposta)` = `done_reason`/`finish_reason` `length` (#270) |
 | `llm/OllamaHealthIndicator` | Health `ollama`: modelos baixados? Inacessível/ausente → `DEGRADED` (HTTP 200), nunca `DOWN`; cliente próprio com timeout curto + cache (issue #141) |
 | `llm/DisponibilidadeModelo` | Disjuntor do modelo (issue #146): depois de uma queda real (I/O, timeout, 5xx, sem ChatModel), as perguntas pulam o modelo por `app.assistente.fallback.pausa-apos-falha`. Recusa 4xx da pergunta, resposta vazia e thread interrompida **não** abrem (senão um produtor derrubaria todos) |
 | `fallback/ModoFallback` | Resposta sem modelo (issue #146): intenção por palavras-chave, trechos de lei verbatim (busca textual) e `TelaAtalho` (NOTAS/APURACAO/CREDITOS/CALENDARIO) para perguntas de dados. Nunca um número do produtor |
@@ -182,7 +182,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 
 `service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas; #266: `notasAConferir` (candidatas por `NotaFiscalRepository.findCandidatasASinal`, 10 mais recentes, só as com sinal) e `pedidosPendentes` (pendências `PENDENTE` dos vínculos ativos)). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `controller/AssistenteController`: `POST /api/assistente/chat` e `POST /api/assistente/chat/stream` (SSE) → `assistente/AssistenteService`. `DadosProdutorAdaptador` roda cada consulta numa transação curta com timeout `app.assistente.timeout-funcao`.
 
-`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-rodadas-ferramentas`, `max-conversas-simultaneas`).
+`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-rodadas-ferramentas`, `max-conversas-simultaneas`, `tetos.*` = teto de tokens por tipo de chamada — funções, classificação, lei — validado contra a metade do contexto e o `AI_MAX_TOKENS`, #270).
 Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.
 
 ### `security/` (issue #93)

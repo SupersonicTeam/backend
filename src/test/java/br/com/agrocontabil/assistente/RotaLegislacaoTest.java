@@ -11,6 +11,7 @@ import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
+import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.support.ChatModelSimulado;
 import java.time.LocalDate;
@@ -48,7 +49,8 @@ class RotaLegislacaoTest {
         new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
             new br.com.agrocontabil.assistente.llm.DisponibilidadeModelo(
                 java.time.Duration.ofSeconds(30), System::nanoTime)),
-        busca, new ValidadorCitacao(), new ValidadorNumeros(), new VerificadorAfirmacaoDados());
+        busca, new ValidadorCitacao(), new ValidadorNumeros(), new VerificadorAfirmacaoDados(),
+        new AssistenteProperties());
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }
 

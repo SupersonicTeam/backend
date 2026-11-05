@@ -626,3 +626,107 @@ régua da #264 na VPS, nunca às cegas.
 - **Acerto:** a ordem das definições e a redação da regra da data mudam o que o modelo vê. A
   comparação na VPS mede tempo **e** acerto (gabarito da #158 pelo comando `dev,avaliacao` e
   harness da #264, 3 repetições).
+
+### Teto de tokens por tipo de chamada (`app.assistente.tetos`)
+
+Antes, um `AI_MAX_TOKENS` único (1.024) valia para tudo. Agora cada chamada manda o seu teto
+(`maxTokens` da chamada: `num_predict` no Ollama, `max_tokens` na API compatível com a da OpenAI),
+e as opções padrão (modelo, temperatura, `num_ctx`, thinking) seguem valendo — conferido no fio
+pelo `TetoSaidaOllamaFioTest`.
+
+| Chamada | Propriedade | Variável | Padrão | Por quê |
+|---|---|---|---|---|
+| Escolha das funções de dados | `funcoes` | `AI_TETO_FUNCOES` | 512 | só o JSON das chamadas; cada uma tem algumas dezenas de tokens |
+| Classificação (inclusive a `perguntaLei` do MISTO) | `classificacao` | `AI_TETO_CLASSIFICACAO` | 256 | JSON curto; a `perguntaLei` tem até 300 caracteres |
+| Lei | `legislacao` | `AI_TETO_LEGISLACAO` | 1.024 | igual ao de antes: reduzir sem medir cortaria respostas que hoje saem |
+
+- **Não há teto próprio para a `perguntaLei`:** ela é um campo do mesmo JSON, na mesma chamada da
+  classificação. No desempate o modelo também pode responder MISTO com ela, e um teto menor ali a
+  cortaria.
+- **A "explicação em 2 ou 3 frases" do item 3 da #270 não tem mais onde se aplicar:** desde a #266
+  a rota de dados não redige pelo modelo (o texto é do template). As chamadas que sobram são as
+  três acima.
+- **Validação na subida:** cada teto entre 16 e a metade do contexto (`tetos.contexto`, lido da
+  mesma propriedade do `num-ctx`) e no máximo o `AI_MAX_TOKENS`, que continua sendo o teto geral
+  do provedor e o teto de saída da reserva da cota (#166) — passar dele faria a chamada gerar mais
+  do que foi reservado.
+- **Resposta cortada nunca sai como completa.** O motivo do fim (`done_reason`/`finish_reason`
+  `length`, `ModeloLinguagem.cortadaPeloTeto`) é conferido antes de qualquer validação, porque o
+  texto cortado pode passar nelas: uma resposta de lei com a marca `[T1]` antes do corte passa no
+  `ValidadorCitacao` (o teste de controle mostra isso); um JSON da classificação pode fechar antes
+  da `perguntaLei`; a primeira de duas chamadas de função sairia como a resposta inteira. Desfecho
+  `RESPOSTA_CORTADA` na auditoria (dados e lei; na lei, os trechos mais próximos sem afirmar que
+  respondem). A classificação cortada vira indeterminada (resposta fixa de fora de escopo) e só
+  aparece no log em WARN.
+- **Para calibrar:** `SELECT count(*) FROM assistente_interacao WHERE desfecho = 'RESPOSTA_CORTADA'
+  OR desfecho_dados = 'RESPOSTA_CORTADA' OR desfecho_legislacao = 'RESPOSTA_CORTADA';` depois de uma
+  rodada da régua. Zero com o teto menor = o teto cabe.
+
+### `num_ctx`
+
+Fica em 8.192 (`AI_OLLAMA_NUM_CTX`), **sem redução**: o maior prompt não foi medido. Pela
+estimativa da tabela acima, o de dados tem de ~3.450 a ~4.600 tokens, mais ~300 caracteres do
+template e o teto de saída (512): ~5.400 no pior caso. A lei depende do tamanho dos trechos. Folga
+hoje: ~2.800 tokens sobre o pior caso de dados.
+
+- O ganho de reduzir é **memória**, não tempo de prefill: o cache de contexto do Qwen3-4B (36
+  camadas, 8 cabeças KV de 128, fp16) ocupa ~144 KB por token, ~1,2 GB em 8.192 e ~0,9 GB em
+  6.144 (cálculo pela arquitetura, não medido).
+- **Candidato a 6.144, só com medição:** rodar a régua e conferir o maior `prompt_eval_count` de
+  uma chamada. O `tokens_entrada` da auditoria soma as chamadas da pergunta e, com cache, pode
+  contar só a parte nova: serve de limite, não de medida.
+- Estourado o contexto, o Ollama descarta o **início** do prompt, justamente a parte fixa com as
+  regras. Não trocar o `num_ctx` entre chamadas: valor diferente faz o Ollama recarregar o modelo.
+
+### Quantização Q4_0 (item 1 da #270: preparado, não adotado)
+
+O padrão segue o `qwen3:4b-instruct` (Q4_K_M). O Q4_0 tem caminho otimizado para ARM no llama.cpp
+e costuma acelerar o prefill; **não há medição na VPS ainda**. A troca é só a variável
+`AI_CHAT_MODEL`; nenhum código muda.
+
+1. **Pelo Hugging Face, direto no Ollama** (o `ollama-init` baixa como qualquer modelo; a VPS
+   precisa alcançar `hf.co`):
+   `AI_CHAT_MODEL=hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_0`. Confira antes no repositório que
+   o arquivo Q4_0 existe. Risco: o template vem do GGUF, e as chamadas de função dependem dele —
+   conferir que a rota de dados recebe `tool_calls` (uma pergunta de dados pelo harness basta).
+2. **Por Modelfile, reaproveitando o template da tag oficial** (o mais seguro para as funções):
+
+   ```bash
+   # na VPS, com o GGUF Q4_0 baixado para o volume do Ollama
+   docker compose exec ollama ollama show qwen3:4b-instruct --modelfile > /tmp/Modelfile
+   # trocar a linha FROM pelo caminho do GGUF Q4_0 (ex.: FROM /root/.ollama/Qwen3-4B-Instruct-2507-Q4_0.gguf)
+   docker compose exec ollama ollama create qwen3-4b-instruct-q4_0 -f /tmp/Modelfile
+   ```
+
+   Depois, `AI_CHAT_MODEL=qwen3-4b-instruct-q4_0`. Modelo criado localmente **não existe no
+   registro**: o `ollama pull` do `ollama-init` falha com esse nome. Nesse caso, subir só o backend
+   (`docker compose up -d backend`) ou ajustar o `ollama-init` na própria VPS durante o teste.
+3. Comparar com o harness da #264 (3 repetições): p50/p95 por rota, acerto de rota/número/citação
+   e memória (`docker stats`). Adotar só sem regressão de acerto.
+
+### Medições pendentes na VPS (#270)
+
+Nada aqui foi medido: sem Ollama na nuvem. Com o harness da #264
+(`docs/avaliacao/harness-api/`, 3 repetições) e o gabarito da #158 (`dev,avaliacao`):
+
+- antes × depois do prefixo estável (#351) e dos tetos: p50/p95 por rota e acerto;
+- `AI_TETO_LEGISLACAO=512`: desfechos `RESPOSTA_CORTADA` e acerto de citação;
+- `AI_OLLAMA_NUM_CTX=6144`: maior `prompt_eval_count` por chamada e memória;
+- Q4_0 × Q4_K_M: tempo, acerto e memória.
+
+Comandos (as variáveis `AI_*` de cada variante no `.env` da VPS, `docker compose up -d backend`
+entre uma e outra):
+
+```bash
+# tempo pela API publicada (3 repeticoes; credenciais so por variavel de ambiente)
+export AGRO_API_URL='https://www.agroconia.com.br' AGRO_EMAIL='<conta de demonstracao>'
+read -rs AGRO_SENHA && export AGRO_SENHA
+python3 -I docs/avaliacao/harness-api/harness.py
+
+# acerto de rota, numero e citacao (gabarito da #158, 3 repeticoes)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,avaliacao \
+  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 4 nucleos'"
+
+# memoria da VM durante a rodada
+docker stats --no-stream
+```
