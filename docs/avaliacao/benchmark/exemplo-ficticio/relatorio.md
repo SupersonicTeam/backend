@@ -14,7 +14,7 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
 | Ceres 2.0 | `54f02ee0c1de525b7ef99ee8a2a18c6982a15827` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.7 (140 perguntas, sha256 `80f1496171e2…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Conjunto de perguntas | 2026-11-05.8 (140 perguntas, sha256 `d4f9d589f5d1…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |
@@ -395,6 +395,33 @@ Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima;
 *Produzo leite na minha propriedade e vendo diretamente para um laticínio. Essa operação terá redução de 60% nas alíquotas ou poderá ter alíquota zero?*
 
 **Atenção:** A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). O sistema ainda dá zero; a correção depende de decisão do Murillo (#284).
+
+| Célula | Rodada | Desfecho | Afirmação proibida? | Resposta |
+|---|---|---|---|---|
+| Ceres 1 · `qwen3:0.6b` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:0.6b` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:0.6b` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:1.7b` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:1.7b` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:1.7b` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:4b-instruct` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:4b-instruct` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 1 · `qwen3:4b-instruct` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:0.6b` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:0.6b` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:0.6b` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:1.7b` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:1.7b` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:1.7b` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:4b-instruct` | 1 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:4b-instruct` | 2 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `qwen3:4b-instruct` | 3 | `RESPONDIDA` | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+
+### E16 (pergunta 16 do Murillo)
+
+*Compro medicamentos veterinários, vacinas e suplementos minerais para meus animais. Todos esses produtos recebem o mesmo tratamento tributário?*
+
+**Atenção:** Anexo IX, itens 12 (vacinas, soros e medicamentos de uso veterinário), 18 (suplementos) e 21 (sal mineralizado): todos com redução de 60%, exceto para animais domésticos. A pergunta fala de rebanho, então a exceção não se aplica (LC 214/2025, art. 138).
 
 | Célula | Rodada | Desfecho | Afirmação proibida? | Resposta |
 |---|---|---|---|---|

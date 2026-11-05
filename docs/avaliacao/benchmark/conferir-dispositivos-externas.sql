@@ -2,7 +2,7 @@
 -- Chaves dos dispositivosEsperados das perguntas externas contra a base de lei.
 -- exato = trecho com a chave inteira; com_subdivisoes = trechos que comecam por ela
 -- seguida de ',' ou ')' (a regra do AvaliadorResposta.citaAlgum). Zero nos dois = sai dos aceitos.
--- Conjunto 2026-11-05.7.
+-- Conjunto 2026-11-05.8.
 WITH chaves(chave, norma, dispositivo, perguntas) AS (VALUES
   ('EC 132/2023, art. 1º (redação do art. 156-A', 'EC 132/2023', 'art. 1º (redação do art. 156-A', 'E30, E35'),
   ('EC 132/2023, art. 2º (redação do art. 128', 'EC 132/2023', 'art. 2º (redação do art. 128', 'E35'),

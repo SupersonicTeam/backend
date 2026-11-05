@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-05.7",
+  "versao": "2026-11-05.8",
   "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352, #358): o gabarito 2026-11-05.2 inteiro, 13 perguntas ineditas da equipe e 40 geradas por IA (ChatGPT, a pedido do Murillo; texto literal), em 16 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado. Campo origem: gabarito (usado no desenvolvimento da Ceres 2.0), inedita_equipe, inedita_equipe_dados ou inedita_externa_ia (medem generalizacao; as de IA nao medem a linguagem real do produtor).",
   "baseadoEm": "2026-11-05.2",
   "temas": {
@@ -2145,7 +2145,7 @@
           "conferidoEm": "L06"
         }
       ],
-      "classeTratamento": "CONDICIONAL",
+      "classeTratamento": "ZERO",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
@@ -2206,7 +2206,7 @@
           "conferidoEm": "L06"
         }
       ],
-      "classeTratamento": "CONDICIONAL",
+      "classeTratamento": "ZERO",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
@@ -2342,7 +2342,7 @@
           "conferidoEm": "M06"
         }
       ],
-      "classeTratamento": "CONDICIONAL",
+      "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
@@ -2429,7 +2429,7 @@
           "conferidoEm": "L04"
         }
       ],
-      "classeTratamento": "CONDICIONAL",
+      "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
@@ -2439,7 +2439,8 @@
         "LC 214/2025, Anexo IX, item 18",
         "LC 214/2025, Anexo IX, item 21"
       ],
-      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05"
+      "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05",
+      "observacao": "Anexo IX, itens 12 (vacinas, soros e medicamentos de uso veterinário), 18 (suplementos) e 21 (sal mineralizado): todos com redução de 60%, exceto para animais domésticos. A pergunta fala de rebanho, então a exceção não se aplica (LC 214/2025, art. 138)."
     },
     {
       "id": "E17",
@@ -2510,7 +2511,7 @@
           "conferidoEm": "L04"
         }
       ],
-      "classeTratamento": "CONDICIONAL",
+      "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
