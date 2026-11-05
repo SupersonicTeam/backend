@@ -1,0 +1,59 @@
+{
+  "iniciadaEm": "2026-11-05T10:00:00-03:00",
+  "hardware": [
+    "maquina de teste"
+  ],
+  "repeticoes": 2,
+  "embedding": "bge-m3",
+  "modeloReferencia": "m-ref",
+  "gabaritoCanonico": "gabarito-canonico.json",
+  "gabaritoAntigo": "gabarito-antigo.json",
+  "arquiteturas": [
+    {
+      "nome": "ceres-1",
+      "rotulo": "Ceres 1",
+      "ref": "abc1234",
+      "sha": "abc1234",
+      "descricao": "antiga",
+      "adaptacao": "adaptacao-ceres-1.json"
+    },
+    {
+      "nome": "ceres-2",
+      "rotulo": "Ceres 2.0",
+      "ref": "main",
+      "sha": "def5678",
+      "descricao": "main",
+      "adaptacao": "adaptacao-ceres-2.json"
+    }
+  ],
+  "modelos": [
+    "m-small",
+    "m-ref"
+  ],
+  "celulas": [
+    {
+      "nome": "ceres-1--m-small",
+      "arquitetura": "ceres-1",
+      "rotuloArquitetura": "Ceres 1",
+      "modelo": "m-small"
+    },
+    {
+      "nome": "ceres-1--m-ref",
+      "arquitetura": "ceres-1",
+      "rotuloArquitetura": "Ceres 1",
+      "modelo": "m-ref"
+    },
+    {
+      "nome": "ceres-2--m-small",
+      "arquitetura": "ceres-2",
+      "rotuloArquitetura": "Ceres 2.0",
+      "modelo": "m-small"
+    },
+    {
+      "nome": "ceres-2--m-ref",
+      "arquitetura": "ceres-2",
+      "rotuloArquitetura": "Ceres 2.0",
+      "modelo": "m-ref"
+    }
+  ]
+}

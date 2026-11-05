@@ -1,0 +1,6 @@
+__pycache__/
+# Do exemplo ficticio so o relatorio e os graficos vao para o repositorio; os JSONs sao
+# regerados por gerar_exemplo_ficticio.py.
+exemplo-ficticio/*
+!exemplo-ficticio/relatorio.md
+!exemplo-ficticio/graficos/

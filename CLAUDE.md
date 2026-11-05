@@ -81,6 +81,14 @@ harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres
 `docs/avaliacao/linha-de-base-2026-10-14.md`. O gabarito é teste, nunca treino:
 `docs/avaliacao/treino/` não pode conter pergunta dele (o build quebra).
 
+**Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
+2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
+`4b-instruct`), 3 repetições, com o gabarito da `main` nas duas (cópia adaptada para a Ceres 1),
+banco próprio por arquitetura e prova do pensamento desligado; o gerador (Python, só stdlib,
+testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia em
+`docs/avaliacao/benchmark/README.md`. **Rodada real pendente** (precisa de Ollama e da base de lei);
+o exemplo versionado é de dados fictícios. O comando de avaliação não mudou.
+
 ## Arquitetura — regras inegociáveis
 
 - **Camadas:** `Controller → Service → Repository`. Sempre nessa direção.

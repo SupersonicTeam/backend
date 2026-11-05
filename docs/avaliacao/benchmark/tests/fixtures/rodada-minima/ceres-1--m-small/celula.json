@@ -1,0 +1,16 @@
+{
+  "celula": "ceres-1--m-small",
+  "arquitetura": "ceres-1",
+  "rotuloArquitetura": "Ceres 1",
+  "modelo": "m-small",
+  "sha": "abc1234",
+  "codigoSaida": 0,
+  "duracaoSegundos": 60,
+  "pensamento": {
+    "resumo": "desligado (think=false; nenhum raciocínio na prova)"
+  },
+  "memoria": {
+    "modeloBytes": 536870912,
+    "processoPicoBytes": 1610612736
+  }
+}
