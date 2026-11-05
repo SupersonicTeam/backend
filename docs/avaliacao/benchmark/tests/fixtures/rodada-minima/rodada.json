@@ -3,11 +3,10 @@
   "hardware": [
     "maquina de teste"
   ],
-  "repeticoes": 2,
+  "repeticoes": 3,
   "embedding": "bge-m3",
   "modeloReferencia": "m-ref",
   "gabaritoCanonico": "gabarito-canonico.json",
-  "gabaritoAntigo": "gabarito-antigo.json",
   "arquiteturas": [
     {
       "nome": "ceres-1",
@@ -55,5 +54,11 @@
       "rotuloArquitetura": "Ceres 2.0",
       "modelo": "m-ref"
     }
-  ]
+  ],
+  "perguntas": {
+    "arquivo": "perguntas.json",
+    "versao": "fixture.2",
+    "sha256": "abababababababababababababababababababababababababababababababab",
+    "total": 5
+  }
 }

@@ -183,7 +183,9 @@ bloqueia a medição. Se ela mudar alguma pergunta, a versão muda e a linha de 
 A comparação `qwen3:0.6b` × `qwen3:1.7b` × `qwen3:4b-instruct` na Ceres 1 (`2463c27`) e na Ceres 2.0
 (`main`), para a banca, roda este mesmo comando seis vezes pelo executor de
 [`benchmark/`](benchmark/README.md), com o gabarito da `main` nas duas arquiteturas e o relatório
-nos dois recortes (perguntas comuns e gabarito inteiro).
+nos dois recortes (capacidade comum e conjunto inteiro). Desde a #352 a matriz usa o conjunto
+congelado `benchmark/perguntas-benchmark.json` (o gabarito inteiro + 13 perguntas, 12 temas), não
+este gabarito direto: mudar uma pergunta aqui não muda o benchmark.
 
 ## Limites conhecidos
 

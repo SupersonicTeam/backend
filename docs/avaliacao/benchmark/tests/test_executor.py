@@ -15,7 +15,7 @@ from ceres_benchmark import executor as ex  # noqa: E402
 def config(**extra):
     args = argparse.Namespace(matriz=str(AQUI.parent / "matriz.json"), arquiteturas=None, modelos=None,
                               ref_ceres2=None, saida="saida", trabalho="trabalho", repeticoes=None,
-                              hardware="maquina X", retomar=None)
+                              hardware="maquina X", retomar=None, teste=False, embedding_cpu=False)
     for k, v in extra.items():
         setattr(args, k, v)
     return ex.montar_config(args, AQUI.parents[3])
@@ -138,3 +138,95 @@ class PensamentoVazioTest(unittest.TestCase):
         prova = ex.avaliar_prova({"message": {"content": "<think>\n\n</think>\n\npronto"}})
         self.assertFalse(prova["raciocinou"])
         self.assertEqual(prova["caracteresPensamento"], 0)
+
+
+class ConfiguracaoTest(unittest.TestCase):
+    REPO = AQUI.parents[3]
+
+    def test_opcoes_do_chat_lidas_do_application_yml_real(self):
+        yml = (self.REPO / "src/main/resources/application.yml").read_text(encoding="utf-8")
+        opcoes = ex.opcoes_chat_ollama(yml)
+        self.assertEqual(opcoes["temperature"], "0.2")
+        self.assertEqual(opcoes["num-ctx"], "${AI_OLLAMA_NUM_CTX:8192}")
+        self.assertEqual(opcoes["think-option"], "${AI_OLLAMA_THINK:false}")
+        self.assertIn("num-predict", opcoes)
+        # O bloco do openai tambem tem chat/options: nao pode entrar.
+        self.assertNotIn("max-tokens", opcoes)
+        self.assertEqual(ex.resolver_placeholder(opcoes["num-ctx"], {}), "8192")
+        self.assertEqual(ex.resolver_placeholder(opcoes["num-ctx"], {"AI_OLLAMA_NUM_CTX": "4096"}), "4096")
+        self.assertEqual(ex.resolver_placeholder("0.2", {}), "0.2")
+
+    def test_onde_rodou(self):
+        self.assertEqual(ex.onde_rodou({"size": 100, "size_vram": 100}), "GPU")
+        self.assertEqual(ex.onde_rodou({"size": 100, "size_vram": 0}), "CPU")
+        self.assertEqual(ex.onde_rodou({"size": 100, "size_vram": 40}), "dividido (40% na GPU)")
+        self.assertEqual(ex.onde_rodou({}), "?")
+
+    def test_avisos_de_recarga_e_divisao(self):
+        avisos = ex.avisos_da_amostra({"descargas": {"qwen3:4b-instruct": 2, "bge-m3": 0},
+                                       "ondeRodou": {"qwen3:4b-instruct": ["GPU", "dividido (60% na GPU)"],
+                                                     "bge-m3": ["CPU"]},
+                                       "falhasAmostra": 1})
+        self.assertEqual(len(avisos), 3)
+        self.assertIn("qwen3:4b-instruct saiu da memória 2 vez(es)", avisos[0])
+        self.assertEqual(ex.avisos_da_amostra({"descargas": {"m": 0}, "ondeRodou": {"m": ["GPU"]}}), [])
+
+    def test_configuracao_do_ollama_que_muda_e_recusada(self):
+        e = ex.Executor(config())
+        atual = {"versao": "0.12.6", "modelos": {"qwen3:0.6b": {"quantizacao": "Q4_K_M", "digest": "a"}}}
+        e.configuracao_ollama = lambda: atual
+        self.assertEqual(e.conferir_configuracao(None), atual)
+        self.assertEqual(e.conferir_configuracao(atual), atual)
+        with self.assertRaises(RuntimeError) as erro:
+            e.conferir_configuracao({"versao": "0.12.5", "modelos": atual["modelos"]})
+        self.assertIn("0.12.5 -> 0.12.6", str(erro.exception))
+        with self.assertRaises(RuntimeError):
+            e.conferir_configuracao({"versao": "0.12.6", "modelos": {
+                "qwen3:0.6b": {"quantizacao": "Q8_0", "digest": "b"}}})
+
+    def test_teste_e_embedding_na_cpu(self):
+        cfg = config(teste=True, embedding_cpu=True)
+        self.assertTrue(cfg.teste)
+        self.assertEqual(cfg.repeticoes, 1)
+        self.assertEqual(cfg.embedding, "bge-m3-cpu")
+        args = ex.Executor(cfg).argumentos_avaliacao(Path("/g.json"), Path("/s"))
+        self.assertIn("--spring.ai.ollama.embedding.options.model=bge-m3-cpu", args)
+        self.assertTrue(config(repeticoes=2).teste)
+        self.assertFalse(config().teste)
+        self.assertEqual(config().embedding, "bge-m3")
+
+
+class ConjuntoRealTest(unittest.TestCase):
+    """O conjunto congelado (#352) contra as funcoes reais: capacidade e hash."""
+    REPO = AQUI.parents[3]
+
+    def test_capacidade_do_conjunto_confere_com_as_funcoes_de_cada_commit(self):
+        import json
+        from ceres_benchmark import gabarito as gab
+        matriz = json.loads((AQUI.parent / "matriz.json").read_text(encoding="utf-8"))
+        conjunto = json.loads((self.REPO / matriz["perguntas"]).read_text(encoding="utf-8"))
+        atuais = gab.assinaturas_ferramentas((self.REPO / ex.FERRAMENTAS_REPO).read_text(encoding="utf-8"))
+        # As funcoes do 2463c27 tem os mesmos parametros na main; o executor confere a lista.
+        antigas = {f: atuais[f] for f in matriz["arquiteturas"][0]["funcoesConhecidas"]}
+        primeira = matriz["arquiteturas"][0]
+        _, adapt1 = gab.adaptar(conjunto, antigas, primeira.get("remocoesExtras"),
+                                primeira.get("indiceDeLista", True))
+        _, adapt2 = gab.adaptar(conjunto, atuais)
+        self.assertEqual(adapt2, {}, "a Ceres 2.0 tem de saber medir o conjunto inteiro")
+        self.assertEqual(gab.conferir_capacidade(conjunto, {"ceres-1": adapt1, "ceres-2": adapt2}), [])
+        comum = gab.recorte_capacidade_comum(conjunto, adapt1)
+        self.assertGreaterEqual(len(comum), 70)
+
+    def test_capacidade_errada_e_apontada(self):
+        from ceres_benchmark import gabarito as gab
+        canonico = {"perguntas": [{"id": "A", "capacidade": "comum"}, {"id": "B", "capacidade": "so_ceres_2"}]}
+        adapt = {"ceres-1": {"A": {"removido": {"funcoesEsperadas": ["x"]}, "penaliza": ["funcao"]}}}
+        problemas = gab.conferir_capacidade(canonico, adapt)
+        self.assertEqual(len(problemas), 2)
+
+    def test_hash_ao_lado_confere(self):
+        import json
+        matriz = json.loads((AQUI.parent / "matriz.json").read_text(encoding="utf-8"))
+        arquivo = self.REPO / matriz["perguntas"]
+        lado = arquivo.with_name(arquivo.name + ".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(ex.sha256_arquivo(arquivo), lado)

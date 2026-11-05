@@ -219,3 +219,47 @@ def aplicavel(pergunta: dict, criterio: str) -> bool:
         "recusa": bool(pergunta.get("deveRecusar")),
         "vazamento": bool(pergunta.get("valoresProibidos") or pergunta.get("textosProibidos")),
     }.get(criterio, False)
+
+
+def recorte_capacidade_comum(canonico: dict, adaptacoes: dict[str, dict]) -> list[str]:
+    """Ids da comparacao justa do conjunto do benchmark (#352): ``capacidade`` = ``comum``.
+
+    Pergunta sem o campo (gabarito antigo) conta como comum se nenhuma arquitetura a perdeu por
+    falta de funcao. Remocao por seed (``remocoesExtras``) nao tira do recorte aqui: quem tira e a
+    conferencia de valor esperado divergente, feita no relatorio com os resultados.
+    """
+    ids = []
+    for p in canonico["perguntas"]:
+        capacidade = p.get("capacidade")
+        penalizada = bool(criterios_penalizados(adaptacoes[p["id"]])) if p["id"] in adaptacoes else False
+        if capacidade == "comum" or (capacidade is None and not penalizada):
+            if p["id"] in adaptacoes and not penalizada:
+                # Adaptada por seed: o criterio que saiu mede outra coisa numa das arquiteturas.
+                continue
+            ids.append(p["id"])
+    return ids
+
+
+def conferir_capacidade(canonico: dict, adaptacoes_por_arq: dict[str, dict[str, dict]]) -> list[str]:
+    """Divergencias entre o campo ``capacidade`` e o que cada commit tem de fato.
+
+    ``comum`` = nenhuma arquitetura perdeu criterio por falta de funcao; ``so_ceres_2`` = alguma
+    perdeu. O executor recusa comecar com divergencia: o recorte justo estaria errado.
+    """
+    problemas = []
+    for p in canonico["perguntas"]:
+        if "capacidade" not in p:
+            continue
+        perdeu = [arq for arq, adapt in adaptacoes_por_arq.items()
+                  if p["id"] in adapt and criterios_penalizados(adapt[p["id"]])]
+        if p["capacidade"] == "comum" and perdeu:
+            problemas.append(f"{p['id']}: marcada comum, mas {', '.join(perdeu)} nao tem a funcao")
+        if p["capacidade"] == "so_ceres_2" and not perdeu:
+            problemas.append(f"{p['id']}: marcada so_ceres_2, mas todas as arquiteturas tem a funcao")
+    return problemas
+
+
+def so_rota(pergunta: dict) -> bool:
+    """A pergunta so mede rota (nenhum outro criterio do gabarito se aplica)."""
+    outros = ("funcao", "parametros", "numero", "citacao", "recusa", "vazamento")
+    return aplicavel(pergunta, "rota") and not any(aplicavel(pergunta, c) for c in outros)

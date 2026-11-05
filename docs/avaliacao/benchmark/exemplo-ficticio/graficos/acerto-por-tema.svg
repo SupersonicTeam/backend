@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Acerto por tema × célula">
+<rect width="1600" height="900" fill="#ffffff"/>
+<text x="40" y="60" font-size="44" font-weight="bold" fill="#111111">Acerto por tema × célula</text>
+<text x="40" y="104" font-size="26" fill="#333333">DADOS FICTÍCIOS — Pergunta certa, capacidade comum, média de 3 rodadas</text>
+<text x="560.8" y="165" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">Ceres 1</text>
+<text x="560.8" y="195" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">qwen3:0.6b</text>
+<text x="742.5" y="165" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">Ceres 1</text>
+<text x="742.5" y="195" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">qwen3:1.7b</text>
+<text x="924.2" y="165" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">Ceres 1</text>
+<text x="924.2" y="195" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">qwen3:4b-instruct</text>
+<text x="1105.8" y="165" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">Ceres 2.0</text>
+<text x="1105.8" y="195" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">qwen3:0.6b</text>
+<text x="1287.5" y="165" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">Ceres 2.0</text>
+<text x="1287.5" y="195" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">qwen3:1.7b</text>
+<text x="1469.2" y="165" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">Ceres 2.0</text>
+<text x="1469.2" y="195" font-size="24" font-weight="bold" text-anchor="middle" fill="#111111">qwen3:4b-instruct</text>
+<text x="454" y="265.4" font-size="24" text-anchor="end" fill="#111111">Guias e vencimentos</text>
+<rect x="473.0" y="233.0" width="175.7" height="46.0" fill="rgb(218,218,218)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="264.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">17%</text>
+<rect x="654.7" y="233.0" width="175.7" height="46.0" fill="rgb(231,231,231)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="264.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">8%</text>
+<rect x="836.3" y="233.0" width="175.7" height="46.0" fill="rgb(138,138,138)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="264.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">67%</text>
+<rect x="1018.0" y="233.0" width="175.7" height="46.0" fill="rgb(165,165,165)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="264.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">50%</text>
+<rect x="1199.7" y="233.0" width="175.7" height="46.0" fill="rgb(111,111,111)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="264.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">83%</text>
+<rect x="1381.3" y="233.0" width="175.7" height="46.0" fill="rgb(111,111,111)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="264.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">83%</text>
+<text x="454" y="317.4" font-size="24" text-anchor="end" fill="#111111">Notas fiscais</text>
+<rect x="473.0" y="285.0" width="175.7" height="46.0" fill="rgb(231,231,231)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="316.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">8%</text>
+<rect x="654.7" y="285.0" width="175.7" height="46.0" fill="rgb(218,218,218)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="316.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">17%</text>
+<rect x="836.3" y="285.0" width="175.7" height="46.0" fill="rgb(151,151,151)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="316.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">58%</text>
+<rect x="1018.0" y="285.0" width="175.7" height="46.0" fill="rgb(218,218,218)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="316.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">17%</text>
+<rect x="1199.7" y="285.0" width="175.7" height="46.0" fill="rgb(191,191,191)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="316.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">33%</text>
+<rect x="1381.3" y="285.0" width="175.7" height="46.0" fill="rgb(111,111,111)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="316.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">83%</text>
+<text x="454" y="369.4" font-size="24" text-anchor="end" fill="#111111">Compras e insumos</text>
+<rect x="473.0" y="337.0" width="175.7" height="46.0" fill="rgb(237,237,237)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="368.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">5%</text>
+<rect x="654.7" y="337.0" width="175.7" height="46.0" fill="rgb(206,206,206)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="368.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">24%</text>
+<rect x="836.3" y="337.0" width="175.7" height="46.0" fill="rgb(168,168,168)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="368.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">48%</text>
+<rect x="1018.0" y="337.0" width="175.7" height="46.0" fill="rgb(214,214,214)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="368.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">19%</text>
+<rect x="1199.7" y="337.0" width="175.7" height="46.0" fill="rgb(176,176,176)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="368.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">43%</text>
+<rect x="1381.3" y="337.0" width="175.7" height="46.0" fill="rgb(130,130,130)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="368.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">71%</text>
+<text x="454" y="421.4" font-size="24" text-anchor="end" fill="#111111">Vendas e produtos</text>
+<rect x="473.0" y="389.0" width="175.7" height="46.0" fill="rgb(245,245,245)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="420.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">0%</text>
+<rect x="654.7" y="389.0" width="175.7" height="46.0" fill="rgb(227,227,227)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="420.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">11%</text>
+<rect x="836.3" y="389.0" width="175.7" height="46.0" fill="rgb(120,120,120)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="420.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">78%</text>
+<rect x="1018.0" y="389.0" width="175.7" height="46.0" fill="rgb(209,209,209)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="420.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">22%</text>
+<rect x="1199.7" y="389.0" width="175.7" height="46.0" fill="rgb(156,156,156)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="420.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">56%</text>
+<rect x="1381.3" y="389.0" width="175.7" height="46.0" fill="rgb(173,173,173)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="420.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">44%</text>
+<text x="454" y="473.4" font-size="24" text-anchor="end" fill="#111111">Apuração e créditos de IBS/CBS</text>
+<rect x="473.0" y="441.0" width="175.7" height="46.0" fill="rgb(237,237,237)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="472.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">5%</text>
+<rect x="654.7" y="441.0" width="175.7" height="46.0" fill="rgb(214,214,214)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="472.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">19%</text>
+<rect x="836.3" y="441.0" width="175.7" height="46.0" fill="rgb(138,138,138)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="472.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">67%</text>
+<rect x="1018.0" y="441.0" width="175.7" height="46.0" fill="rgb(184,184,184)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="472.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">38%</text>
+<rect x="1199.7" y="441.0" width="175.7" height="46.0" fill="rgb(161,161,161)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="472.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">52%</text>
+<rect x="1381.3" y="441.0" width="175.7" height="46.0" fill="rgb(115,115,115)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="472.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">81%</text>
+<text x="454" y="525.4" font-size="24" text-anchor="end" fill="#111111">Retenções</text>
+<rect x="473.0" y="493.0" width="175.7" height="46.0" fill="rgb(227,227,227)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="524.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">11%</text>
+<rect x="654.7" y="493.0" width="175.7" height="46.0" fill="rgb(191,191,191)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="524.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">33%</text>
+<rect x="836.3" y="493.0" width="175.7" height="46.0" fill="rgb(173,173,173)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="524.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">44%</text>
+<rect x="1018.0" y="493.0" width="175.7" height="46.0" fill="rgb(200,200,200)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="524.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">28%</text>
+<rect x="1199.7" y="493.0" width="175.7" height="46.0" fill="rgb(173,173,173)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="524.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">44%</text>
+<rect x="1381.3" y="493.0" width="175.7" height="46.0" fill="rgb(120,120,120)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="524.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">78%</text>
+<text x="454" y="577.4" font-size="24" text-anchor="end" fill="#111111">Legislação geral da reforma</text>
+<rect x="473.0" y="545.0" width="175.7" height="46.0" fill="rgb(218,218,218)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="576.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">17%</text>
+<rect x="654.7" y="545.0" width="175.7" height="46.0" fill="rgb(186,186,186)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="576.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">37%</text>
+<rect x="836.3" y="545.0" width="175.7" height="46.0" fill="rgb(133,133,133)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="576.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">70%</text>
+<rect x="1018.0" y="545.0" width="175.7" height="46.0" fill="rgb(154,154,154)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="576.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">57%</text>
+<rect x="1199.7" y="545.0" width="175.7" height="46.0" fill="rgb(143,143,143)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="576.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">63%</text>
+<rect x="1381.3" y="545.0" width="175.7" height="46.0" fill="rgb(111,111,111)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="576.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">83%</text>
+<text x="454" y="629.4" font-size="24" text-anchor="end" fill="#111111">Legislação do agro</text>
+<rect x="473.0" y="597.0" width="175.7" height="46.0" fill="rgb(191,191,191)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="628.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">33%</text>
+<rect x="654.7" y="597.0" width="175.7" height="46.0" fill="rgb(170,170,170)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="628.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">47%</text>
+<rect x="836.3" y="597.0" width="175.7" height="46.0" fill="rgb(133,133,133)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="628.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">70%</text>
+<rect x="1018.0" y="597.0" width="175.7" height="46.0" fill="rgb(181,181,181)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="628.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">40%</text>
+<rect x="1199.7" y="597.0" width="175.7" height="46.0" fill="rgb(143,143,143)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="628.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">63%</text>
+<rect x="1381.3" y="597.0" width="175.7" height="46.0" fill="rgb(111,111,111)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="628.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">83%</text>
+<text x="454" y="681.4" font-size="24" text-anchor="end" fill="#111111">MISTO</text>
+<rect x="473.0" y="649.0" width="175.7" height="46.0" fill="rgb(245,245,245)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="680.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">0%</text>
+<rect x="654.7" y="649.0" width="175.7" height="46.0" fill="rgb(237,237,237)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="680.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">5%</text>
+<rect x="836.3" y="649.0" width="175.7" height="46.0" fill="rgb(191,191,191)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="680.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">33%</text>
+<rect x="1018.0" y="649.0" width="175.7" height="46.0" fill="rgb(176,176,176)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="680.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">43%</text>
+<rect x="1199.7" y="649.0" width="175.7" height="46.0" fill="rgb(184,184,184)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="680.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">38%</text>
+<rect x="1381.3" y="649.0" width="175.7" height="46.0" fill="rgb(153,153,153)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="680.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">57%</text>
+<text x="454" y="733.4" font-size="24" text-anchor="end" fill="#111111">Fora de escopo e recusa</text>
+<rect x="473.0" y="701.0" width="175.7" height="46.0" fill="rgb(207,207,207)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="732.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">23%</text>
+<rect x="654.7" y="701.0" width="175.7" height="46.0" fill="rgb(186,186,186)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="732.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">37%</text>
+<rect x="836.3" y="701.0" width="175.7" height="46.0" fill="rgb(127,127,127)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="732.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">73%</text>
+<rect x="1018.0" y="701.0" width="175.7" height="46.0" fill="rgb(165,165,165)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="732.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">50%</text>
+<rect x="1199.7" y="701.0" width="175.7" height="46.0" fill="rgb(133,133,133)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="732.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">70%</text>
+<rect x="1381.3" y="701.0" width="175.7" height="46.0" fill="rgb(122,122,122)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="732.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">77%</text>
+<text x="454" y="785.4" font-size="24" text-anchor="end" fill="#111111">Segurança</text>
+<rect x="473.0" y="753.0" width="175.7" height="46.0" fill="rgb(151,151,151)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="784.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">58%</text>
+<rect x="654.7" y="753.0" width="175.7" height="46.0" fill="rgb(125,125,125)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="784.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">75%</text>
+<rect x="836.3" y="753.0" width="175.7" height="46.0" fill="rgb(138,138,138)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="784.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">67%</text>
+<rect x="1018.0" y="753.0" width="175.7" height="46.0" fill="rgb(131,131,131)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="784.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">71%</text>
+<rect x="1199.7" y="753.0" width="175.7" height="46.0" fill="rgb(111,111,111)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="784.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">83%</text>
+<rect x="1381.3" y="753.0" width="175.7" height="46.0" fill="rgb(91,91,91)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="784.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">96%</text>
+<text x="454" y="837.4" font-size="24" text-anchor="end" fill="#111111">Linguagem do dia a dia</text>
+<rect x="473.0" y="805.0" width="175.7" height="46.0" fill="rgb(231,231,231)" stroke="#999999" stroke-width="1"/>
+<text x="560.8" y="836.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">8%</text>
+<rect x="654.7" y="805.0" width="175.7" height="46.0" fill="rgb(178,178,178)" stroke="#999999" stroke-width="1"/>
+<text x="742.5" y="836.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">42%</text>
+<rect x="836.3" y="805.0" width="175.7" height="46.0" fill="rgb(178,178,178)" stroke="#999999" stroke-width="1"/>
+<text x="924.2" y="836.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">42%</text>
+<rect x="1018.0" y="805.0" width="175.7" height="46.0" fill="rgb(178,178,178)" stroke="#999999" stroke-width="1"/>
+<text x="1105.8" y="836.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">42%</text>
+<rect x="1199.7" y="805.0" width="175.7" height="46.0" fill="rgb(138,138,138)" stroke="#999999" stroke-width="1"/>
+<text x="1287.5" y="836.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#111111">67%</text>
+<rect x="1381.3" y="805.0" width="175.7" height="46.0" fill="rgb(98,98,98)" stroke="#999999" stroke-width="1"/>
+<text x="1469.2" y="836.3" font-size="26" font-weight="bold" text-anchor="middle" fill="#ffffff">92%</text>
+<text x="800.0" y="450.0" font-size="100" font-weight="bold" fill="#cc0000" fill-opacity="0.30" text-anchor="middle" transform="rotate(-20 800.0 450.0)">DADOS FICTÍCIOS</text>
+</svg>

@@ -12,7 +12,17 @@
           "camposValor"
         ]
       },
-      "notaRemocoesExtras": "T10: o seed v2 do 2463c27 nao tem nota DEVOLVIDA (veio no v4, #274); o valor esperado seria 0 e mediria outra coisa. Conferido rodando o ValoresEsperados do 2463c27 com o gabarito adaptado (2026-11-05)."
+      "notaRemocoesExtras": "T10: o seed v2 do 2463c27 nao tem nota DEVOLVIDA (veio no v4, #274); o valor esperado seria 0 e mediria outra coisa. Conferido rodando o ValoresEsperados do 2463c27 com o gabarito adaptado (2026-11-05).",
+      "funcoesConhecidas": [
+        "consultarApuracao",
+        "consultarCreditos",
+        "consultarRetencoes",
+        "listarAlertas",
+        "listarNotas",
+        "proximosVencimentos",
+        "totalComprasPorInsumo"
+      ],
+      "funcoesConhecidasNota": "Funcoes @Tool do FerramentasDadosProdutor no 2463c27, conferidas pelo executor: definem o campo capacidade do conjunto (so_ceres_2 = depende de funcao fora desta lista)."
     },
     {
       "nome": "ceres-2",
@@ -29,5 +39,10 @@
   "modeloReferencia": "qwen3:4b-instruct",
   "embedding": "bge-m3",
   "repeticoes": 3,
-  "trechosLegislacao": 8304
+  "trechosLegislacao": 8304,
+  "perguntas": "docs/avaliacao/benchmark/perguntas-benchmark.json",
+  "sessaoParalela": {
+    "issue": "#270",
+    "rotulo": "Sessão 7 (prompts por rota e teto de tokens)"
+  }
 }

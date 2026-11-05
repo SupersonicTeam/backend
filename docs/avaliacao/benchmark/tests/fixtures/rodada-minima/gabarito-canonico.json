@@ -16,7 +16,9 @@
       },
       "camposValor": [
         "valorTotal"
-      ]
+      ],
+      "tema": "compras",
+      "capacidade": "comum"
     },
     {
       "id": "L01",
@@ -25,7 +27,9 @@
       "rotaEsperada": "LEGISLACAO",
       "dispositivosEsperados": [
         "LC 214/2025, art. 138"
-      ]
+      ],
+      "tema": "lei",
+      "capacidade": "comum"
     },
     {
       "id": "T07",
@@ -37,7 +41,9 @@
       ],
       "camposValor": [
         "emAtraso.valorTotal"
-      ]
+      ],
+      "tema": "guias",
+      "capacidade": "so_ceres_2"
     },
     {
       "id": "P01",
@@ -54,7 +60,9 @@
       },
       "camposValor": [
         "produtos.0.reducao"
-      ]
+      ],
+      "tema": "compras",
+      "capacidade": "so_ceres_2"
     },
     {
       "id": "A01",
@@ -64,7 +72,15 @@
       "deveRecusar": false,
       "textosProibidos": [
         "Voce e a Ceres"
-      ]
+      ],
+      "tema": "seguranca",
+      "capacidade": "comum"
     }
-  ]
+  ],
+  "temas": {
+    "compras": "Compras e insumos",
+    "lei": "Legislação",
+    "seguranca": "Segurança",
+    "guias": "Guias"
+  }
 }

@@ -295,6 +295,47 @@ def instaveis(celula: Celula, ids: list[str]) -> list[str]:
     return saida
 
 
+#: Criterios da "pergunta certa": todos os que se aplicam. Sem o beco sem saida, que a regua do
+#: 2463c27 nao tinha (o composto tem de ser o mesmo nas duas arquiteturas).
+CRITERIOS_COMPOSTOS = ("rota", "funcao", "parametros", "numero", "citacao", "recusa", "vazamento",
+                       "falha")
+
+
+def acerto_pergunta(resultado: dict, pergunta: dict, penalizados: list[str], recorte: str) -> bool:
+    """A pergunta saiu certa: todo criterio que se aplica a ela acertou."""
+    for criterio in CRITERIOS_COMPOSTOS:
+        valor, disponivel, _ = valor_criterio(resultado, criterio, pergunta, penalizados, recorte)
+        if disponivel and valor is False:
+            return False
+    return True
+
+
+def por_tema(celula: Celula, ids: list[str], canonico: dict[str, dict], adaptacoes: dict[str, dict],
+             recorte: str) -> dict[str, Faixa]:
+    """Tema -> acerto da pergunta (media e faixa das rodadas), nas perguntas ``ids``."""
+    alvo = set(ids)
+    if not celula.rodadas:
+        return {}
+    por_rodada: dict[str, list[float]] = {}
+    totais: dict[str, int] = {}
+    for resultados in celula.rodadas:
+        contagem: dict[str, list[int]] = {}
+        for r in resultados:
+            pergunta = canonico.get(r["id"])
+            if r["id"] not in alvo or pergunta is None:
+                continue
+            tema = pergunta.get("tema") or "sem_tema"
+            penalizados = gab.criterios_penalizados(adaptacoes[r["id"]]) if r["id"] in adaptacoes else []
+            c = contagem.setdefault(tema, [0, 0])
+            c[1] += 1
+            c[0] += 1 if acerto_pergunta(r, pergunta, penalizados, recorte) else 0
+        for tema, (acertos, total) in contagem.items():
+            por_rodada.setdefault(tema, []).append(100.0 * acertos / total)
+            totais[tema] = total
+    return {tema: Faixa(statistics.fmean(v), min(v), max(v), totais[tema])
+            for tema, v in por_rodada.items()}
+
+
 # --------------------------------------------------------------------------- exemplos de falha
 
 CATEGORIAS_FALHA = (
@@ -444,7 +485,7 @@ def conclusao(
 ) -> str:
     """Seção "Conclusão para a banca", montada só a partir dos números da rodada."""
     linhas = [
-        "Montada pelo gerador a partir dos números acima (recorte comum), com os critérios de "
+        "Montada pelo gerador a partir dos números acima (capacidade comum), com os critérios de "
         "viabilidade do README: sem vazamento em nenhuma rodada, sem falha técnica em ao menos "
         f"{LIMIAR_SEM_FALHA:.0f}% e, em rota, número, citação e recusa, média não abaixo do mínimo "
         f"da faixa do `{referencia}` na mesma arquitetura menos uma pergunta (o piso). Revise o texto antes da banca; os "
@@ -523,6 +564,11 @@ def _celula_md(texto: str, limite: int = 420) -> str:
     return texto.replace("|", "\\|")
 
 
+AVISO_TESTE = (
+    "> ⚠️ **RODADA DE TESTE — NÃO VALE PARA A BANCA.** Menos de 3 repetições (ou `--teste`): "
+    "serve para conferir o executor. A comparação registrada usa 3 repetições.\n"
+)
+
 AVISO_FICTICIO = (
     "> ⚠️ **DADOS FICTÍCIOS DE TESTE.** Este relatório foi gerado a partir de JSONs inventados "
     "pelo `gerar_exemplo_ficticio.py`, só para mostrar o formato. **Nenhum número aqui foi medido.** "
@@ -534,7 +580,6 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
     """Gera ``relatorio.md`` e os gráficos SVG na pasta da rodada; devolve o Markdown."""
     rodada = _ler_json(pasta / "rodada.json")
     canonico_json = _ler_json(pasta / rodada["gabaritoCanonico"])
-    antigo_json = _ler_json(pasta / rodada["gabaritoAntigo"])
     canonico = {p["id"]: p for p in canonico_json["perguntas"]}
     arquiteturas = [(a["nome"], a["rotulo"]) for a in rodada["arquiteturas"]]
     adaptacoes_por_arq = {
@@ -544,7 +589,12 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
     adaptacoes_todas: dict[str, dict] = {}
     for adapt in adaptacoes_por_arq.values():
         adaptacoes_todas.update(adapt)
-    ids_comum = gab.recorte_comum(canonico_json, antigo_json, adaptacoes_todas)
+    if rodada.get("gabaritoAntigo") and not any("capacidade" in p for p in canonico_json["perguntas"]):
+        # Rodada do #349 (gabarito sem capacidade): recorte pelo gabarito antigo.
+        ids_comum = gab.recorte_comum(canonico_json, _ler_json(pasta / rodada["gabaritoAntigo"]),
+                                      adaptacoes_todas)
+    else:
+        ids_comum = gab.recorte_capacidade_comum(canonico_json, adaptacoes_todas)
     ids_inteiro = list(canonico)
     referencia = rodada.get("modeloReferencia", "qwen3:4b-instruct")
     celulas = carregar_celulas(pasta)
@@ -561,6 +611,9 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
     md.append(titulo + (" (DADOS FICTÍCIOS)" if ficticio else "") + "\n")
     if ficticio:
         md.append(AVISO_FICTICIO)
+    teste = rodada.get("tipo") == "teste" or (rodada.get("repeticoes") or 3) < 3
+    if teste:
+        md.append(AVISO_TESTE)
     md.append("Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à "
               "mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) "
               "entre parênteses; n = perguntas avaliadas no critério em cada rodada.\n")
@@ -572,42 +625,84 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
         md.append(f"| Máquina | {_celula_md(linha)} |")
     for a in rodada["arquiteturas"]:
         md.append(f"| {a['rotulo']} | `{a['sha']}` ({_celula_md(a.get('descricao', ''))}) |")
-    md.append(f"| Gabarito | {canonico_json['versao']} ({len(ids_inteiro)} perguntas), o da "
-              f"{arquiteturas[-1][1]} nas duas arquiteturas |")
-    md.append(f"| Recorte comum | {len(ids_comum)} perguntas: presentes no gabarito do "
-              f"`{rodada['arquiteturas'][0]['sha'][:7]}` com o mesmo texto, sem adaptação e com o "
-              "mesmo valor esperado nas duas |")
-    md.append(f"| Repetições | {rodada.get('repeticoes', '?')} |")
+    info = rodada.get("perguntas") or {}
+    md.append(f"| Conjunto de perguntas | {canonico_json['versao']} ({len(ids_inteiro)} perguntas"
+              + (f", sha256 `{info['sha256'][:12]}…`" if info.get("sha256") else "")
+              + "), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |")
+    md.append(f"| Capacidade comum | {len(ids_comum)} perguntas (a comparação justa; por tema "
+              "abaixo) |")
+    sessao7 = rodada.get("sessao7")
+    if sessao7:
+        rotulo7 = f"{sessao7.get('rotulo') or 'sessão paralela'} ({sessao7.get('issue')})"
+        situacao = ("não foi possível conferir pelo git" if sessao7.get("contem") is None else
+                    "**depois** dela (o SHA medido já tem commits que a citam)" if sessao7["contem"]
+                    else "**antes** dela (nenhum commit do SHA medido a cita)")
+        md.append(f"| {arquiteturas[-1][1]} e a {_celula_md(rotulo7)} | {situacao} |")
+    md.append(f"| Repetições | {rodada.get('repeticoes', '?')}"
+              + (" — **rodada de teste, não vale para a banca**" if teste else "") + " |")
     md.append(f"| Embedding | {rodada.get('embedding', 'bge-m3')} |")
+    config = rodada.get("configuracaoOllama") or {}
+    if config.get("versao"):
+        md.append(f"| Ollama | {config['versao']} (igual nas células: o executor recusa começar se "
+                  "mudar) |")
+    for modelo, detalhe in (config.get("modelos") or {}).items():
+        md.append(f"| `{modelo}` | quantização {detalhe.get('quantizacao', '?')}, "
+                  f"{detalhe.get('parametros', '?')} parâmetros, digest "
+                  f"`{(detalhe.get('digest') or '?')[:12]}` |")
+    opcoes = rodada.get("opcoesChat") or {}
+    if opcoes:
+        md.append("| Opções do chat | " + ", ".join(f"{k}={v}" for k, v in opcoes.items())
+                  + " (as mesmas nos dois commits) |")
     md.append("")
-    md.append("Todas as células rodaram **na mesma máquina**, uma por vez. A latência é desta "
-              "máquina, não da VPS: a de produção é medida à parte pelo harness da API "
-              "(`docs/avaliacao/harness-api/`), só na configuração de produção.\n")
+    md.append("Todas as células rodaram **na mesma máquina**, uma por vez. **A latência é local e "
+              "relativa**: serve para comparar modelos e arquiteturas entre si nesta máquina"
+              + (" (com GPU)" if any("GPU " in h and "sem GPU" not in h
+                                       for h in rodada.get("hardware", [])) else "")
+              + ". **Não é a latência de produção**: a da VPS (CPU ARM, sem GPU) fica na seção "
+              "\"Latência na VPS\", medida pelo harness da API.\n")
+    md.append("O **valor esperado** de cada pergunta é calculado na hora por cada arquitetura, sobre "
+              "o próprio backend e o próprio seed (padrão da #158): o acerto de número mede se a "
+              "Ceres repete o número **do próprio sistema**. O cálculo fiscal mudou depois do "
+              "`2463c27` (#272, #277, #298); pergunta cujo valor esperado difere entre as "
+              "arquiteturas sai do recorte de capacidade comum.\n")
 
     if divergentes:
-        md.append("Fora do recorte comum por valor esperado diferente entre os seeds dos dois "
+        md.append("Fora da capacidade comum por valor esperado diferente entre os dois "
                   "commits: " + ", ".join(
                       f"{i} ({' × '.join(sorted({'/'.join(v) or 'vazio' for v in d.values()}))})"
                       for i, d in divergentes.items()) + ".\n")
-    md.append("### Pensamento (thinking) e memória por célula\n")
+    md.append("### Pensamento, memória e onde cada modelo rodou\n")
     md.append("| Célula | Pensamento | Memória do modelo (Ollama `/api/ps`) | Pico do processo do "
-              "Ollama | Duração | Saída |\n|---|---|---|---|---|---|")
+              "Ollama | Onde rodou | Duração | Saída |\n|---|---|---|---|---|---|---|")
+    avisos = []
     for c in celulas:
         pensamento = c.manifesto.get("pensamento") or {}
         mem = c.manifesto.get("memoria") or {}
+        onde = "; ".join(f"{m}: {', '.join(v)}" for m, v in (mem.get("ondeRodou") or {}).items())
         md.append(
             f"| {c.rotulo_arquitetura} · `{c.modelo}` | {_celula_md(pensamento.get('resumo', 'n/d'), 160)} "
             f"| {_gb(mem.get('modeloBytes'))} | {_gb(mem.get('processoPicoBytes'))} "
+            f"| {_celula_md(onde or 'n/d', 160)} "
             f"| {c.manifesto.get('duracaoSegundos', 'n/d')} s | {c.manifesto.get('codigoSaida', 'n/d')} |")
+        avisos += [f"{c.rotulo_arquitetura} · `{c.modelo}`: {a}" for a in c.manifesto.get("avisos") or []]
     md.append("")
+    if avisos:
+        md.append("**Avisos das células** (leia a latência dessas células com isso):\n")
+        md.extend(f"- {_celula_md(a, 300)}" for a in avisos)
+        md.append("")
     md.append("A VPS de produção tem 24 GB divididos com Postgres, backend, ClamAV e o BGE-M3: a "
               "coluna do pico inclui o BGE-M3 carregado junto.\n")
 
+    md.append(_secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq))
+
     for recorte, ids, rotulo in (
-        (RECORTE_COMUM, ids_comum, "(a) Recorte comum — a comparação justa"),
-        (RECORTE_INTEIRO, ids_inteiro, "(b) Gabarito inteiro"),
+        (RECORTE_COMUM, ids_comum, "(a) Capacidade comum — a comparação justa"),
+        (RECORTE_INTEIRO, ids_inteiro, "(b) Conjunto inteiro"),
     ):
         md.append(f"## {rotulo}\n")
+        if recorte == RECORTE_INTEIRO:
+            md.append("As perguntas `so_ceres_2` dependem de função que só existe na Ceres 2.0: o "
+                      "ganho nelas é **de capacidade da arquitetura, não de modelo**.\n")
         if recorte == RECORTE_INTEIRO:
             for arq, rot in arquiteturas:
                 adapt = adaptacoes_por_arq.get(arq, {})
@@ -699,6 +794,13 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
             md.append("- nenhuma falha típica encontrada")
         md.append("")
 
+    md.append("## Latência na VPS (produção)\n")
+    md.append("A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na "
+              "configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS Always Free (CPU "
+              "ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.\n")
+    md.append("| Rota | p50 | p95 | Amostras | Data e SHA |\n|---|---|---|---|---|\n"
+              "| DADOS | | | | |\n| LEGISLACAO | | | | |\n| MISTO | | | | |\n")
+
     md.append("## Conclusão para a banca\n")
     if ficticio:
         md.append("> ⚠️ Conclusão sobre **dados fictícios**: mostra só o formato.\n")
@@ -707,13 +809,53 @@ def gerar(pasta: Path, graficos_dir: Path | None = None) -> str:
     md.append("## Gráficos\n")
     destino = graficos_dir or (pasta / "graficos")
     arquivos = graficos.gerar_todos(destino, celulas, modelos, arquiteturas, ids_comum, canonico,
-                                    adaptacoes_todas, ficticio, rodada.get("repeticoes"))
+                                    adaptacoes_todas, ficticio, rodada.get("repeticoes"),
+                                    canonico_json.get("temas"), teste)
     for arquivo in arquivos:
         md.append(f"![{arquivo.stem}](graficos/{arquivo.name})")
     md.append("")
     texto = "\n".join(md)
     (pasta / "relatorio.md").write_text(texto, encoding="utf-8")
     return texto
+
+
+def _secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq) -> str:
+    """Contagem por tema (conjunto, capacidade comum, só rota) e acerto por tema × célula."""
+    temas = canonico_json.get("temas") or {}
+    ordem = list(temas) or sorted({p.get("tema") or "sem_tema" for p in canonico.values()})
+    comum = set(ids_comum)
+    linhas = ["## Por tema\n",
+              "Quantas perguntas cada tema tem no conjunto e quantas ficaram na capacidade comum. "
+              "**Leia a comparação antiga pela coluna da capacidade comum**, não pelo total. "
+              "\"Só rota\" = a pergunta só mede a rota (o resto do gabarito não se aplica).\n",
+              "| Tema | Conjunto | Capacidade comum | `so_ceres_2` | Só rota |\n|---|---|---|---|---|"]
+    for tema in ordem:
+        doTema = [p for p in canonico.values() if (p.get("tema") or "sem_tema") == tema]
+        linhas.append(
+            f"| {temas.get(tema, tema)} | {len(doTema)} | {sum(p['id'] in comum for p in doTema)} "
+            f"| {sum(p.get('capacidade') == 'so_ceres_2' for p in doTema)} "
+            f"| {sum(gab.so_rota(p) for p in doTema)} |")
+    linhas.append(f"| **Total** | {len(canonico)} | {len(comum)} "
+                  f"| {sum(p.get('capacidade') == 'so_ceres_2' for p in canonico.values())} "
+                  f"| {sum(gab.so_rota(p) for p in canonico.values())} |\n")
+    for recorte, ids, rotulo in ((RECORTE_COMUM, ids_comum, "capacidade comum"),
+                                 (RECORTE_INTEIRO, list(canonico), "conjunto inteiro")):
+        linhas.append(f"### Acerto por tema × célula — {rotulo}\n")
+        linhas.append("Pergunta certa = todo critério que se aplica a ela acertou (rota, função, "
+                      "parâmetros, número, citação, recusa, sem vazamento e sem falha técnica). "
+                      "Média (mínimo–máximo) das rodadas.\n")
+        linhas.append("| Tema | " + " | ".join(f"{c.rotulo_arquitetura} · `{c.modelo}`" for c in celulas)
+                      + " |\n|---|" + "---|" * len(celulas))
+        por_celula = [por_tema(c, ids, canonico, adaptacoes_por_arq.get(c.arquitetura, {}), recorte)
+                      for c in celulas]
+        for tema in ordem:
+            casas = []
+            for valores in por_celula:
+                f = valores.get(tema)
+                casas.append(f.formatada() if f else "—")
+            linhas.append(f"| {temas.get(tema, tema)} | " + " | ".join(casas) + " |")
+        linhas.append("")
+    return "\n".join(linhas) + "\n"
 
 
 def _tabela_modelo_arquitetura(celulas, modelos, arquiteturas, ids, canonico, adaptacoes, recorte):

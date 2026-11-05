@@ -32,6 +32,11 @@ _DEFS = """<defs>
 </defs>"""
 
 
+def _marca(ficticio: bool | str) -> str:
+    """Texto da marca d'agua: ``True`` = dados ficticios; texto = a propria marca."""
+    return ficticio if isinstance(ficticio, str) else "DADOS FICTÍCIOS"
+
+
 def _preenchimento(estilo: dict) -> str:
     return f"url(#{estilo['padrao']})" if estilo["padrao"] else estilo["cor"]
 
@@ -44,7 +49,7 @@ def barras_agrupadas(
     valores: list[list[tuple[float | None, float | None, float | None]]],
     unidade: str,
     maximo: float | None = None,
-    ficticio: bool = False,
+    ficticio: bool | str = False,
 ) -> str:
     """SVG de barras agrupadas.
 
@@ -72,7 +77,7 @@ def barras_agrupadas(
         f'<text x="{MARGEM_ESQ}" y="64" font-size="44" font-weight="bold" fill="#111111">'
         f"{escape(titulo)}</text>",
         f'<text x="{MARGEM_ESQ}" y="110" font-size="28" fill="#333333">'
-        f'{escape(("DADOS FICTÍCIOS — " if ficticio else "") + subtitulo)}</text>',
+        f'{escape((_marca(ficticio) + " — " if ficticio else "") + subtitulo)}</text>',
     ]
     # Eixo e grade
     for i in range(5):
@@ -128,7 +133,56 @@ def barras_agrupadas(
         partes.append(
             f'<text x="{LARGURA / 2}" y="{ALTURA / 2}" font-size="110" font-weight="bold" '
             f'fill="#cc0000" fill-opacity="0.30" text-anchor="middle" '
-            f'transform="rotate(-20 {LARGURA / 2} {ALTURA / 2})">DADOS FICTÍCIOS</text>')
+            f'transform="rotate(-20 {LARGURA / 2} {ALTURA / 2})">{escape(_marca(ficticio))}</text>')
+    partes.append("</svg>")
+    return "\n".join(partes) + "\n"
+
+
+def mapa_tema_celula(titulo: str, subtitulo: str, temas: list[str], colunas: list[str],
+                     valores: list[list[tuple[float | None, int]]], marca: str | None = None) -> str:
+    """Tabela-mapa tema x celula: o percentual escrito em cada casa (o tom de cinza so reforca,
+    nunca e a unica informacao). ``valores[tema][coluna] = (media, n)``."""
+    largura, altura = 1600, 900
+    esquerda, topo = 470, 230
+    largura_col = (largura - esquerda - 40) / max(1, len(colunas))
+    altura_lin = min(52.0, (altura - topo - 40) / max(1, len(temas)))
+    partes = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {largura} {altura}" width="{largura}" '
+        f'height="{altura}" font-family="Arial, Helvetica, sans-serif" role="img" '
+        f'aria-label="{escape(titulo)}">',
+        f'<rect width="{largura}" height="{altura}" fill="#ffffff"/>',
+        f'<text x="40" y="60" font-size="44" font-weight="bold" fill="#111111">{escape(titulo)}</text>',
+        f'<text x="40" y="104" font-size="26" fill="#333333">'
+        f'{escape((marca + " — " if marca else "") + subtitulo)}</text>',
+    ]
+    for ci, coluna in enumerate(colunas):
+        x = esquerda + largura_col * (ci + 0.5)
+        for li, parte in enumerate(coluna.split("\n")):
+            partes.append(f'<text x="{x:.1f}" y="{165 + li * 30}" font-size="24" font-weight="bold" '
+                          f'text-anchor="middle" fill="#111111">{escape(parte)}</text>')
+    for ti, tema in enumerate(temas):
+        y = topo + ti * altura_lin
+        partes.append(f'<text x="{esquerda - 16}" y="{y + altura_lin * 0.68:.1f}" font-size="24" '
+                      f'text-anchor="end" fill="#111111">{escape(tema)}</text>')
+        for ci in range(len(colunas)):
+            media, n = valores[ti][ci]
+            x = esquerda + largura_col * ci
+            if media is None:
+                cinza, texto, cor_texto = 255, "—", "#333333"
+            else:
+                cinza = int(245 - 1.6 * media)  # 245 (0%) a 85 (100%)
+                # Texto branco so no cinza escuro: contraste >= 4,5:1 nos dois tons.
+                texto, cor_texto = f"{media:.0f}%", "#ffffff" if cinza < 115 else "#111111"
+            partes.append(f'<rect x="{x + 3:.1f}" y="{y + 3:.1f}" width="{largura_col - 6:.1f}" '
+                          f'height="{altura_lin - 6:.1f}" fill="rgb({cinza},{cinza},{cinza})" '
+                          f'stroke="#999999" stroke-width="1"/>')
+            partes.append(f'<text x="{x + largura_col / 2:.1f}" y="{y + altura_lin * 0.66:.1f}" '
+                          f'font-size="26" font-weight="bold" text-anchor="middle" fill="{cor_texto}">'
+                          f'{texto}</text>')
+    if marca:
+        partes.append(f'<text x="{largura / 2}" y="{altura / 2}" font-size="100" font-weight="bold" '
+                      f'fill="#cc0000" fill-opacity="0.30" text-anchor="middle" '
+                      f'transform="rotate(-20 {largura / 2} {altura / 2})">{escape(marca)}</text>')
     partes.append("</svg>")
     return "\n".join(partes) + "\n"
 
@@ -140,13 +194,32 @@ def _rotulo(valor: float, unidade: str) -> str:
 
 
 def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canonico, adaptacoes,
-                ficticio: bool, repeticoes: int | None = None) -> list[Path]:
-    """Os graficos do relatorio (recorte comum); devolve os arquivos gravados."""
+                ficticio: bool, repeticoes: int | None = None, temas: dict | None = None,
+                teste: bool = False) -> list[Path]:
+    """Os graficos do relatorio (capacidade comum); devolve os arquivos gravados.
+
+    O principal, para o slide, e ``acerto-por-tema.svg`` (tema x celula).
+    """
     from . import relatorio as rel  # import tardio: relatorio importa este modulo
 
     destino.mkdir(parents=True, exist_ok=True)
     series = [rotulo for _, rotulo in arquiteturas]
     arquivos = []
+    marca = "DADOS FICTÍCIOS" if ficticio else ("RODADA DE TESTE" if teste else None)
+
+    ordem = list(temas or {}) or sorted({p.get("tema") or "sem_tema" for p in canonico.values()})
+    por_celula = [rel.por_tema(c, ids_comum, canonico, adaptacoes, rel.RECORTE_COMUM) for c in celulas]
+    valores_tema = [[(pc[t].media, pc[t].total) if t in pc else (None, 0) for pc in por_celula]
+                    for t in ordem]
+    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" for c in celulas]
+    rodadas_txt = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
+    arquivo = destino / "acerto-por-tema.svg"
+    arquivo.write_text(mapa_tema_celula(
+        "Acerto por tema × célula", f"Pergunta certa, capacidade comum, {rodadas_txt}",
+        # Rotulo curto no slide (sem o parentese): o completo fica na tabela do relatorio.
+        [(temas or {}).get(t, t).split(" (")[0] for t in ordem], colunas, valores_tema, marca),
+        encoding="utf-8")
+    arquivos.append(arquivo)
 
     def celula(modelo, arq):
         return next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
@@ -165,8 +238,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
             valores.append(linha)
         nome = rel.CRITERIOS[criterio][0]
         rodadas = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
-        svg = barras_agrupadas(nome, f"Recorte comum, n={n} por rodada, {rodadas}",
-                               modelos, series, valores, "%", 100.0, ficticio)
+        svg = barras_agrupadas(nome, f"Capacidade comum, n={n} por rodada, {rodadas}",
+                               modelos, series, valores, "%", 100.0, marca or False)
         arquivo = destino / f"{criterio}.svg"
         arquivo.write_text(svg, encoding="utf-8")
         arquivos.append(arquivo)
@@ -181,8 +254,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
         lat.append(linha)
     arquivo = destino / "latencia-p50.svg"
     arquivo.write_text(barras_agrupadas("Latência p50 por pergunta",
-                                        "Recorte comum, todas as rodadas, nesta máquina (não a VPS)",
-                                        modelos, series, lat, "s", None, ficticio), encoding="utf-8")
+                                        "Capacidade comum, todas as rodadas; latência LOCAL e relativa, não a da VPS",
+                                        modelos, series, lat, "s", None, marca or False), encoding="utf-8")
     arquivos.append(arquivo)
 
     mem = []
@@ -196,6 +269,6 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     arquivo = destino / "memoria.svg"
     arquivo.write_text(barras_agrupadas("Memória do modelo carregado no Ollama",
                                         "GB do /api/ps com o num_ctx da Ceres (VPS: 24 GB no total)",
-                                        modelos, series, mem, "GB", None, ficticio), encoding="utf-8")
+                                        modelos, series, mem, "GB", None, marca or False), encoding="utf-8")
     arquivos.append(arquivo)
     return arquivos
