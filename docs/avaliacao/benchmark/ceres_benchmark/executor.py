@@ -780,9 +780,11 @@ class Executor:
     def sessao_paralela(self) -> dict | None:
         """O SHA da Ceres 2.0 ja tem a sessao que muda a main em paralelo (ex.: #270)?
 
-        Com ``commit`` na matriz (o merge da sessao), pela ancestralidade. Sem ele, por um commit
-        de merge **da propria issue** no historico: assunto terminado em ``(#270) (#NNN)``, o padrao
-        do squash dos PRs do repositorio. Commit que so cita a issue no corpo nao conta.
+        ``confirmado`` so com ``commit`` na matriz (o merge do **ultimo** PR da sessao) e o SHA
+        medido o contendo: a sessao entra em varios PRs, e ter um deles no historico nao e ter a
+        sessao inteira. ``commits`` lista os merges da issue ja presentes (assunto terminado em
+        ``(#270) (#NNN)``, o squash dos PRs do repositorio; commit que so cita a issue no corpo nao
+        conta), para o relatorio dizer o que o ensaio ja tem.
         """
         alvo = self.cfg.matriz.get("sessaoParalela")
         if not alvo:
@@ -790,17 +792,19 @@ class Executor:
         sha = self.cfg.todas_arquiteturas[-1]["sha"]
         base = {"issue": alvo["issue"], "rotulo": alvo.get("rotulo")}
         try:
+            assuntos = self.capturar(["git", "log", "--format=%h %s", sha], self.cfg.repo).splitlines()
+            confirmado = False
             if alvo.get("commit"):
                 ancestral = subprocess.run(
                     ["git", "merge-base", "--is-ancestor", alvo["commit"], sha], cwd=self.cfg.repo)
                 if ancestral.returncode not in (0, 1):
-                    return {**base, "contem": None}
-                return {**base, "contem": ancestral.returncode == 0, "commits": [alvo["commit"]]}
-            assuntos = self.capturar(["git", "log", "--format=%h %s", sha], self.cfg.repo).splitlines()
+                    return {**base, "contem": None, "confirmado": False}
+                confirmado = ancestral.returncode == 0
         except (subprocess.CalledProcessError, OSError):
-            return {**base, "contem": None}
+            return {**base, "contem": None, "confirmado": False}
         commits = commits_da_issue(assuntos, alvo["issue"])
-        return {**base, "contem": bool(commits), "commits": commits[:5]}
+        return {**base, "contem": bool(commits) or confirmado, "confirmado": confirmado,
+                "commits": commits[:10]}
 
     def fixar_shas(self, anterior: dict | None) -> None:
         """SHA de cada arquitetura da matriz; numa retomada, o da rodada (a main pode ter andado).

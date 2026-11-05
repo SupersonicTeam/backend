@@ -677,12 +677,16 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     if teste:
         md.append(AVISO_TESTE)
     sessao = rodada.get("sessao7") or {}
-    if sessao and sessao.get("contem") is not True:
-        md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} é de antes da "
-                  f"{_celula_md(sessao.get('rotulo') or 'sessão paralela')} ({sessao.get('issue')})"
-                  + (" ou não foi possível conferir" if sessao.get("contem") is None else "")
-                  + ".** A rodada oficial usa o SHA da `main` depois do merge dela: esta não entra "
-                  "no relatório final.\n")
+    if sessao and not sessao.get("confirmado", sessao.get("contem") is True):
+        nome7 = f"{_celula_md(sessao.get('rotulo') or 'sessão paralela')} ({sessao.get('issue')})"
+        ja = sessao.get("commits") or []
+        md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} não é a de depois da {nome7} "
+                  "inteira.** "
+                  + (f"O SHA medido já tem {len(ja)} PR(s) dela ({_celula_md(', '.join(ja), 300)}), "
+                     "mas o merge do último não está configurado em `sessaoParalela.commit`. "
+                     if ja else "O SHA medido não tem nenhum PR dela. ")
+                  + "A rodada oficial usa o SHA da `main` depois do merge do último PR: esta não "
+                  "entra no relatório final.\n")
     md.append("Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à "
               "mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) "
               "entre parênteses; n = perguntas avaliadas no critério em cada rodada.\n")
@@ -703,11 +707,14 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     sessao7 = rodada.get("sessao7")
     if sessao7:
         rotulo7 = f"{sessao7.get('rotulo') or 'sessão paralela'} ({sessao7.get('issue')})"
+        confirmado = sessao7.get("confirmado", sessao7.get("contem") is True)
+        ja = sessao7.get("commits") or []
         situacao = ("não foi possível conferir pelo git" if sessao7.get("contem") is None else
-                    "**depois** dela (o SHA medido já tem commits que a citam)" if sessao7["contem"]
-                    else "**antes** dela (nenhum commit do SHA medido a cita)")
-        md.append(f"| {arquiteturas[-1][1]} e a {_celula_md(rotulo7)} | {situacao}"
-                  + (" — a coluna inclui as mudanças dela" if sessao7.get("contem") else "") + " |")
+                    "**depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna "
+                    "inclui as mudanças dela" if confirmado else
+                    f"**parcial**: {len(ja)} PR(s) dela no SHA medido, sem o último confirmado"
+                    if ja else "**antes** dela (nenhum PR dela no SHA medido)")
+        md.append(f"| {arquiteturas[-1][1]} e a {_celula_md(rotulo7)} | {situacao} |")
     md.append(f"| Repetições | {rodada.get('repeticoes', '?')}"
               + (" — **rodada de teste, não vale para a banca**" if teste else "") + " |")
     md.append(f"| Embedding | {rodada.get('embedding', 'bge-m3')} |")

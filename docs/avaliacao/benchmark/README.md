@@ -110,7 +110,7 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 
 ### O conjunto de perguntas (#352)
 
-`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito `2026-11-04.1`
+`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito `2026-11-05.1`
 inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
 hash fica em `perguntas-benchmark.json.sha256`: mudou uma pergunta, mude a `versao` e o hash (o
 `PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). As células leem
@@ -165,7 +165,7 @@ build). Paráfrase, a guarda não pega: o executor grava `similaridade-treino.md
 não bloqueia** com os pares pergunta × exemplo de Jaccard das palavras ≥ 0,5. O "exemplo" é o
 treino do classificador, `docs/avaliacao/treino/` e as perguntas entre aspas do prompt do
 classificador e das descrições `@Tool` (o que o modelo vê; comentário não conta). Duas perguntas
-novas parecidas foram reescritas (N10 e N04, versão `2026-11-05.2`). **Hoje o aviso lista 4 pares,
+novas parecidas foram reescritas (N10 e N04, desde a versão `2026-11-05.2`). **Hoje o aviso lista 4 pares,
 todos de perguntas herdadas do gabarito** contra exemplos das descrições `@Tool`:
 
 | Pergunta | Exemplo na descrição `@Tool` | Jaccard |
@@ -307,10 +307,11 @@ e 3: só as funções da rota, prompt com prefixo fixo, teto de tokens por chama
 propriedade). Na prática:
 
 - **A rodada oficial** usa `--ref-ceres2 <SHA da main depois do merge do último PR da #270>`.
-  Antes disso, qualquer rodada é **ensaio**: o relatório sai com o aviso "ENSAIO — a coluna Ceres
-  2.0 é de antes da Sessão 7" e não entra no relatório final. A conferência é pelo histórico do SHA
-  medido; quando a #270 terminar, ponha o SHA do merge em `sessaoParalela.commit` na `matriz.json`
-  (a conferência passa a ser pela ancestralidade).
+  A #270 entra na `main` em vários PRs (o primeiro, #351, já entrou): ter commits dela no histórico
+  **não** basta. A coluna só é oficial quando `sessaoParalela.commit` na `matriz.json` tem o SHA do
+  merge do **último** PR da #270 e o SHA medido o contém (ancestralidade). Sem isso, qualquer rodada
+  é **ensaio**: o relatório sai com o aviso "ENSAIO", lista os commits da #270 que o SHA medido já
+  tem e não entra no relatório final.
 - **Configuração publicada, sem ajuste à mão.** Cada coluna roda com os `AI_*` do `.env.example`
   **do próprio commit** (teto de tokens, `num_ctx`, timeouts); o executor não herda nenhum `AI_*`
   do seu shell (um `export AI_MAX_TOKENS` esquecido mediria outra configuração). Só o modelo (o da

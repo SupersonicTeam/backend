@@ -322,11 +322,18 @@ class Sessao7Test(Base):
             rodada["resultados"][0]["numeroCorreto"] = False
         arquivo.write_text(json.dumps(dados), encoding="utf-8")
         rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
-        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True}
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True, "confirmado": True}
         (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
         texto = rel.gerar(self.pasta, comparar_com=anterior)
         self.assertNotIn("ENSAIO", texto)
         self.assertIn("a coluna inclui as mudanças dela", texto)
+        # Com PRs da sessao, mas sem o ultimo configurado: ensaio parcial.
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True, "confirmado": False,
+                             "commits": ["003624f perf(ceres): prompt (#270) (#351)"]}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        parcial = rel.gerar(self.pasta)
+        self.assertIn("O SHA medido já tem 1 PR(s) dela", parcial)
+        self.assertIn("**parcial**", parcial)
         self.assertIn("## Comparação com a rodada `ensaio`", texto)
         self.assertIn("| Ceres 2.0 · `m-ref` | Exatidão numérica | 100,0% n=1 | 0,0% n=1 | **QUEDA** |", texto)
         self.assertIn("**1 queda(s) fora da faixa.**", texto)
@@ -337,4 +344,6 @@ class Sessao7Test(Base):
         rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
         rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": False}
         (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
-        self.assertIn("**ENSAIO — a coluna Ceres 2.0 é de antes da Sessão 7 (#270).**", rel.gerar(self.pasta))
+        texto = rel.gerar(self.pasta)
+        self.assertIn("**ENSAIO — a coluna Ceres 2.0 não é a de depois da Sessão 7 (#270) inteira.**", texto)
+        self.assertIn("O SHA medido não tem nenhum PR dela", texto)

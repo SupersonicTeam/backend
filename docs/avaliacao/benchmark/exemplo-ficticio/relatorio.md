@@ -2,7 +2,7 @@
 
 > ⚠️ **DADOS FICTÍCIOS DE TESTE.** Este relatório foi gerado a partir de JSONs inventados pelo `gerar_exemplo_ficticio.py`, só para mostrar o formato. **Nenhum número aqui foi medido.** Não use em slide, artigo nem banca.
 
-> ⚠️ **ENSAIO — a coluna Ceres 2.0 é de antes da Sessão 7 (prompts por rota e teto de tokens) (#270).** A rodada oficial usa o SHA da `main` depois do merge dela: esta não entra no relatório final.
+> ⚠️ **ENSAIO — a coluna Ceres 2.0 não é a de depois da Sessão 7 (prompts por rota e teto de tokens) (#270) inteira.** O SHA medido já tem 1 PR(s) dela (003624f perf(ceres): parte fixa do prompt estável byte a byte para o cache do Ollama (#270) (#351)), mas o merge do último não está configurado em `sessaoParalela.commit`. A rodada oficial usa o SHA da `main` depois do merge do último PR: esta não entra no relatório final.
 
 Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não editar à mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) entre parênteses; n = perguntas avaliadas no critério em cada rodada.
 
@@ -13,10 +13,10 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `357b9ce656992c0ab1ce5a74aac8d837bed16b8f` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.2 (100 perguntas, sha256 `d236e4be009f…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Ceres 2.0 | `0aec9ad30f4a7843c66f0c530a074a9cfa51fed8` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Conjunto de perguntas | 2026-11-05.3 (100 perguntas, sha256 `6c7395ba808c…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 78 perguntas (a comparação justa; por tema abaixo) |
-| Ceres 2.0 e a Sessão 7 (prompts por rota e teto de tokens) (#270) | **antes** dela (nenhum commit do SHA medido a cita) |
+| Ceres 2.0 e a Sessão 7 (prompts por rota e teto de tokens) (#270) | **parcial**: 1 PR(s) dela no SHA medido, sem o último confirmado |
 | Repetições | 3 |
 | Embedding | bge-m3 |
 | Ollama | FICTÍCIO (igual nas células: o executor recusa começar se mudar) |
