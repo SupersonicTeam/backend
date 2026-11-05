@@ -15,8 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeAll;
@@ -97,7 +97,8 @@ class TextoReformaTributariaTest {
 
   @ParameterizedTest
   @EnumSource(TipoProdutor.class)
-  @DisplayName("Todo artigo nomeado no texto esta nas citacoes, e vice-versa")
+  @DisplayName("Todo artigo nomeado no texto esta nas citacoes, e vice-versa, com a norma e na "
+      + "mesma ordem")
   void artigosCoerentesComAsCitacoes(TipoProdutor tipo) {
     TextoReformaTributaria.Texto texto =
         TextoReformaTributaria.montar(new TextoReformaTributaria.Perfil(tipo, false, List.of()));
@@ -114,7 +115,7 @@ class TextoReformaTributariaTest {
 
     assertThat(texto.texto())
         .contains(TextoReformaTributaria.VENDA_PRODUTOS)
-        .contains("Soja, mesmo triturada (NCM 1201.90.00): reducao de 60% do IBS e da CBS, como"
+        .contains("\n- Soja, mesmo triturada (NCM 1201.90.00): reducao de 60% do IBS e da CBS, como"
             + " produto agropecuario in natura (LC 214/2025, art. 137; cClassTrib 515001).")
         .contains("Alfaces (NCM 0705.19.00): reducao de 100% do IBS e da CBS (aliquota zero)")
         .contains(TextoReformaTributaria.VENDA_ENQUADRAMENTO)
@@ -122,6 +123,22 @@ class TextoReformaTributariaTest {
     assertThat(texto.dispositivos()).contains("LC 214/2025|art. 137", "LC 214/2025|art. 148")
         .doesNotHaveDuplicates();
     assertThat(artigosNomeados(texto.texto())).isEqualTo(artigosCitados(texto.dispositivos()));
+  }
+
+  @Test
+  @DisplayName("Artigo novo de um produto entra nas citacoes no lugar dele no texto: depois dos da "
+      + "venda e antes da nota fiscal")
+  void artigoDoProdutoNaOrdem() {
+    Produto mel = new Produto("04090000", "Mel natural", 1, "200099", new BigDecimal("60.00"),
+        false, 7, "144", null, true);
+    TextoReformaTributaria.Texto texto = TextoReformaTributaria.montar(
+        new TextoReformaTributaria.Perfil(null, null, List.of(mel)));
+
+    List<String> d = texto.dispositivos();
+    assertThat(d.indexOf("LC 214/2025|art. 144"))
+        .isEqualTo(d.indexOf("LC 214/2025|art. 148") + 1)
+        .isEqualTo(d.indexOf("LC 214/2025|art. 60, § 1º") - 1);
+    assertThat(artigosNomeados(texto.texto())).isEqualTo(artigosCitados(d));
   }
 
   @Test
@@ -141,7 +158,11 @@ class TextoReformaTributariaTest {
         new TextoReformaTributaria.Perfil(TipoProdutor.PESSOA_FISICA, null, List.of()));
     assertThat(texto.texto()).contains(TextoReformaTributaria.PAGAMENTO_PESSOA_FISICA)
         .doesNotContain(TextoReformaTributaria.PAGAMENTO_OUTROS);
-    assertThat(texto.dispositivos()).endsWith(TextoReformaTributaria.DISPOSITIVO_FUNRURAL);
+    // Na ordem do texto: depois do split payment (NO PAGAMENTO) e antes de QUEM PAGA.
+    List<String> d = texto.dispositivos();
+    assertThat(d.indexOf(TextoReformaTributaria.DISPOSITIVO_FUNRURAL))
+        .isEqualTo(d.indexOf("LC 214/2025|art. 32") + 1)
+        .isEqualTo(d.indexOf("LC 214/2025|art. 164") - 1);
   }
 
   @Test
@@ -203,32 +224,51 @@ class TextoReformaTributariaTest {
         new TextoReformaTributaria.Perfil(null, atendido, List.of())).texto();
   }
 
-  private static Set<String> artigosNomeados(String texto) {
-    Matcher artigos = Pattern.compile("\\barts?\\. (\\d+)º?(?: e (\\d+))?").matcher(texto);
-    Set<String> nomeados = new TreeSet<>();
+  /**
+   * Artigos nomeados no texto, com a norma ({@code LC 214:125}, {@code ADCT:125},
+   * {@code Lei 8.212:30}), na ordem da primeira vez: o art. 125 da LC 214 (cesta básica) e o do
+   * ADCT (2026) não se confundem.
+   */
+  private static List<String> artigosNomeados(String texto) {
+    Matcher artigos = Pattern.compile("\\barts?\\. (\\d+)º?(?: e (\\d+))?( do ADCT)?")
+        .matcher(texto);
+    Set<String> nomeados = new LinkedHashSet<>();
     while (artigos.find()) {
-      nomeados.add(artigos.group(1));
+      String antes = texto.substring(Math.max(0, artigos.start() - 20), artigos.start());
+      String norma = artigos.group(3) != null ? "ADCT"
+          : antes.contains("8.212") ? "Lei 8.212" : "LC 214";
+      nomeados.add(norma + ":" + artigos.group(1));
       if (artigos.group(2) != null) {
-        nomeados.add(artigos.group(2));
+        nomeados.add(norma + ":" + artigos.group(2));
       }
     }
-    return nomeados;
+    return List.copyOf(nomeados);
   }
 
-  private static Set<String> artigosCitados(List<String> dispositivos) {
+  /** Artigos citados, com a norma como em {@link #artigosNomeados}, na ordem das citações. */
+  private static List<String> artigosCitados(List<String> dispositivos) {
     Pattern redacao = Pattern.compile("\\(redação do art\\. (\\d+)");
     Pattern artigo = Pattern.compile("^art\\. (\\d+)");
-    Set<String> citados = new TreeSet<>();
+    Set<String> citados = new LinkedHashSet<>();
     for (String dispositivo : dispositivos) {
+      String norma = dispositivo.substring(0, dispositivo.indexOf('|'));
       String rotulo = dispositivo.substring(dispositivo.indexOf('|') + 1);
       Matcher m = redacao.matcher(rotulo);
-      if (!m.find()) {
-        m = artigo.matcher(rotulo);
-        assertThat(m.find()).as(rotulo).isTrue();
+      if (m.find()) {
+        assertThat(norma).as(dispositivo).isEqualTo("EC 132/2023");
+        citados.add("ADCT:" + m.group(1));
+        continue;
       }
-      citados.add(m.group(1));
+      m = artigo.matcher(rotulo);
+      assertThat(m.find()).as(rotulo).isTrue();
+      String chave = switch (norma) {
+        case "LC 214/2025" -> "LC 214";
+        case "Lei 8.212/1991" -> "Lei 8.212";
+        default -> throw new AssertionError("norma inesperada: " + dispositivo);
+      };
+      citados.add(chave + ":" + m.group(1));
     }
-    return citados;
+    return List.copyOf(citados);
   }
 
   private static String normalizado(String texto) {

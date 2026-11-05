@@ -2,11 +2,13 @@ package br.com.agrocontabil.assistente.orquestracao;
 
 import br.com.agrocontabil.assistente.ferramentas.TemplateTratamentoProduto;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
+import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado;
 import br.com.agrocontabil.model.TipoProdutor;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Texto explicado do atalho "O que muda para mim com o IBS e o CBS?" (issue #347): o que são os
@@ -14,7 +16,7 @@ import java.util.Set;
  * contribuinte e o próximo passo — em linguagem do produtor, com o dispositivo de cada afirmação.
  *
  * <p>Correto por construção, como o texto curado da #343: cada número está escrito no dispositivo
- * citado ({@code AtalhoReformaTributariaTest} confere contra o texto da base), e o texto é do
+ * citado ({@code TextoReformaTributariaTest} confere contra o texto da base), e o texto é do
  * backend, não do modelo. A personalização usa só o que o sistema sabe do produtor — o tipo, se
  * um escritório o atende e o tratamento dos produtos que ele mais vende, pela tabela oficial — e
  * nunca afirma a situação dele no IBS e na CBS: optante ou não contribuinte é com o contador
@@ -31,20 +33,22 @@ public final class TextoReformaTributaria {
 
   static final String O_QUE_SAO = String.join("\n",
       "O QUE SAO",
-      "- A CBS e a contribuicao federal e o IBS e o imposto dos estados e dos municipios. Os dois"
-          + " incidem sobre a venda de bens e servicos (LC 214/2025, art. 1º, incisos I e II).",
+      "- A CBS e a contribuicao da Uniao (federal) e o IBS e o imposto de competencia"
+          + " compartilhada entre estados, municipios e Distrito Federal (LC 214/2025, art. 1º,"
+          + " incisos I e II).",
       "- Eles substituem tributos de hoje: a partir de 2027 a CBS e cobrada e o PIS e a Cofins"
           + " sao extintos (EC 132/2023, art. 126 do ADCT); o ICMS e o ISS sao extintos a partir"
           + " de 2033 (art. 129 do ADCT).");
 
   static final String CALENDARIO = String.join("\n",
       "O CALENDARIO",
-      "- 2026 e um ano de teste: a CBS e cobrada a 0,9% e o IBS a 0,1% (LC 214/2025, arts. 346 e"
-          + " 343; EC 132/2023, art. 125 do ADCT). Quem cumpre as obrigacoes acessorias previstas na legislacao fica dispensado"
-          + " de recolher esses valores em 2026 (art. 348, § 1º).",
+      "- 2026 e um ano de teste: a CBS e cobrada a 0,9% e o IBS a 0,1%, so na parcela estadual"
+          + " (LC 214/2025, arts. 346 e 343; EC 132/2023, art. 125 do ADCT). Quem cumpre as"
+          + " obrigacoes acessorias previstas na legislacao fica dispensado de recolher esses"
+          + " valores em 2026 (LC 214/2025, art. 348, § 1º).",
       "- 2027 e 2028: a CBS passa a ser cobrada com a aliquota de referencia reduzida em 0,1"
-          + " ponto percentual (art. 347), e o IBS segue em teste, a 0,05% estadual e 0,05%"
-          + " municipal (art. 344).",
+          + " ponto percentual (LC 214/2025, art. 347), e o IBS segue em teste, a 0,05% estadual"
+          + " e 0,05% municipal (art. 344).",
       "- 2029 a 2032: o ICMS e o ISS diminuem aos poucos, para 9/10 das aliquotas em 2029, 8/10"
           + " em 2030, 7/10 em 2031 e 6/10 em 2032 (EC 132/2023, art. 128 do ADCT), e o IBS"
           + " cresce para repor essa receita (art. 130 do ADCT).",
@@ -68,8 +72,9 @@ public final class TextoReformaTributaria {
       "- Para saber o tratamento de um produto seu, pergunte pelo nome dele ou pelo NCM da nota.";
 
   static final String VENDA_NOTA =
-      "- Toda venda tem nota fiscal eletronica, e o IBS e a CBS informados nela valem como"
-          + " confissao do valor devido (art. 60, § 1º).";
+      "- Quem e contribuinte do IBS e da CBS emite documento fiscal eletronico nas suas"
+          + " operacoes, e o IBS e a CBS informados nele valem como confissao do valor devido"
+          + " (LC 214/2025, art. 60, § 1º).";
 
   static final String COMPRAS = String.join("\n",
       "NAS SUAS COMPRAS",
@@ -110,16 +115,16 @@ public final class TextoReformaTributaria {
   static final String PROXIMO_SEM_ESCRITORIO = String.join("\n",
       "PROXIMO PASSO",
       "- Procure um escritorio de contabilidade para conferir o enquadramento dos seus produtos"
-          + " e a sua situacao no IBS e na CBS. O escritorio pode convidar voce para o AgroConIA"
-          + " pelo seu e-mail.");
+          + " e a sua situacao no IBS e na CBS. Pelo AgroConIA, o escritorio manda um convite para"
+          + " o seu e-mail e, quando voce aceita, passa a acompanhar as suas notas.");
 
   static final String PROXIMO_GENERICO = String.join("\n",
       "PROXIMO PASSO",
       "- Confira com o seu contador o enquadramento dos seus produtos e a sua situacao no IBS e"
           + " na CBS.");
 
-  /** Dispositivos das seções fixas, na ordem do texto ({@code norma|dispositivo}, como na base). */
-  static final List<String> DISPOSITIVOS_FIXOS = List.of(
+  /** Dispositivos do texto antes da lista dos produtos ({@code norma|dispositivo}, como na base). */
+  static final List<String> ANTES_DOS_PRODUTOS = List.of(
       "LC 214/2025|art. 1º, inciso I",
       "LC 214/2025|art. 1º, inciso II",
       "EC 132/2023|art. 2º (redação do art. 126, inciso I, alínea a)",
@@ -139,15 +144,26 @@ public final class TextoReformaTributaria {
       "EC 132/2023|art. 2º (redação do art. 130, inciso III)",
       "LC 214/2025|art. 137",
       "LC 214/2025|art. 125",
-      "LC 214/2025|art. 148",
+      "LC 214/2025|art. 148");
+
+  /** Da nota fiscal ao split payment, depois dos produtos e antes do Funrural. */
+  static final List<String> DA_NOTA_AO_PAGAMENTO = List.of(
       "LC 214/2025|art. 60, § 1º",
       "LC 214/2025|art. 138",
       "LC 214/2025|art. 47",
       "LC 214/2025|art. 31",
-      "LC 214/2025|art. 32",
+      "LC 214/2025|art. 32");
+
+  /** Quem paga, no fim do texto. */
+  static final List<String> QUEM_PAGA_DISPOSITIVOS = List.of(
       "LC 214/2025|art. 164",
       "LC 214/2025|art. 165",
       "LC 214/2025|art. 168");
+
+  /** Todos os dispositivos das seções fixas, na ordem do texto. */
+  static final List<String> DISPOSITIVOS_FIXOS = Stream.of(
+      ANTES_DOS_PRODUTOS, DA_NOTA_AO_PAGAMENTO, QUEM_PAGA_DISPOSITIVOS)
+      .flatMap(List::stream).toList();
 
   /** Funrural retido, só no texto do produtor pessoa física. */
   static final String DISPOSITIVO_FUNRURAL = "Lei 8.212/1991|art. 30, inciso IV";
@@ -178,7 +194,7 @@ public final class TextoReformaTributaria {
    * Texto pronto e os dispositivos que ele cita, sem repetir.
    *
    * @param texto        texto para o produtor
-   * @param dispositivos {@code norma|dispositivo}: os das seções fixas e depois os dos produtos
+   * @param dispositivos {@code norma|dispositivo}, na ordem do texto
    */
   public record Texto(String texto, List<String> dispositivos) {
 
@@ -195,35 +211,38 @@ public final class TextoReformaTributaria {
    * @return texto e dispositivos
    */
   public static Texto montar(Perfil perfil) {
-    Set<String> dispositivos = new LinkedHashSet<>(DISPOSITIVOS_FIXOS);
+    // Na ordem do texto: as citacoes saem na mesma sequencia das secoes.
+    Set<String> dispositivos = new LinkedHashSet<>(ANTES_DOS_PRODUTOS);
+    dispositivos.addAll(TemplateTratamentoProduto.dispositivos(
+        new TratamentoConsultado("", perfil.produtos(), null)));
+    dispositivos.addAll(DA_NOTA_AO_PAGAMENTO);
     List<String> secoes = new ArrayList<>();
     secoes.add(TITULO);
     secoes.add(O_QUE_SAO);
     secoes.add(CALENDARIO);
-    secoes.add(venda(perfil.produtos(), dispositivos));
+    secoes.add(venda(perfil.produtos()));
     secoes.add(COMPRAS);
     boolean pessoaFisica = perfil.tipo() == TipoProdutor.PESSOA_FISICA;
     secoes.add(PAGAMENTO + "\n" + (pessoaFisica ? PAGAMENTO_PESSOA_FISICA : PAGAMENTO_OUTROS));
     if (pessoaFisica) {
       dispositivos.add(DISPOSITIVO_FUNRURAL);
     }
+    dispositivos.addAll(QUEM_PAGA_DISPOSITIVOS);
     secoes.add(QUEM_PAGA);
     secoes.add(proximoPasso(perfil.atendidoPorEscritorio()));
     return new Texto(String.join("\n\n", secoes), List.copyOf(dispositivos));
   }
 
-  private static String venda(List<Produto> produtos, Set<String> dispositivos) {
+  private static String venda(List<Produto> produtos) {
     List<String> linhas = new ArrayList<>();
     linhas.add(VENDA_REGRAS);
     if (produtos.isEmpty()) {
       linhas.add(VENDA_SEM_PRODUTOS);
     } else {
       linhas.add(VENDA_PRODUTOS);
+      // "- " e nao recuo: a tela usa whitespace-pre-line, que descarta espaco no comeco da linha.
       for (Produto p : produtos) {
-        linhas.add("  " + TemplateTratamentoProduto.frase(p));
-        if (p.artigo() != null) {
-          dispositivos.add(TemplateTratamentoProduto.NORMA + "|art. " + p.artigo());
-        }
+        linhas.add("- " + TemplateTratamentoProduto.frase(p));
       }
       linhas.add(VENDA_ENQUADRAMENTO);
     }

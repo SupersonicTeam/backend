@@ -4,7 +4,6 @@ import br.com.agrocontabil.model.AcaoRevisao;
 import br.com.agrocontabil.model.NotaFiscalRevisao;
 import br.com.agrocontabil.model.NotaFiscalValidacao;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
-import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.model.TipoProdutor;
@@ -346,8 +345,7 @@ public class ConsultaDadosProdutorService {
    * @return o perfil; produtor inexistente = tipo nulo e nenhum NCM
    */
   public PerfilAtalho perfilDoAtalho(UUID produtorId, LocalDate inicio, LocalDate fim, int limite) {
-    TipoProdutor tipo = produtorRepository.findById(produtorId)
-        .map(Produtor::getTipoProdutor).orElse(null);
+    TipoProdutor tipo = produtorRepository.findTipoProdutorById(produtorId).orElse(null);
     boolean atendido = !vinculoRepository.findEscritoriosAtivosDoProdutor(produtorId).isEmpty();
     List<String> ncms = notaFiscalRepository.listarNcmsVendidos(produtorId, inicioDoDia(inicio),
         fimExclusivo(fim), PageRequest.of(0, limitar(limite)));
