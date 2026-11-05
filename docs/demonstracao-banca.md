@@ -58,9 +58,12 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    enviar para revisão.
 5. **Reabertura (RN005, #224).** Como Patrícia ou Rafael, reabrir um mês fechado de até três meses
    atrás de um cliente; além disso, 422 `REABERTURA_FORA_PRAZO`.
-6. **Ceres.** Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
-   IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**: a
-   primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
+6. **Ceres.** Os três atalhos da tela respondem sem o modelo (#343): "Quanto eu tenho que pagar
+   este mês?" e "Quando vence a minha próxima guia?" pelas funções de guias, e "O que muda para
+   mim com o IBS e o CBS?" com o texto curado e nove citações (ano de teste de 2026, art. 137,
+   arts. 164 e 165, split payment). Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
+   IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**, digitando perguntas que não sejam as três da tela (o
+   texto exato de um atalho, clicado ou digitado, fica fora da cota e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.
@@ -88,6 +91,26 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
   regime regular. Pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º;
   issue #298): a NF-e e o DANFE saem com CRT 3 pelo tipo do produtor, o calendário nunca mostra DAS,
   DEFIS nem as obrigações do MEI a ela, e o cadastro com `SIMPLES`/`MEI` é recusado.
+
+## Checklist da VPS: base de legislação da Ceres (issue #343)
+
+A base de lei (`legislacao_trecho`) **não vem pelo seed**: é copiada à parte (`deploy/README.md`,
+"Base de legislação da Ceres"). Banco zerado sem a cópia = toda pergunta de lei cai em "não
+encontrei fundamento legal" e o atalho de legislação sai sem as citações (o texto segue). Antes da
+banca, conferir na pasta do `deploy/` da VPS:
+
+```bash
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT norma, count(*) FROM legislacao_trecho GROUP BY norma ORDER BY norma;
+SELECT count(*) FROM legislacao_trecho;
+SQL
+```
+
+**Esperado: 8.304 trechos** — EC 132/2023 538, LC 214/2025 5.004, LC 227/2026 2.211, Lei
+8.212/1991 547 e Lei 9.528/1997 4 (conferido na VPS e no banco local em 2026-11-04). Contagem
+diferente = recopiar a base. Depois, testar na tela o atalho "O que muda para mim com o IBS e o
+CBS?": a resposta lista as nove citações; com menos, o log do backend mostra, na pergunta,
+`Atalho IBS/CBS: x de 9 dispositivos na base de legislacao`.
 
 ## Passo manual na VPS: regime dos produtores pessoa física (issue #298)
 

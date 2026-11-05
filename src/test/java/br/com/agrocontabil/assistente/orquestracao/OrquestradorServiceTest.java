@@ -68,7 +68,8 @@ class OrquestradorServiceTest {
     disponibilidade = new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L);
     orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
         trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
-        new ModoFallback(buscaTextual, propriedades), disponibilidade, propriedades);
+        new AtalhoReformaTributaria(buscaTextual), new ModoFallback(buscaTextual, propriedades),
+        disponibilidade, propriedades);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }
 
@@ -89,6 +90,71 @@ class OrquestradorServiceTest {
     assertThat(contexto.desfechoDados()).isNull();
     assertThat(contexto.desfechoLegislacao()).isNull();
     assertThat(contexto.perguntaLeiReescrita()).isNull();
+  }
+
+  @Test
+  @DisplayName("#343: atalho de legislacao da tela: texto curado e citacoes fixas, sem classificador "
+      + "nem rota de lei (zero chamadas ao modelo), mesmo com o modelo fora do ar")
+  void atalhoDeLegislacao() {
+    disponibilidade.registrarFalha();
+    when(buscaTextual.buscarDispositivos(eq(AtalhoReformaTributaria.DISPOSITIVOS), any()))
+        .thenReturn(List.of(
+            new TrechoRecuperado("T1", "id-346", "LC 214/2025", "art. 346", "u", "t", 0),
+            new TrechoRecuperado("T2", "id-137", "LC 214/2025", "art. 137", "u", "t", 0)));
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "O que muda para mim com o IBS e o CBS?", contexto, rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.LEGISLACAO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.texto()).isEqualTo(AtalhoReformaTributaria.TEXTO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 346", "LC 214/2025, art. 137");
+    assertThat(r.exibirFontes()).isFalse();
+    assertThat(r.modoFallback()).isFalse();
+    assertThat(rotasAvisadas).containsExactly(Intencao.LEGISLACAO);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("ATALHO_FIXO");
+    assertThat(contexto.trechosCitados()).containsExactly("id-346", "id-137");
+    verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#343: atalhos de dados chamam a funcao certa direto pela rota de dados, sem "
+      + "classificador, e mostram as fontes")
+  void atalhosDeDados() {
+    when(rotaDados.responderAtalho(eq("vencimentosDoMes"), anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Em 11/2026: 1 guia para pagar."));
+    when(rotaDados.responderAtalho(eq("proximosVencimentos"), anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("De 04/11/2026 a 04/12/2026 vence 1 guia."));
+
+    ResultadoOrquestracao mes = orquestrador.responder(
+        "Quanto eu tenho que pagar este mês?", contexto, rotasAvisadas::add);
+    ResultadoOrquestracao proxima = orquestrador.responder(
+        "  quando VENCE a minha próxima guia  ", contexto, rotasAvisadas::add);
+
+    assertThat(mes.rota()).isEqualTo(Intencao.DADOS);
+    assertThat(mes.texto()).isEqualTo("Em 11/2026: 1 guia para pagar.");
+    assertThat(mes.exibirFontes()).isTrue();
+    assertThat(proxima.texto()).startsWith("De 04/11/2026");
+    assertThat(rotasAvisadas).containsExactly(Intencao.DADOS, Intencao.DADOS);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("ATALHO_FIXO");
+    verify(rotaDados, never()).responder(anyString(), any());
+    verifyNoInteractions(classificador, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#343: pergunta parecida com o atalho, mas nao igual, segue o fluxo normal")
+  void parecidaComAtalhoSegueOFluxo() {
+    classificarComo(Intencao.LEGISLACAO, 0.9);
+    when(rotaLegislacao.responder(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("regra [x]"));
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "O que muda pra mim com o IBS e o CBS?", contexto, rotasAvisadas::add);
+
+    assertThat(r.texto()).isEqualTo("regra [x]");
+    verify(rotaLegislacao).responder(anyString(), any());
+    verify(rotaDados, never()).responderAtalho(anyString(), anyString(), any());
   }
 
   @Test

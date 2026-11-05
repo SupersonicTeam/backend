@@ -241,10 +241,13 @@ class RotaLegislacaoTest {
     assertThat(r.citacoes()).singleElement()
         .satisfies(c -> assertThat(c.url()).isEqualTo(URL));
     assertThat(contexto.trechosCitados()).containsExactly("id-1");
+    // Citados pelo modelo (#258), nao relacionados: um fundamento do backend nao os tira.
+    assertThat(contexto.trechosRelacionados()).isFalse();
   }
 
   @Test
-  @DisplayName("#258: so marcas inventadas continua 'nao encontrei fundamento legal'")
+  @DisplayName("#343: so marcas inventadas, com trechos recuperados: trechos relacionados, nunca "
+      + "'nao encontrei fundamento legal'")
   void soMarcaInventada() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
     chatModel.responderTexto("Ha isencao total [T4].");
@@ -253,21 +256,90 @@ class RotaLegislacaoTest {
 
     assertThat(r.aceita()).isFalse();
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
-    assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
-    assertThat(r.citacoes()).isEmpty();
-    assertThat(contexto.trechosCitados()).isEmpty();
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
+        .doesNotContain(ValidadorCitacao.SEM_FUNDAMENTO).doesNotContain("isencao");
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 138, § 1º");
+    assertThat(contexto.trechosCitados()).containsExactly("id-1");
+    assertThat(contexto.trechosRelacionados()).isTrue();
   }
 
   @Test
-  @DisplayName("#258: NAO_ENCONTREI vale mesmo com marca no texto (premissa falsa)")
+  @DisplayName("#343: NAO_ENCONTREI com marca no texto (premissa falsa): o texto do modelo sai, "
+      + "os trechos ficam sem afirmar que respondem, e o desfecho segue de recusa")
   void naoEncontreiComMarca() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
     chatModel.responderTexto(PromptsCeres.NAO_ENCONTREI + " O trecho [T1] trata de outra coisa.");
 
     ResultadoRota r = rota.responder("Qual artigo isenta o celular?", contexto);
 
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
+        .doesNotContain("outra coisa");
+    assertThat(r.citacoes()).singleElement()
+        .satisfies(c -> assertThat(c.url()).isEqualTo(URL));
+  }
+
+  @Test
+  @DisplayName("#343: resposta sem marca nenhuma: os tres trechos mais proximos, na ordem da busca")
+  void semMarcaTresTrechosRelacionados() {
+    when(busca.buscar(anyString(), any())).thenReturn(cincoTrechos());
+    chatModel.responderTexto("A reforma muda bastante coisa para o produtor.");
+
+    ResultadoRota r = rota.responder("O que muda pra mim com o IBS?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::dispositivo)
+        .containsExactly("art. 1", "art. 2", "art. 3");
+    assertThat(contexto.trechosCitados()).containsExactly("id-1", "id-2", "id-3");
+    assertThat(r.soTrechos()).isTrue();
+    assertThat(contexto.trechosRelacionados()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#343: NAO_ENCONTREI sem marca, com cinco trechos: os tres mais proximos")
+  void naoEncontreiTresTrechosRelacionados() {
+    when(busca.buscar(anyString(), any())).thenReturn(cincoTrechos());
+    chatModel.responderTexto(PromptsCeres.NAO_ENCONTREI);
+
+    ResultadoRota r = rota.responder("O que muda pra mim com o IBS?", contexto);
+
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::dispositivo)
+        .containsExactly("art. 1", "art. 2", "art. 3");
+  }
+
+  @Test
+  @DisplayName("#260/#343: MISTO com a pergunta inteira (sem parte legal separada) e sem marca: a "
+      + "lei descartada nao leva artigos para o lado dos dados")
+  void mistoSemPerguntaSeparadaSemTrechosRelacionados() {
+    when(busca.buscar(anyString(), any())).thenReturn(cincoTrechos());
+    chatModel.responderTexto(PromptsCeres.NAO_ENCONTREI);
+
+    ResultadoRota r = rota.responderRegraGeral("Quanto comprei e tem reducao?", contexto,
+        List.of(), false);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
     assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
     assertThat(r.citacoes()).isEmpty();
+    assertThat(r.soTrechos()).isFalse();
+    assertThat(contexto.trechosCitados()).isEmpty();
+    assertThat(contexto.trechosRelacionados()).isFalse();
+  }
+
+  @Test
+  @DisplayName("#343: MISTO com a parte legal separada e sem marca: trechos relacionados")
+  void mistoComPerguntaSeparadaTrechosRelacionados() {
+    when(busca.buscar(anyString(), any())).thenReturn(cincoTrechos());
+    chatModel.responderTexto("Depende do caso.");
+
+    ResultadoRota r = rota.responderRegraGeral("Fertilizante tem reducao?", contexto, List.of(),
+        true);
+
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+    assertThat(r.citacoes()).hasSize(RotaLegislacao.TRECHOS_RELACIONADOS);
+    assertThat(r.soTrechos()).isTrue();
   }
 
   @Test
@@ -301,14 +373,17 @@ class RotaLegislacaoTest {
   }
 
   @Test
-  @DisplayName("NAO_ENCONTREI do modelo vira 'nao encontrei fundamento legal'")
+  @DisplayName("#343: NAO_ENCONTREI do modelo, com trecho recuperado: trechos relacionados, nao "
+      + "'nao encontrei fundamento legal' (esta frase fica so para quando nao ha trecho)")
   void modeloNaoEncontrou() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
     chatModel.responderTexto(PromptsCeres.NAO_ENCONTREI);
 
     ResultadoRota r = rota.responder("Como declarar o imposto de renda?", contexto);
 
-    assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
+        .isNotEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
   }
 
   @Test
@@ -321,5 +396,13 @@ class RotaLegislacaoTest {
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.SEM_FUNDAMENTO_LEGAL);
     assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
     assertThat(chatModel.promptsRecebidos()).isEmpty();
+  }
+
+  /** Cinco trechos, do mais para o menos próximo, como a busca devolve. */
+  private static List<TrechoRecuperado> cincoTrechos() {
+    return java.util.stream.IntStream.rangeClosed(1, 5)
+        .mapToObj(n -> new TrechoRecuperado("T" + n, "id-" + n, "LC 214/2025", "art. " + n, URL,
+            "Texto do artigo " + n + " sobre o IBS e a CBS.", 1.0 - n / 10.0))
+        .toList();
   }
 }

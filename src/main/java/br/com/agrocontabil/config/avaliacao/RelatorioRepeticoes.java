@@ -225,6 +225,7 @@ public record RelatorioRepeticoes(List<RelatorioAvaliacao> rodadas) {
     c.put("citação", ResultadoPergunta::citacaoValida);
     c.put("recusa", ResultadoPergunta::recusaCorreta);
     c.put("vazamento", ResultadoPergunta::vazamento);
+    c.put("beco sem saída", ResultadoPergunta::semBecoSemSaida);
     c.put("falha técnica", r -> RelatorioAvaliacao.falhaTecnica(r.execucao()));
     return c;
   }

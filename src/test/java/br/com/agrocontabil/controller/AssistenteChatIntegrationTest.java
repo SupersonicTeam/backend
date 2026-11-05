@@ -266,7 +266,8 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
-  @DisplayName("#257: este mes = atraso + a vencer ate o fim do mes, com os subtotais da funcao")
+  @DisplayName("#257/#343: atalho 'este mes' = atraso + a vencer ate o fim do mes, com os "
+      + "subtotais da funcao, pelo template e sem o modelo (ele esta fora do ar)")
   void esteMesComAtrasadas() throws Exception {
     LocalDate hoje = LocalDate.now(ZONE);
     guiaFiscalRepository.save(guia(produtorA, hoje.minusMonths(2), "430.00",
@@ -276,17 +277,10 @@ class AssistenteChatIntegrationTest {
     guiaFiscalRepository.save(guia(produtorA, YearMonth.from(hoje).plusMonths(1)
         .atDay(10), "640.00", StatusGuiaFiscal.PENDENTE));
     guiaFiscalRepository.save(guia(produtorB, hoje, "777.00", StatusGuiaFiscal.PENDENTE));
-    modelo.responderCom(prompt -> {
-      if (ultimaMensagem(prompt) instanceof ToolResponseMessage respostas) {
-        JsonNode r = lerJson(respostas.getResponses().get(0).responseData());
-        return ChatModelSimulado.texto("Em atraso: " + r.at("/emAtraso/valorTotal").asText()
-            + ". A vencer: " + r.at("/aVencer/valorTotal").asText() + ". Total: "
-            + r.get("valorTotal").asText() + ".");
-      }
-      return pedirFuncao("vencimentosDoMes", Map.of());
-    });
+    // Atalho da tela (#343): a funcao e chamada pelo backend; o modelo nem e consultado.
+    modelo.falharCom(new IllegalStateException("connection refused"));
 
-    perguntar(produtorA, "Quanto eu tenho que pagar este mes?")
+    perguntar(produtorA, "Quanto eu tenho que pagar este mês?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value("Em " + YearMonth.from(hoje).format(
             java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")) + ": 2 guias para pagar,"
@@ -295,7 +289,89 @@ class AssistenteChatIntegrationTest {
             + ": R$ 430,00.\nA vencer de " + br(hoje) + " a " + br(YearMonth.from(hoje)
             .atEndOfMonth()) + ": 1 guia, R$ 310,00:\n- FUNRURAL, vence em " + br(hoje)
             + ": R$ 310,00."))
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.modoFallback").value(false))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("vencimentosDoMes"));
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement().satisfies(i -> {
+          assertThat(i.getCamadaClassificacao()).isEqualTo("ATALHO_FIXO");
+          assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+          assertThat(i.getChamadasFuncao()).isEqualTo(1);
+        });
+  }
+
+  @Test
+  @DisplayName("#257: fora do atalho, o modelo escolhe vencimentosDoMes e a resposta sai pelo "
+      + "template, com os subtotais da funcao")
+  void esteMesPeloModelo() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.minusMonths(2), "430.00",
+        StatusGuiaFiscal.VENCIDA));
+    guiaFiscalRepository.save(guia(produtorA, hoje, "310.00", StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorA, YearMonth.from(hoje).plusMonths(1)
+        .atDay(10), "640.00", StatusGuiaFiscal.PENDENTE));
+    guiaFiscalRepository.save(guia(produtorB, hoje, "777.00", StatusGuiaFiscal.PENDENTE));
+    modelo.responderCom(prompt -> pedirFuncao("vencimentosDoMes", Map.of()));
+
+    perguntar(produtorA, "Quanto preciso separar para as guias deste mes?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value("Em " + YearMonth.from(hoje).format(
+            java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")) + ": 2 guias para pagar,"
+            + " somando R$ 740,00.\nEm atraso: 1 guia, R$ 430,00:\n- FUNRURAL (contribuicao"
+            + " previdenciaria do produtor rural), venceu em " + br(hoje.minusMonths(2))
+            + ": R$ 430,00.\nA vencer de " + br(hoje) + " a " + br(YearMonth.from(hoje)
+            .atEndOfMonth()) + ": 1 guia, R$ 310,00:\n- FUNRURAL, vence em " + br(hoje)
+            + ": R$ 310,00."))
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("vencimentosDoMes"));
+    assertThat(modelo.promptsRecebidos()).isNotEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement().satisfies(i ->
+            assertThat(i.getCamadaClassificacao()).isNotEqualTo("ATALHO_FIXO"));
+  }
+
+  @Test
+  @DisplayName("#343: atalho 'proxima guia' chama proximosVencimentos direto, sem o modelo")
+  void atalhoProximaGuiaSemModelo() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    guiaFiscalRepository.save(guia(produtorA, hoje.plusDays(5), "250.00",
+        StatusGuiaFiscal.PENDENTE));
+    modelo.falharCom(new IllegalStateException("connection refused"));
+
+    perguntar(produtorA, "Quando vence a minha próxima guia?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("DADOS"))
+        .andExpect(jsonPath("$.modoFallback").value(false))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
+            br(hoje.plusDays(5)))))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
+            "R$ 250,00")))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("proximosVencimentos"));
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#343: atalho de legislacao da tela: texto curado, rota LEGISLACAO, zero chamadas "
+      + "ao modelo e nunca 'nao encontrei fundamento legal'")
+  void atalhoReformaSemModelo() throws Exception {
+    perguntar(produtorA, "O que muda para mim com o IBS e o CBS?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("LEGISLACAO"))
+        .andExpect(jsonPath("$.resposta").value(
+            br.com.agrocontabil.assistente.orquestracao.AtalhoReformaTributaria.TEXTO))
+        .andExpect(jsonPath("$.modoFallback").value(false))
+        .andExpect(jsonPath("$.fontesDados").isEmpty());
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement().satisfies(i -> {
+          assertThat(i.getRota()).isEqualTo("LEGISLACAO");
+          assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+          assertThat(i.getCamadaClassificacao()).isEqualTo("ATALHO_FIXO");
+        });
   }
 
   @Test

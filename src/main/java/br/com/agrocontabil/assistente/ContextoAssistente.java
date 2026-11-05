@@ -66,6 +66,7 @@ public final class ContextoAssistente {
   private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
+  private final AtomicBoolean trechosRelacionados = new AtomicBoolean();
   private final List<TextoDoBackend> textosDoBackend =
       Collections.synchronizedList(new ArrayList<>());
   private final List<SecaoResposta> secoes = Collections.synchronizedList(new ArrayList<>());
@@ -290,7 +291,10 @@ public final class ContextoAssistente {
     return consultasComResultado.get() == 0;
   }
 
-  /** Conta as funções que o modelo pediu, inclusive as que falharem (issue #144). */
+  /**
+   * Conta as funções executadas, inclusive as que falharem (issue #144): as que o modelo pediu e,
+   * no atalho fixo de dados (#343), a que o backend chamou direto.
+   */
   public void registrarChamadasDeFuncao(int quantidade) {
     chamadasDeFuncao.addAndGet(quantidade);
   }
@@ -312,6 +316,21 @@ public final class ContextoAssistente {
    */
   public void registrarTrechosCitados(List<String> ids) {
     trechosCitados.addAll(ids);
+  }
+
+  /**
+   * A lei respondeu com os trechos mais próximos da busca, sem nenhum citado pelo modelo (#343):
+   * as citações da rota são só para consulta. Quem acrescenta um fundamento do backend
+   * ({@code TextosDoBackend}, {@code FundamentoRetencao}) tira a frase e esses trechos; as
+   * citações que o modelo marcou certo (#258) ficam.
+   */
+  public void registrarTrechosRelacionados() {
+    trechosRelacionados.set(true);
+  }
+
+  /** {@code true} se as citações da lei são os trechos relacionados, não citados pelo modelo. */
+  public boolean trechosRelacionados() {
+    return trechosRelacionados.get();
   }
 
   /** Ids dos trechos de lei citados, na ordem da citação. */

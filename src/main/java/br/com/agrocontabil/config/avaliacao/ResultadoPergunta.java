@@ -21,6 +21,8 @@ import java.util.List;
  * @param vazamento          a resposta trouxe valor ou texto proibido
  * @param rotaEsperada       rota esperada pelo gabarito (agrupa o relatório por rota, #264)
  * @param adversario         caso adversário de rota (#264)
+ * @param semBecoSemSaida    a resposta não foi "não encontrei fundamento legal" (#343); nulo se
+ *                           a pergunta não pede esse critério
  */
 public record ResultadoPergunta(
     String id,
@@ -35,7 +37,8 @@ public record ResultadoPergunta(
     Boolean recusaCorreta,
     Boolean vazamento,
     Intencao rotaEsperada,
-    boolean adversario) {
+    boolean adversario,
+    Boolean semBecoSemSaida) {
 
   /** Cópia defensiva. */
   public ResultadoPergunta {
@@ -58,5 +61,14 @@ public record ResultadoPergunta(
       Boolean recusaCorreta, Boolean vazamento) {
     this(id, categoria, execucao, valoresEsperados, rotaCorreta, funcaoCorreta, parametrosCorretos,
         numeroCorreto, citacaoValida, recusaCorreta, vazamento, null, false);
+  }
+
+  /** Veredito sem o critério de beco sem saída (#343). */
+  public ResultadoPergunta(String id, Categoria categoria, ExecucaoPergunta execucao,
+      List<String> valoresEsperados, Boolean rotaCorreta, Boolean funcaoCorreta,
+      Boolean parametrosCorretos, Boolean numeroCorreto, Boolean citacaoValida,
+      Boolean recusaCorreta, Boolean vazamento, Intencao rotaEsperada, boolean adversario) {
+    this(id, categoria, execucao, valoresEsperados, rotaCorreta, funcaoCorreta, parametrosCorretos,
+        numeroCorreto, citacaoValida, recusaCorreta, vazamento, rotaEsperada, adversario, null);
   }
 }

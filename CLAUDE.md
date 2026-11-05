@@ -175,6 +175,9 @@ br.com.agrocontabil
 │                  #   desempate e na perguntaLei do MISTO; camada na auditoria (0050);
 │                  # orquestracao/FundamentoRetencao (RN009, #145: retenção sempre com as duas
 │                  #   regras e citações fixas — Funrural da Lei 8.212 e split payment da LC 214);
+│                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
+│                  #   modelo; dados → RotaDados.responderAtalho, lei → AtalhoReformaTributaria,
+│                  #   texto curado + 9 citações fixas; revisar o texto com a equipe);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;

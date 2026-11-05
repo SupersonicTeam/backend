@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
@@ -177,7 +178,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    CotaUsoPorta.ReservaCota reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
+    CotaUsoPorta.ReservaCota reserva = reservar(produtorId, request.pergunta());
     Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
     AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
@@ -236,7 +237,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    CotaUsoPorta.ReservaCota reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
+    CotaUsoPorta.ReservaCota reserva = reservar(produtorId, request.pergunta());
     Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
     SseEmitter emissor = new SseEmitter(timeoutPergunta.plus(FOLGA_TIMEOUT_SSE).toMillis());
     abrirNaThreadDaRequisicao(emissor);
@@ -409,6 +410,18 @@ public class AssistenteService implements DisposableBean {
     } finally {
       encerrarCota(execucao, concluida);
     }
+  }
+
+  /**
+   * Reserva da cota (#166). Atalho fixo da tela (#343) não chama o modelo e custa zero crédito:
+   * não reserva o teto nem recebe 429 {@code LIMITE_USO_ASSISTENTE} com a semana esgotada. A
+   * reserva inativa faz o acerto e o estorno não mexerem na cota.
+   */
+  private CotaUsoPorta.ReservaCota reservar(UUID produtorId, String pergunta) {
+    if (AtalhosFixos.ehAtalho(pergunta)) {
+      return new CotaUsoPorta.ReservaCota(produtorId, null, 0, false);
+    }
+    return cota.reservar(produtorId, modeloLinguagem.identificacao());
   }
 
   /**

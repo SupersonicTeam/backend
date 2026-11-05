@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
@@ -100,6 +101,99 @@ class FundamentoRetencaoTest {
         "Como funciona a retencao do Funrural?", contexto);
 
     assertThat(r.texto()).isEqualTo(FundamentoRetencao.TEXTO);
+  }
+
+  @Test
+  @DisplayName("#343: no MISTO, 'sobre a parte de legislacao, nao encontrei fundamento' sai: o "
+      + "fundamento das duas regras entra logo depois, com as citacoes")
+  void substituiSemFundamentoDaParteLegal() {
+    when(busca.buscarDispositivos(any(), any()))
+        .thenReturn(List.of(trecho("Lei 8.212/1991", "art. 30, inciso IV")));
+
+    ResultadoOrquestracao r = fundamento.aplicar(
+        resposta(Intencao.MISTO, "Em 10/2026: 1 venda.\n\n"
+            + OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL, List.of()),
+        "O comprador reteve Funrural na minha venda, esta certo?", contexto);
+
+    assertThat(r.texto()).isEqualTo("Em 10/2026: 1 venda.\n\n" + FundamentoRetencao.TEXTO)
+        .doesNotContain(OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("Lei 8.212/1991, art. 30, inciso IV");
+  }
+
+  @Test
+  @DisplayName("#343: 'nao consegui confirmar' sai com os trechos que ele apresentava; ficam so "
+      + "as citacoes fixas das duas regras")
+  void substituiTrechosSemConfirmacao() {
+    CitacaoLegal relacionado = new CitacaoLegal("LC 214/2025", "art. 99", "u", "t");
+    contexto.registrarTrechosRelacionados();
+    when(busca.buscarDispositivos(any(), any()))
+        .thenReturn(List.of(trecho("LC 214/2025", "art. 31")));
+
+    ResultadoOrquestracao r = fundamento.aplicar(
+        resposta(Intencao.LEGISLACAO, RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+            List.of(relacionado)),
+        "Como funciona a retencao do Funrural?", contexto);
+
+    assertThat(r.texto()).isEqualTo(FundamentoRetencao.TEXTO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 31");
+  }
+
+  @Test
+  @DisplayName("#343 review: no MISTO com tratamento do produto e trechos relacionados, o "
+      + "TextosDoBackend tira os relacionados e o FundamentoRetencao mantem a citacao do tratamento")
+  void encadeadoComTextosDoBackend() {
+    contexto.registrarFonte("totalComprasPorInsumo", Map.of(), false);
+    contexto.registrarConsultaDeTabela("consultarTratamentoProduto", Map.of(), true);
+    contexto.registrarTextoDoBackend("Soja: reducao de 60%.", List.of("LC 214/2025|art. 137"));
+    contexto.registrarTrechosRelacionados();
+    when(busca.buscarDispositivos(eq(List.of("LC 214/2025|art. 137")), any()))
+        .thenReturn(List.of(trecho("LC 214/2025", "art. 137")));
+    when(busca.buscarDispositivos(eq(FundamentoRetencao.DISPOSITIVOS), any()))
+        .thenReturn(List.of(trecho("LC 214/2025", "art. 31")));
+    ResultadoOrquestracao misto = resposta(Intencao.MISTO,
+        "Em 10/2026: 1 venda.\n\n" + RotaLegislacao.TRECHOS_SEM_CONFIRMACAO,
+        List.of(new CitacaoLegal("LC 214/2025", "art. 99", "u", "t")));
+
+    ResultadoOrquestracao r = fundamento.aplicar(
+        new TextosDoBackend(busca).aplicar(misto, contexto),
+        "O comprador reteve Funrural na venda de soja; soja tem reducao?", contexto);
+
+    assertThat(r.texto()).doesNotContain(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
+        .contains("Soja: reducao de 60%.").endsWith(FundamentoRetencao.TEXTO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 137", "LC 214/2025, art. 31");
+  }
+
+  @Test
+  @DisplayName("#343: modelo fora do ar e lei sem trecho: 'estou sem o modelo e nao encontrei' sai "
+      + "ao lado do fundamento das duas regras")
+  void substituiFallbackSemTrecho() {
+    ResultadoOrquestracao r = fundamento.aplicar(
+        resposta(Intencao.LEGISLACAO,
+            br.com.agrocontabil.assistente.fallback.ModoFallback.SEM_MODELO_SEM_TRECHO, List.of()),
+        "Como funciona a retencao do Funrural?", contexto);
+
+    assertThat(r.texto()).isEqualTo(FundamentoRetencao.TEXTO);
+  }
+
+  @Test
+  @DisplayName("#258/#343: trechos que o modelo citou certo ficam, com a frase que os apresenta, "
+      + "e as citacoes fixas entram depois")
+  void trechosCitadosPeloModeloFicam() {
+    CitacaoLegal citado = new CitacaoLegal("LC 214/2025", "art. 99", "u", "t");
+    when(busca.buscarDispositivos(any(), any()))
+        .thenReturn(List.of(trecho("LC 214/2025", "art. 31")));
+
+    ResultadoOrquestracao r = fundamento.aplicar(
+        resposta(Intencao.LEGISLACAO, RotaLegislacao.TRECHOS_SEM_CONFIRMACAO, List.of(citado)),
+        "Como funciona a retencao do Funrural?", contexto);
+
+    assertThat(r.texto()).isEqualTo(
+        RotaLegislacao.TRECHOS_SEM_CONFIRMACAO + "\n\n" + FundamentoRetencao.TEXTO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::referencia)
+        .containsExactly("LC 214/2025, art. 99", "LC 214/2025, art. 31");
   }
 
   @Test

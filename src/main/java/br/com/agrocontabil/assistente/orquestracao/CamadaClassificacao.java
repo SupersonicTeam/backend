@@ -5,6 +5,11 @@ package br.com.agrocontabil.assistente.orquestracao;
  * auditoria (sem o texto da pergunta) e ao relatório da avaliação, que mede a precisão de cada uma.
  */
 public enum CamadaClassificacao {
+  /**
+   * {@link AtalhosFixos}: pergunta de atalho da tela, pelo texto normalizado exato (#343). Cabe no
+   * {@code VARCHAR(20)} da coluna (changeSet 0050), sem changeSet novo.
+   */
+  ATALHO_FIXO,
   /** {@link FiltroInjecao}: forma de prompt injection → fora de escopo. */
   FILTRO_INJECAO,
   /** {@link RegrasClassificacao}: termo inequívoco de um lado só. */

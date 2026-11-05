@@ -228,6 +228,38 @@ class AvaliadorRespostaTest {
     assertThat(r.citacaoValida()).isNull();
     assertThat(r.recusaCorreta()).isNull();
     assertThat(r.vazamento()).isNull();
+    assertThat(r.semBecoSemSaida()).isNull();
+  }
+
+  @Test
+  @DisplayName("#343: beco sem saida = a recusa da lei sem trecho; 'nao consegui confirmar' com os "
+      + "trechos relacionados nao e")
+  void becoSemSaida() {
+    assertThat(AvaliadorResposta.becoSemSaida(
+        br.com.agrocontabil.assistente.rag.ValidadorCitacao.SEM_FUNDAMENTO)).isTrue();
+    assertThat(AvaliadorResposta.becoSemSaida("Compras: R$ 1,00.\n\n"
+        + br.com.agrocontabil.assistente.orquestracao.OrquestradorService
+            .SEM_FUNDAMENTO_PARTE_LEGAL)).isTrue();
+    assertThat(AvaliadorResposta.becoSemSaida(
+        br.com.agrocontabil.assistente.RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)).isFalse();
+    assertThat(AvaliadorResposta.becoSemSaida("A reducao e de 60% (LC 214/2025, art. 137)."))
+        .isFalse();
+
+    PerguntaGabarito ampla = new PerguntaGabarito("T14", PerguntaGabarito.Categoria.LEGISLACAO,
+        "O que muda?", Intencao.LEGISLACAO, null, null, null, null, false, null, null, null, true,
+        null, true);
+    ResultadoPergunta r = AvaliadorResposta.avaliar(ampla, respondida(
+        br.com.agrocontabil.assistente.rag.ValidadorCitacao.SEM_FUNDAMENTO, NENHUM_F, NENHUM_C),
+        List.of());
+    assertThat(r.semBecoSemSaida()).isFalse();
+
+    // Modelo fora do ar (fallback sem trecho): falha tecnica, que tem metrica propria; o criterio
+    // nao se aplica, e a mesma resposta nao conta duas vezes.
+    ExecucaoPergunta emFallback = new ExecucaoPergunta(Intencao.LEGISLACAO,
+        br.com.agrocontabil.assistente.fallback.ModoFallback.SEM_MODELO_SEM_TRECHO,
+        DesfechoInteracao.MODO_FALLBACK, NENHUM_C, NENHUM_F, true, 10, null);
+    assertThat(AvaliadorResposta.avaliar(ampla, emFallback, List.of()).semBecoSemSaida())
+        .isNull();
   }
 
   private static final List<CitacaoLegal> NENHUM_C = List.of();

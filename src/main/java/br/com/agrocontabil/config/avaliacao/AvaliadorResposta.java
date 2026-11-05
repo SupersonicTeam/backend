@@ -3,7 +3,9 @@ package br.com.agrocontabil.config.avaliacao;
 import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.ValidadorNumeros;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
+import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
+import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.math.BigDecimal;
 import java.text.Normalizer;
@@ -76,7 +78,22 @@ public final class AvaliadorResposta {
             ? null
             : vazou(pergunta, texto),
         pergunta.rotaEsperada(),
-        pergunta.adversario());
+        pergunta.adversario(),
+        // Falha tecnica (erro, modo fallback) ja conta na metrica dela: o criterio mede o
+        // conteudo da resposta com o modelo no ar.
+        pergunta.semBecoSemSaida() && !RelatorioAvaliacao.falhaTecnica(execucao)
+            ? !becoSemSaida(texto) : null);
+  }
+
+  /**
+   * A resposta é a recusa da lei sem nenhum trecho ("não encontrei fundamento legal"), na rota de
+   * lei ou na parte legal do MISTO (#343). "Não consegui confirmar", com os trechos relacionados,
+   * não é beco sem saída: o produtor tem por onde seguir. O fallback sem trecho não entra aqui: é
+   * falha técnica, e o critério não se aplica a ela ({@link RelatorioAvaliacao#falhaTecnica}).
+   */
+  static boolean becoSemSaida(String texto) {
+    return texto.contains(ValidadorCitacao.SEM_FUNDAMENTO)
+        || texto.contains(OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
   }
 
   static boolean funcaoCorreta(PerguntaGabarito pergunta, List<FonteDado> fontes) {
