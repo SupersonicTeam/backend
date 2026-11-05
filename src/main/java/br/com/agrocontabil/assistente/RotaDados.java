@@ -8,9 +8,11 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
@@ -96,7 +98,11 @@ public class RotaDados {
     this.modelo = modelo;
     this.validadorNumeros = validadorNumeros;
     this.verificadorNegativa = verificadorNegativa;
-    this.ferramentas = List.of(ToolCallbacks.from(ferramentasDadosProdutor));
+    // Ordem pelo nome (#270): o ToolCallbacks.from segue a ordem da reflexao, que a JVM nao garante.
+    // As definicoes fazem parte do prefixo fixo do prompt, e outra ordem invalidaria o cache.
+    this.ferramentas = Stream.of(ToolCallbacks.from(ferramentasDadosProdutor))
+        .sorted(Comparator.comparing(f -> f.getToolDefinition().name()))
+        .toList();
     this.nomesPermitidos = ferramentas.stream()
         .map(f -> f.getToolDefinition().name())
         .collect(Collectors.toUnmodifiableSet());
@@ -124,8 +130,8 @@ public class RotaDados {
         .toolContext(contexto.comoToolContext())
         .build();
     Prompt prompt = new Prompt(List.<Message>of(
-        new SystemMessage(PromptsCeres.sistemaDados(contexto.hoje())),
-        new UserMessage(perguntaAoModelo)), opcoes);
+        new SystemMessage(PromptsCeres.SISTEMA_DADOS),
+        new UserMessage(PromptsCeres.mensagemDados(contexto.hoje(), perguntaAoModelo))), opcoes);
 
     // Uma chamada so (#266): o modelo escolhe as funcoes; o texto e do template do backend.
     contexto.verificarAtiva();
