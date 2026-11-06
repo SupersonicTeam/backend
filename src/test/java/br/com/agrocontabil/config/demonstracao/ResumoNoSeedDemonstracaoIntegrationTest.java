@@ -76,7 +76,7 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
     assertThat(atraso).isPositive();
     assertThat(parada).isGreaterThan(atraso);
     assertThat(pedido).isGreaterThan(parada);
-    assertThat(texto).contains("devolvida pelo contador", "Extrato bancario de ");
+    assertThat(texto).contains("devolvida pelo contador", "Extrato bancário de ");
     // Sem nota a conferir no seed (#276: falso positivo zero), ela fica so no resumo.
     assertThat(resumo.notasAConferir()).isZero();
     assertThat(texto).contains("Sem pendências em:").contains("notas a conferir");

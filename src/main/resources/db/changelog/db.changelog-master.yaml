@@ -118,3 +118,5 @@ databaseChangeLog:
       file: db/changelog/changes/0055-nota-fiscal-versao-regra-fiscal.xml
   - include:
       file: db/changelog/changes/0056-nota-fiscal-busca-itens-documento.xml
+  - include:
+      file: db/changelog/changes/0057-obrigacao-fiscal-acentos.xml

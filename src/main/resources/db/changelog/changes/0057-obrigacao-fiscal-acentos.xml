@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0057-obrigacao-fiscal-acentos.xml
+         Issue #408 - as descricoes dos 11 modelos de obrigacao (0040)
+         chegavam a tela do produtor sem acento. O 0040 ja foi aplicado e
+         nao se edita: este changeSet so atualiza os MODELOS (modelo = true)
+         que ainda tem o texto antigo, pelo id fixo. A versao que um
+         escritorio fez do modelo (escritorio_id preenchido, modelo = false)
+         nunca e tocada, e o titulo e a origem dos modelos ja estavam
+         corretos (siglas e normas).
+         ================================================================ -->
+
+    <changeSet id="0057-obrigacao-fiscal-acentos" author="supersonic-team">
+        <comment>Acentua a descricao dos modelos de obrigacao fiscal (#408).</comment>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Apuração e recolhimento mensal do Simples Nacional"/>
+            <where>id = '00000000-0000-4000-8181-000000000001' AND modelo = true AND descricao = 'Apuracao e recolhimento mensal do Simples Nacional'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Declaração anual do MEI"/>
+            <where>id = '00000000-0000-4000-8181-000000000003' AND modelo = true AND descricao = 'Declaracao anual do MEI'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Declaração de informações socioeconômicas e fiscais do Simples"/>
+            <where>id = '00000000-0000-4000-8181-000000000004' AND modelo = true AND descricao = 'Declaracao de informacoes socioeconomicas e fiscais do Simples'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Declaração de débitos e créditos tributários federais previdenciários"/>
+            <where>id = '00000000-0000-4000-8181-000000000005' AND modelo = true AND descricao = 'Declaracao de debitos e creditos tributarios federais previdenciarios'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Escrituração fiscal digital de retenções e outras informações fiscais"/>
+            <where>id = '00000000-0000-4000-8181-000000000006' AND modelo = true AND descricao = 'Escrituracao fiscal digital de retencoes e outras informacoes fiscais'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Contribuição do produtor rural sobre a comercialização"/>
+            <where>id = '00000000-0000-4000-8181-000000000007' AND modelo = true AND descricao = 'Contribuicao do produtor rural sobre a comercializacao'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Declaração do imposto de renda da pessoa física e livro caixa digital do produtor rural"/>
+            <where>id = '00000000-0000-4000-8181-000000000008' AND modelo = true AND descricao = 'Declaracao do imposto de renda da pessoa fisica e livro caixa digital do produtor rural'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Declaração do imposto territorial rural (dono de imóvel rural)"/>
+            <where>id = '00000000-0000-4000-8181-000000000009' AND modelo = true AND descricao = 'Declaracao do imposto territorial rural (dono de imovel rural)'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Escrituração contábil digital (último dia útil de junho)"/>
+            <where>id = '00000000-0000-4000-8181-000000000010' AND modelo = true AND descricao = 'Escrituracao contabil digital (ultimo dia util de junho)'</where>
+        </update>
+        <update tableName="obrigacao_fiscal">
+            <column name="descricao" value="Escrituração contábil fiscal (último dia útil de julho)"/>
+            <where>id = '00000000-0000-4000-8181-000000000011' AND modelo = true AND descricao = 'Escrituracao contabil fiscal (ultimo dia util de julho)'</where>
+        </update>
+
+        <rollback>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Apuracao e recolhimento mensal do Simples Nacional"/>
+                <where>id = '00000000-0000-4000-8181-000000000001' AND modelo = true AND descricao = 'Apuração e recolhimento mensal do Simples Nacional'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Declaracao anual do MEI"/>
+                <where>id = '00000000-0000-4000-8181-000000000003' AND modelo = true AND descricao = 'Declaração anual do MEI'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Declaracao de informacoes socioeconomicas e fiscais do Simples"/>
+                <where>id = '00000000-0000-4000-8181-000000000004' AND modelo = true AND descricao = 'Declaração de informações socioeconômicas e fiscais do Simples'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Declaracao de debitos e creditos tributarios federais previdenciarios"/>
+                <where>id = '00000000-0000-4000-8181-000000000005' AND modelo = true AND descricao = 'Declaração de débitos e créditos tributários federais previdenciários'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Escrituracao fiscal digital de retencoes e outras informacoes fiscais"/>
+                <where>id = '00000000-0000-4000-8181-000000000006' AND modelo = true AND descricao = 'Escrituração fiscal digital de retenções e outras informações fiscais'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Contribuicao do produtor rural sobre a comercializacao"/>
+                <where>id = '00000000-0000-4000-8181-000000000007' AND modelo = true AND descricao = 'Contribuição do produtor rural sobre a comercialização'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Declaracao do imposto de renda da pessoa fisica e livro caixa digital do produtor rural"/>
+                <where>id = '00000000-0000-4000-8181-000000000008' AND modelo = true AND descricao = 'Declaração do imposto de renda da pessoa física e livro caixa digital do produtor rural'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Declaracao do imposto territorial rural (dono de imovel rural)"/>
+                <where>id = '00000000-0000-4000-8181-000000000009' AND modelo = true AND descricao = 'Declaração do imposto territorial rural (dono de imóvel rural)'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Escrituracao contabil digital (ultimo dia util de junho)"/>
+                <where>id = '00000000-0000-4000-8181-000000000010' AND modelo = true AND descricao = 'Escrituração contábil digital (último dia útil de junho)'</where>
+            </update>
+            <update tableName="obrigacao_fiscal">
+                <column name="descricao" value="Escrituracao contabil fiscal (ultimo dia util de julho)"/>
+                <where>id = '00000000-0000-4000-8181-000000000011' AND modelo = true AND descricao = 'Escrituração contábil fiscal (último dia útil de julho)'</where>
+            </update>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

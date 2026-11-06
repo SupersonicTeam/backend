@@ -146,6 +146,8 @@ public class SeedDemonstracao implements CommandLineRunner {
   private static final int MESES = 8;
   private static final int TIMEOUT_SEMEADURA_SEGUNDOS = 600;
   private static final Pattern CHAVE_NO_XML = Pattern.compile("Id=\"NFe(\\d{44})\"");
+  private static final java.time.format.DateTimeFormatter COMPETENCIA =
+      java.time.format.DateTimeFormatter.ofPattern("MM/yyyy");
   private static final String NATUREZA_VENDA = "VENDA DE PRODUCAO DO ESTABELECIMENTO";
   private static final String NATUREZA_REVENDA = "VENDA DE MERCADORIA ADQUIRIDA DE TERCEIROS";
 
@@ -690,8 +692,8 @@ public class SeedDemonstracao implements CommandLineRunner {
         ex.notas++;
         revisao(nota, AcaoRevisao.ENVIADA, null, produtor.getId(), PapelUsuario.PRODUTOR,
             nota.getDataEmissao());
-        revisao(nota, AcaoRevisao.DEVOLVIDA, "Peso divergente do romaneio: a balanca do "
-            + "armazem da trading registrou 36.420 kg. Corrija a quantidade antes de reenviar.",
+        revisao(nota, AcaoRevisao.DEVOLVIDA, "Peso divergente do romaneio: a balança do "
+            + "armazém da trading registrou 36.420 kg. Corrija a quantidade antes de reenviar.",
             revisor.getId(), PapelUsuario.CONTADOR, nota.getDataEmissao().plusHours(5));
       }
       case RASCUNHO -> {
@@ -771,7 +773,7 @@ public class SeedDemonstracao implements CommandLineRunner {
       boolean vencida = vencimento.isBefore(ex.hoje);
       boolean emAtraso = vencida && m == 2 && cliente.chave().equals(
           CenarioDemonstracao.CHAVE_PRINCIPAL);
-      guia(ex, produtor, tipo, vencimento, valorGuia(cliente, m), "Competencia " + competencia,
+      guia(ex, produtor, tipo, vencimento, valorGuia(cliente, m), "Competência " + competenciaBr(competencia),
           emAtraso ? StatusGuiaFiscal.VENCIDA
               : vencida ? StatusGuiaFiscal.PAGA : StatusGuiaFiscal.PENDENTE);
     }
@@ -785,6 +787,11 @@ public class SeedDemonstracao implements CommandLineRunner {
         // Só as mensais.
       }
     }
+  }
+
+  /** Competência como o produtor lê: {@code MM/AAAA}, nunca o {@code AAAA-MM} cru (#408). */
+  private static String competenciaBr(YearMonth competencia) {
+    return competencia.format(COMPETENCIA);
   }
 
   private void guia(Execucao ex, Produtor produtor, TipoGuiaFiscal tipo, LocalDate vencimento,
@@ -817,31 +824,31 @@ public class SeedDemonstracao implements CommandLineRunner {
       Contador revisor) {
     switch (cliente.chave()) {
       case CenarioDemonstracao.CHAVE_PRINCIPAL -> pendencia(ex, escritorio, produtor, revisor,
-          "Extrato bancario de " + YearMonth.from(ex.hoje).minusMonths(1),
+          "Extrato bancário de " + competenciaBr(YearMonth.from(ex.hoje).minusMonths(1)),
           "Extrato da conta de movimento da fazenda, para conciliar as vendas de soja.",
           ex.hoje.plusDays(5), StatusPendencia.PENDENTE, TipoDocumentoPendencia.EXTRATO);
       case "luiz" -> pendencia(ex, escritorio, produtor, revisor,
           "Contrato de fornecimento de leite 2027",
-          "Contrato assinado com a rede de supermercados, com o preco por litro e o prazo de"
+          "Contrato assinado com a rede de supermercados, com o preço por litro e o prazo de"
               + " entrega.",
           ex.hoje.plusDays(12), StatusPendencia.PENDENTE, TipoDocumentoPendencia.CONTRATO);
       case CenarioDemonstracao.CHAVE_COTA_NO_FIM -> pendencia(ex, escritorio, produtor, revisor,
           "Contrato de arrendamento da Fazenda Boa Vista",
-          "Contrato vigente e o ultimo recibo do arrendamento, para o livro caixa.",
+          "Contrato vigente e o último recibo do arrendamento, para o livro caixa.",
           ex.hoje.minusDays(3), StatusPendencia.PENDENTE, TipoDocumentoPendencia.CONTRATO);
       case "helena" -> pendencia(ex, escritorio, produtor, revisor,
           "Comprovante de pagamento do Funrural",
-          "Comprovante da guia de " + YearMonth.from(ex.hoje).minusMonths(2) + ".",
+          "Comprovante da guia de " + competenciaBr(YearMonth.from(ex.hoje).minusMonths(2)) + ".",
           ex.hoje.minusDays(9), StatusPendencia.CONCLUIDA,
           TipoDocumentoPendencia.COMPROVANTE_PAGAMENTO);
       case "santaclara" -> {
         Pendencia enviada = pendencia(ex, escritorio, produtor, revisor,
-            "Nota de compra do cloreto de potassio",
-            "A NF-e do fornecedor nao chegou ao e-mail do escritorio; envie o PDF ou o XML.",
+            "Nota de compra do cloreto de potássio",
+            "A NF-e do fornecedor não chegou ao e-mail do escritório; envie o PDF ou o XML.",
             ex.hoje.plusDays(4), StatusPendencia.ENVIADA, TipoDocumentoPendencia.NOTA_FISCAL);
         anexoRepository.save(PendenciaAnexo.builder()
             .pendenciaId(enviada.getId())
-            .nomeArquivo("NF-e cloreto de potassio.pdf")
+            .nomeArquivo("NF-e cloreto de potássio.pdf")
             .mime("application/pdf")
             .tamanho(PDF_COMPROVANTE.length)
             .sha256(sha256(PDF_COMPROVANTE))

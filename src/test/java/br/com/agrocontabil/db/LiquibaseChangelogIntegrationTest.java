@@ -221,6 +221,29 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0057: descricao dos 11 modelos de obrigacao com acento; versao de escritorio intacta (#408)")
+  void changeSet0057ObrigacoesComAcento() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> modelos = jdbc.queryForList(
+        "SELECT titulo, descricao, origem FROM obrigacao_fiscal WHERE modelo = true");
+
+    assertThat(modelos).hasSize(11);
+    assertThat(modelos).allSatisfy(m -> {
+      for (String coluna : List.of("titulo", "descricao", "origem")) {
+        assertThat(br.com.agrocontabil.support.TextoSemAcento
+            .primeiraPalavraSemAcento((String) m.get(coluna)))
+            .as("%s sem acento: %s", coluna, m.get(coluna)).isNull();
+      }
+    });
+    assertThat(jdbc.queryForObject("SELECT descricao FROM obrigacao_fiscal WHERE id ="
+        + " '00000000-0000-4000-8181-000000000007'", String.class))
+        .isEqualTo("Contribuição do produtor rural sobre a comercialização");
+    assertThat(jdbc.queryForObject("SELECT descricao FROM obrigacao_fiscal WHERE id ="
+        + " '00000000-0000-4000-8181-000000000010'", String.class))
+        .isEqualTo("Escrituração contábil digital (último dia útil de junho)");
+  }
+
+  @Test
   @DisplayName("changeSet 0056: busca_normalizada em 8000 e busca_versao nula, indice de trigrama mantido (#271)")
   void changeSet0056BuscaComItensEDocumento() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

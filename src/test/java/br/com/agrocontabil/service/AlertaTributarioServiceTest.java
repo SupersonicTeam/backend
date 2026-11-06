@@ -115,7 +115,7 @@ class AlertaTributarioServiceTest {
     ArgumentCaptor<AlertaTributario> salvo = ArgumentCaptor.forClass(AlertaTributario.class);
     verify(alertaRepository).save(salvo.capture());
     assertThat(salvo.getValue().getDataLimite()).isEqualTo(LocalDate.of(2026, 10, 15));
-    assertThat(salvo.getValue().getDescricao()).isEqualTo("Prazo para cancelar a NFA 7, serie 1");
+    assertThat(salvo.getValue().getDescricao()).isEqualTo("Prazo para cancelar a NFA 7, série 1");
     assertThat(salvo.getValue().getProdutor().getId()).isEqualTo(produtorId);
   }
 
