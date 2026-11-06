@@ -37,8 +37,14 @@ public class TratamentoProdutoAdaptador implements TratamentoProdutoPorta {
         c.produtos().stream()
             .map(p -> new Produto(p.ncm(), p.descricao(), p.quantidadeNcms(), p.cClassTrib(),
                 p.percentualReducao(), p.origem() == Origem.IN_NATURA, p.anexo(), p.artigo(),
-                p.condicao(), p.ncmConhecido()))
+                p.condicao(), p.ncmConhecido(), alternativa(p.alternativa())))
             .toList(),
         c.versaoTabela());
+  }
+
+  private static Alternativa alternativa(TratamentoProdutoService.Alternativa a) {
+    return a == null ? null
+        : new Alternativa(a.cClassTrib(), a.percentualReducao(), a.anexo(), a.artigo(),
+            a.condicao());
   }
 }

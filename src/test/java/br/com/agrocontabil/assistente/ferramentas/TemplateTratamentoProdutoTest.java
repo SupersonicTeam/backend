@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente.ferramentas;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Alternativa;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado;
 import java.math.BigDecimal;
@@ -32,6 +33,29 @@ class TemplateTratamentoProdutoTest {
         + " 137; cClassTrib 200036). Condicao: vendido in natura, sem industrializacao (LC"
         + " 214/2025, art. 137).\nTratamento pela tabela oficial de classificacao tributaria (IT"
         + " 2025.002 v1.70). " + TemplateTratamentoProduto.RESSALVA);
+  }
+
+  @Test
+  @DisplayName("leite (#284): as duas situacoes, as duas citacoes e o enquadramento com o contador")
+  void leiteDuasSituacoes() {
+    Produto leite = new Produto("04012090", "Leite com teor de gordura entre 1% e 6%, outros", 1,
+        "200036", new BigDecimal("60.00"), true, null, "137",
+        "leite cru ou apenas resfriado, vendido in natura (LC 214/2025, art. 137, par. 1, II)",
+        true, new Alternativa("200003", new BigDecimal("100.00"), 1, "125",
+            "leite para consumo direto pela populacao (Anexo I, item 2)"));
+    TratamentoConsultado consulta =
+        new TratamentoConsultado("leite", List.of(leite), "IT 2025.002 v1.70");
+
+    assertThat(TemplateTratamentoProduto.texto(consulta)).isEqualTo("Leite com teor de gordura"
+        + " entre 1% e 6%, outros (NCM 0401.20.90): reducao de 60% do IBS e da CBS, como produto"
+        + " agropecuario in natura (LC 214/2025, art. 137; cClassTrib 200036). Condicao: leite cru"
+        + " ou apenas resfriado, vendido in natura (LC 214/2025, art. 137, par. 1, II). Ja o leite"
+        + " para consumo direto pela populacao (Anexo I, item 2) tem aliquota zero do IBS e da CBS"
+        + " (LC 214/2025, art. 125, Anexo I; cClassTrib 200003), com esse cClassTrib informado no"
+        + " item da nota.\nTratamento pela tabela oficial de classificacao tributaria (IT 2025.002"
+        + " v1.70). " + TemplateTratamentoProduto.RESSALVA_ALTERNATIVA);
+    assertThat(TemplateTratamentoProduto.dispositivos(consulta))
+        .containsExactly("LC 214/2025|art. 137", "LC 214/2025|art. 125");
   }
 
   @Test

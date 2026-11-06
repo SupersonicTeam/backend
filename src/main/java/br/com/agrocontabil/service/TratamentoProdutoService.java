@@ -53,9 +53,12 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code cClassTrib}. As demais células da coluna de condição são o título do grupo do anexo, não
  * condição.
  *
- * <p>Leite cru e cooperativa (#284, perguntas 2 e 6) seguem o dado atual da tabela, sem regra
- * própria; o arroz em casca não parboilizado (pergunta 3) é in natura pela marca da referência
- * (changeSet 0051).
+ * <p><strong>Leite</strong> (#284, pergunta 2): os NCMs do Anexo I, item 2, saem in natura (60%,
+ * art. 137), como no cálculo da nota, e o produto leva a {@link Alternativa} da alíquota zero
+ * (Anexo I, art. 125, cClassTrib 200003) para o leite de consumo direto: a resposta diz as duas
+ * situações e que o enquadramento é com o contador. A cooperativa (pergunta 6) segue o dado atual
+ * da tabela, sem regra própria; o arroz em casca não parboilizado (pergunta 3) é in natura pela
+ * marca da referência (changeSet 0051).
  */
 @Service
 public class TratamentoProdutoService {
@@ -65,6 +68,12 @@ public class TratamentoProdutoService {
 
   static final String CONDICAO_IN_NATURA =
       "vendido in natura, sem industrializacao (LC 214/2025, art. 137)";
+
+  static final String CONDICAO_LEITE_IN_NATURA = "leite cru ou apenas resfriado para o"
+      + " transporte ou o armazenamento, vendido in natura (LC 214/2025, art. 137, par. 1, II)";
+
+  static final String CONDICAO_LEITE_CONSUMO_DIRETO = "leite em conformidade com os requisitos"
+      + " da legislacao especifica relativos ao consumo direto pela populacao (Anexo I, item 2)";
 
   private static final Pattern NCM = Pattern.compile("\\d{8}");
   private static final Pattern PREFIXO_NCM = Pattern.compile("(?i)^\\s*ncm\\b[:\\s]*");
@@ -140,7 +149,7 @@ public class TratamentoProdutoService {
     List<TratamentoProduto> produtos = new ArrayList<>();
     for (Descrito d : escolhidos) {
       if (d.ncm() != null) {
-        produtos.add(produto(d.ncm(), d.descricao(), 1, tratamentos.get(d.ncm()), true));
+        produtos.add(produto(d.ncm(), d.descricao(), 1, tratamentos.get(d.ncm()), true, data));
         continue;
       }
       // NCMs do item com o mesmo tratamento viram um so produto, com a contagem.
@@ -152,7 +161,7 @@ public class TratamentoProdutoService {
       for (List<TratamentoTributarioNcm> grupo : porHipotese.values()) {
         TratamentoTributarioNcm exemplo = grupo.get(0);
         produtos.add(produto(grupo.size() == 1 ? exemplo.ncm() : null, d.descricao(),
-            grupo.size(), exemplo, true));
+            grupo.size(), exemplo, true, data));
       }
     }
     if (produtos.isEmpty()) {
@@ -171,7 +180,7 @@ public class TratamentoProdutoService {
     boolean conhecido = referencia.isPresent() || !t.enquadramentos().isEmpty();
     return new ConsultaTratamentoProduto(codigo, TipoBusca.NCM,
         List.of(produto(codigo, referencia.map(NcmReferencia::getDescricao).orElse(null), 1, t,
-            conhecido)),
+            conhecido, data)),
         t.versaoTabela());
   }
 
@@ -194,14 +203,37 @@ public class TratamentoProdutoService {
         .filter(Objects::nonNull).findFirst().orElse(null);
   }
 
-  private static TratamentoProduto produto(String ncm, String descricao, int quantidadeNcms,
-      TratamentoTributarioNcm t, boolean ncmConhecido) {
+  private TratamentoProduto produto(String ncm, String descricao, int quantidadeNcms,
+      TratamentoTributarioNcm t, boolean ncmConhecido, LocalDate data) {
     Optional<EnquadramentoAnexo> escolhido = t.enquadramentos().stream()
         .filter(e -> e.cClassTrib().equals(t.cClassTrib()))
         .findFirst();
+    Alternativa alternativa = alternativaDoLeite(t, data);
+    String condicao = alternativa != null ? CONDICAO_LEITE_IN_NATURA : condicao(t, escolhido);
     return new TratamentoProduto(ncm, descricao, quantidadeNcms, t.cClassTrib(),
         t.percentualReducao(), t.origem(), escolhido.map(EnquadramentoAnexo::anexo).orElse(null),
-        artigo(t.fundamento()), condicao(t, escolhido), ncmConhecido);
+        artigo(t.fundamento()), condicao, ncmConhecido, alternativa);
+  }
+
+  /**
+   * Alíquota zero do leite de consumo direto (Anexo I, item 2), quando a regra por NCM o deixou
+   * in natura ({@link ClassificacaoTributariaService#leiteSemDestinoDecidido}); nula nos demais.
+   */
+  private Alternativa alternativaDoLeite(TratamentoTributarioNcm t, LocalDate data) {
+    if (t.origem() != Origem.IN_NATURA) {
+      return null;
+    }
+    Optional<EnquadramentoAnexo> anexoI = t.enquadramentos().stream()
+        .filter(e -> ClassificacaoTributariaService.leiteSemDestinoDecidido(t.ncm(),
+            e.cClassTrib()))
+        .findFirst();
+    if (anexoI.isEmpty()) {
+      return null;
+    }
+    return classificacaoService.classificacao(ClassificacaoTributariaService.CESTA_BASICA, data)
+        .map(c -> new Alternativa(c.getCodigo(), c.getPercentualReducaoIbs(),
+            anexoI.get().anexo(), artigo(c.getDescricao()), CONDICAO_LEITE_CONSUMO_DIRETO))
+        .orElse(null);
   }
 
   /** Artigo da LC 214/2025 na descrição oficial ("observado o art. 137 da ..."). */
@@ -411,8 +443,31 @@ public class TratamentoProdutoService {
    * @param ncmConhecido      {@code false} para um NCM pedido que não está na referência nem em
    *                          anexo nenhum: a tabela não diz nada dele, e a resposta pede para
    *                          conferir o código
+   * @param alternativa       tratamento que vale só com o cClassTrib informado; nulo quando não há
    */
   public record TratamentoProduto(String ncm, String descricao, int quantidadeNcms,
       String cClassTrib, BigDecimal percentualReducao, Origem origem, Integer anexo,
-      String artigo, String condicao, boolean ncmConhecido) {}
+      String artigo, String condicao, boolean ncmConhecido, Alternativa alternativa) {
+
+    /** Sem alternativa (todo produto, exceto o leite do Anexo I, item 2). */
+    public TratamentoProduto(String ncm, String descricao, int quantidadeNcms,
+        String cClassTrib, BigDecimal percentualReducao, Origem origem, Integer anexo,
+        String artigo, String condicao, boolean ncmConhecido) {
+      this(ncm, descricao, quantidadeNcms, cClassTrib, percentualReducao, origem, anexo, artigo,
+          condicao, ncmConhecido, null);
+    }
+  }
+
+  /**
+   * Outro tratamento do mesmo produto, que vale só com o {@code cClassTrib} informado no item
+   * (hoje, a alíquota zero do leite de consumo direto, #284).
+   *
+   * @param cClassTrib        classificação que o item teria de informar
+   * @param percentualReducao redução oficial desse código
+   * @param anexo             número do anexo da LC 214/2025
+   * @param artigo            artigo da LC 214/2025 do código
+   * @param condicao          quando vale
+   */
+  public record Alternativa(String cClassTrib, BigDecimal percentualReducao, Integer anexo,
+      String artigo, String condicao) {}
 }

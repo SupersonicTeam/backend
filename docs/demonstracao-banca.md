@@ -87,11 +87,16 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
 
 | Redução | Produtos |
 |---|---|
-| **100%** (IBS/CBS zero) | ovos, leite, arroz, tomate e café cru (Anexos I e XV da LC 214) |
+| **100%** (IBS/CBS zero) | ovos, leite pasteurizado (com o cClassTrib 200003 informado no item), arroz, tomate e café cru (Anexos I e XV da LC 214) |
 | **60%** | soja, milho, trigo e algodão em grão (in natura, art. 137), touro reprodutor, e os insumos: fertilizantes, defensivos, sementes e ração (Anexo IX) |
 | **0%** (alíquota cheia) | diesel e peças da colhedora |
 
 - O IBS/CBS zero é o comportamento esperado, não falta de cálculo.
+- **Leite (#284, decisão de 2026-11-06):** o NCM não separa o leite cru do de consumo direto, então
+  o leite sai por padrão **in natura, 60%** (art. 137, cClassTrib 200036), e a alíquota zero do
+  Anexo I (item 2, art. 125) só vale com o cClassTrib **200003** informado no item. O leite
+  pasteurizado de 1 litro do Luiz é de consumo direto e vai com o 200003: os totais da
+  demonstração não mudam. Uma nota nova de leite sem o cClassTrib sai com 60%.
 - O 60% da soja e do milho (art. 137) segue em validação com o contador (#284, pergunta 1). Não
   afirmar na banca que esse enquadramento é definitivo.
 - **ICMS e Funrural** ficam por guia (premissa da #280): as guias mensais são de Funrural (PF) e
@@ -121,6 +126,25 @@ diferente = recopiar a base. Depois, testar na tela o atalho "O que muda para mi
 CBS?" (#347): a resposta lista 33 citações (34 para produtor pessoa física, com o Funrural, mais
 as dos produtos vendidos que não se repetem); com dispositivo faltando, o log do backend
 mostra, na pergunta, `Atalho IBS/CBS: x de N dispositivos na base de legislacao`.
+
+## Passo manual na VPS: cClassTrib do leite da demonstração (#284, leite in natura)
+
+O seed da banca é idempotente e não regrava nota já semeada. As notas de leite gravadas antes da
+regra do leite in natura têm o tratamento **aplicado** 200003 (zero) mas não o cClassTrib
+**informado**: emitidas, nada muda (o XML é o documento); a nota não emitida (a do Luiz aguardando
+aprovação) segue zero até ser editada, e uma edição depois de devolvida a recalcularia para 60%.
+Para a demonstração ficar coerente com o seed novo, informar o 200003 nesses itens (idempotente;
+só o leite pasteurizado do seed, nunca changeSet):
+
+```bash
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+UPDATE nota_fiscal_item SET c_class_trib = '200003'
+ WHERE ncm = '04012010' AND c_class_trib IS NULL AND c_class_trib_aplicado = '200003'
+   AND descricao = 'Leite pasteurizado integral, embalagem de 1 litro';
+SQL
+```
+
+Conferir: o mesmo `WHERE` com `SELECT COUNT(*)` volta 0; os totais do Luiz não mudam.
 
 ## Passo manual na VPS: regime dos produtores pessoa física (issue #298)
 

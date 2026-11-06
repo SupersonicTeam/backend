@@ -35,8 +35,18 @@ final class CenarioDemonstracao {
   record Membro(String nome, String cpf, String crc, String email, String telefone,
       FuncaoEscritorio funcao) {}
 
-  /** Produto ou insumo, com o preço de referência por unidade. */
-  record Produto(String codigo, String descricao, String ncm, String unidade, BigDecimal preco) {}
+  /**
+   * Produto ou insumo, com o preço de referência por unidade e, quando o NCM não decide o
+   * tratamento, o {@code cClassTrib} informado no item (o leite de consumo direto, #284).
+   */
+  record Produto(String codigo, String descricao, String ncm, String unidade, BigDecimal preco,
+      String cClassTrib) {
+
+    /** Sem cClassTrib informado: vale a regra por NCM. */
+    Produto(String codigo, String descricao, String ncm, String unidade, BigDecimal preco) {
+      this(codigo, descricao, ncm, unidade, preco, null);
+    }
+  }
 
   /**
    * Linha de venda recorrente: o produto sai para os compradores, em rodízio, nos meses indicados.
@@ -189,9 +199,14 @@ final class CenarioDemonstracao {
   private static final Produto CAFE = new Produto("CAFE-AR",
       "Cafe arabica cru em grao, tipo 6, bebida dura, saca 60 kg", "09011110", "SC",
       new BigDecimal("1890.00"));
+  /**
+   * Leite pasteurizado em embalagem de 1 litro: consumo direto pela população, então o item
+   * informa o cClassTrib 200003 (Anexo I, item 2, alíquota zero). Sem ele, o 0401.20.10 sairia
+   * in natura, com 60% (#284).
+   */
   private static final Produto LEITE = new Produto("LEITE-RF",
       "Leite pasteurizado integral, embalagem de 1 litro", "04012010", "L",
-      new BigDecimal("2.48"));
+      new BigDecimal("2.48"), "200003");
   private static final Produto TOMATE = new Produto("TOM-ITA",
       "Tomate italiano extra AA, caixa 20 kg", "07020000", "CX", new BigDecimal("86.00"));
   private static final Produto OVOS = new Produto("OVO-BR",
