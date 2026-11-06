@@ -1,6 +1,6 @@
 {
-  "versao": "2026-11-06.3",
-  "observacao": "Perguntas de TREINO para o diagnostico das citacoes da rota de lei (#269). Nenhuma e do gabarito, de parafrase dele nem do conjunto cego. O dispositivo esperado foi definido lendo o texto da lei (tabela legislacao_trecho), nunca olhando resposta do modelo. 'esperado' = artigo que responde; 'aceito' = artigo que tambem serve. Comparacao no nivel do artigo (os trechos sao um por paragrafo/inciso). D19, D20 e D22 sao perguntas do produtor rural cuja norma pode estar FORA da base (hipotese verificada por busca no texto da base, ver o relatorio); D21 e controle de pergunta cuja norma esta na base. D23 a D31 sao o CONJUNTO DE CONTROLE (holdout) escrito depois de D01-D22: nao se ajusta regra nenhuma olhando para elas; servem so para medir se uma candidata de busca generaliza.",
+  "versao": "2026-11-06.4",
+  "observacao": "Perguntas de TREINO para o diagnostico das citacoes da rota de lei (#269). Nenhuma e do gabarito, de parafrase dele nem do conjunto cego. O dispositivo esperado foi definido lendo o texto da lei (tabela legislacao_trecho), nunca olhando resposta do modelo. 'esperado' = artigo que responde; 'aceito' = artigo que tambem serve. Comparacao no nivel do artigo (os trechos sao um por paragrafo/inciso). D19, D20 e D22 sao perguntas do produtor rural cuja norma pode estar FORA da base (hipotese verificada por busca no texto da base, ver o relatorio); D21 e controle de pergunta cuja norma esta na base. D23 a D31 sao o CONJUNTO DE CONTROLE (holdout) escrito depois de D01-D22: nao se ajusta regra nenhuma olhando para elas; servem so para medir se uma candidata de busca generaliza. D32 a D43 sao o SEGUNDO CONTROLE, escrito ANTES da tabela de vocabulario da busca (frente de expansao de consulta) e sem ajustar nada olhando para elas.",
   "perguntas": [
     {
       "id": "D01",
@@ -315,6 +315,142 @@
       "aceito": [],
       "holdout": true,
       "raciocinio": "O art. 57 define uso ou consumo pessoal (joias, bebidas, veículos, bens dados a sócios e empregados etc.)."
+    },
+    {
+      "id": "D32",
+      "pergunta": "Qual o período de apuração do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 43"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 43 diz que o período de apuração do IBS e da CBS será mensal."
+    },
+    {
+      "id": "D33",
+      "pergunta": "Até quando devo pagar o saldo do IBS e da CBS do mês?",
+      "esperado": [
+        "LC 214/2025 art. 29"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 29 manda o contribuinte pagar, até a data de vencimento, o saldo a recolher apurado (art. 45)."
+    },
+    {
+      "id": "D34",
+      "pergunta": "Posso pedir a restituição de um imposto que paguei a maior?",
+      "esperado": [
+        "LC 214/2025 art. 38"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 38 trata da restituição do IBS e da CBS pago indevidamente ou a maior, devida ao contribuinte só em certas hipóteses."
+    },
+    {
+      "id": "D35",
+      "pergunta": "A apuração junta todos os meus estabelecimentos ou é separada por estabelecimento?",
+      "esperado": [
+        "LC 214/2025 art. 42"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 42 diz que a apuração consolida as operações de todos os estabelecimentos do contribuinte."
+    },
+    {
+      "id": "D36",
+      "pergunta": "Em que ordem posso usar os créditos que acumulei?",
+      "esperado": [
+        "LC 214/2025 art. 53"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 53 define a ordem de utilização dos créditos apropriados em cada período."
+    },
+    {
+      "id": "D37",
+      "pergunta": "Se um cliente devolver a mercadoria, qual alíquota vale na devolução?",
+      "esperado": [
+        "LC 214/2025 art. 17"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 17 diz que a alíquota para devolução ou cancelamento da operação é a mesma cobrada na operação original."
+    },
+    {
+      "id": "D38",
+      "pergunta": "Sobre qual valor se calcula o imposto numa importação de bens?",
+      "esperado": [
+        "LC 214/2025 art. 69"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 69 fixa a base de cálculo na importação de bens materiais: o valor aduaneiro acrescido de outros valores."
+    },
+    {
+      "id": "D39",
+      "pergunta": "Quem responde junto com o importador pelo imposto de uma importação?",
+      "esperado": [
+        "LC 214/2025 art. 74"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 73"
+      ],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 74 define o responsável solidário na importação de bens materiais; o art. 73 o responsável em substituição."
+    },
+    {
+      "id": "D40",
+      "pergunta": "Uma pessoa física precisa se cadastrar para o IBS e a CBS?",
+      "esperado": [
+        "LC 214/2025 art. 59"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 21"
+      ],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 59 obriga as pessoas físicas e jurídicas sujeitas ao IBS e à CBS a se registrar em cadastro único; o art. 21, § 1º, obriga o contribuinte a se inscrever."
+    },
+    {
+      "id": "D41",
+      "pergunta": "Quando um serviço prestado a quem mora fora do país conta como exportação?",
+      "esperado": [
+        "LC 214/2025 art. 80"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 80 considera exportação de serviço o fornecimento para residente ou domiciliado no exterior, nas condições que descreve."
+    },
+    {
+      "id": "D42",
+      "pergunta": "Em que situação o fisco pode arbitrar o valor da minha venda?",
+      "esperado": [
+        "LC 214/2025 art. 13"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 13 lista quando o valor da operação será arbitrado pela administração tributária."
+    },
+    {
+      "id": "D43",
+      "pergunta": "Se eu vendo vários produtos juntos, preciso detalhar o valor de cada um?",
+      "esperado": [
+        "LC 214/2025 art. 7º"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 7º torna obrigatória a especificação de cada fornecimento e do seu valor quando há bens e serviços diferentes na mesma operação."
     }
   ]
 }
