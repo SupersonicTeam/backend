@@ -36,8 +36,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.PageRequest;
@@ -134,6 +136,7 @@ public class SinaisNotaConferirService {
   private final ClassificacaoTributariaService classificacaoService;
   private final Clock clock;
   private final Pattern termosServico;
+  private final Set<String> termosAmbiguos;
   private final List<String> excecoes;
 
   /** Constrói o serviço com as listas versionadas em {@code sinais-nota/}. */
@@ -142,13 +145,23 @@ public class SinaisNotaConferirService {
       NcmReferenciaRepository ncmReferenciaRepository,
       ClassificacaoTributariaService classificacaoService, Clock clock) {
     this(notaFiscalRepository, ncmReferenciaRepository, classificacaoService, clock,
-        lista("sinais-nota/termos-servico.txt"), lista("sinais-nota/excecoes-servico.txt"));
+        lista("sinais-nota/termos-servico.txt"),
+        lista("sinais-nota/termos-ambiguos-servico.txt"),
+        lista("sinais-nota/excecoes-servico.txt"));
   }
 
   SinaisNotaConferirService(NotaFiscalRepository notaFiscalRepository,
       NcmReferenciaRepository ncmReferenciaRepository,
       ClassificacaoTributariaService classificacaoService, Clock clock, List<String> termos,
       List<String> excecoes) {
+    this(notaFiscalRepository, ncmReferenciaRepository, classificacaoService, clock, termos,
+        List.of(), excecoes);
+  }
+
+  SinaisNotaConferirService(NotaFiscalRepository notaFiscalRepository,
+      NcmReferenciaRepository ncmReferenciaRepository,
+      ClassificacaoTributariaService classificacaoService, Clock clock, List<String> termos,
+      List<String> ambiguos, List<String> excecoes) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.ncmReferenciaRepository = ncmReferenciaRepository;
     this.classificacaoService = classificacaoService;
@@ -159,7 +172,12 @@ public class SinaisNotaConferirService {
       // Lista vazia viraria \b()\b, que casa qualquer descricao: todo item 5949 seria "servico".
       throw new IllegalStateException("Lista de termos de servico vazia (sinais-nota)");
     }
-    this.termosServico = Pattern.compile("\\b(" + normalizados.stream().map(Pattern::quote)
+    this.termosAmbiguos = ambiguos.stream().map(SinaisNotaConferirService::texto)
+        .filter(t -> !t.isEmpty()).collect(Collectors.toUnmodifiableSet());
+    // Termo ambíguo também é termo: a lista dele não precisa repetir a de serviço.
+    List<String> todos = Stream.concat(normalizados.stream(), termosAmbiguos.stream())
+        .distinct().toList();
+    this.termosServico = Pattern.compile("\\b(" + todos.stream().map(Pattern::quote)
         .collect(Collectors.joining("|")) + ")\\b");
     this.excecoes = excecoes.stream().map(SinaisNotaConferirService::texto)
         .filter(t -> !t.isEmpty()).toList();
@@ -190,7 +208,7 @@ public class SinaisNotaConferirService {
     for (ItemParaSinal item : itens) {
       motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
-          item.descricao(), item.cfop(), prazo)));
+          item.descricao(), item.cfop(), prazo, item.unidade(), null, null, null, null)));
       if (ANTES_DO_XML.contains(nota.status())) {
         if (cClassTribNaoAdmitido(item.cClassTrib(), item.ncm(), nota.dataEmissao(),
             cClassTribJaConferido)) {
@@ -389,24 +407,87 @@ public class SinaisNotaConferirService {
    * consulta) e a referência de NCM só quando o CFOP não é genérico.
    */
   Optional<Motivo> motivoServico(ItemParaSinal item) {
-    if (!temTermoDeServico(item.descricao())) {
+    Termos termos = termosDeServico(item.descricao());
+    if (termos == Termos.NENHUM) {
+      return Optional.empty();
+    }
+    Direcao unidade = apontaPara(item.unidade());
+    boolean temNcm = item.ncm() != null && !item.ncm().isBlank();
+    // "Bag de colheita - 100 un", "adubo de plantio - 50 sc": o termo é só o nome de uma operação
+    // que a mercadoria carrega. NCM de mercadoria + unidade de produto desfazem o termo ambíguo
+    // (#364); o termo forte ("serviço", "frete", "aluguel"...) segue valendo.
+    if (termos == Termos.SO_AMBIGUOS && temNcm && unidade == Direcao.PRODUTO) {
       return Optional.empty();
     }
     if (item.cfop() != null && CFOPS_GENERICOS.contains(item.cfop().strip())) {
       return Optional.of(Motivo.CFOP_GENERICO);
     }
-    boolean foraDaReferencia = item.ncm() == null || item.ncm().isBlank()
+    if (unidade == Direcao.SERVICO) {
+      return Optional.of(Motivo.UNIDADE_DE_SERVICO);
+    }
+    boolean foraDaReferencia = !temNcm
         || !ncmReferenciaRepository.existsByCodigo(item.ncm().strip());
     return foraDaReferencia ? Optional.of(Motivo.NCM_FORA_DA_REFERENCIA) : Optional.empty();
   }
 
   /** Termo de serviço na descrição, depois de tirar as exceções ("para plantio"). */
   boolean temTermoDeServico(String descricao) {
+    return termosDeServico(descricao) != Termos.NENHUM;
+  }
+
+  /** Quais termos de serviço a descrição tem, depois das exceções. */
+  private Termos termosDeServico(String descricao) {
     String normalizada = " " + texto(descricao) + " ";
     for (String excecao : excecoes) {
       normalizada = normalizada.replace(" " + excecao + " ", " ");
     }
-    return termosServico.matcher(normalizada).find();
+    Matcher m = termosServico.matcher(normalizada);
+    Termos achados = Termos.NENHUM;
+    while (m.find()) {
+      if (!termosAmbiguos.contains(m.group())) {
+        return Termos.FORTE;
+      }
+      achados = Termos.SO_AMBIGUOS;
+    }
+    return achados;
+  }
+
+  private enum Termos {
+    NENHUM, SO_AMBIGUOS, FORTE
+  }
+
+  /** Para onde a unidade comercial do item aponta (#364). */
+  enum Direcao {
+    SERVICO, PRODUTO, DESCONHECIDA
+  }
+
+  /** Unidades que medem serviço: tempo e área trabalhada. */
+  private static final Set<String> UNIDADES_DE_SERVICO = Set.of("h", "hr", "hrs", "hora", "horas",
+      "dia", "dias", "diaria", "diarias", "ha", "hectare", "hectares", "serv", "servico", "sv");
+
+  /** Unidades que medem mercadoria: peso, volume, embalagem e unidade. */
+  private static final Set<String> UNIDADES_DE_PRODUTO = Set.of("kg", "g", "t", "ton",
+      "tonelada", "toneladas", "sc", "saca", "sacas", "saco", "sacos", "l", "lt", "litro",
+      "litros", "m3", "m2", "m", "un", "und", "unid", "unidade", "unidades", "pc", "pcs", "peca",
+      "pecas", "pct", "cx", "caixa", "fd", "bd", "bag", "rolo");
+
+  /**
+   * Para onde a unidade comercial aponta: hora, diária, hectare e serviço = serviço; kg, saca,
+   * litro e unidade = produto; ausente ou desconhecida = nenhum dos dois (não desfaz nem confirma
+   * o termo). Acento, caixa e ponto são ignorados ("Hectare.", "diária").
+   *
+   * @param unidade unidade comercial do item (uCom); pode ser nula
+   * @return a direção
+   */
+  static Direcao apontaPara(String unidade) {
+    if (unidade == null) {
+      return Direcao.DESCONHECIDA;
+    }
+    String u = texto(unidade);
+    if (UNIDADES_DE_SERVICO.contains(u)) {
+      return Direcao.SERVICO;
+    }
+    return UNIDADES_DE_PRODUTO.contains(u) ? Direcao.PRODUTO : Direcao.DESCONHECIDA;
   }
 
   private Momento momento(NotaParaSinal nota) {

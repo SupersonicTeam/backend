@@ -239,14 +239,15 @@ public interface DadosProdutorPorta {
    * produtor: vai só ao texto fixo do backend, nunca ao modelo.
    *
    * @param codigo            código do sinal (ex.: {@code PRODUTO_PARECE_SERVICO})
-   * @param motivo            por que disparou ({@code CFOP_GENERICO}, {@code NCM_FORA_DA_REFERENCIA})
+   * @param motivo            por que disparou ({@code CFOP_GENERICO}, {@code NCM_FORA_DA_REFERENCIA},
+   *                          {@code UNIDADE_DE_SERVICO})
    * @param momento           {@code ANTES_DE_EMITIR}, {@code AUTORIZADA_NO_PRAZO} ou
    *                          {@code AUTORIZADA_FORA_DO_PRAZO}
    * @param numeroItem        item da nota; nulo num sinal da nota inteira
    * @param descricaoItem     descrição do item
    * @param cfop              CFOP do item
    * @param prazoCancelamento instante-limite para cancelar, só autorizada no prazo
-   * @param unidade           unidade do item (valor fora do padrão)
+   * @param unidade           unidade do item (valor fora do padrão e unidade de serviço)
    * @param valor             valor unitário do item (valor fora do padrão)
    * @param referencia        mediana de referência (valor fora do padrão)
    * @param outraNota         número da outra nota (duplicidade)

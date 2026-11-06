@@ -55,6 +55,8 @@ public record SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento,
     /** NCM ausente ou fora da referência (nota antiga, de antes da troca de código) e termo de
      * serviço. */
     NCM_FORA_DA_REFERENCIA,
+    /** Unidade comercial de serviço (hora, diária, hectare...) com termo de serviço (#364). */
+    UNIDADE_DE_SERVICO,
     /** Mesmo destinatário, valor total, itens (NCM e quantidade) e dia de outra nota. */
     MESMA_VENDA,
     /** Valor unitário acima de 3 vezes a mediana. */

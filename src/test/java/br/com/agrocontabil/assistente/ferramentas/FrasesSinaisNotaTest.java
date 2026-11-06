@@ -23,7 +23,8 @@ class FrasesSinaisNotaTest {
         null)));
 
     assertThat(texto).isEqualTo("Na nota 116, o item 'Frete' saiu com CFOP 6.949 (outra saída não"
-        + " especificada) e parece um serviço. Serviço normalmente não sai em nota de produto:"
+        + " especificada) e parece um serviço. Serviço normalmente não sai em nota de produto"
+        + " (NF-e), e sim em NFS-e de padrão nacional (LC 214/2025, art. 62, § 1º, inciso I):"
         + " confira com seu contador. A nota já foi autorizada: se for preciso, dá para"
         + " cancelá-la até 26/11/2026, às 10:00 (horário de Brasília).");
     assertThat(texto.toLowerCase(Locale.ROOT)).doesNotContain("errad");
@@ -38,6 +39,26 @@ class FrasesSinaisNotaTest {
         .startsWith("Na nota 116 (série 2), o item 'Frete'")
         .doesNotContain("antes de emitir")
         .endsWith("o prazo de 30 dias para cancelar passou: veja com seu contador como corrigir.");
+  }
+
+  @Test
+  @DisplayName("#364: unidade de serviço; toda frase de serviço cita a NFS-e e manda ao contador")
+  void unidadeDeServicoENfse() {
+    String texto = FrasesSinaisNota.texto(9, null, List.of(new Sinal("PRODUTO_PARECE_SERVICO",
+        "UNIDADE_DE_SERVICO", "ANTES_DE_EMITIR", 1, "Colheita de soja", "5101", null, "HA",
+        null, null, null, null)));
+
+    assertThat(texto).isEqualTo("Na nota 9, o item 'Colheita de soja' saiu com unidade de"
+        + " serviço (HA) e parece um serviço. Serviço normalmente não sai em nota de produto"
+        + " (NF-e), e sim em NFS-e de padrão nacional (LC 214/2025, art. 62, § 1º, inciso I):"
+        + " confira com seu contador antes de emitir.");
+    for (String motivo : List.of("CFOP_GENERICO", "NCM_FORA_DA_REFERENCIA",
+        "UNIDADE_DE_SERVICO")) {
+      assertThat(FrasesSinaisNota.texto(9, null, List.of(new Sinal("PRODUTO_PARECE_SERVICO",
+          motivo, "ANTES_DE_EMITIR", 1, "Frete", "5949", null, "H", null, null, null, null))))
+          .as(motivo).contains("NFS-e de padrão nacional").contains("art. 62, § 1º, inciso I")
+          .contains("confira com seu contador");
+    }
   }
 
   @Test

@@ -287,10 +287,11 @@ public final class TextosDosTemplates {
     BigDecimal referencia = new BigDecimal("1.45");
     String[] momentos = {"ANTES_DE_EMITIR", "AUTORIZADA_NO_PRAZO", "AUTORIZADA_FORA_DO_PRAZO"};
     for (String momento : momentos) {
-      for (String motivo : new String[] {"CFOP_GENERICO", "NCM_FORA_DA_REFERENCIA"}) {
+      for (String motivo : new String[] {"CFOP_GENERICO", "NCM_FORA_DA_REFERENCIA",
+          "UNIDADE_DE_SERVICO"}) {
         t.put("sinal PRODUTO_PARECE_SERVICO " + motivo + " " + momento,
             FrasesSinaisNota.texto(116, 2, List.of(new Sinal("PRODUTO_PARECE_SERVICO", motivo,
-                momento, 1, "Frete", "5949", limite, null, null, null, null, null))));
+                momento, 1, "Frete", "5949", limite, "HA", null, null, null, null))));
       }
       t.put("sinal PRODUTO_PARECE_SERVICO CFOP sem quatro dígitos " + momento,
           FrasesSinaisNota.texto(116, null, List.of(new Sinal("PRODUTO_PARECE_SERVICO",

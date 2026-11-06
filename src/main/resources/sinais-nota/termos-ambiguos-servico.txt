@@ -1,0 +1,24 @@
+# Termos de servico que tambem aparecem em mercadoria (issue #364, sinal PRODUTO_PARECE_SERVICO):
+# "bag de colheita", "adubo de plantio", "bico de pulverizacao", "milho seco e limpo". Um item
+# so com termos desta lista (nenhum termo forte de termos-servico.txt, como "servico", "frete" ou
+# "aluguel") deixa de avisar quando o item tem NCM de mercadoria e a unidade comercial e de
+# produto (kg, saca, litro, un...). Com unidade de servico (hora, diaria, ha, serv), avisa mesmo
+# com NCM de mercadoria. Todo termo daqui tambem vale como termo de servico (a lista de la nao
+# precisa repeti-lo). Um por linha; acento, caixa e pontuacao sao ignorados.
+colheita
+colheitas
+plantio
+pulverizacao
+pulverizacoes
+aplicacao
+aplicacoes
+secagem
+secagens
+limpeza de graos
+padronizacao de graos
+aplicacao de adubo a lanco
+secagem de graos
+calagem
+calagens
+ensilagem
+ensilagens
