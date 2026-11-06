@@ -150,11 +150,34 @@ public final class ComposicaoRespostaDados {
       }
       Matcher m = sigla.padrao().matcher(resultado);
       if (m.find()) {
-        resultado = resultado.substring(0, m.end()) + " (" + sigla.nome() + ")"
+        resultado = resultado.substring(0, m.end()) + formaPorExtenso(resultado, m.end(), sigla)
             + resultado.substring(m.end());
         normalizado = NormalizacaoBusca.normalizar(resultado);
       }
     }
     return resultado;
+  }
+
+  /**
+   * A forma por extenso que entra depois da sigla: entre parênteses ("IBS (imposto sobre bens e
+   * serviços)") ou, se a sigla já está dentro de parênteses abertos no mesmo parágrafo, entre
+   * vírgulas ("(LC 214/2025, lei complementar, arts. 31 e 32)"), sem aninhar.
+   */
+  private static String formaPorExtenso(String texto, int fim, GlossarioProdutor.Termo sigla) {
+    int inicioDoParagrafo = texto.lastIndexOf('\n', fim - 1) + 1;
+    int abertos = 0;
+    for (int i = inicioDoParagrafo; i < fim; i++) {
+      char c = texto.charAt(i);
+      if (c == '(') {
+        abertos++;
+      } else if (c == ')' && abertos > 0) {
+        abertos--;
+      }
+    }
+    if (abertos == 0) {
+      return " (" + sigla.nome() + ")";
+    }
+    boolean fechaOuSeparaLogo = fim < texto.length() && ",);.".indexOf(texto.charAt(fim)) >= 0;
+    return ", " + sigla.nome() + (fechaOuSeparaLogo ? "" : ",");
   }
 }

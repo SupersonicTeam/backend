@@ -95,6 +95,26 @@ class ComposicaoRespostaDadosTest {
   }
 
   @Test
+  @DisplayName("#267: dentro de parênteses já abertos, a forma por extenso entra com vírgula")
+  void siglaDentroDeParenteses() {
+    assertThat(ComposicaoRespostaDados.explicarSiglas(
+        "O split payment separa o tributo na venda (LC 214/2025, arts. 31 e 32)."))
+        .isEqualTo("O split payment separa o tributo na venda"
+            + " (LC 214/2025, lei complementar, arts. 31 e 32).");
+    // Sigla que fecha o parêntese: sem vírgula sobrando.
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Vale na venda (conforme a LC 214/2025)."))
+        .isEqualTo("Vale na venda (conforme a LC 214/2025, lei complementar).");
+    // Seguida de palavra: vírgula dos dois lados.
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Vale (LC 214/2025 art. 5)."))
+        .isEqualTo("Vale (LC 214/2025, lei complementar, art. 5).");
+    // Parêntese fechado antes da sigla, ou em outro parágrafo: forma normal, entre parênteses.
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Veja (isto) e a LC 214/2025."))
+        .isEqualTo("Veja (isto) e a LC 214/2025 (lei complementar).");
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Aberto (sem fechar\n\nA LC 214/2025 vale."))
+        .isEqualTo("Aberto (sem fechar\n\nA LC 214/2025 (lei complementar) vale.");
+  }
+
+  @Test
   @DisplayName("#357: a linha 'E mais N' de tela com acento tambem e fonte do validador")
   void maisNaTelaComAcento() {
     List<SecaoResposta> secoes = List.of(
