@@ -161,8 +161,15 @@ class SeedDemonstracaoIntegrationTest {
     assertThat(porStatus).containsEntry(StatusNotaFiscal.AGUARDANDO_APROVACAO, 3L)
         .containsEntry(StatusNotaFiscal.DEVOLVIDA, 1L)
         .containsEntry(StatusNotaFiscal.COM_INCONSISTENCIAS, 1L)
-        .containsEntry(StatusNotaFiscal.RASCUNHO, 1L)
+        // 1 rascunho da fila + 6 vendas sem CST de ICMS defensavel (5 de milho ao pecuarista sem
+        // IE e o touro reprodutor interestadual), que mostram o ICMS_A_DEFINIR na banca.
+        .containsEntry(StatusNotaFiscal.RASCUNHO, 7L)
         .containsEntry(StatusNotaFiscal.CANCELADA, 1L);
+    assertThat(notaRepository.findAll()).filteredOn(n -> n.getStatus() == StatusNotaFiscal.RASCUNHO)
+        .filteredOn(n -> n.getItens().stream()
+            .anyMatch(i -> br.com.agrocontabil.nfe.TributacaoIcms.problema(n, i).isPresent()))
+        .extracting(NotaFiscal::getDestinatarioNome).containsOnly("Antonio Carlos Pereira",
+            "Central de Genetica Bovina Triangulo Ltda").hasSize(6);
 
     NotaFiscal comErro = notaRepository.findAll().stream()
         .filter(n -> n.getStatus() == StatusNotaFiscal.COM_INCONSISTENCIAS).findFirst().orElseThrow();

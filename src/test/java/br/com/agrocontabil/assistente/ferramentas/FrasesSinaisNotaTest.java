@@ -72,4 +72,29 @@ class FrasesSinaisNotaTest {
         .contains("(R$ 0,001 por un) esta bem abaixo")
         .contains("(perto de R$ 0,004 por un)");
   }
+
+  @Test
+  @DisplayName("ICMS_A_DEFINIR: o item, o padrao do sistema e o contador, antes de emitir")
+  void icmsADefinir() {
+    String texto = FrasesSinaisNota.texto(42, null, List.of(new Sinal("ICMS_A_DEFINIR",
+        "SEM_CST_ICMS", "ANTES_DE_EMITIR", 1, "Touro Nelore PO", "6101", null, null, null, null,
+        null, null)));
+
+    assertThat(texto).isEqualTo("Na nota 42, o item 'Touro Nelore PO' esta sem o CST do ICMS. O"
+        + " sistema so preenche sozinho na venda dentro do estado da sua producao (CFOP 5.101) a"
+        + " quem tem inscricao estadual: combine o CST com seu contador antes de emitir, senao a"
+        + " emissao e barrada.");
+  }
+
+  @Test
+  @DisplayName("ICMS_PADRAO_A_CONFIRMAR: o 51 do padrao, o que foi confirmado e o contador")
+  void icmsPadraoAConfirmar() {
+    assertThat(FrasesSinaisNota.texto(7, null, List.of(new Sinal("ICMS_PADRAO_A_CONFIRMAR",
+        "PADRAO_NAO_CONFIRMADO", "ANTES_DE_EMITIR", 1, "Milho em grao", "5101", null, null, null,
+        null, null, null))))
+        .isEqualTo("Na nota 7, o item 'Milho em grao' vai sair com o ICMS diferido (CST 51), que o"
+            + " sistema aplica por padrao na venda dentro do estado da sua producao. Esse"
+            + " tratamento so foi confirmado para a soja em grao em MT: confira com seu contador o"
+            + " ICMS deste produto no seu estado antes de emitir.");
+  }
 }

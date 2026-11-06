@@ -13,6 +13,8 @@ public enum ErrorCode {
   // Nota fiscal
   NOTA_NAO_EDITAVEL,
   NOTA_INVALIDA_EMISSAO,
+  /** Item sem CST de ICMS informado fora da venda interna de produção própria (B25-90). */
+  ICMS_A_DEFINIR,
   XML_GENERATION_ERROR,
   // Assinatura digital
   CERTIFICADO_AUSENTE,

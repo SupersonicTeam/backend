@@ -120,6 +120,7 @@ class FiscalRulesValidatorCfopAmbitoTest {
         .descricao("Soja")
         .ncm("12019000")
         .cfop(cfop)
+        .cstIcms("41") // o ambito e o assunto aqui; 41 vale tambem para a exportacao
         .unidade("KG")
         .quantidade(new BigDecimal("100"))
         .valorUnitario(new BigDecimal("2.50"))

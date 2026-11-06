@@ -64,6 +64,14 @@ public final class FrasesSinaisNota {
           + " tem o mesmo destinatario, valor e itens da nota " + s.outraNota()
           + (s.outraSerie() == null ? "" : " (serie " + s.outraSerie() + ")")
           + ", do mesmo dia. Confira se nao e a mesma venda emitida duas vezes.";
+      case "ICMS_PADRAO_A_CONFIRMAR" -> nota + ", o item '" + curta(s.descricaoItem()) + "' vai"
+          + " sair com o ICMS diferido (CST 51), que o sistema aplica por padrao na venda dentro do"
+          + " estado da sua producao. Esse tratamento so foi confirmado para a soja em grao em MT:"
+          + " confira com seu contador o ICMS deste produto no seu estado antes de emitir.";
+      case "ICMS_A_DEFINIR" -> nota + ", o item '" + curta(s.descricaoItem()) + "' esta sem o"
+          + " CST do ICMS. O sistema so preenche sozinho na venda dentro do estado da sua"
+          + " producao (CFOP 5.101) a quem tem inscricao estadual: combine o CST com seu contador"
+          + " antes de emitir, senao a emissao e barrada.";
       default -> nota + ", ha um ponto para conferir com seu contador.";
     };
   }

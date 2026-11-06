@@ -260,6 +260,7 @@ class FiscalRulesValidatorTest {
         .descricao("Soja em graos")
         .ncm("12019000")
         .cfop("6101")
+        .cstIcms("41") // interestadual: CST informado (sem padrao fora da 5101)
         .unidade("KG")
         .quantidade(BigDecimal.ONE)
         .valorUnitario(new BigDecimal("1000.00"))

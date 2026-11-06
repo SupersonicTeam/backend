@@ -4,6 +4,7 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
+import br.com.agrocontabil.nfe.TributacaoIcms;
 import br.com.agrocontabil.nfe.SecureXmlFactories;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
@@ -49,10 +50,13 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
   /**
    * Um item ({@code det}).
    *
-   * @param ibsCbs presença do grupo {@code gIBSCBS} (base, alíquotas e valores)
+   * @param cstIcms CST do ICMS como a DANFE imprime: origem + CST (MOC 7.00, Anexo II: N11 + N12),
+   *                ou origem + CSOSN na nota importada do Simples; nulo sem o grupo
+   * @param cst     CST do IBS/CBS
+   * @param ibsCbs  presença do grupo {@code gIBSCBS} (base, alíquotas e valores)
    */
   record Item(String codigo, String descricao, String ncm, String cfop, BigDecimal quantidade,
-      String unidade, BigDecimal valorUnitario, BigDecimal valorTotal, String cst,
+      String unidade, BigDecimal valorUnitario, BigDecimal valorTotal, String cstIcms, String cst,
       String cClassTrib, boolean ibsCbs, BigDecimal base, BigDecimal aliquotaCbs,
       BigDecimal aliquotaIbsUf, BigDecimal aliquotaIbsMun, BigDecimal valorCbs,
       BigDecimal valorIbsUf, BigDecimal valorIbsMun) {
@@ -108,7 +112,8 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
 
   private static Item itemDoXml(Element det) {
     Element prod = filho(det, "prod");
-    Element ibsCbs = filho(filho(det, "imposto"), "IBSCBS");
+    Element imposto = filho(det, "imposto");
+    Element ibsCbs = filho(imposto, "IBSCBS");
     Element g = filho(ibsCbs, "gIBSCBS");
     Element uf = filho(g, "gIBSUF");
     Element mun = filho(g, "gIBSMun");
@@ -117,10 +122,26 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
         texto(prod, "cProd"), texto(prod, "xProd"), texto(prod, "NCM"), texto(prod, "CFOP"),
         numero(prod, "qCom"), texto(prod, "uCom"), numero(prod, "vUnCom"),
         numero(prod, "vProd"),
+        cstIcmsDoXml(filhoDireto(imposto, "ICMS")),
         texto(ibsCbs, "CST"), texto(ibsCbs, "cClassTrib"), g != null, numero(g, "vBC"),
         aliquotaImpressa(cbs, "pCBS"), aliquotaImpressa(uf, "pIBSUF"),
         aliquotaImpressa(mun, "pIBSMun"),
         numero(cbs, "vCBS"), numero(uf, "vIBSUF"), numero(mun, "vIBSMun"));
+  }
+
+  /** Origem + CST (ou CSOSN) do único grupo de tributação dentro do {@code ICMS}; nulo sem ele. */
+  private static String cstIcmsDoXml(Element icms) {
+    if (icms == null) {
+      return null;
+    }
+    for (Node no = icms.getFirstChild(); no != null; no = no.getNextSibling()) {
+      if (no instanceof Element grupo) {
+        String cst = texto(grupo, "CST");
+        return TributacaoIcms.impresso(texto(grupo, "orig"),
+            cst != null ? cst : texto(grupo, "CSOSN"));
+      }
+    }
+    return null;
   }
 
   /** {@code pAliqEfet} do {@code gRed} da esfera, se houver; senão a alíquota vigente. */
@@ -139,7 +160,7 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
   static DanfeValores daNota(NotaFiscal nota) {
     List<Item> itens = new ArrayList<>();
     for (NotaFiscalItem item : nota.getItens()) {
-      itens.add(itemDaNota(item));
+      itens.add(itemDaNota(nota, item));
     }
     boolean comIbsCbsTot = nota.getValorTotalIbs() != null || nota.getValorTotalCbs() != null;
     NotaFiscalNfeMapper.TotaisIbs ibs = NotaFiscalNfeMapper.totaisIbs(nota);
@@ -149,8 +170,9 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
             ? NotaFiscalNfeMapper.crt(nota.getProdutor().getTipoProdutor(),
                 nota.getProdutor().getRegimeTributario()) : null,
         nota.getDestinatarioEndereco() != null ? NotaFiscalNfeMapper.BAIRRO_DESTINATARIO : null,
-        // O ICMSTot da nota própria leva zero no que não é produto/nota (ICMS e Funrural por
-        // guia; docs/premissas-e-escopo.md), como o buildIcmsTot do mapper.
+        // O ICMSTot da nota própria leva zero no que não é produto/nota (o sistema não calcula
+        // ICMS: só emite o grupo com o CST, sem valores; docs/premissas-e-escopo.md), como o
+        // buildIcmsTot do mapper.
         new Totais(zero, zero, zero, zero, zero, nota.getValorTotalProdutos(), zero, zero, zero,
             zero, nota.getValorTotalNota()),
         comIbsCbsTot ? orZero(nota.getValorTotalCbs()) : null,
@@ -161,7 +183,7 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
             : NotaFiscalNfeMapper.textoFunrural(nota).orElse(null));
   }
 
-  private static Item itemDaNota(NotaFiscalItem item) {
+  private static Item itemDaNota(NotaFiscal nota, NotaFiscalItem item) {
     // Mesmas condições do buildImposto/buildIbsCbs do mapper: grupo IBSCBS só com valor de IBS ou
     // CBS; gIBSCBS só com valor do item e as duas alíquotas.
     boolean grupo = item.getValorIbs() != null || item.getValorCbs() != null;
@@ -173,6 +195,9 @@ record DanfeValores(String crt, String bairroDestinatario, Totais totais, BigDec
             : String.valueOf(item.getNumeroItem()),
         item.getDescricao(), item.getNcm(), item.getCfop(), item.getQuantidade(),
         item.getUnidade(), item.getValorUnitario(), item.getValorTotal(),
+        // O mesmo CST que o buildImposto do mapper põe no grupo ICMS (nulo = a definir).
+        TributacaoIcms.cst(nota, item)
+            .map(cst -> TributacaoIcms.impresso(TributacaoIcms.origem(item), cst)).orElse(null),
         grupo ? NotaFiscalNfeMapper.cst(item) : null,
         grupo ? NotaFiscalNfeMapper.cClassTrib(item) : null,
         g, g ? item.getValorTotal() : null,

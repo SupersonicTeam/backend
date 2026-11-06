@@ -74,7 +74,9 @@ public final class NfeImportTestFixtures {
         .nomeCompleto(EMITENTE_NOME)
         .cpfCnpj(EMITENTE_CNPJ)
         .tipoProdutor(TipoProdutor.PESSOA_JURIDICA)
-        .regimeTributario(RegimeTributario.SIMPLES)
+        // Regime normal: emitente do Simples informaria CSOSN (grupos ICMSSN), que o pipeline de
+        // emissao barra (rejeicao 590). O XML do fornecedor sai com o ICMS40.
+        .regimeTributario(RegimeTributario.REAL)
         .estado("PR")
         .inscricaoEstadual(ProdutorTestFixtures.INSCRICAO_ESTADUAL)
         .endereco(ProdutorTestFixtures.enderecoCuritibaPr())
@@ -87,6 +89,7 @@ public final class NfeImportTestFixtures {
         .descricao("Fertilizante NPK 20-05-20")
         .ncm("31052000")
         .cfop("6101")
+        .cstIcms("41") // o XML do fornecedor leva o grupo ICMS40
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))
         .valorUnitario(new BigDecimal("3.5000"))

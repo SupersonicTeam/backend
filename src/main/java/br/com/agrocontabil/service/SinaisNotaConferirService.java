@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.nfe.TributacaoIcms;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -75,6 +76,15 @@ import org.springframework.transaction.annotation.Transactional;
  * vale pela mediana dos itens dela), para uma nota de muitas linhas não pesar mais que as outras.
  * Canceladas e rejeitadas ficam fora. Uma consulta por par (NCM, unidade), não por item.
  *
+ * <p><strong>{@link CodigoSinalNota#ICMS_A_DEFINIR}:</strong> item de nota ainda sem XML cujo
+ * grupo ICMS barraria a emissão ({@link TributacaoIcms#problema}: sem CST fora da venda interna de
+ * produção própria a contribuinte, CST fora da lista, exportação sem o 41, emitente do Simples).
+ * O sinal avisa antes, para o produtor combinar o CST com o contador.
+ *
+ * <p><strong>{@link CodigoSinalNota#ICMS_PADRAO_A_CONFIRMAR}:</strong> o item emite com o CST 51
+ * do padrão, mas o par (UF do emitente; NCM) não está na lista que o contador confirmou
+ * ({@code icms/diferimento-confirmado.csv}). Não bloqueia; só antes do XML.
+ *
  * <p>Nenhuma regra compara com nota de outro produtor: toda consulta filtra pelo produtor da
  * sessão.
  */
@@ -87,6 +97,14 @@ public class SinaisNotaConferirService {
   /** Situações sem sinal: em trânsito, aguardando a SEFAZ ou já cancelada. */
   static final Set<StatusNotaFiscal> SEM_SINAL = EnumSet.of(StatusNotaFiscal.ENVIANDO,
       StatusNotaFiscal.PENDENTE_SEFAZ, StatusNotaFiscal.CANCELANDO, StatusNotaFiscal.CANCELADA);
+
+  /**
+   * Situações em que o CST do ICMS ainda pode ser combinado: antes de gerar o XML (com o XML
+   * gerado, a nota não é editável e o aviso "antes de emitir" não teria o que fazer).
+   */
+  static final Set<StatusNotaFiscal> ANTES_DO_XML = EnumSet.of(StatusNotaFiscal.RASCUNHO,
+      StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA,
+      StatusNotaFiscal.AGUARDANDO_APROVACAO, StatusNotaFiscal.APROVADA);
 
   /** Situações que não entram na duplicidade, nem como a consultada nem como a outra. */
   static final Set<StatusNotaFiscal> FORA_DA_DUPLICIDADE = EnumSet.of(StatusNotaFiscal.CANCELADA,
@@ -161,6 +179,16 @@ public class SinaisNotaConferirService {
       motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
           item.descricao(), item.cfop(), prazo)));
+      if (ANTES_DO_XML.contains(nota.status())) {
+        if (icmsADefinir(item)) {
+          sinais.add(new SinalNota(CodigoSinalNota.ICMS_A_DEFINIR, Motivo.SEM_CST_ICMS, momento,
+              item.numeroItem(), item.descricao(), item.cfop(), null));
+        } else if (icmsPadraoAConfirmar(item)) {
+          sinais.add(new SinalNota(CodigoSinalNota.ICMS_PADRAO_A_CONFIRMAR,
+              Motivo.PADRAO_NAO_CONFIRMADO, momento, item.numeroItem(), item.descricao(),
+              item.cfop(), null));
+        }
+      }
     }
     sinais.addAll(valoresForaDoPadrao(produtorId, nota, itens, momento, prazo));
     // Do primeiro item ao ultimo; o sinal da nota inteira (duplicidade) por ultimo.
@@ -255,6 +283,23 @@ public class SinaisNotaConferirService {
         .map(valores -> mediana(valores.stream().sorted().toList()))
         .sorted().toList());
     return mediana.signum() > 0 ? Optional.of(mediana) : Optional.empty();
+  }
+
+  /**
+   * O grupo ICMS do item barraria a emissão: a mesma regra ({@link TributacaoIcms#problema}) do
+   * 422 do {@code FiscalRulesValidator}, mostrada antes, na revisão.
+   */
+  static boolean icmsADefinir(ItemParaSinal item) {
+    return TributacaoIcms.problema(item.cstIcms(), item.cfop(), new TributacaoIcms.DadosOperacao(
+        item.tipoEmitente(), item.regimeEmitente(), item.ufEmitente(), item.ufDestinatario(),
+        item.ieDestinatario())).isPresent();
+  }
+
+  /** CST 51 pelo padrão fora dos pares (UF; NCM) confirmados pelo contador: não bloqueia. */
+  static boolean icmsPadraoAConfirmar(ItemParaSinal item) {
+    return TributacaoIcms.padraoAConfirmar(item.cstIcms(), item.cfop(), item.ncm(),
+        new TributacaoIcms.DadosOperacao(item.tipoEmitente(), item.regimeEmitente(),
+            item.ufEmitente(), item.ufDestinatario(), item.ieDestinatario()));
   }
 
   /** CFOP de venda: {@code x1xx} (5101, 6102, 7101...). Remessa ({@code x9xx}) não é venda. */

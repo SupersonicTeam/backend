@@ -316,6 +316,7 @@ class NotaFiscalEscopoTransacionalIntegrationTest {
           .descricao("Soja em graos - lote " + i)
           .ncm("12019000")
           .cfop("6101")
+          .cstIcms("41")
           .unidade("KG")
           .quantidade(BigDecimal.ONE)
           .valorUnitario(valor)

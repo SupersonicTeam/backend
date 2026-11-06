@@ -179,7 +179,8 @@ public final class NotaFiscalMapper {
    *
    * <p>Calcula {@code valorTotal = quantidade * valorUnitario} com arredondamento HALF_UP
    * em 2 casas decimais. Copia os campos classificatórios opcionais de IBS/CBS
-   * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}).
+   * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}) e do ICMS
+   * ({@code cstIcms}, {@code origemIcms}).
    * Os campos calculados (valorIbs, valorCbs etc.) são preenchidos posteriormente
    * pelo {@link br.com.agrocontabil.service.TributacaoService}.
    *
@@ -204,7 +205,14 @@ public final class NotaFiscalMapper {
         .cstIbsCbs(req.cstIbsCbs())
         .cClassTrib(req.cClassTrib())
         .percentualReducao(req.percentualReducao())
+        // Vazio (select sem opcao) = nao informado: o padrao ou o ICMS_A_DEFINIR decidem.
+        .cstIcms(semVazio(req.cstIcms()))
+        .origemIcms(semVazio(req.origemIcms()))
         .build();
+  }
+
+  private static String semVazio(String valor) {
+    return valor == null || valor.isBlank() ? null : valor.strip();
   }
 
   private static NotaFiscalItemResponse toItemResponse(NotaFiscalItem item) {
@@ -229,6 +237,8 @@ public final class NotaFiscalMapper {
         item.getValorIbs(),
         item.getAliquotaCbs(),
         item.getValorCbs(),
+        item.getCstIcms(),
+        item.getOrigemIcms(),
         item.getCreatedAt(),
         item.getUpdatedAt());
   }

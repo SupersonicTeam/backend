@@ -65,7 +65,10 @@ public final class DadosCeresFixture {
     nota.setStatus(StatusNotaFiscal.AUTORIZADA);
     nota.setValorTotalIbs(new BigDecimal("2.00"));
     nota.setValorTotalCbs(new BigDecimal("18.00"));
-    nota.addItem(item(descricao, ncm, "KG", "100", valor));
+    NotaFiscalItem item = item(descricao, ncm, "KG", "100", valor);
+    // CST do ICMS informado: o sinal ICMS_A_DEFINIR tem teste proprio e nao entra nos da Ceres.
+    item.setCstIcms("41");
+    nota.addItem(item);
     return nota;
   }
 
