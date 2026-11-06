@@ -9,11 +9,10 @@ a subida. Na VPS (`https://www.agroconia.com.br`, profile `homolog`) ele está l
   para este documento.
 - **Idempotente:** com a administradora no banco, nada é recriado. Para semear de novo (as datas
   andam com o dia da semeadura), zere o banco como no `deploy/README.md`.
-- **Passo manual na VPS depois do grupo de ICMS (#376):** o banco já semeado guarda o cenário
-  antigo (terminal exportador no PR, exportadora em Santos, milho e touro autorizados) e as notas
-  autorizadas com o XML sem o grupo `ICMS`. O passo 4 do roteiro (ICMS a definir) só existe depois
-  de **zerar o banco e semear de novo**, como no `deploy/README.md` (preservando a base da Ceres).
-  Sem isso, não mostrar o passo 4.
+- **Grupo de ICMS (#376):** as notas novas do seed saem com o grupo `ICMS` (CST 51 nas vendas
+  internas) e com os compradores internos. As notas já gravadas e emitidas na VPS guardam o XML
+  assinado de antes, sem o grupo e com os compradores antigos; a VPS só reflete o cenário novo
+  (inclusive o passo 4 do roteiro) depois do reset dos dados da demonstração.
 - **Dados fictícios com forma de dado real:** CPF/CNPJ com DV válido, município com o código IBGE
   real, NCM da referência, CFOP pela UF das partes, preços de 2026 e IBS/CBS calculados pelo próprio
   sistema. Nenhuma razão social é de empresa real.
