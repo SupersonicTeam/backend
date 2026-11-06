@@ -38,7 +38,9 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -87,6 +89,10 @@ public class CarteiraService {
 
   static final String ORDEM_NOME = "nome";
   static final String ORDEM_URGENCIA = "urgencia";
+
+  /** Situações que o produtor vê em {@code GET /api/vinculos} quando não pede outra (#353). */
+  static final Set<SituacaoVinculo> SITUACOES_QUE_ATENDEM = Collections.unmodifiableSet(
+      EnumSet.of(SituacaoVinculo.ATIVO, SituacaoVinculo.SUSPENSO));
 
   /** Filtro {@code responsavel}: o próprio membro. */
   static final String RESPONSAVEL_EU = "eu";
@@ -285,15 +291,25 @@ public class CarteiraService {
   }
 
   /**
-   * Escritórios que atendem o produtor autenticado (ativos e suspensos).
+   * Escritórios que atendem, ou já atenderam, o produtor autenticado.
    *
-   * @return vínculos, do mais recente ao mais antigo
+   * <p>Sem {@code situacoes} (ou vazio), o padrão de sempre: {@link #SITUACOES_QUE_ATENDEM}
+   * (ativos e suspensos), para o frontend que não pede nada não mudar. Com
+   * {@link SituacaoVinculo#ENCERRADO} (issue #353) devolve também o histórico, com o {@code fim}
+   * preenchido. Sempre só os vínculos do próprio produtor.
+   *
+   * @param situacoes situações pedidas, ou nulo/vazio para o padrão
+   * @return vínculos: os sem fim primeiro (início mais recente primeiro), depois os encerrados
+   *     (o que terminou por último primeiro)
    * @throws PapelNaoAutorizadoException se quem pede for contador (403)
    */
   @Transactional(readOnly = true)
-  public List<VinculoProdutorResponse> listarDoProdutor() {
+  public List<VinculoProdutorResponse> listarDoProdutor(Collection<SituacaoVinculo> situacoes) {
     UUID produtorId = produtorProvider.get().getId();
-    List<VinculoCarteira> vinculos = vinculoRepository.findAbertosDoProdutor(produtorId);
+    Set<SituacaoVinculo> pedidas = situacoes == null ? Set.of()
+        : situacoes.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+    List<VinculoCarteira> vinculos = vinculoRepository.findDoProdutor(produtorId,
+        pedidas.isEmpty() ? SITUACOES_QUE_ATENDEM : pedidas);
     Map<UUID, Escritorio> escritorios = escritorioRepository
         .findAllById(vinculos.stream().map(VinculoCarteira::getEscritorioId).toList()).stream()
         .collect(Collectors.toMap(Escritorio::getId, Function.identity()));

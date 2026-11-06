@@ -105,10 +105,20 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
    * @param produtorId produtor
    * @return vínculos ativos e suspensos, do mais recente ao mais antigo
    */
+  /**
+   * Vínculos do produtor nas situações pedidas (issue #353): o histórico que o produtor vê, com os
+   * que ainda valem e os que já terminaram. Sempre do próprio produtor.
+   *
+   * @param produtorId produtor
+   * @param situacoes  situações a devolver
+   * @return vínculos: primeiro os sem fim (do início mais recente ao mais antigo), depois os
+   *     encerrados do que terminou por último ao que terminou primeiro
+   */
   @Query("SELECT v FROM VinculoCarteira v WHERE v.produtorId = :produtorId"
-      + " AND v.situacao <> br.com.agrocontabil.model.SituacaoVinculo.ENCERRADO"
-      + " ORDER BY v.inicio DESC, v.id")
-  List<VinculoCarteira> findAbertosDoProdutor(@Param("produtorId") UUID produtorId);
+      + " AND v.situacao IN :situacoes"
+      + " ORDER BY v.fim DESC NULLS FIRST, v.inicio DESC, v.id")
+  List<VinculoCarteira> findDoProdutor(@Param("produtorId") UUID produtorId,
+      @Param("situacoes") Collection<SituacaoVinculo> situacoes);
 
   /**
    * Etiquetas dos vínculos do escritório numa situação, numa consulta só.

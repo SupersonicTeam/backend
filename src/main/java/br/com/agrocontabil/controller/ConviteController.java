@@ -2,6 +2,7 @@ package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.dto.ConviteRecebidoResponse;
 import br.com.agrocontabil.dto.VinculoProdutorResponse;
+import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.service.CarteiraService;
 import br.com.agrocontabil.service.ConviteCarteiraService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -56,11 +58,15 @@ public class ConviteController {
     return conviteService.recusar(conviteId);
   }
 
-  /** Escritórios que atendem o produtor. */
+  /** Escritórios que atendem, ou já atenderam, o produtor. */
   @GetMapping("/api/vinculos")
-  @Operation(summary = "Escritorios que atendem a conta (ativos e suspensos)")
-  public ResponseEntity<List<VinculoProdutorResponse>> vinculos() {
-    List<VinculoProdutorResponse> vinculos = carteiraService.listarDoProdutor();
+  @Operation(summary = "Escritorios que atendem a conta (e, se pedido, os que ja atenderam)",
+      description = "Sem parametro: ativos e suspensos. Com situacao (repetivel; ATIVO, SUSPENSO "
+          + "ou ENCERRADO) devolve as situacoes pedidas; os ENCERRADO trazem o fim. Sempre so "
+          + "os vinculos do proprio produtor. Valor invalido: 400.")
+  public ResponseEntity<List<VinculoProdutorResponse>> vinculos(
+      @RequestParam(required = false) List<SituacaoVinculo> situacao) {
+    List<VinculoProdutorResponse> vinculos = carteiraService.listarDoProdutor(situacao);
     return ResponseEntity.ok()
         .header(GuiaFiscalController.HEADER_TOTAL, String.valueOf(vinculos.size()))
         .body(vinculos);

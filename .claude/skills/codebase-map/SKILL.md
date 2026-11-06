@@ -61,7 +61,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `CarteiraTodasNotasController` | `GET /api/contador/notas` e `/resumo` — notas da carteira ativa inteira do escritório, sem escolher o cliente (#341) |
 | `CarteiraNotasController` | `/api/contador/produtores/{produtorId}/notas` (+ `/{id}`, `/{id}/validacoes`) — leitura, padrão de rota do contador (#177) |
 | `EscritorioController` | `/api/escritorio`, `/api/escritorio/membros/**` (+ convites e aceite) e o público `POST /api/auth/cadastro/equipe` (#228) |
-| `ConviteController` | Lado do produtor (#177): `/api/convites` (+ aceitar/recusar) e `/api/vinculos` (+ encerrar) |
+| `ConviteController` | Lado do produtor (#177): `/api/convites` (+ aceitar/recusar) e `/api/vinculos` (+ encerrar; `?situacao=` repetível, padrão ATIVO+SUSPENSO, ENCERRADO = histórico com `fim`, `VinculoCarteiraRepository.findDoProdutor`, #353) |
 | `CalendarioFiscalController` | `GET /api/calendario-fiscal/{produtorId}/vencimentos` — calendário fiscal do produtor (issue #74) |
 
 ### `service/`
