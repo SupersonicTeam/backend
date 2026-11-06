@@ -5,6 +5,7 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -23,7 +24,8 @@ import org.springframework.stereotype.Service;
  *   <li><strong>Vigentes na data da pergunta:</strong> só a redação válida naquele dia
  *       ({@code vigenciaInicio <= data <= vigenciaFim}) — uma redação revogada não fundamenta
  *       resposta de hoje;</li>
- *   <li><strong>top-k</strong> ({@code app.assistente.rag.top-k}, padrão 5), marcados {@code T1}…
+ *   <li><strong>top-k</strong> ({@code app.assistente.rag.top-k}, padrão 5) <strong>artigos
+ *       distintos</strong>, um trecho por artigo (o mais próximo, #269), marcados {@code T1}…
  *       {@code Tn} na ordem de similaridade;</li>
  *   <li><strong>limiar mínimo</strong> ({@code app.assistente.rag.similaridade-minima}): abaixo
  *       dele o trecho não entra. Sem trecho, a Ceres responde "não encontrei fundamento legal", em
@@ -37,6 +39,9 @@ import org.springframework.stereotype.Service;
 public class BuscaLegislacaoService {
 
   private static final Logger log = LoggerFactory.getLogger(BuscaLegislacaoService.class);
+
+  /** Candidatos buscados por trecho entregue: o {@code top-k} é o limite do que o modelo recebe. */
+  static final int FATOR_CANDIDATOS = 4;
 
   private final VectorStore vectorStore;
   private final AssistenteProperties propriedades;
@@ -62,7 +67,7 @@ public class BuscaLegislacaoService {
         f.gte(MetadadosTrecho.VIGENCIA_FIM, data.toString())).build();
     SearchRequest requisicao = SearchRequest.builder()
         .query(DataSanitizer.mascarar(pergunta))
-        .topK(propriedades.getRag().getTopK())
+        .topK(propriedades.getRag().getTopK() * FATOR_CANDIDATOS)
         .similarityThreshold(propriedades.getRag().getSimilaridadeMinima())
         .filterExpression(vigente)
         .build();
@@ -77,7 +82,7 @@ public class BuscaLegislacaoService {
     }
 
     List<TrechoRecuperado> trechos = new ArrayList<>();
-    for (Document documento : documentos == null ? List.<Document>of() : documentos) {
+    for (Document documento : melhoresPorArtigo(documentos, propriedades.getRag().getTopK())) {
       Map<String, Object> m = documento.getMetadata();
       trechos.add(new TrechoRecuperado(
           "T" + (trechos.size() + 1),
@@ -89,5 +94,31 @@ public class BuscaLegislacaoService {
           documento.getScore() == null ? 0 : documento.getScore()));
     }
     return trechos;
+  }
+
+  /**
+   * Os melhores trechos de até {@code limite} artigos distintos, na ordem de similaridade (#269). A
+   * base guarda um trecho por parágrafo ou inciso, então os {@code k} primeiros costumam ser
+   * pedaços do mesmo artigo e empurram para fora o artigo que responde (diagnóstico das citações:
+   * D06 e D15). Cada artigo entra uma vez, com o trecho mais próximo.
+   */
+  static List<Document> melhoresPorArtigo(List<Document> documentos, int limite) {
+    Map<String, Document> porArtigo = new LinkedHashMap<>();
+    for (Document documento : documentos == null ? List.<Document>of() : documentos) {
+      porArtigo.putIfAbsent(artigo(documento.getMetadata()), documento);
+      if (porArtigo.size() == limite) {
+        break;
+      }
+    }
+    return new ArrayList<>(porArtigo.values());
+  }
+
+  /** Norma e artigo: {@code "LC 214/2025 art. 47"} para {@code "art. 47, § 1º, inciso I"}. */
+  private static String artigo(Map<String, Object> metadados) {
+    String dispositivo = String.valueOf(metadados.get(MetadadosTrecho.DISPOSITIVO));
+    // Anexo: cada item é um assunto (uma lista de NCM), não pedaço de um artigo.
+    int virgula = dispositivo.startsWith("art.") ? dispositivo.indexOf(',') : -1;
+    return metadados.get(MetadadosTrecho.NORMA) + " "
+        + (virgula < 0 ? dispositivo : dispositivo.substring(0, virgula));
   }
 }
