@@ -886,7 +886,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     if ids_externas:
         recortes.append((RECORTE_INEDITAS, ids_externas, "(d) Só as geradas por IA (externas)"))
     if contaminadas:
-        md.append("**Contaminadas** (alguém mexeu na Ceres olhando a resposta delas; fora dos recortes "
+        md.append("**Contaminadas** (alguém mudou a Ceres conhecendo o texto ou a resposta delas; fora dos recortes "
                   "inéditos): " + ", ".join(contaminadas) + ".\n")
     for recorte, ids, rotulo in recortes:
         md.append(f"## {rotulo}\n")
