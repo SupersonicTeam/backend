@@ -63,6 +63,21 @@ public final class NotaFiscalEspecificacoes {
   }
 
   /**
+   * Documento do destinatário (CPF/CNPJ só com dígitos) igual ao informado (#271): no texto
+   * pesquisável o documento é uma palavra inteira, cercada por espaços (vem depois do número, do
+   * nome e da natureza; depois dele vêm os itens ou o fim do texto). Casar a palavra inteira
+   * impede que um CPF case dentro de um CNPJ, ou uma sequência atravesse dois campos. Os dois
+   * {@code LIKE} começam e terminam em trigramas, atendidos pelo índice de trigrama.
+   *
+   * @param digitos CPF (11) ou CNPJ (14), só dígitos
+   */
+  public static Specification<NotaFiscal> comDocumento(String digitos) {
+    return (root, query, cb) -> cb.or(
+        cb.like(root.get("buscaNormalizada"), "% " + digitos + " %", '\\'),
+        cb.like(root.get("buscaNormalizada"), "% " + digitos, '\\'));
+  }
+
+  /**
    * Número da nota começando pelos dígitos. "12" = 12, 120–129, 1200–1299, … até 9 dígitos: uma
    * faixa {@code BETWEEN} por tamanho de número, em vez de converter a coluna em texto.
    *

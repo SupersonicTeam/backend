@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -45,6 +46,9 @@ public class BuscaNotasLegadoRunner {
 
   static final int LOTE = 500;
 
+  /** De quantos em quantos lotes o progresso vai ao log. */
+  private static final int LOTES_POR_LOG = 20;
+
   private static final UUID MENOR_ID = new UUID(0L, 0L);
 
   private static final String SELECAO = "SELECT id, numero, destinatario_nome, natureza_operacao,"
@@ -56,17 +60,19 @@ public class BuscaNotasLegadoRunner {
 
   private final JdbcTemplate jdbc;
   private final boolean preencherNaSubida;
-  private int lote = LOTE;
+  private final int lote;
 
+  @Autowired
   public BuscaNotasLegadoRunner(JdbcTemplate jdbc,
       @Value("${app.notas.busca.preencher-legado:true}") boolean preencherNaSubida) {
-    this.jdbc = jdbc;
-    this.preencherNaSubida = preencherNaSubida;
+    this(jdbc, preencherNaSubida, LOTE);
   }
 
-  /** Tamanho do lote, só para os testes cruzarem lotes com poucas notas. */
-  void usarLote(int tamanho) {
-    this.lote = tamanho;
+  /** Com o tamanho do lote, para os testes cruzarem lotes com poucas notas. */
+  BuscaNotasLegadoRunner(JdbcTemplate jdbc, boolean preencherNaSubida, int lote) {
+    this.jdbc = jdbc;
+    this.preencherNaSubida = preencherNaSubida;
+    this.lote = lote;
   }
 
   /** Dispara o recálculo numa thread própria, sem segurar a prontidão da aplicação. */
@@ -94,6 +100,7 @@ public class BuscaNotasLegadoRunner {
    */
   public int preencherLegado() {
     int total = 0;
+    int lotes = 0;
     UUID ultimo = MENOR_ID;
     List<Map<String, Object>> notas;
     do {
@@ -102,10 +109,12 @@ public class BuscaNotasLegadoRunner {
         break;
       }
       Map<UUID, List<ItemBusca>> itens = itensDoLote(notas);
-      for (Map<String, Object> linha : notas) {
-        total += preencher(linha, itens.getOrDefault(linha.get("id"), List.of()));
-      }
+      total += gravarLote(notas, itens);
       ultimo = (UUID) notas.get(notas.size() - 1).get("id");
+      lotes++;
+      if (lotes % LOTES_POR_LOG == 0) {
+        log.info("Busca das notas (#271): {} nota(s) recalculadas ate agora", total);
+      }
     } while (notas.size() == lote);
     if (total > 0) {
       log.info("Busca das notas (#174, #271): busca_normalizada recalculada em {} nota(s)", total);
@@ -126,22 +135,56 @@ public class BuscaNotasLegadoRunner {
     return porNota;
   }
 
-  private int preencher(Map<String, Object> linha, List<ItemBusca> itens) {
-    try {
-      NormalizacaoBusca.TextoNota texto = NormalizacaoBusca.montarTextoDaNota(linha.get("numero"),
-          (String) linha.get("destinatario_nome"), (String) linha.get("natureza_operacao"),
-          (String) linha.get("destinatario_cpf_cnpj"), itens);
-      if (texto.itensForaDaBusca() > 0) {
-        log.warn("Busca da nota {}: {} item(ns) nao couberam em {} caracteres", linha.get("id"),
-            texto.itensForaDaBusca(), NormalizacaoBusca.TAMANHO_MAXIMO);
+  /**
+   * Calcula o texto de cada nota do lote (uma nota que não calcula é logada e pulada) e grava o
+   * lote de uma vez, num único lote JDBC. Se o lote inteiro falhar, grava nota a nota, para uma
+   * linha ruim não impedir as outras.
+   */
+  private int gravarLote(List<Map<String, Object>> notas, Map<UUID, List<ItemBusca>> itens) {
+    List<Object[]> parametros = new ArrayList<>();
+    for (Map<String, Object> linha : notas) {
+      try {
+        NormalizacaoBusca.TextoNota texto = NormalizacaoBusca.montarTextoDaNota(
+            linha.get("numero"), (String) linha.get("destinatario_nome"),
+            (String) linha.get("natureza_operacao"), (String) linha.get("destinatario_cpf_cnpj"),
+            itens.getOrDefault(linha.get("id"), List.of()));
+        if (texto.itensForaDaBusca() > 0) {
+          log.warn("Busca da nota {}: {} item(ns) nao couberam em {} caracteres", linha.get("id"),
+              texto.itensForaDaBusca(), NormalizacaoBusca.TAMANHO_MAXIMO);
+        }
+        parametros.add(new Object[] {texto.texto(), NormalizacaoBusca.VERSAO_REGRA,
+            linha.get("id"), NormalizacaoBusca.VERSAO_REGRA});
+      } catch (RuntimeException e) {
+        registrarFalha(linha.get("id"), e);
       }
-      return jdbc.update(ATUALIZACAO, texto.texto(), NormalizacaoBusca.VERSAO_REGRA,
-          linha.get("id"), NormalizacaoBusca.VERSAO_REGRA);
-    } catch (RuntimeException e) {
-      // Sem o texto e sem a excecao do banco, que traria o nome do destinatario.
-      log.error("Busca das notas (#271): nota id={} ficou sem recalculo ({}); resolver e "
-          + "reiniciar", linha.get("id"), e.getClass().getSimpleName());
-      return 0;
     }
+    try {
+      return somar(jdbc.batchUpdate(ATUALIZACAO, parametros));
+    } catch (RuntimeException e) {
+      int gravadas = 0;
+      for (Object[] p : parametros) {
+        try {
+          gravadas += jdbc.update(ATUALIZACAO, p);
+        } catch (RuntimeException falha) {
+          registrarFalha(p[2], falha);
+        }
+      }
+      return gravadas;
+    }
+  }
+
+  private static int somar(int[] resultados) {
+    int total = 0;
+    for (int r : resultados) {
+      // Alguns drivers devolvem SUCCESS_NO_INFO (-2) em vez da contagem de linhas.
+      total += r == java.sql.Statement.SUCCESS_NO_INFO ? 1 : Math.max(r, 0);
+    }
+    return total;
+  }
+
+  private static void registrarFalha(Object id, RuntimeException e) {
+    // Sem o texto e sem a excecao do banco, que traria o nome do destinatario.
+    log.error("Busca das notas (#271): nota id={} ficou sem recalculo ({}); resolver e reiniciar",
+        id, e.getClass().getSimpleName());
   }
 }

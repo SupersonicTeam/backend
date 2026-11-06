@@ -244,6 +244,19 @@ class NotaFiscalFiltroIntegrationTest {
   }
 
   @Test
+  @DisplayName("#271: CPF de 11 digitos nao casa dentro de um CNPJ que contem a sequencia")
+  void cpfNaoCasaDentroDeCnpj() throws Exception {
+    notaComItem(produtorA, 1L, "Cooperativa", "12345678901234", "Soja", "12019000");
+    notaComItem(produtorA, 2L, "Pessoa", "23456789012", "Milho", "10059010");
+
+    // 23456789012 aparece dentro do CNPJ 12345678901234 (digitos 2 a 12), mas so a nota 2 tem o CPF.
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "23456789012"))
+        .andExpect(jsonPath("$.content[*].numero", contains(2)));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "234.567.890-12"))
+        .andExpect(jsonPath("$.content[*].numero", contains(2)));
+  }
+
+  @Test
   @DisplayName("#271: editar so um item atualiza a busca (a nota em si nao muda)")
   void editarSoUmItemAtualizaABusca() throws Exception {
     String criada = mockMvc.perform(como(produtorA, post("/api/notas"))

@@ -112,13 +112,13 @@ class BuscaNotasLegadoRunnerTest {
       jdbc.update("UPDATE nota_fiscal SET busca_normalizada = 'velho', busca_versao = 1"
           + " WHERE id = ?", id);
     }
-    runner.usarLote(3);
+    BuscaNotasLegadoRunner emLotesDeTres = new BuscaNotasLegadoRunner(jdbc, false, 3);
 
-    assertThat(runner.preencherLegado()).isEqualTo(7);
+    assertThat(emLotesDeTres.preencherLegado()).isEqualTo(7);
 
     assertThat(jdbc.queryForList("SELECT busca_normalizada FROM nota_fiscal", String.class))
         .allMatch(b -> b.contains("produto ") && b.contains("12345678901"));
-    assertThat(runner.preencherLegado()).isZero();
+    assertThat(emLotesDeTres.preencherLegado()).isZero();
   }
 
   private NotaFiscal comItens(NotaFiscal nota, String descricao, String ncm) {

@@ -269,11 +269,11 @@ public class NotaFiscalService {
    */
   private static Specification<NotaFiscal> busca(String termoBruto) {
     String termo = NormalizacaoBusca.normalizar(termoBruto);
-    // CPF/CNPJ digitado com mascara ("12.345.678/0001-95") casa o documento, que o texto guarda
-    // so com digitos (#271). Sem mascara, 11 ou 14 digitos ja caem no ramo de texto abaixo.
+    // CPF/CNPJ (11 ou 14 digitos, com ou sem mascara: "12.345.678/0001-95") casa o documento do
+    // destinatario como palavra inteira, que o texto guarda so com digitos (#271).
     String semMascara = termo.replaceAll("[.\\-/\\s]", "");
     if (semMascara.matches("\\d{11}|\\d{14}")) {
-      return NotaFiscalEspecificacoes.contendo(semMascara);
+      return NotaFiscalEspecificacoes.comDocumento(semMascara);
     }
     if (termo.length() >= BUSCA_MINIMA) {
       return NotaFiscalEspecificacoes.contendo(NormalizacaoBusca.escaparLike(termo));

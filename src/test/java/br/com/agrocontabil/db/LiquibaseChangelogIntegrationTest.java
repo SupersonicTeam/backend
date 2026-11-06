@@ -245,6 +245,47 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("#271: o backfill da busca roda no PostgreSQL (keyset por UUID, IN, UPDATE condicional)")
+  void backfillDaBuscaNoPostgres() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    String produtorId = UUID.randomUUID().toString();
+    String notaId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor Busca')",
+        produtorId);
+    jdbc.update("""
+        INSERT INTO nota_fiscal (
+            id, numero, serie, modelo, natureza_operacao, data_emissao, produtor_id,
+            destinatario_nome, destinatario_cpf_cnpj, valor_total_produtos, valor_total_nota,
+            status, tipo_documento, origem, busca_normalizada, busca_versao)
+        VALUES (?::uuid, 42, 1, '55', 'Venda', now(), ?::uuid, 'Cooperativa Agrícola',
+            '12345678000195', 10.00, 10.00, 'RASCUNHO', 'NFE', 'PROPRIA', '42 cooperativa', 1)
+        """, notaId, produtorId);
+    jdbc.update("""
+        INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, codigo_produto, descricao,
+            ncm, cfop, unidade, quantidade, valor_unitario, valor_total)
+        VALUES (gen_random_uuid(), ?::uuid, 1, 'P1', 'Soja em grãos', '12019000', '5101', 'KG',
+            1, 10, 10)
+        """, notaId);
+    try {
+      int recalculadas = new br.com.agrocontabil.config.BuscaNotasLegadoRunner(jdbc, false)
+          .preencherLegado();
+
+      assertThat(recalculadas).isGreaterThanOrEqualTo(1);
+      assertThat(jdbc.queryForObject(
+          "SELECT busca_normalizada || '|' || busca_versao FROM nota_fiscal WHERE id = ?::uuid",
+          String.class, notaId))
+          .isEqualTo("42 cooperativa agricola venda 12345678000195 soja em graos 12019000|2");
+      // Segunda rodada: nada a recalcular.
+      assertThat(new br.com.agrocontabil.config.BuscaNotasLegadoRunner(jdbc, false)
+          .preencherLegado()).isZero();
+    } finally {
+      jdbc.update("DELETE FROM nota_fiscal_item WHERE nota_fiscal_id = ?::uuid", notaId);
+      jdbc.update("DELETE FROM nota_fiscal WHERE id = ?::uuid", notaId);
+      jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    }
+  }
+
+  @Test
   @DisplayName("changeSet 0051: em casca in natura, semente sem a marca, parboilizado fora")
   void changeSet0051ArrozEmCascaInNatura() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

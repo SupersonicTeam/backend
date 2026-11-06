@@ -115,7 +115,7 @@ public final class NormalizacaoBusca {
         continue;
       }
       int acrescimo = parte.length() + (texto.isEmpty() ? 0 : 1);
-      if (fora == 0 && texto.length() + acrescimo <= TAMANHO_MAXIMO) {
+      if (texto.length() + acrescimo <= TAMANHO_MAXIMO) {
         texto.append(texto.isEmpty() ? "" : " ").append(parte);
       } else {
         fora++;

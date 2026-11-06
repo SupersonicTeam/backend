@@ -70,6 +70,23 @@ class NormalizacaoBuscaTest {
   }
 
   @Test
+  @DisplayName("#271: um item longo que nao cabe nao tira da busca o item curto que vem depois")
+  void itemCurtoDepoisDoLongoAindaEntra() {
+    List<NormalizacaoBusca.ItemBusca> itens = new ArrayList<>();
+    for (int i = 0; i < 40; i++) {
+      itens.add(new NormalizacaoBusca.ItemBusca(("longo" + i + " ").repeat(40), "12019000"));
+    }
+    itens.add(new NormalizacaoBusca.ItemBusca("Milho", "10059010"));
+
+    NormalizacaoBusca.TextoNota nota = NormalizacaoBusca.montarTextoDaNota(1L, "A", "Venda",
+        "12345678901", itens);
+
+    assertThat(nota.itensForaDaBusca()).isPositive();
+    assertThat(nota.texto().length()).isLessThanOrEqualTo(NormalizacaoBusca.TAMANHO_MAXIMO);
+    assertThat(nota.texto()).endsWith("milho 10059010");
+  }
+
+  @Test
   @DisplayName("Junta as partes ignorando as nulas")
   void juntaPartes() {
     assertThat(NormalizacaoBusca.juntar(123L, "José", null, "Venda de Soja"))
