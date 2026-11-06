@@ -1,0 +1,5 @@
+# Pares (UF do emitente; NCM) em que o contador confirmou o ICMS diferido (CST 51) na venda interna
+# de producao propria (CFOP 5101) a contribuinte. Fora desta lista o sistema aplica o mesmo padrao,
+# mas mostra o sinal ICMS_PADRAO_A_CONFIRMAR (nao bloqueante). Resposta nova do contador = uma
+# linha aqui, com a fonte. Formato: UF;NCM;fonte
+MT;12019000;#284, pergunta 9 (escritorio de contabilidade agro): soja em grao, venda interna em MT, ICMS diferido, CST 51

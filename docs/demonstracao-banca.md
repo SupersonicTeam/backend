@@ -118,7 +118,10 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
     diferimento confirmado pelo escritório (#284, pergunta 9). O **café em MG** (Santa Clara →
     Torrefação de Uberlândia e Cerealista Alto Paranaíba) é de demonstração, **a confirmar com o
     contador**. As demais vendas internas do seed (milho, algodão, leite, ovos e outras) também
-    saem com o padrão 51, igualmente a confirmar;
+    saem com o padrão 51, igualmente a confirmar. Na fila de revisão, as notas fora de MT + soja
+    (o café da Santa Clara e o leite do Luiz) mostram o sinal **não bloqueante**
+    `ICMS_PADRAO_A_CONFIRMAR`. É esperado e faz parte da demonstração: o sistema aplica o padrão e
+    avisa o que o contador ainda não confirmou;
   - toda venda autorizada do seed é interna a contribuinte. As sem CST defensável ficam rascunho
     com o ICMS a definir (roteiro, passo 4). Antes, o Carlos vendia soja a um terminal exportador no
     PR e a Santa Clara, café a uma exportadora em Santos. A exportação indireta traria a suspensão

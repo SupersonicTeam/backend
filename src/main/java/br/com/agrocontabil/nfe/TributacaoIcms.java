@@ -6,8 +6,14 @@ import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Regra única do grupo {@code ICMS} do item da NF-e: qual CST vai ao XML, à DANFE, ao validador
@@ -27,8 +33,9 @@ import java.util.Optional;
  * vendida pelo produtor de MT dentro do estado sai com o ICMS diferido, CST 51, ICMS próprio
  * zero. O grupo {@code ICMS51} exige só {@code orig} e {@code CST}; os valores do diferimento
  * ficam a critério da UF (MOC 7.00, Anexo I, grupo N07 e regra N07-10, facultativa). O padrão vale
- * para toda UF e todo produto por decisão de 2026-11-06: o tratamento de outros produtos e UFs
- * (isenção do hortifrúti, por exemplo) é do contador, que informa o CST.
+ * para toda UF e todo produto (decisão de 2026-11-06), mas só está confirmado nos pares (UF; NCM)
+ * de {@value #RECURSO_CONFIRMADOS} (hoje MT + soja em grão). Fora deles, o item emite e o sinal
+ * não bloqueante {@code ICMS_PADRAO_A_CONFIRMAR} pede a conferência com o contador.
  *
  * <p><strong>Fora do padrão, sem CST informado:</strong> nada é escolhido pelo sistema. O CST fica
  * a definir com o contador, e a emissão é barrada (422 {@code ICMS_A_DEFINIR}). O CST informado só
@@ -83,7 +90,62 @@ public final class TributacaoIcms {
     EMITENTE_SIMPLES
   }
 
+  /** Pares (UF; NCM) com o diferimento confirmado pelo contador, versionados no classpath. */
+  static final String RECURSO_CONFIRMADOS = "icms/diferimento-confirmado.csv";
+
   private TributacaoIcms() {}
+
+  /**
+   * O CST 51 sai pelo padrão (sem CST informado) num par (UF; NCM) que o contador ainda não
+   * confirmou: o item emite, mas o sinal {@code ICMS_PADRAO_A_CONFIRMAR} avisa antes do XML.
+   *
+   * @param cstInformado CST informado no item
+   * @param cfop         CFOP do item
+   * @param ncm          NCM do item
+   * @param dados        emitente e destinatário
+   * @return {@code true} se o 51 vem do padrão fora da lista confirmada
+   */
+  public static boolean padraoAConfirmar(String cstInformado, String cfop, String ncm,
+      DadosOperacao dados) {
+    boolean informado = cstInformado != null && !cstInformado.isBlank();
+    return !informado && !dados.emitenteSimples() && diferimentoPadrao(cfop, dados)
+        && !padraoConfirmado(dados.ufEmitente(), ncm);
+  }
+
+  /**
+   * O par (UF do emitente; NCM) está na lista do contador ({@value #RECURSO_CONFIRMADOS}).
+   *
+   * @param uf  UF do emitente
+   * @param ncm NCM do item
+   * @return {@code true} se confirmado
+   */
+  public static boolean padraoConfirmado(String uf, String ncm) {
+    return uf != null && ncm != null
+        && Confirmados.PARES.contains(uf.strip().toUpperCase() + ";" + ncm.strip());
+  }
+
+  /** Lista carregada uma vez, na primeira consulta. */
+  private static final class Confirmados {
+    static final Set<String> PARES = carregar();
+
+    private static Set<String> carregar() {
+      try (InputStream in = TributacaoIcms.class.getClassLoader()
+          .getResourceAsStream(RECURSO_CONFIRMADOS)) {
+        if (in == null) {
+          throw new IllegalStateException("Lista de diferimento confirmado ausente: "
+              + RECURSO_CONFIRMADOS);
+        }
+        return new String(in.readAllBytes(), StandardCharsets.UTF_8).lines()
+            .map(String::strip)
+            .filter(l -> !l.isEmpty() && !l.startsWith("#"))
+            .map(l -> l.split(";", 3))
+            .map(c -> c[0].strip().toUpperCase() + ";" + c[1].strip())
+            .collect(Collectors.toUnmodifiableSet());
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+  }
 
   /**
    * CST do ICMS que vai ao XML.

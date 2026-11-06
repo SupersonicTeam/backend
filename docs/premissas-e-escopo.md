@@ -89,10 +89,12 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
     (CFOP 5101) a destinatário **com IE**. Esse é o caso confirmado pelo escritório (#284,
     pergunta 9): soja em grão vendida pelo produtor de MT dentro do estado, ICMS diferido, ICMS
     próprio zero. O `ICMS51` leva só `orig` e `CST`; os valores do diferimento ficam a critério
-    da UF (MOC 7.00, Anexo I, regra N07-10, facultativa). O padrão vale para **toda UF e todo
-    produto** com esse CFOP e destinatário. O escritório só confirmou a soja em MT; o tratamento de
-    outro produto ou UF (a isenção do hortifrúti, por exemplo) é do contador, que informa o CST no
-    item. **Limite conhecido:** sem CST informado, esses produtos saem com o 51 sem aviso;
+    da UF (MOC 7.00, Anexo I, regra N07-10, facultativa). **Padrão de diferimento na venda interna
+    de produção própria; confirmado para a soja em MT; demais produtos e UFs a confirmar com o
+    contador.** As confirmações ficam numa lista versionada (`icms/diferimento-confirmado.csv`: UF,
+    NCM e a fonte de cada linha; hoje só MT + 1201.90.00, #284 pergunta 9). Fora dela, o item emite
+    com o 51, e o sinal **não bloqueante** `ICMS_PADRAO_A_CONFIRMAR` pede a conferência antes do
+    XML. Resposta nova do contador = uma linha na lista;
   - **qualquer outro caso** (interestadual, exportação, destinatário sem IE, outra natureza): o
     CST **tem de ser informado** no item (`cstIcms`, combinado com o contador). Sem ele, a
     emissão responde **422 `ICMS_A_DEFINIR`**, e o sinal de nota a conferir `ICMS_A_DEFINIR`

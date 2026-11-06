@@ -85,4 +85,16 @@ class FrasesSinaisNotaTest {
         + " quem tem inscricao estadual: combine o CST com seu contador antes de emitir, senao a"
         + " emissao e barrada.");
   }
+
+  @Test
+  @DisplayName("ICMS_PADRAO_A_CONFIRMAR: o 51 do padrao, o que foi confirmado e o contador")
+  void icmsPadraoAConfirmar() {
+    assertThat(FrasesSinaisNota.texto(7, null, List.of(new Sinal("ICMS_PADRAO_A_CONFIRMAR",
+        "PADRAO_NAO_CONFIRMADO", "ANTES_DE_EMITIR", 1, "Milho em grao", "5101", null, null, null,
+        null, null, null))))
+        .isEqualTo("Na nota 7, o item 'Milho em grao' vai sair com o ICMS diferido (CST 51), que o"
+            + " sistema aplica por padrao na venda dentro do estado da sua producao. Esse"
+            + " tratamento so foi confirmado para a soja em grao em MT: confira com seu contador o"
+            + " ICMS deste produto no seu estado antes de emitir.");
+  }
 }

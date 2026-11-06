@@ -248,7 +248,11 @@ public class SeedAvaliacao {
         && status != StatusNotaFiscal.COM_INCONSISTENCIAS) {
       nota.setChaveAcesso(chave(p, numero));
     }
-    nota.addItem(item(descricao, ncm, "5101", "KG", quantidade, valor));
+    NotaFiscalItem venda = item(descricao, ncm, "5101", "KG", quantidade, valor);
+    // CST do ICMS informado (o contador decidiu): nenhum sinal de ICMS nas notas do avaliado, que
+    // mudaria as respostas do gabarito e do benchmark congelado.
+    venda.setCstIcms("51");
+    nota.addItem(venda);
     return notaFiscalRepository.save(nota);
   }
 
@@ -279,8 +283,7 @@ public class SeedAvaliacao {
         .status(status)
         .destinatarioNome("Cooperativa Agroindustrial Avaliacao")
         .destinatarioCpfCnpj("11444777000161")
-        // Cooperativa contribuinte: a venda interna (5101) sai com o ICMS51 padrao e nao ganha o
-        // sinal ICMS_A_DEFINIR, que mudaria as respostas do gabarito e do benchmark congelado.
+        // Cooperativa contribuinte (com IE), como a destinataria real de uma venda de graos.
         .destinatarioIe("9071425318")
         .destinatarioEndereco(EnderecoDestinatario.builder()
             .logradouro("Rodovia BR-277").numero("S/N").municipio("Cascavel")

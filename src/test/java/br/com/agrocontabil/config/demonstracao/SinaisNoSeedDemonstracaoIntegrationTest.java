@@ -22,8 +22,9 @@ import org.springframework.test.context.ActiveProfiles;
 
 /**
  * Falso positivo dos sinais de nota a conferir (issue #276) medido no seed real da banca (#315):
- * fora das notas feitas para mostrar o {@code ICMS_A_DEFINIR} (vendas sem CST de ICMS defensável,
- * em rascunho, e a nota com o CFOP errado de propósito), nenhuma nota do cenário foi feita para
+ * fora dos sinais de ICMS esperados ({@code ICMS_A_DEFINIR} nas vendas sem CST defensável e na nota
+ * com o CFOP errado de propósito; {@code ICMS_PADRAO_A_CONFIRMAR} na fila de revisão fora de MT +
+ * soja), nenhuma nota do cenário foi feita para
  * estar errada, então todo outro sinal aqui é falso positivo. O resultado vai ao log (para o PR) e
  * o teste exige zero.
  *
@@ -51,7 +52,7 @@ class SinaisNoSeedDemonstracaoIntegrationTest {
   @Autowired private SinaisNotaConferirService sinaisService;
 
   @Test
-  @DisplayName("so o ICMS_A_DEFINIR das notas feitas para ele; nenhum outro sinal")
+  @DisplayName("so os sinais de ICMS esperados; nenhum outro sinal (falso positivo zero)")
   void semFalsoPositivo() {
     List<NotaFiscal> proprias = notaRepository.findAll().stream()
         .filter(n -> n.getOrigem() == OrigemNotaFiscal.PROPRIA)
@@ -68,20 +69,31 @@ class SinaisNoSeedDemonstracaoIntegrationTest {
         proprias.size(), porSinal);
 
     assertThat(proprias).hasSizeGreaterThan(80);
-    // ICMS_A_DEFINIR so nas notas feitas para mostra-lo: as vendas sem CST de ICMS defensavel
-    // (milho ao pecuarista sem IE e touro reprodutor interestadual), que ficam rascunho, e a nota
-    // com o CFOP 6101 interno de proposito (a com inconsistencias). Nenhum outro sinal.
-    assertThat(sinais).filteredOn(s -> s.codigo() != SinalNota.CodigoSinalNota.ICMS_A_DEFINIR)
+    // Os sinais de ICMS sao esperados e mostrados na banca; qualquer outro e falso positivo.
+    // ICMS_A_DEFINIR: as vendas sem CST de ICMS defensavel (milho ao pecuarista sem IE e touro
+    // reprodutor interestadual), em rascunho, e a nota com o CFOP 6101 interno de proposito.
+    // ICMS_PADRAO_A_CONFIRMAR: as notas na fila de revisao com o 51 do padrao fora do par
+    // confirmado pelo contador (MT + soja): o cafe de MG e o leite do PR.
+    assertThat(sinais).filteredOn(s -> s.codigo() != SinalNota.CodigoSinalNota.ICMS_A_DEFINIR
+            && s.codigo() != SinalNota.CodigoSinalNota.ICMS_PADRAO_A_CONFIRMAR)
         .isEmpty();
-    assertThat(sinais.stream().map(SinalNota::descricaoItem).distinct().toList())
+    assertThat(sinais.stream().filter(s -> s.codigo() == SinalNota.CodigoSinalNota.ICMS_A_DEFINIR)
+        .map(SinalNota::descricaoItem).distinct().toList())
         .containsExactlyInAnyOrder("Milho em grao a granel, segunda safra 2026",
             "Touro Nelore PO reprodutor, com registro genealogico",
             "Tomate italiano extra AA, caixa 20 kg");
+    assertThat(sinais.stream()
+        .filter(s -> s.codigo() == SinalNota.CodigoSinalNota.ICMS_PADRAO_A_CONFIRMAR)
+        .map(SinalNota::descricaoItem).toList())
+        .allSatisfy(d -> assertThat(d).doesNotStartWith("Soja"))
+        .anySatisfy(d -> assertThat(d).startsWith("Cafe"))
+        .anySatisfy(d -> assertThat(d).startsWith("Leite"));
     assertThat(proprias).filteredOn(n -> !sinaisService.sinais(n.getProdutor().getId(),
             new NotaParaSinal(n.getId(), n.getOrigem(), n.getStatus(), n.getDataEmissao(),
                 n.getDestinatarioCpfCnpj(), n.getValorTotalNota())).isEmpty())
         .extracting(NotaFiscal::getStatus)
         .containsOnly(br.com.agrocontabil.model.StatusNotaFiscal.RASCUNHO,
-            br.com.agrocontabil.model.StatusNotaFiscal.COM_INCONSISTENCIAS);
+            br.com.agrocontabil.model.StatusNotaFiscal.COM_INCONSISTENCIAS,
+            br.com.agrocontabil.model.StatusNotaFiscal.AGUARDANDO_APROVACAO);
   }
 }

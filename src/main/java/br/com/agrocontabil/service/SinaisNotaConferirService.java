@@ -81,6 +81,10 @@ import org.springframework.transaction.annotation.Transactional;
  * produção própria a contribuinte, CST fora da lista, exportação sem o 41, emitente do Simples).
  * O sinal avisa antes, para o produtor combinar o CST com o contador.
  *
+ * <p><strong>{@link CodigoSinalNota#ICMS_PADRAO_A_CONFIRMAR}:</strong> o item emite com o CST 51
+ * do padrão, mas o par (UF do emitente; NCM) não está na lista que o contador confirmou
+ * ({@code icms/diferimento-confirmado.csv}). Não bloqueia; só antes do XML.
+ *
  * <p>Nenhuma regra compara com nota de outro produtor: toda consulta filtra pelo produtor da
  * sessão.
  */
@@ -175,9 +179,15 @@ public class SinaisNotaConferirService {
       motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
           item.descricao(), item.cfop(), prazo)));
-      if (ANTES_DO_XML.contains(nota.status()) && icmsADefinir(item)) {
-        sinais.add(new SinalNota(CodigoSinalNota.ICMS_A_DEFINIR, Motivo.SEM_CST_ICMS, momento,
-            item.numeroItem(), item.descricao(), item.cfop(), null));
+      if (ANTES_DO_XML.contains(nota.status())) {
+        if (icmsADefinir(item)) {
+          sinais.add(new SinalNota(CodigoSinalNota.ICMS_A_DEFINIR, Motivo.SEM_CST_ICMS, momento,
+              item.numeroItem(), item.descricao(), item.cfop(), null));
+        } else if (icmsPadraoAConfirmar(item)) {
+          sinais.add(new SinalNota(CodigoSinalNota.ICMS_PADRAO_A_CONFIRMAR,
+              Motivo.PADRAO_NAO_CONFIRMADO, momento, item.numeroItem(), item.descricao(),
+              item.cfop(), null));
+        }
       }
     }
     sinais.addAll(valoresForaDoPadrao(produtorId, nota, itens, momento, prazo));
@@ -283,6 +293,13 @@ public class SinaisNotaConferirService {
     return TributacaoIcms.problema(item.cstIcms(), item.cfop(), new TributacaoIcms.DadosOperacao(
         item.tipoEmitente(), item.regimeEmitente(), item.ufEmitente(), item.ufDestinatario(),
         item.ieDestinatario())).isPresent();
+  }
+
+  /** CST 51 pelo padrão fora dos pares (UF; NCM) confirmados pelo contador: não bloqueia. */
+  static boolean icmsPadraoAConfirmar(ItemParaSinal item) {
+    return TributacaoIcms.padraoAConfirmar(item.cstIcms(), item.cfop(), item.ncm(),
+        new TributacaoIcms.DadosOperacao(item.tipoEmitente(), item.regimeEmitente(),
+            item.ufEmitente(), item.ufDestinatario(), item.ieDestinatario()));
   }
 
   /** CFOP de venda: {@code x1xx} (5101, 6102, 7101...). Remessa ({@code x9xx}) não é venda. */

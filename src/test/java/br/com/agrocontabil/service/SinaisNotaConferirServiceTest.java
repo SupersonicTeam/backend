@@ -126,6 +126,23 @@ class SinaisNotaConferirServiceTest {
   }
 
   @Test
+  @DisplayName("ICMS_PADRAO_A_CONFIRMAR: 51 do padrao fora de MT + soja, sem bloquear; so antes do XML")
+  void icmsPadraoAConfirmar() {
+    itens(new ItemParaSinal(1, "Soja em grao", "5101", "12019000", "KG", java.math.BigDecimal.ONE,
+            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"),
+        new ItemParaSinal(2, "Milho em grao", "5101", "10059010", "KG", java.math.BigDecimal.ONE,
+            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"),
+        new ItemParaSinal(3, "Milho em grao", "5101", "10059010", "KG", java.math.BigDecimal.ONE,
+            null, "51", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"));
+
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.AGUARDANDO_APROVACAO, EMISSAO)))
+        .extracting(SinalNota::codigo, SinalNota::numeroItem, SinalNota::motivo)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple(
+            CodigoSinalNota.ICMS_PADRAO_A_CONFIRMAR, 2, Motivo.PADRAO_NAO_CONFIRMADO));
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.XML_GERADO, EMISSAO))).isEmpty();
+  }
+
+  @Test
   @DisplayName("ICMS_A_DEFINIR so antes do XML: gerado, rejeitado ou autorizado, nada a combinar")
   void icmsADefinirSoAntesDoXml() {
     itens(itemIcms(1, "6101", null, "PR", "9071425318"),

@@ -41,7 +41,9 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   (`ICMSTot` zerado). A NT 2025.002, regra B25-90, rejeita (1002) a NF-e normal sem o grupo. O CST
   vem do `nfe/TributacaoIcms` (regra única do XML, da DANFE, do validador e do sinal): o informado
   (`cstIcms`, só 40/41/50/51/90, os grupos sem valores) ou o **51 (diferimento total)** só na venda
-  interna de produção própria (CFOP 5101) a destinatário com IE (#284, pergunta 9). Fora disso,
+  interna de produção própria (CFOP 5101) a destinatário com IE (#284, pergunta 9), confirmado só
+  nos pares de `resources/icms/diferimento-confirmado.csv` (hoje MT + soja; fora deles, o sinal não
+  bloqueante `ICMS_PADRAO_A_CONFIRMAR`; resposta nova do contador = uma linha). Fora disso,
   sem CST: 422 `ICMS_A_DEFINIR` na emissão e o sinal `ICMS_A_DEFINIR` (#276) antes dela; o sistema
   nunca escolhe CST. Exportação (7xxx) exige 41. O ICMS devido e o ST seguem com o contador, por
   guia. Nota importada: CST/CSOSN e origem do XML só para informar (sem o grupo, segue aceita).

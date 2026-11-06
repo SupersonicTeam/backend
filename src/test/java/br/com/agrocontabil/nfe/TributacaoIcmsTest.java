@@ -51,6 +51,31 @@ class TributacaoIcmsTest {
   }
 
   @Test
+  @DisplayName("padrao a confirmar: 51 pelo padrao fora do par confirmado (MT + soja), sem bloquear")
+  void padraoAConfirmar() {
+    assertThat(TributacaoIcms.padraoConfirmado("MT", "12019000")).isTrue();
+    assertThat(TributacaoIcms.padraoConfirmado("mt ", " 12019000")).isTrue();
+    assertThat(TributacaoIcms.padraoConfirmado("PR", "12019000")).isFalse();
+    assertThat(TributacaoIcms.padraoConfirmado("MT", "10059010")).isFalse();
+
+    // soja em MT: confirmada, sem aviso
+    assertThat(TributacaoIcms.padraoAConfirmar(null, "5101", "12019000",
+        regular("MT", "MT", "133518276"))).isFalse();
+    // milho em MT e soja no PR: padrao aplicado, a confirmar (e o item emite)
+    assertThat(TributacaoIcms.padraoAConfirmar(null, "5101", "10059010",
+        regular("MT", "MT", "133518276"))).isTrue();
+    assertThat(TributacaoIcms.problema(null, "5101", regular("MT", "MT", "133518276")))
+        .isEmpty();
+    assertThat(TributacaoIcms.padraoAConfirmar(null, "5101", "12019000",
+        regular("PR", "PR", "9071425318"))).isTrue();
+    // CST informado: o contador decidiu; fora do padrao: e o ICMS_A_DEFINIR, nao este
+    assertThat(TributacaoIcms.padraoAConfirmar("51", "5101", "10059010",
+        regular("MT", "MT", "133518276"))).isFalse();
+    assertThat(TributacaoIcms.padraoAConfirmar(null, "6101", "10059010",
+        regular("MT", "PR", "9071425318"))).isFalse();
+  }
+
+  @Test
   @DisplayName("a regex do DTO e a lista de CSTs sao a mesma coisa (mais o vazio)")
   void regexDoDtoCasaComALista() {
     assertThat(TributacaoIcms.CSTS_SEM_CALCULO_REGEX)
