@@ -160,7 +160,8 @@ br.com.agrocontabil
 │                  # AliquotaIbsCbsResolver + ReducaoNcmResolver (resolvedores únicos débito×crédito),
 │                  # ClassificacaoTributariaService (tabela oficial cClassTrib + anexos da LC 214 por NCM, #272),
 │                  # TratamentoProdutoService (tratamento de um produto por nome ou NCM, para a Ceres, #283;
-│                  #   a busca por nome ignora o trecho negado das descrições, #369),
+│                  #   a busca por nome ignora o trecho negado das descrições, #369; a `condicao` leva o
+│                  #   trecho negado do item de anexo, sem número, #396),
 │                  # SinaisNotaConferirService (sinais de nota a conferir: PRODUTO_PARECE_SERVICO, POSSIVEL_DUPLICIDADE,
 │                  #   VALOR_UNITARIO_FORA_PADRAO, #276; PRODUTO_PARECE_SERVICO cruza o termo com a unidade
 │                  #   comercial e o NCM e a frase cita a NFS-e, #364;
