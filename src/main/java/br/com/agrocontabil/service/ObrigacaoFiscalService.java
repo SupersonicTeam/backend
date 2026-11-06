@@ -191,9 +191,9 @@ public class ObrigacaoFiscalService {
     }
     for (LocalDate data : datas(Periodicidade.MENSAL, 31, null, AjusteFimDeSemana.NENHUM,
         inicio, fim)) {
-      itens.add(item(FECHAMENTO_APURACAO_ID, "Fechamento da apuracao do mes",
-          "A apuracao de IBS/CBS do mes fecha automaticamente no ultimo dia.", data,
-          Periodicidade.MENSAL, "RN004 (apuracao mensal de IBS/CBS)"));
+      itens.add(item(FECHAMENTO_APURACAO_ID, "Fechamento da apuração do mês",
+          "A apuração de IBS/CBS do mês fecha automaticamente no último dia.", data,
+          Periodicidade.MENSAL, "RN004 (apuração mensal de IBS/CBS)"));
     }
     return itens;
   }

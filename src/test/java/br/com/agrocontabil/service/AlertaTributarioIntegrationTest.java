@@ -124,8 +124,8 @@ class AlertaTributarioIntegrationTest {
     assertThat(alertas.get(2).descricao()).isEqualTo("Guia de FUNRURAL de R$ 1.840,55");
     assertThat(alertas.get(2).referenciaId()).isEqualTo(guiaQueVence.getId());
     assertThat(alertas.get(1).descricao())
-        .isEqualTo("Prazo para cancelar a NF-e " + notaNoPrazoFinal.getNumero() + ", serie 1");
-    assertThat(alertas.get(3).descricao()).isEqualTo("Fechamento da apuracao de 2026-10");
+        .isEqualTo("Prazo para cancelar a NF-e " + notaNoPrazoFinal.getNumero() + ", série 1");
+    assertThat(alertas.get(3).descricao()).isEqualTo("Fechamento da apuração de 10/2026");
     assertThat(resumo.criados()).isEqualTo(5); // 4 do A + 1 do B
   }
 

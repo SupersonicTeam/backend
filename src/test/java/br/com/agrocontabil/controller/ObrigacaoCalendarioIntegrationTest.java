@@ -142,12 +142,40 @@ class ObrigacaoCalendarioIntegrationTest {
   }
 
   @Test
+  @DisplayName("catalogo e calendario: textos com acento, nenhuma palavra do catalogo sem ele (#408)")
+  void textosDoCatalogoComAcento() throws Exception {
+    List<String> textos = new ArrayList<>();
+    JsonNode catalogo = objectMapper.readTree(mockMvc.perform(get("/api/contador/obrigacoes")
+            .header(HttpHeaders.AUTHORIZATION, tokenA)).andReturn().getResponse()
+        .getContentAsString());
+    catalogo.forEach(o -> {
+      textos.add(o.path("titulo").asText());
+      textos.add(o.path("descricao").asText());
+      textos.add(o.path("origem").asText());
+    });
+    JsonNode calendario = objectMapper.readTree(calendario(tokenProdutor, produtor.usuarioId())
+        .andReturn().getResponse().getContentAsString());
+    calendario.forEach(i -> {
+      textos.add(i.path("titulo").asText());
+      textos.add(i.path("descricao").asText());
+      textos.add(i.path("origem").asText());
+    });
+
+    assertThat(textos).hasSizeGreaterThan(30);
+    assertThat(textos).allSatisfy(t ->
+        assertThat(br.com.agrocontabil.support.TextoSemAcento.primeiraPalavraSemAcento(t))
+            .as("texto sem acento: %s", t).isNull());
+    assertThat(textos).contains("Contribuição do produtor rural sobre a comercialização",
+        "A apuração de IBS/CBS do mês fecha automaticamente no último dia.");
+  }
+
+  @Test
   @DisplayName("calendario: ocorrencias do catalogo que valem para o produtor + fechamento")
   void calendarioDoProdutor() throws Exception {
     List<String> titulos = titulosDeObrigacao(tokenProdutor, produtor.usuarioId());
 
     assertThat(titulos).contains("DAS / PGDAS-D@2026-03-20", "Funrural (recolhimento)@2026-03-20",
-        "DEFIS@2026-03-31", "Fechamento da apuracao do mes@2026-03-31");
+        "DEFIS@2026-03-31", "Fechamento da apuração do mês@2026-03-31");
     assertThat(titulos).noneMatch(t -> t.startsWith("DCTFWeb") || t.startsWith("DAS-MEI")
         || t.startsWith("DIRPF"));
     calendario(tokenProdutor, produtor.usuarioId())
@@ -160,7 +188,7 @@ class ObrigacaoCalendarioIntegrationTest {
 
     // Sem escritorio: so o fechamento da apuracao (RN004), que vale para todo produtor.
     assertThat(titulosDeObrigacao(token("joaquim@fazenda.com.br"), semEscritorio.usuarioId()))
-        .containsExactly("Fechamento da apuracao do mes@2026-03-31");
+        .containsExactly("Fechamento da apuração do mês@2026-03-31");
   }
 
   @Test
@@ -177,7 +205,7 @@ class ObrigacaoCalendarioIntegrationTest {
         .andExpect(jsonPath("$.tipoProdutor").value(org.hamcrest.Matchers.nullValue()));
 
     assertThat(titulosDeObrigacao(tokenProdutor, produtor.usuarioId()))
-        .contains("Funrural (recolhimento)@2026-03-20", "Fechamento da apuracao do mes@2026-03-31")
+        .contains("Funrural (recolhimento)@2026-03-20", "Fechamento da apuração do mês@2026-03-31")
         .noneMatch(t -> t.startsWith("DAS") || t.startsWith("DEFIS"));
 
     jdbcTemplate.update("UPDATE produtores SET regime_tributario = 'MEI' WHERE id = ?",

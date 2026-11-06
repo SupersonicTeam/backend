@@ -125,7 +125,7 @@ public class AlertaTributarioService {
       // Referencia sem consulta: o alerta so precisa do id do produtor para a FK.
       criados += criar(produtorRepository.getReferenceById(nota.produtorId()),
           TipoAlertaTributario.PRAZO_CANCELAMENTO_NFE, nota.id(), prazo,
-          "Prazo para cancelar a " + documento + " " + nota.numero() + ", serie " + nota.serie(),
+          "Prazo para cancelar a " + documento + " " + nota.numero() + ", série " + nota.serie(),
           agora);
     }
 
@@ -140,7 +140,7 @@ public class AlertaTributarioService {
           fechamento.plusDays(1).atStartOfDay(ZONE).toOffsetDateTime())) {
         criados += criar(produtorRepository.getReferenceById(produtorId),
             TipoAlertaTributario.FECHAMENTO_APURACAO, produtorId, fechamento,
-            "Fechamento da apuracao de " + mes, agora);
+            "Fechamento da apuração de " + mes.format(java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")), agora);
       }
     }
 
