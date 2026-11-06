@@ -237,6 +237,25 @@ class TextoReformaTributariaTest {
         .contains("O que muda para você");
   }
 
+  @ParameterizedTest
+  @EnumSource(TipoProdutor.class)
+  @DisplayName("#267: densidade de citações — no máximo duas por item e uma a cada 35 palavras")
+  void densidadeDeCitacoes(TipoProdutor tipo) {
+    String texto = TextoReformaTributaria.montar(
+        new TextoReformaTributaria.Perfil(tipo, true, List.of())).texto();
+    Pattern citacao = Pattern.compile("\\((?:LC|EC|Lei|arts?\\.)[^)]*\\)");
+
+    int total = 0;
+    for (String linha : texto.split("\n")) {
+      int naLinha = (int) citacao.matcher(linha).results().count();
+      assertThat(naLinha).as(linha).isLessThanOrEqualTo(2);
+      total += naLinha;
+    }
+    int palavras = texto.split("\\s+").length;
+    assertThat(total).isPositive();
+    assertThat((double) palavras / total).as("palavras por citação").isGreaterThanOrEqualTo(35);
+  }
+
   @Test
   @DisplayName("Formato da tela: texto puro, secoes separadas por linha em branco, sem HTML")
   void formatoDaTela() {

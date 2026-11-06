@@ -1,0 +1,154 @@
+# Glossário do produtor da Ceres (issue #267).
+#
+# Uma única fonte para: (1) a explicação da sigla na primeira vez que ela aparece na resposta de
+# dados (ComposicaoRespostaDados); (2) a verificação de "sigla sem explicação" (ClarezaTexto e os
+# testes dos textos fixos); (3) a seção/linha "O que isso quer dizer", montada pelo backend, nunca
+# pelo modelo (TextoReformaTributaria hoje; rota de legislação na #269).
+#
+# REVISÃO HUMANA OBRIGATÓRIA: cada definição é texto entregue ao produtor. Quem revisa confere se o
+# sentido está certo e se a frase é de quem planta e vende, não de quem lê lei.
+#
+# Regras de cada definição (conferidas por GlossarioProdutorTest):
+#   - curta (até 170 caracteres), em letra minúscula no começo e sem ponto final;
+#   - SEM número (o ValidadorNumeros trataria como número novo) e SEM artigo de lei;
+#   - com acento: é texto entregue ao produtor (#357).
+# Sigla sem definição segura fica de fora: melhor não explicar do que explicar errado.
+#
+# Campos:
+#   termo      como o termo aparece no relatório e no começo da linha explicativa
+#   sigla      false para termo que não é sigla (crédito, guia...); padrão true
+#   padrao     regex Java do termo no texto (com \b); "ignorarCaixa" liga o CASE_INSENSITIVE
+#   nome       forma por extenso; vale como explicação se estiver no texto (sem acento/caixa)
+#   aceitas    outras expressões que valem como explicação no texto (sem acento/caixa)
+#   emLinha    true: a composição das respostas de dados insere "(nome)" depois da 1ª ocorrência
+#   explicacao a definição em linguagem de produtor
+termos:
+  - termo: IBS
+    padrao: '\bIBS\b'
+    nome: imposto sobre bens e serviços
+    emLinha: true
+    explicacao: o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos
+
+  - termo: CBS
+    padrao: '\bCBS\b'
+    nome: contribuição sobre bens e serviços
+    aceitas: [contribuição social sobre bens e serviços]
+    emLinha: true
+    explicacao: o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins
+
+  - termo: PIS
+    padrao: '\bPIS\b'
+    nome: Programa de Integração Social
+    emLinha: true
+    explicacao: contribuição federal sobre a receita, que a CBS vai substituir
+
+  - termo: Cofins
+    padrao: '\bCofins\b'
+    ignorarCaixa: true
+    nome: Contribuição para o Financiamento da Seguridade Social
+    emLinha: true
+    explicacao: contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS
+
+  - termo: ICMS
+    padrao: '\bICMS\b'
+    nome: imposto sobre circulação de mercadorias e serviços
+    emLinha: true
+    explicacao: imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos
+
+  - termo: ISS
+    padrao: '\bISS\b'
+    nome: imposto sobre serviços
+    emLinha: true
+    explicacao: imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos
+
+  - termo: LC
+    padrao: '\bLC\b'
+    nome: lei complementar
+    emLinha: true
+    explicacao: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê
+
+  - termo: EC
+    padrao: '\bEC\b'
+    nome: emenda constitucional
+    emLinha: true
+    explicacao: emenda constitucional, uma mudança feita na Constituição; foi uma delas que criou o IBS e a CBS
+
+  - termo: ADCT
+    padrao: '\bADCT\b'
+    nome: Ato das Disposições Constitucionais Transitórias
+    emLinha: true
+    explicacao: parte da Constituição com as regras de transição, como o calendário da troca dos impostos
+
+  - termo: NF-e
+    padrao: '\bNF-?e\b'
+    ignorarCaixa: true
+    nome: nota fiscal eletrônica
+    emLinha: true
+    explicacao: o documento eletrônico que registra uma venda ou uma compra
+
+  - termo: DANFE
+    padrao: '\bDANFE\b'
+    ignorarCaixa: true
+    nome: documento auxiliar
+    emLinha: true
+    explicacao: a versão em PDF da nota fiscal eletrônica, que acompanha a mercadoria
+
+  - termo: NCM
+    padrao: '\bNCM\b'
+    nome: código do produto
+    aceitas: [Nomenclatura Comum do Mercosul, código de classificação do produto]
+    emLinha: true
+    explicacao: o código que classifica o produto na nota fiscal
+
+  - termo: CFOP
+    padrao: '\bCFOP\b'
+    nome: código da operação
+    aceitas: [código fiscal de operações, código fiscal da operação]
+    emLinha: true
+    explicacao: o código que diz o tipo da operação da nota, como venda, compra ou devolução
+
+  - termo: Funrural
+    padrao: '\bFunrural\b'
+    ignorarCaixa: true
+    nome: contribuição previdenciária do produtor rural
+    aceitas: [contribuição previdenciária, previdência rural, previdência do produtor, INSS]
+    emLinha: true
+    explicacao: contribuição da previdência sobre a venda da produção rural
+
+  - termo: SEFAZ
+    padrao: '\bSEFAZ\b'
+    ignorarCaixa: true
+    nome: secretaria da fazenda
+    aceitas: [secretaria de fazenda, secretaria de estado de fazenda, secretaria de estado da fazenda, secretaria estadual da fazenda]
+    emLinha: true
+    explicacao: a secretaria da fazenda do estado, que autoriza as notas fiscais eletrônicas
+
+  - termo: cClassTrib
+    padrao: '\bcClassTrib\b'
+    nome: código de classificação tributária
+    emLinha: true
+    explicacao: o código que diz como o item da nota é tratado no IBS e na CBS
+
+  - termo: crédito
+    sigla: false
+    padrao: '\bcr[ée]ditos?\b'
+    ignorarCaixa: true
+    explicacao: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas
+
+  - termo: apuração
+    sigla: false
+    padrao: '\bapura[çc][ãa]o\b'
+    ignorarCaixa: true
+    explicacao: a conta do mês que compara o imposto das suas vendas com o das suas compras
+
+  - termo: split payment
+    sigla: false
+    padrao: '\bsplit payment\b'
+    ignorarCaixa: true
+    explicacao: forma de pagamento em que a parte do imposto é separada na hora e segue direto para o governo
+
+  - termo: guia
+    sigla: false
+    padrao: '\bguias?\b'
+    ignorarCaixa: true
+    explicacao: o documento usado para pagar um imposto

@@ -230,6 +230,10 @@ br.com.agrocontabil
 │                  #   desempate e na perguntaLei do MISTO; camada na auditoria (0050);
 │                  # orquestracao/FundamentoRetencao (RN009, #145: retenção sempre com as duas
 │                  #   regras e citações fixas — Funrural da Lei 8.212 e split payment da LC 214);
+│                  # GlossarioProdutor + resources/assistente/glossario-produtor.yml (#267: siglas e termos do
+│                  #   produtor com definição curta, sem número nem artigo, revisada por humano; inline na
+│                  #   composição de dados, seção "O QUE QUER DIZER" no atalho de legislação, medição de
+│                  #   clareza e TextosFixosSiglasTest; sigla nova em texto fixo quebra o teste até entrar no yml);
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo e fora da cota; dados → RotaDados.responderAtalho, lei →
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
