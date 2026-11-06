@@ -251,6 +251,60 @@ class TratamentoProdutoServiceTest {
         });
   }
 
+  @Test
+  @DisplayName("#396: trecho negado da descricao do item, no texto original, curto e sem numeros")
+  void trechosNegadosDaDescricao() {
+    assertThat(TratamentoProdutoService.trechosNegados(
+        "Rações para animais, concentrados, aditivos, exceto para animais domésticos"))
+        .containsExactly("exceto para animais domésticos");
+    assertThat(TratamentoProdutoService.trechosNegados("Aves de um dia, exceto as ornamentais"))
+        .containsExactly("exceto as ornamentais");
+    assertThat(TratamentoProdutoService.trechosNegados(
+        "Carnes bovina e de aves (exceto foies gras) dos códigos da NCM/SH"))
+        .containsExactly("exceto foies gras");
+    assertThat(TratamentoProdutoService.trechosNegados(
+        "Farinha da NCM/SH; ressalvados os produtos relacionados no Anexo I"))
+        .containsExactly("ressalvados os produtos relacionados no Anexo I");
+  }
+
+  @Test
+  @DisplayName("#396: trecho com numero (lista de NCM) nao vai para a condicao")
+  void trechoComNumeroFicaDeFora() {
+    assertThat(TratamentoProdutoService.trechosNegados(
+        "Crustáceos, exceto os produtos da subposição 0306.11 e dos códigos 0306.15.00"))
+        .isEmpty();
+    assertThat(TratamentoProdutoService.trechosNegados("Soja, mesmo triturada, exceto 12019000"))
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("#396: 'nao'/'nem' fazem parte do nome do produto, nao sao condicao")
+  void naoENemNaoViramCondicao() {
+    assertThat(TratamentoProdutoService.trechosNegados(
+        "Queijo fresco não maturado e queijo do reino")).isEmpty();
+    assertThat(TratamentoProdutoService.trechosNegados("Sem exceção alguma")).isEmpty();
+    assertThat(TratamentoProdutoService.trechosNegados(null)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#396: condicao junta o trecho negado do item, sem repetir o que ja foi dito")
+  void condicaoComTrechoNegado() {
+    TratamentoTributarioNcm t = tratamento("23099010", "200038", "60");
+
+    assertThat(TratamentoProdutoService.condicao(t, Optional.empty(),
+        "Rações, exceto para animais domésticos"))
+        .isEqualTo("exceto para animais domésticos");
+    assertThat(TratamentoProdutoService.condicao(t, Optional.empty(), "Rações")).isNull();
+    assertThat(TratamentoProdutoService.condicao(t, Optional.empty(), null)).isNull();
+    // O destino do item ja diz "exceto de animais domesticos": nao repete.
+    EnquadramentoAnexo e = new EnquadramentoAnexo("200038", 9,
+        "Farelos, todos destinados diretamente à alimentação animal,"
+            + " exceto de animais domésticos", null, null);
+    assertThat(TratamentoProdutoService.condicao(t, Optional.of(e), e.descricaoItem()))
+        .isEqualTo("todos destinados diretamente à alimentação animal,"
+            + " exceto de animais domésticos");
+  }
+
   private static TratamentoTributarioNcm tratamento(String ncm, String codigo, String reducao) {
     boolean integral = codigo.equals("000001");
     return new TratamentoTributarioNcm(ncm, codigo, codigo.substring(0, 3),

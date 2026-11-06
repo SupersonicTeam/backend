@@ -158,6 +158,21 @@ class TratamentoProdutoServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("#396: 'ração para cão' diz que o item exclui animais domésticos")
+  void racaoDizOQueOItemExclui() {
+    List<TratamentoProduto> produtos =
+        service.consultar("ração para cão", EM_2026).produtos();
+
+    TratamentoProduto doItem = produtos.stream()
+        .filter(p -> "200038".equals(p.cClassTrib())).findFirst().orElseThrow();
+    assertThat(doItem.condicao()).contains("exceto").contains("animais domésticos");
+    // Os NCMs do item que saem in natura ou pelo Anexo I seguem a propria hipotese: a exclusao
+    // do item do Anexo IX nao e condicao deles.
+    produtos.stream().filter(p -> !"200038".equals(p.cClassTrib())).forEach(
+        p -> assertThat(p.condicao()).doesNotContain("domésticos"));
+  }
+
+  @Test
   @DisplayName("#284 p. 2: leite nao UHT sai in natura (60%) com a alternativa do Anexo I (zero)")
   void leiteDuasSituacoes() {
     for (String ncm : List.of("04011090", "04012090", "04014010", "04015010")) {

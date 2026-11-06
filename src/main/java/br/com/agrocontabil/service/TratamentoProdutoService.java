@@ -8,6 +8,7 @@ import br.com.agrocontabil.repository.ClassificacaoTributariaAnexoNcmRepository;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +61,15 @@ import org.springframework.transaction.annotation.Transactional;
  * ração"); a exceção do item; e a cláusula "desde que ..." da descrição oficial do
  * {@code cClassTrib}. As demais células da coluna de condição são o título do grupo do anexo, não
  * condição.
+ *
+ * <p><strong>Exclusão da descrição do item (#396):</strong> o que a descrição do item de anexo
+ * exclui ("exceto de animais domésticos") também é condição que o NCM não decide, e vai para a
+ * condição no texto original, com a mesma regra de {@link #semTrechoNegado}: só {@code exceto},
+ * {@code excetuados}, {@code excluídos}, {@code ressalvados} e {@code salvo} ({@code não} e
+ * {@code nem} fazem parte do nome do produto), curto e sem número (uma lista de NCM no "exceto"
+ * fica a cargo do contador). Só vale para o tratamento do próprio item: o NCM do item que sai in
+ * natura ou pelo Anexo I segue a sua hipótese. A descrição da <em>referência de NCM</em> não
+ * entra: o código já traz a exclusão ("exceto para semeadura" é outro NCM).
  *
  * <p><strong>Leite</strong> (#284, pergunta 2): os NCMs do Anexo I, item 2, que não são UHT saem
  * in natura (60%, art. 137), como no cálculo da nota, e o produto leva a {@link Alternativa} da
@@ -102,6 +113,9 @@ public class TratamentoProdutoService {
   /** Palavras que negam o que vem depois (#369), já sem acento (a busca normaliza antes). */
   private static final Pattern NEGACAO = Pattern.compile(
       "\\b(?:exceto|excetuad[oa]s?|excluid[oa]s?|ressalvad[oa]s?|salvo|nao|nem)\\b");
+  /** A parte de {@link #NEGACAO} que exclui um grupo (sem {@code não}/{@code nem}). */
+  private static final Pattern EXCLUSAO = Pattern.compile(
+      "\\b(?:exceto|excetuad[oa]s?|excluid[oa]s?|ressalvad[oa]s?|salvo)\\b");
   private static final Pattern PROXIMA_PALAVRA = Pattern.compile("[a-z0-9]+");
   private static final Set<String> PALAVRAS_VAZIAS = Set.of("de", "do", "da", "dos", "das",
       "em", "e", "o", "a", "os", "as", "para", "com", "ncm", "sh", "nbs", "tem", "paga", "que");
@@ -169,7 +183,8 @@ public class TratamentoProdutoService {
     List<TratamentoProduto> produtos = new ArrayList<>();
     for (Descrito d : escolhidos) {
       if (d.ncm() != null) {
-        produtos.add(produto(d.ncm(), d.descricao(), 1, tratamentos.get(d.ncm()), true, data));
+        produtos.add(produto(d.ncm(), d.descricao(), 1, tratamentos.get(d.ncm()), true, data,
+            null));
         continue;
       }
       // NCMs do item com o mesmo tratamento viram um so produto, com a contagem.
@@ -181,7 +196,7 @@ public class TratamentoProdutoService {
       for (List<TratamentoTributarioNcm> grupo : porHipotese.values()) {
         TratamentoTributarioNcm exemplo = grupo.get(0);
         produtos.add(produto(grupo.size() == 1 ? exemplo.ncm() : null, d.descricao(),
-            grupo.size(), exemplo, true, data));
+            grupo.size(), exemplo, true, data, d.descricao()));
       }
     }
     if (produtos.isEmpty()) {
@@ -200,7 +215,7 @@ public class TratamentoProdutoService {
     boolean conhecido = referencia.isPresent() || !t.enquadramentos().isEmpty();
     return new ConsultaTratamentoProduto(codigo, TipoBusca.NCM,
         List.of(produto(codigo, referencia.map(NcmReferencia::getDescricao).orElse(null), 1, t,
-            conhecido, data)),
+            conhecido, data, null)),
         t.versaoTabela());
   }
 
@@ -224,17 +239,31 @@ public class TratamentoProdutoService {
   }
 
   private TratamentoProduto produto(String ncm, String descricao, int quantidadeNcms,
-      TratamentoTributarioNcm t, boolean ncmConhecido, LocalDate data) {
+      TratamentoTributarioNcm t, boolean ncmConhecido, LocalDate data, String descricaoDoItem) {
     Optional<EnquadramentoAnexo> escolhido = t.enquadramentos().stream()
         .filter(e -> e.cClassTrib().equals(t.cClassTrib()))
         .findFirst();
     Alternativa alternativa = alternativaDoLeite(t, data);
     String condicao = alternativa != null ? CONDICAO_LEITE_IN_NATURA
         : ClassificacaoTributariaService.LEITE_UHT.contains(t.ncm()) ? CONDICAO_LEITE_UHT
-        : condicao(t, escolhido);
+        : condicao(t, escolhido, itemDoTratamento(t, descricaoDoItem));
     return new TratamentoProduto(ncm, descricao, quantidadeNcms, t.cClassTrib(),
         t.percentualReducao(), t.origem(), escolhido.map(EnquadramentoAnexo::anexo).orElse(null),
         artigo(t.fundamento()), condicao, ncmConhecido, alternativa);
+  }
+
+  /**
+   * Descrição do item de anexo escolhido, se o tratamento aplicado é o dele (#396): o NCM do item
+   * que sai in natura ou pelo Anexo I tem outra hipótese, e a exclusão do item não vale para ela.
+   */
+  private static String itemDoTratamento(TratamentoTributarioNcm t, String descricaoDoItem) {
+    if (descricaoDoItem == null) {
+      return null;
+    }
+    boolean eDoItem = t.enquadramentos().stream()
+        .anyMatch(e -> e.cClassTrib().equals(t.cClassTrib())
+            && descricaoDoItem.equals(e.descricaoItem()));
+    return eDoItem ? descricaoDoItem : null;
   }
 
   /**
@@ -269,8 +298,14 @@ public class TratamentoProdutoService {
     return m.find() ? m.group(1) : null;
   }
 
-  /** Condição que o dado não decide; nula quando não há. */
-  static String condicao(TratamentoTributarioNcm t, Optional<EnquadramentoAnexo> escolhido) {
+  /**
+   * Condição que o dado não decide; nula quando não há.
+   *
+   * @param descricaoDoItem descrição do item de anexo do tratamento, de onde sai o trecho negado
+   *                        (#396); nula na referência de NCM e quando o tratamento não é o do item
+   */
+  static String condicao(TratamentoTributarioNcm t, Optional<EnquadramentoAnexo> escolhido,
+      String descricaoDoItem) {
     Set<String> partes = new LinkedHashSet<>();
     if (t.origem() == Origem.IN_NATURA) {
       partes.add(CONDICAO_IN_NATURA);
@@ -294,7 +329,59 @@ public class TratamentoProdutoService {
         partes.add("desde que " + m.group(1).strip());
       }
     }
+    for (String trecho : trechosNegados(descricaoDoItem)) {
+      if (!jaDito(partes, trecho)) {
+        partes.add(curta(trecho, EXCECAO_MAXIMA));
+      }
+    }
     return partes.isEmpty() ? null : String.join("; ", partes);
+  }
+
+  /**
+   * O que a descrição exclui, no texto original (com acento e caixa), um trecho por exclusão
+   * (#396): de {@code exceto}, {@code excetuados}, {@code excluídos}, {@code ressalvados} ou
+   * {@code salvo} até onde {@link #semTrechoNegado} corta. Fica de fora o trecho com número (lista
+   * de NCM) ou sem nada depois da palavra. {@code não}/{@code nem} não contam: fazem parte do nome
+   * do produto.
+   *
+   * @param descricao descrição oficial; pode ser nula
+   * @return trechos na ordem em que aparecem; vazia se não há
+   */
+  static List<String> trechosNegados(String descricao) {
+    if (descricao == null || descricao.isBlank()) {
+      return List.of();
+    }
+    // Normaliza caractere a caractere para saber de onde cada um veio no texto original.
+    StringBuilder normalizado = new StringBuilder(descricao.length());
+    List<Integer> origem = new ArrayList<>(descricao.length());
+    for (int i = 0; i < descricao.length(); i++) {
+      String n = Normalizer.normalize(
+          Normalizer.normalize(descricao.substring(i, i + 1), Normalizer.Form.NFD)
+              .replaceAll("\\p{M}+", ""), Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
+      for (int k = 0; k < n.length(); k++) {
+        normalizado.append(n.charAt(k));
+        origem.add(i);
+      }
+    }
+    List<String> trechos = new ArrayList<>();
+    for (int[] intervalo : intervalosNegados(normalizado.toString(), EXCLUSAO)) {
+      int inicio = origem.get(intervalo[0]);
+      int fim = intervalo[1] >= origem.size() ? descricao.length() : origem.get(intervalo[1]);
+      String trecho = descricao.substring(inicio, fim).strip().replaceAll("[\\s,;:.]+$", "");
+      if (trecho.contains(" ") && trecho.chars().noneMatch(Character::isDigit)) {
+        trechos.add(Character.toLowerCase(trecho.charAt(0)) + trecho.substring(1));
+      }
+    }
+    return trechos;
+  }
+
+  /** O trecho já está dito: todas as palavras dele (sem a da exclusão) estão nas partes. */
+  private static boolean jaDito(Set<String> partes, String trecho) {
+    String ditas = NormalizacaoBusca.normalizar(String.join(" ", partes));
+    List<String> palavras = Stream.of(NormalizacaoBusca.normalizar(trecho).split("[^a-z0-9]+"))
+        .filter(p -> p.length() >= 4 && !EXCLUSAO.matcher(p).matches())
+        .toList();
+    return !palavras.isEmpty() && palavras.stream().allMatch(ditas::contains);
   }
 
   private static String curta(String texto, int maximo) {
@@ -359,16 +446,27 @@ public class TratamentoProdutoService {
   static String semTrechoNegado(String normalizado) {
     StringBuilder resultado = new StringBuilder(normalizado.length());
     int cursor = 0;
-    Matcher m = NEGACAO.matcher(normalizado);
+    for (int[] intervalo : intervalosNegados(normalizado, NEGACAO)) {
+      resultado.append(normalizado, cursor, intervalo[0]).append(' ');
+      cursor = intervalo[1];
+    }
+    return resultado.append(normalizado, cursor, normalizado.length()).toString();
+  }
+
+  /** Início e fim de cada trecho negado do texto normalizado, sem sobreposição. */
+  private static List<int[]> intervalosNegados(String normalizado, Pattern negacao) {
+    List<int[]> intervalos = new ArrayList<>();
+    int cursor = 0;
+    Matcher m = negacao.matcher(normalizado);
     while (m.find()) {
       if (m.start() < cursor) {
         continue;
       }
       int fim = fimDoTrechoNegado(normalizado, m);
-      resultado.append(normalizado, cursor, m.start()).append(' ');
+      intervalos.add(new int[] {m.start(), fim});
       cursor = fim;
     }
-    return resultado.append(normalizado, cursor, normalizado.length()).toString();
+    return intervalos;
   }
 
   private static int fimDoTrechoNegado(String texto, Matcher negacao) {

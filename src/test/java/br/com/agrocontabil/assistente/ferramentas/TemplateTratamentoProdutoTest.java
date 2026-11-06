@@ -36,6 +36,20 @@ class TemplateTratamentoProdutoTest {
   }
 
   @Test
+  @DisplayName("#396: a exclusão da descrição do item vai na condição, com a ressalva do contador")
+  void exclusaoDoItemNaCondicao() {
+    Produto racao = new Produto(null, "Rações para animais, exceto para animais domésticos",
+        118, "200038", new BigDecimal("60.00"), false, 9, "138",
+        "exceto para animais domésticos", true);
+
+    String texto = TemplateTratamentoProduto.texto(
+        new TratamentoConsultado("ração para cão", List.of(racao), "IT 2025.002 v1.70"));
+
+    assertThat(texto).contains(" Condição: exceto para animais domésticos.")
+        .endsWith(TemplateTratamentoProduto.RESSALVA);
+  }
+
+  @Test
   @DisplayName("leite (#284): as duas situacoes, as duas citacoes e o enquadramento com o contador")
   void leiteDuasSituacoes() {
     Produto leite = new Produto("04012090", "Leite com teor de gordura entre 1% e 6%, outros", 1,
