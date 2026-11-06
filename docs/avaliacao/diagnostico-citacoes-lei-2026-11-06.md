@@ -32,7 +32,7 @@ Sobre as 18 perguntas com artigo esperado na base, em 54 execuções (18 × 3), 
 |---|---|---|
 | **(a) Busca** | **6 de 18 (33%)** | D03, D14, D15, D16 (resposta errada servida); D05, D06 (descartadas) |
 | (b) Escolha, com o esperado entregue | 0 no k=5 | aparece no k=10 (abaixo) |
-| Protocolo de marca (modelo escreve marca inválida e a resposta é descartada, com o artigo certo entregue) | 2 | D04, D10 |
+| **Falsa recusa**: o artigo certo foi entregue e o modelo respondeu `NAO_ENCONTREI` (não é marca inválida, ver abaixo) | 2 | D04, D10 |
 | (c) Sentido errado com citação certa | 1 (D07) | lê "pagos até a entrega" (art. 76) como "quando surge a obrigação" (art. 65/67) |
 | (e) Validador derrubou resposta certa | 1 (D21, fora das 18) | Senar |
 
@@ -108,7 +108,7 @@ Correção separada, pequena e certa: fazer o `ValidadorNumeros` entender o perc
 - 22 perguntas, uma rodada de 3 repetições por configuração; as repetições deram resultados quase idênticos (o modelo é quase determinístico), então as 3 não dão intervalo de confiança. A amostra mostra o tipo de falha, não a taxa de produção.
 - O artigo esperado é meu, lido na lei; um revisor jurídico pode discordar de um caso (mantive um `aceito` onde há dois artigos defensáveis).
 - A causa (c) foi julgada por mim, lendo a resposta contra o trecho citado.
-- Não foi investigado por que o modelo escreve marca inválida em D04 e D10 (os 12 descartes `CITACAO_INVALIDA` do k=5); fica aberto.
+- O motivo dos 12 descartes `CITACAO_INVALIDA` do k=5 foi investigado (seção "Marca inválida"): não é formato de marca.
 - Não usei o gabarito nem o conjunto cego.
 
 ## Como repetir
@@ -127,13 +127,13 @@ AI_RAG_TOP_K=10 ./mvnw test -Dtest=DiagnosticoCitacoesLeiManual -Ddiagnostico.sa
 | D01 | O que é o Comitê Gestor do IBS e para que ele serve? | LC 227/2026 art. 1º | 1 | 3×certa | 3×certa | ok |
 | D02 | O que é o Imposto Seletivo? | LC 214/2025 art. 409 | 1 | 3×certa | 3×certa | ok |
 | D03 | Até quando existem o ICMS e o ISS durante a transição para o IBS? | EC 132/2023 art. 2º | >20 | 3×errada | 3×errada | (a) busca + (c) sentido invertido |
-| D04 | Como funciona o cashback do IBS e da CBS para famílias de baixa renda? | LC 214/2025 art. 112 | 1 | 3×descartada | 3×certa | ok no k=5 só com a marca; descartada por marca inválida (protocolo) |
+| D04 | Como funciona o cashback do IBS e da CBS para famílias de baixa renda? | LC 214/2025 art. 112 | 1 | 3×descartada | 3×certa | falsa recusa (NAO_ENCONTREI) com o artigo entregue; no k=10 responde |
 | D05 | A venda de grãos para o exterior paga IBS e CBS? | LC 214/2025 art. 79 | 12 | 3×descartada | 2×descartada/1×errada | (a) busca |
 | D06 | Como funciona o crédito do IBS e da CBS nas compras de quem é contribuinte? | LC 214/2025 art. 47 | 9 | 3×descartada | 3×errada | (a) busca; no k=10 vira (b) |
 | D07 | Quando surge a obrigação de pagar o IBS e a CBS na importação de bens? | LC 214/2025 art. 67 | 1 | 3×certa | 3×certa | citação ok; (c) sentido (prazo de pagamento lido como "quando surge") |
 | D08 | Quem é contribuinte do IBS e da CBS? | LC 214/2025 art. 21 | 1 | 3×certa | 1×descartada/2×certa | ok (cita também o art. 176, de combustíveis) |
 | D09 | Se a minha venda for isenta, eu perco os créditos das minhas compras? | LC 214/2025 art. 51 | 1 | 3×certa | 3×errada | ok no k=5; no k=10 vira (b) |
-| D10 | Posso descontar o crédito de um carro que comprei para uso pessoal? | LC 214/2025 art. 57 | 2 | 3×descartada | 3×certa | descartada por marca inválida (protocolo) |
+| D10 | Posso descontar o crédito de um carro que comprei para uso pessoal? | LC 214/2025 art. 57 | 2 | 3×descartada | 3×certa | falsa recusa: o modelo respondeu NAO_ENCONTREI com o artigo entregue |
 | D11 | Sou obrigado a emitir nota fiscal eletrônica nas minhas vendas? | LC 214/2025 art. 60 | 1 | 3×certa | 3×certa | ok |
 | D12 | Posso pedir de volta o saldo de crédito que sobrou no fim do mês? | LC 214/2025 art. 39 | 1 | 3×certa | 3×certa | ok |
 | D13 | Uma cooperativa de produtores pode ter alíquota zero de IBS e CBS? | LC 214/2025 art. 271 | 1 | 3×certa | 3×certa | ok |
@@ -149,3 +149,68 @@ AI_RAG_TOP_K=10 ./mvnw test -Dtest=DiagnosticoCitacoesLeiManual -Ddiagnostico.sa
 
 
 Dados brutos das rodadas (desfecho, citações e texto de cada repetição): `diagnostico-lei-2026-11-06/`.
+
+
+---
+
+# Segunda rodada (2026-11-06): marca inválida, validador, candidatas de busca e controle
+
+Pedido do Murillo: seguir corrigindo as citações. Três frentes.
+
+## 1. Percentual por extenso (D21) — PR #427
+
+`ValidadorNumeros` agora lê "zero vírgula dois por cento" como 0,2, nas fontes e na resposta. PR próprio, CI verde, `code-review high` feito (achados de reuso e `codebase-map` corrigidos). O merge foi negado pelo modo automático ("Merge Without Review"): fica para o orquestrador.
+
+## 2. "Marca inválida" (D04, D10): a hipótese não se confirmou
+
+Registrei o texto cru do modelo antes do `ValidadorCitacao` (espião de `ModeloLinguagem.chamar` no harness, 3 repetições em D04, D05, D06, D08, D10, D18; dados em `k5-texto-cru-descartes.json`).
+
+- Os 12 descartes `CITACAO_INVALIDA` do k=5 (D04, D05, D06, D10 × 3) são o texto literal **`NAO_ENCONTREI`**. Não há marca inventada nem formato fora do padrão.
+- A resposta com marcas (D08, D18) vem no formato correto: `... [T3]. ... [T5].`
+- Portanto: 6 dos 12 são **recusas corretas** (D05 e D06: o artigo certo não foi entregue; recusar é o que protege o produtor) e 6 são **falsas recusas** (D04 e D10: o artigo certo estava entre os 5 e o modelo disse que não achou).
+- Não há ajuste de formato a aceitar. Afrouxar a regra do `NAO_ENCONTREI` no prompt traria de volta as respostas de D05 e D06 com artigo errado (é o que o k=10 fez): ganho nos 6 e perda nos outros 6. **Não proponho ajuste e não medi um**, porque a causa é outra.
+
+## 3. Candidatas de seleção na busca
+
+Controle: 9 perguntas novas (D23 a D31, `holdout: true` no JSON), escritas depois de D01 a D22, com o artigo esperado lido na lei; **nenhuma regra foi ajustada olhando para elas**.
+
+### Só o recall (sem o modelo; 20 primeiros trechos, mesmos dados do k=5)
+
+| | treino (19 com artigo) | controle (9) |
+|---|---|---|
+| k=5 hoje | 13 | 7 |
+| (a) 5 artigos distintos | **15** (D06, D15) | **8** (D30) |
+| (b) rebaixar regime específico, 5 trechos | 12 (perde D02 e D13) | 8 |
+| (b) rebaixar regime específico, 5 artigos distintos | 14 | 9 |
+
+(b) usa palavras do caput ("combustível", "imóvel", "saúde", "crédito presumido", "regime específico"...) e só rebaixa se a pergunta não cita o setor. Falso positivo: "prejudiciais à **saúde**" põe o Imposto Seletivo (D02) como regime de saúde, e "regime específico" no caput do art. 271 rebaixa a cooperativa (D13). **Descartada**: no treino fica abaixo da linha de base e a regra é frágil por construção (palavra-chave de caput). Só a (a) foi para o modelo.
+
+### Modelo real nas candidatas (3 repetições, `qwen3:4b-instruct`, k=5 artigos)
+
+| Execuções | Aceita, **certa** | Aceita, **outro artigo** | Descartada |
+|---|---|---|---|
+| **Treino D01–D18** (54) | | | |
+| k=5 hoje | 30 | 12 | 12 |
+| (a1) 5 artigos, 1 trecho por artigo | 29 | 12 | 13 |
+| (a2) 5 artigos, até 2 trechos por artigo | 21 | 18 | 15 |
+| **Controle D23–D31** (27) | | | |
+| k=5 hoje | 12 | 7 | 7 (+1 falha do modelo) |
+| (a1) | 15 | 6 | 6 |
+| (a2) | 14 | 6 | 7 |
+| **Total (81)** | | | |
+| k=5 hoje | 42 | 19 | 19 |
+| (a1) | **44** | **18** | 19 |
+| (a2) | 35 | 24 | 22 |
+
+Por pergunta (a1): ganha D06 (3 de 3 viram certas), D25, D28, D30; perde D09 e D27 (certa → outro artigo) e D17 (certa → descartada). D09: o trecho mais próximo do art. 51 passou a ser o § 1º (proporcionalidade) e saiu o caput, que dizia que a isenção anula os créditos; o modelo cita o art. 49. Ou seja, **um trecho por artigo perde a informação do parágrafo certo**. O a2 tenta recuperar isso e piora (mais contexto, mais respostas por outro artigo).
+
+Regra combinada (a "certa" sobe e "outro artigo" não sobe): **(a1) não passa no treino** (certa 30 → 29) e passa no controle (12 → 15; 7 → 6); no total, +2 certas e −1 "outro artigo" em 81 execuções, dentro do que as trocas por pergunta explicam (4 ganhos, 3 perdas). **(a2) não passa em nenhum dos dois**. Absolutamente nada mudou para a lei ausente (D19 e D22 seguem recusadas).
+
+## Conclusão desta rodada
+1. **Nenhuma candidata de busca se sustenta.** (b) perde recall no treino; (a1) melhora o recall (13 → 15 e 7 → 8) mas isso não vira ganho de resposta de forma consistente: +2 certas e −1 "outro artigo" em 81 execuções, com 3 perguntas piorando.
+2. **O limite está na escolha do trecho, não só na busca.** O recall de artigos distintos sobe, mas o modelo de 4B cita o artigo errado mesmo com o certo na mão (D06 e D15 no k=10; D09 e D27 no a1).
+3. **Falsa recusa** (D04, D10 e D26 do controle: `NAO_ENCONTREI` com o artigo certo entregue) é o que sobra de "descarte com o artigo na mão" e não tem correção segura: afrouxá-la traz de volta as respostas erradas das recusas corretas.
+4. **Correção que ficou de pé:** percentual por extenso no validador (PR #427).
+5. O ganho de qualidade que o dado ainda sustenta é de **modelo ou de reescrita da pergunta**, não de busca ou de base: D03, D14 e D16 continuam fora do alcance (nem nos 20 primeiros).
+
+Dados das rodadas: `candidata-a1-1-trecho-por-artigo.json`, `candidata-a2-2-trechos-por-artigo.json`, `k5-controle-D23-D27.json`, `k5-controle-D28-D31.json`, `recall-candidatas.json` e `simula_candidatas.py` (a simulação de (a) e (b) sobre os 20 primeiros trechos). Código da candidata: branch `feat/269-busca-artigos-distintos` (sem PR; `BuscaLegislacaoService.melhoresPorArtigo`).
