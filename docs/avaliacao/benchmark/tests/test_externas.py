@@ -20,6 +20,24 @@ def resultado(texto, desfecho="RESPONDIDA", rota="LEGISLACAO", citacao_valida=No
 
 
 class CriteriosTest(unittest.TestCase):
+    def test_e03_leite_ao_laticinio_reducao_60_exclusiva(self):
+        """#378: E03 sai do pendente com REDUCAO_60; o que acerta e o que erra a classe."""
+        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
+        e03 = next(p for p in conjunto["perguntas"] if p["id"] == "E03")
+        self.assertEqual(e03["classeTratamento"], "REDUCAO_60")
+        self.assertNotIn("pendenteContador", e03)
+        acertos = ["O leite vendido ao laticínio tem redução de 60% nas alíquotas (art. 137). "
+                   "A alíquota zero do Anexo I não se aplica a esse caso.",
+                   "A redução é de 60%; zero só para o leite de consumo direto."]
+        erros = ["Redução de 60% (art. 137). A alíquota zero vale só para o leite em conformidade "
+                 "com a legislação de consumo direto (Anexo I, item 2).",
+                 "Terá alíquota zero de IBS e CBS.",
+                 "Por padrão, redução de 60%; se o leite for de consumo direto, alíquota zero."]
+        for texto in acertos:
+            self.assertTrue(ext.avaliar(resultado(texto), e03)["classe"], texto)
+        for texto in erros:
+            self.assertFalse(ext.avaliar(resultado(texto), e03)["classe"], texto)
+
     def test_classe_de_tratamento_dita(self):
         self.assertTrue(ext.classe_dita("Tem alíquota zero de IBS e CBS.", "ZERO"))
         self.assertTrue(ext.classe_dita("A redução é de 60% nas alíquotas.", "REDUCAO_60"))
@@ -267,6 +285,12 @@ CORPUS_PROIBIDA = [
 CORPUS_PROIBIDA_E36 = [
     ("A indústria que compra de produtor não contribuinte não poderá aproveitar nenhum crédito.", True),
 ]
+#: E03 (#379): afirmar o zero na venda ao laticinio e proibido; negar, nao.
+E03_PROIBIDA = r"\bter[aá] al[ií]quota zero"
+CORPUS_PROIBIDA_E03 = [
+    ("Essa operação terá alíquota zero de IBS e CBS.", True),
+    ("Essa operação não terá alíquota zero: a redução é de 60%.", False),
+]
 CORPUS_ENCAMINHA = [
     ("Procure o seu contador.", True),
     ("Você não precisa procurar o contador: a regra é a mesma para todos.", False),
@@ -292,6 +316,13 @@ class CorpusHeuristicaTest(unittest.TestCase):
         for texto, esperado in CORPUS_PROIBIDA_E36:
             self.assertEqual(ext.afirma(r"n[aã]o poder[aá] aproveitar nenhum cr[eé]dito", texto),
                              esperado, texto)
+
+    def test_afirmacao_proibida_da_e03(self):
+        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
+        e03 = next(p for p in conjunto["perguntas"] if p["id"] == "E03")
+        self.assertEqual(e03["afirmacoesProibidas"], [E03_PROIBIDA])
+        for texto, esperado in CORPUS_PROIBIDA_E03:
+            self.assertEqual(ext.afirma(E03_PROIBIDA, texto), esperado, texto)
 
     def test_encaminhamento(self):
         for texto, esperado in CORPUS_ENCAMINHA:
