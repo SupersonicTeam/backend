@@ -1,6 +1,12 @@
 # Backlog até a banca e depois: ordem por sessões
 
-Auditoria de 2026-11-06 contra a `main` em `6dcc8a6`: 45 issues abertas, cada critério conferido no código, com um cético tentando derrubar as que pareciam prontas. Dois planos independentes foram julgados e sintetizados aqui. **Aprovado pelo Murillo em 2026-11-06** (decisões no fim). S1 e S2 iniciadas no mesmo dia.
+Auditoria de 2026-11-06 contra a `main` em `6dcc8a6`: 45 issues abertas, cada critério conferido no código, com um cético tentando derrubar as que pareciam prontas. Dois planos independentes foram julgados e sintetizados aqui. **Aprovado pelo Murillo em 2026-11-06** (decisões no fim). S1 e S2 concluídas no mesmo dia (andamento logo abaixo).
+
+## Andamento
+
+- **S1 e S2 concluídas em 2026-11-06:** 8 issues, 10 PRs (#394 a #406), `main` em `40914ae`, 2.274 testes sem falha, deploy na VPS conferido. Na VPS, nenhuma nota em `XML_GERADO` (a #389 não recusa nada ali) e as 157 notas com a busca nova da #271. Nenhuma ferramenta das duas sessões tocou o conjunto cego.
+- **Issues novas da S1 e da S2:** #396 entrou na S3 (resposta errada sobre produto, precisa estar no SHA oficial); #399 na S14; #402 na S13. O contrato final da #341 está na frontend#164.
+- **Portão do benchmark:** o `sessaoParalela.tambemExige` ainda não pede #369, #357, #364 e a S3. Fica para quando o Murillo fixar o SHA.
 
 ## Regras do fluxo
 
@@ -29,9 +35,9 @@ Confirmadas pelo Murillo em 2026-11-06: resposta do contador até 13/11, congela
 
 | Sessão | Tema | Issues, em ordem | Quando | Modelo e esforço | Roda junto com |
 |---|---|---|---|---|---|
-| S1 | Notas: regra fiscal versionada, busca e carteira do contador | #389 → #271 → #341 → #353 | antes da banca | sonnet / high (medium na #353) | S2 |
-| S2 | Ceres: precisão e texto que o produtor lê | #369 → #342 → #357 → #364 | antes da banca | sonnet / high na #369, low na #342, medium na #357 e na #364 | S1 |
-| S3 | Ceres 2.0: glossário e lei em linguagem simples | #267 → #269 | antes da banca | sonnet / high | S4 |
+| S1 | Notas: regra fiscal versionada, busca e carteira do contador | #389 → #271 → #341 → #353 | concluída em 2026-11-06 | sonnet / high (medium na #353) | S2 |
+| S2 | Ceres: precisão e texto que o produtor lê | #369 → #342 → #357 → #364 | concluída em 2026-11-06 | sonnet / high na #369, low na #342, medium na #357 e na #364 | S1 |
+| S3 | Ceres 2.0: exclusão no tratamento, glossário e lei em linguagem simples | #396 → #267 → #269 | antes da banca | sonnet / high | S4 |
 | S4 | Qualidade: Swagger, fluxos em PostgreSQL e piso de cobertura | #154 → #152 → #151 | antes da banca | haiku low na #154; sonnet medium na #152 e na #151 / low a medium | S3 |
 | S5 | Medição na VPS: Ceres, classificador e p95 | #270 → #265 → #153 | antes da banca | sonnet / medium | - |
 | S6 | Pós-banca imediato: remover o seed da demonstração | #317 | depois da banca | sonnet / medium | - |
@@ -41,8 +47,8 @@ Confirmadas pelo Murillo em 2026-11-06: resposta do contador até 13/11, congela
 | S10 | Ceres pós-banca: explicação do modelo em duas etapas | #268 | depois da banca | opus na issue filha; sonnet na #268 / high | - |
 | S11 | Ceres pós-banca: base de lei, NCM e busca | #283 → #200 | depois da banca | sonnet high na #283; opus high na #200 / high | - |
 | S12 | Ceres: relatório de uso e feedback com curadoria | #311 → #312 | depois da banca | sonnet / medium na #311; high na #312 | - |
-| S13 | API: rotas de guias separadas por papel | #273 | depois da banca | sonnet / medium | - |
-| S14 | Segurança consolidada (última sessão) | #289 → #252 → #345 → #367 → #313 → #263 | depois da banca | sonnet; haiku low na #289 e na #367 / high | - |
+| S13 | API: rotas de guias separadas por papel e quem encerrou o vínculo | #273 → #402 | depois da banca | sonnet / medium | - |
+| S14 | Segurança consolidada (última sessão) | #289 → #252 → #345 → #367 → #313 → #399 → #263 | depois da banca | sonnet; haiku low na #289 e na #367 / high | - |
 
 Fora do fluxo autônomo: #284, #275, #198, #202, #261, #321, #322. A #387 fechou com o PR #392. Nenhuma issue pode ser fechada agora: a #198 teve o fechamento refutado e as demais ainda dependem de medição ou de ajuste de escopo.
 
@@ -102,12 +108,14 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 
 **Condições:** Sessão 2 mergeada. Glossário revisado por humano antes do merge: exceção ao merge sem OK. PR do prompt da #269 exige modelo real e OK do Murillo. Linha de corte: o que não estiver mergeado até 19/11 vai para o pós-banca, e a medição segue sem ele.
 
+- **#396** Ceres: tratamento de produto não informa a exclusão que está na descrição do item
+  Achado no review da #369. Levar para `TratamentoProduto.condicao` o trecho negado da descrição do item ou NCM escolhido, curto e sem números, com a mesma regra de `semTrechoNegado`. Cuidado com `TemplateTratamentoProduto` e `ValidadorNumeros` (listas de NCM no "exceto" dos Anexos I e VII). Nenhum caso existente (soja, arroz, leite, ovos, adubo) muda sem decisão explícita.
 - **#267** [Ceres 2.0 · 5/8] Glossario do produtor e explicacao opcional do modelo, conferida em codigo
   Recorte determinístico: assistente/glossario-produtor.yml (inclui ADCT, LC, EC, PIS, Cofins, ISS, ICMS), carga e teste estático das siglas nos textos fixos (AtalhosFixos, TextoReformaTributaria), revisão da densidade de citações do atalho. ExplicadorResposta, VerificadorFidelidade, app.assistente.explicacao.*, consumo da cota e desfechos na auditoria saem para uma issue filha, criada neste PR e executada na sessão 10 com a #268, salvo decisão contrária do Murillo. Atualizar o corpo da #267 com o recorte.
 - **#269** [Ceres 2.0 · 7/8] Rota de legislacao em linguagem simples, sem recusa falsa (#258) nem ruido no MISTO (#260)
   Itens 3 e 4 já entregues: #258 e #260 estão fechadas, e no código CITACAO_INVALIDA com marcas válidas já cai em TRECHOS_SEM_CONFIRMACAO. Atualizar o corpo. PR principal: linha determinística O que isso quer dizer, montada pelo backend depois das validações, e teste de nenhuma sigla do glossário sem explicação (ChatModelSimulado). A diretriz de linguagem em PromptsCeres.sistemaLegislacao fica em PR separado e só mergeia depois de rodar com o modelo real em perguntas de docs/avaliacao/treino/ e de o Murillo ver os exemplos; o texto livre da rota de lei ainda sai do modelo. A meta de clareza depende da #275.
 
-**Arquivos que a sessão reserva:** `src/main/resources/assistente/glossario-produtor.yml`, `src/main/java/br/com/agrocontabil/assistente/RotaLegislacao.java`, `src/main/java/br/com/agrocontabil/assistente/PromptsCeres.java`, `src/main/java/br/com/agrocontabil/assistente/orquestracao/AtalhosFixos.java`, `src/main/java/br/com/agrocontabil/assistente/orquestracao/TextoReformaTributaria.java`, `docs/ceres-assistente.md`, `CLAUDE.md`
+**Arquivos que a sessão reserva:** `src/main/java/br/com/agrocontabil/service/TratamentoProdutoService.java`, `src/main/java/br/com/agrocontabil/assistente/ferramentas/TemplateTratamentoProduto.java`, `src/main/resources/assistente/glossario-produtor.yml`, `src/main/java/br/com/agrocontabil/assistente/RotaLegislacao.java`, `src/main/java/br/com/agrocontabil/assistente/PromptsCeres.java`, `src/main/java/br/com/agrocontabil/assistente/orquestracao/AtalhosFixos.java`, `src/main/java/br/com/agrocontabil/assistente/orquestracao/TextoReformaTributaria.java`, `docs/ceres-assistente.md`, `CLAUDE.md`
 
 ### S4. Qualidade: Swagger, fluxos em PostgreSQL e piso de cobertura
 
@@ -278,6 +286,8 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 
 - **#273** Guias do produtor vivem sob /api/contador/guias: separar a rota do produtor da rota da carteira
   Aditivo. GET e POST /api/guias e PATCH /api/guias/{id}/pagar (produtor do token); GET e POST /api/contador/produtores/{produtorId}/guias pelo ProdutorEmContextoResolver; rotas antigas deprecated no OpenAPI e mantidas. SecurityConfig, CLAUDE.md, testes com dois produtores e produtor fora da carteira; IDOR em rota nova se corrige aqui. Abrir a issue de migração no frontend.
+- **#402** feat(vinculos): registrar quem encerrou o vínculo e o motivo
+  Follow-up da #353. ChangeSet novo em `carteira_vinculo` (`encerrado_por`, motivo opcional), sem preencher os vínculos antigos: a tela trata nulo como "não registrado". Os dois caminhos de encerramento gravam, o motivo não vai para auditoria nem log, asserção no `LiquibaseChangelogIntegrationTest`.
 
 **Arquivos que a sessão reserva:** `src/main/java/br/com/agrocontabil/controller/GuiaFiscalController.java`, `src/main/java/br/com/agrocontabil/config/SecurityConfig.java`, `src/main/java/br/com/agrocontabil/service/GuiaFiscalService.java`, `CLAUDE.md`
 
@@ -301,6 +311,8 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
   Conferir antes se o #392 já alterou `_celula_csv`. Incluir tab e CR nos prefixos protegidos em externas.py, teste em tests/test_externas.py e paridade com o CsvCego Java.
 - **#313** CNPJ alfanumérico não é mascarado no log nem no DataSanitizer da Ceres
   CNPJ alfanumérico em MascaraDadosPessoais e DataSanitizer, com DV módulo 11 e a fronteira do PR #310; aceitar minúsculas; docs/lgpd.md; testes de CNPJ válido, hash e base64 de 14 caracteres intactos, CPF e CNPJ numérico inalterados. Aceitar CNPJ alfanumérico como dado do sistema é decisão à parte.
+- **#399** CPF/CNPJ do destinatário em claro na busca_normalizada das notas
+  Aberta pela #271. Decidir se o documento sai da coluna para igualdade por HMAC em coluna própria, e cobrir `busca_normalizada` na anonimização da LGPD (`ExclusaoDadosService`) se o titular excluído puder ser destinatário. Liga com o débito de dados das notas em claro.
 - **#263** SEFAZ mock ligado por padrão em prod
   Última da sessão. Tirar o default true do base e pôr true em application-dev.yml e application-test.yml; prod com mock não sobe (teste no estilo do AntivirusConfigTest). A VPS roda em homolog com o mock herdado do default (deploy/compose.yaml, sem NFE_SEFAZ_MOCK_ENABLED): declarar a variável no compose no mesmo PR, com o tratamento de homolog que o Murillo decidir, e copiar o compose para a VPS antes do deploy.
 
@@ -320,6 +332,9 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 
 | Issue | Título | Tipo | Situação no código | Tam. | Risco | Toca a Ceres | Banca | Onde |
 |---|---|---|---|---|---|---|---|---|
+| #396 | Ceres: tratamento de produto não informa a exclusão que está na descrição do item | bug | não iniciada | P | medio | sim | antes | S3 |
+| #399 | [Segurança] CPF/CNPJ do destinatário em claro na busca_normalizada das notas | seguranca | não iniciada | M | medio | não | depois | S14 |
+| #402 | feat(vinculos): registrar quem encerrou o vínculo e o motivo | feature | não iniciada | P | baixo | não | depois | S13 |
 | #151 | [Sprint 9] Testes unitários no backend (JUnit 5 + Mockito) — meta 80% de cobertura | teste | parcial | M | baixo | não | depois | S4 |
 | #152 | [Sprint 9] Testes de integração nos fluxos críticos | teste | parcial | M | baixo | não | tanto faz | S4 |
 | #153 | [Sprint 9] Performance: garantir resposta < 2s em p95 | performance | parcial | G | medio | não | depois | S5 |
@@ -335,7 +350,7 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 | #268 | [Ceres 2.0 · 6/8] Entrega em duas etapas no SSE: o numero primeiro, a explicacao depois | feature | não iniciada | M | medio | sim | antes | S10 |
 | #269 | [Ceres 2.0 · 7/8] Rota de legislacao em linguagem simples, sem recusa falsa (#258) nem ruido no MISTO (#260) | experimento-ia | parcial | M | medio | sim | antes | S3 |
 | #270 | [Ceres 2.0 · 8/8] Inferência local no ARM e metas de tempo | experimento-ia | parcial | M | medio | sim | antes | S5 |
-| #271 | Busca de notas não acha por produto nem por CPF/CNPJ do destinatário (#174) | feature | não iniciada | M | medio | não | antes | S1 |
+| #271 | Busca de notas não acha por produto nem por CPF/CNPJ do destinatário (#174) | feature | fechada pelo PR #400 | M | medio | não | antes | S1 |
 | #273 | Guias do produtor vivem sob /api/contador/guias: separar a rota do produtor da rota da carteira | chore | não iniciada | M | baixo | não | depois | S13 |
 | #275 | [Ceres 2.0 · externo] Avaliação externa: revisão do gabarito e nota de clareza | decisao-externa | não é código | P | baixo | não | antes | fora |
 | #281 | Modelar a situação do produtor no IBS/CBS: não contribuinte (art. 164), optante (art. 165) e crédito presumido (art. 168) | feature | não iniciada | G | alto | sim | depois | S9 |
@@ -352,19 +367,19 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 | #322 | [Sprint 9] Correção de bugs encontrados no QA | decisao-externa | não é código | P | baixo | não | depois | fora |
 | #329 | [Pos-banca] Notas a conferir: sinal NCM_NAO_BATE_DESCRICAO (e atalho no frontend) | feature | não iniciada | M | baixo | sim | depois | S8 |
 | #334 | Grupo de ICMS por item na NF-e com diferimento (CST 51) conforme a UF | feature | parcial | G | medio | não | depois | S7 |
-| #341 | feat: listagem de notas de toda a carteira do contador (GET /api/contador/notas) | feature | não iniciada | G | medio | não | antes | S1 |
-| #342 | Ceres: informar em fontesDados se a consulta é dado do produtor ou tabela pública | feature | não iniciada | P | baixo | sim | antes | S2 |
+| #341 | feat: listagem de notas de toda a carteira do contador (GET /api/contador/notas) | feature | fechada pelo PR #401 | G | medio | não | antes | S1 |
+| #342 | Ceres: informar em fontesDados se a consulta é dado do produtor ou tabela pública | feature | fechada pelo PR #397 | P | baixo | sim | antes | S2 |
 | #345 | Matcher da CSP (/api/**) lê o caminho analisado em dois passos e quebra em commit fora da thread do container | seguranca | não iniciada | P | medio | não | depois | S14 |
-| #353 | feat(vinculos): o produtor ver os vínculos que já encerrou (histórico em GET /api/vinculos) | feature | não iniciada | M | baixo | não | tanto faz | S1 |
+| #353 | feat(vinculos): o produtor ver os vínculos que já encerrou (histórico em GET /api/vinculos) | feature | fechada pelo PR #403 | M | baixo | não | tanto faz | S1 |
 | #356 | Crédito estimado nos insumos do Anexo IX sem considerar o diferimento (art. 138, § 2º) | bug | não iniciada | M | alto | sim | depois | S9 |
-| #357 | Textos da Ceres sem acento: "e" e "é" se confundem e mudam o sentido | feature | não iniciada | M | medio | sim | antes | S2 |
+| #357 | Textos da Ceres sem acento: "e" e "é" se confundem e mudam o sentido | feature | fechada pelos PRs #398, #404 e #405 | M | medio | sim | antes | S2 |
 | #362 | NF-e: unidade tributável igual à comercial (café em saca sai com uTrib SC em vez de kg) | bug | não iniciada | M | medio | sim | depois | S7 |
 | #363 | Ceres: debito pendente mostra tambem as guias a vencer, em linha secundaria | feature | parcial | M | medio | sim | depois | S8 |
-| #364 | Sinais de nota a conferir: termos de servico agricola e cruzamento com NCM e unidade | feature | não iniciada | M | baixo | sim | tanto faz | S2 |
+| #364 | Sinais de nota a conferir: termos de servico agricola e cruzamento com NCM e unidade | feature | fechada pelo PR #406 | M | baixo | sim | tanto faz | S2 |
 | #367 | CSV cego das externas do benchmark não protege valor com tab ou CR (injeção de fórmula) | seguranca | não iniciada | P | baixo | não | tanto faz | S14 |
-| #369 | Ceres: busca de produto por nome ignora negacao (exceto, nao) nas descricoes dos anexos | bug | não iniciada | M | medio | sim | antes | S2 |
+| #369 | Ceres: busca de produto por nome ignora negacao (exceto, nao) nas descricoes dos anexos | bug | fechada pelo PR #394 | M | medio | sim | antes | S2 |
 | #387 | benchmark: planilha de revisão pela equipe e pelo orientador (sem contador) e leitura de volta | docs | fechada pelo PR #392 | M | baixo | não | antes | fora |
-| #389 | Regra fiscal nova não alcança nota já em XML_GERADO nem o rascunho antes da validação | bug | não iniciada | M | medio | não | tanto faz | S1 |
+| #389 | Regra fiscal nova não alcança nota já em XML_GERADO nem o rascunho antes da validação | bug | fechada pelo PR #395 | M | medio | não | tanto faz | S1 |
 
 ### O que falta nas parciais
 
