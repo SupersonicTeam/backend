@@ -417,8 +417,13 @@ primeira ocorrência (`ComposicaoRespostaDados.explicarSiglas`); a medição de 
 todos os textos fixos da rota de dados, que incluem os atalhos de dados); e o atalho de legislação
 ganha, no fim, a seção "O QUE QUER DIZER" com a definição de cada sigla que o texto usa sem explicar,
 mais as que as definições citam (`GlossarioProdutor.aExplicar`). A densidade de citações do atalho
-foi medida (23 referências em cerca de 700 palavras de regra, no máximo duas por item): o item de
-"quem paga" que tinha três virou dois, e o `TextoReformaTributariaTest` trava o teto. A explicação
+foi medida (24 referências em cerca de 680 palavras de regra, uma a cada 28, no máximo duas por
+item): o item de "quem paga" que tinha três virou dois, e o `TextoReformaTributariaTest` trava o
+teto, sem contar a seção do glossário. **Limites:** o tratamento de produto, o modo fallback e a
+retenção não passam pela composição e ainda trazem sigla sem explicação (fora do recorte; a rota de
+lei ganha a linha da #269); LC e EC só são explicadas seguidas de número (a composição insere a
+forma por extenso na primeira ocorrência, e "LC" sozinho pode ser nome de cliente); a medição de
+clareza passou de 8 para 16 siglas, então as linhas de base anteriores usam a lista antiga. A explicação
 gerada pelo modelo (`ExplicadorResposta`, `VerificadorFidelidade`, `app.assistente.explicacao.*`)
 fica fora da Ceres medida e vai para a S10, com a #268.
 

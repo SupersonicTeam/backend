@@ -40,10 +40,33 @@ class GlossarioProdutorTest {
   @DisplayName("O padrão de cada termo acha o próprio termo e não acha pedaço de outra palavra")
   void padraoAchaOTermo() {
     for (Termo t : GLOSSARIO.termos()) {
-      assertThat(t.padrao().matcher("sobre " + t.termo() + " aqui").find()).as(t.termo())
+      // LC e EC só valem seguidas de número ("LC 214/2025").
+      assertThat(t.padrao().matcher("sobre " + t.termo() + " 214 aqui").find()).as(t.termo())
           .isTrue();
       assertThat(t.padrao().matcher("xx" + t.termo() + "xx").find()).as(t.termo()).isFalse();
     }
+  }
+
+  @Test
+  @DisplayName("Definições e formas por extenso levam acento, como todo texto fixo (#357)")
+  void textosComAcento() {
+    for (Termo t : GLOSSARIO.termos()) {
+      assertThat(TextosFixosAcentuadosTest.semAcento(t.explicacao())).as(t.termo()).isEmpty();
+      if (t.nome() != null) {
+        assertThat(TextosFixosAcentuadosTest.semAcento(t.nome())).as(t.termo()).isEmpty();
+      }
+    }
+  }
+
+  @Test
+  @DisplayName("LC e EC só valem com número; 'crédito presumido' não é o crédito do glossário")
+  void padroesRestritos() {
+    assertThat(GLOSSARIO.semExplicacao("o cliente LC Agropecuária Ltda")).isEmpty();
+    assertThat(GLOSSARIO.semExplicacao("conforme a LC 214/2025")).extracting(Termo::termo)
+        .containsExactly("LC");
+    assertThat(GLOSSARIO.semExplicacao("pode apropriar crédito presumido")).isEmpty();
+    assertThat(GLOSSARIO.semExplicacao("pode virar crédito")).extracting(Termo::termo)
+        .containsExactly("crédito");
   }
 
   @Test

@@ -11,13 +11,17 @@
 # Regras de cada definição (conferidas por GlossarioProdutorTest):
 #   - curta (até 170 caracteres), em letra minúscula no começo e sem ponto final;
 #   - SEM número (o ValidadorNumeros trataria como número novo) e SEM artigo de lei;
-#   - com acento: é texto entregue ao produtor (#357).
+#   - com acento: é texto entregue ao produtor (#357; o teste usa o mesmo detector de
+#     palavra sem acento do TextosFixosAcentuadosTest).
 # Sigla sem definição segura fica de fora: melhor não explicar do que explicar errado.
 #
 # Campos:
 #   termo      como o termo aparece no relatório e no começo da linha explicativa
 #   sigla      false para termo que não é sigla (crédito, guia...); padrão true
-#   padrao     regex Java do termo no texto (com \b); "ignorarCaixa" liga o CASE_INSENSITIVE
+#   padrao     regex Java do termo no texto (com \b); "ignorarCaixa" liga o CASE_INSENSITIVE.
+#              LC e EC só valem seguidas de número ("LC 214/2025"): a composição insere a forma
+#              por extenso depois da 1ª ocorrência, e "LC" sozinho pode ser nome de cliente
+#              ('crédito' não vale em 'crédito presumido': é outro conceito)
 #   nome       forma por extenso; vale como explicação se estiver no texto (sem acento/caixa)
 #   aceitas    outras expressões que valem como explicação no texto (sem acento/caixa)
 #   emLinha    true: a composição das respostas de dados insere "(nome)" depois da 1ª ocorrência
@@ -62,13 +66,13 @@ termos:
     explicacao: imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos
 
   - termo: LC
-    padrao: '\bLC\b'
+    padrao: '\bLC(?=\s*\d)'
     nome: lei complementar
     emLinha: true
     explicacao: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê
 
   - termo: EC
-    padrao: '\bEC\b'
+    padrao: '\bEC(?=\s*\d)'
     nome: emenda constitucional
     emLinha: true
     explicacao: emenda constitucional, uma mudança feita na Constituição; foi uma delas que criou o IBS e a CBS
@@ -91,7 +95,7 @@ termos:
     ignorarCaixa: true
     nome: documento auxiliar
     emLinha: true
-    explicacao: a versão em PDF da nota fiscal eletrônica, que acompanha a mercadoria
+    explicacao: o documento auxiliar em PDF que acompanha a mercadoria; a nota fiscal eletrônica em si é o arquivo eletrônico
 
   - termo: NCM
     padrao: '\bNCM\b'
@@ -131,7 +135,7 @@ termos:
 
   - termo: crédito
     sigla: false
-    padrao: '\bcr[ée]ditos?\b'
+    padrao: '\bcr[ée]ditos?\b(?!\s+presumid)'
     ignorarCaixa: true
     explicacao: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas
 

@@ -15,10 +15,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * Nenhum texto fixo entregue ao produtor usa sigla do glossário sem explicação (issue #267): o
- * atalho de legislação ({@link TextoReformaTributaria}) e as respostas de dados, que passam pela
- * composição ({@link ComposicaoRespostaDados}). Texto fixo novo com sigla nova quebra aqui até a
- * sigla entrar no {@code glossario-produtor.yml}.
+ * Nenhum texto fixo do atalho de legislação ({@link TextoReformaTributaria}) nem das respostas de
+ * dados que passam pela composição ({@link ComposicaoRespostaDados}, atalhos de dados incluídos)
+ * usa sigla do glossário sem explicação (issue #267). Ficam de fora, por não passarem pela
+ * composição, o tratamento de produto, o modo fallback e a retenção. Texto fixo novo com sigla
+ * nova quebra aqui até a sigla entrar no {@code glossario-produtor.yml}.
  */
 class TextosFixosSiglasTest {
 
@@ -69,7 +70,10 @@ class TextosFixosSiglasTest {
     Map<String, List<String>> pendentes = new java.util.TreeMap<>();
     textos.forEach((nome, texto) -> {
       if (nome.startsWith("tratamento")) {
-        return; // entregue pelo TextosDoBackend, fora da composição (ver a #267, issue filha)
+        // Entregue pelo TextosDoBackend, fora da composição: ainda traz IBS, CBS, NCM e
+        // cClassTrib sem explicação. Lacuna conhecida, fora do recorte da #267 (fica anotada na
+        // #269/#415); o fallback e a retenção (FundamentoRetencao) também não passam por aqui.
+        return;
       }
       List<Termo> soltas = GLOSSARIO.siglasSemExplicacao(
           ComposicaoRespostaDados.explicarSiglas(texto));

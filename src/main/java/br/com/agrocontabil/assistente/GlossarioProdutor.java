@@ -21,7 +21,9 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
  * backend monta a seção/linha "O que isso quer dizer" com as definições (nunca o modelo).
  *
  * <p>A comparação com o texto ignora acento e caixa (a mesma normalização da busca): a explicação
- * já escrita por outro texto do backend conta, com ou sem acento. Função pura, sem Spring.
+ * já escrita por outro texto do backend conta, com ou sem acento. Função pura, sem Spring. O arquivo
+ * é lido na primeira vez que a classe é usada (não na subida): o {@code GlossarioProdutorTest}
+ * carrega o arquivo real no CI, e o JAR sai depois dele.
  */
 public final class GlossarioProdutor {
 
@@ -45,9 +47,12 @@ public final class GlossarioProdutor {
    * @param aceitas    outras expressões que valem como explicação, já normalizadas (sem acento)
    * @param emLinha    se a composição de dados insere {@code (nome)} depois da primeira ocorrência
    * @param explicacao definição em linguagem de produtor, sem ponto final
+   * @param nomeNormalizado       {@code nome} sem acento nem caixa (calculado na carga), ou nulo
+   * @param explicacaoNormalizada {@code explicacao} sem acento nem caixa (calculada na carga)
    */
   public record Termo(String termo, boolean sigla, Pattern padrao, String nome,
-      List<String> aceitas, boolean emLinha, String explicacao) {
+      List<String> aceitas, boolean emLinha, String explicacao, String nomeNormalizado,
+      String explicacaoNormalizada) {
 
     /** Cópia defensiva. */
     public Termo {
@@ -66,10 +71,10 @@ public final class GlossarioProdutor {
      * @param normalizado texto já normalizado por {@link NormalizacaoBusca#normalizar}
      */
     public boolean explicadoEm(String normalizado) {
-      if (nome != null && normalizado.contains(NormalizacaoBusca.normalizar(nome))) {
+      if (nomeNormalizado != null && normalizado.contains(nomeNormalizado)) {
         return true;
       }
-      return normalizado.contains(NormalizacaoBusca.normalizar(explicacao))
+      return normalizado.contains(explicacaoNormalizada)
           || aceitas.stream().anyMatch(normalizado::contains);
     }
   }
@@ -123,9 +128,11 @@ public final class GlossarioProdutor {
     if (campos.get("aceitas") instanceof List<?> lista) {
       lista.forEach(a -> aceitas.add(NormalizacaoBusca.normalizar(String.valueOf(a))));
     }
-    return new Termo(termo, !Boolean.FALSE.equals(campos.get("sigla")), regex,
-        texto(campos.get("nome")), aceitas, Boolean.TRUE.equals(campos.get("emLinha")),
-        explicacao);
+    String nome = texto(campos.get("nome"));
+    return new Termo(termo, !Boolean.FALSE.equals(campos.get("sigla")), regex, nome, aceitas,
+        Boolean.TRUE.equals(campos.get("emLinha")), explicacao,
+        nome == null ? null : NormalizacaoBusca.normalizar(nome),
+        NormalizacaoBusca.normalizar(explicacao));
   }
 
   private static String texto(Object valor) {
