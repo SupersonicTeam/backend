@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -46,6 +47,20 @@ public record NotaFiscalResponse(
 
     @Schema(description = "Tipo do documento fiscal: NFE ou NFA", example = "NFE")
     TipoDocumentoFiscal tipoDocumento,
+
+    @Schema(description = "Origem da nota: PROPRIA (emitida pelo produtor) ou IMPORTADA (compra, "
+        + "emitida por um fornecedor; o destinatario e o proprio produtor e quem cancela e o "
+        + "fornecedor)", example = "PROPRIA")
+    OrigemNotaFiscal origem,
+
+    @Schema(description = "Nome ou razao social do fornecedor que emitiu a nota. So em nota "
+        + "IMPORTADA; nulo na propria, cujo emitente e o produtor",
+        example = "Posto Rodoviario Exemplo Ltda", nullable = true)
+    String emitenteNome,
+
+    @Schema(description = "CPF ou CNPJ do fornecedor que emitiu a nota (somente digitos). So em "
+        + "nota IMPORTADA; nulo na propria", example = "12345678000195", nullable = true)
+    String emitenteCpfCnpj,
 
     @Schema(description = "Data e hora de emissao", example = "2026-06-10T10:00:00-03:00")
     OffsetDateTime dataEmissao,

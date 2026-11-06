@@ -594,7 +594,11 @@ class CarteiraIntegrationTest {
         produtorA.usuarioId())
         .andExpect(header().string("X-Total-Count", "1"));
     comoContador("/api/contador/produtores/{id}/notas/{nota}", produtorA.usuarioId(), notaDeA)
-        .andExpect(status().isOk());
+        .andExpect(status().isOk())
+        // #409: mesma resposta do produtor; nota propria = origem PROPRIA, sem emitente terceiro.
+        .andExpect(jsonPath("$.origem").value("PROPRIA"))
+        .andExpect(jsonPath("$.emitenteNome").doesNotExist())
+        .andExpect(jsonPath("$.emitenteCpfCnpj").doesNotExist());
     comoContador("/api/contador/produtores/{id}/notas/{nota}/validacoes",
         produtorA.usuarioId(), notaDeA)
         .andExpect(status().isOk());

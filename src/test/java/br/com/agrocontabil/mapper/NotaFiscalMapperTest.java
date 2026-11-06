@@ -61,6 +61,30 @@ class NotaFiscalMapperTest {
   // -------------------------------------------------------------------------
 
   @Test
+  @DisplayName("toResponse (#409): compra importada leva origem e emitente; propria, origem e emitente nulo")
+  void toResponseTrazOrigemEEmitente() {
+    NotaFiscal propria = NotaFiscalMapper.toEntity(
+        buildRequest(List.of(buildItem("1", "5.00"))), produtor);
+    NotaFiscal importada = NotaFiscalMapper.toEntity(
+        buildRequest(List.of(buildItem("1", "5.00"))), produtor);
+    importada.setOrigem(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA);
+    importada.setEmitenteNome("Posto Fornecedor Ltda");
+    importada.setEmitenteCpfCnpj("12345678000195");
+
+    var respostaPropria = NotaFiscalMapper.toResponse(propria);
+    var respostaImportada = NotaFiscalMapper.toResponse(importada);
+
+    assertThat(respostaPropria.origem())
+        .isEqualTo(br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA);
+    assertThat(respostaPropria.emitenteNome()).isNull();
+    assertThat(respostaPropria.emitenteCpfCnpj()).isNull();
+    assertThat(respostaImportada.origem())
+        .isEqualTo(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA);
+    assertThat(respostaImportada.emitenteNome()).isEqualTo("Posto Fornecedor Ltda");
+    assertThat(respostaImportada.emitenteCpfCnpj()).isEqualTo("12345678000195");
+  }
+
+  @Test
   @DisplayName("toEntity deve fixar modelo '55' independente do request")
   void toEntityShouldFixModeloAs55() {
     NotaFiscalRequest request = buildRequest(List.of(buildItem("10", "1.00")));

@@ -120,7 +120,12 @@ class ImportacaoNotaFiscalIntegrationTest {
 
     mockMvc.perform(get("/api/notas"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content[0].id").exists());
+        .andExpect(jsonPath("$.content[0].id").exists())
+        // #409: a lista diz que e compra e quem emitiu (o destinatario e o proprio produtor).
+        .andExpect(jsonPath("$.content[0].origem").value("IMPORTADA"))
+        .andExpect(jsonPath("$.content[0].emitenteCpfCnpj")
+            .value(NfeImportTestFixtures.EMITENTE_CNPJ))
+        .andExpect(jsonPath("$.content[0].emitenteNome").isNotEmpty());
 
     // Confirma a persistencia com origem IMPORTADA e emitente terceiro, AUTORIZADA pela consulta.
     var notas = notaFiscalRepository.findAll();
@@ -285,6 +290,20 @@ class ImportacaoNotaFiscalIntegrationTest {
     org.assertj.core.api.Assertions.assertThat(doDestinatario).hasSize(1);
     org.assertj.core.api.Assertions.assertThat(doDestinatario.get(0).getStatus())
         .isEqualTo(br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA);
+  }
+
+  @Test
+  @DisplayName("#409: GET /api/notas/{id} da compra importada traz origem e emitente")
+  void detalheDaCompraImportadaTrazOrigemEEmitente() throws Exception {
+    mockMvc.perform(multipart("/api/notas/importar").file(arquivoXml("n.xml", nfeProcXml)))
+        .andExpect(jsonPath("$[0].status").value("IMPORTADA"));
+    var nota = notaFiscalRepository.findAll().get(0);
+
+    mockMvc.perform(get("/api/notas/{id}", nota.getId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.origem").value("IMPORTADA"))
+        .andExpect(jsonPath("$.emitenteNome").value(nota.getEmitenteNome()))
+        .andExpect(jsonPath("$.emitenteCpfCnpj").value(NfeImportTestFixtures.EMITENTE_CNPJ));
   }
 
   @Test
