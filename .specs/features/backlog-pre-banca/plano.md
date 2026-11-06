@@ -6,9 +6,9 @@ Auditoria de 2026-11-06 contra a `main` em `6dcc8a6`: 45 issues abertas, cada cr
 
 - **S1 e S2 concluídas em 2026-11-06:** 8 issues, 10 PRs (#394 a #406), `main` em `40914ae`, 2.274 testes sem falha, deploy na VPS conferido. Na VPS, nenhuma nota em `XML_GERADO` (a #389 não recusa nada ali) e as 157 notas com a busca nova da #271. Nenhuma ferramenta das duas sessões tocou o conjunto cego.
 - **Issues novas da S1 e da S2:** #396 entrou na S3 (resposta errada sobre produto, precisa estar no SHA oficial); #399 na S14; #402 na S13. O contrato final da #341 está na frontend#164.
-- **S4 concluída em 2026-11-06:** #154, #152 e #151 pelos PRs #411, #413 e #414. `main` em `c1020be`, 2.290 testes sem falha, deploy conferido (`sha-c1020be`) e Swagger público respondendo. Os 4 testes em PostgreSQL rodaram na CI. A cobertura já estava em 93,5%, acima da meta; o piso de LINE nasceu em 93% (94,7% medidos com as exclusões).
+- **S4 concluída em 2026-11-06:** #154, #152 e #151 pelos PRs #411, #413 e #414. `main` em `c1020be`, 2.290 testes sem falha, deploy conferido (`sha-c1020be`). O Swagger não está no domínio público: o Caddy só encaminha `/api/*` ao backend. Os 4 testes em PostgreSQL rodaram na CI. A cobertura já estava em 93,5%, acima da meta; o piso de LINE nasceu em 93% (94,7% medidos com as exclusões).
 - **S3 em andamento:** #396 fechada pelo PR #412. A #267 está no PR #416, à espera da revisão humana do glossário; o resto dela virou a #415 (S10). A #269 só começa depois desse merge.
-- **S4b iniciada em 2026-11-06:** o Murillo pôs antes da banca as issues #407, #408 e #409, que o Luiz abriu a partir do roteiro da demonstração. A #418 entra junto, achada na conferência da #409: o botão "Cancelar" da compra importada funciona com o mock. Na VPS, nenhuma importada foi cancelada.
+- **S4b concluída em 2026-11-06:** #418, #407, #408 e #409 pelos PRs #419 a #422. `main` em `9b8882b`, 2.298 testes sem falha. O changeSet 0057 foi aplicado na VPS, com os 11 modelos acentuados, e nenhuma compra importada foi cancelada. O seed acentuado só chega com o reset dos dados da demonstração, que fica com o Murillo. O contrato da #409 e da #418 está comentado na #409, para o Luiz.
 - **Portão do benchmark:** o `sessaoParalela.tambemExige` ainda não pede #369, #357, #364 e a S3. Fica para quando o Murillo fixar o SHA.
 
 ## Regras do fluxo
@@ -42,7 +42,7 @@ Confirmadas pelo Murillo em 2026-11-06: resposta do contador até 13/11, congela
 | S2 | Ceres: precisão e texto que o produtor lê | #369 → #342 → #357 → #364 | concluída em 2026-11-06 | sonnet / high na #369, low na #342, medium na #357 e na #364 | S1 |
 | S3 | Ceres 2.0: exclusão no tratamento, glossário e lei em linguagem simples | #396 → #267 → #269 | em andamento; antes da banca | sonnet / high | S4 |
 | S4 | Qualidade: Swagger, fluxos em PostgreSQL e piso de cobertura | #154 → #152 → #151 | concluída em 2026-11-06 | haiku low na #154; sonnet medium na #152 e na #151 / low a medium | S3 |
-| S4b | Demonstração: cancelamento da importada, carteira, textos e origem da nota | #418 → #407 → #408 → #409 | em andamento; antes da banca | sonnet / medium | S3 |
+| S4b | Demonstração: cancelamento da importada, carteira, textos e origem da nota | #418 → #407 → #408 → #409 | concluída em 2026-11-06 | sonnet / medium | S3 |
 | S5 | Medição na VPS: Ceres, classificador e p95 | #270 → #265 → #153 | antes da banca | sonnet / medium | - |
 | S6 | Pós-banca imediato: remover o seed da demonstração | #317 | depois da banca | sonnet / medium | - |
 | S7 | NF-e pós-banca: unidade tributável, destinatário e ICMS por UF | #362 → #300 → #334 | depois da banca | sonnet high na #362 e #300; opus high na #334 / high | - |
@@ -360,10 +360,10 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também, e a S4b junto com a S3. 
 | #396 | Ceres: tratamento de produto não informa a exclusão que está na descrição do item | bug | fechada pelo PR #412 | P | medio | sim | antes | S3 |
 | #399 | [Segurança] CPF/CNPJ do destinatário em claro na busca_normalizada das notas | seguranca | não iniciada | M | medio | não | depois | S14 |
 | #402 | feat(vinculos): registrar quem encerrou o vínculo e o motivo | feature | não iniciada | P | baixo | não | depois | S13 |
-| #407 | fix(carteira): sort=urgencia ignora notas aguardando aprovação e documentos enviados | bug | não iniciada | P | baixo | não | antes | S4b |
-| #408 | fix(calendario): textos das obrigações fiscais sem acento | bug | não iniciada | P | baixo | não | antes | S4b |
-| #409 | feat(notas): NotaFiscalResponse sem emitente nem origem (nota própria x importada) | feature | não iniciada | P | baixo | não | antes | S4b |
-| #418 | fix(cancelamento): compra importada pode ser cancelada pelo produtor que a recebeu | bug | não iniciada | P | medio | não | antes | S4b |
+| #407 | fix(carteira): sort=urgencia ignora notas aguardando aprovação e documentos enviados | bug | fechada pelo PR #420 | P | baixo | não | antes | S4b |
+| #408 | fix(calendario): textos das obrigações fiscais sem acento | bug | fechada pelo PR #421 | P | baixo | não | antes | S4b |
+| #409 | feat(notas): NotaFiscalResponse sem emitente nem origem (nota própria x importada) | feature | fechada pelo PR #422 | P | baixo | não | antes | S4b |
+| #418 | fix(cancelamento): compra importada pode ser cancelada pelo produtor que a recebeu | bug | fechada pelo PR #419 | P | medio | não | antes | S4b |
 | #415 | [Ceres 2.0 · 5b/8] Explicação do modelo conferida em código | experimento-ia | não iniciada | G | medio | sim | depois | S10 |
 | #151 | [Sprint 9] Testes unitários no backend (JUnit 5 + Mockito) — meta 80% de cobertura | teste | fechada pelo PR #414 | M | baixo | não | depois | S4 |
 | #152 | [Sprint 9] Testes de integração nos fluxos críticos | teste | fechada pelo PR #413 | M | baixo | não | tanto faz | S4 |
