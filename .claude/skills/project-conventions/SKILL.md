@@ -49,7 +49,8 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 4. **Controller** — `@Valid` no request, chama service, retorna `ResponseEntity`/DTO. Sem try/catch (o `GlobalExceptionHandler` cuida).
 5. **Migration** (se mudar schema) — novo changeSet em `db/changelog/changes/`. Nunca editar um já aplicado.
 6. **Testes** — unitário de service (Mockito) + integração do fluxo crítico.
-7. Documentar o endpoint na tabela do CLAUDE.md e no `codebase-map` se criar classe significativa.
+7. **Swagger** — `@Operation(summary)` no mapeamento, `@Schema` no DTO (inclusive aninhado) e prefixo novo em `OpenApiConfig.GRUPOS`; sem eles o `OpenApiDocumentacaoIntegrationTest` quebra.
+8. Documentar o endpoint na tabela do CLAUDE.md e no `codebase-map` se criar classe significativa.
 
 ## Validação
 
@@ -102,6 +103,8 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Feature nova = teste unitário de service (Mockito) + teste de integração do fluxo crítico.
 - Mockito **strict stubs**: não crie stub de objeto usado só após early return.
 - Rodar `./mvnw test` (profile test, H2) antes de abrir PR. Manter todos verdes.
+- Cobertura: `jacoco:check` exige LINE ≥ 93%, sem `config/**`, `dto/**` e a classe main (#151). Suba o piso quando a cobertura subir; não o reduza para acomodar PR.
+- Teste em PostgreSQL: estender `support/PostgresIntegrationTestBase` (#152). Limpar com `limparDominio()`, nunca TRUNCATE CASCADE. Nos fluxos de emissão não vincule contador: com contador ativo, só nota `APROVADA` gera XML.
 
 ## Idioma do código (convenção híbrida)
 

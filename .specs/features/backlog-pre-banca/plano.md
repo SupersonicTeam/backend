@@ -6,6 +6,9 @@ Auditoria de 2026-11-06 contra a `main` em `6dcc8a6`: 45 issues abertas, cada cr
 
 - **S1 e S2 concluídas em 2026-11-06:** 8 issues, 10 PRs (#394 a #406), `main` em `40914ae`, 2.274 testes sem falha, deploy na VPS conferido. Na VPS, nenhuma nota em `XML_GERADO` (a #389 não recusa nada ali) e as 157 notas com a busca nova da #271. Nenhuma ferramenta das duas sessões tocou o conjunto cego.
 - **Issues novas da S1 e da S2:** #396 entrou na S3 (resposta errada sobre produto, precisa estar no SHA oficial); #399 na S14; #402 na S13. O contrato final da #341 está na frontend#164.
+- **S4 concluída em 2026-11-06:** #154, #152 e #151 pelos PRs #411, #413 e #414. `main` em `c1020be`, 2.290 testes sem falha, deploy conferido (`sha-c1020be`) e Swagger público respondendo. Os 4 testes em PostgreSQL rodaram na CI. A cobertura já estava em 93,5%, acima da meta; o piso de LINE nasceu em 93% (94,7% medidos com as exclusões).
+- **S3 em andamento:** #396 fechada pelo PR #412. A #267 está no PR #416, à espera da revisão humana do glossário; o resto dela virou a #415 (S10). A #269 só começa depois desse merge.
+- **Issues do Luiz, a decidir com o Murillo:** #407, #408 e #409, vistas no roteiro da demonstração em 06/11. Conferi as três no código e elas procedem. Ficam fora da Visão geral até a decisão.
 - **Portão do benchmark:** o `sessaoParalela.tambemExige` ainda não pede #369, #357, #364 e a S3. Fica para quando o Murillo fixar o SHA.
 
 ## Regras do fluxo
@@ -37,8 +40,8 @@ Confirmadas pelo Murillo em 2026-11-06: resposta do contador até 13/11, congela
 |---|---|---|---|---|---|
 | S1 | Notas: regra fiscal versionada, busca e carteira do contador | #389 → #271 → #341 → #353 | concluída em 2026-11-06 | sonnet / high (medium na #353) | S2 |
 | S2 | Ceres: precisão e texto que o produtor lê | #369 → #342 → #357 → #364 | concluída em 2026-11-06 | sonnet / high na #369, low na #342, medium na #357 e na #364 | S1 |
-| S3 | Ceres 2.0: exclusão no tratamento, glossário e lei em linguagem simples | #396 → #267 → #269 | antes da banca | sonnet / high | S4 |
-| S4 | Qualidade: Swagger, fluxos em PostgreSQL e piso de cobertura | #154 → #152 → #151 | antes da banca | haiku low na #154; sonnet medium na #152 e na #151 / low a medium | S3 |
+| S3 | Ceres 2.0: exclusão no tratamento, glossário e lei em linguagem simples | #396 → #267 → #269 | em andamento; antes da banca | sonnet / high | S4 |
+| S4 | Qualidade: Swagger, fluxos em PostgreSQL e piso de cobertura | #154 → #152 → #151 | concluída em 2026-11-06 | haiku low na #154; sonnet medium na #152 e na #151 / low a medium | S3 |
 | S5 | Medição na VPS: Ceres, classificador e p95 | #270 → #265 → #153 | antes da banca | sonnet / medium | - |
 | S6 | Pós-banca imediato: remover o seed da demonstração | #317 | depois da banca | sonnet / medium | - |
 | S7 | NF-e pós-banca: unidade tributável, destinatário e ICMS por UF | #362 → #300 → #334 | depois da banca | sonnet high na #362 e #300; opus high na #334 / high | - |
@@ -236,7 +239,7 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 **Condições:** Banca realizada, ou decisão do Murillo de antecipar. Ollama real para a medição do descarte.
 
 - **#268** [Ceres 2.0 · 6/8] Entrega em duas etapas no SSE: o numero primeiro, a explicacao depois
-  Primeiro a issue filha da #267: ExplicadorResposta, VerificadorFidelidade, app.assistente.explicacao.* com enabled=false, cota #166, desfechos EXPLICACAO_ACEITA e EXPLICACAO_DESCARTADA_<motivo> com changeSet e asserção. Medir com modelo real e mostrar exemplos ao Murillo antes de seguir, pela lição da #347. Depois a #268: evento SSE explicacao entre resposta e fim, campo aditivo no POST /chat, bulkhead liberado após a explicação ou o timeout, erro posterior não invalida a resposta, testes de ordem (aceita, descartada, timeout), contrato e frontend#105.
+  Primeiro a #415, filha da #267: ExplicadorResposta, VerificadorFidelidade, app.assistente.explicacao.* com enabled=false, cota #166, desfechos EXPLICACAO_ACEITA e EXPLICACAO_DESCARTADA_<motivo> com changeSet e asserção. Medir com modelo real e mostrar exemplos ao Murillo antes de seguir, pela lição da #347. Depois a #268: evento SSE explicacao entre resposta e fim, campo aditivo no POST /chat, bulkhead liberado após a explicação ou o timeout, erro posterior não invalida a resposta, testes de ordem (aceita, descartada, timeout), contrato e frontend#105.
 
 **Arquivos que a sessão reserva:** `src/main/java/br/com/agrocontabil/assistente/AssistenteService.java`, `src/main/java/br/com/agrocontabil/assistente/RotaDados.java`, `src/main/java/br/com/agrocontabil/controller/AssistenteController.java`, `src/main/java/br/com/agrocontabil/dto/AssistenteChatResponse.java`, `src/main/resources/application.yml`, `src/main/resources/db/changelog/db.changelog-master.yaml`, `CLAUDE.md`, `docs/ceres-assistente.md`
 
@@ -332,13 +335,17 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 
 | Issue | Título | Tipo | Situação no código | Tam. | Risco | Toca a Ceres | Banca | Onde |
 |---|---|---|---|---|---|---|---|---|
-| #396 | Ceres: tratamento de produto não informa a exclusão que está na descrição do item | bug | não iniciada | P | medio | sim | antes | S3 |
+| #396 | Ceres: tratamento de produto não informa a exclusão que está na descrição do item | bug | fechada pelo PR #412 | P | medio | sim | antes | S3 |
 | #399 | [Segurança] CPF/CNPJ do destinatário em claro na busca_normalizada das notas | seguranca | não iniciada | M | medio | não | depois | S14 |
 | #402 | feat(vinculos): registrar quem encerrou o vínculo e o motivo | feature | não iniciada | P | baixo | não | depois | S13 |
-| #151 | [Sprint 9] Testes unitários no backend (JUnit 5 + Mockito) — meta 80% de cobertura | teste | parcial | M | baixo | não | depois | S4 |
-| #152 | [Sprint 9] Testes de integração nos fluxos críticos | teste | parcial | M | baixo | não | tanto faz | S4 |
+| #407 | fix(carteira): sort=urgencia ignora notas aguardando aprovação e documentos enviados | bug | não iniciada | P | baixo | não | a decidir | a decidir |
+| #408 | fix(calendario): textos das obrigações fiscais sem acento | bug | não iniciada | P | baixo | não | a decidir | a decidir |
+| #409 | feat(notas): NotaFiscalResponse sem emitente nem origem (nota própria x importada) | feature | não iniciada | P | baixo | não | a decidir | a decidir |
+| #415 | [Ceres 2.0 · 5b/8] Explicação do modelo conferida em código | experimento-ia | não iniciada | G | medio | sim | depois | S10 |
+| #151 | [Sprint 9] Testes unitários no backend (JUnit 5 + Mockito) — meta 80% de cobertura | teste | fechada pelo PR #414 | M | baixo | não | depois | S4 |
+| #152 | [Sprint 9] Testes de integração nos fluxos críticos | teste | fechada pelo PR #413 | M | baixo | não | tanto faz | S4 |
 | #153 | [Sprint 9] Performance: garantir resposta < 2s em p95 | performance | parcial | G | medio | não | depois | S5 |
-| #154 | [Sprint 10] Documentação da API com SpringDoc OpenAPI (Swagger) | docs | parcial | M | baixo | não | tanto faz | S4 |
+| #154 | [Sprint 10] Documentação da API com SpringDoc OpenAPI (Swagger) | docs | fechada pelo PR #411 | M | baixo | não | tanto faz | S4 |
 | #198 | [Sprint 9] Ceres — Linha de base com o Ollama na GPU e com o qwen3:8b | experimento-ia | não iniciada | M | baixo | não | congelada | fora |
 | #200 | Ceres: busca de lei antes do gerador (reranker, busca híbrida RRF, embedding ajustado) | experimento-ia | não iniciada | G | alto | sim | depois | S11 |
 | #202 | Ceres: LoRA no qwen3:4b para função e formato (condicional) | experimento-ia | não iniciada | G | alto | sim | congelada | fora |
@@ -346,7 +353,7 @@ Pela ordem, S1 e S2 rodam em paralelo; S3 e S4 também. A partir da S5, uma por 
 | #261 | Ceres: contexto da conversa (sessão) e memória do usuário | feature | não iniciada | G | alto | sim | congelada | fora |
 | #263 | SEFAZ mock ligado por padrão em prod | seguranca | não iniciada | P | medio | não | depois | S14 |
 | #265 | [Ceres 2.0 · 3/8] Classificacao de intencao por regras + embeddings (LLM so no desempate) | experimento-ia | parcial | P | baixo | sim | tanto faz | S5 |
-| #267 | [Ceres 2.0 · 5/8] Glossario do produtor e explicacao opcional do modelo, conferida em codigo | experimento-ia | não iniciada | G | medio | sim | antes | S3 |
+| #267 | [Ceres 2.0 · 5/8] Glossario do produtor e explicacao opcional do modelo, conferida em codigo | experimento-ia | no PR #416, à espera da revisão; resto na #415 | G | medio | sim | antes | S3 |
 | #268 | [Ceres 2.0 · 6/8] Entrega em duas etapas no SSE: o numero primeiro, a explicacao depois | feature | não iniciada | M | medio | sim | antes | S10 |
 | #269 | [Ceres 2.0 · 7/8] Rota de legislacao em linguagem simples, sem recusa falsa (#258) nem ruido no MISTO (#260) | experimento-ia | parcial | M | medio | sim | antes | S3 |
 | #270 | [Ceres 2.0 · 8/8] Inferência local no ARM e metas de tempo | experimento-ia | parcial | M | medio | sim | antes | S5 |

@@ -27,7 +27,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `BuscaNotasLegadoRunner` | Recalcula `busca_normalizada` das notas sem `busca_versao` ou de versão menor que `NormalizacaoBusca.VERSAO_REGRA` (sem texto, regra 1 da #174, sem itens/documento), com a própria `NormalizacaoBusca` (sem backfill SQL, que divergiria da regra Java). **Em segundo plano depois do `ApplicationReadyEvent`** (thread `agro-busca-backfill`, lotes de 500 por id), nunca antes do Tomcat: não alonga o boot do deploy. Idempotente (`UPDATE ... AND busca_versao < ?`); `app.notas.busca.preencher-legado` (#174, #271). Mudou o que entra no texto da busca: suba `VERSAO_REGRA` |
 | `CifragemLegadoRunner` | Cifra na subida as linhas em claro de antes da #147 (`COLUNAS_CIFRADAS`), idempotente |
 | `CorsConfig` | CORS via `APP_CORS_ALLOWED_ORIGINS` |
-| `OpenApiConfig` | springdoc / Swagger UI |
+| `OpenApiConfig` | springdoc / Swagger UI; `GRUPOS` é a lista única dos grupos de `/v3/api-docs/<grupo>` (#154) |
 | `MockIdentidadeFilter` | Resolve o produtor por requisição pelo header `X-Usuario-Id` (só profile dev desde a #221; homolog só JWT — `HomologSemMockIdentidadeIntegrationTest`); sem header usa o semente (#91) |
 | `TributosProperties/Config` | Alíquotas IBS/CBS do `application.yml` |
 | `CertificadoDigitalProperties/Config` | Caminho/senha do `.p12` via env `NFE_CERT_*` |
@@ -186,6 +186,8 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 `service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas; #266: `notasAConferir` (candidatas por `NotaFiscalRepository.findCandidatasASinal`, 10 mais recentes, só as com sinal) e `pedidosPendentes` (pendências `PENDENTE` dos vínculos ativos)). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `controller/AssistenteController`: `POST /api/assistente/chat` e `POST /api/assistente/chat/stream` (SSE) → `assistente/AssistenteService`. `DadosProdutorAdaptador` roda cada consulta numa transação curta com timeout `app.assistente.timeout-funcao`.
 
 `config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-conversas-simultaneas`, `tetos.*` = teto de tokens por tipo de chamada — funções, classificação, lei — validado contra a metade do contexto, #270; a reserva da cota soma os três, `Cota.tetoDaPergunta` com `CHAMADAS_POR_PERGUNTA` = 3, travado pelo `TetoDaCotaCobreChamadasTest`).
+Testes em PostgreSQL: `support/PostgresIntegrationTestBase` (Testcontainers + Liquibase, #152), base de `controller/FluxosCriticosPostgresIntegrationTest`.
+
 Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.
 
 ### `security/` (issue #93)
