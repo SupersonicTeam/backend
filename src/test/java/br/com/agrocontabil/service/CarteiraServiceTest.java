@@ -148,6 +148,38 @@ class CarteiraServiceTest {
   }
 
   @Test
+  @DisplayName("urgencia (#407): nota aguardando aprovacao e documento enviado passam o cliente em dia")
+  void urgenciaContaAprovacaoEDocumentoEnviado() {
+    when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deContador(contador));
+    VinculoCarteira ana = vinculo("Ana");
+    VinculoCarteira bruno = vinculo("Bruno");
+    VinculoCarteira carla = vinculo("Carla");
+    VinculoCarteira dora = vinculo("Dora");
+    VinculoCarteira eva = vinculo("Eva");
+    when(vinculoRepository.findDaCarteira(contador.getEscritorioId(), SituacaoVinculo.ATIVO))
+        .thenReturn(List.of(ana, bruno, carla, dora, eva));
+    when(vinculoRepository.contarNotasDaCarteira(
+        contador.getEscritorioId(), StatusNotaFiscal.COM_INCONSISTENCIAS))
+        .thenReturn(List.of(new ContagemPorProdutor(eva.getProdutorId(), 1)));
+    when(vinculoRepository.contarNotasDaCarteira(
+        contador.getEscritorioId(), StatusNotaFiscal.AGUARDANDO_APROVACAO))
+        .thenReturn(List.of(new ContagemPorProdutor(bruno.getProdutorId(), 1)));
+    when(pendenciaRepository.contarDaCarteira(any(), any()))
+        .thenReturn(List.of(new ContagemPorProdutor(carla.getProdutorId(), 1)));
+    when(vinculoRepository.contarGuiasVencidasDaCarteira(any(), any())).thenReturn(List.of());
+    when(vinculoRepository.contarGuiasNaFaixaDaCarteira(any(), any(), any(), any()))
+        .thenReturn(List.of(new ContagemPorProdutor(dora.getProdutorId(), 1)));
+
+    List<ProdutorCarteiraResponse> clientes =
+        service.listar(filtro(null, "urgencia")).getContent();
+
+    // guias vencidas > inconsistencias > aguardando aprovacao > documento enviado > vencimento
+    // proximo > nome: Ana, em dia e primeira no alfabeto, fica por ultimo.
+    assertThat(clientes).extracting(ProdutorCarteiraResponse::nomeCompleto)
+        .containsExactly("Eva", "Bruno", "Carla", "Dora", "Ana");
+  }
+
+  @Test
   @DisplayName("termo curto demais e ignorado; documento incompleto nao consulta o banco")
   void buscaCurtaIgnorada() {
     when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deContador(contador));
