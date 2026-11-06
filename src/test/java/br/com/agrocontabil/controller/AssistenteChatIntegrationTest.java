@@ -147,7 +147,8 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.citacoes.length()").value(0))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("totalComprasPorInsumo"))
         .andExpect(jsonPath("$.fontesDados[0].parametros.descricaoOuNcm").value("fertilizante"))
-        .andExpect(jsonPath("$.fontesDados[0].parametros.dataFim").value("2026-06-30"));
+        .andExpect(jsonPath("$.fontesDados[0].parametros.dataFim").value("2026-06-30"))
+        .andExpect(jsonPath("$.fontesDados[0].origem").value("PRODUTOR"));
     // #266: uma chamada ao modelo por pergunta; o resultado da funcao nao volta a ele.
     assertThat(modelo.promptsRecebidos()).hasSize(1);
   }
@@ -738,7 +739,8 @@ class AssistenteChatIntegrationTest {
             org.hamcrest.Matchers.containsString("IT 2025.002 v1.70"),
             org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("isenta")))))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("consultarTratamentoProduto"))
-        .andExpect(jsonPath("$.fontesDados[0].parametros.produtoOuNcm").value("soja"));
+        .andExpect(jsonPath("$.fontesDados[0].parametros.produtoOuNcm").value("soja"))
+        .andExpect(jsonPath("$.fontesDados[0].origem").value("TABELA_OFICIAL"));
   }
 
   @Test

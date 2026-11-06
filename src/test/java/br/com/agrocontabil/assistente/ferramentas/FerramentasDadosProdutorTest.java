@@ -14,6 +14,7 @@ import br.com.agrocontabil.assistente.ContextoAssistenteAusenteException;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.assistente.FonteDado;
+import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Apuracao;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Creditos;
@@ -90,6 +91,8 @@ class FerramentasDadosProdutorTest {
         .satisfies(u -> assertThat(u.quantidade()).isEqualTo("1.500"));
     assertThat(contexto.fontes()).containsExactly(new FonteDado("totalComprasPorInsumo", Map.of(
         "descricaoOuNcm", "fertilizante", "dataInicio", "2026-01-01", "dataFim", "2026-06-30")));
+    assertThat(contexto.fontes()).extracting(FonteDado::origem)
+        .containsExactly(OrigemFonte.PRODUTOR);
   }
 
   @Test
@@ -682,6 +685,9 @@ class FerramentasDadosProdutorTest {
     assertThat(contexto.nenhumDadoEncontrado()).isTrue();
     assertThat(contexto.fontes()).extracting(FonteDado::funcao)
         .containsExactly("consultarTratamentoProduto");
+    // #342: tabela publica, nao dado do produtor.
+    assertThat(contexto.fontes()).extracting(FonteDado::origem)
+        .containsExactly(OrigemFonte.TABELA_OFICIAL);
     assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
       assertThat(t.texto()).contains("reducao de 60%").contains("Condicao: vendido in natura");
       assertThat(t.dispositivos()).containsExactly("LC 214/2025|art. 137");
