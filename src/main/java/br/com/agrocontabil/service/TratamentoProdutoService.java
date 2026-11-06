@@ -92,6 +92,10 @@ public class TratamentoProdutoService {
   private static final Pattern DESDE_QUE = Pattern.compile("(?i)desde que ([^,.;]+)");
   private static final Pattern DESTINO_NO_ITEM =
       Pattern.compile("(?i)\\b((?:todos |todas )?destinad[oa]s? [^;.]+)");
+  /** Palavras que negam o que vem depois (#369), já sem acento (a busca normaliza antes). */
+  private static final Pattern NEGACAO = Pattern.compile(
+      "\\b(?:exceto|excetuad[oa]s?|excluid[oa]s?|ressalvad[oa]s?|salvo|nao|nem)\\b");
+  private static final Pattern PROXIMA_PALAVRA = Pattern.compile("[a-z0-9]+");
   private static final Set<String> PALAVRAS_VAZIAS = Set.of("de", "do", "da", "dos", "das",
       "em", "e", "o", "a", "os", "as", "para", "com", "ncm", "sh", "nbs", "tem", "paga", "que");
   private static final int PALAVRA_MINIMA = 3;
@@ -326,7 +330,89 @@ public class TratamentoProdutoService {
   }
 
   private static List<String> tokens(String texto) {
-    return List.of(NormalizacaoBusca.normalizar(texto).split("[^a-z0-9]+"));
+    return List.of(semTrechoNegado(NormalizacaoBusca.normalizar(texto)).split("[^a-z0-9]+"));
+  }
+
+  /**
+   * Tira do texto (já normalizado) o que ele nega (#369): "Soja, mesmo triturada, exceto para
+   * semeadura" não descreve a semeadura, e "semente de soja" não pode casar com ela.
+   *
+   * <ul>
+   *   <li>{@code exceto}, {@code excetuado(s)}, {@code excluído(s)}, {@code ressalvado(s)} e
+   *       {@code salvo}: o trecho vai da palavra até a vírgula, o ponto e vírgula ou o ponto final
+   *       (o ponto de "07.10" não conta), ou, se a palavra está entre parênteses, até o
+   *       {@code )} que os fecha;</li>
+   *   <li>{@code não} e {@code nem}: só a palavra seguinte ("café não torrado", "algodão não
+   *       cardado nem penteado"), porque a negação costuma fazer parte do nome do produto ("queijo
+   *       fresco não maturado e queijo do reino", "semente não certificada"). Se a seguinte é
+   *       "destinados", a negação vai até o fim da oração ("não destinados à alimentação
+   *       humana").</li>
+   * </ul>
+   */
+  static String semTrechoNegado(String normalizado) {
+    StringBuilder resultado = new StringBuilder(normalizado.length());
+    int cursor = 0;
+    Matcher m = NEGACAO.matcher(normalizado);
+    while (m.find()) {
+      if (m.start() < cursor) {
+        continue;
+      }
+      int fim = fimDoTrechoNegado(normalizado, m);
+      resultado.append(normalizado, cursor, m.start()).append(' ');
+      cursor = fim;
+    }
+    return resultado.append(normalizado, cursor, normalizado.length()).toString();
+  }
+
+  private static int fimDoTrechoNegado(String texto, Matcher negacao) {
+    String palavra = negacao.group();
+    if (palavra.equals("nao") || palavra.equals("nem")) {
+      Matcher seguinte = PROXIMA_PALAVRA.matcher(texto);
+      if (!seguinte.find(negacao.end())) {
+        return texto.length();
+      }
+      return seguinte.group().startsWith("destinad")
+          ? fimDaOracao(texto, negacao.end()) : seguinte.end();
+    }
+    return fimDaOracao(texto, negacao.end());
+  }
+
+  /** Depois do último {@code )} que fecha o parêntese aberto antes do início, ou da pontuação. */
+  private static int fimDaOracao(String texto, int inicio) {
+    boolean dentroDeParenteses = abertos(texto, inicio) > 0;
+    int aninhados = 0;
+    for (int i = inicio; i < texto.length(); i++) {
+      char c = texto.charAt(i);
+      if (c == '(') {
+        aninhados++;
+      } else if (c == ')') {
+        if (aninhados == 0) {
+          return i;
+        }
+        aninhados--;
+      } else if (aninhados == 0 && !dentroDeParenteses && fimDeOracao(texto, i)) {
+        return i;
+      }
+    }
+    return texto.length();
+  }
+
+  private static boolean fimDeOracao(String texto, int i) {
+    char c = texto.charAt(i);
+    return c == ',' || c == ';'
+        || (c == '.' && (i + 1 == texto.length() || texto.charAt(i + 1) == ' '));
+  }
+
+  private static int abertos(String texto, int ate) {
+    int abertos = 0;
+    for (int i = 0; i < ate; i++) {
+      if (texto.charAt(i) == '(') {
+        abertos++;
+      } else if (texto.charAt(i) == ')' && abertos > 0) {
+        abertos--;
+      }
+    }
+    return abertos;
   }
 
   /**

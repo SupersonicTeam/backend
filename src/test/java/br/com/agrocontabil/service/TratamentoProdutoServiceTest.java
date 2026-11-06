@@ -91,6 +91,66 @@ class TratamentoProdutoServiceTest {
     assertThat(TratamentoProdutoService.artigo(null)).isNull();
   }
 
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      // referencia de NCM (changeSets 0007/0046): o trecho negado sai ate a virgula ou o fim
+      "Soja, mesmo triturada, exceto para semeadura|soja,triturada|semeadura",
+      "Soja, mesmo triturada (exceto para semeadura)|soja,triturada|semeadura",
+      "Soja para semeadura|soja,semeadura|",
+      "Outros ovos frescos de aves, com casca (exceto de galinha)|ovo,fresco,casca|galinha",
+      "Suinos vivos (exceto reprodutores de raca pura)|suino,vivo|reprodutor,raca,pura",
+      // "nao" nega so a palavra seguinte: o resto faz parte do nome do produto
+      "Cafe nao torrado, nao descafeinado, em grao|cafe,grao|torrado,descafeinado",
+      "Algodao em bruto, nao cardado nem penteado|algodao,bruto|cardado,penteado",
+      // anexos da LC 214 (CSV do changeSet 0048): dentro de parenteses vale ate o ')'
+      "Crustaceos (exceto lagostas e lagostim) e moluscos|crustaceo,molusco|lagosta,lagostim",
+      "Farinha das posicoes 1101.00; ressalvados os produtos relacionados no Anexo I|"
+          + "farinha,posicao|relacionado,produto,anexo",
+      "Cereais do capitulo 10, ressalvados os produtos do Anexo I|cereai,capitulo|anexo",
+      "Racoes para animais, concentrados, exceto para animais domesticos|"
+          + "racao,animai,concentrado|domestico",
+      "Queijo fresco não maturado e queijo do reino|queijo,fresco,reino|maturado",
+      "Semente não certificada de primeira geração (S1)|"
+          + "semente,primeira,geracao|certificada"})
+  @DisplayName("#369: descricao sem o trecho negado (exceto, excluidos, ressalvados, salvo, nao)")
+  void descricaoSemTrechoNegado(String descricao, String presentes, String ausentes) {
+    List<String> palavras = Descrito.de("00000000", null, descricao).palavras();
+
+    assertThat(palavras).contains(presentes.split(","));
+    if (ausentes != null) {
+      assertThat(palavras).doesNotContain(ausentes.split(","));
+    }
+  }
+
+  @Test
+  @DisplayName("#369: 'nao destinados a ...' nega a oracao inteira; sem negacao nada sai")
+  void negacaoDeDestino() {
+    assertThat(Descrito.de(null, 1, "Sal, nao destinados a alimentacao humana, a granel")
+        .palavras()).contains("sal", "granel").doesNotContain("alimentacao", "humana");
+    assertThat(Descrito.de(null, 2, "Grao de soja inteiro").palavras())
+        .containsExactly("grao", "de", "soja", "inteiro");
+  }
+
+  @Test
+  @DisplayName("#369: a pergunta com negacao tambem perde o trecho negado")
+  void perguntaComNegacao() {
+    assertThat(TratamentoProdutoService.palavras("soja exceto para semeadura"))
+        .containsExactly("soja");
+    assertThat(TratamentoProdutoService.palavras("soja para semeadura"))
+        .containsExactly("soja", "semeadura");
+  }
+
+  @Test
+  @DisplayName("#369: 'soja para semeadura' fica com a semente, nao com 'exceto para semeadura'")
+  void semeaduraNaoCasaOExcluido() {
+    Catalogo catalogo = new Catalogo(List.of(
+        Descrito.de("12011000", null, "Soja para semeadura"),
+        Descrito.de("12019000", null, "Soja, mesmo triturada, exceto para semeadura")));
+
+    assertThat(TratamentoProdutoService.melhores(catalogo, List.of("soja", "semeadura")))
+        .extracting(Descrito::ncm).containsExactly("12011000");
+  }
+
   @Test
   @DisplayName("a palavra mais rara decide e, no empate, a referencia vence o item de anexo")
   void melhores() {

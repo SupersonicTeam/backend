@@ -123,6 +123,41 @@ class TratamentoProdutoServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("#369: 'para semeadura' acha a semente, nao o NCM que exclui a semeadura")
+  void semeaduraNaoCaiNoExcluido() {
+    assertThat(service.consultar("soja para semeadura", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm, TratamentoProduto::cClassTrib)
+        .containsExactly(tuple("12011000", "200038"));
+    assertThat(service.consultar("milho para semeadura", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm, TratamentoProduto::cClassTrib)
+        .containsExactly(tuple("10051000", "200038"));
+    assertThat(service.consultar("semeadura", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm)
+        .doesNotContain("12019000", "10059010", "10011900");
+  }
+
+  @Test
+  @DisplayName("#369: arroz em casca acha o em casca natural e a semente, nunca o polido")
+  void arrozEmCascaNaoVaiParaOPolido() {
+    assertThat(service.consultar("arroz em casca", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm)
+        .contains("10061092")
+        .doesNotContain("10063021");
+    assertThat(service.consultar("semente de arroz para semeadura", EM_2026).produtos())
+        .extracting(TratamentoProduto::cClassTrib)
+        .containsOnly("200038");
+  }
+
+  @Test
+  @DisplayName("#369: 'domesticos' so aparece no 'exceto de animais domesticos': nao acha a racao")
+  void racaoNaoCasaOTrechoExcluido() {
+    // Antes, a palavra negada levava a pergunta ao item que exclui os animais domesticos.
+    assertThat(service.consultar("domésticos", EM_2026).produtos()).isEmpty();
+    // Sem a palavra negada, a racao segue achada pelo nome.
+    assertThat(service.consultar("ração para cão", EM_2026).produtos()).isNotEmpty();
+  }
+
+  @Test
   @DisplayName("#284 p. 2: leite nao UHT sai in natura (60%) com a alternativa do Anexo I (zero)")
   void leiteDuasSituacoes() {
     for (String ncm : List.of("04011090", "04012090", "04014010", "04015010")) {
