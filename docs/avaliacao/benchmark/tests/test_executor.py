@@ -244,19 +244,18 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         self.assertEqual(ex.commits_da_issue(assuntos, "#270"), ["aaa1111 feat(ceres): prompts por rota (#270) (#360)"])
         self.assertEqual(ex.commits_da_issue(assuntos[:1] + assuntos[2:], "#270"), [])
 
-    def test_coluna_oficial_exige_a_sessao_7_e_a_8a(self):
+    def test_coluna_oficial_exige_a_sessao_7_e_todo_tambem_exige(self):
         from unittest import mock
         e = ex.Executor(config())
         e.capturar = lambda comando, cwd=None: ""
         e.cfg.todas_arquiteturas[-1]["sha"] = "b" * 40
         sete = e.cfg.matriz["sessaoParalela"]["commit"]
         extras = {x["commit"] for x in e.cfg.matriz["sessaoParalela"]["tambemExige"]}
-        # Sem so o ultimo exigido (o #381 da 8c, #382): nao basta checar os primeiros da lista.
-        ultimo = e.cfg.matriz["sessaoParalela"]["tambemExige"][-1]["commit"]
-        self.assertEqual(ultimo, "cd43c5be32c0cb173aa15baf77be97d17b3b86e5")
+        # Faltando qualquer um dos exigidos (o primeiro, o do meio ou o ultimo), nao e oficial.
+        exigidos = [x["commit"] for x in e.cfg.matriz["sessaoParalela"]["tambemExige"]]
+        sem_um = [(({sete} | extras) - {c}, False, True) for c in exigidos]
         for presentes, confirmado, inteira in (({sete} | extras, True, True), ({sete}, False, True),
-                                               (({sete} | extras) - {ultimo}, False, True),
-                                               (set(), False, False)):
+                                               *sem_um, (set(), False, False)):
             def run(comando, cwd=None, _p=presentes):
                 return mock.Mock(returncode=0 if comando[3] in _p else 1)
             with mock.patch.object(ex.subprocess, "run", run):

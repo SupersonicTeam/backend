@@ -755,12 +755,12 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         faltando = sessao.get("faltando") or []
         if sessao.get("inteira") and faltando:
             md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} tem a {nome7} inteira, mas não "
-                      f"tem: {_celula_md('; '.join(faltando), 300)}.** A rodada oficial usa um SHA da "
+                      f"tem: {_celula_md('; '.join(faltando), 2000)}.** A rodada oficial usa um SHA da "
                       "`main` que contenha todos (`sessaoParalela.commit` e `tambemExige`): esta não "
                       "entra no relatório final.\n")
         else:
             md.append(f"> ⚠️ **ENSAIO — a coluna {arquiteturas[-1][1]} não é a de depois da {nome7} "
-                    "inteira" + (" e de " + _celula_md("; ".join(faltando), 300) if faltando else "")
+                    "inteira" + (" e de " + _celula_md("; ".join(faltando), 2000) if faltando else "")
                     + ".** "
                     + (f"O SHA medido já tem {len(ja)} PR(s) dela ({_celula_md(', '.join(ja), 300)}), "
                        "mas o merge do último não está configurado em `sessaoParalela.commit`. "
@@ -792,7 +792,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         faltando = sessao7.get("faltando") or []
         situacao = ("não foi possível conferir pelo git" if sessao7.get("contem") is None else
                     "**depois** dela inteira, mas **sem** "
-                    + _celula_md("; ".join(faltando), 300) + " — ensaio, não a coluna oficial"
+                    + _celula_md("; ".join(faltando), 2000) + " — ensaio, não a coluna oficial"
                     if sessao7.get("inteira") and faltando else
                     "**depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna "
                     "inclui as mudanças dela" if confirmado else

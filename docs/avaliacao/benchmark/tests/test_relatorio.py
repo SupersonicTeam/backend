@@ -549,6 +549,17 @@ class ExternasNoRelatorioTest(Base):
         self.assertIn("**depois** dela inteira, mas **sem** Sessão 8a (#360)", texto)
         self.assertNotIn("sem o último confirmado", texto)
 
+    def test_faltando_lista_inteira_sem_corte(self):
+        """#383: com os rotulos reais da matriz faltando, nenhum sai cortado pelo limite da celula."""
+        matriz = json.loads((AQUI.parent / "matriz.json").read_text(encoding="utf-8"))
+        rotulos = [x["rotulo"] for x in matriz["sessaoParalela"]["tambemExige"]]
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True, "confirmado": False,
+                             "inteira": True, "faltando": rotulos, "commits": ["a (#270) (#351)"]}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn(rotulos[-1].replace("|", "\\|"), texto)
+
     def test_contaminada_sai_do_inedito(self):
         self._marcar()
         canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
