@@ -110,10 +110,25 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 
 ### O conjunto de perguntas (#352)
 
-`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.2`,
-com a T03 de 33 dispositivos da Sessão 8a, #360) inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
+`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.3`:
+a T03 de 33 dispositivos da Sessão 8a, #360, e a P02 da Sessão 8b, #366) inteiro (87), **13
+perguntas novas da equipe** (N01–N13) e as **40 externas** (abaixo): **140 perguntas em 16 temas**
+de 6 a 10. O
 hash fica em `perguntas-benchmark.json.sha256`: mudou uma pergunta, mude a `versao` e o hash (o
-`PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). As células leem
+`PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). **O gabarito
+andou, o conjunto anda junto:** o `baseadoEm` tem de ser a versão atual do gabarito e as herdadas
+iguais a ele, senão o `PerguntasBenchmarkIntegrationTest` falha (não pula) e diz o que fazer —
+copiar as herdadas que mudaram, mudar a `versao`, o `baseadoEm`, a versão do gabarito na
+`descricao` e o hash, regenerar `conferir-dispositivos-externas.sql` e a versão do congelamento
+abaixo. Foi o que faltou na P02 da Sessão 8b (#371): os parâmetros e os dispositivos dela mudaram
+sem mudar o hash. O executor confere o mesmo contra o gabarito **do commit medido** (checkout
+atrasado não passa: recusa a rodada da banca, avisa nas outras). O guarda não cobre valor esperado
+que muda só por código (o valor é calculado na hora pelo `ValoresEsperados`): isso fica com a
+regra de não mexer na Ceres antes da rodada. **Depois da rodada da banca**, o campo
+`rodadaRealizada` (data) congela o conjunto de propósito: o gabarito pode andar e as herdadas
+ficam como foram medidas. Se, depois da rodada, aparecer valor esperado errado, a correção entra como
+**errata** no relatório (pergunta, valor antigo, valor certo e efeito no acerto) e nunca muda o
+que foi medido sem deixar rastro. As células leem
 **esse arquivo**; a Ceres 2.0 lê ele próprio, a Ceres 1 lê a cópia adaptada (abaixo), e os dois
 hashes vão no `celula.json`.
 
@@ -159,7 +174,7 @@ pergunta vale ~1,9 ponto percentual.
 | `rotaEsperada` | `LEGISLACAO` em todas, com `justificativaRota` de uma linha: todas pedem a regra da lei, nenhuma pede um dado do produtor |
 | `adversario` | 30 delas: pronome ou situação do produtor com termo de lei ("Sou produtor de soja e milho..."), o caso que as regras da #265 têm de mandar para a lei, não para os dados. É o mesmo campo que o comando de avaliação já mede ("Rota nos casos adversários") |
 | `capacidade` | `comum` em todas (a rota de lei existe nas duas arquiteturas): a comparação justa ganha 40 perguntas |
-| `dispositivosEsperados` | preenchidos a partir do texto da lei no **normas.leg.br** (LC 214/2025 compilada e EC 132/2023; os anexos no texto atualizado da Câmara), com as chaves no formato da base e `fonteConferencia: "normas.leg.br, 2026-11-05"`; nada de memória. Seguem `aConferir: true` até o Murillo rodar `conferir-dispositivos-externas.sql` na VPS (uma consulta, gerada do conjunto e travada por teste): a chave que faltar em `legislacao_trecho` sai dos aceitos. A E18 (peças de trator) fica sem dispositivo: é a regra geral, sem redução. `dispositivosSugeridos` (do gabarito) ficam para a revisão. As citações do parecer anexado na #284 **não** entram sem conferir (erra o art. 353, os arts. 43 a 45, o art. 15 para a CBS e o § 3º do art. 168) |
+| `dispositivosEsperados` | preenchidos a partir do texto da lei no **normas.leg.br** (LC 214/2025 compilada e EC 132/2023; os anexos no texto atualizado da Câmara), com as chaves no formato da base e `fonteConferencia: "normas.leg.br, 2026-11-05"`; nada de memória. Seguem `aConferir: true` até o Murillo rodar `conferir-dispositivos-externas.sql` na VPS (uma consulta, gerada do conjunto e travada por teste): a chave que faltar em `legislacao_trecho` sai dos aceitos. A E18 (peças de trator) fica sem dispositivo: é a regra geral, sem redução. **Existência na base conferida na VPS em 2026-11-06** (`existenciaNaBase` nas 40, conjunto `2026-11-05.8`): 48 chaves, nenhuma ausente; as 46 da LC 214 com trecho exato e as 2 da EC 132 (prefixos) com subdivisões (63 e 8 trechos). `aConferir` segue `true`: falta a revisão humana do conteúdo, não a existência. `dispositivosSugeridos` (do gabarito) ficam para a revisão. As citações do parecer anexado na #284 **não** entram sem conferir (erra o art. 353, os arts. 43 a 45, o art. 15 para a CBS e o § 3º do art. 168) |
 | `classeTratamento` | `ZERO`, `REDUCAO_60`, `PADRAO`, `CONDICIONAL`, `NAO_SE_APLICA` ou `FORA_DO_ESCOPO_SISTEMA`, **provisória** (`revisado: false`); cinco corrigidas pelo texto da lei na conferência do normas.leg.br (`2026-11-05.8`): E07 e E09 → `ZERO` (Anexo XV, item 5, com o art. 148, parágrafo único; Anexo I, item 8, posição 09.01), E13, E16 e E19 → `REDUCAO_60` (Anexo IX, itens 10; 12, 18 e 21, exceção dos animais domésticos fora porque a pergunta fala de rebanho; 28) |
 | `afirmacoesProibidas` | expressões que seriam erro (ex.: E17 "sim, pode aproveitar a redução"; E22 "o comprador não tem crédito", existe o presumido do art. 168; E33 "pode aproveitar o crédito") |
 | `encaminharContador` | 9 delas (E21, E22, E23, E24, E27, E29, E36, E39, E40): a resposta certa depende da situação do produtor |
@@ -206,7 +221,7 @@ do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. 
 **Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
 descrições `@Tool` ou as outras perguntas do conjunto.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.8` está congelado (versão e
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.9` está congelado (versão e
 hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
 respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
 perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o
@@ -425,7 +440,8 @@ propriedade). Na prática:
 
 - **E também depois da Sessão 8a** (#360, `54f02ee`): o texto do atalho de IBS/CBS mudou (explica
   o diferimento dos insumos do Anexo IX) e a T03 passou a 33 dispositivos. A coluna oficial é medida
-  num SHA que contenha **os dois**, `54a4201` (Sessão 7) e `54f02ee` (8a); a `main` de hoje contém.
+  num SHA que contenha `54a4201` (Sessão 7), `54f02ee` (8a) e `d8b0b36` (8b, arroz em casca: a P02 do gabarito
+  `2026-11-05.3` foi escrita para ela); a `main` de hoje contém.
   O `54f02ee` está em `sessaoParalela.tambemExige`: sem ele, o relatório sai como ensaio e diz o que
   falta.
 - **A Sessão 7 terminou** (#351 e #354): `sessaoParalela.commit` na `matriz.json` é

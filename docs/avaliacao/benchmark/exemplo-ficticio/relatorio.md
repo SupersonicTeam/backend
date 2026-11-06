@@ -13,8 +13,8 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `cade11e1682a600b7adf9cbaed1e20d55159e372` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.8 (140 perguntas, sha256 `d4f9d589f5d1…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Ceres 2.0 | `e75dfabf16c39b57890d8ea9258ecd67def32bf4` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Conjunto de perguntas | 2026-11-05.9 (140 perguntas, sha256 `977c4d3861e8…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |

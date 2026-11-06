@@ -1,7 +1,6 @@
 package br.com.agrocontabil.config.avaliacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
@@ -110,30 +109,46 @@ class PerguntasBenchmarkIntegrationTest {
   }
 
   @Test
-  @DisplayName("Pergunta herdada do gabarito não diverge dele enquanto ele estiver na versão de baseadoEm")
+  @DisplayName("O conjunto acompanha o gabarito: baseadoEm na versão atual e herdadas iguais a ele (falha, nunca pula)")
   void herdadasIguaisAoGabarito() throws IOException {
     JsonNode raizGabarito = objectMapper.readTree(GABARITO.toFile());
-    // O conjunto e congelado: depois que o gabarito muda de versao, ele deixa de acompanhar (a
-    // conferencia so vale enquanto o gabarito e o mesmo de "baseadoEm").
-    assumeTrue(raizGabarito.path("versao").asText().equals(
-        objectMapper.readTree(PERGUNTAS.toFile()).path("baseadoEm").asText()),
-        "gabarito em outra versao: o conjunto congelado nao o acompanha");
+    JsonNode raizPerguntas = objectMapper.readTree(PERGUNTAS.toFile());
+    String versaoGabarito = raizGabarito.path("versao").asText();
+    String baseadoEm = raizPerguntas.path("baseadoEm").asText();
+    // O gabarito andou e o conjunto nao: uma herdada pode ter mudado de parametros ou de
+    // dispositivos sem mudar a versao nem o hash do conjunto (a P02 na Sessao 8b, #371). Falha,
+    // nunca pula. Depois da rodada da banca, "rodadaRealizada" congela o conjunto de proposito: o
+    // gabarito pode andar e as herdadas ficam como foram medidas.
+    if (raizPerguntas.path("rodadaRealizada").asText().isEmpty()) {
+      assertThat(baseadoEm)
+          .as("o gabarito esta na versao %s e o conjunto congelado em baseadoEm %s: copie as "
+              + "herdadas que mudaram para perguntas-benchmark.json, mude versao, baseadoEm, a "
+              + "versao do gabarito na descricao e o .sha256, regenere "
+              + "conferir-dispositivos-externas.sql e a versao do congelamento no README "
+              + "(antes de qualquer rodada)", versaoGabarito, baseadoEm)
+          .isEqualTo(versaoGabarito);
+    }
+    assertThat(raizPerguntas.path("descricao").asText()).as("descricao cita o gabarito de baseadoEm")
+        .contains("gabarito " + baseadoEm);
     Map<String, JsonNode> gabarito = new HashMap<>();
     raizGabarito.path("perguntas").forEach(p -> gabarito.put(p.path("id").asText(), p));
     int herdadas = 0;
-    for (JsonNode p : objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas")) {
+    boolean conferirHerdadas = raizPerguntas.path("rodadaRealizada").asText().isEmpty();
+    for (JsonNode p : raizPerguntas.path("perguntas")) {
       JsonNode original = gabarito.get(p.path("id").asText());
-      if (original == null) {
+      if (original == null || !conferirHerdadas) {
         continue;
       }
       herdadas++;
       ObjectNode semCamposNovos = ((ObjectNode) p.deepCopy()).without(CAMPOS_DO_BENCHMARK);
       assertThat(semCamposNovos).as(p.path("id").asText()).isEqualTo(original);
     }
-    assertThat(herdadas).isEqualTo(gabarito.size());
+    if (conferirHerdadas) {
+      assertThat(herdadas).isEqualTo(gabarito.size());
+    }
     // origem = gabarito exatamente nas herdadas: as ineditas medem generalizacao (a Ceres 2.0 foi
     // desenvolvida contra o gabarito).
-    for (JsonNode p : objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas")) {
+    for (JsonNode p : raizPerguntas.path("perguntas")) {
       assertThat(p.path("origem").asText()).as(p.path("id").asText())
           .isIn(gabarito.containsKey(p.path("id").asText())
               ? List.of("gabarito") : List.of("inedita_equipe", "inedita_equipe_dados", "inedita_externa_ia"));
@@ -168,6 +183,8 @@ class PerguntasBenchmarkIntegrationTest {
       p.path("dispositivosEsperados").forEach(d -> assertThat(d.asText()).as(id)
           .matches("(LC 214/2025, (art\\. \\d+(º|-[A-Z])?(, .+)?|Anexo [IVX]+, item \\d+)"
               + "|EC 132/2023, art\\. [12]º \\(redação do art\\. .+)"));
+      // Existencia dos dispositivos conferida na base da VPS (#358): a revisao do conteudo segue.
+      assertThat(p.path("existenciaNaBase").asText()).as(id).startsWith("conferida na VPS");
       assertThat(p.path("classeTratamento").asText()).as(id).isIn("ZERO", "REDUCAO_60", "PADRAO",
           "CONDICIONAL", "NAO_SE_APLICA", "FORA_DO_ESCOPO_SISTEMA");
       p.path("afirmacoesProibidas").forEach(r -> java.util.regex.Pattern.compile(r.asText()));

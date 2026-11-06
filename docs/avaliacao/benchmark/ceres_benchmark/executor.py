@@ -731,6 +731,18 @@ class Executor:
         preparo.mkdir()
         (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         canonico = json.loads(canonico_txt)
+        if arquivo is not None and canonico.get("baseadoEm") and not canonico.get("rodadaRealizada"):
+            # O conjunto vem da arvore local e a Ceres 2.0 do commit medido: um checkout atrasado
+            # passa no hash com herdadas velhas (#371). O baseadoEm tem de ser o gabarito do commit.
+            gabarito_commit = json.loads(self.capturar(
+                ["git", "show", f"{todas[-1]['sha']}:{GABARITO_REPO}"], cfg.repo))
+            if gabarito_commit.get("versao") != canonico["baseadoEm"]:
+                mensagem = (f"o conjunto e baseado no gabarito {canonico['baseadoEm']}, mas o commit "
+                            f"medido ({todas[-1]['sha'][:7]}) tem o {gabarito_commit.get('versao')}: "
+                            "atualize o conjunto (herdadas, versao, baseadoEm e hash) ou o checkout")
+                if cfg.tipo == "banca":
+                    raise RuntimeError(mensagem)
+                log(f"AVISO: {mensagem}")
         if cfg.tipo == "banca":
             # Revisao humana bloqueante (#358): dispositivos, classe e afirmacoes proibidas das
             # externas sao provisorios ate a equipe e o contador conferirem.
