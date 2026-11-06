@@ -409,10 +409,12 @@ br.com.agrocontabil
 ## Testes
 
 - Smoke test de contexto já existe (`AgroContabilApplicationTests`, profile `test`, H2).
-- Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Meta de cobertura do TCC: 80% (Sprint 9).
+- Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Piso de cobertura no `jacoco:check`: LINE ≥ 93%, sem `config/**`, `dto/**` e a classe main (medido 94,7% em 2026-11-06, #151; meta da issue, 80%). A CI roda `./mvnw verify`, então cair abaixo do piso quebra o build. Suba o piso quando a cobertura subir; não o reduza para acomodar PR.
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 2.274 testes, sem falha** (2026-11-06, CI do `40914ae`, 4 ignorados) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase e pgvector) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 2.290 testes, sem falha** (2026-11-06, CI do `c1020be`, 4 ignorados) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase, pgvector, reset da demonstração e fluxos críticos) também rodam; sem Docker ficam *skipped*.
+- **Teste em PostgreSQL novo (#152):** estende `support/PostgresIntegrationTestBase` (Liquibase ligado, `ddl-auto: validate`). A limpeza é `limparDominio()`, DELETE de filho para pai, nunca TRUNCATE CASCADE, que apagaria os modelos de obrigação. Produtor com contador ativo só gera XML de nota `APROVADA`: nos fluxos de emissão não vincule contador. `FluxosCriticosPostgresIntegrationTest` cobre emissão até `AUTORIZADA`, cancelamento dentro e fora do prazo e reabertura dentro e fora do limite; a importação segue em H2.
+- **Swagger travado por teste (#154):** `OpenApiConfig.GRUPOS` é a lista única dos grupos (`/v3/api-docs/<grupo>`: notas, apuracao, chat, relatorios, contador, auth). Rota com prefixo novo entra num grupo, mapeamento novo exige `@Operation(summary)` e DTO novo, inclusive aninhado, exige `@Schema` na classe; senão o `OpenApiDocumentacaoIntegrationTest` quebra. O springdoc só é desligado em `prod`: a VPS (`homolog`) publica `/swagger-ui.html` e `/v3/api-docs`.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 
 ## Estado atual — Sprint 8 concluída (2026-10-20)
