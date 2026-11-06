@@ -23,6 +23,7 @@ import org.springframework.format.annotation.DateTimeFormat;
  *                      parcial e sem diferenciar maiúscula nem acento; texto com menos de 3
  *                      caracteres é ignorado, exceto número (prefixo do número da nota)
  */
+@Schema(description = "Filtros opcionais da lista de notas do produtor, combináveis entre si")
 public record FiltroNotasRequest(
     @Schema(description = "Um ou mais status (repetível; OU entre eles)")
     List<StatusNotaFiscal> status,

@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Size;
  *
  * @param senha senha atual
  */
+@Schema(description = "Confirmação da exclusão dos dados pessoais com a senha atual; operação irreversível")
 public record ExclusaoDadosRequest(
     @NotNull @Size(max = 1024) @Sensivel
     @Schema(format = "password", accessMode = Schema.AccessMode.WRITE_ONLY) String senha) {

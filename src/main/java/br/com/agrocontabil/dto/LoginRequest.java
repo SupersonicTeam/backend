@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Size;
  * @param email e-mail de login
  * @param senha senha
  */
+@Schema(description = "Login por e-mail e senha")
 public record LoginRequest(
     @NotBlank
     @Size(max = 254)

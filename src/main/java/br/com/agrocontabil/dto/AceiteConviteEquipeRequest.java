@@ -1,6 +1,7 @@
 package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.common.Sensivel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -9,7 +10,10 @@ import jakarta.validation.constraints.Size;
  *
  * @param token token do fragmento do link
  */
-public record AceiteConviteEquipeRequest(@NotBlank @Size(max = 100) @Sensivel String token) {
+@Schema(description = "Aceite do convite de equipe pelo contador que já tem conta")
+public record AceiteConviteEquipeRequest(
+    @Schema(description = "Token do convite, vindo do fragmento do link")
+    @NotBlank @Size(max = 100) @Sensivel String token) {
 
   @Override
   public String toString() {

@@ -17,6 +17,7 @@ import jakarta.validation.constraints.Size;
  * @param cpfCnpj      CPF ou CNPJ, só dígitos
  * @param senha        senha (mesma política do cadastro)
  */
+@Schema(description = "Cadastro de contador pelo link do convite de equipe; o e-mail é o do convite")
 public record CadastroEquipeRequest(
     @NotBlank @Size(max = 100) @Sensivel String token,
     @NotBlank @Size(max = 255) String nomeCompleto,

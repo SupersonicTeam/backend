@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -9,7 +10,10 @@ import jakarta.validation.constraints.Size;
  *
  * @param email e-mail do produtor (com ou sem conta)
  */
-public record ConviteRequest(@NotBlank @Email @Size(max = 254) String email) {
+@Schema(description = "Convite do escritório para um produtor, só por e-mail")
+public record ConviteRequest(
+    @Schema(description = "E-mail do produtor, com ou sem conta", example = "produtor@exemplo.com.br")
+    @NotBlank @Email @Size(max = 254) String email) {
 
   @Override
   public String toString() {

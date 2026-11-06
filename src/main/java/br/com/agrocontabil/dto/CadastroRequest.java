@@ -23,6 +23,7 @@ import jakarta.validation.constraints.Size;
  * @param email       e-mail de login
  * @param senha       senha escolhida
  */
+@Schema(description = "Cadastro de produtor ou contador com credencial de acesso")
 public record CadastroRequest(
     @NotNull
     @Schema(description = "Papel da conta", example = "PRODUTOR")

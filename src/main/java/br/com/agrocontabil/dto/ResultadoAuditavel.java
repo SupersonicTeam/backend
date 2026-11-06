@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
 /**
@@ -8,6 +9,7 @@ import java.util.UUID;
  * <p>Os records implementam {@link #status()} pelo próprio componente {@code status}; o resto tem
  * padrão nulo. Nada aqui pode ser dado pessoal: vai para um registro guardado por 5 anos.
  */
+@Schema(description = "Contrato interno da auditoria: descreve o que a operação mudou (não é resposta da API)")
 public interface ResultadoAuditavel {
 
   /**
