@@ -1,0 +1,46 @@
+# Vocabulário da busca de lei (#269, experimento): tema da regra geral -> palavras da própria lei.
+#
+# Por quê: a pergunta do produtor ("até quando posso usar o crédito?") não usa as palavras do
+# texto da lei ("o direito de utilização dos créditos extinguir-se-á após o prazo de 5 anos"), e o
+# embedding não aproxima as duas. Os termos abaixo entram SÓ na consulta que vai à busca; o modelo
+# recebe a pergunta original. Sem casamento, a consulta é a de hoje.
+#
+# Regras do arquivo:
+#   - os termos são frases do texto da lei (LC 214/2025; EC 132/2023 para o fim do ICMS e do ISS),
+#     nunca a redação de uma pergunta de treino ou do gabarito;
+#   - "gatilhos" é uma lista de grupos; o tema vale se TODOS os padrões de ALGUM grupo casam na
+#     pergunta sem acento e em minúsculas (regex Java);
+#   - tema novo = termos tirados do artigo, e teste de que nenhuma pergunta recusada passa a ser
+#     respondida (o limiar de similaridade é conferido no diagnóstico).
+temas:
+  - tema: fato gerador
+    gatilhos:
+      - ['fato gerador']
+      - ['quando (surge|nasce|ocorre|acontece|se considera)', 'obrigacao|imposto|tributo|ibs|cbs']
+    termos: Considera-se ocorrido o fato gerador do IBS e da CBS no momento do fornecimento nas operações com bens ou com serviços
+
+  - tema: base de cálculo
+    gatilhos:
+      - ['base de calculo']
+      - ['\bcalcul', '\bvalor']
+    termos: A base de cálculo do IBS e da CBS é o valor da operação
+
+  - tema: prazo para usar o crédito
+    gatilhos:
+      - ['credito', 'prazo|quanto tempo|ate quando|validade|vence|expira']
+    termos: O direito de utilização dos créditos extinguir-se-á após o prazo de 5 anos, contado do primeiro dia do período subsequente ao de apuração em que tiver ocorrido a apropriação do crédito
+
+  - tema: apropriação do crédito
+    gatilhos:
+      - ['credito', 'usar|uso|aproveit|descont|compra|adquir|apropri|funciona|contribuinte']
+    termos: O contribuinte sujeito ao regime regular poderá apropriar créditos do IBS e da CBS nas operações em que seja adquirente
+
+  - tema: imunidade da exportação
+    gatilhos:
+      - ['exterior|exporta']
+    termos: São imunes ao IBS e à CBS as exportações de bens e de serviços para o exterior
+
+  - tema: fim do ICMS e do ISS
+    gatilhos:
+      - ['\bicms\b|\biss\b', 'ate quando|fim|extint|acab|deixa|transicao|existem']
+    termos: Ficam extintos, a partir de 2033, os impostos previstos nos arts. 155, II, e 156, III, da Constituição Federal

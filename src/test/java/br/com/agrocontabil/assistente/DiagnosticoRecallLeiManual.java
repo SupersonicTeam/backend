@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.rag.ExpansaoConsultaLei;
 import br.com.agrocontabil.assistente.rag.MetadadosTrecho;
 import br.com.agrocontabil.config.AssistenteProperties;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,7 +67,10 @@ class DiagnosticoRecallLeiManual {
     raiz.put("limiarProducao", limiar);
     ArrayNode perguntas = raiz.putArray("perguntas");
     for (JsonNode p : entrada.get("perguntas")) {
-      String pergunta = DataSanitizer.mascarar(p.get("pergunta").asText());
+      String original = p.get("pergunta").asText();
+      boolean expandir = Boolean.getBoolean("diagnostico.expandir");
+      String pergunta = DataSanitizer.mascarar(
+          expandir ? ExpansaoConsultaLei.expandir(original) : original);
       List<Document> docs = vectorStore.similaritySearch(SearchRequest.builder()
           .query(pergunta).topK(20).similarityThreshold(0.0).filterExpression(vigente).build());
       Set<String> certos = new java.util.LinkedHashSet<>();
@@ -77,6 +81,8 @@ class DiagnosticoRecallLeiManual {
       ObjectNode item = perguntas.addObject();
       item.put("id", p.get("id").asText());
       item.put("pergunta", p.get("pergunta").asText());
+      item.put("consulta", pergunta);
+      item.put("temas", String.join(",", ExpansaoConsultaLei.temasCasados(original)));
       item.set("esperado", p.get("esperado"));
       ArrayNode lista = item.putArray("top20");
       int primeiroEsperado = 0;
