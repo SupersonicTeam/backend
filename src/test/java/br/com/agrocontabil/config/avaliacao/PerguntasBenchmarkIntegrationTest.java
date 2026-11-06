@@ -183,6 +183,8 @@ class PerguntasBenchmarkIntegrationTest {
       p.path("dispositivosEsperados").forEach(d -> assertThat(d.asText()).as(id)
           .matches("(LC 214/2025, (art\\. \\d+(º|-[A-Z])?(, .+)?|Anexo [IVX]+, item \\d+)"
               + "|EC 132/2023, art\\. [12]º \\(redação do art\\. .+)"));
+      // Existencia dos dispositivos conferida na base da VPS (#358): a revisao do conteudo segue.
+      assertThat(p.path("existenciaNaBase").asText()).as(id).startsWith("conferida na VPS");
       assertThat(p.path("classeTratamento").asText()).as(id).isIn("ZERO", "REDUCAO_60", "PADRAO",
           "CONDICIONAL", "NAO_SE_APLICA", "FORA_DO_ESCOPO_SISTEMA");
       p.path("afirmacoesProibidas").forEach(r -> java.util.regex.Pattern.compile(r.asText()));
