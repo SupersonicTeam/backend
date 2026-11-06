@@ -66,35 +66,82 @@ class SinaisNotaConferirServiceTest {
             || i.getArgument(0, String.class).equals("10059010"));
   }
 
-  @ParameterizedTest(name = "[{index}] {0} | CFOP {1} | NCM {2} -> {3}")
+  @ParameterizedTest(name = "[{index}] {0} | CFOP {1} | NCM {2} | un {3} -> {4}")
   @CsvSource(delimiter = '|', nullValues = "NULO", value = {
-      // descricao                        | cfop | ncm      | motivo
-      "Servico de colheita de soja        | 5949 | 12019000 | CFOP_GENERICO",
-      "Prestação de serviço - PLANTIO     | 6949 | 12019000 | CFOP_GENERICO",
-      "Frete da carga                     | 5101 | NULO     | NCM_FORA_DA_REFERENCIA",
-      "Aluguel de trator                  | 5101 | 87019000 | NCM_FORA_DA_REFERENCIA",
-      "Hora máquina pulverização          | 5949 | NULO     | CFOP_GENERICO",
-      "Mão-de-obra                        | 5949 | 12019000 | CFOP_GENERICO",
-      "Fretes                             | 5949 | 12019000 | CFOP_GENERICO",
-      "Operacao de plantio                | 5949 | 12019000 | CFOP_GENERICO",
-      "Servico de pulverizacao            | 5949 | 12019000 | CFOP_GENERICO",
-      "Semente de soja para plantio       | 5949 | 12019000 | NULO",
-      "Milho para semeadura               | 5949 | NULO     | NULO",
-      "Soja em grão                       | 5949 | 12019000 | NULO",
-      "Soja - remessa para armazenagem    | 5949 | 12019000 | NULO",
-      "Big bag para transporte            | 5949 | 12019000 | NULO",
-      "Bomba de pulverização              | 5949 | 12019000 | NULO",
-      "Servico de colheita                | 5101 | 12019000 | NULO",
-      "Transportadora Silva soja          | 5101 | 10059010 | NULO",
-      "NULO                               | 5949 | 12019000 | NULO"
+      // descricao | cfop | ncm | unidade | motivo (unidade NULO = não informada)
+      "Servico de colheita de soja | 5949 | 12019000 | NULO | CFOP_GENERICO",
+      "Prestação de serviço - PLANTIO | 6949 | 12019000 | NULO | CFOP_GENERICO",
+      "Frete da carga | 5101 | NULO | NULO | NCM_FORA_DA_REFERENCIA",
+      "Aluguel de trator | 5101 | 87019000 | NULO | NCM_FORA_DA_REFERENCIA",
+      "Hora máquina pulverização | 5949 | NULO | NULO | CFOP_GENERICO",
+      "Mão-de-obra | 5949 | 12019000 | NULO | CFOP_GENERICO",
+      "Fretes | 5949 | 12019000 | NULO | CFOP_GENERICO",
+      "Operacao de plantio | 5949 | 12019000 | NULO | CFOP_GENERICO",
+      "Servico de pulverizacao | 5949 | 12019000 | NULO | CFOP_GENERICO",
+      "Semente de soja para plantio | 5949 | 12019000 | NULO | NULO",
+      "Milho para semeadura | 5949 | NULO | NULO | NULO",
+      "Soja em grão | 5949 | 12019000 | NULO | NULO",
+      "Soja - remessa para armazenagem | 5949 | 12019000 | NULO | NULO",
+      "Big bag para transporte | 5949 | 12019000 | NULO | NULO",
+      "Bomba de pulverização | 5949 | 12019000 | NULO | NULO",
+      "Servico de colheita | 5101 | 12019000 | NULO | NULO",
+      "Transportadora Silva soja | 5101 | 10059010 | NULO | NULO",
+      "NULO | 5949 | 12019000 | NULO | NULO",
+      // #364: termos novos de serviço agrícola, cruzados com a unidade comercial e o NCM
+      "Serviço de gradagem | 5101 | 12019000 | HA | UNIDADE_DE_SERVICO",
+      "Colheita de soja | 5101 | 12019000 | HA | UNIDADE_DE_SERVICO",
+      "Aração de área | 5101 | NULO | H | UNIDADE_DE_SERVICO",
+      "Aplicação de adubo a lanço | 5101 | 31051000 | Hectare. | UNIDADE_DE_SERVICO",
+      "Subsolagem | 5949 | 12019000 | KG | CFOP_GENERICO",
+      "Destoca e desmatamento | 5101 | NULO | NULO | NCM_FORA_DA_REFERENCIA",
+      "Secagem de grãos | 5101 | NULO | SC | NCM_FORA_DA_REFERENCIA",
+      "Secagem de grãos | 5101 | 12019000 | HORA | UNIDADE_DE_SERVICO",
+      "Calagem do talhão 4 | 5101 | NULO | NULO | NCM_FORA_DA_REFERENCIA",
+      "Ensilagem de milho | 5949 | NULO | NULO | CFOP_GENERICO",
+      // mercadoria que carrega o nome da operação: unidade de produto + NCM de mercadoria
+      "Milho seco e limpo | 5101 | 10059010 | KG | NULO",
+      "Milho seco e limpo | 5949 | 10059010 | SC | NULO",
+      "Bico de pulverização | 5949 | NULO | UN | NULO",
+      "Bico de pulverização | 5101 | 84248990 | UN | NULO",
+      "Bag de colheita | 5949 | 39232990 | UN | NULO",
+      "Adubo de plantio | 5949 | 31051000 | SC | NULO",
+      "Calcário agrícola para calagem | 5949 | 25210000 | TON | NULO",
+      "Semente de soja para plantio | 5949 | 12019000 | SC | NULO",
+      // termo forte (serviço, frete, aluguel...) não é desfeito pela unidade de produto
+      "Aluguel de trator | 5101 | 87019000 | UN | NCM_FORA_DA_REFERENCIA",
+      "Serviço de colheita de soja | 5949 | 12019000 | UN | CFOP_GENERICO",
+      // NCM de preenchimento não é mercadoria: o serviço em "UN" com CFOP 5949 segue avisando
+      "Colheita de soja | 5949 | 00000000 | UN | CFOP_GENERICO",
+      "Pulverização de lavoura | 5949 | 99999999 | UN | CFOP_GENERICO",
+      "Colheita de soja | 5949 | 1201 | UN | CFOP_GENERICO",
+      // exceções novas
+      "Silo para ensilagem | 5949 | NULO | NULO | NULO",
+      "Secador para secagem de grãos | 5949 | NULO | NULO | NULO",
+      // termo ambíguo sem NCM de mercadoria segue avisando, com ou sem unidade de produto
+      "Colheita mecanizada | 5101 | NULO | NULO | NCM_FORA_DA_REFERENCIA",
+      "Pulverização aérea | 5101 | NULO | UNIDADE | NCM_FORA_DA_REFERENCIA"
   })
   @DisplayName("PRODUTO_PARECE_SERVICO, com o motivo")
-  void produtoPareceServico(String descricao, String cfop, String ncm, Motivo motivo) {
-    itens(item(1, descricao, cfop, ncm));
+  void produtoPareceServico(String descricao, String cfop, String ncm, String unidade,
+      Motivo motivo) {
+    itens(comUnidade(item(1, descricao, cfop, ncm), unidade));
 
     assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.RASCUNHO, EMISSAO)))
         .extracting(SinalNota::motivo)
         .containsExactlyElementsOf(motivo == null ? List.of() : List.of(motivo));
+  }
+
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', nullValues = "NULO", value = {
+      "ha|SERVICO", "HA.|SERVICO", "Hectare|SERVICO", "h|SERVICO", "Hora|SERVICO",
+      "HRS|SERVICO", "diária|SERVICO", "DIARIA|SERVICO", "serv|SERVICO", "SV|SERVICO",
+      "kg|PRODUTO", "SC|PRODUTO", "Saca|PRODUTO", "L|PRODUTO", "litro|PRODUTO", "Un.|PRODUTO",
+      "UNIDADE|PRODUTO", "TON|PRODUTO", "CX|PRODUTO", "xyz|DESCONHECIDA", "NULO|DESCONHECIDA",
+      "' '|DESCONHECIDA"})
+  @DisplayName("#364: a unidade comercial aponta serviço, produto ou nada")
+  void unidadeComercial(String unidade, String esperado) {
+    assertThat(SinaisNotaConferirService.apontaPara(unidade == null ? null : unidade.replace("'", "")))
+        .hasToString(esperado);
   }
 
   @Test
@@ -205,6 +252,37 @@ class SinaisNotaConferirServiceTest {
         .isInstanceOf(IllegalStateException.class);
   }
 
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', nullValues = "NULO", value = {
+      "12019000|true", "1201.90.00|true", "87019000|true", "00000000|false", "99999999|false",
+      "1201|false", "NULO|false", "' '|false"})
+  @DisplayName("#364: NCM de mercadoria = 8 dígitos que não são preenchimento")
+  void ncmDeMercadoria(String ncm, boolean mercadoria) {
+    assertThat(SinaisNotaConferirService.ncmDeMercadoria(ncm == null ? null : ncm.replace("'", "")))
+        .isEqualTo(mercadoria);
+  }
+
+  @Test
+  @DisplayName("#364: termo ambíguo vale como termo sem repetir na lista forte; arquivos coerentes")
+  void listasAmbiguas() throws Exception {
+    SinaisNotaConferirService so = new SinaisNotaConferirService(notas, referencia, classificacao,
+        CLOCK, List.of("serviço"), List.of("Colheita"), List.of());
+    assertThat(so.temTermoDeServico("Colheita de soja")).isTrue();
+    assertThat(so.temTermoDeServico("Soja em grão")).isFalse();
+
+    List<String> fortes = lerLista("sinais-nota/termos-servico.txt");
+    assertThat(lerLista("sinais-nota/termos-ambiguos-servico.txt"))
+        .as("todo termo ambíguo também está em termos-servico.txt").isNotEmpty()
+        .isSubsetOf(fortes);
+  }
+
+  private static List<String> lerLista(String recurso) throws Exception {
+    try (var in = new org.springframework.core.io.ClassPathResource(recurso).getInputStream()) {
+      return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).lines()
+          .map(String::strip).filter(l -> !l.isEmpty() && !l.startsWith("#")).toList();
+    }
+  }
+
   @Test
   @DisplayName("termo de servico conferido antes da referencia de NCM (sem consulta a toa)")
   void semConsultaSemTermo() {
@@ -298,6 +376,12 @@ class SinaisNotaConferirServiceTest {
   private static ItemParaSinal item(int numero, String descricao, String cfop, String ncm) {
     return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null,
         "41", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "PR", "9071425318", null);
+  }
+
+  private static ItemParaSinal comUnidade(ItemParaSinal i, String unidade) {
+    return new ItemParaSinal(i.numeroItem(), i.descricao(), i.cfop(), i.ncm(), unidade,
+        i.quantidade(), i.valorUnitario(), i.cstIcms(), i.tipoEmitente(), i.regimeEmitente(),
+        i.ufEmitente(), i.ufDestinatario(), i.ieDestinatario(), i.cClassTrib());
   }
 
   private static ItemParaSinal itemIcms(int numero, String cfop, String cstIcms, String ufDestino,

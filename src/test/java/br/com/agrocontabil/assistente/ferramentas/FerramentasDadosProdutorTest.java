@@ -748,7 +748,8 @@ class FerramentasDadosProdutorTest {
     assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
       assertThat(t.texto()).isEqualTo("Na nota 116, o item 'Servico de colheita do Joao' saiu"
           + " com CFOP 5.949 (outra saída não especificada) e parece um serviço. Serviço"
-          + " normalmente não sai em nota de produto: confira com seu contador antes de emitir.");
+          + " normalmente não sai em nota de produto (NF-e), e sim em NFS-e de padrão nacional"
+          + " (LC 214/2025, art. 62, § 1º, inciso I): confira com seu contador antes de emitir.");
       assertThat(t.dispositivos()).isEmpty();
     });
   }

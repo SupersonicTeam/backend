@@ -4,6 +4,10 @@
 # entra como linha propria. Revisao do avaliador externo: #275; validacao do contador: #284,
 # perguntas 13 e 14.
 #
+# Termos agricolas da #364 (respostas 13 e 14 do escritorio, #284). Os que tambem aparecem em
+# mercadoria ("secagem", "colheita") estao tambem em termos-ambiguos-servico.txt: la a unidade
+# comercial e o NCM decidem. Aqui, so os que nomeiam uma operacao.
+#
 # Fora de proposito: "transporte" e "armazenagem" sozinhos (aparecem em produto: "big bag para
 # transporte", "soja - remessa para armazenagem"); servico de transporte entra por "frete" ou
 # "servico".
@@ -31,3 +35,23 @@ diaria
 diarias
 empreitada
 empreitadas
+gradagem
+gradagens
+subsolagem
+subsolagens
+aracao
+aracoes
+destoca
+destocas
+desmatamento
+desmatamentos
+calagem
+calagens
+secagem
+secagens
+ensilagem
+ensilagens
+limpeza de graos
+padronizacao de graos
+aplicacao de adubo a lanco
+secagem de graos

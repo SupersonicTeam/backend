@@ -19,6 +19,8 @@ public final class FrasesSinaisNota {
   private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
   private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
   private static final int DESCRICAO_MAXIMA = 60;
+  /** A NFS-e de padrão nacional: os Municípios autorizam o contribuinte a emiti-la (#364). */
+  private static final String ARTIGO_NFSE = "LC 214/2025, art. 62, § 1º, inciso I";
 
   private FrasesSinaisNota() {}
 
@@ -52,8 +54,9 @@ public final class FrasesSinaisNota {
   static String frase(String nota, Sinal s) {
     return switch (s.codigo()) {
       case "PRODUTO_PARECE_SERVICO" -> nota + ", o item '" + curta(s.descricaoItem()) + "' "
-          + motivoServico(s) + " Serviço normalmente não sai em nota de produto: confira com seu"
-          + " contador" + ("ANTES_DE_EMITIR".equals(s.momento()) ? " antes de emitir." : ".");
+          + motivoServico(s) + " Serviço normalmente não sai em nota de produto (NF-e), e sim em"
+          + " NFS-e de padrão nacional (" + ARTIGO_NFSE + "): confira com seu contador"
+          + ("ANTES_DE_EMITIR".equals(s.momento()) ? " antes de emitir." : ".");
       case "VALOR_UNITARIO_FORA_PADRAO" -> nota + ", o preço do item '" + curta(s.descricaoItem())
           + "' (" + FormatoBr.precoUnitario(s.valor()) + " por " + unidade(s.unidade())
           + ") está bem " + ("ABAIXO_DO_PADRAO".equals(s.motivo()) ? "abaixo" : "acima")
@@ -81,6 +84,9 @@ public final class FrasesSinaisNota {
   }
 
   private static String motivoServico(Sinal s) {
+    if ("UNIDADE_DE_SERVICO".equals(s.motivo())) {
+      return "saiu com unidade de serviço (" + unidade(s.unidade()) + ") e parece um serviço.";
+    }
     if ("CFOP_GENERICO".equals(s.motivo()) && s.cfop() != null && s.cfop().strip().length() == 4) {
       String cfop = s.cfop().strip();
       return "saiu com CFOP " + cfop.charAt(0) + "." + cfop.substring(1)
