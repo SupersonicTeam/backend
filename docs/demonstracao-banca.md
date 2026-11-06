@@ -30,7 +30,7 @@ E-mails no domínio reservado `example.com`.
 | `juliana.prado@example.com` | Contador, **ASSISTENTE** | Atende a carteira, mas **não aprova** nota (403 `PAPEL_NAO_AUTORIZADO`) |
 | `carlos.rossi@example.com` | Produtor PF, Sorriso/MT | **O principal:** grãos e algodão, R$ 6,8 mi/ano (acima do limite do art. 164), ~60 notas, compras de insumo com crédito, fila de revisão completa |
 | `financeiro.santaclara@example.com` | Produtor PJ, Patrocínio/MG | Café para torrefação de Uberlândia e cerealista de Patrocínio (vendas internas, ICMS diferido), nota aguardando aprovação, pendência **enviada** com anexo |
-| `luiz.bertoldo@example.com` | Produtor PF, Cascavel/PR | Leite para laticínio, optante do art. 165, nota aguardando aprovação |
+| `luiz.bertoldo@example.com` | Produtor PF, Cascavel/PR | Leite UHT de 1 litro vendido a uma rede de supermercados (alíquota zero, Anexo I), optante do art. 165, nota aguardando aprovação |
 | `helena.takahashi@example.com` | Produtora PF, Mogi das Cruzes/SP | Hortifrúti, **nota com inconsistência** (CFOP 6101 para comprador do mesmo estado), GPS vencendo em 3 dias |
 | `contato.trespontes@example.com` | Produtor PJ, Campo Grande/MS | Pecuária: venda de gado para MS; o touro reprodutor para MG fica **rascunho com o ICMS a definir** |
 | `rogerio.antunes@example.com` | Produtor PF, Rio Verde/GO | **Cota da Ceres no limite:** uma pergunta passa, a segunda recebe 429 |
@@ -133,6 +133,54 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
   regime regular. Pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º;
   issue #298): a NF-e e o DANFE saem com CRT 3 pelo tipo do produtor, o calendário nunca mostra DAS,
   DEFIS nem as obrigações do MEI a ela, e o cadastro com `SIMPLES`/`MEI` é recusado.
+
+## Reset dos dados da demonstração na VPS
+
+Serve para **toda mudança de seed** (ICMS, compradores, leite...): o `SeedDemonstracao` é
+idempotente e não regrava o que já semeou, e as notas emitidas têm XML assinado, então mudar o banco
+por `UPDATE` faria nota e XML divergirem. O caminho é apagar só o que é da demonstração e deixar o
+backend semear de novo pelo pipeline real. **Rodar uma vez, perto da banca, depois que todas as
+mudanças de seed entrarem.**
+
+O que é da demonstração: o escritório "Contabilidade Rural Oeste" (nome **e** CNPJ do seed), os
+contadores dele e os produtores da carteira do `CenarioDemonstracao` (nome na lista **e** vínculo
+com esse escritório: CPF/CNPJ vão cifrados ao banco), com notas, itens, validações, revisões,
+alertas, apurações, guias, pendências e anexos, notificações, vínculos e etiquetas, convites,
+obrigações do escritório, créditos e interações da Ceres, credenciais, sessões e links de senha.
+**Nunca** entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de referência,
+a auditoria (`registro_auditoria`, que sobrevive ao que audita, #149) e qualquer dado fora do seed.
+
+Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
+`ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → reset → seed, com as
+contagens batendo e o homônimo de fora do seed intacto). Copie-os para a pasta `deploy/` da VPS
+(`scp docs/demonstracao/reset-0*.sql <vps>:~/deploy/`) e, nela:
+
+1. **Backup** antes de tudo: `./backup.sh` (o mesmo `pg_dump` do cron).
+2. **Parar o backend**, para nenhum job gravar no meio: `docker compose stop backend`.
+3. **Conferir** (só leitura): as contagens por tabela do que vai ser apagado. Esperado: 1
+   escritório, 3 contadores, 9 produtores, 12 credenciais, ~160 notas.
+
+   ```bash
+   docker compose exec -T postgres sh -c \
+     'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < reset-01-conferencia.sql
+   ```
+
+4. **Apagar** numa transação, filho → pai (`ON_ERROR_STOP`: qualquer erro desfaz tudo):
+
+   ```bash
+   docker compose exec -T postgres sh -c \
+     'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < reset-02-apagar.sql
+   ```
+
+5. **Conferir de novo**: o passo 3 volta tudo zero.
+6. **Subir o backend**: `docker compose start backend`. Com `DEMONSTRACAO_HABILITADA=true`, o log
+   mostra "Demonstracao da banca semeada: 9 produtores, ... (0 recusadas)". Rode o passo 3 mais uma
+   vez: as contagens voltam às do passo 3 original (mesmo dia; as datas são relativas ao dia da
+   semeadura).
+
+Mudou o `CenarioDemonstracao` (nome do escritório, CNPJ, nomes da carteira)? O teste quebra até os
+dois scripts serem atualizados. Os passos manuais abaixo (leite, regime) ficam como histórico: o
+reset os torna desnecessários para os dados do seed.
 
 ## Checklist da VPS: base de legislação da Ceres (issue #343)
 

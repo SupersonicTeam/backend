@@ -56,6 +56,10 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta
   da RN009, em qualquer status); 1,5% até a pergunta A da #284 (o contador citou 1,63%).
 - **Demonstração:** o produtor semeado é optante (art. 165), nas observações do vínculo semeado.
+  Mudança de seed chega à VPS pelo **reset dos dados da demonstração** (`docs/demonstracao/reset-*.sql`,
+  procedimento em `docs/demonstracao-banca.md`, testado no PostgreSQL pelo
+  `ResetDemonstracaoPostgresIntegrationTest`), nunca por `UPDATE` em nota emitida (o XML assinado é o
+  documento).
 - **Produtor pessoa física nunca no Simples nem no MEI (#298, LC 123/2006, art. 3º):** CRT **3**
   na NF-e e no DANFE pelo `tipoProdutor` (`NotaFiscalNfeMapper.crt(tipo, regime)`), qualquer que
   seja o regime gravado; o calendário nunca lhe mostra obrigação só do Simples/MEI

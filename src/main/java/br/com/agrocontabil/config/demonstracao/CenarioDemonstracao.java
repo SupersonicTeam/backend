@@ -130,10 +130,15 @@ final class CenarioDemonstracao {
       "Cerealista Alto Paranaiba Ltda", cnpj("725419860001"), "4801736290084",
       new Endereco("Avenida Faria Pereira", "2100", "Distrito Industrial", "3148103",
           "Patrocinio", "MG", "38740000"));
-  private static final Parte LATICINIO_TOLEDO = new Parte(
-      "Laticinios Oeste Paranaense Ltda", cnpj("836025140001"), "9058213467",
-      new Endereco("Rodovia PR-317", "5800", "Jardim Coopagro", "4127700", "Toledo", "PR",
-          "85903000"));
+  /**
+   * Comprador do leite UHT do Luiz: uma rede de supermercados (revenda ao consumidor), não um
+   * laticínio. Desde o #374/#380, leite vendido a laticínio é o leite cru, in natura (60%); o UHT,
+   * de consumo direto, vai ao varejo, e o par produto × comprador fica coerente com a regra.
+   */
+  private static final Parte SUPERMERCADO_TOLEDO = new Parte(
+      "Supermercados Bom Dia Oeste Ltda", cnpj("847136250001"), "9071324586",
+      new Endereco("Avenida Parigot de Souza", "2380", "Centro", "4127700", "Toledo", "PR",
+          "85900040"));
   private static final Parte DISTRIBUIDORA_SP = new Parte(
       "Distribuidora Hortifruti Paulistana Ltda", cnpj("941736280001"), "117405829110",
       new Endereco("Avenida Doutor Gastao Vidigal", "1946", "Vila Leopoldina", "3550308",
@@ -208,12 +213,12 @@ final class CenarioDemonstracao {
       "Cafe arabica cru em grao, tipo 6, bebida dura, saca 60 kg", "09011110", "SC",
       new BigDecimal("1890.00"));
   /**
-   * Leite pasteurizado em embalagem de 1 litro: consumo direto pela população, então o item
-   * informa o cClassTrib 200003 (Anexo I, item 2, alíquota zero). O 0401.20.10 é UHT e já teria
-   * zero sem ele (#284, decisão de 2026-11-06); o informado fica para a nota não depender do NCM.
+   * Leite UHT integral em caixa de 1 litro (0401.20.10, o UHT da nomenclatura): consumo direto
+   * pela população, alíquota zero pelo Anexo I, item 2, já pela regra (#380). O item ainda informa
+   * o cClassTrib 200003, que não atrapalha e deixa a nota sem depender do NCM.
    */
-  private static final Produto LEITE = new Produto("LEITE-RF",
-      "Leite pasteurizado integral, embalagem de 1 litro", "04012010", "L",
+  private static final Produto LEITE = new Produto("LEITE-UHT",
+      "Leite UHT integral, caixa de 1 litro", "04012010", "L",
       new BigDecimal("2.48"), "200003");
   private static final Produto TOMATE = new Produto("TOM-ITA",
       "Tomate italiano extra AA, caixa 20 kg", "07020000", "CX", new BigDecimal("86.00"));
@@ -308,7 +313,7 @@ final class CenarioDemonstracao {
               "85818899"),
           "luiz.bertoldo@example.com", "(45) 99912-3368", SituacaoVinculo.ATIVO, 1,
           List.of("Leite", "Optante (art. 165)"), OPTANTE, 418,
-          List.of(new LinhaVenda(LEITE, List.of(LATICINIO_TOLEDO), List.of(6, 5, 4, 3, 2, 1, 0), 2,
+          List.of(new LinhaVenda(LEITE, List.of(SUPERMERCADO_TOLEDO), List.of(6, 5, 4, 3, 2, 1, 0), 2,
               new BigDecimal("21000"))),
           List.of(
               new LinhaCompra(RACAO, RACOES_CASCAVEL, List.of(6, 5, 4, 3, 2, 1, 0),
@@ -405,8 +410,8 @@ final class CenarioDemonstracao {
     return TORREFACAO_UBERLANDIA;
   }
 
-  static Parte laticinioToledo() {
-    return LATICINIO_TOLEDO;
+  static Parte supermercadoToledo() {
+    return SUPERMERCADO_TOLEDO;
   }
 
   static Produto soja() {
