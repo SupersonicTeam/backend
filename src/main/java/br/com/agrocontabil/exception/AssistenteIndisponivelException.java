@@ -17,7 +17,7 @@ public class AssistenteIndisponivelException extends DomainException {
 
   /** Mensagem segura para o cliente da API. */
   public static final String MENSAGEM_CLIENTE =
-      "A assistente Ceres esta indisponivel no momento. Tente novamente em instantes.";
+      "A assistente Ceres está indisponível no momento. Tente novamente em instantes.";
 
   /**
    * Cria a exceção com a causa técnica encadeada.

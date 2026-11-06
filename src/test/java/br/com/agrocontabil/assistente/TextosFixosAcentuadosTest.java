@@ -3,9 +3,17 @@ package br.com.agrocontabil.assistente;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.assistente.SecaoResposta.Assunto;
+import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.ferramentas.TextosDosTemplates;
 import br.com.agrocontabil.assistente.orquestracao.FundamentoRetencao;
+import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.TextoReformaTributaria;
+import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
+import br.com.agrocontabil.exception.AssistenteIndisponivelException;
+import br.com.agrocontabil.exception.AssistenteOcupadoException;
+import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
+import br.com.agrocontabil.exception.DomainException;
+import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.TipoProdutor;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,6 +100,29 @@ public class TextosFixosAcentuadosTest {
     textos.put("RotaDados.MENSAGEM_SEM_FUNCAO", RotaDados.MENSAGEM_SEM_FUNCAO);
     textos.put("RotaDados.MENSAGEM_NUMERO_SEM_FONTE", RotaDados.MENSAGEM_NUMERO_SEM_FONTE);
     textos.putAll(composicaoDeDados());
+    // Fallback e mensagens fixas das rotas (PR 3).
+    textos.put("ModoFallback.SEM_MODELO_DADOS", ModoFallback.SEM_MODELO_DADOS);
+    textos.put("ModoFallback.SEM_MODELO_LEI", ModoFallback.SEM_MODELO_LEI);
+    textos.put("ModoFallback.SEM_MODELO_SEM_TRECHO", ModoFallback.SEM_MODELO_SEM_TRECHO);
+    textos.put("RotaLegislacao.SO_TRECHOS", RotaLegislacao.SO_TRECHOS);
+    textos.put("RotaLegislacao.TRECHOS_SEM_CONFIRMACAO", RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+    textos.put("OrquestradorService.LIGACAO_REGRA", OrquestradorService.LIGACAO_REGRA);
+    textos.put("OrquestradorService.LIGACAO_SEM_DADOS", OrquestradorService.LIGACAO_SEM_DADOS);
+    textos.put("OrquestradorService.SEM_DADOS", OrquestradorService.SEM_DADOS);
+    textos.put("OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL",
+        OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
+    textos.put("PromptsCeres.FORA_DE_ESCOPO", PromptsCeres.FORA_DE_ESCOPO);
+    textos.put("ValidadorCitacao.SEM_FUNDAMENTO", ValidadorCitacao.SEM_FUNDAMENTO);
+    // Textos de erro que o produtor lê (ErrorDetail.message dos erros da Ceres).
+    for (DomainException erro : List.<DomainException>of(
+        new AssistenteIndisponivelException("falha tecnica", null),
+        AssistenteOcupadoException.limiteGlobal(), AssistenteOcupadoException.perguntaEmAndamento(),
+        new AssistenteTempoEsgotadoException(), new LimiteUsoAssistenteException(60))) {
+      erro.getErrors().forEach(d -> textos.put(
+          "erro " + d.code() + " " + textos.size(), d.message()));
+    }
+    textos.put("LimiteUsoAssistenteException.MENSAGEM_CLIENTE",
+        LimiteUsoAssistenteException.MENSAGEM_CLIENTE);
     return textos;
   }
 
@@ -164,7 +195,9 @@ public class TextosFixosAcentuadosTest {
         .anyMatch(n -> n.startsWith("tratamento: leite"))
         .anyMatch(n -> n.startsWith("EXPLICACAO_SITUACAO"))
         .anyMatch(n -> n.startsWith("resumo"))
-        .contains("RotaDados.MENSAGEM_SEM_FUNCAO", "siglas explicadas");
+        .anyMatch(n -> n.startsWith("erro ASSISTENTE_OCUPADO"))
+        .contains("RotaDados.MENSAGEM_SEM_FUNCAO", "siglas explicadas",
+            "ModoFallback.SEM_MODELO_LEI", "PromptsCeres.FORA_DE_ESCOPO");
     assertThat(textos.size()).isGreaterThan(150);
     // Os textos não são vazios: um template que devolve vazio não prova nada.
     textos.forEach((nome, texto) -> assertThat(texto).as(nome).isNotBlank());

@@ -76,9 +76,9 @@ public final class PromptsCeres {
 
   /** Resposta fixa para pergunta fora de escopo ou de intenção incerta (sem chamar o modelo). */
   public static final String FORA_DE_ESCOPO =
-      "Sou a Ceres, assistente fiscal do AgroConIA. Respondo sobre as suas notas, a apuracao "
-          + "de IBS e CBS, creditos, vencimentos e a legislacao da reforma tributaria do "
-          + "agronegocio. Essa pergunta esta fora do que consigo responder.";
+      "Sou a Ceres, assistente fiscal do AgroConIA. Respondo sobre as suas notas, a apuração "
+          + "de IBS e CBS, créditos, vencimentos e a legislação da reforma tributária do "
+          + "agronegócio. Essa pergunta está fora do que consigo responder.";
 
   /** Resposta fixa que o modelo deve dar quando os trechos não respondem a pergunta. */
   public static final String NAO_ENCONTREI = "NAO_ENCONTREI";

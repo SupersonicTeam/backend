@@ -272,10 +272,10 @@ Todo erro usa o envelope padrão da API:
   "timestamp": "2026-09-30T14:00:05.804-03:00",
   "status": 503,
   "error": "Service Unavailable",
-  "message": "A assistente Ceres esta indisponivel no momento. Tente novamente em instantes.",
+  "message": "A assistente Ceres está indisponível no momento. Tente novamente em instantes.",
   "path": "/api/assistente/chat",
   "errors": [
-    { "code": "ASSISTENTE_INDISPONIVEL", "message": "A assistente Ceres esta indisponivel no momento. Tente novamente em instantes." }
+    { "code": "ASSISTENTE_INDISPONIVEL", "message": "A assistente Ceres está indisponível no momento. Tente novamente em instantes." }
   ]
 }
 ```
