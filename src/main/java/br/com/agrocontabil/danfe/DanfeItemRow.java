@@ -22,7 +22,10 @@ public class DanfeItemRow {
   /** Código e descrição do produto, com {@code [NCM ...] [cClassTrib ...]} na linha de baixo. */
   private final String descricao;
 
-  /** CST do IBS/CBS e CFOP, um por linha ({@code CST 200}, {@code CFOP 5101}). */
+  /**
+   * CST do ICMS, do IBS/CBS e CFOP, um por linha ({@code ICMS 051}, {@code IBS/CBS 200},
+   * {@code CFOP 5101}).
+   */
   private final String cstCfop;
 
   /** Quantidade e unidade, uma por linha. */

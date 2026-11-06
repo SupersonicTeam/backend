@@ -104,4 +104,31 @@ class NfeToNotaFiscalMapperTest {
     // XML_GERADO liberaria "transmitir" o XML de outro emitente com o certificado do produtor.
     assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.PENDENTE_SEFAZ);
   }
+
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', value = {
+      // caso | grupo ICMS no XML do fornecedor | CST lido | origem lida
+      "ICMS40 do fixture | | 41 | 0",
+      "ICMS00 com valores | <ICMS><ICMS00><orig>1</orig><CST>00</CST><modBC>3</modBC>"
+          + "<vBC>1750.00</vBC><pICMS>12.00</pICMS><vICMS>210.00</vICMS></ICMS00></ICMS> | 00 | 1",
+      "Simples (CSOSN) | <ICMS><ICMSSN102><orig>0</orig><CSOSN>102</CSOSN></ICMSSN102></ICMS>"
+          + " | 102 | 0",
+      "sem o grupo (nota do terceiro segue aceita) | SEM | | "
+  })
+  @DisplayName("Le o CST (ou CSOSN) e a origem do ICMS do XML do terceiro, so para informar")
+  void leIcmsDoTerceiro(String caso, String grupo, String cst, String origem) {
+    String xml = NfeImportTestFixtures.gerarNfeAssinada();
+    String doFixture = "<ICMS><ICMS40><orig>0</orig><CST>41</CST></ICMS40></ICMS>";
+    assertThat(xml).contains(doFixture);
+    if (grupo != null) {
+      xml = xml.replace(doFixture, "SEM".equals(grupo) ? "" : grupo);
+    }
+    ResultadoImportacao r = importer.importar(xml.getBytes(StandardCharsets.UTF_8));
+
+    NotaFiscal nota = mapper.toNotaFiscal(r.nfe(), produtor, r.nfeXml());
+
+    assertThat(nota.getItens().get(0).getCstIcms()).isEqualTo(cst);
+    assertThat(nota.getItens().get(0).getOrigemIcms()).isEqualTo(origem);
+    assertThat(nota.getValorTotalProdutos()).isEqualByComparingTo(new BigDecimal("1750.00"));
+  }
 }

@@ -37,8 +37,21 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   diferimento dos insumos do Anexo IX (art. 138, § 2º) estão **fora do escopo**; a modelagem é a
   [#281](https://github.com/SupersonicTeam/backend/issues/281). Não criar campo de situação fora
   dela.
-- **ICMS e Funrural por guia:** a NF-e não tem o grupo de ICMS por item (total zerado); o sistema
-  trata da reforma e os tributos atuais ficam com o contador. O Funrural/Senar retido pelo
+- **ICMS e Funrural por guia:** o sistema **emite o grupo de ICMS por item, sem calcular ICMS**
+  (`ICMSTot` zerado). A NT 2025.002, regra B25-90, rejeita (1002) a NF-e normal sem o grupo. O CST
+  vem do `nfe/TributacaoIcms` (regra única do XML, da DANFE, do validador e do sinal): o informado
+  (`cstIcms`, só 40/41/50/51/90, os grupos sem valores) ou o **51 (diferimento total)** só na venda
+  interna de produção própria (CFOP 5101) a destinatário com IE (#284, pergunta 9), confirmado só
+  nos pares de `resources/icms/diferimento-confirmado.csv` (hoje MT + soja; fora deles, o sinal não
+  bloqueante `ICMS_PADRAO_A_CONFIRMAR`; resposta nova do contador = uma linha). Fora disso,
+  sem CST: 422 `ICMS_A_DEFINIR` na emissão e o sinal `ICMS_A_DEFINIR` (#276) antes dela; o sistema
+  nunca escolhe CST. Exportação (7xxx) exige 41. O ICMS devido e o ST seguem com o contador, por
+  guia. Nota importada: CST/CSOSN e origem do XML só para informar (sem o grupo, segue aceita).
+  Emitente PJ do Simples/MEI (CRT 1/4): barrado (CSOSN fora do escopo, rejeição 590). **Frontend:**
+  o item ganhou `cstIcms`/`origemIcms` (vazio = não informado); o `PUT` substitui os itens, então
+  a tela que não os reenvia apaga o CST. Até o Angular expor o campo, venda interestadual ou a
+  destinatário sem IE só emite pela API.
+  O Funrural/Senar retido pelo
   adquirente (RN009) sai **destacado no `infCpl`** e nos Dados Adicionais do DANFE (#332):
   `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta
   da RN009, em qualquer status); 1,5% até a pergunta A da #284 (o contador citou 1,63%).
@@ -98,7 +111,7 @@ generalização, não a linguagem real do produtor; conferidas contra
 `src/test/resources/benchmark/perguntas-externas-murillo.txt`; dispositivos `aConferir` até a
 conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando as respostas às
 inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`),
-a 8b (`d8b0b36`) e a 8c (`da90c20`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
+a 8b (`d8b0b36`) e a 8c (`da90c20` e `cd43c5b`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
 `docs/avaliacao/benchmark/ineditas-dados/` (`inedita_equipe_dados`, autor e data, valor esperado
 calculado do seed com teste).
 

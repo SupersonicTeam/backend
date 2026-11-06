@@ -848,9 +848,11 @@ public interface NotaFiscalRepository
    */
   @Query("""
       SELECT new br.com.agrocontabil.repository.ItemParaSinal(
-          i.numeroItem, i.descricao, i.cfop, i.ncm, i.unidade, i.quantidade, i.valorUnitario)
-      FROM NotaFiscalItem i
-      WHERE i.notaFiscal.id = :notaId AND i.notaFiscal.produtor.id = :produtorId
+          i.numeroItem, i.descricao, i.cfop, i.ncm, i.unidade, i.quantidade, i.valorUnitario,
+          i.cstIcms, p.tipoProdutor, p.regimeTributario, p.estado, n.destinatarioEndereco.uf,
+          n.destinatarioIe)
+      FROM NotaFiscalItem i JOIN i.notaFiscal n JOIN n.produtor p
+      WHERE n.id = :notaId AND p.id = :produtorId
       ORDER BY i.numeroItem
       """)
   List<ItemParaSinal> findItensParaSinais(

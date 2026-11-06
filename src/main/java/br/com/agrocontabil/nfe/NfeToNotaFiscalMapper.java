@@ -12,7 +12,10 @@ import br.com.agrocontabil.nfe.model.Dest;
 import br.com.agrocontabil.nfe.model.Det;
 import br.com.agrocontabil.nfe.model.Emit;
 import br.com.agrocontabil.nfe.model.EnderDest;
+import br.com.agrocontabil.nfe.model.Icms;
+import br.com.agrocontabil.nfe.model.IcmsGrupo;
 import br.com.agrocontabil.nfe.model.Ide;
+import br.com.agrocontabil.nfe.model.Imposto;
 import br.com.agrocontabil.nfe.model.InfNFe;
 import br.com.agrocontabil.nfe.model.NFe;
 import br.com.agrocontabil.nfe.model.Prod;
@@ -20,6 +23,7 @@ import br.com.agrocontabil.service.ClassificacaoTributariaService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**
@@ -121,6 +125,7 @@ public class NfeToNotaFiscalMapper {
       valorTotal = quantidade.multiply(valorUnitario);
     }
 
+    Optional<IcmsGrupo> icms = icmsDoTerceiro(det);
     return NotaFiscalItem.builder()
         .numeroItem(parseNItem(det.getNItem()))
         .codigoProduto(prod.getCProd())
@@ -132,8 +137,19 @@ public class NfeToNotaFiscalMapper {
         .quantidade(quantidade)
         .valorUnitario(valorUnitario)
         .valorTotal(valorTotal.setScale(2, java.math.RoundingMode.HALF_UP))
+        .cstIcms(icms.map(IcmsGrupo::cstOuCsosn).filter(c -> c.matches("\\d{2,3}"))
+            .orElse(null))
+        .origemIcms(icms.map(IcmsGrupo::getOrig).filter(o -> o.matches("\\d")).orElse(null))
         .cClassTrib(cClassTribDeclarado(det, prod.getNcm()))
         .build();
+  }
+
+  /**
+   * Grupo de ICMS do item no XML do terceiro, só informativo (o crédito de IBS/CBS não depende
+   * dele). Nota sem o grupo continua aceita: o XML é do fornecedor.
+   */
+  private static Optional<IcmsGrupo> icmsDoTerceiro(Det det) {
+    return Optional.ofNullable(det.getImposto()).map(Imposto::getIcms).flatMap(Icms::grupo);
   }
 
   /**

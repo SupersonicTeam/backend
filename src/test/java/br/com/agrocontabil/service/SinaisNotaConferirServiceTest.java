@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.repository.ItemParaSinal;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -107,6 +109,56 @@ class SinaisNotaConferirServiceTest {
     assertThat(service.sinais(outro, nota(StatusNotaFiscal.RASCUNHO, EMISSAO))).isEmpty();
   }
 
+  @Test
+  @DisplayName("ICMS_A_DEFINIR: item sem CST fora da venda interna a contribuinte, antes de emitir")
+  void icmsADefinir() {
+    itens(itemIcms(1, "5101", null, "MT", "133518276"), // padrao: 51, sem sinal
+        itemIcms(2, "6101", null, "PR", "9071425318"), // interestadual sem CST
+        itemIcms(3, "5101", null, "MT", null), // destinatario sem IE
+        itemIcms(4, "6101", "41", "PR", "9071425318")); // informado
+
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.RASCUNHO, EMISSAO)))
+        .filteredOn(s -> s.codigo() == CodigoSinalNota.ICMS_A_DEFINIR)
+        .extracting(SinalNota::numeroItem, SinalNota::motivo, SinalNota::momento)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(2, Motivo.SEM_CST_ICMS, Momento.ANTES_DE_EMITIR),
+            org.assertj.core.groups.Tuple.tuple(3, Motivo.SEM_CST_ICMS, Momento.ANTES_DE_EMITIR));
+  }
+
+  @Test
+  @DisplayName("ICMS_PADRAO_A_CONFIRMAR: 51 do padrao fora de MT + soja, sem bloquear; so antes do XML")
+  void icmsPadraoAConfirmar() {
+    itens(new ItemParaSinal(1, "Soja em grao", "5101", "12019000", "KG", java.math.BigDecimal.ONE,
+            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"),
+        new ItemParaSinal(2, "Milho em grao", "5101", "10059010", "KG", java.math.BigDecimal.ONE,
+            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"),
+        new ItemParaSinal(3, "Milho em grao", "5101", "10059010", "KG", java.math.BigDecimal.ONE,
+            null, "51", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"));
+
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.AGUARDANDO_APROVACAO, EMISSAO)))
+        .extracting(SinalNota::codigo, SinalNota::numeroItem, SinalNota::motivo)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple(
+            CodigoSinalNota.ICMS_PADRAO_A_CONFIRMAR, 2, Motivo.PADRAO_NAO_CONFIRMADO));
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.XML_GERADO, EMISSAO))).isEmpty();
+  }
+
+  @Test
+  @DisplayName("ICMS_A_DEFINIR so antes do XML: gerado, rejeitado ou autorizado, nada a combinar")
+  void icmsADefinirSoAntesDoXml() {
+    itens(itemIcms(1, "6101", null, "PR", "9071425318"),
+        itemIcms(2, "7101", "40", "EX", null)); // exportacao com CST errado tambem barra
+
+    for (StatusNotaFiscal status : List.of(StatusNotaFiscal.XML_GERADO,
+        StatusNotaFiscal.REJEITADA, StatusNotaFiscal.AUTORIZADA)) {
+      assertThat(service.sinais(PRODUTOR, nota(status, EMISSAO))).as("%s", status).isEmpty();
+    }
+    for (StatusNotaFiscal status : List.of(StatusNotaFiscal.RASCUNHO,
+        StatusNotaFiscal.DEVOLVIDA, StatusNotaFiscal.AGUARDANDO_APROVACAO)) {
+      assertThat(service.sinais(PRODUTOR, nota(status, EMISSAO))).as("%s", status)
+          .extracting(SinalNota::numeroItem).containsExactly(1, 2);
+    }
+  }
+
   @ParameterizedTest
   @EnumSource(value = StatusNotaFiscal.class,
       names = {"ENVIANDO", "PENDENTE_SEFAZ", "CANCELANDO", "CANCELADA"})
@@ -182,7 +234,16 @@ class SinaisNotaConferirServiceTest {
     when(notas.findItensParaSinais(NOTA, PRODUTOR)).thenReturn(List.of(itens));
   }
 
+  /** Item com o CST do ICMS informado: as regras que não olham o ICMS não veem o sinal dele. */
   private static ItemParaSinal item(int numero, String descricao, String cfop, String ncm) {
-    return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null);
+    return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null,
+        "41", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "PR", "9071425318");
+  }
+
+  private static ItemParaSinal itemIcms(int numero, String cfop, String cstIcms, String ufDestino,
+      String ieDestino) {
+    return new ItemParaSinal(numero, "Soja em grao", cfop, "12019000", "KG",
+        java.math.BigDecimal.ONE, null, cstIcms, TipoProdutor.PESSOA_FISICA,
+        RegimeTributario.REAL, "MT", ufDestino, ieDestino);
   }
 }

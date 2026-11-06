@@ -39,7 +39,11 @@ public record SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento,
     /** Outra nota própria com o mesmo destinatário, valor, itens e dia. */
     POSSIVEL_DUPLICIDADE,
     /** Valor unitário mais de 3 vezes acima ou abaixo da mediana do mesmo NCM e unidade. */
-    VALOR_UNITARIO_FORA_PADRAO
+    VALOR_UNITARIO_FORA_PADRAO,
+    /** Item sem CST de ICMS fora da venda interna de produção própria: a emissão é barrada. */
+    ICMS_A_DEFINIR,
+    /** CST 51 pelo padrão num par (UF; NCM) que o contador não confirmou: não bloqueia. */
+    ICMS_PADRAO_A_CONFIRMAR
   }
 
   /** Por que o sinal disparou. */
@@ -54,7 +58,11 @@ public record SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento,
     /** Valor unitário acima de 3 vezes a mediana. */
     ACIMA_DO_PADRAO,
     /** Valor unitário abaixo de um terço da mediana. */
-    ABAIXO_DO_PADRAO
+    ABAIXO_DO_PADRAO,
+    /** Sem CST do ICMS informado e fora do padrão (CFOP 5101 interno a contribuinte). */
+    SEM_CST_ICMS,
+    /** Diferimento (CST 51) aplicado por padrão fora da lista confirmada pelo contador. */
+    PADRAO_NAO_CONFIRMADO
   }
 
   /** Em que ponto a nota está, para a frase dizer o que ainda dá para fazer. */

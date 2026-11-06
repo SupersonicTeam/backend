@@ -41,6 +41,7 @@ import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NfeToNotaFiscalMapper;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
+import br.com.agrocontabil.nfe.TributacaoIcms;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.model.NFe;
 import br.com.agrocontabil.repository.ContadorRepository;
@@ -606,6 +607,11 @@ public class SeedDemonstracao implements CommandLineRunner {
         .build());
   }
 
+  /** Algum item sem CST de ICMS, que o pipeline de emissão barraria (422 ICMS_A_DEFINIR). */
+  private static boolean icmsADefinir(NotaFiscal nota) {
+    return nota.getItens().stream().anyMatch(i -> TributacaoIcms.problema(nota, i).isPresent());
+  }
+
   /** O que a venda planejada vira: nota autorizada ou um dos estados da fila. */
   enum Especial { NENHUM, NO_PRAZO, CANCELADA, AGUARDANDO, DEVOLVIDA, RASCUNHO, COM_INCONSISTENCIAS }
 
@@ -630,10 +636,10 @@ public class SeedDemonstracao implements CommandLineRunner {
               CenarioDemonstracao.graneleiraTelesPires(), soja, new BigDecimal("37120"),
               soja.preco(), Especial.CANCELADA),
           new VendaPlanejada(noDia(hoje.minusDays(3), 14),
-              CenarioDemonstracao.exportadoraParanagua(), soja, new BigDecimal("37980"),
+              CenarioDemonstracao.tradingLucas(), soja, new BigDecimal("37980"),
               soja.preco(), Especial.DEVOLVIDA),
           new VendaPlanejada(noDia(hoje.minusDays(1), 9),
-              CenarioDemonstracao.exportadoraParanagua(), soja, new BigDecimal("37400"),
+              CenarioDemonstracao.tradingLucas(), soja, new BigDecimal("37400"),
               soja.preco(), Especial.AGUARDANDO),
           new VendaPlanejada(noDia(hoje, 8), CenarioDemonstracao.graneleiraTelesPires(), soja,
               new BigDecimal("36200"), soja.preco(), Especial.RASCUNHO));
@@ -685,7 +691,7 @@ public class SeedDemonstracao implements CommandLineRunner {
         revisao(nota, AcaoRevisao.ENVIADA, null, produtor.getId(), PapelUsuario.PRODUTOR,
             nota.getDataEmissao());
         revisao(nota, AcaoRevisao.DEVOLVIDA, "Peso divergente do romaneio: a balanca do "
-            + "terminal registrou 36.420 kg. Corrija a quantidade antes de reenviar.",
+            + "armazem da trading registrou 36.420 kg. Corrija a quantidade antes de reenviar.",
             revisor.getId(), PapelUsuario.CONTADOR, nota.getDataEmissao().plusHours(5));
       }
       case RASCUNHO -> {
@@ -693,6 +699,13 @@ public class SeedDemonstracao implements CommandLineRunner {
         ex.notas++;
       }
       default -> {
+        if (icmsADefinir(nota)) {
+          // Sem CST de ICMS defensavel (milho ao pecuarista sem IE, touro reprodutor
+          // interestadual): fica rascunho e mostra na banca o sinal e o 422 ICMS_A_DEFINIR.
+          notaRepository.save(nota);
+          ex.notas++;
+          return;
+        }
         // NENHUM e NO_PRAZO: autorizada, com o historico da aprovacao quando ha escritorio.
         if (autorizar(ex, nota) && comEscritorio) {
           historicoAprovado(nota, produtor, revisor);

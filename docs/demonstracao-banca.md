@@ -9,6 +9,10 @@ a subida. Na VPS (`https://www.agroconia.com.br`, profile `homolog`) ele está l
   para este documento.
 - **Idempotente:** com a administradora no banco, nada é recriado. Para semear de novo (as datas
   andam com o dia da semeadura), zere o banco como no `deploy/README.md`.
+- **Grupo de ICMS (#376):** as notas novas do seed saem com o grupo `ICMS` (CST 51 nas vendas
+  internas) e com os compradores internos. As notas já gravadas e emitidas na VPS guardam o XML
+  assinado de antes, sem o grupo e com os compradores antigos; a VPS só reflete o cenário novo
+  (inclusive o passo 4 do roteiro) depois do reset dos dados da demonstração.
 - **Dados fictícios com forma de dado real:** CPF/CNPJ com DV válido, município com o código IBGE
   real, NCM da referência, CFOP pela UF das partes, preços de 2026 e IBS/CBS calculados pelo próprio
   sistema. Nenhuma razão social é de empresa real.
@@ -25,10 +29,10 @@ E-mails no domínio reservado `example.com`.
 | `rafael.costa@example.com` | Contador, **CONTADOR** | Aprova e devolve nota, reabre apuração; não gerencia a equipe (403) |
 | `juliana.prado@example.com` | Contador, **ASSISTENTE** | Atende a carteira, mas **não aprova** nota (403 `PAPEL_NAO_AUTORIZADO`) |
 | `carlos.rossi@example.com` | Produtor PF, Sorriso/MT | **O principal:** grãos e algodão, R$ 6,8 mi/ano (acima do limite do art. 164), ~60 notas, compras de insumo com crédito, fila de revisão completa |
-| `financeiro.santaclara@example.com` | Produtor PJ, Patrocínio/MG | Café para torrefação e exportadora de Santos (interestadual), nota aguardando aprovação, pendência **enviada** com anexo |
+| `financeiro.santaclara@example.com` | Produtor PJ, Patrocínio/MG | Café para torrefação de Uberlândia e cerealista de Patrocínio (vendas internas, ICMS diferido), nota aguardando aprovação, pendência **enviada** com anexo |
 | `luiz.bertoldo@example.com` | Produtor PF, Cascavel/PR | Leite para laticínio, optante do art. 165, nota aguardando aprovação |
 | `helena.takahashi@example.com` | Produtora PF, Mogi das Cruzes/SP | Hortifrúti, **nota com inconsistência** (CFOP 6101 para comprador do mesmo estado), GPS vencendo em 3 dias |
-| `contato.trespontes@example.com` | Produtor PJ, Campo Grande/MS | Pecuária: venda de reprodutores para MS e MG |
+| `contato.trespontes@example.com` | Produtor PJ, Campo Grande/MS | Pecuária: venda de gado para MS; o touro reprodutor para MG fica **rascunho com o ICMS a definir** |
 | `rogerio.antunes@example.com` | Produtor PF, Rio Verde/GO | **Cota da Ceres no limite:** uma pergunta passa, a segunda recebe 429 |
 | `granja.toledo@example.com` | Produtor PJ, Toledo/PR | Ovos, DARF que **vence amanhã** (aviso urgente) |
 | `arrozeira.schmitt@example.com` | Produtor PJ, Pelotas/RS | Vínculo **suspenso** (some da carteira ativa) |
@@ -53,12 +57,20 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    nota autorizada; a nota emitida há 27 dias gera o alerta de **fim do prazo de cancelamento**
    (RN006/RN010); a **cancelada** mostra o motivo e o protocolo; o pedido do escritório (extrato
    bancário) está no calendário.
-4. **Erro de validação (Helena).** A nota de tomate está `COM_INCONSISTENCIAS`: o histórico de
+4. **ICMS a definir (Carlos e Três Pontes).** Os rascunhos de venda de milho do Carlos ao
+   pecuarista Antônio Carlos Pereira (pessoa física **sem IE**) e o do touro reprodutor da Três
+   Pontes para MG não têm CST de ICMS. O sistema só preenche sozinho o **51 (diferimento)** na venda
+   interna de produção própria a quem tem IE. Mostrar: a Ceres aponta o sinal "esta sem o CST do
+   ICMS" na nota; enviar para revisão ou gerar o XML responde **422 `ICMS_A_DEFINIR`**, com a
+   sugestão "Informe o CST do ICMS combinado com o contador: 40, 41, 50, 51 ou 90". O sistema nunca
+   escolhe o CST. Sem o grupo de ICMS, a SEFAZ rejeitaria a NF-e (rejeição 1002, NT 2025.002, regra
+   B25-90).
+5. **Erro de validação (Helena).** A nota de tomate está `COM_INCONSISTENCIAS`: o histórico de
    validação explica o CFOP 6101 para comprador de SP. Trocar o CFOP para 5101, gerar de novo e
    enviar para revisão.
-5. **Reabertura (RN005, #224).** Como Patrícia ou Rafael, reabrir um mês fechado de até três meses
+6. **Reabertura (RN005, #224).** Como Patrícia ou Rafael, reabrir um mês fechado de até três meses
    atrás de um cliente; além disso, 422 `REABERTURA_FORA_PRAZO`.
-6. **Ceres.** Os três atalhos da tela respondem mesmo sem o modelo (#343): "Quanto eu tenho que
+7. **Ceres.** Os três atalhos da tela respondem mesmo sem o modelo (#343): "Quanto eu tenho que
    pagar este mês?" e "Quando vence a minha próxima guia?" pelas funções de guias, e "O que muda
    para mim com o IBS e o CBS?" com o texto explicado (#347): o que são, o calendário de 2026 a
    2033, venda, compras, pagamento, quem paga e o próximo passo, cada item com o dispositivo.
@@ -76,7 +88,7 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.
-7. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
+8. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
    **urgente**; na Helena, a GPS de daqui a 3 dias sai como **próximo**.
 
 ## O que o cálculo mostra (e por quê)
@@ -102,7 +114,21 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
 - O 60% da soja e do milho (art. 137) segue em validação com o contador (#284, pergunta 1). Não
   afirmar na banca que esse enquadramento é definitivo.
 - **ICMS e Funrural** ficam por guia (premissa da #280): as guias mensais são de Funrural (PF) e
-  ICMS (PJ).
+  ICMS (PJ). A NF-e leva o **grupo de ICMS por item**, sem calcular o ICMS (premissas, seção 3):
+  - venda interna de produção própria a contribuinte → **CST 51**, diferimento total, ICMS zero.
+    A **soja em MT** (Carlos → Graneleira Teles Pires e Trading Chapadão do Norte) tem o
+    diferimento confirmado pelo escritório (#284, pergunta 9). O **café em MG** (Santa Clara →
+    Torrefação de Uberlândia e Cerealista Alto Paranaíba) é de demonstração, **a confirmar com o
+    contador**. As demais vendas internas do seed (milho, algodão, leite, ovos e outras) também
+    saem com o padrão 51, igualmente a confirmar. Na fila de revisão, as notas fora de MT + soja
+    (o café da Santa Clara e o leite do Luiz) mostram o sinal **não bloqueante**
+    `ICMS_PADRAO_A_CONFIRMAR`. É esperado e faz parte da demonstração: o sistema aplica o padrão e
+    avisa o que o contador ainda não confirmou;
+  - toda venda autorizada do seed é interna a contribuinte. As sem CST defensável ficam rascunho
+    com o ICMS a definir (roteiro, passo 4). Antes, o Carlos vendia soja a um terminal exportador no
+    PR e a Santa Clara, café a uma exportadora em Santos. A exportação indireta traria a suspensão
+    do IBS/CBS (LC 214/2025, art. 82) e a imunidade do Funrural, que o sistema não modela; por isso
+    mudou o comprador, e não a operação.
 - **Regime:** todo produtor pessoa física é de regime normal (CRT 3), coerente com a premissa do
   regime regular. Pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º;
   issue #298): a NF-e e o DANFE saem com CRT 3 pelo tipo do produtor, o calendário nunca mostra DAS,

@@ -191,6 +191,22 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0054: CST e origem do ICMS por item, nulos e sem preenchimento")
+  void changeSet0054IcmsDoItem() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'nota_fiscal_item'"
+            + " AND column_name IN ('cst_icms', 'origem_icms') ORDER BY column_name");
+
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"), c -> ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("cst_icms", "character varying", "YES", 3),
+            tuple("origem_icms", "character varying", "YES", 1));
+  }
+
+  @Test
   @DisplayName("changeSet 0051: em casca in natura, semente sem a marca, parboilizado fora")
   void changeSet0051ArrozEmCascaInNatura() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -207,7 +223,7 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("changeSet 0053: o 0401.20.10 da referencia se descreve como UHT (#380)")
+  @DisplayName("changeSet 0054: o 0401.20.10 da referencia se descreve como UHT (#380)")
   void changeSet0053LeiteUhtDescricao() {
     assertThat(new JdbcTemplate(dataSource).queryForObject(
         "SELECT descricao FROM ncm_agropecuario WHERE codigo = '04012010'", String.class))

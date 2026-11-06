@@ -2,6 +2,7 @@ package br.com.agrocontabil.nfe;
 
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.model.EnderecoProdutor;
+import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.UfIbge;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
@@ -353,6 +354,7 @@ public class FiscalRulesValidator {
         validarAmbitoCfop(nota, item, prefixo, violations);
       }
 
+      validarIcms(nota, item, prefixo, violations);
       validarTributacaoIbsCbs(nota, item, prefixo, violations);
 
       if (item.getValorTotal() == null
@@ -362,6 +364,53 @@ public class FiscalRulesValidator {
                 prefixo + ".valorTotal", "Valor total do item deve ser maior que zero"));
       }
     }
+  }
+
+  /**
+   * Grupo {@code ICMS} do item ({@link TributacaoIcms#problema}): toda NF-e normal precisa dele (NT
+   * 2025.002 v1.53, regra B25-90, rejeição 1002). Sem CST informado e fora da venda interna de
+   * produção própria a contribuinte, o CST fica a definir com o contador: 422
+   * {@code ICMS_A_DEFINIR}, sem o sistema escolher um. O CST informado tem de ser um dos que o
+   * leiaute aceita sem o cálculo do ICMS (o DTO já barra os outros; aqui alcança a nota gravada
+   * antes) e, no CFOP de exportação (7xxx), o 41 (MOC 7.00, regra N12-10, rejeição 527). Emitente
+   * do Simples ou MEI informa CSOSN, que o sistema não monta. Sem CFOP, só a falta do CFOP é
+   * apontada.
+   */
+  private void validarIcms(NotaFiscal nota, NotaFiscalItem item, String prefixo,
+      List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+    if (isBlank(item.getCfop())) {
+      return;
+    }
+    Optional<TributacaoIcms.Problema> problema = TributacaoIcms.problema(nota, item);
+    if (problema.isEmpty()) {
+      return;
+    }
+    String campo = prefixo + ".cstIcms";
+    String cst = item.getCstIcms() == null ? "" : item.getCstIcms().strip();
+    violations.add(switch (problema.get()) {
+      case A_DEFINIR -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
+          "ICMS a definir com o contador: o CST do ICMS so tem padrao na venda interna de"
+              + " producao propria (CFOP " + TributacaoIcms.CFOP_VENDA_PRODUCAO_INTERNA
+              + ") a destinatario com inscricao estadual (diferimento, CST 51)",
+          ErrorCode.ICMS_A_DEFINIR, "Informe o CST do ICMS combinado com o contador: "
+              + TributacaoIcms.CSTS_SEM_CALCULO_TEXTO);
+      case EXPORTACAO_A_DEFINIR -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+          campo, "ICMS a definir: exportacao (CFOP " + item.getCfop() + ") sem o CST do ICMS",
+          ErrorCode.ICMS_A_DEFINIR, "Na exportacao o CST do ICMS e o "
+              + TributacaoIcms.CST_NAO_TRIBUTADA + " (rejeicao 527 da SEFAZ); confirme com o"
+              + " contador e informe-o");
+      case FORA_DA_LISTA -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
+          "CST do ICMS " + cst + " exige o calculo do ICMS, que o sistema nao faz: use "
+              + TributacaoIcms.CSTS_SEM_CALCULO_TEXTO);
+      case EXPORTACAO_SEM_41 -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
+          "Exportacao (CFOP " + item.getCfop() + ") exige o CST do ICMS "
+              + TributacaoIcms.CST_NAO_TRIBUTADA + " (rejeicao 527 da SEFAZ); informado " + cst);
+      case EMITENTE_SIMPLES -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
+          "Emitente do Simples Nacional ou MEI informa o ICMS por CSOSN (grupos ICMSSN), que o"
+              + " sistema ainda nao emite: a SEFAZ rejeita CST para esse emitente (rejeicao 590)",
+          ErrorCode.ICMS_A_DEFINIR, "Emita esta nota com o contador ate o sistema tratar o"
+              + " Simples Nacional");
+    });
   }
 
   /**
@@ -440,7 +489,7 @@ public class FiscalRulesValidator {
                   + " NCM " + item.getNcm() + ": a hipotese de reducao dele nao inclui esse NCM"
                   + " na tabela oficial (LC 214/2025). Para este NCM valem: " + admitidos
                   + " (alem de 000001 e 200036)",
-              "Informe o cClassTrib " + nao.regra().cClassTrib() + " ("
+              null, "Informe o cClassTrib " + nao.regra().cClassTrib() + " ("
                   + nao.regra().percentualReducao().stripTrailingZeros().toPlainString()
                   + "% de reducao, a regra do NCM), outro da lista ou retire o cClassTrib do"
                   + " item",

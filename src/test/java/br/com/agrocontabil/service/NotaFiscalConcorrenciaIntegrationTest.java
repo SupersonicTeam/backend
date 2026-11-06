@@ -238,6 +238,7 @@ class NotaFiscalConcorrenciaIntegrationTest {
         .descricao("Soja em graos")
         .ncm("12019000")
         .cfop("6101")
+        .cstIcms("41")
         .unidade("KG")
         .quantidade(BigDecimal.ONE)
         .valorUnitario(new BigDecimal("1000.00"))

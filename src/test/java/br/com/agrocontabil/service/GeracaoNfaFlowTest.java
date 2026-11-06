@@ -192,6 +192,7 @@ class GeracaoNfaFlowTest {
         .produtor(produtor)
         .destinatarioNome("COMPRADORA SA")
         .destinatarioCpfCnpj("11222333000181")
+        .destinatarioIe("9071425318") // contribuinte: venda interna 5101 sai com ICMS51
         .destinatarioEndereco(endDest)
         .valorTotalProdutos(new BigDecimal("1000.00"))
         .valorTotalNota(new BigDecimal("1000.00"))
