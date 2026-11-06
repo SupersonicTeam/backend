@@ -90,11 +90,11 @@ public final class ClarezaTexto {
       "IBS", "CBS", "NF-e", "NCM", "CFOP", "Funrural", "DANFE", "SEFAZ");
 
   /**
-   * Siglas da régua que aparecem no texto sem nenhuma das explicações aceitas, na ordem da
-   * régua.
+   * Siglas da régua que aparecem no texto sem a forma por extenso nem expressão aceita (a
+   * definição do glossário não conta, como na Ceres 1), na ordem do glossário.
    */
   static List<String> siglasSemExplicacao(String texto) {
-    return GlossarioProdutor.padrao().siglasSemExplicacao(texto).stream()
+    return GlossarioProdutor.padrao().siglasSemNome(texto).stream()
         .map(GlossarioProdutor.Termo::termo)
         .filter(SIGLAS_DA_REGUA::contains)
         .toList();

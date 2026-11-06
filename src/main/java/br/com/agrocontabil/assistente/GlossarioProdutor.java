@@ -22,8 +22,9 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
  *
  * <p>A comparação com o texto ignora acento e caixa (a mesma normalização da busca): a explicação
  * já escrita por outro texto do backend conta, com ou sem acento. Função pura, sem Spring. O arquivo
- * é lido na primeira vez que a classe é usada (não na subida): o {@code GlossarioProdutorTest}
- * carrega o arquivo real no CI, e o JAR sai depois dele.
+ * é lido na primeira vez que a classe é usada; o bean do {@code AssistenteConfig} força essa leitura
+ * na subida, então arquivo ausente ou termo inválido derruba a aplicação na hora. O
+ * {@code GlossarioProdutorTest} também carrega o arquivo real no CI.
  */
 public final class GlossarioProdutor {
 
@@ -71,11 +72,20 @@ public final class GlossarioProdutor {
      * @param normalizado texto já normalizado por {@link NormalizacaoBusca#normalizar}
      */
     public boolean explicadoEm(String normalizado) {
+      return explicadoPorNome(normalizado) || normalizado.contains(explicacaoNormalizada);
+    }
+
+    /**
+     * O texto traz a forma por extenso ou uma expressão aceita, sem contar a definição do
+     * glossário: é a régua da medição de clareza (#264), que já valia na Ceres 1.
+     *
+     * @param normalizado texto já normalizado por {@link NormalizacaoBusca#normalizar}
+     */
+    public boolean explicadoPorNome(String normalizado) {
       if (nomeNormalizado != null && normalizado.contains(nomeNormalizado)) {
         return true;
       }
-      return normalizado.contains(explicacaoNormalizada)
-          || aceitas.stream().anyMatch(normalizado::contains);
+      return aceitas.stream().anyMatch(normalizado::contains);
     }
   }
 
@@ -168,6 +178,20 @@ public final class GlossarioProdutor {
     String normalizado = NormalizacaoBusca.normalizar(texto);
     return termos.stream()
         .filter(t -> t.apareceEm(texto) && !t.explicadoEm(normalizado))
+        .toList();
+  }
+
+  /**
+   * Siglas que aparecem no texto sem a forma por extenso nem expressão aceita, na ordem do
+   * glossário. A definição do glossário não conta: é a régua da medição de clareza (#264).
+   */
+  public List<Termo> siglasSemNome(String texto) {
+    if (texto == null || texto.isBlank()) {
+      return List.of();
+    }
+    String normalizado = NormalizacaoBusca.normalizar(texto);
+    return termos.stream()
+        .filter(t -> t.sigla() && t.apareceEm(texto) && !t.explicadoPorNome(normalizado))
         .toList();
   }
 

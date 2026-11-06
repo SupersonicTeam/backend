@@ -40,8 +40,8 @@ class GlossarioProdutorTest {
   @DisplayName("O padrão de cada termo acha o próprio termo e não acha pedaço de outra palavra")
   void padraoAchaOTermo() {
     for (Termo t : GLOSSARIO.termos()) {
-      // LC e EC só valem seguidas de número ("LC 214/2025").
-      assertThat(t.padrao().matcher("sobre " + t.termo() + " 214 aqui").find()).as(t.termo())
+      // LC e EC só valem com número e ano ("LC 214/2025").
+      assertThat(t.padrao().matcher("sobre " + t.termo() + " 214/2025 aqui").find()).as(t.termo())
           .isTrue();
       assertThat(t.padrao().matcher("xx" + t.termo() + "xx").find()).as(t.termo()).isFalse();
     }
@@ -59,9 +59,14 @@ class GlossarioProdutorTest {
   }
 
   @Test
-  @DisplayName("LC e EC só valem com número; 'crédito presumido' não é o crédito do glossário")
+  @DisplayName("LC e EC só valem com número e ano; 'crédito presumido' não é o crédito do glossário")
   void padroesRestritos() {
     assertThat(GLOSSARIO.semExplicacao("o cliente LC Agropecuária Ltda")).isEmpty();
+    // EC é também a formulação de defensivo (concentrado emulsionável): sem ano não é emenda.
+    assertThat(GLOSSARIO.semExplicacao("aplicar o Fungicida EC 250 na lavoura")).isEmpty();
+    assertThat(GLOSSARIO.aExplicar("aplicar o Fungicida EC 250 na lavoura")).isEmpty();
+    assertThat(GLOSSARIO.semExplicacao("a EC 132/2023")).extracting(Termo::termo)
+        .containsExactly("EC");
     assertThat(GLOSSARIO.semExplicacao("conforme a LC 214/2025")).extracting(Termo::termo)
         .containsExactly("LC");
     assertThat(GLOSSARIO.semExplicacao("pode apropriar crédito presumido")).isEmpty();

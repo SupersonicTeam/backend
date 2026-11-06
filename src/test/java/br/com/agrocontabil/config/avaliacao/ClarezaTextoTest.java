@@ -2,6 +2,7 @@ package br.com.agrocontabil.config.avaliacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.assistente.GlossarioProdutor;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,20 @@ class ClarezaTextoTest {
           ClarezaTexto.medir("Veja o " + sigla + ", " + e + ".").siglasSemExplicacao())
           .as(sigla + " / " + e).isEmpty());
     });
+  }
+
+  @Test
+  @DisplayName("Régua da Ceres 1: a definição do glossário sozinha não explica a sigla")
+  void definicaoDoGlossarioNaoContaNaReguaDaMedicao() {
+    // "imposto dos municípios sobre serviços" é a definição do ISS e "o imposto..." a do IBS;
+    // aqui só a definição (sem o nome nem as expressões aceitas) aparece junto da sigla.
+    String definicaoDaCbs = GlossarioProdutor.padrao().termos().stream()
+        .filter(t -> t.termo().equals("CBS")).findFirst().orElseThrow().explicacao();
+    assertThat(ClarezaTexto.medir("A CBS: " + definicaoDaCbs + ".").siglasSemExplicacao())
+        .containsExactly("CBS");
+    // Já a composição e os testes de texto fixo aceitam a definição.
+    assertThat(GlossarioProdutor.padrao().semExplicacao("A CBS: " + definicaoDaCbs + "."))
+        .extracting(GlossarioProdutor.Termo::termo).doesNotContain("CBS");
   }
 
   @Test

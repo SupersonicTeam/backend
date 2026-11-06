@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.llm.PoliticaRetryModelo;
 import br.com.agrocontabil.assistente.llm.ThinkOptionConverter;
 import org.slf4j.Logger;
@@ -36,6 +37,15 @@ public class AssistenteConfig {
   @ConfigurationPropertiesBinding
   static ThinkOptionConverter thinkOptionConverter() {
     return new ThinkOptionConverter();
+  }
+
+  /**
+   * Glossário do produtor (#267) como bean: lê o {@code glossario-produtor.yml} na subida, então
+   * arquivo ausente ou termo inválido derruba a aplicação na hora (e não na primeira resposta).
+   */
+  @Bean
+  GlossarioProdutor glossarioProdutor() {
+    return GlossarioProdutor.padrao();
   }
 
   /**

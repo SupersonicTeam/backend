@@ -107,11 +107,37 @@ class ComposicaoRespostaDadosTest {
     // Seguida de palavra: vírgula dos dois lados.
     assertThat(ComposicaoRespostaDados.explicarSiglas("Vale (LC 214/2025 art. 5)."))
         .isEqualTo("Vale (LC 214/2025, lei complementar, art. 5).");
+    // Nunca sobra vírgula colada em pontuação: ':', '?', '!', ';' e ')' separam sozinhos.
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Vale (LC 214/2025: art. 5)."))
+        .isEqualTo("Vale (LC 214/2025, lei complementar: art. 5).");
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Vale (e a LC 214/2025?)"))
+        .isEqualTo("Vale (e a LC 214/2025, lei complementar?)");
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Vale (a LC 214/2025!) mesmo."))
+        .isEqualTo("Vale (a LC 214/2025, lei complementar!) mesmo.");
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Vale (LC 214/2025; art. 5)."))
+        .isEqualTo("Vale (LC 214/2025, lei complementar; art. 5).");
+    // Par com barra: a vírgula separaria a barra do par, então a primeira sigla fica entre
+    // parênteses (único aninhamento que sobra) e a segunda segue a regra da vírgula.
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Valores (IBS/CBS do mês) na nota."))
+        .isEqualTo("Valores (IBS (imposto sobre bens e serviços)/CBS, contribuição sobre bens e"
+            + " serviços, do mês) na nota.");
     // Parêntese fechado antes da sigla, ou em outro parágrafo: forma normal, entre parênteses.
     assertThat(ComposicaoRespostaDados.explicarSiglas("Veja (isto) e a LC 214/2025."))
         .isEqualTo("Veja (isto) e a LC 214/2025 (lei complementar).");
     assertThat(ComposicaoRespostaDados.explicarSiglas("Aberto (sem fechar\n\nA LC 214/2025 vale."))
         .isEqualTo("Aberto (sem fechar\n\nA LC 214/2025 (lei complementar) vale.");
+  }
+
+  @Test
+  @DisplayName("#267: 'EC 250' (formulação de defensivo) e 'LC' sem ano não são norma")
+  void produtoComSiglaDeNormaNaoERotulado() {
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Fungicida EC 250 e o cliente LC 12 Ltda."))
+        .isEqualTo("Fungicida EC 250 e o cliente LC 12 Ltda.");
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Defensivo EC 250/100 na lavoura."))
+        .isEqualTo("Defensivo EC 250/100 na lavoura.");
+    // A norma com ano continua sendo explicada.
+    assertThat(ComposicaoRespostaDados.explicarSiglas("Conforme a EC 132/2023."))
+        .isEqualTo("Conforme a EC 132/2023 (emenda constitucional).");
   }
 
   @Test

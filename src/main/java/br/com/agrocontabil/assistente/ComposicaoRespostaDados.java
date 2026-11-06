@@ -174,10 +174,16 @@ public final class ComposicaoRespostaDados {
         abertos--;
       }
     }
-    if (abertos == 0) {
+    // Par de siglas ("IBS/CBS do mês"): uma vírgula separaria a barra do par, então fica entre
+    // parênteses mesmo aberto (o único aninhamento que sobra).
+    boolean barra = fim < texto.length() && texto.charAt(fim) == '/';
+    if (abertos == 0 || barra) {
       return " (" + sigla.nome() + ")";
     }
-    boolean fechaOuSeparaLogo = fim < texto.length() && ",);.".indexOf(texto.charAt(fim)) >= 0;
-    return ", " + sigla.nome() + (fechaOuSeparaLogo ? "" : ",");
+    // A vírgula de depois só entra se vem palavra: antes de pontuação ou de barra ("IBS/CBS"), o
+    // sinal que já está lá separa, e uma vírgula colada nele sairia errada.
+    boolean vemPalavra = fim < texto.length()
+        && (texto.charAt(fim) == ' ' || Character.isLetterOrDigit(texto.charAt(fim)));
+    return ", " + sigla.nome() + (vemPalavra ? "," : "");
   }
 }
