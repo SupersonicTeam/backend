@@ -173,6 +173,17 @@ class TratamentoProdutoServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("#396: pelo código NCM o trecho negado do item aparece como na busca pelo nome")
+  void trechoNegadoPeloCodigo() {
+    String ncm = anexoNcmRepository.findNcmsPermitidosDoItem(20, EM_2026).get(0);
+
+    TratamentoProduto p = service.consultar(ncm, EM_2026).produtos().get(0);
+
+    assertThat(p.cClassTrib()).isEqualTo("200003");
+    assertThat(p.condicao()).contains("exceto salmonídeos, atuns");
+  }
+
+  @Test
   @DisplayName("#284 p. 2: leite nao UHT sai in natura (60%) com a alternativa do Anexo I (zero)")
   void leiteDuasSituacoes() {
     for (String ncm : List.of("04011090", "04012090", "04014010", "04015010")) {

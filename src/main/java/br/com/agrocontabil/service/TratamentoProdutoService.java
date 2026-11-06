@@ -116,6 +116,7 @@ public class TratamentoProdutoService {
   /** A parte de {@link #NEGACAO} que exclui um grupo (sem {@code não}/{@code nem}). */
   private static final Pattern EXCLUSAO = Pattern.compile(
       "\\b(?:exceto|excetuad[oa]s?|excluid[oa]s?|ressalvad[oa]s?|salvo)\\b");
+  private static final Pattern MARCAS = Pattern.compile("\\p{M}+");
   private static final Pattern PROXIMA_PALAVRA = Pattern.compile("[a-z0-9]+");
   private static final Set<String> PALAVRAS_VAZIAS = Set.of("de", "do", "da", "dos", "das",
       "em", "e", "o", "a", "os", "as", "para", "com", "ncm", "sh", "nbs", "tem", "paga", "que");
@@ -184,7 +185,7 @@ public class TratamentoProdutoService {
     for (Descrito d : escolhidos) {
       if (d.ncm() != null) {
         produtos.add(produto(d.ncm(), d.descricao(), 1, tratamentos.get(d.ncm()), true, data,
-            null));
+            false));
         continue;
       }
       // NCMs do item com o mesmo tratamento viram um so produto, com a contagem.
@@ -196,7 +197,7 @@ public class TratamentoProdutoService {
       for (List<TratamentoTributarioNcm> grupo : porHipotese.values()) {
         TratamentoTributarioNcm exemplo = grupo.get(0);
         produtos.add(produto(grupo.size() == 1 ? exemplo.ncm() : null, d.descricao(),
-            grupo.size(), exemplo, true, data, d.descricao()));
+            grupo.size(), exemplo, true, data, true));
       }
     }
     if (produtos.isEmpty()) {
@@ -215,7 +216,7 @@ public class TratamentoProdutoService {
     boolean conhecido = referencia.isPresent() || !t.enquadramentos().isEmpty();
     return new ConsultaTratamentoProduto(codigo, TipoBusca.NCM,
         List.of(produto(codigo, referencia.map(NcmReferencia::getDescricao).orElse(null), 1, t,
-            conhecido, data, null)),
+            conhecido, data, false)),
         t.versaoTabela());
   }
 
@@ -239,31 +240,35 @@ public class TratamentoProdutoService {
   }
 
   private TratamentoProduto produto(String ncm, String descricao, int quantidadeNcms,
-      TratamentoTributarioNcm t, boolean ncmConhecido, LocalDate data, String descricaoDoItem) {
+      TratamentoTributarioNcm t, boolean ncmConhecido, LocalDate data, boolean descricaoDeItem) {
     Optional<EnquadramentoAnexo> escolhido = t.enquadramentos().stream()
         .filter(e -> e.cClassTrib().equals(t.cClassTrib()))
         .findFirst();
     Alternativa alternativa = alternativaDoLeite(t, data);
     String condicao = alternativa != null ? CONDICAO_LEITE_IN_NATURA
         : ClassificacaoTributariaService.LEITE_UHT.contains(t.ncm()) ? CONDICAO_LEITE_UHT
-        : condicao(t, escolhido, itemDoTratamento(t, descricaoDoItem));
+        : condicao(t, escolhido, itemDoTratamento(t, escolhido, descricao, descricaoDeItem));
     return new TratamentoProduto(ncm, descricao, quantidadeNcms, t.cClassTrib(),
         t.percentualReducao(), t.origem(), escolhido.map(EnquadramentoAnexo::anexo).orElse(null),
         artigo(t.fundamento()), condicao, ncmConhecido, alternativa);
   }
 
   /**
-   * Descrição do item de anexo escolhido, se o tratamento aplicado é o dele (#396): o NCM do item
-   * que sai in natura ou pelo Anexo I tem outra hipótese, e a exclusão do item não vale para ela.
+   * Descrição do item de anexo de onde sai o trecho negado (#396), ou nula. Busca pelo item
+   * ({@code descricaoDeItem}): a do item achado, se o tratamento aplicado é o dele (o NCM do item
+   * que sai in natura ou pelo Anexo I tem outra hipótese, e a exclusão do item não vale para ela).
+   * Pelo NCM (código ou referência): a do enquadramento do tratamento aplicado, como a destinação.
+   * A descrição da referência de NCM nunca serve: o código já traz a exclusão.
    */
-  private static String itemDoTratamento(TratamentoTributarioNcm t, String descricaoDoItem) {
-    if (descricaoDoItem == null) {
-      return null;
+  private static String itemDoTratamento(TratamentoTributarioNcm t,
+      Optional<EnquadramentoAnexo> escolhido, String descricao, boolean descricaoDeItem) {
+    if (!descricaoDeItem) {
+      return escolhido.map(EnquadramentoAnexo::descricaoItem).orElse(null);
     }
-    boolean eDoItem = t.enquadramentos().stream()
+    boolean eDoItem = descricao != null && t.enquadramentos().stream()
         .anyMatch(e -> e.cClassTrib().equals(t.cClassTrib())
-            && descricaoDoItem.equals(e.descricaoItem()));
-    return eDoItem ? descricaoDoItem : null;
+            && descricao.equals(e.descricaoItem()));
+    return eDoItem ? descricao : null;
   }
 
   /**
@@ -301,8 +306,8 @@ public class TratamentoProdutoService {
   /**
    * Condição que o dado não decide; nula quando não há.
    *
-   * @param descricaoDoItem descrição do item de anexo do tratamento, de onde sai o trecho negado
-   *                        (#396); nula na referência de NCM e quando o tratamento não é o do item
+   * @param descricaoDoItem descrição do item de anexo de onde sai o trecho negado (#396); nula
+   *                        quando não há
    */
   static String condicao(TratamentoTributarioNcm t, Optional<EnquadramentoAnexo> escolhido,
       String descricaoDoItem) {
@@ -348,7 +353,7 @@ public class TratamentoProdutoService {
    * @return trechos na ordem em que aparecem; vazia se não há
    */
   static List<String> trechosNegados(String descricao) {
-    if (descricao == null || descricao.isBlank()) {
+    if (descricao == null || !EXCLUSAO.matcher(NormalizacaoBusca.normalizar(descricao)).find()) {
       return List.of();
     }
     // Normaliza caractere a caractere para saber de onde cada um veio no texto original.
@@ -356,8 +361,8 @@ public class TratamentoProdutoService {
     List<Integer> origem = new ArrayList<>(descricao.length());
     for (int i = 0; i < descricao.length(); i++) {
       String n = Normalizer.normalize(
-          Normalizer.normalize(descricao.substring(i, i + 1), Normalizer.Form.NFD)
-              .replaceAll("\\p{M}+", ""), Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
+          MARCAS.matcher(Normalizer.normalize(descricao.substring(i, i + 1), Normalizer.Form.NFD))
+              .replaceAll(""), Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
       for (int k = 0; k < n.length(); k++) {
         normalizado.append(n.charAt(k));
         origem.add(i);
