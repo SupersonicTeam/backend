@@ -495,6 +495,19 @@ desfecho dela. A classificação que manda pergunta só de dados ao MISTO é da 
 desfechos seguem contando como recusa e **não** contam como citação válida (o texto do modelo
 saiu), para a taxa não subir com o descarte.
 
+**Linha "O que isso quer dizer" na resposta de lei (#269).** A resposta de lei **aceita** (rota
+pura e parte de lei do MISTO) ganha, depois de todas as conferências (citação, números, afirmação
+sobre dados), a linha montada pelo backend (`LinhaGlossario`): o título e um item por termo do
+glossário (#267) que a resposta usa sem explicar, com a forma por extenso e a definição do
+`glossario-produtor.yml` ("- IBS (imposto sobre bens e serviços): o novo imposto..."; a forma por
+extenso é o que a régua de clareza reconhece, a definição sozinha não conta; sem número nem artigo, então não vira fonte de número nem mexe nas citações). Conta o texto já com
+as referências montadas, então a "LC 214/2025" de toda citação puxa o item da LC. Os termos que as
+definições citam (a do IBS fala do ICMS e do ISS) entram junto, pelo `GlossarioProdutor.aExplicar`.
+Sigla que o modelo já explicou no texto não entra; sem sigla solta, não há linha. Resposta descartada
+(`TRECHOS_SEM_CONFIRMACAO`, `SO_TRECHOS`, sem fundamento) não leva a linha: são frases fixas sem
+sigla. Os itens 3 e 4 da #269 (descarte com trechos e lei do MISTO) já estavam entregues pela #258,
+#260 e #343, acima. A medição de clareza segue na régua de 8 siglas (`ClarezaTexto`).
+
 **Resultado vazio nunca vira "não tem" absoluto (#274, item 6).** O pior erro medido na VPS era a
 negativa falsa: "não tem débito pendente" com guias vencidas (#259), "não há notas devolvidas"
 filtrando as rejeitadas (#254). A garantia é do backend, não do prompt: o
