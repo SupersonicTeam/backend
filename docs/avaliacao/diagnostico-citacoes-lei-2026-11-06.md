@@ -257,3 +257,89 @@ Por pergunta, no treino: D05 (12 → 1), D06 (9 → 1), D14 (fora → 1), D15 (6
 - A regra do orquestrador (a posição 1 subir de forma clara) **não se confirma**. Não rodei o modelo real. A lei ausente não foi empurrada para cima do limiar (nenhum tema casou nelas).
 - O mecanismo é válido para o vocabulário que a tabela cobre, mas **tabela escrita à mão para temas gerais não generaliza com segurança** nesta amostra: cada tema novo vira um risco de piorar perguntas vizinhas, e a conferência exigiria um conjunto de controle por tema.
 - Dados: `recall-43-sem-expansao.json` e `recall-43-com-expansao.json`. Código: `feat/269-expansao-consulta` (`ExpansaoConsultaLei`, `vocabulario-lei.yml`, ligação não feita na `BuscaLegislacaoService`).
+
+
+---
+
+# Quarta rodada (2026-11-06): Qwen3 30B-A3B contra o 4B, na VPS (item 4 da #270)
+
+Autorizado pelo Murillo ("Autorizo na VPS"); o orquestrador baixou `qwen3:30b-instruct` (18 GB, Q4_K_M) e abriu o túnel `127.0.0.1:11435` para o Ollama da VPS. **Sem SSH.** Mesmo código da `main` em `2dba24f` (com o #427), nenhuma mudança de padrão (`.env`, `application.yml`, `compose`).
+
+**Condições, iguais nos dois modelos:** `AI_OLLAMA_BASE_URL=http://127.0.0.1:11435`, `AI_CHAT_MODEL` = `qwen3:30b-instruct` ou `qwen3:4b-instruct`, `top-k` 5, `AI_OLLAMA_NUM_CTX=8192`, `AI_OLLAMA_THINK=false`. D01 a D43, 3 repetições, uma rodada por vez (a VPS tem `OLLAMA_NUM_PARALLEL=1`). O embedding é o `bge-m3` da VPS, o mesmo modelo. A chamada de aquecimento de cada rodada fica fora da conta. **O 4B da VPS é a linha de base**, não o 4B local de antes: o #427 entrou e o tempo era da CPU local. Os dois 4B concordam, com 4 perguntas a oscilar (D05, D06, D25, D28), porque a máquina é outra.
+
+**Raciocínio no texto:** nenhum. Nos 129 textos crus de cada modelo não há `<think>` (30B: mediana 196 caracteres, máximo 1.646; 4B: 118 e 3.347).
+
+**Falha de coleta:** na primeira rodada do 30B, D01 deu 3 `AssistenteIndisponivelException` seguidas (efeito de primeira chamada/disjuntor logo depois do aquecimento). Rodei D01 sozinho e as 3 repetições deram certo; o arquivo `…-bruto-com-D01-com-erro.json` guarda o original.
+
+## Tabela por modelo e por conjunto (execuções)
+
+| Conjunto | Modelo | Certa | Outro artigo | Descartada | Tempo p50 | p95 |
+|---|---|---|---|---|---|---|
+| Treino D01–D18 + D21 (57) | 4B | 33 | 15 | 9 | 3,8 s | 18,3 s |
+| | **30B** | **39** | **18** | **0** | 4,4 s | 19,4 s |
+| Controle 1 D23–D31 (27) | 4B | 12 | 8 | 7 | 7,0 s | 49,2 s |
+| | **30B** | **18** | **9** | **0** | 4,1 s | 32,0 s |
+| Controle 2 D32–D43 (36) | 4B | 33 | 3 | 0 | 5,7 s | 13,8 s |
+| | **30B** | **33** | **3** | **0** | 8,1 s | 17,3 s |
+| Lei ausente D19, D20, D22 (9) | 4B | 0 | 0 | 9 | 0,1 s | 3,5 s |
+| | 30B | 0 | 0 | 9 | 0,2 s | 4,1 s |
+| **Todas as chamadas (129)** | 4B | 78 | 26 | 25 | **3,7 s** | **20,3 s** |
+| | 30B | 90 | 30 | 9 | **4,1 s** | **19,6 s** |
+
+- **Tempo:** os dois ficam bem abaixo da meta da #270 para lei (p50 ≤ 25 s). O p50 do 30B (4,1 s) é igual ao do 4B nesta VPS. O tempo inclui a busca (embedding) e a rota inteira.
+- **O 30B não recusa:** zero `NAO_ENCONTREI` nos conjuntos com artigo (o 4B tinha 25 recusas). Na lei ausente a recusa continua, e vem do limiar de similaridade (antes do modelo): D19 e D22 sem trecho, D20 descartada pelos validadores, nos dois modelos. D21 (Senar) sai certa nos dois, graças ao #427.
+
+## Regra do orquestrador (certa sobe e "outro artigo" não sobe, nos três conjuntos com artigo)
+
+| Conjunto | certa | outro artigo | passa? |
+|---|---|---|---|
+| Treino | 33 → 39 (sobe) | 15 → 18 (**sobe**) | não |
+| Controle 1 | 12 → 18 (sobe) | 8 → 9 (**sobe**) | não |
+| Controle 2 | 33 → 33 (igual) | 3 → 3 | não (certa não sobe) |
+
+**O 30B não é candidato pela regra.** O resultado é **misto**, sem arredondar: 12 respostas certas a mais e 4 de outro artigo a mais em 129 execuções, porque o 30B troca as recusas do 4B por respostas, e parte delas está errada.
+
+## O que mudou por pergunta
+
+Ganhos (4B recusa ou erra, 30B acerta, sentido conferido contra o texto da lei):
+- **D04** (cashback), **D10** (crédito de carro de uso pessoal) e **D26** (vender créditos): as 3 falsas recusas do 4B viram **certas nas 3 repetições**, com o sentido correto (D04: a CBS é devolvida pela União e o IBS pelos entes, art. 112; D10: não pode, art. 57; D26: não pode, art. 55 e, numa repetição, a exceção da sucessão em fusão, cisão ou incorporação, que está no parágrafo único do art. 55).
+- **D25** (importação de serviços): oscila no 4B (1 certa, 2 de outro artigo), 3 certas no 30B. **D28**: 4B 2 certas e 1 recusa, 30B 3 certas.
+
+Perdas (a recusa era a resposta certa):
+- **D29** (compensar crédito de IBS com CBS): o 4B recusava nas 3 (o art. 47 não chegava ao modelo); o 30B responde nas 3, **com outro artigo**.
+- **D05** (grãos para o exterior): o 4B respondia errado 1 vez e recusava 2; o 30B responde errado 3 vezes.
+- **D06** (crédito): o 4B respondia errado 2 e recusava 1; o 30B, errado 3.
+
+Sentido, nas perguntas pedidas (citação certa com sentido errado não conta como acerto):
+
+| Pergunta | 4B | 30B |
+|---|---|---|
+| D03 ICMS e ISS | outro artigo (art. 408); vago ("continuam aplicáveis, com regras específicas") | outro artigo (art. 408); diz "vigentes até 31/12/2032", o que **na substância é próximo do certo** (o ICMS e o ISS são extintos a partir de 2033, ADCT art. 129), mas a citação não sustenta |
+| D05 exportação de grãos | outro artigo; **sentido errado** ("não paga" por causa do art. 82, § 11, que é suspensão para a indústria exportadora); 1 de 3, nas outras recusa | outro artigo 3 de 3; **sentido errado**, e acrescenta a condição de "exportação acima de 30% da receita" como se fosse do produtor (é do adquirente industrial) |
+| D06 crédito | outro artigo; **sentido errado** (diz que o crédito "não se aplica" às compras de contribuinte) | outro artigo 3 de 3; **sentido errado** (descreve só o crédito presumido de bem móvel usado, art. 171) |
+| D07 importação | certa, **(c) sentido**: lê o prazo de pagamento (art. 76) como "quando surge a obrigação" | certa, **(c)** igual ("surge até a entrega"); marcado à parte, não como acerto |
+| D14 prazo do crédito | outro artigo (créditos presumidos, arts. 452 e 468); "5 anos" certo por coincidência | idem |
+| D15 fato gerador | outro artigo (art. 254, imóveis) | outro artigo (art. 254) |
+| D16 base de cálculo | outro artigo (art. 173, combustíveis) | outro artigo (art. 255, imóveis) |
+
+O 30B **não corrige** nenhuma das 7 falhas de busca/escolha (D03, D05, D06, D14, D15, D16 continuam outro artigo; D07 segue com o (c)): como o artigo certo não chega, modelo maior não o inventa. O que ele muda é o comportamento diante do trecho errado: responde em vez de recusar.
+
+## Guarda: descartar a resposta quando todas as citações são da LC 214 em regime específico e a pergunta não cita o setor
+
+Limites conferidos no texto da lei: o título "Dos regimes específicos do IBS e da CBS" começa depois do art. 171 (o título aparece colado ao fim do art. 171) e vai até o **art. 307** (o art. 308 abre "Dos regimes diferenciados da CBS" – ProUni); os arts. 172 a 307 batem. Capítulos: combustíveis 172–180, serviços financeiros 181–233, planos de saúde 234–243, prognósticos 244–250, bens imóveis 251–270, cooperativas 271–272, bares/hotelaria/transporte/turismo 273–291, SAF 292–296, missões diplomáticas 297–299, disposições comuns 300–307. O "setor" da pergunta é detectado por palavras do capítulo (`analisa_vps.py`).
+
+| | Outro artigo (total) | Barradas pela guarda | Certas barradas |
+|---|---|---|---|
+| 4B (129) | 26 | **8** (D15 ×3, D16 ×3, D25 ×2) | **0** |
+| 30B (129) | 30 | **6** (D15 ×3, D16 ×3) | **0** |
+
+A guarda não barra nenhuma resposta certa nos dois modelos, e pega só os erros que citam regime de combustível ou de imóveis para pergunta geral (31% das respostas de outro artigo no 4B, 20% no 30B). Fica de fora tudo que cita um artigo geral errado (D03, D05, D06, D14). Com o 30B, a guarda também não resolve a troca de recusa por erro de D29, D05 e D06.
+
+## Conclusão desta rodada
+1. **Tempo não é problema**: 30B e 4B têm p50 de 4 s e p95 de 20 s nesta VPS, abaixo da meta da #270.
+2. **Qualidade: misto.** O 30B acerta o que o 4B recusava por medo (D04, D10, D26) e perde a proteção das recusas (D29, D05, D06). Em 129 execuções: +12 certas, +4 de outro artigo, −16 recusas. Pela regra combinada, **não é candidato**.
+3. **O sentido não melhora** nas perguntas em que o artigo certo não chega; só melhora onde o artigo chegou e o 4B recusava.
+4. **A guarda do regime específico** é segura nos dados (0 certa barrada) e cobre D15 e D16 em qualquer um dos dois modelos; com o 30B ela é ainda mais útil, porque o 30B deixa de recusar.
+5. **Fora do teste:** a rota de dados e o classificador de rota (só a rota de lei foi medida); um único modelo por vez; as mesmas 43 perguntas que orientaram as outras decisões (D23 a D43 só como controle).
+
+Dados: `vps-4b-43-perguntas.json`, `vps-30b-43-perguntas.json` (D01 refeito), `vps-30b-43-perguntas-bruto-com-D01-com-erro.json`, `analisa_vps.py` (tabelas e guarda).

@@ -99,6 +99,7 @@ class DiagnosticoCitacoesLeiManual {
       ArrayNode rodadas = item.putArray("rodadas");
       for (int i = 0; i < repeticoes; i++) {
         crus.clear();
+        long inicio = System.nanoTime();
         ResultadoRota r;
         try {
           r = rota.responder(pergunta, new ContextoAssistente(UUID.randomUUID(), hoje));
@@ -114,6 +115,7 @@ class DiagnosticoCitacoesLeiManual {
         }
         ObjectNode o = rodadas.addObject();
         o.put("cru", crus.isEmpty() ? "" : crus.get(crus.size() - 1));
+        o.put("ms", (System.nanoTime() - inicio) / 1_000_000);
         o.put("desfecho", r.desfecho().name());
         o.put("texto", r.texto());
         ArrayNode citacoes = o.putArray("citacoes");
