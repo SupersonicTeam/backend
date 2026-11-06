@@ -20,14 +20,14 @@ class NotaFiscalItemRequestIcmsTest {
       Validation.buildDefaultValidatorFactory().getValidator();
 
   @ParameterizedTest
-  @ValueSource(strings = {"40", "41", "50", "51", "90"})
-  @DisplayName("aceita os CSTs que o leiaute emite sem calculo do ICMS")
+  @ValueSource(strings = {"40", "41", "50", "51", "90", ""})
+  @DisplayName("aceita os CSTs que o leiaute emite sem calculo do ICMS, e o vazio (nao informado)")
   void aceitaCstsSemCalculo(String cst) {
     assertThat(VALIDATOR.validateValue(NotaFiscalItemRequest.class, "cstIcms", cst)).isEmpty();
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"00", "20", "60", "101", "4", "041", "5 1", ""})
+  @ValueSource(strings = {"00", "20", "60", "101", "4", "041", "5 1", " "})
   @DisplayName("recusa CST que exige o calculo do ICMS ou fora do formato (400)")
   void recusaOutros(String cst) {
     assertThat(VALIDATOR.validateValue(NotaFiscalItemRequest.class, "cstIcms", cst))
@@ -54,5 +54,11 @@ class NotaFiscalItemRequestIcmsTest {
 
     assertThat(item.getCstIcms()).isEqualTo("41");
     assertThat(item.getOrigemIcms()).isEqualTo("2");
+
+    NotaFiscalItem vazio = NotaFiscalMapper.toItemEntityList(List.of(new NotaFiscalItemRequest(1,
+        null, "Soja", "12019000", "5101", "KG", BigDecimal.ONE, BigDecimal.TEN, null, null, null,
+        "", ""))).get(0);
+    assertThat(vazio.getCstIcms()).isNull();
+    assertThat(vazio.getOrigemIcms()).isNull();
   }
 }

@@ -85,7 +85,7 @@ class IcmsObrigatorioNaNfeNormalTest {
   }
 
   @Test
-  @DisplayName("venda interna de producao propria a contribuinte: ICMS51 com orig 0, antes do IBSCBS")
+  @DisplayName("venda interna de producao propria a contribuinte: ICMS51, antes do IBSCBS")
   void vendaInternaPadraoSaiComIcms51() {
     NotaFiscal nota = nota("MT", "133518276", item(1, "5101", null, null));
 
@@ -171,6 +171,50 @@ class IcmsObrigatorioNaNfeNormalTest {
         .extracting(e -> ((NotaFiscalInvalidaParaEmissaoException) e).getErrors().stream()
             .filter(d -> "item[1].cstIcms".equals(d.field())).map(ErrorDetail::message).toList())
         .asList().singleElement().asString().contains("exige o CST do ICMS 41");
+  }
+
+  @Test
+  @DisplayName("exportacao sem CST: ICMS_A_DEFINIR sugerindo so o 41, nao a lista inteira")
+  void exportacaoSemCstSugereSo41() {
+    NotaFiscal nota = nota("EX", null, item(1, "7101", null, null));
+    nota.getDestinatarioEndereco().setCodigoMunicipioIbge("9999999");
+
+    assertThatThrownBy(() -> service.gerarXml(nota))
+        .isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class)
+        .satisfies(e -> assertThat(((NotaFiscalInvalidaParaEmissaoException) e).getErrors())
+            .filteredOn(d -> "item[1].cstIcms".equals(d.field())).singleElement()
+            .satisfies(d -> {
+              assertThat(d.code()).isEqualTo("ICMS_A_DEFINIR");
+              assertThat(d.suggestion()).startsWith("Na exportacao o CST do ICMS e o 41");
+            }));
+  }
+
+  @Test
+  @DisplayName("emitente PJ do Simples (CRT 1): barrado, CSOSN fora do escopo (rejeicao 590)")
+  void emitenteDoSimplesEBarrado() {
+    NotaFiscal nota = nota("MT", "133518276", item(1, "5101", null, null));
+    nota.getProdutor().setTipoProdutor(br.com.agrocontabil.model.TipoProdutor.PESSOA_JURIDICA);
+    nota.getProdutor().setCpfCnpj("11222333000181");
+    nota.getProdutor().setRegimeTributario(br.com.agrocontabil.model.RegimeTributario.SIMPLES);
+
+    assertThatThrownBy(() -> service.gerarXml(nota))
+        .isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class)
+        .satisfies(e -> assertThat(((NotaFiscalInvalidaParaEmissaoException) e).getErrors())
+            .filteredOn(d -> "item[1].cstIcms".equals(d.field())).singleElement()
+            .satisfies(d -> assertThat(d.message()).contains("CSOSN").contains("590")));
+  }
+
+  @Test
+  @DisplayName("item sem CFOP: so a falta do CFOP e apontada, sem o ICMS a definir")
+  void semCfopSoApontaOCfop() {
+    NotaFiscal nota = nota("MT", "133518276", item(1, "5101", null, null));
+    nota.getItens().get(0).setCfop(null);
+
+    assertThatThrownBy(() -> new FiscalRulesValidator().validar(nota))
+        .isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class)
+        .satisfies(e -> assertThat(((NotaFiscalInvalidaParaEmissaoException) e).getErrors())
+            .extracting(ErrorDetail::field).contains("item[1].cfop")
+            .doesNotContain("item[1].cstIcms"));
   }
 
   @Test

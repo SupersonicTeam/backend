@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.nfe.TributacaoIcms;
 import br.com.agrocontabil.validation.ValidCfop;
 import br.com.agrocontabil.validation.ValidNcm;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -118,19 +119,20 @@ public record NotaFiscalItemRequest(
 
     @Schema(
         description =
-            "CST do ICMS (40, 41, 50, 51 ou 90), combinado com o contador. Opcional: sem ele, "
+            "CST do ICMS (40, 41, 50, 51 ou 90), combinado com o contador. Opcional (vazio = nao "
+                + "informado): sem ele, "
                 + "a venda interna de producao propria (CFOP 5101) a destinatario com IE sai com "
                 + "51 (diferimento total); qualquer outro caso sem CST e barrado na emissao "
                 + "(422 ICMS_A_DEFINIR). Exportacao (CFOP 7xxx) exige 41.",
         example = "51")
     @Pattern(
-        regexp = "40|41|50|51|90",
+        regexp = TributacaoIcms.CSTS_SEM_CALCULO_REGEX,
         message = "cstIcms deve ser 40, 41, 50, 51 ou 90 (o sistema nao calcula ICMS)")
     String cstIcms,
 
     @Schema(description = "Origem da mercadoria (tabela Torig, 0 a 8). Opcional; padrao 0, "
         + "nacional.", example = "0")
-    @Pattern(regexp = "[0-8]", message = "origemIcms deve ser um digito de 0 a 8")
+    @Pattern(regexp = "|[0-8]", message = "origemIcms deve ser um digito de 0 a 8")
     String origemIcms
 ) {
 

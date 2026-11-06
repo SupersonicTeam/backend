@@ -18,7 +18,10 @@ import java.util.Optional;
  * unmarshaller. Cada campo é um elemento da escolha do XSD; no máximo um vem preenchido.
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "ICMS", namespace = NfeNamespace.NS, propOrder = {"gICMS00", "gICMS02", "gICMS10", "gICMS15", "gICMS20", "gICMS30", "gICMS40", "gICMS51", "gICMS53", "gICMS60", "gICMS61", "gICMS70", "gICMS90", "gICMSPart", "gICMSST", "gICMSSN101", "gICMSSN102", "gICMSSN201", "gICMSSN202", "gICMSSN500", "gICMSSN900"})
+@XmlType(name = "ICMS", namespace = NfeNamespace.NS, propOrder = {
+    "gICMS00", "gICMS02", "gICMS10", "gICMS15", "gICMS20", "gICMS30", "gICMS40", "gICMS51",
+    "gICMS53", "gICMS60", "gICMS61", "gICMS70", "gICMS90", "gICMSPart", "gICMSST", "gICMSSN101",
+    "gICMSSN102", "gICMSSN201", "gICMSSN202", "gICMSSN500", "gICMSSN900"})
 public class Icms {
 
   @XmlElement(name = "ICMS00", namespace = NfeNamespace.NS)

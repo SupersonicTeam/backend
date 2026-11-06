@@ -279,6 +279,9 @@ public class SeedAvaliacao {
         .status(status)
         .destinatarioNome("Cooperativa Agroindustrial Avaliacao")
         .destinatarioCpfCnpj("11444777000161")
+        // Cooperativa contribuinte: a venda interna (5101) sai com o ICMS51 padrao e nao ganha o
+        // sinal ICMS_A_DEFINIR, que mudaria as respostas do gabarito e do benchmark congelado.
+        .destinatarioIe("9071425318")
         .destinatarioEndereco(EnderecoDestinatario.builder()
             .logradouro("Rodovia BR-277").numero("S/N").municipio("Cascavel")
             .codigoMunicipioIbge("4104808").uf("PR").cep("85800000").build())

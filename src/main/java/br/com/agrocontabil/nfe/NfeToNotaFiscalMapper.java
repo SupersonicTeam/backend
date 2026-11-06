@@ -124,6 +124,7 @@ public class NfeToNotaFiscalMapper {
       valorTotal = quantidade.multiply(valorUnitario);
     }
 
+    Optional<IcmsGrupo> icms = icmsDoTerceiro(det);
     return NotaFiscalItem.builder()
         .numeroItem(parseNItem(det.getNItem()))
         .codigoProduto(prod.getCProd())
@@ -135,10 +136,9 @@ public class NfeToNotaFiscalMapper {
         .quantidade(quantidade)
         .valorUnitario(valorUnitario)
         .valorTotal(valorTotal.setScale(2, java.math.RoundingMode.HALF_UP))
-        .cstIcms(icmsDoTerceiro(det).map(IcmsGrupo::cstOuCsosn)
-            .filter(c -> c.matches("\\d{2,3}")).orElse(null))
-        .origemIcms(icmsDoTerceiro(det).map(IcmsGrupo::getOrig)
-            .filter(o -> o.matches("\\d")).orElse(null))
+        .cstIcms(icms.map(IcmsGrupo::cstOuCsosn).filter(c -> c.matches("\\d{2,3}"))
+            .orElse(null))
+        .origemIcms(icms.map(IcmsGrupo::getOrig).filter(o -> o.matches("\\d")).orElse(null))
         .build();
   }
 

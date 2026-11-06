@@ -205,9 +205,14 @@ public final class NotaFiscalMapper {
         .cstIbsCbs(req.cstIbsCbs())
         .cClassTrib(req.cClassTrib())
         .percentualReducao(req.percentualReducao())
-        .cstIcms(req.cstIcms())
-        .origemIcms(req.origemIcms())
+        // Vazio (select sem opcao) = nao informado: o padrao ou o ICMS_A_DEFINIR decidem.
+        .cstIcms(semVazio(req.cstIcms()))
+        .origemIcms(semVazio(req.origemIcms()))
         .build();
+  }
+
+  private static String semVazio(String valor) {
+    return valor == null || valor.isBlank() ? null : valor.strip();
   }
 
   private static NotaFiscalItemResponse toItemResponse(NotaFiscalItem item) {

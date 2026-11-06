@@ -17,6 +17,12 @@ rejeitada na homologação real**. O XSD PL_010g aceita a nota sem o grupo (a es
 nenhum teste pegava. Desde então, o grupo sai em todo item (`nfe/TributacaoIcms`; premissas,
 seção 3), e o `IcmsObrigatorioNaNfeNormalTest` trava a regra B25-90.
 
+**Nota em `XML_GERADO` de antes do changeSet 0052:** o XML assinado guardado não tem o grupo e
+não é regerado (`XML_GERADO` não é editável), então o `enviar-sefaz` mandaria esse XML e
+receberia a 1002. Na homologação real, não transmitir nota gerada antes do 0052: excluir não é
+possível nesse status, então a saída é criar a nota de novo. Hoje só há notas assim no ambiente
+com o mock da SEFAZ (VPS), que não confere a regra.
+
 ## Serviços
 
 | Operação | Webservice | Mensagem |

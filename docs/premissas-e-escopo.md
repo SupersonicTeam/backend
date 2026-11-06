@@ -89,11 +89,18 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
     (CFOP 5101) a destinatário **com IE**. Esse é o caso confirmado pelo escritório (#284,
     pergunta 9): soja em grão vendida pelo produtor de MT dentro do estado, ICMS diferido, ICMS
     próprio zero. O `ICMS51` leva só `orig` e `CST`; os valores do diferimento ficam a critério
-    da UF (MOC 7.00, Anexo I, regra N07-10, facultativa);
+    da UF (MOC 7.00, Anexo I, regra N07-10, facultativa). O padrão vale para **toda UF e todo
+    produto** com esse CFOP e destinatário. O escritório só confirmou a soja em MT; o tratamento de
+    outro produto ou UF (a isenção do hortifrúti, por exemplo) é do contador, que informa o CST no
+    item. **Limite conhecido:** sem CST informado, esses produtos saem com o 51 sem aviso;
   - **qualquer outro caso** (interestadual, exportação, destinatário sem IE, outra natureza): o
     CST **tem de ser informado** no item (`cstIcms`, combinado com o contador). Sem ele, a
     emissão responde **422 `ICMS_A_DEFINIR`**, e o sinal de nota a conferir `ICMS_A_DEFINIR`
-    (#276) avisa antes de emitir. O sistema nunca escolhe um CST;
+    (#276) avisa antes de emitir. O sistema nunca escolhe um CST. Na exportação (CFOP 7xxx), a
+    sugestão é o 41;
+  - **emitente do Simples Nacional ou MEI** (pessoa jurídica, CRT 1 ou 4): informa CSOSN (grupos
+    `ICMSSN`), que o sistema não monta. A SEFAZ rejeita CST para ele (rejeição 590), então a emissão
+    é barrada com `ICMS_A_DEFINIR` até esse tratamento existir;
   - **CSTs aceitos:** só 40, 41, 50, 51 e 90, os grupos do leiaute que não exigem base, alíquota
     e valor (`ICMS40` com 40/41/50, `ICMS51` e `ICMS90`). O 00, o 20 e os demais exigem o
     cálculo, que segue fora. Exportação (CFOP 7xxx) exige o 41 (MOC 7.00, regra N12-10);

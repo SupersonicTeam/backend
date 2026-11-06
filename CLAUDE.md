@@ -45,6 +45,10 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   sem CST: 422 `ICMS_A_DEFINIR` na emissão e o sinal `ICMS_A_DEFINIR` (#276) antes dela; o sistema
   nunca escolhe CST. Exportação (7xxx) exige 41. O ICMS devido e o ST seguem com o contador, por
   guia. Nota importada: CST/CSOSN e origem do XML só para informar (sem o grupo, segue aceita).
+  Emitente PJ do Simples/MEI (CRT 1/4): barrado (CSOSN fora do escopo, rejeição 590). **Frontend:**
+  o item ganhou `cstIcms`/`origemIcms` (vazio = não informado); o `PUT` substitui os itens, então
+  a tela que não os reenvia apaga o CST. Até o Angular expor o campo, venda interestadual ou a
+  destinatário sem IE só emite pela API.
   O Funrural/Senar retido pelo
   adquirente (RN009) sai **destacado no `infCpl`** e nos Dados Adicionais do DANFE (#332):
   `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta

@@ -51,7 +51,7 @@ class SinaisNoSeedDemonstracaoIntegrationTest {
   @Autowired private SinaisNotaConferirService sinaisService;
 
   @Test
-  @DisplayName("so o ICMS_A_DEFINIR das notas feitas para ele; nenhum outro sinal (falso positivo zero)")
+  @DisplayName("so o ICMS_A_DEFINIR das notas feitas para ele; nenhum outro sinal")
   void semFalsoPositivo() {
     List<NotaFiscal> proprias = notaRepository.findAll().stream()
         .filter(n -> n.getOrigem() == OrigemNotaFiscal.PROPRIA)

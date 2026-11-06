@@ -608,7 +608,7 @@ public class SeedDemonstracao implements CommandLineRunner {
 
   /** Algum item sem CST de ICMS, que o pipeline de emissão barraria (422 ICMS_A_DEFINIR). */
   private static boolean icmsADefinir(NotaFiscal nota) {
-    return nota.getItens().stream().anyMatch(i -> TributacaoIcms.cst(nota, i).isEmpty());
+    return nota.getItens().stream().anyMatch(i -> TributacaoIcms.problema(nota, i).isPresent());
   }
 
   /** O que a venda planejada vira: nota autorizada ou um dos estados da fila. */

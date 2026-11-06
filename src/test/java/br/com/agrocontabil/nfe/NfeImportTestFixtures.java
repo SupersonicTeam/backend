@@ -74,7 +74,9 @@ public final class NfeImportTestFixtures {
         .nomeCompleto(EMITENTE_NOME)
         .cpfCnpj(EMITENTE_CNPJ)
         .tipoProdutor(TipoProdutor.PESSOA_JURIDICA)
-        .regimeTributario(RegimeTributario.SIMPLES)
+        // Regime normal: emitente do Simples informaria CSOSN (grupos ICMSSN), que o pipeline de
+        // emissao barra (rejeicao 590). O XML do fornecedor sai com o ICMS40.
+        .regimeTributario(RegimeTributario.REAL)
         .estado("PR")
         .inscricaoEstadual(ProdutorTestFixtures.INSCRICAO_ESTADUAL)
         .endereco(ProdutorTestFixtures.enderecoCuritibaPr())

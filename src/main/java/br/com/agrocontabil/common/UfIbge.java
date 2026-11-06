@@ -33,6 +33,22 @@ public final class UfIbge {
     return uf != null && UF_EXTERIOR.equalsIgnoreCase(uf.trim());
   }
 
+  /**
+   * Operação interna: emitente e destinatário na mesma UF do país (sem caixa nem espaços nas
+   * pontas). UF ausente ou do exterior = não interna.
+   *
+   * @param ufEmitente     UF do emitente
+   * @param ufDestinatario UF do destinatário
+   * @return {@code true} se as duas UFs são a mesma UF brasileira
+   */
+  public static boolean operacaoInterna(String ufEmitente, String ufDestinatario) {
+    if (ufEmitente == null || ufDestinatario == null || isExterior(ufDestinatario)
+        || ufEmitente.isBlank()) {
+      return false;
+    }
+    return ufEmitente.trim().equalsIgnoreCase(ufDestinatario.trim());
+  }
+
   /** Tabela UF → cUF. Fonte: Manual de Orientação do Contribuinte (MOC) NF-e 4.00, Anexo IV. */
   private static final Map<String, String> CODIGO_POR_UF =
       Map.ofEntries(

@@ -1,5 +1,7 @@
 package br.com.agrocontabil.repository;
 
+import br.com.agrocontabil.model.RegimeTributario;
+import br.com.agrocontabil.model.TipoProdutor;
 import java.math.BigDecimal;
 
 /**
@@ -14,10 +16,13 @@ import java.math.BigDecimal;
  * @param quantidade    quantidade
  * @param valorUnitario valor unitário
  * @param cstIcms        CST do ICMS informado (nulo = não informado)
+ * @param tipoEmitente   tipo do emitente (CRT, regra do ICMS)
+ * @param regimeEmitente regime gravado do emitente (CRT, regra do ICMS)
  * @param ufEmitente     UF do emitente (regra do CST padrão do ICMS)
  * @param ufDestinatario UF do destinatário
  * @param ieDestinatario IE do destinatário (só se há ou não; nunca sai do service)
  */
 public record ItemParaSinal(Integer numeroItem, String descricao, String cfop, String ncm,
     String unidade, BigDecimal quantidade, BigDecimal valorUnitario, String cstIcms,
-    String ufEmitente, String ufDestinatario, String ieDestinatario) {}
+    TipoProdutor tipoEmitente, RegimeTributario regimeEmitente, String ufEmitente,
+    String ufDestinatario, String ieDestinatario) {}

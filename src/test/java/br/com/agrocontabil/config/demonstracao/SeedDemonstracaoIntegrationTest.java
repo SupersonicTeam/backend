@@ -167,7 +167,7 @@ class SeedDemonstracaoIntegrationTest {
         .containsEntry(StatusNotaFiscal.CANCELADA, 1L);
     assertThat(notaRepository.findAll()).filteredOn(n -> n.getStatus() == StatusNotaFiscal.RASCUNHO)
         .filteredOn(n -> n.getItens().stream()
-            .anyMatch(i -> br.com.agrocontabil.nfe.TributacaoIcms.cst(n, i).isEmpty()))
+            .anyMatch(i -> br.com.agrocontabil.nfe.TributacaoIcms.problema(n, i).isPresent()))
         .extracting(NotaFiscal::getDestinatarioNome).containsOnly("Antonio Carlos Pereira",
             "Central de Genetica Bovina Triangulo Ltda").hasSize(6);
 
