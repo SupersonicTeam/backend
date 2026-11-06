@@ -22,7 +22,8 @@ final class LinhaGlossario {
    * A linha para o texto, ou vazio se ele não deixa termo do glossário sem explicação.
    *
    * @param texto resposta já validada, com as referências legais montadas
-   * @return o título e um item por termo ({@code "- IBS: definição."}), ou {@code ""}
+   * @return o título e um item por termo ({@code "- IBS (imposto sobre bens e serviços):
+   *         definição."}), ou {@code ""}
    */
   static String para(String texto) {
     List<GlossarioProdutor.Termo> termos = GlossarioProdutor.padrao().aExplicar(texto);
@@ -31,8 +32,21 @@ final class LinhaGlossario {
     }
     List<String> linhas = new ArrayList<>();
     linhas.add(TITULO);
-    termos.forEach(t -> linhas.add("- " + t.termo() + ": " + t.explicacao() + "."));
+    termos.forEach(t -> linhas.add("- " + rotulo(t) + ": " + t.explicacao() + "."));
     return String.join("\n", linhas);
+  }
+
+  /**
+   * O termo com a forma por extenso entre parênteses ("IBS (imposto sobre bens e serviços)"), que
+   * além de clara é o que a medição de clareza ({@code ClarezaTexto}) reconhece como explicação; a
+   * definição sozinha não conta lá. Sem os parênteses quando não há nome ou a definição já começa
+   * por ele ("LC: lei complementar, um tipo de lei federal...").
+   */
+  private static String rotulo(GlossarioProdutor.Termo t) {
+    boolean definicaoJaComecaPeloNome = t.nomeNormalizado() != null
+        && t.explicacaoNormalizada().startsWith(t.nomeNormalizado());
+    return t.nome() == null || definicaoJaComecaPeloNome
+        ? t.termo() : t.termo() + " (" + t.nome() + ")";
   }
 
   /** O texto seguido da linha, em outro parágrafo; o próprio texto se não há o que explicar. */

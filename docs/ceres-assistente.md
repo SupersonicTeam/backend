@@ -498,8 +498,9 @@ saiu), para a taxa não subir com o descarte.
 **Linha "O que isso quer dizer" na resposta de lei (#269).** A resposta de lei **aceita** (rota
 pura e parte de lei do MISTO) ganha, depois de todas as conferências (citação, números, afirmação
 sobre dados), a linha montada pelo backend (`LinhaGlossario`): o título e um item por termo do
-glossário (#267) que a resposta usa sem explicar, com a definição do `glossario-produtor.yml`
-(sem número nem artigo, então não vira fonte de número nem mexe nas citações). Conta o texto já com
+glossário (#267) que a resposta usa sem explicar, com a forma por extenso e a definição do
+`glossario-produtor.yml` ("- IBS (imposto sobre bens e serviços): o novo imposto..."; a forma por
+extenso é o que a régua de clareza reconhece, a definição sozinha não conta; sem número nem artigo, então não vira fonte de número nem mexe nas citações). Conta o texto já com
 as referências montadas, então a "LC 214/2025" de toda citação puxa o item da LC. Os termos que as
 definições citam (a do IBS fala do ICMS e do ISS) entram junto, pelo `GlossarioProdutor.aExplicar`.
 Sigla que o modelo já explicou no texto não entra; sem sigla solta, não há linha. Resposta descartada

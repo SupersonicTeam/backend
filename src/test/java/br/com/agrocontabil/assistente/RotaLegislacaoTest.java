@@ -228,10 +228,14 @@ class RotaLegislacaoTest {
 
     assertThat(r.aceita()).isTrue();
     String linha = r.texto().substring(r.texto().indexOf(LinhaGlossario.TITULO));
-    assertThat(linha).contains("- IBS: ", "- CBS: ", "- LC: ").doesNotContainPattern("\\d");
+    assertThat(linha).contains("- IBS (imposto sobre bens e serviços): ",
+        "- CBS (contribuição sobre bens e serviços): ", "- LC: ").doesNotContainPattern("\\d");
     assertThat(linha).doesNotContainIgnoringCase("art.");
     // Nenhuma sigla do glossario fica sem explicacao na resposta entregue.
     assertThat(GlossarioProdutor.padrao().siglasSemExplicacao(r.texto())).isEmpty();
+    // E a régua de clareza da #264 (8 siglas, sem contar a definição) também a reconhece.
+    assertThat(br.com.agrocontabil.config.avaliacao.ClarezaTexto.medir(r.texto())
+        .siglasSemExplicacao()).isEmpty();
     assertThat(r.citacoes()).hasSize(1);
   }
 
@@ -243,12 +247,12 @@ class RotaLegislacaoTest {
     chatModel.responderTexto(
         "O imposto sobre bens e serviços (IBS) dos insumos tem reducao de 60% [T1].");
     String comSigla = rota.responder("Qual a reducao?", contexto).texto();
-    assertThat(comSigla).doesNotContain("- IBS: ").contains("- LC: ");
+    assertThat(comSigla).doesNotContain("- IBS (").contains("- LC: ");
 
     chatModel.responderTexto("A reducao dos insumos e de 60% [T1].");
     String semSigla = rota.responder("Qual a reducao dos insumos?", contexto).texto();
     // So a LC da referencia montada pelo backend.
-    assertThat(semSigla).contains("- LC: ").doesNotContain("- IBS: ", "- CBS: ");
+    assertThat(semSigla).contains("- LC: ").doesNotContain("- IBS (", "- CBS (");
   }
 
   @Test
@@ -259,7 +263,8 @@ class RotaLegislacaoTest {
     ResultadoRota aceita = rota.responderRegraGeral(
         "Fertilizante tem reducao de aliquota?", contexto, List.of(), true);
     assertThat(aceita.aceita()).isTrue();
-    assertThat(aceita.texto()).contains(LinhaGlossario.TITULO, "- IBS: ");
+    assertThat(aceita.texto()).contains(LinhaGlossario.TITULO,
+        "- IBS (imposto sobre bens e serviços): ");
 
     chatModel.responderTexto("Os fertilizantes que você comprou têm IBS reduzido em 60% [T1].");
     ResultadoRota soTrechos = rota.responderRegraGeral(
