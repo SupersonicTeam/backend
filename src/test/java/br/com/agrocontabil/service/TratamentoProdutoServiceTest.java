@@ -122,6 +122,23 @@ class TratamentoProdutoServiceTest {
     }
   }
 
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "soja salvo semente, milho|soja , milho",
+      "graos excluidos os rejeitados; trigo|graos ; trigo",
+      "frutas excetuadas as secas e as nozes. cafe|frutas . cafe",
+      "ressalvados os produtos do anexo i|''",
+      "x (exceto a (b, c), d), e y|x ( ), e y",
+      "x (exceto a, b) y, z|x ( ) y, z",
+      "arroz exceto sem fim|arroz",
+      "cafe nao|cafe",
+      "cafe nao torrado e nem moido|cafe e"})
+  @DisplayName("#369: escopo exato do trecho negado (salvo, excluidos, ponto final, parenteses)")
+  void escopoDoTrechoNegado(String entrada, String esperado) {
+    assertThat(TratamentoProdutoService.semTrechoNegado(entrada).replaceAll("\s+", " ").strip())
+        .isEqualTo(esperado.replace("'", ""));
+  }
+
   @Test
   @DisplayName("#369: 'nao destinados a ...' nega a oracao inteira; sem negacao nada sai")
   void negacaoDeDestino() {

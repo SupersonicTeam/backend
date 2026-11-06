@@ -45,6 +45,13 @@ import org.springframework.transaction.annotation.Transactional;
  *       anexo; o item de anexo traz o tratamento de cada NCM dele, agrupado.</li>
  * </ol>
  *
+ * <p><strong>Negação (#369):</strong> o que a descrição oficial exclui não conta para o
+ * casamento. "Soja, mesmo triturada, exceto para semeadura" não é achada por "semeadura": o
+ * trecho de {@code exceto}, {@code excetuados}, {@code excluídos}, {@code ressalvados} e
+ * {@code salvo} (até a vírgula, o ponto e vírgula, o ponto final ou o parêntese que fecha) e a
+ * palavra depois de {@code não}/{@code nem} saem da descrição, e o mesmo vale para a pergunta
+ * ({@link #semTrechoNegado}).
+ *
  * <p><strong>Condição que o dado não decide</strong> vai em {@link TratamentoProduto#condicao()},
  * para a resposta dizê-la em vez de afirmar. Vem do dado: no in natura, o próprio art. 137; a
  * condição de destino do item ("destinados à alimentação humana"), da coluna de condição ou da
