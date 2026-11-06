@@ -110,6 +110,11 @@ class RegraFiscalDesatualizadaIntegrationTest {
 
     verify(sefazTransport, never()).enviar(any(), any(), any());
     assertThat(statusDe(notaId)).isEqualTo(StatusNotaFiscal.COM_INCONSISTENCIAS);
+    // O documento antigo nao fica servido numa nota editavel: XML, chave e marca saem.
+    NotaFiscal devolvida = notaFiscalRepository.findById(notaId).orElseThrow();
+    assertThat(devolvida.getXmlGerado()).isNull();
+    assertThat(devolvida.getChaveAcesso()).isNull();
+    assertThat(devolvida.getDataGeracaoXml()).isNull();
     assertThat(validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(notaId))
         .extracting("code").containsExactly("XML_REGRA_FISCAL_DESATUALIZADA");
     // Sem aprovacao no historico, nada de caducidade.
@@ -146,6 +151,23 @@ class RegraFiscalDesatualizadaIntegrationTest {
         revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(notaId);
     assertThat(historico).extracting(NotaFiscalRevisao::getAcao)
         .containsExactly(AcaoRevisao.APROVACAO_CADUCADA, AcaoRevisao.APROVADA);
+  }
+
+  @Test
+  @DisplayName("dois envios seguidos da mesma nota recusada: o historico nao duplica")
+  void recusaRepetidaNaoDuplicaOHistorico() throws Exception {
+    UUID notaId = persistir(StatusNotaFiscal.XML_GERADO, null);
+
+    mockMvc.perform(post("/api/notas/{id}/enviar-sefaz", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("XML_REGRA_FISCAL_DESATUALIZADA"));
+    // A nota ja voltou a editavel: o segundo envio e o 409 de status, sem novo registro.
+    mockMvc.perform(post("/api/notas/{id}/enviar-sefaz", notaId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("NOTA_NAO_ENVIAVEL"));
+
+    assertThat(validacaoRepository.findByNotaFiscalIdOrderByValidadoEmDesc(notaId)).hasSize(1);
+    verify(sefazTransport, never()).enviar(any(), any(), any());
   }
 
   @Test

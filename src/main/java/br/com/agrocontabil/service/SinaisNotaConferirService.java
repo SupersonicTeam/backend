@@ -186,12 +186,14 @@ public class SinaisNotaConferirService {
       return List.of();
     }
     List<SinalNota> sinais = new ArrayList<>();
+    Map<String, Boolean> cClassTribJaConferido = new HashMap<>();
     for (ItemParaSinal item : itens) {
       motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
           item.descricao(), item.cfop(), prazo)));
       if (ANTES_DO_XML.contains(nota.status())) {
-        if (cClassTribNaoAdmitido(item.cClassTrib(), item.ncm(), nota.dataEmissao())) {
+        if (cClassTribNaoAdmitido(item.cClassTrib(), item.ncm(), nota.dataEmissao(),
+            cClassTribJaConferido)) {
           sinais.add(new SinalNota(CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
               Motivo.CODIGO_NAO_VALE_PARA_O_NCM, momento, item.numeroItem(), item.descricao(),
               item.cfop(), null));
@@ -217,8 +219,9 @@ public class SinaisNotaConferirService {
   /**
    * Avisos de uma nota própria recém-gravada, sem o resto da validação fiscal (issue #389): só o
    * cClassTrib informado que o NCM do item não admite, a mesma regra que barra o {@code gerar-xml}
-   * (422). Barata (uma consulta por NCM com código informado), roda no create/update do rascunho.
-   * Não bloqueia; a nota importada nunca recebe aviso.
+   * (422). Sem as demais regras (duplicidade, valor fora do padrão, ICMS), só o cClassTrib
+   * informado, e uma conferência por par (cClassTrib, NCM) da nota; roda no create/update do
+   * rascunho. Não bloqueia; a nota importada nunca recebe aviso.
    *
    * @param nota nota já com os itens, ainda gerenciada ou completa
    * @return um sinal por item com código não admitido, na ordem dos itens
@@ -229,8 +232,10 @@ public class SinaisNotaConferirService {
       return List.of();
     }
     List<SinalNota> sinais = new ArrayList<>();
+    Map<String, Boolean> jaConferido = new HashMap<>();
     for (NotaFiscalItem item : nota.getItens()) {
-      if (cClassTribNaoAdmitido(item.getCClassTrib(), item.getNcm(), nota.getDataEmissao())) {
+      if (cClassTribNaoAdmitido(item.getCClassTrib(), item.getNcm(), nota.getDataEmissao(),
+          jaConferido)) {
         sinais.add(new SinalNota(CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
             Motivo.CODIGO_NAO_VALE_PARA_O_NCM, Momento.ANTES_DE_EMITIR, item.getNumeroItem(),
             item.getDescricao(), item.getCfop(), null));
@@ -240,14 +245,18 @@ public class SinaisNotaConferirService {
   }
 
   /** cClassTrib informado que o NCM não alcança: a regra do {@code FiscalRulesValidator}. */
-  private boolean cClassTribNaoAdmitido(String cClassTrib, String ncm, OffsetDateTime emissao) {
+  private boolean cClassTribNaoAdmitido(String cClassTrib, String ncm, OffsetDateTime emissao,
+      Map<String, Boolean> jaConferido) {
     if (cClassTrib == null || cClassTrib.isBlank() || ncm == null || ncm.isBlank()) {
       return false;
     }
-    LocalDate data = (emissao == null ? OffsetDateTime.now(clock) : emissao)
-        .atZoneSameInstant(FUSO).toLocalDate();
-    return classificacaoService.codigoNaoAdmitido(cClassTrib.strip(), ncm.strip(), data)
-        .isPresent();
+    // A data e a mesma para todos os itens da nota: a chave e o par (cClassTrib, NCM).
+    return jaConferido.computeIfAbsent(cClassTrib.strip() + "|" + ncm.strip(), chave -> {
+      LocalDate data = (emissao == null ? OffsetDateTime.now(clock) : emissao)
+          .atZoneSameInstant(FUSO).toLocalDate();
+      return classificacaoService.codigoNaoAdmitido(cClassTrib.strip(), ncm.strip(), data)
+          .isPresent();
+    });
   }
 
   /** Outra nota do mesmo produtor com o mesmo destinatário, valor, itens e dia. */

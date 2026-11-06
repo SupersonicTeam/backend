@@ -177,7 +177,14 @@ public class SefazService {
     try {
       dados = reservarParaEnvio(notaId, produtor, ambiente);
     } catch (RegraFiscalDesatualizadaException e) {
-      validacaoService.registrarXmlDesatualizado(notaId);
+      // Melhor esforco: o 409 de acao sai sempre; se a nota nao puder voltar a editavel agora, o
+      // proximo envio recusa de novo e tenta de novo.
+      try {
+        validacaoService.registrarXmlDesatualizado(notaId, produtor.getId());
+      } catch (RuntimeException falha) {
+        log.error("Nao foi possivel devolver a nota {} a edicao apos recusar o XML desatualizado",
+            notaId, falha);
+      }
       throw e;
     }
     return enviarReservada(notaId, produtor, ambiente, dados);

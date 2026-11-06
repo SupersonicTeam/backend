@@ -144,11 +144,18 @@ public class NotaFiscalValidacaoService {
    * nota já saiu de {@code XML_GERADO} ou se o XML já está na versão atual (outra requisição
    * chegou antes).
    *
-   * @param notaId nota já conferida pelo chamador (anti-IDOR)
+   * <p>Lê a nota sob lock pessimista: dois envios simultâneos da mesma nota recusada chegam aqui
+   * juntos, e sem o lock um deles estouraria o lock otimista (409 genérico de concorrência no
+   * lugar do 409 de ação) ou duplicaria o histórico. O XML, a chave e a marca antigos são
+   * descartados: a nota editável não pode seguir servindo (XML/DANFE) um documento que nunca será
+   * transmitido; o {@code gerar-xml} os repõe.
+   *
+   * @param notaId     nota
+   * @param produtorId dono (a nota é lida pelo par, o mesmo anti-IDOR do envio)
    */
   @Transactional
-  public void registrarXmlDesatualizado(UUID notaId) {
-    NotaFiscal nota = notaFiscalRepository.findById(notaId)
+  public void registrarXmlDesatualizado(UUID notaId, UUID produtorId) {
+    NotaFiscal nota = notaFiscalRepository.findByIdAndProdutorIdForUpdate(notaId, produtorId)
         .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
     if (nota.getStatus() != StatusNotaFiscal.XML_GERADO
         || !VersaoRegraFiscal.desatualizada(nota.getVersaoRegraFiscal())) {
@@ -178,10 +185,16 @@ public class NotaFiscalValidacaoService {
           .ocorridoEm(agora)
           .build());
     }
+    Integer versaoDescartada = nota.getVersaoRegraFiscal();
+    nota.setXmlGerado(null);
+    nota.setChaveAcesso(null);
+    nota.setDataGeracaoXml(null);
+    nota.setVersaoLayoutNfe(null);
+    nota.setVersaoRegraFiscal(null);
     nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
     notaFiscalRepository.save(nota);
     log.info("XML de regra fiscal desatualizada recusado no envio: notaId={} versao={}",
-        notaId, nota.getVersaoRegraFiscal());
+        notaId, versaoDescartada);
   }
 
   /**

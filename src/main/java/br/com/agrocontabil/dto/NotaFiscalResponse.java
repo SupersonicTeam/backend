@@ -107,14 +107,6 @@ public record NotaFiscalResponse(
     List<AvisoNotaResponse> avisos
 ) implements ResultadoAuditavel {
 
-  /** Mesma resposta com os avisos da gravacao (issue #389). */
-  public NotaFiscalResponse comAvisos(List<AvisoNotaResponse> novosAvisos) {
-    return new NotaFiscalResponse(id, chaveAcesso, numero, serie, modelo, naturezaOperacao,
-        status, tipoDocumento, dataEmissao, dataSaida, produtorId, destinatarioNome,
-        destinatarioCpfCnpj, destinatarioIe, destinatarioEndereco, valorTotalProdutos,
-        valorTotalNota, valorTotalIbs, valorTotalCbs, itens, createdAt, updatedAt, novosAvisos);
-  }
-
   @Override
   public UUID recursoAuditado() {
     return id;

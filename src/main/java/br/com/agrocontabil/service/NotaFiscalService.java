@@ -410,14 +410,21 @@ public class NotaFiscalService {
    * Salvar nunca e impedido por isso; so a tela deixa de mostrar o imposto como definitivo.
    */
   private NotaFiscalResponse comAvisos(NotaFiscal salva) {
-    List<AvisoNotaResponse> avisos = sinaisService.avisosDoRascunho(salva).stream()
-        .map(s -> new AvisoNotaResponse(s.codigo().name(), s.numeroItem(), "cClassTrib",
-            "O cClassTrib informado no item " + s.numeroItem() + " (" + s.descricaoItem()
-                + ") nao vale para o NCM dele: o imposto mostrado nao vale na emissao e o "
-                + "gerar-xml sera recusado. Corrija o cClassTrib ou retire-o do item."))
-        .toList();
-    NotaFiscalResponse resposta = NotaFiscalMapper.toResponse(salva);
-    return avisos.isEmpty() ? resposta : resposta.comAvisos(avisos);
+    List<AvisoNotaResponse> avisos;
+    try {
+      avisos = sinaisService.avisosDoRascunho(salva).stream()
+          .map(s -> new AvisoNotaResponse(s.codigo().name(), s.numeroItem(), "cClassTrib",
+              "O cClassTrib informado no item " + s.numeroItem() + " nao vale para o NCM dele: "
+                  + "o imposto mostrado nao vale na emissao e o gerar-xml sera recusado. "
+                  + "Corrija o cClassTrib ou retire-o do item."))
+          .toList();
+    } catch (RuntimeException falha) {
+      // O aviso e um extra: uma falha na tabela oficial nunca pode impedir de salvar a nota.
+      log.warn("Aviso de cClassTrib indisponivel para a nota {}: {}", salva.getId(),
+          falha.toString());
+      avisos = List.of();
+    }
+    return NotaFiscalMapper.toResponse(salva, avisos);
   }
 
   /**
