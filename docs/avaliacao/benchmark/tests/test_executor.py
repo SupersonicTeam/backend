@@ -251,8 +251,11 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         e.cfg.todas_arquiteturas[-1]["sha"] = "b" * 40
         sete = e.cfg.matriz["sessaoParalela"]["commit"]
         extras = {x["commit"] for x in e.cfg.matriz["sessaoParalela"]["tambemExige"]}
-        oito = e.cfg.matriz["sessaoParalela"]["tambemExige"][0]["commit"]
+        # Sem so o ultimo exigido (a 8c, #378): nao basta checar os primeiros da lista.
+        ultimo = e.cfg.matriz["sessaoParalela"]["tambemExige"][-1]["commit"]
+        self.assertEqual(ultimo, "da90c2004fd94398842397efc157ccc72518b0ae")
         for presentes, confirmado, inteira in (({sete} | extras, True, True), ({sete}, False, True),
+                                               (({sete} | extras) - {ultimo}, False, True),
                                                (set(), False, False)):
             def run(comando, cwd=None, _p=presentes):
                 return mock.Mock(returncode=0 if comando[3] in _p else 1)

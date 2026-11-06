@@ -44,7 +44,7 @@
   "sessaoParalela": {
     "issue": "#270",
     "rotulo": "Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade)",
-    "commitNota": "Merge do ultimo PR da #270 (#354; antes, #351), informado pela sessao que a coordenou em 2026-11-05. A coluna Ceres 2.0 so e oficial num SHA que o contenha. Desde o 54f02ee (Sessao 8a, #360) o texto do atalho de IBS/CBS mudou (explica o diferimento dos insumos do Anexo IX): a coluna oficial tambem precisa dele (tambemExige).",
+    "commitNota": "Merge do ultimo PR da #270 (#354; antes, #351), informado pela sessao que a coordenou em 2026-11-05. A coluna Ceres 2.0 so e oficial num SHA que o contenha e tambem os de tambemExige: 54f02ee (Sessao 8a, #360: o texto do atalho de IBS/CBS explica o diferimento dos insumos do Anexo IX), d8b0b36 (8b, #366: arroz em casca in natura, P02 do gabarito 2026-11-05.3) e da90c20 (8c, #374: leite in natura com 60% por padrao, classe da E03).",
     "commit": "54a4201ad908cfa1181578b531685b0bb06da17e",
     "tambemExige": [
       {
