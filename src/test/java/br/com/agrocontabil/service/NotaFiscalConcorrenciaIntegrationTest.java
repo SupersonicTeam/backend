@@ -138,6 +138,9 @@ class NotaFiscalConcorrenciaIntegrationTest {
     assertThat(recarregada.getStatus()).isEqualTo(StatusNotaFiscal.XML_GERADO);
     assertThat(recarregada.getChaveAcesso()).isNotNull().hasSize(44);
     assertThat(recarregada.getXmlGerado()).isNotNull();
+    // A marca da regra fiscal (#389) chega a nota persistida pela fase 3 do gerarXml.
+    assertThat(recarregada.getVersaoRegraFiscal())
+        .isEqualTo(br.com.agrocontabil.nfe.VersaoRegraFiscal.ATUAL);
 
     // A asserção central da issue #95: sem @Version, a thread perdedora podia sobrescrever a chave
     // de acesso deixando o XML da outra — chave e XML divergentes na mesma linha.

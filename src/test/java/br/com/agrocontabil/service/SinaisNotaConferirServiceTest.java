@@ -2,12 +2,17 @@ package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -21,10 +26,12 @@ import br.com.agrocontabil.service.SinalNota.Momento;
 import br.com.agrocontabil.service.SinalNota.Motivo;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,13 +52,15 @@ class SinaisNotaConferirServiceTest {
 
   private NotaFiscalRepository notas;
   private NcmReferenciaRepository referencia;
+  private ClassificacaoTributariaService classificacao;
   private SinaisNotaConferirService service;
 
   @BeforeEach
   void setUp() {
     notas = mock(NotaFiscalRepository.class);
     referencia = mock(NcmReferenciaRepository.class);
-    service = new SinaisNotaConferirService(notas, referencia, CLOCK);
+    classificacao = mock(ClassificacaoTributariaService.class);
+    service = new SinaisNotaConferirService(notas, referencia, classificacao, CLOCK);
     when(referencia.existsByCodigo(anyString())).thenAnswer(i ->
         i.getArgument(0, String.class).equals("12019000")
             || i.getArgument(0, String.class).equals("10059010"));
@@ -129,11 +138,11 @@ class SinaisNotaConferirServiceTest {
   @DisplayName("ICMS_PADRAO_A_CONFIRMAR: 51 do padrao fora de MT + soja, sem bloquear; so antes do XML")
   void icmsPadraoAConfirmar() {
     itens(new ItemParaSinal(1, "Soja em grao", "5101", "12019000", "KG", java.math.BigDecimal.ONE,
-            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"),
+            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335", null),
         new ItemParaSinal(2, "Milho em grao", "5101", "10059010", "KG", java.math.BigDecimal.ONE,
-            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"),
+            null, null, TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335", null),
         new ItemParaSinal(3, "Milho em grao", "5101", "10059010", "KG", java.math.BigDecimal.ONE,
-            null, "51", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335"));
+            null, "51", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "MT", "1335", null));
 
     assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.AGUARDANDO_APROVACAO, EMISSAO)))
         .extracting(SinalNota::codigo, SinalNota::numeroItem, SinalNota::motivo)
@@ -188,10 +197,10 @@ class SinaisNotaConferirServiceTest {
   @Test
   @DisplayName("listas: pontuacao e acento nas entradas casam; lista de termos vazia recusa subir")
   void listas() {
-    SinaisNotaConferirService comHifen = new SinaisNotaConferirService(notas, referencia, CLOCK,
+    SinaisNotaConferirService comHifen = new SinaisNotaConferirService(notas, referencia, classificacao, CLOCK,
         List.of("Hora/Máquina"), List.of());
     assertThat(comHifen.temTermoDeServico("hora maquina do trator")).isTrue();
-    assertThatThrownBy(() -> new SinaisNotaConferirService(notas, referencia, CLOCK,
+    assertThatThrownBy(() -> new SinaisNotaConferirService(notas, referencia, classificacao, CLOCK,
         List.of(" ", "--"), List.of()))
         .isInstanceOf(IllegalStateException.class);
   }
@@ -230,6 +239,57 @@ class SinaisNotaConferirServiceTest {
     return new NotaParaSinal(NOTA, OrigemNotaFiscal.PROPRIA, status, emissao, null, null);
   }
 
+  @Test
+  @DisplayName("CCLASSTRIB_NAO_ADMITIDO: cClassTrib que o NCM nao admite avisa antes do XML (#389)")
+  void cClassTribNaoAdmitido() {
+    ItemParaSinal soja = comCClassTrib(item(1, "Soja em grao", "5101", "12019000"), "200009");
+    ItemParaSinal milho = comCClassTrib(item(2, "Milho em grao", "5101", "10059010"), "200003");
+    ItemParaSinal semCodigo = item(3, "Soja em grao", "5101", "12019000");
+    itens(soja, milho, semCodigo);
+    when(classificacao.codigoNaoAdmitido(eq("200009"), eq("12019000"), any(LocalDate.class)))
+        .thenReturn(Optional.of(new ClassificacaoTributariaService.CodigoNaoAdmitido(null,
+            List.of("200036"))));
+    when(classificacao.codigoNaoAdmitido(eq("200003"), eq("10059010"), any(LocalDate.class)))
+        .thenReturn(Optional.empty());
+
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.RASCUNHO, EMISSAO)))
+        .extracting(SinalNota::codigo, SinalNota::numeroItem, SinalNota::motivo)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple(
+            CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO, 1, Motivo.CODIGO_NAO_VALE_PARA_O_NCM));
+    // Com o XML gerado a nota nao e editavel: sem o aviso "antes de emitir".
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.XML_GERADO, EMISSAO)))
+        .extracting(SinalNota::codigo)
+        .doesNotContain(CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO);
+  }
+
+  @Test
+  @DisplayName("avisosDoRascunho: so o cClassTrib nao admitido, sem tocar nas outras regras (#389)")
+  void avisosDoRascunho() {
+    NotaFiscal nota = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA)
+        .dataEmissao(EMISSAO).build();
+    nota.addItem(NotaFiscalItem.builder().numeroItem(1).descricao("Soja").ncm("12019000")
+        .cClassTrib("200009").build());
+    nota.addItem(NotaFiscalItem.builder().numeroItem(2).descricao("Milho").ncm("10059010")
+        .build());
+    when(classificacao.codigoNaoAdmitido(eq("200009"), eq("12019000"), any(LocalDate.class)))
+        .thenReturn(Optional.of(new ClassificacaoTributariaService.CodigoNaoAdmitido(null,
+            List.of("200036"))));
+
+    assertThat(service.avisosDoRascunho(nota)).extracting(SinalNota::numeroItem)
+        .containsExactly(1);
+    // Nenhuma consulta de nota, de item ou de referencia: e a checagem barata.
+    verifyNoInteractions(notas);
+
+    nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
+    assertThat(service.avisosDoRascunho(nota)).isEmpty();
+  }
+
+  private static ItemParaSinal comCClassTrib(ItemParaSinal i, String cClassTrib) {
+    return new ItemParaSinal(i.numeroItem(), i.descricao(), i.cfop(), i.ncm(), i.unidade(),
+        i.quantidade(), i.valorUnitario(), i.cstIcms(), i.tipoEmitente(), i.regimeEmitente(),
+        i.ufEmitente(), i.ufDestinatario(), i.ieDestinatario(), cClassTrib);
+  }
+
   private void itens(ItemParaSinal... itens) {
     when(notas.findItensParaSinais(NOTA, PRODUTOR)).thenReturn(List.of(itens));
   }
@@ -237,13 +297,13 @@ class SinaisNotaConferirServiceTest {
   /** Item com o CST do ICMS informado: as regras que não olham o ICMS não veem o sinal dele. */
   private static ItemParaSinal item(int numero, String descricao, String cfop, String ncm) {
     return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null,
-        "41", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "PR", "9071425318");
+        "41", TipoProdutor.PESSOA_FISICA, RegimeTributario.REAL, "MT", "PR", "9071425318", null);
   }
 
   private static ItemParaSinal itemIcms(int numero, String cfop, String cstIcms, String ufDestino,
       String ieDestino) {
     return new ItemParaSinal(numero, "Soja em grao", cfop, "12019000", "KG",
         java.math.BigDecimal.ONE, null, cstIcms, TipoProdutor.PESSOA_FISICA,
-        RegimeTributario.REAL, "MT", ufDestino, ieDestino);
+        RegimeTributario.REAL, "MT", ufDestino, ieDestino, null);
   }
 }

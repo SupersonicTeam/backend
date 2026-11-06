@@ -101,6 +101,8 @@ class GeracaoNfaFlowTest {
     String xml = geracaoNfaService.gerarXml(nota);
 
     assertThat(xml).contains("<CPF>" + CPF_VALIDO + "</CPF>");
+    assertThat(nota.getVersaoRegraFiscal())
+        .isEqualTo(br.com.agrocontabil.nfe.VersaoRegraFiscal.ATUAL);
     // Nao deve conter CNPJ no emitente (o bloco <emit> vem antes do <dest>).
     String emit = xml.substring(xml.indexOf("<emit>"), xml.indexOf("</emit>"));
     assertThat(emit).contains("<CPF>");

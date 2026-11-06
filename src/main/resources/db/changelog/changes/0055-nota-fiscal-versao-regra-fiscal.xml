@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0055-nota-fiscal-versao-regra-fiscal.xml
+         Versao da regra fiscal com que o XML da nota foi gerado (#389).
+
+         As regras que mudam o que uma NF-e valida precisa ter (grupo de
+         ICMS por item, tratamento do leite, cClassTrib admitido por NCM)
+         valem na geracao. Uma nota que ja estava em XML_GERADO antes do
+         deploy seria transmitida com o XML antigo. O enviar-sefaz recusa
+         (409) o XML de versao menor que a constante
+         nfe/VersaoRegraFiscal.ATUAL, sem transmitir.
+
+         Sem preenchimento das linhas existentes: nulo = anterior a marca,
+         e o XML delas e justamente o que precisa ser gerado de novo. Nota
+         AUTORIZADA nao e tocada (o envio so olha XML_GERADO).
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0055-nota-fiscal-versao-regra-fiscal" author="supersonic-team">
+        <addColumn tableName="nota_fiscal">
+            <column name="versao_regra_fiscal" type="INTEGER" remarks="Versao da regra fiscal do XML gerado (nfe/VersaoRegraFiscal); nulo = anterior a marca"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

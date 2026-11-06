@@ -245,6 +245,14 @@ public class NotaFiscal {
   private String versaoLayoutNfe;
 
   /**
+   * Versao da regra fiscal (validador e mapper) com que o XML foi gerado
+   * ({@link br.com.agrocontabil.nfe.VersaoRegraFiscal#ATUAL}, issue #389). Nulo = gerado antes
+   * desta marca, ou nota sem XML proprio. O {@code enviar-sefaz} recusa o XML de versao menor.
+   */
+  @Column(name = "versao_regra_fiscal")
+  private Integer versaoRegraFiscal;
+
+  /**
    * Data e hora (com fuso horario) em que o XML da NF-e foi gerado pela primeira vez.
    *
    * <p>Nulo enquanto a nota esta em {@link StatusNotaFiscal#RASCUNHO}.

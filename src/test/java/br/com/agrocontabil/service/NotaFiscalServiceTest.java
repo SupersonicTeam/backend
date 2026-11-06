@@ -108,6 +108,7 @@ class NotaFiscalServiceTest {
   private NotaFiscalValidacaoService validacaoService;
 
   private NotaFiscalService notaFiscalService;
+  private SinaisNotaConferirService sinaisService;
 
   private Produtor produtor;
   private UUID produtorId;
@@ -118,6 +119,7 @@ class NotaFiscalServiceTest {
     // servico deixa de ser montavel por @InjectMocks — um template dublado devolveria null em
     // execute() e todo metodo retornaria null. Um TransactionTemplate real sobre um gerenciador
     // dublado executa o callback de verdade, que e o que o teste precisa exercitar.
+    sinaisService = mock(SinaisNotaConferirService.class);
     notaFiscalService = new NotaFiscalService(
         notaFiscalRepository,
         produtorProvider,
@@ -127,6 +129,7 @@ class NotaFiscalServiceTest {
         danfePdfService,
         validacaoService,
         vinculoRepository,
+        sinaisService,
         new TransactionTemplate(mock(PlatformTransactionManager.class)));
     produtorId = UUID.randomUUID();
     produtor = Produtor.builder()
@@ -163,6 +166,29 @@ class NotaFiscalServiceTest {
     assertThat(response.produtorId()).isEqualTo(produtorId);
 
     verify(notaFiscalRepository).save(any(NotaFiscal.class));
+  }
+
+  @Test
+  @DisplayName("#389: create devolve o aviso de cClassTrib nao admitido sem impedir de salvar")
+  void createDevolveAvisosSemRecusar() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    NotaFiscal notaSalva = buildNotaSalva();
+    when(tributacaoService.calcular(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenReturn(notaSalva);
+    when(sinaisService.avisosDoRascunho(notaSalva)).thenReturn(List.of(new SinalNota(
+        SinalNota.CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
+        SinalNota.Motivo.CODIGO_NAO_VALE_PARA_O_NCM, SinalNota.Momento.ANTES_DE_EMITIR, 1,
+        "Soja", "5101", null)));
+
+    NotaFiscalResponse response = notaFiscalService.create(buildRequest());
+
+    assertThat(response.id()).isEqualTo(notaSalva.getId());
+    assertThat(response.avisos()).singleElement().satisfies(a -> {
+      assertThat(a.codigo()).isEqualTo("CCLASSTRIB_NAO_ADMITIDO");
+      assertThat(a.numeroItem()).isEqualTo(1);
+      assertThat(a.campo()).isEqualTo("cClassTrib");
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -372,6 +398,35 @@ class NotaFiscalServiceTest {
 
     assertThat(response.valorTotalProdutos()).isEqualByComparingTo("500.00");
     assertThat(response.valorTotalNota()).isEqualByComparingTo("500.00");
+  }
+
+  @Test
+  @DisplayName("#389: update devolve o aviso de cClassTrib, e uma falha do aviso nao impede salvar")
+  void updateDevolveAvisosEFalhaDoAvisoNaoImpedeSalvar() {
+    UUID notaId = UUID.randomUUID();
+    NotaFiscal notaExistente = buildNotaSalva();
+    notaExistente.setId(notaId);
+    NotaFiscalRequest request = buildRequest();
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findByIdAndProdutorId(notaId, produtorId))
+        .thenReturn(Optional.of(notaExistente));
+    when(tributacaoService.calcular(any(NotaFiscal.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(sinaisService.avisosDoRascunho(any(NotaFiscal.class)))
+        .thenReturn(List.of(new SinalNota(SinalNota.CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
+            SinalNota.Motivo.CODIGO_NAO_VALE_PARA_O_NCM, SinalNota.Momento.ANTES_DE_EMITIR, 1,
+            "Soja", "5101", null)))
+        .thenThrow(new IllegalStateException("tabela oficial indisponivel"));
+
+    NotaFiscalResponse comAviso = notaFiscalService.update(notaId, request);
+    NotaFiscalResponse semAviso = notaFiscalService.update(notaId, request);
+
+    assertThat(comAviso.avisos()).extracting(a -> a.codigo())
+        .containsExactly("CCLASSTRIB_NAO_ADMITIDO");
+    // A falha do aviso (ex.: tabela oficial fora) nao derruba o salvamento.
+    assertThat(semAviso.avisos()).isEmpty();
+    assertThat(semAviso.id()).isEqualTo(notaId);
   }
 
   // -------------------------------------------------------------------------

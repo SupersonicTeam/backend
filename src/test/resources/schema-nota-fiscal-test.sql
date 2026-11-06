@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     -- XML gerado — Sprint 2 Sessão 6
     xml_gerado                  TEXT,
     versao_layout_nfe           VARCHAR(10),
+    versao_regra_fiscal         INTEGER,
     data_geracao_xml            TIMESTAMP WITH TIME ZONE,
     -- Retorno da SEFAZ — Sprint 3 issue #15
     protocolo_autorizacao       VARCHAR(20),

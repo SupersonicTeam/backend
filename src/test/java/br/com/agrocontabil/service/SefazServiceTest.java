@@ -103,7 +103,7 @@ class SefazServiceTest {
         new TransactionTemplate(mock(PlatformTransactionManager.class));
     sefazService = new SefazService(
         notaFiscalRepository, produtorProvider, sefazClient, sefazProperties, eventPublisher,
-        transactionTemplate);
+        transactionTemplate, mock(NotaFiscalValidacaoService.class));
   }
 
   @Test
@@ -708,6 +708,7 @@ class SefazServiceTest {
         .chaveAcesso(CHAVE)
         .xmlGerado("<NFe><infNFe Id=\"NFe" + CHAVE + "\"/></NFe>")
         .versaoLayoutNfe("4.00")
+        .versaoRegraFiscal(br.com.agrocontabil.nfe.VersaoRegraFiscal.ATUAL)
         .build();
   }
 }

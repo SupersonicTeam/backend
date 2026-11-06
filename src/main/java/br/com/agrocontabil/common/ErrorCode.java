@@ -257,7 +257,13 @@ public enum ErrorCode {
    * O titular gastou os créditos da semana da Ceres (issue #166). 429 com {@code Retry-After}
    * até a virada da semana (segunda 00:00, {@code America/Sao_Paulo}).
    */
-  LIMITE_USO_ASSISTENTE;
+  LIMITE_USO_ASSISTENTE,
+  /**
+   * O XML guardado foi gerado por uma versao da regra fiscal anterior a atual (issue #389): nada
+   * foi transmitido; a nota voltou a um estado editavel e o XML precisa ser gerado de novo.
+   * HTTP 409.
+   */
+  XML_REGRA_FISCAL_DESATUALIZADA;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {

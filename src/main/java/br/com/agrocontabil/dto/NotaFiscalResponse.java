@@ -99,7 +99,12 @@ public record NotaFiscalResponse(
     OffsetDateTime createdAt,
 
     @Schema(description = "Data e hora da ultima atualizacao da nota")
-    OffsetDateTime updatedAt
+    OffsetDateTime updatedAt,
+
+    @Schema(description = "Avisos nao bloqueantes da gravacao (criar e atualizar o rascunho): "
+        + "a nota foi salva, mas o imposto mostrado pode nao valer na emissao. Vazio nas demais "
+        + "respostas.")
+    List<AvisoNotaResponse> avisos
 ) implements ResultadoAuditavel {
 
   @Override

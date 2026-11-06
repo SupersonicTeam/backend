@@ -173,6 +173,7 @@ class NotaFiscalControllerValidationTest {
         new BigDecimal("2.25"),
         List.of(),
         OffsetDateTime.now(),
-        OffsetDateTime.now());
+        OffsetDateTime.now(),
+        java.util.List.of());
   }
 }

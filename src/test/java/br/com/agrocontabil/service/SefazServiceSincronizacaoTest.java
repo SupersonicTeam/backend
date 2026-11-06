@@ -67,7 +67,8 @@ class SefazServiceSincronizacaoTest {
         .build();
     sefazService = new SefazService(
         notaFiscalRepository, produtorProvider, sefazClient, sefazProperties, eventPublisher,
-        new TransactionTemplate(mock(PlatformTransactionManager.class)));
+        new TransactionTemplate(mock(PlatformTransactionManager.class)),
+        mock(NotaFiscalValidacaoService.class));
   }
 
   @Test

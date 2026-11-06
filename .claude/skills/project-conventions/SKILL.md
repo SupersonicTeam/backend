@@ -84,6 +84,18 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Todo changeSet novo precisa do **espelho no `schema-nota-fiscal-test.sql`** (Liquibase é desligado no profile `test`).
 - **NCM semeado em `ncm_agropecuario`** tem de existir na nomenclatura oficial versionada em `src/test/resources/ncm/nomenclatura-ncm-oficial.txt` (Siscomex, com a versão da Gecex no cabeçalho). O `NcmSemeadoExisteNaNomenclaturaTest` lê o changelog e o espelho do H2 e falha se o código não existir ou se os dois divergirem (#282). Ele não confere fixtures de teste nem exemplos do OpenAPI: use neles só códigos da referência. Nova versão da Gecex = novo download desse arquivo. Na emissão, o `FiscalRulesValidator` também confere o NCM contra a referência (422), porque nota gravada antes de um código sair dela não passa mais pelo `@ValidNcm`.
 
+## Versão da regra fiscal do XML (#389)
+
+- `nfe/VersaoRegraFiscal.ATUAL` é gravada em `nota_fiscal.versao_regra_fiscal` pelo
+  `GeracaoNotaFiscalService.gerarXml` (NF-e, NFA e seed da demonstração passam por ele; nunca
+  gravar a marca em outro lugar). O `enviar-sefaz` recusa com 409 `XML_REGRA_FISCAL_DESATUALIZADA`
+  o XML de versão menor ou sem marca, sem transmitir, e a nota volta a `COM_INCONSISTENCIAS`.
+- **Mudou o mapper ou o validador de modo que altera o XML (ou o que ele precisa ter), suba a
+  constante.** Mudança só de mensagem, sugestão ou log não sobe. Teste que monta nota `XML_GERADO`
+  para o envio põe `.versaoRegraFiscal(VersaoRegraFiscal.ATUAL)`.
+- Rascunho: `NotaFiscalResponse.avisos` (create/update) traz o cClassTrib não admitido pelo NCM
+  (`SinaisNotaConferirService.avisosDoRascunho`), sem 422 e sem o resto da validação fiscal.
+
 ## Testes
 
 - Feature nova = teste unitário de service (Mockito) + teste de integração do fluxo crítico.

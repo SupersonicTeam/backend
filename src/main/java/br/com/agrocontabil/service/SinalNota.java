@@ -43,7 +43,9 @@ public record SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento,
     /** Item sem CST de ICMS fora da venda interna de produção própria: a emissão é barrada. */
     ICMS_A_DEFINIR,
     /** CST 51 pelo padrão num par (UF; NCM) que o contador não confirmou: não bloqueia. */
-    ICMS_PADRAO_A_CONFIRMAR
+    ICMS_PADRAO_A_CONFIRMAR,
+    /** cClassTrib informado no item que não vale para o NCM: a emissão é barrada (#375, #389). */
+    CCLASSTRIB_NAO_ADMITIDO
   }
 
   /** Por que o sinal disparou. */
@@ -62,7 +64,9 @@ public record SinalNota(CodigoSinalNota codigo, Motivo motivo, Momento momento,
     /** Sem CST do ICMS informado e fora do padrão (CFOP 5101 interno a contribuinte). */
     SEM_CST_ICMS,
     /** Diferimento (CST 51) aplicado por padrão fora da lista confirmada pelo contador. */
-    PADRAO_NAO_CONFIRMADO
+    PADRAO_NAO_CONFIRMADO,
+    /** A hipótese de redução do cClassTrib informado não inclui o NCM do item. */
+    CODIGO_NAO_VALE_PARA_O_NCM
   }
 
   /** Em que ponto a nota está, para a frase dizer o que ainda dá para fazer. */

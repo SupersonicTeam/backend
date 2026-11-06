@@ -1,6 +1,7 @@
 package br.com.agrocontabil.mapper;
 
 import br.com.agrocontabil.dto.NotaFiscalItemRequest;
+import br.com.agrocontabil.dto.AvisoNotaResponse;
 import br.com.agrocontabil.dto.NotaFiscalItemResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
@@ -94,6 +95,17 @@ public final class NotaFiscalMapper {
    * @return DTO de saída com todos os campos, incluindo itens e campos IBS/CBS mapeados
    */
   public static NotaFiscalResponse toResponse(NotaFiscal nota) {
+    return toResponse(nota, List.of());
+  }
+
+  /**
+   * Converte a nota com os avisos não bloqueantes da gravação (issue #389).
+   *
+   * @param nota   entidade
+   * @param avisos avisos de create/update (vazio nas demais respostas)
+   * @return DTO de saída
+   */
+  public static NotaFiscalResponse toResponse(NotaFiscal nota, List<AvisoNotaResponse> avisos) {
     List<NotaFiscalItemResponse> itensResponse = nota.getItens().stream()
         .map(NotaFiscalMapper::toItemResponse)
         .toList();
@@ -120,7 +132,8 @@ public final class NotaFiscalMapper {
         nota.getValorTotalCbs(),
         itensResponse,
         nota.getCreatedAt(),
-        nota.getUpdatedAt());
+        nota.getUpdatedAt(),
+        avisos);
   }
 
   /**

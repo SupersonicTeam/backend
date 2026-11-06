@@ -5,6 +5,7 @@ import br.com.agrocontabil.nfe.AssinaturaValidator;
 import br.com.agrocontabil.nfe.FiscalRulesValidator;
 import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
+import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
 import br.com.agrocontabil.nfe.model.NFe;
@@ -97,6 +98,10 @@ public class GeracaoNotaFiscalService {
     String xmlAssinado = nfeAssinador.assinar(xml, nfe.getInfNFe().getId());
     assinaturaValidator.validar(xmlAssinado);
     xsdValidator.validar(xmlAssinado);
+
+    // Marca da regra fiscal (issue #389): gravada aqui porque a NF-e, a NFA e o seed da
+    // demonstracao passam todos por este metodo; quem persiste a nota leva a marca junto.
+    nota.setVersaoRegraFiscal(VersaoRegraFiscal.ATUAL);
 
     log.info(
         "XML da NF-e gerado, assinado e validado com sucesso: notaId={} chave={}",

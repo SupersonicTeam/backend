@@ -11,6 +11,8 @@ import br.com.agrocontabil.exception.CancelamentoRejeitadoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoConsultavelException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEnviavelException;
+import br.com.agrocontabil.exception.RegraFiscalDesatualizadaException;
+import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SefazComunicacaoException;
 import br.com.agrocontabil.exception.SefazConexaoException;
@@ -132,6 +134,7 @@ public class SefazService {
    * seguinte volta ao início. Estado só em memória, por instância: basta para garantir progresso,
    * e um restart apenas recomeça do início.
    */
+  private final NotaFiscalValidacaoService validacaoService;
   private final AtomicReference<UUID> retomarSincronizacaoApos = new AtomicReference<>();
 
   /** Constrói o serviço com as dependências de persistência, transporte, configuração e eventos. */
@@ -141,13 +144,15 @@ public class SefazService {
       SefazClient sefazClient,
       SefazProperties sefazProperties,
       ApplicationEventPublisher eventPublisher,
-      TransactionTemplate transactionTemplate) {
+      TransactionTemplate transactionTemplate,
+      NotaFiscalValidacaoService validacaoService) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
     this.sefazClient = sefazClient;
     this.sefazProperties = sefazProperties;
     this.eventPublisher = eventPublisher;
     this.transactionTemplate = transactionTemplate;
+    this.validacaoService = validacaoService;
   }
 
   /**
@@ -168,10 +173,34 @@ public class SefazService {
     // Transacao 1 (curta): sob lock, valida a pre-condicao e reserva a nota marcando ENVIANDO.
     // O commit libera lock e conexao ANTES da rede. Uma segunda requisicao concorrente espera o
     // lock, encontra ENVIANDO e recebe 409 — o XML chega a SEFAZ uma unica vez.
-    DadosTransmissao dados = emTransacao(() -> {
+    DadosTransmissao dados;
+    try {
+      dados = reservarParaEnvio(notaId, produtor, ambiente);
+    } catch (RegraFiscalDesatualizadaException e) {
+      // Melhor esforco: o 409 de acao sai sempre; se a nota nao puder voltar a editavel agora, o
+      // proximo envio recusa de novo e tenta de novo.
+      try {
+        validacaoService.registrarXmlDesatualizado(notaId, produtor.getId());
+      } catch (RuntimeException falha) {
+        log.error("Nao foi possivel devolver a nota {} a edicao apos recusar o XML desatualizado",
+            notaId, falha);
+      }
+      throw e;
+    }
+    return enviarReservada(notaId, produtor, ambiente, dados);
+  }
+
+  private DadosTransmissao reservarParaEnvio(UUID notaId, Produtor produtor,
+      SefazAmbiente ambiente) {
+    return emTransacao(() -> {
       NotaFiscal nota = carregarComLock(notaId, produtor);
       if (nota.getStatus() != StatusNotaFiscal.XML_GERADO) {
         throw new NotaFiscalNaoEnviavelException(notaId, nota.getStatus());
+      }
+      // XML gerado por regra fiscal anterior a atual (issue #389): nao transmite. A nota volta a
+      // um estado editavel fora desta transacao (ver o catch abaixo), porque a excecao a desfaz.
+      if (VersaoRegraFiscal.desatualizada(nota.getVersaoRegraFiscal())) {
+        throw new RegraFiscalDesatualizadaException(notaId, nota.getVersaoRegraFiscal());
       }
       nota.setStatus(StatusNotaFiscal.ENVIANDO);
       // O ambiente vai junto na reserva, antes da rede: se o desfecho ficar incerto, toda consulta
@@ -182,7 +211,10 @@ public class SefazService {
       notaFiscalRepository.save(nota);
       return new DadosTransmissao(nota.getXmlGerado(), nota.getChaveAcesso());
     });
+  }
 
+  private SefazEnvioResponse enviarReservada(UUID notaId, Produtor produtor,
+      SefazAmbiente ambiente, DadosTransmissao dados) {
     // Fora de transacao: a chamada de rede (com retry) e a eventual consulta de reconciliacao
     // nao seguram conexao do pool nem o lock.
     SefazRetorno retorno = transmitirEnvio(notaId, produtor, dados, ambiente);

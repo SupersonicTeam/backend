@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -112,6 +113,9 @@ class SeedDemonstracaoIntegrationTest {
       assertThat(nota.getChaveAcesso()).hasSize(44);
       assertThat(nota.getXmlGerado()).contains("Id=\"NFe" + nota.getChaveAcesso() + "\"");
       assertThat(nota.getProtocoloAutorizacao()).hasSize(15);
+      // O seed chama o pipeline direto, sem o NotaFiscalService: a marca da regra fiscal (#389)
+      // tem de vir dele, senao o enviar-sefaz recusaria as notas semeadas diante da banca.
+      assertThat(nota.getVersaoRegraFiscal()).isEqualTo(VersaoRegraFiscal.ATUAL);
       // Zero e valido: ovos, leite, arroz, tomate e cafe tem reducao de 100% (Anexos I e XV).
       assertThat(nota.getValorTotalCbs()).isNotNull().isNotNegative();
     });
