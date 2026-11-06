@@ -106,11 +106,16 @@ public class CarteiraService {
       .comparing((ProdutorCarteiraResponse p) -> NormalizacaoBusca.normalizar(p.nomeCompleto()))
       .thenComparing(ProdutorCarteiraResponse::vinculoId);
 
-  /** Guias vencidas, depois inconsistências, depois vencimentos próximos; empate pelo nome. */
+  /**
+   * Guias vencidas, inconsistências, notas aguardando aprovação, documentos enviados e vencimentos
+   * próximos (#407); empate pelo nome.
+   */
   private static final Comparator<ProdutorCarteiraResponse> POR_URGENCIA = Comparator
       .comparingLong(
           (ProdutorCarteiraResponse p) -> -indicador(p, AtencaoCarteiraResponse::guiasVencidas))
       .thenComparingLong(p -> -indicador(p, AtencaoCarteiraResponse::notasComInconsistencia))
+      .thenComparingLong(p -> -indicador(p, AtencaoCarteiraResponse::notasAguardandoAprovacao))
+      .thenComparingLong(p -> -indicador(p, AtencaoCarteiraResponse::pendenciasEnviadas))
       .thenComparingLong(p -> -indicador(p, AtencaoCarteiraResponse::vencimentosProximos7Dias))
       .thenComparing(POR_NOME);
 

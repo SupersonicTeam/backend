@@ -353,6 +353,21 @@ class CarteiraIntegrationTest {
   }
 
   @Test
+  @DisplayName("urgencia (#407): cliente com nota aguardando aprovacao passa o cliente em dia")
+  void urgenciaContaNotaAguardandoAprovacao() throws Exception {
+    clienteA();
+    vinculoRepository.save(br.com.agrocontabil.model.VinculoCarteira.builder()
+        .escritorioId(escritorioDe(contador.usuarioId())).produtorId(produtorB.usuarioId())
+        .situacao(SituacaoVinculo.ATIVO).inicio(java.time.OffsetDateTime.now()).build());
+    // A (Beatriz, primeira no alfabeto) esta em dia; B tem trabalho para o escritorio.
+    inserirNota(produtorB.usuarioId(), 20, "AGUARDANDO_APROVACAO");
+
+    comoContador("/api/contador/produtores?sort=urgencia")
+        .andExpect(jsonPath("$[0].id").value(produtorB.usuarioId().toString()))
+        .andExpect(jsonPath("$[1].id").value(produtorA.usuarioId().toString()));
+  }
+
+  @Test
   @DisplayName("lista: busca por nome sem acento e por CPF completo; filtros e ordenacao")
   void listaBuscaFiltroOrdem() throws Exception {
     clienteA();
