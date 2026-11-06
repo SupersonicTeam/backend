@@ -14,6 +14,6 @@ import java.util.List;
  */
 @Schema(description = "Etiquetas de um cliente, substituindo as anteriores")
 public record EtiquetasClienteRequest(
-    @Schema(description = "Nomes das etiquetas (até 10, de 1 a 30 caracteres); lista vazia remove todas", example = "Soja")
+    @Schema(description = "Nomes das etiquetas (até 10, de 1 a 30 caracteres); lista vazia remove todas", example = "[\"Soja\", \"Leite\"]")
     @NotNull @Size(max = 10) List<@NotBlank @Size(max = 30) String> etiquetas) {
 }
