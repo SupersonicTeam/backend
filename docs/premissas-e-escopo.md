@@ -132,7 +132,7 @@ As validações de contador da issue #284 podem ajustar este texto:
   motivos para optar ou não;
 - **pergunta 9 (respondida):** ICMS diferido, CST 51, na venda interna de soja em MT, hoje o
   padrão da NF-e (seção 3). Outros casos dependem do CST que o contador informar;
-- **pergunta 1:** a redução de 60% da soja em grão (art. 137), hoje não aplicada pela tabela de
-  NCM.
+- **pergunta 1:** a redução de 60% da soja em grão (art. 137), aplicada desde a #272 pela marca
+  *in natura* do NCM e ainda em validação com o contador.
 
 Roteiro de resposta para a banca: [`roteiro-banca-regime-regular.md`](roteiro-banca-regime-regular.md).
