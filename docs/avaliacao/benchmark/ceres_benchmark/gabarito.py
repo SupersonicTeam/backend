@@ -258,3 +258,31 @@ def so_rota(pergunta: dict) -> bool:
     """A pergunta so mede rota (nenhum outro criterio do gabarito se aplica)."""
     outros = ("funcao", "parametros", "numero", "citacao", "recusa", "vazamento")
     return aplicavel(pergunta, "rota") and not any(aplicavel(pergunta, c) for c in outros)
+
+
+#: Origens cuja resposta esperada a banca so aceita revisada (#358, #387).
+ORIGENS_COM_REVISAO = ("inedita_externa_ia", "inedita_equipe_dados")
+
+
+def _palavras(nome: str) -> set[str]:
+    nome = unicodedata.normalize("NFKD", (nome or "").lower())
+    nome = "".join(c for c in nome if not unicodedata.combining(c))
+    return set(re.findall(r"\w+", nome))
+
+
+def revisada(p: dict) -> bool:
+    """Revisada pela equipe ou pelo orientador (#387): ``revisado.por`` preenchido e por quem nao
+    escreveu a pergunta (qualquer palavra de 3+ letras do ``autor`` no revisor, a regra da
+    planilha do repositorio cego). O antigo ``revisado: true`` nao diz quem revisou e nao conta."""
+    r = p.get("revisado")
+    if not (isinstance(r, dict) and str(r.get("por") or "").strip()):
+        return False
+    autor = {w for w in _palavras(p.get("autor", "")) if len(w) >= 3}
+    return not (autor & _palavras(str(r["por"])))
+
+
+def perguntas_sem_revisao(perguntas: list[dict]) -> list[str]:
+    """Ids que ainda impedem a rodada da banca (e a declaracao do relatorio): ``aConferir`` ou sem
+    revisao valida."""
+    return [p["id"] for p in perguntas
+            if p.get("origem") in ORIGENS_COM_REVISAO and (p.get("aConferir") or not revisada(p))]

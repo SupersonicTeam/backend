@@ -1,0 +1,136 @@
+{
+  "versao": "ficticio.1",
+  "descricao": "[FICTÍCIO] Conjunto cego de mentira para os testes e o exemplo do relatório: nenhuma pergunta real do benchmark.",
+  "perguntas": [
+    {
+      "id": "ZI01",
+      "categoria": "DADOS",
+      "pergunta": "[FICTÍCIO] quanto gastei de adubo esse ano?",
+      "rotaEsperada": "DADOS",
+      "funcoesEsperadas": [
+        "totalComprasPorInsumo"
+      ],
+      "parametrosEsperados": {
+        "descricaoOuNcm": [
+          "fertilizante",
+          "adubo"
+        ]
+      },
+      "camposValor": [
+        "valorTotal"
+      ],
+      "tema": "compras",
+      "capacidade": "comum",
+      "origem": "inedita_equipe"
+    },
+    {
+      "id": "ZI02",
+      "categoria": "LEGISLACAO",
+      "pergunta": "[FICTÍCIO] semente paga menos imposto?",
+      "rotaEsperada": "LEGISLACAO",
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "tema": "linguagem",
+      "capacidade": "comum",
+      "origem": "inedita_equipe"
+    },
+    {
+      "id": "ZE01",
+      "categoria": "LEGISLACAO",
+      "pergunta": "[FICTÍCIO] A venda de um produto inventado tem alíquota zero?",
+      "rotaEsperada": "LEGISLACAO",
+      "justificativaRota": "fictícia: pergunta de regra",
+      "tema": "ext_aliquotas",
+      "capacidade": "comum",
+      "origem": "inedita_externa_ia",
+      "fonte": "[FICTÍCIO] inventada para o exemplo do relatório; não é pergunta do benchmark",
+      "numeroOriginal": 1,
+      "adversario": true,
+      "aConferir": true,
+      "classeTratamento": "ZERO",
+      "encaminharContador": false,
+      "revisado": false,
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "fonteConferencia": "normas.leg.br, fictício",
+      "existenciaNaBase": "conferida na VPS (fictício)",
+      "afirmacoesProibidas": [
+        "\\bn[aã]o tem al[ií]quota zero"
+      ]
+    },
+    {
+      "id": "ZE02",
+      "categoria": "LEGISLACAO",
+      "pergunta": "[FICTÍCIO] O insumo inventado tem redução de 60%?",
+      "rotaEsperada": "LEGISLACAO",
+      "justificativaRota": "fictícia: pergunta de regra",
+      "tema": "ext_insumos",
+      "capacidade": "comum",
+      "origem": "inedita_externa_ia",
+      "fonte": "[FICTÍCIO] inventada para o exemplo do relatório; não é pergunta do benchmark",
+      "numeroOriginal": 2,
+      "adversario": true,
+      "aConferir": true,
+      "classeTratamento": "REDUCAO_60",
+      "encaminharContador": false,
+      "revisado": false,
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "fonteConferencia": "normas.leg.br, fictício",
+      "existenciaNaBase": "conferida na VPS (fictício)",
+      "afirmacoesProibidas": [],
+      "observacao": "[FICTÍCIO] observação de exemplo, lida célula a célula no relatório."
+    },
+    {
+      "id": "ZE03",
+      "categoria": "LEGISLACAO",
+      "pergunta": "[FICTÍCIO] Uma situação inventada depende do quê?",
+      "rotaEsperada": "LEGISLACAO",
+      "justificativaRota": "fictícia: pergunta de regra",
+      "tema": "ext_praticas",
+      "capacidade": "comum",
+      "origem": "inedita_externa_ia",
+      "fonte": "[FICTÍCIO] inventada para o exemplo do relatório; não é pergunta do benchmark",
+      "numeroOriginal": 3,
+      "adversario": true,
+      "aConferir": true,
+      "classeTratamento": "CONDICIONAL",
+      "encaminharContador": true,
+      "revisado": false,
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "fonteConferencia": "normas.leg.br, fictício",
+      "existenciaNaBase": "conferida na VPS (fictício)",
+      "afirmacoesProibidas": [],
+      "pendenteContador": "#284, pergunta fictícia"
+    },
+    {
+      "id": "ZE04",
+      "categoria": "LEGISLACAO",
+      "pergunta": "[FICTÍCIO] Uma regra de transição inventada vale quando?",
+      "rotaEsperada": "LEGISLACAO",
+      "justificativaRota": "fictícia: pergunta de regra",
+      "tema": "ext_transicao",
+      "capacidade": "comum",
+      "origem": "inedita_externa_ia",
+      "fonte": "[FICTÍCIO] inventada para o exemplo do relatório; não é pergunta do benchmark",
+      "numeroOriginal": 4,
+      "adversario": true,
+      "aConferir": true,
+      "classeTratamento": "NAO_SE_APLICA",
+      "encaminharContador": false,
+      "revisado": false,
+      "dispositivosEsperados": [
+        "LC 214/2025, art. 138"
+      ],
+      "fonteConferencia": "normas.leg.br, fictício",
+      "existenciaNaBase": "conferida na VPS (fictício)",
+      "afirmacoesProibidas": [],
+      "contaminada": true
+    }
+  ]
+}

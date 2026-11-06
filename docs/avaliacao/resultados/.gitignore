@@ -6,3 +6,7 @@ benchmark/**/comando.log
 benchmark/*/logs/
 # Chave do CSV cego das perguntas externas (#358): liga a resposta a celula; nao vai ao avaliador.
 *-avaliacao-chave.json
+# Repositorio cego (#387): a rodada com as ineditas grava o texto delas (gabarito canonico,
+# respostas, relatorio, CSV cego). Nada da pasta da rodada entra no backend; guarde-a no
+# SupersonicTeam/ceres-benchmark-cego.
+benchmark/*

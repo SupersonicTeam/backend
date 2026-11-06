@@ -1,6 +1,7 @@
 """Partes puras do executor da matriz (issue #348): nada aqui chama Ollama, banco nem git."""
 
 import argparse
+import os
 import sys
 import tempfile
 import unittest
@@ -11,12 +12,16 @@ sys.path.insert(0, str(AQUI.parent))
 
 from ceres_benchmark import executor as ex  # noqa: E402
 
+# O executor le CERES_BENCHMARK_CEGO; com ele no ambiente de quem roda os testes, os casos "sem o
+# cego" deixariam de ser sem o cego.
+os.environ.pop("CERES_BENCHMARK_CEGO", None)
+
 
 def config(**extra):
     args = argparse.Namespace(matriz=str(AQUI.parent / "matriz.json"), arquiteturas=None, modelos=None,
                               ref_ceres2=None, saida="saida", trabalho="trabalho", repeticoes=None,
                               hardware="maquina X", retomar=None, teste=False, embedding_cpu=False,
-                              ensaio=False)
+                              ensaio=False, cego=None)
     for k, v in extra.items():
         setattr(args, k, v)
     return ex.montar_config(args, AQUI.parents[3])
@@ -225,6 +230,27 @@ class ConjuntoRealTest(unittest.TestCase):
         problemas = gab.conferir_capacidade(canonico, adapt)
         self.assertEqual(len(problemas), 2)
 
+    def test_compromisso_das_ineditas_sem_o_texto_delas(self):
+        """#387: aqui so as herdadas e o compromisso (ids e sha256 do repositorio cego)."""
+        import json
+        matriz = json.loads((AQUI.parent / "matriz.json").read_text(encoding="utf-8"))
+        conjunto = json.loads((self.REPO / matriz["perguntas"]).read_text(encoding="utf-8"))
+        self.assertEqual({p["origem"] for p in conjunto["perguntas"]}, {"gabarito"})
+        compromisso = conjunto["ineditas"]
+        self.assertEqual((compromisso["repositorio"], compromisso["arquivo"]),
+                         ("SupersonicTeam/ceres-benchmark-cego", "ineditas.json"))
+        self.assertRegex(compromisso["sha256"], r"^[0-9a-f]{64}$")
+        # A versao do cego e independente da deste conjunto.
+        self.assertRegex(compromisso["versao"], r"^\d{4}-\d{2}-\d{2}\.\d+$")
+        self.assertGreaterEqual(len(compromisso["ids"]), 53)
+        # Um hash por pergunta normalizada (a guarda do treino sem o texto), nunca o texto.
+        self.assertEqual(len(compromisso["normalizadas"]), len(compromisso["ids"]))
+        for n in compromisso["normalizadas"]:
+            self.assertEqual(set(n), {"palavras", "sha256"})
+            self.assertRegex(n["sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(len(set(compromisso["ids"])), len(compromisso["ids"]))
+        self.assertFalse(set(compromisso["ids"]) & {p["id"] for p in conjunto["perguntas"]})
+
     def test_hash_ao_lado_confere(self):
         import json
         matriz = json.loads((AQUI.parent / "matriz.json").read_text(encoding="utf-8"))
@@ -262,6 +288,100 @@ class RevisaoSegundoPrTest(unittest.TestCase):
                 sessao = e.sessao_paralela()
             self.assertEqual((sessao["confirmado"], sessao["inteira"]), (confirmado, inteira))
             self.assertEqual(bool(sessao["faltando"]), not extras <= presentes)
+
+    def test_banca_exige_revisado_por_da_equipe_ou_do_orientador(self):
+        """#387: sem contador; a trava le revisado.por, nao o antigo booleano."""
+        perguntas = [
+            {"id": "E1", "origem": "inedita_externa_ia", "aConferir": True, "revisado": False},
+            {"id": "E2", "origem": "inedita_externa_ia", "revisado": True},
+            {"id": "E3", "origem": "inedita_externa_ia", "revisado": {"por": " ", "em": "2026-11-10"}},
+            {"id": "E4", "origem": "inedita_externa_ia", "revisado": {"por": "Orientador", "em": "2026-11-10"}},
+            {"id": "E5", "origem": "inedita_externa_ia", "aConferir": True,
+             "revisado": {"por": "Luiz", "em": "2026-11-10"}},
+            {"id": "N1", "origem": "inedita_equipe_dados", "autor": "Luiz"},
+            {"id": "G1", "origem": "gabarito"},
+            {"id": "I1", "origem": "inedita_equipe"},
+        ]
+        self.assertEqual(ex.perguntas_sem_revisao(perguntas), ["E1", "E2", "E3", "E5", "N1"])
+        # Quem escreveu nao revisa a propria, por nenhuma grafia do nome (a regra da planilha).
+        for por in ("Luiz", "luiz gervazio", "LUÍZ F."):
+            self.assertFalse(ex.revisada({"autor": "Luiz", "revisado": {"por": por, "em": "2026-11-10"}}), por)
+        self.assertTrue(ex.revisada({"autor": "Luiz", "revisado": {"por": "Herick", "em": "2026-11-10"}}))
+
+    def test_juntar_ineditas_confere_o_compromisso(self):
+        import hashlib
+        import json
+        cego = {"versao": "v1", "perguntas": [{"id": "Z1", "pergunta": "x?", "origem": "inedita_equipe"}]}
+        with tempfile.TemporaryDirectory() as d:
+            pasta = Path(d)
+            texto = json.dumps(cego)
+            (pasta / "ineditas.json").write_text(texto, encoding="utf-8")
+            sha = hashlib.sha256(texto.encode()).hexdigest()
+            base = {"versao": "b1", "ineditas": {"arquivo": "ineditas.json", "versao": "v1", "sha256": sha,
+                                                 "ids": ["Z1"]}, "perguntas": [{"id": "D1", "pergunta": "y?"}]}
+            junto, info = ex.juntar_ineditas(base, pasta, "banca")
+            self.assertEqual([p["id"] for p in junto["perguntas"]], ["D1", "Z1"])
+            self.assertEqual((info["presente"], info["confere"], info["sha256"]), (True, True, sha))
+            self.assertEqual(base["perguntas"], [{"id": "D1", "pergunta": "y?"}])
+            # Sem o cego: banca recusa; ensaio segue so com as herdadas.
+            with self.assertRaisesRegex(RuntimeError, "conjunto cego ausente"):
+                ex.juntar_ineditas(base, pasta / "nao-existe", "banca")
+            junto, info = ex.juntar_ineditas(base, pasta / "nao-existe", "ensaio")
+            self.assertEqual(([p["id"] for p in junto["perguntas"]], info["presente"]), (["D1"], False))
+            # Hash, versao ou ids diferentes: banca recusa; ensaio avisa e segue com as do cego.
+            for campo, valor in (("sha256", "0" * 64), ("versao", "v2"), ("ids", ["Z1", "Z2"])):
+                outro = {**base, "ineditas": {**base["ineditas"], campo: valor}}
+                with self.assertRaisesRegex(RuntimeError, "nao confere com o compromisso"):
+                    ex.juntar_ineditas(outro, pasta, "banca")
+                junto, info = ex.juntar_ineditas(outro, pasta, "ensaio")
+                self.assertEqual((len(junto["perguntas"]), info["confere"]), (2, False))
+            # Id repetido entre herdada e inedita nunca passa, nem no ensaio.
+            repetido = {**base, "perguntas": [{"id": "Z1", "pergunta": "z?"}]}
+            with self.assertRaisesRegex(RuntimeError, "id repetido"):
+                ex.juntar_ineditas(repetido, pasta, "ensaio")
+        # Conjunto sem compromisso (o antigo, com tudo dentro): passa como esta.
+        self.assertEqual(ex.juntar_ineditas({"perguntas": []}, None, "banca"), ({"perguntas": []}, None))
+
+    def test_retomada_confere_o_conjunto_cego(self):
+        import hashlib
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            pasta = Path(d)
+            compromisso = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))["ineditas"]
+            (pasta / compromisso["arquivo"]).write_text("{}", encoding="utf-8")
+            cego_sha = hashlib.sha256(b"{}").hexdigest()
+            atual = ex.sha256_arquivo(AQUI.parent / "perguntas-benchmark.json")
+            e = ex.Executor(config(cego=str(pasta)))
+            # A mesma: segue. Outra, ausente no inicio ou sumida agora: recusa.
+            e.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}}, "embedding": "bge-m3"})
+            for antes in ({"sha256": "0" * 64}, None):
+                with self.assertRaisesRegex(RuntimeError, "conjunto cego mudou"):
+                    e.conferir_retomada({"perguntas": {"sha256": atual, "cego": antes}, "embedding": "bge-m3"})
+            sem = ex.Executor(config())
+            with self.assertRaisesRegex(RuntimeError, "conjunto cego mudou"):
+                sem.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}},
+                                       "embedding": "bge-m3"})
+
+    def test_caminho_do_cego(self):
+        import os
+        repo = Path("/x/backend")
+        # Nunca achado sozinho (#387): a pasta irma nao conta, so --cego ou a variavel.
+        antigo = os.environ.pop("CERES_BENCHMARK_CEGO", None)
+        try:
+            self.assertIsNone(ex.caminho_cego(None, repo))
+        finally:
+            if antigo is not None:
+                os.environ["CERES_BENCHMARK_CEGO"] = antigo
+        self.assertEqual(ex.caminho_cego("/y/cego", repo), Path("/y/cego"))
+        antigo = os.environ.get("CERES_BENCHMARK_CEGO")
+        os.environ["CERES_BENCHMARK_CEGO"] = "/z/cego"
+        try:
+            self.assertEqual(ex.caminho_cego(None, repo), Path("/z/cego"))
+        finally:
+            if antigo is None:
+                del os.environ["CERES_BENCHMARK_CEGO"]
+            else:
+                os.environ["CERES_BENCHMARK_CEGO"] = antigo
 
     def test_retomada_refaz_a_celula_sem_nenhuma_prova_do_pensamento(self):
         medida = {"codigoSaida": 0, "pensamento": {"raciocinou": False}}
@@ -312,14 +432,29 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             else stub if comando[-1].startswith("a" * 40) else fonte)
         return e
 
-    def test_rodada_da_banca_espera_a_revisao_das_externas(self):
-        # O conjunto versionado ainda tem as 40 externas sem revisao: so --ensaio (ou --teste) roda.
+    def test_rodada_da_banca_exige_o_conjunto_cego(self):
+        # As ineditas ficam no repositorio cego (#387): sem ele, a banca recusa antes de tudo.
         e = self._executor_com_stub()
         self.assertEqual(e.cfg.tipo, "banca")
         with tempfile.TemporaryDirectory() as d:
-            with self.assertRaisesRegex(RuntimeError, "revisao humana.*--ensaio"):
+            with self.assertRaisesRegex(RuntimeError, "conjunto cego ausente"):
                 e.preparar_gabaritos(Path(d))
             self.assertFalse((Path(d) / "gabarito-canonico.json").exists())
+
+    def test_rodada_da_banca_espera_a_revisao_das_externas(self):
+        # Com o cego (aqui o ficticio, aceito como se conferisse), as externas sem revisado.por travam.
+        import json
+        e = self._executor_com_stub()
+        cego = json.loads((AQUI / "fixtures/cego-ficticio/ineditas.json").read_text(encoding="utf-8"))
+        original = ex.juntar_ineditas
+        ex.juntar_ineditas = lambda base, pasta, tipo: (
+            {**base, "perguntas": base["perguntas"] + cego["perguntas"]}, {"presente": True, "confere": True})
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                with self.assertRaisesRegex(RuntimeError, "revisao da equipe ou do orientador.*--ensaio"):
+                    e.preparar_gabaritos(Path(d))
+        finally:
+            ex.juntar_ineditas = original
         self.assertEqual(self._executor_com_stub(ensaio=True).cfg.tipo, "ensaio")
         self.assertEqual(self._executor_com_stub(teste=True, ensaio=True).cfg.tipo, "teste")
 

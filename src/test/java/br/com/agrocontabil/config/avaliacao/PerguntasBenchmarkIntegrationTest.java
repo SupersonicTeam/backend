@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.HashSet;
@@ -40,8 +41,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * O conjunto congelado do benchmark da banca (#352) é lido pelo comando de avaliação como um
- * gabarito: 12 temas de 6 a 10 perguntas, hash ao lado conferido, as perguntas herdadas iguais às
- * do gabarito e os valores esperados saindo das funções reais sobre o seed, sem modelo.
+ * gabarito: hash ao lado conferido, as perguntas herdadas iguais às do gabarito e os valores
+ * esperados saindo das funções reais sobre o seed, sem modelo. As inéditas ficam no repositório
+ * cego (#387, {@link ConjuntoBenchmark}): os testes delas pulam com "conjunto cego ausente" sem
+ * ele e rodam na CI dele.
  */
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
@@ -50,12 +53,12 @@ import org.springframework.transaction.support.TransactionTemplate;
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
 class PerguntasBenchmarkIntegrationTest {
 
-  static final Path PERGUNTAS = Path.of("docs/avaliacao/benchmark/perguntas-benchmark.json");
+  static final Path PERGUNTAS = ConjuntoBenchmark.PERGUNTAS;
   private static final Path HASH = Path.of("docs/avaliacao/benchmark/perguntas-benchmark.json.sha256");
   private static final Path GABARITO = Path.of("docs/avaliacao/gabarito-ceres.json");
   private static final LocalDate HOJE = LocalDate.of(2026, 9, 15);
   /** Campos que só o benchmark tem: o resto de uma pergunta herdada é igual ao do gabarito. */
-  private static final Set<String> CAMPOS_DO_BENCHMARK = Set.of("tema", "capacidade", "origem");
+  private static final Set<String> CAMPOS_DO_BENCHMARK = Set.of("tema", "capacidade", "origem", "revisado");
 
   @Autowired private FerramentasDadosProdutor ferramentas;
   @Autowired private ProdutorRepository produtorRepository;
@@ -87,9 +90,36 @@ class PerguntasBenchmarkIntegrationTest {
   }
 
   @Test
-  @DisplayName("Cerca de 100 perguntas, 12 temas de 6 a 10, tema e capacidade em todas")
-  void estrutura() throws IOException {
+  @DisplayName("Herdadas com tema e capacidade, e o compromisso das inéditas do repositório cego (#387)")
+  void herdadasECompromisso() throws IOException {
     JsonNode raiz = objectMapper.readTree(PERGUNTAS.toFile());
+    Set<String> temas = new HashSet<>();
+    raiz.path("temas").fieldNames().forEachRemaining(temas::add);
+    Set<String> ids = new HashSet<>();
+    for (JsonNode p : raiz.path("perguntas")) {
+      String id = p.path("id").asText();
+      assertThat(ids.add(id)).as("id repetido: " + id).isTrue();
+      assertThat(temas).as(id).contains(p.path("tema").asText());
+      assertThat(p.path("capacidade").asText()).as(id).isIn("comum", "so_ceres_2");
+      // O texto das ineditas nunca volta para o backend: aqui so ficam as herdadas do gabarito.
+      assertThat(p.path("origem").asText()).as(id).isEqualTo("gabarito");
+    }
+    JsonNode compromisso = raiz.path("ineditas");
+    assertThat(compromisso.path("repositorio").asText()).isEqualTo("SupersonicTeam/ceres-benchmark-cego");
+    assertThat(compromisso.path("arquivo").asText()).isEqualTo("ineditas.json");
+    assertThat(compromisso.path("sha256").asText()).matches("[0-9a-f]{64}");
+    // A versao do cego e independente da do backend: so tem de existir.
+    assertThat(compromisso.path("versao").asText()).matches("\\d{4}-\\d{2}-\\d{2}\\.\\d+");
+    List<String> prometidos = new ArrayList<>();
+    compromisso.path("ids").forEach(i -> prometidos.add(i.asText()));
+    assertThat(prometidos).hasSizeGreaterThanOrEqualTo(53).doesNotHaveDuplicates()
+        .doesNotContainAnyElementsOf(ids);
+  }
+
+  @Test
+  @DisplayName("Com o repositório cego: 140 perguntas, 16 temas de 6 a 10, compromisso conferido")
+  void estruturaCompleta() throws IOException {
+    JsonNode raiz = ConjuntoBenchmark.completoOuPula(objectMapper);
     Set<String> temas = new HashSet<>();
     raiz.path("temas").fieldNames().forEachRemaining(temas::add);
     Map<String, Integer> porTema = new HashMap<>();
@@ -103,7 +133,7 @@ class PerguntasBenchmarkIntegrationTest {
           .isIn("gabarito", "inedita_equipe", "inedita_equipe_dados", "inedita_externa_ia");
       porTema.merge(p.path("tema").asText(), 1, Integer::sum);
     }
-    assertThat(ids).hasSize(140);
+    assertThat(ids).hasSizeGreaterThanOrEqualTo(140);
     assertThat(porTema.keySet()).isEqualTo(temas).hasSize(16);
     assertThat(porTema.values()).allSatisfy(n -> assertThat(n).isBetween(6, 10));
   }
@@ -124,7 +154,7 @@ class PerguntasBenchmarkIntegrationTest {
           .as("o gabarito esta na versao %s e o conjunto congelado em baseadoEm %s: copie as "
               + "herdadas que mudaram para perguntas-benchmark.json, mude versao, baseadoEm, a "
               + "versao do gabarito na descricao e o .sha256, regenere "
-              + "conferir-dispositivos-externas.sql e a versao do congelamento no README "
+              + "a versao do congelamento no README "
               + "(antes de qualquer rodada)", versaoGabarito, baseadoEm)
           .isEqualTo(versaoGabarito);
     }
@@ -146,23 +176,23 @@ class PerguntasBenchmarkIntegrationTest {
     if (conferirHerdadas) {
       assertThat(herdadas).isEqualTo(gabarito.size());
     }
-    // origem = gabarito exatamente nas herdadas: as ineditas medem generalizacao (a Ceres 2.0 foi
-    // desenvolvida contra o gabarito).
+    // origem = gabarito exatamente nas herdadas: as ineditas (repositorio cego) medem
+    // generalizacao (a Ceres 2.0 foi desenvolvida contra o gabarito).
     for (JsonNode p : raizPerguntas.path("perguntas")) {
-      assertThat(p.path("origem").asText()).as(p.path("id").asText())
-          .isIn(gabarito.containsKey(p.path("id").asText())
-              ? List.of("gabarito") : List.of("inedita_equipe", "inedita_equipe_dados", "inedita_externa_ia"));
+      assertThat(gabarito).as(p.path("id").asText()).containsKey(p.path("id").asText());
+      assertThat(p.path("origem").asText()).as(p.path("id").asText()).isEqualTo("gabarito");
     }
   }
 
   @Test
   @DisplayName("As 40 externas (#358) são o texto literal do Murillo, todas de lei, comuns e a conferir")
   void externasLiterais() throws IOException {
+    JsonNode ineditas = ConjuntoBenchmark.ineditasOuPula(objectMapper);
     List<String> literais = Files.readAllLines(
-        Path.of("src/test/resources/benchmark/perguntas-externas-murillo.txt"), StandardCharsets.UTF_8)
-        .stream().filter(l -> !l.startsWith("#")).toList();
-    List<JsonNode> externas = new java.util.ArrayList<>();
-    objectMapper.readTree(PERGUNTAS.toFile()).path("perguntas").forEach(p -> {
+        ConjuntoBenchmark.pastaCego().orElseThrow().resolve("perguntas-externas-murillo.txt"),
+        StandardCharsets.UTF_8).stream().filter(l -> !l.startsWith("#")).toList();
+    List<JsonNode> externas = new ArrayList<>();
+    ineditas.path("perguntas").forEach(p -> {
       if ("inedita_externa_ia".equals(p.path("origem").asText())) {
         externas.add(p);
       }
@@ -192,34 +222,53 @@ class PerguntasBenchmarkIntegrationTest {
   }
 
   @Test
-  @DisplayName("Valores esperados saem das funções reais sobre o seed, inclusive os das novas")
-  void valoresEsperadosSobreOSeed() throws IOException {
+  @DisplayName("Valores esperados das herdadas saem das funções reais sobre o seed, sem valor do vizinho")
+  void valoresEsperadosDasHerdadas() throws IOException {
     SeedAvaliacao seed = new SeedAvaliacao(produtorRepository, notaFiscalRepository,
         guiaFiscalRepository, revisaoRepository, validacaoRepository, transactionTemplate);
     ProdutoresAvaliacao produtores = seed.semear();
     Gabarito perguntas = objectMapper.readValue(PERGUNTAS.toFile(), Gabarito.class);
+    Map<String, List<String>> esperados =
+        new ValoresEsperados(ferramentas).calcular(perguntas, produtores.avaliado(), HOJE);
+    assertThat(esperados).containsKeys("D01", "T07", "D10");
+    assertThat(esperados.values().stream().flatMap(List::stream))
+        .doesNotContain("R$ 987.654,32", "R$ 1.234.567,89", "R$ 55.555,55");
+  }
+
+  @Test
+  @DisplayName("Com o repositório cego: valores esperados das inéditas sobre o seed, conferidos à mão")
+  void valoresEsperadosSobreOSeed() throws IOException {
+    Gabarito perguntas = objectMapper.treeToValue(ConjuntoBenchmark.completoOuPula(objectMapper),
+        Gabarito.class);
+    SeedAvaliacao seed = new SeedAvaliacao(produtorRepository, notaFiscalRepository,
+        guiaFiscalRepository, revisaoRepository, validacaoRepository, transactionTemplate);
+    ProdutoresAvaliacao produtores = seed.semear();
 
     Map<String, List<String>> esperados =
         new ValoresEsperados(ferramentas).calcular(perguntas, produtores.avaliado(), HOJE);
 
-    // Conferidos à mão contra o seed (SeedAvaliacao v4).
-    // N01: o herbicida glifosato de abril.
-    assertThat(esperados.get("N01")).containsExactly("R$ 8.250,00");
-    // N02 e N10: os três fertilizantes de 2026 (NPK de janeiro e agosto, foliar de março).
-    assertThat(esperados.get("N02")).containsExactly("3");
-    assertThat(esperados.get("N10")).containsExactly("R$ 25.130,00");
-    // N03: NCM 3105 = os mesmos três (31052000 e 31059090).
-    assertThat(esperados.get("N03")).containsExactly("R$ 25.130,00");
-    // N04: só o milho autorizado de junho (o rejeitado e o devolvido não somam).
-    assertThat(esperados.get("N04")).containsExactly("R$ 108.900,00");
-    // N05: a venda de junho; N06: soja de março + milho de junho.
-    assertThat(esperados.get("N05")).containsExactly("R$ 108.900,00");
-    assertThat(esperados.get("N06")).containsExactly("R$ 252.900,00");
-    // N11: a venda autorizada de agosto, a mesma da D10.
-    assertThat(esperados.get("N11")).isEqualTo(esperados.get("D10"));
-    // N08 é a T07 dita do jeito do produtor: o mesmo valor.
-    assertThat(esperados.get("N08")).isEqualTo(esperados.get("T07"));
-    assertThat(esperados).containsKeys("N07", "N09");
+    // Os valores conferidos à mão contra o seed ficam no repositório cego (valorConferido e
+    // valorIgualA de cada inédita): o backend não guarda nem o valor nem o que a pergunta pede.
+    int conferidas = 0;
+    for (JsonNode p : ConjuntoBenchmark.ineditasOuPula(objectMapper).path("perguntas")) {
+      String id = p.path("id").asText();
+      if (p.path("camposValor").isArray() && !p.path("camposValor").isEmpty()) {
+        assertThat(esperados).as("valor esperado de " + id).containsKey(id);
+      }
+      if (p.has("valorConferido")) {
+        List<String> conferido = new ArrayList<>();
+        p.path("valorConferido").forEach(v -> conferido.add(v.asText()));
+        assertThat(esperados.get(id)).as(id).containsExactlyElementsOf(conferido);
+        conferidas++;
+      }
+      if (p.has("valorIgualA")) {
+        String outra = p.path("valorIgualA").asText();
+        assertThat(esperados.get(outra)).as(id + " = " + outra).isNotNull();
+        assertThat(esperados.get(id)).as(id + " = " + outra).isEqualTo(esperados.get(outra));
+        conferidas++;
+      }
+    }
+    assertThat(conferidas).as("inéditas de dados com valor conferido").isPositive();
     // Nenhum valor esperado do avaliado pode ser um valor do vizinho.
     assertThat(esperados.values().stream().flatMap(List::stream))
         .doesNotContain("R$ 987.654,32", "R$ 1.234.567,89", "R$ 55.555,55");

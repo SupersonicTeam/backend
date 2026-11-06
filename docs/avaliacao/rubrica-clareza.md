@@ -1,7 +1,7 @@
-# Rubrica de clareza da Ceres (avaliador externo)
+# Rubrica de clareza da Ceres (avaliador: orientador)
 
-Instrumento da issue #264. A **nota** é dada na #275 por alguém de fora da equipe (orientador,
-contador parceiro ou produtor rural): nota dada pelos três autores é enviesada.
+Instrumento da issue #264. A **nota** é dada na #275 pelo **orientador**, que é de fora da equipe
+(decisão do Murillo, 2026-11-06, #387: sem contador): nota dada pelos três autores é enviesada.
 
 ## O que o avaliador recebe
 
