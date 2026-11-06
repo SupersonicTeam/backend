@@ -131,16 +131,15 @@ mostra, na pergunta, `Atalho IBS/CBS: x de N dispositivos na base de legislacao`
 
 ## Passo manual na VPS: cClassTrib do leite da demonstração (#284, leite in natura)
 
-O seed da banca é idempotente e não regrava nota já semeada. As notas de leite gravadas antes da
-regra do leite in natura têm o tratamento **aplicado** 200003 (zero) mas não o cClassTrib
-**informado**: emitidas, nada muda (o XML é o documento); a nota não emitida (a do Luiz aguardando
-aprovação) segue zero até ser editada, e uma edição depois de devolvida a recalcularia para 60%.
-Para a demonstração ficar coerente com o seed novo, informar o 200003 nesses itens (idempotente;
-só o leite pasteurizado do seed, nunca changeSet). **Rodar antes do deploy desta versão** (a coluna
-já existe): na subida, o `TributosLegadoRunner` recalcula pelo padrão novo (60%) todo item de leite
-não emitido com o aplicado 200003 e sem o informado — a nota do Luiz em aprovação voltaria a
-`RASCUNHO` com `APROVACAO_CADUCADA`. Se o deploy já rodou, o passo ainda informa o 200003, e basta o
-Luiz editar e reenviar a nota para ela voltar a zero:
+**Já rodado na VPS antes do deploy do #374 (2026-11-06, 15 itens).** Fica aqui para quem montar
+outra VPS a partir de um banco semeado antes do #374.
+
+O seed da banca é idempotente e não regrava nota já semeada. As notas de leite gravadas antes do
+#374 têm o tratamento **aplicado** 200003 (zero) mas não o cClassTrib **informado**. Emitidas,
+nada muda (o XML é o documento). Desde a #380 o 0401.20.10 do seed é UHT e tem zero pela regra, e
+o `TributosLegadoRunner` só recalcula item de leite cujo tratamento gravado difere do da regra
+(nos dois sentidos), então as notas do Luiz não mudam com ou sem o passo. O passo apenas informa o
+200003, como o seed novo faz (idempotente; só o leite do seed, nunca changeSet):
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'

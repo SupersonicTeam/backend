@@ -70,12 +70,12 @@ class NfeToNotaFiscalMapperTest {
   @org.junit.jupiter.params.ParameterizedTest(name = "NCM {0}, declarado {1} -> {2}")
   @org.junit.jupiter.params.provider.CsvSource({
       "04011090, 200003, 200003",
-      "04012010, 200003, ",
+      "04012010, 200036, 200036",
       "04012090, 200036, 200036",
       "31052000, 200038, ",
-      "04012010, ,       "
+      "04012090, ,       "
   })
-  @DisplayName("#284: cClassTrib do fornecedor entra no item so para o leite do Anexo I")
+  @DisplayName("#284: cClassTrib do fornecedor entra no item so para o leite do Anexo I (com UHT)")
   void cClassTribDeclaradoSoNoLeite(String ncm, String declarado, String esperado) {
     ResultadoImportacao r = importer.importar(
         NfeImportTestFixtures.gerarNfeAssinada().getBytes(StandardCharsets.UTF_8));

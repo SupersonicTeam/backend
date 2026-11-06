@@ -151,6 +151,7 @@ class TratamentoProdutoServiceIntegrationTest {
       assertThat(l.anexo()).isEqualTo(1);
       assertThat(l.artigo()).isEqualTo("125");
       assertThat(l.alternativa()).isNull();
+      assertThat(l.condicao()).contains("UHT").contains("60%");
     }
     // Pelo nome: os 3 primeiros da referencia, UHT com zero e o desnatado "outros" com 60%.
     assertThat(service.consultar("leite", EM_2026).produtos())

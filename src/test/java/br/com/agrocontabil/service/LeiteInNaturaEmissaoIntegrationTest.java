@@ -145,7 +145,7 @@ class LeiteInNaturaEmissaoIntegrationTest {
   @Test
   @DisplayName("XML do leite com 200003 informado: CST 200, cClassTrib 200003 e aliquota zero")
   void xmlConsumoDireto() {
-    NotaFiscal nota = nota("04012010", "200003");
+    NotaFiscal nota = nota("04012090", "200003");
     tributacao.calcular(nota);
 
     String xml = geracao.gerarXml(nota);
@@ -160,7 +160,7 @@ class LeiteInNaturaEmissaoIntegrationTest {
   @Test
   @DisplayName("validador: leite com 200003 mas reducao de 60% informada e recusado")
   void validadorRecusaReducaoDivergente() {
-    NotaFiscal nota = nota("04012010", "200003");
+    NotaFiscal nota = nota("04012090", "200003");
     nota.getItens().get(0).setPercentualReducao(new BigDecimal("60"));
     tributacao.calcular(nota);
 

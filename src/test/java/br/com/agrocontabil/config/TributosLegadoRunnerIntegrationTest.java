@@ -138,6 +138,23 @@ class TributosLegadoRunnerIntegrationTest {
     assertThat(runner.recalcularLegado()).isZero();
   }
 
+  @Test
+  @DisplayName("#380: UHT gravado com os 60% do #374 volta a zero; UHT ja em zero nao muda")
+  void uhtDosSessentaVoltaAZero() throws Exception {
+    String dos60 = criarNota("04012010", "200003");
+    String jaEmZero = criarNota("04012010", "200003");
+    jdbc.update("UPDATE nota_fiscal_item SET percentual_reducao_aplicado = 60,"
+        + " c_class_trib_aplicado = '200036', valor_ibs = 0.40 WHERE nota_fiscal_id = ?",
+        java.util.UUID.fromString(dos60));
+
+    assertThat(runner.recalcularLegado()).isEqualTo(1);
+
+    assertThat(item(dos60)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
+    assertThat((BigDecimal) item(dos60).get("VALOR_IBS")).isEqualByComparingTo("0.00");
+    assertThat(item(jaEmZero)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
+    assertThat(runner.recalcularLegado()).isZero();
+  }
+
   private Map<String, Object> item(String notaId) {
     return jdbc.queryForMap("SELECT c_class_trib_aplicado, base_calculo_ibs_cbs, valor_ibs"
         + " FROM nota_fiscal_item WHERE nota_fiscal_id = ?", java.util.UUID.fromString(notaId));

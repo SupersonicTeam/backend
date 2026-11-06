@@ -90,6 +90,11 @@ public class ClassificacaoTributariaService {
    */
   public static final Set<String> LEITE_UHT = Set.of("04011010", "04012010");
 
+  /** Os seis NCMs do leite do Anexo I, item 2: os sem destino definido e o UHT. */
+  public static final Set<String> LEITE_DO_ANEXO_I = java.util.stream.Stream
+      .concat(LEITE_SEM_DESTINO_DEFINIDO.stream(), LEITE_UHT.stream())
+      .collect(Collectors.toUnmodifiableSet());
+
   /** Anexos de alíquota zero (I e XV), que vencem o in natura. */
   static final List<String> ANEXOS_ZERO = List.of("200003", "200014");
 
@@ -286,8 +291,8 @@ public class ClassificacaoTributariaService {
 
   /**
    * NCM cujo tratamento a regra por NCM não decide sozinha: o {@code cClassTrib} informado no
-   * item (ou declarado no XML do fornecedor, na importação) é que diz se vale a alíquota zero.
-   * Hoje, o leite do Anexo I, item 2 (#284).
+   * item é que diz se vale a alíquota zero. Hoje, o leite do Anexo I, item 2, que não é UHT
+   * (#284; o UHT segue a regra geral desde a #380).
    *
    * @param ncm NCM do item; nulo devolve {@code false}
    * @return {@code true} para os NCMs de {@link #LEITE_SEM_DESTINO_DEFINIDO}
