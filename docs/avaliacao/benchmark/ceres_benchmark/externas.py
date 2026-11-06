@@ -38,25 +38,31 @@ _CONTADOR = re.compile(r"\bcontador|\bcontabilista|\bescrit[oó]rio (de )?contab
 #: "Voce nao precisa procurar o contador" fala do contador sem encaminhar a ele (mesma oracao).
 _SEM_CONTADOR = re.compile(r"\b(n[aã]o|sem) (precisa|precisar|[eé] necess[aá]rio|h[aá] necessidade)"
                            r"[^.;:!?,\n]{0,40}?(contador|contabilista|contab)", re.IGNORECASE)
-#: Aposto entre virgulas (", neste caso,", ", que nao e processado,"): sai antes de separar as
-#: oracoes, para nao cortar a negacao do que vem depois.
-_APOSTO = re.compile(r",\s+(neste caso|nesse caso|a meu ver|em regra|a rigor|por exemplo|em geral|de fato|"
-                     r"na pr[aá]tica|no entanto|contudo|todavia|por[eé]m|em princ[ií]pio|via de regra|"
-                     r"que [^,.;:!?\n]{1,60})\s*,", re.IGNORECASE)
+#: Um vocabulario so de negadores, para a classe, a afirmacao proibida e a base de reducao.
+_NEGADOR = re.compile(r"\b(n[aã]o|nem|nunca|jamais|sem|nenhum|nenhuma)\b", re.IGNORECASE)
+#: Negador que nao nega o que vem depois: interjeicao ("Nao, neste caso, ..."), "nao so"/"nao
+#: apenas", e "nao contribuinte" (substantivo do art. 164).
+_NEGADOR_INERTE = re.compile(r"\s*,|\s+(s[oó]|apenas|somente|contribuintes?)\b", re.IGNORECASE)
+#: Conectivo que abre outra oracao: o escopo do negador para nele ("o trator nao e isento e tem
+#: aliquota padrao", "nao paga IBS porque tem aliquota zero").
+_CONECTIVO = re.compile(r"\b(e|mas|por[eé]m|contudo|todavia|porque|pois|se|ou|enquanto|que|quando)\b",
+                        re.IGNORECASE)
 #: Fim de oracao: pontuacao forte, quebra de linha e a virgula seguida de espaco (a decimal, 26,5%,
-#: nao corta).
+#: nao corta), fora dos apostos curtos (mascarados, ver _mascarar_apostos).
 _FIM_ORACAO = re.compile(r"[.;:!?\n]|,\s")
-_NEGADOR = re.compile(r"\b(n[aã]o|nem|nunca)\b", re.IGNORECASE)
-#: Ate quantas palavras entre o "nao" e a expressao: "nao ha reducao de 60%" (3), "nao tera direito
-#: a aliquota zero" (3); "a reducao nao se aplica e vale a aliquota cheia" (5) nao nega a cheia.
+#: Aposto: trecho curto entre virgulas (ate 4 palavras): ", neste caso,", ", hoje,", ", a meu ver,".
+_APOSTO = re.compile(r",(\s+[^\s,.;:!?]+){1,4}\s*,")
+#: Ate quantas palavras entre o negador e a expressao: "nao ha reducao de 60%" (3), "nao tera
+#: direito a aliquota zero" (3).
 _JANELA_NEGACAO = 4
 _PARTICIPIO = re.compile(r"\w+(ad|id)[oa]s?", re.IGNORECASE)
+#: Negacao logo depois da expressao: "a aliquota zero nao se aplica", "a reducao de 60% nao vale".
+_NEGADA_DEPOIS = re.compile(r"^[^.;:!?,\n]{0,25}?\bn[aã]o\s+(se\s+aplica|vale|incide|cabe|existe|h[aá])\b",
+                            re.IGNORECASE)
 #: Gatilho de "aliquota padrao" como base de uma reducao: "reducao de 60% da aliquota padrao",
 #: "60% menor que a aliquota padrao".
-_GATILHO_REDUCAO = re.compile(r"redu[cç][aã]o|reduzid\w*|\bmenor\b|\bdesconto\b|\b60\s?%|sessenta por cento",
-                              re.IGNORECASE)
-_NEGA_GATILHO_ANTES = re.compile(r"\b(n[aã]o|nem|nunca|nenhuma?|sem)\b(\s+\S+){0,2}\s*$", re.IGNORECASE)
-_NEGA_GATILHO_DEPOIS = re.compile(r"^\s*(\S+\s+){0,1}(n[aã]o|nem|nunca)\b", re.IGNORECASE)
+_GATILHO_REDUCAO = re.compile(r"redu[cç][aã]o|reduzid\w*|\bmenor que\b|\bdesconto\b|\b60\s?%|"
+                              r"sessenta por cento", re.IGNORECASE)
 #: Desfechos em que o comando descarta o texto: a citacao dele nao conta (regra do AvaliadorResposta
 #: da main; o do 2463c27 nao a aplica, e as duas arquiteturas tem de ser medidas pela mesma regua).
 DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"}
@@ -73,55 +79,68 @@ CRITERIOS_EXTERNAS = {
 }
 
 
-def _normalizar(texto: str) -> str:
-    """Tira os apostos: as regras de negacao e de oracao olham so o texto normalizado."""
-    return _APOSTO.sub(" ", texto)
+def _mascarar_apostos(texto: str) -> str:
+    """O texto com as virgulas dos apostos curtos trocadas por espaco (mesmo comprimento): so para
+    medir o escopo da negacao; a busca dos padroes roda no texto original, nada some."""
+    def trocar(m):
+        # "Nao, neste caso, ..." e interjeicao: a virgula fica e corta a oracao.
+        if re.search(r"\b(n[aã]o|nem|nunca|jamais)\s*$", texto[:m.start()], re.IGNORECASE):
+            return m.group(0)
+        return " " + m.group(0)[1:-1] + " "
+    return _APOSTO.sub(trocar, texto)
 
 
-def _oracao_antes(texto: str, inicio: int) -> str:
-    """O trecho da mesma oracao antes de ``inicio``."""
-    antes = texto[max(0, inicio - 160):inicio]
+def _oracao_antes(mascarado: str, inicio: int) -> str:
+    """O trecho da mesma oracao antes de ``inicio``, no texto mascarado."""
+    antes = mascarado[max(0, inicio - 160):inicio]
     cortes = list(_FIM_ORACAO.finditer(antes))
     return antes[cortes[-1].end():] if cortes else antes
 
 
 def _negada(oracao: str) -> bool:
-    """Um "nao"/"nem"/"nunca" na oracao governa o que vem no fim dela: ate ``_JANELA_NEGACAO``
-    palavras antes, sem ser relativa ("que nao e processado tem...") nem qualificar um participio
-    ("nao processados tem...")."""
+    """Um negador da oracao governa o que vem no fim dela: ate ``_JANELA_NEGACAO`` palavras antes,
+    sem conectivo no meio (o escopo para nele), sem ser inerte (interjeicao, "nao so", "nao
+    contribuinte") e sem qualificar um particípio seguido de outro verbo ("nao processados tem",
+    "que nao e processado tem")."""
     for m in _NEGADOR.finditer(oracao):
-        palavras = oracao[m.end():].split()
-        if len(palavras) > _JANELA_NEGACAO:
+        depois = oracao[m.end():]
+        if _NEGADOR_INERTE.match(depois):
             continue
-        if re.search(r"\bque\s*$", oracao[:m.start()], re.IGNORECASE):
+        palavras = depois.split()
+        if len(palavras) > _JANELA_NEGACAO or any(_CONECTIVO.fullmatch(p) for p in palavras):
             continue
-        if len(palavras) > 1 and _PARTICIPIO.fullmatch(palavras[0].strip(",")):
+        if any(_PARTICIPIO.fullmatch(p) for p in palavras[:-1]):
             continue
         return True
     return False
 
 
 def _base_de_reducao(oracao: str) -> bool:
-    """A oracao antes da "aliquota padrao" afirma uma reducao (nao negada antes nem logo depois)."""
+    """A oracao antes da "aliquota padrao" afirma uma reducao (nao negada, sem conectivo depois)."""
     for m in _GATILHO_REDUCAO.finditer(oracao):
-        if _NEGA_GATILHO_ANTES.search(oracao[:m.start()]) or _NEGA_GATILHO_DEPOIS.search(oracao[m.end():]):
+        if _negada(oracao[:m.start()]) or _NEGADA_DEPOIS.match(oracao[m.end():]):
+            continue
+        if any(_CONECTIVO.fullmatch(p) for p in oracao[m.end():].split()):
             continue
         return True
     return False
 
 
 def afirma(padrao: re.Pattern | str, texto: str, base_de_reducao: bool = False) -> bool:
-    """O texto **afirma** o padrao: alguma ocorrencia que nao esta negada na mesma oracao.
+    """O texto **afirma** o padrao: alguma ocorrencia que nao esta negada na mesma oracao (antes
+    dela, ou logo depois: "a aliquota zero nao se aplica").
 
     "Voce nao pode aproveitar o credito" nao afirma "pode aproveitar o credito". Com
     ``base_de_reducao``, a ocorrencia que e a base de uma reducao ("60% da aliquota padrao") tambem
     nao conta.
     """
     regex = padrao if isinstance(padrao, re.Pattern) else re.compile(padrao, re.IGNORECASE)
-    texto = _normalizar(texto)
+    mascarado = _mascarar_apostos(texto)
     for m in regex.finditer(texto):
-        oracao = _oracao_antes(texto, m.start())
-        if _negada(oracao) or (base_de_reducao and _base_de_reducao(oracao)):
+        oracao = _oracao_antes(mascarado, m.start())
+        if _negada(oracao) or _NEGADA_DEPOIS.match(texto[m.end():]):
+            continue
+        if base_de_reducao and _base_de_reducao(oracao):
             continue
         return True
     return False
@@ -129,8 +148,7 @@ def afirma(padrao: re.Pattern | str, texto: str, base_de_reducao: bool = False) 
 
 def encaminha(texto: str) -> bool:
     """A resposta manda ao contador: alguma mencao fora de um "nao precisa ... contador"."""
-    texto = _normalizar(texto)
-    fora = [(m.start(), m.end()) for m in _SEM_CONTADOR.finditer(texto)]
+    fora = [(m.start(), m.end()) for m in _SEM_CONTADOR.finditer(_mascarar_apostos(texto))]
     return any(not any(a <= m.start() < b for a, b in fora) for m in _CONTADOR.finditer(texto))
 
 

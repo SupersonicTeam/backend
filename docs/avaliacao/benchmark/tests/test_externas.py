@@ -226,6 +226,30 @@ CORPUS_CLASSE = [
     ("Tem redução de 60%, conforme o art. 138.", "CONDICIONAL", False),
     ("A alíquota não varia: é zero para todos.", "CONDICIONAL", False),
     ("Não se preocupe, depende do produto.", "CONDICIONAL", True),
+    ("Venda de produtor não contribuinte tem alíquota zero.", "ZERO", True),
+    ("Para o produtor não contribuinte depende do regime do comprador.", "CONDICIONAL", True),
+    ("O milho tem redução de 60% e o trator paga a alíquota padrão.", "CONDICIONAL", True),
+    ("Esse produto fica fora da redução e paga a alíquota padrão.", "PADRAO", True),
+    ("A redução do Anexo IX não se aplica e vale a alíquota padrão.", "PADRAO", True),
+    ("O produtor de menor porte paga a alíquota padrão.", "PADRAO", True),
+    ("O ovo, que tem alíquota zero de IBS e CBS, pode ser vendido sem destaque.", "ZERO", True),
+    ("Não, neste caso, tem redução de 60%.", "REDUCAO_60", True),
+    ("Não é isento, contudo, tem 60% de redução.", "REDUCAO_60", True),
+    ("O trator não é isento e tem alíquota padrão.", "PADRAO", True),
+    ("O produtor não paga IBS porque tem alíquota zero.", "ZERO", True),
+    ("A soja não é processada e tem alíquota zero.", "ZERO", True),
+    ("Se não for processado tem alíquota zero.", "ZERO", True),
+    ("Para o trator a redução não vale e paga a alíquota cheia.", "PADRAO", True),
+    ("Não só o milho tem 60% de redução.", "REDUCAO_60", True),
+    ("Informo que não há alíquota zero para o adubo.", "ZERO", False),
+    ("Acho que não tem alíquota zero.", "ZERO", False),
+    ("Não há, hoje, alíquota zero para o adubo.", "ZERO", False),
+    ("Não terá, assim, alíquota zero.", "ZERO", False),
+    ("Não tem, infelizmente, alíquota zero.", "ZERO", False),
+    ("O trator fica sem isenção e paga a alíquota padrão.", "PADRAO", True),
+    ("Nenhum benefício de alíquota zero: paga a alíquota padrão.", "PADRAO", True),
+    ("A alíquota zero não se aplica ao adubo.", "ZERO", False),
+    ("A redução de 60% não vale para o trator.", "REDUCAO_60", False),
     ("Converse com o seu contador.", "FORA_DO_ESCOPO_SISTEMA", True),
     ("Você não precisa procurar o contador: a regra é a mesma.", "FORA_DO_ESCOPO_SISTEMA", False),
 ]
@@ -235,6 +259,13 @@ CORPUS_PROIBIDA = [
     ("Mesmo que o insumo não seja tributado, você pode aproveitar o crédito do IBS e da CBS.", True),
     ("Não há impedimento, pode aproveitar os créditos.", True),
     ("Não tem problema, pode aproveitar o crédito.", True),
+    ("Não, nesse caso, pode aproveitar o crédito.", True),
+    ("Não importa e pode aproveitar o crédito.", True),
+    ("Entendo que não pode aproveitar o crédito.", False),
+    ("Lembre que não pode aproveitar o crédito.", False),
+]
+CORPUS_PROIBIDA_E36 = [
+    ("A indústria que compra de produtor não contribuinte não poderá aproveitar nenhum crédito.", True),
 ]
 CORPUS_ENCAMINHA = [
     ("Procure o seu contador.", True),
@@ -243,6 +274,8 @@ CORPUS_ENCAMINHA = [
     ("Sem precisar de nada, fale com seu contador.", True),
     ("Você não precisa, neste caso, procurar o contador.", False),
     ("Não é necessário, em regra, consultar o contador.", False),
+    ("Para isso, procure um profissional, que pode ser o seu contador, e confirme.", True),
+    ("Você não precisa, hoje, procurar o contador.", False),
 ]
 
 
@@ -254,6 +287,11 @@ class CorpusHeuristicaTest(unittest.TestCase):
     def test_afirmacao_proibida_da_e33(self):
         for texto, esperado in CORPUS_PROIBIDA:
             self.assertEqual(ext.afirma(E33_PROIBIDA, texto), esperado, texto)
+
+    def test_afirmacao_proibida_com_nao_contribuinte(self):
+        for texto, esperado in CORPUS_PROIBIDA_E36:
+            self.assertEqual(ext.afirma(r"n[aã]o poder[aá] aproveitar nenhum cr[eé]dito", texto),
+                             esperado, texto)
 
     def test_encaminhamento(self):
         for texto, esperado in CORPUS_ENCAMINHA:

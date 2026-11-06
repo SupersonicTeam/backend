@@ -170,14 +170,17 @@ no relatório — rota, fundamentação (provisória enquanto `aConferir`), alí
 precisão por heurística de texto (classe dita e afirmações proibidas) e encaminhamento ao contador;
 **humanos** no CSV cego `externas-avaliacao-cego.csv` — contextualização, orientação prática e
 precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio. A negação é por
-oração: tirados os apostos (", neste caso,", ", que não é processado,"), a oração acaba em
-pontuação forte ou em vírgula seguida de espaço (a decimal, 26,5%, não corta), e um "não"/"nem"/
-"nunca" até quatro palavras antes da expressão a nega ("não há redução de 60%", "não terá direito
-à alíquota zero"), exceto o relativo ("que não é processado tem alíquota zero") e o que qualifica
-um particípio ("não processados têm alíquota zero"). A classe só conta quando é a única afirmada
+oração e tem um vocabulário só ("não", "nem", "nunca", "jamais", "sem", "nenhum"): a oração acaba
+em pontuação forte ou em vírgula seguida de espaço (a decimal, 26,5%, não corta; o aposto curto
+entre vírgulas, ", neste caso,", é mascarado só para medir o escopo, sem apagar texto), e o
+negador até quatro palavras antes nega a expressão ("não há redução de 60%", "não terá direito à
+alíquota zero"), desde que não haja conectivo no meio ("e", "mas", "porque", "se", "que"…: "o
+trator não é isento e tem alíquota padrão"), que ele não qualifique um particípio ("não
+processados têm alíquota zero") e que não seja inerte (a interjeição "Não, …", "não só", "não
+contribuinte"). A negação logo depois também conta ("a alíquota zero não se aplica"). A classe só conta quando é a única afirmada
 (a resposta que lista todas as classes não acerta nenhuma), e "alíquota padrão" depois de uma
-redução afirmada na mesma oração ("60% da alíquota padrão", "60% menor que a alíquota padrão") não
-conta como PADRAO; "depende", "varia" e "conforme o produto" (não negados) contam como
+redução afirmada na mesma oração, sem conectivo entre as duas ("60% da alíquota padrão", "60%
+menor que a alíquota padrão"), não conta como PADRAO; "depende", "varia" e "conforme o produto" (não negados) contam como
 condicional, "conforme o art. 138" não; "não precisa procurar o contador" não é encaminhar (nem
 conta como fora do escopo), mas "não precisa pagar nada agora, mas procure o contador" é. Toda
 frase que um review usou para mostrar um erro da heurística fica no corpus de regressão
