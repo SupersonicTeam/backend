@@ -207,6 +207,14 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0053: o 0401.20.10 da referencia se descreve como UHT (#380)")
+  void changeSet0053LeiteUhtDescricao() {
+    assertThat(new JdbcTemplate(dataSource).queryForObject(
+        "SELECT descricao FROM ncm_agropecuario WHERE codigo = '04012010'", String.class))
+        .isEqualTo("Leite UHT, teor de gordura entre 1% e 6%");
+  }
+
+  @Test
   @DisplayName("changeSet 0052: os 6 leites do Anexo I na referencia, sem a marca (#284)")
   void changeSet0052LeiteOutrosNaReferencia() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

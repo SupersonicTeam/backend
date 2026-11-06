@@ -119,8 +119,8 @@ class TributosLegadoRunnerIntegrationTest {
   @Test
   @DisplayName("#284: leite nao emitido com o zero antigo e sem 200003 informado vai a 60%")
   void leiteDoZeroAntigoVaiParaInNatura() throws Exception {
-    String semInformado = criarNota("04012010", "200036");
-    String comInformado = criarNota("04012010", "200036");
+    String semInformado = criarNota("04012090", "200036");
+    String comInformado = criarNota("04012090", "200036");
     // Simula o calculo de antes da regra do leite: Anexo I, aliquota zero.
     for (String id : new String[] {semInformado, comInformado}) {
       jdbc.update("UPDATE nota_fiscal_item SET percentual_reducao_aplicado = 100,"
@@ -135,6 +135,23 @@ class TributosLegadoRunnerIntegrationTest {
     assertThat(item(semInformado)).containsEntry("C_CLASS_TRIB_APLICADO", "200036");
     assertThat((BigDecimal) item(semInformado).get("VALOR_IBS")).isPositive();
     assertThat(item(comInformado)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
+    assertThat(runner.recalcularLegado()).isZero();
+  }
+
+  @Test
+  @DisplayName("#380: UHT gravado com os 60% do #374 volta a zero; UHT ja em zero nao muda")
+  void uhtDosSessentaVoltaAZero() throws Exception {
+    String dos60 = criarNota("04012010", "200003");
+    String jaEmZero = criarNota("04012010", "200003");
+    jdbc.update("UPDATE nota_fiscal_item SET percentual_reducao_aplicado = 60,"
+        + " c_class_trib_aplicado = '200036', valor_ibs = 0.40 WHERE nota_fiscal_id = ?",
+        java.util.UUID.fromString(dos60));
+
+    assertThat(runner.recalcularLegado()).isEqualTo(1);
+
+    assertThat(item(dos60)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
+    assertThat((BigDecimal) item(dos60).get("VALOR_IBS")).isEqualByComparingTo("0.00");
+    assertThat(item(jaEmZero)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
     assertThat(runner.recalcularLegado()).isZero();
   }
 

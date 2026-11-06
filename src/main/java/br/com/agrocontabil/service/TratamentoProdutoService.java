@@ -53,10 +53,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code cClassTrib}. As demais células da coluna de condição são o título do grupo do anexo, não
  * condição.
  *
- * <p><strong>Leite</strong> (#284, pergunta 2): os NCMs do Anexo I, item 2, saem in natura (60%,
- * art. 137), como no cálculo da nota, e o produto leva a {@link Alternativa} da alíquota zero
- * (Anexo I, art. 125, cClassTrib 200003) para o leite de consumo direto: a resposta diz as duas
- * situações e que o enquadramento é com o contador. A cooperativa (pergunta 6) segue o dado atual
+ * <p><strong>Leite</strong> (#284, pergunta 2): os NCMs do Anexo I, item 2, que não são UHT saem
+ * in natura (60%, art. 137), como no cálculo da nota, e o produto leva a {@link Alternativa} da
+ * alíquota zero (Anexo I, art. 125, cClassTrib 200003) para o leite de consumo direto: a resposta
+ * diz as duas situações e que o enquadramento é com o contador. O UHT (#380) tem zero pela regra e
+ * a condição lembra que o leite cru é outro NCM, com 60%. A cooperativa (pergunta 6) segue o dado atual
  * da tabela, sem regra própria; o arroz em casca não parboilizado (pergunta 3) é in natura pela
  * marca da referência (changeSet 0051).
  */
@@ -71,6 +72,14 @@ public class TratamentoProdutoService {
 
   static final String CONDICAO_LEITE_IN_NATURA = "leite cru ou apenas resfriado para o"
       + " transporte ou o armazenamento, vendido in natura (LC 214/2025, art. 137, par. 1, II)";
+
+  /**
+   * UHT (#380): zero sem condição a decidir, mas a frase lembra que o leite cru não é este caso,
+   * para o produtor de leite que pergunta só "leite" não ler zero para a venda ao laticínio.
+   */
+  static final String CONDICAO_LEITE_UHT = "leite UHT, sempre de consumo direto (Anexo I, item"
+      + " 2); o leite cru ou apenas resfriado vendido ao laticinio e outro NCM (0401.20.90 e"
+      + " outros) e sai com 60%, in natura (LC 214/2025, art. 137)";
 
   static final String CONDICAO_LEITE_CONSUMO_DIRETO = "leite em conformidade com os requisitos"
       + " da legislacao especifica relativos ao consumo direto pela populacao (Anexo I, item 2)";
@@ -209,7 +218,9 @@ public class TratamentoProdutoService {
         .filter(e -> e.cClassTrib().equals(t.cClassTrib()))
         .findFirst();
     Alternativa alternativa = alternativaDoLeite(t, data);
-    String condicao = alternativa != null ? CONDICAO_LEITE_IN_NATURA : condicao(t, escolhido);
+    String condicao = alternativa != null ? CONDICAO_LEITE_IN_NATURA
+        : ClassificacaoTributariaService.LEITE_UHT.contains(t.ncm()) ? CONDICAO_LEITE_UHT
+        : condicao(t, escolhido);
     return new TratamentoProduto(ncm, descricao, quantidadeNcms, t.cClassTrib(),
         t.percentualReducao(), t.origem(), escolhido.map(EnquadramentoAnexo::anexo).orElse(null),
         artigo(t.fundamento()), condicao, ncmConhecido, alternativa);

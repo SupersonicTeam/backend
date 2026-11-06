@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0053-leite-uht-descricao.xml
+         Issue #380 (leite UHT com aliquota zero por padrao; #284, pergunta 2).
+
+         Desde a #380 o 0401.20.10 (UHT) tem aliquota zero pela regra (Anexo I,
+         item 2), e os demais leites do item saem com 60% in natura. A descricao
+         da referencia, gravada no 0007 ("Leite, teor de gordura entre 1% e 6%,
+         em embalagem ate 1 litro"), nao dizia UHT: quem escolhesse o codigo pela
+         descricao, ou a Ceres ao responder "leite", dava a entender que todo
+         leite ate 1% a 6% tem zero. A nomenclatura oficial do 0401.20.10 e o
+         leite UHT; a descricao passa a dizer isso.
+
+         So muda texto da tabela de referencia; nenhum calculo depende dele.
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0053-leite-uht-descricao" author="supersonic-team">
+        <update tableName="ncm_agropecuario">
+            <column name="descricao" value="Leite UHT, teor de gordura entre 1% e 6%"/>
+            <where>codigo = '04012010'</where>
+        </update>
+        <rollback>
+            <update tableName="ncm_agropecuario">
+                <column name="descricao"
+                        value="Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro"/>
+                <where>codigo = '04012010'</where>
+            </update>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

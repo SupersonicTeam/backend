@@ -123,15 +123,11 @@ class TratamentoProdutoServiceIntegrationTest {
   }
 
   @Test
-  @DisplayName("#284 p. 2: leite sai in natura (60%, art. 137) com a alternativa do Anexo I (zero)")
+  @DisplayName("#284 p. 2: leite nao UHT sai in natura (60%) com a alternativa do Anexo I (zero)")
   void leiteDuasSituacoes() {
-    List<TratamentoProduto> leite = service.consultar("leite", EM_2026).produtos();
-
-    // Os 6 NCMs do item 2 estao na referencia (0052); a consulta devolve os 3 primeiros.
-    assertThat(leite).extracting(TratamentoProduto::ncm)
-        .containsExactly("04011010", "04011090", "04012010");
-    assertThat(leite).allSatisfy(l -> {
-      assertThat(l.cClassTrib()).isEqualTo("200036");
+    for (String ncm : List.of("04011090", "04012090", "04014010", "04015010")) {
+      TratamentoProduto l = service.consultar(ncm, EM_2026).produtos().get(0);
+      assertThat(l.cClassTrib()).as(ncm).isEqualTo("200036");
       assertThat(l.percentualReducao()).isEqualByComparingTo("60");
       assertThat(l.origem()).isEqualTo(Origem.IN_NATURA);
       assertThat(l.artigo()).isEqualTo("137");
@@ -142,9 +138,27 @@ class TratamentoProdutoServiceIntegrationTest {
       assertThat(l.alternativa().artigo()).isEqualTo("125");
       assertThat(l.alternativa().anexo()).isEqualTo(1);
       assertThat(l.alternativa().condicao()).contains("consumo direto");
-    });
-    assertThat(service.consultar("0401.20.90", EM_2026).produtos().get(0).alternativa())
-        .isNotNull();
+    }
+  }
+
+  @Test
+  @DisplayName("leite UHT: Anexo I, aliquota zero, sem alternativa (consumo direto, 2026-11-06)")
+  void leiteUhtZero() {
+    for (String ncm : List.of("04011010", "04012010")) {
+      TratamentoProduto l = service.consultar(ncm, EM_2026).produtos().get(0);
+      assertThat(l.cClassTrib()).as(ncm).isEqualTo("200003");
+      assertThat(l.percentualReducao()).isEqualByComparingTo("100");
+      assertThat(l.anexo()).isEqualTo(1);
+      assertThat(l.artigo()).isEqualTo("125");
+      assertThat(l.alternativa()).isNull();
+      assertThat(l.condicao()).contains("UHT").contains("60%");
+    }
+    // Pelo nome: os 3 primeiros da referencia, UHT com zero e o desnatado "outros" com 60%.
+    assertThat(service.consultar("leite", EM_2026).produtos())
+        .extracting(TratamentoProduto::ncm, TratamentoProduto::cClassTrib,
+            p -> p.alternativa() != null)
+        .containsExactly(tuple("04011010", "200003", false), tuple("04011090", "200036", true),
+            tuple("04012010", "200003", false));
   }
 
   @Test

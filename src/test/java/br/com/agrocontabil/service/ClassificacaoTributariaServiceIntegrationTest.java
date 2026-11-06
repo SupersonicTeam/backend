@@ -58,7 +58,8 @@ class ClassificacaoTributariaServiceIntegrationTest {
       "10061091, 200038, 60,  ANEXO,       arroz em casca parboilizado: sem a marca (#365)",
       "10061010, 200038, 60,  ANEXO,       arroz em casca para semeadura (Anexo IX)",
       "10063021, 200003, 100, ANEXO,       arroz polido (Anexo I)",
-      "04012010, 200036, 60,  IN_NATURA,   leite sem cClassTrib informado: in natura (#284)",
+      "04012010, 200003, 100, ANEXO,       leite UHT: consumo direto, Anexo I (#284)",
+      "04011010, 200003, 100, ANEXO,       leite UHT desnatado: Anexo I (#284)",
       "04012090, 200036, 60,  IN_NATURA,   leite cru ao laticinio (art. 137, #284)",
       "04072100, 200014, 100, ANEXO,       ovos de galinha (Anexo XV)",
       "07020000, 200014, 100, ANEXO,       tomate (Anexo XV)",
@@ -83,8 +84,8 @@ class ClassificacaoTributariaServiceIntegrationTest {
   }
 
   @ParameterizedTest(name = "leite {0}: in natura por padrao, Anexo I nos enquadramentos")
-  @CsvSource({"04011010", "04011090", "04012010", "04012090", "04014010", "04015010"})
-  @DisplayName("leite do Anexo I, item 2: 60% in natura por padrao, sem perder o Anexo I (#284)")
+  @CsvSource({"04011090", "04012090", "04014010", "04015010"})
+  @DisplayName("leite do Anexo I, item 2, nao UHT: 60% in natura por padrao, com o Anexo I (#284)")
   void leiteInNaturaPorPadrao(String ncm) {
     TratamentoTributarioNcm tratamento = service.tratamentoPorNcm(ncm, EM_2026);
 
@@ -100,12 +101,16 @@ class ClassificacaoTributariaServiceIntegrationTest {
   }
 
   @Test
-  @DisplayName("os NCMs da excecao do leite sao exatamente os do Anexo I, item 2, da tabela")
+  @DisplayName("excecao do leite + UHT = exatamente os NCMs do Anexo I, item 2, da tabela")
   void excecaoDoLeiteSaoOsNcmsDoItem() {
+    java.util.Set<String> leite =
+        new java.util.HashSet<>(ClassificacaoTributariaService.LEITE_SEM_DESTINO_DEFINIDO);
+    leite.addAll(ClassificacaoTributariaService.LEITE_UHT);
+    assertThat(ClassificacaoTributariaService.LEITE_UHT)
+        .doesNotContainAnyElementsOf(ClassificacaoTributariaService.LEITE_SEM_DESTINO_DEFINIDO);
     assertThat(anexoNcmRepository.findNcmsPermitidosDoItem(ITEM_LEITE, EM_2026))
-        .containsExactlyInAnyOrderElementsOf(ClassificacaoTributariaService.LEITE_ANEXO_I);
-    assertThat(anexoNcmRepository.findVigentesEm(
-            ClassificacaoTributariaService.LEITE_ANEXO_I, EM_2026))
+        .containsExactlyInAnyOrderElementsOf(leite);
+    assertThat(anexoNcmRepository.findVigentesEm(leite, EM_2026))
         .allSatisfy(l -> assertThat(l.getItem().getId()).isEqualTo(ITEM_LEITE));
   }
 
