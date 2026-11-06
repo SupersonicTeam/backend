@@ -413,10 +413,11 @@ public class SinaisNotaConferirService {
     }
     Direcao unidade = apontaPara(item.unidade());
     boolean temNcm = item.ncm() != null && !item.ncm().isBlank();
+    boolean mercadoria = ncmDeMercadoria(item.ncm());
     // "Bag de colheita - 100 un", "adubo de plantio - 50 sc": o termo é só o nome de uma operação
     // que a mercadoria carrega. NCM de mercadoria + unidade de produto desfazem o termo ambíguo
     // (#364); o termo forte ("serviço", "frete", "aluguel"...) segue valendo.
-    if (termos == Termos.SO_AMBIGUOS && temNcm && unidade == Direcao.PRODUTO) {
+    if (termos == Termos.SO_AMBIGUOS && mercadoria && unidade == Direcao.PRODUTO) {
       return Optional.empty();
     }
     if (item.cfop() != null && CFOPS_GENERICOS.contains(item.cfop().strip())) {
@@ -450,6 +451,19 @@ public class SinaisNotaConferirService {
       achados = Termos.SO_AMBIGUOS;
     }
     return achados;
+  }
+
+  /**
+   * NCM de mercadoria: 8 dígitos que não são um preenchimento ("00000000", "99999999"), como o
+   * serviço costuma sair numa NF-e de produto. O código fora da referência agropecuária (um trator,
+   * um saco plástico) conta: é mercadoria, mas não do agro.
+   */
+  static boolean ncmDeMercadoria(String ncm) {
+    if (ncm == null) {
+      return false;
+    }
+    String digitos = ncm.replaceAll("\\D", "");
+    return digitos.length() == 8 && digitos.chars().distinct().count() > 1;
   }
 
   private enum Termos {

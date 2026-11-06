@@ -110,6 +110,13 @@ class SinaisNotaConferirServiceTest {
       // termo forte (serviço, frete, aluguel...) não é desfeito pela unidade de produto
       "Aluguel de trator | 5101 | 87019000 | UN | NCM_FORA_DA_REFERENCIA",
       "Serviço de colheita de soja | 5949 | 12019000 | UN | CFOP_GENERICO",
+      // NCM de preenchimento não é mercadoria: o serviço em "UN" com CFOP 5949 segue avisando
+      "Colheita de soja | 5949 | 00000000 | UN | CFOP_GENERICO",
+      "Pulverização de lavoura | 5949 | 99999999 | UN | CFOP_GENERICO",
+      "Colheita de soja | 5949 | 1201 | UN | CFOP_GENERICO",
+      // exceções novas
+      "Silo para ensilagem | 5949 | NULO | NULO | NULO",
+      "Secador para secagem de grãos | 5949 | NULO | NULO | NULO",
       // termo ambíguo sem NCM de mercadoria segue avisando, com ou sem unidade de produto
       "Colheita mecanizada | 5101 | NULO | NULO | NCM_FORA_DA_REFERENCIA",
       "Pulverização aérea | 5101 | NULO | UNIDADE | NCM_FORA_DA_REFERENCIA"
@@ -243,6 +250,37 @@ class SinaisNotaConferirServiceTest {
     assertThatThrownBy(() -> new SinaisNotaConferirService(notas, referencia, classificacao, CLOCK,
         List.of(" ", "--"), List.of()))
         .isInstanceOf(IllegalStateException.class);
+  }
+
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', nullValues = "NULO", value = {
+      "12019000|true", "1201.90.00|true", "87019000|true", "00000000|false", "99999999|false",
+      "1201|false", "NULO|false", "' '|false"})
+  @DisplayName("#364: NCM de mercadoria = 8 dígitos que não são preenchimento")
+  void ncmDeMercadoria(String ncm, boolean mercadoria) {
+    assertThat(SinaisNotaConferirService.ncmDeMercadoria(ncm == null ? null : ncm.replace("'", "")))
+        .isEqualTo(mercadoria);
+  }
+
+  @Test
+  @DisplayName("#364: termo ambíguo vale como termo sem repetir na lista forte; arquivos coerentes")
+  void listasAmbiguas() throws Exception {
+    SinaisNotaConferirService so = new SinaisNotaConferirService(notas, referencia, classificacao,
+        CLOCK, List.of("serviço"), List.of("Colheita"), List.of());
+    assertThat(so.temTermoDeServico("Colheita de soja")).isTrue();
+    assertThat(so.temTermoDeServico("Soja em grão")).isFalse();
+
+    List<String> fortes = lerLista("sinais-nota/termos-servico.txt");
+    assertThat(lerLista("sinais-nota/termos-ambiguos-servico.txt"))
+        .as("todo termo ambíguo também está em termos-servico.txt").isNotEmpty()
+        .isSubsetOf(fortes);
+  }
+
+  private static List<String> lerLista(String recurso) throws Exception {
+    try (var in = new org.springframework.core.io.ClassPathResource(recurso).getInputStream()) {
+      return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).lines()
+          .map(String::strip).filter(l -> !l.isEmpty() && !l.startsWith("#")).toList();
+    }
   }
 
   @Test

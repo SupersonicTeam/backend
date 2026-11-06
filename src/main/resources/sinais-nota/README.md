@@ -8,7 +8,7 @@ tem de ganhar o caso novo.
 | Arquivo | O que tem |
 |---|---|
 | `termos-servico.txt` | Todo termo que, na descrição do item, sugere serviço: genéricos ("serviço", "frete", "aluguel", "mão de obra", "diária") e operações agrícolas (colheita, plantio, pulverização, gradagem, subsolagem, aração, destoca, desmatamento, calagem, secagem, ensilagem...). |
-| `termos-ambiguos-servico.txt` | O subconjunto que também aparece em **mercadoria**: "bag de colheita", "adubo de plantio", "bico de pulverização", "milho seco e limpo". Todo termo daqui vale como termo de serviço sem repetir na lista anterior. |
+| `termos-ambiguos-servico.txt` | O subconjunto que também aparece em **mercadoria**: "bag de colheita", "adubo de plantio", "bico de pulverização", "milho seco e limpo". Todo termo daqui também fica em `termos-servico.txt` (um teste confere); é essa lista que diz quais deles são ambíguos. |
 | `excecoes-servico.txt` | Expressões que tiram o sentido de serviço de um termo ("semente para plantio", "bico de pulverização", "seco e limpo", "para calagem"). Saem da descrição antes de procurar os termos. |
 
 Formato: um termo por linha; `#` abre comentário; acento, caixa e pontuação são ignorados
@@ -18,7 +18,8 @@ linha própria. Fora de propósito: "transporte" e "armazenagem" sozinhos (apare
 ## Como o sinal decide (#364)
 
 1. Sem termo (depois das exceções): sem sinal.
-2. Só termos ambíguos, com **NCM** informado e **unidade comercial de produto**
+2. Só termos ambíguos, com **NCM de mercadoria** (8 dígitos que não são preenchimento como
+   `00000000` ou `99999999`, que é como muito serviço sai) e **unidade comercial de produto**
    (kg, g, t, saca, litro, caixa, un...): sem sinal. É a mercadoria que carrega o nome da
    operação.
 3. CFOP 5949/6949 (outra saída não especificada): sinal `CFOP_GENERICO`.
