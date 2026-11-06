@@ -13,6 +13,10 @@ import java.util.regex.Pattern;
  * orientador (CSV cego + rubrica, #275; sem contador, #387). Uma sigla conta como explicada se a resposta traz,
  * em qualquer lugar, uma das explicações do {@link GlossarioProdutor} (sem acento e sem caixa):
  * "IBS (imposto sobre bens e serviços)" ou "o imposto sobre bens e serviços, o IBS".
+ *
+ * <p><strong>A régua tem 8 siglas, de propósito</strong> ({@link #SIGLAS_DA_REGUA}): a medição
+ * alimenta o {@code comSiglaSemExplicacao} do benchmark, que põe lado a lado a Ceres 1 (8 siglas) e
+ * a Ceres 2.0. Sigla nova no glossário não entra aqui.
  */
 public final class ClarezaTexto {
 
@@ -76,9 +80,23 @@ public final class ClarezaTexto {
     return new Medida(frases, palavras, siglasSemExplicacao(texto));
   }
 
-  /** Siglas do glossário que aparecem no texto sem nenhuma das explicações aceitas. */
+  /**
+   * As 8 siglas da régua da #264, por nome no {@link GlossarioProdutor}. A régua é fixa de
+   * propósito: o benchmark da banca compara a Ceres 1 (que mede estas 8) com a Ceres 2.0, e só
+   * vale se as duas usam a mesma. O glossário tem mais siglas, cobradas pelo
+   * {@code TextosFixosSiglasTest} e pela composição, não por esta medição.
+   */
+  static final List<String> SIGLAS_DA_REGUA = List.of(
+      "IBS", "CBS", "NF-e", "NCM", "CFOP", "Funrural", "DANFE", "SEFAZ");
+
+  /**
+   * Siglas da régua que aparecem no texto sem nenhuma das explicações aceitas, na ordem da
+   * régua.
+   */
   static List<String> siglasSemExplicacao(String texto) {
     return GlossarioProdutor.padrao().siglasSemExplicacao(texto).stream()
-        .map(GlossarioProdutor.Termo::termo).toList();
+        .map(GlossarioProdutor.Termo::termo)
+        .filter(SIGLAS_DA_REGUA::contains)
+        .toList();
   }
 }

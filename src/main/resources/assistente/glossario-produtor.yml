@@ -19,8 +19,9 @@
 #   termo      como o termo aparece no relatório e no começo da linha explicativa
 #   sigla      false para termo que não é sigla (crédito, guia...); padrão true
 #   padrao     regex Java do termo no texto (com \b); "ignorarCaixa" liga o CASE_INSENSITIVE.
-#              LC e EC só valem seguidas de número ("LC 214/2025"): a composição insere a forma
-#              por extenso depois da 1ª ocorrência, e "LC" sozinho pode ser nome de cliente
+#              LC e EC só valem com o número ("LC 214/2025"): a composição insere a forma por
+#              extenso depois da 1ª ocorrência ("LC 214/2025 (lei complementar)"), e "LC" sozinho
+#              pode ser nome de cliente
 #              ('crédito' não vale em 'crédito presumido': é outro conceito)
 #   nome       forma por extenso; vale como explicação se estiver no texto (sem acento/caixa)
 #   aceitas    outras expressões que valem como explicação no texto (sem acento/caixa)
@@ -66,13 +67,13 @@ termos:
     explicacao: imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos
 
   - termo: LC
-    padrao: '\bLC(?=\s*\d)'
+    padrao: '\bLC\s*\d+(?:/\d+)?'
     nome: lei complementar
     emLinha: true
     explicacao: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê
 
   - termo: EC
-    padrao: '\bEC(?=\s*\d)'
+    padrao: '\bEC\s*\d+(?:/\d+)?'
     nome: emenda constitucional
     emLinha: true
     explicacao: emenda constitucional, uma mudança feita na Constituição; foi uma delas que criou o IBS e a CBS
@@ -95,7 +96,7 @@ termos:
     ignorarCaixa: true
     nome: documento auxiliar
     emLinha: true
-    explicacao: o documento auxiliar em PDF que acompanha a mercadoria; a nota fiscal eletrônica em si é o arquivo eletrônico
+    explicacao: a versão impressa ou em PDF da nota, que acompanha a mercadoria; a nota fiscal eletrônica em si é o arquivo eletrônico
 
   - termo: NCM
     padrao: '\bNCM\b'

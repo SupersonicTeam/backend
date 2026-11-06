@@ -423,7 +423,11 @@ teto, sem contar a seção do glossário. **Limites:** o tratamento de produto, 
 retenção não passam pela composição e ainda trazem sigla sem explicação (fora do recorte; a rota de
 lei ganha a linha da #269); LC e EC só são explicadas seguidas de número (a composição insere a
 forma por extenso na primeira ocorrência, e "LC" sozinho pode ser nome de cliente); a medição de
-clareza passou de 8 para 16 siglas, então as linhas de base anteriores usam a lista antiga. A explicação
+clareza (`ClarezaTexto`) segue em 8 siglas, de propósito (IBS, CBS, NF-e, NCM, CFOP, Funrural,
+DANFE, SEFAZ, as da régua da #264): o benchmark da banca compara a Ceres 1 e a Ceres 2.0 pelo
+`comSiglaSemExplicacao`, e as duas têm de usar a mesma régua. As 16 do glossário são cobradas pelo
+`TextosFixosSiglasTest` e pela composição. A forma por extenso de LC e EC entra depois do número
+("LC 214/2025 (lei complementar)"). A explicação
 gerada pelo modelo (`ExplicadorResposta`, `VerificadorFidelidade`, `app.assistente.explicacao.*`)
 fica fora da Ceres medida e vai para a S10, com a #268.
 
