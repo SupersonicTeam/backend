@@ -52,7 +52,7 @@ import org.w3c.dom.NodeList;
  *
  * <p>Trava a regra B25-90 da NT 2025.002 v1.53 (rejeição 1002, "NF-e sem informação de ICMS /
  * ISSQN"): toda NF-e com {@code finNFe = 1} que o pipeline aceita leva o grupo {@code ICMS} em todo
- * item. Antes do changeSet 0053 nenhuma levava, e o XSD (escolha {@code minOccurs="0"}) não pegava.
+ * item. Antes do changeSet 0054 nenhuma levava, e o XSD (escolha {@code minOccurs="0"}) não pegava.
  */
 @DisplayName("Grupo ICMS por item na NF-e (B25-90, ICMS51 diferido, CST informado)")
 class IcmsObrigatorioNaNfeNormalTest {

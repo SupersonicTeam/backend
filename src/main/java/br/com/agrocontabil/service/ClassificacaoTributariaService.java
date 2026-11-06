@@ -49,9 +49,11 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Leite (decisão de 2026-11-06, #284, pergunta 2):</strong> o Anexo I, item 2, só
  * alcança o leite "em conformidade com os requisitos da legislação específica relativos ao
- * consumo direto pela população", e os NCMs dele ({@link #LEITE_ANEXO_I}) servem também ao leite
- * cru, só resfriado, vendido ao laticínio — que segue in natura (art. 137, § 1º, II). O dado da
- * nota não decide o destino, então esses NCMs saem por padrão <strong>in natura</strong>
+ * consumo direto pela população", e os NCMs "outros" e de maior teor de gordura dele
+ * ({@link #LEITE_SEM_DESTINO_DEFINIDO}) servem também ao leite cru, só resfriado, vendido ao
+ * laticínio — que segue in natura (art. 137, § 1º, II). O UHT ({@link #LEITE_UHT}) é sempre de
+ * consumo direto e fica na regra geral (zero). Nos outros, o dado da nota não decide o destino,
+ * então eles saem por padrão <strong>in natura</strong>
  * (200036, 60%), o lado seguro (errar faz pagar a mais, nunca a menos); a alíquota zero vale só
  * com o cClassTrib 200003 informado no item, que o {@link ReducaoNcmResolver} honra antes da
  * regra por NCM. O Anexo I continua nos {@link TratamentoTributarioNcm#enquadramentos()}, para a
@@ -74,12 +76,24 @@ public class ClassificacaoTributariaService {
   public static final String CESTA_BASICA = "200003";
 
   /**
-   * NCMs do leite do Anexo I, item 2, da LC 214/2025 (0401.10.10, 0401.10.90, 0401.20.10,
-   * 0401.20.90, 0401.40.10 e 0401.50.10), literais da lei: saem in natura por padrão e só têm
-   * alíquota zero com o cClassTrib 200003 informado (ver a classe).
+   * NCMs do leite do Anexo I, item 2, da LC 214/2025 que servem tanto ao leite cru quanto ao de
+   * consumo direto (0401.10.90, 0401.20.90, 0401.40.10 e 0401.50.10): saem in natura por padrão
+   * e só têm alíquota zero com o cClassTrib 200003 informado (ver a classe).
    */
-  public static final Set<String> LEITE_ANEXO_I = Set.of(
-      "04011010", "04011090", "04012010", "04012090", "04014010", "04015010");
+  public static final Set<String> LEITE_SEM_DESTINO_DEFINIDO = Set.of(
+      "04011090", "04012090", "04014010", "04015010");
+
+  /**
+   * Leite UHT do Anexo I, item 2 (0401.10.10 e 0401.20.10): é sempre de consumo direto, então
+   * segue a regra geral — alíquota zero pelo Anexo I, sem código informado (decisão do Murillo,
+   * 2026-11-06). Junto com {@link #LEITE_SEM_DESTINO_DEFINIDO}, são os seis NCMs do item.
+   */
+  public static final Set<String> LEITE_UHT = Set.of("04011010", "04012010");
+
+  /** Os seis NCMs do leite do Anexo I, item 2: os sem destino definido e o UHT. */
+  public static final Set<String> LEITE_DO_ANEXO_I = java.util.stream.Stream
+      .concat(LEITE_SEM_DESTINO_DEFINIDO.stream(), LEITE_UHT.stream())
+      .collect(Collectors.toUnmodifiableSet());
 
   /** Anexos de alíquota zero (I e XV), que vencem o in natura. */
   static final List<String> ANEXOS_ZERO = List.of("200003", "200014");
@@ -277,14 +291,14 @@ public class ClassificacaoTributariaService {
 
   /**
    * NCM cujo tratamento a regra por NCM não decide sozinha: o {@code cClassTrib} informado no
-   * item (ou declarado no XML do fornecedor, na importação) é que diz se vale a alíquota zero.
-   * Hoje, o leite do Anexo I, item 2 (#284).
+   * item é que diz se vale a alíquota zero. Hoje, o leite do Anexo I, item 2, que não é UHT
+   * (#284; o UHT segue a regra geral desde a #380).
    *
    * @param ncm NCM do item; nulo devolve {@code false}
-   * @return {@code true} para os NCMs de {@link #LEITE_ANEXO_I}
+   * @return {@code true} para os NCMs de {@link #LEITE_SEM_DESTINO_DEFINIDO}
    */
   public static boolean tratamentoDependeDoInformado(String ncm) {
-    return ncm != null && LEITE_ANEXO_I.contains(ncm);
+    return ncm != null && LEITE_SEM_DESTINO_DEFINIDO.contains(ncm);
   }
 
   private boolean inNatura(String ncm) {

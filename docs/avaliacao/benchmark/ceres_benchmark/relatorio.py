@@ -1188,20 +1188,26 @@ def _secao_externas(celulas, ids, canonico) -> str:
         linhas.append(f"\n### {p['id']} (pergunta {p.get('numeroOriginal', '?')} do Murillo)\n")
         linhas.append(f"*{_celula_md(p['pergunta'], 300)}*\n")
         linhas.append(f"**Atenção:** {p['observacao']}\n")
-        linhas.append("| Célula | Rodada | Desfecho | Afirmação proibida? | Resposta |\n|---|---|---|---|---|")
+        linhas.append("| Célula | Rodada | Desfecho | Classe | Afirmação proibida? | Resposta |\n"
+                      "|---|---|---|---|---|---|")
         for c in celulas:
             for numero, resultados in enumerate(c.rodadas, 1):
                 for r in resultados:
                     if r["id"] != p["id"]:
                         continue
                     desfecho = (r.get("execucao") or {}).get("desfecho")
-                    criterio = ext.avaliar(r, p)["proibidas"]
+                    avaliacao = ext.avaliar(r, p)
+                    criterio = avaliacao["proibidas"]
+                    # Classe pela heuristica (#379): "—" quando nao se aplica ou esta pendente.
+                    classe = ("—" if desfecho not in REDIGIDAS
+                              else {True: "acertou", False: "**errou**"}.get(avaliacao["classe"], "—"))
                     # Frase fixa do backend (recusa, descarte, corte) nao afirma nada: sem credito,
                     # mas tambem nao e "afirmou o proibido".
                     proibida = ("— (frase fixa)" if desfecho not in REDIGIDAS
                                 else "**sim**" if criterio is False else "não")
                     linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {numero} "
                                   f"| `{desfecho}` "
+                                  f"| {classe} "
                                   f"| {proibida} "
                                   f"| {_celula_md((r.get('execucao') or {}).get('texto') or '', 240)} |")
     return "\n".join(linhas) + "\n"

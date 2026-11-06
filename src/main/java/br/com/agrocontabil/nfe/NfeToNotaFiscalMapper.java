@@ -153,13 +153,13 @@ public class NfeToNotaFiscalMapper {
   }
 
   /**
-   * cClassTrib do XML do fornecedor, só para o NCM cujo tratamento a regra por NCM não decide
-   * (o leite do Anexo I, #284): sem ele o crédito sairia pelo padrão in natura (60%) numa compra
-   * que o fornecedor declarou com alíquota zero (200003), e o crédito ficaria acima do destacado.
-   * Nos outros NCMs o crédito segue a regra por NCM, como antes.
+   * cClassTrib do XML do fornecedor, só para o leite do Anexo I, item 2 (#284), em que a regra
+   * por NCM mudou e depende do destino: sem ele o crédito sairia pela regra do comprador (60% ou,
+   * no UHT, zero) numa compra que o fornecedor declarou de outro jeito, e o crédito ficaria
+   * diferente do destacado. Nos outros NCMs o crédito segue a regra por NCM, como antes.
    */
   private static String cClassTribDeclarado(Det det, String ncm) {
-    if (!ClassificacaoTributariaService.tratamentoDependeDoInformado(ncm)
+    if (ncm == null || !ClassificacaoTributariaService.LEITE_DO_ANEXO_I.contains(ncm)
         || det.getImposto() == null || det.getImposto().getIbsCbs() == null) {
       return null;
     }

@@ -458,7 +458,9 @@ class ExternasNoRelatorioTest(Base):
         self.assertIn("### L01 (pergunta ? do Murillo)", texto)
         # Ceres 1 m-small: "Nao consegui confirmar a citacao." e frase fixa (CITACAO_INVALIDA), nao
         # afirmacao do modelo.
-        self.assertIn("| Ceres 1 · `m-small` | 1 | `CITACAO_INVALIDA` | — (frase fixa) |", texto)
+        # A classe da frase fixa tambem nao conta como erro do modelo (#379).
+        self.assertIn("| Ceres 1 · `m-small` | 1 | `CITACAO_INVALIDA` | — | — (frase fixa) |", texto)
+        self.assertIn("| Ceres 1 · `m-ref` | 1 | `RESPONDIDA` | **errou** | não |", texto)
         self.assertTrue((self.pasta / "externas-avaliacao-cego.csv").exists())
         chave = (self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8")
         # Regerar o relatorio nao reembaralha o CSV que ja foi ao avaliador.

@@ -99,16 +99,18 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
 
 | Redução | Produtos |
 |---|---|
-| **100%** (IBS/CBS zero) | ovos, leite pasteurizado (com o cClassTrib 200003 informado no item), arroz, tomate e café cru (Anexos I e XV da LC 214) |
+| **100%** (IBS/CBS zero) | ovos, leite UHT de 1 litro, arroz, tomate e café cru (Anexos I e XV da LC 214) |
 | **60%** | soja, milho, trigo e algodão em grão (in natura, art. 137), touro reprodutor, e os insumos: fertilizantes, defensivos, sementes e ração (Anexo IX) |
 | **0%** (alíquota cheia) | diesel e peças da colhedora |
 
 - O IBS/CBS zero é o comportamento esperado, não falta de cálculo.
-- **Leite (#284, decisão de 2026-11-06):** o NCM não separa o leite cru do de consumo direto, então
-  o leite sai por padrão **in natura, 60%** (art. 137, cClassTrib 200036), e a alíquota zero do
-  Anexo I (item 2, art. 125) só vale com o cClassTrib **200003** informado no item. O leite
-  pasteurizado de 1 litro do Luiz é de consumo direto e vai com o 200003: os totais da
-  demonstração não mudam. Uma nota nova de leite sem o cClassTrib sai com 60%.
+- **Leite (#284, decisão de 2026-11-06):** nos NCMs "outros" e de maior teor de gordura (0401.10.90,
+  0401.20.90, 0401.40.10, 0401.50.10) o NCM não separa o leite cru do de consumo direto, então ele
+  sai por padrão **in natura, 60%** (art. 137, cClassTrib 200036), e a alíquota zero do Anexo I
+  (item 2, art. 125) só vale com o cClassTrib **200003** informado no item. O **UHT** (0401.10.10 e
+  0401.20.10) é sempre de consumo direto e sai com zero sem código informado. O leite de 1 litro do
+  Luiz (0401.20.10) tem zero de qualquer jeito (o seed ainda informa o 200003): os totais da
+  demonstração não mudam.
 - O 60% da soja e do milho (art. 137) segue em validação com o contador (#284, pergunta 1). Não
   afirmar na banca que esse enquadramento é definitivo.
 - **ICMS e Funrural** ficam por guia (premissa da #280): as guias mensais são de Funrural (PF) e
@@ -155,16 +157,15 @@ mostra, na pergunta, `Atalho IBS/CBS: x de N dispositivos na base de legislacao`
 
 ## Passo manual na VPS: cClassTrib do leite da demonstração (#284, leite in natura)
 
-O seed da banca é idempotente e não regrava nota já semeada. As notas de leite gravadas antes da
-regra do leite in natura têm o tratamento **aplicado** 200003 (zero) mas não o cClassTrib
-**informado**: emitidas, nada muda (o XML é o documento); a nota não emitida (a do Luiz aguardando
-aprovação) segue zero até ser editada, e uma edição depois de devolvida a recalcularia para 60%.
-Para a demonstração ficar coerente com o seed novo, informar o 200003 nesses itens (idempotente;
-só o leite pasteurizado do seed, nunca changeSet). **Rodar antes do deploy desta versão** (a coluna
-já existe): na subida, o `TributosLegadoRunner` recalcula pelo padrão novo (60%) todo item de leite
-não emitido com o aplicado 200003 e sem o informado — a nota do Luiz em aprovação voltaria a
-`RASCUNHO` com `APROVACAO_CADUCADA`. Se o deploy já rodou, o passo ainda informa o 200003, e basta o
-Luiz editar e reenviar a nota para ela voltar a zero:
+**Já rodado na VPS antes do deploy do #374 (2026-11-06, 15 itens).** Fica aqui para quem montar
+outra VPS a partir de um banco semeado antes do #374.
+
+O seed da banca é idempotente e não regrava nota já semeada. As notas de leite gravadas antes do
+#374 têm o tratamento **aplicado** 200003 (zero) mas não o cClassTrib **informado**. Emitidas,
+nada muda (o XML é o documento). Desde a #380 o 0401.20.10 do seed é UHT e tem zero pela regra, e
+o `TributosLegadoRunner` só recalcula item de leite cujo tratamento gravado difere do da regra
+(nos dois sentidos), então as notas do Luiz não mudam com ou sem o passo. O passo apenas informa o
+200003, como o seed novo faz (idempotente; só o leite do seed, nunca changeSet):
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'

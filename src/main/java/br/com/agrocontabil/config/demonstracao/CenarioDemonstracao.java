@@ -209,8 +209,8 @@ final class CenarioDemonstracao {
       new BigDecimal("1890.00"));
   /**
    * Leite pasteurizado em embalagem de 1 litro: consumo direto pela população, então o item
-   * informa o cClassTrib 200003 (Anexo I, item 2, alíquota zero). Sem ele, o 0401.20.10 sairia
-   * in natura, com 60% (#284).
+   * informa o cClassTrib 200003 (Anexo I, item 2, alíquota zero). O 0401.20.10 é UHT e já teria
+   * zero sem ele (#284, decisão de 2026-11-06); o informado fica para a nota não depender do NCM.
    */
   private static final Produto LEITE = new Produto("LEITE-RF",
       "Leite pasteurizado integral, embalagem de 1 litro", "04012010", "L",

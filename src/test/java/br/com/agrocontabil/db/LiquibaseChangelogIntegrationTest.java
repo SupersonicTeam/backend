@@ -191,8 +191,8 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("changeSet 0053: CST e origem do ICMS por item, nulos e sem preenchimento")
-  void changeSet0053IcmsDoItem() {
+  @DisplayName("changeSet 0054: CST e origem do ICMS por item, nulos e sem preenchimento")
+  void changeSet0054IcmsDoItem() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
     List<Map<String, Object>> colunas = jdbc.queryForList(
         "SELECT column_name, data_type, is_nullable, character_maximum_length"
@@ -220,6 +220,14 @@ class LiquibaseChangelogIntegrationTest {
         + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
         + " WHERE n.ncm = '10061092' ORDER BY 1", String.class))
         .containsExactly("200034", "200038");
+  }
+
+  @Test
+  @DisplayName("changeSet 0054: o 0401.20.10 da referencia se descreve como UHT (#380)")
+  void changeSet0053LeiteUhtDescricao() {
+    assertThat(new JdbcTemplate(dataSource).queryForObject(
+        "SELECT descricao FROM ncm_agropecuario WHERE codigo = '04012010'", String.class))
+        .isEqualTo("Leite UHT, teor de gordura entre 1% e 6%");
   }
 
   @Test

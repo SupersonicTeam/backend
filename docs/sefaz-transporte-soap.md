@@ -8,7 +8,7 @@ de cStat, timeouts) e entra no lugar do `MockSefazTransport` com `app.nfe.sefaz.
 com mTLS. A homologação com a SEFAZ depende do certificado A1 ICP-Brasil de um emitente de teste e
 do credenciamento na UF.
 
-**Achado para a homologação (rejeição 1002):** antes do changeSet 0053, a NF-e não levava o grupo
+**Achado para a homologação (rejeição 1002):** antes do changeSet 0054, a NF-e não levava o grupo
 `ICMS` em nenhum item. Pela NT 2025.002 v1.53, regra B25-90 (obrigatória), a NF-e com
 `finNFe` diferente de 5 e 6 sem `ICMS` nem `ISSQN` é rejeitada com o cStat 1002 ("NF-e sem
 informação de ICMS / ISSQN"). Como o sistema emite sempre `finNFe = 1`, **toda NF-e anterior seria
@@ -17,9 +17,9 @@ rejeitada na homologação real**. O XSD PL_010g aceita a nota sem o grupo (a es
 nenhum teste pegava. Desde então, o grupo sai em todo item (`nfe/TributacaoIcms`; premissas,
 seção 3), e o `IcmsObrigatorioNaNfeNormalTest` trava a regra B25-90.
 
-**Nota em `XML_GERADO` de antes do changeSet 0053:** o XML assinado guardado não tem o grupo e
+**Nota em `XML_GERADO` de antes do changeSet 0054:** o XML assinado guardado não tem o grupo e
 não é regerado (`XML_GERADO` não é editável), então o `enviar-sefaz` mandaria esse XML e
-receberia a 1002. Na homologação real, não transmitir nota gerada antes do 0053: excluir não é
+receberia a 1002. Na homologação real, não transmitir nota gerada antes do 0054: excluir não é
 possível nesse status, então a saída é criar a nota de novo. Hoje só há notas assim no ambiente
 com o mock da SEFAZ (VPS), que não confere a regra.
 
