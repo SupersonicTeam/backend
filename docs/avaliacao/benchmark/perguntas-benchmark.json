@@ -1,7 +1,7 @@
 {
-  "versao": "2026-11-05.8",
-  "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352, #358): o gabarito 2026-11-05.2 inteiro, 13 perguntas ineditas da equipe e 40 geradas por IA (ChatGPT, a pedido do Murillo; texto literal), em 16 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado. Campo origem: gabarito (usado no desenvolvimento da Ceres 2.0), inedita_equipe, inedita_equipe_dados ou inedita_externa_ia (medem generalizacao; as de IA nao medem a linguagem real do produtor).",
-  "baseadoEm": "2026-11-05.2",
+  "versao": "2026-11-05.9",
+  "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352, #358): o gabarito 2026-11-05.3 inteiro, 13 perguntas ineditas da equipe e 40 geradas por IA (ChatGPT, a pedido do Murillo; texto literal), em 16 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado. Campo origem: gabarito (usado no desenvolvimento da Ceres 2.0), inedita_equipe, inedita_equipe_dados ou inedita_externa_ia (medem generalizacao; as de IA nao medem a linguagem real do produtor).",
+  "baseadoEm": "2026-11-05.3",
   "temas": {
     "guias": "Guias e vencimentos",
     "notas": "Notas fiscais",
@@ -1752,15 +1752,16 @@
       ],
       "parametrosEsperados": {
         "produtoOuNcm": [
-          "arroz",
-          "10063021"
+          "arroz"
         ]
       },
       "camposValor": [
         "produtos.0.reducao"
       ],
       "dispositivosEsperados": [
-        "LC 214/2025, art. 125"
+        "LC 214/2025, art. 125",
+        "LC 214/2025, art. 137",
+        "LC 214/2025, art. 138"
       ],
       "tema": "linguagem",
       "capacidade": "so_ceres_2",

@@ -1,7 +1,6 @@
 package br.com.agrocontabil.config.avaliacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.config.avaliacao.SeedAvaliacao.ProdutoresAvaliacao;
@@ -110,14 +109,16 @@ class PerguntasBenchmarkIntegrationTest {
   }
 
   @Test
-  @DisplayName("Pergunta herdada do gabarito não diverge dele enquanto ele estiver na versão de baseadoEm")
+  @DisplayName("O conjunto acompanha o gabarito: baseadoEm na versão atual e herdadas iguais a ele (falha, nunca pula)")
   void herdadasIguaisAoGabarito() throws IOException {
     JsonNode raizGabarito = objectMapper.readTree(GABARITO.toFile());
-    // O conjunto e congelado: depois que o gabarito muda de versao, ele deixa de acompanhar (a
-    // conferencia so vale enquanto o gabarito e o mesmo de "baseadoEm").
-    assumeTrue(raizGabarito.path("versao").asText().equals(
-        objectMapper.readTree(PERGUNTAS.toFile()).path("baseadoEm").asText()),
-        "gabarito em outra versao: o conjunto congelado nao o acompanha");
+    // O gabarito andou e o conjunto nao: o valor esperado de uma herdada pode ter mudado sem mudar a
+    // versao nem o hash do conjunto (foi o que a P02 fez na Sessao 8b, #371). Falha, nunca pula.
+    assertThat(objectMapper.readTree(PERGUNTAS.toFile()).path("baseadoEm").asText())
+        .as("o gabarito esta na versao %s e o conjunto congelado em baseadoEm diferente: copie as "
+            + "perguntas herdadas que mudaram para perguntas-benchmark.json, mude a versao, o "
+            + "baseadoEm e o .sha256 (antes de qualquer rodada)", raizGabarito.path("versao").asText())
+        .isEqualTo(raizGabarito.path("versao").asText());
     Map<String, JsonNode> gabarito = new HashMap<>();
     raizGabarito.path("perguntas").forEach(p -> gabarito.put(p.path("id").asText(), p));
     int herdadas = 0;

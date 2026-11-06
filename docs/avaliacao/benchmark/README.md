@@ -110,10 +110,14 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 
 ### O conjunto de perguntas (#352)
 
-`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.2`,
-com a T03 de 33 dispositivos da Sessão 8a, #360) inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
+`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.3`:
+a T03 de 33 dispositivos da Sessão 8a, #360, e a P02 da Sessão 8b, #366) inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
 hash fica em `perguntas-benchmark.json.sha256`: mudou uma pergunta, mude a `versao` e o hash (o
-`PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). As células leem
+`PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). **O gabarito
+andou, o conjunto anda junto:** o `baseadoEm` tem de ser a versão atual do gabarito e as herdadas
+iguais a ele, senão o `PerguntasBenchmarkIntegrationTest` falha (não pula) e diz o que fazer —
+copiar as herdadas que mudaram, mudar a `versao`, o `baseadoEm` e o hash. Foi o que faltou na P02
+da Sessão 8b (#371): o valor esperado dela mudou sem mudar o hash. As células leem
 **esse arquivo**; a Ceres 2.0 lê ele próprio, a Ceres 1 lê a cópia adaptada (abaixo), e os dois
 hashes vão no `celula.json`.
 
@@ -184,7 +188,7 @@ do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. 
 **Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
 descrições `@Tool` ou as outras perguntas do conjunto.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.8` está congelado (versão e
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.9` está congelado (versão e
 hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
 respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
 perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o
