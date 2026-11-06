@@ -116,12 +116,38 @@ class TributosLegadoRunnerIntegrationTest {
         .isEqualTo("APROVACAO_CADUCADA:" + TributosLegadoRunner.MOTIVO_CADUCADA);
   }
 
+  @Test
+  @DisplayName("#284: leite nao emitido com o zero antigo e sem 200003 informado vai a 60%")
+  void leiteDoZeroAntigoVaiParaInNatura() throws Exception {
+    String semInformado = criarNota("04012010", "200036");
+    String comInformado = criarNota("04012010", "200036");
+    // Simula o calculo de antes da regra do leite: Anexo I, aliquota zero.
+    for (String id : new String[] {semInformado, comInformado}) {
+      jdbc.update("UPDATE nota_fiscal_item SET percentual_reducao_aplicado = 100,"
+          + " c_class_trib_aplicado = '200003', valor_ibs = 0 WHERE nota_fiscal_id = ?",
+          java.util.UUID.fromString(id));
+    }
+    jdbc.update("UPDATE nota_fiscal_item SET c_class_trib = '200003' WHERE nota_fiscal_id = ?",
+        java.util.UUID.fromString(comInformado));
+
+    assertThat(runner.recalcularLegado()).isEqualTo(1);
+
+    assertThat(item(semInformado)).containsEntry("C_CLASS_TRIB_APLICADO", "200036");
+    assertThat((BigDecimal) item(semInformado).get("VALOR_IBS")).isPositive();
+    assertThat(item(comInformado)).containsEntry("C_CLASS_TRIB_APLICADO", "200003");
+    assertThat(runner.recalcularLegado()).isZero();
+  }
+
   private Map<String, Object> item(String notaId) {
     return jdbc.queryForMap("SELECT c_class_trib_aplicado, base_calculo_ibs_cbs, valor_ibs"
         + " FROM nota_fiscal_item WHERE nota_fiscal_id = ?", java.util.UUID.fromString(notaId));
   }
 
   private String criarNota(String ncm) throws Exception {
+    return criarNota(ncm, "200003");
+  }
+
+  private String criarNota(String ncm, String cClassTribEsperado) throws Exception {
     String corpo = mockMvc.perform(post("/api/notas")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
@@ -136,8 +162,7 @@ class TributosLegadoRunnerIntegrationTest {
                 }
                 """.formatted(ncm)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.itens[0].percentualReducaoAplicado").value(100))
-        .andExpect(jsonPath("$.itens[0].cClassTribAplicado").value("200003"))
+        .andExpect(jsonPath("$.itens[0].cClassTribAplicado").value(cClassTribEsperado))
         .andReturn().getResponse().getContentAsString();
     return JsonPath.read(corpo, "$.id");
   }

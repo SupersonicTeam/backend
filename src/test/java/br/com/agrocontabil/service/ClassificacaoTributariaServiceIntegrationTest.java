@@ -3,6 +3,7 @@ package br.com.agrocontabil.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import br.com.agrocontabil.repository.ClassificacaoTributariaAnexoNcmRepository;
 import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +42,11 @@ class ClassificacaoTributariaServiceIntegrationTest {
 
   private static final LocalDate EM_2026 = LocalDate.of(2026, 10, 29);
 
+  /** Item 2 do Anexo I (leite) no CSV do changeSet 0048. */
+  private static final int ITEM_LEITE = 2;
+
   @Autowired private ClassificacaoTributariaService service;
+  @Autowired private ClassificacaoTributariaAnexoNcmRepository anexoNcmRepository;
 
   @ParameterizedTest(name = "{0} ({4}) -> {1}, {2}%")
   @CsvSource({
@@ -53,7 +58,8 @@ class ClassificacaoTributariaServiceIntegrationTest {
       "10061091, 200038, 60,  ANEXO,       arroz em casca parboilizado: sem a marca (#365)",
       "10061010, 200038, 60,  ANEXO,       arroz em casca para semeadura (Anexo IX)",
       "10063021, 200003, 100, ANEXO,       arroz polido (Anexo I)",
-      "04012010, 200003, 100, ANEXO,       leite UHT (Anexo I)",
+      "04012010, 200036, 60,  IN_NATURA,   leite sem cClassTrib informado: in natura (#284)",
+      "04012090, 200036, 60,  IN_NATURA,   leite cru ao laticinio (art. 137, #284)",
       "04072100, 200014, 100, ANEXO,       ovos de galinha (Anexo XV)",
       "07020000, 200014, 100, ANEXO,       tomate (Anexo XV)",
       "08043000, 200014, 100, ANEXO,       abacaxi (Anexo XV)",
@@ -74,6 +80,33 @@ class ClassificacaoTributariaServiceIntegrationTest {
       assertThat(tratamento.versaoTabela()).isEqualTo("IT 2025.002 v1.70");
       assertThat(tratamento.fundamento()).contains("Lei Complementar");
     }
+  }
+
+  @ParameterizedTest(name = "leite {0}: in natura por padrao, Anexo I nos enquadramentos")
+  @CsvSource({"04011010", "04011090", "04012010", "04012090", "04014010", "04015010"})
+  @DisplayName("leite do Anexo I, item 2: 60% in natura por padrao, sem perder o Anexo I (#284)")
+  void leiteInNaturaPorPadrao(String ncm) {
+    TratamentoTributarioNcm tratamento = service.tratamentoPorNcm(ncm, EM_2026);
+
+    assertThat(tratamento.cClassTrib()).isEqualTo("200036");
+    assertThat(tratamento.percentualReducao()).isEqualByComparingTo("60");
+    assertThat(tratamento.origem()).isEqualTo(Origem.IN_NATURA);
+    assertThat(tratamento.fundamento()).contains("art. 137");
+    assertThat(tratamento.enquadramentos())
+        .extracting(EnquadramentoAnexo::cClassTrib, EnquadramentoAnexo::anexo)
+        .contains(tuple("200003", 1));
+    assertThat(service.tratamentosPorNcm(java.util.List.of(ncm), EM_2026).get(ncm))
+        .isEqualTo(tratamento);
+  }
+
+  @Test
+  @DisplayName("os NCMs da excecao do leite sao exatamente os do Anexo I, item 2, da tabela")
+  void excecaoDoLeiteSaoOsNcmsDoItem() {
+    assertThat(anexoNcmRepository.findNcmsPermitidosDoItem(ITEM_LEITE, EM_2026))
+        .containsExactlyInAnyOrderElementsOf(ClassificacaoTributariaService.LEITE_ANEXO_I);
+    assertThat(anexoNcmRepository.findVigentesEm(
+            ClassificacaoTributariaService.LEITE_ANEXO_I, EM_2026))
+        .allSatisfy(l -> assertThat(l.getItem().getId()).isEqualTo(ITEM_LEITE));
   }
 
   @Test

@@ -505,6 +505,7 @@ public class SeedDemonstracao implements CommandLineRunner {
         .codigoProduto(produto.codigo())
         .descricao(produto.descricao())
         .ncm(produto.ncm())
+        .cClassTrib(produto.cClassTrib())
         .cfop(cfop)
         .unidade(produto.unidade())
         .quantidade(quantidade)

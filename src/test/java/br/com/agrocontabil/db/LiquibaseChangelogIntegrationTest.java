@@ -207,6 +207,23 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0052: os 6 leites do Anexo I na referencia, sem a marca (#284)")
+  void changeSet0052LeiteOutrosNaReferencia() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT codigo || ':' || in_natura FROM ncm_agropecuario"
+        + " WHERE codigo LIKE '0401%' ORDER BY codigo", String.class))
+        .containsExactly("04011010:false", "04011090:false", "04012010:false",
+            "04012090:false", "04014010:false", "04015010:false");
+    // Segue no Anexo I, item 2: a regra de codigo do leite o deixa in natura por padrao.
+    assertThat(jdbc.queryForList("SELECT DISTINCT i.c_class_trib"
+        + " FROM classificacao_tributaria_anexo_ncm n"
+        + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
+        + " WHERE n.ncm = '04012090' AND n.permissao = 'PERMITIDO' ORDER BY 1", String.class))
+        .containsExactly("200003");
+  }
+
+  @Test
   @DisplayName("changeSet 0050: camada que decidiu a rota, nula para as antigas, sem texto (#265)")
   void changeSet0050CamadaClassificacao() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
