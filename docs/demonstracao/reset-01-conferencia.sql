@@ -3,25 +3,40 @@
 -- docs/demonstracao-banca.md, seção "Reset dos dados da demonstração". Testado contra o
 -- PostgreSQL 16 do Testcontainers pelo ResetDemonstracaoPostgresIntegrationTest.
 --
--- O que é da demonstração (o SeedDemonstracao / CenarioDemonstracao):
+-- O que é da demonstração (o SeedDemonstracao e o CenarioDemonstracao):
 --   * o escritório "Contabilidade Rural Oeste" com o CNPJ do seed (nome e CNPJ do escritório não
 --     são cifrados),
---   * os contadores desse escritório,
---   * os produtores da carteira do seed: o nome está na lista do CenarioDemonstracao.CARTEIRA E o
---     produtor tem vínculo (qualquer situação) com esse escritório. CPF/CNPJ e e-mail vão
---     cifrados ao banco (#147), então a identificação é pelo nome + vínculo, nunca só pelo nome,
---   * o que pende deles: notas (itens, validações, revisões), alertas, apurações, guias, pendências
---     (e anexos), notificações, vínculos e etiquetas, convites, obrigações do escritório, uso da
---     Ceres (créditos), interações com a Ceres, credenciais, sessões e links de senha.
+--   * os contadores da equipe do seed (nome na lista do CenarioDemonstracao.EQUIPE) que estão
+--     nesse escritório ou sem escritório (membro removido da equipe num ensaio). Contador de fora
+--     da equipe que entrou no escritório por convite NÃO é apagado: sai do escritório, como na
+--     remoção pela tela (escritorio_id e funcao_escritorio nulos), e a conta dele fica,
+--   * os produtores da carteira do seed: nome na lista do CenarioDemonstracao.CARTEIRA E vínculo
+--     (qualquer situação) com esse escritório. CPF/CNPJ e e-mail vão cifrados ao banco (#147),
+--     então a identificação é pelo nome + vínculo, nunca só pelo nome,
+--   * o que pende deles: notas (itens, validações, revisões), alertas, apurações, guias,
+--     pendências (e anexos), notificações, vínculos e etiquetas, convites, obrigações do
+--     escritório, uso da Ceres (créditos, do produtor e do escritório), interações com a Ceres,
+--     credenciais, sessões e links de senha. Vínculo, pendência e notificação de produtor de fora
+--     do seed com esse escritório também saem (o escritório deixa de existir), mas o produtor e a
+--     conta dele ficam.
 --
 -- Nunca entram: legislacao_trecho, shedlock, databasechangelog*, tabelas de referência e a
 -- auditoria (registro_auditoria não tem FK e sobrevive ao que audita, #149).
+--
+-- As duas últimas linhas NÃO são apagadas, são alertas:
+--   * contadores_fora_da_equipe: contas que vão sair do escritório (ficam sem escritório),
+--   * atencao_titular_anonimizado: produtor anonimizado pela LGPD sem vínculo. Se for cliente do
+--     seed excluído num ensaio, o CPF dele continua no banco e o seed novo falha (CPF repetido).
+--     Com valor maior que zero, NÃO rode o passo 2: ver docs/demonstracao-banca.md.
 -- =============================================================================================
 WITH
   esc AS (
     SELECT id FROM escritorio
      WHERE nome = 'Contabilidade Rural Oeste' AND cnpj = '48315276000195'),
-  cont AS (SELECT id FROM contadores WHERE escritorio_id IN (SELECT id FROM esc)),
+  cont AS (
+    SELECT id FROM contadores
+     WHERE nome_completo IN ('Patricia Moreira Lopes', 'Rafael Augusto Costa', 'Juliana Prado Ferreira')
+       AND (escritorio_id IN (SELECT id FROM esc) OR escritorio_id IS NULL)),
   prod AS (
     SELECT p.id FROM produtores p
      WHERE p.nome_completo IN ('Carlos Eduardo Rossi', 'Fazenda Santa Clara Agropecuaria Ltda',
@@ -77,7 +92,7 @@ SELECT tabela, linhas FROM (
       (SELECT COUNT(*) FROM obrigacao_fiscal WHERE escritorio_id IN (SELECT id FROM esc))
   UNION ALL SELECT 20, 'assistente_uso_semanal',
       (SELECT COUNT(*) FROM assistente_uso_semanal WHERE titular_id IN (SELECT id FROM prod)
-          OR titular_id IN (SELECT id FROM cont))
+          OR titular_id IN (SELECT id FROM esc))
   UNION ALL SELECT 21, 'assistente_interacao',
       (SELECT COUNT(*) FROM assistente_interacao WHERE produtor_id IN (SELECT id FROM prod))
   UNION ALL SELECT 22, 'credencial_usuario', (SELECT COUNT(*) FROM cred)
@@ -85,5 +100,11 @@ SELECT tabela, linhas FROM (
       (SELECT COUNT(*) FROM sessao_refresh WHERE credencial_id IN (SELECT id FROM cred))
   UNION ALL SELECT 24, 'redefinicao_senha',
       (SELECT COUNT(*) FROM redefinicao_senha WHERE credencial_id IN (SELECT id FROM cred))
+  UNION ALL SELECT 25, 'contadores_fora_da_equipe',
+      (SELECT COUNT(*) FROM contadores WHERE escritorio_id IN (SELECT id FROM esc)
+          AND id NOT IN (SELECT id FROM cont))
+  UNION ALL SELECT 26, 'atencao_titular_anonimizado',
+      (SELECT COUNT(*) FROM produtores p WHERE p.nome_completo = 'Titular excluido (LGPD)'
+          AND NOT EXISTS (SELECT 1 FROM carteira_vinculo v WHERE v.produtor_id = p.id))
 ) contagem
 ORDER BY ordem;

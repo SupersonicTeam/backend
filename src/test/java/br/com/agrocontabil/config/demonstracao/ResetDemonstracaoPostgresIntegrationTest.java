@@ -2,10 +2,13 @@ package br.com.agrocontabil.config.demonstracao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
+import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import java.io.IOException;
@@ -17,6 +20,7 @@ import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,6 +60,8 @@ import org.testcontainers.utility.DockerImageName;
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 @DisplayName("Reset dos dados da demonstracao da banca no PostgreSQL")
+// Sem TestDatabaseCleaner (CLAUDE.md, #90): o banco e um container proprio desta classe, descartado
+// com o contexto (@DirtiesContext), e apagar produtores e justamente o que o teste prova.
 class ResetDemonstracaoPostgresIntegrationTest {
 
   private static final Path CONFERENCIA = Path.of("docs/demonstracao/reset-01-conferencia.sql");
@@ -87,26 +93,10 @@ class ResetDemonstracaoPostgresIntegrationTest {
 
   @Autowired private DataSource dataSource;
   @Autowired private SeedDemonstracao seed;
+  @Autowired private CotaDemonstracaoCeres cotaCeres;
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private EscritorioRepository escritorioRepository;
-
-  @Test
-  @DisplayName("os scripts repetem o nome e o CNPJ do escritorio e os nomes da carteira do seed")
-  void scriptsCoerentesComOCenario() throws IOException {
-    for (Path script : new Path[] {CONFERENCIA, APAGAR}) {
-      String sql = Files.readString(script, StandardCharsets.UTF_8);
-      assertThat(sql).as(script.toString())
-          .contains("nome = '" + CenarioDemonstracao.ESCRITORIO_NOME + "'")
-          .contains("cnpj = '" + CenarioDemonstracao.ESCRITORIO_CNPJ + "'");
-      CenarioDemonstracao.CARTEIRA.forEach(cliente ->
-          assertThat(sql).as(script + ": " + cliente.nome()).contains("'" + cliente.nome() + "'"));
-      // Nunca as tabelas de fora do reset nem SQL que apague em massa.
-      assertThat(sql.toLowerCase()).doesNotContain("truncate")
-          .doesNotContain("delete from legislacao_trecho").doesNotContain("delete from shedlock")
-          .doesNotContain("delete from databasechangelog")
-          .doesNotContain("delete from registro_auditoria");
-    }
-  }
+  @Autowired private ContadorRepository contadorRepository;
 
   @Test
   @DisplayName("seed -> conferencia -> reset -> seed: contagens batem e nada fora do seed muda")
@@ -117,13 +107,23 @@ class ResetDemonstracaoPostgresIntegrationTest {
         .containsEntry("contadores", (long) CenarioDemonstracao.EQUIPE.size())
         .containsEntry("produtores", (long) CenarioDemonstracao.CARTEIRA.size())
         .containsEntry("credencial_usuario",
-            (long) (CenarioDemonstracao.EQUIPE.size() + CenarioDemonstracao.CARTEIRA.size()));
+            (long) (CenarioDemonstracao.EQUIPE.size() + CenarioDemonstracao.CARTEIRA.size()))
+        .containsEntry("carteira_vinculo", (long) CenarioDemonstracao.CARTEIRA.size())
+        .containsEntry("contadores_fora_da_equipe", 0L)
+        .containsEntry("atencao_titular_anonimizado", 0L);
     assertThat(primeira.get("nota_fiscal")).isGreaterThan(100L);
     assertThat(primeira.get("nota_fiscal_item")).isGreaterThan(100L);
-    assertThat(primeira.get("carteira_vinculo")).isEqualTo(CenarioDemonstracao.CARTEIRA.size());
 
-    // Dado que nao e do seed: homonimo de um cliente sem vinculo e escritorio de mesmo nome com
-    // outro CNPJ. Os dois sobrevivem ao reset.
+    // Ensaio: a assistente foi removida da equipe (sem escritorio, como na tela) e um contador de
+    // fora entrou no escritorio por convite. Dado que nao e do seed: homonimo de um cliente sem
+    // vinculo e escritorio de mesmo nome com outro CNPJ.
+    jdbc.update("UPDATE contadores SET escritorio_id = NULL, funcao_escritorio = NULL"
+        + " WHERE nome_completo = ?", CenarioDemonstracao.EQUIPE.get(2).nome());
+    UUID escritorioSeed = jdbc.queryForObject("SELECT id FROM escritorio WHERE cnpj = ?",
+        UUID.class, CenarioDemonstracao.ESCRITORIO_CNPJ);
+    Contador convidado = contadorRepository.save(Contador.builder()
+        .nomeCompleto("Avaliador Convidado da Banca").cpfCnpj(CenarioDemonstracao.cpf("222333444"))
+        .escritorioId(escritorioSeed).funcao(FuncaoEscritorio.CONTADOR).build());
     Produtor homonimo = produtorRepository.save(Produtor.builder()
         .nomeCompleto("Luiz Carlos Bertoldo").cpfCnpj(CenarioDemonstracao.cpf("111222333"))
         .tipoProdutor(TipoProdutor.PESSOA_FISICA).regimeTributario(RegimeTributario.REAL)
@@ -132,13 +132,16 @@ class ResetDemonstracaoPostgresIntegrationTest {
         .nome(CenarioDemonstracao.ESCRITORIO_NOME).cnpj(CenarioDemonstracao.cnpj("111222333000"))
         .build());
 
+    Map<String, Long> aApagar = conferencia(jdbc);
+    assertThat(aApagar).containsEntry("contadores", (long) CenarioDemonstracao.EQUIPE.size())
+        .containsEntry("contadores_fora_da_equipe", 1L);
     Map<String, Long> antes = totais(jdbc);
     executar(APAGAR);
     Map<String, Long> depois = totais(jdbc);
 
     assertThat(conferencia(jdbc).values()).as("nada do seed sobra").containsOnly(0L);
     for (Map.Entry<String, Long> tabela : antes.entrySet()) {
-      long apagado = primeira.getOrDefault(tabela.getKey(), 0L);
+      long apagado = aApagar.getOrDefault(tabela.getKey(), 0L);
       assertThat(depois.get(tabela.getKey())).as(tabela.getKey())
           .isEqualTo(tabela.getValue() - apagado);
       if (FORA_DO_RESET.contains(tabela.getKey())) {
@@ -147,11 +150,16 @@ class ResetDemonstracaoPostgresIntegrationTest {
     }
     assertThat(produtorRepository.findById(homonimo.getId())).isPresent();
     assertThat(escritorioRepository.findById(outro.getId())).isPresent();
+    assertThat(contadorRepository.findById(convidado.getId())).hasValueSatisfying(c -> {
+      assertThat(c.getEscritorioId()).isNull();
+      assertThat(c.getFuncao()).isNull();
+    });
 
-    // Reiniciar o backend = o runner do seed de novo: recria tudo, nas mesmas contagens.
+    // Subir o backend = o runner do seed de novo. Chamado direto, para a excecao aparecer.
     assertThat(seed.jaSemeado()).isFalse();
-    seed.run();
-    assertThat(seed.ultimoResumo().notasRecusadas()).isZero();
+    SeedDemonstracao.Resumo resumo = seed.semear();
+    cotaCeres.prepararSemana(); // como o run(): a cota da Ceres no limite
+    assertThat(resumo.notasRecusadas()).isZero();
     assertThat(conferencia(jdbc)).isEqualTo(primeira);
     // O leite UHT do Luiz vai ao supermercado, nao ao laticinio (#284).
     assertThat(jdbc.queryForList("SELECT DISTINCT n.destinatario_nome FROM nota_fiscal n"
