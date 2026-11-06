@@ -647,7 +647,7 @@ public class SeedDemonstracao implements CommandLineRunner {
           CenarioDemonstracao.torrefacaoUberlandia(), CenarioDemonstracao.cafe(),
           new BigDecimal("310"), CenarioDemonstracao.cafe().preco(), Especial.AGUARDANDO));
       case "luiz" -> List.of(new VendaPlanejada(noDia(hoje.minusDays(2), 7),
-          CenarioDemonstracao.laticinioToledo(), CenarioDemonstracao.leite(),
+          CenarioDemonstracao.supermercadoToledo(), CenarioDemonstracao.leite(),
           new BigDecimal("20850"), CenarioDemonstracao.leite().preco(), Especial.AGUARDANDO));
       case "helena" -> List.of(new VendaPlanejada(noDia(hoje.minusDays(1), 6),
           CenarioDemonstracao.distribuidoraSaoPaulo(), CenarioDemonstracao.tomate(),
@@ -822,7 +822,8 @@ public class SeedDemonstracao implements CommandLineRunner {
           ex.hoje.plusDays(5), StatusPendencia.PENDENTE, TipoDocumentoPendencia.EXTRATO);
       case "luiz" -> pendencia(ex, escritorio, produtor, revisor,
           "Contrato de fornecimento de leite 2027",
-          "Contrato assinado com o laticinio, com o preco por litro e a bonificacao por qualidade.",
+          "Contrato assinado com a rede de supermercados, com o preco por litro e o prazo de"
+              + " entrega.",
           ex.hoje.plusDays(12), StatusPendencia.PENDENTE, TipoDocumentoPendencia.CONTRATO);
       case CenarioDemonstracao.CHAVE_COTA_NO_FIM -> pendencia(ex, escritorio, produtor, revisor,
           "Contrato de arrendamento da Fazenda Boa Vista",

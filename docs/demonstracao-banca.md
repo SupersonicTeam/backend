@@ -30,7 +30,7 @@ E-mails no domínio reservado `example.com`.
 | `juliana.prado@example.com` | Contador, **ASSISTENTE** | Atende a carteira, mas **não aprova** nota (403 `PAPEL_NAO_AUTORIZADO`) |
 | `carlos.rossi@example.com` | Produtor PF, Sorriso/MT | **O principal:** grãos e algodão, R$ 6,8 mi/ano (acima do limite do art. 164), ~60 notas, compras de insumo com crédito, fila de revisão completa |
 | `financeiro.santaclara@example.com` | Produtor PJ, Patrocínio/MG | Café para torrefação de Uberlândia e cerealista de Patrocínio (vendas internas, ICMS diferido), nota aguardando aprovação, pendência **enviada** com anexo |
-| `luiz.bertoldo@example.com` | Produtor PF, Cascavel/PR | Leite para laticínio, optante do art. 165, nota aguardando aprovação |
+| `luiz.bertoldo@example.com` | Produtor PF, Cascavel/PR | Leite UHT de 1 litro vendido a uma rede de supermercados (alíquota zero, Anexo I), optante do art. 165, nota aguardando aprovação |
 | `helena.takahashi@example.com` | Produtora PF, Mogi das Cruzes/SP | Hortifrúti, **nota com inconsistência** (CFOP 6101 para comprador do mesmo estado), GPS vencendo em 3 dias |
 | `contato.trespontes@example.com` | Produtor PJ, Campo Grande/MS | Pecuária: venda de gado para MS; o touro reprodutor para MG fica **rascunho com o ICMS a definir** |
 | `rogerio.antunes@example.com` | Produtor PF, Rio Verde/GO | **Cota da Ceres no limite:** uma pergunta passa, a segunda recebe 429 |
@@ -133,6 +133,73 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
   regime regular. Pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º;
   issue #298): a NF-e e o DANFE saem com CRT 3 pelo tipo do produtor, o calendário nunca mostra DAS,
   DEFIS nem as obrigações do MEI a ela, e o cadastro com `SIMPLES`/`MEI` é recusado.
+
+## Reset dos dados da demonstração na VPS
+
+Serve para **toda mudança de seed** (ICMS, compradores, leite...): o `SeedDemonstracao` é
+idempotente e não regrava o que já semeou, e as notas emitidas têm XML assinado, então mudar o banco
+por `UPDATE` faria nota e XML divergirem. O caminho é apagar só o que é da demonstração e deixar o
+backend semear de novo pelo pipeline real. **Rodar uma vez, perto da banca, depois que todas as
+mudanças de seed entrarem.**
+
+O que é da demonstração: o escritório "Contabilidade Rural Oeste" (nome **e** CNPJ do seed), os
+contadores da equipe do seed (no escritório ou removidos dele num ensaio) e os produtores da
+carteira do `CenarioDemonstracao` (nome na lista **e** vínculo com esse escritório: CPF/CNPJ vão
+cifrados ao banco), com notas, itens, validações, revisões, alertas, apurações, guias, pendências e
+anexos, notificações, vínculos e etiquetas, convites, obrigações do escritório, créditos e
+interações da Ceres, credenciais, sessões e links de senha. Contador de fora da equipe que entrou no
+escritório (convite de equipe) **não** é apagado: sai do escritório, como na remoção pela tela, e a
+conta fica. Produtor de fora do seed com vínculo nesse escritório fica, sem o vínculo. **Nunca**
+entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de referência, a auditoria
+(`registro_auditoria`, que sobrevive ao que audita, #149) e os dados do `DataLoader`.
+
+Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
+`ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro
+removido e contador convidado → reset → seed, com as contagens batendo e o que é de fora do seed
+intacto). Na VPS a pasta do deploy é **`/opt/agrocontabil`** (`deploy/README.md`).
+
+1. Copiar os scripts: `scp docs/demonstracao/reset-0*.sql <vps>:/opt/agrocontabil/` e, na VPS,
+   `cd /opt/agrocontabil`.
+2. **Segurar o lock do deploy** no shell (o CD faz `docker compose up backend` a cada merge e
+   subiria o backend no meio do reset): `exec 9>/opt/agrocontabil/.deploy.lock && flock 9`. Ele fica
+   preso até o passo 9.
+3. **Backup**: `./backup.sh` (o mesmo `pg_dump` do cron).
+4. **Tirar o site do ar e parar o backend**: `docker compose stop caddy backend`. O Caddy fica
+   parado até o seed terminar: as contas da demonstração (e-mails e CPFs deste repositório) não
+   existem durante a semeadura, e um cadastro com um deles quebraria o seed.
+5. **Conferir** (só leitura) o que vai ser apagado. Esperado: 1 escritório, 3 contadores,
+   9 produtores, 12 credenciais, ~160 notas. As duas últimas linhas são alertas:
+   `contadores_fora_da_equipe` = contas que vão sair do escritório (ficam sem escritório);
+   `atencao_titular_anonimizado` maior que zero = **pare**: um cliente do seed foi excluído pela
+   LGPD num ensaio, o CPF dele continua no banco e o seed novo falharia (CPF repetido). Apagar esse
+   titular à mão (é anonimizado, com notas sob guarda legal) é decisão do Murillo.
+
+   ```bash
+   docker compose exec -T postgres sh -c \
+     'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < reset-01-conferencia.sql
+   ```
+
+6. **Apagar** numa transação, filho → pai (`ON_ERROR_STOP`: qualquer erro desfaz tudo):
+
+   ```bash
+   docker compose exec -T postgres sh -c \
+     'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < reset-02-apagar.sql
+   ```
+
+7. **Conferir de novo** (passo 5): tudo zero.
+8. **Subir o backend** (`docker compose start backend`) e esperar no log
+   (`docker compose logs -f backend`) "Demonstracao da banca semeada: 9 produtores, ...
+   (0 recusadas)". Rode o passo 5 mais uma vez: escritório, contadores, produtores, credenciais,
+   vínculos, notas e itens voltam às contagens esperadas acima. Sessões, interações da Ceres,
+   notificações e os alertas e meses fechados pelos jobs **não** voltam aos números de antes: eram
+   uso dos ensaios, que o seed não recria.
+9. **Voltar o site** (`docker compose start caddy`) e soltar o lock (`exec 9>&-`, ou sair do shell).
+
+Mudou o `CenarioDemonstracao` (nome do escritório, CNPJ, nomes da carteira ou da equipe)? O
+`ScriptsResetDemonstracaoTest` (sem banco, roda em qualquer máquina) quebra até os dois scripts
+serem atualizados. O passo manual do leite abaixo fica como histórico (o reset recria os itens do
+seed com o 200003); o do regime (#298) **continua valendo**: corrige o João e a Maria do
+`DataLoader`, que o reset não toca.
 
 ## Checklist da VPS: base de legislação da Ceres (issue #343)
 
