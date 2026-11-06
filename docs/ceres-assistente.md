@@ -405,6 +405,35 @@ a, 5º, 6º e 7º do art. 138, sobre o registro e o diferimento dos insumos do A
 confere texto × citações contra o fixture `ceres/atalho-reforma-trechos.json`, copiado da base.
 Parte do perfil que falha sai do texto, e o resto segue. Continua sem modelo e fora da cota.
 
+**Glossário do produtor (#267, recorte determinístico).** `assistente/glossario-produtor.yml` é a
+fonte única das siglas e termos que o produtor não precisa conhecer (IBS, CBS, PIS, Cofins, ICMS,
+ISS, LC, EC, ADCT, NF-e, DANFE, NCM, CFOP, Funrural, SEFAZ, cClassTrib e, como termos, crédito,
+apuração, split payment e guia), lido pelo `GlossarioProdutor`. Cada definição é curta, em
+linguagem de produtor, **sem número e sem artigo** (o `GlossarioProdutorTest` confere) e **passa por
+revisão humana antes do merge**; sigla sem definição segura fica de fora. Três usos, todos
+determinísticos: a composição das respostas de dados insere a forma por extenso em linha na
+primeira ocorrência (`ComposicaoRespostaDados.explicarSiglas`); a medição de clareza
+(`ClarezaTexto`) e o `TextosFixosSiglasTest` conferem "sigla sem explicação" (atalho de legislação e
+todos os textos fixos da rota de dados, que incluem os atalhos de dados); e o atalho de legislação
+ganha, no fim, a seção "O QUE QUER DIZER" com a definição de cada sigla que o texto usa sem explicar,
+mais as que as definições citam (`GlossarioProdutor.aExplicar`). A densidade de citações do atalho
+foi medida (24 referências em cerca de 680 palavras de regra, uma a cada 28, no máximo duas por
+item): o item de "quem paga" que tinha três virou dois, e o `TextoReformaTributariaTest` trava o
+teto, sem contar a seção do glossário. **Limites:** o tratamento de produto, o modo fallback e a
+retenção não passam pela composição e ainda trazem sigla sem explicação (fora do recorte; a rota de
+lei ganha a linha da #269); LC e EC só são explicadas com número e ano ("LC 214/2025"; "LC" sozinho pode ser nome de
+cliente e "EC 250" é a formulação de um defensivo); a medição de
+clareza (`ClarezaTexto`) segue em 8 siglas, de propósito (IBS, CBS, NF-e, NCM, CFOP, Funrural,
+DANFE, SEFAZ, as da régua da #264): o benchmark da banca compara a Ceres 1 e a Ceres 2.0 pelo
+`comSiglaSemExplicacao`, e as duas têm de usar a mesma régua. As 16 do glossário são cobradas pelo
+`TextosFixosSiglasTest` e pela composição. A forma por extenso de LC e EC entra depois do ano
+("LC 214/2025 (lei complementar)"); dentro de parênteses já abertos entra entre vírgulas
+("(LC 214/2025, lei complementar, arts. 31 e 32)"), sem vírgula colada em pontuação, e só o par
+com barra ("IBS/CBS") fica aninhado. A medição de clareza conta só o nome e as expressões aceitas,
+nunca a definição do glossário (como na Ceres 1). A explicação
+gerada pelo modelo (`ExplicadorResposta`, `VerificadorFidelidade`, `app.assistente.explicacao.*`)
+fica fora da Ceres medida e vai para a S10, com a #268.
+
 **Parágrafo do modelo testado e descartado (#347).** Um "Em resumo" do modelo sobre trechos
 fixos de regra geral, conferido pelas redes da rota de lei, foi medido com o `qwen3:4b-instruct`
 em 2026-11-05: passava nas conferências de citação e de número, mas toda rodada (10 de 10, com

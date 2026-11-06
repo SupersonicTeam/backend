@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
+import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.ferramentas.TemplateTratamentoProduto;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado;
@@ -26,11 +27,16 @@ import java.util.stream.Stream;
  * maiúsculas e itens com "- ". Com acento (#357): "e" e "é" mudam o sentido da frase; a comparação
  * dos validadores é que é sem acento nem caixa, nunca o texto entregue. Texto a revisar pela
  * equipe a cada mudança.
+ *
+ * <p>Sigla do glossário do produtor ({@link GlossarioProdutor}) que o texto usa sem explicar
+ * ganha, no fim, a seção "O QUE QUER DIZER" com a definição do glossário (#267).
  */
 public final class TextoReformaTributaria {
 
   /** Título da resposta. */
   static final String TITULO = "O que muda para você com o IBS e a CBS";
+
+  static final String O_QUE_QUER_DIZER = "O QUE QUER DIZER";
 
   static final String O_QUE_SAO = String.join("\n",
       "O QUE SÃO",
@@ -108,8 +114,9 @@ public final class TextoReformaTributaria {
       "QUEM PAGA",
       "- Pela lei, o produtor rural com receita inferior a R$ 3.600.000,00 no ano-calendário não"
           + " é contribuinte do IBS e da CBS (LC 214/2025, art. 164), mas pode optar pelo regime"
-          + " regular a qualquer tempo (art. 165). Quem está no regime regular e compra de produtor"
-          + " não contribuinte pode apropriar crédito presumido (art. 168).",
+          + " regular a qualquer tempo (art. 165).",
+      "- Quem está no regime regular e compra de produtor não contribuinte pode apropriar crédito"
+          + " presumido (art. 168).",
       "- O AgroConIA calcula o IBS e a CBS das suas notas pelo regime regular. Confirme com o"
           + " contador se esse é o seu caso.");
 
@@ -241,7 +248,24 @@ public final class TextoReformaTributaria {
     dispositivos.addAll(QUEM_PAGA_DISPOSITIVOS);
     secoes.add(QUEM_PAGA);
     secoes.add(proximoPasso(perfil.atendidoPorEscritorio()));
+    secoes.addAll(oQueQuerDizer(String.join("\n\n", secoes)));
     return new Texto(String.join("\n\n", secoes), List.copyOf(dispositivos));
+  }
+
+  /**
+   * Seção com a definição, em linguagem de produtor, de cada sigla do texto que ele não explica
+   * (#267). Do glossário revisado, nunca do modelo; sem artigo nem número, então a lista de
+   * citações da resposta não muda. Vazia se o texto não deixa sigla solta.
+   */
+  private static List<String> oQueQuerDizer(String texto) {
+    List<GlossarioProdutor.Termo> termos = GlossarioProdutor.padrao().aExplicar(texto);
+    if (termos.isEmpty()) {
+      return List.of();
+    }
+    List<String> linhas = new ArrayList<>();
+    linhas.add(O_QUE_QUER_DIZER);
+    termos.forEach(t -> linhas.add("- " + t.termo() + ": " + t.explicacao() + "."));
+    return List.of(String.join("\n", linhas));
   }
 
   private static String venda(List<Produto> produtos) {

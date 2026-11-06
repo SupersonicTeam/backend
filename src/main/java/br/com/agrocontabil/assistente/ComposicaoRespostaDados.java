@@ -36,19 +36,6 @@ public final class ComposicaoRespostaDados {
   /** Máximo de seções numa resposta. */
   static final int MAXIMO_SECOES = 6;
 
-  /** Sigla e a explicação que entra entre parênteses na primeira ocorrência. */
-  private record Sigla(Pattern padrao, String explicacao) {}
-
-  private static final List<Sigla> GLOSSARIO = List.of(
-      new Sigla(Pattern.compile("\\bIBS\\b"), "imposto sobre bens e serviços"),
-      new Sigla(Pattern.compile("\\bCBS\\b"), "contribuição sobre bens e serviços"),
-      new Sigla(Pattern.compile("\\bFunrural\\b", Pattern.CASE_INSENSITIVE),
-          "contribuição previdenciária do produtor rural"),
-      new Sigla(Pattern.compile("\\bSEFAZ\\b"), "secretaria da fazenda"),
-      new Sigla(Pattern.compile("\\bNCM\\b"), "código do produto"),
-      new Sigla(Pattern.compile("\\bCFOP\\b"), "código da operação"),
-      new Sigla(Pattern.compile("\\bNF-e\\b"), "nota fiscal eletrônica"));
-
   private ComposicaoRespostaDados() {}
 
   /**
@@ -147,24 +134,56 @@ public final class ComposicaoRespostaDados {
         + itens.get(itens.size() - 1);
   }
 
-  /** Explica cada sigla do glossário na primeira ocorrência, se o texto ainda não a explica. */
+  /**
+   * Explica cada sigla do glossário do produtor ({@link GlossarioProdutor}, as marcadas
+   * {@code emLinha}) na primeira ocorrência, se o texto ainda não a explica.
+   */
   static String explicarSiglas(String texto) {
     String resultado = texto;
     // A comparação (só ela) ignora acento e caixa: a explicação já escrita por outro texto do
     // backend ("serviços" ou "servicos") conta, e a explicação inserida segue acentuada. O texto
     // é normalizado uma vez e de novo só quando uma explicação é inserida.
     String normalizado = NormalizacaoBusca.normalizar(resultado);
-    for (Sigla sigla : GLOSSARIO) {
-      if (normalizado.contains(NormalizacaoBusca.normalizar(sigla.explicacao()))) {
+    for (GlossarioProdutor.Termo sigla : GlossarioProdutor.padrao().termos()) {
+      if (!sigla.emLinha() || sigla.explicadoEm(normalizado)) {
         continue;
       }
       Matcher m = sigla.padrao().matcher(resultado);
       if (m.find()) {
-        resultado = resultado.substring(0, m.end()) + " (" + sigla.explicacao() + ")"
+        resultado = resultado.substring(0, m.end()) + formaPorExtenso(resultado, m.end(), sigla)
             + resultado.substring(m.end());
         normalizado = NormalizacaoBusca.normalizar(resultado);
       }
     }
     return resultado;
+  }
+
+  /**
+   * A forma por extenso que entra depois da sigla: entre parênteses ("IBS (imposto sobre bens e
+   * serviços)") ou, se a sigla já está dentro de parênteses abertos no mesmo parágrafo, entre
+   * vírgulas ("(LC 214/2025, lei complementar, arts. 31 e 32)"), sem aninhar.
+   */
+  private static String formaPorExtenso(String texto, int fim, GlossarioProdutor.Termo sigla) {
+    int inicioDoParagrafo = texto.lastIndexOf('\n', fim - 1) + 1;
+    int abertos = 0;
+    for (int i = inicioDoParagrafo; i < fim; i++) {
+      char c = texto.charAt(i);
+      if (c == '(') {
+        abertos++;
+      } else if (c == ')' && abertos > 0) {
+        abertos--;
+      }
+    }
+    // Par de siglas ("IBS/CBS do mês"): uma vírgula separaria a barra do par, então fica entre
+    // parênteses mesmo aberto (o único aninhamento que sobra).
+    boolean barra = fim < texto.length() && texto.charAt(fim) == '/';
+    if (abertos == 0 || barra) {
+      return " (" + sigla.nome() + ")";
+    }
+    // A vírgula de depois só entra se vem palavra: antes de pontuação ou de barra ("IBS/CBS"), o
+    // sinal que já está lá separa, e uma vírgula colada nele sairia errada.
+    boolean vemPalavra = fim < texto.length()
+        && (texto.charAt(fim) == ' ' || Character.isLetterOrDigit(texto.charAt(fim)));
+    return ", " + sigla.nome() + (vemPalavra ? "," : "");
   }
 }
