@@ -92,7 +92,7 @@ da função** (função nova do backend aparece com o selo certo, sem deploy do 
 | `TABELA_OFICIAL` | Consultado em tabela pública oficial (hoje: `consultarTratamentoProduto`, classificação do IBS/CBS) | "Consultado na tabela oficial do IBS/CBS" |
 
 O backend não manda rótulo em português: quem traduz é o frontend. É mudança **aditiva**; o campo
-sempre vem preenchido. Valor desconhecido (enum novo no futuro) deve cair no selo de `PRODUTOR`.
+sempre vem preenchido. Valor desconhecido (enum novo no futuro) deve cair num selo neutro ("Consultado pelo AgroConIA"), nunca no de `PRODUTOR`: ele afirmaria que o dado é das notas do produtor.
 
 #### Resposta de dados por template (#266)
 

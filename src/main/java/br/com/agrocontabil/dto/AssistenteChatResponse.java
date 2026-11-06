@@ -51,12 +51,13 @@ public record AssistenteChatResponse(
   public record FonteDado(
       String funcao,
       Map<String, String> parametros,
-      @Schema(description = "Origem do dado consultado", example = "PRODUTOR") OrigemFonte origem) {}
+      @Schema(description = "Origem do dado consultado", example = "PRODUTOR")
+      OrigemFonte origem) {}
 
   /**
    * Origem do dado de uma {@link FonteDado} (#342). Sem rótulo em português: quem traduz é o
-   * frontend. Valor novo só se acrescenta (o frontend trata valor desconhecido como o mais
-   * conservador, {@link #PRODUTOR}).
+   * frontend. Valor novo só se acrescenta; o frontend trata valor desconhecido com um selo neutro,
+   * sem afirmar que o dado é do produtor.
    */
   public enum OrigemFonte {
     /** Calculado a partir dos dados do produtor (notas, guias, apuração, créditos...). */

@@ -142,6 +142,8 @@ class AssistenteStreamingIntegrationTest {
     assertThat(contrato.path("modoFallback").asBoolean()).isFalse();
     assertThat(contrato.has("citacoes")).isTrue();
     assertThat(contrato.has("fontesDados")).isTrue();
+    assertThat(contrato.path("fontesDados").path(0).path("origem").asText())
+        .isEqualTo("PRODUTOR");
 
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
