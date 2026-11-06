@@ -43,6 +43,9 @@ public class BuscaLegislacaoService {
   /** Candidatos buscados por trecho entregue: o {@code top-k} é o limite do que o modelo recebe. */
   static final int FATOR_CANDIDATOS = 4;
 
+  /** Trechos de um mesmo artigo que o modelo recebe: o caput e o parágrafo mais próximo. */
+  static final int TRECHOS_POR_ARTIGO = 2;
+
   private final VectorStore vectorStore;
   private final AssistenteProperties propriedades;
 
@@ -103,14 +106,27 @@ public class BuscaLegislacaoService {
    * D06 e D15). Cada artigo entra uma vez, com o trecho mais próximo.
    */
   static List<Document> melhoresPorArtigo(List<Document> documentos, int limite) {
-    Map<String, Document> porArtigo = new LinkedHashMap<>();
+    Map<String, List<Document>> porArtigo = new LinkedHashMap<>();
     for (Document documento : documentos == null ? List.<Document>of() : documentos) {
-      porArtigo.putIfAbsent(artigo(documento.getMetadata()), documento);
-      if (porArtigo.size() == limite) {
-        break;
+      String chave = artigo(documento.getMetadata());
+      List<Document> doArtigo = porArtigo.get(chave);
+      if (doArtigo == null) {
+        if (porArtigo.size() == limite) {
+          continue;
+        }
+        doArtigo = new ArrayList<>();
+        porArtigo.put(chave, doArtigo);
+      }
+      if (doArtigo.size() < TRECHOS_POR_ARTIGO) {
+        doArtigo.add(documento);
       }
     }
-    return new ArrayList<>(porArtigo.values());
+    List<Document> escolhidos = new ArrayList<>();
+    porArtigo.values().forEach(escolhidos::addAll);
+    // Ordem de similaridade (a ordem em que chegaram), não agrupada por artigo.
+    List<Document> ordem = new ArrayList<>(documentos == null ? List.<Document>of() : documentos);
+    escolhidos.sort(java.util.Comparator.comparingInt(ordem::indexOf));
+    return escolhidos;
   }
 
   /** Norma e artigo: {@code "LC 214/2025 art. 47"} para {@code "art. 47, § 1º, inciso I"}. */

@@ -17,8 +17,8 @@ class BuscaLegislacaoArtigosDistintosTest {
   }
 
   @Test
-  @DisplayName("Pedaços do mesmo artigo viram um só; a ordem de similaridade é mantida")
-  void umTrechoPorArtigo() {
+  @DisplayName("Até 2 trechos por artigo; a ordem de similaridade é mantida")
+  void doisTrechosPorArtigo() {
     List<Document> candidatos = List.of(
         doc("1", "LC 214/2025", "art. 254, inciso I"), doc("2", "LC 214/2025", "art. 254, inciso II"),
         doc("3", "LC 214/2025", "art. 254"), doc("4", "LC 214/2025", "art. 10"),
@@ -26,7 +26,7 @@ class BuscaLegislacaoArtigosDistintosTest {
 
     List<Document> escolhidos = BuscaLegislacaoService.melhoresPorArtigo(candidatos, 5);
 
-    assertThat(escolhidos).extracting(Document::getId).containsExactly("1", "4", "5");
+    assertThat(escolhidos).extracting(Document::getId).containsExactly("1", "2", "4", "5", "6");
   }
 
   @Test
