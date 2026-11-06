@@ -75,21 +75,21 @@ public class TratamentoProdutoService {
   public static final int LIMITE_PRODUTOS = 3;
 
   static final String CONDICAO_IN_NATURA =
-      "vendido in natura, sem industrializacao (LC 214/2025, art. 137)";
+      "vendido in natura, sem industrialização (LC 214/2025, art. 137)";
 
   static final String CONDICAO_LEITE_IN_NATURA = "leite cru ou apenas resfriado para o"
-      + " transporte ou o armazenamento, vendido in natura (LC 214/2025, art. 137, par. 1, II)";
+      + " transporte ou o armazenamento, vendido in natura (LC 214/2025, art. 137, § 1º, II)";
 
   /**
    * UHT (#380): zero sem condição a decidir, mas a frase lembra que o leite cru não é este caso,
    * para o produtor de leite que pergunta só "leite" não ler zero para a venda ao laticínio.
    */
   static final String CONDICAO_LEITE_UHT = "leite UHT, sempre de consumo direto (Anexo I, item"
-      + " 2); o leite cru ou apenas resfriado vendido ao laticinio e outro NCM (0401.20.90 e"
+      + " 2); o leite cru ou apenas resfriado vendido ao laticínio é outro NCM (0401.20.90 e"
       + " outros) e sai com 60%, in natura (LC 214/2025, art. 137)";
 
   static final String CONDICAO_LEITE_CONSUMO_DIRETO = "leite em conformidade com os requisitos"
-      + " da legislacao especifica relativos ao consumo direto pela populacao (Anexo I, item 2)";
+      + " da legislação específica relativos ao consumo direto pela população (Anexo I, item 2)";
 
   private static final Pattern NCM = Pattern.compile("\\d{8}");
   private static final Pattern PREFIXO_NCM = Pattern.compile("(?i)^\\s*ncm\\b[:\\s]*");

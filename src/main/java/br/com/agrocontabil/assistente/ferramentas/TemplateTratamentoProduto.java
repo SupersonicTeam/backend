@@ -22,11 +22,11 @@ public final class TemplateTratamentoProduto {
 
   static final int DESCRICAO_MAXIMA = 110;
 
-  static final String RESSALVA = "Confira com seu contador se a sua venda atende a condicao.";
+  static final String RESSALVA = "Confira com seu contador se a sua venda atende à condição.";
 
   /** Com duas situações (o leite, #284), quem escolhe é o contador, não a tabela. */
   static final String RESSALVA_ALTERNATIVA =
-      "O enquadramento da sua venda em uma das duas situacoes e com o seu contador.";
+      "O enquadramento da sua venda em uma das duas situações é com o seu contador.";
 
   private static final Map<Integer, String> ROMANOS =
       Map.of(1, "I", 7, "VII", 9, "IX", 15, "XV");
@@ -35,9 +35,9 @@ public final class TemplateTratamentoProduto {
 
   /** Frase sem produto achado: também é a frase fixa da negativa (#274). */
   public static String naoEncontrado(String termo) {
-    return "Nao encontrei " + (termo == null || termo.isBlank() ? "esse produto" : termo)
-        + " na tabela oficial de classificacao tributaria do IBS e da CBS. Tente outro nome do"
-        + " produto ou o codigo NCM que esta na nota fiscal dele.";
+    return "Não encontrei " + (termo == null || termo.isBlank() ? "esse produto" : termo)
+        + " na tabela oficial de classificação tributária do IBS e da CBS. Tente outro nome do"
+        + " produto ou o código NCM que está na nota fiscal dele.";
   }
 
   /**
@@ -60,8 +60,8 @@ public final class TemplateTratamentoProduto {
       comAlternativa |= p.alternativa() != null;
     }
     String fonte = consulta.versaoTabela() == null
-        ? "Tratamento pela tabela oficial de classificacao tributaria."
-        : "Tratamento pela tabela oficial de classificacao tributaria (" + consulta.versaoTabela()
+        ? "Tratamento pela tabela oficial de classificação tributária."
+        : "Tratamento pela tabela oficial de classificação tributária (" + consulta.versaoTabela()
             + ").";
     StringBuilder fim = new StringBuilder(fonte);
     if (comCondicao) {
@@ -93,19 +93,19 @@ public final class TemplateTratamentoProduto {
     StringBuilder s = new StringBuilder(nome(p)).append(": ");
     if (!p.ncmConhecido()) {
       // Codigo fora da referencia e de todo anexo: pode nem existir. Nada de afirmar.
-      return s.append("nao encontrei esse codigo na referencia de NCM nem nos anexos de reducao"
-          + " da LC 214/2025. Se o codigo estiver certo, nao ha reducao e o IBS e a CBS sao"
-          + " cobrados pela aliquota cheia (cClassTrib ").append(p.cClassTrib())
+      return s.append("não encontrei esse código na referência de NCM nem nos anexos de redução"
+          + " da LC 214/2025. Se o código estiver certo, não há redução e o IBS e a CBS são"
+          + " cobrados pela alíquota cheia (cClassTrib ").append(p.cClassTrib())
           .append("). Confira o NCM na nota fiscal do produto.").toString();
     }
     if (p.percentualReducao().signum() == 0) {
-      s.append("sem reducao; o IBS e a CBS sao cobrados pela aliquota cheia (cClassTrib ")
+      s.append("sem redução; o IBS e a CBS são cobrados pela alíquota cheia (cClassTrib ")
           .append(p.cClassTrib()).append(").");
     } else {
-      s.append("reducao de ").append(percentual(p.percentualReducao()))
+      s.append("redução de ").append(percentual(p.percentualReducao()))
           .append(" do IBS e da CBS");
       if (p.percentualReducao().compareTo(BigDecimal.valueOf(100)) == 0) {
-        s.append(" (aliquota zero)");
+        s.append(" (alíquota zero)");
       }
       String fundamento = fundamento(p);
       s.append(", ").append(hipotese(p)).append(" (")
@@ -113,7 +113,7 @@ public final class TemplateTratamentoProduto {
           .append("cClassTrib ").append(p.cClassTrib()).append(").");
     }
     if (p.condicao() != null) {
-      s.append(" Condicao: ").append(p.condicao()).append('.');
+      s.append(" Condição: ").append(p.condicao()).append('.');
     }
     if (p.alternativa() != null) {
       s.append(' ').append(alternativa(p.alternativa()));
@@ -123,11 +123,11 @@ public final class TemplateTratamentoProduto {
 
   /** A outra situação do produto, que vale só com o cClassTrib informado (o leite, #284). */
   private static String alternativa(Alternativa a) {
-    StringBuilder s = new StringBuilder("Ja o ").append(a.condicao()).append(" tem ");
+    StringBuilder s = new StringBuilder("Já o ").append(a.condicao()).append(" tem ");
     if (a.percentualReducao().compareTo(BigDecimal.valueOf(100)) == 0) {
-      s.append("aliquota zero");
+      s.append("alíquota zero");
     } else {
-      s.append("reducao de ").append(percentual(a.percentualReducao()));
+      s.append("redução de ").append(percentual(a.percentualReducao()));
     }
     s.append(" do IBS e da CBS (");
     if (a.artigo() != null) {
@@ -152,7 +152,7 @@ public final class TemplateTratamentoProduto {
 
   private static String hipotese(Produto p) {
     if (p.inNatura()) {
-      return "como produto agropecuario in natura";
+      return "como produto agropecuário in natura";
     }
     return p.anexo() == null ? "pela tabela oficial" : "pelo Anexo " + romano(p.anexo());
   }

@@ -68,18 +68,18 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
     assertThat(resumo.pedidosDoEscritorio()).isEqualTo(1);
     long pontos = resumo.guiasEmAtraso() + resumo.prazos() + resumo.notasParadas()
         + resumo.pedidosDoEscritorio() + resumo.notasAConferir();
-    assertThat(texto).startsWith("Encontrei " + pontos + " pontos de atencao: 1 guia em atraso");
-    int atraso = texto.indexOf("Voce tem 1 guia em atraso");
-    int parada = texto.indexOf(resumo.notasParadas() == 1 ? "1 nota esta parada"
-        : resumo.notasParadas() + " notas estao paradas");
-    int pedido = texto.indexOf("O escritorio espera 1 documento seu");
+    assertThat(texto).startsWith("Encontrei " + pontos + " pontos de atenção: 1 guia em atraso");
+    int atraso = texto.indexOf("Você tem 1 guia em atraso");
+    int parada = texto.indexOf(resumo.notasParadas() == 1 ? "1 nota está parada"
+        : resumo.notasParadas() + " notas estão paradas");
+    int pedido = texto.indexOf("O escritório espera 1 documento seu");
     assertThat(atraso).isPositive();
     assertThat(parada).isGreaterThan(atraso);
     assertThat(pedido).isGreaterThan(parada);
     assertThat(texto).contains("devolvida pelo contador", "Extrato bancario de ");
     // Sem nota a conferir no seed (#276: falso positivo zero), ela fica so no resumo.
     assertThat(resumo.notasAConferir()).isZero();
-    assertThat(texto).contains("Sem pendencias em:").contains("notas a conferir");
+    assertThat(texto).contains("Sem pendências em:").contains("notas a conferir");
   }
 
   private Produtor produtor(String chave) {

@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.SecaoResposta.Assunto;
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -18,10 +19,10 @@ import java.util.regex.Pattern;
  *       informativos (apuração, créditos, vendas). Dentro do mesmo assunto, a ordem das
  *       chamadas.</li>
  *   <li>Com duas ou mais seções de atenção consultadas, a <strong>primeira linha é o resumo</strong>
- *       do backend: "Encontrei 3 pontos de atencao: 2 guias em atraso e 1 nota devolvida." ou, sem
- *       nenhum, "Nao encontrei pontos de atencao em: ..." com o recorte de cada consulta.</li>
+ *       do backend: "Encontrei 3 pontos de atenção: 2 guias em atraso e 1 nota devolvida." ou, sem
+ *       nenhum, "Não encontrei pontos de atenção em: ..." com o recorte de cada consulta.</li>
  *   <li><strong>Seção vazia</strong> só aparece se a pergunta pediu aquele assunto (a função foi
- *       chamada direto); a do resumo do produtor entra só no resumo, como "sem pendencias
+ *       chamada direto); a do resumo do produtor entra só no resumo, como "sem pendências
  *       em".</li>
  *   <li>Teto de {@value #MAXIMO_SECOES} seções (o teto de itens por seção é do template); a
  *       mesma seção repetida (duas chamadas iguais) sai uma vez.</li>
@@ -39,14 +40,14 @@ public final class ComposicaoRespostaDados {
   private record Sigla(Pattern padrao, String explicacao) {}
 
   private static final List<Sigla> GLOSSARIO = List.of(
-      new Sigla(Pattern.compile("\\bIBS\\b"), "imposto sobre bens e servicos"),
-      new Sigla(Pattern.compile("\\bCBS\\b"), "contribuicao sobre bens e servicos"),
+      new Sigla(Pattern.compile("\\bIBS\\b"), "imposto sobre bens e serviços"),
+      new Sigla(Pattern.compile("\\bCBS\\b"), "contribuição sobre bens e serviços"),
       new Sigla(Pattern.compile("\\bFunrural\\b", Pattern.CASE_INSENSITIVE),
-          "contribuicao previdenciaria do produtor rural"),
+          "contribuição previdenciária do produtor rural"),
       new Sigla(Pattern.compile("\\bSEFAZ\\b"), "secretaria da fazenda"),
-      new Sigla(Pattern.compile("\\bNCM\\b"), "codigo do produto"),
-      new Sigla(Pattern.compile("\\bCFOP\\b"), "codigo da operacao"),
-      new Sigla(Pattern.compile("\\bNF-e\\b"), "nota fiscal eletronica"));
+      new Sigla(Pattern.compile("\\bNCM\\b"), "código do produto"),
+      new Sigla(Pattern.compile("\\bCFOP\\b"), "código da operação"),
+      new Sigla(Pattern.compile("\\bNF-e\\b"), "nota fiscal eletrônica"));
 
   private ComposicaoRespostaDados() {}
 
@@ -72,7 +73,7 @@ public final class ComposicaoRespostaDados {
 
   /** Linha do template com contagem calculada pelo backend ("E mais 7, na tela de Notas."). */
   private static final Pattern MAIS_NA_TELA =
-      Pattern.compile("(?m)^E mais \\d+, na tela de \\w+\\.$");
+      Pattern.compile("(?m)^E mais \\d+, na tela de \\p{L}+\\.$");
 
   /**
    * Fontes do {@code ValidadorNumeros} que não estão nos resultados das funções: os pedaços de
@@ -122,17 +123,17 @@ public final class ComposicaoRespostaDados {
       // Todas pedidas e vazias: as frases de cada uma ja dizem o recorte; o resumo so repetiria.
       boolean algumaSoNoResumo = atencao.stream().anyMatch(s -> !s.pedida());
       return algumaSoNoResumo
-          ? java.util.Optional.of("Nao encontrei pontos de atencao em: " + lista(semPendencia)
+          ? java.util.Optional.of("Não encontrei pontos de atenção em: " + lista(semPendencia)
               + ".")
           : java.util.Optional.empty();
     }
     int total = comPontos.stream().mapToInt(SecaoResposta::pontos).sum();
     StringBuilder linha = new StringBuilder("Encontrei ").append(total)
-        .append(total == 1 ? " ponto de atencao: " : " pontos de atencao: ")
+        .append(total == 1 ? " ponto de atenção: " : " pontos de atenção: ")
         .append(lista(comPontos.stream().map(SecaoResposta::resumo).distinct().toList()))
         .append('.');
     if (!semPendencia.isEmpty()) {
-      linha.append(" Sem pendencias em: ").append(lista(semPendencia)).append('.');
+      linha.append(" Sem pendências em: ").append(lista(semPendencia)).append('.');
     }
     return java.util.Optional.of(linha.toString());
   }
@@ -150,7 +151,10 @@ public final class ComposicaoRespostaDados {
   static String explicarSiglas(String texto) {
     String resultado = texto;
     for (Sigla sigla : GLOSSARIO) {
-      if (resultado.toLowerCase(java.util.Locale.ROOT).contains(sigla.explicacao())) {
+      // A comparação (só ela) ignora acento e caixa: a explicação já escrita por outro texto do
+      // backend ("serviços" ou "servicos") conta, e a explicação inserida segue acentuada.
+      if (NormalizacaoBusca.normalizar(resultado)
+          .contains(NormalizacaoBusca.normalizar(sigla.explicacao()))) {
         continue;
       }
       Matcher m = sigla.padrao().matcher(resultado);

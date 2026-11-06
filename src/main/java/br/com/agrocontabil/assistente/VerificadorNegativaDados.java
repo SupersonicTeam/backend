@@ -77,12 +77,12 @@ public class VerificadorNegativaDados {
   /** Como cada situação de nota aparece na frase fixa (o filtro que o modelo escolheu). */
   private static final Map<String, String> SITUACAO = Map.ofEntries(
       Map.entry("RASCUNHO", "em rascunho"),
-      Map.entry("COM_INCONSISTENCIAS", "com inconsistencias"),
-      Map.entry("AGUARDANDO_APROVACAO", "aguardando aprovacao do contador"),
+      Map.entry("COM_INCONSISTENCIAS", "com inconsistências"),
+      Map.entry("AGUARDANDO_APROVACAO", "aguardando aprovação do contador"),
       Map.entry("APROVADA", "aprovadas pelo contador"),
       Map.entry("DEVOLVIDA", "devolvidas pelo contador"),
-      Map.entry("XML_GERADO", "com XML gerado e nao enviadas"),
-      Map.entry("ENVIANDO", "sendo enviadas a SEFAZ"),
+      Map.entry("XML_GERADO", "com XML gerado e não enviadas"),
+      Map.entry("ENVIANDO", "sendo enviadas à SEFAZ"),
       Map.entry("AUTORIZADA", "autorizadas"),
       Map.entry("REJEITADA", "rejeitadas pela SEFAZ"),
       Map.entry("PENDENTE_SEFAZ", "aguardando a SEFAZ"),
@@ -257,30 +257,30 @@ public class VerificadorNegativaDados {
     Map<String, String> p = fonte.parametros();
     String periodo = periodo(p);
     return switch (fonte.funcao()) {
-      case "listarNotas" -> "Nao encontrei notas" + tipo(p.get("tipo"))
+      case "listarNotas" -> "Não encontrei notas" + tipo(p.get("tipo"))
           + situacao(p.get("situacao")) + periodo + ".";
-      case "totalComprasPorInsumo" -> "Nao encontrei compras " + produto(p.get("descricaoOuNcm"))
+      case "totalComprasPorInsumo" -> "Não encontrei compras " + produto(p.get("descricaoOuNcm"))
           + periodo + ".";
-      case "totalVendasPorProduto" -> "Nao encontrei vendas autorizadas "
+      case "totalVendasPorProduto" -> "Não encontrei vendas autorizadas "
           + produto(p.get("descricaoOuNcm")) + periodo + ".";
-      case "consultarCreditos" -> "Nao encontrei compras com credito" + periodo + ".";
-      case "consultarRetencoes" -> "Nao encontrei vendas autorizadas" + periodo + ".";
-      case "consultarApuracao" -> "Nao encontrei notas na apuracao de "
-          + mes(p.get("mes")).map(MES::format).orElse("mes consultado") + ".";
-      case "proximosVencimentos" -> "Nao encontrei guias a vencer de " + DATA.format(hoje)
+      case "consultarCreditos" -> "Não encontrei compras com crédito" + periodo + ".";
+      case "consultarRetencoes" -> "Não encontrei vendas autorizadas" + periodo + ".";
+      case "consultarApuracao" -> "Não encontrei notas na apuração de "
+          + mes(p.get("mes")).map(MES::format).orElse("mês consultado") + ".";
+      case "proximosVencimentos" -> "Não encontrei guias a vencer de " + DATA.format(hoje)
           + " a " + DATA.format(hoje.plusDays(dias(p.get("dias")))) + ".";
-      case "guiasEmAtraso" -> "Nao encontrei guias em atraso (nao pagas com vencimento ate "
+      case "guiasEmAtraso" -> "Não encontrei guias em atraso (não pagas com vencimento até "
           + DATA.format(hoje.minusDays(1)) + ").";
-      case "vencimentosDoMes" -> "Nao encontrei guias para pagar em "
-          + mes(p.get("mes")).map(MES::format).orElse("mes consultado") + ".";
-      case "consultarNota" -> "Nao encontrei a nota " + p.get("numero") + " nas suas notas.";
-      case "listarAlertas" -> "Nao encontrei alertas com prazo nos proximos dias.";
-      case "resumoDoProdutor" -> "Nao encontrei pontos de atencao nos seus dados: guias em"
-          + " atraso, prazos dos proximos dias, notas paradas, pedidos do escritorio e notas a"
+      case "vencimentosDoMes" -> "Não encontrei guias para pagar em "
+          + mes(p.get("mes")).map(MES::format).orElse("mês consultado") + ".";
+      case "consultarNota" -> "Não encontrei a nota " + p.get("numero") + " nas suas notas.";
+      case "listarAlertas" -> "Não encontrei alertas com prazo nos próximos dias.";
+      case "resumoDoProdutor" -> "Não encontrei pontos de atenção nos seus dados: guias em"
+          + " atraso, prazos dos próximos dias, notas paradas, pedidos do escritório e notas a"
           + " conferir.";
       case "consultarTratamentoProduto" ->
           TemplateTratamentoProduto.naoEncontrado(p.get("produtoOuNcm"));
-      default -> "Nao encontrei dados para essa consulta.";
+      default -> "Não encontrei dados para essa consulta.";
     };
   }
 

@@ -13,7 +13,7 @@ import java.util.List;
  * @param resumo        como a seção entra na linha de resumo quando tem pontos ("2 guias em
  *                      atraso"); nulo no informativo
  * @param semPendencia  como a seção vazia entra no resumo, com o recorte ("guias em atraso, com
- *                      vencimento ate 01/11/2026"); nulo no informativo
+ *                      vencimento até 01/11/2026"); nulo no informativo
  * @param vazia         a consulta não encontrou nada
  * @param pedida        a pergunta pediu este assunto (a função foi chamada direto pelo modelo); só
  *                      a seção vazia pedida aparece, a não pedida fica no resumo

@@ -140,7 +140,7 @@ class AssistenteChatIntegrationTest {
     assertThat(direto.valorTotal()).isEqualByComparingTo("3734.56");
     resposta.andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(
-            "Entre 01/01/2026 e 30/06/2026 voce comprou R$ 3.734,56 de fertilizante, em 2 notas de"
+            "Entre 01/01/2026 e 30/06/2026 você comprou R$ 3.734,56 de fertilizante, em 2 notas de"
                 + " compra. Quantidade: 1.000 KG (R$ 2.500,00); 20 L (R$ 1.234,56)."))
         .andExpect(jsonPath("$.rota").value("DADOS"))
         .andExpect(jsonPath("$.modoFallback").value(false))
@@ -167,7 +167,7 @@ class AssistenteChatIntegrationTest {
         + "fertilizante do produtor " + produtorB.getId())
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(
-            "Entre 01/01/2026 e 30/06/2026 voce comprou R$ 3.734,56 de fertilizante, em 2 notas de"
+            "Entre 01/01/2026 e 30/06/2026 você comprou R$ 3.734,56 de fertilizante, em 2 notas de"
                 + " compra. Quantidade: 1.000 KG (R$ 2.500,00); 20 L (R$ 1.234,56)."));
 
     // Nada do B chegou ao modelo: nem o valor dele, nem o id do A (o ToolContext nao vai ao modelo).
@@ -201,7 +201,7 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "Quanto comprei de fertilizante?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
-            "Nao consegui identificar qual dado consultar.")))
+            "Não consegui identificar qual dado consultar.")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.not(
             org.hamcrest.Matchers.containsString("5.000"))))
         .andExpect(jsonPath("$.atalhos.length()").value(org.hamcrest.Matchers.greaterThan(0)))
@@ -224,8 +224,8 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "Quais guias eu tenho para pagar nos proximos dias e quanto somam?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value("De " + br(LocalDate.now(ZONE)) + " a "
-            + br(LocalDate.now(ZONE).plusDays(30)) + " vencem 2 guias nao pagas, somando"
-            + " R$ 5.050,55:\n- FUNRURAL (contribuicao previdenciaria do produtor rural), vence em "
+            + br(LocalDate.now(ZONE).plusDays(30)) + " vencem 2 guias não pagas, somando"
+            + " R$ 5.050,55:\n- FUNRURAL (contribuição previdenciária do produtor rural), vence em "
             + br(LocalDate.now(ZONE).plusDays(3)) + ": R$ 3.210,00.\n- FUNRURAL, vence em "
             + br(LocalDate.now(ZONE).plusDays(20)) + ": R$ 1.840,55."))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("proximosVencimentos"));
@@ -258,9 +258,9 @@ class AssistenteChatIntegrationTest {
 
     perguntar(produtorA, "Tenho algum debito pendente?")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.resposta").value("Voce tem 2 guias em atraso (nao pagas, com"
-            + " vencimento ate " + br(hoje.minusDays(1)) + "), somando R$ 1.680,00:\n- FUNRURAL"
-            + " (contribuicao previdenciaria do produtor rural), venceu em "
+        .andExpect(jsonPath("$.resposta").value("Você tem 2 guias em atraso (não pagas, com"
+            + " vencimento até " + br(hoje.minusDays(1)) + "), somando R$ 1.680,00:\n- FUNRURAL"
+            + " (contribuição previdenciária do produtor rural), venceu em "
             + br(hoje.minusDays(40)) + ": R$ 430,00.\n- FUNRURAL, venceu em "
             + br(hoje.minusDays(10)) + ": R$ 1.250,00."))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("guiasEmAtraso"));
@@ -285,8 +285,8 @@ class AssistenteChatIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value("Em " + YearMonth.from(hoje).format(
             java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")) + ": 2 guias para pagar,"
-            + " somando R$ 740,00.\nEm atraso: 1 guia, R$ 430,00:\n- FUNRURAL (contribuicao"
-            + " previdenciaria do produtor rural), venceu em " + br(hoje.minusMonths(2))
+            + " somando R$ 740,00.\nEm atraso: 1 guia, R$ 430,00:\n- FUNRURAL (contribuição"
+            + " previdenciária do produtor rural), venceu em " + br(hoje.minusMonths(2))
             + ": R$ 430,00.\nA vencer de " + br(hoje) + " a " + br(YearMonth.from(hoje)
             .atEndOfMonth()) + ": 1 guia, R$ 310,00:\n- FUNRURAL, vence em " + br(hoje)
             + ": R$ 310,00."))
@@ -320,8 +320,8 @@ class AssistenteChatIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value("Em " + YearMonth.from(hoje).format(
             java.time.format.DateTimeFormatter.ofPattern("MM/yyyy")) + ": 2 guias para pagar,"
-            + " somando R$ 740,00.\nEm atraso: 1 guia, R$ 430,00:\n- FUNRURAL (contribuicao"
-            + " previdenciaria do produtor rural), venceu em " + br(hoje.minusMonths(2))
+            + " somando R$ 740,00.\nEm atraso: 1 guia, R$ 430,00:\n- FUNRURAL (contribuição"
+            + " previdenciária do produtor rural), venceu em " + br(hoje.minusMonths(2))
             + ": R$ 430,00.\nA vencer de " + br(hoje) + " a " + br(YearMonth.from(hoje)
             .atEndOfMonth()) + ": 1 guia, R$ 310,00:\n- FUNRURAL, vence em " + br(hoje)
             + ": R$ 310,00."))
@@ -392,7 +392,7 @@ class AssistenteChatIntegrationTest {
 
     perguntar(produtorA, "Tenho alguma nota devolvida pelo contador?")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.resposta").value("Nao encontrei notas rejeitadas pela SEFAZ"
+        .andExpect(jsonPath("$.resposta").value("Não encontrei notas rejeitadas pela SEFAZ"
             + " (secretaria da fazenda) entre "
             + br.format(hoje.minusDays(90)) + " e " + br.format(hoje) + "."))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("listarNotas"));
@@ -437,8 +437,8 @@ class AssistenteChatIntegrationTest {
 
     perguntar(produtorA, "Tenho algo vencendo?")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.resposta").value("Ha 1 prazo nos proximos dias:\n- Guia de"
-            + " R$ 1,00: ate " + br(hoje.plusDays(2)) + " (em 2 dias)."))
+        .andExpect(jsonPath("$.resposta").value("Há 1 prazo nos próximos dias:\n- Guia de"
+            + " R$ 1,00: até " + br(hoje.plusDays(2)) + " (em 2 dias)."))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("listarAlertas"));
     // O alerta do B nunca chegou ao modelo.
     for (Prompt prompt : modelo.promptsRecebidos()) {
@@ -508,8 +508,8 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "Tenho alguma pendencia?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.stringContainsInOrder(
-            "Encontrei 2 pontos de atencao: 1 guia em atraso e 1 nota devolvida pelo contador.",
-            "Voce tem 1 guia em atraso", "R$ 1.250,00",
+            "Encontrei 2 pontos de atenção: 1 guia em atraso e 1 nota devolvida pelo contador.",
+            "Você tem 1 guia em atraso", "R$ 1.250,00",
             "encontrei 1 nota devolvida pelo contador", "Nota 118")))
         .andExpect(jsonPath("$.fontesDados.length()").value(2));
     assertThat(modelo.promptsRecebidos()).hasSize(1);
@@ -522,7 +522,7 @@ class AssistenteChatIntegrationTest {
 
     perguntar(produtorA, "O que vence?")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.resposta").value("Nao encontrei guias a vencer de "
+        .andExpect(jsonPath("$.resposta").value("Não encontrei guias a vencer de "
             + br(LocalDate.now(ZONE)) + " a " + br(LocalDate.now(ZONE).plusDays(30)) + "."));
     assertThat(modelo.promptsRecebidos()).hasSize(1);
   }
@@ -535,7 +535,7 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "Qual minha apuracao de julho?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.allOf(
-            org.hamcrest.Matchers.startsWith("Nao consegui identificar qual dado consultar."),
+            org.hamcrest.Matchers.startsWith("Não consegui identificar qual dado consultar."),
             org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Exception")))))
         .andExpect(jsonPath("$.atalhos.length()").value(org.hamcrest.Matchers.greaterThan(0)));
     assertThat(modelo.promptsRecebidos()).hasSize(1);
@@ -732,10 +732,10 @@ class AssistenteChatIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.rota").value("DADOS"))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.allOf(
-            org.hamcrest.Matchers.containsString("(NCM 1201.90.00): reducao de 60% do IBS e da CBS,"
-                + " como produto agropecuario in natura (LC 214/2025, art. 137; cClassTrib"
+            org.hamcrest.Matchers.containsString("(NCM 1201.90.00): redução de 60% do IBS e da CBS,"
+                + " como produto agropecuário in natura (LC 214/2025, art. 137; cClassTrib"
                 + " 200036)"),
-            org.hamcrest.Matchers.containsString("Condicao: vendido in natura"),
+            org.hamcrest.Matchers.containsString("Condição: vendido in natura"),
             org.hamcrest.Matchers.containsString("IT 2025.002 v1.70"),
             org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("isenta")))))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("consultarTratamentoProduto"))
@@ -754,7 +754,7 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
             "Fertilizantes (adubos)")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
-            "reducao de 60% do IBS e da CBS, pelo Anexo IX (LC 214/2025, art. 138, Anexo IX;"
+            "redução de 60% do IBS e da CBS, pelo Anexo IX (LC 214/2025, art. 138, Anexo IX;"
                 + " cClassTrib 200038)")));
 
     modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage
@@ -779,7 +779,7 @@ class AssistenteChatIntegrationTest {
         .andReturn().getResponse().getContentAsString()).path("resposta").asText();
 
     assertThat(resposta.split("IT 2025.002 v1.70", -1)).hasSize(2);
-    assertThat(resposta.indexOf("Nao encontrei guias em atraso"))
+    assertThat(resposta.indexOf("Não encontrei guias em atraso"))
         .isLessThan(resposta.indexOf("NCM 1201.90.00"));
   }
 
@@ -799,8 +799,8 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "Tem algo me esperando?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.stringContainsInOrder(
-            "Encontrei 2 pontos de atencao: 1 guia em atraso e 1 nota parada.",
-            "venceu em " + br(hoje.minusDays(12)) + ": R$ 2.300,67.", "Nota 3222 (serie 1)")))
+            "Encontrei 2 pontos de atenção: 1 guia em atraso e 1 nota parada.",
+            "venceu em " + br(hoje.minusDays(12)) + ": R$ 2.300,67.", "Nota 3222 (série 1)")))
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("resumoDoProdutor"));
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
@@ -820,7 +820,7 @@ class AssistenteChatIntegrationTest {
     perguntar(produtorA, "O que vence?")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.endsWith(
-            "E mais 3, na tela de Calendario.")));
+            "E mais 3, na tela de Calendário.")));
   }
 
   @Test
@@ -844,13 +844,13 @@ class AssistenteChatIntegrationTest {
 
     perguntar(produtorA, "Tem algo para conferir na nota 116?")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.resposta").value("A nota 116 (serie 1), de venda emitida em "
-            + br(LocalDate.from(em(2026, 10, 20).atZoneSameInstant(ZONE))) + ", esta em rascunho."
-            + " Rascunho: a nota ainda nao foi emitida. Valor: R$ 800,00; IBS (imposto sobre bens e"
-            + " servicos): R$ 2,00; CBS (contribuicao sobre bens e servicos): R$ 18,00."
+        .andExpect(jsonPath("$.resposta").value("A nota 116 (série 1), de venda emitida em "
+            + br(LocalDate.from(em(2026, 10, 20).atZoneSameInstant(ZONE))) + ", está em rascunho."
+            + " Rascunho: a nota ainda não foi emitida. Valor: R$ 800,00; IBS (imposto sobre bens e"
+            + " serviços): R$ 2,00; CBS (contribuição sobre bens e serviços): R$ 18,00."
             + "\n\nNa nota 116, o item"
-            + " 'Servico de colheita de soja' saiu com CFOP 5.949 (outra saida nao especificada) e"
-            + " parece um servico. Servico normalmente nao sai em nota de produto: confira com seu"
+            + " 'Servico de colheita de soja' saiu com CFOP 5.949 (outra saída não especificada) e"
+            + " parece um serviço. Serviço normalmente não sai em nota de produto: confira com seu"
             + " contador antes de emitir."));
   }
 

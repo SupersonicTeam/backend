@@ -62,20 +62,20 @@ public class RotaDados {
 
   /** O modelo pediu funções além do teto ou uma função que não existe. */
   static final String MENSAGEM_SEM_CONCLUSAO =
-      "Nao consegui concluir a consulta. Tente reformular a pergunta de forma mais especifica.";
+      "Não consegui concluir a consulta. Tente reformular a pergunta de forma mais específica.";
 
   /**
    * O modelo não escolheu nenhuma função (ou todas falharam): resposta honesta, nunca negativa
    * (issue #266). Vai com os atalhos de tela.
    */
-  static final String MENSAGEM_SEM_FUNCAO = "Nao consegui identificar qual dado consultar. Voce"
+  static final String MENSAGEM_SEM_FUNCAO = "Não consegui identificar qual dado consultar. Você"
       + " pode perguntar, por exemplo: \"tenho guia em atraso?\", \"quanto vendi de soja em"
       + " outubro?\" ou \"tem algo me esperando?\". Ou veja direto na tela indicada.";
 
   /** A resposta tinha número que não veio de nenhuma função. */
   static final String MENSAGEM_NUMERO_SEM_FONTE =
-      "Nao consegui confirmar os valores da resposta com os seus dados, por isso nao vou "
-          + "mostra-los. Tente reformular a pergunta.";
+      "Não consegui confirmar os valores da resposta com os seus dados, por isso não vou "
+          + "mostrá-los. Tente reformular a pergunta.";
 
   private static final Logger log = LoggerFactory.getLogger(RotaDados.class);
 

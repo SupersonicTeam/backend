@@ -155,7 +155,7 @@ class AtalhoReformaIntegrationTest {
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
             "O que muda para você com o IBS e a CBS")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
-            "Soja, mesmo triturada (NCM 1201.90.00): reducao de 60% do IBS e da CBS")))
+            "Soja, mesmo triturada (NCM 1201.90.00): redução de 60% do IBS e da CBS")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
             "Lei 8.212/1991, art. 30, IV")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(

@@ -305,7 +305,7 @@ class OrquestradorServiceTest {
     ResultadoOrquestracao r = responder();
 
     assertThat(r.texto()).isEqualTo(
-        "Nao encontrei compras de adubo.\n\n"
+        "Não encontrei compras de adubo.\n\n"
             + OrquestradorService.LIGACAO_SEM_DADOS
             + "Fertilizantes tem reducao (LC 214/2025, art. 138).");
     assertThat(r.texto()).doesNotContain("Nao tem essa informacao");

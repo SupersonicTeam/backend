@@ -21,14 +21,14 @@ class ComposicaoRespostaDadosTest {
   void ordemDePrioridade() {
     String texto = ComposicaoRespostaDados.compor(List.of(
         SecaoResposta.informativa("Apuracao.", false, List.of()),
-        secao(Assunto.PEDIDOS_DO_ESCRITORIO, "Pedido.", 1, "1 pedido do escritorio", "pedidos",
+        secao(Assunto.PEDIDOS_DO_ESCRITORIO, "Pedido.", 1, "1 pedido do escritório", "pedidos",
             true),
         secao(Assunto.NOTAS_PARADAS, "Nota parada.", 1, "1 nota parada", "notas paradas", true),
         secao(Assunto.GUIAS_EM_ATRASO, "Atraso.", 2, "2 guias em atraso", "guias em atraso",
             true)));
 
-    assertThat(texto).isEqualTo("Encontrei 4 pontos de atencao: 2 guias em atraso, 1 nota"
-        + " parada e 1 pedido do escritorio.\n\nAtraso.\n\nNota parada.\n\nPedido.\n\nApuracao.");
+    assertThat(texto).isEqualTo("Encontrei 4 pontos de atenção: 2 guias em atraso, 1 nota"
+        + " parada e 1 pedido do escritório.\n\nAtraso.\n\nNota parada.\n\nPedido.\n\nApuracao.");
   }
 
   @Test
@@ -37,13 +37,13 @@ class ComposicaoRespostaDadosTest {
     String texto = ComposicaoRespostaDados.compor(List.of(
         secao(Assunto.GUIAS_EM_ATRASO, "Atraso.", 1, "1 guia em atraso", "guias em atraso",
             false),
-        secao(Assunto.PEDIDOS_DO_ESCRITORIO, "Nenhum pedido.", 0, null, "pedidos do escritorio",
+        secao(Assunto.PEDIDOS_DO_ESCRITORIO, "Nenhum pedido.", 0, null, "pedidos do escritório",
             false),
         secao(Assunto.NOTAS_A_CONFERIR, "Nada a conferir.", 0, null, "notas a conferir",
             false)));
 
-    assertThat(texto).isEqualTo("Encontrei 1 ponto de atencao: 1 guia em atraso. Sem pendencias"
-        + " em: pedidos do escritorio e notas a conferir.\n\nAtraso.");
+    assertThat(texto).isEqualTo("Encontrei 1 ponto de atenção: 1 guia em atraso. Sem pendências"
+        + " em: pedidos do escritório e notas a conferir.\n\nAtraso.");
   }
 
   @Test
@@ -51,21 +51,21 @@ class ComposicaoRespostaDadosTest {
   void semPontos() {
     String texto = ComposicaoRespostaDados.compor(List.of(
         secao(Assunto.GUIAS_EM_ATRASO, "Sem atraso.", 0, null,
-            "guias em atraso (vencimento ate 01/11/2026)", false),
-        secao(Assunto.PRAZOS, "Sem prazo.", 0, null, "prazos dos proximos dias", false)));
+            "guias em atraso (vencimento até 01/11/2026)", false),
+        secao(Assunto.PRAZOS, "Sem prazo.", 0, null, "prazos dos próximos dias", false)));
 
-    assertThat(texto).isEqualTo("Nao encontrei pontos de atencao em: guias em atraso"
-        + " (vencimento ate 01/11/2026) e prazos dos proximos dias.");
+    assertThat(texto).isEqualTo("Não encontrei pontos de atenção em: guias em atraso"
+        + " (vencimento até 01/11/2026) e prazos dos próximos dias.");
   }
 
   @Test
   @DisplayName("secao vazia pedida aparece; com um assunto de atencao so, sem linha de resumo")
   void vaziaPedidaSemResumo() {
     String texto = ComposicaoRespostaDados.compor(List.of(
-        secao(Assunto.GUIAS_EM_ATRASO, "Nao encontrei guias em atraso.", 0, null,
+        secao(Assunto.GUIAS_EM_ATRASO, "Não encontrei guias em atraso.", 0, null,
             "guias em atraso", true)));
 
-    assertThat(texto).isEqualTo("Nao encontrei guias em atraso.");
+    assertThat(texto).isEqualTo("Não encontrei guias em atraso.");
   }
 
   @Test
@@ -85,11 +85,24 @@ class ComposicaoRespostaDadosTest {
   @DisplayName("sigla do glossario explicada na primeira vez, e so uma vez")
   void siglas() {
     assertThat(ComposicaoRespostaDados.explicarSiglas("IBS de R$ 1,00 e IBS de R$ 2,00; CBS."))
-        .isEqualTo("IBS (imposto sobre bens e servicos) de R$ 1,00 e IBS de R$ 2,00; CBS"
-            + " (contribuicao sobre bens e servicos).");
-    // Ja explicada pelo texto: nao repete.
+        .isEqualTo("IBS (imposto sobre bens e serviços) de R$ 1,00 e IBS de R$ 2,00; CBS"
+            + " (contribuição sobre bens e serviços).");
+    // Ja explicada pelo texto: nao repete, com ou sem acento (a comparacao ignora o acento).
+    assertThat(ComposicaoRespostaDados.explicarSiglas(
+        "O imposto sobre bens e serviços (IBS) cresce.")).doesNotContain("IBS (");
     assertThat(ComposicaoRespostaDados.explicarSiglas(
         "O imposto sobre bens e servicos (IBS) cresce.")).doesNotContain("IBS (");
+  }
+
+  @Test
+  @DisplayName("#357: a linha 'E mais N' de tela com acento tambem e fonte do validador")
+  void maisNaTelaComAcento() {
+    List<SecaoResposta> secoes = List.of(
+        SecaoResposta.informativa("Compras:\n- x\nE mais 3, na tela de Apuração.", false,
+            List.of()));
+
+    assertThat(ComposicaoRespostaDados.textosLivres(secoes))
+        .contains("E mais 3, na tela de Apuração.");
   }
 
   @Test
@@ -116,7 +129,7 @@ class ComposicaoRespostaDadosTest {
         secao(Assunto.GUIAS_EM_ATRASO, "Mes com atraso.", 1, "1 guia em atraso", "atraso", true),
         secao(Assunto.NOTAS_PARADAS, "Parada.", 1, "1 nota parada", "paradas", true)));
 
-    assertThat(texto).startsWith("Encontrei 3 pontos de atencao: 2 guias em atraso e 1 nota"
+    assertThat(texto).startsWith("Encontrei 3 pontos de atenção: 2 guias em atraso e 1 nota"
         + " parada.");
   }
 
@@ -124,12 +137,12 @@ class ComposicaoRespostaDadosTest {
   @DisplayName("fontes do validador: a linha de resumo e o 'E mais N' calculados pelo backend")
   void fontesCalculadas() {
     List<SecaoResposta> secoes = List.of(
-        secao(Assunto.GUIAS_EM_ATRASO, "Atraso:\n- x\nE mais 7, na tela de Calendario.", 9,
+        secao(Assunto.GUIAS_EM_ATRASO, "Atraso:\n- x\nE mais 7, na tela de Calendário.", 9,
             "9 guias em atraso", "atraso", true),
         secao(Assunto.NOTAS_PARADAS, "Parada.", 2, "2 notas paradas", "paradas", true));
 
     assertThat(ComposicaoRespostaDados.textosLivres(secoes)).contains(
-        "E mais 7, na tela de Calendario.",
-        "Encontrei 11 pontos de atencao: 9 guias em atraso e 2 notas paradas.");
+        "E mais 7, na tela de Calendário.",
+        "Encontrei 11 pontos de atenção: 9 guias em atraso e 2 notas paradas.");
   }
 }

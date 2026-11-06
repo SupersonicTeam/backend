@@ -92,29 +92,29 @@ public class FerramentasDadosProdutor {
    * barra a volta disso.
    */
   static final String NADA_POR_DESCRICAO =
-      "Nao encontrei compras com esse termo no periodo. A busca procura o termo exato na "
-          + "descricao dos itens das notas (acentos e grafia contam): tente outro termo ou o "
-          + "codigo NCM do insumo.";
+      "Não encontrei compras com esse termo no período. A busca procura o termo exato na "
+          + "descrição dos itens das notas (acentos e grafia contam): tente outro termo ou o "
+          + "código NCM do insumo.";
 
   /** Venda vazia: fala com o usuário, sem dígito (mesmo cuidado de NADA_POR_DESCRICAO). */
   static final String NADA_VENDIDO =
-      "Nao encontrei vendas autorizadas desse produto no periodo. A busca procura o termo exato na "
-          + "descricao dos itens das notas de venda (grafia conta): tente outro termo, o codigo NCM "
-          + "do produto ou outro periodo.";
+      "Não encontrei vendas autorizadas desse produto no período. A busca procura o termo exato na "
+          + "descrição dos itens das notas de venda (grafia conta): tente outro termo, o código NCM "
+          + "do produto ou outro período.";
 
   /** Mesmo cuidado para a busca por NCM. */
   static final String NADA_POR_NCM =
-      "Nao encontrei compras com esse codigo NCM no periodo. Confira o codigo ou busque pelo "
+      "Não encontrei compras com esse código NCM no período. Confira o código ou busque pelo "
           + "nome do insumo.";
 
   /** Abrangencia do valorTotal de listarNotas sem filtro de situacao (sem digitos, ver acima). */
   static final String TOTAL_SO_AUTORIZADAS =
-      "Soma apenas das notas AUTORIZADAS do periodo e tipo pedidos, inclusive as que nao aparecem "
+      "Soma apenas das notas AUTORIZADAS do período e tipo pedidos, inclusive as que não aparecem "
           + "na lista. Rascunhos, rejeitadas e canceladas ficam fora.";
 
   /** Abrangencia do valorTotal de listarNotas com filtro de situacao. */
   static final String TOTAL_DO_FILTRO =
-      "Soma de todas as notas do filtro pedido, inclusive as que nao aparecem na lista.";
+      "Soma de todas as notas do filtro pedido, inclusive as que não aparecem na lista.";
 
   /**
    * O que cada situação da nota quer dizer (issues #254 e #256). Devolvida (pelo contador) e
@@ -141,22 +141,22 @@ public class FerramentasDadosProdutor {
   private static final int LIMITE_PADRAO = 5;
   /** 1,2% + 0,1% (Lei 8.212/1991, art. 25) + 0,2% SENAR (Lei 9.528/1997, art. 6º). */
   static final String ALIQUOTA_FUNRURAL = "1,5% (1,2% + 0,1% + 0,2% SENAR)";
-  static final String FUNRURAL_NAO_SE_APLICA = "nao se aplica";
-  static final String FUNRURAL_EXPORTACAO = "imune (exportacao)";
+  static final String FUNRURAL_NAO_SE_APLICA = "não se aplica";
+  static final String FUNRURAL_EXPORTACAO = "imune (exportação)";
   /** Receita de exportação não paga Funrural (Constituição, art. 149, § 2º, I; STF, Tema 674). */
-  static final String AVISO_EXPORTACAO = "Venda ao exterior nao paga Funrural: a receita de"
-      + " exportacao e imune as contribuicoes sociais (Constituicao, art. 149, § 2º, I).";
+  static final String AVISO_EXPORTACAO = "Venda ao exterior não paga Funrural: a receita de"
+      + " exportação é imune às contribuições sociais (Constituição, art. 149, § 2º, I).";
   private static final String AVISO_SPLIT_PAYMENT = "O split payment separa o IBS e a CBS da nota"
       + " no pagamento da venda (LC 214/2025, arts. 31 e 32).";
   /** O que o cálculo não sabe e o produtor precisa ouvir (RN009, issue #145). */
   static final List<String> AVISOS_PESSOA_FISICA = List.of(
-      "Se o produtor optou por contribuir sobre a folha de salarios (Lei 8.212/1991, art. 25,"
-          + " § 13), o comprador nao retem o Funrural.",
-      "Venda de semente para plantio ou de animal para reproducao nao entra na base do Funrural"
-          + " (art. 25, § 12); o calculo considera todas as vendas.",
+      "Se o produtor optou por contribuir sobre a folha de salários (Lei 8.212/1991, art. 25,"
+          + " § 13), o comprador não retém o Funrural.",
+      "Venda de semente para plantio ou de animal para reprodução não entra na base do Funrural"
+          + " (art. 25, § 12); o cálculo considera todas as vendas.",
       AVISO_SPLIT_PAYMENT);
   static final List<String> AVISOS_OUTROS = List.of(
-      "Produtor pessoa juridica ou sem tipo cadastrado: nao ha retencao do Funrural pelo"
+      "Produtor pessoa jurídica ou sem tipo cadastrado: não há retenção do Funrural pelo"
           + " comprador.",
       AVISO_SPLIT_PAYMENT);
   private static final int DIAS_VENCIMENTO_PADRAO = 30;
@@ -168,10 +168,10 @@ public class FerramentasDadosProdutor {
   static final LocalDate SEM_LIMITE_PASSADO = LocalDate.of(1, 1, 1);
 
   /** Frase sem atraso; o recorte (a data) vai no fim. */
-  static final String SEM_ATRASO = "Nao encontrei guias em atraso (nao pagas com vencimento ate ";
+  static final String SEM_ATRASO = "Não encontrei guias em atraso (não pagas com vencimento até ";
 
   /** Frase sem guia no mês; o recorte vai no fim. */
-  static final String SEM_GUIAS_NO_MES = "Nao encontrei guias para pagar ";
+  static final String SEM_GUIAS_NO_MES = "Não encontrei guias para pagar ";
   private static final int MAXIMO_MESES_VENCIMENTO = 12;
   private static final int NUMERO_NOTA_MAXIMO = 999_999_999;
   private static final int DIAS_LISTAGEM_PADRAO = 90;
@@ -628,10 +628,10 @@ public class FerramentasDadosProdutor {
 
   private static String descricaoRecorte(YearMonth mes, YearMonth atual, LocalDate hoje) {
     if (mes.equals(atual)) {
-      return "(sem guias em atraso e sem guias nao pagas de " + FormatoBr.data(hoje) + " a "
+      return "(sem guias em atraso e sem guias não pagas de " + FormatoBr.data(hoje) + " a "
           + FormatoBr.data(mes.atEndOfMonth()) + ")";
     }
-    return "(sem guias nao pagas de " + FormatoBr.data(mes.atDay(1)) + " a "
+    return "(sem guias não pagas de " + FormatoBr.data(mes.atDay(1)) + " a "
         + FormatoBr.data(mes.atEndOfMonth()) + ")";
   }
 
@@ -721,7 +721,7 @@ public class FerramentasDadosProdutor {
                 .toList(),
             n.sinais().stream().map(DadosProdutorPorta.Sinal::codigo).distinct().toList()))
         .toList(),
-        notas.isEmpty() ? "Nao encontrei a nota " + numero + " nas suas notas." : null));
+        notas.isEmpty() ? "Não encontrei a nota " + numero + " nas suas notas." : null));
   }
 
   /** Template de uma função (issue #266): o resultado, os parâmetros usados e o "hoje". */
@@ -745,18 +745,18 @@ public class FerramentasDadosProdutor {
 
   private static Map<StatusNotaFiscal, String> explicacoes() {
     Map<StatusNotaFiscal, String> e = new EnumMap<>(StatusNotaFiscal.class);
-    e.put(StatusNotaFiscal.RASCUNHO, "Rascunho: a nota ainda nao foi emitida.");
+    e.put(StatusNotaFiscal.RASCUNHO, "Rascunho: a nota ainda não foi emitida.");
     e.put(StatusNotaFiscal.COM_INCONSISTENCIAS,
-        "Com inconsistencias: a validacao achou erros a corrigir antes de emitir.");
+        "Com inconsistências: a validação achou erros a corrigir antes de emitir.");
     e.put(StatusNotaFiscal.AGUARDANDO_APROVACAO,
-        "Aguardando aprovacao: enviada ao contador para revisao.");
+        "Aguardando aprovação: enviada ao contador para revisão.");
     e.put(StatusNotaFiscal.APROVADA, "Aprovada pelo contador: pronta para gerar o XML e emitir.");
     e.put(StatusNotaFiscal.DEVOLVIDA,
-        "Devolvida pelo contador para correcao (nao e rejeicao da SEFAZ).");
-    e.put(StatusNotaFiscal.XML_GERADO, "XML gerado e assinado, ainda nao enviado a SEFAZ.");
-    e.put(StatusNotaFiscal.ENVIANDO, "Sendo enviada a SEFAZ neste momento.");
+        "Devolvida pelo contador para correção (não é rejeição da SEFAZ).");
+    e.put(StatusNotaFiscal.XML_GERADO, "XML gerado e assinado, ainda não enviado à SEFAZ.");
+    e.put(StatusNotaFiscal.ENVIANDO, "Sendo enviada à SEFAZ neste momento.");
     e.put(StatusNotaFiscal.AUTORIZADA, "Autorizada pela SEFAZ: a nota vale.");
-    e.put(StatusNotaFiscal.REJEITADA, "Recusada pela SEFAZ (nao e devolucao do contador).");
+    e.put(StatusNotaFiscal.REJEITADA, "Recusada pela SEFAZ (não é devolução do contador).");
     e.put(StatusNotaFiscal.PENDENTE_SEFAZ, "Aguardando a resposta da SEFAZ.");
     e.put(StatusNotaFiscal.CANCELANDO, "Cancelamento em andamento na SEFAZ.");
     e.put(StatusNotaFiscal.CANCELADA, "Cancelada.");

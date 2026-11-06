@@ -137,7 +137,7 @@ class AssistenteStreamingIntegrationTest {
     assertThat(eventos.get(0).dados().path("rota").asText()).isEqualTo("DADOS");
     JsonNode contrato = eventos.get(1).dados();
     assertThat(contrato.path("resposta").asText())
-        .isEqualTo("Nao encontrei compras de fertilizante entre 01/01/2026 e 30/06/2026.");
+        .isEqualTo("Não encontrei compras de fertilizante entre 01/01/2026 e 30/06/2026.");
     assertThat(contrato.path("rota").asText()).isEqualTo("DADOS");
     assertThat(contrato.path("modoFallback").asBoolean()).isFalse();
     assertThat(contrato.has("citacoes")).isTrue();

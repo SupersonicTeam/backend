@@ -33,7 +33,7 @@ class VerificadorNegativaDadosTest {
     notasRejeitadasVazias();
 
     assertThat(verificador.substituir("Voce nao tem notas devolvidas.", contexto)).contains(
-        "Nao encontrei notas rejeitadas pela SEFAZ entre 30/07/2026 e 28/10/2026.");
+        "Não encontrei notas rejeitadas pela SEFAZ entre 30/07/2026 e 28/10/2026.");
   }
 
   @Test
@@ -63,9 +63,9 @@ class VerificadorNegativaDadosTest {
     contexto.registrarFonte("guiasEmAtraso", Map.of(), true);
 
     assertThat(verificador.substituir(
-        "Seu credito de CBS foi de R$ 1.234,00. Voce nao possui debito pendente.", contexto))
-        .contains("Seu credito de CBS foi de R$ 1.234,00.\n\nNao encontrei guias em atraso (nao "
-            + "pagas com vencimento ate 27/10/2026).");
+        "Seu crédito de CBS foi de R$ 1.234,00. Você não possui débito pendente.", contexto))
+        .contains("Seu crédito de CBS foi de R$ 1.234,00.\n\nNão encontrei guias em atraso (não "
+            + "pagas com vencimento até 27/10/2026).");
   }
 
   @Test
@@ -74,7 +74,7 @@ class VerificadorNegativaDadosTest {
     contexto.registrarFonte("consultarNota", Map.of("numero", "118"), true);
 
     assertThat(verificador.substituir("NÃO HÁ essa nota.", contexto))
-        .contains("Nao encontrei a nota 118 nas suas notas.");
+        .contains("Não encontrei a nota 118 nas suas notas.");
     // O numero e o recorte: com ele, a negativa fica.
     assertThat(verificador.substituir("Nenhuma nota 118 foi encontrada.", contexto)).isEmpty();
   }
@@ -94,7 +94,7 @@ class VerificadorNegativaDadosTest {
 
     assertThat(verificador.substituir(
         "Entre 30/07/2026 e 28/10/2026 voce nao tem notas devolvidas.", contexto))
-        .contains("Nao encontrei notas rejeitadas pela SEFAZ entre 30/07/2026 e 28/10/2026.");
+        .contains("Não encontrei notas rejeitadas pela SEFAZ entre 30/07/2026 e 28/10/2026.");
   }
 
   @Test
@@ -115,9 +115,9 @@ class VerificadorNegativaDadosTest {
   void numeroInteiro() {
     contexto.registrarFonte("proximosVencimentos", Map.of("dias", "5"), true);
 
-    assertThat(verificador.substituir("Nao ha guias vencendo nos proximos 15 dias.", contexto))
-        .contains("Nao encontrei guias a vencer de 28/10/2026 a 02/11/2026.");
-    assertThat(verificador.substituir("Nao ha guias vencendo nos proximos 5 dias.", contexto))
+    assertThat(verificador.substituir("Não há guias vencendo nos próximos 15 dias.", contexto))
+        .contains("Não encontrei guias a vencer de 28/10/2026 a 02/11/2026.");
+    assertThat(verificador.substituir("Não há guias vencendo nos próximos 5 dias.", contexto))
         .isEmpty();
   }
 
@@ -135,9 +135,9 @@ class VerificadorNegativaDadosTest {
   void semDuplicar() {
     contexto.registrarFonte("guiasEmAtraso", Map.of(), true);
 
-    assertThat(verificador.substituir("Nao encontrei guias em atraso (nao pagas com vencimento "
-        + "ate 27/10/2026). Voce nao tem debito pendente.", contexto))
-        .contains("Nao encontrei guias em atraso (nao pagas com vencimento ate 27/10/2026).");
+    assertThat(verificador.substituir("Não encontrei guias em atraso (não pagas com vencimento "
+        + "até 27/10/2026). Você não tem débito pendente.", contexto))
+        .contains("Não encontrei guias em atraso (não pagas com vencimento até 27/10/2026).");
   }
 
   @Test
@@ -148,10 +148,34 @@ class VerificadorNegativaDadosTest {
     contexto.registrarFonte("guiasEmAtraso", Map.of(), true);
 
     assertThat(verificador.substituir("Suas notas:\n1. Nota 113 de R$ 10,00\n2. Nota 114 de "
-        + "R$ 20,00\nVeja a Lei 8.212/1991, art. 30, IV.\nVoce nao tem debito pendente.", contexto))
+        + "R$ 20,00\nVeja a Lei 8.212/1991, art. 30, IV.\nVocê não tem débito pendente.", contexto))
         .contains("Suas notas:\n1. Nota 113 de R$ 10,00\n2. Nota 114 de R$ 20,00\nVeja a Lei "
-            + "8.212/1991, art. 30, IV.\n\nNao encontrei guias em atraso (nao pagas com "
-            + "vencimento ate 27/10/2026).");
+            + "8.212/1991, art. 30, IV.\n\nNão encontrei guias em atraso (não pagas com "
+            + "vencimento até 27/10/2026).");
+  }
+
+  @Test
+  @DisplayName("#357: texto e frase fixa acentuados: a comparacao ignora o acento dos dois lados")
+  void textoAcentuado() {
+    notasRejeitadasVazias();
+
+    assertThat(verificador.substituir("Você não tem notas devolvidas.", contexto)).contains(
+        "Não encontrei notas rejeitadas pela SEFAZ entre 30/07/2026 e 28/10/2026.");
+    // A frase fixa acentuada, repassada pelo modelo, traz o recorte e fica.
+    assertThat(verificador.substituir(
+        "Não encontrei notas rejeitadas pela SEFAZ entre 30/07/2026 e 28/10/2026.", contexto))
+        .isEmpty();
+
+    // "março" (acento) e "marco" (sem) são o mesmo mês na comparação.
+    ContextoAssistente marco = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    marco.registrarFonte("vencimentosDoMes", Map.of("mes", "2026-03"), true);
+    assertThat(verificador.substituir("Você não tem guias para pagar em março de 2026.",
+        marco)).isEmpty();
+    assertThat(verificador.substituir("Você não tem guias para pagar em marco de 2026.",
+        marco)).isEmpty();
+    assertThat(VerificadorNegativaDados.fraseFixa(
+        new FonteDado("consultarApuracao", Map.of("mes", "2026-03")), HOJE))
+        .isEqualTo("Não encontrei notas na apuração de 03/2026.");
   }
 
   @Test
@@ -165,6 +189,6 @@ class VerificadorNegativaDadosTest {
     outro.registrarFonte("totalComprasPorInsumo", Map.of("descricaoOuNcm", "3808",
         "dataInicio", "2026-01-01", "dataFim", "2026-08-31"), true);
     assertThat(verificador.substituir("Voce nao comprou nada; nao ha compras.", outro))
-        .contains("Nao encontrei compras do NCM 3808 entre 01/01/2026 e 31/08/2026.");
+        .contains("Não encontrei compras do NCM 3808 entre 01/01/2026 e 31/08/2026.");
   }
 }
