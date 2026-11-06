@@ -87,7 +87,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal (
     version                     BIGINT         NOT NULL DEFAULT 0,
     -- Busca das notas — issue #174 (migration 0037). Mantida pela aplicacao; o indice GIN de
     -- trigrama (pg_trgm + btree_gin) e so do PostgreSQL e nao e replicado aqui.
-    busca_normalizada           VARCHAR(600),
+    busca_normalizada           VARCHAR(8000),
+    -- Versao da regra do texto (0056, #271): descricao/NCM dos itens e documento do destinatario.
+    busca_versao                INTEGER,
     created_at                  TIMESTAMP WITH TIME ZONE,
     updated_at                  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),

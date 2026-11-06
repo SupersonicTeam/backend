@@ -1,49 +1,62 @@
 package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.common.NormalizacaoBusca;
+import br.com.agrocontabil.common.NormalizacaoBusca.ItemBusca;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Preenche, na subida, a {@code busca_normalizada} das notas gravadas antes do changeSet 0037
- * (issue #174).
+ * Preenche e recalcula a {@code busca_normalizada} das notas gravadas com uma regra anterior à
+ * atual ({@link NormalizacaoBusca#VERSAO_REGRA}): as de antes do changeSet 0037 (sem texto) e as
+ * da regra 1, sem descrição e NCM dos itens nem documento do destinatário (issues #174 e #271).
  *
  * <p><strong>Na aplicação, não no SQL.</strong> A coluna é gravada pela {@link NormalizacaoBusca}
- * (NFD sem marcas + NFC), e um backfill em SQL com {@code translate} só cobriria as letras do mapa:
- * uma nota antiga com "å" ou "ł" ficaria com um texto diferente do que a aplicação gravaria, e a
- * busca não a acharia até alguém editá-la (achado do review). Aqui a regra é a mesma, por
- * construção.
+ * (NFD sem marcas + NFC), e um backfill em SQL com {@code translate} só cobriria as letras do mapa
+ * e divergiria da regra Java. Aqui a regra é a mesma, por construção
+ * ({@link NormalizacaoBusca#montarTextoDaNota}).
  *
- * <p>Mesmo desenho do {@link CifragemLegadoRunner}: roda em {@link SmartInitializingSingleton},
- * antes de o Tomcat aceitar conexões; lê em lotes as linhas sem valor; a atualização só vale se a
- * linha ainda estiver sem valor ({@code AND busca_normalizada IS NULL}), então é idempotente e
- * segura entre réplicas; erro numa linha vai ao log com o id e não derruba a subida. Depois da
- * primeira subida, a consulta não acha nada.
+ * <p><strong>Em segundo plano, depois de a aplicação estar pronta.</strong> Antes (#174) rodava
+ * antes de o Tomcat aceitar conexões, o que era barato com poucas notas sem texto. Recalcular
+ * todas as notas da regra 1 alongaria o boot, e o healthcheck do deploy pode fazer rollback de um
+ * boot lento. Uma nota que ainda não foi recalculada só deixa de ser achada pelos termos novos
+ * (produto, documento) até a vez dela; nada quebra. Roda numa thread própria, em lotes por
+ * {@code id} (keyset: uma nota que falha não trava o laço), com a atualização condicionada à
+ * versão ({@code AND (busca_versao IS NULL OR busca_versao < ?)}): idempotente, segura entre
+ * réplicas e incapaz de sobrescrever o texto que a própria aplicação gravou entretanto. Erro numa
+ * linha vai ao log com o id e não derruba nada.
  *
  * <p>Desligável por {@code app.notas.busca.preencher-legado} (desligado nos testes, que chamam
  * {@link #preencherLegado()} direto).
  */
 @Component
-public class BuscaNotasLegadoRunner implements SmartInitializingSingleton {
+public class BuscaNotasLegadoRunner {
 
   private static final Logger log = LoggerFactory.getLogger(BuscaNotasLegadoRunner.class);
 
   static final int LOTE = 500;
 
-  private static final String SELECAO = "SELECT id, numero, destinatario_nome, natureza_operacao"
-      + " FROM nota_fiscal WHERE busca_normalizada IS NULL LIMIT " + LOTE;
+  private static final UUID MENOR_ID = new UUID(0L, 0L);
 
-  private static final String ATUALIZACAO = "UPDATE nota_fiscal SET busca_normalizada = ?"
-      + " WHERE id = ? AND busca_normalizada IS NULL";
+  private static final String SELECAO = "SELECT id, numero, destinatario_nome, natureza_operacao,"
+      + " destinatario_cpf_cnpj FROM nota_fiscal"
+      + " WHERE (busca_versao IS NULL OR busca_versao < ?) AND id > ? ORDER BY id LIMIT ?";
+
+  private static final String ATUALIZACAO = "UPDATE nota_fiscal SET busca_normalizada = ?,"
+      + " busca_versao = ? WHERE id = ? AND (busca_versao IS NULL OR busca_versao < ?)";
 
   private final JdbcTemplate jdbc;
   private final boolean preencherNaSubida;
+  private int lote = LOTE;
 
   public BuscaNotasLegadoRunner(JdbcTemplate jdbc,
       @Value("${app.notas.busca.preencher-legado:true}") boolean preencherNaSubida) {
@@ -51,44 +64,82 @@ public class BuscaNotasLegadoRunner implements SmartInitializingSingleton {
     this.preencherNaSubida = preencherNaSubida;
   }
 
-  @Override
-  public void afterSingletonsInstantiated() {
-    if (preencherNaSubida) {
-      preencherLegado();
+  /** Tamanho do lote, só para os testes cruzarem lotes com poucas notas. */
+  void usarLote(int tamanho) {
+    this.lote = tamanho;
+  }
+
+  /** Dispara o recálculo numa thread própria, sem segurar a prontidão da aplicação. */
+  @EventListener(ApplicationReadyEvent.class)
+  public void aoFicarPronta() {
+    if (!preencherNaSubida) {
+      return;
     }
+    Thread fio = new Thread(() -> {
+      try {
+        preencherLegado();
+      } catch (RuntimeException e) {
+        log.error("Busca das notas (#271): recalculo interrompido ({}); a proxima subida retoma",
+            e.getClass().getSimpleName());
+      }
+    }, "agro-busca-backfill");
+    fio.setDaemon(true);
+    fio.start();
   }
 
   /**
-   * Preenche toda nota sem {@code busca_normalizada}.
+   * Recalcula toda nota sem {@code busca_versao} ou de versão anterior à atual.
    *
-   * @return quantidade de notas preenchidas
+   * @return quantidade de notas atualizadas
    */
   public int preencherLegado() {
     int total = 0;
-    int noLote;
-    List<Map<String, Object>> lote;
+    UUID ultimo = MENOR_ID;
+    List<Map<String, Object>> notas;
     do {
-      lote = jdbc.queryForList(SELECAO);
-      noLote = 0;
-      for (Map<String, Object> linha : lote) {
-        noLote += preencher(linha);
+      notas = jdbc.queryForList(SELECAO, NormalizacaoBusca.VERSAO_REGRA, ultimo, lote);
+      if (notas.isEmpty()) {
+        break;
       }
-      total += noLote;
-      // Lote cheio de falhas voltaria igual: sem progresso, para (a proxima subida tenta de novo).
-    } while (lote.size() == LOTE && noLote > 0);
+      Map<UUID, List<ItemBusca>> itens = itensDoLote(notas);
+      for (Map<String, Object> linha : notas) {
+        total += preencher(linha, itens.getOrDefault(linha.get("id"), List.of()));
+      }
+      ultimo = (UUID) notas.get(notas.size() - 1).get("id");
+    } while (notas.size() == lote);
     if (total > 0) {
-      log.info("Busca das notas (#174): busca_normalizada preenchida em {} nota(s)", total);
+      log.info("Busca das notas (#174, #271): busca_normalizada recalculada em {} nota(s)", total);
     }
     return total;
   }
 
-  private int preencher(Map<String, Object> linha) {
+  private Map<UUID, List<ItemBusca>> itensDoLote(List<Map<String, Object>> lote) {
+    String marcas = String.join(", ", java.util.Collections.nCopies(lote.size(), "?"));
+    List<Object> ids = new ArrayList<>(lote.stream().map(l -> l.get("id")).toList());
+    Map<UUID, List<ItemBusca>> porNota = new HashMap<>();
+    jdbc.query("SELECT nota_fiscal_id, descricao, ncm FROM nota_fiscal_item"
+        + " WHERE nota_fiscal_id IN (" + marcas + ") ORDER BY nota_fiscal_id, numero_item",
+        rs -> {
+          porNota.computeIfAbsent((UUID) rs.getObject("nota_fiscal_id"), k -> new ArrayList<>())
+              .add(new ItemBusca(rs.getString("descricao"), rs.getString("ncm")));
+        }, ids.toArray());
+    return porNota;
+  }
+
+  private int preencher(Map<String, Object> linha, List<ItemBusca> itens) {
     try {
-      return jdbc.update(ATUALIZACAO, NormalizacaoBusca.juntar(linha.get("numero"),
-          linha.get("destinatario_nome"), linha.get("natureza_operacao")), linha.get("id"));
+      NormalizacaoBusca.TextoNota texto = NormalizacaoBusca.montarTextoDaNota(linha.get("numero"),
+          (String) linha.get("destinatario_nome"), (String) linha.get("natureza_operacao"),
+          (String) linha.get("destinatario_cpf_cnpj"), itens);
+      if (texto.itensForaDaBusca() > 0) {
+        log.warn("Busca da nota {}: {} item(ns) nao couberam em {} caracteres", linha.get("id"),
+            texto.itensForaDaBusca(), NormalizacaoBusca.TAMANHO_MAXIMO);
+      }
+      return jdbc.update(ATUALIZACAO, texto.texto(), NormalizacaoBusca.VERSAO_REGRA,
+          linha.get("id"), NormalizacaoBusca.VERSAO_REGRA);
     } catch (RuntimeException e) {
       // Sem o texto e sem a excecao do banco, que traria o nome do destinatario.
-      log.error("Busca das notas (#174): nota id={} ficou sem busca_normalizada ({}); resolver e "
+      log.error("Busca das notas (#271): nota id={} ficou sem recalculo ({}); resolver e "
           + "reiniciar", linha.get("id"), e.getClass().getSimpleName());
       return 0;
     }

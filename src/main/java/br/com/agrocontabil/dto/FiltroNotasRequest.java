@@ -18,9 +18,10 @@ import org.springframework.format.annotation.DateTimeFormat;
  * @param tipoDocumento {@code NFE} ou {@code NFA}
  * @param emitidaDe     emissão a partir deste dia (inclusivo, em {@code America/Sao_Paulo})
  * @param emitidaAte    emissão até este dia inteiro (inclusivo, em {@code America/Sao_Paulo})
- * @param busca         número, destinatário ou natureza da operação, parcial e sem diferenciar
- *                      maiúscula nem acento; texto com menos de 3 caracteres é ignorado, exceto
- *                      número (prefixo do número da nota)
+ * @param busca         número, destinatário, natureza da operação, CPF/CNPJ do destinatário
+ *                      (11 ou 14 dígitos, com ou sem máscara) e descrição ou NCM dos itens,
+ *                      parcial e sem diferenciar maiúscula nem acento; texto com menos de 3
+ *                      caracteres é ignorado, exceto número (prefixo do número da nota)
  */
 public record FiltroNotasRequest(
     @Schema(description = "Um ou mais status (repetível; OU entre eles)")
@@ -39,8 +40,9 @@ public record FiltroNotasRequest(
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     LocalDate emitidaAte,
 
-    @Schema(description = "Número, destinatário ou natureza da operação (3 a 100 caracteres; "
-        + "número da nota também por prefixo)", example = "cooperativa")
+    @Schema(description = "Número, destinatário, natureza, CPF/CNPJ do destinatário ou produto "
+        + "(descrição ou NCM do item) (3 a 100 caracteres; número da nota também por prefixo)",
+        example = "soja")
     @Size(max = 100)
     String busca) {
 

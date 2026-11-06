@@ -3,6 +3,8 @@ package br.com.agrocontabil.controller;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,6 +31,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -198,6 +201,73 @@ class NotaFiscalFiltroIntegrationTest {
   }
 
   @Test
+  @DisplayName("#271: busca por produto acha pela descricao e pelo NCM do item, so do produtor")
+  void buscaPorProdutoAchaPelaDescricaoENcm() throws Exception {
+    notaComItem(produtorA, 1L, "Cooperativa Agrícola", "12345678901", "Soja em grãos",
+        "12019000");
+    notaComItem(produtorA, 2L, "Laticínio Sul", "12345678901", "Leite UHT", "04012010");
+    notaComItem(produtorB, 3L, "Cooperativa Agrícola", "12345678901", "Soja em grãos",
+        "12019000");
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "soja"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].numero").value(1));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "GRÃOS"))
+        .andExpect(jsonPath("$.content[*].numero", contains(1)));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "04012010"))
+        .andExpect(jsonPath("$.content[*].numero", contains(2)));
+  }
+
+  @Test
+  @DisplayName("#271: busca pelo CPF/CNPJ do destinatario, com ou sem mascara; outro produtor nao ve")
+  void buscaPeloDocumentoDoDestinatario() throws Exception {
+    notaComItem(produtorA, 1L, "Cooperativa A", "12345678000195", "Soja", "12019000");
+    notaComItem(produtorA, 2L, "Cooperativa B", "98765432000110", "Soja", "12019000");
+    notaComItem(produtorB, 3L, "Cooperativa A", "12345678000195", "Soja", "12019000");
+    notaComItem(produtorB, 4L, "Pessoa Fisica", "11144477735", "Milho", "10059010");
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "12345678000195"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].numero").value(1));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "12.345.678/0001-95"))
+        .andExpect(jsonPath("$.content[*].numero", contains(1)));
+    // O CNPJ da nota de B, buscado por A em outra nota de A, nao acha a nota de B.
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "11144477735"))
+        .andExpect(jsonPath("$.totalElements").value(0));
+    // E B acha o proprio CPF; a busca de B nunca traz a nota de A.
+    mockMvc.perform(como(produtorB, get("/api/notas")).param("busca", "11144477735"))
+        .andExpect(jsonPath("$.content[*].numero", contains(4)));
+    mockMvc.perform(como(produtorB, get("/api/notas")).param("busca", "98765432000110"))
+        .andExpect(jsonPath("$.totalElements").value(0));
+  }
+
+  @Test
+  @DisplayName("#271: editar so um item atualiza a busca (a nota em si nao muda)")
+  void editarSoUmItemAtualizaABusca() throws Exception {
+    String criada = mockMvc.perform(como(produtorA, post("/api/notas"))
+            .contentType(MediaType.APPLICATION_JSON).content(payload("Soja em graos", "12019000")))
+        .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+    String id = com.jayway.jsonpath.JsonPath.read(criada, "$.id");
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "soja"))
+        .andExpect(jsonPath("$.totalElements").value(1));
+
+    // Mesmo numero, destinatario, natureza e data: so a descricao e o NCM do item mudam.
+    mockMvc.perform(como(produtorA, put("/api/notas/{id}", id))
+            .contentType(MediaType.APPLICATION_JSON).content(payload("Milho amarelo", "10059010")))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "soja"))
+        .andExpect(jsonPath("$.totalElements").value(0));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "milho"))
+        .andExpect(jsonPath("$.totalElements").value(1));
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "10059010"))
+        .andExpect(jsonPath("$.totalElements").value(1));
+  }
+
+  @Test
   @DisplayName("Termo numérico curto casa o número da nota por prefixo")
   void termoNumericoCurtoCasaNumeroPorPrefixo() throws Exception {
     nota(produtorA, 12L, "A", "Venda", dia(2026, 9, 1));
@@ -311,6 +381,49 @@ class NotaFiscalFiltroIntegrationTest {
   private MockHttpServletRequestBuilder como(Produtor produtor,
       MockHttpServletRequestBuilder requisicao) {
     return requisicao.header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId());
+  }
+
+  /** Nota com um item, gravada pela aplicacao (a busca nasce no @PrePersist). */
+  private NotaFiscal notaComItem(Produtor produtor, long numero, String destinatario,
+      String documento, String descricao, String ncm) {
+    NotaFiscal nota = NotaFiscal.builder()
+        .numero(numero).serie(1).modelo("55")
+        .naturezaOperacao("Venda de producao rural")
+        .dataEmissao(dia(2026, 9, 1).atZone(BRT).toOffsetDateTime())
+        .produtor(produtor)
+        .destinatarioNome(destinatario).destinatarioCpfCnpj(documento)
+        .valorTotalProdutos(new BigDecimal("1000.00"))
+        .valorTotalNota(new BigDecimal("1000.00"))
+        .build();
+    nota.addItem(br.com.agrocontabil.model.NotaFiscalItem.builder()
+        .numeroItem(1).codigoProduto("P1").descricao(descricao).ncm(ncm).cfop("5101")
+        .unidade("KG").quantidade(new BigDecimal("10.0000"))
+        .valorUnitario(new BigDecimal("100.0000")).valorTotal(new BigDecimal("1000.00"))
+        .build());
+    return notaFiscalRepository.save(nota);
+  }
+
+  private static String payload(String descricaoItem, String ncm) {
+    return """
+        {
+          "numero": 77,
+          "naturezaOperacao": "Venda de producao",
+          "dataEmissao": "2026-06-10T10:00:00-03:00",
+          "destinatarioNome": "Comprador",
+          "destinatarioCpfCnpj": "11144477735",
+          "itens": [
+            {
+              "numeroItem": 1,
+              "descricao": "%s",
+              "ncm": "%s",
+              "cfop": "6101",
+              "unidade": "KG",
+              "quantidade": 100,
+              "valorUnitario": 2.50
+            }
+          ]
+        }
+        """.formatted(descricaoItem, ncm);
   }
 
   private static LocalDateTime dia(int ano, int mes, int dia) {
