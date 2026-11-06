@@ -109,5 +109,36 @@ public record NotaFiscalItemRequest(
         example = "0.00")
     @DecimalMin(value = "0", message = "percentualReducao deve ser entre 0 e 100")
     @DecimalMax(value = "100", message = "percentualReducao deve ser entre 0 e 100")
-    BigDecimal percentualReducao
-) {}
+    BigDecimal percentualReducao,
+
+    // -------------------------------------------------------------------------
+    // ICMS: o sistema nao calcula. So o CST, combinado com o contador, entre os que o leiaute
+    // aceita sem valores (ICMS40 com 40/41/50, ICMS51 e ICMS90; MOC 7.00, Anexo I).
+    // -------------------------------------------------------------------------
+
+    @Schema(
+        description =
+            "CST do ICMS (40, 41, 50, 51 ou 90), combinado com o contador. Opcional: sem ele, "
+                + "a venda interna de producao propria (CFOP 5101) a destinatario com IE sai com "
+                + "51 (diferimento total); qualquer outro caso sem CST e barrado na emissao "
+                + "(422 ICMS_A_DEFINIR). Exportacao (CFOP 7xxx) exige 41.",
+        example = "51")
+    @Pattern(
+        regexp = "40|41|50|51|90",
+        message = "cstIcms deve ser 40, 41, 50, 51 ou 90 (o sistema nao calcula ICMS)")
+    String cstIcms,
+
+    @Schema(description = "Origem da mercadoria (tabela Torig, 0 a 8). Opcional; padrao 0, "
+        + "nacional.", example = "0")
+    @Pattern(regexp = "[0-8]", message = "origemIcms deve ser um digito de 0 a 8")
+    String origemIcms
+) {
+
+  /** Item sem os campos do ICMS (o CST padrao ou a definir), como antes do changeSet 0052. */
+  public NotaFiscalItemRequest(Integer numeroItem, String codigoProduto, String descricao,
+      String ncm, String cfop, String unidade, BigDecimal quantidade, BigDecimal valorUnitario,
+      String cstIbsCbs, String cClassTrib, BigDecimal percentualReducao) {
+    this(numeroItem, codigoProduto, descricao, ncm, cfop, unidade, quantidade, valorUnitario,
+        cstIbsCbs, cClassTrib, percentualReducao, null, null);
+  }
+}

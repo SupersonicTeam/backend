@@ -15,6 +15,7 @@ import br.com.agrocontabil.nfe.model.EnderDest;
 import br.com.agrocontabil.nfe.model.EnderEmit;
 import br.com.agrocontabil.nfe.model.IbsCbs;
 import br.com.agrocontabil.nfe.model.IbsCbsTot;
+import br.com.agrocontabil.nfe.model.Icms;
 import br.com.agrocontabil.nfe.model.IcmsTot;
 import br.com.agrocontabil.nfe.model.Ide;
 import br.com.agrocontabil.nfe.model.Imposto;
@@ -262,16 +263,16 @@ public class NotaFiscalNfeMapper {
   private List<Det> buildDet(NotaFiscal nota) {
     List<Det> detList = new ArrayList<>();
     for (NotaFiscalItem item : nota.getItens()) {
-      detList.add(buildDetItem(item));
+      detList.add(buildDetItem(nota, item));
     }
     return detList;
   }
 
-  private Det buildDetItem(NotaFiscalItem item) {
+  private Det buildDetItem(NotaFiscal nota, NotaFiscalItem item) {
     Det det = new Det();
     det.setNItem(String.valueOf(item.getNumeroItem()));
     det.setProd(buildProd(item));
-    det.setImposto(buildImposto(item));
+    det.setImposto(buildImposto(nota, item));
     return det;
   }
 
@@ -299,8 +300,17 @@ public class NotaFiscalNfeMapper {
     return prod;
   }
 
-  private Imposto buildImposto(NotaFiscalItem item) {
+  /**
+   * Tributos do item: o grupo {@code ICMS} com o CST do {@link TributacaoIcms} (informado ou o 51
+   * do diferimento padrão) e o {@code IBSCBS}. O {@code FiscalRulesValidator} barra a emissão sem
+   * CST de ICMS (regra B25-90 da NT 2025.002, rejeição 1002); sem CST, aqui, o grupo fica de fora
+   * só para quem monta XML fora do pipeline de emissão (o XML do fornecedor do seed da banca, que
+   * existe só para ser importado).
+   */
+  private Imposto buildImposto(NotaFiscal nota, NotaFiscalItem item) {
     Imposto imposto = new Imposto();
+    TributacaoIcms.cst(nota, item)
+        .ifPresent(cst -> imposto.setIcms(Icms.semCalculo(TributacaoIcms.origem(item), cst)));
     if (item.getValorIbs() != null || item.getValorCbs() != null) {
       imposto.setIbsCbs(buildIbsCbs(item));
     }
@@ -481,6 +491,10 @@ public class NotaFiscalNfeMapper {
     return total;
   }
 
+  /**
+   * {@code ICMSTot} com zero no ICMS: os grupos emitidos (40/41/50, 51 diferido total e 90) não
+   * levam valor de ICMS, ST nem FCP, e o sistema não calcula ICMS (o contador apura por guia).
+   */
   private IcmsTot buildIcmsTot(NotaFiscal nota) {
     IcmsTot t = new IcmsTot();
     String zero = "0.00";

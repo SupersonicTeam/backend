@@ -299,6 +299,24 @@ public class NotaFiscalItem {
   @Column(name = "valor_ibs_mun", precision = 15, scale = 2)
   private BigDecimal valorIbsMun;
 
+  // -------------------------------------------------------------------------
+  // Grupo ICMS do item (changeSet 0052). O sistema nao calcula ICMS: so emite o grupo com o CST
+  // informado ou o padrao do diferimento (nfe/TributacaoIcms). Nullable.
+  // -------------------------------------------------------------------------
+
+  /**
+   * CST do ICMS informado pelo usuário ou pelo contador (40, 41, 50, 51 ou 90 na nota própria).
+   * Nulo = não informado: vale o padrão do {@code TributacaoIcms} (51 na venda interna de produção
+   * própria a contribuinte) ou o CST fica a definir. Na nota importada, o CST (ou o CSOSN, de
+   * fornecedor do Simples) lido do XML do terceiro, só informativo.
+   */
+  @Column(name = "cst_icms", length = 3)
+  private String cstIcms;
+
+  /** Origem da mercadoria (tabela {@code Torig}, 0 a 8); nula = 0, nacional. */
+  @Column(name = "origem_icms", length = 1)
+  private String origemIcms;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

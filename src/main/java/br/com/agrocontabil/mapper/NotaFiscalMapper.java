@@ -179,7 +179,8 @@ public final class NotaFiscalMapper {
    *
    * <p>Calcula {@code valorTotal = quantidade * valorUnitario} com arredondamento HALF_UP
    * em 2 casas decimais. Copia os campos classificatórios opcionais de IBS/CBS
-   * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}).
+   * ({@code cstIbsCbs}, {@code cClassTrib}, {@code percentualReducao}) e do ICMS
+   * ({@code cstIcms}, {@code origemIcms}).
    * Os campos calculados (valorIbs, valorCbs etc.) são preenchidos posteriormente
    * pelo {@link br.com.agrocontabil.service.TributacaoService}.
    *
@@ -204,6 +205,8 @@ public final class NotaFiscalMapper {
         .cstIbsCbs(req.cstIbsCbs())
         .cClassTrib(req.cClassTrib())
         .percentualReducao(req.percentualReducao())
+        .cstIcms(req.cstIcms())
+        .origemIcms(req.origemIcms())
         .build();
   }
 
@@ -229,6 +232,8 @@ public final class NotaFiscalMapper {
         item.getValorIbs(),
         item.getAliquotaCbs(),
         item.getValorCbs(),
+        item.getCstIcms(),
+        item.getOrigemIcms(),
         item.getCreatedAt(),
         item.getUpdatedAt());
   }

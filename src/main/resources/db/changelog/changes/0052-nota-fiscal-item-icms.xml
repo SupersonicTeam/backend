@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0052-nota-fiscal-item-icms.xml
+         Grupo ICMS por item na NF-e (decisao do Murillo, 2026-11-06; #284,
+         pergunta 9).
+
+         NT 2025.002 v1.53, regra B25-90 (obrigatoria, rejeicao 1002): NF-e
+         de finalidade diferente de credito/debito sem o grupo ICMS nem o
+         ISSQN e rejeitada. O sistema nao calcula ICMS: emite o grupo com o
+         CST informado (40, 41, 50, 51 ou 90) ou com o padrao do diferimento
+         (CST 51) na venda interna de producao propria a contribuinte
+         (nfe/TributacaoIcms). Fora disso, sem CST, a emissao e barrada.
+
+         - cst_icms: CST informado (na nota importada, o CST ou o CSOSN do
+           XML do terceiro, por isso 3 caracteres). Nulo = nao informado.
+         - origem_icms: origem da mercadoria (Torig, 0 a 8). Nulo = 0.
+
+         Sem preenchimento das linhas existentes: o CST de uma nota ja
+         gravada e decisao do contador, nunca do changeSet.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0052-nota-fiscal-item-icms" author="supersonic-team">
+        <addColumn tableName="nota_fiscal_item">
+            <column name="cst_icms" type="VARCHAR(3)" remarks="CST do ICMS informado (ou CSOSN da nota importada); nulo = nao informado"/>
+            <column name="origem_icms" type="VARCHAR(1)" remarks="Origem da mercadoria (Torig); nulo = 0, nacional"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

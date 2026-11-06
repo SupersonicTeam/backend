@@ -126,6 +126,18 @@ public record NotaFiscalItemResponse(
         example = "11.25")
     BigDecimal valorCbs,
 
+    @Schema(
+        description =
+            "CST do ICMS informado (40, 41, 50, 51 ou 90). Nulo = nao informado: na venda interna "
+                + "de producao propria (CFOP 5101) a destinatario com IE vale o 51 (diferimento); "
+                + "fora disso a emissao responde 422 ICMS_A_DEFINIR. Na nota importada, o CST ou "
+                + "o CSOSN do XML do fornecedor.",
+        example = "51")
+    String cstIcms,
+
+    @Schema(description = "Origem da mercadoria (0 a 8); nula = 0, nacional", example = "0")
+    String origemIcms,
+
     @Schema(description = "Data e hora de criacao do item")
     OffsetDateTime createdAt,
 

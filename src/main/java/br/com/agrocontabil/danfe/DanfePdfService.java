@@ -262,7 +262,7 @@ public class DanfePdfService {
 
   /**
    * Linhas do quadro de produtos (NT 2026.010, item 4.3): código e descrição com
-   * {@code [NCM][cClassTrib]}, CST/CFOP, quantidade/unidade, valores, base do IBS/CBS e, por esfera
+   * {@code [NCM][cClassTrib]}, CST (do ICMS e do IBS/CBS)/CFOP, quantidade/unidade, valores, base do IBS/CBS e, por esfera
    * (CBS, IBS UF, IBS Município), a alíquota impressa (efetiva com {@code gRed}) e o valor.
    */
   private List<DanfeItemRow> montarItens(DanfeValores valores) {
@@ -273,7 +273,9 @@ public class DanfePdfService {
           juntar("\n", juntar(" - ", item.codigo(), item.descricao()), juntar(" ",
               item.ncm() != null ? "[NCM " + ncm(item.ncm()) + "]" : null,
               item.cClassTrib() != null ? "[cClassTrib " + item.cClassTrib() + "]" : null)),
-          juntar("\n", item.cst() != null ? "CST " + item.cst() : null,
+          // CST do ICMS (origem + CST, MOC Anexo II) e o do IBS/CBS, depois o CFOP.
+          juntar("\n", item.cstIcms() != null ? "ICMS " + item.cstIcms() : null,
+              item.cst() != null ? "IBS/CBS " + item.cst() : null,
               item.cfop() != null ? "CFOP " + item.cfop() : null),
           juntar("\n", quantidade(item.quantidade()), item.unidade()),
           moeda(item.valorUnitario()),

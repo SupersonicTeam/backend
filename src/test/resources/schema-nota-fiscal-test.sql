@@ -134,6 +134,9 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     aliquota_ibs_mun        NUMERIC(7,4),
     valor_ibs_uf            NUMERIC(15,2),
     valor_ibs_mun           NUMERIC(15,2),
+    -- Grupo ICMS do item: CST informado e origem (migration 0052)
+    cst_icms                VARCHAR(3),
+    origem_icms             VARCHAR(1),
     created_at              TIMESTAMP WITH TIME ZONE,
     updated_at              TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id),
