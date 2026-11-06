@@ -2,6 +2,7 @@ package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.model.SituacaoVinculo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -18,10 +19,24 @@ import java.util.UUID;
  * @param inicio     início
  * @param fim        fim (só encerrado)
  */
+@Schema(description = "Escritório que atende o produtor, na visão do produtor")
 public record VinculoProdutorResponse(
-    UUID id, UUID escritorioId, String escritorio, String responsavel, String crc,
+    @Schema(description = "Id do vínculo", example = "3f2b8c1e-5d4a-4b7e-9a1c-2e8f0d6b7a10")
+    UUID id,
+    @Schema(description = "Id do escritório", example = "3f2b8c1e-5d4a-4b7e-9a1c-2e8f0d6b7a10")
+    UUID escritorioId,
+    @Schema(description = "Nome do escritório", example = "Escritório Campo Verde")
+    String escritorio,
+    @Schema(description = "Nome do contador responsável pelo produtor", example = "Ana Souza")
+    String responsavel,
+    @Schema(description = "Registro do responsável no conselho regional", example = "MT-12345")
+    String crc,
+    @Schema(description = "Situação do vínculo", example = "ATIVO")
     SituacaoVinculo situacao,
-    OffsetDateTime inicio, OffsetDateTime fim) implements ResultadoAuditavel {
+    @Schema(description = "Início do vínculo", example = "2026-09-01T10:00:00-03:00")
+    OffsetDateTime inicio,
+    @Schema(description = "Fim do vínculo; só quando encerrado")
+    OffsetDateTime fim) implements ResultadoAuditavel {
 
   @JsonIgnore
   @Override

@@ -16,6 +16,7 @@ import java.util.List;
  * <p>{@code busca} casa o nome por trecho (sem acento nem caixa) ou o CPF/CNPJ completo, com ou sem
  * máscara: o documento é cifrado de forma determinística (#147), então só por igualdade.
  */
+@Schema(description = "Filtros, ordenação e página da carteira de clientes do escritório")
 public record FiltroCarteiraRequest(
     @Schema(description = "Trecho do nome (3+ caracteres) ou CPF/CNPJ completo",
         example = "silva")

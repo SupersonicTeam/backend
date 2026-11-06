@@ -38,7 +38,12 @@ public record AssistenteChatResponse(
    * @param url         link oficial (Planalto)
    * @param trecho      texto do dispositivo
    */
-  public record Citacao(String norma, String dispositivo, String url, String trecho) {}
+  @Schema(description = "Trecho de lei citado pela resposta")
+  public record Citacao(
+      @Schema(description = "Norma citada", example = "LC 214/2025") String norma,
+      @Schema(description = "Dispositivo da norma", example = "art. 138, § 2º") String dispositivo,
+      @Schema(description = "Link para o texto da norma") String url,
+      @Schema(description = "Texto do dispositivo, literal") String trecho) {}
 
   /**
    * Função de dados consultada.
@@ -48,9 +53,10 @@ public record AssistenteChatResponse(
    * @param origem     de onde veio o dado (#342): quem escolhe o selo na tela é o frontend, com
    *                   base neste valor, não no nome da função
    */
+  @Schema(description = "Função de dados consultada para montar a resposta")
   public record FonteDado(
-      String funcao,
-      Map<String, String> parametros,
+      @Schema(description = "Nome da função", example = "totalComprasPorInsumo") String funcao,
+      @Schema(description = "Parâmetros usados na consulta") Map<String, String> parametros,
       @Schema(description = "Origem do dado consultado", example = "PRODUTOR")
       OrigemFonte origem) {}
 

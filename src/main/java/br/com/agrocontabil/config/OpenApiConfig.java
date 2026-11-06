@@ -8,6 +8,8 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import java.util.Map;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,6 +28,57 @@ public class OpenApiConfig {
 
     /** Nome do esquema de seguranca Bearer na especificacao (issue #206). */
     static final String ESQUEMA_BEARER = "bearerAuth";
+
+    /**
+     * Grupos do Swagger UI (issue #154): nome do grupo e os padrões de caminho que ele reúne. Cada
+     * grupo tem o seu JSON em {@code /v3/api-docs/<grupo>}. Todo caminho da API tem de cair em
+     * pelo menos um (travado pelo {@code OpenApiDocumentacaoIntegrationTest}).
+     */
+    static final Map<String, String[]> GRUPOS = Map.of(
+            "notas", new String[] {"/api/notas/**"},
+            "apuracao", new String[] {"/api/apuracao/**", "/api/creditos/**", "/api/dashboard/**",
+                "/api/alertas/**"},
+            "chat", new String[] {"/api/assistente/**"},
+            "relatorios", new String[] {"/api/relatorios/**"},
+            "contador", new String[] {"/api/contador/**", "/api/escritorio/**", "/api/convites/**",
+                "/api/vinculos/**", "/api/pendencias/**", "/api/notificacao/**",
+                "/api/auditoria/**", "/api/calendario-fiscal/**"},
+            "auth", new String[] {"/api/auth/**", "/api/usuarios/**", "/api/politica-dados",
+                "/api/v1/health"});
+
+    @Bean
+    public GroupedOpenApi grupoNotas() {
+        return grupo("notas");
+    }
+
+    @Bean
+    public GroupedOpenApi grupoApuracao() {
+        return grupo("apuracao");
+    }
+
+    @Bean
+    public GroupedOpenApi grupoChat() {
+        return grupo("chat");
+    }
+
+    @Bean
+    public GroupedOpenApi grupoRelatorios() {
+        return grupo("relatorios");
+    }
+
+    @Bean
+    public GroupedOpenApi grupoContador() {
+        return grupo("contador");
+    }
+
+    @Bean
+    public GroupedOpenApi grupoAuth() {
+        return grupo("auth");
+    }
+
+    private static GroupedOpenApi grupo(String nome) {
+        return GroupedOpenApi.builder().group(nome).pathsToMatch(GRUPOS.get(nome)).build();
+    }
 
     @Bean
     public OpenAPI agroContabilOpenApi() {

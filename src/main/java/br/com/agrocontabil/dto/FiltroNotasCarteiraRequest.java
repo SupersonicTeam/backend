@@ -24,6 +24,7 @@ import org.springframework.format.annotation.DateTimeFormat;
  * @param produtorId    só as notas deste cliente; fora da carteira ativa, 404
  * @param responsavel   {@code eu}, {@code nenhum} ou o id de um membro do escritório
  */
+@Schema(description = "Filtros das notas da carteira do escritório")
 public record FiltroNotasCarteiraRequest(
     @Schema(description = "Um ou mais status (repetível; OU entre eles). Ignorado no /resumo")
     List<StatusNotaFiscal> status,
