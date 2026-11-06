@@ -6,6 +6,7 @@ import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.event.NotaCanceladaEvent;
 import br.com.agrocontabil.event.NotaEmitidaEvent;
+import br.com.agrocontabil.exception.CancelamentoCompraImportadaException;
 import br.com.agrocontabil.exception.CancelamentoForaPrazoException;
 import br.com.agrocontabil.exception.CancelamentoRejeitadoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoCancelavelException;
@@ -307,6 +308,8 @@ public class SefazService {
    * <ol>
    *   <li>Ownership anti-IDOR: {@code findByIdAndProdutorId} → 404 se inexistente/de outro
    *       produtor.</li>
+   *   <li>Compra importada ({@code IMPORTADA}): {@link CancelamentoCompraImportadaException}
+   *       (HTTP 409, issue #418) — quem cancela é o fornecedor que emitiu.</li>
    *   <li>Pré-condição: status deve ser {@link StatusNotaFiscal#AUTORIZADA}; caso contrário
    *       {@link NotaFiscalNaoCancelavelException} (HTTP 409).</li>
    *   <li>RN006: {@code dataEmissao} + 30 dias (fuso {@code America/Sao_Paulo}, limite
@@ -334,6 +337,11 @@ public class SefazService {
     // Transacao 1 (curta): sob lock, valida status e prazo (RN006) e reserva marcando CANCELANDO.
     DadosCancelamento dados = emTransacao(() -> {
       NotaFiscal nota = carregarComLock(notaId, produtor);
+      // Issue #418: o evento de cancelamento e do emitente. Compra importada (o produtor e o
+      // destinatario) nunca vai a SEFAZ, nem muda de status.
+      if (nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
+        throw new CancelamentoCompraImportadaException(notaId);
+      }
       if (nota.getStatus() != StatusNotaFiscal.AUTORIZADA) {
         throw new NotaFiscalNaoCancelavelException(notaId, nota.getStatus());
       }

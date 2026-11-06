@@ -51,6 +51,8 @@ public enum ErrorCode {
   CANCELAMENTO_REJEITADO,
   /** Cancelamento fora do prazo legal de 30 dias corridos da emissão (RN006). HTTP 422. */
   CANCELAMENTO_FORA_PRAZO,
+  /** Compra importada: o cancelamento cabe ao fornecedor que emitiu a nota (issue #418). HTTP 409. */
+  CANCELAMENTO_COMPRA_IMPORTADA,
   // Reabertura de apuração mensal (Sprint 4 — issue Agrocontabil#42, RN005)
   /** Apuração não está em status FECHADO para reabertura. HTTP 409. */
   APURACAO_NAO_REABRIVEL,
