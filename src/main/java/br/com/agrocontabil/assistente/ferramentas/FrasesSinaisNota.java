@@ -68,6 +68,10 @@ public final class FrasesSinaisNota {
           + " sair com o ICMS diferido (CST 51), que o sistema aplica por padrao na venda dentro do"
           + " estado da sua producao. Esse tratamento so foi confirmado para a soja em grao em MT:"
           + " confira com seu contador o ICMS deste produto no seu estado antes de emitir.";
+      case "CCLASSTRIB_NAO_ADMITIDO" -> nota + ", o item '" + curta(s.descricaoItem()) + "' tem"
+          + " um cClassTrib que nao vale para o NCM dele, entao o imposto mostrado nao vale na"
+          + " emissao: corrija o codigo (ou retire-o do item) antes de emitir, senao a emissao e"
+          + " barrada.";
       case "ICMS_A_DEFINIR" -> nota + ", o item '" + curta(s.descricaoItem()) + "' esta sem o"
           + " CST do ICMS. O sistema so preenche sozinho na venda dentro do estado da sua"
           + " producao (CFOP 5.101) a quem tem inscricao estadual: combine o CST com seu contador"

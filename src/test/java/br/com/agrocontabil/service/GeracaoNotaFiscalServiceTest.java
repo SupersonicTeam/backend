@@ -18,6 +18,7 @@ import br.com.agrocontabil.config.TributosProperties;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -113,6 +114,8 @@ class GeracaoNotaFiscalServiceTest {
     assertThat(xml).contains("<NFe ");
     assertThat(xml).contains("http://www.portalfiscal.inf.br/nfe");
     // Não deve lançar exceção (XsdValidator internamente já valida e lança se inválido)
+    // A marca da regra fiscal (#389) sai do pipeline, que o seed e a NFA também atravessam.
+    assertThat(nota.getVersaoRegraFiscal()).isEqualTo(VersaoRegraFiscal.ATUAL);
   }
 
   @Test

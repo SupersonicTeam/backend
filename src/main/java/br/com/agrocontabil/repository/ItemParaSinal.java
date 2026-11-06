@@ -21,8 +21,9 @@ import java.math.BigDecimal;
  * @param ufEmitente     UF do emitente (regra do CST padrão do ICMS)
  * @param ufDestinatario UF do destinatário
  * @param ieDestinatario IE do destinatário (só se há ou não; nunca sai do service)
+ * @param cClassTrib     cClassTrib informado no item (nulo = o do NCM; regra do #389)
  */
 public record ItemParaSinal(Integer numeroItem, String descricao, String cfop, String ncm,
     String unidade, BigDecimal quantidade, BigDecimal valorUnitario, String cstIcms,
     TipoProdutor tipoEmitente, RegimeTributario regimeEmitente, String ufEmitente,
-    String ufDestinatario, String ieDestinatario) {}
+    String ufDestinatario, String ieDestinatario, String cClassTrib) {}

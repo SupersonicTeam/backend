@@ -293,3 +293,15 @@ não roda, a subida loga um `WARN` "Produtor semeado ... e pessoa fisica com reg
 
 Nota fiscal já autorizada não muda: o XML assinado guarda o CRT da emissão. A NF-e com CRT 1 que já
 existir na VPS continua com ele; as novas saem com CRT 3.
+
+## Nota em `XML_GERADO` de antes da marca de versão (#389)
+
+O `enviar-sefaz` recusa (409 `XML_REGRA_FISCAL_DESATUALIZADA`, nada transmitido) o XML gerado por
+uma versão da regra fiscal anterior à atual, e a nota volta a `COM_INCONSISTENCIAS` para gerar o XML
+de novo. Isso **não afeta o roteiro da banca**: as notas do seed passam pelo mesmo
+`GeracaoNotaFiscalService` que grava a marca (o `SeedDemonstracaoIntegrationTest` confere) e nascem
+autorizadas ou ainda sem XML. Uma nota que alguém tenha deixado em `XML_GERADO` na VPS antes do
+deploy da #389 também é recusada no envio; nesse caso, gerar o XML de novo (ou o reset dos dados da
+demonstração) resolve. Subir `VersaoRegraFiscal.ATUAL` depois do congelamento (2026-11-26) faz toda
+nota `XML_GERADO` da demonstração dar esse 409: só suba a constante antes da banca com o reset
+planejado.

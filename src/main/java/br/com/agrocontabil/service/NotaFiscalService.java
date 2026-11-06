@@ -4,6 +4,7 @@ import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.danfe.DanfePdfService;
 import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
+import br.com.agrocontabil.dto.AvisoNotaResponse;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.exception.AprovacaoExigidaException;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
@@ -132,6 +133,7 @@ public class NotaFiscalService {
   private final DanfePdfService danfePdfService;
   private final NotaFiscalValidacaoService validacaoService;
   private final VinculoCarteiraRepository vinculoRepository;
+  private final SinaisNotaConferirService sinaisService;
   private final TransactionTemplate transactionTemplate;
   private final TransactionTemplate readOnlyTransactionTemplate;
 
@@ -144,6 +146,7 @@ public class NotaFiscalService {
       DanfePdfService danfePdfService,
       NotaFiscalValidacaoService validacaoService,
       VinculoCarteiraRepository vinculoRepository,
+      SinaisNotaConferirService sinaisService,
       TransactionTemplate transactionTemplate) {
     this.notaFiscalRepository = notaFiscalRepository;
     this.produtorProvider = produtorProvider;
@@ -153,6 +156,7 @@ public class NotaFiscalService {
     this.danfePdfService = danfePdfService;
     this.validacaoService = validacaoService;
     this.vinculoRepository = vinculoRepository;
+    this.sinaisService = sinaisService;
     this.transactionTemplate = transactionTemplate;
     // Variante somente-leitura derivada do template autoconfigurado: a fase de leitura
     // nao escreve nada, e marca-la readOnly permite ao Hibernate dispensar dirty checking.
@@ -179,7 +183,7 @@ public class NotaFiscalService {
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal criada: id={} produtor={} numero={}",
         saved.getId(), produtor.getId(), saved.getNumero());
-    return NotaFiscalMapper.toResponse(saved);
+    return comAvisos(saved);
   }
 
   /**
@@ -397,7 +401,23 @@ public class NotaFiscalService {
 
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal atualizada: id={} produtor={}", saved.getId(), produtor.getId());
-    return NotaFiscalMapper.toResponse(saved);
+    return comAvisos(saved);
+  }
+
+  /**
+   * Resposta da gravacao do rascunho com os avisos nao bloqueantes (issue #389): hoje o
+   * cClassTrib informado que o NCM do item nao admite, que o {@code gerar-xml} recusaria com 422.
+   * Salvar nunca e impedido por isso; so a tela deixa de mostrar o imposto como definitivo.
+   */
+  private NotaFiscalResponse comAvisos(NotaFiscal salva) {
+    List<AvisoNotaResponse> avisos = sinaisService.avisosDoRascunho(salva).stream()
+        .map(s -> new AvisoNotaResponse(s.codigo().name(), s.numeroItem(), "cClassTrib",
+            "O cClassTrib informado no item " + s.numeroItem() + " (" + s.descricaoItem()
+                + ") nao vale para o NCM dele: o imposto mostrado nao vale na emissao e o "
+                + "gerar-xml sera recusado. Corrija o cClassTrib ou retire-o do item."))
+        .toList();
+    NotaFiscalResponse resposta = NotaFiscalMapper.toResponse(salva);
+    return avisos.isEmpty() ? resposta : resposta.comAvisos(avisos);
   }
 
   /**
@@ -517,6 +537,8 @@ public class NotaFiscalService {
 
       atual.setXmlGerado(xml);
       atual.setVersaoLayoutNfe(VERSAO_LAYOUT_NFE);
+      // Marca gravada pelo GeracaoNotaFiscalService na instancia que gerou o XML (issue #389).
+      atual.setVersaoRegraFiscal(nota.getVersaoRegraFiscal());
       atual.setDataGeracaoXml(OffsetDateTime.now());
       atual.setStatus(StatusNotaFiscal.XML_GERADO);
       atual.setChaveAcesso(chaveAcesso);

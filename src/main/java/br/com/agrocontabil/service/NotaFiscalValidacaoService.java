@@ -1,6 +1,8 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
+import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
@@ -128,6 +130,58 @@ public class NotaFiscalValidacaoService {
 
     log.info("Inconsistencias de validacao registradas: notaId={} lote={} quantidade={}",
         notaId, lote, registros.size());
+  }
+
+  /**
+   * Devolve a um estado editável a nota cujo XML foi gerado por uma regra fiscal anterior à atual
+   * (issue #389), depois de o {@code enviar-sefaz} recusá-la sem transmitir.
+   *
+   * <p>A nota passa a {@link StatusNotaFiscal#COM_INCONSISTENCIAS} com um registro no histórico de
+   * validações (para o produtor ver o motivo em {@code GET /api/notas/{id}/validacoes}) e, se a
+   * última ação da revisão era a aprovação, {@link AcaoRevisao#APROVACAO_CADUCADA}, como na falha
+   * do {@code gerar-xml}: o contador aprovou um conteúdo que as regras de hoje não emitiriam.
+   * Mesmo contrato do {@link #registrarInconsistencias}: só fora de transação. Não faz nada se a
+   * nota já saiu de {@code XML_GERADO} ou se o XML já está na versão atual (outra requisição
+   * chegou antes).
+   *
+   * @param notaId nota já conferida pelo chamador (anti-IDOR)
+   */
+  @Transactional
+  public void registrarXmlDesatualizado(UUID notaId) {
+    NotaFiscal nota = notaFiscalRepository.findById(notaId)
+        .orElseThrow(() -> new ResourceNotFoundException("NotaFiscal", notaId));
+    if (nota.getStatus() != StatusNotaFiscal.XML_GERADO
+        || !VersaoRegraFiscal.desatualizada(nota.getVersaoRegraFiscal())) {
+      return;
+    }
+    OffsetDateTime agora = OffsetDateTime.now();
+    String versao = nota.getVersaoRegraFiscal() == null ? "sem marca"
+        : "versao " + nota.getVersaoRegraFiscal();
+    validacaoRepository.save(NotaFiscalValidacao.builder()
+        .notaFiscal(nota)
+        .loteValidacao(UUID.randomUUID())
+        .code(ErrorCode.XML_REGRA_FISCAL_DESATUALIZADA.code())
+        .field("versaoRegraFiscal")
+        .message("O XML foi gerado com regras fiscais anteriores as atuais (" + versao + ").")
+        .suggestion("Revise os itens e gere o XML de novo; nada foi enviado a SEFAZ.")
+        .rejectedValue(nota.getVersaoRegraFiscal() == null ? null
+            : nota.getVersaoRegraFiscal().toString())
+        .expectedValue(String.valueOf(VersaoRegraFiscal.ATUAL))
+        .validadoEm(agora)
+        .build());
+    List<NotaFiscalRevisao> historico =
+        revisaoRepository.findByNotaFiscalIdOrderByOcorridoEmDesc(notaId);
+    if (!historico.isEmpty() && historico.get(0).getAcao() == AcaoRevisao.APROVADA) {
+      revisaoRepository.save(NotaFiscalRevisao.builder()
+          .notaFiscalId(notaId)
+          .acao(AcaoRevisao.APROVACAO_CADUCADA)
+          .ocorridoEm(agora)
+          .build());
+    }
+    nota.setStatus(StatusNotaFiscal.COM_INCONSISTENCIAS);
+    notaFiscalRepository.save(nota);
+    log.info("XML de regra fiscal desatualizada recusado no envio: notaId={} versao={}",
+        notaId, nota.getVersaoRegraFiscal());
   }
 
   /**

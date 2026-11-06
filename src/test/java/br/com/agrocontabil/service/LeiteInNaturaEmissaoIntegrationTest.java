@@ -192,6 +192,23 @@ class LeiteInNaturaEmissaoIntegrationTest {
   }
 
   @Test
+  @DisplayName("#389: o aviso do rascunho usa a mesma tabela do validador, sem validar o resto")
+  void avisoDoRascunhoSegueARegraDoValidador() {
+    SinaisNotaConferirService sinais = new SinaisNotaConferirService(
+        mock(br.com.agrocontabil.repository.NotaFiscalRepository.class), ncmReferenciaRepository,
+        classificacao, java.time.Clock.fixed(java.time.Instant.parse("2026-11-06T15:00:00Z"),
+            java.time.ZoneId.of("America/Sao_Paulo")));
+
+    // O 200003 (Anexo I) nao vale para a soja; no leite vale. Sem codigo informado, sem aviso.
+    assertThat(sinais.avisosDoRascunho(nota("12019000", "200003")))
+        .extracting(SinalNota::numeroItem, SinalNota::codigo)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple(1,
+            SinalNota.CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO));
+    assertThat(sinais.avisosDoRascunho(nota("04012090", "200003"))).isEmpty();
+    assertThat(sinais.avisosDoRascunho(nota("12019000", null))).isEmpty();
+  }
+
+  @Test
   @DisplayName("#375: outro codigo de reducao (200009, medicamentos) na soja tambem e recusado")
   void codigoDeOutraHipoteseRecusado() {
     NotaFiscal nota = nota("12019000", "200009");

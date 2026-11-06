@@ -120,7 +120,8 @@ public final class NotaFiscalMapper {
         nota.getValorTotalCbs(),
         itensResponse,
         nota.getCreatedAt(),
-        nota.getUpdatedAt());
+        nota.getUpdatedAt(),
+        List.of());
   }
 
   /**

@@ -80,7 +80,8 @@ class SefazServiceReconciliacaoTest {
         .build();
     sefazService = new SefazService(
         notaFiscalRepository, produtorProvider, sefazClient, new SefazProperties(),
-        eventPublisher, new TransactionTemplate(mock(PlatformTransactionManager.class)));
+        eventPublisher, new TransactionTemplate(mock(PlatformTransactionManager.class)),
+        mock(NotaFiscalValidacaoService.class));
   }
 
   // -------------------------------------------------------------------------
@@ -428,6 +429,7 @@ class SefazServiceReconciliacaoTest {
         .chaveAcesso(CHAVE)
         .xmlGerado("<NFe><infNFe Id=\"NFe" + CHAVE + "\"/></NFe>")
         .versaoLayoutNfe("4.00")
+        .versaoRegraFiscal(br.com.agrocontabil.nfe.VersaoRegraFiscal.ATUAL)
         .build();
   }
 }

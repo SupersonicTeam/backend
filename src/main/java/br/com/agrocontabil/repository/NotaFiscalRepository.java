@@ -850,7 +850,7 @@ public interface NotaFiscalRepository
       SELECT new br.com.agrocontabil.repository.ItemParaSinal(
           i.numeroItem, i.descricao, i.cfop, i.ncm, i.unidade, i.quantidade, i.valorUnitario,
           i.cstIcms, p.tipoProdutor, p.regimeTributario, p.estado, n.destinatarioEndereco.uf,
-          n.destinatarioIe)
+          n.destinatarioIe, i.cClassTrib)
       FROM NotaFiscalItem i JOIN i.notaFiscal n JOIN n.produtor p
       WHERE n.id = :notaId AND p.id = :produtorId
       ORDER BY i.numeroItem

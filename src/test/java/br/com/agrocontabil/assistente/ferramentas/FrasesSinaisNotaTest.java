@@ -97,4 +97,15 @@ class FrasesSinaisNotaTest {
             + " tratamento so foi confirmado para a soja em grao em MT: confira com seu contador o"
             + " ICMS deste produto no seu estado antes de emitir.");
   }
+
+  @Test
+  @DisplayName("CCLASSTRIB_NAO_ADMITIDO: o codigo nao vale para o NCM, corrigir antes de emitir (#389)")
+  void cClassTribNaoAdmitido() {
+    assertThat(FrasesSinaisNota.texto(7, null, List.of(new Sinal("CCLASSTRIB_NAO_ADMITIDO",
+        "CODIGO_NAO_VALE_PARA_O_NCM", "ANTES_DE_EMITIR", 1, "Soja em grao", "5101", null, null,
+        null, null, null, null))))
+        .isEqualTo("Na nota 7, o item 'Soja em grao' tem um cClassTrib que nao vale para o NCM"
+            + " dele, entao o imposto mostrado nao vale na emissao: corrija o codigo (ou retire-o"
+            + " do item) antes de emitir, senao a emissao e barrada.");
+  }
 }

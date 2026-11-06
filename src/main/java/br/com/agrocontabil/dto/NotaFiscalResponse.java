@@ -99,8 +99,21 @@ public record NotaFiscalResponse(
     OffsetDateTime createdAt,
 
     @Schema(description = "Data e hora da ultima atualizacao da nota")
-    OffsetDateTime updatedAt
+    OffsetDateTime updatedAt,
+
+    @Schema(description = "Avisos nao bloqueantes da gravacao (criar e atualizar o rascunho): "
+        + "a nota foi salva, mas o imposto mostrado pode nao valer na emissao. Vazio nas demais "
+        + "respostas.")
+    List<AvisoNotaResponse> avisos
 ) implements ResultadoAuditavel {
+
+  /** Mesma resposta com os avisos da gravacao (issue #389). */
+  public NotaFiscalResponse comAvisos(List<AvisoNotaResponse> novosAvisos) {
+    return new NotaFiscalResponse(id, chaveAcesso, numero, serie, modelo, naturezaOperacao,
+        status, tipoDocumento, dataEmissao, dataSaida, produtorId, destinatarioNome,
+        destinatarioCpfCnpj, destinatarioIe, destinatarioEndereco, valorTotalProdutos,
+        valorTotalNota, valorTotalIbs, valorTotalCbs, itens, createdAt, updatedAt, novosAvisos);
+  }
 
   @Override
   public UUID recursoAuditado() {

@@ -379,6 +379,7 @@ class SefazEntregaIncertaIntegrationTest {
         .chaveAcesso(chave)
         .xmlGerado("<NFe><infNFe Id=\"NFe" + chave + "\"/></NFe>")
         .versaoLayoutNfe("4.00")
+        .versaoRegraFiscal(br.com.agrocontabil.nfe.VersaoRegraFiscal.ATUAL)
         .protocoloAutorizacao(status == StatusNotaFiscal.AUTORIZADA ? "141260000000017" : null)
         .build())).getId();
   }

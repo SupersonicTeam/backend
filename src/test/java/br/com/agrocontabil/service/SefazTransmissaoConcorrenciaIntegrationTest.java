@@ -351,6 +351,7 @@ class SefazTransmissaoConcorrenciaIntegrationTest {
         .chaveAcesso(chave)
         .xmlGerado("<NFe><infNFe Id=\"NFe" + chave + "\"/></NFe>")
         .versaoLayoutNfe("4.00")
+        .versaoRegraFiscal(br.com.agrocontabil.nfe.VersaoRegraFiscal.ATUAL)
         .protocoloAutorizacao("141260000000017")
         .build();
   }

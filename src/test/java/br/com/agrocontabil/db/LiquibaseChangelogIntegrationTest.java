@@ -207,6 +207,19 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0055: versao da regra fiscal na nota, nula e sem preenchimento (#389)")
+  void changeSet0055VersaoRegraFiscal() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable FROM information_schema.columns"
+            + " WHERE table_name = 'nota_fiscal' AND column_name = 'versao_regra_fiscal'");
+
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"))
+        .containsExactly(tuple("versao_regra_fiscal", "integer", "YES"));
+  }
+
+  @Test
   @DisplayName("changeSet 0051: em casca in natura, semente sem a marca, parboilizado fora")
   void changeSet0051ArrozEmCascaInNatura() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
