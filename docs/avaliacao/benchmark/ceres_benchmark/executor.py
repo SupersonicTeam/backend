@@ -249,6 +249,20 @@ class Config:
         return f"{base}-cpu" if self.embedding_cpu else base
 
 
+
+#: Origens cuja resposta esperada a banca so aceita revisada (#358, #387).
+ORIGENS_COM_REVISAO = ("inedita_externa_ia", "inedita_equipe_dados")
+
+
+def perguntas_sem_revisao(perguntas: list[dict]) -> list[str]:
+    """Ids que ainda impedem a rodada da banca: ``aConferir`` ou sem ``revisado.por`` (a revisao da
+    equipe ou do orientador pela planilha; o antigo ``revisado: true`` nao diz quem revisou)."""
+    def revisada(p: dict) -> bool:
+        r = p.get("revisado")
+        return isinstance(r, dict) and bool(str(r.get("por") or "").strip())
+    return [p["id"] for p in perguntas
+            if p.get("origem") in ORIGENS_COM_REVISAO and (p.get("aConferir") or not revisada(p))]
+
 class Executor:
     """Roda a matriz; cada passo loga o que faz e falha cedo com a causa."""
 
@@ -744,16 +758,16 @@ class Executor:
                     raise RuntimeError(mensagem)
                 log(f"AVISO: {mensagem}")
         if cfg.tipo == "banca":
-            # Revisao humana bloqueante (#358): dispositivos, classe e afirmacoes proibidas das
-            # externas sao provisorios ate a equipe e o contador conferirem.
-            sem_revisao = [p["id"] for p in canonico["perguntas"]
-                           if p.get("origem") == "inedita_externa_ia"
-                           and (p.get("aConferir") or not p.get("revisado"))]
+            # Revisao humana bloqueante (#358, #387): dispositivos, classe e afirmacoes proibidas
+            # das externas (e o valor das ineditas de dados) sao provisorios ate a equipe ou o
+            # orientador revisarem pela planilha (revisado.por); sem contador.
+            sem_revisao = perguntas_sem_revisao(canonico["perguntas"])
             if sem_revisao:
                 raise RuntimeError(
-                    f"{len(sem_revisao)} perguntas externas sem a revisao humana (aConferir ou "
-                    f"revisado false: {', '.join(sem_revisao[:5])}{'...' if len(sem_revisao) > 5 else ''})"
-                    ": a rodada da banca espera a revisao; para conferir antes, use --ensaio")
+                    f"{len(sem_revisao)} perguntas sem a revisao da equipe ou do orientador (aConferir "
+                    f"ou sem revisado.por: {', '.join(sem_revisao[:5])}{'...' if len(sem_revisao) > 5 else ''})"
+                    ": a rodada da banca espera a planilha de revisao (revisao_planilha.py); "
+                    "para conferir antes, use --ensaio")
         self.perguntas_info = {"arquivo": cfg.matriz.get("perguntas") or GABARITO_REPO,
                                "versao": canonico.get("versao"), "sha256": sha,
                                "total": len(canonico["perguntas"])}

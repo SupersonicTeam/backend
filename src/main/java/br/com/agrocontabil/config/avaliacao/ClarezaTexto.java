@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * e siglas do glossário usadas sem explicação. Funções puras, sem Spring.
  *
  * <p>São um indicador barato, que vale para toda etapa da Ceres 2.0; não substituem a nota do
- * avaliador externo (CSV cego + rubrica, #275). Uma sigla conta como explicada se a resposta traz,
+ * orientador (CSV cego + rubrica, #275; sem contador, #387). Uma sigla conta como explicada se a resposta traz,
  * em qualquer lugar, uma das explicações do {@link #GLOSSARIO} (sem acento e sem caixa): "IBS
  * (imposto sobre bens e serviços)" ou "o imposto sobre bens e serviços, o IBS".
  */

@@ -25,6 +25,7 @@ from pathlib import Path
 from . import externas as ext
 from . import gabarito as gab
 from . import graficos
+from . import revisao as rev
 
 #: Desfechos de falha tecnica (``RelatorioAvaliacao.FALHAS_TECNICAS``).
 FALHAS_TECNICAS = {"MODELO_INDISPONIVEL", "MODO_FALLBACK", "TEMPO_ESGOTADO", "CANCELADA", "ERRO"}
@@ -1143,7 +1144,8 @@ def _secao_externas(celulas, ids, canonico) -> str:
     perguntas = [canonico[i] for i in ids]
     a_conferir = [p["id"] for p in perguntas if p.get("aConferir")]
     pendentes = [f"{p['id']} ({p['pendenteContador']})" for p in perguntas if p.get("pendenteContador")]
-    nao_revisadas = [p["id"] for p in perguntas if not p.get("revisado")]
+    nao_revisadas = [p["id"] for p in perguntas
+                     if not (isinstance(p.get("revisado"), dict) and p["revisado"].get("por"))]
     linhas = ["## Perguntas geradas por IA: critérios automáticos (#358)\n",
               AVISO_IA + "\n",
               "Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; "
@@ -1152,19 +1154,22 @@ def _secao_externas(celulas, ids, canonico) -> str:
               "(`externas-avaliacao-cego-2.csv`, …, quando houver: mande todos; contextualização, "
               "orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). "
               "**A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão "
-              "é a humana.\n"]
+              "é a humana.\n",
+              "**" + rev.DECLARACAO + "** A nota de clareza do CSV cego é do orientador.\n"]
     if a_conferir:
         sem = [p["id"] for p in perguntas if p.get("aConferir") and not p.get("dispositivosEsperados")]
         linhas.append(f"- Fundamentação **a conferir** em {len(a_conferir)} perguntas: os "
-                      "`dispositivosEsperados` vêm do texto da lei (`fonteConferencia`) e ainda não foram "
-                      "confirmados na base (`conferir-dispositivos-externas.sql`); a chave que faltar sai dos "
-                      "aceitos. Leia a fundamentação delas como provisória."
+                      "`dispositivosEsperados` vêm do texto da lei (`fonteConferencia`), com a existência na base "
+                      "conferida (`conferir-dispositivos-externas.sql`), e esperam a revisão da equipe ou do "
+                      "orientador (`revisao/planilha-revisao-<versão>.csv`). Leia a fundamentação delas como "
+                      "provisória."
                       + (f" Sem dispositivo (n/d): {', '.join(sem)}." if sem else ""))
     if pendentes:
-        linhas.append("- Pendentes do contador (fora da métrica de classe): " + ", ".join(pendentes) + ".")
+        linhas.append("- Pendentes (eram do contador, #284; sem contador, a equipe decide com o orientador; fora da "
+                      "métrica de classe): " + ", ".join(pendentes) + ".")
     if nao_revisadas:
         linhas.append(f"- Classe e afirmações proibidas **provisórias** em {len(nao_revisadas)} perguntas "
-                      "(ainda não revisadas pela equipe e pelo contador).")
+                      "(ainda não revisadas pela equipe ou pelo orientador).")
     linhas.append("")
     linhas.append("| Célula | " + " | ".join(ext.CRITERIOS_EXTERNAS.values()) + " |\n|---|"
                   + "---|" * len(ext.CRITERIOS_EXTERNAS))

@@ -178,7 +178,7 @@ pergunta vale ~1,9 ponto percentual.
 | `classeTratamento` | `ZERO`, `REDUCAO_60`, `PADRAO`, `CONDICIONAL`, `NAO_SE_APLICA` ou `FORA_DO_ESCOPO_SISTEMA`, **provisória** (`revisado: false`); cinco corrigidas pelo texto da lei na conferência do normas.leg.br (`2026-11-05.8`): E07 e E09 → `ZERO` (Anexo XV, item 5, com o art. 148, parágrafo único; Anexo I, item 8, posição 09.01), E13, E16 e E19 → `REDUCAO_60` (Anexo IX, itens 10; 12, 18 e 21, exceção dos animais domésticos fora porque a pergunta fala de rebanho; 28); e, no `2026-11-05.10`, E03 `CONDICIONAL` → `REDUCAO_60` (art. 137, § 1º, II; a Sessão 8c, ver `pendenteContador`) |
 | `afirmacoesProibidas` | expressões que seriam erro (ex.: E17 "sim, pode aproveitar a redução"; E22 "o comprador não tem crédito", existe o presumido do art. 168; E33 "pode aproveitar o crédito"; E03 "terá alíquota zero", no `2026-11-05.11`, com a frase que nega fora: "não terá alíquota zero") |
 | `encaminharContador` | 9 delas (E21, E22, E23, E24, E27, E29, E36, E39, E40): a resposta certa depende da situação do produtor |
-| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas. A E03 (leite ao laticínio, #284, pergunta 2) saiu no conjunto `2026-11-05.10`: a Sessão 8c (#374, `da90c20`) deu 60% por padrão (art. 137, § 1º, II), e a classe é `REDUCAO_60`; desde o #381 (`cd43c5b`, conjunto `2026-11-05.12`) o UHT (0401.10.10 e 0401.20.10) sai com zero por padrão, e a venda ao laticínio segue 60% (leite cru). **Contaminada** no `2026-11-05.12` (decisão do Murillo, 2026-11-06): a sessão do #374/#381 conhecia o texto da E03, e a frase do UHT foi escrita para esse cenário. Segue no conjunto, fora dos recortes de inéditas (52 inéditas: 13 da equipe e 39 externas). Com a classe exclusiva, a resposta que afirma também a alíquota zero ("a alíquota zero vale só para o leite de consumo direto") não acerta a classe; "a alíquota zero do Anexo I não se aplica a esse caso" acerta, e "zero" solto não conta como afirmação de `ZERO` (travado no `test_externas.py`). O texto fixo da 8c (`TemplateTratamentoProduto`: 60% com a alternativa do zero nos NCMs sem destino definido, zero no UHT) só entra pela rota de dados (`consultarTratamentoProduto`); na rota esperada da E03, LEGISLACAO, o texto é do modelo |
+| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a decisão da equipe com o orientador (não há contador, #387); rota e citação seguem medidas. A E03 (leite ao laticínio, #284, pergunta 2) saiu no conjunto `2026-11-05.10`: a Sessão 8c (#374, `da90c20`) deu 60% por padrão (art. 137, § 1º, II), e a classe é `REDUCAO_60`; desde o #381 (`cd43c5b`, conjunto `2026-11-05.12`) o UHT (0401.10.10 e 0401.20.10) sai com zero por padrão, e a venda ao laticínio segue 60% (leite cru). **Contaminada** no `2026-11-05.12` (decisão do Murillo, 2026-11-06): a sessão do #374/#381 conhecia o texto da E03, e a frase do UHT foi escrita para esse cenário. Segue no conjunto, fora dos recortes de inéditas (52 inéditas: 13 da equipe e 39 externas). Com a classe exclusiva, a resposta que afirma também a alíquota zero ("a alíquota zero vale só para o leite de consumo direto") não acerta a classe; "a alíquota zero do Anexo I não se aplica a esse caso" acerta, e "zero" solto não conta como afirmação de `ZERO` (travado no `test_externas.py`). O texto fixo da 8c (`TemplateTratamentoProduto`: 60% com a alternativa do zero nos NCMs sem destino definido, zero no UHT) só entra pela rota de dados (`consultarTratamentoProduto`); na rota esperada da E03, LEGISLACAO, o texto é do modelo |
 
 **Critérios das externas** (os 5 do Murillo, rubrica em `../rubrica-clareza.md`): **automáticos**
 no relatório — rota, fundamentação (provisória enquanto `aConferir`), alíquota/classe e
@@ -232,13 +232,37 @@ só o id (`E03`), nunca o texto, e quem escreve código da Ceres não lê `pergu
 nem `perguntas-externas-murillo.txt`. Varredura de 2026-11-06 (commits, diffs fora do benchmark e
 mensagens recebidas pelas sessões de código das Sessões 7, 8a, 8b, 8c e do #359): ver o PR #383.
 
-**Revisão humana bloqueante antes da rodada da banca:** a lista das 40 com rota, dispositivos e
-classe esperados vai para a equipe e para o contador (#284, pergunta 15): conferir e preencher
-`dispositivosEsperados` na base (`legislacao_trecho`), revisar `classeTratamento` e
-`afirmacoesProibidas`, marcar `revisado: true` e tirar `aConferir`. **O executor recusa a rodada
-da banca** enquanto alguma externa estiver com `aConferir` ou sem `revisado`. Para rodar antes
-(conferir o executor, ver o formato), use `--ensaio`: o relatório sai marcado como ensaio e a pasta
-não pode ser retomada como rodada da banca.
+**Revisão humana bloqueante antes da rodada da banca — equipe e orientador, sem contador**
+(decisão do Murillo, 2026-11-06, #387): *respostas esperadas conferidas no texto da lei
+(normas.leg.br e base da VPS) e revisadas pela equipe e pelo orientador; sem validação de
+contador.* (A mesma frase sai no relatório.)
+
+1. `python3 docs/avaliacao/benchmark/revisao_planilha.py gerar` grava
+   `revisao/planilha-revisao-<versão>.csv` (UTF-8 com BOM, separador `;`, abre direto no Excel e no
+   LibreOffice) e o `.xlsx` (só texto), uma linha por pergunta: id, origem, autor, tema, pergunta,
+   rota esperada, tratamento esperado em português, dispositivos aceitos, afirmações proibidas em
+   texto legível (a regra exata fica no conjunto), encaminhar ao contador, valor esperado
+   ("calculado pelo sistema a partir dos dados de teste", com o campo e a função; nunca um número
+   escrito à mão), pendências, observação e situação, mais as colunas a preencher: **OK?
+   (sim/não/dúvida)**, **Correção sugerida**, **Revisor** e **Data** (`AAAA-MM-DD`). Célula que
+   começaria por `=`, `+`, `-`, `@`, tab, CR ou LF ganha um apóstrofo na frente (injeção de
+   fórmula; a #367 segue aberta para o CSV cego). A planilha da versão atual é travada por teste.
+2. Preencha e salve como CSV (`;`, UTF-8). **Quem escreveu a pergunta não a revisa** (nas inéditas
+   de dados, o Luiz não revisa as dele e o Herick não revisa as dele: o comando recusa).
+3. `python3 docs/avaliacao/benchmark/revisao_planilha.py aplicar <planilha.csv> --versao <nova>`:
+   "sim" sem correção vira `revisado: {"por": ..., "em": ...}` e tira `aConferir`; "não", "dúvida"
+   ou qualquer correção sugerida vão para `revisao/decisoes-<versão>.md` para a equipe decidir —
+   **nada é corrigido sozinho**. Erro (id fora do conjunto, pergunta diferente da do conjunto,
+   resposta fora de sim/não/dúvida, "sim" sem revisor ou data, autor revisando a própria) não aplica
+   nada. Com revisão aplicada, o comando grava o conjunto com a versão nova, o hash e a planilha
+   nova; regere o SQL de conferência e o exemplo fictício.
+
+**O executor recusa a rodada da banca** enquanto alguma externa (ou inédita de dados) estiver com
+`aConferir` ou sem `revisado.por` (o antigo `revisado: true` não diz quem revisou e não conta).
+As `pendenteContador` (E01, E33) eram perguntas ao escritório da #284: sem contador, a equipe as
+decide com o orientador pela mesma planilha. Para rodar antes (conferir o executor, ver o formato),
+use `--ensaio`: o relatório sai marcado como ensaio e a pasta não pode ser retomada como rodada da
+banca.
 
 ### Inéditas de dados da equipe (#358)
 
@@ -315,8 +339,8 @@ do conjunto (nova versão e hash). Mudar a descrição `@Tool` muda a Ceres e fi
 
 **Revisão humana — tarefa da equipe, bloqueante para a rodada da banca:**
 
-- [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados (o contador pode
-      revisar junto, #284, pergunta 15);
+- [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados pela planilha de
+      revisão (equipe e orientador, #387; sem contador);
 - [ ] decidir os 4 pares do aviso de semelhança (D12, D01, T05, D15; tabela acima);
 - [ ] **tema de linguagem do dia a dia: obrigatória.** Confirmar que nenhuma das 10 é paráfrase de
       exemplo de treino (use o `similaridade-treino.md` e leia o treino do classificador).

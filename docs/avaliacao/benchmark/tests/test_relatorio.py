@@ -455,6 +455,8 @@ class ExternasNoRelatorioTest(Base):
         self.assertNotIn("perguntas de produtores", texto)
         self.assertNotIn("internet e produtores", texto)
         self.assertIn("Fundamentação **a conferir** em 1 perguntas: os", texto)
+        # Sem contador (#387): a declaracao da revisao sai no relatorio.
+        self.assertIn("revisadas pela equipe e pelo orientador; sem validação de contador", texto)
         self.assertIn("### L01 (pergunta ? do Murillo)", texto)
         # Ceres 1 m-small: "Nao consegui confirmar a citacao." e frase fixa (CITACAO_INVALIDA), nao
         # afirmacao do modelo.

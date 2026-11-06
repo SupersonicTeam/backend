@@ -13,7 +13,7 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `cd43c5be32c0cb173aa15baf77be97d17b3b86e5` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Ceres 2.0 | `764654b4a10bb9f487ad864b2fcb40bfdf6d2317` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
 | Conjunto de perguntas | 2026-11-05.12 (140 perguntas, sha256 `773eb7389af6…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
@@ -379,9 +379,11 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` e nos lotes seguintes (`externas-avaliacao-cego-2.csv`, …, quando houver: mande todos; contextualização, orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). **A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão é a humana.
 
-- Fundamentação **a conferir** em 39 perguntas: os `dispositivosEsperados` vêm do texto da lei (`fonteConferencia`) e ainda não foram confirmados na base (`conferir-dispositivos-externas.sql`); a chave que faltar sai dos aceitos. Leia a fundamentação delas como provisória. Sem dispositivo (n/d): E18.
-- Pendentes do contador (fora da métrica de classe): E01 (#284, pergunta 6), E33 (#284, pergunta C (diferimento do art. 138, §§ 2º a 8º)).
-- Classe e afirmações proibidas **provisórias** em 39 perguntas (ainda não revisadas pela equipe e pelo contador).
+**Respostas esperadas conferidas no texto da lei (normas.leg.br e base da VPS) e revisadas pela equipe e pelo orientador; sem validação de contador.** A nota de clareza do CSV cego é do orientador.
+
+- Fundamentação **a conferir** em 39 perguntas: os `dispositivosEsperados` vêm do texto da lei (`fonteConferencia`), com a existência na base conferida (`conferir-dispositivos-externas.sql`), e esperam a revisão da equipe ou do orientador (`revisao/planilha-revisao-<versão>.csv`). Leia a fundamentação delas como provisória. Sem dispositivo (n/d): E18.
+- Pendentes (eram do contador, #284; sem contador, a equipe decide com o orientador; fora da métrica de classe): E01 (#284, pergunta 6), E33 (#284, pergunta C (diferimento do art. 138, §§ 2º a 8º)).
+- Classe e afirmações proibidas **provisórias** em 39 perguntas (ainda não revisadas pela equipe ou pelo orientador).
 
 | Célula | Fundamentação (citação válida) | Alíquota / classe de tratamento | Precisão: responde sem afirmação proibida | Encaminha ao contador quando deve |
 |---|---|---|---|---|

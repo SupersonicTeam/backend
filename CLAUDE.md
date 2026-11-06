@@ -113,7 +113,9 @@ conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando a
 inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`),
 a 8b (`d8b0b36`) e a 8c (`da90c20` e `cd43c5b`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
 `docs/avaliacao/benchmark/ineditas-dados/` (`inedita_equipe_dados`, autor e data, valor esperado
-calculado do seed com teste).
+calculado do seed com teste). **Sem contador (#387):** as respostas esperadas são revisadas pela equipe e pelo orientador
+pela planilha `docs/avaliacao/benchmark/revisao/planilha-revisao-<versão>.csv` (`revisao_planilha.py gerar`/`aplicar`;
+quem escreveu a pergunta não a revisa); a banca exige `revisado.por`; a nota de clareza é do orientador.
 
 ## Arquitetura — regras inegociáveis
 

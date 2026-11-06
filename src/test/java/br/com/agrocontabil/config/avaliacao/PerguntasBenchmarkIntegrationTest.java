@@ -55,7 +55,7 @@ class PerguntasBenchmarkIntegrationTest {
   private static final Path GABARITO = Path.of("docs/avaliacao/gabarito-ceres.json");
   private static final LocalDate HOJE = LocalDate.of(2026, 9, 15);
   /** Campos que só o benchmark tem: o resto de uma pergunta herdada é igual ao do gabarito. */
-  private static final Set<String> CAMPOS_DO_BENCHMARK = Set.of("tema", "capacidade", "origem");
+  private static final Set<String> CAMPOS_DO_BENCHMARK = Set.of("tema", "capacidade", "origem", "revisado");
 
   @Autowired private FerramentasDadosProdutor ferramentas;
   @Autowired private ProdutorRepository produtorRepository;

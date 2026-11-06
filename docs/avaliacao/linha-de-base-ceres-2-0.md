@@ -36,7 +36,7 @@ export DB_PASSWORD=...   # sem o docker-compose do Spring, o dev não lê o .env
   [README](README.md#seed-de-avaliação)).
 - 81 perguntas × 3 rodadas: em CPU, conte ~2 horas.
 - Saídas em `docs/avaliacao/resultados/`: `.md`, `.json`, `-clareza-cego.csv` e
-  `-clareza-chave.json`. Versione o `.md` já; o `.json` completo só depois de o avaliador externo
+  `-clareza-chave.json`. Versione o `.md` já; o `.json` completo só depois de o orientador
   da #275 devolver as notas do CSV cego (ele liga resposta a pergunta e rodada). A chave fica com a
   equipe, fora do repositório (o `.gitignore` de `resultados/` a ignora).
 - Latência no ambiente publicado: [harness de API](harness-api/README.md), também com 3
@@ -53,4 +53,4 @@ export DB_PASSWORD=...   # sem o docker-compose do Spring, o dev não lê o .env
    sem explicação.
 4. **Perguntas instáveis** entre as rodadas.
 5. **Harness de API** — p50/p95 por rota no ambiente publicado.
-6. **Nota humana de clareza** — fica para a #275 (avaliador externo); não bloqueia as etapas 2 e 3.
+6. **Nota humana de clareza** — fica para a #275 (orientador, sem contador, #387); não bloqueia as etapas 2 e 3.

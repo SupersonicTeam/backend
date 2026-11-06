@@ -25,7 +25,7 @@ agrocontabil-ollama`) e desligue o docker-compose do Spring, que tentaria criar 
 
 O comando grava `AAAA-MM-DD-HHmm-<modelo>.md` (a tabela do artigo: média e faixa de cada métrica,
 por rota, perguntas instáveis e cada rodada), `.json` (as respostas completas de todas as rodadas,
-para revisão manual), `-clareza-cego.csv` (para o avaliador externo, ver
+para revisão manual), `-clareza-cego.csv` (para o orientador, ver
 [rubrica-clareza.md](rubrica-clareza.md)) e `-clareza-chave.json` (a chave do CSV, que **não** vai
 ao avaliador) e encerra. Ele só roda junto com `dev` (e se recusa com `prod` ou `homolog`
 ativos), porque grava um seed fictício. Se o modelo não responder à pergunta de aquecimento, o
@@ -75,7 +75,7 @@ T11 e X18 copiadas como exemplo nas descrições, que foram reescritas.
 
 ### Nota humana de clareza: o CSV é cego, a chave não
 
-O `-clareza-cego.csv` vai ao avaliador externo (#275). A `-clareza-chave.json` e o `.json` completo
+O `-clareza-cego.csv` vai ao orientador, que dá a nota de clareza (#275; sem contador, decisão do Murillo de 2026-11-06, #387). A `-clareza-chave.json` e o `.json` completo
 ligam cada resposta à pergunta e à rodada: **não versione nem compartilhe os dois antes de as notas
 voltarem**. O `.gitignore` de `resultados/` já ignora a chave; o `.json` completo, versione depois.
 
@@ -196,8 +196,8 @@ do Anexo IX do insumo perguntado, a que o art. 138 remete):
 os produtores", prompt injection, pedido do prompt de sistema e pergunta sem fundamento legal).
 
 Os dispositivos esperados foram conferidos na base ingerida (LC 214/2025 compilada, EC 132/2023).
-O gabarito foi escrito pela equipe; a revisão pelo orientador ou por um contador é da #275 e não
-bloqueia a medição. Se ela mudar alguma pergunta, a versão muda e a linha de base é rodada de novo.
+O gabarito foi escrito pela equipe; a revisão é da equipe e do orientador (sem contador, #387;
+planilha em `benchmark/revisao/`) e não bloqueia a medição. Se ela mudar alguma pergunta, a versão muda e a linha de base é rodada de novo.
 
 ## Benchmark de modelos e arquiteturas (#348)
 
@@ -219,4 +219,4 @@ este gabarito direto: mudar uma pergunta aqui não muda o benchmark.
   latência que o produtor sente na VPS é medida pelo [harness de API](harness-api/README.md), com
   URL e credenciais só por variável de ambiente.
 - **Nota humana de clareza:** o comando entrega o instrumento (CSV cego + rubrica); a nota é do
-  avaliador externo, na #275.
+  orientador, na #275 (sem contador, #387).

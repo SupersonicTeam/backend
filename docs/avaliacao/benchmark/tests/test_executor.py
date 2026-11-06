@@ -1,6 +1,7 @@
 """Partes puras do executor da matriz (issue #348): nada aqui chama Ollama, banco nem git."""
 
 import argparse
+import json
 import sys
 import tempfile
 import unittest
@@ -263,6 +264,24 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             self.assertEqual((sessao["confirmado"], sessao["inteira"]), (confirmado, inteira))
             self.assertEqual(bool(sessao["faltando"]), not extras <= presentes)
 
+    def test_banca_exige_revisado_por_da_equipe_ou_do_orientador(self):
+        """#387: sem contador; a trava le revisado.por, nao o antigo booleano."""
+        perguntas = [
+            {"id": "E1", "origem": "inedita_externa_ia", "aConferir": True, "revisado": False},
+            {"id": "E2", "origem": "inedita_externa_ia", "revisado": True},
+            {"id": "E3", "origem": "inedita_externa_ia", "revisado": {"por": " ", "em": "2026-11-10"}},
+            {"id": "E4", "origem": "inedita_externa_ia", "revisado": {"por": "Orientador", "em": "2026-11-10"}},
+            {"id": "E5", "origem": "inedita_externa_ia", "aConferir": True,
+             "revisado": {"por": "Luiz", "em": "2026-11-10"}},
+            {"id": "N1", "origem": "inedita_equipe_dados", "autor": "Luiz"},
+            {"id": "G1", "origem": "gabarito"},
+            {"id": "I1", "origem": "inedita_equipe"},
+        ]
+        self.assertEqual(ex.perguntas_sem_revisao(perguntas), ["E1", "E2", "E3", "E5", "N1"])
+        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
+        # Hoje nenhuma externa foi revisada: a banca fica travada ate a planilha voltar.
+        self.assertEqual(len(ex.perguntas_sem_revisao(conjunto["perguntas"])), 40)
+
     def test_retomada_refaz_a_celula_sem_nenhuma_prova_do_pensamento(self):
         medida = {"codigoSaida": 0, "pensamento": {"raciocinou": False}}
         sem_prova = {"codigoSaida": 0, "pensamento": {"semProva": True}}
@@ -317,7 +336,7 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         e = self._executor_com_stub()
         self.assertEqual(e.cfg.tipo, "banca")
         with tempfile.TemporaryDirectory() as d:
-            with self.assertRaisesRegex(RuntimeError, "revisao humana.*--ensaio"):
+            with self.assertRaisesRegex(RuntimeError, "revisao da equipe ou do orientador.*--ensaio"):
                 e.preparar_gabaritos(Path(d))
             self.assertFalse((Path(d) / "gabarito-canonico.json").exists())
         self.assertEqual(self._executor_com_stub(ensaio=True).cfg.tipo, "ensaio")
