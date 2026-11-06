@@ -260,13 +260,21 @@ public class NotaFiscalService {
   }
 
   /**
-   * Termo de 3+ caracteres casa o texto pesquisável; termo só de dígitos mais curto casa o número
+   * Termo de 3+ caracteres casa o texto pesquisável (número, destinatário, natureza, documento do
+   * destinatário e descrição e NCM dos itens, #271); termo de CPF/CNPJ (11 ou 14 dígitos, com ou
+   * sem máscara) casa o documento; termo só de dígitos mais curto casa o número
    * da nota por prefixo; texto mais curto é ignorado (o trigrama não ajuda abaixo de 3). Dígitos
    * com zero à esquerda não são prefixo de número de nota: ignorados como o texto curto, em vez de
    * zerar a lista.
    */
   private static Specification<NotaFiscal> busca(String termoBruto) {
     String termo = NormalizacaoBusca.normalizar(termoBruto);
+    // CPF/CNPJ (11 ou 14 digitos, com ou sem mascara: "12.345.678/0001-95") casa o documento do
+    // destinatario como palavra inteira, que o texto guarda so com digitos (#271).
+    String semMascara = termo.replaceAll("[.\\-/\\s]", "");
+    if (semMascara.matches("\\d{11}|\\d{14}")) {
+      return NotaFiscalEspecificacoes.comDocumento(semMascara);
+    }
     if (termo.length() >= BUSCA_MINIMA) {
       return NotaFiscalEspecificacoes.contendo(NormalizacaoBusca.escaparLike(termo));
     }
@@ -398,6 +406,10 @@ public class NotaFiscalService {
 
     // Recalcula IBS/CBS após substituição dos itens e recálculo dos totais de produtos.
     tributacaoService.calcular(nota);
+
+    // A busca leva a descricao e o NCM dos itens (#271). Trocar so os itens nao suja a nota, e
+    // sem isso o @PreUpdate nem dispararia: recalcula aqui, depois da troca.
+    nota.atualizarBuscaNormalizada();
 
     NotaFiscal saved = notaFiscalRepository.save(nota);
     log.info("NotaFiscal atualizada: id={} produtor={}", saved.getId(), produtor.getId());

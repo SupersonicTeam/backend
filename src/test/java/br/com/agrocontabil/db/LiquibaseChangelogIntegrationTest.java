@@ -166,7 +166,8 @@ class LiquibaseChangelogIntegrationTest {
         + " is_nullable FROM information_schema.columns"
         + " WHERE table_name = 'nota_fiscal' AND column_name = 'busca_normalizada'");
     assertThat(coluna).containsEntry("data_type", "character varying")
-        .containsEntry("character_maximum_length", 600).containsEntry("is_nullable", "YES");
+        // 600 no 0037; o 0056 alargou para 8000 (descricao e NCM dos itens, #271).
+        .containsEntry("character_maximum_length", 8000).containsEntry("is_nullable", "YES");
     assertThat(jdbc.queryForObject("SELECT indexdef FROM pg_indexes"
         + " WHERE indexname = 'idx_nota_fiscal_busca_trgm'", String.class))
         .contains("USING gin (produtor_id, busca_normalizada gin_trgm_ops)");
@@ -217,6 +218,71 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
         c -> c.get("is_nullable"))
         .containsExactly(tuple("versao_regra_fiscal", "integer", "YES"));
+  }
+
+  @Test
+  @DisplayName("changeSet 0056: busca_normalizada em 8000 e busca_versao nula, indice de trigrama mantido (#271)")
+  void changeSet0056BuscaComItensEDocumento() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'nota_fiscal'"
+            + " AND column_name IN ('busca_normalizada', 'busca_versao') ORDER BY column_name");
+
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("busca_normalizada", "character varying", "YES", 8000),
+            tuple("busca_versao", "integer", "YES", null));
+    // O ALTER de tamanho nao derruba nem recria o GIN de trigrama (0037).
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pg_indexes"
+        + " WHERE indexname = 'idx_nota_fiscal_busca_trgm'", Integer.class)).isEqualTo(1);
+    // As notas existentes ficam sem versao: o runner as recalcula em segundo plano.
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM nota_fiscal"
+        + " WHERE busca_versao IS NOT NULL", Integer.class)).isZero();
+  }
+
+  @Test
+  @DisplayName("#271: o backfill da busca roda no PostgreSQL (keyset por UUID, IN, UPDATE condicional)")
+  void backfillDaBuscaNoPostgres() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    String produtorId = UUID.randomUUID().toString();
+    String notaId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor Busca')",
+        produtorId);
+    jdbc.update("""
+        INSERT INTO nota_fiscal (
+            id, numero, serie, modelo, natureza_operacao, data_emissao, produtor_id,
+            destinatario_nome, destinatario_cpf_cnpj, valor_total_produtos, valor_total_nota,
+            status, tipo_documento, origem, busca_normalizada, busca_versao)
+        VALUES (?::uuid, 42, 1, '55', 'Venda', now(), ?::uuid, 'Cooperativa Agrícola',
+            '12345678000195', 10.00, 10.00, 'RASCUNHO', 'NFE', 'PROPRIA', '42 cooperativa', 1)
+        """, notaId, produtorId);
+    jdbc.update("""
+        INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, codigo_produto, descricao,
+            ncm, cfop, unidade, quantidade, valor_unitario, valor_total)
+        VALUES (gen_random_uuid(), ?::uuid, 1, 'P1', 'Soja em grãos', '12019000', '5101', 'KG',
+            1, 10, 10)
+        """, notaId);
+    try {
+      int recalculadas = new br.com.agrocontabil.config.BuscaNotasLegadoRunner(jdbc, false)
+          .preencherLegado();
+
+      assertThat(recalculadas).isGreaterThanOrEqualTo(1);
+      assertThat(jdbc.queryForObject(
+          "SELECT busca_normalizada || '|' || busca_versao FROM nota_fiscal WHERE id = ?::uuid",
+          String.class, notaId))
+          .isEqualTo("42 cooperativa agricola venda 12345678000195 soja em graos 12019000|2");
+      // Segunda rodada: nada a recalcular.
+      assertThat(new br.com.agrocontabil.config.BuscaNotasLegadoRunner(jdbc, false)
+          .preencherLegado()).isZero();
+    } finally {
+      jdbc.update("DELETE FROM nota_fiscal_item WHERE nota_fiscal_id = ?::uuid", notaId);
+      jdbc.update("DELETE FROM nota_fiscal WHERE id = ?::uuid", notaId);
+      jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+    }
   }
 
   @Test

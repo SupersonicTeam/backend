@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0056-nota-fiscal-busca-itens-documento.xml
+         Issue #271 - a busca de GET /api/notas acha a nota pelo produto
+         (descricao e NCM dos itens) e pelo CPF/CNPJ do destinatario.
+
+         - busca_normalizada passa de VARCHAR(600) a VARCHAR(8000): o texto
+           ganha a descricao e o NCM dos itens. O limite continua existindo
+           (NormalizacaoBusca.TAMANHO_MAXIMO): o cabecalho entra inteiro, os
+           itens entram um a um, o que nao couber fica de fora e a gravacao
+           avisa no log (nada e cortado no meio de uma palavra). ALTER de
+           tamanho de VARCHAR para maior nao reescreve a tabela nem o indice
+           GIN de trigrama (0037) no PostgreSQL.
+         - busca_versao: versao da regra do texto (NormalizacaoBusca.
+           VERSAO_REGRA, hoje 2). Nula nas notas existentes, que ficam com o
+           texto da regra 1 (#174) ate o BuscaNotasLegadoRunner recalcular,
+           em segundo plano e em lotes, as de versao menor. Sem backfill em
+           SQL: a regra de normalizacao e a do Java (mesmo motivo do 0037).
+
+         NAO editar changesets anteriores. No H2 (profile test) so as
+         colunas, em schema-nota-fiscal-test.sql.
+         ================================================================ -->
+
+    <changeSet id="0056-nota-fiscal-busca-8000" author="supersonic-team" dbms="postgresql">
+        <comment>Alarga busca_normalizada para 8000 (descricao e NCM dos itens, #271).</comment>
+        <sql>ALTER TABLE nota_fiscal ALTER COLUMN busca_normalizada TYPE VARCHAR(8000)</sql>
+        <rollback>
+            <sql>ALTER TABLE nota_fiscal ALTER COLUMN busca_normalizada TYPE VARCHAR(600) USING left(busca_normalizada, 600)</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0056-nota-fiscal-busca-versao" author="supersonic-team">
+        <comment>Versao da regra do texto pesquisavel da nota (#271).</comment>
+        <addColumn tableName="nota_fiscal">
+            <column name="busca_versao" type="INTEGER" remarks="Versao da regra de busca_normalizada (NormalizacaoBusca.VERSAO_REGRA); nulo = anterior ao 0056"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="nota_fiscal" columnName="busca_versao"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -1,8 +1,11 @@
 package br.com.agrocontabil.common;
 
 import java.text.Normalizer;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,8 +24,19 @@ public final class NormalizacaoBusca {
 
   private static final Pattern ESPACOS = Pattern.compile("\\s+");
 
-  /** Tamanho da coluna {@code nota_fiscal.busca_normalizada} (changeSet 0037). */
-  public static final int TAMANHO_MAXIMO = 600;
+  /**
+   * Tamanho da coluna {@code nota_fiscal.busca_normalizada}: 600 no changeSet 0037, 8000 desde o
+   * 0056 (descrição e NCM dos itens e documento do destinatário entram no texto, #271).
+   */
+  public static final int TAMANHO_MAXIMO = 8000;
+
+  /**
+   * Versão da regra do texto pesquisável da nota, gravada em {@code nota_fiscal.busca_versao}.
+   * Mudou o que entra no texto, suba o número: o {@code BuscaNotasLegadoRunner} recalcula, em
+   * segundo plano, toda nota de versão menor. 1 = número, destinatário e natureza (#174);
+   * 2 = mais documento do destinatário e descrição e NCM dos itens (#271).
+   */
+  public static final int VERSAO_REGRA = 2;
 
   private NormalizacaoBusca() {
   }
@@ -57,6 +71,57 @@ public final class NormalizacaoBusca {
     String junto = normalizar(Stream.of(partes).filter(Objects::nonNull).map(String::valueOf)
         .collect(Collectors.joining(" ")));
     return junto.length() > TAMANHO_MAXIMO ? junto.substring(0, TAMANHO_MAXIMO) : junto;
+  }
+
+  /** Item da nota como entra no texto pesquisável. */
+  public record ItemBusca(String descricao, String ncm) {}
+
+  /**
+   * Texto pesquisável da nota (#271) e quantos itens não couberam nele.
+   *
+   * @param texto           texto normalizado, até {@link #TAMANHO_MAXIMO} caracteres
+   * @param itensForaDaBusca itens distintos que não couberam (a busca não os acha)
+   */
+  public record TextoNota(String texto, int itensForaDaBusca) {}
+
+  /**
+   * Monta o texto pesquisável da nota: número, destinatário, natureza e documento do destinatário
+   * (só dígitos) e, depois, "descrição NCM" de cada item. Regra única da gravação ({@code
+   * NotaFiscal}) e do backfill ({@code BuscaNotasLegadoRunner}).
+   *
+   * <p><strong>Regra do limite:</strong> o cabeçalho entra primeiro e inteiro; os itens entram na
+   * ordem, um por vez e inteiros, e o que não couber em {@link #TAMANHO_MAXIMO} fica de fora e é
+   * contado em {@link TextoNota#itensForaDaBusca()} (quem grava avisa no log). Itens com o mesmo
+   * texto contam uma vez só. Nada é cortado no meio de uma palavra.
+   *
+   * @param numero               número da nota
+   * @param destinatarioNome     nome do destinatário
+   * @param naturezaOperacao     natureza da operação
+   * @param destinatarioDocumento CPF/CNPJ do destinatário, com ou sem máscara
+   * @param itens                itens da nota, na ordem
+   * @return o texto e a contagem dos itens que ficaram de fora
+   */
+  public static TextoNota montarTextoDaNota(Object numero, String destinatarioNome,
+      String naturezaOperacao, String destinatarioDocumento, List<ItemBusca> itens) {
+    String documento = destinatarioDocumento == null ? null
+        : destinatarioDocumento.replaceAll("\\D", "");
+    String cabecalho = juntar(numero, destinatarioNome, naturezaOperacao, documento);
+    StringBuilder texto = new StringBuilder(cabecalho);
+    Set<String> vistos = new LinkedHashSet<>();
+    int fora = 0;
+    for (ItemBusca item : itens) {
+      String parte = juntar(item.descricao(), item.ncm());
+      if (parte.isEmpty() || !vistos.add(parte)) {
+        continue;
+      }
+      int acrescimo = parte.length() + (texto.isEmpty() ? 0 : 1);
+      if (texto.length() + acrescimo <= TAMANHO_MAXIMO) {
+        texto.append(texto.isEmpty() ? "" : " ").append(parte);
+      } else {
+        fora++;
+      }
+    }
+    return new TextoNota(texto.toString(), fora);
   }
 
   /**

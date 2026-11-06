@@ -33,6 +33,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.Hibernate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Nota Fiscal eletrônica (NF-e) emitida por um {@link Produtor}.
@@ -65,6 +68,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NotaFiscal {
+
+  private static final Logger log = LoggerFactory.getLogger(NotaFiscal.class);
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -350,8 +355,15 @@ public class NotaFiscal {
    * Se os dados das notas forem cifrados (débito da #147), esta coluna entra na mesma decisão:
    * busca parcial e cifra determinística não convivem.
    */
-  @Column(name = "busca_normalizada", length = 600)
+  @Column(name = "busca_normalizada", length = NormalizacaoBusca.TAMANHO_MAXIMO)
   private String buscaNormalizada;
+
+  /**
+   * Versão da regra com que {@link #buscaNormalizada} foi calculada
+   * ({@link NormalizacaoBusca#VERSAO_REGRA}); nulo ou menor = o backfill ainda vai recalcular.
+   */
+  @Column(name = "busca_versao")
+  private Integer buscaVersao;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
@@ -372,9 +384,31 @@ public class NotaFiscal {
     atualizarBuscaNormalizada();
   }
 
-  /** Recalcula {@link #buscaNormalizada} a partir dos campos pesquisáveis (issue #174). */
-  void atualizarBuscaNormalizada() {
-    buscaNormalizada = NormalizacaoBusca.juntar(numero, destinatarioNome, naturezaOperacao);
+  /**
+   * Recalcula {@link #buscaNormalizada}: número, destinatário, natureza, documento do destinatário
+   * e descrição e NCM dos itens (issues #174 e #271).
+   *
+   * <p>Os itens são {@code LAZY}, e o {@code @PreUpdate} só dispara quando a própria nota está suja:
+   * quem troca os itens chama este método depois de trocá-los ({@code NotaFiscalService.update}),
+   * e o recálculo daí torna a nota suja. No {@code @PreUpdate} sem os itens carregados (uma
+   * mudança de status, por exemplo) o texto guardado é mantido: recalculá-lo sem os itens apagaria
+   * a parte deles, e carregá-los a cada atualização custaria uma consulta à toa.
+   */
+  public void atualizarBuscaNormalizada() {
+    if (!Hibernate.isInitialized(itens)) {
+      return;
+    }
+    List<NormalizacaoBusca.ItemBusca> paraBusca = itens.stream()
+        .map(i -> new NormalizacaoBusca.ItemBusca(i.getDescricao(), i.getNcm())).toList();
+    NormalizacaoBusca.TextoNota montado = NormalizacaoBusca.montarTextoDaNota(numero,
+        destinatarioNome, naturezaOperacao, destinatarioCpfCnpj, paraBusca);
+    if (montado.itensForaDaBusca() > 0) {
+      // Sem o texto da nota: so o que falta e quanto.
+      log.warn("Busca da nota {}: {} item(ns) nao couberam em {} caracteres e nao serao achados",
+          id, montado.itensForaDaBusca(), NormalizacaoBusca.TAMANHO_MAXIMO);
+    }
+    buscaNormalizada = montado.texto();
+    buscaVersao = NormalizacaoBusca.VERSAO_REGRA;
   }
 
   // -------------------------------------------------------------------------
