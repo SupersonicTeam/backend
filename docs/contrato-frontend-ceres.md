@@ -65,7 +65,7 @@ X-Usuario-Id: <uuid do produtor>
   "rota": "DADOS",
   "citacoes": [],
   "fontesDados": [
-    { "funcao": "proximosVencimentos", "parametros": { "dias": "30" } }
+    { "funcao": "proximosVencimentos", "parametros": { "dias": "30" }, "origem": "PRODUTOR" }
   ],
   "modoFallback": false,
   "atalhos": []
@@ -77,9 +77,22 @@ X-Usuario-Id: <uuid do produtor>
 | `resposta` | `string` | Texto **já validado**. Texto puro com quebras de linha (`\n`), **nunca HTML** |
 | `rota` | `"DADOS" \| "LEGISLACAO" \| "MISTO" \| "FORA_DE_ESCOPO"` | Camada que respondeu |
 | `citacoes` | `Citacao[]` | Trechos de lei citados, na ordem da resposta. Vazio fora de `LEGISLACAO`/`MISTO` |
-| `fontesDados` | `FonteDado[]` | Consultas aos dados do produtor usadas. **Vazio quando a resposta foi descartada**: sem selo "calculado a partir das suas notas" |
+| `fontesDados` | `FonteDado[]` | Consultas usadas. **Vazio quando a resposta foi descartada**: sem selo. Cada item traz `origem` (abaixo), que decide o selo |
 | `modoFallback` | `boolean` | `true` quando o modelo estava fora e a resposta foi montada **sem ele** (#146). Exiba um aviso ("assistente em modo limitado") |
 | `atalhos` | `("NOTAS" \| "APURACAO" \| "CREDITOS" \| "CALENDARIO")[]` | Telas onde o dado está, para perguntas de dados: no modo fallback e, desde a #266, quando a Ceres não identificou qual dado consultar (`modoFallback: false`). Mapeie cada valor para a rota do Angular e mostre como botões. Vazio nos outros casos |
+
+#### Origem do dado: `fontesDados[].origem` (#342)
+
+Cada `FonteDado` diz de onde veio o dado, para o frontend escolher o selo **sem depender do nome
+da função** (função nova do backend aparece com o selo certo, sem deploy do Angular):
+
+| `origem` | Significa | Selo sugerido |
+|---|---|---|
+| `PRODUTOR` | Calculado a partir dos dados do produtor (notas, guias, apuração, créditos, alertas) | "Calculado a partir das suas notas" |
+| `TABELA_OFICIAL` | Consultado em tabela pública oficial (hoje: `consultarTratamentoProduto`, classificação do IBS/CBS) | "Consultado na tabela oficial do IBS/CBS" |
+
+O backend não manda rótulo em português: quem traduz é o frontend. É mudança **aditiva**; o campo
+sempre vem preenchido. Valor desconhecido (enum novo no futuro) deve cair no selo de `PRODUTOR`.
 
 #### Resposta de dados por template (#266)
 
@@ -328,9 +341,11 @@ envelope.
    | `consultarTratamentoProduto` | Tabela oficial de classificação tributária (#283) | `produtoOuNcm` |
    | `resumoDoProdutor` | Resumo dos seus pontos de atenção (#266) | nenhum |
 
-   `consultarTratamentoProduto` **não** é dado do produtor: é a tabela oficial (IT 2025.002), igual
-   para todos. Para ela, o rótulo "Calculado a partir das suas notas" não serve; mostre "Consultado
-   na tabela oficial do IBS/CBS". A resposta vem com `citacoes` (o artigo da LC 214/2025 do
+   O selo vem de `origem` (#342), não do nome da função: `PRODUTOR` = "Calculado a partir das suas
+   notas"; `TABELA_OFICIAL` = "Consultado na tabela oficial do IBS/CBS". O rótulo da tabela acima
+   continua sendo só do nome da função. `consultarTratamentoProduto` **não** é dado do produtor: é
+   a tabela oficial (IT 2025.002), igual para todos, e chega com `origem: "TABELA_OFICIAL"`. A
+   resposta vem com `citacoes` (o artigo da LC 214/2025 do
    tratamento). Sugestão de atalho do chat: "O [produto] tem redução de IBS e CBS?".
 
    Os valores de `parametros` já vêm mascarados (CPF, CNPJ etc. viram `[CPF]`...). Podem ser
@@ -363,6 +378,7 @@ export interface CeresCitacao {
 export interface CeresFonteDado {
   funcao: string;                     // ver tabela da seção 6
   parametros: Record<string, string>;
+  origem: 'PRODUTOR' | 'TABELA_OFICIAL'; // #342: decide o selo; não usar o nome da função
 }
 
 export interface CeresResposta {

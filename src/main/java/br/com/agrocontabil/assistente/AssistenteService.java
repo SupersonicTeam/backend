@@ -495,7 +495,8 @@ public class AssistenteService implements DisposableBean {
     // Fontes so quando a parte de dados foi aceita: resposta descartada e texto fixo do backend.
     List<AssistenteChatResponse.FonteDado> fontes = resultado.exibirFontes()
         ? contexto.fontes().stream()
-            .map(f -> new AssistenteChatResponse.FonteDado(f.funcao(), f.parametros()))
+            .map(f -> new AssistenteChatResponse.FonteDado(
+                f.funcao(), f.parametros(), f.origem()))
             .toList()
         : List.of();
     List<AssistenteChatResponse.Citacao> citacoes = resultado.citacoes().stream()

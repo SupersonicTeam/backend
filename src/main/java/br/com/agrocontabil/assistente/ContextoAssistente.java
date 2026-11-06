@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -116,8 +117,8 @@ public final class ContextoAssistente {
    * @param vazio      {@code true} se a consulta não encontrou nada (sem nota, guia ou compra)
    */
   public void registrarFonte(String funcao, Map<String, String> parametros, boolean vazio) {
-    FonteDado fonte =
-        new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros)));
+    FonteDado fonte = new FonteDado(funcao,
+        Collections.unmodifiableMap(new LinkedHashMap<>(parametros)), OrigemFonte.PRODUTOR);
     fontes.add(fonte);
     if (vazio) {
       fontesVazias.add(fonte);
@@ -196,8 +197,8 @@ public final class ContextoAssistente {
    */
   public void registrarConsultaDeTabela(
       String funcao, Map<String, String> parametros, boolean vazio) {
-    FonteDado fonte =
-        new FonteDado(funcao, Collections.unmodifiableMap(new LinkedHashMap<>(parametros)));
+    FonteDado fonte = new FonteDado(funcao,
+        Collections.unmodifiableMap(new LinkedHashMap<>(parametros)), OrigemFonte.TABELA_OFICIAL);
     fontes.add(fonte);
     if (vazio) {
       fontesVazias.add(fonte);

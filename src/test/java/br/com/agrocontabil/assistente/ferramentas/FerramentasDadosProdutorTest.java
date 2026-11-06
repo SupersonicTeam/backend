@@ -90,6 +90,8 @@ class FerramentasDadosProdutorTest {
         .satisfies(u -> assertThat(u.quantidade()).isEqualTo("1.500"));
     assertThat(contexto.fontes()).containsExactly(new FonteDado("totalComprasPorInsumo", Map.of(
         "descricaoOuNcm", "fertilizante", "dataInicio", "2026-01-01", "dataFim", "2026-06-30")));
+    assertThat(contexto.fontes()).extracting(FonteDado::origem)
+        .containsExactly(br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte.PRODUTOR);
   }
 
   @Test
@@ -682,6 +684,10 @@ class FerramentasDadosProdutorTest {
     assertThat(contexto.nenhumDadoEncontrado()).isTrue();
     assertThat(contexto.fontes()).extracting(FonteDado::funcao)
         .containsExactly("consultarTratamentoProduto");
+    // #342: tabela publica, nao dado do produtor.
+    assertThat(contexto.fontes()).extracting(FonteDado::origem)
+        .containsExactly(br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte
+            .TABELA_OFICIAL);
     assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
       assertThat(t.texto()).contains("reducao de 60%").contains("Condicao: vendido in natura");
       assertThat(t.dispositivos()).containsExactly("LC 214/2025|art. 137");

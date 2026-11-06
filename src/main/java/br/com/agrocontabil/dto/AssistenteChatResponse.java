@@ -45,6 +45,23 @@ public record AssistenteChatResponse(
    *
    * @param funcao     nome da função (ex.: {@code totalComprasPorInsumo})
    * @param parametros parâmetros usados (ex.: {@code {"dataInicio": "2026-01-01"}})
+   * @param origem     de onde veio o dado (#342): quem escolhe o selo na tela é o frontend, com
+   *                   base neste valor, não no nome da função
    */
-  public record FonteDado(String funcao, Map<String, String> parametros) {}
+  public record FonteDado(
+      String funcao,
+      Map<String, String> parametros,
+      @Schema(description = "Origem do dado consultado", example = "PRODUTOR") OrigemFonte origem) {}
+
+  /**
+   * Origem do dado de uma {@link FonteDado} (#342). Sem rótulo em português: quem traduz é o
+   * frontend. Valor novo só se acrescenta (o frontend trata valor desconhecido como o mais
+   * conservador, {@link #PRODUTOR}).
+   */
+  public enum OrigemFonte {
+    /** Calculado a partir dos dados do produtor (notas, guias, apuração, créditos...). */
+    PRODUTOR,
+    /** Consultado em tabela pública oficial (ex.: classificação tributária do IBS/CBS). */
+    TABELA_OFICIAL
+  }
 }

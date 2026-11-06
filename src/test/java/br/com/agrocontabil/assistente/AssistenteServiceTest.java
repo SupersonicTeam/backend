@@ -109,6 +109,8 @@ class AssistenteServiceTest {
       ContextoAssistente contexto = inv.getArgument(1);
       recebido.set(contexto);
       contexto.registrarFonte("consultarApuracao", Map.of("mes", "2026-07"), false);
+      contexto.registrarConsultaDeTabela("consultarTratamentoProduto",
+          Map.of("produtoOuNcm", "soja"), false);
       return new ResultadoOrquestracao(Intencao.MISTO, "texto", DesfechoInteracao.RESPONDIDA,
           List.of(new CitacaoLegal("LC 214/2025", "art. 138", URL, "trecho")), true);
     });
@@ -118,8 +120,14 @@ class AssistenteServiceTest {
     assertThat(resposta.rota()).isEqualTo("MISTO");
     assertThat(resposta.citacoes()).singleElement()
         .satisfies(c -> assertThat(c.url()).isEqualTo(URL));
-    assertThat(resposta.fontesDados()).extracting(AssistenteChatResponse.FonteDado::funcao)
-        .containsExactly("consultarApuracao");
+    assertThat(resposta.fontesDados())
+        .extracting(AssistenteChatResponse.FonteDado::funcao,
+            AssistenteChatResponse.FonteDado::origem)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("consultarApuracao",
+                AssistenteChatResponse.OrigemFonte.PRODUTOR),
+            org.assertj.core.groups.Tuple.tuple("consultarTratamentoProduto",
+                AssistenteChatResponse.OrigemFonte.TABELA_OFICIAL));
     assertThat(recebido.get().produtorId()).isEqualTo(produtorId);
     assertThat(recebido.get().hoje()).isEqualTo(LocalDate.of(2026, 9, 28));
     // So o tamanho da pergunta vai a auditoria, nunca o texto.
