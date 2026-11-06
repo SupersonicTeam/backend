@@ -1,11 +1,10 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.math.BigDecimal;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,8 +36,6 @@ final class PercentualPorExtenso {
       Map.entry("seiscentos", 600), Map.entry("setecentos", 700), Map.entry("oitocentos", 800),
       Map.entry("novecentos", 900));
 
-  private static final Pattern MARCAS = Pattern.compile("\\p{M}+");
-
   private static final String PALAVRA = "(?:" + PALAVRAS.keySet().stream()
       .sorted(Comparator.comparingInt(String::length).reversed())
       .collect(Collectors.joining("|")) + ")";
@@ -58,8 +55,7 @@ final class PercentualPorExtenso {
     if (texto == null || texto.isBlank()) {
       return List.of();
     }
-    String simples = MARCAS.matcher(Normalizer.normalize(texto, Normalizer.Form.NFD))
-        .replaceAll("").toLowerCase(Locale.ROOT);
+    String simples = NormalizacaoBusca.normalizar(texto);
     List<BigDecimal> valores = new ArrayList<>();
     Matcher m = PERCENTUAL.matcher(simples);
     while (m.find()) {
