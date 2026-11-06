@@ -173,7 +173,7 @@ public class ClassificacaoTributariaService {
         .collect(Collectors.toSet());
 
     Optional<String> zero = ANEXOS_ZERO.stream().filter(enquadrados::contains).findFirst();
-    if (zero.isPresent() && leiteSemDestinoDecidido(ncm, zero.get())) {
+    if (zero.isPresent() && leiteSemDestinoDecidido(ncm, enquadrados)) {
       // Consumo direto (condicao do Anexo I, item 2) o dado nao decide: in natura por padrao.
       return tratamento(ncm, IN_NATURA, Origem.IN_NATURA, data, enquadramentos, classificacoes);
     }
@@ -263,14 +263,28 @@ public class ClassificacaoTributariaService {
 
   /**
    * Leite do Anexo I, item 2, cuja alíquota zero dependeria do consumo direto: a regra por NCM o
-   * trata in natura. Só quando o único anexo de alíquota zero é o I (no XV o leite não está).
+   * trata in natura. Só quando o NCM está no Anexo I e não no XV (o XV dá zero sem condição de
+   * destino; hoje nenhum leite está nele).
    *
    * @param ncm NCM do item
-   * @param anexoZero cClassTrib de alíquota zero que venceria
+   * @param enquadrados cClassTrib de anexo em que o NCM se enquadra na data
    * @return {@code true} se o leite sai in natura
    */
-  public static boolean leiteSemDestinoDecidido(String ncm, String anexoZero) {
-    return CESTA_BASICA.equals(anexoZero) && LEITE_ANEXO_I.contains(ncm);
+  public static boolean leiteSemDestinoDecidido(String ncm, Collection<String> enquadrados) {
+    return tratamentoDependeDoInformado(ncm) && enquadrados.contains(CESTA_BASICA)
+        && !enquadrados.contains(ANEXOS_ZERO.get(1));
+  }
+
+  /**
+   * NCM cujo tratamento a regra por NCM não decide sozinha: o {@code cClassTrib} informado no
+   * item (ou declarado no XML do fornecedor, na importação) é que diz se vale a alíquota zero.
+   * Hoje, o leite do Anexo I, item 2 (#284).
+   *
+   * @param ncm NCM do item; nulo devolve {@code false}
+   * @return {@code true} para os NCMs de {@link #LEITE_ANEXO_I}
+   */
+  public static boolean tratamentoDependeDoInformado(String ncm) {
+    return ncm != null && LEITE_ANEXO_I.contains(ncm);
   }
 
   private boolean inNatura(String ncm) {

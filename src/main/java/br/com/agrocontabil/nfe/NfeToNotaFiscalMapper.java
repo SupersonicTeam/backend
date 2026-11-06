@@ -16,6 +16,7 @@ import br.com.agrocontabil.nfe.model.Ide;
 import br.com.agrocontabil.nfe.model.InfNFe;
 import br.com.agrocontabil.nfe.model.NFe;
 import br.com.agrocontabil.nfe.model.Prod;
+import br.com.agrocontabil.service.ClassificacaoTributariaService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
@@ -131,7 +132,23 @@ public class NfeToNotaFiscalMapper {
         .quantidade(quantidade)
         .valorUnitario(valorUnitario)
         .valorTotal(valorTotal.setScale(2, java.math.RoundingMode.HALF_UP))
+        .cClassTrib(cClassTribDeclarado(det, prod.getNcm()))
         .build();
+  }
+
+  /**
+   * cClassTrib do XML do fornecedor, só para o NCM cujo tratamento a regra por NCM não decide
+   * (o leite do Anexo I, #284): sem ele o crédito sairia pelo padrão in natura (60%) numa compra
+   * que o fornecedor declarou com alíquota zero (200003), e o crédito ficaria acima do destacado.
+   * Nos outros NCMs o crédito segue a regra por NCM, como antes.
+   */
+  private static String cClassTribDeclarado(Det det, String ncm) {
+    if (!ClassificacaoTributariaService.tratamentoDependeDoInformado(ncm)
+        || det.getImposto() == null || det.getImposto().getIbsCbs() == null) {
+      return null;
+    }
+    String declarado = det.getImposto().getIbsCbs().getCClassTrib();
+    return declarado == null || declarado.isBlank() ? null : declarado.strip();
   }
 
   // =========================================================================

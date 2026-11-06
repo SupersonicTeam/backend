@@ -59,6 +59,20 @@ class TemplateTratamentoProdutoTest {
   }
 
   @Test
+  @DisplayName("leite junto com produto com condicao: as duas ressalvas, nenhuma some")
+  void leiteEOutroProdutoComCondicao() {
+    Produto leite = new Produto("04012090", "Leite", 1, "200036", new BigDecimal("60.00"), true,
+        null, "137", "leite cru", true,
+        new Alternativa("200003", new BigDecimal("100.00"), 1, "125", "leite para consumo direto"));
+
+    assertThat(TemplateTratamentoProduto.texto(
+            new TratamentoConsultado("x", List.of(leite, ARROZ), null)))
+        .endsWith("Tratamento pela tabela oficial de classificacao tributaria. "
+            + TemplateTratamentoProduto.RESSALVA + " "
+            + TemplateTratamentoProduto.RESSALVA_ALTERNATIVA);
+  }
+
+  @Test
   @DisplayName("anexo de aliquota zero: 100% (aliquota zero), anexo em romano")
   void aliquotaZero() {
     assertThat(TemplateTratamentoProduto.frase(ARROZ)).isEqualTo("Arroz polido (NCM 1006.30.21):"

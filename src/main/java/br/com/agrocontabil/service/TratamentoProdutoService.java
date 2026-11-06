@@ -223,16 +223,18 @@ public class TratamentoProdutoService {
     if (t.origem() != Origem.IN_NATURA) {
       return null;
     }
-    Optional<EnquadramentoAnexo> anexoI = t.enquadramentos().stream()
-        .filter(e -> ClassificacaoTributariaService.leiteSemDestinoDecidido(t.ncm(),
-            e.cClassTrib()))
-        .findFirst();
-    if (anexoI.isEmpty()) {
+    Set<String> enquadrados = new LinkedHashSet<>();
+    t.enquadramentos().forEach(e -> enquadrados.add(e.cClassTrib()));
+    if (!ClassificacaoTributariaService.leiteSemDestinoDecidido(t.ncm(), enquadrados)) {
       return null;
     }
+    Optional<EnquadramentoAnexo> anexoI = t.enquadramentos().stream()
+        .filter(e -> ClassificacaoTributariaService.CESTA_BASICA.equals(e.cClassTrib()))
+        .findFirst();
     return classificacaoService.classificacao(ClassificacaoTributariaService.CESTA_BASICA, data)
         .map(c -> new Alternativa(c.getCodigo(), c.getPercentualReducaoIbs(),
-            anexoI.get().anexo(), artigo(c.getDescricao()), CONDICAO_LEITE_CONSUMO_DIRETO))
+            anexoI.map(EnquadramentoAnexo::anexo).orElse(null), artigo(c.getDescricao()),
+            CONDICAO_LEITE_CONSUMO_DIRETO))
         .orElse(null);
   }
 

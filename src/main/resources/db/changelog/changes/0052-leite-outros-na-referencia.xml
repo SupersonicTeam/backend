@@ -17,14 +17,17 @@
          ("consumo direto pela populacao") o dado da nota nao decide, e o NCM
          nao separa o leite cru do de consumo direto.
 
-         Este changeSet so poe na referencia o 0401.20.90 ("outros", teor de
-         gordura entre 1% e 6%; nomenclatura oficial conferida), o codigo do
-         leite a granel vendido ao laticinio. Fora da referencia o @ValidNcm e
-         o FiscalRulesValidator recusavam a nota (#282), e a regra nova nao
-         alcancaria o caso que a motivou.
+         Este changeSet so poe na referencia os outros cinco NCMs do Anexo I,
+         item 2 (o 0401.20.10 ja estava, desde o 0007; todos conferidos na
+         nomenclatura oficial): 0401.10.10, 0401.10.90, 0401.20.90 (o leite a
+         granel vendido ao laticinio, caso que motivou a decisao), 0401.40.10 e
+         0401.50.10. Fora da referencia o @ValidNcm e o FiscalRulesValidator
+         recusavam a nota (#282), e a regra nova nao alcancaria esses casos.
 
          in_natura = false, como o 0401.20.10: quem decide o tratamento do leite
          e a regra de codigo, nao a marca (sem ela, o Anexo I venceria).
+         As descricoes seguem a nomenclatura ("UHT", "outros") sem afirmar o
+         destino, que o NCM nao decide.
 
          Fora da referencia nao havia nota propria com o codigo para recalcular.
          NAO editar changesets anteriores.
@@ -32,13 +35,33 @@
 
     <changeSet id="0052-leite-outros-na-referencia" author="supersonic-team">
         <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04011010"/>
+            <column name="descricao" value="Leite UHT, teor de gordura ate 1%"/>
+            <column name="in_natura" valueBoolean="false"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04011090"/>
+            <column name="descricao" value="Leite com teor de gordura ate 1%, outros"/>
+            <column name="in_natura" valueBoolean="false"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
             <column name="codigo" value="04012090"/>
             <column name="descricao" value="Leite com teor de gordura entre 1% e 6%, outros"/>
             <column name="in_natura" valueBoolean="false"/>
         </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04014010"/>
+            <column name="descricao" value="Leite com teor de gordura entre 6% e 10%"/>
+            <column name="in_natura" valueBoolean="false"/>
+        </insert>
+        <insert tableName="ncm_agropecuario">
+            <column name="codigo" value="04015010"/>
+            <column name="descricao" value="Leite com teor de gordura superior a 10%"/>
+            <column name="in_natura" valueBoolean="false"/>
+        </insert>
         <rollback>
             <delete tableName="ncm_agropecuario">
-                <where>codigo = '04012090'</where>
+                <where>codigo IN ('04011010', '04011090', '04012090', '04014010', '04015010')</where>
             </delete>
         </rollback>
     </changeSet>

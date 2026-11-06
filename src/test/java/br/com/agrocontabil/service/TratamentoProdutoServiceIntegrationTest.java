@@ -127,8 +127,9 @@ class TratamentoProdutoServiceIntegrationTest {
   void leiteDuasSituacoes() {
     List<TratamentoProduto> leite = service.consultar("leite", EM_2026).produtos();
 
+    // Os 6 NCMs do item 2 estao na referencia (0052); a consulta devolve os 3 primeiros.
     assertThat(leite).extracting(TratamentoProduto::ncm)
-        .containsExactly("04012010", "04012090");
+        .containsExactly("04011010", "04011090", "04012010");
     assertThat(leite).allSatisfy(l -> {
       assertThat(l.cClassTrib()).isEqualTo("200036");
       assertThat(l.percentualReducao()).isEqualByComparingTo("60");

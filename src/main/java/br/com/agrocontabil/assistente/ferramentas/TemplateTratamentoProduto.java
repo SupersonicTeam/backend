@@ -55,15 +55,22 @@ public final class TemplateTratamentoProduto {
     boolean comAlternativa = false;
     for (Produto p : consulta.produtos()) {
       frases.add(frase(p));
-      comCondicao |= p.condicao() != null;
+      // A condicao do produto com alternativa ja tem a ressalva propria (as duas situacoes).
+      comCondicao |= p.condicao() != null && p.alternativa() == null;
       comAlternativa |= p.alternativa() != null;
     }
     String fonte = consulta.versaoTabela() == null
         ? "Tratamento pela tabela oficial de classificacao tributaria."
         : "Tratamento pela tabela oficial de classificacao tributaria (" + consulta.versaoTabela()
             + ").";
-    frases.add(comAlternativa ? fonte + " " + RESSALVA_ALTERNATIVA
-        : comCondicao ? fonte + " " + RESSALVA : fonte);
+    StringBuilder fim = new StringBuilder(fonte);
+    if (comCondicao) {
+      fim.append(' ').append(RESSALVA);
+    }
+    if (comAlternativa) {
+      fim.append(' ').append(RESSALVA_ALTERNATIVA);
+    }
+    frases.add(fim.toString());
     return String.join("\n", frases);
   }
 

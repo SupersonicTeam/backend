@@ -134,7 +134,11 @@ regra do leite in natura têm o tratamento **aplicado** 200003 (zero) mas não o
 **informado**: emitidas, nada muda (o XML é o documento); a nota não emitida (a do Luiz aguardando
 aprovação) segue zero até ser editada, e uma edição depois de devolvida a recalcularia para 60%.
 Para a demonstração ficar coerente com o seed novo, informar o 200003 nesses itens (idempotente;
-só o leite pasteurizado do seed, nunca changeSet):
+só o leite pasteurizado do seed, nunca changeSet). **Rodar antes do deploy desta versão** (a coluna
+já existe): na subida, o `TributosLegadoRunner` recalcula pelo padrão novo (60%) todo item de leite
+não emitido com o aplicado 200003 e sem o informado — a nota do Luiz em aprovação voltaria a
+`RASCUNHO` com `APROVACAO_CADUCADA`. Se o deploy já rodou, o passo ainda informa o 200003, e basta o
+Luiz editar e reenviar a nota para ela voltar a zero:
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'

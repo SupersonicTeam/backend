@@ -207,13 +207,14 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("changeSet 0052: leite 0401.20.90 na referencia, sem a marca, no Anexo I (#284)")
+  @DisplayName("changeSet 0052: os 6 leites do Anexo I na referencia, sem a marca (#284)")
   void changeSet0052LeiteOutrosNaReferencia() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
     assertThat(jdbc.queryForList("SELECT codigo || ':' || in_natura FROM ncm_agropecuario"
-        + " WHERE codigo LIKE '040120%' ORDER BY codigo", String.class))
-        .containsExactly("04012010:false", "04012090:false");
+        + " WHERE codigo LIKE '0401%' ORDER BY codigo", String.class))
+        .containsExactly("04011010:false", "04011090:false", "04012010:false",
+            "04012090:false", "04014010:false", "04015010:false");
     // Segue no Anexo I, item 2: a regra de codigo do leite o deixa in natura por padrao.
     assertThat(jdbc.queryForList("SELECT DISTINCT i.c_class_trib"
         + " FROM classificacao_tributaria_anexo_ncm n"

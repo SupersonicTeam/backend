@@ -26,7 +26,9 @@ import br.com.agrocontabil.nfe.XmlGenerator;
 import br.com.agrocontabil.nfe.XsdValidator;
 import br.com.agrocontabil.repository.AliquotaCbsRepository;
 import br.com.agrocontabil.repository.AliquotaIbsUfRepository;
+import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.service.ReducaoNcmResolver.ReducaoAplicada;
+import br.com.agrocontabil.validation.NcmValidator;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -72,6 +74,7 @@ class LeiteInNaturaEmissaoIntegrationTest {
 
   @Autowired private ClassificacaoTributariaService classificacao;
   @Autowired private ReducaoNcmResolver resolver;
+  @Autowired private NcmReferenciaRepository ncmReferenciaRepository;
 
   private TributacaoService tributacao;
   private GeracaoNotaFiscalService geracao;
@@ -92,7 +95,8 @@ class LeiteInNaturaEmissaoIntegrationTest {
     tributacao = new TributacaoService(resolver,
         new AliquotaIbsCbsResolver(ibsRepo, cbsRepo, props));
     geracao = new GeracaoNotaFiscalService(
-        new FiscalRulesValidator(null, classificacao),
+        // Validador completo: tambem confere o NCM na referencia (o 0401.20.90 entrou na 0052).
+        new FiscalRulesValidator(new NcmValidator(ncmReferenciaRepository), classificacao),
         new NotaFiscalNfeMapper(new ChaveAcessoGenerator()), new XmlGenerator(),
         new NfeAssinador(new KeyStoreCertificadoProvider(new CertificadoDigitalProperties(
             "classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"))),
