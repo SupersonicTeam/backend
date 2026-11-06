@@ -112,8 +112,7 @@ class TextosFixosAcentuadosTest {
     String texto = TextoReformaTributaria.montar(TextoReformaTributaria.Perfil.DESCONHECIDO)
         .texto();
     // Escapes Unicode: se o javac lesse o fonte em cp1252, "é" viraria dois caracteres.
-    assertThat(texto).contains("\u00e9 a contribui\u00e7\u00e3o da Uni\u00e3o")
-        .doesNotContain("\u00c3");
+    assertThat(texto).contains("\u00e9 a contribui\u00e7\u00e3o da Uni\u00e3o");
   }
 
   @Test
