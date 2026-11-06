@@ -94,6 +94,20 @@ public final class SeparacaoTreinoTeste {
    * @return ids das perguntas encontradas no prompt
    */
   public static List<String> noPromptDoClassificador(Gabarito gabarito) {
+    String prompt = " " + normalizar(textoDoPrompt()) + " ";
+    return gabarito.perguntas().stream()
+        .filter(p -> prompt.contains(" " + normalizar(p.pergunta()) + " "))
+        .map(PerguntaGabarito::id)
+        .toList();
+  }
+
+  /**
+   * O texto que vai ao modelo como prompt: o do classificador e as descrições das funções de
+   * dados.
+   *
+   * @return o texto, sem normalizar
+   */
+  static String textoDoPrompt() {
     StringBuilder textos = new StringBuilder(PromptsCeres.CLASSIFICACAO);
     // As descricoes das funcoes tambem vao ao modelo como prompt, com exemplos de pergunta.
     for (Method metodo : FerramentasDadosProdutor.class.getDeclaredMethods()) {
@@ -108,11 +122,7 @@ public final class SeparacaoTreinoTeste {
         }
       }
     }
-    String prompt = " " + normalizar(textos.toString()) + " ";
-    return gabarito.perguntas().stream()
-        .filter(p -> prompt.contains(" " + normalizar(p.pergunta()) + " "))
-        .map(PerguntaGabarito::id)
-        .toList();
+    return textos.toString();
   }
 
   /** Sem acento, minúsculas, só letras e dígitos separados por um espaço. */

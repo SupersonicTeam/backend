@@ -252,21 +252,10 @@ class Config:
 
 
 
-#: Origens cuja resposta esperada a banca so aceita revisada (#358, #387).
-ORIGENS_COM_REVISAO = ("inedita_externa_ia", "inedita_equipe_dados")
-
-
-def revisada(p: dict) -> bool:
-    """Revisada pela equipe ou pelo orientador: ``revisado.por`` preenchido (o antigo
-    ``revisado: true`` nao diz quem revisou e nao conta)."""
-    r = p.get("revisado")
-    return isinstance(r, dict) and bool(str(r.get("por") or "").strip())
-
-
-def perguntas_sem_revisao(perguntas: list[dict]) -> list[str]:
-    """Ids que ainda impedem a rodada da banca: ``aConferir`` ou sem ``revisado.por``."""
-    return [p["id"] for p in perguntas
-            if p.get("origem") in ORIGENS_COM_REVISAO and (p.get("aConferir") or not revisada(p))]
+#: A regra unica de "revisada" (gabarito.py): a trava da banca e o relatorio leem a mesma.
+ORIGENS_COM_REVISAO = gab.ORIGENS_COM_REVISAO
+revisada = gab.revisada
+perguntas_sem_revisao = gab.perguntas_sem_revisao
 
 
 def juntar_ineditas(base: dict, pasta_cego: Path | None, tipo: str) -> tuple[dict, dict | None]:
@@ -284,14 +273,16 @@ def juntar_ineditas(base: dict, pasta_cego: Path | None, tipo: str) -> tuple[dic
     arquivo = (pasta_cego / compromisso["arquivo"]) if pasta_cego is not None else None
     if arquivo is None or not arquivo.exists():
         mensagem = (f"conjunto cego ausente ({arquivo or 'sem --cego'}): as {len(compromisso['ids'])} "
-                    "ineditas ficam no repositorio SupersonicTeam/ceres-benchmark-cego; clone-o ao lado "
-                    "do backend ou use --cego / CERES_BENCHMARK_CEGO")
+                    "ineditas ficam no repositorio SupersonicTeam/ceres-benchmark-cego; aponte para o "
+                    "checkout dele com --cego ou CERES_BENCHMARK_CEGO")
         if tipo == "banca":
             raise RuntimeError(mensagem)
         log(f"AVISO: {mensagem}. Esta rodada mede so as herdadas.")
         return base, {"presente": False, "confere": False, "arquivo": str(arquivo) if arquivo else None}
-    cego = json.loads(arquivo.read_text(encoding="utf-8"))
-    sha = sha256_arquivo(arquivo)
+    # Le uma vez: o hash e o conteudo sao dos mesmos bytes (BOM aceito, como no Bloco de Notas).
+    bruto = arquivo.read_bytes()
+    sha = hashlib.sha256(bruto).hexdigest()
+    cego = json.loads(bruto.decode("utf-8-sig"))
     ids = [p["id"] for p in cego["perguntas"]]
     problemas = []
     if sha != compromisso["sha256"]:
@@ -312,6 +303,11 @@ def juntar_ineditas(base: dict, pasta_cego: Path | None, tipo: str) -> tuple[dic
     junto["perguntas"] = list(base["perguntas"]) + list(cego["perguntas"])
     return junto, {"presente": True, "confere": not problemas, "arquivo": str(arquivo),
                    "versao": cego.get("versao"), "sha256": sha, "total": len(ids)}
+
+
+def texto_canonico(conjunto: dict) -> str:
+    """O texto do ``gabarito-canonico.json`` de uma rodada com as ineditas juntas."""
+    return json.dumps(conjunto, ensure_ascii=False, indent=2) + "\n"
 
 class Executor:
     """Roda a matriz; cada passo loga o que faz e falha cedo com a causa."""
@@ -809,7 +805,7 @@ class Executor:
         # As ineditas vem do repositorio cego (#387), conferidas contra o compromisso do backend.
         canonico, info_cego = juntar_ineditas(canonico, cfg.cego, cfg.tipo)
         if canonico.get("ineditas"):
-            canonico_txt = json.dumps(canonico, ensure_ascii=False, indent=2) + "\n"
+            canonico_txt = texto_canonico(canonico)
         (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         if cfg.tipo == "banca":
             # Revisao humana bloqueante (#358, #387): dispositivos, classe e afirmacoes proibidas
@@ -822,8 +818,11 @@ class Executor:
                     f"ou sem revisado.por: {', '.join(sem_revisao[:5])}{'...' if len(sem_revisao) > 5 else ''})"
                     ": a rodada da banca espera a planilha de revisao do repositorio cego; para conferir "
                     "antes, use --ensaio")
+        # sha256 = o arquivo do backend; sha256Junto = o gabarito-canonico.json da rodada (herdadas
+        # mais ineditas), que e o que a Ceres 2.0 le (o sha256Lido do celula.json).
         self.perguntas_info = {"arquivo": cfg.matriz.get("perguntas") or GABARITO_REPO,
                                "versao": canonico.get("versao"), "sha256": sha,
+                               "sha256Junto": hashlib.sha256(canonico_txt.encode("utf-8")).hexdigest(),
                                "total": len(canonico["perguntas"]), "cego": info_cego}
 
         adaptacoes_por_arq = {}
@@ -844,8 +843,9 @@ class Executor:
                                      encoding="utf-8")
             arquitetura["adaptacao"] = arquivo_adapt.name
             if not adaptacoes:
-                # Le a copia congelada da rodada (os mesmos bytes do conjunto): um checkout no meio
-                # de uma rodada de horas nao troca as perguntas das celulas seguintes.
+                # Le a copia congelada da rodada (o conjunto do backend, com as ineditas juntas: o
+                # sha256Junto de perguntas_info): um checkout no meio de uma rodada de horas nao troca
+                # as perguntas das celulas seguintes.
                 arquitetura["gabarito"] = rodada_dir / "gabarito-canonico.json"
             else:
                 arquivo_gab = preparo / f"gabarito-{arquitetura['nome']}.json"
@@ -1127,11 +1127,11 @@ def montar_config(argumentos, repo: Path) -> Config:
     )
 
 
-def caminho_cego(argumento: str | None, repo: Path) -> Path:
-    """O checkout do repositorio cego: ``--cego``, ``CERES_BENCHMARK_CEGO`` ou a pasta irma
-    ``../ceres-benchmark-cego`` do backend (pode nao existir: ``juntar_ineditas`` decide)."""
+def caminho_cego(argumento: str | None, repo: Path) -> Path | None:
+    """O checkout do repositorio cego: so ``--cego`` ou ``CERES_BENCHMARK_CEGO``, nunca achado
+    sozinho (#387): uma sessao de codigo com o cego ao lado nao o le por acaso."""
     escolhido = argumento or os.environ.get("CERES_BENCHMARK_CEGO")
-    return Path(escolhido).expanduser().resolve() if escolhido else (repo.parent / "ceres-benchmark-cego")
+    return Path(escolhido).expanduser().resolve() if escolhido else None
 
 
 if __name__ == "__main__":  # pragma: no cover

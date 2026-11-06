@@ -118,7 +118,10 @@ privado [`SupersonicTeam/ceres-benchmark-cego`](https://github.com/SupersonicTea
 (`ineditas.json`, com o texto, os valores e dispositivos esperados, a classe, as afirmações
 proibidas e as observações). Juntas: **140 perguntas em 16 temas**. O hash do arquivo do backend
 fica em `perguntas-benchmark.json.sha256`; o das inéditas, no campo `ineditas` (`arquivo`,
-`versao`, `sha256` e `ids`). Mudou uma herdada: versão e hash aqui. Mudou uma inédita: versão e
+`versao` — a do repositório cego, independente da deste arquivo —, `sha256`, `ids` e
+`normalizadas`, o sha256 e o número de palavras de cada pergunta normalizada, gerado no cego por
+`python3 planilha.py compromisso`). Com os hashes, o `SeparacaoTreinoTesteTest` confere aqui,
+sempre e sem o texto, que nenhuma inédita foi copiada para o treino nem para o prompt. Mudou uma herdada: versão e hash aqui. Mudou uma inédita: versão e
 hash no repositório cego e, depois, o compromisso novo aqui.
 
 > **Sessões de código (e os reviews e subagentes delas) não leem `perguntas-benchmark.json`, a
@@ -136,19 +139,23 @@ merge dela. O histórico não foi reescrito. A cegueira protegida é a **do dese
 mudança da Ceres feita por quem leu as inéditas, exceto a E03, marcada.
 
 **Como o executor usa as inéditas:** o checkout do repositório cego vem de `--cego`,
-`CERES_BENCHMARK_CEGO` ou da pasta irmã `../ceres-benchmark-cego`. O executor confere o sha256, a
+`CERES_BENCHMARK_CEGO`, nunca da pasta irmã sozinha (para uma sessão de código não o ler por
+acaso). O executor confere o sha256, a
 versão e os ids contra o compromisso e junta as inéditas às herdadas (`gabarito-canonico.json` da
 rodada tem as 140). **A rodada da banca recusa** sem o repositório cego ou com ele diferente do
 compromisso; ensaio e teste sem ele rodam **só com as herdadas** (o relatório diz "ausentes"), e
 com ele diferente, com aviso. **A pasta de uma rodada com as inéditas tem o texto delas**
 (`gabarito-canonico.json`, `celula.json`, o relatório e o CSV cego): até a rodada da banca, ela
-não entra no backend (guarde-a no repositório cego).
+não entra no backend (guarde-a no repositório cego; `docs/avaliacao/resultados/.gitignore` ignora
+`benchmark/*`).
 
 **Testes:** os do backend que dependem do texto das inéditas (as externas literais, os valores
-das N01–N13 sobre o seed, a estrutura de 140 perguntas e o treino × inéditas) **pulam** com
-"conjunto cego ausente" quando o repositório cego não está ao lado; a CI do repositório cego roda
-esses testes com ele (`CERES_BENCHMARK_CEGO`, e `CERES_BENCHMARK_CEGO_EXIGIR=1` faz a ausência
-falhar). A guarda treino × gabarito e a conferência das herdadas continuam aqui, sempre. O exemplo
+das inéditas de dados sobre o seed, a estrutura de 140 perguntas e o treino × inéditas) **pulam** com
+"conjunto cego ausente" sem `CERES_BENCHMARK_CEGO`, e também quando o cego não confere com o
+compromisso (o cego anda à frente até o PR do compromisso novo aqui); os valores das inéditas de
+dados vêm do `valorConferido`/`valorIgualA` do cego, não do código do teste. A CI do repositório
+cego roda esses testes com ele (`CERES_BENCHMARK_CEGO`, e `CERES_BENCHMARK_CEGO_EXIGIR=1` faz a
+ausência e a divergência falharem). A guarda treino × gabarito e a conferência das herdadas continuam aqui, sempre. O exemplo
 fictício usa inéditas de mentira (`tests/fixtures/cego-ficticio/`).
 
 **O gabarito andou, o conjunto anda junto:** o `baseadoEm` tem de ser a versão atual do gabarito e

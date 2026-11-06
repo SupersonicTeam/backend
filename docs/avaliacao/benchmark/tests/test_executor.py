@@ -1,6 +1,7 @@
 """Partes puras do executor da matriz (issue #348): nada aqui chama Ollama, banco nem git."""
 
 import argparse
+import os
 import sys
 import tempfile
 import unittest
@@ -11,12 +12,16 @@ sys.path.insert(0, str(AQUI.parent))
 
 from ceres_benchmark import executor as ex  # noqa: E402
 
+# O executor le CERES_BENCHMARK_CEGO; com ele no ambiente de quem roda os testes, os casos "sem o
+# cego" deixariam de ser sem o cego.
+os.environ.pop("CERES_BENCHMARK_CEGO", None)
+
 
 def config(**extra):
     args = argparse.Namespace(matriz=str(AQUI.parent / "matriz.json"), arquiteturas=None, modelos=None,
                               ref_ceres2=None, saida="saida", trabalho="trabalho", repeticoes=None,
                               hardware="maquina X", retomar=None, teste=False, embedding_cpu=False,
-                              ensaio=False, cego=str(AQUI / "fixtures" / "sem-cego"))
+                              ensaio=False, cego=None)
     for k, v in extra.items():
         setattr(args, k, v)
     return ex.montar_config(args, AQUI.parents[3])
@@ -235,8 +240,14 @@ class ConjuntoRealTest(unittest.TestCase):
         self.assertEqual((compromisso["repositorio"], compromisso["arquivo"]),
                          ("SupersonicTeam/ceres-benchmark-cego", "ineditas.json"))
         self.assertRegex(compromisso["sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(compromisso["versao"], conjunto["versao"])
+        # A versao do cego e independente da deste conjunto.
+        self.assertRegex(compromisso["versao"], r"^\d{4}-\d{2}-\d{2}\.\d+$")
         self.assertGreaterEqual(len(compromisso["ids"]), 53)
+        # Um hash por pergunta normalizada (a guarda do treino sem o texto), nunca o texto.
+        self.assertEqual(len(compromisso["normalizadas"]), len(compromisso["ids"]))
+        for n in compromisso["normalizadas"]:
+            self.assertEqual(set(n), {"palavras", "sha256"})
+            self.assertRegex(n["sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(len(set(compromisso["ids"])), len(compromisso["ids"]))
         self.assertFalse(set(compromisso["ids"]) & {p["id"] for p in conjunto["perguntas"]})
 
@@ -292,6 +303,10 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             {"id": "I1", "origem": "inedita_equipe"},
         ]
         self.assertEqual(ex.perguntas_sem_revisao(perguntas), ["E1", "E2", "E3", "E5", "N1"])
+        # Quem escreveu nao revisa a propria, por nenhuma grafia do nome (a regra da planilha).
+        for por in ("Luiz", "luiz gervazio", "LUÍZ F."):
+            self.assertFalse(ex.revisada({"autor": "Luiz", "revisado": {"por": por, "em": "2026-11-10"}}), por)
+        self.assertTrue(ex.revisada({"autor": "Luiz", "revisado": {"por": "Herick", "em": "2026-11-10"}}))
 
     def test_juntar_ineditas_confere_o_compromisso(self):
         import hashlib
@@ -327,10 +342,36 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         # Conjunto sem compromisso (o antigo, com tudo dentro): passa como esta.
         self.assertEqual(ex.juntar_ineditas({"perguntas": []}, None, "banca"), ({"perguntas": []}, None))
 
+    def test_retomada_confere_o_conjunto_cego(self):
+        import hashlib
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            pasta = Path(d)
+            compromisso = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))["ineditas"]
+            (pasta / compromisso["arquivo"]).write_text("{}", encoding="utf-8")
+            cego_sha = hashlib.sha256(b"{}").hexdigest()
+            atual = ex.sha256_arquivo(AQUI.parent / "perguntas-benchmark.json")
+            e = ex.Executor(config(cego=str(pasta)))
+            # A mesma: segue. Outra, ausente no inicio ou sumida agora: recusa.
+            e.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}}, "embedding": "bge-m3"})
+            for antes in ({"sha256": "0" * 64}, None):
+                with self.assertRaisesRegex(RuntimeError, "conjunto cego mudou"):
+                    e.conferir_retomada({"perguntas": {"sha256": atual, "cego": antes}, "embedding": "bge-m3"})
+            sem = ex.Executor(config())
+            with self.assertRaisesRegex(RuntimeError, "conjunto cego mudou"):
+                sem.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}},
+                                       "embedding": "bge-m3"})
+
     def test_caminho_do_cego(self):
         import os
         repo = Path("/x/backend")
-        self.assertEqual(ex.caminho_cego(None, repo), Path("/x/ceres-benchmark-cego"))
+        # Nunca achado sozinho (#387): a pasta irma nao conta, so --cego ou a variavel.
+        antigo = os.environ.pop("CERES_BENCHMARK_CEGO", None)
+        try:
+            self.assertIsNone(ex.caminho_cego(None, repo))
+        finally:
+            if antigo is not None:
+                os.environ["CERES_BENCHMARK_CEGO"] = antigo
         self.assertEqual(ex.caminho_cego("/y/cego", repo), Path("/y/cego"))
         antigo = os.environ.get("CERES_BENCHMARK_CEGO")
         os.environ["CERES_BENCHMARK_CEGO"] = "/z/cego"

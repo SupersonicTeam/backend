@@ -109,9 +109,12 @@ local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` nã
 Desde a #387, **as inéditas (13 da equipe, 40 externas geradas por IA e as de dados do Luiz e do
 Herick) ficam só no repositório privado `SupersonicTeam/ceres-benchmark-cego`**; o
 `perguntas-benchmark.json` guarda as 87 herdadas do gabarito e o **compromisso** (`ineditas`:
-arquivo, versão, sha256 e ids). O executor junta as duas pelo `--cego`/`CERES_BENCHMARK_CEGO`/pasta
-irmã e a rodada da banca recusa sem o cego ou com o hash diferente; os testes que dependem do texto
-pulam com "conjunto cego ausente" e rodam na CI do cego. A revisão das respostas esperadas é da
+arquivo, versão própria do cego, sha256, ids e o sha256 de cada pergunta normalizada, com que o
+`SeparacaoTreinoTesteTest` confere treino e prompt sem o texto). O executor junta as duas só pelo
+`--cego`/`CERES_BENCHMARK_CEGO` (nunca a pasta irmã sozinha) e a rodada da banca recusa sem o cego
+ou com o hash diferente; os testes que dependem do texto pulam com "conjunto cego ausente" (ou com
+o cego diferente do compromisso) e rodam na CI do cego. A pasta de uma rodada com as inéditas não
+entra no backend (`docs/avaliacao/resultados/.gitignore`). A revisão das respostas esperadas é da
 **equipe e do orientador, sem contador** (planilha no repositório cego; a banca exige
 `revisado.por`), e a nota de clareza é do orientador. A E03 está `contaminada`. Coluna Ceres 2.0
 oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`), a 8b (`d8b0b36`) e a 8c (`da90c20` e

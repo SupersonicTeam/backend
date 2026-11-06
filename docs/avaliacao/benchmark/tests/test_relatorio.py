@@ -471,6 +471,24 @@ class ExternasNoRelatorioTest(Base):
         rel.gerar(self.pasta)
         self.assertEqual((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"), chave)
 
+    def _revisar(self, **campos):
+        caminho = self.pasta / "gabarito-canonico.json"
+        canonico = json.loads(caminho.read_text(encoding="utf-8"))
+        next(p for p in canonico["perguntas"] if p["id"] == "L01").update(campos)
+        caminho.write_text(json.dumps(canonico), encoding="utf-8")
+
+    def test_declaracao_so_com_revisado_por_e_sem_a_conferir(self):
+        self._marcar()
+        # revisado.por preenchido, mas ainda aConferir: a declaracao nao sai.
+        self._revisar(revisado={"por": "Orientador", "em": "2026-11-06"})
+        texto = rel.gerar(self.pasta)
+        self.assertIn("Revisão da equipe e do orientador pendente em 1 perguntas", texto)
+        self.assertNotIn(rel.DECLARACAO, texto)
+        self._revisar(aConferir=False)
+        texto = rel.gerar(self.pasta)
+        self.assertIn(rel.DECLARACAO, texto)
+        self.assertNotIn("pendente em", texto)
+
     def test_celula_medida_depois_vai_num_lote_novo_do_csv_cego(self):
         self._marcar()
         import shutil

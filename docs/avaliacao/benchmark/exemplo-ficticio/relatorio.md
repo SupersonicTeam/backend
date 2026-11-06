@@ -13,8 +13,8 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `b90281c764795ea49f089465098a3ecd001ab66d` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.13 (93 perguntas, sha256 `4d7c50611db5…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Ceres 2.0 | `6dcc8a666b263e724fb84c5610d348d495d66c72` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Conjunto de perguntas | 2026-11-05.13 (93 perguntas, sha256 `7caacef430fc…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Inéditas (repositório cego) | 6 perguntas, versão ficticio.1, sha256 `d5fa2462e0bb…` — **não confere com o compromisso do backend** (só ensaio) |
 | Capacidade comum | 75 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
@@ -380,7 +380,7 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
 Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` e nos lotes seguintes (`externas-avaliacao-cego-2.csv`, …, quando houver: mande todos; contextualização, orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). **A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão é a humana.
 
-**Revisão da equipe e do orientador pendente em 3 perguntas** (sem validação de contador, #387): até ela, as respostas esperadas são provisórias, conferidas só no texto da lei (normas.leg.br e base da VPS). A nota de clareza do CSV cego é do orientador.
+**Revisão da equipe e do orientador pendente em 4 perguntas** (sem validação de contador, #387): até ela, as respostas esperadas são provisórias, conferidas só no texto da lei (normas.leg.br e base da VPS). A nota de clareza do CSV cego é do orientador.
 
 - Fundamentação **a conferir** em 3 perguntas: os `dispositivosEsperados` vêm do texto da lei (`fonteConferencia`), com a existência na base conferida (`conferir-dispositivos-externas.sql`, no repositório cego), e esperam a revisão da equipe ou do orientador (planilha do repositório cego). Leia a fundamentação delas como provisória.
 - Pendentes (eram do contador, #284; sem contador, a equipe decide com o orientador; fora da métrica de classe): ZE03 (#284, pergunta fictícia).

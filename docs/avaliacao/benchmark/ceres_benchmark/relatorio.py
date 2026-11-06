@@ -1157,8 +1157,10 @@ def _secao_externas(celulas, ids, canonico) -> str:
     perguntas = [canonico[i] for i in ids]
     a_conferir = [p["id"] for p in perguntas if p.get("aConferir")]
     pendentes = [f"{p['id']} ({p['pendenteContador']})" for p in perguntas if p.get("pendenteContador")]
-    nao_revisadas = [p["id"] for p in perguntas
-                     if not (isinstance(p.get("revisado"), dict) and str(p["revisado"].get("por") or "").strip())]
+    nao_revisadas = [p["id"] for p in perguntas if not gab.revisada(p)]
+    # A declaracao so sai com toda inedita que a banca exige revisada (externas e de dados), pela
+    # mesma regra da trava (gabarito.perguntas_sem_revisao: aConferir ou sem revisado.por).
+    pendentes_revisao = gab.perguntas_sem_revisao(list(canonico.values()))
     linhas = ["## Perguntas geradas por IA: critérios automáticos (#358)\n",
               AVISO_IA + "\n",
               "Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; "
@@ -1168,8 +1170,8 @@ def _secao_externas(celulas, ids, canonico) -> str:
               "orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). "
               "**A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão "
               "é a humana.\n",
-              (f"**{DECLARACAO}** A nota de clareza do CSV cego é do orientador.\n" if not nao_revisadas else
-               f"**Revisão da equipe e do orientador pendente em {len(nao_revisadas)} perguntas** (sem "
+              (f"**{DECLARACAO}** A nota de clareza do CSV cego é do orientador.\n" if not pendentes_revisao else
+               f"**Revisão da equipe e do orientador pendente em {len(pendentes_revisao)} perguntas** (sem "
                "validação de contador, #387): até ela, as respostas esperadas são provisórias, conferidas "
                "só no texto da lei (normas.leg.br e base da VPS). A nota de clareza do CSV cego é do "
                "orientador.\n")]

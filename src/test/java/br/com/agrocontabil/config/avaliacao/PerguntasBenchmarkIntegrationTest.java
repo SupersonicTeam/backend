@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.HashSet;
@@ -107,8 +108,9 @@ class PerguntasBenchmarkIntegrationTest {
     assertThat(compromisso.path("repositorio").asText()).isEqualTo("SupersonicTeam/ceres-benchmark-cego");
     assertThat(compromisso.path("arquivo").asText()).isEqualTo("ineditas.json");
     assertThat(compromisso.path("sha256").asText()).matches("[0-9a-f]{64}");
-    assertThat(compromisso.path("versao").asText()).isEqualTo(raiz.path("versao").asText());
-    List<String> prometidos = new java.util.ArrayList<>();
+    // A versao do cego e independente da do backend: so tem de existir.
+    assertThat(compromisso.path("versao").asText()).matches("\\d{4}-\\d{2}-\\d{2}\\.\\d+");
+    List<String> prometidos = new ArrayList<>();
     compromisso.path("ids").forEach(i -> prometidos.add(i.asText()));
     assertThat(prometidos).hasSizeGreaterThanOrEqualTo(53).doesNotHaveDuplicates()
         .doesNotContainAnyElementsOf(ids);
@@ -189,7 +191,7 @@ class PerguntasBenchmarkIntegrationTest {
     List<String> literais = Files.readAllLines(
         ConjuntoBenchmark.pastaCego().orElseThrow().resolve("perguntas-externas-murillo.txt"),
         StandardCharsets.UTF_8).stream().filter(l -> !l.startsWith("#")).toList();
-    List<JsonNode> externas = new java.util.ArrayList<>();
+    List<JsonNode> externas = new ArrayList<>();
     ineditas.path("perguntas").forEach(p -> {
       if ("inedita_externa_ia".equals(p.path("origem").asText())) {
         externas.add(p);
@@ -245,24 +247,28 @@ class PerguntasBenchmarkIntegrationTest {
     Map<String, List<String>> esperados =
         new ValoresEsperados(ferramentas).calcular(perguntas, produtores.avaliado(), HOJE);
 
-    // Conferidos à mão contra o seed (SeedAvaliacao v4).
-    // N01: o herbicida glifosato de abril.
-    assertThat(esperados.get("N01")).containsExactly("R$ 8.250,00");
-    // N02 e N10: os três fertilizantes de 2026 (NPK de janeiro e agosto, foliar de março).
-    assertThat(esperados.get("N02")).containsExactly("3");
-    assertThat(esperados.get("N10")).containsExactly("R$ 25.130,00");
-    // N03: NCM 3105 = os mesmos três (31052000 e 31059090).
-    assertThat(esperados.get("N03")).containsExactly("R$ 25.130,00");
-    // N04: só o milho autorizado de junho (o rejeitado e o devolvido não somam).
-    assertThat(esperados.get("N04")).containsExactly("R$ 108.900,00");
-    // N05: a venda de junho; N06: soja de março + milho de junho.
-    assertThat(esperados.get("N05")).containsExactly("R$ 108.900,00");
-    assertThat(esperados.get("N06")).containsExactly("R$ 252.900,00");
-    // N11: a venda autorizada de agosto, a mesma da D10.
-    assertThat(esperados.get("N11")).isEqualTo(esperados.get("D10"));
-    // N08 é a T07 dita do jeito do produtor: o mesmo valor.
-    assertThat(esperados.get("N08")).isEqualTo(esperados.get("T07"));
-    assertThat(esperados).containsKeys("N07", "N09");
+    // Os valores conferidos à mão contra o seed ficam no repositório cego (valorConferido e
+    // valorIgualA de cada inédita): o backend não guarda nem o valor nem o que a pergunta pede.
+    int conferidas = 0;
+    for (JsonNode p : ConjuntoBenchmark.ineditasOuPula(objectMapper).path("perguntas")) {
+      String id = p.path("id").asText();
+      if (p.path("camposValor").isArray() && !p.path("camposValor").isEmpty()) {
+        assertThat(esperados).as("valor esperado de " + id).containsKey(id);
+      }
+      if (p.has("valorConferido")) {
+        List<String> conferido = new ArrayList<>();
+        p.path("valorConferido").forEach(v -> conferido.add(v.asText()));
+        assertThat(esperados.get(id)).as(id).containsExactlyElementsOf(conferido);
+        conferidas++;
+      }
+      if (p.has("valorIgualA")) {
+        String outra = p.path("valorIgualA").asText();
+        assertThat(esperados.get(outra)).as(id + " = " + outra).isNotNull();
+        assertThat(esperados.get(id)).as(id + " = " + outra).isEqualTo(esperados.get(outra));
+        conferidas++;
+      }
+    }
+    assertThat(conferidas).as("inéditas de dados com valor conferido").isPositive();
     // Nenhum valor esperado do avaliado pode ser um valor do vizinho.
     assertThat(esperados.values().stream().flatMap(List::stream))
         .doesNotContain("R$ 987.654,32", "R$ 1.234.567,89", "R$ 55.555,55");

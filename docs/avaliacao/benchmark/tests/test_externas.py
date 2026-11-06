@@ -173,7 +173,9 @@ class AchadosReviewDelta361Test(unittest.TestCase):
 
 
 
-E33_PROIBIDA = r"\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\b"
+#: Regras de mentira com a mesma forma das afirmacoes proibidas (#387): as de verdade, de cada
+#: inedita, ficam no repositorio cego (tests/test_heuristica.py de la), com este mesmo corpus.
+PROIBIDA_PODE = r"\b(poder[aá]|pode) plantar (agora |hoje )?(o|os|esse|esses) milhos?\b"
 
 #: Corpus de regressao da heuristica: toda frase que um review (#361, #368) usou para mostrar um
 #: erro entra aqui com o resultado certo. Mudou a regra, o corpus inteiro tem de continuar valendo.
@@ -238,24 +240,24 @@ CORPUS_CLASSE = [
     ("Você não precisa procurar o contador: a regra é a mesma.", "FORA_DO_ESCOPO_SISTEMA", False),
 ]
 CORPUS_PROIBIDA = [
-    ("Você pode aproveitar o crédito.", True),
-    ("Você não pode aproveitar o crédito.", False),
-    ("Mesmo que o insumo não seja tributado, você pode aproveitar o crédito do IBS e da CBS.", True),
-    ("Não há impedimento, pode aproveitar os créditos.", True),
-    ("Não tem problema, pode aproveitar o crédito.", True),
-    ("Não, nesse caso, pode aproveitar o crédito.", True),
-    ("Não importa e pode aproveitar o crédito.", True),
-    ("Entendo que não pode aproveitar o crédito.", False),
-    ("Lembre que não pode aproveitar o crédito.", False),
+    ("Você pode plantar o milho.", True),
+    ("Você não pode plantar o milho.", False),
+    ("Mesmo que a chuva não venha, você pode plantar o milho do talhão norte.", True),
+    ("Não há impedimento, pode plantar os milhos.", True),
+    ("Não tem problema, pode plantar o milho.", True),
+    ("Não, nesse caso, pode plantar o milho.", True),
+    ("Não importa e pode plantar o milho.", True),
+    ("Entendo que não pode plantar o milho.", False),
+    ("Lembre que não pode plantar o milho.", False),
 ]
-CORPUS_PROIBIDA_E36 = [
-    ("A indústria que compra de produtor não contribuinte não poderá aproveitar nenhum crédito.", True),
+PROIBIDA_NAO_PODERA = r"\bn[aã]o poder[aá] plantar (nenhum|qualquer) milho\b"
+CORPUS_PROIBIDA_NAO_PODERA = [
+    ("A fazenda que compra de produtor não contribuinte não poderá plantar nenhum milho.", True),
 ]
-#: E03 (#379): afirmar o zero na venda ao laticinio e proibido; negar, nao.
-E03_PROIBIDA = r"\bter[aá] al[ií]quota zero"
-CORPUS_PROIBIDA_E03 = [
-    ("Essa operação terá alíquota zero de IBS e CBS.", True),
-    ("Essa operação não terá alíquota zero: a redução é de 60%.", False),
+PROIBIDA_TERA = r"\bter[aá] chuva forte"
+CORPUS_PROIBIDA_TERA = [
+    ("Essa semana terá chuva forte na região.", True),
+    ("Essa semana não terá chuva forte: o céu fica limpo.", False),
 ]
 CORPUS_ENCAMINHA = [
     ("Procure o seu contador.", True),
@@ -274,19 +276,11 @@ class CorpusHeuristicaTest(unittest.TestCase):
         for texto, classe, esperado in CORPUS_CLASSE:
             self.assertEqual(ext.classe_dita(texto, classe), esperado, f"{classe}: {texto}")
 
-    def test_afirmacao_proibida_da_e33(self):
-        for texto, esperado in CORPUS_PROIBIDA:
-            self.assertEqual(ext.afirma(E33_PROIBIDA, texto), esperado, texto)
-
-    def test_afirmacao_proibida_com_nao_contribuinte(self):
-        for texto, esperado in CORPUS_PROIBIDA_E36:
-            self.assertEqual(ext.afirma(r"n[aã]o poder[aá] aproveitar nenhum cr[eé]dito", texto),
-                             esperado, texto)
-
-    def test_afirmacao_proibida_da_e03(self):
-        # A regra da E03 fica no repositorio cego (#387), que confere que e esta; aqui, a heuristica.
-        for texto, esperado in CORPUS_PROIBIDA_E03:
-            self.assertEqual(ext.afirma(E03_PROIBIDA, texto), esperado, texto)
+    def test_afirmacao_proibida(self):
+        for regra, corpus in ((PROIBIDA_PODE, CORPUS_PROIBIDA), (PROIBIDA_NAO_PODERA, CORPUS_PROIBIDA_NAO_PODERA),
+                              (PROIBIDA_TERA, CORPUS_PROIBIDA_TERA)):
+            for texto, esperado in corpus:
+                self.assertEqual(ext.afirma(regra, texto), esperado, texto)
 
     def test_encaminhamento(self):
         for texto, esperado in CORPUS_ENCAMINHA:
