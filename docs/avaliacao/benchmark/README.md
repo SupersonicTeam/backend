@@ -178,7 +178,7 @@ pergunta vale ~1,9 ponto percentual.
 | `classeTratamento` | `ZERO`, `REDUCAO_60`, `PADRAO`, `CONDICIONAL`, `NAO_SE_APLICA` ou `FORA_DO_ESCOPO_SISTEMA`, **provisória** (`revisado: false`); cinco corrigidas pelo texto da lei na conferência do normas.leg.br (`2026-11-05.8`): E07 e E09 → `ZERO` (Anexo XV, item 5, com o art. 148, parágrafo único; Anexo I, item 8, posição 09.01), E13, E16 e E19 → `REDUCAO_60` (Anexo IX, itens 10; 12, 18 e 21, exceção dos animais domésticos fora porque a pergunta fala de rebanho; 28); e, no `2026-11-05.10`, E03 `CONDICIONAL` → `REDUCAO_60` (art. 137, § 1º, II; a Sessão 8c, ver `pendenteContador`) |
 | `afirmacoesProibidas` | expressões que seriam erro (ex.: E17 "sim, pode aproveitar a redução"; E22 "o comprador não tem crédito", existe o presumido do art. 168; E33 "pode aproveitar o crédito"; E03 "terá alíquota zero", no `2026-11-05.11`, com a frase que nega fora: "não terá alíquota zero") |
 | `encaminharContador` | 9 delas (E21, E22, E23, E24, E27, E29, E36, E39, E40): a resposta certa depende da situação do produtor |
-| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas. A E03 (leite ao laticínio, #284, pergunta 2) saiu no conjunto `2026-11-05.10`: a Sessão 8c (#374, `da90c20`) deu 60% por padrão (art. 137, § 1º, II), e a classe é `REDUCAO_60`. Não é contaminação: a mudança veio da resposta do escritório e da lei. Com a classe exclusiva, a resposta que afirma também a alíquota zero ("a alíquota zero vale só para o leite de consumo direto") não acerta a classe; "a alíquota zero do Anexo I não se aplica a esse caso" acerta, e "zero" solto não conta como afirmação de `ZERO` (travado no `test_externas.py`). O texto fixo da 8c (`TemplateTratamentoProduto`, as duas situações) só entra pela rota de dados (`consultarTratamentoProduto`); na rota esperada da E03, LEGISLACAO, o texto é do modelo |
+| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas. A E03 (leite ao laticínio, #284, pergunta 2) saiu no conjunto `2026-11-05.10`: a Sessão 8c (#374, `da90c20`) deu 60% por padrão (art. 137, § 1º, II), e a classe é `REDUCAO_60`; desde o #381 (`cd43c5b`, conjunto `2026-11-05.12`) o UHT (0401.10.10 e 0401.20.10) sai com zero por padrão, e a venda ao laticínio segue 60% (leite cru). **Contaminada** no `2026-11-05.12` (decisão do Murillo, 2026-11-06): a sessão do #374/#381 conhecia o texto da E03, e a frase do UHT foi escrita para esse cenário. Segue no conjunto, fora dos recortes de inéditas (52 inéditas: 13 da equipe e 39 externas). Com a classe exclusiva, a resposta que afirma também a alíquota zero ("a alíquota zero vale só para o leite de consumo direto") não acerta a classe; "a alíquota zero do Anexo I não se aplica a esse caso" acerta, e "zero" solto não conta como afirmação de `ZERO` (travado no `test_externas.py`). O texto fixo da 8c (`TemplateTratamentoProduto`: 60% com a alternativa do zero nos NCMs sem destino definido, zero no UHT) só entra pela rota de dados (`consultarTratamentoProduto`); na rota esperada da E03, LEGISLACAO, o texto é do modelo |
 
 **Critérios das externas** (os 5 do Murillo, rubrica em `../rubrica-clareza.md`): **automáticos**
 no relatório — rota, fundamentação (provisória enquanto `aConferir`), alíquota/classe e
@@ -221,11 +221,16 @@ do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. 
 **Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
 descrições `@Tool` ou as outras perguntas do conjunto.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.11` está congelado (versão e
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.12` está congelado (versão e
 hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
 respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
 perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o
-relatório as lista.
+relatório as lista. **Conhecer a pergunta também contamina** (E03, 2026-11-06): mudança de código da
+Ceres feita por quem conhecia o texto de uma inédita a contamina, qualquer que seja a intenção.
+Por isso, **nenhuma sessão de código recebe o texto das inéditas**: as mensagens entre sessões citam
+só o id (`E03`), nunca o texto, e quem escreve código da Ceres não lê `perguntas-benchmark.json`
+nem `perguntas-externas-murillo.txt`. Varredura de 2026-11-06 (commits, diffs fora do benchmark e
+mensagens recebidas pelas sessões de código das Sessões 7, 8a, 8b, 8c e do #359): ver o PR #383.
 
 **Revisão humana bloqueante antes da rodada da banca:** a lista das 40 com rota, dispositivos e
 classe esperados vai para a equipe e para o contador (#284, pergunta 15): conferir e preencher
@@ -441,10 +446,12 @@ propriedade). Na prática:
 - **E também depois da Sessão 8a** (#360, `54f02ee`): o texto do atalho de IBS/CBS mudou (explica
   o diferimento dos insumos do Anexo IX) e a T03 passou a 33 dispositivos. A coluna oficial é medida
   num SHA que contenha `54a4201` (Sessão 7), `54f02ee` (8a), `d8b0b36` (8b, arroz em casca: a P02 do gabarito
-  `2026-11-05.3` foi escrita para ela) e `da90c20` (8c, leite in natura com 60% por padrão: a classe da
-  E03); a `main` de hoje contém.
-  O `54a4201` é o `sessaoParalela.commit`; os outros três estão em `sessaoParalela.tambemExige`. Sem qualquer um deles, o relatório sai como ensaio e diz o que
+  `2026-11-05.3` foi escrita para ela), `da90c20` (8c, leite in natura com 60% por padrão: a classe da
+  E03) e `cd43c5b` (8c, #381: leite UHT com zero por padrão); a `main` de hoje contém.
+  O `54a4201` é o `sessaoParalela.commit`; os outros quatro estão em `sessaoParalela.tambemExige`. Sem qualquer um deles, o relatório sai como ensaio e diz o que
   falta.
+  **Melhoria possível (não feita):** a cadeia é linear (cada SHA é ancestral do seguinte), então
+  bastaria exigir o SHA mínimo em vez da lista; hoje, acrescentar um SHA mexe em seis lugares.
 - **A Sessão 7 terminou** (#351 e #354): `sessaoParalela.commit` na `matriz.json` é
   `54a4201`, o merge do último PR. A rodada oficial usa a `main` (o padrão `origin/main`) ou
   `--ref-ceres2 <SHA>` de um commit que contenha o `54a4201`; o relatório confere pela

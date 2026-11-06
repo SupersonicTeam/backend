@@ -111,7 +111,7 @@ generalização, não a linguagem real do produtor; conferidas contra
 `src/test/resources/benchmark/perguntas-externas-murillo.txt`; dispositivos `aConferir` até a
 conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando as respostas às
 inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`),
-a 8b (`d8b0b36`) e a 8c (`da90c20`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
+a 8b (`d8b0b36`) e a 8c (`da90c20` e `cd43c5b`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
 `docs/avaliacao/benchmark/ineditas-dados/` (`inedita_equipe_dados`, autor e data, valor esperado
 calculado do seed com teste).
 
