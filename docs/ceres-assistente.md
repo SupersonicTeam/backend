@@ -99,8 +99,8 @@ resultado vazio é a frase fixa do `VerificadorNegativaDados` com o recorte, nun
   pedidos do escritório → notas a conferir (#276) → informativos (apuração, créditos, vendas,
   compras, retenções, tratamento do produto);
 - com duas ou mais seções de atenção, a **primeira linha é o resumo** do backend ("Encontrei 3
-  pontos de atencao: 1 guia em atraso, 1 nota parada e 1 pedido do escritorio. Sem pendencias em:
-  notas a conferir."), ou "Nao encontrei pontos de atencao em: ..." com os recortes;
+  pontos de atenção: 1 guia em atraso, 1 nota parada e 1 pedido do escritório. Sem pendências em:
+  notas a conferir."), ou "Não encontrei pontos de atenção em: ..." com os recortes;
 - seção **vazia só aparece se foi pedida** (a função chamada direto pelo modelo); a do
   `resumoDoProdutor` entra só no resumo;
 - até 5 itens por lista ("E mais N, na tela de X") e 6 seções;

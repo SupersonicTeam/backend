@@ -150,17 +150,19 @@ public final class ComposicaoRespostaDados {
   /** Explica cada sigla do glossário na primeira ocorrência, se o texto ainda não a explica. */
   static String explicarSiglas(String texto) {
     String resultado = texto;
+    // A comparação (só ela) ignora acento e caixa: a explicação já escrita por outro texto do
+    // backend ("serviços" ou "servicos") conta, e a explicação inserida segue acentuada. O texto
+    // é normalizado uma vez e de novo só quando uma explicação é inserida.
+    String normalizado = NormalizacaoBusca.normalizar(resultado);
     for (Sigla sigla : GLOSSARIO) {
-      // A comparação (só ela) ignora acento e caixa: a explicação já escrita por outro texto do
-      // backend ("serviços" ou "servicos") conta, e a explicação inserida segue acentuada.
-      if (NormalizacaoBusca.normalizar(resultado)
-          .contains(NormalizacaoBusca.normalizar(sigla.explicacao()))) {
+      if (normalizado.contains(NormalizacaoBusca.normalizar(sigla.explicacao()))) {
         continue;
       }
       Matcher m = sigla.padrao().matcher(resultado);
       if (m.find()) {
         resultado = resultado.substring(0, m.end()) + " (" + sigla.explicacao() + ")"
             + resultado.substring(m.end());
+        normalizado = NormalizacaoBusca.normalizar(resultado);
       }
     }
     return resultado;

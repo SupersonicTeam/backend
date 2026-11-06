@@ -103,10 +103,10 @@ Na rota `DADOS` (e na parte de dados do `MISTO`), o texto é montado pelo backen
   quebras de linha e, se quiser, as linhas `- ` como lista. Continua texto puro, nunca HTML.
 - **Ordem fixa:** guias em atraso → prazos dos próximos dias → notas paradas → pedidos do
   escritório → notas a conferir → informativos. Com mais de um assunto de atenção, a primeira
-  linha é um resumo ("Encontrei 3 pontos de atencao: ...").
+  linha é um resumo ("Encontrei 3 pontos de atenção: ...").
 - **Pergunta geral** ("o que eu preciso saber?"): nova função `resumoDoProdutor` em
   `fontesDados[].funcao`. Rótulo sugerido para o selo: "Resumo dos seus pontos de atenção".
-- **Sem dado identificado:** "Nao consegui identificar qual dado consultar..." com `atalhos`
+- **Sem dado identificado:** "Não consegui identificar qual dado consultar..." com `atalhos`
   preenchidos e `modoFallback: false`. Mostre os botões das telas também nesse caso.
 - Siglas (IBS, CBS, Funrural, SEFAZ, NCM, CFOP, NF-e) vêm explicadas entre parênteses na primeira
   vez.
