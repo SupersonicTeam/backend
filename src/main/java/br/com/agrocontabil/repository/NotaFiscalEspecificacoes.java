@@ -1,9 +1,13 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
+import br.com.agrocontabil.model.VinculoCarteira;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,6 +33,35 @@ public final class NotaFiscalEspecificacoes {
   /** Notas do produtor. */
   public static Specification<NotaFiscal> doProdutor(UUID produtorId) {
     return (root, query, cb) -> cb.equal(root.get("produtor").get("id"), produtorId);
+  }
+
+  /**
+   * Notas dos clientes com vínculo {@code ATIVO} no escritório (issue #341), por subconsulta
+   * ({@code produtor_id IN (SELECT ...)}): o tamanho da carteira não vira lista de parâmetros.
+   * Suspenso e encerrado ficam de fora. Escopo obrigatório da listagem do escritório: os filtros
+   * entram sempre {@code and} sobre ele.
+   *
+   * @param escritorioId       escritório do membro autenticado
+   * @param responsavelId      só os clientes deste responsável; nulo = qualquer
+   * @param semResponsavel     só os clientes sem responsável (vale quando {@code responsavelId} é
+   *                           nulo)
+   */
+  public static Specification<NotaFiscal> daCarteiraAtiva(UUID escritorioId,
+      UUID responsavelId, boolean semResponsavel) {
+    return (root, query, cb) -> {
+      Subquery<UUID> carteira = query.subquery(UUID.class);
+      Root<VinculoCarteira> vinculo = carteira.from(VinculoCarteira.class);
+      List<Predicate> onde = new ArrayList<>();
+      onde.add(cb.equal(vinculo.get("escritorioId"), escritorioId));
+      onde.add(cb.equal(vinculo.get("situacao"), SituacaoVinculo.ATIVO));
+      if (responsavelId != null) {
+        onde.add(cb.equal(vinculo.get("responsavelId"), responsavelId));
+      } else if (semResponsavel) {
+        onde.add(cb.isNull(vinculo.get("responsavelId")));
+      }
+      carteira.select(vinculo.get("produtorId")).where(onde.toArray(Predicate[]::new));
+      return root.get("produtor").get("id").in(carteira);
+    };
   }
 
   /** Status em qualquer um dos informados (OU). */

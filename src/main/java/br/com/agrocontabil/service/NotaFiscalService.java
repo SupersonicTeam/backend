@@ -232,7 +232,17 @@ public class NotaFiscalService {
    */
   private static Specification<NotaFiscal> especificacao(
       UUID produtorId, FiltroNotasRequest filtro) {
-    Specification<NotaFiscal> consulta = NotaFiscalEspecificacoes.doProdutor(produtorId);
+    return NotaFiscalEspecificacoes.doProdutor(produtorId).and(filtros(filtro));
+  }
+
+  /**
+   * Só os filtros de {@code GET /api/notas}, sem o recorte de quem é dono: quem chama combina com
+   * o escopo (o produtor, ou a carteira do escritório na issue #341) por {@code and}.
+   *
+   * @throws FiltroNotasInvalidoException faixa de emissão invertida (400)
+   */
+  static Specification<NotaFiscal> filtros(FiltroNotasRequest filtro) {
+    Specification<NotaFiscal> consulta = Specification.unrestricted();
     if (filtro.emitidaDe() != null && filtro.emitidaAte() != null
         && filtro.emitidaDe().isAfter(filtro.emitidaAte())) {
       throw FiltroNotasInvalidoException.faixaInvertida(filtro.emitidaDe(), filtro.emitidaAte());
@@ -294,7 +304,7 @@ public class NotaFiscalService {
    * desconhecida virava no Spring Data. Com ordenação, o {@code id} desempata: sem ele, notas com o
    * mesmo valor podiam pular ou repetir entre páginas.
    */
-  private static Pageable paginaComOrdenacaoPermitida(Pageable pageable) {
+  static Pageable paginaComOrdenacaoPermitida(Pageable pageable) {
     if (pageable.getSort().isUnsorted()) {
       return pageable;
     }
