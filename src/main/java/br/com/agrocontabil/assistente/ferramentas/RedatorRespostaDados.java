@@ -50,12 +50,12 @@ public final class RedatorRespostaDados {
   /** A situação de uma nota, no singular. */
   private static final Map<String, String> SITUACAO = Map.ofEntries(
       Map.entry("RASCUNHO", "em rascunho"),
-      Map.entry("COM_INCONSISTENCIAS", "com inconsistencias a corrigir"),
-      Map.entry("AGUARDANDO_APROVACAO", "aguardando aprovacao do contador"),
+      Map.entry("COM_INCONSISTENCIAS", "com inconsistências a corrigir"),
+      Map.entry("AGUARDANDO_APROVACAO", "aguardando aprovação do contador"),
       Map.entry("APROVADA", "aprovada pelo contador"),
       Map.entry("DEVOLVIDA", "devolvida pelo contador"),
-      Map.entry("XML_GERADO", "com XML gerado, ainda nao enviada"),
-      Map.entry("ENVIANDO", "sendo enviada a SEFAZ"),
+      Map.entry("XML_GERADO", "com XML gerado, ainda não enviada"),
+      Map.entry("ENVIANDO", "sendo enviada à SEFAZ"),
       Map.entry("AUTORIZADA", "autorizada"),
       Map.entry("REJEITADA", "rejeitada pela SEFAZ"),
       Map.entry("PENDENTE_SEFAZ", "aguardando a SEFAZ"),
@@ -79,7 +79,7 @@ public final class RedatorRespostaDados {
       return vazia("totalComprasPorInsumo", parametros, hoje);
     }
     return SecaoResposta.informativa("Entre " + c.dataInicio() + " e " + c.dataFim()
-        + " voce comprou " + c.valorTotal() + " de " + produto(c.insumo(), c.criterio()) + ", em "
+        + " você comprou " + c.valorTotal() + " de " + produto(c.insumo(), c.criterio()) + ", em "
         + notas(c.quantidadeNotas(), "de compra") + "." + unidades(c.porUnidade()), false,
         List.of());
   }
@@ -90,7 +90,7 @@ public final class RedatorRespostaDados {
       return vazia("totalVendasPorProduto", parametros, hoje);
     }
     return SecaoResposta.informativa("Entre " + v.dataInicio() + " e " + v.dataFim()
-        + " voce vendeu " + v.valorTotal() + " de " + produto(v.produto(), v.criterio()) + ", em "
+        + " você vendeu " + v.valorTotal() + " de " + produto(v.produto(), v.criterio()) + ", em "
         + notas(v.quantidadeNotas(), v.quantidadeNotas() == 1 ? "de venda autorizada"
             : "de venda autorizadas") + "." + unidades(v.porUnidade()), false, List.of());
   }
@@ -103,14 +103,14 @@ public final class RedatorRespostaDados {
     String mes = mes(a.mes());
     boolean negativo = a.saldoIbs().contains("-") || a.saldoCbs().contains("-");
     String saldo = negativo
-        ? "o saldo e de " + a.saldoIbs() + " de IBS e " + a.saldoCbs()
-            + " de CBS (valor negativo e credito a seu favor)"
-        : "o imposto a pagar e de " + a.saldoIbs() + " de IBS e " + a.saldoCbs() + " de CBS";
+        ? "o saldo é de " + a.saldoIbs() + " de IBS e " + a.saldoCbs()
+            + " de CBS (valor negativo é crédito a seu favor)"
+        : "o imposto a pagar é de " + a.saldoIbs() + " de IBS e " + a.saldoCbs() + " de CBS";
     String situacao = "FECHADO".equals(a.situacao()) ? "fechada"
-        : "ainda aberta: o valor pode mudar ate o fechamento";
-    return SecaoResposta.informativa("Na apuracao de " + mes + " (" + situacao + "), " + saldo
+        : "ainda aberta: o valor pode mudar até o fechamento";
+    return SecaoResposta.informativa("Na apuração de " + mes + " (" + situacao + "), " + saldo
         + ". Imposto das suas vendas: " + a.debitoIbs() + " de IBS e " + a.debitoCbs()
-        + " de CBS. Credito das suas compras: " + a.creditoIbs() + " de IBS e " + a.creditoCbs()
+        + " de CBS. Crédito das suas compras: " + a.creditoIbs() + " de IBS e " + a.creditoCbs()
         + " de CBS. " + (a.totalNotas() == 1 ? "Entrou " : "Entraram ")
         + notas(a.totalNotas(), "") + ".", false, List.of(mes));
   }
@@ -121,7 +121,7 @@ public final class RedatorRespostaDados {
       return vazia("consultarCreditos", parametros, hoje);
     }
     return SecaoResposta.informativa("Entre " + c.dataInicio() + " e " + c.dataFim()
-        + " suas compras geraram " + c.creditoTotal() + " de credito: " + c.creditoIbs()
+        + " suas compras geraram " + c.creditoTotal() + " de crédito: " + c.creditoIbs()
         + " de IBS e " + c.creditoCbs() + " de CBS, em " + notas(c.quantidadeNotas(), "de compra")
         + ".", false, List.of());
   }
@@ -143,13 +143,13 @@ public final class RedatorRespostaDados {
     }
     Funrural proprio = r.funruralSemRetencao();
     if (proprio != null && proprio.notas() > 0) {
-      t.append("\n- Funrural que voce mesmo recolhe: ").append(proprio.total()).append(", em ")
+      t.append("\n- Funrural que você mesmo recolhe: ").append(proprio.total()).append(", em ")
           .append(plural(proprio.notas(), "venda", "vendas"))
-          .append(" a pessoa fisica ou no varejo.");
+          .append(" a pessoa física ou no varejo.");
     }
     Funrural exportacao = r.exportacao();
     if (exportacao != null && exportacao.notas() > 0) {
-      t.append("\n- Exportacao: ").append(plural(exportacao.notas(), "venda", "vendas"))
+      t.append("\n- Exportação: ").append(plural(exportacao.notas(), "venda", "vendas"))
           .append(", sem Funrural.");
     }
     t.append("\n- Split payment: ").append(r.splitPaymentTotal()).append(" (")
@@ -182,7 +182,7 @@ public final class RedatorRespostaDados {
           .append('.');
     }
     n.notas().stream().limit(MAXIMO_ITENS).forEach(nota -> t.append("\n- Nota ")
-        .append(nota.numero()).append(" (serie ").append(nota.serie()).append("), ")
+        .append(nota.numero()).append(" (série ").append(nota.serie()).append("), ")
         .append("ENTRADA".equals(nota.tipo()) ? "compra" : "venda").append(" de ")
         .append(nota.dataEmissao()).append(": ").append(nota.valorTotal()).append(", ")
         .append(SITUACAO.getOrDefault(nota.situacao(), nota.situacao().toLowerCase()))
@@ -206,39 +206,39 @@ public final class RedatorRespostaDados {
     }
     StringBuilder t = new StringBuilder("De ").append(v.de()).append(" a ").append(v.ate())
         .append(v.totalEncontrado() == 1 ? " vence " : " vencem ")
-        .append(plural(v.totalEncontrado(), "guia nao paga", "guias nao pagas"))
+        .append(plural(v.totalEncontrado(), "guia não paga", "guias não pagas"))
         .append(", somando ").append(v.valorTotal()).append(':');
     guias(t, v.guias(), "vence em");
-    maisNaTela(t, v.totalEncontrado(), Math.min(MAXIMO_ITENS, v.guias().size()), "Calendario");
+    maisNaTela(t, v.totalEncontrado(), Math.min(MAXIMO_ITENS, v.guias().size()), "Calendário");
     return new SecaoResposta(Assunto.PRAZOS, t.toString(), (int) v.totalEncontrado(),
-        plural(v.totalEncontrado(), "guia", "guias") + " a vencer ate " + v.ate(), recorte, false,
+        plural(v.totalEncontrado(), "guia", "guias") + " a vencer até " + v.ate(), recorte, false,
         true, List.of());
   }
 
   /** {@code guiasEmAtraso}. */
   static SecaoResposta guiasEmAtraso(GuiasEmAtraso g, LocalDate hoje) {
     String ontem = FormatoBr.data(hoje.minusDays(1));
-    String recorte = "guias em atraso (vencimento ate " + ontem + ")";
+    String recorte = "guias em atraso (vencimento até " + ontem + ")";
     GuiasDoRecorte atraso = g.emAtraso();
     if (atraso.quantidade() == 0) {
       StringBuilder t = new StringBuilder(g.observacao() == null
           ? fraseVazia("guiasEmAtraso", Map.of(), hoje) : g.observacao());
       Guia proxima = g.proximaGuia();
       if (proxima != null) {
-        t.append(" A proxima guia a vencer e ").append(proxima.tipo()).append(", em ")
+        t.append(" A próxima guia a vencer é ").append(proxima.tipo()).append(", em ")
             .append(proxima.vencimento()).append(", de ").append(proxima.valor()).append('.');
       }
       return new SecaoResposta(Assunto.GUIAS_EM_ATRASO, t.toString(), 0, null, recorte, true,
           true, List.of(ontem));
     }
-    StringBuilder t = new StringBuilder("Voce tem ")
+    StringBuilder t = new StringBuilder("Você tem ")
         .append(plural(atraso.quantidade(), "guia em atraso", "guias em atraso"))
-        .append(atraso.quantidade() == 1 ? " (nao paga" : " (nao pagas")
-        .append(", com vencimento ate ").append(ontem).append("), somando ")
+        .append(atraso.quantidade() == 1 ? " (não paga" : " (não pagas")
+        .append(", com vencimento até ").append(ontem).append("), somando ")
         .append(atraso.valorTotal()).append(':');
     guias(t, atraso.guias(), "venceu em");
     maisNaTela(t, atraso.quantidade(), Math.min(MAXIMO_ITENS, atraso.guias().size()),
-        "Calendario");
+        "Calendário");
     return new SecaoResposta(Assunto.GUIAS_EM_ATRASO, t.toString(), (int) atraso.quantidade(),
         plural(atraso.quantidade(), "guia em atraso", "guias em atraso"), recorte, false, true,
         List.of(ontem));
@@ -262,7 +262,7 @@ public final class RedatorRespostaDados {
           .append(", ").append(v.emAtraso().valorTotal()).append(':');
       guias(t, v.emAtraso().guias(), "venceu em");
       maisNaTela(t, v.emAtraso().quantidade(),
-          Math.min(MAXIMO_ITENS, v.emAtraso().guias().size()), "Calendario");
+          Math.min(MAXIMO_ITENS, v.emAtraso().guias().size()), "Calendário");
     }
     if (v.aVencer() != null && v.aVencer().quantidade() > 0) {
       t.append("\nA vencer de ").append(v.aVencer().de()).append(" a ").append(v.aVencer().ate())
@@ -270,7 +270,7 @@ public final class RedatorRespostaDados {
           .append(v.aVencer().valorTotal()).append(':');
       guias(t, v.aVencer().guias(), "vence em");
       maisNaTela(t, v.aVencer().quantidade(),
-          Math.min(MAXIMO_ITENS, v.aVencer().guias().size()), "Calendario");
+          Math.min(MAXIMO_ITENS, v.aVencer().guias().size()), "Calendário");
     }
     long atrasadas = v.emAtraso() == null ? 0 : v.emAtraso().quantidade();
     if (atrasadas > 0) {
@@ -297,9 +297,9 @@ public final class RedatorRespostaDados {
       if (!t.isEmpty()) {
         t.append("\n\n");
       }
-      t.append("A nota ").append(n.numero()).append(" (serie ").append(n.serie()).append("), ")
+      t.append("A nota ").append(n.numero()).append(" (série ").append(n.serie()).append("), ")
           .append("ENTRADA".equals(n.tipo()) ? "de compra recebida" : "de venda emitida")
-          .append(" em ").append(n.dataEmissao()).append(", esta ")
+          .append(" em ").append(n.dataEmissao()).append(", está ")
           .append(SITUACAO.getOrDefault(n.situacao(), n.situacao().toLowerCase())).append('.');
       if (n.explicacao() != null) {
         t.append(' ').append(n.explicacao());
@@ -308,7 +308,7 @@ public final class RedatorRespostaDados {
       t.append(" Valor: ").append(n.valorTotal()).append("; IBS: ").append(n.valorIbs())
           .append("; CBS: ").append(n.valorCbs()).append('.');
       if (n.motivoDevolucao() != null) {
-        t.append(" Motivo da devolucao: ").append(n.motivoDevolucao()).append('.');
+        t.append(" Motivo da devolução: ").append(n.motivoDevolucao()).append('.');
         livres.add(n.motivoDevolucao());
       }
       if (!n.inconsistencias().isEmpty()) {
@@ -337,38 +337,38 @@ public final class RedatorRespostaDados {
 
   /** {@code listarAlertas}. */
   static SecaoResposta alertas(Alertas a, LocalDate hoje) {
-    String recorte = "prazos dos proximos dias";
+    String recorte = "prazos dos próximos dias";
     if (a.totalEncontrado() == 0) {
       return new SecaoResposta(Assunto.PRAZOS, fraseVazia("listarAlertas", Map.of(), hoje), 0,
           null, recorte, true, true, List.of());
     }
     List<String> livres = new ArrayList<>();
-    StringBuilder t = new StringBuilder(a.totalEncontrado() == 1 ? "Ha 1 prazo"
-        : "Ha " + a.totalEncontrado() + " prazos").append(" nos proximos dias:");
+    StringBuilder t = new StringBuilder(a.totalEncontrado() == 1 ? "Há 1 prazo"
+        : "Há " + a.totalEncontrado() + " prazos").append(" nos próximos dias:");
     a.alertas().stream().limit(MAXIMO_ITENS).forEach(alerta -> {
-      t.append("\n- ").append(alerta.descricao()).append(": ate ").append(alerta.prazo())
+      t.append("\n- ").append(alerta.descricao()).append(": até ").append(alerta.prazo())
           .append(" (").append(quando(alerta.diasRestantes())).append(").");
       livres.add(alerta.descricao());
     });
-    maisNaTela(t, a.totalEncontrado(), Math.min(MAXIMO_ITENS, a.alertas().size()), "Calendario");
+    maisNaTela(t, a.totalEncontrado(), Math.min(MAXIMO_ITENS, a.alertas().size()), "Calendário");
     return new SecaoResposta(Assunto.PRAZOS, t.toString(), (int) a.totalEncontrado(),
-        plural(a.totalEncontrado(), "prazo nos proximos dias", "prazos nos proximos dias"),
+        plural(a.totalEncontrado(), "prazo nos próximos dias", "prazos nos próximos dias"),
         recorte, false, true, livres);
   }
 
   /** Notas paradas do resumo do produtor. */
   static SecaoResposta notasParadas(List<RespostasFerramentas.Nota> notas, long total,
       String desde) {
-    String recorte = "notas paradas (devolvidas, com inconsistencias, aguardando aprovacao ou"
+    String recorte = "notas paradas (devolvidas, com inconsistências, aguardando aprovação ou"
         + " rejeitadas, desde " + desde + ")";
     if (total == 0) {
-      return new SecaoResposta(Assunto.NOTAS_PARADAS, "Nao encontrei " + recorte + ".", 0, null,
+      return new SecaoResposta(Assunto.NOTAS_PARADAS, "Não encontrei " + recorte + ".", 0, null,
           recorte, true, false, List.of(desde));
     }
-    StringBuilder t = new StringBuilder(total == 1 ? "1 nota esta parada:"
-        : total + " notas estao paradas:");
+    StringBuilder t = new StringBuilder(total == 1 ? "1 nota está parada:"
+        : total + " notas estão paradas:");
     notas.stream().limit(MAXIMO_ITENS).forEach(n -> t.append("\n- Nota ").append(n.numero())
-        .append(" (serie ").append(n.serie()).append("), de ").append(n.dataEmissao())
+        .append(" (série ").append(n.serie()).append("), de ").append(n.dataEmissao())
         .append(": ").append(SITUACAO.getOrDefault(n.situacao(), n.situacao().toLowerCase()))
         .append('.'));
     maisNaTela(t, total, Math.min(MAXIMO_ITENS, notas.size()), "Notas");
@@ -382,28 +382,28 @@ public final class RedatorRespostaDados {
    * @param pedidos título (texto do escritório) e prazo formatado (nulo sem prazo)
    */
   static SecaoResposta pedidos(List<String[]> pedidos, long total) {
-    String recorte = "pedidos do escritorio";
+    String recorte = "pedidos do escritório";
     if (total == 0) {
       return new SecaoResposta(Assunto.PEDIDOS_DO_ESCRITORIO,
-          "Nao encontrei pedidos do escritorio esperando documento seu.", 0, null, recorte, true,
+          "Não encontrei pedidos do escritório esperando documento seu.", 0, null, recorte, true,
           false, List.of());
     }
     List<String> livres = new ArrayList<>();
     StringBuilder t = new StringBuilder(total == 1
-        ? "O escritorio espera 1 documento seu:" : "O escritorio espera " + total
+        ? "O escritório espera 1 documento seu:" : "O escritório espera " + total
         + " documentos seus:");
     pedidos.stream().limit(MAXIMO_ITENS).forEach(p -> {
       t.append("\n- ").append(p[0]);
       livres.add(p[0]);
       if (p[1] != null) {
-        t.append(", ate ").append(p[1]);
+        t.append(", até ").append(p[1]);
         livres.add(p[1]);
       }
       t.append('.');
     });
     maisNaTela(t, total, Math.min(MAXIMO_ITENS, pedidos.size()), "Pedidos");
     return new SecaoResposta(Assunto.PEDIDOS_DO_ESCRITORIO, t.toString(), (int) total,
-        plural(total, "pedido do escritorio", "pedidos do escritorio"), recorte, false, false,
+        plural(total, "pedido do escritório", "pedidos do escritório"), recorte, false, false,
         livres);
   }
 
@@ -412,7 +412,7 @@ public final class RedatorRespostaDados {
     String recorte = "notas a conferir";
     if (frases.isEmpty()) {
       return new SecaoResposta(Assunto.NOTAS_A_CONFERIR,
-          "Nao encontrei pontos a conferir nas suas notas ainda nao emitidas nem nas autorizadas"
+          "Não encontrei pontos a conferir nas suas notas ainda não emitidas nem nas autorizadas"
               + " dentro do prazo de cancelamento.", 0, null, recorte, true, false, List.of());
     }
     String texto = String.join("\n\n", frases.stream().limit(MAXIMO_ITENS).toList());
@@ -460,7 +460,7 @@ public final class RedatorRespostaDados {
     if (dias <= 0) {
       return "hoje";
     }
-    return dias == 1 ? "amanha" : "em " + dias + " dias";
+    return dias == 1 ? "amanhã" : "em " + dias + " dias";
   }
 
   /** {@code 2026-08} vira {@code 08/2026}. */

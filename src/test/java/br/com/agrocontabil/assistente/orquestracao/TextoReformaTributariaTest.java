@@ -142,9 +142,9 @@ class TextoReformaTributariaTest {
 
     assertThat(texto.texto())
         .contains(TextoReformaTributaria.VENDA_PRODUTOS)
-        .contains("\n- Soja, mesmo triturada (NCM 1201.90.00): reducao de 60% do IBS e da CBS, como"
-            + " produto agropecuario in natura (LC 214/2025, art. 137; cClassTrib 515001).")
-        .contains("Alfaces (NCM 0705.19.00): reducao de 100% do IBS e da CBS (aliquota zero)")
+        .contains("\n- Soja, mesmo triturada (NCM 1201.90.00): redução de 60% do IBS e da CBS, como"
+            + " produto agropecuário in natura (LC 214/2025, art. 137; cClassTrib 515001).")
+        .contains("Alfaces (NCM 0705.19.00): redução de 100% do IBS e da CBS (alíquota zero)")
         .contains(TextoReformaTributaria.VENDA_ENQUADRAMENTO)
         .doesNotContain(TextoReformaTributaria.VENDA_SEM_PRODUTOS);
     assertThat(texto.dispositivos()).contains("LC 214/2025|art. 137", "LC 214/2025|art. 148")

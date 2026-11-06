@@ -166,7 +166,7 @@ class TratamentoProdutoServiceIntegrationTest {
       assertThat(l.percentualReducao()).isEqualByComparingTo("60");
       assertThat(l.origem()).isEqualTo(Origem.IN_NATURA);
       assertThat(l.artigo()).isEqualTo("137");
-      assertThat(l.condicao()).contains("cru").contains("art. 137, par. 1, II");
+      assertThat(l.condicao()).contains("cru").contains("art. 137, § 1º, II");
       assertThat(l.alternativa()).isNotNull();
       assertThat(l.alternativa().cClassTrib()).isEqualTo("200003");
       assertThat(l.alternativa().percentualReducao()).isEqualByComparingTo("100");

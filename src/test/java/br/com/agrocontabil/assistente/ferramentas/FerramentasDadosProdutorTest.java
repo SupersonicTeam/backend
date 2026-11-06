@@ -14,6 +14,7 @@ import br.com.agrocontabil.assistente.ContextoAssistenteAusenteException;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta;
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Pagina;
 import br.com.agrocontabil.assistente.FonteDado;
+import br.com.agrocontabil.assistente.TextosFixosAcentuadosTest;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Apuracao;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ComprasInsumo;
@@ -415,7 +416,7 @@ class FerramentasDadosProdutorTest {
 
     assertThat(atraso.emAtraso().valorTotal()).isEqualTo("R$ 0,00");
     assertThat(atraso.observacao()).isEqualTo(
-        "Nao encontrei guias em atraso (nao pagas com vencimento ate 28/09/2026).");
+        "Não encontrei guias em atraso (não pagas com vencimento até 28/09/2026).");
     // Vence hoje: e a proxima, nao atraso.
     assertThat(atraso.proximaGuia().vencimento()).isEqualTo("29/09/2026");
   }
@@ -439,6 +440,20 @@ class FerramentasDadosProdutorTest {
   }
 
   @Test
+  @DisplayName("#357: as observacoes que as funcoes montam para o produtor saem com acento")
+  void observacoesComAcento() {
+    // Mes corrente sem guia nenhuma: nem atraso nem a vencer.
+    guias(FerramentasDadosProdutor.SEM_LIMITE_PASSADO, HOJE.minusDays(1), "0.00", 0);
+    guias(HOJE, LocalDate.of(2026, 9, 30), "0.00", 0);
+
+    String semGuias = ferramentas.vencimentosDoMes(null, toolContext).observacao();
+
+    assertThat(semGuias).isEqualTo("Não encontrei guias para pagar (sem guias em atraso e sem"
+        + " guias não pagas de 29/09/2026 a 30/09/2026).");
+    assertThat(TextosFixosAcentuadosTest.semAcento(semGuias)).isEmpty();
+  }
+
+  @Test
   @DisplayName("#257: mes futuro so tem as do mes; passado so as que ficaram sem pagar")
   void vencimentosDeOutroMes() {
     guias(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), "640.00", 1);
@@ -454,7 +469,7 @@ class FerramentasDadosProdutorTest {
     assertThat(julho.aVencer()).isNull();
     assertThat(julho.valorTotal()).isEqualTo("R$ 0,00");
     assertThat(julho.observacao())
-        .isEqualTo("Nao encontrei guias para pagar (sem guias nao pagas de 01/07/2026 a "
+        .isEqualTo("Não encontrei guias para pagar (sem guias não pagas de 01/07/2026 a "
             + "31/07/2026).");
   }
 
@@ -487,7 +502,7 @@ class FerramentasDadosProdutorTest {
     assertThat(nota.notas()).singleElement().satisfies(n -> {
       assertThat(n.tipo()).isEqualTo("SAIDA");
       assertThat(n.situacao()).isEqualTo("DEVOLVIDA");
-      assertThat(n.explicacao()).contains("contador").contains("nao e rejeicao");
+      assertThat(n.explicacao()).contains("contador").contains("não é rejeição");
       assertThat(n.valorTotal()).isEqualTo("R$ 12.100,00");
       assertThat(n.motivoDevolucao()).isEqualTo("Corrija a natureza.");
       assertThat(n.inconsistencias()).singleElement()
@@ -506,7 +521,7 @@ class FerramentasDadosProdutorTest {
     RespostasFerramentas.NotaConsultada nota = ferramentas.consultarNota(5, toolContext);
 
     assertThat(nota.encontradas()).isZero();
-    assertThat(nota.observacao()).isEqualTo("Nao encontrei a nota 5 nas suas notas.");
+    assertThat(nota.observacao()).isEqualTo("Não encontrei a nota 5 nas suas notas.");
   }
 
   @Test
@@ -656,11 +671,11 @@ class FerramentasDadosProdutorTest {
   @DisplayName("#203: busca vazia por descricao fala com o usuario, sem digito")
   void nadaPorDescricaoParaOUsuario() {
     assertThat(FerramentasDadosProdutor.NADA_POR_DESCRICAO)
-        .startsWith("Nao encontrei compras").contains("codigo NCM").doesNotContainPattern("\\d");
+        .startsWith("Não encontrei compras").contains("código NCM").doesNotContainPattern("\\d");
     assertThat(FerramentasDadosProdutor.NADA_POR_NCM)
-        .startsWith("Nao encontrei compras").doesNotContainPattern("\\d");
+        .startsWith("Não encontrei compras").doesNotContainPattern("\\d");
     assertThat(FerramentasDadosProdutor.NADA_VENDIDO)
-        .startsWith("Nao encontrei vendas").doesNotContainPattern("\\d");
+        .startsWith("Não encontrei vendas").doesNotContainPattern("\\d");
   }
 
   @Test
@@ -689,7 +704,7 @@ class FerramentasDadosProdutorTest {
     assertThat(contexto.fontes()).extracting(FonteDado::origem)
         .containsExactly(OrigemFonte.TABELA_OFICIAL);
     assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
-      assertThat(t.texto()).contains("reducao de 60%").contains("Condicao: vendido in natura");
+      assertThat(t.texto()).contains("redução de 60%").contains("Condição: vendido in natura");
       assertThat(t.dispositivos()).containsExactly("LC 214/2025|art. 137");
     });
     verifyNoInteractions(dados);
@@ -732,8 +747,8 @@ class FerramentasDadosProdutorTest {
     assertThat(nota.toString()).doesNotContain("Joao");
     assertThat(contexto.textosDoBackend()).singleElement().satisfies(t -> {
       assertThat(t.texto()).isEqualTo("Na nota 116, o item 'Servico de colheita do Joao' saiu"
-          + " com CFOP 5.949 (outra saida nao especificada) e parece um servico. Servico"
-          + " normalmente nao sai em nota de produto: confira com seu contador antes de emitir.");
+          + " com CFOP 5.949 (outra saída não especificada) e parece um serviço. Serviço"
+          + " normalmente não sai em nota de produto: confira com seu contador antes de emitir.");
       assertThat(t.dispositivos()).isEmpty();
     });
   }
@@ -766,11 +781,12 @@ class FerramentasDadosProdutorTest {
         assertThat(secao.pedida()).isFalse());
     String texto = br.com.agrocontabil.assistente.ComposicaoRespostaDados.compor(
         contexto.secoes());
-    assertThat(texto).startsWith("Encontrei 3 pontos de atencao: 1 guia em atraso, 1 nota"
-        + " parada e 1 pedido do escritorio. Sem pendencias em: prazos dos proximos dias e notas"
+    assertThat(texto).startsWith("Encontrei 3 pontos de atenção: 1 guia em atraso, 1 nota"
+        + " parada e 1 pedido do escritório. Sem pendências em: prazos dos próximos dias e notas"
         + " a conferir.")
-        .contains("- Extrato do Joao, ate 04/10/2026.")
-        .doesNotContain("Nao encontrei alertas");
+        .contains("- Extrato do Joao, até 04/10/2026.")
+        .doesNotContain("Não encontrei alertas");
+    assertThat(TextosFixosAcentuadosTest.semAcento(texto)).isEmpty();
     assertThat(contexto.fontes()).extracting(br.com.agrocontabil.assistente.FonteDado::funcao)
         .containsExactly("resumoDoProdutor");
   }

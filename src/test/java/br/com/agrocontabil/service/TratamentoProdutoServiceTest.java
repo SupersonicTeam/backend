@@ -91,6 +91,18 @@ class TratamentoProdutoServiceTest {
     assertThat(TratamentoProdutoService.artigo(null)).isNull();
   }
 
+  @Test
+  @DisplayName("#357: as condições fixas entregues ao produtor levam acento")
+  void condicoesComAcento() {
+    for (String condicao : List.of(TratamentoProdutoService.CONDICAO_IN_NATURA,
+        TratamentoProdutoService.CONDICAO_LEITE_IN_NATURA,
+        TratamentoProdutoService.CONDICAO_LEITE_UHT,
+        TratamentoProdutoService.CONDICAO_LEITE_CONSUMO_DIRETO)) {
+      assertThat(br.com.agrocontabil.assistente.TextosFixosAcentuadosTest.semAcento(condicao))
+          .as(condicao).isEmpty();
+    }
+  }
+
   @ParameterizedTest
   @CsvSource(delimiter = '|', value = {
       // referencia de NCM (changeSets 0007/0046): o trecho negado sai ate a virgula ou o fim

@@ -14,7 +14,7 @@ class TemplateTratamentoProdutoTest {
 
   private static final Produto SOJA = new Produto("12019000",
       "Soja, mesmo triturada, exceto para semeadura", 1, "200036", new BigDecimal("60.00"), true,
-      null, "137", "vendido in natura, sem industrializacao (LC 214/2025, art. 137)", true);
+      null, "137", "vendido in natura, sem industrialização (LC 214/2025, art. 137)", true);
   private static final Produto ARROZ = new Produto("10063021", "Arroz polido", 1, "200003",
       new BigDecimal("100.00"), false, 1, "125", "destinados à alimentação humana", true);
   private static final Produto ADUBO = new Produto(null, "Fertilizantes (adubos)", 35, "200038",
@@ -29,9 +29,9 @@ class TemplateTratamentoProdutoTest {
         new TratamentoConsultado("soja", List.of(SOJA), "IT 2025.002 v1.70"));
 
     assertThat(texto).isEqualTo("Soja, mesmo triturada, exceto para semeadura (NCM 1201.90.00):"
-        + " reducao de 60% do IBS e da CBS, como produto agropecuario in natura (LC 214/2025, art."
-        + " 137; cClassTrib 200036). Condicao: vendido in natura, sem industrializacao (LC"
-        + " 214/2025, art. 137).\nTratamento pela tabela oficial de classificacao tributaria (IT"
+        + " redução de 60% do IBS e da CBS, como produto agropecuário in natura (LC 214/2025, art."
+        + " 137; cClassTrib 200036). Condição: vendido in natura, sem industrialização (LC"
+        + " 214/2025, art. 137).\nTratamento pela tabela oficial de classificação tributária (IT"
         + " 2025.002 v1.70). " + TemplateTratamentoProduto.RESSALVA);
   }
 
@@ -40,19 +40,19 @@ class TemplateTratamentoProdutoTest {
   void leiteDuasSituacoes() {
     Produto leite = new Produto("04012090", "Leite com teor de gordura entre 1% e 6%, outros", 1,
         "200036", new BigDecimal("60.00"), true, null, "137",
-        "leite cru ou apenas resfriado, vendido in natura (LC 214/2025, art. 137, par. 1, II)",
+        "leite cru ou apenas resfriado, vendido in natura (LC 214/2025, art. 137, § 1º, II)",
         true, new Alternativa("200003", new BigDecimal("100.00"), 1, "125",
-            "leite para consumo direto pela populacao (Anexo I, item 2)"));
+            "leite para consumo direto pela população (Anexo I, item 2)"));
     TratamentoConsultado consulta =
         new TratamentoConsultado("leite", List.of(leite), "IT 2025.002 v1.70");
 
     assertThat(TemplateTratamentoProduto.texto(consulta)).isEqualTo("Leite com teor de gordura"
-        + " entre 1% e 6%, outros (NCM 0401.20.90): reducao de 60% do IBS e da CBS, como produto"
-        + " agropecuario in natura (LC 214/2025, art. 137; cClassTrib 200036). Condicao: leite cru"
-        + " ou apenas resfriado, vendido in natura (LC 214/2025, art. 137, par. 1, II). Ja o leite"
-        + " para consumo direto pela populacao (Anexo I, item 2) tem aliquota zero do IBS e da CBS"
+        + " entre 1% e 6%, outros (NCM 0401.20.90): redução de 60% do IBS e da CBS, como produto"
+        + " agropecuário in natura (LC 214/2025, art. 137; cClassTrib 200036). Condição: leite cru"
+        + " ou apenas resfriado, vendido in natura (LC 214/2025, art. 137, § 1º, II). Já o leite"
+        + " para consumo direto pela população (Anexo I, item 2) tem alíquota zero do IBS e da CBS"
         + " (LC 214/2025, art. 125, Anexo I; cClassTrib 200003), com esse cClassTrib informado no"
-        + " item da nota.\nTratamento pela tabela oficial de classificacao tributaria (IT 2025.002"
+        + " item da nota.\nTratamento pela tabela oficial de classificação tributária (IT 2025.002"
         + " v1.70). " + TemplateTratamentoProduto.RESSALVA_ALTERNATIVA);
     assertThat(TemplateTratamentoProduto.dispositivos(consulta))
         .containsExactly("LC 214/2025|art. 137", "LC 214/2025|art. 125");
@@ -67,7 +67,7 @@ class TemplateTratamentoProdutoTest {
 
     assertThat(TemplateTratamentoProduto.texto(
             new TratamentoConsultado("x", List.of(leite, ARROZ), null)))
-        .endsWith("Tratamento pela tabela oficial de classificacao tributaria. "
+        .endsWith("Tratamento pela tabela oficial de classificação tributária. "
             + TemplateTratamentoProduto.RESSALVA + " "
             + TemplateTratamentoProduto.RESSALVA_ALTERNATIVA);
   }
@@ -76,18 +76,18 @@ class TemplateTratamentoProdutoTest {
   @DisplayName("anexo de aliquota zero: 100% (aliquota zero), anexo em romano")
   void aliquotaZero() {
     assertThat(TemplateTratamentoProduto.frase(ARROZ)).isEqualTo("Arroz polido (NCM 1006.30.21):"
-        + " reducao de 100% do IBS e da CBS (aliquota zero), pelo Anexo I (LC 214/2025, art. 125,"
-        + " Anexo I; cClassTrib 200003). Condicao: destinados à alimentação humana.");
+        + " redução de 100% do IBS e da CBS (alíquota zero), pelo Anexo I (LC 214/2025, art. 125,"
+        + " Anexo I; cClassTrib 200003). Condição: destinados à alimentação humana.");
   }
 
   @Test
   @DisplayName("grupo de NCMs de um item de anexo e tributacao integral")
   void grupoEIntegral() {
     assertThat(TemplateTratamentoProduto.frase(ADUBO))
-        .startsWith("Fertilizantes (adubos) (35 NCMs): reducao de 60%")
+        .startsWith("Fertilizantes (adubos) (35 NCMs): redução de 60%")
         .contains("art. 138, Anexo IX");
-    assertThat(TemplateTratamentoProduto.frase(INTEGRAL)).isEqualTo("NCM 9999.99.99: sem reducao;"
-        + " o IBS e a CBS sao cobrados pela aliquota cheia (cClassTrib 000001).");
+    assertThat(TemplateTratamentoProduto.frase(INTEGRAL)).isEqualTo("NCM 9999.99.99: sem redução;"
+        + " o IBS e a CBS são cobrados pela alíquota cheia (cClassTrib 000001).");
   }
 
   @Test
@@ -97,7 +97,7 @@ class TemplateTratamentoProdutoTest {
         INTEGRAL), null);
     assertThat(TemplateTratamentoProduto.texto(dois))
         .doesNotContain(TemplateTratamentoProduto.RESSALVA)
-        .endsWith("Tratamento pela tabela oficial de classificacao tributaria.");
+        .endsWith("Tratamento pela tabela oficial de classificação tributária.");
     assertThat(TemplateTratamentoProduto.dispositivos(dois))
         .containsExactly("LC 214/2025|art. 138");
     assertThat(TemplateTratamentoProduto.texto(
@@ -113,7 +113,7 @@ class TemplateTratamentoProdutoTest {
     assertThat(TemplateTratamentoProduto.frase(new Produto("12019000", longa, 1, "200036",
         new BigDecimal("30.50"), true, null, "137", null, true)))
         .contains("... (NCM 1201.90.00)")
-        .contains("reducao de 30,5%");
+        .contains("redução de 30,5%");
   }
 
   @Test
@@ -121,8 +121,8 @@ class TemplateTratamentoProdutoTest {
   void ncmDesconhecido() {
     assertThat(TemplateTratamentoProduto.frase(new Produto("07133390", null, 1, "000001",
         BigDecimal.ZERO, false, null, null, null, false)))
-        .startsWith("NCM 0713.33.90: nao encontrei esse codigo")
-        .contains("Se o codigo estiver certo")
+        .startsWith("NCM 0713.33.90: não encontrei esse código")
+        .contains("Se o código estiver certo")
         .endsWith("Confira o NCM na nota fiscal do produto.");
   }
 

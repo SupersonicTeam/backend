@@ -76,8 +76,8 @@ class RotaDadosOllamaFioTest {
 
     assertThat(resultado.aceita()).isTrue();
     // #266: a resposta e do template; o modelo so escolheu a funcao, numa chamada so.
-    assertThat(resultado.texto()).startsWith("Na apuracao de 07/2026 (ainda aberta")
-        .contains("o imposto a pagar e de R$ 120,00 de IBS");
+    assertThat(resultado.texto()).startsWith("Na apuração de 07/2026 (ainda aberta")
+        .contains("o imposto a pagar é de R$ 120,00 de IBS");
     assertThat(corpos).hasSize(1);
     for (String corpo : corpos) {
       assertThat(corpo).doesNotContain(PRODUTOR.toString(), "contextoAssistente", "produtorId");
