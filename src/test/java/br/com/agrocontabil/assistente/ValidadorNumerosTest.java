@@ -103,4 +103,37 @@ class ValidadorNumerosTest {
         .anySatisfy(v -> assertThat(v).isEqualByComparingTo("1500"))
         .anySatisfy(v -> assertThat(v).isEqualByComparingTo("1.5"));
   }
+
+  @Test
+  @DisplayName("#269: percentual por extenso na fonte vale como número ('0,2%' = zero vírgula dois)")
+  void percentualPorExtensoNaFonte() {
+    String fonte = "Art. 6o A contribuição ao SENAR é de zero vírgula dois por cento da receita.";
+
+    assertThat(validador.verificar("A contribuição é de 0,2% da receita.", List.of(fonte))
+        .rastreavel()).isTrue();
+    assertThat(validador.verificar("A contribuição é de 0,2 por cento.", List.of(fonte))
+        .rastreavel()).isTrue();
+    // Outro valor continua sem fonte.
+    assertThat(validador.verificar("A contribuição é de 0,3% da receita.", List.of(fonte))
+        .rastreavel()).isFalse();
+    assertThat(validador.verificar("A contribuição é de 2% da receita.", List.of(fonte))
+        .rastreavel()).isFalse();
+    assertThat(validador.verificar("A contribuição é de 1,5% da receita.",
+        List.of("é de um vírgula cinco por cento")).rastreavel()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#269: percentual por extenso na RESPOSTA também precisa de fonte")
+  void percentualPorExtensoNaResposta() {
+    assertThat(validador.verificar("A redução é de sessenta por cento.",
+        List.of("Ficam reduzidas em 60% as alíquotas."))).extracting(
+            ValidadorNumeros.Resultado::rastreavel).isEqualTo(true);
+    ValidadorNumeros.Resultado inventado = validador.verificar("A redução é de setenta por cento.",
+        List.of("Ficam reduzidas em 60% as alíquotas."));
+    assertThat(inventado.rastreavel()).isFalse();
+    assertThat(inventado.quantidadeSemFonte()).isEqualTo(1);
+    // Por extenso na fonte e na resposta.
+    assertThat(validador.verificar("É de zero vírgula dois por cento.",
+        List.of("é de zero vírgula dois por cento")).rastreavel()).isTrue();
+  }
 }

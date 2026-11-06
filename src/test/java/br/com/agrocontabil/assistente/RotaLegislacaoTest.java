@@ -273,6 +273,21 @@ class RotaLegislacaoTest {
   }
 
   @Test
+  @DisplayName("#269: lei com o percentual por extenso: a resposta em dígitos é aceita, não descartada")
+  void percentualPorExtensoNaLei() {
+    TrechoRecuperado senar = new TrechoRecuperado("T1", "id-senar", "Lei 9.528/1997", "art. 6º",
+        URL, "A contribuição do empregador rural pessoa física para o SENAR é de zero vírgula dois "
+        + "por cento, incidente sobre a receita bruta.", 0.9);
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(senar));
+    chatModel.responderTexto("A contribuição ao SENAR é de 0,2% da receita bruta [T1].");
+
+    ResultadoRota r = rota.responder("Quanto o produtor paga de contribuição ao Senar?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.texto()).startsWith("A contribuição ao SENAR é de 0,2% da receita bruta");
+  }
+
+  @Test
   @DisplayName("#269: a parte de lei do MISTO aceita tambem leva a linha; a que fala dos dados, nao")
   void regraGeralAceitaLevaALinha() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));

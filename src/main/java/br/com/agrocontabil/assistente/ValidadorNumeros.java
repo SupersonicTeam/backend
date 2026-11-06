@@ -27,7 +27,9 @@ import org.springframework.stereotype.Component;
  *       ({@code 07/2026}, {@code 2026-07}) são comparados como data, não como três números soltos;
  *       mês e ano de uma data conhecida também valem sozinhos ("julho de 2026");</li>
  *   <li><strong>números</strong> são comparados pelo valor, aceitando as grafias pt-BR e en
- *       ({@code 1.234,56} = {@code 1234.56}); marcadores de lista ({@code "1. "}) são ignorados.</li>
+ *       ({@code 1.234,56} = {@code 1234.56}); marcadores de lista ({@code "1. "}) são ignorados;</li>
+ *   <li><strong>percentuais por extenso</strong> ({@link PercentualPorExtenso}: "zero vírgula dois
+ *       por cento" = 0,2) valem como número, nas fontes e na resposta (#269).</li>
  * </ul>
  */
 @Component
@@ -158,6 +160,8 @@ public class ValidadorNumeros {
       while (m.find()) {
         numeros.addAll(candidatos(m.group()));
       }
+      // "zero virgula dois por cento" tambem e o numero 0,2 (#269).
+      numeros.addAll(PercentualPorExtenso.valores(resto));
     }
 
     void aprenderData(LocalDate data) {
@@ -192,6 +196,13 @@ public class ValidadorNumeros {
       Matcher m = NUMERO.matcher(resto);
       while (m.find()) {
         if (candidatos(m.group()).stream().noneMatch(numeros::contains)) {
+          semFonte++;
+        }
+      }
+      // Percentual por extenso na resposta tambem precisa de fonte (#269): "setenta por cento" nao
+      // passa sem o 70 nas fontes, escrito em digitos ou por extenso.
+      for (BigDecimal valor : PercentualPorExtenso.valores(resto)) {
+        if (!numeros.contains(valor)) {
           semFonte++;
         }
       }

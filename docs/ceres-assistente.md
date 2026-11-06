@@ -518,6 +518,13 @@ depois, no modelo real, estão no PR. Linguagem mais simples também deixa o mod
 sobre o que o trecho não diz: o ganho de leitura e o risco de paráfrase infiel andam juntos, e a
 conferência de fidelidade é da #268.
 
+**Percentual por extenso (#269, achado do diagnóstico).** A Lei 9.528, art. 6º, escreve a contribuição
+ao SENAR "de zero vírgula dois por cento"; a resposta certa "0,2%" caía como número sem fonte
+(`NUMERO_SEM_FONTE`, 3 de 3 repetições). O `ValidadorNumeros` agora lê o percentual por extenso
+(`PercentualPorExtenso`, de zero a novecentos e noventa e nove, com parte decimal) como número, nas
+fontes **e na resposta**: "setenta por cento" na resposta precisa do 70 nas fontes, em dígitos ou por
+extenso. O mesmo validador serve à rota de dados.
+
 **Resultado vazio nunca vira "não tem" absoluto (#274, item 6).** O pior erro medido na VPS era a
 negativa falsa: "não tem débito pendente" com guias vencidas (#259), "não há notas devolvidas"
 filtrando as rejeitadas (#254). A garantia é do backend, não do prompt: o
