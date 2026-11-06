@@ -58,14 +58,14 @@ public class OrquestradorService {
    * a separou, ou os dados vieram em fallback): a recusa fala só dela (#260).
    */
   public static final String SEM_FUNDAMENTO_PARTE_LEGAL =
-      "Sobre a parte de legislacao da pergunta, nao encontrei fundamento legal.";
+      "Sobre a parte de legislação da pergunta, não encontrei fundamento legal.";
 
   /** Ligação quando a parte de dados não encontrou nada: a regra vale em tese, não "para você". */
-  public static final String LIGACAO_SEM_DADOS = "De forma geral, a legislacao preve: ";
+  public static final String LIGACAO_SEM_DADOS = "De forma geral, a legislação prevê: ";
 
   /** Parte de dados do MISTO sem consulta nenhuma: o modelo não buscou dado algum. */
   public static final String SEM_DADOS =
-      "Nao encontrei nos seus dados do sistema informacao para essa pergunta.";
+      "Não encontrei nos seus dados do sistema informação para essa pergunta.";
 
   private static final Logger log = LoggerFactory.getLogger(OrquestradorService.class);
 

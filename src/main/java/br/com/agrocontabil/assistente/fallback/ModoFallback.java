@@ -42,17 +42,17 @@ public class ModoFallback {
    * redigida pelo modelo (issue #170 — sem contradição entre as partes).
    */
   public static final String SEM_MODELO_DADOS =
-      "Nao consegui consultar os seus dados agora. Voce encontra essas informacoes nas telas "
+      "Não consegui consultar os seus dados agora. Você encontra essas informações nas telas "
           + "indicadas.";
 
   /** Abertura da parte de legislação sem modelo. */
   public static final String SEM_MODELO_LEI =
-      "Estou sem o modelo de linguagem no momento, entao nao redijo uma resposta. Estes sao os "
-          + "trechos da legislacao mais proximos da sua pergunta:";
+      "Estou sem o modelo de linguagem no momento, então não redijo uma resposta. Estes são os "
+          + "trechos da legislação mais próximos da sua pergunta:";
 
   /** Nenhum trecho encontrado pela busca textual. */
   public static final String SEM_MODELO_SEM_TRECHO =
-      "Estou sem o modelo de linguagem no momento e nao encontrei na legislacao um trecho que "
+      "Estou sem o modelo de linguagem no momento e não encontrei na legislação um trecho que "
           + "trate da sua pergunta. Tente de novo em alguns minutos.";
 
   private static final Pattern SINAL_DADOS = Pattern.compile(

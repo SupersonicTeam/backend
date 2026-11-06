@@ -61,7 +61,7 @@ public class RotaLegislacao {
    * dígitos, para não virar fonte de número.
    */
   public static final String SO_TRECHOS =
-      "A regra legal que trata do assunto esta nos trechos de lei citados.";
+      "A regra legal que trata do assunto está nos trechos de lei citados.";
 
   /**
    * Resposta de lei descartada (número fora dos trechos ou marca inventada) com trechos marcados
@@ -70,8 +70,8 @@ public class RotaLegislacao {
    * respondem, e o {@link #SO_TRECHOS} diria o contrário. Sem dígitos, para não virar fonte.
    */
   public static final String TRECHOS_SEM_CONFIRMACAO =
-      "Nao consegui confirmar uma resposta com a legislacao. Estes sao os trechos de lei mais "
-          + "proximos da pergunta, para consulta.";
+      "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais "
+          + "próximos da pergunta, para consulta.";
 
   /**
    * Trechos mostrados quando o modelo não marca nenhum válido (#343): os primeiros da busca, já

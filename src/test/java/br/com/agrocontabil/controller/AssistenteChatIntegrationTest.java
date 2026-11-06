@@ -366,7 +366,7 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
             "O CALENDÁRIO")))
         .andExpect(jsonPath("$.resposta").value(
-            org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("nao encontrei"))))
+            org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("ncontrei"))))
         .andExpect(jsonPath("$.modoFallback").value(false))
         .andExpect(jsonPath("$.fontesDados").isEmpty());
     assertThat(modelo.promptsRecebidos()).isEmpty();

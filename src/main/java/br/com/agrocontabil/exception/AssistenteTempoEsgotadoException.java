@@ -18,7 +18,7 @@ public class AssistenteTempoEsgotadoException extends DomainException {
   public AssistenteTempoEsgotadoException() {
     super(HttpStatus.SERVICE_UNAVAILABLE, "Pergunta a Ceres passou do tempo maximo",
         List.of(ErrorDetail.of(ErrorCode.ASSISTENTE_TEMPO_ESGOTADO,
-            "A Ceres demorou demais para responder. Tente uma pergunta mais especifica ou tente "
+            "A Ceres demorou demais para responder. Tente uma pergunta mais específica ou tente "
                 + "novamente em instantes.")));
   }
 }

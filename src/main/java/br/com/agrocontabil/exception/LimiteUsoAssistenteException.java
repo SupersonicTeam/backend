@@ -17,7 +17,7 @@ public class LimiteUsoAssistenteException extends DomainException
 
   /** Mensagem segura para o cliente da API (também o {@code message} de topo, #251). */
   public static final String MENSAGEM_CLIENTE =
-      "Os creditos da Ceres desta semana acabaram. Eles renovam na segunda-feira.";
+      "Os créditos da Ceres desta semana acabaram. Eles renovam na segunda-feira.";
 
   private final long retryAfterSegundos;
 

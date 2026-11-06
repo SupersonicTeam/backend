@@ -33,7 +33,7 @@ public class AssistenteOcupadoException extends DomainException implements ComRe
   public static AssistenteOcupadoException limiteGlobal() {
     return new AssistenteOcupadoException(
         "Limite de perguntas simultaneas da Ceres atingido",
-        "A Ceres esta atendendo muitas perguntas agora. Tente novamente em instantes.");
+        "A Ceres está atendendo muitas perguntas agora. Tente novamente em instantes.");
   }
 
   /** O produtor já tem uma pergunta em andamento. */

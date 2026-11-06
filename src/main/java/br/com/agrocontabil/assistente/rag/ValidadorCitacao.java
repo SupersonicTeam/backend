@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
 public class ValidadorCitacao {
 
   /** Texto fixo quando não há fundamento legal validado. */
-  public static final String SEM_FUNDAMENTO = "Nao encontrei fundamento legal para isso.";
+  public static final String SEM_FUNDAMENTO = "Não encontrei fundamento legal para isso.";
 
   private static final Pattern MARCA =
       Pattern.compile("\\[\\s*(T\\d+(?:\\s*[,;]\\s*T\\d+)*)\\s*\\]");
