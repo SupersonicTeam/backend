@@ -1,0 +1,1374 @@
+[ {
+  "id" : "D01",
+  "pergunta" : "O que é o Comitê Gestor do IBS e para que ele serve?",
+  "esperado" : [ "LC 227/2026 art. 1º" ],
+  "aceito" : [ "LC 214/2025 art. 480" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 480, § 4º",
+    "similaridade" : 0.634
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 480, § 5º",
+    "similaridade" : 0.628
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 1º, parágrafo único, inciso II",
+    "similaridade" : 0.623
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 480, § 2º",
+    "similaridade" : 0.62
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 480, § 3º",
+    "similaridade" : 0.618
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 318",
+    "similaridade" : 0.616
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 1º",
+    "similaridade" : 0.611
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 1º, parágrafo único, inciso I",
+    "similaridade" : 0.609
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 318, parágrafo único",
+    "similaridade" : 0.607
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 1º, parágrafo único",
+    "similaridade" : 0.597
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O Comitê Gestor do IBS é uma entidade pública com caráter técnico e operacional, sob regime especial, com sede e foro no Distrito Federal, dotada de independência técnica, administrativa, orçamentária e financeira. Ele serve para definir diretrizes e coordenar a atuação integrada das administrações tributárias e das Procuradorias dos Estados, do Distrito Federal e dos Municípios, observadas as respectivas competências (LC 227/2026, art. 1º, parágrafo único, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.",
+    "citacoes" : [ "LC 227/2026 art. 1º, parágrafo único, inciso I" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O Comitê Gestor do IBS é uma entidade pública com caráter técnico e operacional, sob regime especial, com sede e foro no Distrito Federal, dotada de independência técnica, administrativa, orçamentária e financeira. Ele serve para definir diretrizes e coordenar a atuação integrada das administrações tributárias e das Procuradorias dos Estados, do Distrito Federal e dos Municípios, observadas as respectivas competências (LC 227/2026, art. 1º, parágrafo único, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.",
+    "citacoes" : [ "LC 227/2026 art. 1º, parágrafo único, inciso I" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O Comitê Gestor do IBS é uma entidade pública com caráter técnico e operacional, sob regime especial, com sede e foro no Distrito Federal, dotada de independência técnica, administrativa, orçamentária e financeira. Ele serve para definir diretrizes e coordenar a atuação integrada das administrações tributárias e das Procuradorias dos Estados, do Distrito Federal e dos Municípios, observadas as respectivas competências (LC 227/2026, art. 1º, parágrafo único, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.",
+    "citacoes" : [ "LC 227/2026 art. 1º, parágrafo único, inciso I" ]
+  } ]
+}, {
+  "id" : "D02",
+  "pergunta" : "O que é o Imposto Seletivo?",
+  "esperado" : [ "LC 214/2025 art. 409" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 2º",
+    "similaridade" : 0.675
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso VII",
+    "similaridade" : 0.672
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso III",
+    "similaridade" : 0.671
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso II",
+    "similaridade" : 0.67
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso I",
+    "similaridade" : 0.669
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso VI",
+    "similaridade" : 0.668
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º",
+    "similaridade" : 0.667
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso IV",
+    "similaridade" : 0.666
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409",
+    "similaridade" : 0.662
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 409, § 1º, inciso V",
+    "similaridade" : 0.658
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O Imposto Seletivo é um imposto instituído para incidir sobre a produção, extração, comercialização ou importação de bens e serviços prejudiciais à saúde ou ao meio ambiente (LC 214/2025, art. 409, § 2º).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.",
+    "citacoes" : [ "LC 214/2025 art. 409, § 2º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O Imposto Seletivo é um imposto instituído pela Constituição Federal, incidente sobre a produção, extração, comercialização ou importação de bens e serviços prejudiciais à saúde ou ao meio ambiente. (LC 214/2025, art. 409, § 2º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.",
+    "citacoes" : [ "LC 214/2025 art. 409, § 2º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O Imposto Seletivo é um imposto instituído pela Constituição Federal, incidente sobre a produção, extração, comercialização ou importação de bens e serviços prejudiciais à saúde ou ao meio ambiente. (LC 214/2025, art. 409, § 2º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.",
+    "citacoes" : [ "LC 214/2025 art. 409, § 2º" ]
+  } ]
+}, {
+  "id" : "D03",
+  "pergunta" : "Até quando existem o ICMS e o ISS durante a transição para o IBS?",
+  "esperado" : [ "EC 132/2023 art. 2º" ],
+  "aceito" : [ "EC 132/2023 art. 22" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 4º, inciso II, alínea b",
+    "similaridade" : 0.651
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 4º, inciso I",
+    "similaridade" : 0.646
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 4º, inciso II, alínea a",
+    "similaridade" : 0.629
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 4º, inciso II",
+    "similaridade" : 0.629
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, § 3º, inciso II",
+    "similaridade" : 0.588
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 4º",
+    "similaridade" : 0.572
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, inciso II",
+    "similaridade" : 0.571
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 105, § 2º",
+    "similaridade" : 0.57
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, § 6º, inciso II",
+    "similaridade" : 0.57
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 5º",
+    "similaridade" : 0.566
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Durante o período de 2029 a 2032, caso não tenha se aperfeiçoado o elemento temporal da hipótese de incidência do ICMS ou do ISS, os referidos impostos não incidirão na operação (LC 214/2025, art. 408, § 4º, inciso II, alínea a).\n\nO que isso quer dizer:\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.",
+    "citacoes" : [ "LC 214/2025 art. 408, § 4º, inciso II, alínea a" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Durante o período de 2029 a 2032, o elemento temporal da hipótese de incidência do ICMS ou do ISS será considerado, mas apenas se não tiver se aperfeiçoado até 31 de dezembro de 2032. (LC 214/2025, art. 408, § 4º, inciso II, alínea b; LC 214/2025, art. 408, § 4º, inciso II, alínea a)\n\nO que isso quer dizer:\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.",
+    "citacoes" : [ "LC 214/2025 art. 408, § 4º, inciso II, alínea b", "LC 214/2025 art. 408, § 4º, inciso II, alínea a" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Durante o período de 2029 a 2032, o ICMS e o ISS não incidirão na operação, se o elemento temporal da hipótese de incidência não tiver se aperfeiçoado até 31 de dezembro de 2032. (LC 214/2025, art. 408, § 4º, inciso II, alínea a)\n\nO que isso quer dizer:\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.",
+    "citacoes" : [ "LC 214/2025 art. 408, § 4º, inciso II, alínea a" ]
+  } ]
+}, {
+  "id" : "D04",
+  "pergunta" : "Como funciona o cashback do IBS e da CBS para famílias de baixa renda?",
+  "esperado" : [ "LC 214/2025 art. 112" ],
+  "aceito" : [ "LC 214/2025 art. 113", "LC 214/2025 art. 117" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 112, inciso I",
+    "similaridade" : 0.627
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 128, inciso VII",
+    "similaridade" : 0.607
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 112, inciso II",
+    "similaridade" : 0.603
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 125, parágrafo único",
+    "similaridade" : 0.585
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 407, § 2º, inciso I",
+    "similaridade" : 0.582
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso I, alínea b",
+    "similaridade" : 0.581
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 126, § 4º",
+    "similaridade" : 0.58
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 237",
+    "similaridade" : 0.579
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 135",
+    "similaridade" : 0.579
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 126, § 6º",
+    "similaridade" : 0.578
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A CBS é devolvida para pessoas físicas que forem integrantes de famílias de baixa renda (LC 214/2025, art. 112, inciso I). O IBS também é devolvido para essas famílias (LC 214/2025, art. 112, inciso II).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 112, inciso I", "LC 214/2025 art. 112, inciso II" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A CBS é devolvida para pessoas físicas que forem integrantes de famílias de baixa renda. (LC 214/2025, art. 112, inciso I)  \nO IBS é devolvido para pessoas físicas que forem integrantes de famílias de baixa renda. (LC 214/2025, art. 112, inciso II)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 112, inciso I", "LC 214/2025 art. 112, inciso II" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A CBS é devolvida para pessoas físicas que forem integrantes de famílias de baixa renda. (LC 214/2025, art. 112, inciso I)  \nO IBS é devolvido para pessoas físicas que forem integrantes de famílias de baixa renda. (LC 214/2025, art. 112, inciso II)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 112, inciso I", "LC 214/2025 art. 112, inciso II" ]
+  } ]
+}, {
+  "id" : "D05",
+  "pergunta" : "A venda de grãos para o exterior paga IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 79" ],
+  "aceito" : [ "LC 214/2025 art. 8º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 82, § 11, inciso I",
+    "similaridade" : 0.621
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 471, § 1º, inciso II",
+    "similaridade" : 0.616
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 242",
+    "similaridade" : 0.61
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 471, § 2º, inciso II",
+    "similaridade" : 0.61
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 471, § 2º, inciso III",
+    "similaridade" : 0.61
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º, inciso II",
+    "similaridade" : 0.608
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 63",
+    "similaridade" : 0.604
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 92, inciso I",
+    "similaridade" : 0.603
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 22, inciso I",
+    "similaridade" : 0.603
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76, § 3º",
+    "similaridade" : 0.603
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 82, § 11, inciso I", "LC 214/2025 art. 471, § 1º, inciso II", "LC 214/2025 art. 242" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, a venda de grãos para o exterior não paga IBS e CBS, pois o fornecimento de produtos agropecuários in natura para contribuinte do regime regular que promova industrialização destinada a exportação fica suspenso do pagamento do IBS e da CBS (LC 214/2025, art. 82, § 11, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 82, § 11, inciso I" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 82, § 11, inciso I", "LC 214/2025 art. 471, § 1º, inciso II", "LC 214/2025 art. 242" ]
+  } ]
+}, {
+  "id" : "D06",
+  "pergunta" : "Como funciona o crédito do IBS e da CBS nas compras de quem é contribuinte?",
+  "esperado" : [ "LC 214/2025 art. 47" ],
+  "aceito" : [ "LC 214/2025 art. 45" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 5º, inciso I, alínea a",
+    "similaridade" : 0.719
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso II, alínea a",
+    "similaridade" : 0.712
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso II",
+    "similaridade" : 0.708
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso I, alínea a",
+    "similaridade" : 0.708
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso I, alínea b",
+    "similaridade" : 0.708
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso II, alínea b",
+    "similaridade" : 0.706
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso I",
+    "similaridade" : 0.705
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º",
+    "similaridade" : 0.696
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 47, § 9º, inciso II",
+    "similaridade" : 0.696
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 2º",
+    "similaridade" : 0.694
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O contribuinte de IBS e CBS pode apropriar créditos presumidos relativos às aquisições de bem móvel usado de pessoa física que não seja contribuinte ou que seja MEI, desde que a aquisição seja para revenda. (LC 214/2025, art. 5º, inciso I, alínea a) O crédito presumido de IBS é calculado com o percentual equivalente à soma das alíquotas de IBS aplicáveis, fixadas pelo Município e pelo Estado onde está localizado o estabelecimento, vigentes na data da revenda ou na data da aquisição, conforme a data de realização da operação. (LC 214/2025, art. 171, § 1º, inciso I, alínea a; LC 214/2025, art. 171, § 1º, inciso I, alínea b) Para a CBS, a alíquota aplicável, fixada pela União e vigente, é usada na data da revenda ou da aquisição, conforme a data da operação. (LC 214/2025, art. 171, § 1º, inciso II, alínea a; LC 214/2025, art. 171, § 1º, inciso II, alínea b) O crédito só pode ser utilizado para deduzir o IBS e a CBS devidos na revenda do bem. (LC 214/2025, art. 171, § 2º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 5º, inciso I, alínea a", "LC 214/2025 art. 171, § 1º, inciso I, alínea a", "LC 214/2025 art. 171, § 1º, inciso I, alínea b", "LC 214/2025 art. 171, § 1º, inciso II, alínea a", "LC 214/2025 art. 171, § 1º, inciso II, alínea b", "LC 214/2025 art. 171, § 2º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O contribuinte de IBS e CBS pode apropriar créditos presumidos relativo às aquisições de bens e serviços de pessoa física que não seja contribuinte ou inscrita como MEI, desde que o bem seja usado e a aquisição seja registrada em documento admitido pela administração tributária. (LC 214/2025, art. 5º, inciso I, alínea a)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 5º, inciso I, alínea a" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O contribuinte de IBS e CBS pode apropriar créditos presumidos relativo às aquisições de bens e serviços de pessoa física que não seja contribuinte ou inscrita como MEI, desde que o bem seja usado e a aquisição seja registrada em documento admitido pela administração tributária. (LC 214/2025, art. 5º, inciso I, alínea a)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 5º, inciso I, alínea a" ]
+  } ]
+}, {
+  "id" : "D07",
+  "pergunta" : "Quando surge a obrigação de pagar o IBS e a CBS na importação de bens?",
+  "esperado" : [ "LC 214/2025 art. 67" ],
+  "aceito" : [ "LC 214/2025 art. 65", "LC 214/2025 art. 76" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76, § 1º",
+    "similaridade" : 0.732
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76, § 3º",
+    "similaridade" : 0.731
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76, § 5º",
+    "similaridade" : 0.724
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76, § 4º",
+    "similaridade" : 0.724
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76",
+    "similaridade" : 0.723
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 76, § 2º",
+    "similaridade" : 0.718
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º, inciso II",
+    "similaridade" : 0.702
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º, inciso I",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 408, § 1º, inciso II, alínea c",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º",
+    "similaridade" : 0.695
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A obrigação de pagar o IBS e a CBS na importação de bens surge até a entrega dos bens submetidos a despacho para consumo, ainda que esta ocorra antes da liberação dos bens pela autoridade aduaneira. (LC 214/2025, art. 76, § 1º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 76, § 1º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A obrigação de pagar o IBS e a CBS na importação de bens surge até a entrega dos bens submetidos a despacho para consumo, ainda que esta ocorra antes da liberação dos bens pela autoridade aduaneira. (LC 214/2025, art. 76, § 1º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 76, § 1º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A obrigação de pagar o IBS e a CBS na importação de bens surge até a entrega dos bens submetidos a despacho para consumo, ainda que esta ocorra antes da liberação dos bens pela autoridade aduaneira. (LC 214/2025, art. 76, § 1º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 76, § 1º" ]
+  } ]
+}, {
+  "id" : "D08",
+  "pergunta" : "Quem é contribuinte do IBS e da CBS?",
+  "esperado" : [ "LC 214/2025 art. 21" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21",
+    "similaridade" : 0.737
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21, inciso III",
+    "similaridade" : 0.722
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 176, inciso I",
+    "similaridade" : 0.679
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21, inciso I",
+    "similaridade" : 0.676
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21, inciso I, alínea b",
+    "similaridade" : 0.674
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21, inciso I, alínea a",
+    "similaridade" : 0.67
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 24, inciso I",
+    "similaridade" : 0.668
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 72",
+    "similaridade" : 0.668
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21, inciso I, alínea c",
+    "similaridade" : 0.666
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 26, § 6º-A",
+    "similaridade" : 0.657
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 21", "LC 214/2025 art. 21, inciso III", "LC 214/2025 art. 176, inciso I" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O produtor nacional de biocombustíveis é contribuinte do IBS e da CBS (LC 214/2025, art. 176, inciso I). O fornecedor que realizar operações de modo habitual ou em volume que caracterize atividade econômica é contribuinte do IBS e da CBS (LC 214/2025, art. 21, inciso I, alínea b). O fornecedor que realizar operações de forma profissional, ainda que a profissão não seja regulamentada, é contribuinte do IBS e da CBS (LC 214/2025, art. 21, inciso I, alínea c). O importador é contribuinte do IBS e da CBS (LC 214/2025, art. 21, inciso III). (LC 214/2025, art. 21; LC 214/2025, art. 21, inciso III; LC 214/2025, art. 176, inciso I; LC 214/2025, art. 21, inciso I, alínea b; LC 214/2025, art. 21, inciso I, alínea c)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 176, inciso I", "LC 214/2025 art. 21, inciso I, alínea b", "LC 214/2025 art. 21, inciso I, alínea c", "LC 214/2025 art. 21, inciso III", "LC 214/2025 art. 21" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O produtor nacional de biocombustíveis é contribuinte do IBS e da CBS (LC 214/2025, art. 176, inciso I). O fornecedor que realizar operações de modo habitual ou em volume que caracterize atividade econômica é contribuinte do IBS e da CBS (LC 214/2025, art. 21, inciso I, alínea b). O fornecedor que realizar operações de forma profissional, ainda que a profissão não seja regulamentada, é contribuinte do IBS e da CBS (LC 214/2025, art. 21, inciso I, alínea c). (LC 214/2025, art. 21; LC 214/2025, art. 21, inciso III; LC 214/2025, art. 176, inciso I; LC 214/2025, art. 21, inciso I; LC 214/2025, art. 21, inciso I, alínea b; LC 214/2025, art. 21, inciso I, alínea a; LC 214/2025, art. 21, inciso I, alínea c)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 176, inciso I", "LC 214/2025 art. 21, inciso I, alínea b", "LC 214/2025 art. 21, inciso I, alínea c", "LC 214/2025 art. 21", "LC 214/2025 art. 21, inciso III", "LC 214/2025 art. 21, inciso I", "LC 214/2025 art. 21, inciso I, alínea a" ]
+  } ]
+}, {
+  "id" : "D09",
+  "pergunta" : "Se a minha venda for isenta, eu perco os créditos das minhas compras?",
+  "esperado" : [ "LC 214/2025 art. 51" ],
+  "aceito" : [ "LC 214/2025 art. 52" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 51, § 1º",
+    "similaridade" : 0.626
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 51",
+    "similaridade" : 0.604
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 49",
+    "similaridade" : 0.591
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 407, § 2º, inciso I",
+    "similaridade" : 0.586
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 407, § 4º, inciso II, alínea a",
+    "similaridade" : 0.578
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 407, § 4º, inciso I, alínea a",
+    "similaridade" : 0.571
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, § 4º, inciso I, alínea a",
+    "similaridade" : 0.567
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, § 4º, inciso I",
+    "similaridade" : 0.565
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, § 4º, inciso I, alínea c",
+    "similaridade" : 0.565
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 406, § 4º, inciso I, alínea d",
+    "similaridade" : 0.564
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, se a sua venda for isenta, você perde os créditos das suas compras, pois operações imunes ou isentas não permitem a apropriação de créditos pelos adquirentes (LC 214/2025, art. 49).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 49" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, se a sua venda for isenta, você perde os créditos das suas compras, pois operações imunes ou isentas não permitem a apropriação de créditos pelos adquirentes (LC 214/2025, art. 49).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 49" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, se a sua venda for isenta, você perde os créditos das suas compras, pois operações imunes ou isentas não permitem a apropriação de créditos pelos adquirentes (LC 214/2025, art. 49).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 49" ]
+  } ]
+}, {
+  "id" : "D10",
+  "pergunta" : "Posso descontar o crédito de um carro que comprei para uso pessoal?",
+  "esperado" : [ "LC 214/2025 art. 57" ],
+  "aceito" : [ "LC 214/2025 art. 47" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 2º",
+    "similaridade" : 0.595
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 47, § 4º",
+    "similaridade" : 0.588
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 57, § 9º",
+    "similaridade" : 0.587
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 47, § 6º",
+    "similaridade" : 0.585
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 3º",
+    "similaridade" : 0.581
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 57, § 5º",
+    "similaridade" : 0.581
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 170, § 4º",
+    "similaridade" : 0.578
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso II, alínea a",
+    "similaridade" : 0.578
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso II",
+    "similaridade" : 0.573
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 1º, inciso II, alínea b",
+    "similaridade" : 0.573
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, não pode descontar o crédito de um carro que comprou para uso pessoal, pois operações de uso ou consumo pessoal excluem a apropriação de créditos (LC 214/2025, art. 57, § 5º).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 57, § 5º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não. A apropriação de créditos do IBS e da CBS é excluída para bens de uso ou consumo pessoal. (LC 214/2025, art. 57, § 5º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 57, § 5º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não. A apropriação de créditos do IBS e da CBS é excluída para bens de uso ou consumo pessoal. (LC 214/2025, art. 57, § 5º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 57, § 5º" ]
+  } ]
+}, {
+  "id" : "D11",
+  "pergunta" : "Sou obrigado a emitir nota fiscal eletrônica nas minhas vendas?",
+  "esperado" : [ "LC 214/2025 art. 60" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 2º, inciso I",
+    "similaridade" : 0.648
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 2º",
+    "similaridade" : 0.645
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 62, § 1º, inciso I",
+    "similaridade" : 0.644
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 2º, inciso II",
+    "similaridade" : 0.643
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 2º, inciso III",
+    "similaridade" : 0.641
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 4º",
+    "similaridade" : 0.62
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60",
+    "similaridade" : 0.614
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 3º",
+    "similaridade" : 0.601
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 6º",
+    "similaridade" : 0.598
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 60, § 1º",
+    "similaridade" : 0.598
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, você é obrigado a emitir documento fiscal eletrônico nas suas vendas, incluindo operações com bens ou serviços, exportações e importações (LC 214/2025, art. 60, § 2º, inciso I; LC 214/2025, art. 60, § 2º; LC 214/2025, art. 60).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.",
+    "citacoes" : [ "LC 214/2025 art. 60, § 2º, inciso I", "LC 214/2025 art. 60, § 2º", "LC 214/2025 art. 60" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, você é obrigado a emitir documento fiscal eletrônico nas suas vendas, incluindo vendas de bens e serviços, exportações e importações (LC 214/2025, art. 60, § 2º, inciso I; LC 214/2025, art. 60, § 2º; LC 214/2025, art. 60, § 2º, inciso II; LC 214/2025, art. 60, § 2º, inciso III; LC 214/2025, art. 60).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.",
+    "citacoes" : [ "LC 214/2025 art. 60, § 2º, inciso I", "LC 214/2025 art. 60, § 2º", "LC 214/2025 art. 60, § 2º, inciso II", "LC 214/2025 art. 60, § 2º, inciso III", "LC 214/2025 art. 60" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, você é obrigado a emitir documento fiscal eletrônico nas suas vendas, incluindo operações com bens ou serviços, exportações e importações (LC 214/2025, art. 60, § 2º, inciso I; LC 214/2025, art. 60, § 2º; LC 214/2025, art. 60, § 2º, inciso II; LC 214/2025, art. 60, § 2º, inciso III; LC 214/2025, art. 60).\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.",
+    "citacoes" : [ "LC 214/2025 art. 60, § 2º, inciso I", "LC 214/2025 art. 60, § 2º", "LC 214/2025 art. 60, § 2º, inciso II", "LC 214/2025 art. 60, § 2º, inciso III", "LC 214/2025 art. 60" ]
+  } ]
+}, {
+  "id" : "D12",
+  "pergunta" : "Posso pedir de volta o saldo de crédito que sobrou no fim do mês?",
+  "esperado" : [ "LC 214/2025 art. 39" ],
+  "aceito" : [ "LC 214/2025 art. 40", "LC 214/2025 art. 45" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 1º",
+    "similaridade" : 0.671
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 4º",
+    "similaridade" : 0.633
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 7º",
+    "similaridade" : 0.623
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 5º, inciso II",
+    "similaridade" : 0.623
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 8º",
+    "similaridade" : 0.619
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 9º",
+    "similaridade" : 0.619
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 394, § 4º",
+    "similaridade" : 0.616
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 11",
+    "similaridade" : 0.601
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 378, inciso IV",
+    "similaridade" : 0.6
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 394, § 6º",
+    "similaridade" : 0.597
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, você pode solicitar o ressarcimento integral ou parcial do saldo a recuperar ao final do período de apuração. (LC 214/2025, art. 39, § 1º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- apuração: a conta do mês que compara o imposto das suas vendas com o das suas compras.",
+    "citacoes" : [ "LC 214/2025 art. 39, § 1º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, você pode solicitar o ressarcimento integral ou parcial do saldo a recuperar ao final do período de apuração. (LC 214/2025, art. 39, § 1º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- apuração: a conta do mês que compara o imposto das suas vendas com o das suas compras.",
+    "citacoes" : [ "LC 214/2025 art. 39, § 1º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, você pode solicitar o ressarcimento integral ou parcial do saldo a recuperar no final do período de apuração. (LC 214/2025, art. 39, § 1º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- apuração: a conta do mês que compara o imposto das suas vendas com o das suas compras.",
+    "citacoes" : [ "LC 214/2025 art. 39, § 1º" ]
+  } ]
+}, {
+  "id" : "D13",
+  "pergunta" : "Uma cooperativa de produtores pode ter alíquota zero de IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 271" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, § 1º, inciso II",
+    "similaridade" : 0.717
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, inciso I",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, § 4º",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, § 1º, inciso I",
+    "similaridade" : 0.687
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, inciso II",
+    "similaridade" : 0.685
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, § 3º",
+    "similaridade" : 0.683
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, § 2º",
+    "similaridade" : 0.678
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271, § 1º",
+    "similaridade" : 0.678
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 271",
+    "similaridade" : 0.666
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 110, inciso I",
+    "similaridade" : 0.658
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, uma cooperativa de produtores pode ter alíquota zero de IBS e CBS, pois pode optar por regime específico do IBS e da CBS, no qual as alíquotas ficam reduzidas a zero nas operações definidas (LC 214/2025, art. 271, § 1º, inciso II).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 271, § 1º, inciso II" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, uma cooperativa de produtores pode ter alíquota zero de IBS e CBS, pois pode optar por regime específico do IBS e da CBS, no qual as alíquotas ficam reduzidas a zero nas operações definidas (LC 214/2025, art. 271, § 1º, inciso II).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 271, § 1º, inciso II" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, uma cooperativa de produtores pode ter alíquota zero de IBS e CBS, pois pode optar por regime específico do IBS e da CBS, no qual as alíquotas ficam reduzidas a zero (LC 214/2025, art. 271, § 1º, inciso II).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 271, § 1º, inciso II" ]
+  } ]
+}, {
+  "id" : "D14",
+  "pergunta" : "Por quanto tempo posso usar o crédito do IBS e da CBS?",
+  "esperado" : [ "LC 214/2025 art. 54" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 452, parágrafo único",
+    "similaridade" : 0.69
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 468, parágrafo único",
+    "similaridade" : 0.686
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 168, § 10",
+    "similaridade" : 0.639
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 89, § 3º, inciso I",
+    "similaridade" : 0.636
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 7º",
+    "similaridade" : 0.636
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 10, inciso I",
+    "similaridade" : 0.636
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 10",
+    "similaridade" : 0.635
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 4º",
+    "similaridade" : 0.633
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 5º, inciso II",
+    "similaridade" : 0.632
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 47, § 13, inciso I",
+    "similaridade" : 0.629
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O direito à utilização dos créditos presumidos de IBS e CBS extingue-se após 5 (cinco) anos, contados do primeiro dia do mês subsequente àquele em que ocorrer sua apropriação. (LC 214/2025, art. 452, parágrafo único; LC 214/2025, art. 468, parágrafo único)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 452, parágrafo único", "LC 214/2025 art. 468, parágrafo único" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O direito à utilização dos créditos presumidos de IBS e CBS extingue-se após 5 (cinco) anos, contados do primeiro dia do mês subsequente àquele em que ocorrer sua apropriação. (LC 214/2025, art. 452, parágrafo único; LC 214/2025, art. 468, parágrafo único)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 452, parágrafo único", "LC 214/2025 art. 468, parágrafo único" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O direito à utilização dos créditos presumidos de IBS e CBS extingue-se após 5 (cinco) anos, contados do primeiro dia do mês subsequente àquele em que ocorrer sua apropriação. (LC 214/2025, art. 452, parágrafo único; LC 214/2025, art. 468, parágrafo único)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 452, parágrafo único", "LC 214/2025 art. 468, parágrafo único" ]
+  } ]
+}, {
+  "id" : "D15",
+  "pergunta" : "Quando se considera que aconteceu o fato gerador do IBS e da CBS numa venda?",
+  "esperado" : [ "LC 214/2025 art. 10" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 254, inciso I",
+    "similaridade" : 0.652
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 254",
+    "similaridade" : 0.65
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 254, inciso IV",
+    "similaridade" : 0.648
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 254, inciso II",
+    "similaridade" : 0.646
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 254, inciso III",
+    "similaridade" : 0.645
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 10, § 1º, inciso V, alínea b",
+    "similaridade" : 0.629
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 67, inciso I",
+    "similaridade" : 0.626
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 10",
+    "similaridade" : 0.621
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 10, § 1º, inciso V",
+    "similaridade" : 0.618
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 10, § 1º, inciso V, alínea a",
+    "similaridade" : 0.615
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Na alienação de bem imóvel, ocorre o fato gerador do IBS e da CBS no momento do ato de alienação. (LC 214/2025, art. 254, inciso I)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 254, inciso I" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Na alienação de bem imóvel, ocorre o fato gerador do IBS e da CBS no momento do ato de alienação. (LC 214/2025, art. 254, inciso I)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 254, inciso I" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Na alienação de bem imóvel, ocorre o fato gerador do IBS e da CBS no momento do ato de alienação. (LC 214/2025, art. 254, inciso I)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 254, inciso I" ]
+  } ]
+}, {
+  "id" : "D16",
+  "pergunta" : "Sobre qual valor se calcula o IBS e a CBS?",
+  "esperado" : [ "LC 214/2025 art. 12" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 173, § 2º",
+    "similaridade" : 0.709
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 255, inciso II",
+    "similaridade" : 0.687
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 173",
+    "similaridade" : 0.686
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 255",
+    "similaridade" : 0.683
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 255, inciso I",
+    "similaridade" : 0.683
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 274",
+    "similaridade" : 0.678
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 255, § 4º",
+    "similaridade" : 0.677
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 173, § 1º",
+    "similaridade" : 0.675
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 255, inciso IV",
+    "similaridade" : 0.674
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 255, inciso III",
+    "similaridade" : 0.673
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sobre a quantidade de combustível objeto da operação se calcula o IBS e a CBS (LC 214/2025, art. 173, § 2º; LC 214/2025, art. 173; LC 214/2025, art. 173, § 1º).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 173, § 2º", "LC 214/2025 art. 173", "LC 214/2025 art. 173, § 1º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sobre a quantidade de combustível objeto da operação se calcula o IBS e a CBS (LC 214/2025, art. 173, § 2º; LC 214/2025, art. 173; LC 214/2025, art. 173, § 1º).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 173, § 2º", "LC 214/2025 art. 173", "LC 214/2025 art. 173, § 1º" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sobre a quantidade de combustível objeto da operação se calcula o IBS e a CBS (LC 214/2025, art. 173, § 2º; LC 214/2025, art. 173; LC 214/2025, art. 173, § 1º).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 173, § 2º", "LC 214/2025 art. 173", "LC 214/2025 art. 173, § 1º" ]
+  } ]
+}, {
+  "id" : "D17",
+  "pergunta" : "Em quais operações o IBS e a CBS não incidem?",
+  "esperado" : [ "LC 214/2025 art. 6º" ],
+  "aceito" : [ "LC 214/2025 art. 9º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º",
+    "similaridade" : 0.707
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, § 1º",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 252, § 2º, inciso II",
+    "similaridade" : 0.688
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso I, alínea a",
+    "similaridade" : 0.685
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso I",
+    "similaridade" : 0.683
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso I, alínea b",
+    "similaridade" : 0.682
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso VII",
+    "similaridade" : 0.68
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 5º, inciso I",
+    "similaridade" : 0.679
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 252, § 2º, inciso I",
+    "similaridade" : 0.676
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 252, § 2º",
+    "similaridade" : 0.676
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS e a CBS não incidem sobre:  \n- fornecimento de serviços por pessoas físicas em decorrência de relação de emprego;  \n- fornecimento de serviços por pessoas físicas em decorrência de sua atuação como administradores ou membros de conselhos de administração;  \n- na constituição ou transmissão de direitos reais de garantia;  \n- nas operações de permuta entre bens imóveis, exceto sobre a torna;  \n- demais operações com títulos ou valores mobiliários, com exceção do disposto no regime específico de serviços financeiros.  \n\n(LC 214/2025, art. 6º; LC 214/2025, art. 6º, inciso I, alínea a; LC 214/2025, art. 6º, inciso I, alínea b; LC 214/2025, art. 252, § 2º, inciso II; LC 214/2025, art. 252, § 2º, inciso I; LC 214/2025, art. 6º, inciso VII)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 6º", "LC 214/2025 art. 6º, inciso I, alínea a", "LC 214/2025 art. 6º, inciso I, alínea b", "LC 214/2025 art. 252, § 2º, inciso II", "LC 214/2025 art. 252, § 2º, inciso I", "LC 214/2025 art. 6º, inciso VII" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS e a CBS não incidem sobre:  \n- fornecimento de serviços por pessoas físicas em decorrência de relação de emprego;  \n- fornecimento de serviços por pessoas físicas em decorrência de sua atuação como administradores ou membros de conselhos de administração;  \n- constituição ou transmissão de direitos reais de garantia;  \n- operações de permuta entre bens imóveis, exceto sobre a torna;  \n- demais operações com títulos ou valores mobiliários, com exceção do disposto no regime específico de serviços financeiros.  \n\n(LC 214/2025, art. 6º; LC 214/2025, art. 6º, inciso I, alínea a; LC 214/2025, art. 6º, inciso I, alínea b; LC 214/2025, art. 252, § 2º, inciso II; LC 214/2025, art. 252, § 2º, inciso I; LC 214/2025, art. 6º, inciso VII)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 6º", "LC 214/2025 art. 6º, inciso I, alínea a", "LC 214/2025 art. 6º, inciso I, alínea b", "LC 214/2025 art. 252, § 2º, inciso II", "LC 214/2025 art. 252, § 2º, inciso I", "LC 214/2025 art. 6º, inciso VII" ]
+  }, {
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS e a CBS não incidem sobre:  \n- fornecimento de serviços por pessoas físicas em decorrência de relação de emprego com o contribuinte;  \n- fornecimento de serviços por pessoas físicas em decorrência de sua atuação como administradores ou membros de conselhos de administração e fiscal e comitês de assessoramento do conselho de administração do contribuinte previstos em lei;  \n- na constituição ou transmissão de direitos reais de garantia;  \n- nas operações de permuta entre bens imóveis, exceto sobre a torna, que será tributada nos termos deste Capítulo;  \n- demais operações com títulos ou valores mobiliários, com exceção do disposto para essas operações no regime específico de serviços financeiros de que trata a Seção III do Capítulo II do Título V deste Livro, nos termos previstos nesse regime e das demais situações previstas expressamente nesta Lei Complementar.  \n\n(LC 214/2025, art. 6º; LC 214/2025, art. 6º, inciso I, alínea a; LC 214/2025, art. 6º, inciso I, alínea b; LC 214/2025, art. 252, § 2º, inciso II; LC 214/2025, art. 252, § 2º, inciso I; LC 214/2025, art. 6º, inciso VII)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 6º", "LC 214/2025 art. 6º, inciso I, alínea a", "LC 214/2025 art. 6º, inciso I, alínea b", "LC 214/2025 art. 252, § 2º, inciso II", "LC 214/2025 art. 252, § 2º, inciso I", "LC 214/2025 art. 6º, inciso VII" ]
+  } ]
+}, {
+  "id" : "D18",
+  "pergunta" : "Quais operações são imunes ao IBS e à CBS?",
+  "esperado" : [ "LC 214/2025 art. 9º" ],
+  "aceito" : [ "LC 214/2025 art. 8º", "LC 214/2025 art. 79" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 8º",
+    "similaridade" : 0.622
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 143, inciso IV",
+    "similaridade" : 0.597
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 143, inciso I",
+    "similaridade" : 0.597
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 9º, inciso I",
+    "similaridade" : 0.594
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 143, inciso VIII",
+    "similaridade" : 0.584
+  }, {
+    "posicao" : 6,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 143, inciso II",
+    "similaridade" : 0.583
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º",
+    "similaridade" : 0.582
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 9º",
+    "similaridade" : 0.578
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 143, inciso III",
+    "similaridade" : 0.576
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 143, inciso V",
+    "similaridade" : 0.575
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 8º", "LC 214/2025 art. 143, inciso IV", "LC 214/2025 art. 143, inciso I" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 8º", "LC 214/2025 art. 143, inciso IV", "LC 214/2025 art. 143, inciso I" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 8º", "LC 214/2025 art. 143, inciso IV", "LC 214/2025 art. 143, inciso I" ]
+  } ]
+}, {
+  "id" : "D19",
+  "pergunta" : "Qual a alíquota de ICMS na venda de soja dentro de Mato Grosso?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "D20",
+  "pergunta" : "Como funciona o ITR, o imposto territorial rural?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 1º",
+    "similaridade" : 0.565
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 164, § 1º" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 164, § 1º" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 164, § 1º" ]
+  } ]
+}, {
+  "id" : "D21",
+  "pergunta" : "Quanto o produtor rural pessoa física paga de contribuição ao Senar?",
+  "esperado" : [ "Lei 9.528/1997 art. 6º" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único, inciso II",
+    "similaridade" : 0.71
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único, inciso I",
+    "similaridade" : 0.708
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único",
+    "similaridade" : 0.696
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º",
+    "similaridade" : 0.691
+  }, {
+    "posicao" : 5,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 22-A, § 5º",
+    "similaridade" : 0.638
+  }, {
+    "posicao" : 6,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 13",
+    "similaridade" : 0.631
+  }, {
+    "posicao" : 7,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 5º, inciso I",
+    "similaridade" : 0.63
+  }, {
+    "posicao" : 8,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 6º",
+    "similaridade" : 0.628
+  }, {
+    "posicao" : 9,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 5º, inciso II",
+    "similaridade" : 0.625
+  }, {
+    "posicao" : 10,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 5º",
+    "similaridade" : 0.621
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "NUMERO_SEM_FONTE",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso II" ]
+  }, {
+    "desfecho" : "NUMERO_SEM_FONTE",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso II" ]
+  }, {
+    "desfecho" : "NUMERO_SEM_FONTE",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso II" ]
+  } ]
+}, {
+  "id" : "D22",
+  "pergunta" : "Como funciona o livro caixa digital do produtor rural, o LCDPR?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+} ]

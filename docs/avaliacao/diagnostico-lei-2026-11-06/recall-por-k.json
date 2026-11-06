@@ -1,0 +1,2469 @@
+{
+  "topKProducao" : 5,
+  "limiarProducao" : 0.55,
+  "perguntas" : [ {
+    "id" : "D01",
+    "pergunta" : "O que é o Comitê Gestor do IBS e para que ele serve?",
+    "esperado" : [ "LC 227/2026 art. 1º" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 480",
+      "dispositivo" : "art. 480, § 4º",
+      "similaridade" : 0.634
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 480",
+      "dispositivo" : "art. 480, § 5º",
+      "similaridade" : 0.628
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 227/2026 art. 1º",
+      "dispositivo" : "art. 1º, parágrafo único, inciso II",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 480",
+      "dispositivo" : "art. 480, § 2º",
+      "similaridade" : 0.62
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 480",
+      "dispositivo" : "art. 480, § 3º",
+      "similaridade" : 0.618
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 318",
+      "dispositivo" : "art. 318",
+      "similaridade" : 0.616
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 1º",
+      "dispositivo" : "art. 1º",
+      "similaridade" : 0.611
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 1º",
+      "dispositivo" : "art. 1º, parágrafo único, inciso I",
+      "similaridade" : 0.609
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 318",
+      "dispositivo" : "art. 318, parágrafo único",
+      "similaridade" : 0.607
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 227/2026 art. 1º",
+      "dispositivo" : "art. 1º, parágrafo único",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 480",
+      "dispositivo" : "art. 480, § 6º",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 58",
+      "dispositivo" : "art. 58, § 4º",
+      "similaridade" : 0.59
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 58",
+      "dispositivo" : "art. 58, § 3º",
+      "similaridade" : 0.589
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 319",
+      "dispositivo" : "art. 319, inciso I, alínea b",
+      "similaridade" : 0.589
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 480",
+      "dispositivo" : "art. 480",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 115",
+      "dispositivo" : "art. 115",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 35",
+      "dispositivo" : "art. 35, § 2º",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 475",
+      "dispositivo" : "art. 475",
+      "similaridade" : 0.584
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 58",
+      "dispositivo" : "art. 58",
+      "similaridade" : 0.584
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 319",
+      "dispositivo" : "art. 319, § 1º",
+      "similaridade" : 0.581
+    } ],
+    "posicaoEsperado" : 3,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 8,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D02",
+    "pergunta" : "O que é o Imposto Seletivo?",
+    "esperado" : [ "LC 214/2025 art. 409" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 2º",
+      "similaridade" : 0.675
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso VII",
+      "similaridade" : 0.672
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso III",
+      "similaridade" : 0.671
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso II",
+      "similaridade" : 0.67
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso I",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso VI",
+      "similaridade" : 0.668
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º",
+      "similaridade" : 0.667
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso IV",
+      "similaridade" : 0.666
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409",
+      "similaridade" : 0.662
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 409",
+      "dispositivo" : "art. 409, § 1º, inciso V",
+      "similaridade" : 0.658
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 424",
+      "dispositivo" : "art. 424, inciso II",
+      "similaridade" : 0.651
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 410",
+      "dispositivo" : "art. 410",
+      "similaridade" : 0.649
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 424",
+      "dispositivo" : "art. 424, inciso I",
+      "similaridade" : 0.643
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 422",
+      "dispositivo" : "art. 422, § 5º",
+      "similaridade" : 0.635
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 422",
+      "dispositivo" : "art. 422, § 2º",
+      "similaridade" : 0.631
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 424",
+      "dispositivo" : "art. 424, inciso IV",
+      "similaridade" : 0.63
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 414",
+      "dispositivo" : "art. 414, inciso I",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 424",
+      "dispositivo" : "art. 424, inciso V",
+      "similaridade" : 0.627
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 424",
+      "dispositivo" : "art. 424",
+      "similaridade" : 0.626
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 414",
+      "dispositivo" : "art. 414, inciso VI",
+      "similaridade" : 0.622
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 5,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D03",
+    "pergunta" : "Até quando existem o ICMS e o ISS durante a transição para o IBS?",
+    "esperado" : [ "EC 132/2023 art. 2º" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 4º, inciso II, alínea b",
+      "similaridade" : 0.651
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 4º, inciso I",
+      "similaridade" : 0.646
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 4º, inciso II, alínea a",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 4º, inciso II",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 3º, inciso II",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 4º",
+      "similaridade" : 0.572
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, inciso II",
+      "similaridade" : 0.571
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 105",
+      "dispositivo" : "art. 105, § 2º",
+      "similaridade" : 0.57
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 6º, inciso II",
+      "similaridade" : 0.57
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 5º",
+      "similaridade" : 0.566
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 93",
+      "dispositivo" : "art. 93, § 8º",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 89",
+      "dispositivo" : "art. 89, § 3º, inciso I, alínea b",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 89",
+      "dispositivo" : "art. 89, § 3º, inciso I, alínea a",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea a",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, inciso I",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 3º, inciso I",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 342",
+      "dispositivo" : "art. 342, inciso III",
+      "similaridade" : 0.56
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 5º",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea c",
+      "similaridade" : 0.559
+    } ],
+    "posicaoEsperado" : 0,
+    "posicaoEsperadoOuAceito" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 6,
+    "k5" : false,
+    "k10" : false,
+    "k20" : false
+  }, {
+    "id" : "D04",
+    "pergunta" : "Como funciona o cashback do IBS e da CBS para famílias de baixa renda?",
+    "esperado" : [ "LC 214/2025 art. 112" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 112",
+      "dispositivo" : "art. 112, inciso I",
+      "similaridade" : 0.627
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 128",
+      "dispositivo" : "art. 128, inciso VII",
+      "similaridade" : 0.607
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 112",
+      "dispositivo" : "art. 112, inciso II",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 125",
+      "dispositivo" : "art. 125, parágrafo único",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 2º, inciso I",
+      "similaridade" : 0.582
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso I, alínea b",
+      "similaridade" : 0.581
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 4º",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 237",
+      "dispositivo" : "art. 237",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 135",
+      "dispositivo" : "art. 135",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 6º",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 129",
+      "dispositivo" : "art. 129, parágrafo único, inciso II",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso IV, alínea a",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso I, alínea a",
+      "similaridade" : 0.575
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 2º, inciso I",
+      "similaridade" : 0.575
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea a",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 369",
+      "dispositivo" : "art. 369, § 1º, inciso III",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 3º",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 261",
+      "dispositivo" : "art. 261, parágrafo único",
+      "similaridade" : 0.573
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso II, alínea b",
+      "similaridade" : 0.572
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 19",
+      "dispositivo" : "art. 19, inciso I",
+      "similaridade" : 0.572
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 13,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D05",
+    "pergunta" : "A venda de grãos para o exterior paga IBS e CBS?",
+    "esperado" : [ "LC 214/2025 art. 79" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 82",
+      "dispositivo" : "art. 82, § 11, inciso I",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 1º, inciso II",
+      "similaridade" : 0.616
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 242",
+      "dispositivo" : "art. 242",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 2º, inciso II",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 2º, inciso III",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º, inciso II",
+      "similaridade" : 0.608
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 63",
+      "dispositivo" : "art. 63",
+      "similaridade" : 0.604
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 92",
+      "dispositivo" : "art. 92, inciso I",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, inciso I",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 3º",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 1º, inciso I",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 79",
+      "dispositivo" : "art. 79",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 2º, inciso IV",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471",
+      "similaridade" : 0.599
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 2º, inciso V",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 1º, inciso IV",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º, inciso I",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 1º, inciso III",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 82",
+      "dispositivo" : "art. 82, § 11, inciso II",
+      "similaridade" : 0.596
+    } ],
+    "posicaoEsperado" : 12,
+    "posicaoEsperadoOuAceito" : 12,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 9,
+    "k5" : false,
+    "k10" : false,
+    "k20" : true
+  }, {
+    "id" : "D06",
+    "pergunta" : "Como funciona o crédito do IBS e da CBS nas compras de quem é contribuinte?",
+    "esperado" : [ "LC 214/2025 art. 47" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso I, alínea a",
+      "similaridade" : 0.719
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso II, alínea a",
+      "similaridade" : 0.712
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso II",
+      "similaridade" : 0.708
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso I, alínea a",
+      "similaridade" : 0.708
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso I, alínea b",
+      "similaridade" : 0.708
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso II, alínea b",
+      "similaridade" : 0.706
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso I",
+      "similaridade" : 0.705
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º",
+      "similaridade" : 0.696
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 9º, inciso II",
+      "similaridade" : 0.696
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 2º",
+      "similaridade" : 0.694
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 194",
+      "dispositivo" : "art. 194, inciso I",
+      "similaridade" : 0.692
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 302",
+      "dispositivo" : "art. 302, parágrafo único",
+      "similaridade" : 0.69
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 2º, inciso I",
+      "similaridade" : 0.69
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea e",
+      "similaridade" : 0.69
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea a",
+      "similaridade" : 0.689
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea c",
+      "similaridade" : 0.688
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea b",
+      "similaridade" : 0.688
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 5º",
+      "similaridade" : 0.687
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso I, alínea b",
+      "similaridade" : 0.685
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 194",
+      "dispositivo" : "art. 194, inciso II",
+      "similaridade" : 0.685
+    } ],
+    "posicaoEsperado" : 9,
+    "posicaoEsperadoOuAceito" : 9,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 7,
+    "k5" : false,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D07",
+    "pergunta" : "Quando surge a obrigação de pagar o IBS e a CBS na importação de bens?",
+    "esperado" : [ "LC 214/2025 art. 67" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 1º",
+      "similaridade" : 0.732
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 3º",
+      "similaridade" : 0.731
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 5º",
+      "similaridade" : 0.724
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 4º",
+      "similaridade" : 0.724
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76",
+      "similaridade" : 0.723
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 2º",
+      "similaridade" : 0.718
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º, inciso II",
+      "similaridade" : 0.702
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º, inciso I",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 1º, inciso II, alínea c",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º",
+      "similaridade" : 0.695
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 63",
+      "dispositivo" : "art. 63, parágrafo único",
+      "similaridade" : 0.691
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 1º, inciso II, alínea d",
+      "similaridade" : 0.688
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 71)",
+      "dispositivo" : "art. 174 (redação do art. 71)",
+      "similaridade" : 0.685
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 93",
+      "dispositivo" : "art. 93, § 3º",
+      "similaridade" : 0.679
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, § 2º",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso V",
+      "similaridade" : 0.677
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 5º",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 71",
+      "dispositivo" : "art. 71",
+      "similaridade" : 0.675
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso I",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, inciso III, alínea c",
+      "similaridade" : 0.674
+    } ],
+    "posicaoEsperado" : 15,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 9,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D08",
+    "pergunta" : "Quem é contribuinte do IBS e da CBS?",
+    "esperado" : [ "LC 214/2025 art. 21" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21",
+      "similaridade" : 0.737
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso III",
+      "similaridade" : 0.722
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 176",
+      "dispositivo" : "art. 176, inciso I",
+      "similaridade" : 0.679
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso I",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso I, alínea b",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso I, alínea a",
+      "similaridade" : 0.67
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso I",
+      "similaridade" : 0.668
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 72",
+      "dispositivo" : "art. 72",
+      "similaridade" : 0.668
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso I, alínea c",
+      "similaridade" : 0.666
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 26",
+      "dispositivo" : "art. 26, § 6º-A",
+      "similaridade" : 0.657
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso V",
+      "similaridade" : 0.653
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 26",
+      "dispositivo" : "art. 26, § 5º-A, inciso I, alínea b",
+      "similaridade" : 0.652
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 26",
+      "dispositivo" : "art. 26, § 6º-A, inciso II",
+      "similaridade" : 0.652
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso V, alínea a",
+      "similaridade" : 0.651
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 26",
+      "dispositivo" : "art. 26, § 6º-A, inciso I, alínea b",
+      "similaridade" : 0.65
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, § 1º",
+      "similaridade" : 0.648
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 176",
+      "dispositivo" : "art. 176, inciso VI",
+      "similaridade" : 0.646
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 176",
+      "dispositivo" : "art. 176",
+      "similaridade" : 0.645
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso IV",
+      "similaridade" : 0.644
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 176",
+      "dispositivo" : "art. 176, inciso V",
+      "similaridade" : 0.643
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 5,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D09",
+    "pergunta" : "Se a minha venda for isenta, eu perco os créditos das minhas compras?",
+    "esperado" : [ "LC 214/2025 art. 51" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 51",
+      "dispositivo" : "art. 51, § 1º",
+      "similaridade" : 0.626
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 51",
+      "dispositivo" : "art. 51",
+      "similaridade" : 0.604
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 49",
+      "dispositivo" : "art. 49",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 2º, inciso I",
+      "similaridade" : 0.586
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso II, alínea a",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso I, alínea a",
+      "similaridade" : 0.571
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea a",
+      "similaridade" : 0.567
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I",
+      "similaridade" : 0.565
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea c",
+      "similaridade" : 0.565
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea d",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 49",
+      "dispositivo" : "art. 49, parágrafo único",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 2º, inciso I",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea e",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea b",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso I, alínea b",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 2º, inciso II",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 443",
+      "dispositivo" : "art. 443, § 2º, inciso II",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 6º",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 52",
+      "dispositivo" : "art. 52",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 2º",
+      "similaridade" : 0.557
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 7,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D10",
+    "pergunta" : "Posso descontar o crédito de um carro que comprei para uso pessoal?",
+    "esperado" : [ "LC 214/2025 art. 57" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 2º",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 4º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 57",
+      "dispositivo" : "art. 57, § 9º",
+      "similaridade" : 0.587
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 6º",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 3º",
+      "similaridade" : 0.581
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 57",
+      "dispositivo" : "art. 57, § 5º",
+      "similaridade" : 0.581
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 4º",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso II, alínea a",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso II",
+      "similaridade" : 0.573
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso II, alínea b",
+      "similaridade" : 0.573
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 180",
+      "dispositivo" : "art. 180, § 1º",
+      "similaridade" : 0.572
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso I, alínea a",
+      "similaridade" : 0.572
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso I, alínea b",
+      "similaridade" : 0.57
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 1º, inciso I",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 171",
+      "dispositivo" : "art. 171, § 1º, inciso I",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 13, inciso II",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 180",
+      "dispositivo" : "art. 180, § 2º",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 11, inciso I",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 7º",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 7º",
+      "similaridade" : 0.568
+    } ],
+    "posicaoEsperado" : 3,
+    "posicaoEsperadoOuAceito" : 2,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 6,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D11",
+    "pergunta" : "Sou obrigado a emitir nota fiscal eletrônica nas minhas vendas?",
+    "esperado" : [ "LC 214/2025 art. 60" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 2º, inciso I",
+      "similaridade" : 0.648
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 2º",
+      "similaridade" : 0.645
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 62",
+      "dispositivo" : "art. 62, § 1º, inciso I",
+      "similaridade" : 0.644
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 2º, inciso II",
+      "similaridade" : 0.643
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 2º, inciso III",
+      "similaridade" : 0.641
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 4º",
+      "similaridade" : 0.62
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60",
+      "similaridade" : 0.614
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 3º",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 6º",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 1º",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 7º",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 517 (redação do art. 26",
+      "dispositivo" : "art. 517 (redação do art. 26, § 10)",
+      "similaridade" : 0.596
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 60",
+      "dispositivo" : "art. 60, § 5º",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 14",
+      "similaridade" : 0.582
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 517 (redação do art. 26",
+      "dispositivo" : "art. 517 (redação do art. 26, § 6º, inciso II)",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 62",
+      "dispositivo" : "art. 62, § 1º, inciso II",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, § 5º",
+      "similaridade" : 0.576
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 62",
+      "dispositivo" : "art. 62, inciso II",
+      "similaridade" : 0.567
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 471-D",
+      "dispositivo" : "art. 471-D, inciso I",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 471-D",
+      "dispositivo" : "art. 471-D, inciso III",
+      "similaridade" : 0.558
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 6,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D12",
+    "pergunta" : "Posso pedir de volta o saldo de crédito que sobrou no fim do mês?",
+    "esperado" : [ "LC 214/2025 art. 39" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 1º",
+      "similaridade" : 0.671
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 4º",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 7º",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 5º, inciso II",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 8º",
+      "similaridade" : 0.619
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 9º",
+      "similaridade" : 0.619
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 394",
+      "dispositivo" : "art. 394, § 4º",
+      "similaridade" : 0.616
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 11",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 378",
+      "dispositivo" : "art. 378, inciso IV",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 394",
+      "dispositivo" : "art. 394, § 6º",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 137",
+      "dispositivo" : "art. 137, inciso II",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 3º",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 394",
+      "dispositivo" : "art. 394, § 8º",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 394",
+      "dispositivo" : "art. 394, § 10",
+      "similaridade" : 0.593
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 53",
+      "dispositivo" : "art. 53, § 1º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 5º, inciso II",
+      "similaridade" : 0.587
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 2º",
+      "similaridade" : 0.586
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 10",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 315",
+      "dispositivo" : "art. 315, § 2º, inciso III",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 5º, inciso I",
+      "similaridade" : 0.583
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 7,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D13",
+    "pergunta" : "Uma cooperativa de produtores pode ter alíquota zero de IBS e CBS?",
+    "esperado" : [ "LC 214/2025 art. 271" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, § 1º, inciso II",
+      "similaridade" : 0.717
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, inciso I",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, § 4º",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, § 1º, inciso I",
+      "similaridade" : 0.687
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, inciso II",
+      "similaridade" : 0.685
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, § 3º",
+      "similaridade" : 0.683
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, § 2º",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271, § 1º",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 271",
+      "dispositivo" : "art. 271",
+      "similaridade" : 0.666
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110, inciso I",
+      "similaridade" : 0.658
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 148",
+      "dispositivo" : "art. 148",
+      "similaridade" : 0.634
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 148",
+      "dispositivo" : "art. 148, parágrafo único",
+      "similaridade" : 0.628
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso V",
+      "similaridade" : 0.626
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 448",
+      "dispositivo" : "art. 448",
+      "similaridade" : 0.624
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 448",
+      "dispositivo" : "art. 448, § 3º",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 144",
+      "dispositivo" : "art. 144, inciso II, alínea b",
+      "similaridade" : 0.617
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 147",
+      "dispositivo" : "art. 147, inciso III",
+      "similaridade" : 0.617
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 147",
+      "dispositivo" : "art. 147, parágrafo único",
+      "similaridade" : 0.613
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 125",
+      "dispositivo" : "art. 125, parágrafo único",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 448",
+      "dispositivo" : "art. 448, § 2º",
+      "similaridade" : 0.611
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 8,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D14",
+    "pergunta" : "Por quanto tempo posso usar o crédito do IBS e da CBS?",
+    "esperado" : [ "LC 214/2025 art. 54" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 452",
+      "dispositivo" : "art. 452, parágrafo único",
+      "similaridade" : 0.69
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 468",
+      "dispositivo" : "art. 468, parágrafo único",
+      "similaridade" : 0.686
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 10",
+      "similaridade" : 0.639
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 89",
+      "dispositivo" : "art. 89, § 3º, inciso I",
+      "similaridade" : 0.636
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 7º",
+      "similaridade" : 0.636
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 10, inciso I",
+      "similaridade" : 0.636
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 10",
+      "similaridade" : 0.635
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 4º",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 5º, inciso II",
+      "similaridade" : 0.632
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 13, inciso I",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 43",
+      "dispositivo" : "art. 43",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 53",
+      "dispositivo" : "art. 53, inciso I",
+      "similaridade" : 0.628
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 10, inciso II",
+      "similaridade" : 0.625
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 89",
+      "dispositivo" : "art. 89, § 1º",
+      "similaridade" : 0.624
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 89",
+      "dispositivo" : "art. 89, § 3º, inciso I, alínea a",
+      "similaridade" : 0.624
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, inciso II",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 53",
+      "dispositivo" : "art. 53, inciso III",
+      "similaridade" : 0.622
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 53",
+      "dispositivo" : "art. 53, § 2º",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 89",
+      "dispositivo" : "art. 89, § 2º",
+      "similaridade" : 0.62
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 474",
+      "dispositivo" : "art. 474, inciso III",
+      "similaridade" : 0.617
+    } ],
+    "posicaoEsperado" : 0,
+    "posicaoEsperadoOuAceito" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 10,
+    "k5" : false,
+    "k10" : false,
+    "k20" : false
+  }, {
+    "id" : "D15",
+    "pergunta" : "Quando se considera que aconteceu o fato gerador do IBS e da CBS numa venda?",
+    "esperado" : [ "LC 214/2025 art. 10" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 254",
+      "dispositivo" : "art. 254, inciso I",
+      "similaridade" : 0.652
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 254",
+      "dispositivo" : "art. 254",
+      "similaridade" : 0.65
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 254",
+      "dispositivo" : "art. 254, inciso IV",
+      "similaridade" : 0.648
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 254",
+      "dispositivo" : "art. 254, inciso II",
+      "similaridade" : 0.646
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 254",
+      "dispositivo" : "art. 254, inciso III",
+      "similaridade" : 0.645
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10, § 1º, inciso V, alínea b",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, inciso I",
+      "similaridade" : 0.626
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10, § 1º, inciso V",
+      "similaridade" : 0.618
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10, § 1º, inciso V, alínea a",
+      "similaridade" : 0.615
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 254",
+      "dispositivo" : "art. 254, inciso V",
+      "similaridade" : 0.613
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, inciso III, alínea b",
+      "similaridade" : 0.611
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, inciso III",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67",
+      "similaridade" : 0.606
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, inciso III, alínea c",
+      "similaridade" : 0.604
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 2º, inciso II",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 67",
+      "dispositivo" : "art. 67, inciso III, alínea a",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 6º, inciso II",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10, § 1º, inciso II",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10, § 1º, inciso III",
+      "similaridade" : 0.599
+    } ],
+    "posicaoEsperado" : 6,
+    "posicaoEsperadoOuAceito" : 6,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 4,
+    "k5" : false,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D16",
+    "pergunta" : "Sobre qual valor se calcula o IBS e a CBS?",
+    "esperado" : [ "LC 214/2025 art. 12" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 173",
+      "dispositivo" : "art. 173, § 2º",
+      "similaridade" : 0.709
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, inciso II",
+      "similaridade" : 0.687
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 173",
+      "dispositivo" : "art. 173",
+      "similaridade" : 0.686
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255",
+      "similaridade" : 0.683
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, inciso I",
+      "similaridade" : 0.683
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 274",
+      "dispositivo" : "art. 274",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 4º",
+      "similaridade" : 0.677
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 173",
+      "dispositivo" : "art. 173, § 1º",
+      "similaridade" : 0.675
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, inciso IV",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, inciso III",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, inciso V",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 274",
+      "dispositivo" : "art. 274, parágrafo único",
+      "similaridade" : 0.671
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 280",
+      "dispositivo" : "art. 280",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 3º, inciso I",
+      "similaridade" : 0.666
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 1º, inciso I",
+      "similaridade" : 0.665
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso II",
+      "similaridade" : 0.663
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 3º, inciso II",
+      "similaridade" : 0.663
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 359",
+      "dispositivo" : "art. 359, parágrafo único, inciso II",
+      "similaridade" : 0.662
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 2º",
+      "similaridade" : 0.662
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso I",
+      "similaridade" : 0.662
+    } ],
+    "posicaoEsperado" : 0,
+    "posicaoEsperadoOuAceito" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 6,
+    "k5" : false,
+    "k10" : false,
+    "k20" : false
+  }, {
+    "id" : "D17",
+    "pergunta" : "Em quais operações o IBS e a CBS não incidem?",
+    "esperado" : [ "LC 214/2025 art. 6º" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º",
+      "similaridade" : 0.707
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, § 1º",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 2º, inciso II",
+      "similaridade" : 0.688
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso I, alínea a",
+      "similaridade" : 0.685
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso I",
+      "similaridade" : 0.683
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso I, alínea b",
+      "similaridade" : 0.682
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso VII",
+      "similaridade" : 0.68
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso I",
+      "similaridade" : 0.679
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 2º, inciso I",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 2º",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 3º",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 5º",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, § 1º, inciso I",
+      "similaridade" : 0.67
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 3º, inciso III",
+      "similaridade" : 0.667
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 5º, inciso I",
+      "similaridade" : 0.666
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso IV",
+      "similaridade" : 0.665
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 4º",
+      "similaridade" : 0.661
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º",
+      "similaridade" : 0.661
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso IV",
+      "similaridade" : 0.657
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 5º, inciso II",
+      "similaridade" : 0.657
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 4,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D18",
+    "pergunta" : "Quais operações são imunes ao IBS e à CBS?",
+    "esperado" : [ "LC 214/2025 art. 9º" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 8º",
+      "dispositivo" : "art. 8º",
+      "similaridade" : 0.622
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso IV",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso I",
+      "similaridade" : 0.597
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso I",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso VIII",
+      "similaridade" : 0.584
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso II",
+      "similaridade" : 0.583
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º",
+      "similaridade" : 0.582
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso III",
+      "similaridade" : 0.576
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143, inciso V",
+      "similaridade" : 0.575
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 143",
+      "dispositivo" : "art. 143",
+      "similaridade" : 0.575
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso VII",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 3º",
+      "similaridade" : 0.571
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso I",
+      "similaridade" : 0.571
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 79",
+      "dispositivo" : "art. 79",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º, § 3º, inciso III",
+      "similaridade" : 0.567
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 144",
+      "dispositivo" : "art. 144, inciso II, alínea b",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 448",
+      "dispositivo" : "art. 448",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso VI",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 445",
+      "dispositivo" : "art. 445, § 1º",
+      "similaridade" : 0.561
+    } ],
+    "posicaoEsperado" : 4,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 10,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D19",
+    "pergunta" : "Qual a alíquota de ICMS na venda de soja dentro de Mato Grosso?",
+    "esperado" : [ ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 1º",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 10",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 446",
+      "dispositivo" : "art. 446, § 1º, inciso III",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 3º",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 7º",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137, § 1º, inciso II",
+      "similaridade" : 0.531
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 3º, inciso II",
+      "similaridade" : 0.53
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 5º, inciso I, alínea b",
+      "similaridade" : 0.529
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137",
+      "similaridade" : 0.528
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 100",
+      "dispositivo" : "art. 100, § 2º",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 5º, inciso II",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso II, alínea b",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso I, alínea a",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 4º",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso II, alínea a",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso I, alínea b",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 4º, inciso I, alínea d",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137, § 1º, inciso I",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso I",
+      "similaridade" : 0.523
+    } ],
+    "posicaoEsperado" : 0,
+    "posicaoEsperadoOuAceito" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0,
+    "artigosDistintosNoTop20" : 5,
+    "k5" : false,
+    "k10" : false,
+    "k20" : false
+  }, {
+    "id" : "D20",
+    "pergunta" : "Como funciona o ITR, o imposto territorial rural?",
+    "esperado" : [ ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.565
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 2º",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 6º",
+      "similaridade" : 0.537
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 3º",
+      "similaridade" : 0.534
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 4º",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "similaridade" : 0.528
+    }, {
+      "posicao" : 8,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 4º",
+      "similaridade" : 0.528
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 3º",
+      "similaridade" : 0.528
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 2º",
+      "similaridade" : 0.516
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35, inciso I)",
+      "similaridade" : 0.512
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso II, alínea n",
+      "similaridade" : 0.512
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 1º",
+      "similaridade" : 0.51
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35, inciso II)",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 227/2026 art. 158",
+      "dispositivo" : "art. 158, § 1º",
+      "similaridade" : 0.506
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 227/2026 art. 163",
+      "dispositivo" : "art. 163, inciso VIII",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso II, alínea m",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, § 1º",
+      "similaridade" : 0.504
+    } ],
+    "posicaoEsperado" : 0,
+    "posicaoEsperadoOuAceito" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 1,
+    "artigosDistintosNoTop20" : 7,
+    "k5" : false,
+    "k10" : false,
+    "k20" : false
+  }, {
+    "id" : "D21",
+    "pergunta" : "Quanto o produtor rural pessoa física paga de contribuição ao Senar?",
+    "esperado" : [ "Lei 9.528/1997 art. 6º" ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso II",
+      "similaridade" : 0.71
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso I",
+      "similaridade" : 0.708
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único",
+      "similaridade" : 0.696
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º",
+      "similaridade" : 0.691
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 5º",
+      "similaridade" : 0.638
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 13",
+      "similaridade" : 0.631
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.63
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 6º",
+      "similaridade" : 0.628
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "similaridade" : 0.625
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 3º",
+      "similaridade" : 0.619
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, inciso I",
+      "similaridade" : 0.614
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 4º",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 2º",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 3º",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, inciso II",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, inciso I",
+      "similaridade" : 0.59
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso IV",
+      "similaridade" : 0.588
+    } ],
+    "posicaoEsperado" : 1,
+    "posicaoEsperadoOuAceito" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20,
+    "artigosDistintosNoTop20" : 5,
+    "k5" : true,
+    "k10" : true,
+    "k20" : true
+  }, {
+    "id" : "D22",
+    "pergunta" : "Como funciona o livro caixa digital do produtor rural, o LCDPR?",
+    "esperado" : [ ],
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.484
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 1º, inciso I",
+      "similaridade" : 0.467
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 1º",
+      "similaridade" : 0.46
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 1º, inciso II",
+      "similaridade" : 0.459
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 6º",
+      "similaridade" : 0.452
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 3º",
+      "similaridade" : 0.451
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 1º, inciso III",
+      "similaridade" : 0.451
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 166",
+      "dispositivo" : "art. 166, parágrafo único",
+      "similaridade" : 0.449
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 2º",
+      "similaridade" : 0.448
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165",
+      "similaridade" : 0.445
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 4º",
+      "similaridade" : 0.444
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164",
+      "similaridade" : 0.443
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 1º",
+      "similaridade" : 0.44
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 6º",
+      "similaridade" : 0.438
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 2º",
+      "similaridade" : 0.437
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 5º, inciso II, alínea a",
+      "similaridade" : 0.436
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 168",
+      "dispositivo" : "art. 174 (redação do art. 168, § 6º)",
+      "similaridade" : 0.436
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.435
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º",
+      "similaridade" : 0.433
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 4º",
+      "similaridade" : 0.433
+    } ],
+    "posicaoEsperado" : 0,
+    "posicaoEsperadoOuAceito" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0,
+    "artigosDistintosNoTop20" : 5,
+    "k5" : false,
+    "k10" : false,
+    "k20" : false
+  } ]
+}

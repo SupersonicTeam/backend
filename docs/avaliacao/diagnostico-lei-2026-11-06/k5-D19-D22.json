@@ -1,0 +1,107 @@
+[ {
+  "id" : "D19",
+  "pergunta" : "Qual a alíquota de ICMS na venda de soja dentro de Mato Grosso?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "D20",
+  "pergunta" : "Como funciona o ITR, o imposto territorial rural?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 1º",
+    "similaridade" : 0.565
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 164, § 1º" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 164, § 1º" ]
+  }, {
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 164, § 1º" ]
+  } ]
+}, {
+  "id" : "D21",
+  "pergunta" : "Quanto o produtor rural pessoa física paga de contribuição ao Senar?",
+  "esperado" : [ "Lei 9.528/1997 art. 6º" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único, inciso II",
+    "similaridade" : 0.71
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único, inciso I",
+    "similaridade" : 0.708
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único",
+    "similaridade" : 0.696
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º",
+    "similaridade" : 0.691
+  }, {
+    "posicao" : 5,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 22-A, § 5º",
+    "similaridade" : 0.638
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "NUMERO_SEM_FONTE",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso II" ]
+  }, {
+    "desfecho" : "NUMERO_SEM_FONTE",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso II" ]
+  }, {
+    "desfecho" : "NUMERO_SEM_FONTE",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso II" ]
+  } ]
+}, {
+  "id" : "D22",
+  "pergunta" : "Como funciona o livro caixa digital do produtor rural, o LCDPR?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+} ]
