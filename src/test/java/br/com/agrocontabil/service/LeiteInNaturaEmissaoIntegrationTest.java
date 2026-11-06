@@ -204,6 +204,7 @@ class LeiteInNaturaEmissaoIntegrationTest {
         .produtor(produtor)
         .destinatarioNome("LATICINIO SA")
         .destinatarioCpfCnpj("12345678000195")
+        .destinatarioIe("9071425318") // laticinio contribuinte: 5101 interna sai com ICMS51 (#376)
         .destinatarioEndereco(EnderecoDestinatario.builder()
             .logradouro("Rua das Flores").numero("100").municipio("Curitiba")
             .codigoMunicipioIbge("4106902").uf("PR").cep("80010000").build())
