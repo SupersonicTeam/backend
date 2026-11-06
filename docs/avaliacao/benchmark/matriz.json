@@ -44,7 +44,7 @@
   "sessaoParalela": {
     "issue": "#270",
     "rotulo": "Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade)",
-    "commitNota": "Merge do ultimo PR da #270 (#354; antes, #351), informado pela sessao que a coordenou em 2026-11-05. A coluna Ceres 2.0 so e oficial num SHA que o contenha e tambem os de tambemExige: 54f02ee (Sessao 8a, #360: o texto do atalho de IBS/CBS explica o diferimento dos insumos do Anexo IX), d8b0b36 (8b, #366: arroz em casca in natura, P02 do gabarito 2026-11-05.3) e da90c20 (8c, #374: leite in natura com 60% por padrao, classe da E03).",
+    "commitNota": "Merge do ultimo PR da #270 (#354; antes, #351), informado pela sessao que a coordenou em 2026-11-05. A coluna Ceres 2.0 so e oficial num SHA que o contenha e tambem os de tambemExige: 54f02ee (Sessao 8a, #360: o texto do atalho de IBS/CBS explica o diferimento dos insumos do Anexo IX), d8b0b36 (8b, #366: arroz em casca in natura, P02 do gabarito 2026-11-05.3) da90c20 (8c, #374: leite in natura com 60% por padrao, classe da E03) e cd43c5b (8c, #381: leite UHT com zero por padrao).",
     "commit": "54a4201ad908cfa1181578b531685b0bb06da17e",
     "tambemExige": [
       {
@@ -58,6 +58,10 @@
       {
         "commit": "da90c2004fd94398842397efc157ccc72518b0ae",
         "rotulo": "Sessão 8c (#374: leite do Anexo I, item 2 in natura com 60% por padrão, zero só com o cClassTrib 200003 informado; E03 do conjunto 2026-11-05.10)"
+      },
+      {
+        "commit": "cd43c5be32c0cb173aa15baf77be97d17b3b86e5",
+        "rotulo": "Sessão 8c, segunda parte (#381: leite UHT, 0401.10.10 e 0401.20.10, com alíquota zero por padrão; observação da E03 do conjunto 2026-11-05.12)"
       }
     ]
   },

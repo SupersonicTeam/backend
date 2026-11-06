@@ -251,9 +251,9 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         e.cfg.todas_arquiteturas[-1]["sha"] = "b" * 40
         sete = e.cfg.matriz["sessaoParalela"]["commit"]
         extras = {x["commit"] for x in e.cfg.matriz["sessaoParalela"]["tambemExige"]}
-        # Sem so o ultimo exigido (a 8c, #378): nao basta checar os primeiros da lista.
+        # Sem so o ultimo exigido (o #381 da 8c, #382): nao basta checar os primeiros da lista.
         ultimo = e.cfg.matriz["sessaoParalela"]["tambemExige"][-1]["commit"]
-        self.assertEqual(ultimo, "da90c2004fd94398842397efc157ccc72518b0ae")
+        self.assertEqual(ultimo, "cd43c5be32c0cb173aa15baf77be97d17b3b86e5")
         for presentes, confirmado, inteira in (({sete} | extras, True, True), ({sete}, False, True),
                                                (({sete} | extras) - {ultimo}, False, True),
                                                (set(), False, False)):

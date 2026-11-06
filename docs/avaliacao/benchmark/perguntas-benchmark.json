@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-05.11",
+  "versao": "2026-11-05.12",
   "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352, #358): o gabarito 2026-11-05.3 inteiro, 13 perguntas ineditas da equipe e 40 geradas por IA (ChatGPT, a pedido do Murillo; texto literal), em 16 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado. Campo origem: gabarito (usado no desenvolvimento da Ceres 2.0), inedita_equipe, inedita_equipe_dados ou inedita_externa_ia (medem generalizacao; as de IA nao medem a linguagem real do produtor).",
   "baseadoEm": "2026-11-05.3",
   "temas": {
@@ -2028,7 +2028,7 @@
         "LC 214/2025, art. 125"
       ],
       "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05",
-      "observacao": "A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). Desde a Sessão 8c (#374, da90c20; #284, pergunta 2) o sistema dá 60% por padrão e zero só com o cClassTrib 200003 informado. Não é contaminação: a mudança veio da resposta do escritório e do texto da lei, não das respostas da Ceres a esta pergunta. Ler célula a célula: a resposta que diz 60% e cita a condição do zero do Anexo I (\"a alíquota zero vale só para o leite de consumo direto\") pode sair como classe errada, e a que diz que o outro leite \"terá alíquota zero\" pode sair como afirmação proibida, pela heurística de texto; aqui a nota humana manda.",
+      "observacao": "A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). Desde a Sessão 8c (#374, da90c20; #381, cd43c5b; #284, pergunta 2) o sistema dá 60% por padrão ao leite cru e aos outros NCMs do item 2, zero por padrão ao UHT (0401.10.10 e 0401.20.10) e zero ao resto só com o cClassTrib 200003 informado; a busca por nome de \"leite\" (rota de dados) traz até 3 NCMs com as duas situações. A venda ao laticínio é de leite cru: a classe segue 60%. Não é contaminação: a mudança veio da resposta do escritório e do texto da lei, não das respostas da Ceres a esta pergunta. Ler célula a célula: a resposta que diz 60% e cita a condição do zero do Anexo I (\"a alíquota zero vale só para o leite de consumo direto\") pode sair como classe errada, e a que diz que o outro leite \"terá alíquota zero\" pode sair como afirmação proibida, pela heurística de texto; aqui a nota humana manda.",
       "existenciaNaBase": "conferida na VPS em 2026-11-06"
     },
     {

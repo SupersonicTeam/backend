@@ -13,8 +13,8 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `da90c2004fd94398842397efc157ccc72518b0ae` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.11 (140 perguntas, sha256 `f17dda183f14…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Ceres 2.0 | `cd43c5be32c0cb173aa15baf77be97d17b3b86e5` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Conjunto de perguntas | 2026-11-05.12 (140 perguntas, sha256 `b9a5d3eb2553…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |
@@ -394,7 +394,7 @@ Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima;
 
 *Produzo leite na minha propriedade e vendo diretamente para um laticínio. Essa operação terá redução de 60% nas alíquotas ou poderá ter alíquota zero?*
 
-**Atenção:** A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). Desde a Sessão 8c (#374, da90c20; #284, pergunta 2) o sistema dá 60% por padrão e zero só com o cClassTrib 200003 informado. Não é contaminação: a mudança veio da resposta do escritório e do texto da lei, não das respostas da Ceres a esta pergunta. Ler célula a célula: a resposta que diz 60% e cita a condição do zero do Anexo I ("a alíquota zero vale só para o leite de consumo direto") pode sair como classe errada, e a que diz que o outro leite "terá alíquota zero" pode sair como afirmação proibida, pela heurística de texto; aqui a nota humana manda.
+**Atenção:** A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). Desde a Sessão 8c (#374, da90c20; #381, cd43c5b; #284, pergunta 2) o sistema dá 60% por padrão ao leite cru e aos outros NCMs do item 2, zero por padrão ao UHT (0401.10.10 e 0401.20.10) e zero ao resto só com o cClassTrib 200003 informado; a busca por nome de "leite" (rota de dados) traz até 3 NCMs com as duas situações. A venda ao laticínio é de leite cru: a classe segue 60%. Não é contaminação: a mudança veio da resposta do escritório e do texto da lei, não das respostas da Ceres a esta pergunta. Ler célula a célula: a resposta que diz 60% e cita a condição do zero do Anexo I ("a alíquota zero vale só para o leite de consumo direto") pode sair como classe errada, e a que diz que o outro leite "terá alíquota zero" pode sair como afirmação proibida, pela heurística de texto; aqui a nota humana manda.
 
 | Célula | Rodada | Desfecho | Classe | Afirmação proibida? | Resposta |
 |---|---|---|---|---|---|

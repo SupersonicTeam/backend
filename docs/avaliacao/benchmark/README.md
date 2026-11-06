@@ -221,7 +221,7 @@ do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. 
 **Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
 descrições `@Tool` ou as outras perguntas do conjunto.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.11` está congelado (versão e
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.12` está congelado (versão e
 hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
 respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
 perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o
@@ -441,9 +441,9 @@ propriedade). Na prática:
 - **E também depois da Sessão 8a** (#360, `54f02ee`): o texto do atalho de IBS/CBS mudou (explica
   o diferimento dos insumos do Anexo IX) e a T03 passou a 33 dispositivos. A coluna oficial é medida
   num SHA que contenha `54a4201` (Sessão 7), `54f02ee` (8a), `d8b0b36` (8b, arroz em casca: a P02 do gabarito
-  `2026-11-05.3` foi escrita para ela) e `da90c20` (8c, leite in natura com 60% por padrão: a classe da
-  E03); a `main` de hoje contém.
-  O `54a4201` é o `sessaoParalela.commit`; os outros três estão em `sessaoParalela.tambemExige`. Sem qualquer um deles, o relatório sai como ensaio e diz o que
+  `2026-11-05.3` foi escrita para ela) , `da90c20` (8c, leite in natura com 60% por padrão: a classe da
+  E03) e `cd43c5b` (8c, #381: leite UHT com zero por padrão); a `main` de hoje contém.
+  O `54a4201` é o `sessaoParalela.commit`; os outros quatro estão em `sessaoParalela.tambemExige`. Sem qualquer um deles, o relatório sai como ensaio e diz o que
   falta.
 - **A Sessão 7 terminou** (#351 e #354): `sessaoParalela.commit` na `matriz.json` é
   `54a4201`, o merge do último PR. A rodada oficial usa a `main` (o padrão `origin/main`) ou
