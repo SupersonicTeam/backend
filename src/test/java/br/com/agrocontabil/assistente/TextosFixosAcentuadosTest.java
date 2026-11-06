@@ -52,7 +52,7 @@ class TextosFixosAcentuadosTest {
   private static final List<String> EXCECOES = List.of();
 
   private static final Pattern SEM_ACENTO = Pattern.compile(
-      "(?iu)(?<![\\p{L}\\p{N}_-])(" + String.join("|", PALAVRAS) + ")(?![\\p{L}\\p{N}_-])");
+      "(?iu)(?<![\\p{L}\\p{N}_])(" + String.join("|", PALAVRAS) + ")(?![\\p{L}\\p{N}_])");
 
   /** Os textos fixos entregues ao produtor, por grupo. */
   private static Map<String, String> textosFixos() {
@@ -107,12 +107,18 @@ class TextosFixosAcentuadosTest {
   }
 
   @Test
-  @DisplayName("#357: os acentos saem corretos em UTF-8 (JSON e SSE da Ceres)")
-  void utf8() throws Exception {
+  @DisplayName("#357: o fonte é compilado em UTF-8: o texto traz os caracteres, não mojibake")
+  void fonteEmUtf8() {
     String texto = TextoReformaTributaria.montar(TextoReformaTributaria.Perfil.DESCONHECIDO)
         .texto();
-    byte[] bytes = texto.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-    assertThat(new String(bytes, java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(texto);
-    assertThat(texto).contains("é a contribuição da União");
+    // Escapes Unicode: se o javac lesse o fonte em cp1252, "é" viraria dois caracteres.
+    assertThat(texto).contains("\u00e9 a contribui\u00e7\u00e3o da Uni\u00e3o")
+        .doesNotContain("\u00c3");
+  }
+
+  @Test
+  @DisplayName("#357: palavra sem acento colada a hífen também é acusada")
+  void hifen() {
+    assertThat(semAcento("no ano-calendario ou sem-credito")).contains("calendario", "credito");
   }
 }
