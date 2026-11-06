@@ -126,5 +126,177 @@ class SqlConferenciaTest(unittest.TestCase):
         self.assertIn("'art. 1º d''x'", sql)
 
 
+class AchadosReviewDelta361Test(unittest.TestCase):
+    """Regressoes do review do delta do #361 (#368)."""
+
+    def test_aliquota_padrao_como_base_da_reducao_nao_e_padrao(self):
+        texto = "Sim, esse insumo tem redução de 60% da alíquota padrão (Anexo IX)."
+        self.assertTrue(ext.classe_dita(texto, "REDUCAO_60"))
+        self.assertFalse(ext.classe_dita(texto, "CONDICIONAL"))
+        self.assertTrue(ext.classe_dita("Não tem redução: vale a alíquota padrão.", "PADRAO"))
+
+    def test_negacao_de_outra_oracao_nao_apaga_a_afirmacao(self):
+        proibida = r"\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\b"
+        self.assertTrue(ext.afirma(proibida, "Mesmo que o insumo não seja tributado, você pode "
+                                             "aproveitar o crédito do IBS e da CBS."))
+        self.assertTrue(ext.classe_dita("Os produtos hortícolas não processados têm alíquota zero.", "ZERO"))
+        self.assertTrue(ext.classe_dita("Isso não muda nada. Alíquota zero para o ovo.", "ZERO"))
+        self.assertFalse(ext.afirma(proibida, "Você não pode aproveitar o crédito."))
+
+    def test_casos_do_segundo_review(self):
+        casos = [("Não há redução de 60% para esse produto.", "PADRAO", True),
+                 ("O adubo não terá direito à alíquota zero.", "ZERO", False),
+                 ("Para o trator a redução não se aplica e vale a alíquota cheia.", "PADRAO", True),
+                 ("Sobre a venda do trator incide a alíquota padrão.", "PADRAO", True),
+                 ("Não há, neste caso, alíquota zero.", "ZERO", False),
+                 ("A alíquota de 26,5% é a alíquota padrão.", "PADRAO", True),
+                 ("A alíquota não varia: é zero para todos.", "CONDICIONAL", False)]
+        for texto, classe, esperado in casos:
+            self.assertEqual(ext.classe_dita(texto, classe), esperado, texto)
+        self.assertTrue(ext.encaminha("Você não precisa pagar nada agora, mas procure o contador."))
+        self.assertTrue(ext.encaminha("Sem precisar de nada, fale com seu contador."))
+        self.assertFalse(ext.classe_dita("Você não precisa procurar o contador: a regra é a mesma.",
+                                         "FORA_DO_ESCOPO_SISTEMA"))
+
+    def test_varia_conforme_e_condicional_mas_conforme_o_artigo_nao(self):
+        self.assertTrue(ext.classe_dita("A alíquota varia conforme o produto: o milho em grão tem "
+                                        "redução de 60%.", "CONDICIONAL"))
+        self.assertFalse(ext.classe_dita("Tem redução de 60%, conforme o art. 138.", "CONDICIONAL"))
+
+    def test_descartar_o_contador_nao_e_encaminhar(self):
+        pergunta = {"encaminharContador": True}
+        self.assertFalse(ext.avaliar(resultado("Você não precisa procurar o contador: a regra é a "
+                                               "mesma para todos."), pergunta)["encaminhamento"])
+        self.assertTrue(ext.avaliar(resultado("Procure o seu contador."), pergunta)["encaminhamento"])
+
+    def test_fundamentacao_de_texto_descartado_nao_conta_nas_duas_arquiteturas(self):
+        # O AvaliadorResposta do 2463c27 da citacaoValida=true a uma CITACAO_INVALIDA com citacao.
+        for desfecho in ("CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"):
+            self.assertFalse(ext.avaliar(resultado("x", desfecho, citacao_valida=True), {})["fundamentacao"])
+        self.assertTrue(ext.avaliar(resultado("x", citacao_valida=True), {})["fundamentacao"])
+
+    def test_sql_aceita_espaco_depois_da_chave_como_o_cita_algum(self):
+        sql = ext.sql_conferencia({"perguntas": [{"origem": "inedita_externa_ia", "id": "X",
+                                                  "dispositivosEsperados": ["LC 214/2025, art. 138"]}]})
+        self.assertIn("LIKE c.dispositivo || ' %'", sql)
+
+    def test_ineditas_de_dados_aceita_arquivo_com_bom(self):
+        import tempfile
+        from ceres_benchmark import ineditas_dados as ind
+        with tempfile.TemporaryDirectory() as d:
+            caminho = Path(d) / "perguntas.txt"
+            caminho.write_bytes("\ufeff# cabecalho\r\n2026-11-06 | Luiz | oq vence?\r\n".encode("utf-8"))
+            self.assertEqual([e["pergunta"] for e in ind.ler(caminho)], ["oq vence?"])
+
+
+E33_PROIBIDA = r"\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\b"
+
+#: Corpus de regressao da heuristica: toda frase que um review (#361, #368) usou para mostrar um
+#: erro entra aqui com o resultado certo. Mudou a regra, o corpus inteiro tem de continuar valendo.
+CORPUS_CLASSE = [
+    ("Tem alíquota zero de IBS e CBS.", "ZERO", True),
+    ("Não tem alíquota zero: a redução é de 60%.", "ZERO", False),
+    ("Não tem alíquota zero: a redução é de 60%.", "REDUCAO_60", True),
+    ("Pode ter alíquota zero, redução de 60% ou alíquota padrão.", "ZERO", False),
+    ("Pode ter alíquota zero, redução de 60% ou alíquota padrão.", "CONDICIONAL", True),
+    ("Sim, esse insumo tem redução de 60% da alíquota padrão (Anexo IX).", "REDUCAO_60", True),
+    ("Sim, esse insumo tem redução de 60% da alíquota padrão (Anexo IX).", "CONDICIONAL", False),
+    ("O milho tem redução de 60% na alíquota padrão.", "REDUCAO_60", True),
+    ("A redução de 60% aplica-se à alíquota padrão.", "REDUCAO_60", True),
+    ("O milho tem alíquota 60% menor que a alíquota padrão.", "REDUCAO_60", True),
+    ("Não tem redução: vale a alíquota padrão.", "PADRAO", True),
+    ("Não tem direito à redução: vale a alíquota padrão.", "PADRAO", True),
+    ("Não há redução de 60% para esse produto.", "PADRAO", True),
+    ("Para o trator a redução não se aplica e vale a alíquota cheia.", "PADRAO", True),
+    ("O trator não tem nenhuma redução e paga a alíquota padrão.", "PADRAO", True),
+    ("Sobre a venda do trator incide a alíquota padrão.", "PADRAO", True),
+    ("A alíquota de 26,5% é a alíquota padrão.", "PADRAO", True),
+    ("O trator nunca foi isento e paga a alíquota padrão.", "PADRAO", True),
+    ("Os produtos hortícolas não processados têm alíquota zero.", "ZERO", True),
+    ("Isso não muda nada. Alíquota zero para o ovo.", "ZERO", True),
+    ("O produto que não é processado tem alíquota zero.", "ZERO", True),
+    ("O ovo, que não é industrializado, tem alíquota zero.", "ZERO", True),
+    ("O adubo não terá direito à alíquota zero.", "ZERO", False),
+    ("Não há, neste caso, alíquota zero.", "ZERO", False),
+    ("Não há, a meu ver, alíquota zero.", "ZERO", False),
+    ("O milho não fica isento: tem redução de 60%.", "REDUCAO_60", True),
+    ("Os insumos não ficam isentos; têm redução de 60%.", "REDUCAO_60", True),
+    ("Depende do NCM do produto.", "CONDICIONAL", True),
+    ("A alíquota varia conforme o produto: o milho em grão tem redução de 60%.", "CONDICIONAL", True),
+    ("Tem redução de 60%, conforme o art. 138.", "CONDICIONAL", False),
+    ("A alíquota não varia: é zero para todos.", "CONDICIONAL", False),
+    ("Não se preocupe, depende do produto.", "CONDICIONAL", True),
+    ("Venda de produtor não contribuinte tem alíquota zero.", "ZERO", True),
+    ("Para o produtor não contribuinte depende do regime do comprador.", "CONDICIONAL", True),
+    ("O milho tem redução de 60% e o trator paga a alíquota padrão.", "CONDICIONAL", True),
+    ("Esse produto fica fora da redução e paga a alíquota padrão.", "PADRAO", True),
+    ("A redução do Anexo IX não se aplica e vale a alíquota padrão.", "PADRAO", True),
+    ("O produtor de menor porte paga a alíquota padrão.", "PADRAO", True),
+    ("O ovo, que tem alíquota zero de IBS e CBS, pode ser vendido sem destaque.", "ZERO", True),
+    ("Não, neste caso, tem redução de 60%.", "REDUCAO_60", True),
+    ("Não é isento, contudo, tem 60% de redução.", "REDUCAO_60", True),
+    ("O trator não é isento e tem alíquota padrão.", "PADRAO", True),
+    ("O produtor não paga IBS porque tem alíquota zero.", "ZERO", True),
+    ("A soja não é processada e tem alíquota zero.", "ZERO", True),
+    ("Se não for processado tem alíquota zero.", "ZERO", True),
+    ("Para o trator a redução não vale e paga a alíquota cheia.", "PADRAO", True),
+    ("Não só o milho tem 60% de redução.", "REDUCAO_60", True),
+    ("Informo que não há alíquota zero para o adubo.", "ZERO", False),
+    ("Acho que não tem alíquota zero.", "ZERO", False),
+    ("Não há, hoje, alíquota zero para o adubo.", "ZERO", False),
+    ("Não terá, assim, alíquota zero.", "ZERO", False),
+    ("Não tem, infelizmente, alíquota zero.", "ZERO", False),
+    ("O trator fica sem isenção e paga a alíquota padrão.", "PADRAO", True),
+    ("Nenhum benefício de alíquota zero: paga a alíquota padrão.", "PADRAO", True),
+    ("A alíquota zero não se aplica ao adubo.", "ZERO", False),
+    ("A redução de 60% não vale para o trator.", "REDUCAO_60", False),
+    ("Converse com o seu contador.", "FORA_DO_ESCOPO_SISTEMA", True),
+    ("Você não precisa procurar o contador: a regra é a mesma.", "FORA_DO_ESCOPO_SISTEMA", False),
+]
+CORPUS_PROIBIDA = [
+    ("Você pode aproveitar o crédito.", True),
+    ("Você não pode aproveitar o crédito.", False),
+    ("Mesmo que o insumo não seja tributado, você pode aproveitar o crédito do IBS e da CBS.", True),
+    ("Não há impedimento, pode aproveitar os créditos.", True),
+    ("Não tem problema, pode aproveitar o crédito.", True),
+    ("Não, nesse caso, pode aproveitar o crédito.", True),
+    ("Não importa e pode aproveitar o crédito.", True),
+    ("Entendo que não pode aproveitar o crédito.", False),
+    ("Lembre que não pode aproveitar o crédito.", False),
+]
+CORPUS_PROIBIDA_E36 = [
+    ("A indústria que compra de produtor não contribuinte não poderá aproveitar nenhum crédito.", True),
+]
+CORPUS_ENCAMINHA = [
+    ("Procure o seu contador.", True),
+    ("Você não precisa procurar o contador: a regra é a mesma para todos.", False),
+    ("Você não precisa pagar nada agora, mas procure o contador para confirmar.", True),
+    ("Sem precisar de nada, fale com seu contador.", True),
+    ("Você não precisa, neste caso, procurar o contador.", False),
+    ("Não é necessário, em regra, consultar o contador.", False),
+    ("Para isso, procure um profissional, que pode ser o seu contador, e confirme.", True),
+    ("Você não precisa, hoje, procurar o contador.", False),
+]
+
+
+class CorpusHeuristicaTest(unittest.TestCase):
+    def test_classe(self):
+        for texto, classe, esperado in CORPUS_CLASSE:
+            self.assertEqual(ext.classe_dita(texto, classe), esperado, f"{classe}: {texto}")
+
+    def test_afirmacao_proibida_da_e33(self):
+        for texto, esperado in CORPUS_PROIBIDA:
+            self.assertEqual(ext.afirma(E33_PROIBIDA, texto), esperado, texto)
+
+    def test_afirmacao_proibida_com_nao_contribuinte(self):
+        for texto, esperado in CORPUS_PROIBIDA_E36:
+            self.assertEqual(ext.afirma(r"n[aã]o poder[aá] aproveitar nenhum cr[eé]dito", texto),
+                             esperado, texto)
+
+    def test_encaminhamento(self):
+        for texto, esperado in CORPUS_ENCAMINHA:
+            self.assertEqual(ext.encaminha(texto), esperado, texto)
+
+
 if __name__ == "__main__":
     unittest.main()

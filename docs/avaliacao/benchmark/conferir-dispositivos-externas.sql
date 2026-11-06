@@ -1,7 +1,8 @@
 -- Gerado por ceres_benchmark.externas.sql_conferencia (#358): nao editar a mao.
 -- Chaves dos dispositivosEsperados das perguntas externas contra a base de lei.
 -- exato = trecho com a chave inteira; com_subdivisoes = trechos que comecam por ela
--- seguida de ',' ou ')' (a regra do AvaliadorResposta.citaAlgum). Zero nos dois = sai dos aceitos.
+-- seguida de ',', ')' ou espaco (a regra do AvaliadorResposta.citaAlgum). Zero nos dois = sai dos
+-- aceitos.
 -- Conjunto 2026-11-05.9.
 WITH chaves(chave, norma, dispositivo, perguntas) AS (VALUES
   ('EC 132/2023, art. 1º (redação do art. 156-A', 'EC 132/2023', 'art. 1º (redação do art. 156-A', 'E30, E35'),
@@ -56,10 +57,11 @@ WITH chaves(chave, norma, dispositivo, perguntas) AS (VALUES
 SELECT c.chave, c.perguntas,
        count(t.*) FILTER (WHERE t.dispositivo = c.dispositivo) AS exato,
        count(t.*) FILTER (WHERE t.dispositivo LIKE c.dispositivo || ',%'
-                            OR t.dispositivo LIKE c.dispositivo || ')%') AS com_subdivisoes
+                            OR t.dispositivo LIKE c.dispositivo || ')%'
+                            OR t.dispositivo LIKE c.dispositivo || ' %') AS com_subdivisoes
 FROM chaves c
 LEFT JOIN legislacao_trecho t ON t.norma = c.norma
   AND (t.dispositivo = c.dispositivo OR t.dispositivo LIKE c.dispositivo || ',%'
-       OR t.dispositivo LIKE c.dispositivo || ')%')
+       OR t.dispositivo LIKE c.dispositivo || ')%' OR t.dispositivo LIKE c.dispositivo || ' %')
 GROUP BY c.chave, c.perguntas
 ORDER BY (count(t.*) = 0) DESC, c.chave;

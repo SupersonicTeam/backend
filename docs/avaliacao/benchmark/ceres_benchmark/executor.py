@@ -137,6 +137,37 @@ def onde_rodou(modelo_ps: dict) -> str:
     return f"dividido ({round(100 * fracao)}% na GPU)"
 
 
+def decidir_retomada(anterior: dict, mesma: bool) -> str:
+    """O que o ``--retomar`` faz com uma celula que ja tem manifesto: ``pular`` (medida, mesma
+    configuracao), ``sem_prova`` (medida sem nenhuma prova do pensamento: refaz, a falha das duas
+    provas costuma ser passageira), ``outra`` (medida com outra configuracao: recusa) ou ``medir``
+    (a medicao anterior nao terminou)."""
+    if mesma and (anterior.get("pensamento") or {}).get("semProva"):
+        return "sem_prova"
+    if anterior.get("codigoSaida") == 0:
+        return "pular" if mesma else "outra"
+    return "medir"
+
+
+def avisos_das_provas(pensamento: dict, final: dict) -> list[str]:
+    """Avisos das provas do pensamento (inicio e fim da celula); ajusta ``pensamento``.
+
+    Prova que falhou nao prova nada: o aviso diz qual valeu e o resumo passa a ser o dela. Sem
+    nenhuma, ``semProva`` torna a celula invalida (nao ha como mostrar o think=false).
+    """
+    inicio_erro, fim_erro = pensamento.get("erro"), final.get("erro")
+    if inicio_erro and fim_erro:
+        pensamento["semProva"] = True
+        return [f"as duas provas do pensamento falharam (início: {inicio_erro}; fim: {fim_erro}): "
+                "a célula não prova o think=false"]
+    if fim_erro:
+        return [f"a prova do pensamento no fim da célula falhou ({fim_erro}); vale só a do início"]
+    if inicio_erro:
+        pensamento["resumo"] = resumo_pensamento(final) + " (na prova do fim da célula)"
+        return [f"a prova do pensamento no início da célula falhou ({inicio_erro}); vale só a do fim"]
+    return []
+
+
 def avisos_da_amostra(memoria: dict) -> list[str]:
     """Avisos que mudam a leitura da latencia: descarga/recarga e modelo dividido."""
     avisos = []
@@ -534,12 +565,15 @@ class Executor:
             mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes"),
                      anterior.get("embedding", self.cfg.embedding)) == (
                 arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding)
-            if anterior.get("codigoSaida") == 0 and mesma:
+            decisao = decidir_retomada(anterior, mesma)
+            if decisao == "pular":
                 log(f"{nome}: ja medida nesta rodada, pulando")
                 return anterior
-            if anterior.get("codigoSaida") == 0:
+            if decisao == "outra":
                 raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding ou "
                                    "numero de repeticoes: use uma rodada nova em vez de --retomar")
+            if decisao == "sem_prova":
+                log(f"{nome}: medida sem nenhuma prova do pensamento, medindo de novo")
         destino.mkdir(parents=True, exist_ok=True)
         temporario = destino / "saida-do-comando"
         shutil.rmtree(temporario, ignore_errors=True)
@@ -577,11 +611,9 @@ class Executor:
         if pensamento["raciocinou"]:
             log(f"AVISO: {nome} raciocinou apesar de think=false: celula invalida para comparar")
         avisos = avisos_da_amostra(memoria)
-        if final.get("erro"):
-            # Sem a prova do fim a celula so tem a do inicio: o relatorio diz, nao esconde.
-            avisos.append(f"a prova do pensamento no fim da célula falhou ({final['erro']}); "
-                          "vale só a do início")
-            log(f"AVISO: {nome}: {avisos[-1]}")
+        for aviso in avisos_das_provas(pensamento, final):
+            avisos.append(aviso)
+            log(f"AVISO: {nome}: {aviso}")
         arquivos = self._renomear_saida(temporario, destino, nome)
         manifesto = {
             "celula": nome,
