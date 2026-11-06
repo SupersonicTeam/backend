@@ -145,6 +145,28 @@ class SeparacaoTreinoTesteTest {
     assertThat(SeparacaoTreinoTeste.contaminacoes(ineditas, SeparacaoTreinoTeste.TREINO_EMBUTIDO))
         .isEmpty();
     assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(ineditas)).isEmpty();
+
+    // Os hashes do compromisso (feitos em Python no cego) sao os da normalizacao deste lado:
+    // divergencia deixaria a guarda sem o cego (hashesDasIneditasForaDoTreino) cega em silencio.
+    JsonNode normalizadas = mapper.readTree(PerguntasBenchmarkIntegrationTest.PERGUNTAS.toFile())
+        .path("ineditas").path("normalizadas");
+    assertThat(normalizadas.size()).isEqualTo(ineditas.perguntas().size());
+    for (int i = 0; i < normalizadas.size(); i++) {
+      String n = SeparacaoTreinoTeste.normalizar(ineditas.perguntas().get(i).pergunta());
+      assertThat(normalizadas.get(i).path("palavras").asInt()).as(ineditas.perguntas().get(i).id())
+          .isEqualTo(n.split(" ").length);
+      assertThat(normalizadas.get(i).path("sha256").asText()).as(ineditas.perguntas().get(i).id())
+          .isEqualTo(sha256(n));
+    }
+  }
+
+  private static String sha256(String texto) {
+    try {
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+          .digest(texto.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   @Test
