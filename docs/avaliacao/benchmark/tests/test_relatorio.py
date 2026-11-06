@@ -205,6 +205,8 @@ class RevisaoTest(Base):
 
     def test_regressao_quando_so_a_arquitetura_antiga_tinha_modelo_viavel(self):
         celulas = [rel.Celula("a", "ceres-1", "Ceres 1", "m-small", {}, {}, [[]]),
+                   rel.Celula("r1", "ceres-1", "Ceres 1", "m-ref", {}, {}, [[]]),
+                   rel.Celula("r2", "ceres-2", "Ceres 2.0", "m-ref", {}, {}, [[]]),
                    rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", {}, {}, [[]])]
         original = rel.viabilidade
         rel.viabilidade = lambda das, *a: [rel.Viabilidade(
@@ -222,10 +224,14 @@ class RevisaoTest(Base):
                 ({}, invalida, "célula não rodou ou é inválida", "**Regressão:**"),
                 (invalida, {}, "a célula da Ceres 1 não rodou ou é inválida", "Com todas as letras")):
             celulas = [rel.Celula("a", "ceres-1", "Ceres 1", "m-small", antiga, {}, [[]]),
+                       rel.Celula("r1", "ceres-1", "Ceres 1", "m-ref", {}, {}, [[]]),
+                       rel.Celula("r2", "ceres-2", "Ceres 2.0", "m-ref", {}, {}, [[]]),
                        rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", nova, {}, [[]])]
             original = rel.viabilidade
+            def _pequena(das):
+                return next(c for c in das if c.modelo == "m-small")
             rel.viabilidade = lambda das, *a: [rel.Viabilidade(
-                "m-small", not das[0].invalida, [] if not das[0].invalida else ["inválida"])]
+                "m-small", not _pequena(das).invalida, [] if not _pequena(das).invalida else ["inválida"])]
             try:
                 texto = rel.conclusao(celulas, [("ceres-1", "Ceres 1"), ("ceres-2", "Ceres 2.0")],
                                       "m-ref", [], {}, {})
@@ -233,6 +239,38 @@ class RevisaoTest(Base):
                 rel.viabilidade = original
             self.assertIn(esperado, texto)
             self.assertNotIn(proibido, texto)
+
+    def test_referencia_invalida_numa_coluna_nao_vira_ganho_nem_regressao(self):
+        invalida = {"pensamento": {"raciocinou": True}}
+        for qual in ("ceres-1", "ceres-2"):
+            celulas = [rel.Celula("a", "ceres-1", "Ceres 1", "m-small", {}, {}, [[]]),
+                       rel.Celula("b", "ceres-2", "Ceres 2.0", "m-small", {}, {}, [[]]),
+                       rel.Celula("r1", "ceres-1", "Ceres 1", "m-ref",
+                                  invalida if qual == "ceres-1" else {}, {}, [[]]),
+                       rel.Celula("r2", "ceres-2", "Ceres 2.0", "m-ref",
+                                  invalida if qual == "ceres-2" else {}, {}, [[]])]
+            original = rel.viabilidade
+            rel.viabilidade = lambda das, *a: [rel.Viabilidade(
+                "m-small", das[0].arquitetura != qual, [] if das[0].arquitetura != qual else ["sem ref"])]
+            try:
+                texto = rel.conclusao(celulas, [("ceres-1", "Ceres 1"), ("ceres-2", "Ceres 2.0")],
+                                      "m-ref", [], {}, {})
+            finally:
+                rel.viabilidade = original
+            self.assertIn("Comparação entre as arquiteturas: não medida", texto)
+            self.assertNotIn("**Regressão:**", texto)
+            self.assertNotIn("Com todas as letras", texto)
+
+    def test_sem_nenhuma_prova_do_pensamento_a_celula_e_invalida(self):
+        sem = rel.Celula("a", "ceres-2", "Ceres 2.0", "m", {"pensamento": {"semProva": True}}, {}, [[]])
+        self.assertTrue(sem.invalida)
+        self.assertFalse(rel.Celula("b", "ceres-2", "Ceres 2.0", "m", {"pensamento": {}}, {}, [[]]).invalida)
+
+    def test_rotulo_mais_longo_do_mapa_por_tema_cabe_inteiro(self):
+        from ceres_benchmark import graficos
+        tema = "Externas: tributação de insumos agrícolas e pecuários"
+        svg = graficos.mapa_tema_celula("t", "s", [tema, "curto"], ["c"], [[(50.0, 1)], [(50.0, 1)]])
+        self.assertIn(">" + tema + "<", svg)
 
     def test_recusa_limpa_nao_conta_recusa_por_corte(self):
         cortada = {"id": "F1", "recusaCorreta": True,
@@ -426,6 +464,88 @@ class ExternasNoRelatorioTest(Base):
         # Regerar o relatorio nao reembaralha o CSV que ja foi ao avaliador.
         rel.gerar(self.pasta)
         self.assertEqual((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"), chave)
+
+    def test_celula_medida_depois_vai_num_lote_novo_do_csv_cego(self):
+        self._marcar()
+        import shutil
+        guardada = self.pasta.parent / "guardada-ceres-2"
+        origem = next(d for d in self.pasta.iterdir() if d.is_dir() and d.name.startswith("ceres-2"))
+        shutil.move(str(origem), guardada)
+        rel.gerar(self.pasta)
+        chave1 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        shutil.move(str(guardada), origem)  # a celula "medida depois" (--retomar)
+        rel.gerar(self.pasta)
+        chave2 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        self.assertTrue(set(chave1) < set(chave2))
+        self.assertTrue(all(chave2[k] == chave1[k] for k in chave1))
+        self.assertTrue((self.pasta / "externas-avaliacao-cego-2.csv").exists())
+        self.assertTrue(all(v["lote"] == 2 for k, v in chave2.items() if k not in chave1))
+
+    def test_celula_refeita_vai_num_lote_novo_e_o_antigo_fica_substituido(self):
+        self._marcar()
+        rel.gerar(self.pasta)
+        chave1 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        celula = next(v["celula"] for v in chave1.values())
+        arquivo = self.pasta / celula / f"{celula}.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        for r in dados["rodadas"][0]["resultados"]:
+            if (r.get("execucao") or {}).get("texto"):
+                r["execucao"]["texto"] += " (refeita)"
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        rel.gerar(self.pasta)
+        chave2 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        self.assertTrue(all(chave2[k].get("substituida") for k, v in chave1.items() if v["celula"] == celula))
+        self.assertTrue(any(v["celula"] == celula and v["lote"] == 2 for v in chave2.values()))
+        rel.gerar(self.pasta)  # sem mudanca, nao abre lote novo
+        self.assertEqual(json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(
+            encoding="utf-8")), chave2)
+
+    def test_celula_refeita_e_agora_invalida_tem_os_codigos_substituidos(self):
+        self._marcar()
+        rel.gerar(self.pasta)
+        chave1 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        celula = next(v["celula"] for v in chave1.values())
+        arquivo = self.pasta / celula / f"{celula}.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados["rodadas"][0]["resultados"][0]["execucao"]["texto"] = "outra resposta"
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        manifesto = self.pasta / celula / "celula.json"
+        m = json.loads(manifesto.read_text(encoding="utf-8"))
+        m["pensamento"] = {"raciocinou": True}
+        manifesto.write_text(json.dumps(m), encoding="utf-8")
+        rel.gerar(self.pasta)
+        chave2 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        self.assertTrue(all(v.get("substituida") for v in chave2.values() if v["celula"] == celula))
+        self.assertFalse(any(v["celula"] == celula and not v.get("substituida") for v in chave2.values()))
+
+    def test_citacao_de_texto_descartado_nao_conta_no_criterio_principal(self):
+        r = {"citacaoValida": True, "execucao": {"desfecho": "CITACAO_INVALIDA"}}
+        self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
+
+    def test_origem_antiga_das_externas_ainda_e_externa(self):
+        self._marcar()
+        canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
+        for q in canonico["perguntas"]:
+            if q["origem"] == "inedita_externa_ia":
+                q["origem"] = "inedita_externa"
+        (self.pasta / "gabarito-canonico.json").write_text(json.dumps(canonico), encoding="utf-8")
+        self.assertIn("## (d) Só as geradas por IA (externas)", rel.gerar(self.pasta))
+
+    def test_citacao_a_conferir_fica_fora_do_criterio_principal(self):
+        pergunta = {"aConferir": True, "dispositivosEsperados": ["LC 214/2025, art. 138"]}
+        self.assertEqual(rel.valor_criterio({"citacaoValida": False}, "citacao", pergunta, [],
+                                            rel.RECORTE_COMUM), (None, True, False))
+        self.assertEqual(rel.valor_criterio({"citacaoValida": False}, "citacao", {}, [],
+                                            rel.RECORTE_COMUM)[0], False)
+
+    def test_condicoes_com_a_sessao_7_inteira_e_sem_a_8a(self):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["sessao7"] = {"issue": "#270", "rotulo": "Sessão 7", "contem": True, "confirmado": False,
+                             "inteira": True, "faltando": ["Sessão 8a (#360)"], "commits": ["a (#270) (#351)"]}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("**depois** dela inteira, mas **sem** Sessão 8a (#360)", texto)
+        self.assertNotIn("sem o último confirmado", texto)
 
     def test_contaminada_sai_do_inedito(self):
         self._marcar()

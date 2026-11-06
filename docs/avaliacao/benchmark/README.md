@@ -166,16 +166,38 @@ pergunta vale ~1,9 ponto percentual.
 | `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa), E03 (#284, pergunta 2: leite ao laticínio; a lei já sustenta 60%, Anexo I, item 2, e art. 137, § 1º, II, mas o sistema dá zero e a correção é decisão do Murillo) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas |
 
 **Critérios das externas** (os 5 do Murillo, rubrica em `../rubrica-clareza.md`): **automáticos**
-no relatório — rota, fundamentação (só depois de conferidos os dispositivos), alíquota/classe e
+no relatório — rota, fundamentação (provisória enquanto `aConferir`), alíquota/classe e
 precisão por heurística de texto (classe dita e afirmações proibidas) e encaminhamento ao contador;
 **humanos** no CSV cego `externas-avaliacao-cego.csv` — contextualização, orientação prática e
-precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio: "não" (ou "nem",
-"nunca") até três palavras antes da expressão a nega; a classe só conta quando é a única afirmada (a
-resposta que lista todas as classes não acerta nenhuma); e a resposta que não foi redigida pelo
-modelo (recusa, descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. O CSV
-(`;`, BOM UTF-8, protegido contra fórmula, como o `CsvCego` do Java) sai **uma vez** por rodada:
-regerar o relatório não reembaralha o que já foi ao avaliador. Para refazer, apague
-`externas-avaliacao-cego.csv` e `externas-avaliacao-chave.json` (a chave fica fora do Git).
+precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio. A negação é por
+oração e tem um vocabulário só ("não", "nem", "nunca", "jamais", "sem", "nenhum"): a oração acaba
+em pontuação forte ou em vírgula seguida de espaço (a decimal, 26,5%, não corta; o aposto curto
+entre vírgulas, ", neste caso,", é mascarado só para medir o escopo, sem apagar texto), e o
+negador até quatro palavras antes nega a expressão ("não há redução de 60%", "não terá direito à
+alíquota zero"), desde que não haja conectivo no meio ("e", "mas", "porque", "se", "que"…: "o
+trator não é isento e tem alíquota padrão"), que ele não qualifique um particípio ("não
+processados têm alíquota zero") e que não seja inerte (a interjeição "Não, …", "não só", "não
+contribuinte"). A negação logo depois também conta ("a alíquota zero não se aplica"). A classe só conta quando é a única afirmada
+(a resposta que lista todas as classes não acerta nenhuma), e "alíquota padrão" depois de uma
+redução afirmada na mesma oração, sem conectivo entre as duas ("60% da alíquota padrão", "60%
+menor que a alíquota padrão"), não conta como PADRAO; "depende", "varia" e "conforme o produto" (não negados) contam como
+condicional, "conforme o art. 138" não; "não precisa procurar o contador" não é encaminhar (nem
+conta como fora do escopo), mas "não precisa pagar nada agora, mas procure o contador" é. Toda
+frase que um review usou para mostrar um erro da heurística fica no corpus de regressão
+(`tests/test_externas.py`, `CORPUS_*`): mudou a regra, o corpus inteiro continua valendo. E a resposta que não foi redigida pelo modelo
+(recusa, descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A
+fundamentação é o `citacaoValida` do comando com a regra da `main` nas duas arquiteturas: texto
+descartado (`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`) não ganha crédito de
+citação, porque o `AvaliadorResposta` do `2463c27` não aplica essa regra; a mesma regra vale no
+critério principal "Citação válida" de todo o conjunto. Enquanto `aConferir`, a
+citação das externas fica **só** na seção delas, como provisória: não entra no critério principal
+"Citação válida" nem na viabilidade. O CSV (`;`, BOM UTF-8, protegido contra fórmula, como o
+`CsvCego` do Java) sai em **lotes**: regerar o relatório não reembaralha o que já foi ao avaliador,
+e célula medida depois (`--retomar`) ou refeita (a primeira rodada dela mudou) vai num
+lote novo (`externas-avaliacao-cego-2.csv`, …), com códigos que continuam a numeração na mesma
+chave; os códigos antigos da refeita ficam `substituida`. Limite: o lote novo só tem as células que
+entraram depois, corrigidas noutro momento. Para comparar todas na mesma sessão do avaliador,
+apague os `externas-avaliacao-*` e gere tudo de novo **antes** de mandar (a chave fica fora do Git).
 
 **E33 (pergunta 33):** com o diferimento do art. 138, § 2º, o fertilizante comprado por contribuinte
 do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. Errar nela é o defeito da
@@ -435,7 +457,10 @@ propriedade). Na prática:
   pensamento contam no teto e quase toda chamada sai cortada. A prova de pensamento roda para
   **cada** modelo antes da célula; se o modelo raciocinar apesar do `think=false` (o 0.6B e o 1.7B
   são híbridos), a célula fica marcada como **inválida para comparar**: aparece nas tabelas, sai da
-  conclusão e dos gráficos, em vez de o teto puni-la.
+  conclusão e dos gráficos, em vez de o teto puni-la. A prova roda no início e no fim da célula;
+  se uma falhar, o aviso diz qual valeu, e se as duas falharem a célula também é inválida (não há
+  como mostrar que o pensamento estava desligado) e o `--retomar` a mede de novo. Com a célula do `qwen3:4b-instruct` inválida ou
+  ausente numa das colunas, a conclusão não afirma ganho nem regressão entre as arquiteturas.
 
 ## Latência na VPS (produção)
 

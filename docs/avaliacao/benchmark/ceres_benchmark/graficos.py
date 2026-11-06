@@ -7,6 +7,8 @@ aparece como barra de erro (minimo-maximo). So biblioteca padrao: SVG escrito a 
 
 from __future__ import annotations
 
+import math
+
 from html import escape
 from pathlib import Path
 
@@ -147,8 +149,8 @@ def mapa_tema_celula(titulo: str, subtitulo: str, temas: list[str], colunas: lis
     # Rotulo do tema a ~13,5 px por caractere (Arial 24): a margem cresce com o maior, ate 800 px;
     # alem disso o rotulo e encurtado com reticencias, nunca sai da imagem.
     maior = max((len(t) for t in temas), default=0)
-    esquerda = int(min(800, max(470, 56 + 13.5 * maior)))
-    limite_rotulo = int((esquerda - 56) / 13.5)
+    esquerda = math.ceil(min(800, max(470, 56 + 13.5 * maior)))
+    limite_rotulo = math.floor((esquerda - 56) / 13.5 + 1e-9)
     largura_col = (largura - esquerda - 40) / max(1, len(colunas))
     altura_lin = min(52.0, (altura - topo - 40) / max(1, len(temas)))
     partes = [
