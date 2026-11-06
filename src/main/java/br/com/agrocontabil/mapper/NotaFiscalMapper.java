@@ -2,6 +2,8 @@ package br.com.agrocontabil.mapper;
 
 import br.com.agrocontabil.dto.NotaFiscalItemRequest;
 import br.com.agrocontabil.dto.AvisoNotaResponse;
+import br.com.agrocontabil.dto.NotaCarteiraResponse;
+import br.com.agrocontabil.repository.NotaDaCarteira;
 import br.com.agrocontabil.dto.NotaFiscalItemResponse;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
@@ -134,6 +136,20 @@ public final class NotaFiscalMapper {
         nota.getCreatedAt(),
         nota.getUpdatedAt(),
         avisos);
+  }
+
+  /**
+   * Converte a linha da listagem da carteira do escritório (issue #341).
+   *
+   * @param nota projeção lida do banco
+   * @return resumo para a API
+   */
+  public static NotaCarteiraResponse toCarteiraResponse(NotaDaCarteira nota) {
+    return new NotaCarteiraResponse(nota.id(), nota.produtorId(), nota.produtorNome(),
+        nota.numero(), nota.serie(), nota.naturezaOperacao(), nota.status(),
+        nota.tipoDocumento(), nota.dataEmissao(), nota.destinatarioNome(),
+        nota.valorTotalProdutos(), nota.valorTotalNota(), nota.valorTotalIbs(),
+        nota.valorTotalCbs(), nota.chaveAcesso(), nota.createdAt(), nota.updatedAt());
   }
 
   /**
