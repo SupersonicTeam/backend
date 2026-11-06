@@ -6,7 +6,7 @@
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
     <!-- ================================================================
-         0052-nota-fiscal-item-icms.xml
+         0053-nota-fiscal-item-icms.xml
          Grupo ICMS por item na NF-e (decisao do Murillo, 2026-11-06; #284,
          pergunta 9).
 
@@ -27,7 +27,7 @@
          NAO editar changesets anteriores.
          ================================================================ -->
 
-    <changeSet id="0052-nota-fiscal-item-icms" author="supersonic-team">
+    <changeSet id="0053-nota-fiscal-item-icms" author="supersonic-team">
         <addColumn tableName="nota_fiscal_item">
             <column name="cst_icms" type="VARCHAR(3)" remarks="CST do ICMS informado (ou CSOSN da nota importada); nulo = nao informado"/>
             <column name="origem_icms" type="VARCHAR(1)" remarks="Origem da mercadoria (Torig); nulo = 0, nacional"/>

@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS nota_fiscal_item (
     aliquota_ibs_mun        NUMERIC(7,4),
     valor_ibs_uf            NUMERIC(15,2),
     valor_ibs_mun           NUMERIC(15,2),
-    -- Grupo ICMS do item: CST informado e origem (migration 0052)
+    -- Grupo ICMS do item: CST informado e origem (migration 0053)
     cst_icms                VARCHAR(3),
     origem_icms             VARCHAR(1),
     created_at              TIMESTAMP WITH TIME ZONE,
@@ -572,7 +572,7 @@ CREATE TABLE IF NOT EXISTS cfop_referencia (
 );
 
 -- Codigos conferidos contra a nomenclatura oficial (changeset 0046, issue #282); in_natura do
--- changeset 0048 (issue #272); arroz em casca in natura no 0051 (#284).
+-- changeset 0048 (issue #272); arroz em casca in natura no 0051 (#284); leite do Anexo I, item 2, no 0052.
 -- NcmSemeadoExisteNaNomenclaturaTest trava o espelho.
 MERGE INTO ncm_agropecuario (codigo, descricao, in_natura) KEY (codigo) VALUES
     ('12019000', 'Soja, mesmo triturada, exceto para semeadura', TRUE),
@@ -592,6 +592,11 @@ MERGE INTO ncm_agropecuario (codigo, descricao, in_natura) KEY (codigo) VALUES
     ('04072100', 'Ovos frescos de galinha (Gallus domesticus), com casca', FALSE),
     ('04072900', 'Outros ovos frescos de aves, com casca (exceto de galinha)', FALSE),
     ('04012010', 'Leite, teor de gordura entre 1% e 6%, em embalagem ate 1 litro', FALSE),
+    ('04011010', 'Leite UHT, teor de gordura ate 1%', FALSE),
+    ('04011090', 'Leite com teor de gordura ate 1%, outros', FALSE),
+    ('04012090', 'Leite com teor de gordura entre 1% e 6%, outros', FALSE),
+    ('04014010', 'Leite com teor de gordura entre 6% e 10%', FALSE),
+    ('04015010', 'Leite com teor de gordura superior a 10%', FALSE),
     ('08043000', 'Abacaxis (ananases) frescos ou secos', FALSE),
     ('07020000', 'Tomates frescos ou refrigerados', FALSE);
 

@@ -136,7 +136,7 @@ public record NotaFiscalItemRequest(
     String origemIcms
 ) {
 
-  /** Item sem os campos do ICMS (o CST padrao ou a definir), como antes do changeSet 0052. */
+  /** Item sem os campos do ICMS (o CST padrao ou a definir), como antes do changeSet 0053. */
   public NotaFiscalItemRequest(Integer numeroItem, String codigoProduto, String descricao,
       String ncm, String cfop, String unidade, BigDecimal quantidade, BigDecimal valorUnitario,
       String cstIbsCbs, String cClassTrib, BigDecimal percentualReducao) {

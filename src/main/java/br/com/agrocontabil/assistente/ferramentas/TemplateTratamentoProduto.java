@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente.ferramentas;
 
+import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Alternativa;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado;
 import java.math.BigDecimal;
@@ -22,6 +23,10 @@ public final class TemplateTratamentoProduto {
   static final int DESCRICAO_MAXIMA = 110;
 
   static final String RESSALVA = "Confira com seu contador se a sua venda atende a condicao.";
+
+  /** Com duas situações (o leite, #284), quem escolhe é o contador, não a tabela. */
+  static final String RESSALVA_ALTERNATIVA =
+      "O enquadramento da sua venda em uma das duas situacoes e com o seu contador.";
 
   private static final Map<Integer, String> ROMANOS =
       Map.of(1, "I", 7, "VII", 9, "IX", 15, "XV");
@@ -47,15 +52,25 @@ public final class TemplateTratamentoProduto {
     }
     List<String> frases = new ArrayList<>();
     boolean comCondicao = false;
+    boolean comAlternativa = false;
     for (Produto p : consulta.produtos()) {
       frases.add(frase(p));
-      comCondicao |= p.condicao() != null;
+      // A condicao do produto com alternativa ja tem a ressalva propria (as duas situacoes).
+      comCondicao |= p.condicao() != null && p.alternativa() == null;
+      comAlternativa |= p.alternativa() != null;
     }
     String fonte = consulta.versaoTabela() == null
         ? "Tratamento pela tabela oficial de classificacao tributaria."
         : "Tratamento pela tabela oficial de classificacao tributaria (" + consulta.versaoTabela()
             + ").";
-    frases.add(comCondicao ? fonte + " " + RESSALVA : fonte);
+    StringBuilder fim = new StringBuilder(fonte);
+    if (comCondicao) {
+      fim.append(' ').append(RESSALVA);
+    }
+    if (comAlternativa) {
+      fim.append(' ').append(RESSALVA_ALTERNATIVA);
+    }
+    frases.add(fim.toString());
     return String.join("\n", frases);
   }
 
@@ -65,6 +80,9 @@ public final class TemplateTratamentoProduto {
     for (Produto p : consulta.produtos()) {
       if (p.artigo() != null) {
         dispositivos.add(NORMA + "|art. " + p.artigo());
+      }
+      if (p.alternativa() != null && p.alternativa().artigo() != null) {
+        dispositivos.add(NORMA + "|art. " + p.alternativa().artigo());
       }
     }
     return List.copyOf(dispositivos);
@@ -97,7 +115,30 @@ public final class TemplateTratamentoProduto {
     if (p.condicao() != null) {
       s.append(" Condicao: ").append(p.condicao()).append('.');
     }
+    if (p.alternativa() != null) {
+      s.append(' ').append(alternativa(p.alternativa()));
+    }
     return s.toString();
+  }
+
+  /** A outra situação do produto, que vale só com o cClassTrib informado (o leite, #284). */
+  private static String alternativa(Alternativa a) {
+    StringBuilder s = new StringBuilder("Ja o ").append(a.condicao()).append(" tem ");
+    if (a.percentualReducao().compareTo(BigDecimal.valueOf(100)) == 0) {
+      s.append("aliquota zero");
+    } else {
+      s.append("reducao de ").append(percentual(a.percentualReducao()));
+    }
+    s.append(" do IBS e da CBS (");
+    if (a.artigo() != null) {
+      s.append(NORMA).append(", art. ").append(a.artigo());
+      if (a.anexo() != null) {
+        s.append(", Anexo ").append(romano(a.anexo()));
+      }
+      s.append("; ");
+    }
+    return s.append("cClassTrib ").append(a.cClassTrib()).append("), com esse cClassTrib")
+        .append(" informado no item da nota.").toString();
   }
 
   /** Dispositivo legível: "LC 214/2025, art. 137" ou "LC 214/2025, art. 138, Anexo IX". */

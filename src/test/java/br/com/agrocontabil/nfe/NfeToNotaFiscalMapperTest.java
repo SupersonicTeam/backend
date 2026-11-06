@@ -67,6 +67,30 @@ class NfeToNotaFiscalMapperTest {
     assertThat(nota.getXmlGerado()).contains("Signature");
   }
 
+  @org.junit.jupiter.params.ParameterizedTest(name = "NCM {0}, declarado {1} -> {2}")
+  @org.junit.jupiter.params.provider.CsvSource({
+      "04012010, 200003, 200003",
+      "04012090, 200036, 200036",
+      "31052000, 200038, ",
+      "04012010, ,       "
+  })
+  @DisplayName("#284: cClassTrib do fornecedor entra no item so para o leite do Anexo I")
+  void cClassTribDeclaradoSoNoLeite(String ncm, String declarado, String esperado) {
+    ResultadoImportacao r = importer.importar(
+        NfeImportTestFixtures.gerarNfeAssinada().getBytes(StandardCharsets.UTF_8));
+    br.com.agrocontabil.nfe.model.Det det = r.nfe().getInfNFe().getDet().get(0);
+    det.getProd().setNcm(ncm);
+    if (declarado == null) {
+      det.setImposto(null);
+    } else {
+      det.getImposto().getIbsCbs().setCClassTrib(declarado);
+    }
+
+    NotaFiscal nota = mapper.toNotaFiscal(r.nfe(), produtor, r.nfeXml());
+
+    assertThat(nota.getItens().get(0).getCClassTrib()).isEqualTo(esperado);
+  }
+
   @Test
   @DisplayName("NFe pura (sem protocolo) tambem entra PENDENTE_SEFAZ, nunca XML_GERADO (#223)")
   void mapeiaNfePuraComoNeutra() {

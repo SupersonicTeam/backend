@@ -52,5 +52,27 @@ public interface TratamentoProdutoPorta {
    */
   record Produto(String ncm, String descricao, int quantidadeNcms, String cClassTrib,
       BigDecimal percentualReducao, boolean inNatura, Integer anexo, String artigo,
-      String condicao, boolean ncmConhecido) {}
+      String condicao, boolean ncmConhecido, Alternativa alternativa) {
+
+    /** Sem alternativa. */
+    public Produto(String ncm, String descricao, int quantidadeNcms, String cClassTrib,
+        BigDecimal percentualReducao, boolean inNatura, Integer anexo, String artigo,
+        String condicao, boolean ncmConhecido) {
+      this(ncm, descricao, quantidadeNcms, cClassTrib, percentualReducao, inNatura, anexo, artigo,
+          condicao, ncmConhecido, null);
+    }
+  }
+
+  /**
+   * Tratamento que vale só com o {@code cClassTrib} informado no item (o leite de consumo
+   * direto, Anexo I, #284).
+   *
+   * @param cClassTrib classificação a informar
+   * @param percentualReducao redução oficial desse código
+   * @param anexo número do anexo da LC 214/2025
+   * @param artigo artigo da LC 214/2025
+   * @param condicao quando vale
+   */
+  record Alternativa(String cClassTrib, BigDecimal percentualReducao, Integer anexo,
+      String artigo, String condicao) {}
 }

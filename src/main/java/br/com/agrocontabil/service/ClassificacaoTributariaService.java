@@ -37,7 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>Precedência</strong> (o mais benéfico vence; assunção da #284, pergunta 5):
  * <ol>
  *   <li>Anexo I (200003, cesta básica, art. 125) ou Anexo XV (200014, hortícolas, frutas e ovos,
- *       art. 148): redução de 100% (alíquota zero);</li>
+ *       art. 148): redução de 100% (alíquota zero), <strong>exceto o leite do Anexo I, item
+ *       2</strong> (ver abaixo);</li>
  *   <li>produto in natura (200036, art. 137, 60%), pela marca da referência — o art. 137 vale
  *       pela condição e não tem lista de NCM;</li>
  *   <li>Anexo IX (200038, insumos, art. 138) ou Anexo VII (200034, alimentos, art. 135): 60%;</li>
@@ -46,12 +47,20 @@ import org.springframework.transaction.annotation.Transactional;
  * Um NCM só se enquadra num {@code cClassTrib} se tem linha {@code PERMITIDO} e nenhuma
  * {@code VEDADO} vigente para ele (a tabela veda, por exemplo, no Anexo VII o que está no Anexo I).
  *
- * <p><strong>Pendências de validação (#284):</strong> leite cru vendido ao laticínio (pergunta 2:
- * o Anexo I traz o leite "para consumo direto") e venda a cooperativa optante (pergunta 6:
- * cClassTrib 200020 depende da opção da cooperativa, não do NCM). Aqui vale o dado oficial por
- * NCM, sem regra própria para essas situações. A marca in natura não é dado oficial: é da
- * referência do projeto (o art. 137 não tem lista); o arroz em casca não parboilizado
- * (pergunta 3) a recebeu pela resposta do escritório (changeSet 0051).
+ * <p><strong>Leite (decisão de 2026-11-06, #284, pergunta 2):</strong> o Anexo I, item 2, só
+ * alcança o leite "em conformidade com os requisitos da legislação específica relativos ao
+ * consumo direto pela população", e os NCMs dele ({@link #LEITE_ANEXO_I}) servem também ao leite
+ * cru, só resfriado, vendido ao laticínio — que segue in natura (art. 137, § 1º, II). O dado da
+ * nota não decide o destino, então esses NCMs saem por padrão <strong>in natura</strong>
+ * (200036, 60%), o lado seguro (errar faz pagar a mais, nunca a menos); a alíquota zero vale só
+ * com o cClassTrib 200003 informado no item, que o {@link ReducaoNcmResolver} honra antes da
+ * regra por NCM. O Anexo I continua nos {@link TratamentoTributarioNcm#enquadramentos()}, para a
+ * explicação. A exceção é só desse item: nos outros produtos o "mais benéfico vence" segue.
+ *
+ * <p><strong>Pendência de validação (#284):</strong> venda a cooperativa optante (pergunta 6:
+ * cClassTrib 200020 depende da opção da cooperativa, não do NCM). A marca in natura não é dado
+ * oficial: é da referência do projeto (o art. 137 não tem lista); o arroz em casca não
+ * parboilizado (pergunta 3) a recebeu pela resposta do escritório (changeSet 0051).
  */
 @Service
 public class ClassificacaoTributariaService {
@@ -60,6 +69,17 @@ public class ClassificacaoTributariaService {
 
   static final String INTEGRAL = "000001";
   static final String IN_NATURA = "200036";
+
+  /** Cesta básica (Anexo I, art. 125): alíquota zero. */
+  public static final String CESTA_BASICA = "200003";
+
+  /**
+   * NCMs do leite do Anexo I, item 2, da LC 214/2025 (0401.10.10, 0401.10.90, 0401.20.10,
+   * 0401.20.90, 0401.40.10 e 0401.50.10), literais da lei: saem in natura por padrão e só têm
+   * alíquota zero com o cClassTrib 200003 informado (ver a classe).
+   */
+  public static final Set<String> LEITE_ANEXO_I = Set.of(
+      "04011010", "04011090", "04012010", "04012090", "04014010", "04015010");
 
   /** Anexos de alíquota zero (I e XV), que vencem o in natura. */
   static final List<String> ANEXOS_ZERO = List.of("200003", "200014");
@@ -153,6 +173,10 @@ public class ClassificacaoTributariaService {
         .collect(Collectors.toSet());
 
     Optional<String> zero = ANEXOS_ZERO.stream().filter(enquadrados::contains).findFirst();
+    if (zero.isPresent() && leiteSemDestinoDecidido(ncm, enquadrados)) {
+      // Consumo direto (condicao do Anexo I, item 2) o dado nao decide: in natura por padrao.
+      return tratamento(ncm, IN_NATURA, Origem.IN_NATURA, data, enquadramentos, classificacoes);
+    }
     if (zero.isPresent()) {
       return tratamento(ncm, zero.get(), Origem.ANEXO, data, enquadramentos, classificacoes);
     }
@@ -235,6 +259,32 @@ public class ClassificacaoTributariaService {
     return new TratamentoTributarioNcm(ncm, codigo, codigo.substring(0, 3), reducao, origem,
         classificacao.map(ClassificacaoTributaria::getDescricao).orElse(null), enquadramentos,
         classificacao.map(ClassificacaoTributaria::getVersaoTabela).orElse(null));
+  }
+
+  /**
+   * Leite do Anexo I, item 2, cuja alíquota zero dependeria do consumo direto: a regra por NCM o
+   * trata in natura. Só quando o NCM está no Anexo I e não no XV (o XV dá zero sem condição de
+   * destino; hoje nenhum leite está nele).
+   *
+   * @param ncm NCM do item
+   * @param enquadrados cClassTrib de anexo em que o NCM se enquadra na data
+   * @return {@code true} se o leite sai in natura
+   */
+  public static boolean leiteSemDestinoDecidido(String ncm, Collection<String> enquadrados) {
+    return tratamentoDependeDoInformado(ncm) && enquadrados.contains(CESTA_BASICA)
+        && !enquadrados.contains(ANEXOS_ZERO.get(1));
+  }
+
+  /**
+   * NCM cujo tratamento a regra por NCM não decide sozinha: o {@code cClassTrib} informado no
+   * item (ou declarado no XML do fornecedor, na importação) é que diz se vale a alíquota zero.
+   * Hoje, o leite do Anexo I, item 2 (#284).
+   *
+   * @param ncm NCM do item; nulo devolve {@code false}
+   * @return {@code true} para os NCMs de {@link #LEITE_ANEXO_I}
+   */
+  public static boolean tratamentoDependeDoInformado(String ncm) {
+    return ncm != null && LEITE_ANEXO_I.contains(ncm);
   }
 
   private boolean inNatura(String ncm) {

@@ -9,6 +9,7 @@ import br.com.agrocontabil.repository.ClassificacaoTributariaAnexoNcmRepository;
 import br.com.agrocontabil.service.TratamentoProdutoService.ConsultaTratamentoProduto;
 import br.com.agrocontabil.service.TratamentoProdutoService.TipoBusca;
 import br.com.agrocontabil.service.TratamentoProdutoService.TratamentoProduto;
+import br.com.agrocontabil.service.TratamentoTributarioNcm.Origem;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -119,6 +120,40 @@ class TratamentoProdutoServiceIntegrationTest {
     assertThat(service.consultar("arroz parboilizado", EM_2026).produtos())
         .extracting(TratamentoProduto::ncm)
         .containsExactly("10061010", "10061092", "10063021");
+  }
+
+  @Test
+  @DisplayName("#284 p. 2: leite sai in natura (60%, art. 137) com a alternativa do Anexo I (zero)")
+  void leiteDuasSituacoes() {
+    List<TratamentoProduto> leite = service.consultar("leite", EM_2026).produtos();
+
+    // Os 6 NCMs do item 2 estao na referencia (0052); a consulta devolve os 3 primeiros.
+    assertThat(leite).extracting(TratamentoProduto::ncm)
+        .containsExactly("04011010", "04011090", "04012010");
+    assertThat(leite).allSatisfy(l -> {
+      assertThat(l.cClassTrib()).isEqualTo("200036");
+      assertThat(l.percentualReducao()).isEqualByComparingTo("60");
+      assertThat(l.origem()).isEqualTo(Origem.IN_NATURA);
+      assertThat(l.artigo()).isEqualTo("137");
+      assertThat(l.condicao()).contains("cru").contains("art. 137, par. 1, II");
+      assertThat(l.alternativa()).isNotNull();
+      assertThat(l.alternativa().cClassTrib()).isEqualTo("200003");
+      assertThat(l.alternativa().percentualReducao()).isEqualByComparingTo("100");
+      assertThat(l.alternativa().artigo()).isEqualTo("125");
+      assertThat(l.alternativa().anexo()).isEqualTo(1);
+      assertThat(l.alternativa().condicao()).contains("consumo direto");
+    });
+    assertThat(service.consultar("0401.20.90", EM_2026).produtos().get(0).alternativa())
+        .isNotNull();
+  }
+
+  @Test
+  @DisplayName("alternativa so no leite: arroz polido e soja nao a trazem")
+  void semAlternativaForaDoLeite() {
+    assertThat(service.consultar("arroz", EM_2026).produtos())
+        .allSatisfy(p -> assertThat(p.alternativa()).isNull());
+    assertThat(service.consultar("soja", EM_2026).produtos())
+        .allSatisfy(p -> assertThat(p.alternativa()).isNull());
   }
 
   @Test

@@ -2,10 +2,12 @@ package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.model.AcaoRevisao;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.NotaFiscalRevisao;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
+import br.com.agrocontabil.service.ClassificacaoTributariaService;
 import br.com.agrocontabil.service.TributacaoService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -36,6 +39,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * contador não aprovou os números novos. A nota volta a {@code RASCUNHO} com
  * {@code APROVACAO_CADUCADA} no histórico da revisão (mesmo desenho da falha no gerar-xml), e o
  * produtor a envia de novo. Sem mudança de valor, só o tratamento aplicado é gravado.
+ *
+ * <p><strong>Leite (#284):</strong> também recalcula o item de leite do Anexo I gravado com a
+ * alíquota zero da regra antiga (aplicado 200003) sem o 200003 informado: o padrão passou a ser in
+ * natura (60%), e sem o recálculo a nota iria ao XML com zero. Item com o 200003 informado não é
+ * tocado.
  *
  * <p>Mesmo desenho do {@link BuscaNotasLegadoRunner}: {@link SmartInitializingSingleton}, antes de
  * o Tomcat aceitar conexões; uma transação por nota, que relê a nota <strong>sob lock</strong> e
@@ -60,7 +68,11 @@ public class TributosLegadoRunner implements SmartInitializingSingleton {
 
   private static final String SELECAO = "SELECT DISTINCT n.id, n.produtor_id FROM nota_fiscal n"
       + " JOIN nota_fiscal_item i ON i.nota_fiscal_id = n.id"
-      + " WHERE i.percentual_reducao_aplicado IS NULL"
+      + " WHERE (i.percentual_reducao_aplicado IS NULL"
+      + " OR (i.c_class_trib IS NULL AND i.c_class_trib_aplicado = '"
+      + ClassificacaoTributariaService.CESTA_BASICA + "' AND i.ncm IN ("
+      + ClassificacaoTributariaService.LEITE_ANEXO_I.stream().sorted()
+          .map(n -> "'" + n + "'").collect(Collectors.joining(", ")) + ")))"
       + " AND n.status IN ('RASCUNHO', 'COM_INCONSISTENCIAS', 'DEVOLVIDA',"
       + " 'AGUARDANDO_APROVACAO', 'APROVADA')";
 
@@ -116,8 +128,7 @@ public class TributosLegadoRunner implements SmartInitializingSingleton {
       Boolean feito = transacao.execute(status ->
           notaFiscalRepository.findByIdAndProdutorIdForUpdate(id, produtorId)
               .filter(nota -> NAO_EMITIDAS.contains(nota.getStatus()))
-              .filter(nota -> nota.getItens().stream()
-                  .anyMatch(item -> item.getPercentualReducaoAplicado() == null))
+              .filter(nota -> nota.getItens().stream().anyMatch(TributosLegadoRunner::legado))
               .map(this::recalcular)
               .orElse(false));
       return Boolean.TRUE.equals(feito) ? 1 : 0;
@@ -161,6 +172,18 @@ public class TributosLegadoRunner implements SmartInitializingSingleton {
 
   private static String texto(BigDecimal valor) {
     return valor == null ? "" : valor.stripTrailingZeros().toPlainString();
+  }
+
+  /**
+   * Item calculado por regra anterior: sem a redução aplicada (antes da tabela oficial, #272) ou
+   * leite do Anexo I com a alíquota zero da regra antiga e sem o 200003 informado (#284: o
+   * padrão passou a ser in natura).
+   */
+  static boolean legado(NotaFiscalItem item) {
+    return item.getPercentualReducaoAplicado() == null
+        || (item.getCClassTrib() == null
+            && ClassificacaoTributariaService.CESTA_BASICA.equals(item.getCClassTribAplicado())
+            && ClassificacaoTributariaService.tratamentoDependeDoInformado(item.getNcm()));
   }
 
   private static UUID uuid(Object valor) {

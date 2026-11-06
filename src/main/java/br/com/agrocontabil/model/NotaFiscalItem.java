@@ -300,7 +300,7 @@ public class NotaFiscalItem {
   private BigDecimal valorIbsMun;
 
   // -------------------------------------------------------------------------
-  // Grupo ICMS do item (changeSet 0052). O sistema nao calcula ICMS: so emite o grupo com o CST
+  // Grupo ICMS do item (changeSet 0053). O sistema nao calcula ICMS: so emite o grupo com o CST
   // informado ou o padrao do diferimento (nfe/TributacaoIcms). Nullable.
   // -------------------------------------------------------------------------
 

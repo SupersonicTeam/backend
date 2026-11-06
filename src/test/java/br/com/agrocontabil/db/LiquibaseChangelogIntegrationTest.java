@@ -191,8 +191,8 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("changeSet 0052: CST e origem do ICMS por item, nulos e sem preenchimento")
-  void changeSet0052IcmsDoItem() {
+  @DisplayName("changeSet 0053: CST e origem do ICMS por item, nulos e sem preenchimento")
+  void changeSet0053IcmsDoItem() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
     List<Map<String, Object>> colunas = jdbc.queryForList(
         "SELECT column_name, data_type, is_nullable, character_maximum_length"
@@ -220,6 +220,23 @@ class LiquibaseChangelogIntegrationTest {
         + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
         + " WHERE n.ncm = '10061092' ORDER BY 1", String.class))
         .containsExactly("200034", "200038");
+  }
+
+  @Test
+  @DisplayName("changeSet 0052: os 6 leites do Anexo I na referencia, sem a marca (#284)")
+  void changeSet0052LeiteOutrosNaReferencia() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT codigo || ':' || in_natura FROM ncm_agropecuario"
+        + " WHERE codigo LIKE '0401%' ORDER BY codigo", String.class))
+        .containsExactly("04011010:false", "04011090:false", "04012010:false",
+            "04012090:false", "04014010:false", "04015010:false");
+    // Segue no Anexo I, item 2: a regra de codigo do leite o deixa in natura por padrao.
+    assertThat(jdbc.queryForList("SELECT DISTINCT i.c_class_trib"
+        + " FROM classificacao_tributaria_anexo_ncm n"
+        + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
+        + " WHERE n.ncm = '04012090' AND n.permissao = 'PERMITIDO' ORDER BY 1", String.class))
+        .containsExactly("200003");
   }
 
   @Test
