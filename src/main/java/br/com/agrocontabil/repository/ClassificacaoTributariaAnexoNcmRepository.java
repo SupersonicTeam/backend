@@ -65,20 +65,4 @@ public interface ClassificacaoTributariaAnexoNcmRepository
   List<String> findNcmsPermitidosDoItem(
       @Param("itemId") Integer itemId, @Param("data") LocalDate data);
 
-  /**
-   * Se o {@code cClassTrib} tem algum item de anexo com NCM vigente na data (issue #375): só os
-   * códigos de anexo (I, VII, IX e XV) dependem do NCM; os demais (integral, in natura...) não.
-   *
-   * @param cClassTrib código de 6 dígitos
-   * @param data data de referência
-   * @return {@code true} se o código é de anexo
-   */
-  @Query("""
-      SELECT COUNT(n) > 0 FROM ClassificacaoTributariaAnexoNcm n
-      WHERE n.item.cClassTrib = :cClassTrib
-        AND n.dataInicio <= :data
-        AND (n.dataFim IS NULL OR n.dataFim >= :data)
-      """)
-  boolean existeAnexoDoCodigo(
-      @Param("cClassTrib") String cClassTrib, @Param("data") LocalDate data);
 }

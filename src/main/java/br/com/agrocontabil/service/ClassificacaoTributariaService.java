@@ -256,31 +256,48 @@ public class ClassificacaoTributariaService {
   }
 
   /**
-   * Confere um {@code cClassTrib} informado contra o NCM do item (issue #375): código de anexo
-   * (I, VII, IX ou XV) só vale para NCM enquadrado nele na data (linha {@code PERMITIDO} e sem
-   * {@code VEDADO}, a mesma regra dos {@link #enquadramentos}). Código sem anexo (integral, in
-   * natura e os demais) não depende do NCM e passa.
+   * Confere um {@code cClassTrib} informado contra o NCM do item (issue #375). São admitidos: o
+   * tratamento da regra por NCM, todo anexo em que o NCM se enquadra na data (linha
+   * {@code PERMITIDO} sem {@code VEDADO}, a mesma regra dos {@link #enquadramentos} — o 200003 do
+   * leite, por exemplo), a tributação integral ({@code 000001}) e o in natura ({@code 200036}:
+   * o art. 137 vale pela condição e não tem lista de NCM, então o código informado é a declaração
+   * de quem emite). Qualquer outro código de redução (de anexo que não inclui o NCM, ou de outra
+   * hipótese de CST 200 — medicamentos, saúde... — que o NCM do produtor não alcança) é recusado:
+   * sem isso, qualquer produto teria alíquota zero informando o código.
    *
    * @param cClassTrib código informado no item
    * @param ncm NCM do item
    * @param data data de referência (emissão em {@code America/Sao_Paulo})
-   * @return o tratamento certo do NCM, para a sugestão, quando o código não o alcança; vazio quando
-   *     o código vale para o NCM
+   * @return os códigos admitidos e o tratamento da regra, quando o informado não está entre eles;
+   *     vazio quando ele vale para o NCM
    */
   @Transactional(readOnly = true)
-  public Optional<TratamentoTributarioNcm> foraDoAnexo(String cClassTrib, String ncm,
+  public Optional<CodigoNaoAdmitido> codigoNaoAdmitido(String cClassTrib, String ncm,
       LocalDate data) {
-    if (cClassTrib == null || ncm == null || ncm.isBlank()
-        || !anexoNcmRepository.existeAnexoDoCodigo(cClassTrib, data)) {
+    if (cClassTrib == null || INTEGRAL.equals(cClassTrib) || IN_NATURA.equals(cClassTrib)
+        || ncm == null || ncm.isBlank()) {
       return Optional.empty();
     }
     List<EnquadramentoAnexo> enquadramentos = enquadramentos(ncm, data);
-    if (enquadramentos.stream().anyMatch(e -> e.cClassTrib().equals(cClassTrib))) {
+    TratamentoTributarioNcm regra = escolher(ncm, enquadramentos, () -> inNatura(ncm), data,
+        codigo -> classificacao(codigo, data));
+    java.util.LinkedHashSet<String> admitidos = new java.util.LinkedHashSet<>();
+    admitidos.add(regra.cClassTrib());
+    enquadramentos.forEach(e -> admitidos.add(e.cClassTrib()));
+    if (admitidos.contains(cClassTrib)) {
       return Optional.empty();
     }
-    return Optional.of(escolher(ncm, enquadramentos, () -> inNatura(ncm), data,
-        codigo -> classificacao(codigo, data)));
+    return Optional.of(new CodigoNaoAdmitido(regra, List.copyOf(admitidos)));
   }
+
+  /**
+   * {@code cClassTrib} informado que o NCM não alcança (issue #375).
+   *
+   * @param regra tratamento da regra por NCM (a sugestão principal)
+   * @param admitidos códigos de redução que valem para o NCM na data, a regra primeiro (além do
+   *     integral {@code 000001} e do in natura {@code 200036}, sempre aceitos)
+   */
+  public record CodigoNaoAdmitido(TratamentoTributarioNcm regra, List<String> admitidos) {}
 
   private TratamentoTributarioNcm tratamento(String ncm, String codigo, Origem origem,
       LocalDate data, List<EnquadramentoAnexo> enquadramentos,

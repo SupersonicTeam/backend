@@ -184,9 +184,23 @@ class LeiteInNaturaEmissaoIntegrationTest {
         .isInstanceOfSatisfying(NotaFiscalInvalidaParaEmissaoException.class,
             e -> assertThat(e.getErrors()).anySatisfy(d -> {
               assertThat(d.field()).endsWith(".cClassTrib");
-              assertThat(d.message()).contains("200003").contains("12019000")
-                  .contains("cClassTrib 200036").contains("60% de reducao");
+              assertThat(d.message()).contains("200003").contains("12019000");
+              assertThat(d.rejectedValue()).isEqualTo("200003");
+              assertThat(d.expectedValue()).isEqualTo("200036, 200038, 200034");
+              assertThat(d.suggestion()).contains("200036").contains("60% de reducao");
             }));
+  }
+
+  @Test
+  @DisplayName("#375: outro codigo de reducao (200009, medicamentos) na soja tambem e recusado")
+  void codigoDeOutraHipoteseRecusado() {
+    NotaFiscal nota = nota("12019000", "200009");
+    tributacao.calcular(nota);
+
+    assertThatThrownBy(() -> validador.validar(nota))
+        .isInstanceOfSatisfying(NotaFiscalInvalidaParaEmissaoException.class,
+            e -> assertThat(e.getErrors())
+                .anySatisfy(d -> assertThat(d.rejectedValue()).isEqualTo("200009")));
   }
 
   @ParameterizedTest(name = "{0} com {1} informado passa")
