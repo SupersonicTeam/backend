@@ -172,6 +172,19 @@ class AssistenteStreamingIntegrationTest {
   }
 
   @Test
+  @DisplayName("#357: os acentos do atalho chegam corretos pelo SSE (UTF-8 no fio)")
+  void atalhoComAcentoNoStreaming() throws Exception {
+    HttpResponse<String> resposta = stream(produtorA, "O que muda para mim com o IBS e o CBS?");
+
+    List<Evento> eventos = eventos(resposta.body());
+    String texto = eventos.get(1).dados().path("resposta").asText();
+    assertThat(texto).startsWith("O que muda para você com o IBS e a CBS")
+        .contains("A CBS é a contribuição da União").contains("O CALENDÁRIO")
+        .doesNotContain("�");
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+  }
+
+  @Test
   @DisplayName("#146: modelo fora na pergunta de dados: rota, resposta em fallback e fim")
   void fallbackNoStreaming() throws Exception {
     modelo.falharCom(new IllegalStateException("connection refused: ollama:11434 segredo"));

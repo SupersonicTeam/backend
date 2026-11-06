@@ -28,10 +28,10 @@ public class FundamentoRetencao {
   static final String FUNCAO_RETENCOES = "consultarRetencoes";
 
   /** Parágrafo fixo, com as duas regras e os dispositivos. */
-  public static final String TEXTO = "Fundamento das retencoes: o Funrural do produtor pessoa"
-      + " fisica e retido pelo comprador empresa ou cooperativa (Lei 8.212/1991, art. 30, IV), a"
+  public static final String TEXTO = "Fundamento das retenções: o Funrural do produtor pessoa"
+      + " física é retido pelo comprador empresa ou cooperativa (Lei 8.212/1991, art. 30, IV), a"
       + " 1,2% mais 0,1% da receita bruta (art. 25, I e II) e 0,2% do SENAR (Lei 9.528/1997, art."
-      + " 6º); e o IBS e a CBS destacados na nota sao separados no pagamento pelo split payment"
+      + " 6º); e o IBS e a CBS destacados na nota são separados no pagamento pelo split payment"
       + " (LC 214/2025, arts. 31 e 32).";
 
   /** Dispositivos citados, na ordem do parágrafo ({@code norma|dispositivo}). */

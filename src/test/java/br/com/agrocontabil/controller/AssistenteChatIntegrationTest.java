@@ -362,9 +362,9 @@ class AssistenteChatIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.rota").value("LEGISLACAO"))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
-            "O que muda para voce com o IBS e a CBS")))
+            "O que muda para você com o IBS e a CBS")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
-            "O CALENDARIO")))
+            "O CALENDÁRIO")))
         .andExpect(jsonPath("$.resposta").value(
             org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("nao encontrei"))))
         .andExpect(jsonPath("$.modoFallback").value(false))
