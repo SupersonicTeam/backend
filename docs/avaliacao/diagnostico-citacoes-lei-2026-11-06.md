@@ -214,3 +214,46 @@ Regra combinada (a "certa" sobe e "outro artigo" não sobe): **(a1) não passa n
 5. O ganho de qualidade que o dado ainda sustenta é de **modelo ou de reescrita da pergunta**, não de busca ou de base: D03, D14 e D16 continuam fora do alcance (nem nos 20 primeiros).
 
 Dados das rodadas: `candidata-a1-1-trecho-por-artigo.json`, `candidata-a2-2-trechos-por-artigo.json`, `k5-controle-D23-D27.json`, `k5-controle-D28-D31.json`, `recall-candidatas.json` e `simula_candidatas.py` (a simulação de (a) e (b) sobre os 20 primeiros trechos). Código da candidata: branch `feat/269-busca-artigos-distintos` (sem PR; `BuscaLegislacaoService.melhoresPorArtigo`).
+
+
+---
+
+# Terceira rodada (2026-11-06): expansão de consulta com o vocabulário da lei
+
+Hipótese (orquestrador): os casos de D03, D14 e D16 são de vocabulário (a pergunta não usa as palavras da lei), então uma tabela **versionada e determinística** tema → frase da própria lei, acrescentada **só à consulta da busca** (o modelo recebe a pergunta original; sem tema casado a consulta é a de hoje) poderia pôr o artigo certo em 1º lugar. Só o recall foi medido, sem o modelo.
+
+## Conferência da posição 1 nos dados brutos (k=5, hoje)
+
+Contado de `recall-por-k.json` e das rodadas (3 repetições por pergunta), pelo 1º trecho do artigo esperado ou aceito:
+
+| Posição do artigo | Perguntas (D01–D18) | Execuções | Certa | Outro artigo | Descartada |
+|---|---|---|---|---|---|
+| 1º | 11 (D01, D02, D04, D07, D08, D09, D11, D12, D13, D17, D18) | 33 | **30** | 0 | 3 (D04, falsa recusa) |
+| 2º a 5º | 1 (D10) | 3 | 0 | 0 | 3 (falsa recusa) |
+| Fora do 5º | 6 (D03, D05, D06, D14, D15, D16) | 18 | **0** | 12 | 6 |
+
+Com o artigo em 1º lugar, 10 das 11 perguntas saíram certas nas 3 repetições (a exceção é a falsa recusa de D04); com o artigo fora do 5º lugar, **nenhuma** das 6 saiu certa. No controle 1 (D23–D31), com o artigo em 1º: 12 certas, 1 de outro artigo, 4 descartadas e 1 falha do modelo em 18 execuções; em 2º a 5º: 3 de outro artigo; fora do 5º: 3 descartadas e 3 de outro artigo. A contagem do orquestrador (10 de 12 com D21) bate; o que muda é que a base de comparação sem D21 é 10 de 11. A posição importa mais que o recall.
+
+## O que foi testado
+
+- **Controle 2** (D32–D43, 12 perguntas) escrito **antes** da tabela, de temas gerais do Título I da LC 214 (apuração, pagamento, restituição, devolução, importação, cadastro, exportação de serviço etc.); sem ajuste olhando para elas. Linha de base: posição 1 em 10 de 12; só D33 e D39 falham, então o controle 2 deixa pouco espaço para ganho e serve mais para detectar dano.
+- **Tabela** `ceres/vocabulario-lei.yml`: 6 temas pedidos (fato gerador, base de cálculo, prazo para usar o crédito, apropriação do crédito, imunidade da exportação, fim do ICMS e do ISS), cada um com frases tiradas do texto do artigo; gatilhos genéricos sobre a pergunta sem acento. `ExpansaoConsultaLei` (branch `feat/269-expansao-consulta`, sem PR).
+
+## Resultado (só recall; mesma busca, k=5, 20 primeiros candidatos)
+
+| Conjunto | n | Posição 1 | Top 5 | Top 20 |
+|---|---|---|---|---|
+| Treino D01–D18 + D21 | 19 | 12 → **16** | 13 → 17 | 16 → 18 |
+| Controle 1 D23–D31 | 9 | 6 → 6 | 7 → 7 | 9 → 9 |
+| Controle 2 D32–D43 | 12 | 10 → **8** | 11 → 9 | 11 → 9 |
+| Lei ausente D19, D20, D22 | 3 | sem tema casado: 0, 1 e 0 trechos acima do limiar, como antes | | |
+
+Por pergunta, no treino: D05 (12 → 1), D06 (9 → 1), D14 (fora → 1), D15 (6 → 1) e D10 (2 → 1) sobem para o 1º; D03 sai de fora do top 20 para o 10º e D16 para o 2º; **D09 piora** (1 → fora do top 20: o tema "apropriação do crédito" enche os 5 primeiros com pedaços do art. 47, que não é o art. 51). No controle 2, **D36** (ordem de uso dos créditos) e **D41** (exportação de **serviço**, art. 80) caem de 1º para fora do top 5: o gatilho de "crédito" enche os 5 primeiros de pedaços do art. 47 (D36 esperava o art. 53), e o de "exportação" põe o art. 79 (imunidade) na frente do art. 80 (exportação de serviço, D41).
+
+## Conclusão: a frente se encerra aqui
+
+- **No treino a posição 1 sobe (12 → 16), mas é em amostra por construção**: os 6 temas vieram das 6 falhas de busca do treino.
+- **Fora da amostra não sobe nada**: controle 1 igual (6 → 6) e controle 2 pior (10 → 8). O dano vem dos gatilhos largos; estreitá-los olhando para D36 e D41 seria ajustar nos controles, o que não pode.
+- A regra do orquestrador (a posição 1 subir de forma clara) **não se confirma**. Não rodei o modelo real. A lei ausente não foi empurrada para cima do limiar (nenhum tema casou nelas).
+- O mecanismo é válido para o vocabulário que a tabela cobre, mas **tabela escrita à mão para temas gerais não generaliza com segurança** nesta amostra: cada tema novo vira um risco de piorar perguntas vizinhas, e a conferência exigiria um conjunto de controle por tema.
+- Dados: `recall-43-sem-expansao.json` e `recall-43-com-expansao.json`. Código: `feat/269-expansao-consulta` (`ExpansaoConsultaLei`, `vocabulario-lei.yml`, ligação não feita na `BuscaLegislacaoService`).
