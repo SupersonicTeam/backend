@@ -87,6 +87,7 @@ public final class NfeImportTestFixtures {
         .descricao("Fertilizante NPK 20-05-20")
         .ncm("31052000")
         .cfop("6101")
+        .cstIcms("41") // o XML do fornecedor leva o grupo ICMS40
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))
         .valorUnitario(new BigDecimal("3.5000"))

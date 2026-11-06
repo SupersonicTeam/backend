@@ -22,8 +22,10 @@ import org.springframework.test.context.ActiveProfiles;
 
 /**
  * Falso positivo dos sinais de nota a conferir (issue #276) medido no seed real da banca (#315):
- * nenhuma nota do cenário foi feita para estar errada, então todo sinal aqui é falso positivo. O
- * resultado vai ao log (para o PR) e o teste exige zero.
+ * fora das notas feitas para mostrar o {@code ICMS_A_DEFINIR} (vendas sem CST de ICMS defensável,
+ * em rascunho, e a nota com o CFOP errado de propósito), nenhuma nota do cenário foi feita para
+ * estar errada, então todo outro sinal aqui é falso positivo. O resultado vai ao log (para o PR) e
+ * o teste exige zero.
  *
  * <p>Mesmas propriedades do {@code SeedDemonstracaoIntegrationTest}, de propósito: o Spring reusa o
  * contexto (e o banco H2 próprio) já semeado, sem semear de novo. Este teste só lê.
@@ -49,7 +51,7 @@ class SinaisNoSeedDemonstracaoIntegrationTest {
   @Autowired private SinaisNotaConferirService sinaisService;
 
   @Test
-  @DisplayName("nenhum sinal nas notas proprias do cenario (falso positivo zero)")
+  @DisplayName("so o ICMS_A_DEFINIR das notas feitas para ele; nenhum outro sinal (falso positivo zero)")
   void semFalsoPositivo() {
     List<NotaFiscal> proprias = notaRepository.findAll().stream()
         .filter(n -> n.getOrigem() == OrigemNotaFiscal.PROPRIA)
@@ -66,6 +68,20 @@ class SinaisNoSeedDemonstracaoIntegrationTest {
         proprias.size(), porSinal);
 
     assertThat(proprias).hasSizeGreaterThan(80);
-    assertThat(sinais).isEmpty();
+    // ICMS_A_DEFINIR so nas notas feitas para mostra-lo: as vendas sem CST de ICMS defensavel
+    // (milho ao pecuarista sem IE e touro reprodutor interestadual), que ficam rascunho, e a nota
+    // com o CFOP 6101 interno de proposito (a com inconsistencias). Nenhum outro sinal.
+    assertThat(sinais).filteredOn(s -> s.codigo() != SinalNota.CodigoSinalNota.ICMS_A_DEFINIR)
+        .isEmpty();
+    assertThat(sinais.stream().map(SinalNota::descricaoItem).distinct().toList())
+        .containsExactlyInAnyOrder("Milho em grao a granel, segunda safra 2026",
+            "Touro Nelore PO reprodutor, com registro genealogico",
+            "Tomate italiano extra AA, caixa 20 kg");
+    assertThat(proprias).filteredOn(n -> !sinaisService.sinais(n.getProdutor().getId(),
+            new NotaParaSinal(n.getId(), n.getOrigem(), n.getStatus(), n.getDataEmissao(),
+                n.getDestinatarioCpfCnpj(), n.getValorTotalNota())).isEmpty())
+        .extracting(NotaFiscal::getStatus)
+        .containsOnly(br.com.agrocontabil.model.StatusNotaFiscal.RASCUNHO,
+            br.com.agrocontabil.model.StatusNotaFiscal.COM_INCONSISTENCIAS);
   }
 }

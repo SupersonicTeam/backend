@@ -107,6 +107,30 @@ class SinaisNotaConferirServiceTest {
     assertThat(service.sinais(outro, nota(StatusNotaFiscal.RASCUNHO, EMISSAO))).isEmpty();
   }
 
+  @Test
+  @DisplayName("ICMS_A_DEFINIR: item sem CST fora da venda interna a contribuinte, antes de emitir")
+  void icmsADefinir() {
+    itens(itemIcms(1, "5101", null, "MT", "133518276"), // padrao: 51, sem sinal
+        itemIcms(2, "6101", null, "PR", "9071425318"), // interestadual sem CST
+        itemIcms(3, "5101", null, "MT", null), // destinatario sem IE
+        itemIcms(4, "6101", "41", "PR", "9071425318")); // informado
+
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.RASCUNHO, EMISSAO)))
+        .filteredOn(s -> s.codigo() == CodigoSinalNota.ICMS_A_DEFINIR)
+        .extracting(SinalNota::numeroItem, SinalNota::motivo, SinalNota::momento)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(2, Motivo.SEM_CST_ICMS, Momento.ANTES_DE_EMITIR),
+            org.assertj.core.groups.Tuple.tuple(3, Motivo.SEM_CST_ICMS, Momento.ANTES_DE_EMITIR));
+  }
+
+  @Test
+  @DisplayName("ICMS_A_DEFINIR so antes de emitir: a autorizada ja passou (ou nao) pela SEFAZ")
+  void icmsADefinirSoAntesDeEmitir() {
+    itens(itemIcms(1, "6101", null, "PR", "9071425318"));
+
+    assertThat(service.sinais(PRODUTOR, nota(StatusNotaFiscal.AUTORIZADA, EMISSAO))).isEmpty();
+  }
+
   @ParameterizedTest
   @EnumSource(value = StatusNotaFiscal.class,
       names = {"ENVIANDO", "PENDENTE_SEFAZ", "CANCELANDO", "CANCELADA"})
@@ -182,7 +206,15 @@ class SinaisNotaConferirServiceTest {
     when(notas.findItensParaSinais(NOTA, PRODUTOR)).thenReturn(List.of(itens));
   }
 
+  /** Item com o CST do ICMS informado: as regras que não olham o ICMS não veem o sinal dele. */
   private static ItemParaSinal item(int numero, String descricao, String cfop, String ncm) {
-    return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null);
+    return new ItemParaSinal(numero, descricao, cfop, ncm, "KG", java.math.BigDecimal.ONE, null,
+        "41", "MT", "PR", "9071425318");
+  }
+
+  private static ItemParaSinal itemIcms(int numero, String cfop, String cstIcms, String ufDestino,
+      String ieDestino) {
+    return new ItemParaSinal(numero, "Soja em grao", cfop, "12019000", "KG",
+        java.math.BigDecimal.ONE, null, cstIcms, "MT", ufDestino, ieDestino);
   }
 }

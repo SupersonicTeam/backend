@@ -37,8 +37,15 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   diferimento dos insumos do Anexo IX (art. 138, § 2º) estão **fora do escopo**; a modelagem é a
   [#281](https://github.com/SupersonicTeam/backend/issues/281). Não criar campo de situação fora
   dela.
-- **ICMS e Funrural por guia:** a NF-e não tem o grupo de ICMS por item (total zerado); o sistema
-  trata da reforma e os tributos atuais ficam com o contador. O Funrural/Senar retido pelo
+- **ICMS e Funrural por guia:** o sistema **emite o grupo de ICMS por item, sem calcular ICMS**
+  (`ICMSTot` zerado). A NT 2025.002, regra B25-90, rejeita (1002) a NF-e normal sem o grupo. O CST
+  vem do `nfe/TributacaoIcms` (regra única do XML, da DANFE, do validador e do sinal): o informado
+  (`cstIcms`, só 40/41/50/51/90, os grupos sem valores) ou o **51 (diferimento total)** só na venda
+  interna de produção própria (CFOP 5101) a destinatário com IE (#284, pergunta 9). Fora disso,
+  sem CST: 422 `ICMS_A_DEFINIR` na emissão e o sinal `ICMS_A_DEFINIR` (#276) antes dela; o sistema
+  nunca escolhe CST. Exportação (7xxx) exige 41. O ICMS devido e o ST seguem com o contador, por
+  guia. Nota importada: CST/CSOSN e origem do XML só para informar (sem o grupo, segue aceita).
+  O Funrural/Senar retido pelo
   adquirente (RN009) sai **destacado no `infCpl`** e nos Dados Adicionais do DANFE (#332):
   `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta
   da RN009, em qualquer status); 1,5% até a pergunta A da #284 (o contador citou 1,63%).

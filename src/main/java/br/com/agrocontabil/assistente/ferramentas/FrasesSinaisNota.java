@@ -64,6 +64,10 @@ public final class FrasesSinaisNota {
           + " tem o mesmo destinatario, valor e itens da nota " + s.outraNota()
           + (s.outraSerie() == null ? "" : " (serie " + s.outraSerie() + ")")
           + ", do mesmo dia. Confira se nao e a mesma venda emitida duas vezes.";
+      case "ICMS_A_DEFINIR" -> nota + ", o item '" + curta(s.descricaoItem()) + "' esta sem o"
+          + " CST do ICMS. O sistema so preenche sozinho na venda dentro do estado da sua"
+          + " producao (CFOP 5.101) a quem tem inscricao estadual: combine o CST com seu contador"
+          + " antes de emitir, senao a emissao e barrada.";
       default -> nota + ", ha um ponto para conferir com seu contador.";
     };
   }

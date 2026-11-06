@@ -207,10 +207,13 @@ class DanfePdfServiceTest {
 
     String texto = texto(service.gerarPdf(nota));
 
-    String cst = tag(det, "CST", 0);
+    // O primeiro CST do det e o do grupo ICMS (ICMS40, CST 41); o segundo, o do IBSCBS.
+    assertThat(tag(det, "CST", 0)).isEqualTo("41");
+    String cst = tag(det, "CST", 1);
     assertThat(cst).isEqualTo(tratamento.cClassTrib.substring(0, 3));
     assertThat(texto)
-        .contains("CST " + cst)
+        .contains("ICMS 041") // origem + CST do ICMS (MOC, Anexo II)
+        .contains("IBS/CBS " + cst)
         .contains("[cClassTrib " + tag(det, "cClassTrib", 0) + "]")
         .contains("CFOP 6101")
         .contains("1.000,00");
@@ -269,7 +272,11 @@ class DanfePdfServiceTest {
         .replace("<vBC>0.00</vBC><vICMS>0.00</vICMS>", "<vBC>1000.00</vBC><vICMS>120.00</vICMS>")
         .replace("<vFrete>0.00</vFrete>", "<vFrete>50.00</vFrete>")
         .replace("<CRT>3</CRT>", "<CRT>1</CRT>")
-        .replace("<xBairro>CENTRO</xBairro>", "<xBairro>Distrito Industrial</xBairro>");
+        .replace("<xBairro>CENTRO</xBairro>", "<xBairro>Distrito Industrial</xBairro>")
+        .replace("<ICMS><ICMS40><orig>0</orig><CST>41</CST></ICMS40></ICMS>",
+            "<ICMS><ICMS00><orig>1</orig><CST>00</CST><modBC>3</modBC><vBC>1000.00</vBC>"
+                + "<pICMS>12.00</pICMS><vICMS>120.00</vICMS></ICMS00></ICMS>");
+    assertThat(xml).contains("<ICMS00><orig>1</orig><CST>00</CST>");
     assertThat(xml).contains("<vICMS>120.00</vICMS>").contains("<CRT>1</CRT>")
         .contains("Distrito Industrial");
     nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
@@ -289,7 +296,8 @@ class DanfePdfServiceTest {
     assertThat(valorDoRotulo(texto, "VALOR DO FRETE")).isEqualTo("50,00");
     assertThat(valorDoRotulo(texto, "CÓDIGO DE REGIME TRIBUTÁRIO (CRT)"))
         .isEqualTo("1 - SIMPLES NACIONAL");
-    assertThat(texto).contains("Distrito Industrial").contains("CST 000")
+    assertThat(texto).contains("Distrito Industrial").contains("ICMS 100")
+        .contains("IBS/CBS 000")
         .contains("[cClassTrib 000001]").doesNotContain("200036")
         .contains("CBS 0,90%").contains("CBS 9,00")
         .contains("Origem: importada (nota de terceiro)")
@@ -382,7 +390,8 @@ class DanfePdfServiceTest {
     String texto = texto(service.gerarPreview(nota));
 
     assertThat(texto).contains("RASCUNHO").contains("SEM VALOR FISCAL")
-        .contains("CST 200").contains("[cClassTrib 200036]").contains("CBS 0,36%")
+        .contains("ICMS 041").contains("IBS/CBS 200").contains("[cClassTrib 200036]")
+        .contains("CBS 0,36%")
         .contains("TOTAL DO IBS / CBS / IS");
   }
 
@@ -588,6 +597,7 @@ class DanfePdfServiceTest {
         .descricao("Soja em graos")
         .ncm("12019000")
         .cfop("6101")
+        .cstIcms("41")
         .unidade("KG")
         .quantidade(new BigDecimal("500.0000"))
         .valorUnitario(new BigDecimal("2.0000"))

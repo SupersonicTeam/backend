@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.nfe.TributacaoIcms;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
@@ -74,6 +75,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@value #MAXIMO_VALORES_REFERENCIA} itens, os mais recentes). A mediana é das notas (cada nota
  * vale pela mediana dos itens dela), para uma nota de muitas linhas não pesar mais que as outras.
  * Canceladas e rejeitadas ficam fora. Uma consulta por par (NCM, unidade), não por item.
+ *
+ * <p><strong>{@link CodigoSinalNota#ICMS_A_DEFINIR}:</strong> item de nota ainda não emitida sem
+ * CST do ICMS fora da venda interna de produção própria a contribuinte ({@link TributacaoIcms}): a
+ * emissão vai ser barrada (NT 2025.002, regra B25-90). O sinal avisa antes, para o produtor
+ * combinar o CST com o contador.
  *
  * <p>Nenhuma regra compara com nota de outro produtor: toda consulta filtra pelo produtor da
  * sessão.
@@ -161,6 +167,10 @@ public class SinaisNotaConferirService {
       motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
           item.descricao(), item.cfop(), prazo)));
+      if (momento == Momento.ANTES_DE_EMITIR && icmsADefinir(item)) {
+        sinais.add(new SinalNota(CodigoSinalNota.ICMS_A_DEFINIR, Motivo.SEM_CST_ICMS, momento,
+            item.numeroItem(), item.descricao(), item.cfop(), null));
+      }
     }
     sinais.addAll(valoresForaDoPadrao(produtorId, nota, itens, momento, prazo));
     // Do primeiro item ao ultimo; o sinal da nota inteira (duplicidade) por ultimo.
@@ -255,6 +265,15 @@ public class SinaisNotaConferirService {
         .map(valores -> mediana(valores.stream().sorted().toList()))
         .sorted().toList());
     return mediana.signum() > 0 ? Optional.of(mediana) : Optional.empty();
+  }
+
+  /**
+   * Sem CST do ICMS e fora do padrão do diferimento: a mesma regra ({@link TributacaoIcms}) que
+   * barra a emissão com 422 {@code ICMS_A_DEFINIR}, mostrada antes, na revisão.
+   */
+  static boolean icmsADefinir(ItemParaSinal item) {
+    return TributacaoIcms.cst(item.cstIcms(), item.cfop(), item.ufEmitente(),
+        item.ufDestinatario(), item.ieDestinatario()).isEmpty();
   }
 
   /** CFOP de venda: {@code x1xx} (5101, 6102, 7101...). Remessa ({@code x9xx}) não é venda. */

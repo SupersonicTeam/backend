@@ -93,10 +93,14 @@ final class CenarioDemonstracao {
       "Graneleira Vale do Teles Pires Ltda", cnpj("274813950001"), "133518276",
       new Endereco("Rodovia BR-163", "KM 742", "Distrito Industrial", "5107925", "Sorriso", "MT",
           "78890000"));
-  private static final Parte EXPORTADORA_PARANAGUA = new Parte(
-      "Terminal Exportador de Graos Litoral Ltda", cnpj("361904570001"), "9071425318",
-      new Endereco("Avenida Portuaria", "1200", "Dom Pedro II", "4118204", "Paranagua", "PR",
-          "83221570"));
+  // Trading de MT, com IE: a venda da soja fica interna a contribuinte (5101, ICMS diferido, CST
+  // 51, confirmado pelo escritorio na #284, pergunta 9). Antes era um terminal exportador no PR,
+  // venda interestadual sem CST defensavel (a exportacao indireta traria a suspensao do IBS/CBS do
+  // art. 82 da LC 214 e a imunidade do Funrural, que o sistema nao modela).
+  private static final Parte TRADING_LUCAS = new Parte(
+      "Trading de Graos Chapadao do Norte Ltda", cnpj("361904570001"), "134072958",
+      new Endereco("Rodovia BR-163", "KM 690", "Distrito Industrial", "5105259",
+          "Lucas do Rio Verde", "MT", "78455000"));
   private static final Parte ALGODOEIRA_PRIMAVERA = new Parte(
       "Algodoeira Primavera do Leste Ltda", cnpj("509127330001"), "132904185",
       new Endereco("Avenida Sao Joao", "3150", "Parque Industrial", "5107040",
@@ -109,9 +113,13 @@ final class CenarioDemonstracao {
       "Torrefacao Cerrado Mineiro Ltda", cnpj("618230490001"), "7024618350091",
       new Endereco("Avenida Joao Naves de Avila", "4410", "Santa Monica", "3170206", "Uberlandia",
           "MG", "38408100"));
-  private static final Parte EXPORTADORA_SANTOS = new Parte(
-      "Comercial Exportadora Cafes do Planalto Ltda", cnpj("725419860001"), "633948107112",
-      new Endereco("Rua Augusto Severo", "88", "Valongo", "3548500", "Santos", "SP", "11010050"));
+  // Cerealista de MG, com IE: venda interna do cafe a contribuinte (5101, CST 51 pelo padrao). O
+  // diferimento do cafe cru em MG e de demonstracao, a confirmar com o contador. Antes era uma
+  // exportadora em Santos (interestadual, sem CST defensavel).
+  private static final Parte CEREALISTA_PATROCINIO = new Parte(
+      "Cerealista Alto Paranaiba Ltda", cnpj("725419860001"), "4801736290084",
+      new Endereco("Avenida Faria Pereira", "2100", "Distrito Industrial", "3148103",
+          "Patrocinio", "MG", "38740000"));
   private static final Parte LATICINIO_TOLEDO = new Parte(
       "Laticinios Oeste Paranaense Ltda", cnpj("836025140001"), "9058213467",
       new Endereco("Rodovia PR-317", "5800", "Jardim Coopagro", "4127700", "Toledo", "PR",
@@ -249,7 +257,7 @@ final class CenarioDemonstracao {
           "carlos.rossi@example.com", "(66) 99631-4087", SituacaoVinculo.ATIVO, 0,
           List.of("Grãos", "Acima do limite do art. 164", "Prioridade"), ACIMA_DO_LIMITE, 3184,
           List.of(
-              new LinhaVenda(SOJA, List.of(GRANELEIRA_TELES_PIRES, EXPORTADORA_PARANAGUA),
+              new LinhaVenda(SOJA, List.of(GRANELEIRA_TELES_PIRES, TRADING_LUCAS),
                   List.of(7, 6, 5, 4, 3, 2, 1, 0), 3, new BigDecimal("37000")),
               new LinhaVenda(MILHO, List.of(GRANELEIRA_TELES_PIRES, PECUARISTA_PF),
                   List.of(5, 4, 3, 2, 1), 2, new BigDecimal("42000")),
@@ -271,7 +279,7 @@ final class CenarioDemonstracao {
               "38740000"),
           "financeiro.santaclara@example.com", "(34) 3831-2290", SituacaoVinculo.ATIVO, 1,
           List.of("Café", "Acima do limite do art. 164"), ACIMA_DO_LIMITE, 912,
-          List.of(new LinhaVenda(CAFE, List.of(TORREFACAO_UBERLANDIA, EXPORTADORA_SANTOS),
+          List.of(new LinhaVenda(CAFE, List.of(TORREFACAO_UBERLANDIA, CEREALISTA_PATROCINIO),
               List.of(6, 5, 4, 3, 2, 1, 0), 2, new BigDecimal("280"))),
           List.of(
               new LinhaCompra(KCL, FERTILIZANTES_UBERLANDIA, List.of(5, 2), new BigDecimal("22000")),
@@ -366,8 +374,8 @@ final class CenarioDemonstracao {
   }
 
   /** Compradores usados pelas notas especiais do produtor principal. */
-  static Parte exportadoraParanagua() {
-    return EXPORTADORA_PARANAGUA;
+  static Parte tradingLucas() {
+    return TRADING_LUCAS;
   }
 
   static Parte graneleiraTelesPires() {

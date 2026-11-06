@@ -8,6 +8,15 @@ de cStat, timeouts) e entra no lugar do `MockSefazTransport` com `app.nfe.sefaz.
 com mTLS. A homologação com a SEFAZ depende do certificado A1 ICP-Brasil de um emitente de teste e
 do credenciamento na UF.
 
+**Achado para a homologação (rejeição 1002):** antes do changeSet 0052, a NF-e não levava o grupo
+`ICMS` em nenhum item. Pela NT 2025.002 v1.53, regra B25-90 (obrigatória), a NF-e com
+`finNFe` diferente de 5 e 6 sem `ICMS` nem `ISSQN` é rejeitada com o cStat 1002 ("NF-e sem
+informação de ICMS / ISSQN"). Como o sistema emite sempre `finNFe = 1`, **toda NF-e anterior seria
+rejeitada na homologação real**. O XSD PL_010g aceita a nota sem o grupo (a escolha tem
+`minOccurs="0"` por causa das NF-e de crédito e débito) e o mock não confere a regra, por isso
+nenhum teste pegava. Desde então, o grupo sai em todo item (`nfe/TributacaoIcms`; premissas,
+seção 3), e o `IcmsObrigatorioNaNfeNormalTest` trava a regra B25-90.
+
 ## Serviços
 
 | Operação | Webservice | Mensagem |

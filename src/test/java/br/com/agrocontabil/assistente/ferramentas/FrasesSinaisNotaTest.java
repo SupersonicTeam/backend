@@ -72,4 +72,17 @@ class FrasesSinaisNotaTest {
         .contains("(R$ 0,001 por un) esta bem abaixo")
         .contains("(perto de R$ 0,004 por un)");
   }
+
+  @Test
+  @DisplayName("ICMS_A_DEFINIR: o item, o padrao do sistema e o contador, antes de emitir")
+  void icmsADefinir() {
+    String texto = FrasesSinaisNota.texto(42, null, List.of(new Sinal("ICMS_A_DEFINIR",
+        "SEM_CST_ICMS", "ANTES_DE_EMITIR", 1, "Touro Nelore PO", "6101", null, null, null, null,
+        null, null)));
+
+    assertThat(texto).isEqualTo("Na nota 42, o item 'Touro Nelore PO' esta sem o CST do ICMS. O"
+        + " sistema so preenche sozinho na venda dentro do estado da sua producao (CFOP 5.101) a"
+        + " quem tem inscricao estadual: combine o CST com seu contador antes de emitir, senao a"
+        + " emissao e barrada.");
+  }
 }

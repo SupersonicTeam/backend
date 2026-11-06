@@ -81,9 +81,30 @@ confirmar o CRT 3.
 
 O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o contador:
 
-- **ICMS:** a NF-e gerada **não tem o grupo de ICMS por item** e o total de ICMS sai zerado. O
-  tratamento de ICMS da operação (diferimento, isenção, CST por UF) é do contador, que lança a guia
-  de ICMS no módulo de guias (`/api/contador/guias`, tipo `ICMS`).
+- **ICMS:** o sistema **emite o grupo de ICMS por item, mas não calcula o ICMS**. O grupo é
+  obrigatório: pela NT 2025.002 v1.53, regra B25-90 (rejeição 1002), a NF-e normal sem o grupo
+  `ICMS` nem o `ISSQN` é rejeitada. Antes da decisão de 2026-11-06, toda NF-e do sistema seria
+  rejeitada por essa regra na SEFAZ real. O CST vem de uma regra única (`nfe/TributacaoIcms`):
+  - **padrão: CST 51, diferimento total**, só na venda **interna** de **produção própria**
+    (CFOP 5101) a destinatário **com IE**. Esse é o caso confirmado pelo escritório (#284,
+    pergunta 9): soja em grão vendida pelo produtor de MT dentro do estado, ICMS diferido, ICMS
+    próprio zero. O `ICMS51` leva só `orig` e `CST`; os valores do diferimento ficam a critério
+    da UF (MOC 7.00, Anexo I, regra N07-10, facultativa);
+  - **qualquer outro caso** (interestadual, exportação, destinatário sem IE, outra natureza): o
+    CST **tem de ser informado** no item (`cstIcms`, combinado com o contador). Sem ele, a
+    emissão responde **422 `ICMS_A_DEFINIR`**, e o sinal de nota a conferir `ICMS_A_DEFINIR`
+    (#276) avisa antes de emitir. O sistema nunca escolhe um CST;
+  - **CSTs aceitos:** só 40, 41, 50, 51 e 90, os grupos do leiaute que não exigem base, alíquota
+    e valor (`ICMS40` com 40/41/50, `ICMS51` e `ICMS90`). O 00, o 20 e os demais exigem o
+    cálculo, que segue fora. Exportação (CFOP 7xxx) exige o 41 (MOC 7.00, regra N12-10);
+  - **origem** (`origemIcms`): a informada, ou 0 (nacional);
+  - o `ICMSTot` sai zerado (sem ICMS próprio, ST nem FCP). O **cálculo do ICMS devido e o do
+    ICMS-ST continuam com o contador**, que lança a guia no módulo de guias
+    (`/api/contador/guias`, tipo `ICMS`). Regras facultativas de cada UF sobre os campos do
+    diferimento (N07-10), o ICMS desonerado (N12-90) ou o código de benefício (`cBenef`) ficam
+    fora: a UF que as aplicar pode rejeitar, e isso é escopo do contador;
+  - na **nota importada**, o CST (ou o CSOSN) e a origem do XML do fornecedor são lidos e
+    guardados só para informar. A nota sem o grupo continua aceita, porque o XML é do terceiro.
 - **Funrural:** a retenção pelo comprador e o recolhimento pelo produtor são **calculados para
   informar** (RN009, `RetencaoService`, função `consultarRetencoes` da Ceres). Desde a #332
   (resposta 9 do contador na #284), quando o comprador retém (produtor pessoa física vendendo a
@@ -100,8 +121,8 @@ As validações de contador da issue #284 podem ajustar este texto:
 
 - **pergunta 7:** plausibilidade de um produtor desse porte optar pelo regime regular, e outros
   motivos para optar ou não;
-- **pergunta 9:** tratamento de ICMS de uma venda interna de soja em MT e se o ICMS zerado na nota
-  é aceitável para a banca;
+- **pergunta 9 (respondida):** ICMS diferido, CST 51, na venda interna de soja em MT, hoje o
+  padrão da NF-e (seção 3). Outros casos dependem do CST que o contador informar;
 - **pergunta 1:** a redução de 60% da soja em grão (art. 137), hoje não aplicada pela tabela de
   NCM.
 
