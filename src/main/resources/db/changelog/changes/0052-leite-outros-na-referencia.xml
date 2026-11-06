@@ -13,7 +13,7 @@
          padrao in natura (LC 214/2025, art. 137, cClassTrib 200036, 60%); a
          aliquota zero do Anexo I, item 2 (art. 125, 200003) so com o cClassTrib
          200003 informado no item. A regra e de codigo, no
-         ClassificacaoTributariaService (LEITE_ANEXO_I): a condicao do Anexo I
+         ClassificacaoTributariaService (LEITE_SEM_DESTINO_DEFINIDO): a condicao do Anexo I
          ("consumo direto pela populacao") o dado da nota nao decide, e o NCM
          nao separa o leite cru do de consumo direto.
 

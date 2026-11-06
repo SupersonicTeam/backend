@@ -71,7 +71,7 @@ public class TributosLegadoRunner implements SmartInitializingSingleton {
       + " WHERE (i.percentual_reducao_aplicado IS NULL"
       + " OR (i.c_class_trib IS NULL AND i.c_class_trib_aplicado = '"
       + ClassificacaoTributariaService.CESTA_BASICA + "' AND i.ncm IN ("
-      + ClassificacaoTributariaService.LEITE_ANEXO_I.stream().sorted()
+      + ClassificacaoTributariaService.LEITE_SEM_DESTINO_DEFINIDO.stream().sorted()
           .map(n -> "'" + n + "'").collect(Collectors.joining(", ")) + ")))"
       + " AND n.status IN ('RASCUNHO', 'COM_INCONSISTENCIAS', 'DEVOLVIDA',"
       + " 'AGUARDANDO_APROVACAO', 'APROVADA')";

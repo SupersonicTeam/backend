@@ -69,7 +69,8 @@ class NfeToNotaFiscalMapperTest {
 
   @org.junit.jupiter.params.ParameterizedTest(name = "NCM {0}, declarado {1} -> {2}")
   @org.junit.jupiter.params.provider.CsvSource({
-      "04012010, 200003, 200003",
+      "04011090, 200003, 200003",
+      "04012010, 200003, ",
       "04012090, 200036, 200036",
       "31052000, 200038, ",
       "04012010, ,       "

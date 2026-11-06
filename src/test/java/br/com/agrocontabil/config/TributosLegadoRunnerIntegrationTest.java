@@ -119,8 +119,8 @@ class TributosLegadoRunnerIntegrationTest {
   @Test
   @DisplayName("#284: leite nao emitido com o zero antigo e sem 200003 informado vai a 60%")
   void leiteDoZeroAntigoVaiParaInNatura() throws Exception {
-    String semInformado = criarNota("04012010", "200036");
-    String comInformado = criarNota("04012010", "200036");
+    String semInformado = criarNota("04012090", "200036");
+    String comInformado = criarNota("04012090", "200036");
     // Simula o calculo de antes da regra do leite: Anexo I, aliquota zero.
     for (String id : new String[] {semInformado, comInformado}) {
       jdbc.update("UPDATE nota_fiscal_item SET percentual_reducao_aplicado = 100,"

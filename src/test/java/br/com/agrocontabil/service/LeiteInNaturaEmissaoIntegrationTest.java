@@ -107,11 +107,13 @@ class LeiteInNaturaEmissaoIntegrationTest {
   @CsvSource({
       // NCM,   informado, aplicado, reducao
       "04012090, ,       200036, 60",
-      "04012010, ,       200036, 60",
+      "04012010, ,       200003, 100",
+      "04011010, ,       200003, 100",
+      "04011090, ,       200036, 60",
       "04012090, 200003, 200003, 100",
       "04012010, 200003, 200003, 100"
   })
-  @DisplayName("resolvedor: leite sem informado = in natura; com 200003 = aliquota zero")
+  @DisplayName("resolvedor: leite sem informado = in natura, UHT = zero; com 200003 = zero")
   void resolvedor(String ncm, String informado, String aplicado, String reducao) {
     NotaFiscalItem item = nota(ncm, informado).getItens().get(0);
 
