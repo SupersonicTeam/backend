@@ -144,6 +144,21 @@ class ClassificacaoTributariaServiceIntegrationTest {
         .isEqualTo("000001");
   }
 
+  @ParameterizedTest(name = "{1} em {0}: fora do anexo = {2}")
+  @CsvSource({
+      "12019000, 200003, 200036",  // soja nao esta no Anexo I: sugestao = in natura
+      "99999999, 200014, 000001",  // NCM sem hipotese no Anexo XV: sugestao = integral
+      "04012090, 200003, ",        // leite esta no Anexo I
+      "10063021, 200034, 200003",  // arroz polido e VEDADO no Anexo VII
+      "12019000, 200036, ",        // in natura nao e codigo de anexo
+      "12019000, 000001, "
+  })
+  @DisplayName("#375: foraDoAnexo confere o codigo de anexo informado contra o NCM")
+  void foraDoAnexo(String ncm, String informado, String sugestao) {
+    assertThat(service.foraDoAnexo(informado, ncm, EM_2026)
+        .map(TratamentoTributarioNcm::cClassTrib).orElse(null)).isEqualTo(sugestao);
+  }
+
   @Test
   @DisplayName("classificacao confere codigo existente e vigente")
   void classificacaoPorCodigo() {

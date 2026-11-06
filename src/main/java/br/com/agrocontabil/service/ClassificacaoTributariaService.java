@@ -255,6 +255,33 @@ public class ClassificacaoTributariaService {
     return classificacaoRepository.findVigente(cClassTrib, data).stream().findFirst();
   }
 
+  /**
+   * Confere um {@code cClassTrib} informado contra o NCM do item (issue #375): código de anexo
+   * (I, VII, IX ou XV) só vale para NCM enquadrado nele na data (linha {@code PERMITIDO} e sem
+   * {@code VEDADO}, a mesma regra dos {@link #enquadramentos}). Código sem anexo (integral, in
+   * natura e os demais) não depende do NCM e passa.
+   *
+   * @param cClassTrib código informado no item
+   * @param ncm NCM do item
+   * @param data data de referência (emissão em {@code America/Sao_Paulo})
+   * @return o tratamento certo do NCM, para a sugestão, quando o código não o alcança; vazio quando
+   *     o código vale para o NCM
+   */
+  @Transactional(readOnly = true)
+  public Optional<TratamentoTributarioNcm> foraDoAnexo(String cClassTrib, String ncm,
+      LocalDate data) {
+    if (cClassTrib == null || ncm == null || ncm.isBlank()
+        || !anexoNcmRepository.existeAnexoDoCodigo(cClassTrib, data)) {
+      return Optional.empty();
+    }
+    List<EnquadramentoAnexo> enquadramentos = enquadramentos(ncm, data);
+    if (enquadramentos.stream().anyMatch(e -> e.cClassTrib().equals(cClassTrib))) {
+      return Optional.empty();
+    }
+    return Optional.of(escolher(ncm, enquadramentos, () -> inNatura(ncm), data,
+        codigo -> classificacao(codigo, data)));
+  }
+
   private TratamentoTributarioNcm tratamento(String ncm, String codigo, Origem origem,
       LocalDate data, List<EnquadramentoAnexo> enquadramentos,
       Function<String, Optional<ClassificacaoTributaria>> classificacoes) {

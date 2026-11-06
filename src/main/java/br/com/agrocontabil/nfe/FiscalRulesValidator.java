@@ -7,6 +7,7 @@ import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.ClassificacaoTributaria;
 import br.com.agrocontabil.service.ClassificacaoTributariaService;
@@ -415,6 +416,28 @@ public class FiscalRulesValidator {
               + oficial.get().getPercentualReducaoIbs().stripTrailingZeros().toPlainString()
               + "% na tabela oficial)"));
     }
+    validarAnexoDoInformado(nota, item, prefixo, data, violations);
+  }
+
+  /**
+   * cClassTrib <strong>informado</strong> de anexo tem de alcançar o NCM do item (issue #375): sem
+   * isso, qualquer produto teria alíquota zero informando o 200003 ou o 200014. O tratamento da
+   * regra por NCM é coerente por construção e não passa aqui. A nota importada nunca é recusada
+   * por isso (é o documento do fornecedor; o crédito segue a regra, #374) e nem chega a este
+   * validador, que só roda na emissão e no envio à revisão; a guarda é defesa em profundidade.
+   */
+  private void validarAnexoDoInformado(NotaFiscal nota, NotaFiscalItem item, String prefixo,
+      LocalDate data, List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+    if (item.getCClassTrib() == null || nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
+      return;
+    }
+    classificacaoService.foraDoAnexo(item.getCClassTrib(), item.getNcm(), data)
+        .ifPresent(certo -> violations.add(new NotaFiscalInvalidaParaEmissaoException
+            .FieldViolation(prefixo + ".cClassTrib", "cClassTrib " + item.getCClassTrib()
+                + " e de anexo da LC 214/2025 que nao inclui o NCM " + item.getNcm() + ". Para"
+                + " este NCM a tabela oficial da o cClassTrib " + certo.cClassTrib() + " ("
+                + certo.percentualReducao().stripTrailingZeros().toPlainString()
+                + "% de reducao): informe esse codigo ou retire o cClassTrib do item")));
   }
 
   /**
