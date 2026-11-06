@@ -13,8 +13,8 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `e75dfabf16c39b57890d8ea9258ecd67def32bf4` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
-| Conjunto de perguntas | 2026-11-05.9 (140 perguntas, sha256 `977c4d3861e8…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
+| Ceres 2.0 | `da90c2004fd94398842397efc157ccc72518b0ae` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Conjunto de perguntas | 2026-11-05.10 (140 perguntas, sha256 `87c8fb24637e…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
 | Capacidade comum | 118 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |
@@ -378,23 +378,23 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` e nos lotes seguintes (`externas-avaliacao-cego-2.csv`, …, quando houver: mande todos; contextualização, orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). **A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão é a humana.
 
 - Fundamentação **a conferir** em 40 perguntas: os `dispositivosEsperados` vêm do texto da lei (`fonteConferencia`) e ainda não foram confirmados na base (`conferir-dispositivos-externas.sql`); a chave que faltar sai dos aceitos. Leia a fundamentação delas como provisória. Sem dispositivo (n/d): E18.
-- Pendentes do contador (fora da métrica de classe): E01 (#284, pergunta 6), E03 (#284, pergunta 2), E33 (#284, pergunta C (diferimento do art. 138, §§ 2º a 8º)).
+- Pendentes do contador (fora da métrica de classe): E01 (#284, pergunta 6), E33 (#284, pergunta C (diferimento do art. 138, §§ 2º a 8º)).
 - Classe e afirmações proibidas **provisórias** em 40 perguntas (ainda não revisadas pela equipe e pelo contador).
 
 | Célula | Fundamentação (citação válida) | Alíquota / classe de tratamento | Precisão: responde sem afirmação proibida | Encaminha ao contador quando deve |
 |---|---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 44,3% (38,2–50,0) n=38 | 0,0% n=28 | 100,0% n=10 | 0,0% n=8 |
-| Ceres 1 · `qwen3:1.7b` | 69,9% (64,1–76,3) n=39 | 0,0% n=28 | 100,0% n=10 | 0,0% n=9 |
-| Ceres 1 · `qwen3:4b-instruct` | 86,1% (81,6–89,5) n=38 | 0,0% n=27 | 100,0% n=10 | 0,0% n=9 |
-| Ceres 2.0 · `qwen3:0.6b` | 75,6% (73,0–79,5) n=39 | 0,0% n=28 | 100,0% n=10 | 0,0% n=9 |
-| Ceres 2.0 · `qwen3:1.7b` | 84,5% (74,4–92,3) n=38 | 0,0% n=27 | 100,0% n=10 | 0,0% n=8 |
-| Ceres 2.0 · `qwen3:4b-instruct` | 94,0% (92,3–94,9) n=39 | 0,0% n=28 | 100,0% n=10 | 0,0% n=9 |
+| Ceres 1 · `qwen3:0.6b` | 44,3% (38,2–50,0) n=38 | 0,0% n=29 | 100,0% n=10 | 0,0% n=8 |
+| Ceres 1 · `qwen3:1.7b` | 69,9% (64,1–76,3) n=39 | 0,0% n=29 | 100,0% n=10 | 0,0% n=9 |
+| Ceres 1 · `qwen3:4b-instruct` | 86,1% (81,6–89,5) n=38 | 0,0% n=28 | 100,0% n=10 | 0,0% n=9 |
+| Ceres 2.0 · `qwen3:0.6b` | 75,6% (73,0–79,5) n=39 | 0,0% n=29 | 100,0% n=10 | 0,0% n=9 |
+| Ceres 2.0 · `qwen3:1.7b` | 84,5% (74,4–92,3) n=38 | 0,0% n=28 | 100,0% n=10 | 0,0% n=8 |
+| Ceres 2.0 · `qwen3:4b-instruct` | 94,0% (92,3–94,9) n=39 | 0,0% n=29 | 100,0% n=10 | 0,0% n=9 |
 
 ### E03 (pergunta 3 do Murillo)
 
 *Produzo leite na minha propriedade e vendo diretamente para um laticínio. Essa operação terá redução de 60% nas alíquotas ou poderá ter alíquota zero?*
 
-**Atenção:** A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). O sistema ainda dá zero; a correção depende de decisão do Murillo (#284).
+**Atenção:** A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). Desde a Sessão 8c (#374, da90c20; #284, pergunta 2) o sistema dá 60% por padrão e zero só com o cClassTrib 200003 informado. Não é contaminação: a mudança veio da resposta do escritório e do texto da lei, não das respostas da Ceres a esta pergunta.
 
 | Célula | Rodada | Desfecho | Afirmação proibida? | Resposta |
 |---|---|---|---|---|

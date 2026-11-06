@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-05.9",
+  "versao": "2026-11-05.10",
   "descricao": "Conjunto congelado do benchmark da Ceres para a banca (#352, #358): o gabarito 2026-11-05.3 inteiro, 13 perguntas ineditas da equipe e 40 geradas por IA (ChatGPT, a pedido do Murillo; texto literal), em 16 temas. Mudou uma pergunta, mude a versao e o arquivo .sha256 ao lado. Campo origem: gabarito (usado no desenvolvimento da Ceres 2.0), inedita_equipe, inedita_equipe_dados ou inedita_externa_ia (medem generalizacao; as de IA nao medem a linguagem real do produtor).",
   "baseadoEm": "2026-11-05.3",
   "temas": {
@@ -2016,18 +2016,17 @@
           "conferidoEm": "L07"
         }
       ],
-      "classeTratamento": "CONDICIONAL",
+      "classeTratamento": "REDUCAO_60",
       "afirmacoesProibidas": [],
       "encaminharContador": false,
       "revisado": false,
-      "pendenteContador": "#284, pergunta 2",
       "dispositivosEsperados": [
         "LC 214/2025, art. 137, § 1º, inciso II",
         "LC 214/2025, Anexo I, item 2",
         "LC 214/2025, art. 125"
       ],
       "fonteConferencia": "normas.leg.br, 2026-11-05; anexos no texto atualizado da Câmara (legin), 2026-11-05",
-      "observacao": "A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). O sistema ainda dá zero; a correção depende de decisão do Murillo (#284).",
+      "observacao": "A resposta legal esperada é 60%, não zero: o Anexo I, item 2, exige leite em conformidade com a legislação de consumo direto pela população, e o art. 137, § 1º, II mantém in natura o produto só resfriado para transporte (LC 214/2025). Desde a Sessão 8c (#374, da90c20; #284, pergunta 2) o sistema dá 60% por padrão e zero só com o cClassTrib 200003 informado. Não é contaminação: a mudança veio da resposta do escritório e do texto da lei, não das respostas da Ceres a esta pergunta.",
       "existenciaNaBase": "conferida na VPS em 2026-11-06"
     },
     {
