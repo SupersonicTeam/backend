@@ -250,15 +250,16 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         e.capturar = lambda comando, cwd=None: ""
         e.cfg.todas_arquiteturas[-1]["sha"] = "b" * 40
         sete = e.cfg.matriz["sessaoParalela"]["commit"]
+        extras = {x["commit"] for x in e.cfg.matriz["sessaoParalela"]["tambemExige"]}
         oito = e.cfg.matriz["sessaoParalela"]["tambemExige"][0]["commit"]
-        for presentes, confirmado, inteira in (({sete, oito}, True, True), ({sete}, False, True),
+        for presentes, confirmado, inteira in (({sete} | extras, True, True), ({sete}, False, True),
                                                (set(), False, False)):
             def run(comando, cwd=None, _p=presentes):
                 return mock.Mock(returncode=0 if comando[3] in _p else 1)
             with mock.patch.object(ex.subprocess, "run", run):
                 sessao = e.sessao_paralela()
             self.assertEqual((sessao["confirmado"], sessao["inteira"]), (confirmado, inteira))
-            self.assertEqual(bool(sessao["faltando"]), oito not in presentes)
+            self.assertEqual(bool(sessao["faltando"]), not extras <= presentes)
 
     def test_retomada_recusa_rodada_antiga_conjunto_ou_embedding_diferente(self):
         e = ex.Executor(config())
@@ -278,11 +279,14 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         antiga, nova = e.cfg.todas_arquiteturas
         antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
         fonte = (self.REPO / ex.FERRAMENTAS_REPO).read_text(encoding="utf-8")
+        gabarito = (self.REPO / ex.GABARITO_REPO).read_text(encoding="utf-8")
         assinaturas = gab.assinaturas_ferramentas(fonte)
         stub = "\n".join(
             f'@Tool(description = "x")\npublic X {f}(' + ", ".join(f"String {p}" for p in assinaturas[f]) + ") {}"
             for f in antiga["funcoesConhecidas"])
-        e.capturar = lambda comando, cwd=None: stub if comando[-1].startswith("a" * 40) else fonte
+        e.capturar = lambda comando, cwd=None: (
+            gabarito if comando[-1].endswith(ex.GABARITO_REPO)
+            else stub if comando[-1].startswith("a" * 40) else fonte)
         return e
 
     def test_rodada_da_banca_espera_a_revisao_das_externas(self):
@@ -296,18 +300,39 @@ class RevisaoSegundoPrTest(unittest.TestCase):
         self.assertEqual(self._executor_com_stub(ensaio=True).cfg.tipo, "ensaio")
         self.assertEqual(self._executor_com_stub(teste=True, ensaio=True).cfg.tipo, "teste")
 
+    def test_conjunto_de_outro_gabarito_que_o_do_commit_medido(self):
+        # Checkout atrasado (#371): o conjunto local passa no hash, mas o commit medido ja tem outro
+        # gabarito. Banca recusa; ensaio avisa e segue.
+        import json
+        for ensaio in (False, True):
+            e = self._executor_com_stub(ensaio=ensaio)
+            antigo = json.loads((self.REPO / ex.GABARITO_REPO).read_text(encoding="utf-8"))
+            antigo["versao"] = "2099-01-01.1"
+            original = e.capturar
+            e.capturar = lambda comando, cwd=None, _o=original: (
+                json.dumps(antigo) if comando[-1].endswith(ex.GABARITO_REPO) else _o(comando, cwd))
+            with tempfile.TemporaryDirectory() as d:
+                if ensaio:
+                    e.preparar_gabaritos(Path(d))
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "baseado no gabarito .* commit medido"):
+                        e.preparar_gabaritos(Path(d))
+
     def test_preparo_recusado_nao_mexe_na_pasta_da_rodada(self):
         from ceres_benchmark import gabarito as gab
         e = ex.Executor(config(ensaio=True))
         antiga, nova = e.cfg.todas_arquiteturas
         antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
         fonte = (self.REPO / ex.FERRAMENTAS_REPO).read_text(encoding="utf-8")
+        gabarito = (self.REPO / ex.GABARITO_REPO).read_text(encoding="utf-8")
         assinaturas = gab.assinaturas_ferramentas(fonte)
         # O 2463c27 de mentira: so as funcoes da matriz, com os parametros de hoje.
         stub = "\n".join(
             f'@Tool(description = "x")\npublic X {f}(' + ", ".join(f"String {p}" for p in assinaturas[f]) + ") {}"
             for f in antiga["funcoesConhecidas"])
-        e.capturar = lambda comando, cwd=None: stub if comando[-1].startswith("a" * 40) else fonte
+        e.capturar = lambda comando, cwd=None: (
+            gabarito if comando[-1].endswith(ex.GABARITO_REPO)
+            else stub if comando[-1].startswith("a" * 40) else fonte)
         with tempfile.TemporaryDirectory() as d:
             pasta = Path(d)
             (pasta / "gabarito-canonico.json").write_text("ANTIGO", encoding="utf-8")

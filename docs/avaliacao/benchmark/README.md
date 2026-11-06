@@ -111,13 +111,22 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 ### O conjunto de perguntas (#352)
 
 `perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.3`:
-a T03 de 33 dispositivos da Sessão 8a, #360, e a P02 da Sessão 8b, #366) inteiro (87) mais **13 perguntas novas** (N01–N13), **100 perguntas em 12 temas** de 6 a 10. O
+a T03 de 33 dispositivos da Sessão 8a, #360, e a P02 da Sessão 8b, #366) inteiro (87), **13
+perguntas novas da equipe** (N01–N13) e as **40 externas** (abaixo): **140 perguntas em 16 temas**
+de 6 a 10. O
 hash fica em `perguntas-benchmark.json.sha256`: mudou uma pergunta, mude a `versao` e o hash (o
 `PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). **O gabarito
 andou, o conjunto anda junto:** o `baseadoEm` tem de ser a versão atual do gabarito e as herdadas
 iguais a ele, senão o `PerguntasBenchmarkIntegrationTest` falha (não pula) e diz o que fazer —
-copiar as herdadas que mudaram, mudar a `versao`, o `baseadoEm` e o hash. Foi o que faltou na P02
-da Sessão 8b (#371): o valor esperado dela mudou sem mudar o hash. As células leem
+copiar as herdadas que mudaram, mudar a `versao`, o `baseadoEm`, a versão do gabarito na
+`descricao` e o hash, regenerar `conferir-dispositivos-externas.sql` e a versão do congelamento
+abaixo. Foi o que faltou na P02 da Sessão 8b (#371): os parâmetros e os dispositivos dela mudaram
+sem mudar o hash. O executor confere o mesmo contra o gabarito **do commit medido** (checkout
+atrasado não passa: recusa a rodada da banca, avisa nas outras). O guarda não cobre valor esperado
+que muda só por código (o valor é calculado na hora pelo `ValoresEsperados`): isso fica com a
+regra de não mexer na Ceres antes da rodada. **Depois da rodada da banca**, o campo
+`rodadaRealizada` (data) congela o conjunto de propósito: o gabarito pode andar e as herdadas
+ficam como foram medidas. As células leem
 **esse arquivo**; a Ceres 2.0 lê ele próprio, a Ceres 1 lê a cópia adaptada (abaixo), e os dois
 hashes vão no `celula.json`.
 
@@ -407,7 +416,8 @@ propriedade). Na prática:
 
 - **E também depois da Sessão 8a** (#360, `54f02ee`): o texto do atalho de IBS/CBS mudou (explica
   o diferimento dos insumos do Anexo IX) e a T03 passou a 33 dispositivos. A coluna oficial é medida
-  num SHA que contenha **os dois**, `54a4201` (Sessão 7) e `54f02ee` (8a); a `main` de hoje contém.
+  num SHA que contenha `54a4201` (Sessão 7), `54f02ee` (8a) e `d8b0b36` (8b, arroz em casca: a P02 do gabarito
+  `2026-11-05.3` foi escrita para ela); a `main` de hoje contém.
   O `54f02ee` está em `sessaoParalela.tambemExige`: sem ele, o relatório sai como ensaio e diz o que
   falta.
 - **A Sessão 7 terminou** (#351 e #354): `sessaoParalela.commit` na `matriz.json` é

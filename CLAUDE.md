@@ -97,8 +97,8 @@ por IA (ChatGPT, a pedido do Murillo), texto literal** (`origem: inedita_externa
 generalização, não a linguagem real do produtor; conferidas contra
 `src/test/resources/benchmark/perguntas-externas-murillo.txt`; dispositivos `aConferir` até a
 conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando as respostas às
-inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`) **e** a 8a
-(`54f02ee`, `sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
+inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`)
+e a 8b (`d8b0b36`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
 `docs/avaliacao/benchmark/ineditas-dados/` (`inedita_equipe_dados`, autor e data, valor esperado
 calculado do seed com teste).
 
