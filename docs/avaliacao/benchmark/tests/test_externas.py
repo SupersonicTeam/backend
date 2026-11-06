@@ -285,6 +285,12 @@ CORPUS_PROIBIDA = [
 CORPUS_PROIBIDA_E36 = [
     ("A indústria que compra de produtor não contribuinte não poderá aproveitar nenhum crédito.", True),
 ]
+#: E03 (#379): afirmar o zero na venda ao laticinio e proibido; negar, nao.
+E03_PROIBIDA = r"\bter[aá] al[ií]quota zero"
+CORPUS_PROIBIDA_E03 = [
+    ("Essa operação terá alíquota zero de IBS e CBS.", True),
+    ("Essa operação não terá alíquota zero: a redução é de 60%.", False),
+]
 CORPUS_ENCAMINHA = [
     ("Procure o seu contador.", True),
     ("Você não precisa procurar o contador: a regra é a mesma para todos.", False),
@@ -310,6 +316,13 @@ class CorpusHeuristicaTest(unittest.TestCase):
         for texto, esperado in CORPUS_PROIBIDA_E36:
             self.assertEqual(ext.afirma(r"n[aã]o poder[aá] aproveitar nenhum cr[eé]dito", texto),
                              esperado, texto)
+
+    def test_afirmacao_proibida_da_e03(self):
+        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
+        e03 = next(p for p in conjunto["perguntas"] if p["id"] == "E03")
+        self.assertEqual(e03["afirmacoesProibidas"], [E03_PROIBIDA])
+        for texto, esperado in CORPUS_PROIBIDA_E03:
+            self.assertEqual(ext.afirma(E03_PROIBIDA, texto), esperado, texto)
 
     def test_encaminhamento(self):
         for texto, esperado in CORPUS_ENCAMINHA:
