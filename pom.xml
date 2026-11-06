@@ -319,6 +319,13 @@
 						<id>report</id>
 						<phase>verify</phase>
 						<goals><goal>report</goal></goals>
+						<configuration>
+							<excludes>
+								<exclude>br/com/agrocontabil/config/**</exclude>
+								<exclude>br/com/agrocontabil/dto/**</exclude>
+								<exclude>br/com/agrocontabil/AgroContabilApplication*</exclude>
+							</excludes>
+						</configuration>
 					</execution>
 					<!-- Threshold de cobertura -->
 					<execution>
@@ -326,6 +333,16 @@
 						<phase>verify</phase>
 						<goals><goal>check</goal></goals>
 						<configuration>
+							<!-- Fora da conta (#151): config/** (propriedades, beans, DataLoader e os seeds
+							     config/demonstracao e config/avaliacao, que so rodam em dev/homolog ou
+							     em comando proprio), dto/** (records sem logica) e a classe main.
+							     Mesma lista do relatorio, para o numero lido e o numero cobrado serem
+							     o mesmo. -->
+							<excludes>
+								<exclude>br/com/agrocontabil/config/**</exclude>
+								<exclude>br/com/agrocontabil/dto/**</exclude>
+								<exclude>br/com/agrocontabil/AgroContabilApplication*</exclude>
+							</excludes>
 							<rules>
 								<rule>
 									<element>BUNDLE</element>
@@ -333,7 +350,12 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.0</minimum>
+											<!-- Medido em 2026-11-06 (verify, 2.290 testes): LINE 94,7% com as
+											     exclusoes acima (93,5% sem elas). Piso = medido - 1 ponto
+											     arredondado para baixo; a meta da issue (80%) ja esta
+											     superada. Suba o piso quando a cobertura subir, nunca
+											     desca para acomodar um PR. -->
+											<minimum>0.93</minimum>
 										</limit>
 									</limits>
 								</rule>
