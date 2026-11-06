@@ -32,6 +32,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - **Prompt ao modelo = parte fixa primeiro (#270).** Instrução de sistema e definições de função iguais byte a byte entre perguntas; data, pergunta e trechos só depois (no fim do sistema ou na mensagem do usuário). Nada variável na instrução de sistema da rota de dados: o template do Qwen põe as funções depois dela. O `PrefixoPromptOllamaFioTest` quebra se isso voltar.
 - **Chamada nova ao modelo = teto próprio + corte conferido (#270).** Opções com `ModeloLinguagem.comTeto(...)` de uma propriedade em `app.assistente.tetos` (validada na subida) e `ModeloLinguagem.cortadaPeloTeto(resposta)` antes de qualquer validação: texto cortado é descartado (desfecho `RESPOSTA_CORTADA`), nunca conferido e entregue.
 - Exemplo em prompt ou descrição de `@Tool` **nunca** é pergunta do gabarito (`SeparacaoTreinoTesteTest` quebra).
+- **Texto fixo entregue ao produtor leva acento (#357).** A comparação dos validadores é que normaliza (sem acento nem caixa); regex sobre texto fixo usa `\p{L}` (`E mais N, na tela de X`). Texto fixo novo entra em `TextosFixosAcentuadosTest.textosFixos()` ou `TextosDosTemplates`. Teste com `static final String` alterada: `./mvnw clean test`.
 - Extrair a Ceres como serviço (só quando um critério de `memory: ceres-extracao-microsservico-futuro` aparecer) = trocar os adaptadores por clientes HTTP.
 
 ## Benchmark da banca — teste cego (até a rodada da banca)
