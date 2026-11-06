@@ -45,7 +45,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 /**
  * Cota semanal da Ceres pela API (issue #166), com a cota ligada e um plano pequeno (100
- * créditos; o teto de uma pergunta é 73).
+ * créditos; o teto de uma pergunta é 32 desde que segue as chamadas reais e os tetos da #270 —
+ * eram 73, com 6 chamadas de 1.024 tokens de saída cada).
  */
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
@@ -118,9 +119,24 @@ class AssistenteCotaIntegrationTest {
   }
 
   @Test
+  @DisplayName("#166/#270: com saldo para o teto real (3 chamadas) a pergunta passa; antes era 429")
+  void saldoParaOTetoRealNaoRecebe429() throws Exception {
+    // 50 + 32 de teto <= 100. Com a formula antiga (6 x 1.024 de saida, 73 creditos) era 429:
+    // o produtor tinha credito para qualquer pergunta e ficava bloqueado.
+    gastar(50);
+
+    perguntar("/api/assistente/chat", "Quem ganhou o jogo?").andExpect(status().isOk());
+
+    UsoSemanalAssistente uso = uso();
+    assertThat(modelo.classificacoesRecebidas()).isNotEmpty();
+    assertThat(uso.getCreditosConsumidos()).isGreaterThan(50).isLessThanOrEqualTo(50 + 32);
+    assertThat(uso.getCreditosReservados()).isZero();
+  }
+
+  @Test
   @DisplayName("Sem saldo: 429 LIMITE_USO_ASSISTENTE com Retry-After, sem chamar o modelo")
   void semSaldo429() throws Exception {
-    gastar(50); // 50 + 73 de teto > 100
+    gastar(70); // 70 + 32 de teto > 100
 
     perguntar("/api/assistente/chat", "Quanto devo de IBS?")
         .andExpect(status().isTooManyRequests())
@@ -136,7 +152,7 @@ class AssistenteCotaIntegrationTest {
   @Test
   @DisplayName("#343: atalho da tela sem saldo responde: sem modelo, nao reserva nem gasta credito")
   void atalhoSemSaldoResponde() throws Exception {
-    gastar(50); // 50 + 73 de teto > 100: pergunta digitada levaria 429
+    gastar(70); // 70 + 32 de teto > 100: pergunta digitada levaria 429
 
     perguntar("/api/assistente/chat", "O que muda para mim com o IBS e o CBS?")
         .andExpect(status().isOk())
@@ -144,14 +160,14 @@ class AssistenteCotaIntegrationTest {
     assertThat(modelo.classificacoesRecebidas()).isEmpty();
     assertThat(modelo.promptsRecebidos()).isEmpty();
     UsoSemanalAssistente uso = uso();
-    assertThat(uso.getCreditosConsumidos()).isEqualTo(50);
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(70);
     assertThat(uso.getCreditosReservados()).isZero();
   }
 
   @Test
   @DisplayName("#343: atalho da tela sem saldo no streaming: o stream abre e responde, sem 429")
   void atalhoSemSaldoNoStream() throws Exception {
-    gastar(50);
+    gastar(70);
 
     org.springframework.test.web.servlet.MvcResult inicio = mockMvc.perform(
             post("/api/assistente/chat/stream")
@@ -170,14 +186,14 @@ class AssistenteCotaIntegrationTest {
         .doesNotContain("LIMITE_USO_ASSISTENTE");
     assertThat(modelo.promptsRecebidos()).isEmpty();
     UsoSemanalAssistente uso = uso();
-    assertThat(uso.getCreditosConsumidos()).isEqualTo(50);
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(70);
     assertThat(uso.getCreditosReservados()).isZero();
   }
 
   @Test
   @DisplayName("Sem saldo no streaming: 429 JSON antes de o stream abrir")
   void semSaldoAntesDoStream() throws Exception {
-    gastar(50);
+    gastar(70);
 
     mockMvc.perform(post("/api/assistente/chat/stream")
             .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())

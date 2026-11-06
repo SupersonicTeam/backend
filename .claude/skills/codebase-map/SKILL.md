@@ -182,7 +182,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 
 `service/ConsultaDadosProdutorService`: consultas fixas da Ceres com `produtorId` explícito (compras por NCM/descrição com `LIKE` escapado, notas top-N, guias não pagas; #266: `notasAConferir` (candidatas por `NotaFiscalRepository.findCandidatasASinal`, 10 mais recentes, só as com sinal) e `pedidosPendentes` (pendências `PENDENTE` dos vínculos ativos)). `ApuracaoService.consultarParaProdutor` e `CreditoService.somarCreditosNoIntervalo` são as variantes com produtor explícito (a antiga delega). `controller/AssistenteController`: `POST /api/assistente/chat` e `POST /api/assistente/chat/stream` (SSE) → `assistente/AssistenteService`. `DadosProdutorAdaptador` roda cada consulta numa transação curta com timeout `app.assistente.timeout-funcao`.
 
-`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-rodadas-ferramentas`, `max-conversas-simultaneas`, `tetos.*` = teto de tokens por tipo de chamada — funções, classificação, lei — validado contra a metade do contexto e o `AI_MAX_TOKENS`, #270).
+`config/AssistenteProperties` (+ `AssistenteConfig`): `app.assistente.*` (timeout/cache do health, `max-conversas-simultaneas`, `tetos.*` = teto de tokens por tipo de chamada — funções, classificação, lei — validado contra a metade do contexto, #270; a reserva da cota soma os três, `Cota.tetoDaPergunta` com `CHAMADAS_POR_PERGUNTA` = 3, travado pelo `TetoDaCotaCobreChamadasTest`).
 Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programável) e `EmbeddingModelSimulado` (1024 dim) no profile `test`.
 
 ### `security/` (issue #93)

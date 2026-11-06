@@ -53,7 +53,7 @@ public class CotaUsoAssistenteService {
   private final UsoSemanalAssistenteRepository repository;
   private final PlanoUsoProvider planoProvider;
   private final AssistenteProperties.Cota cota;
-  private final int maxRodadasFerramentas;
+  private final AssistenteProperties.Tetos tetos;
   private final Duration timeoutPergunta;
   private final Clock clock;
   private final TransactionTemplate transacao;
@@ -66,7 +66,7 @@ public class CotaUsoAssistenteService {
     this.repository = repository;
     this.planoProvider = planoProvider;
     this.cota = propriedades.getCota();
-    this.maxRodadasFerramentas = propriedades.getMaxRodadasFerramentas();
+    this.tetos = propriedades.getTetos();
     this.timeoutPergunta = propriedades.getTimeoutPergunta();
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
@@ -125,7 +125,8 @@ public class CotaUsoAssistenteService {
     long consumidos = Math.min(real, reserva.creditos());
     if (real > reserva.creditos()) {
       log.warn("Cota da Ceres: consumo real ({}) passou do teto reservado ({}); cobrado o teto. "
-          + "Revise app.assistente.cota.teto-tokens-*", real, reserva.creditos());
+          + "Revise app.assistente.cota.teto-tokens-entrada-por-chamada e app.assistente.tetos",
+          real, reserva.creditos());
     }
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
     Integer acertou = transacao.execute(status -> repository.acertar(reserva.tipo(),
@@ -183,13 +184,13 @@ public class CotaUsoAssistenteService {
   }
 
   /**
-   * Custo máximo possível de uma pergunta: classificação + parte de legislação + o laço de funções
-   * (a primeira chamada e uma por rodada, até {@code max-rodadas-ferramentas}), cada uma com o
-   * teto de tokens de entrada e de saída. A fórmula é a de {@link AssistenteProperties.Cota}, a
+   * Custo máximo possível de uma pergunta: as três chamadas que ela pode fazer (classificação,
+   * funções de dados e lei), cada uma com o teto de entrada e o próprio teto de saída
+   * ({@code app.assistente.tetos}, #270). A fórmula é a de {@link AssistenteProperties.Cota}, a
    * mesma que a validação da subida usa.
    */
   public long tetoDaPergunta(String modelo) {
-    return cota.tetoDaPergunta(maxRodadasFerramentas, fator(modelo));
+    return cota.tetoDaPergunta(tetos, fator(modelo));
   }
 
   private double fator(String modelo) {

@@ -296,7 +296,8 @@ envelope.
 - Mostre **créditos**, nunca tokens. Uma pergunta simples custa poucos créditos; uma que consulta
   várias funções e trechos de lei custa mais.
 - `restantes` já desconta as perguntas em andamento. Uma pergunta só começa se houver saldo para
-  o teto dela (hoje cerca de 73 créditos); o que sobra do teto volta no fim. Uma pergunta que
+  o teto dela (hoje 32 créditos com os padrões; eram 73 até a revisão da #166 depois da #270); o
+  que sobra do teto volta no fim. Uma pergunta que
   falha não custa nada, e no modo fallback (sem modelo) também não.
 - `habilitada: false`: a cota está desligada (demonstração) e nada é bloqueado.
 
