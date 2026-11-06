@@ -1,6 +1,6 @@
 {
-  "versao": "2026-11-06.2",
-  "observacao": "Perguntas de TREINO para o diagnostico das citacoes da rota de lei (#269). Nenhuma e do gabarito, de parafrase dele nem do conjunto cego. O dispositivo esperado foi definido lendo o texto da lei (tabela legislacao_trecho), nunca olhando resposta do modelo. 'esperado' = artigo que responde; 'aceito' = artigo que tambem serve. Comparacao no nivel do artigo (os trechos sao um por paragrafo/inciso). D19, D20 e D22 sao perguntas do produtor rural cuja norma pode estar FORA da base (hipotese verificada por busca no texto da base, ver o relatorio); D21 e controle de pergunta cuja norma esta na base.",
+  "versao": "2026-11-06.3",
+  "observacao": "Perguntas de TREINO para o diagnostico das citacoes da rota de lei (#269). Nenhuma e do gabarito, de parafrase dele nem do conjunto cego. O dispositivo esperado foi definido lendo o texto da lei (tabela legislacao_trecho), nunca olhando resposta do modelo. 'esperado' = artigo que responde; 'aceito' = artigo que tambem serve. Comparacao no nivel do artigo (os trechos sao um por paragrafo/inciso). D19, D20 e D22 sao perguntas do produtor rural cuja norma pode estar FORA da base (hipotese verificada por busca no texto da base, ver o relatorio); D21 e controle de pergunta cuja norma esta na base. D23 a D31 sao o CONJUNTO DE CONTROLE (holdout) escrito depois de D01-D22: nao se ajusta regra nenhuma olhando para elas; servem so para medir se uma candidata de busca generaliza.",
   "perguntas": [
     {
       "id": "D01",
@@ -223,6 +223,98 @@
       "aceito": [],
       "foraDaBaseHipotese": true,
       "raciocinio": "O LCDPR é regido por instrução normativa da RFB, que não está na base. Pergunta do produtor rural, fora da reforma tributária."
+    },
+    {
+      "id": "D23",
+      "pergunta": "O IBS e a CBS incidem sobre uma doação?",
+      "esperado": [
+        "LC 214/2025 art. 4º"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 4º diz que o IBS e a CBS incidem sobre operações onerosas com bens ou serviços; doação não é onerosa."
+    },
+    {
+      "id": "D24",
+      "pergunta": "Quem fixa a alíquota de referência do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 18"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 18 diz que as alíquotas de referência serão fixadas por resolução do Senado Federal."
+    },
+    {
+      "id": "D25",
+      "pergunta": "A importação de serviços paga IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 64"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 63"
+      ],
+      "holdout": true,
+      "raciocinio": "O art. 64 define importação de serviço ou de bem imaterial (fornecimento por residente no exterior) para o art. 63, que trata da incidência na importação."
+    },
+    {
+      "id": "D26",
+      "pergunta": "Posso vender os meus créditos de IBS e CBS para outra empresa?",
+      "esperado": [
+        "LC 214/2025 art. 55"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 55 veda a transferência, a qualquer título, de créditos do IBS e da CBS."
+    },
+    {
+      "id": "D27",
+      "pergunta": "O valor do transporte que cobro do cliente entra na base de cálculo?",
+      "esperado": [
+        "LC 214/2025 art. 12"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 12, § 1º, IV, inclui no valor da operação o transporte cobrado como parte dela."
+    },
+    {
+      "id": "D28",
+      "pergunta": "Quem não é contribuinte do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 26"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 26 lista quem não é contribuinte, ressalvado o inciso II do § 1º do art. 156-A da Constituição."
+    },
+    {
+      "id": "D29",
+      "pergunta": "Posso compensar crédito de IBS com débito de CBS?",
+      "esperado": [
+        "LC 214/2025 art. 47"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 47, § 1º, I, diz que a apropriação é segregada para IBS e CBS, vedada a compensação de créditos de um com o outro."
+    },
+    {
+      "id": "D30",
+      "pergunta": "Onde se considera feita a importação de bens materiais?",
+      "esperado": [
+        "LC 214/2025 art. 68"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 68 define o local da importação de bens materiais."
+    },
+    {
+      "id": "D31",
+      "pergunta": "O que a lei considera bens e serviços de uso ou consumo pessoal?",
+      "esperado": [
+        "LC 214/2025 art. 57"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 57 define uso ou consumo pessoal (joias, bebidas, veículos, bens dados a sócios e empregados etc.)."
     }
   ]
 }

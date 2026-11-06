@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
@@ -10,11 +11,17 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
  * Diagnóstico MANUAL das citações da rota de lei (#269). Não roda no {@code mvn test} (o nome não
@@ -36,6 +43,12 @@ class DiagnosticoCitacoesLeiManual {
   @Autowired
   private RotaLegislacao rota;
 
+  /** Espião: chama o modelo de verdade e guarda o texto cru, antes de qualquer validador. */
+  @MockitoSpyBean
+  private ModeloLinguagem modelo;
+
+  private final List<String> crus = new CopyOnWriteArrayList<>();
+
   @Test
   void diagnostico() throws Exception {
     ObjectMapper json = new ObjectMapper();
@@ -44,6 +57,13 @@ class DiagnosticoCitacoesLeiManual {
     int repeticoes = Integer.getInteger("diagnostico.repeticoes", 3);
     Path saida = Path.of(System.getProperty("diagnostico.saida", "diagnostico-lei.json"));
     LocalDate hoje = LocalDate.now();
+    Mockito.doAnswer(inv -> {
+      Object r = inv.callRealMethod();
+      if (r instanceof ChatResponse c && c.getResult() != null) {
+        crus.add(c.getResult().getOutput().getText());
+      }
+      return r;
+    }).when(modelo).chamar(Mockito.any(Prompt.class));
 
     // Aquece o modelo: a primeira chamada a frio passa do read-timeout e abriria o disjuntor.
     try {
@@ -78,8 +98,22 @@ class DiagnosticoCitacoesLeiManual {
 
       ArrayNode rodadas = item.putArray("rodadas");
       for (int i = 0; i < repeticoes; i++) {
-        ResultadoRota r = rota.responder(pergunta, new ContextoAssistente(UUID.randomUUID(), hoje));
+        crus.clear();
+        ResultadoRota r;
+        try {
+          r = rota.responder(pergunta, new ContextoAssistente(UUID.randomUUID(), hoje));
+        } catch (RuntimeException e) {
+          // Falha do modelo (timeout etc.): registra e segue, sem derrubar a rodada.
+          ObjectNode erro = rodadas.addObject();
+          erro.put("desfecho", "ERRO_MODELO");
+          erro.put("texto", e.getClass().getSimpleName());
+          erro.put("cru", "");
+          erro.putArray("citacoes");
+          Thread.sleep(40_000);
+          continue;
+        }
         ObjectNode o = rodadas.addObject();
+        o.put("cru", crus.isEmpty() ? "" : crus.get(crus.size() - 1));
         o.put("desfecho", r.desfecho().name());
         o.put("texto", r.texto());
         ArrayNode citacoes = o.putArray("citacoes");
