@@ -78,6 +78,7 @@ class LeiteInNaturaEmissaoIntegrationTest {
 
   private TributacaoService tributacao;
   private GeracaoNotaFiscalService geracao;
+  private FiscalRulesValidator validador;
 
   @BeforeEach
   void setUp() {
@@ -94,9 +95,10 @@ class LeiteInNaturaEmissaoIntegrationTest {
     when(cbsRepo.findVigente(any(LocalDate.class))).thenReturn(List.of());
     tributacao = new TributacaoService(resolver,
         new AliquotaIbsCbsResolver(ibsRepo, cbsRepo, props));
+    // Validador completo: tambem confere o NCM na referencia (o 0401.20.90 entrou na 0052).
+    validador = new FiscalRulesValidator(new NcmValidator(ncmReferenciaRepository), classificacao);
     geracao = new GeracaoNotaFiscalService(
-        // Validador completo: tambem confere o NCM na referencia (o 0401.20.90 entrou na 0052).
-        new FiscalRulesValidator(new NcmValidator(ncmReferenciaRepository), classificacao),
+        validador,
         new NotaFiscalNfeMapper(new ChaveAcessoGenerator()), new XmlGenerator(),
         new NfeAssinador(new KeyStoreCertificadoProvider(new CertificadoDigitalProperties(
             "classpath:certs/nfe-teste.p12", "changeit", "nfe-teste"))),
@@ -170,6 +172,62 @@ class LeiteInNaturaEmissaoIntegrationTest {
               assertThat(d.field()).endsWith(".percentualReducao");
               assertThat(d.message()).contains("200003");
             }));
+  }
+
+  @Test
+  @DisplayName("#375: 200003 informado em NCM fora do Anexo I (soja) e recusado com a sugestao")
+  void anexoInformadoForaDoNcmRecusado() {
+    NotaFiscal nota = nota("12019000", "200003");
+    tributacao.calcular(nota);
+
+    assertThatThrownBy(() -> geracao.gerarXml(nota))
+        .isInstanceOfSatisfying(NotaFiscalInvalidaParaEmissaoException.class,
+            e -> assertThat(e.getErrors()).anySatisfy(d -> {
+              assertThat(d.field()).endsWith(".cClassTrib");
+              assertThat(d.message()).contains("200003").contains("12019000");
+              assertThat(d.rejectedValue()).isEqualTo("200003");
+              assertThat(d.expectedValue()).isEqualTo("200036, 200038, 200034");
+              assertThat(d.suggestion()).contains("200036").contains("60% de reducao");
+            }));
+  }
+
+  @Test
+  @DisplayName("#375: outro codigo de reducao (200009, medicamentos) na soja tambem e recusado")
+  void codigoDeOutraHipoteseRecusado() {
+    NotaFiscal nota = nota("12019000", "200009");
+    tributacao.calcular(nota);
+
+    assertThatThrownBy(() -> validador.validar(nota))
+        .isInstanceOfSatisfying(NotaFiscalInvalidaParaEmissaoException.class,
+            e -> assertThat(e.getErrors())
+                .anySatisfy(d -> assertThat(d.rejectedValue()).isEqualTo("200009")));
+  }
+
+  @ParameterizedTest(name = "{0} com {1} informado passa")
+  @CsvSource({
+      "04012090, 200003",  // leite no Anexo I, item 2
+      "04072100, 200014",  // ovos no Anexo XV
+      "12019000, 200036",  // in natura nao e codigo de anexo
+      "12019000, 000001"   // integral
+  })
+  @DisplayName("#375: codigo de anexo que alcanca o NCM, ou codigo sem anexo, passa")
+  void informadoCoerentePassa(String ncm, String cClassTrib) {
+    NotaFiscal nota = nota(ncm, cClassTrib);
+    tributacao.calcular(nota);
+
+    org.assertj.core.api.Assertions.assertThatCode(() -> validador.validar(nota))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("#375: nota importada com codigo de anexo fora do NCM nao e recusada por isso")
+  void importadaNaoERecusada() {
+    NotaFiscal nota = nota("12019000", "200003");
+    nota.setOrigem(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA);
+    tributacao.calcular(nota);
+
+    org.assertj.core.api.Assertions.assertThatCode(() -> validador.validar(nota))
+        .doesNotThrowAnyException();
   }
 
   private static NotaFiscal nota(String ncm, String cClassTrib) {

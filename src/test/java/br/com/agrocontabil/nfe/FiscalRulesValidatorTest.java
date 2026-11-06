@@ -113,6 +113,63 @@ class FiscalRulesValidatorTest {
   }
 
   @Test
+  @DisplayName("#375: cClassTrib informado nao admitido para o NCM vira 422 com os valores")
+  void informadoNaoAdmitidoParaONcm() {
+    ClassificacaoTributariaService classificacao = mock(ClassificacaoTributariaService.class);
+    when(classificacao.classificacao(org.mockito.ArgumentMatchers.eq("200003"),
+        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.of(
+            br.com.agrocontabil.model.ClassificacaoTributaria.builder().codigo("200003")
+                .percentualReducaoIbs(new BigDecimal("100")).build()));
+    when(classificacao.codigoNaoAdmitido(org.mockito.ArgumentMatchers.eq("200003"),
+        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(java.util.Optional.of(new ClassificacaoTributariaService.CodigoNaoAdmitido(
+            new br.com.agrocontabil.service.TratamentoTributarioNcm("12019000", "200036", "200",
+                new BigDecimal("60"), br.com.agrocontabil.service.TratamentoTributarioNcm.Origem
+                    .IN_NATURA, null, java.util.List.of(), null),
+            java.util.List.of("200036", "200038"))));
+    NotaFiscal nota = notaValida();
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setValorIbs(BigDecimal.ZERO);
+    item.setCClassTrib("200003");
+    item.setCClassTribAplicado("200003");
+    item.setPercentualReducaoAplicado(new BigDecimal("100"));
+
+    Throwable erro = catchThrowable(() -> new FiscalRulesValidator(null, classificacao)
+        .validar(nota));
+
+    assertThat(((NotaFiscalInvalidaParaEmissaoException) erro).getErrors())
+        .anySatisfy(d -> {
+          assertThat(d.field()).isEqualTo("item[1].cClassTrib");
+          assertThat(d.rejectedValue()).isEqualTo("200003");
+          assertThat(d.expectedValue()).isEqualTo("200036, 200038");
+          assertThat(d.suggestion()).startsWith("Informe o cClassTrib 200036 (60%");
+        });
+  }
+
+  @Test
+  @DisplayName("#375: nota importada nao e recusada pelo cClassTrib fora do NCM")
+  void importadaNaoConfereOInformado() {
+    ClassificacaoTributariaService classificacao = mock(ClassificacaoTributariaService.class);
+    when(classificacao.classificacao(org.mockito.ArgumentMatchers.eq("200003"),
+        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.of(
+            br.com.agrocontabil.model.ClassificacaoTributaria.builder().codigo("200003")
+                .percentualReducaoIbs(new BigDecimal("100")).build()));
+    NotaFiscal nota = notaValida();
+    nota.setOrigem(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA);
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setValorIbs(BigDecimal.ZERO);
+    item.setCClassTrib("200003");
+    item.setCClassTribAplicado("200003");
+    item.setPercentualReducaoAplicado(new BigDecimal("100"));
+
+    assertThatCode(() -> new FiscalRulesValidator(null, classificacao).validar(nota))
+        .doesNotThrowAnyException();
+    org.mockito.Mockito.verify(classificacao, org.mockito.Mockito.never())
+        .codigoNaoAdmitido(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
   @DisplayName("CST informado sem cClassTrib (resto do exemplo antigo do OpenAPI) e ignorado (#278)")
   void cstSemCClassTribIgnorado() {
     NotaFiscal nota = notaValida();

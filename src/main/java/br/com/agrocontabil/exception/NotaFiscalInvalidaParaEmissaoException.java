@@ -15,16 +15,24 @@ public class NotaFiscalInvalidaParaEmissaoException extends DomainException {
   /**
    * Registro imutável de uma violação de regra fiscal.
    *
-   * @param field      campo
-   * @param reason     mensagem ao cliente
-   * @param code       código do erro; nulo = {@code NOTA_INVALIDA_EMISSAO}
-   * @param suggestion o que fazer; pode ser nula
+   * @param field         campo
+   * @param reason        mensagem ao cliente
+   * @param code          código do erro; nulo = {@code NOTA_INVALIDA_EMISSAO}
+   * @param suggestion    o que fazer; pode ser nula
+   * @param rejectedValue valor recusado; pode ser nulo (#375)
+   * @param expectedValue valor ou valores aceitos; pode ser nulo (#375)
    */
-  public record FieldViolation(String field, String reason, ErrorCode code, String suggestion) {
+  public record FieldViolation(String field, String reason, ErrorCode code, String suggestion,
+      String rejectedValue, String expectedValue) {
 
     /** Violação com o código padrão e sem sugestão. */
     public FieldViolation(String field, String reason) {
-      this(field, reason, null, null);
+      this(field, reason, null, null, null, null);
+    }
+
+    /** Violação com código e sugestão próprios, sem valores recusado e esperado. */
+    public FieldViolation(String field, String reason, ErrorCode code, String suggestion) {
+      this(field, reason, code, suggestion, null, null);
     }
   }
 
@@ -39,7 +47,7 @@ public class NotaFiscalInvalidaParaEmissaoException extends DomainException {
     return violations.stream()
         .map(v -> new ErrorDetail(
             (v.code() != null ? v.code() : ErrorCode.NOTA_INVALIDA_EMISSAO).code(), v.field(),
-            v.reason(), v.suggestion(), null, null))
+            v.reason(), v.suggestion(), v.rejectedValue(), v.expectedValue()))
         .toList();
   }
 }

@@ -144,6 +144,31 @@ class ClassificacaoTributariaServiceIntegrationTest {
         .isEqualTo("000001");
   }
 
+  @ParameterizedTest(name = "{1} em {0} ({3}): sugestao = {2}")
+  @CsvSource({
+      "12019000, 200003, 200036, 2026-10-29",  // soja nao esta no Anexo I: sugestao = in natura
+      "99999999, 200014, 000001, 2026-10-29",  // NCM sem hipotese no Anexo XV: integral
+      "12019000, 200009, 200036, 2026-10-29",  // medicamentos (CST 200, sem anexo carregado)
+      "10063021, 200034, 200003, 2026-10-29",  // arroz polido e VEDADO no Anexo VII
+      "12019000, 200003, 200036, 2025-12-20",  // antes da vigencia dos anexos: so a regra
+      "04012090, 200003, ,       2026-10-29",  // leite esta no Anexo I
+      "04012090, 200036, ,       2026-10-29",  // a regra do leite
+      "12019000, 200036, ,       2026-10-29",  // in natura: o art. 137 nao tem lista de NCM
+      "99999999, 000001, ,       2026-10-29"   // integral sempre vale
+  })
+  @DisplayName("#375: codigoNaoAdmitido confere o cClassTrib informado contra o NCM")
+  void codigoNaoAdmitido(String ncm, String informado, String sugestao, LocalDate data) {
+    assertThat(service.codigoNaoAdmitido(informado, ncm, data)
+        .map(n -> n.regra().cClassTrib()).orElse(null)).isEqualTo(sugestao);
+  }
+
+  @Test
+  @DisplayName("#375: a lista de admitidos do leite traz a regra e o Anexo I")
+  void admitidosDoLeite() {
+    assertThat(service.codigoNaoAdmitido("200014", "04012090", EM_2026))
+        .hasValueSatisfying(n -> assertThat(n.admitidos()).containsExactly("200036", "200003"));
+  }
+
   @Test
   @DisplayName("classificacao confere codigo existente e vigente")
   void classificacaoPorCodigo() {

@@ -8,6 +8,7 @@ import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.ClassificacaoTributaria;
 import br.com.agrocontabil.service.ClassificacaoTributariaService;
@@ -464,6 +465,36 @@ public class FiscalRulesValidator {
               + oficial.get().getPercentualReducaoIbs().stripTrailingZeros().toPlainString()
               + "% na tabela oficial)"));
     }
+    validarAnexoDoInformado(nota, item, prefixo, data, violations);
+  }
+
+  /**
+   * cClassTrib <strong>informado</strong> tem de valer para o NCM do item (issue #375):
+   * {@link ClassificacaoTributariaService#codigoNaoAdmitido}. Sem isso, qualquer produto teria
+   * alíquota zero informando o 200003, o 200014 ou outro código de redução. O tratamento da regra
+   * por NCM é coerente por construção e não passa aqui. A nota importada nunca é recusada por isso
+   * (é o documento do fornecedor; o crédito segue a regra, #374): hoje este validador só roda na
+   * emissão e no envio à revisão, e a guarda deixa a decisão explícita se isso mudar.
+   */
+  private void validarAnexoDoInformado(NotaFiscal nota, NotaFiscalItem item, String prefixo,
+      LocalDate data, List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+    if (item.getCClassTrib() == null || nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
+      return;
+    }
+    classificacaoService.codigoNaoAdmitido(item.getCClassTrib(), item.getNcm(), data)
+        .ifPresent(nao -> {
+          String admitidos = String.join(", ", nao.admitidos());
+          violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
+              prefixo + ".cClassTrib", "cClassTrib " + item.getCClassTrib() + " nao vale para o"
+                  + " NCM " + item.getNcm() + ": a hipotese de reducao dele nao inclui esse NCM"
+                  + " na tabela oficial (LC 214/2025). Para este NCM valem: " + admitidos
+                  + " (alem de 000001 e 200036)",
+              null, "Informe o cClassTrib " + nao.regra().cClassTrib() + " ("
+                  + nao.regra().percentualReducao().stripTrailingZeros().toPlainString()
+                  + "% de reducao, a regra do NCM), outro da lista ou retire o cClassTrib do"
+                  + " item",
+              item.getCClassTrib(), admitidos));
+        });
   }
 
   /**

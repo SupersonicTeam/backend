@@ -64,4 +64,5 @@ public interface ClassificacaoTributariaAnexoNcmRepository
       """)
   List<String> findNcmsPermitidosDoItem(
       @Param("itemId") Integer itemId, @Param("data") LocalDate data);
+
 }
