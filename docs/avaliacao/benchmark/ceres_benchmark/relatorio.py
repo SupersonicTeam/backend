@@ -186,11 +186,10 @@ def valor_criterio(
         return False, True, True
     if valor is None:
         return None, True, False
-    if criterio == "citacao" and valor and (resultado.get("execucao") or {}).get("desfecho") \
-            in ext.DESCARTADAS:
-        # Regra da main nas duas arquiteturas: o AvaliadorResposta do 2463c27 da citacao valida a
-        # texto descartado (citacao invalida, numero sem fonte, corte), o da main nao.
-        return False, True, False
+    if criterio == "citacao":
+        # Regra da main nas duas arquiteturas (ext.citacao_vale): o AvaliadorResposta do 2463c27
+        # da citacao valida a texto descartado, o da main nao.
+        valor = ext.citacao_vale(resultado)
     if criterio == "recusa_limpa" and valor and ext.cortada(resultado)["qualquer"]:
         return False, True, False
     return (not valor) if inverte else bool(valor), True, False
@@ -325,24 +324,20 @@ def valores_divergentes(celulas: list[Celula]) -> dict[str, dict[str, list[str]]
 
 
 def instaveis(celula: Celula, ids: list[str], canonico: dict[str, dict] | None = None) -> list[str]:
-    """Perguntas que mudaram de resultado entre rodadas em algum criterio que conta (a citacao de
-    pergunta ``aConferir`` nao conta em nenhuma metrica principal)."""
+    """Perguntas que mudaram de resultado entre rodadas em algum criterio, pela mesma regua das
+    tabelas (``valor_criterio``): a citacao de pergunta ``aConferir`` e a de texto descartado nao
+    contam, e a recusa limpa conta."""
     if len(celula.rodadas) < 2:
         return []
-    alvo, saida = set(ids), []
-    chaves = list(dict.fromkeys(c[1] for c in CRITERIOS.values() if c[1]))
+    alvo = set(ids)
     por_id: dict[str, list[tuple]] = {}
     for resultados in celula.rodadas:
         for r in resultados:
             if r["id"] in alvo:
-                fora = (canonico or {}).get(r["id"], {}).get("aConferir")
-                por_id.setdefault(r["id"], []).append(
-                    tuple(None if (fora and k == "citacaoValida") else r.get(k) for k in chaves)
-                    + (falha_tecnica(r),))
-    for id_, valores in por_id.items():
-        if len(set(valores)) > 1:
-            saida.append(id_)
-    return saida
+                pergunta = (canonico or {}).get(r["id"], {})
+                por_id.setdefault(r["id"], []).append(tuple(
+                    valor_criterio(r, c, pergunta, [], RECORTE_COMUM)[0] for c in CRITERIOS))
+    return [id_ for id_, valores in por_id.items() if len(set(valores)) > 1]
 
 
 #: Criterios da "pergunta certa": todos os que se aplicam. Sem o beco sem saida, que a regua do
@@ -1078,8 +1073,9 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
 def _gravar_csv_cego(pasta: Path, celulas, canonico) -> None:
     """CSV cego das externas em lotes: o primeiro uma vez so; celula medida depois (``--retomar``)
-    ou refeita (respostas diferentes das do lote dela) vai num lote novo, com codigos que continuam
-    a numeracao. Os codigos antigos da celula refeita ficam marcados ``substituida``.
+    ou refeita (a 1a rodada mudou, ``ext.assinatura_celula``) vai num lote novo, com codigos que
+    continuam a numeracao, e os codigos antigos da refeita ficam ``substituida`` (mesmo que ela
+    agora seja invalida ou nao tenha resposta a avaliar).
 
     Regerar o relatorio nunca reembaralha um CSV que ja foi ao avaliador (a chave antiga deixaria
     de casar as notas). Limite: o lote novo so tem as celulas que entraram depois, e o avaliador as
@@ -1087,39 +1083,37 @@ def _gravar_csv_cego(pasta: Path, celulas, canonico) -> None:
     ``externas-avaliacao-*`` e gere tudo de novo antes de mandar.
     """
     arquivo_chave = pasta / "externas-avaliacao-chave.json"
-    chave_atual = json.loads(arquivo_chave.read_text(encoding="utf-8")) if arquivo_chave.exists() else {}
-    vigentes = {}
-    for v in chave_atual.values():
-        if not v.get("substituida"):
-            vigentes.setdefault(v["celula"], set()).add(v.get("resposta"))
+    chave = json.loads(arquivo_chave.read_text(encoding="utf-8")) if arquivo_chave.exists() else {}
+    vigente = {v["celula"]: v.get("assinaturaCelula") for v in chave.values() if not v.get("substituida")}
+    mudou = False
     novas = []
     for c in celulas:
-        if not c.rodadas or c.invalida:
-            continue
-        atuais = {ext.assinatura(r) for r in c.rodadas[0]}
-        if c.nome not in vigentes:
-            novas.append(c)
-        elif None not in vigentes[c.nome] and not vigentes[c.nome] <= atuais:
-            # Celula refeita: as respostas do lote dela mudaram (chave antiga, sem assinatura, nao
-            # da para saber e fica como esta).
-            for v in chave_atual.values():
+        atual = ext.assinatura_celula(c)
+        if c.nome in vigente:
+            if vigente[c.nome] in (None, atual):
+                continue  # mesma celula (ou chave antiga, sem assinatura: fica como esta)
+            for v in chave.values():
                 if v["celula"] == c.nome:
                     v["substituida"] = True
-            novas.append(c)
-    if not novas:
-        return
-    lote = max((v.get("lote", 1) for v in chave_atual.values()), default=0) + 1
-    cego, chave = ext.csv_cego(novas, canonico, inicio=len(chave_atual) + 1)
-    chave_nova = json.loads(chave)
-    if not chave_nova:
-        return
-    for v in chave_nova.values():
-        v["lote"] = lote
-    nome = "externas-avaliacao-cego.csv" if lote == 1 else f"externas-avaliacao-cego-{lote}.csv"
-    (pasta / nome).write_text(cego, encoding="utf-8")
-    # A chave liga a resposta a celula: fica com a equipe ate as notas voltarem (.gitignore).
-    arquivo_chave.write_text(json.dumps({**chave_atual, **chave_nova}, ensure_ascii=False, indent=2)
-                             + "\n", encoding="utf-8")
+            mudou = True
+        if c.rodadas and not c.invalida:
+            novas.append((c, atual))
+    if novas:
+        lote = max((v.get("lote", 1) for v in chave.values()), default=0) + 1
+        cego, chave_txt = ext.csv_cego([c for c, _ in novas], canonico, inicio=len(chave) + 1)
+        chave_nova = json.loads(chave_txt)
+        if chave_nova:
+            assinaturas = {c.nome: a for c, a in novas}
+            for v in chave_nova.values():
+                v["lote"] = lote
+                v["assinaturaCelula"] = assinaturas[v["celula"]]
+            nome = "externas-avaliacao-cego.csv" if lote == 1 else f"externas-avaliacao-cego-{lote}.csv"
+            (pasta / nome).write_text(cego, encoding="utf-8")
+            chave.update(chave_nova)
+            mudou = True
+    if mudou:
+        # A chave liga a resposta a celula: fica com a equipe ate as notas voltarem (.gitignore).
+        arquivo_chave.write_text(json.dumps(chave, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def acerto_geral(celula: Celula, ids: list[str], canonico: dict[str, dict],
@@ -1154,7 +1148,8 @@ def _secao_externas(celulas, ids, canonico) -> str:
               AVISO_IA + "\n",
               "Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima; "
               "fundamentação, alíquota/classe e precisão por heurística de texto, e o encaminhamento "
-              "ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` (contextualização, "
+              "ao contador) e **humanos** no CSV cego `externas-avaliacao-cego.csv` e nos lotes seguintes "
+              "(`externas-avaliacao-cego-2.csv`, …, quando houver: mande todos; contextualização, "
               "orientação prática e precisão final, 1 a 5, rubrica em `docs/avaliacao/rubrica-clareza.md`). "
               "**A heurística mede o que a frase diz, não o raciocínio**; a nota que vale para a precisão "
               "é a humana.\n"]

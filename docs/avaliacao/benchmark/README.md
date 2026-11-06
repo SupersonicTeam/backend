@@ -166,19 +166,22 @@ pergunta vale ~1,9 ponto percentual.
 | `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa), E03 (#284, pergunta 2: leite ao laticínio; a lei já sustenta 60%, Anexo I, item 2, e art. 137, § 1º, II, mas o sistema dá zero e a correção é decisão do Murillo) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas |
 
 **Critérios das externas** (os 5 do Murillo, rubrica em `../rubrica-clareza.md`): **automáticos**
-no relatório — rota, fundamentação (só depois de conferidos os dispositivos), alíquota/classe e
+no relatório — rota, fundamentação (provisória enquanto `aConferir`), alíquota/classe e
 precisão por heurística de texto (classe dita e afirmações proibidas) e encaminhamento ao contador;
 **humanos** no CSV cego `externas-avaliacao-cego.csv` — contextualização, orientação prática e
-precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio: "não" (ou "nem",
-"nunca") na mesma oração nega a expressão quando vem logo antes ("não pode aproveitar") ou seguido
-de um verbo e até mais duas palavras ("não há redução de 60%", "não terá direito à alíquota zero");
-"não processados têm alíquota zero" não nega, e a oração acaba em ponto, dois-pontos, ponto e
-vírgula ou na vírgula que abre outra oração (", você", ", mas"), não na vírgula decimal nem no
-aposto. A classe só conta quando é a única afirmada (a resposta que lista todas as classes não
-acerta nenhuma), e "alíquota padrão" como base de uma redução ("60% da alíquota padrão") não conta
-como PADRAO; "varia" (não negado) e "conforme o produto" contam como condicional, "conforme o art.
-138" não; "não precisa procurar o contador" não é encaminhar (nem conta como fora do escopo), mas
-"não precisa pagar nada agora, mas procure o contador" é; e a resposta que não foi redigida pelo modelo
+precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio. A negação é por
+oração: tirados os apostos (", neste caso,", ", que não é processado,"), a oração acaba em
+pontuação forte ou em vírgula seguida de espaço (a decimal, 26,5%, não corta), e um "não"/"nem"/
+"nunca" até quatro palavras antes da expressão a nega ("não há redução de 60%", "não terá direito
+à alíquota zero"), exceto o relativo ("que não é processado tem alíquota zero") e o que qualifica
+um particípio ("não processados têm alíquota zero"). A classe só conta quando é a única afirmada
+(a resposta que lista todas as classes não acerta nenhuma), e "alíquota padrão" depois de uma
+redução afirmada na mesma oração ("60% da alíquota padrão", "60% menor que a alíquota padrão") não
+conta como PADRAO; "depende", "varia" e "conforme o produto" (não negados) contam como
+condicional, "conforme o art. 138" não; "não precisa procurar o contador" não é encaminhar (nem
+conta como fora do escopo), mas "não precisa pagar nada agora, mas procure o contador" é. Toda
+frase que um review usou para mostrar um erro da heurística fica no corpus de regressão
+(`tests/test_externas.py`, `CORPUS_*`): mudou a regra, o corpus inteiro continua valendo. E a resposta que não foi redigida pelo modelo
 (recusa, descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A
 fundamentação é o `citacaoValida` do comando com a regra da `main` nas duas arquiteturas: texto
 descartado (`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`) não ganha crédito de
@@ -187,7 +190,7 @@ critério principal "Citação válida" de todo o conjunto. Enquanto `aConferir`
 citação das externas fica **só** na seção delas, como provisória: não entra no critério principal
 "Citação válida" nem na viabilidade. O CSV (`;`, BOM UTF-8, protegido contra fórmula, como o
 `CsvCego` do Java) sai em **lotes**: regerar o relatório não reembaralha o que já foi ao avaliador,
-e célula medida depois (`--retomar`) ou refeita (respostas diferentes das do lote dela) vai num
+e célula medida depois (`--retomar`) ou refeita (a primeira rodada dela mudou) vai num
 lote novo (`externas-avaliacao-cego-2.csv`, …), com códigos que continuam a numeração na mesma
 chave; os códigos antigos da refeita ficam `substituida`. Limite: o lote novo só tem as células que
 entraram depois, corrigidas noutro momento. Para comparar todas na mesma sessão do avaliador,

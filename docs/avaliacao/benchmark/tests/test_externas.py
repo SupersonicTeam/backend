@@ -189,5 +189,76 @@ class AchadosReviewDelta361Test(unittest.TestCase):
             self.assertEqual([e["pergunta"] for e in ind.ler(caminho)], ["oq vence?"])
 
 
+E33_PROIBIDA = r"\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\b"
+
+#: Corpus de regressao da heuristica: toda frase que um review (#361, #368) usou para mostrar um
+#: erro entra aqui com o resultado certo. Mudou a regra, o corpus inteiro tem de continuar valendo.
+CORPUS_CLASSE = [
+    ("Tem alíquota zero de IBS e CBS.", "ZERO", True),
+    ("Não tem alíquota zero: a redução é de 60%.", "ZERO", False),
+    ("Não tem alíquota zero: a redução é de 60%.", "REDUCAO_60", True),
+    ("Pode ter alíquota zero, redução de 60% ou alíquota padrão.", "ZERO", False),
+    ("Pode ter alíquota zero, redução de 60% ou alíquota padrão.", "CONDICIONAL", True),
+    ("Sim, esse insumo tem redução de 60% da alíquota padrão (Anexo IX).", "REDUCAO_60", True),
+    ("Sim, esse insumo tem redução de 60% da alíquota padrão (Anexo IX).", "CONDICIONAL", False),
+    ("O milho tem redução de 60% na alíquota padrão.", "REDUCAO_60", True),
+    ("A redução de 60% aplica-se à alíquota padrão.", "REDUCAO_60", True),
+    ("O milho tem alíquota 60% menor que a alíquota padrão.", "REDUCAO_60", True),
+    ("Não tem redução: vale a alíquota padrão.", "PADRAO", True),
+    ("Não tem direito à redução: vale a alíquota padrão.", "PADRAO", True),
+    ("Não há redução de 60% para esse produto.", "PADRAO", True),
+    ("Para o trator a redução não se aplica e vale a alíquota cheia.", "PADRAO", True),
+    ("O trator não tem nenhuma redução e paga a alíquota padrão.", "PADRAO", True),
+    ("Sobre a venda do trator incide a alíquota padrão.", "PADRAO", True),
+    ("A alíquota de 26,5% é a alíquota padrão.", "PADRAO", True),
+    ("O trator nunca foi isento e paga a alíquota padrão.", "PADRAO", True),
+    ("Os produtos hortícolas não processados têm alíquota zero.", "ZERO", True),
+    ("Isso não muda nada. Alíquota zero para o ovo.", "ZERO", True),
+    ("O produto que não é processado tem alíquota zero.", "ZERO", True),
+    ("O ovo, que não é industrializado, tem alíquota zero.", "ZERO", True),
+    ("O adubo não terá direito à alíquota zero.", "ZERO", False),
+    ("Não há, neste caso, alíquota zero.", "ZERO", False),
+    ("Não há, a meu ver, alíquota zero.", "ZERO", False),
+    ("O milho não fica isento: tem redução de 60%.", "REDUCAO_60", True),
+    ("Os insumos não ficam isentos; têm redução de 60%.", "REDUCAO_60", True),
+    ("Depende do NCM do produto.", "CONDICIONAL", True),
+    ("A alíquota varia conforme o produto: o milho em grão tem redução de 60%.", "CONDICIONAL", True),
+    ("Tem redução de 60%, conforme o art. 138.", "CONDICIONAL", False),
+    ("A alíquota não varia: é zero para todos.", "CONDICIONAL", False),
+    ("Não se preocupe, depende do produto.", "CONDICIONAL", True),
+    ("Converse com o seu contador.", "FORA_DO_ESCOPO_SISTEMA", True),
+    ("Você não precisa procurar o contador: a regra é a mesma.", "FORA_DO_ESCOPO_SISTEMA", False),
+]
+CORPUS_PROIBIDA = [
+    ("Você pode aproveitar o crédito.", True),
+    ("Você não pode aproveitar o crédito.", False),
+    ("Mesmo que o insumo não seja tributado, você pode aproveitar o crédito do IBS e da CBS.", True),
+    ("Não há impedimento, pode aproveitar os créditos.", True),
+    ("Não tem problema, pode aproveitar o crédito.", True),
+]
+CORPUS_ENCAMINHA = [
+    ("Procure o seu contador.", True),
+    ("Você não precisa procurar o contador: a regra é a mesma para todos.", False),
+    ("Você não precisa pagar nada agora, mas procure o contador para confirmar.", True),
+    ("Sem precisar de nada, fale com seu contador.", True),
+    ("Você não precisa, neste caso, procurar o contador.", False),
+    ("Não é necessário, em regra, consultar o contador.", False),
+]
+
+
+class CorpusHeuristicaTest(unittest.TestCase):
+    def test_classe(self):
+        for texto, classe, esperado in CORPUS_CLASSE:
+            self.assertEqual(ext.classe_dita(texto, classe), esperado, f"{classe}: {texto}")
+
+    def test_afirmacao_proibida_da_e33(self):
+        for texto, esperado in CORPUS_PROIBIDA:
+            self.assertEqual(ext.afirma(E33_PROIBIDA, texto), esperado, texto)
+
+    def test_encaminhamento(self):
+        for texto, esperado in CORPUS_ENCAMINHA:
+            self.assertEqual(ext.encaminha(texto), esperado, texto)
+
+
 if __name__ == "__main__":
     unittest.main()

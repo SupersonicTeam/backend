@@ -260,6 +260,27 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             self.assertEqual((sessao["confirmado"], sessao["inteira"]), (confirmado, inteira))
             self.assertEqual(bool(sessao["faltando"]), oito not in presentes)
 
+    def test_retomada_refaz_a_celula_sem_nenhuma_prova_do_pensamento(self):
+        medida = {"codigoSaida": 0, "pensamento": {"raciocinou": False}}
+        sem_prova = {"codigoSaida": 0, "pensamento": {"semProva": True}}
+        self.assertEqual(ex.decidir_retomada(medida, True), "pular")
+        self.assertEqual(ex.decidir_retomada(sem_prova, True), "sem_prova")
+        self.assertEqual(ex.decidir_retomada(medida, False), "outra")
+        self.assertEqual(ex.decidir_retomada({"codigoSaida": 1}, True), "medir")
+
+    def test_avisos_das_provas_do_pensamento(self):
+        ok = {"raciocinou": False, "resumo": "desligado"}
+        self.assertEqual(ex.avisos_das_provas(dict(ok), dict(ok)), [])
+        inicio = {"erro": "URLError: x", "resumo": "prova falhou: URLError: x"}
+        avisos = ex.avisos_das_provas(inicio, {"raciocinou": False, "pensamento": "", "resposta": "4"})
+        self.assertIn("vale só a do fim", avisos[0])
+        self.assertIn("(na prova do fim da célula)", inicio["resumo"])
+        self.assertNotIn("semProva", inicio)
+        duas = {"erro": "a"}
+        self.assertIn("as duas provas", ex.avisos_das_provas(duas, {"erro": "b"})[0])
+        self.assertTrue(duas["semProva"])
+        self.assertIn("vale só a do início", ex.avisos_das_provas(dict(ok), {"erro": "b"})[0])
+
     def test_retomada_recusa_rodada_antiga_conjunto_ou_embedding_diferente(self):
         e = ex.Executor(config())
         atual = ex.sha256_arquivo(self.REPO / e.cfg.matriz["perguntas"])

@@ -500,6 +500,24 @@ class ExternasNoRelatorioTest(Base):
         self.assertEqual(json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(
             encoding="utf-8")), chave2)
 
+    def test_celula_refeita_e_agora_invalida_tem_os_codigos_substituidos(self):
+        self._marcar()
+        rel.gerar(self.pasta)
+        chave1 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        celula = next(v["celula"] for v in chave1.values())
+        arquivo = self.pasta / celula / f"{celula}.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados["rodadas"][0]["resultados"][0]["execucao"]["texto"] = "outra resposta"
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        manifesto = self.pasta / celula / "celula.json"
+        m = json.loads(manifesto.read_text(encoding="utf-8"))
+        m["pensamento"] = {"raciocinou": True}
+        manifesto.write_text(json.dumps(m), encoding="utf-8")
+        rel.gerar(self.pasta)
+        chave2 = json.loads((self.pasta / "externas-avaliacao-chave.json").read_text(encoding="utf-8"))
+        self.assertTrue(all(v.get("substituida") for v in chave2.values() if v["celula"] == celula))
+        self.assertFalse(any(v["celula"] == celula and not v.get("substituida") for v in chave2.values()))
+
     def test_citacao_de_texto_descartado_nao_conta_no_criterio_principal(self):
         r = {"citacaoValida": True, "execucao": {"desfecho": "CITACAO_INVALIDA"}}
         self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
