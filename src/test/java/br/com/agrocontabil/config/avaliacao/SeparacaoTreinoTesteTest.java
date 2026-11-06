@@ -41,16 +41,31 @@ class SeparacaoTreinoTesteTest {
   @Test
   @DisplayName("Guarda real: nenhuma pergunta do benchmark da banca (#352) está no treino nem no prompt")
   void perguntasDoBenchmarkForaDoTreino() throws IOException {
-    Gabarito benchmark = new ObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readValue(PerguntasBenchmarkIntegrationTest.PERGUNTAS.toFile(), Gabarito.class);
+    ObjectMapper mapper = new ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    Gabarito benchmark = mapper.readValue(PerguntasBenchmarkIntegrationTest.PERGUNTAS.toFile(),
+        Gabarito.class);
 
-    assertThat(benchmark.perguntas()).hasSizeGreaterThan(90);
+    assertThat(benchmark.perguntas()).hasSizeGreaterThan(80);
     assertThat(SeparacaoTreinoTeste.contaminacoes(benchmark, SeparacaoTreinoTeste.TREINO))
         .isEmpty();
     assertThat(SeparacaoTreinoTeste.contaminacoes(benchmark, SeparacaoTreinoTeste.TREINO_EMBUTIDO))
         .isEmpty();
     assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(benchmark)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Com o repositório cego (#387): nenhuma inédita está no treino nem no prompt")
+  void ineditasForaDoTreino() throws IOException {
+    ObjectMapper mapper = new ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    Gabarito ineditas = mapper.treeToValue(ConjuntoBenchmark.ineditasOuPula(mapper), Gabarito.class);
+
+    assertThat(ineditas.perguntas()).hasSizeGreaterThanOrEqualTo(53);
+    assertThat(SeparacaoTreinoTeste.contaminacoes(ineditas, SeparacaoTreinoTeste.TREINO)).isEmpty();
+    assertThat(SeparacaoTreinoTeste.contaminacoes(ineditas, SeparacaoTreinoTeste.TREINO_EMBUTIDO))
+        .isEmpty();
+    assertThat(SeparacaoTreinoTeste.noPromptDoClassificador(ineditas)).isEmpty();
   }
 
   @Test

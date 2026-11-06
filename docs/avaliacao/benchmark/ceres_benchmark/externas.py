@@ -6,7 +6,7 @@ Os 5 criterios do Murillo para as 40 perguntas compiladas por ele:
   fundamentacao (dispositivo aceito citado; so depois de ``dispositivosEsperados`` conferidos na
   base), aliquota/classe de tratamento e precisao por heuristica (``classeTratamento`` e
   ``afirmacoesProibidas``) e encaminhamento ao contador;
-- **humanos** (CSV cego para o avaliador externo da #275): contextualizacao, orientacao pratica e
+- **humanos** (CSV cego para o orientador, #275; sem contador, #387): contextualizacao, orientacao pratica e
   precisao final, de 1 a 5 (``docs/avaliacao/rubrica-clareza.md``).
 
 Tudo aqui e **heuristica de texto**: acerta o que a frase diz, nao o raciocinio. Serve para
@@ -240,7 +240,7 @@ def assinatura_celula(celula) -> str:
 
 def csv_cego(celulas, canonico: dict[str, dict], aleatorio: random.Random | None = None,
              inicio: int = 1):
-    """CSV cego das externas para o avaliador externo (#275) e a chave, que nao vai a ele.
+    """CSV cego das externas para o orientador (#275, #387) e a chave, que nao vai a ele.
 
     Uma linha por (celula, pergunta) da 1a rodada, embaralhadas; colunas de nota 1 a 5 em branco
     para contextualizacao, orientacao pratica e precisao final. Ficam de fora: pergunta

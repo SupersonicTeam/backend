@@ -237,6 +237,8 @@ class Config:
     embedding_cpu: bool = False
     #: Rodada antes da revisao humana das externas (#358): vale para conferir, nao para a banca.
     ensaio: bool = False
+    #: Checkout do repositorio cego (SupersonicTeam/ceres-benchmark-cego): o texto das ineditas.
+    cego: Path | None = None
 
     @property
     def tipo(self) -> str:
@@ -248,6 +250,68 @@ class Config:
         base = self.matriz.get("embedding", "bge-m3")
         return f"{base}-cpu" if self.embedding_cpu else base
 
+
+
+#: Origens cuja resposta esperada a banca so aceita revisada (#358, #387).
+ORIGENS_COM_REVISAO = ("inedita_externa_ia", "inedita_equipe_dados")
+
+
+def revisada(p: dict) -> bool:
+    """Revisada pela equipe ou pelo orientador: ``revisado.por`` preenchido (o antigo
+    ``revisado: true`` nao diz quem revisou e nao conta)."""
+    r = p.get("revisado")
+    return isinstance(r, dict) and bool(str(r.get("por") or "").strip())
+
+
+def perguntas_sem_revisao(perguntas: list[dict]) -> list[str]:
+    """Ids que ainda impedem a rodada da banca: ``aConferir`` ou sem ``revisado.por``."""
+    return [p["id"] for p in perguntas
+            if p.get("origem") in ORIGENS_COM_REVISAO and (p.get("aConferir") or not revisada(p))]
+
+
+def juntar_ineditas(base: dict, pasta_cego: Path | None, tipo: str) -> tuple[dict, dict | None]:
+    """O conjunto inteiro: as herdadas do backend mais as ineditas do repositorio cego.
+
+    O backend guarda so o compromisso (``ineditas``: arquivo, versao, sha256 e ids). A rodada da
+    banca exige o arquivo cego com o mesmo sha256, a mesma versao e os mesmos ids; ensaio e teste
+    sem ele rodam so com as herdadas (marcado), e com ele diferente, com aviso.
+
+    :raises RuntimeError: rodada da banca sem o conjunto cego ou com ele diferente do compromisso
+    """
+    compromisso = base.get("ineditas")
+    if not compromisso:
+        return base, None
+    arquivo = (pasta_cego / compromisso["arquivo"]) if pasta_cego is not None else None
+    if arquivo is None or not arquivo.exists():
+        mensagem = (f"conjunto cego ausente ({arquivo or 'sem --cego'}): as {len(compromisso['ids'])} "
+                    "ineditas ficam no repositorio SupersonicTeam/ceres-benchmark-cego; clone-o ao lado "
+                    "do backend ou use --cego / CERES_BENCHMARK_CEGO")
+        if tipo == "banca":
+            raise RuntimeError(mensagem)
+        log(f"AVISO: {mensagem}. Esta rodada mede so as herdadas.")
+        return base, {"presente": False, "confere": False, "arquivo": str(arquivo) if arquivo else None}
+    cego = json.loads(arquivo.read_text(encoding="utf-8"))
+    sha = sha256_arquivo(arquivo)
+    ids = [p["id"] for p in cego["perguntas"]]
+    problemas = []
+    if sha != compromisso["sha256"]:
+        problemas.append(f"sha256 {sha[:12]} diferente do compromisso {compromisso['sha256'][:12]}")
+    if cego.get("versao") != compromisso.get("versao"):
+        problemas.append(f"versao {cego.get('versao')} diferente do compromisso {compromisso.get('versao')}")
+    if sorted(ids) != sorted(compromisso["ids"]) or len(set(ids)) != len(ids):
+        problemas.append("ids diferentes dos do compromisso")
+    herdados = {p["id"] for p in base["perguntas"]}
+    if herdados & set(ids):
+        problemas.append(f"id repetido entre herdadas e ineditas: {sorted(herdados & set(ids))[:5]}")
+    if problemas:
+        mensagem = "o conjunto cego nao confere com o compromisso do backend: " + "; ".join(problemas)
+        if tipo == "banca" or herdados & set(ids):
+            raise RuntimeError(mensagem)
+        log(f"AVISO: {mensagem}")
+    junto = dict(base)
+    junto["perguntas"] = list(base["perguntas"]) + list(cego["perguntas"])
+    return junto, {"presente": True, "confere": not problemas, "arquivo": str(arquivo),
+                   "versao": cego.get("versao"), "sha256": sha, "total": len(ids)}
 
 class Executor:
     """Roda a matriz; cada passo loga o que faz e falha cedo com a causa."""
@@ -729,7 +793,6 @@ class Executor:
         preparo = rodada_dir / ".preparo"
         shutil.rmtree(preparo, ignore_errors=True)
         preparo.mkdir()
-        (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         canonico = json.loads(canonico_txt)
         if arquivo is not None and canonico.get("baseadoEm") and not canonico.get("rodadaRealizada"):
             # O conjunto vem da arvore local e a Ceres 2.0 do commit medido: um checkout atrasado
@@ -743,20 +806,25 @@ class Executor:
                 if cfg.tipo == "banca":
                     raise RuntimeError(mensagem)
                 log(f"AVISO: {mensagem}")
+        # As ineditas vem do repositorio cego (#387), conferidas contra o compromisso do backend.
+        canonico, info_cego = juntar_ineditas(canonico, cfg.cego, cfg.tipo)
+        if canonico.get("ineditas"):
+            canonico_txt = json.dumps(canonico, ensure_ascii=False, indent=2) + "\n"
+        (preparo / "gabarito-canonico.json").write_text(canonico_txt, encoding="utf-8")
         if cfg.tipo == "banca":
-            # Revisao humana bloqueante (#358): dispositivos, classe e afirmacoes proibidas das
-            # externas sao provisorios ate a equipe e o contador conferirem.
-            sem_revisao = [p["id"] for p in canonico["perguntas"]
-                           if p.get("origem") == "inedita_externa_ia"
-                           and (p.get("aConferir") or not p.get("revisado"))]
+            # Revisao humana bloqueante (#358, #387): dispositivos, classe e afirmacoes proibidas
+            # das externas (e o valor das ineditas de dados) sao provisorios ate a equipe ou o
+            # orientador revisarem pela planilha do repositorio cego (revisado.por); sem contador.
+            sem_revisao = perguntas_sem_revisao(canonico["perguntas"])
             if sem_revisao:
                 raise RuntimeError(
-                    f"{len(sem_revisao)} perguntas externas sem a revisao humana (aConferir ou "
-                    f"revisado false: {', '.join(sem_revisao[:5])}{'...' if len(sem_revisao) > 5 else ''})"
-                    ": a rodada da banca espera a revisao; para conferir antes, use --ensaio")
+                    f"{len(sem_revisao)} perguntas sem a revisao da equipe ou do orientador (aConferir "
+                    f"ou sem revisado.por: {', '.join(sem_revisao[:5])}{'...' if len(sem_revisao) > 5 else ''})"
+                    ": a rodada da banca espera a planilha de revisao do repositorio cego; para conferir "
+                    "antes, use --ensaio")
         self.perguntas_info = {"arquivo": cfg.matriz.get("perguntas") or GABARITO_REPO,
                                "versao": canonico.get("versao"), "sha256": sha,
-                               "total": len(canonico["perguntas"])}
+                               "total": len(canonico["perguntas"]), "cego": info_cego}
 
         adaptacoes_por_arq = {}
         for arquitetura in todas:
@@ -813,6 +881,17 @@ class Executor:
             if atual != gravado:
                 raise RuntimeError("o conjunto de perguntas mudou desde o inicio da rodada (sha256 "
                                    f"{gravado[:12]} -> {atual[:12]}): use uma rodada nova")
+            # As ineditas tambem: o mesmo arquivo cego (ou a mesma ausencia dele) do inicio.
+            antes = ((anterior.get("perguntas") or {}).get("cego") or {}).get("sha256")
+            compromisso = json.loads((cfg.repo / cfg.matriz["perguntas"]).read_text(encoding="utf-8"))
+            agora = None
+            if compromisso.get("ineditas") and cfg.cego is not None:
+                arquivo_cego = cfg.cego / compromisso["ineditas"]["arquivo"]
+                agora = sha256_arquivo(arquivo_cego) if arquivo_cego.exists() else None
+            if antes != agora:
+                raise RuntimeError("o conjunto cego mudou (ou apareceu, ou sumiu) desde o inicio da "
+                                   f"rodada ({(antes or 'ausente')[:12]} -> {(agora or 'ausente')[:12]}): "
+                                   "use uma rodada nova")
         if anterior.get("embedding", cfg.embedding) != cfg.embedding:
             raise RuntimeError(f"a rodada usou o embedding {anterior.get('embedding')}, nao "
                                f"{cfg.embedding} (--embedding-cpu): use a mesma opcao ou uma pasta nova")
@@ -1044,7 +1123,15 @@ def montar_config(argumentos, repo: Path) -> Config:
         or (argumentos.repeticoes or matriz.get("repeticoes", 3)) < 3,
         embedding_cpu=bool(getattr(argumentos, "embedding_cpu", False)),
         ensaio=bool(getattr(argumentos, "ensaio", False)),
+        cego=caminho_cego(getattr(argumentos, "cego", None), repo),
     )
+
+
+def caminho_cego(argumento: str | None, repo: Path) -> Path:
+    """O checkout do repositorio cego: ``--cego``, ``CERES_BENCHMARK_CEGO`` ou a pasta irma
+    ``../ceres-benchmark-cego`` do backend (pode nao existir: ``juntar_ineditas`` decide)."""
+    escolhido = argumento or os.environ.get("CERES_BENCHMARK_CEGO")
+    return Path(escolhido).expanduser().resolve() if escolhido else (repo.parent / "ceres-benchmark-cego")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -35,6 +35,8 @@ def main() -> int:
                    help="bge-m3 sem GPU (cria bge-m3-cpu, num_gpu 0): VRAM pequena, ver README")
     p.add_argument("--comparar-com", help="rodada anterior (ex.: ensaio antes da #270) para o "
                    "relatorio apontar queda de acerto")
+    p.add_argument("--cego", help="checkout do SupersonicTeam/ceres-benchmark-cego (padrao: "
+                   "CERES_BENCHMARK_CEGO ou ../ceres-benchmark-cego); a rodada da banca o exige")
     p.add_argument("--retomar", help="pasta de uma rodada interrompida: pula as celulas medidas")
     args = p.parse_args()
     cfg = executor.montar_config(args, repo)

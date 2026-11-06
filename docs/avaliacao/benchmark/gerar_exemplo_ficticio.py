@@ -109,7 +109,9 @@ def gerar(pasta: Path) -> Path:
         matriz=str(AQUI / "matriz.json"), arquiteturas=None, modelos=None, ref_ceres2=None,
         saida=str(pasta), trabalho=str(pasta), repeticoes=None,
         hardware="FICTÍCIO: máquina inventada", retomar=str(pasta),
-        ensaio=True)
+        ensaio=True,
+        # Ineditas de mentira (#387): as de verdade ficam no repositorio cego e nunca entram aqui.
+        cego=str(AQUI / "tests" / "fixtures" / "cego-ficticio"))
     cfg = executor.montar_config(argumentos, REPO)
     ex = executor.Executor(cfg)
     ex.fixar_shas(None)

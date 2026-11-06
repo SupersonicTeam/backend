@@ -66,7 +66,7 @@ import org.springframework.web.client.RestClient;
  *
  * <p>Grava em {@code avaliacao.saida}: {@code <data>-<hora>-<modelo>.md} (tabela para o artigo),
  * {@code .json} (respostas completas, para revisão manual), {@code -clareza-cego.csv} (pergunta e
- * resposta embaralhadas, para o avaliador externo da #275) e {@code -clareza-chave.json} (a chave
+ * resposta embaralhadas, para o orientador, #275) e {@code -clareza-chave.json} (a chave
  * do CSV, que não vai ao avaliador). Encerra com código 0 se a avaliação rodou até o
  * fim, qualquer que seja o resultado; 1 se não rodou (gabarito inválido, seed, banco, ou modelo
  * que não respondeu à pergunta de aquecimento).

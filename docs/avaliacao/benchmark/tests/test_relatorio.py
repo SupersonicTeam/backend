@@ -455,6 +455,10 @@ class ExternasNoRelatorioTest(Base):
         self.assertNotIn("perguntas de produtores", texto)
         self.assertNotIn("internet e produtores", texto)
         self.assertIn("Fundamentação **a conferir** em 1 perguntas: os", texto)
+        # Sem contador (#387): a declaracao da revisao sai no relatorio.
+        # Com externa ainda sem revisado.por, o relatorio nao afirma a revisao: diz que esta pendente.
+        self.assertIn("Revisão da equipe e do orientador pendente em 1 perguntas", texto)
+        self.assertNotIn(rel.DECLARACAO, texto)
         self.assertIn("### L01 (pergunta ? do Murillo)", texto)
         # Ceres 1 m-small: "Nao consegui confirmar a citacao." e frase fixa (CITACAO_INVALIDA), nao
         # afirmacao do modelo.

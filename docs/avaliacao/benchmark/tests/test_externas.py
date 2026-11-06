@@ -20,24 +20,6 @@ def resultado(texto, desfecho="RESPONDIDA", rota="LEGISLACAO", citacao_valida=No
 
 
 class CriteriosTest(unittest.TestCase):
-    def test_e03_leite_ao_laticinio_reducao_60_exclusiva(self):
-        """#378: E03 sai do pendente com REDUCAO_60; o que acerta e o que erra a classe."""
-        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
-        e03 = next(p for p in conjunto["perguntas"] if p["id"] == "E03")
-        self.assertEqual(e03["classeTratamento"], "REDUCAO_60")
-        self.assertNotIn("pendenteContador", e03)
-        acertos = ["O leite vendido ao laticínio tem redução de 60% nas alíquotas (art. 137). "
-                   "A alíquota zero do Anexo I não se aplica a esse caso.",
-                   "A redução é de 60%; zero só para o leite de consumo direto."]
-        erros = ["Redução de 60% (art. 137). A alíquota zero vale só para o leite em conformidade "
-                 "com a legislação de consumo direto (Anexo I, item 2).",
-                 "Terá alíquota zero de IBS e CBS.",
-                 "Por padrão, redução de 60%; se o leite for de consumo direto, alíquota zero."]
-        for texto in acertos:
-            self.assertTrue(ext.avaliar(resultado(texto), e03)["classe"], texto)
-        for texto in erros:
-            self.assertFalse(ext.avaliar(resultado(texto), e03)["classe"], texto)
-
     def test_classe_de_tratamento_dita(self):
         self.assertTrue(ext.classe_dita("Tem alíquota zero de IBS e CBS.", "ZERO"))
         self.assertTrue(ext.classe_dita("A redução é de 60% nas alíquotas.", "REDUCAO_60"))
@@ -129,15 +111,6 @@ class CsvCegoTest(unittest.TestCase):
 
 
 class SqlConferenciaTest(unittest.TestCase):
-    def test_sql_versionado_e_o_gerado_pelo_conjunto(self):
-        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
-        gerado = ext.sql_conferencia(conjunto)
-        versionado = (AQUI.parent / "conferir-dispositivos-externas.sql").read_text(encoding="utf-8")
-        self.assertEqual(versionado, gerado, "regere o .sql: python3 -c 'from ceres_benchmark ...'")
-        chaves = {c for p in conjunto["perguntas"] if p.get("origem") == "inedita_externa_ia"
-                  for c in p.get("dispositivosEsperados") or []}
-        self.assertTrue(all(f"('{c}'" in gerado for c in chaves))
-
     def test_aspas_escapadas(self):
         sql = ext.sql_conferencia({"perguntas": [{"origem": "inedita_externa_ia", "id": "X",
                                                   "dispositivosEsperados": ["LC 1/2000, art. 1º d'x"]}]})
@@ -198,13 +171,6 @@ class AchadosReviewDelta361Test(unittest.TestCase):
                                                   "dispositivosEsperados": ["LC 214/2025, art. 138"]}]})
         self.assertIn("LIKE c.dispositivo || ' %'", sql)
 
-    def test_ineditas_de_dados_aceita_arquivo_com_bom(self):
-        import tempfile
-        from ceres_benchmark import ineditas_dados as ind
-        with tempfile.TemporaryDirectory() as d:
-            caminho = Path(d) / "perguntas.txt"
-            caminho.write_bytes("\ufeff# cabecalho\r\n2026-11-06 | Luiz | oq vence?\r\n".encode("utf-8"))
-            self.assertEqual([e["pergunta"] for e in ind.ler(caminho)], ["oq vence?"])
 
 
 E33_PROIBIDA = r"\b(poder[aá]|pode) aproveitar (integralmente |normalmente )?(o|os|esse|esses) cr[eé]ditos?\b"
@@ -318,9 +284,7 @@ class CorpusHeuristicaTest(unittest.TestCase):
                              esperado, texto)
 
     def test_afirmacao_proibida_da_e03(self):
-        conjunto = json.loads((AQUI.parent / "perguntas-benchmark.json").read_text(encoding="utf-8"))
-        e03 = next(p for p in conjunto["perguntas"] if p["id"] == "E03")
-        self.assertEqual(e03["afirmacoesProibidas"], [E03_PROIBIDA])
+        # A regra da E03 fica no repositorio cego (#387), que confere que e esta; aqui, a heuristica.
         for texto, esperado in CORPUS_PROIBIDA_E03:
             self.assertEqual(ext.afirma(E03_PROIBIDA, texto), esperado, texto)
 

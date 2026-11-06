@@ -1,9 +1,0 @@
-# Inéditas de dados da equipe (#358) — Luiz e Herick escrevem aqui, uma pergunta por linha.
-# Antes de escrever, leia só o LEIA-ME.md desta pasta (o cenário). Formato de cada linha:
-#
-#   AAAA-MM-DD | Autor | pergunta, do jeito que o produtor manda no WhatsApp
-#
-# Exemplo de formato (não é pergunta, linhas com # são ignoradas):
-#   2026-11-06 | Fulano | oq eu tenho pra pagar essa semana?
-#
-# Não corrija a grafia nem a pontuação: o texto entra literal no conjunto.

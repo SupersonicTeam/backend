@@ -34,6 +34,12 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Exemplo em prompt ou descrição de `@Tool` **nunca** é pergunta do gabarito (`SeparacaoTreinoTesteTest` quebra).
 - Extrair a Ceres como serviço (só quando um critério de `memory: ceres-extracao-microsservico-futuro` aparecer) = trocar os adaptadores por clientes HTTP.
 
+## Benchmark da banca — teste cego (até a rodada da banca)
+
+- Sessão de código (e os reviews e subagentes dela) **não lê** `docs/avaliacao/benchmark/perguntas-benchmark.json`, a cópia adaptada nem `src/test/resources/benchmark/`, e **nunca recebe acesso** ao repositório `SupersonicTeam/ceres-benchmark-cego` (as inéditas são teste cego, #387).
+- Mensagem a uma sessão de código cita só o id da inédita (`E03`), nunca o texto. Mudança da Ceres feita por quem conheceu uma inédita a contamina (`contaminada: true`), qualquer que seja a intenção.
+- Exemplo em prompt ou descrição de `@Tool` nunca é pergunta do gabarito (o `SeparacaoTreinoTesteTest` quebra) nem uma inédita.
+
 ## Fluxo para adicionar um endpoint (checklist)
 
 1. **DTO** `record` em `dto/` — `XxxRequest` (entrada) e `XxxResponse` (saída). Validação Bean Validation nas anotações do request.

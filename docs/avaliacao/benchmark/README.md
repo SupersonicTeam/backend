@@ -108,167 +108,145 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
    leu, prova do pensamento, memória, onde rodou, avisos, duração e código de saída.
 7. Gera o relatório comparativo.
 
-### O conjunto de perguntas (#352)
+### O conjunto de perguntas (#352) e o repositório cego (#387)
 
-`perguntas-benchmark.json` é um arquivo **próprio e congelado**: o gabarito (hoje o `2026-11-05.3`:
-a T03 de 33 dispositivos da Sessão 8a, #360, e a P02 da Sessão 8b, #366) inteiro (87), **13
-perguntas novas da equipe** (N01–N13) e as **40 externas** (abaixo): **140 perguntas em 16 temas**
-de 6 a 10. O
-hash fica em `perguntas-benchmark.json.sha256`: mudou uma pergunta, mude a `versao` e o hash (o
-`PerguntasBenchmarkIntegrationTest` e o executor recusam um hash que não confere). **O gabarito
-andou, o conjunto anda junto:** o `baseadoEm` tem de ser a versão atual do gabarito e as herdadas
-iguais a ele, senão o `PerguntasBenchmarkIntegrationTest` falha (não pula) e diz o que fazer —
-copiar as herdadas que mudaram, mudar a `versao`, o `baseadoEm`, a versão do gabarito na
-`descricao` e o hash, regenerar `conferir-dispositivos-externas.sql` e a versão do congelamento
-abaixo. Foi o que faltou na P02 da Sessão 8b (#371): os parâmetros e os dispositivos dela mudaram
-sem mudar o hash. O executor confere o mesmo contra o gabarito **do commit medido** (checkout
-atrasado não passa: recusa a rodada da banca, avisa nas outras). O guarda não cobre valor esperado
-que muda só por código (o valor é calculado na hora pelo `ValoresEsperados`): isso fica com a
-regra de não mexer na Ceres antes da rodada. **Depois da rodada da banca**, o campo
-`rodadaRealizada` (data) congela o conjunto de propósito: o gabarito pode andar e as herdadas
-ficam como foram medidas. Se, depois da rodada, aparecer valor esperado errado, a correção entra como
-**errata** no relatório (pergunta, valor antigo, valor certo e efeito no acerto) e nunca muda o
-que foi medido sem deixar rastro. As células leem
-**esse arquivo**; a Ceres 2.0 lê ele próprio, a Ceres 1 lê a cópia adaptada (abaixo), e os dois
-hashes vão no `celula.json`.
+`perguntas-benchmark.json` é um arquivo **próprio e congelado** com o gabarito (hoje o
+`2026-11-05.3`: a T03 de 33 dispositivos da Sessão 8a, #360, e a P02 da Sessão 8b, #366) inteiro,
+as **87 herdadas**, e o **compromisso** das inéditas. As **inéditas** (13 da equipe, 40 externas
+geradas por IA e, quando chegarem, as de dados do Luiz e do Herick) ficam **só** no repositório
+privado [`SupersonicTeam/ceres-benchmark-cego`](https://github.com/SupersonicTeam/ceres-benchmark-cego)
+(`ineditas.json`, com o texto, os valores e dispositivos esperados, a classe, as afirmações
+proibidas e as observações). Juntas: **140 perguntas em 16 temas**. O hash do arquivo do backend
+fica em `perguntas-benchmark.json.sha256`; o das inéditas, no campo `ineditas` (`arquivo`,
+`versao`, `sha256` e `ids`). Mudou uma herdada: versão e hash aqui. Mudou uma inédita: versão e
+hash no repositório cego e, depois, o compromisso novo aqui.
 
-| Tema | Perguntas | Capacidade comum |
-|---|---|---|
-| Guias e vencimentos | 10 | 4 |
-| Notas fiscais | 8 | 4 |
-| Compras e insumos | 7 | 7 |
-| Vendas e produtos | 7 | 3 |
-| Apuração e créditos de IBS/CBS | 7 | 7 |
-| Retenções (Funrural/Senar, split payment) | 6 | 6 |
-| Legislação geral da reforma | 10 | 10 |
-| Legislação do agro | 10 | 10 |
-| MISTO (dado + lei) | 7 | 7 |
-| Fora de escopo e recusa | 10 | 10 |
-| Segurança (injeção, dado de outro produtor) | 8 | 8 |
-| **Linguagem do dia a dia** (gíria, abreviação, pergunta curta ou incompleta) | 10 | 4 |
-| **Total** | **100** | **80** (81 marcadas `comum`; a T10 sai pela diferença de seed) |
+> **Sessões de código (e os reviews e subagentes delas) não leem `perguntas-benchmark.json`, a
+> cópia adaptada nem o repositório cego até a rodada da banca, e nunca recebem acesso ao
+> `ceres-benchmark-cego`. As inéditas são teste cego.** Mensagem a uma sessão de código cita só o
+> id (`E03`). **Conhecer a pergunta contamina** (E03, 2026-11-06): mudança da Ceres feita por quem
+> conhecia o texto de uma inédita a contamina (`contaminada: true`, fora dos recortes de inéditas),
+> qualquer que seja a intenção. Varredura de 2026-11-06 (commits, diffs e mensagens recebidas pelas
+> sessões de código das Sessões 7, 8a, 8b, 8c e do #359): ver o PR #383.
+
+**Histórico:** até a separação (#387), o texto das inéditas esteve neste repositório, que é
+**privado**, mas lido pelas sessões de código: ele continua no histórico de todo commit entre o
+`5b8b1e1` (#355) e o `b90281c` (a `main` em que a separação foi feita) e nos que entraram antes do
+merge dela. O histórico não foi reescrito. A cegueira protegida é a **do desenvolvimento**: nenhuma
+mudança da Ceres feita por quem leu as inéditas, exceto a E03, marcada.
+
+**Como o executor usa as inéditas:** o checkout do repositório cego vem de `--cego`,
+`CERES_BENCHMARK_CEGO` ou da pasta irmã `../ceres-benchmark-cego`. O executor confere o sha256, a
+versão e os ids contra o compromisso e junta as inéditas às herdadas (`gabarito-canonico.json` da
+rodada tem as 140). **A rodada da banca recusa** sem o repositório cego ou com ele diferente do
+compromisso; ensaio e teste sem ele rodam **só com as herdadas** (o relatório diz "ausentes"), e
+com ele diferente, com aviso. **A pasta de uma rodada com as inéditas tem o texto delas**
+(`gabarito-canonico.json`, `celula.json`, o relatório e o CSV cego): até a rodada da banca, ela
+não entra no backend (guarde-a no repositório cego).
+
+**Testes:** os do backend que dependem do texto das inéditas (as externas literais, os valores
+das N01–N13 sobre o seed, a estrutura de 140 perguntas e o treino × inéditas) **pulam** com
+"conjunto cego ausente" quando o repositório cego não está ao lado; a CI do repositório cego roda
+esses testes com ele (`CERES_BENCHMARK_CEGO`, e `CERES_BENCHMARK_CEGO_EXIGIR=1` faz a ausência
+falhar). A guarda treino × gabarito e a conferência das herdadas continuam aqui, sempre. O exemplo
+fictício usa inéditas de mentira (`tests/fixtures/cego-ficticio/`).
+
+**O gabarito andou, o conjunto anda junto:** o `baseadoEm` tem de ser a versão atual do gabarito e
+as herdadas iguais a ele, senão o `PerguntasBenchmarkIntegrationTest` falha (não pula) e diz o que
+fazer — copiar as herdadas que mudaram, mudar a `versao`, o `baseadoEm`, a versão do gabarito na
+`descricao` e o hash. Foi o que faltou na P02 da Sessão 8b (#371). O executor confere o mesmo
+contra o gabarito **do commit medido** (checkout atrasado não passa: recusa a rodada da banca,
+avisa nas outras). O guarda não cobre valor esperado que muda só por código (o valor é calculado
+na hora pelo `ValoresEsperados`): isso fica com a regra de não mexer na Ceres antes da rodada.
+**Depois da rodada da banca**, o campo `rodadaRealizada` (data) congela o conjunto de propósito: o
+gabarito pode andar e as herdadas ficam como foram medidas. Se, depois da rodada, aparecer valor
+esperado errado, a correção entra como **errata** no relatório (pergunta, valor antigo, valor certo
+e efeito no acerto) e nunca muda o que foi medido sem deixar rastro. A Ceres 2.0 lê o conjunto
+inteiro, a Ceres 1 lê a cópia adaptada (abaixo), e os dois hashes vão no `celula.json`.
 
 Cada pergunta tem `tema` e `capacidade`: `comum` (as duas arquiteturas têm a função) ou
 `so_ceres_2` (depende de função que só existe na Ceres 2.0: `consultarNota`,
 `consultarTratamentoProduto`, `guiasEmAtraso`, `vencimentosDoMes`, `totalVendasPorProduto`,
 `resumoDoProdutor`). O campo é conferido pelo executor contra o código de cada commit e pela CI
-(`ConjuntoRealTest`). **Leia a banca pela capacidade comum por tema**: o tema de linguagem do dia
-a dia tem 10 perguntas no conjunto, mas só 4 na comparação justa.
+(`ConjuntoRealTest`). **Leia a banca pela capacidade comum por tema.**
 
-### As 40 perguntas externas, geradas por IA (#358)
+### As inéditas (#355, #358)
 
-São **40 perguntas geradas pelo ChatGPT a pedido do Murillo** (`origem: inedita_externa_ia`). **Não
-são perguntas reais de produtores.** Medem generalização (ninguém da equipe as escreveu e a Ceres
-não foi ajustada a elas), mas **não medem a linguagem real do produtor**: são longas e formais. O
-relatório escreve essa limitação sempre que elas aparecem; a linguagem do produtor fica com o tema
-"Linguagem do dia a dia" e com as inéditas de dados da equipe (abaixo). Entraram com o **texto
-literal**: nada reescrito, corrigido ou normalizado, porque reescrever destrói o valor de pergunta
-inédita (o `PerguntasBenchmarkIntegrationTest` confere os 40 textos contra a lista dele). Com elas o
-conjunto tem **140 perguntas** e o recorte de inéditas, **53** (13 da equipe + 40 externas): cada
-pergunta vale ~1,9 ponto percentual.
+- **13 da equipe** (N01–N13, `inedita_equipe`), sobre os dados do seed de avaliação.
+- **40 externas** (`inedita_externa_ia`), **geradas pelo ChatGPT a pedido do Murillo**, com o
+  texto literal. **Não são perguntas reais de produtores**: medem generalização (ninguém da equipe
+  as escreveu e a Ceres não foi ajustada a elas), mas **não medem a linguagem real do produtor**
+  (são longas e formais). Todas de lei (`rotaEsperada: LEGISLACAO`), `comum`, 30 adversárias, com
+  `dispositivosEsperados` do texto da lei (normas.leg.br; existência conferida na base da VPS em
+  2026-11-06), `classeTratamento`, `afirmacoesProibidas` (heurística), `encaminharContador` e,
+  algumas, `pendenteContador` e `observacao` (lidas célula a célula no relatório). Os detalhes de
+  cada uma ficam no repositório cego.
+- **De dados do Luiz e do Herick** (`inedita_equipe_dados`): nascem direto no repositório cego
+  (`ineditas-dados/`, com as regras e o cenário do `SeedAvaliacao` v4), com autor e data; o valor
+  esperado é calculado do seed com teste; a que não tiver dado no seed fica só de rota.
 
-| Campo | Nas externas |
-|---|---|
-| `origem` | `inedita_externa_ia`, com `fonte` ("gerada por IA (ChatGPT), a pedido do Murillo; não são perguntas reais de produtores"); as 13 do #355 são `inedita_equipe`; as de dados da equipe (abaixo), `inedita_equipe_dados` |
-| `tema` | as 4 categorias do Murillo (10 cada): alíquotas de produtos, insumos, situações práticas, planejamento/notas/transição |
-| `rotaEsperada` | `LEGISLACAO` em todas, com `justificativaRota` de uma linha: todas pedem a regra da lei, nenhuma pede um dado do produtor |
-| `adversario` | 30 delas: pronome ou situação do produtor com termo de lei ("Sou produtor de soja e milho..."), o caso que as regras da #265 têm de mandar para a lei, não para os dados. É o mesmo campo que o comando de avaliação já mede ("Rota nos casos adversários") |
-| `capacidade` | `comum` em todas (a rota de lei existe nas duas arquiteturas): a comparação justa ganha 40 perguntas |
-| `dispositivosEsperados` | preenchidos a partir do texto da lei no **normas.leg.br** (LC 214/2025 compilada e EC 132/2023; os anexos no texto atualizado da Câmara), com as chaves no formato da base e `fonteConferencia: "normas.leg.br, 2026-11-05"`; nada de memória. Seguem `aConferir: true` até o Murillo rodar `conferir-dispositivos-externas.sql` na VPS (uma consulta, gerada do conjunto e travada por teste): a chave que faltar em `legislacao_trecho` sai dos aceitos. A E18 (peças de trator) fica sem dispositivo: é a regra geral, sem redução. **Existência na base conferida na VPS em 2026-11-06** (`existenciaNaBase` nas 40, conjunto `2026-11-05.8`): 48 chaves, nenhuma ausente; as 46 da LC 214 com trecho exato e as 2 da EC 132 (prefixos) com subdivisões (63 e 8 trechos). `aConferir` segue `true`: falta a revisão humana do conteúdo, não a existência. `dispositivosSugeridos` (do gabarito) ficam para a revisão. As citações do parecer anexado na #284 **não** entram sem conferir (erra o art. 353, os arts. 43 a 45, o art. 15 para a CBS e o § 3º do art. 168) |
-| `classeTratamento` | `ZERO`, `REDUCAO_60`, `PADRAO`, `CONDICIONAL`, `NAO_SE_APLICA` ou `FORA_DO_ESCOPO_SISTEMA`, **provisória** (`revisado: false`); cinco corrigidas pelo texto da lei na conferência do normas.leg.br (`2026-11-05.8`): E07 e E09 → `ZERO` (Anexo XV, item 5, com o art. 148, parágrafo único; Anexo I, item 8, posição 09.01), E13, E16 e E19 → `REDUCAO_60` (Anexo IX, itens 10; 12, 18 e 21, exceção dos animais domésticos fora porque a pergunta fala de rebanho; 28); e, no `2026-11-05.10`, E03 `CONDICIONAL` → `REDUCAO_60` (art. 137, § 1º, II; a Sessão 8c, ver `pendenteContador`) |
-| `afirmacoesProibidas` | expressões que seriam erro (ex.: E17 "sim, pode aproveitar a redução"; E22 "o comprador não tem crédito", existe o presumido do art. 168; E33 "pode aproveitar o crédito"; E03 "terá alíquota zero", no `2026-11-05.11`, com a frase que nega fora: "não terá alíquota zero") |
-| `encaminharContador` | 9 delas (E21, E22, E23, E24, E27, E29, E36, E39, E40): a resposta certa depende da situação do produtor |
-| `pendenteContador` | E01 (#284, pergunta 6: venda a cooperativa) e E33 (#284, pergunta C: diferimento do art. 138, §§ 2º a 8º): fora da métrica de classe até a resposta do contador; rota e citação seguem medidas. A E03 (leite ao laticínio, #284, pergunta 2) saiu no conjunto `2026-11-05.10`: a Sessão 8c (#374, `da90c20`) deu 60% por padrão (art. 137, § 1º, II), e a classe é `REDUCAO_60`; desde o #381 (`cd43c5b`, conjunto `2026-11-05.12`) o UHT (0401.10.10 e 0401.20.10) sai com zero por padrão, e a venda ao laticínio segue 60% (leite cru). **Contaminada** no `2026-11-05.12` (decisão do Murillo, 2026-11-06): a sessão do #374/#381 conhecia o texto da E03, e a frase do UHT foi escrita para esse cenário. Segue no conjunto, fora dos recortes de inéditas (52 inéditas: 13 da equipe e 39 externas). Com a classe exclusiva, a resposta que afirma também a alíquota zero ("a alíquota zero vale só para o leite de consumo direto") não acerta a classe; "a alíquota zero do Anexo I não se aplica a esse caso" acerta, e "zero" solto não conta como afirmação de `ZERO` (travado no `test_externas.py`). O texto fixo da 8c (`TemplateTratamentoProduto`: 60% com a alternativa do zero nos NCMs sem destino definido, zero no UHT) só entra pela rota de dados (`consultarTratamentoProduto`); na rota esperada da E03, LEGISLACAO, o texto é do modelo |
+Com elas o recorte de inéditas tem **52** (a E03 está contaminada): cada pergunta vale ~1,9 ponto
+percentual.
 
 **Critérios das externas** (os 5 do Murillo, rubrica em `../rubrica-clareza.md`): **automáticos**
 no relatório — rota, fundamentação (provisória enquanto `aConferir`), alíquota/classe e
 precisão por heurística de texto (classe dita e afirmações proibidas) e encaminhamento ao contador;
 **humanos** no CSV cego `externas-avaliacao-cego.csv` — contextualização, orientação prática e
-precisão final, de 1 a 5. A heurística mede o que a frase diz, não o raciocínio. A negação é por
-oração e tem um vocabulário só ("não", "nem", "nunca", "jamais", "sem", "nenhum"): a oração acaba
-em pontuação forte ou em vírgula seguida de espaço (a decimal, 26,5%, não corta; o aposto curto
-entre vírgulas, ", neste caso,", é mascarado só para medir o escopo, sem apagar texto), e o
-negador até quatro palavras antes nega a expressão ("não há redução de 60%", "não terá direito à
-alíquota zero"), desde que não haja conectivo no meio ("e", "mas", "porque", "se", "que"…: "o
-trator não é isento e tem alíquota padrão"), que ele não qualifique um particípio ("não
-processados têm alíquota zero") e que não seja inerte (a interjeição "Não, …", "não só", "não
-contribuinte"). A negação logo depois também conta ("a alíquota zero não se aplica"). A classe só conta quando é a única afirmada
-(a resposta que lista todas as classes não acerta nenhuma), e "alíquota padrão" depois de uma
-redução afirmada na mesma oração, sem conectivo entre as duas ("60% da alíquota padrão", "60%
-menor que a alíquota padrão"), não conta como PADRAO; "depende", "varia" e "conforme o produto" (não negados) contam como
-condicional, "conforme o art. 138" não; "não precisa procurar o contador" não é encaminhar (nem
-conta como fora do escopo), mas "não precisa pagar nada agora, mas procure o contador" é. Toda
+precisão final, de 1 a 5, dadas pelo **orientador**. A heurística mede o que a frase diz, não o
+raciocínio. A negação é por oração e tem um vocabulário só ("não", "nem", "nunca", "jamais",
+"sem", "nenhum"): a oração acaba em pontuação forte ou em vírgula seguida de espaço (a decimal,
+26,5%, não corta; o aposto curto entre vírgulas, ", neste caso,", é mascarado só para medir o
+escopo, sem apagar texto), e o negador até quatro palavras antes nega a expressão ("não há redução
+de 60%", "não terá direito à alíquota zero"), desde que não haja conectivo no meio ("e", "mas",
+"porque", "se", "que"…: "o trator não é isento e tem alíquota padrão"), que ele não qualifique um
+particípio ("não processados têm alíquota zero") e que não seja inerte (a interjeição "Não, …",
+"não só", "não contribuinte"). A negação logo depois também conta ("a alíquota zero não se
+aplica"). A classe só conta quando é a única afirmada (a resposta que lista todas as classes não
+acerta nenhuma), e "alíquota padrão" depois de uma redução afirmada na mesma oração, sem conectivo
+entre as duas ("60% da alíquota padrão"), não conta como PADRAO; "depende", "varia" e "conforme o
+produto" (não negados) contam como condicional, "conforme o art. 138" não; "não precisa procurar o
+contador" não é encaminhar, mas "não precisa pagar nada agora, mas procure o contador" é. Toda
 frase que um review usou para mostrar um erro da heurística fica no corpus de regressão
-(`tests/test_externas.py`, `CORPUS_*`): mudou a regra, o corpus inteiro continua valendo. E a resposta que não foi redigida pelo modelo
-(recusa, descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A
-fundamentação é o `citacaoValida` do comando com a regra da `main` nas duas arquiteturas: texto
-descartado (`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`) não ganha crédito de
-citação, porque o `AvaliadorResposta` do `2463c27` não aplica essa regra; a mesma regra vale no
-critério principal "Citação válida" de todo o conjunto. Enquanto `aConferir`, a
-citação das externas fica **só** na seção delas, como provisória: não entra no critério principal
-"Citação válida" nem na viabilidade. O CSV (`;`, BOM UTF-8, protegido contra fórmula, como o
-`CsvCego` do Java) sai em **lotes**: regerar o relatório não reembaralha o que já foi ao avaliador,
-e célula medida depois (`--retomar`) ou refeita (a primeira rodada dela mudou) vai num
-lote novo (`externas-avaliacao-cego-2.csv`, …), com códigos que continuam a numeração na mesma
-chave; os códigos antigos da refeita ficam `substituida`. Limite: o lote novo só tem as células que
-entraram depois, corrigidas noutro momento. Para comparar todas na mesma sessão do avaliador,
-apague os `externas-avaliacao-*` e gere tudo de novo **antes** de mandar (a chave fica fora do Git).
+(`tests/test_externas.py`, `CORPUS_*`). A resposta que não foi redigida pelo modelo (recusa,
+descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A fundamentação é o
+`citacaoValida` do comando com a regra da `main` nas duas arquiteturas: texto descartado
+(`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`) não ganha crédito de citação. Enquanto
+`aConferir`, a citação das externas fica **só** na seção delas, como provisória. O CSV (`;`, BOM
+UTF-8, protegido contra fórmula, como o `CsvCego` do Java) sai em **lotes**: regerar o relatório
+não reembaralha o que já foi ao avaliador, e célula medida depois (`--retomar`) ou refeita vai num
+lote novo (`externas-avaliacao-cego-2.csv`, …); os códigos antigos da refeita ficam `substituida`.
+Para comparar todas na mesma sessão do avaliador, apague os `externas-avaliacao-*` e gere tudo de
+novo **antes** de mandar (a chave fica fora do Git).
 
-**E33 (pergunta 33):** com o diferimento do art. 138, § 2º, o fertilizante comprado por contribuinte
-do regime regular não tem IBS/CBS pago, então não há crédito a aproveitar. Errar nela é o defeito da
-#356, e o relatório mostra a E33 à parte, célula a célula, com a resposta.
+**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.13` (este arquivo e o
+`ineditas.json` do compromisso) está congelado **antes de qualquer rodada**. **Nenhuma mudança de
+código da Ceres pode ser feita olhando para as inéditas** (texto ou respostas) até a rodada da
+banca; se alguém fizer, elas ganham `contaminada: true` (nova versão e hash) e saem dos recortes
+inéditos; o relatório as lista.
 
-**Semelhança:** nenhuma das 40 passa de Jaccard 0,4 contra o treino, o prompt do classificador, as
-descrições `@Tool` ou as outras perguntas do conjunto.
+**Revisão humana bloqueante antes da rodada da banca — equipe e orientador, sem contador**
+(decisão do Murillo, 2026-11-06, #387): *respostas esperadas conferidas no texto da lei
+(normas.leg.br e base da VPS) e revisadas pela equipe e pelo orientador; sem validação de
+contador.* (A mesma frase sai no relatório quando todas estão revisadas; antes, ele diz que a
+revisão está pendente.) A planilha de revisão (CSV e `.xlsx`, uma linha por pergunta, com as
+colunas a preencher) é gerada e lida de volta **no repositório cego** (`planilha.py`); quem
+escreveu a pergunta não a revisa; "não", "dúvida" e correção sugerida viram item para a equipe
+decidir. **O executor recusa a rodada da banca** enquanto alguma externa ou inédita de dados
+estiver com `aConferir` ou sem `revisado.por` (o antigo `revisado: true` não diz quem revisou e
+não conta). As `pendenteContador` eram perguntas ao escritório da #284: sem contador, a equipe as
+decide com o orientador pela mesma planilha. Para rodar antes (conferir o executor, ver o
+formato), use `--ensaio`: o relatório sai marcado como ensaio e a pasta não pode ser retomada como
+rodada da banca.
 
-**Congelamento — regra até a rodada da banca:** o conjunto `2026-11-05.12` está congelado (versão e
-hash) **antes de qualquer rodada**. **Nenhuma mudança de código da Ceres pode ser feita olhando as
-respostas a estas perguntas** (nem às 13 da equipe) até a rodada da banca. Se alguém fizer, as
-perguntas afetadas ganham `contaminada: true` (nova versão e hash) e saem dos recortes inéditos; o
-relatório as lista. **Conhecer a pergunta também contamina** (E03, 2026-11-06): mudança de código da
-Ceres feita por quem conhecia o texto de uma inédita a contamina, qualquer que seja a intenção.
-Por isso, **nenhuma sessão de código recebe o texto das inéditas**: as mensagens entre sessões citam
-só o id (`E03`), nunca o texto, e quem escreve código da Ceres não lê `perguntas-benchmark.json`
-nem `perguntas-externas-murillo.txt`. Varredura de 2026-11-06 (commits, diffs fora do benchmark e
-mensagens recebidas pelas sessões de código das Sessões 7, 8a, 8b, 8c e do #359): ver o PR #383.
-
-**Revisão humana bloqueante antes da rodada da banca:** a lista das 40 com rota, dispositivos e
-classe esperados vai para a equipe e para o contador (#284, pergunta 15): conferir e preencher
-`dispositivosEsperados` na base (`legislacao_trecho`), revisar `classeTratamento` e
-`afirmacoesProibidas`, marcar `revisado: true` e tirar `aConferir`. **O executor recusa a rodada
-da banca** enquanto alguma externa estiver com `aConferir` ou sem `revisado`. Para rodar antes
-(conferir o executor, ver o formato), use `--ensaio`: o relatório sai marcado como ensaio e a pasta
-não pode ser retomada como rodada da banca.
-
-### Inéditas de dados da equipe (#358)
-
-O Luiz e o Herick escrevem perguntas inéditas sobre os **dados do produtor**, com as próprias
-palavras, em `ineditas-dados/perguntas.txt` (`AAAA-MM-DD | Autor | pergunta`). Para eles há uma
-página só, `ineditas-dados/LEIA-ME.md`, com as regras e **só o cenário de negócio** do
-`SeedAvaliacao` v4 (o que o produtor comprou e vendeu, as notas e as guias, com o "hoje" da
-avaliação), sem nome de função nem campo. Regras:
-
-- escrever **sem ler** as descrições `@Tool`, o treino do classificador (`resources/ceres/treino/`),
-  o gabarito, este README nem o conjunto;
-- escrever como o produtor fala no WhatsApp, sem corrigir depois;
-- mirar nos dados que existem no seed; cada pergunta leva **autor e data**.
-
-Depois, a sessão do benchmark põe cada uma no conjunto com `origem: inedita_equipe_dados`, `autor`
-e `escritaEm`, texto literal, e calcula o valor esperado a partir do seed **com teste**, como nas
-N01–N13 (`PerguntasBenchmarkIntegrationTest`). A que não tiver dado no seed fica **só de rota**,
-marcada (`soRota: true`); **o seed não muda por causa delas**. Entram no mesmo congelamento: versão
-nova e hash antes de qualquer rodada. O `test_ineditas_dados.py` confere o formato do arquivo e que
-toda pergunta de dados do conjunto está nele com o mesmo texto, autor e data.
-
-**Limitação de método: o gabarito foi usado no desenvolvimento da Ceres 2.0.** 87 das 100
+**Limitação de método: o gabarito foi usado no desenvolvimento da Ceres 2.0.** 87 das 140
 perguntas são o gabarito, e a Ceres 2.0 foi desenvolvida contra ele: as regras de rota da #265
 têm "zero erros no gabarito" como critério, a T03 foi ajustada às citações da #347 e as etapas 2 a
 8 mediram o próprio progresso nele. A Ceres 1 e os modelos menores nunca foram ajustados a ele.
 Comparar arquiteturas só nessas perguntas favorece a Ceres 2.0 por construção. Por isso cada
-pergunta tem `origem` (`gabarito`, `inedita_equipe` ou `inedita_externa_ia`), e o relatório tem os
-recortes **(c) Inéditas** (as 53: 13 da equipe, N01–N13, e as 40 externas) e **(d) Só as
-externas**: **são eles que medem generalização**. Com 53, cada pergunta vale ~1,9 ponto percentual
-(com só as 40 externas, 2,5); o relatório calcula o número de cada recorte. Leia sempre com a faixa. Pelo mesmo motivo, o relatório mostra o acerto da
+pergunta tem `origem` (`gabarito`, `inedita_equipe`, `inedita_equipe_dados` ou `inedita_externa_ia`),
+e o relatório tem os recortes **(c) Inéditas** (as do repositório cego, menos as contaminadas) e
+**(d) Só as externas**: **são eles que medem generalização**. Com 52, cada pergunta vale ~1,9
+ponto percentual (com só as 39 externas não contaminadas, ~2,6); o relatório calcula o número de cada recorte. Leia sempre com a faixa. Pelo mesmo motivo, o relatório mostra o acerto da
 capacidade comum **com e sem** as 4 perguntas parecidas com exemplos que o modelo vê (D12, D01,
 T05, D15, abaixo). A inédita parecida com uma pergunta do gabarito (paráfrase do que a Ceres 2.0 já
 "viu" no desenvolvimento) é outra lista (`parecidasComGabarito` na rodada), que o relatório mostra à
@@ -295,7 +273,7 @@ que fica com **78 perguntas** (guias e vencimentos: 2). As de nota devolvida/inc
 **Treino × teste:** nenhuma pergunta do conjunto pode estar no treino do classificador
 (`src/main/resources/ceres/treino/`, `docs/avaliacao/treino/`), no prompt dele ou nas descrições
 das funções. O `SeparacaoTreinoTesteTest` passou a conferir o conjunto (cópia literal quebra o
-build). Paráfrase, a guarda não pega: o executor grava `similaridade-treino.md`, um **aviso que
+build; as inéditas, quando o repositório cego está ao lado, e sempre na CI dele). Paráfrase, a guarda não pega: o executor grava `similaridade-treino.md`, um **aviso que
 não bloqueia** com os pares pergunta × exemplo de Jaccard das palavras ≥ 0,5. O "exemplo" é o
 treino do classificador, `docs/avaliacao/treino/` e as perguntas entre aspas do prompt do
 classificador e das descrições `@Tool` (o que o modelo vê; comentário não conta). Duas perguntas
@@ -315,8 +293,8 @@ do conjunto (nova versão e hash). Mudar a descrição `@Tool` muda a Ceres e fi
 
 **Revisão humana — tarefa da equipe, bloqueante para a rodada da banca:**
 
-- [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados (o contador pode
-      revisar junto, #284, pergunta 15);
+- [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados pela planilha do
+      repositório cego (equipe e orientador, #387; sem contador);
 - [ ] decidir os 4 pares do aviso de semelhança (D12, D01, T05, D15; tabela acima);
 - [ ] **tema de linguagem do dia a dia: obrigatória.** Confirmar que nenhuma das 10 é paráfrase de
       exemplo de treino (use o `similaridade-treino.md` e leia o treino do classificador).
@@ -542,5 +520,9 @@ têm as duas arquiteturas nos dois esquemas (o do `2463c27`, sem `semBecoSemSaid
 esperado divergente, a viabilidade, os exemplos de falha e a marca de dados fictícios conferidos
 contra números calculados à mão. O `ConjuntoRealTest` confere o `capacidade` e o hash do conjunto
 real, e o `test_similaridade` o aviso de semelhança. No Java (`./mvnw verify`), o
-`PerguntasBenchmarkIntegrationTest` confere estrutura, hash, perguntas herdadas iguais às do
-gabarito e os valores esperados sobre o seed, e o `SeparacaoTreinoTesteTest` a guarda de treino.
+`PerguntasBenchmarkIntegrationTest` confere hash, compromisso, perguntas herdadas iguais às do
+gabarito e, com o repositório cego ao lado, a estrutura inteira, as externas literais e os valores
+esperados das inéditas sobre o seed (sem ele, pula com "conjunto cego ausente"; a CI do repositório
+cego roda com ele); o `SeparacaoTreinoTesteTest` faz a guarda de treino. O `juntar_ineditas` do
+executor (compromisso, ausência, hash/versão/ids diferentes, id repetido) é testado com
+`tests/fixtures/cego-ficticio/`.

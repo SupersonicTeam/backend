@@ -105,15 +105,23 @@ células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-bench
 perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
 pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo
 `SeparacaoTreinoTesteTest`; o relatório traz o acerto por tema e a rodada local com GPU (latência
-local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca). Desde a #358 o conjunto tem 140 perguntas: + **40 externas geradas
-por IA (ChatGPT, a pedido do Murillo), texto literal** (`origem: inedita_externa_ia`; medem
-generalização, não a linguagem real do produtor; conferidas contra
-`src/test/resources/benchmark/perguntas-externas-murillo.txt`; dispositivos `aConferir` até a
-conferência na base). **Até a rodada da banca, ninguém muda a Ceres olhando as respostas às
-inéditas**; quem mudar marca a pergunta `contaminada`. Coluna Ceres 2.0 oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`),
-a 8b (`d8b0b36`) e a 8c (`da90c20` e `cd43c5b`) (`sessaoParalela.tambemExige`). Inéditas de dados do Luiz e do Herick entram por
-`docs/avaliacao/benchmark/ineditas-dados/` (`inedita_equipe_dados`, autor e data, valor esperado
-calculado do seed com teste).
+local, nunca a de produção; `--embedding-cpu` para VRAM pequena; `--teste` não vale para a banca).
+Desde a #387, **as inéditas (13 da equipe, 40 externas geradas por IA e as de dados do Luiz e do
+Herick) ficam só no repositório privado `SupersonicTeam/ceres-benchmark-cego`**; o
+`perguntas-benchmark.json` guarda as 87 herdadas do gabarito e o **compromisso** (`ineditas`:
+arquivo, versão, sha256 e ids). O executor junta as duas pelo `--cego`/`CERES_BENCHMARK_CEGO`/pasta
+irmã e a rodada da banca recusa sem o cego ou com o hash diferente; os testes que dependem do texto
+pulam com "conjunto cego ausente" e rodam na CI do cego. A revisão das respostas esperadas é da
+**equipe e do orientador, sem contador** (planilha no repositório cego; a banca exige
+`revisado.por`), e a nota de clareza é do orientador. A E03 está `contaminada`. Coluna Ceres 2.0
+oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`), a 8b (`d8b0b36`) e a 8c (`da90c20` e
+`cd43c5b`) (`sessaoParalela.tambemExige`).
+
+> **Teste cego — regra inegociável até a rodada da banca:** sessões de código (e os reviews e
+> subagentes delas) **não leem** `docs/avaliacao/benchmark/perguntas-benchmark.json`, a cópia
+> adaptada nem `src/test/resources/benchmark/`, e **nunca recebem acesso** ao
+> `SupersonicTeam/ceres-benchmark-cego`. Mensagem a uma sessão de código cita só o id da inédita
+> (`E03`), nunca o texto. Mudança da Ceres feita por quem conheceu uma inédita a contamina.
 
 ## Arquitetura — regras inegociáveis
 
