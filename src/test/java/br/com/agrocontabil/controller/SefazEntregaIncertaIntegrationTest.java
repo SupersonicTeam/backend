@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.agrocontabil.exception.SefazConexaoException;
 import br.com.agrocontabil.exception.SefazRespostaIndeterminadaException;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -351,6 +352,45 @@ class SefazEntregaIncertaIntegrationTest {
   }
 
   // -------------------------------------------------------------------------
+  // Compra importada (issue #418)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("Compra importada autorizada nao e cancelada pelo destinatario: 409, nada transmitido")
+  void compraImportadaNaoPodeSerCanceladaPeloProdutor() throws Exception {
+    UUID notaId = persistir(StatusNotaFiscal.AUTORIZADA, OrigemNotaFiscal.IMPORTADA);
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(CORPO_CANCELAMENTO))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].code").value("CANCELAMENTO_COMPRA_IMPORTADA"))
+        .andExpect(jsonPath("$.errors[0].message").value(
+            org.hamcrest.Matchers.containsString("fornecedor que a emitiu")));
+
+    verify(sefazTransport, never()).cancelar(any(), any(), any(), any());
+    NotaFiscal nota = notaFiscalRepository.findById(notaId).orElseThrow();
+    assertThat(nota.getStatus()).isEqualTo(StatusNotaFiscal.AUTORIZADA);
+    assertThat(nota.getProtocoloCancelamento()).isNull();
+    assertThat(contador.canceladas()).isZero();
+  }
+
+  @Test
+  @DisplayName("Nota propria autorizada segue cancelando (controle da #418)")
+  void notaPropriaSegueCancelando() throws Exception {
+    UUID notaId = persistir(StatusNotaFiscal.AUTORIZADA, OrigemNotaFiscal.PROPRIA);
+
+    mockMvc.perform(post("/api/notas/{id}/cancelar", notaId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(CORPO_CANCELAMENTO))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELADA"));
+
+    assertThat(contador.canceladas()).isEqualTo(1);
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
@@ -363,6 +403,10 @@ class SefazEntregaIncertaIntegrationTest {
   }
 
   private UUID persistir(StatusNotaFiscal status) {
+    return persistir(status, OrigemNotaFiscal.PROPRIA);
+  }
+
+  private UUID persistir(StatusNotaFiscal status, OrigemNotaFiscal origem) {
     String chave = CHAVE_PREFIXO + String.format("%06d", SEQUENCIA_CHAVE.incrementAndGet());
     return transactionTemplate.execute(tx -> notaFiscalRepository.save(NotaFiscal.builder()
         .numero(1L)
@@ -376,6 +420,7 @@ class SefazEntregaIncertaIntegrationTest {
         .valorTotalProdutos(new BigDecimal("1000.00"))
         .valorTotalNota(new BigDecimal("1000.00"))
         .status(status)
+        .origem(origem)
         .chaveAcesso(chave)
         .xmlGerado("<NFe><infNFe Id=\"NFe" + chave + "\"/></NFe>")
         .versaoLayoutNfe("4.00")

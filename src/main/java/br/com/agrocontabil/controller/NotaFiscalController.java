@@ -430,7 +430,8 @@ public class NotaFiscalController {
   /**
    * Cancela a NF-e indicada junto à SEFAZ (issue #21 — RN006).
    *
-   * <p>Somente notas {@code AUTORIZADA} podem ser canceladas (409 caso contrário) e apenas
+   * <p>Somente notas próprias {@code AUTORIZADA} podem ser canceladas (409 caso contrário; compra
+   * importada também é 409, issue #418) e apenas
    * dentro do prazo de 30 dias corridos da emissão (422 se fora do prazo). O motivo é uma
    * justificativa de 15 a 255 caracteres (400 se inválido). O controller apenas orquestra:
    * delega a {@link SefazService#cancelar(UUID, String)}.
@@ -441,7 +442,8 @@ public class NotaFiscalController {
       description = "Cancela uma NF-e AUTORIZADA dentro do prazo legal de 30 dias corridos da "
           + "emissao (RN006), transmitindo o evento de cancelamento a SEFAZ e persistindo o "
           + "resultado (status CANCELADA, data, motivo e protocolo). Retorna 409 se a nota nao "
-          + "estiver AUTORIZADA, 422 se o prazo de 30 dias expirou ou se a SEFAZ recusar o evento "
+          + "estiver AUTORIZADA ou for uma compra importada (CANCELAMENTO_COMPRA_IMPORTADA: o "
+          + "cancelamento cabe ao fornecedor que emitiu), 422 se o prazo de 30 dias expirou ou se a SEFAZ recusar o evento "
           + "(CANCELAMENTO_REJEITADO, com o cStat em rejectedValue e o xMotivo em message), "
           + "400 se o motivo for invalido "
           + "e 404 se a nota nao existir ou nao pertencer ao produtor. Na Sprint 3 o transporte "
@@ -456,7 +458,8 @@ public class NotaFiscalController {
           description = "Nota nao encontrada ou nao pertence ao produtor",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "409",
-          description = "Nota nao esta em status AUTORIZADA",
+          description = "Nota nao esta em status AUTORIZADA ou e compra importada "
+              + "(CANCELAMENTO_COMPRA_IMPORTADA)",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "422",
           description = "Cancelamento fora do prazo de 30 dias da emissao (RN006) ou recusado "
