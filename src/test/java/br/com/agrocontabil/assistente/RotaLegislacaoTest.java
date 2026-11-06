@@ -206,13 +206,77 @@ class RotaLegislacaoTest {
     ResultadoRota r = rota.responder("Qual a reducao para insumos?", contexto);
 
     assertThat(r.aceita()).isTrue();
-    assertThat(r.texto()).isEqualTo(
-        "A reducao para insumos agropecuarios e de 60% (LC 214/2025, art. 138, § 1º).");
+    // O texto do modelo com a referencia montada; a LC da referencia ganha a linha do glossario.
+    assertThat(r.texto()).startsWith(
+        "A reducao para insumos agropecuarios e de 60% (LC 214/2025, art. 138, § 1º)."
+            + "\n\n" + LinhaGlossario.TITULO);
     assertThat(r.citacoes()).singleElement().satisfies(c -> {
       assertThat(c.url()).isEqualTo(URL);
       assertThat(c.trecho()).isEqualTo(TRECHO.texto());
     });
     assertThat(contexto.trechosCitados()).containsExactly("id-1");
+  }
+
+  @Test
+  @DisplayName("#269: sigla do glossario sem explicacao ganha a linha 'O que isso quer dizer', do "
+      + "backend, sem numero nem artigo")
+  void siglaSemExplicacaoGanhaLinhaDoGlossario() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("O IBS e a CBS dos insumos agropecuarios tem reducao de 60% [T1].");
+
+    ResultadoRota r = rota.responder("Qual a reducao para insumos?", contexto);
+
+    assertThat(r.aceita()).isTrue();
+    String linha = r.texto().substring(r.texto().indexOf(LinhaGlossario.TITULO));
+    assertThat(linha).contains("- IBS: ", "- CBS: ", "- LC: ").doesNotContainPattern("\\d");
+    assertThat(linha).doesNotContainIgnoringCase("art.");
+    // Nenhuma sigla do glossario fica sem explicacao na resposta entregue.
+    assertThat(GlossarioProdutor.padrao().siglasSemExplicacao(r.texto())).isEmpty();
+    assertThat(r.citacoes()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("#269: sigla ja explicada no texto do modelo nao entra na linha; sem sigla, sem linha")
+  void siglaExplicadaOuAusenteNaoGanhaLinha() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    // Pergunta sem referencia de norma: a unica sigla do texto (IBS) ja vem explicada.
+    chatModel.responderTexto(
+        "O imposto sobre bens e serviços (IBS) dos insumos tem reducao de 60% [T1].");
+    String comSigla = rota.responder("Qual a reducao?", contexto).texto();
+    assertThat(comSigla).doesNotContain("- IBS: ").contains("- LC: ");
+
+    chatModel.responderTexto("A reducao dos insumos e de 60% [T1].");
+    String semSigla = rota.responder("Qual a reducao dos insumos?", contexto).texto();
+    // So a LC da referencia montada pelo backend.
+    assertThat(semSigla).contains("- LC: ").doesNotContain("- IBS: ", "- CBS: ");
+  }
+
+  @Test
+  @DisplayName("#269: a parte de lei do MISTO aceita tambem leva a linha; a que fala dos dados, nao")
+  void regraGeralAceitaLevaALinha() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("O IBS dos insumos agropecuarios tem reducao de 60% [T1].");
+    ResultadoRota aceita = rota.responderRegraGeral(
+        "Fertilizante tem reducao de aliquota?", contexto, List.of(), true);
+    assertThat(aceita.aceita()).isTrue();
+    assertThat(aceita.texto()).contains(LinhaGlossario.TITULO, "- IBS: ");
+
+    chatModel.responderTexto("Os fertilizantes que você comprou têm IBS reduzido em 60% [T1].");
+    ResultadoRota soTrechos = rota.responderRegraGeral(
+        "Fertilizante tem reducao?", contexto, List.of(), true);
+    assertThat(soTrechos.texto()).isEqualTo(RotaLegislacao.SO_TRECHOS);
+  }
+
+  @Test
+  @DisplayName("#269: resposta descartada (numero sem fonte) segue so com trechos, sem a linha")
+  void descartadaNaoGanhaLinha() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("O IBS dos insumos tem reducao de 70% [T1].");
+
+    ResultadoRota r = rota.responder("Qual a reducao para insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE);
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
   }
 
   @Test

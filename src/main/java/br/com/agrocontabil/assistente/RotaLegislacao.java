@@ -32,7 +32,9 @@ import org.springframework.stereotype.Component;
  *   <li>o {@link ValidadorCitacao} exige marca existente e troca cada marca pela referência montada
  *       dos metadados — citação inventada derruba a resposta;</li>
  *   <li>o {@link ValidadorNumeros} confere que percentuais, prazos e números de artigo da resposta
- *       estão nos trechos (ou na pergunta): um "redução de 70%" que a lei não diz não passa.</li>
+ *       estão nos trechos (ou na pergunta): um "redução de 70%" que a lei não diz não passa;</li>
+ *   <li>a resposta aceita ganha a linha "O que isso quer dizer" ({@link LinhaGlossario}) com a
+ *       definição dos termos do glossário que ela usa sem explicar, montada pelo backend (#269).</li>
  * </ol>
  */
 @Component
@@ -237,7 +239,9 @@ public class RotaLegislacao {
       return new ResultadoRota(
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
-    return ResultadoRota.aceita(regra, citacao.citacoes());
+    // Depois de todas as conferencias (#269): a linha do glossario e do backend, sem numero, e nao
+    // pode ser lida como parte do que o modelo afirmou.
+    return ResultadoRota.aceita(LinhaGlossario.acrescentadaA(regra), citacao.citacoes());
   }
 
   /**
