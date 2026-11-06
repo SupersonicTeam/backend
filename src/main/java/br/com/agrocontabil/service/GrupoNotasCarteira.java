@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.model.StatusNotaFiscal;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -31,14 +32,15 @@ public enum GrupoNotasCarteira {
    * Estados que nenhuma caixa mostra, só a "Todas": a nota aprovada que espera o produtor gerar o
    * XML, o XML pronto para enviar, e os estados curtos de transmissão e cancelamento.
    */
-  public static final Set<StatusNotaFiscal> SOMENTE_EM_TODAS = EnumSet.of(
-      StatusNotaFiscal.APROVADA, StatusNotaFiscal.XML_GERADO, StatusNotaFiscal.ENVIANDO,
-      StatusNotaFiscal.PENDENTE_SEFAZ, StatusNotaFiscal.CANCELANDO);
+  public static final Set<StatusNotaFiscal> SOMENTE_EM_TODAS = Collections.unmodifiableSet(
+      EnumSet.of(StatusNotaFiscal.APROVADA, StatusNotaFiscal.XML_GERADO,
+          StatusNotaFiscal.ENVIANDO, StatusNotaFiscal.PENDENTE_SEFAZ,
+          StatusNotaFiscal.CANCELANDO));
 
   private final Set<StatusNotaFiscal> status;
 
   GrupoNotasCarteira(StatusNotaFiscal primeiro, StatusNotaFiscal... demais) {
-    this.status = EnumSet.of(primeiro, demais);
+    this.status = Collections.unmodifiableSet(EnumSet.of(primeiro, demais));
   }
 
   /** Status do grupo. */

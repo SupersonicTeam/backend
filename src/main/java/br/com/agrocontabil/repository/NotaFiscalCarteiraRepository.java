@@ -16,6 +16,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -50,6 +51,11 @@ public class NotaFiscalCarteiraRepository {
    */
   public Page<NotaDaCarteira> listar(Specification<NotaFiscal> especificacao,
       Pageable pageable) {
+    if (pageable.getOffset() > Integer.MAX_VALUE) {
+      // setFirstResult e int: um offset maior viraria negativo (500) ou uma pagina errada. Alem
+      // do fim de qualquer lista real, e uma pagina vazia com o total.
+      return new PageImpl<>(List.of(), pageable, contar(especificacao));
+    }
     CriteriaBuilder cb = em.getCriteriaBuilder();
     CriteriaQuery<NotaDaCarteira> consulta = cb.createQuery(NotaDaCarteira.class);
     Root<NotaFiscal> nota = consulta.from(NotaFiscal.class);

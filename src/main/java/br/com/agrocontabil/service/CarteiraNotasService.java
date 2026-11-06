@@ -6,7 +6,6 @@ import br.com.agrocontabil.dto.NotaCarteiraResponse;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
 import br.com.agrocontabil.dto.ResumoNotasCarteiraResponse;
-import br.com.agrocontabil.exception.FiltroCarteiraInvalidoException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -16,7 +15,6 @@ import br.com.agrocontabil.repository.NotaFiscalEspecificacoes;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
 import br.com.agrocontabil.security.ProdutorEmContextoResolver;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -125,25 +123,10 @@ public class CarteiraNotasService {
    */
   private Specification<NotaFiscal> escopo(FiltroNotasCarteiraRequest filtro) {
     Contador membro = membroProvider.membro();
-    String pedido = filtro.responsavel() == null ? ""
-        : filtro.responsavel().strip().toLowerCase(Locale.ROOT);
-    UUID responsavelId = null;
-    boolean semResponsavel = false;
-    if (CarteiraService.RESPONSAVEL_EU.equals(pedido)) {
-      responsavelId = membro.getId();
-    } else if (CarteiraService.RESPONSAVEL_NENHUM.equals(pedido)) {
-      semResponsavel = true;
-    } else if (!pedido.isEmpty()) {
-      try {
-        responsavelId = UUID.fromString(pedido);
-      } catch (IllegalArgumentException e) {
-        throw new FiltroCarteiraInvalidoException("responsavel", filtro.responsavel(),
-            List.of(CarteiraService.RESPONSAVEL_EU, CarteiraService.RESPONSAVEL_NENHUM,
-                "<id do membro>"));
-      }
-    }
+    CarteiraService.PedidoResponsavel responsavel =
+        CarteiraService.interpretarResponsavel(filtro.responsavel(), membro);
     Specification<NotaFiscal> escopo = NotaFiscalEspecificacoes.daCarteiraAtiva(
-        membro.getEscritorioId(), responsavelId, semResponsavel);
+        membro.getEscritorioId(), responsavel.id(), responsavel.semResponsavel());
     if (filtro.produtorId() != null) {
       // 404 para cliente de outro escritorio, suspenso ou encerrado: o mesmo resolvedor das rotas
       // por cliente.

@@ -242,6 +242,35 @@ class CarteiraTodasNotasIntegrationTest {
   }
 
   @Test
+  @DisplayName("tipoDocumento e faixa de emissao filtram; produtorId com outro responsavel da lista vazia")
+  void outrosFiltros() throws Exception {
+    // As emissoes sao BASE + numero dias: 2026-09-02 (nota 1) a 2026-09-11 (nota 10).
+    mockMvc.perform(como(admin, get(LISTA).param("emitidaDe", "2026-09-04")
+            .param("emitidaAte", "2026-09-06")))
+        .andExpect(header().string("X-Total-Count", "3"))
+        .andExpect(jsonPath("$[*].numero", containsInAnyOrder(3, 4, 5)));
+    mockMvc.perform(como(admin, get(LISTA).param("tipoDocumento", "NFA")))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"));
+    mockMvc.perform(como(admin, get(LISTA).param("tipoDocumento", "NFE")))
+        .andExpect(header().string("X-Total-Count", "10"));
+    // O cliente A e do admin; pedir A com "nenhum" (sem responsavel) nao traz nada.
+    mockMvc.perform(como(admin, get(LISTA).param("produtorId", clienteA.getId().toString())
+            .param("responsavel", "nenhum")))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"));
+  }
+
+  @Test
+  @DisplayName("page gigante (offset acima de int) devolve pagina vazia com o total, nao 500")
+  void paginaAlemDoFim() throws Exception {
+    mockMvc.perform(como(admin, get(LISTA).param("page", "2147483647").param("size", "50")))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "10"))
+        .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
   @DisplayName("ordenacao: padrao mais recente primeiro; sort permitido; fora da lista, 400; paginacao com total")
   void ordenacaoEPaginacao() throws Exception {
     // A emissao cresce com o numero: o padrao (dataEmissao desc) devolve o 10 primeiro.

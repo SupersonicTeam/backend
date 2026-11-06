@@ -383,19 +383,47 @@ public class CarteiraService {
 
   /** {@code eu}, {@code nenhum} ou o id de um membro; sem valor, todos. */
   private static Predicate<VinculoCarteira> porResponsavel(String responsavel, Contador membro) {
-    String pedido = responsavel == null ? "" : responsavel.strip().toLowerCase(Locale.ROOT);
-    if (pedido.isEmpty()) {
-      return v -> true;
+    PedidoResponsavel pedido = interpretarResponsavel(responsavel, membro);
+    if (pedido.id() != null) {
+      return v -> pedido.id().equals(v.getResponsavelId());
     }
-    if (RESPONSAVEL_EU.equals(pedido)) {
-      return v -> membro.getId().equals(v.getResponsavelId());
-    }
-    if (RESPONSAVEL_NENHUM.equals(pedido)) {
+    if (pedido.semResponsavel()) {
       return v -> v.getResponsavelId() == null;
     }
+    return v -> true;
+  }
+
+  /**
+   * O filtro {@code responsavel} decodificado: um membro (o próprio, no {@code eu}, ou o id
+   * informado), os clientes sem responsável, ou nenhum recorte. Regra única da carteira de clientes
+   * e das notas da carteira (#341).
+   *
+   * @param id             membro pedido; nulo se não houver recorte por membro
+   * @param semResponsavel só os clientes sem responsável
+   */
+  record PedidoResponsavel(UUID id, boolean semResponsavel) {}
+
+  /**
+   * Decodifica o filtro {@code responsavel}.
+   *
+   * @param responsavel {@code eu}, {@code nenhum}, o id de um membro ou vazio
+   * @param membro      quem pede (o {@code eu})
+   * @return o pedido decodificado
+   * @throws FiltroCarteiraInvalidoException se não for nenhum dos formatos (400)
+   */
+  static PedidoResponsavel interpretarResponsavel(String responsavel, Contador membro) {
+    String pedido = responsavel == null ? "" : responsavel.strip().toLowerCase(Locale.ROOT);
+    if (pedido.isEmpty()) {
+      return new PedidoResponsavel(null, false);
+    }
+    if (RESPONSAVEL_EU.equals(pedido)) {
+      return new PedidoResponsavel(membro.getId(), false);
+    }
+    if (RESPONSAVEL_NENHUM.equals(pedido)) {
+      return new PedidoResponsavel(null, true);
+    }
     try {
-      UUID id = UUID.fromString(pedido);
-      return v -> id.equals(v.getResponsavelId());
+      return new PedidoResponsavel(UUID.fromString(pedido), false);
     } catch (IllegalArgumentException e) {
       throw new FiltroCarteiraInvalidoException("responsavel", responsavel,
           List.of(RESPONSAVEL_EU, RESPONSAVEL_NENHUM, "<id do membro>"));
