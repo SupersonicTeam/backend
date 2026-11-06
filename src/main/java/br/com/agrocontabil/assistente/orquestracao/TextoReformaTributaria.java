@@ -23,81 +23,82 @@ import java.util.stream.Stream;
  * (premissas da #280; a modelagem é da #281).
  *
  * <p>Formato da tela: texto puro com quebra de linha ({@code whitespace-pre-line}), títulos em
- * maiúsculas e itens com "- ". Sem acento, como os demais textos da Ceres. Texto a revisar pela
+ * maiúsculas e itens com "- ". Com acento (#357): "e" e "é" mudam o sentido da frase; a comparação
+ * dos validadores é que é sem acento nem caixa, nunca o texto entregue. Texto a revisar pela
  * equipe a cada mudança.
  */
 public final class TextoReformaTributaria {
 
   /** Título da resposta. */
-  static final String TITULO = "O que muda para voce com o IBS e a CBS";
+  static final String TITULO = "O que muda para você com o IBS e a CBS";
 
   static final String O_QUE_SAO = String.join("\n",
-      "O QUE SAO",
-      "- A CBS e a contribuicao da Uniao (federal) e o IBS e o imposto de competencia"
-          + " compartilhada entre estados, municipios e Distrito Federal (LC 214/2025, art. 1º,"
+      "O QUE SÃO",
+      "- A CBS é a contribuição da União (federal) e o IBS é o imposto de competência"
+          + " compartilhada entre estados, municípios e Distrito Federal (LC 214/2025, art. 1º,"
           + " incisos I e II).",
-      "- Eles substituem tributos de hoje: a partir de 2027 a CBS e cobrada e o PIS e a Cofins"
-          + " sao extintos (EC 132/2023, art. 126 do ADCT); o ICMS e o ISS sao extintos a partir"
+      "- Eles substituem tributos de hoje: a partir de 2027 a CBS é cobrada e o PIS e a Cofins"
+          + " são extintos (EC 132/2023, art. 126 do ADCT); o ICMS e o ISS são extintos a partir"
           + " de 2033 (art. 129 do ADCT).");
 
   static final String CALENDARIO = String.join("\n",
-      "O CALENDARIO",
-      "- 2026 e um ano de teste: a CBS e cobrada a 0,9% e o IBS a 0,1%, so na parcela estadual"
+      "O CALENDÁRIO",
+      "- 2026 é um ano de teste: a CBS é cobrada a 0,9% e o IBS a 0,1%, só na parcela estadual"
           + " (LC 214/2025, arts. 346 e 343; EC 132/2023, art. 125 do ADCT). Quem cumpre as"
-          + " obrigacoes acessorias previstas na legislacao fica dispensado de recolher esses"
+          + " obrigações acessórias previstas na legislação fica dispensado de recolher esses"
           + " valores em 2026 (LC 214/2025, art. 348, § 1º).",
-      "- 2027 e 2028: a CBS passa a ser cobrada com a aliquota de referencia reduzida em 0,1"
+      "- 2027 e 2028: a CBS passa a ser cobrada com a alíquota de referência reduzida em 0,1"
           + " ponto percentual (LC 214/2025, art. 347), e o IBS segue em teste, a 0,05% estadual"
           + " e 0,05% municipal (art. 344).",
-      "- 2029 a 2032: o ICMS e o ISS diminuem aos poucos, para 9/10 das aliquotas em 2029, 8/10"
+      "- 2029 a 2032: o ICMS e o ISS diminuem aos poucos, para 9/10 das alíquotas em 2029, 8/10"
           + " em 2030, 7/10 em 2031 e 6/10 em 2032 (EC 132/2023, art. 128 do ADCT), e o IBS"
           + " cresce para repor essa receita (art. 130 do ADCT).",
       "- 2033: o ICMS e o ISS deixam de existir (art. 129 do ADCT).");
 
   static final String VENDA_REGRAS = String.join("\n",
       "NA SUA VENDA",
-      "- Produto agropecuario in natura tem reducao de 60% nas aliquotas do IBS e da CBS"
+      "- Produto agropecuário in natura tem redução de 60% nas alíquotas do IBS e da CBS"
           + " (LC 214/2025, art. 137).",
-      "- Alguns alimentos tem aliquota zero: os da Cesta Basica Nacional, no Anexo I (art. 125),"
-          + " e os horticolas, frutas e ovos do Anexo XV (art. 148).");
+      "- Alguns alimentos têm alíquota zero: os da Cesta Básica Nacional, no Anexo I (art. 125),"
+          + " e os hortícolas, frutas e ovos do Anexo XV (art. 148).");
 
   static final String VENDA_PRODUTOS =
-      "- Pela tabela oficial, os produtos que voce mais vendeu este ano, nas suas notas"
+      "- Pela tabela oficial, os produtos que você mais vendeu este ano, nas suas notas"
           + " autorizadas:";
 
   static final String VENDA_ENQUADRAMENTO =
-      "- O enquadramento final de cada venda e com o seu contador.";
+      "- O enquadramento final de cada venda é com o seu contador.";
 
   static final String VENDA_SEM_PRODUTOS =
       "- Para saber o tratamento de um produto seu, pergunte pelo nome dele ou pelo NCM da nota.";
 
   static final String VENDA_NOTA =
-      "- Quem e contribuinte do IBS e da CBS emite documento fiscal eletronico nas suas"
-          + " operacoes, e o IBS e a CBS informados nele valem como confissao do valor devido"
+      "- Quem é contribuinte do IBS e da CBS emite documento fiscal eletrônico nas suas"
+          + " operações, e o IBS e a CBS informados nele valem como confissão do valor devido"
           + " (LC 214/2025, art. 60, § 1º).";
 
   static final String COMPRAS = String.join("\n",
       "NAS SUAS COMPRAS",
-      "- Os insumos agropecuarios e aquicolas do Anexo IX tem reducao de 60% nas aliquotas do"
+      "- Os insumos agropecuários e aquícolas do Anexo IX têm redução de 60% nas alíquotas do"
           + " IBS e da CBS (LC 214/2025, art. 138), se estiverem registrados como insumos no"
-          + " Ministerio da Agricultura e Pecuaria, quando a lei exige (art. 138, § 1º).",
-      "- Na compra desses insumos de fornecedor do regime regular por quem tambem esta no regime"
+          + " Ministério da Agricultura e Pecuária, quando a lei exige (art. 138, § 1º).",
+      "- Na compra desses insumos de fornecedor do regime regular por quem também está no regime"
           + " regular, o recolhimento do IBS e da CBS fica diferido (art. 138, § 2º, inciso I,"
-          + " alinea a). Quando o diferimento se encerra e quem recolhe (art. 138, §§ 5º a 7º), e"
-          + " o efeito disso no seu credito, sao para conferir com o contador.",
+          + " alínea a). Quando o diferimento se encerra e quem recolhe (art. 138, §§ 5º a 7º), e"
+          + " o efeito disso no seu crédito, são para conferir com o contador.",
       "- No regime regular, o IBS e a CBS pagos nas demais compras, fora desse diferimento, podem"
-          + " virar credito, exceto o que for de uso ou consumo pessoal (art. 47). O que conta como"
-          + " credito na sua atividade e com o contador.");
+          + " virar crédito, exceto o que for de uso ou consumo pessoal (art. 47). O que conta como"
+          + " crédito na sua atividade é com o contador.");
 
   static final String PAGAMENTO = String.join("\n",
       "NO PAGAMENTO",
-      "- A lei preve o split payment: nos pagamentos eletronicos, a instituicao de pagamento"
-          + " separa e recolhe o IBS e a CBS no momento da liquidacao (LC 214/2025, arts. 31 e"
+      "- A lei prevê o split payment: nos pagamentos eletrônicos, a instituição de pagamento"
+          + " separa e recolhe o IBS e a CBS no momento da liquidação (LC 214/2025, arts. 31 e"
           + " 32).");
 
   static final String PAGAMENTO_PESSOA_FISICA = String.join("\n",
-      "- O Funrural segue a regra propria: na venda a empresa ou cooperativa, o comprador retem a"
-          + " contribuicao do produtor pessoa fisica (Lei 8.212/1991, art. 30, IV).",
+      "- O Funrural segue a regra própria: na venda a empresa ou cooperativa, o comprador retém a"
+          + " contribuição do produtor pessoa física (Lei 8.212/1991, art. 30, IV).",
       "- O ICMS fica com o contador; o AgroConIA trata do IBS e da CBS.");
 
   static final String PAGAMENTO_OUTROS =
@@ -105,27 +106,27 @@ public final class TextoReformaTributaria {
 
   static final String QUEM_PAGA = String.join("\n",
       "QUEM PAGA",
-      "- Pela lei, o produtor rural com receita inferior a R$ 3.600.000,00 no ano-calendario nao"
-          + " e contribuinte do IBS e da CBS (LC 214/2025, art. 164), mas pode optar pelo regime"
-          + " regular a qualquer tempo (art. 165). Quem esta no regime regular e compra de produtor"
-          + " nao contribuinte pode apropriar credito presumido (art. 168).",
+      "- Pela lei, o produtor rural com receita inferior a R$ 3.600.000,00 no ano-calendário não"
+          + " é contribuinte do IBS e da CBS (LC 214/2025, art. 164), mas pode optar pelo regime"
+          + " regular a qualquer tempo (art. 165). Quem está no regime regular e compra de produtor"
+          + " não contribuinte pode apropriar crédito presumido (art. 168).",
       "- O AgroConIA calcula o IBS e a CBS das suas notas pelo regime regular. Confirme com o"
-          + " contador se esse e o seu caso.");
+          + " contador se esse é o seu caso.");
 
   static final String PROXIMO_COM_ESCRITORIO = String.join("\n",
-      "PROXIMO PASSO",
-      "- Confira com o seu escritorio de contabilidade o enquadramento dos seus produtos e a sua"
-          + " situacao no IBS e na CBS.");
+      "PRÓXIMO PASSO",
+      "- Confira com o seu escritório de contabilidade o enquadramento dos seus produtos e a sua"
+          + " situação no IBS e na CBS.");
 
   static final String PROXIMO_SEM_ESCRITORIO = String.join("\n",
-      "PROXIMO PASSO",
-      "- Procure um escritorio de contabilidade para conferir o enquadramento dos seus produtos"
-          + " e a sua situacao no IBS e na CBS. Pelo AgroConIA, o escritorio manda um convite para"
-          + " o seu e-mail e, quando voce aceita, passa a acompanhar as suas notas.");
+      "PRÓXIMO PASSO",
+      "- Procure um escritório de contabilidade para conferir o enquadramento dos seus produtos"
+          + " e a sua situação no IBS e na CBS. Pelo AgroConIA, o escritório manda um convite para"
+          + " o seu e-mail e, quando você aceita, passa a acompanhar as suas notas.");
 
   static final String PROXIMO_GENERICO = String.join("\n",
-      "PROXIMO PASSO",
-      "- Confira com o seu contador o enquadramento dos seus produtos e a sua situacao no IBS e"
+      "PRÓXIMO PASSO",
+      "- Confira com o seu contador o enquadramento dos seus produtos e a sua situação no IBS e"
           + " na CBS.");
 
   /** Dispositivos do texto antes da lista dos produtos ({@code norma|dispositivo}, como na base). */

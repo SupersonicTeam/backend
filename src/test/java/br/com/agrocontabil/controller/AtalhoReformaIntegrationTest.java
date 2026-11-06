@@ -153,13 +153,13 @@ class AtalhoReformaIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.rota").value("LEGISLACAO"))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith(
-            "O que muda para voce com o IBS e a CBS")))
+            "O que muda para você com o IBS e a CBS")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
             "Soja, mesmo triturada (NCM 1201.90.00): reducao de 60% do IBS e da CBS")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
             "Lei 8.212/1991, art. 30, IV")))
         .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.containsString(
-            "Procure um escritorio de contabilidade")))
+            "Procure um escritório de contabilidade")))
         .andExpect(jsonPath("$.citacoes[0].norma").value("LC 214/2025"))
         .andExpect(jsonPath("$.citacoes[0].dispositivo").value("art. 1º, inciso I"))
         .andExpect(jsonPath("$.citacoes[0].trecho").value(

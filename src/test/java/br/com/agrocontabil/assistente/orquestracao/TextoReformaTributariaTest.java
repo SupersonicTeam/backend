@@ -109,8 +109,8 @@ class TextoReformaTributariaTest {
     assertThat(lei.get("LC 214/2025|art. 138, § 5º")).contains("o diferimento será encerrado");
     assertThat(lei.get("LC 214/2025|art. 138, § 6º"))
         .contains("encerrar a fase do diferimento");
-    assertThat(texto).contains("fica diferido (art. 138, § 2º, inciso I, alinea a)")
-        .contains("(art. 138, §§ 5º a 7º), e o efeito disso no seu credito, sao para conferir"
+    assertThat(texto).contains("fica diferido (art. 138, § 2º, inciso I, alínea a)")
+        .contains("(art. 138, §§ 5º a 7º), e o efeito disso no seu crédito, são para conferir"
             + " com o contador")
         .contains("nas demais compras, fora desse diferimento");
     // Os §§ 5º a 7º encerram o diferimento: o texto nao afirma o efeito liquido no credito.
@@ -231,8 +231,10 @@ class TextoReformaTributariaTest {
         // Split payment e o que a lei preve; o sistema nao calcula.
         .contains("a lei preve o split payment")
         .contains("confirme com o contador se esse e o seu caso");
+    // #357: o "é" e o "e" não se confundem ("A CBS é a contribuição...").
     assertThat(TextoReformaTributaria.montar(new TextoReformaTributaria.Perfil(tipo, true,
-        List.of())).texto()).doesNotContainPattern("[áàâãéêíóôõúç]");
+        List.of())).texto()).contains("A CBS é a contribuição da União")
+        .contains("O que muda para você");
   }
 
   @Test
@@ -240,10 +242,10 @@ class TextoReformaTributariaTest {
   void formatoDaTela() {
     String texto = TextoReformaTributaria.montar(TextoReformaTributaria.Perfil.DESCONHECIDO)
         .texto();
-    assertThat(texto).startsWith(TextoReformaTributaria.TITULO + "\n\nO QUE SAO\n- ")
-        .contains("\n\nO CALENDARIO\n- ").contains("\n\nNA SUA VENDA\n- ")
+    assertThat(texto).startsWith(TextoReformaTributaria.TITULO + "\n\nO QUE SÃO\n- ")
+        .contains("\n\nO CALENDÁRIO\n- ").contains("\n\nNA SUA VENDA\n- ")
         .contains("\n\nNAS SUAS COMPRAS\n- ").contains("\n\nNO PAGAMENTO\n- ")
-        .contains("\n\nQUEM PAGA\n- ").contains("\n\nPROXIMO PASSO\n- ")
+        .contains("\n\nQUEM PAGA\n- ").contains("\n\nPRÓXIMO PASSO\n- ")
         .doesNotContain("<").doesNotContain("**");
   }
 
