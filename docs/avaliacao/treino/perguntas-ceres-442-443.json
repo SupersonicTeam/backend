@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-07.2",
+  "versao": "2026-11-07.3",
   "observacao": "Conjunto de medição de uso único das issues #442 (período relativo nas perguntas de dados) e #443 (tratamento de produto com a ressalva do enquadramento). Escrito e congelado antes de qualquer rodada e antes de ler o código da Ceres, por uma sessão que nunca leu o gabarito nem o benchmark. Não serve para ajustar a Ceres: nenhuma pergunta daqui entra em exemplo de classificação, prompt, descrição de função, template ou teste. Mudou uma pergunta, mude a versão e o .sha256 ao lado. Pontuação em docs/avaliacao/ceres-442-443/pontuar.py; regra em docs/avaliacao/ceres-442-443/regra-de-decisao.md. Conta da medição: produtor principal do seed da demonstração (Carlos Eduardo Rossi, Sorriso/MT: vende soja, milho e algodão; compra adubo, semente, defensivos e diesel; guias mensais de Funrural). Períodos relativos são calculados pelo script a partir da data da rodada, no fuso de Brasília.",
   "perguntas": [
     {
@@ -221,17 +221,17 @@
     },
     {
       "id": "p443-32",
-      "pergunta": "Quanto rendeu a soja que eu vendi de 1º de abril a 31 de maio de 2026?",
+      "pergunta": "Quanto rendeu o milho que eu vendi de 1º de junho a 31 de julho de 2026?",
       "grupo": "controle-dados",
-      "esperado": {"funcoes": ["totalVendasPorProduto"], "inicio": "2026-04-01", "fim": "2026-05-31", "produto": ["soja", "1201"]},
-      "raciocinio": "Vendas de um produto com as duas datas explícitas, em dois meses."
+      "esperado": {"funcoes": ["totalVendasPorProduto"], "inicio": "2026-06-01", "fim": "2026-07-31", "produto": ["milho", "1005"]},
+      "raciocinio": "Vendas de um produto com as duas datas explícitas, em dois meses (o seed vende milho nesses meses)."
     },
     {
       "id": "p443-33",
-      "pergunta": "Quem é que define a alíquota do IBS: a União, o estado ou o município?",
+      "pergunta": "Na reforma, venda e aluguel de imóvel pagam IBS e CBS?",
       "grupo": "controle-lei",
-      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [14, 15, 16]},
-      "raciocinio": "Lei geral: alíquotas fixadas por lei específica de cada ente, LC 214/2025, arts. 14 a 16."
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261]},
+      "raciocinio": "Lei geral: regime específico das operações com bens imóveis, LC 214/2025, arts. 251 a 261 (incidência no art. 252, redução de 50% no art. 261)."
     },
     {
       "id": "p443-34",
