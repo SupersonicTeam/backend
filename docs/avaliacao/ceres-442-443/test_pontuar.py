@@ -284,9 +284,25 @@ class ComparacaoTest(unittest.TestCase):
     def resumo(self, periodo_certas, controles, data="2026-11-07", sha="abc"):
         por_pergunta = {f"c-{i}": {"grupo": "controle-lei", "resultado": r}
                         for i, r in enumerate(controles)}
+        por_pergunta.update({f"p-{i:02d}": {
+            "grupo": "periodo", "resultado": "certa" if i < periodo_certas else "errada"}
+            for i in range(12)})
         return {"sha256_conjunto": sha, "datas_referencia": [data],
                 "por_grupo": {"periodo": {"certas": periodo_certas, "total": 12}},
                 "por_pergunta": por_pergunta}
+
+    def test_sem_ids_tira_as_perguntas_das_duas_rodadas(self):
+        base = self.resumo(3, ["certa", "certa"])
+        correcao = self.resumo(4, ["certa", "errada"])
+        # Com todas: o controle c-1 piorou. Sem ele (visto no ensaio), a regra so ve o resto.
+        self.assertEqual(pontuar.comparar(base, correcao, "442")["decisao"], "NAO_ENTRA")
+        sem = pontuar.comparar(base, correcao, "442", frozenset({"c-1"}))
+        self.assertEqual(sem["decisao"], "ENTRA")
+        self.assertEqual(sem["sem_ids"], ["c-1"])
+        # Tirar a unica pergunta que subiu (p-03) deixa o grupo igual: nao entra.
+        sem_subida = pontuar.comparar(base, correcao, "442", frozenset({"c-1", "p-03"}))
+        self.assertEqual(sem_subida["decisao"], "NAO_ENTRA")
+        self.assertEqual((sem_subida["certas_base"], sem_subida["certas_correcao"]), (3, 3))
 
     def test_entra_quando_sobe_e_nenhum_controle_piora(self):
         decisao = pontuar.comparar(self.resumo(3, ["certa", "errada"]),

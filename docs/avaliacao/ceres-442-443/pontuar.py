@@ -450,8 +450,12 @@ def pontuar(conjunto: dict, registros: list[dict], data_padrao: dt.date | None) 
 # ---------------------------------------------------------------------------------------------
 
 
-def comparar(base: dict, candidato: dict, issue: str) -> dict:
-    """Aplica a regra: o grupo da correção sobe e nenhum controle passa de certa a errada."""
+def comparar(base: dict, candidato: dict, issue: str, sem_ids: frozenset = frozenset()) -> dict:
+    """Aplica a regra: o grupo da correção sobe e nenhum controle passa de certa a errada.
+
+    `sem_ids`: perguntas tiradas das duas rodadas antes da conta (as vistas no ensaio, ver a
+    declaração em regra-de-decisao.md); a regra vale com e sem elas.
+    """
     if issue not in GRUPOS_CORRECAO:
         raise SystemExit(f"Issue sem grupo no conjunto: {issue}")
     problemas = []
@@ -462,14 +466,21 @@ def comparar(base: dict, candidato: dict, issue: str) -> dict:
         problemas.append("as rodadas não são do mesmo dia (uma data de referência só, a mesma)")
 
     grupo = GRUPOS_CORRECAO[issue]
-    certas_base = base["por_grupo"].get(grupo, {}).get("certas", 0)
-    certas_cand = candidato["por_grupo"].get(grupo, {}).get("certas", 0)
+    da_base = {i: p for i, p in base["por_pergunta"].items() if i not in sem_ids}
+    da_correcao = {i: p for i, p in candidato["por_pergunta"].items() if i not in sem_ids}
+
+    def certas(perguntas: dict) -> int:
+        return sum(1 for p in perguntas.values()
+                   if p["grupo"] == grupo and p["resultado"] == "certa")
+
+    certas_base = certas(da_base)
+    certas_cand = certas(da_correcao)
     pioras = sorted(
-        ident for ident, item in base["por_pergunta"].items()
+        ident for ident, item in da_base.items()
         if item["grupo"] in GRUPOS_CONTROLE and item["resultado"] == "certa"
-        and candidato["por_pergunta"].get(ident, {}).get("resultado") != "certa")
+        and da_correcao.get(ident, {}).get("resultado") != "certa")
     sem_medicao = sorted(
-        ident for ident, item in candidato["por_pergunta"].items()
+        ident for ident, item in da_correcao.items()
         if item["resultado"] == "sem_medicao")
     if sem_medicao:
         problemas.append("perguntas sem execução válida na correção: " + ", ".join(sem_medicao))
@@ -478,6 +489,7 @@ def comparar(base: dict, candidato: dict, issue: str) -> dict:
     return {
         "issue": issue,
         "grupo": grupo,
+        "sem_ids": sorted(sem_ids),
         "certas_base": certas_base,
         "certas_correcao": certas_cand,
         "controles_que_pioraram": pioras,
@@ -516,6 +528,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--base", type=Path, required=True)
     c.add_argument("--correcao", type=Path, required=True)
     c.add_argument("--issue", choices=sorted(GRUPOS_CORRECAO), required=True)
+    c.add_argument("--sem-ids", default="",
+                   help="ids tirados das duas rodadas, separados por vírgula")
 
     args = analisador.parse_args(argv)
     if args.comando == "pontuar":
@@ -528,7 +542,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     base = json.loads(args.base.read_text(encoding="utf-8"))
     correcao = json.loads(args.correcao.read_text(encoding="utf-8"))
-    decisao = comparar(base, correcao, args.issue)
+    sem_ids = frozenset(i for i in args.sem_ids.split(",") if i)
+    decisao = comparar(base, correcao, args.issue, sem_ids)
     print(json.dumps(decisao, ensure_ascii=False, indent=2))
     return 0 if decisao["decisao"] == "ENTRA" else 1
 

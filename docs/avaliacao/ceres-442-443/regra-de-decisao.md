@@ -60,3 +60,43 @@ problemas de comparação (conjunto ou dia diferentes, pergunta sem execução v
 O conjunto mede estas duas correções e não serve para ajustar a Ceres: nenhuma pergunta dele entra
 em exemplo de classificação, prompt, descrição de função, template ou teste. Os testes das
 correções usam perguntas inventadas, diferentes destas.
+
+## Declaração do ensaio e das mudanças depois do congelamento (2026-11-07)
+
+Escrita antes da linha de base, a pedido da sessão orquestradora. Horários em Brasília.
+
+**1. O que o ensaio rodou.** Duas tentativas, as duas com o JAR da `main` (`4a0b3a8`), nenhuma
+com as correções:
+
+- 12:47: o seed da demonstração falhou na subida (caminho relativo do certificado de teste); a
+  rodada não começou e **nenhuma resposta** foi produzida.
+- 12:50 a 12:57: **p443-01** (grupo `periodo`) e **p443-33** (grupo `controle-lei`), uma
+  repetição cada, só para validar o caminho (subida, seed, cópia da base de lei, login, executor e
+  pontuação). O que li das respostas: na p443-01, rota `DADOS`, nenhuma função chamada e o texto
+  "Não consegui identificar qual dado consultar..." (223 s); na p443-33, rota `LEGISLACAO` com
+  citações da LC 214/2025, art. 252, e o início do texto sobre o IBS e a CBS na venda e no aluguel
+  de imóvel (62 s). Pontuadas pelo script: p443-01 errada, p443-33 certa.
+
+**2. A mudança do "confira" (`8f461ab`, 12:50:38) não veio do ensaio.** Ela é anterior à única
+tentativa que produziu respostas (12:50:48 a 12:57:26), e nenhuma das duas respostas tem
+ressalva de contador. Veio da leitura do código, depois do congelamento: a constante da ressalva no
+`TemplateTratamentoProduto` diz "Confira com seu contador...", e o padrão "confer" do script não
+pegava o imperativo "confira" de conferir. A mudança vale igual para a base e para as correções.
+
+**3. As correções foram escritas depois do ensaio.** O código da #442 (`c77e9ec`, 13:00 a 13:08;
+ajustes do review em `8b4684f`) e o da #443 (`46275b4`, 13:10 a 13:21; ajustes do review em
+`16cb907`) são posteriores às respostas das 12:57. A resposta da p443-01 confirmou o defeito que
+a #442 já descreve (pergunta de apuração com "mês passado" sem nenhuma função); o desenho da
+correção (período resolvido pelo backend, mostrado ao modelo e gravado nas chamadas) veio da issue
+e da leitura da `RotaDados` e do `PromptsCeres`. A p443-33 é controle de lei e não tem relação
+com as correções. Nenhuma outra pergunta do conjunto foi feita ao modelo antes da linha de base.
+
+**Consequência na regra.** Como o ensaio usou duas perguntas do conjunto, a regra é calculada
+duas vezes, com todas as perguntas e sem **p443-01** e **p443-33**, e cada correção só entra se
+passar nas duas:
+
+```bash
+python3 pontuar.py comparar --base base.json --correcao correcao.json --issue 442
+python3 pontuar.py comparar --base base.json --correcao correcao.json --issue 442 \
+    --sem-ids p443-01,p443-33
+```
