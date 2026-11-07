@@ -1,0 +1,236 @@
+[ {
+  "id" : "D23",
+  "pergunta" : "O IBS e a CBS incidem sobre uma doação?",
+  "esperado" : [ "LC 214/2025 art. 4º" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso VIII",
+    "similaridade" : 0.686
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 4º, § 5º, inciso I",
+    "similaridade" : 0.672
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, § 2º, inciso II",
+    "similaridade" : 0.664
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, § 2º, inciso I",
+    "similaridade" : 0.663
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 4º",
+    "similaridade" : 0.659
+  } ],
+  "rodadas" : [ {
+    "cru" : "Não, o IBS e a CBS não incidem sobre doações sem contraprestação em benefício do doador [T1].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, o IBS e a CBS não incidem sobre doações sem contraprestação em benefício do doador (LC 214/2025, art. 6º, inciso VIII).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 6º, inciso VIII" ]
+  }, {
+    "cru" : "Não, o IBS e a CBS não incidem sobre doações sem contraprestação em benefício do doador [T1].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, o IBS e a CBS não incidem sobre doações sem contraprestação em benefício do doador (LC 214/2025, art. 6º, inciso VIII).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 6º, inciso VIII" ]
+  }, {
+    "cru" : "Não, o IBS e a CBS não incidem sobre doações sem contraprestação em benefício do doador [T1].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, o IBS e a CBS não incidem sobre doações sem contraprestação em benefício do doador (LC 214/2025, art. 6º, inciso VIII).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 6º, inciso VIII" ]
+  } ]
+}, {
+  "id" : "D24",
+  "pergunta" : "Quem fixa a alíquota de referência do IBS e da CBS?",
+  "esperado" : [ "LC 214/2025 art. 18" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 18, inciso III",
+    "similaridade" : 0.723
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 359, parágrafo único, inciso II",
+    "similaridade" : 0.712
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 14, inciso I",
+    "similaridade" : 0.7
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 14, § 2º, inciso II",
+    "similaridade" : 0.691
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 349, § 14",
+    "similaridade" : 0.69
+  } ],
+  "rodadas" : [ {
+    "cru" : "A alíquota de referência do IBS e da CBS é fixada por resolução do Senado Federal [T1].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A alíquota de referência do IBS e da CBS é fixada por resolução do Senado Federal (LC 214/2025, art. 18, inciso III).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 18, inciso III" ]
+  }, {
+    "cru" : "A alíquota de referência do IBS e da CBS é fixada por resolução do Senado Federal [T1].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A alíquota de referência do IBS e da CBS é fixada por resolução do Senado Federal (LC 214/2025, art. 18, inciso III).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 18, inciso III" ]
+  }, {
+    "cru" : "A alíquota de referência do IBS e da CBS é fixada por resolução do Senado Federal [T1].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A alíquota de referência do IBS e da CBS é fixada por resolução do Senado Federal (LC 214/2025, art. 18, inciso III).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 18, inciso III" ]
+  } ]
+}, {
+  "id" : "D25",
+  "pergunta" : "A importação de serviços paga IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 64" ],
+  "aceito" : [ "LC 214/2025 art. 63" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 63, parágrafo único",
+    "similaridade" : 0.724
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 231, § 1º, inciso I",
+    "similaridade" : 0.711
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 231, § 1º, inciso II",
+    "similaridade" : 0.707
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 63",
+    "similaridade" : 0.701
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 231, § 1º",
+    "similaridade" : 0.695
+  } ],
+  "rodadas" : [ {
+    "cru" : "Sim, a importação de serviços paga IBS e CBS, desde que sejam considerados importados nos termos da Seção II do Capítulo IV do Título I deste Livro [T2].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, a importação de serviços paga IBS e CBS, desde que sejam considerados importados nos termos da Seção II do Capítulo IV do Título I deste Livro (LC 214/2025, art. 231, § 1º, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 231, § 1º, inciso I" ]
+  }, {
+    "cru" : "Sim, a importação de serviços paga IBS e CBS, desde que sejam considerados importados nos termos da Seção II do Capítulo IV do Título I deste Livro [T2]. \n\nNa hipótese em que o importador seja contribuinte do IBS e da CBS e tenha direito de apropriação de créditos, será aplicada alíquota zero na importação [T3]. \n\n[ T1, T2, T3 ]",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, a importação de serviços paga IBS e CBS, desde que sejam considerados importados nos termos da Seção II do Capítulo IV do Título I deste Livro (LC 214/2025, art. 231, § 1º, inciso I). \n\nNa hipótese em que o importador seja contribuinte do IBS e da CBS e tenha direito de apropriação de créditos, será aplicada alíquota zero na importação (LC 214/2025, art. 231, § 1º, inciso II). \n\n(LC 214/2025, art. 63, parágrafo único; LC 214/2025, art. 231, § 1º, inciso I; LC 214/2025, art. 231, § 1º, inciso II)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 231, § 1º, inciso I", "LC 214/2025 art. 231, § 1º, inciso II", "LC 214/2025 art. 63, parágrafo único" ]
+  }, {
+    "cru" : "Sim, a importação de serviços paga IBS e CBS, conforme o artigo 63, que estabelece a incidência do IBS e da CBS sobre a importação de bens ou serviços do exterior [T1, T4].",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, a importação de serviços paga IBS e CBS, conforme o artigo 63, que estabelece a incidência do IBS e da CBS sobre a importação de bens ou serviços do exterior (LC 214/2025, art. 63, parágrafo único; LC 214/2025, art. 63).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 63, parágrafo único", "LC 214/2025 art. 63" ]
+  } ]
+}, {
+  "id" : "D26",
+  "pergunta" : "Posso vender os meus créditos de IBS e CBS para outra empresa?",
+  "esperado" : [ "LC 214/2025 art. 55" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 55, parágrafo único",
+    "similaridade" : 0.69
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 55",
+    "similaridade" : 0.666
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 272, parágrafo único",
+    "similaridade" : 0.646
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 171, § 2º",
+    "similaridade" : 0.623
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 5º, inciso III",
+    "similaridade" : 0.614
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 55, parágrafo único", "LC 214/2025 art. 55", "LC 214/2025 art. 272, parágrafo único" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 55, parágrafo único", "LC 214/2025 art. 55", "LC 214/2025 art. 272, parágrafo único" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 55, parágrafo único", "LC 214/2025 art. 55", "LC 214/2025 art. 272, parágrafo único" ]
+  } ]
+}, {
+  "id" : "D27",
+  "pergunta" : "O valor do transporte que cobro do cliente entra na base de cálculo?",
+  "esperado" : [ "LC 214/2025 art. 12" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 12, § 8º",
+    "similaridade" : 0.708
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 415, inciso IV",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 12, § 1º, inciso IV",
+    "similaridade" : 0.663
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 415, inciso VI",
+    "similaridade" : 0.648
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 415, inciso II",
+    "similaridade" : 0.637
+  } ],
+  "rodadas" : [ {
+    "cru" : "Sim, o valor do transporte cobrado do cliente entra na base de cálculo do IBS e da CBS. [T3]",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, o valor do transporte cobrado do cliente entra na base de cálculo do IBS e da CBS. (LC 214/2025, art. 12, § 1º, inciso IV)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 12, § 1º, inciso IV" ]
+  }, {
+    "cru" : "Sim, o valor do transporte cobrado do cliente entra na base de cálculo do IBS e da CBS. [T3]",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, o valor do transporte cobrado do cliente entra na base de cálculo do IBS e da CBS. (LC 214/2025, art. 12, § 1º, inciso IV)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 12, § 1º, inciso IV" ]
+  }, {
+    "cru" : "Sim, o valor do transporte cobrado do cliente entra na base de cálculo do IBS e da CBS. [T3]",
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, o valor do transporte cobrado do cliente entra na base de cálculo do IBS e da CBS. (LC 214/2025, art. 12, § 1º, inciso IV)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 12, § 1º, inciso IV" ]
+  } ]
+} ]
