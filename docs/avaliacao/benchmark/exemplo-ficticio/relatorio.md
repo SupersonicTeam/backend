@@ -43,7 +43,7 @@ Fora da capacidade comum por valor esperado diferente entre os seeds dos commits
 | Ceres 2.0 · `qwen3:1.7b` | FICTÍCIO: desligado (think=false; nenhum raciocínio na prova) | 1,5 GB | 2,9 GB | qwen3:1.7b: GPU; bge-m3: CPU | 1116 s | 0 |
 | Ceres 2.0 · `qwen3:4b-instruct` | FICTÍCIO: desligado (think=false; nenhum raciocínio na prova) | 3,3 GB | 4,7 GB | qwen3:4b-instruct: GPU; bge-m3: CPU | 1953 s | 0 |
 
-A VPS de produção tem 24 GB divididos com Postgres, backend, ClamAV e o BGE-M3: a coluna do pico inclui o BGE-M3 carregado junto.
+A VPS de produção tem 47 GiB (8 OCPU ARM) divididos com Postgres, backend, ClamAV e o BGE-M3: a coluna do pico inclui o BGE-M3 carregado junto.
 
 ## Por tema
 
@@ -558,7 +558,7 @@ Heurísticas do README sobre os vereditos da régua; o texto é a resposta entre
 
 ## Latência na VPS (produção)
 
-A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS Always Free (CPU ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.
+A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS de produção (CPU ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.
 
 | Rota | p50 | p95 | Amostras | Data e SHA |
 |---|---|---|---|---|
