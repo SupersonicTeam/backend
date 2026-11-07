@@ -87,6 +87,22 @@ class TemplateTratamentoProdutoTest {
   }
 
   @Test
+  @DisplayName("#443: com condicao ou alternativa, a ressalva delas, sem repetir a do enquadramento")
+  void umaRessalvaSo() {
+    assertThat(TemplateTratamentoProduto.texto(
+            new TratamentoConsultado("soja", List.of(SOJA), null)))
+        .doesNotContain(TemplateTratamentoProduto.RESSALVA_ENQUADRAMENTO);
+    Produto polpa = new Produto("08119000", "Polpa de açaí congelada", 1, "200034",
+        new BigDecimal("60.00"), false, 7, "135", null, true);
+    assertThat(TemplateTratamentoProduto.texto(
+            new TratamentoConsultado("polpa de açaí", List.of(polpa), "IT 2025.002 v1.70")))
+        .isEqualTo("Polpa de açaí congelada (NCM 0811.90.00): redução de 60% do IBS e da CBS,"
+            + " pelo Anexo VII (LC 214/2025, art. 135, Anexo VII; cClassTrib 200034).\nTratamento"
+            + " pela tabela oficial de classificação tributária (IT 2025.002 v1.70). "
+            + TemplateTratamentoProduto.RESSALVA_ENQUADRAMENTO);
+  }
+
+  @Test
   @DisplayName("anexo de aliquota zero: 100% (aliquota zero), anexo em romano")
   void aliquotaZero() {
     assertThat(TemplateTratamentoProduto.frase(ARROZ)).isEqualTo("Arroz polido (NCM 1006.30.21):"
@@ -105,13 +121,15 @@ class TemplateTratamentoProdutoTest {
   }
 
   @Test
-  @DisplayName("sem condicao, sem ressalva; dispositivos sem repetir; nada achado = frase fixa")
+  @DisplayName("#443: sem condicao, a ressalva do enquadramento; dispositivos sem repetir; nada"
+      + " achado = frase fixa")
   void ressalvaDispositivosEVazio() {
     TratamentoConsultado dois = new TratamentoConsultado("x", List.of(ADUBO, ADUBO,
         INTEGRAL), null);
     assertThat(TemplateTratamentoProduto.texto(dois))
         .doesNotContain(TemplateTratamentoProduto.RESSALVA)
-        .endsWith("Tratamento pela tabela oficial de classificação tributária.");
+        .endsWith("Tratamento pela tabela oficial de classificação tributária. "
+            + TemplateTratamentoProduto.RESSALVA_ENQUADRAMENTO);
     assertThat(TemplateTratamentoProduto.dispositivos(dois))
         .containsExactly("LC 214/2025|art. 138");
     assertThat(TemplateTratamentoProduto.texto(

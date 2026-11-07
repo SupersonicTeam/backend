@@ -360,6 +360,8 @@ public final class TextosDosTemplates {
     t.put("tratamento: nada achado, sem termo", TemplateTratamentoProduto.naoEncontrado(null));
     t.put("tratamento: ressalva", TemplateTratamentoProduto.RESSALVA);
     t.put("tratamento: ressalva da alternativa", TemplateTratamentoProduto.RESSALVA_ALTERNATIVA);
+    t.put("tratamento: ressalva do enquadramento",
+        TemplateTratamentoProduto.RESSALVA_ENQUADRAMENTO);
   }
 
   /** As constantes de {@link FerramentasDadosProdutor} que chegam à resposta ou ao DTO. */

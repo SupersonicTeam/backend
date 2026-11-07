@@ -584,6 +584,66 @@ class OrquestradorServiceTest {
     assertThatThrownBy(this::responder).isInstanceOf(AssistenteIndisponivelException.class);
   }
 
+  @Test
+  @DisplayName("#443: lei sobre o tratamento de um produto ganha a tabela oficial com a ressalva")
+  void leiDeProdutoGanhaATabela() {
+    classificarComo(Intencao.LEGISLACAO, 0.8);
+    when(rotaLegislacao.responder(anyString(), any())).thenReturn(ResultadoRota.aceita(
+        "A pimenta tem reducao de 60% [art. 137].", List.of(CITACAO)));
+    when(rotaDados.consultarTratamento(anyString(), any())).thenAnswer(chamada -> {
+      ContextoAssistente c = chamada.getArgument(1);
+      c.registrarConsultaDeTabela(RotaDados.FUNCAO_TRATAMENTO,
+          java.util.Map.of("produtoOuNcm", "pimenta"), false);
+      c.registrarTextoDoBackend("Pimenta (NCM 0904.11.00): redução de 60%. Confirme o"
+          + " enquadramento com o seu contador.", List.of());
+      return true;
+    });
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "A pimenta-do-reino tem alíquota reduzida de IBS?", contexto, rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.LEGISLACAO);
+    assertThat(r.texto()).isEqualTo("A pimenta tem reducao de 60% [art. 137].\n\nPimenta (NCM"
+        + " 0904.11.00): redução de 60%. Confirme o enquadramento com o seu contador.");
+    assertThat(r.citacoes()).containsExactly(CITACAO);
+  }
+
+  @Test
+  @DisplayName("#443: sem sinal de tratamento, no MISTO ou com a tabela ja consultada: nada a mais")
+  void semConsultaDaTabela() {
+    classificarComo(Intencao.LEGISLACAO, 0.8);
+    when(rotaLegislacao.responder(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Regra.", List.of(CITACAO)));
+    orquestrador.responder("Quem recolhe o IBS na importação?", contexto, rotasAvisadas::add);
+
+    when(rotaDados.responder(anyString(), any())).thenAnswer(chamada -> {
+      ContextoAssistente c = chamada.getArgument(1);
+      c.registrarConsultaDeTabela(RotaDados.FUNCAO_TRATAMENTO,
+          java.util.Map.of("produtoOuNcm", "cravo"), true);
+      return ResultadoRota.aceita("");
+    });
+    classificarComo(Intencao.DADOS, 0.9);
+    orquestrador.responder("O cravo tem redução de CBS?", contexto, rotasAvisadas::add);
+
+    verify(rotaDados, never()).consultarTratamento(anyString(), any());
+  }
+
+  @Test
+  @DisplayName("#443: o modelo fora na consulta da tabela nao derruba a resposta da rota")
+  void tabelaSemModelo() {
+    classificarComo(Intencao.LEGISLACAO, 0.8);
+    when(rotaLegislacao.responder(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Regra do anexo.", List.of(CITACAO)));
+    when(rotaDados.consultarTratamento(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("fora", null));
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Gengibre paga menos imposto na reforma?", contexto, rotasAvisadas::add);
+
+    assertThat(r.texto()).isEqualTo("Regra do anexo.");
+    assertThat(r.citacoes()).containsExactly(CITACAO);
+  }
+
   private void classificarComo(Intencao intencao, double confianca) {
     when(classificador.classificar(anyString(), any()))
         .thenReturn(new ClassificacaoIntencao(intencao, confianca));

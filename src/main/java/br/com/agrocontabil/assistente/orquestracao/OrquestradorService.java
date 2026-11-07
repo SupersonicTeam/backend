@@ -130,10 +130,39 @@ public class OrquestradorService {
               ? DesfechoInteracao.RESPOSTA_CORTADA : DesfechoInteracao.FORA_DE_ESCOPO,
           List.of(), false);
     };
+    // Tratamento de produto fora da tabela (#443): a pergunta de lei (ou de dados que nao
+    // consultou a tabela) sobre um produto ganha o tratamento oficial com a ressalva.
+    tratamentoDaTabela(rota, resultado, pergunta, contexto);
     // Tratamento do produto pela tabela oficial (#283): texto e citacao do dado, nao do modelo.
     resultado = textosDoBackend.aplicar(resultado, contexto);
     // Retencao (RN009): as duas regras e as citacoes vem do backend, nao da memoria do modelo.
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
+  }
+
+  /**
+   * Pergunta sobre o tratamento de um produto que a rota respondeu sem a tabela oficial (#443): a
+   * rota de lei afirmava o percentual do artigo como definitivo, sem a ressalva do enquadramento.
+   * Com o sinal da pergunta ({@link PerguntaTratamentoProduto}), o modelo diz qual é o produto
+   * ({@link RotaDados#consultarTratamento}) e o texto da tabela, com a ressalva, entra depois da
+   * resposta pelo {@link TextosDoBackend}. Só nas rotas de lei e de dados: o MISTO já passa pela
+   * rota de dados, que tem a função da tabela, e uma quarta chamada ao modelo passaria do teto
+   * reservado da cota (#166). Sem o modelo, a resposta fica como está.
+   */
+  private void tratamentoDaTabela(Intencao rota, ResultadoOrquestracao resultado,
+      String pergunta, ContextoAssistente contexto) {
+    if ((rota != Intencao.LEGISLACAO && rota != Intencao.DADOS) || resultado.modoFallback()
+        || !PerguntaTratamentoProduto.parece(pergunta)
+        || contexto.fontes().stream()
+            .anyMatch(f -> RotaDados.FUNCAO_TRATAMENTO.equals(f.funcao()))
+        || !disponibilidade.disponivel()) {
+      return;
+    }
+    contexto.verificarAtiva();
+    try {
+      rotaDados.consultarTratamento(pergunta, contexto);
+    } catch (AssistenteIndisponivelException e) {
+      semModelo(contexto, "tratamento");
+    }
   }
 
   /**

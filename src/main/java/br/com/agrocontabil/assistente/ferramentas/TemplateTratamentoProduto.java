@@ -24,6 +24,13 @@ public final class TemplateTratamentoProduto {
 
   static final String RESSALVA = "Confira com seu contador se a sua venda atende à condição.";
 
+  /**
+   * Sem condição nem alternativa (#443): o percentual da tabela também não sai como definitivo,
+   * porque o enquadramento do produto vendido no NCM e no anexo é do contador (decisão da #284).
+   */
+  static final String RESSALVA_ENQUADRAMENTO =
+      "O enquadramento do seu produto nessa classificação se confirma com o seu contador.";
+
   /** Com duas situações (o leite, #284), quem escolhe é o contador, não a tabela. */
   static final String RESSALVA_ALTERNATIVA =
       "O enquadramento da sua venda em uma das duas situações é com o seu contador.";
@@ -69,6 +76,9 @@ public final class TemplateTratamentoProduto {
     }
     if (comAlternativa) {
       fim.append(' ').append(RESSALVA_ALTERNATIVA);
+    }
+    if (!comCondicao && !comAlternativa) {
+      fim.append(' ').append(RESSALVA_ENQUADRAMENTO);
     }
     frases.add(fim.toString());
     return String.join("\n", frases);

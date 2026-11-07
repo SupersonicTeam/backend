@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
@@ -76,6 +77,12 @@ public class RotaDados {
   static final String MENSAGEM_NUMERO_SEM_FONTE =
       "Não consegui confirmar os valores da resposta com os seus dados, por isso não vou "
           + "mostrá-los. Tente reformular a pergunta.";
+
+  /** Função da tabela oficial de classificação tributária (#283). */
+  public static final String FUNCAO_TRATAMENTO = "consultarTratamentoProduto";
+
+  /** Produtos consultados no máximo pela consulta depois da rota (#443). */
+  static final int MAXIMO_PRODUTOS_TRATAMENTO = 3;
 
   private static final Logger log = LoggerFactory.getLogger(RotaDados.class);
 
@@ -204,6 +211,70 @@ public class RotaDados {
     }
     contexto.verificarAtiva();
     return redigir(pergunta, DataSanitizer.mascarar(pergunta), List.of(resultado), contexto);
+  }
+
+  /**
+   * Consulta a tabela oficial pelo produto que a pergunta nomeia, quando a rota não a consultou
+   * (issue #443): uma chamada ao modelo com <strong>só</strong> a função da tabela, para ele dizer
+   * qual é o produto; a consulta e o texto (com a ressalva do enquadramento) são do backend, e o
+   * {@code TextosDoBackend} os põe na resposta da rota que for. Nada achado na tabela não muda a
+   * resposta: cada chamada roda num contexto avulso, e só o que a tabela achou passa ao da
+   * pergunta. Pedido de outra função não é executado.
+   *
+   * @param pergunta pergunta do usuário
+   * @param contexto contexto da pergunta
+   * @return {@code true} se algum produto foi achado na tabela
+   * @throws br.com.agrocontabil.exception.AssistenteIndisponivelException se o modelo falhar
+   */
+  public boolean consultarTratamento(String pergunta, ContextoAssistente contexto) {
+    ToolCallback tratamento = ferramentas.stream()
+        .filter(f -> f.getToolDefinition().name().equals(FUNCAO_TRATAMENTO))
+        .findFirst()
+        .orElseThrow();
+    ToolCallingChatOptions opcoes = ToolCallingChatOptions.builder()
+        .toolCallbacks(List.of(tratamento))
+        .internalToolExecutionEnabled(false)
+        .toolContext(contexto.comoToolContext())
+        .maxTokens(tetoSaida)
+        .build();
+    Prompt prompt = new Prompt(List.<Message>of(
+        new SystemMessage(PromptsCeres.SISTEMA_TRATAMENTO),
+        new UserMessage("Pergunta: " + DataSanitizer.mascarar(pergunta))), opcoes);
+    contexto.verificarAtiva();
+    ChatResponse resposta = modelo.chamar(prompt);
+    contexto.registrarUso(prompt, resposta);
+    if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida) || !resposta.hasToolCalls()) {
+      return false;
+    }
+    List<AssistantMessage.ToolCall> chamadas = resposta.getResults().stream()
+        .flatMap(g -> g.getOutput().getToolCalls().stream())
+        .filter(c -> FUNCAO_TRATAMENTO.equals(c.name()))
+        .limit(MAXIMO_PRODUTOS_TRATAMENTO)
+        .toList();
+    contexto.registrarChamadasDeFuncao(chamadas.size());
+    boolean achou = false;
+    for (AssistantMessage.ToolCall chamada : chamadas) {
+      contexto.verificarAtiva();
+      ContextoAssistente avulso = new ContextoAssistente(contexto.produtorId(), contexto.hoje());
+      try {
+        tratamento.call(chamada.arguments(), new ToolContext(avulso.comoToolContext()));
+      } catch (ToolExecutionException e) {
+        if (e.getCause() instanceof ContextoAssistenteAusenteException ausente) {
+          throw ausente;
+        }
+        // Parametro recusado (nome curto demais, NCM incompleto): sem produto, nada muda.
+        continue;
+      }
+      if (!avulso.fontesVazias().isEmpty()) {
+        continue;
+      }
+      avulso.textosDoBackend()
+          .forEach(t -> contexto.registrarTextoDoBackend(t.texto(), t.dispositivos()));
+      avulso.fontes().forEach(f ->
+          contexto.registrarConsultaDeTabela(f.funcao(), f.parametros(), false));
+      achou = true;
+    }
+    return achou;
   }
 
   /**
