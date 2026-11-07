@@ -270,6 +270,97 @@ class RotaLegislacaoTest {
     assertThat(r.texto()).startsWith("A contribuição ao SENAR é de 0,2% da receita bruta");
   }
 
+  private static TrechoRecuperado trecho(String marca, String id, String dispositivo, String texto) {
+    return new TrechoRecuperado(marca, id, "LC 214/2025", dispositivo, URL, texto, 0.9);
+  }
+
+  @Test
+  @DisplayName("#269: pergunta geral respondida só com regime específico (combustível) é barrada, "
+      + "sem trecho geral: 'sem fundamento'")
+  void regimeEspecificoSemSetorSemTrechoGeral() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-173", "art. 173, § 2º", "A base de cálculo é a quantidade de combustível.")));
+    chatModel.responderTexto("O IBS e a CBS são calculados sobre a quantidade de combustível [T1].");
+
+    ResultadoRota r = rota.responder("Sobre qual valor se calcula o IBS e a CBS?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+    assertThat(r.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(r.citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#269: barrada, mas com trecho geral entre os recuperados: ficam só os gerais, "
+      + "nunca o de regime específico")
+  void regimeEspecificoSemSetorComTrechoGeral() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-255", "art. 255, inciso I", "Base de cálculo do bem imóvel: o valor da alienação."),
+        trecho("T2", "id-12", "art. 12", "A base de cálculo é o valor da operação.")));
+    chatModel.responderTexto("A base é o valor da alienação do bem imóvel [T1].");
+
+    ResultadoRota r = rota.responder("Sobre qual valor se calcula o IBS e a CBS?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+    assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::dispositivo).containsExactly("art. 12");
+  }
+
+  @Test
+  @DisplayName("#269: cooperativa (D13) e pergunta que cita o setor passam")
+  void perguntaComSetorPassa() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-271", "art. 271, § 1º, inciso II", "A cooperativa pode optar por alíquota zero.")));
+    chatModel.responderTexto("A cooperativa pode ter alíquota zero [T1].");
+    ResultadoRota cooperativa = rota.responder(
+        "Uma cooperativa de produtores pode ter alíquota zero de IBS e CBS?", contexto);
+    assertThat(cooperativa.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-254", "art. 254, inciso I", "Na alienação de bem imóvel, no ato de alienação.")));
+    chatModel.responderTexto("Na venda do imóvel, no ato da alienação [T1].");
+    ResultadoRota imovel = rota.responder(
+        "Quando surge o fato gerador na venda de um imóvel?", contexto);
+    assertThat(imovel.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+  }
+
+  @Test
+  @DisplayName("#269: Imposto Seletivo (art. 409, fora da faixa) e citação mista passam")
+  void foraDaFaixaEMistaPassam() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-409", "art. 409", "Fica instituído o Imposto Seletivo.")));
+    chatModel.responderTexto("O Imposto Seletivo incide sobre bens prejudiciais à saúde [T1].");
+    assertThat(rota.responder("O que é o Imposto Seletivo?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.RESPONDIDA);
+
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-173", "art. 173", "Combustível: quantidade."),
+        trecho("T2", "id-12", "art. 12", "A base de cálculo é o valor da operação.")));
+    chatModel.responderTexto("A base é o valor da operação [T2]. No combustível, a quantidade [T1].");
+    assertThat(rota.responder("Sobre qual valor se calcula o IBS e a CBS?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.RESPONDIDA);
+  }
+
+  @Test
+  @DisplayName("#269: parte de lei do MISTO também é barrada; sem parte legal separada, nada da "
+      + "lei entra")
+  void mistoBarrado() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(
+        trecho("T1", "id-173", "art. 173", "Combustível: quantidade."),
+        trecho("T2", "id-12", "art. 12", "A base de cálculo é o valor da operação.")));
+    chatModel.responderTexto("É a quantidade de combustível [T1].");
+    ResultadoRota separada = rota.responderRegraGeral(
+        "Sobre qual valor se calcula o IBS e a CBS?", contexto, List.of(), true);
+    assertThat(separada.desfecho()).isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+    assertThat(separada.citacoes()).extracting(CitacaoLegal::dispositivo).containsExactly("art. 12");
+
+    chatModel.responderTexto("É a quantidade de combustível [T1].");
+    ResultadoRota inteira = rota.responderRegraGeral(
+        "Quanto comprei e sobre qual valor se calcula o IBS e a CBS?", contexto, List.of(), false);
+    assertThat(inteira.desfecho()).isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+    assertThat(inteira.texto()).isEqualTo(ValidadorCitacao.SEM_FUNDAMENTO);
+    assertThat(inteira.citacoes()).isEmpty();
+  }
+
   @Test
   @DisplayName("#269: a parte de lei do MISTO aceita tambem leva a linha; a que fala dos dados, nao")
   void regraGeralAceitaLevaALinha() {

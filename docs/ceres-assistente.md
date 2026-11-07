@@ -515,6 +515,26 @@ ao SENAR "de zero vírgula dois por cento"; a resposta certa "0,2%" caía como n
 fontes **e na resposta**: "setenta por cento" na resposta precisa do 70 nas fontes, em dígitos ou por
 extenso. O mesmo validador serve à rota de dados.
 
+**Guarda do regime específico (#269, diagnóstico das citações).** Numa pergunta geral ("sobre qual
+valor se calcula o IBS e a CBS?") o modelo pequeno cita o regime de combustíveis ou de imóveis como
+se fosse a regra geral, e a resposta sai afirmativa e errada. O Título dos regimes específicos da LC
+214/2025 vai do **art. 172** (abre logo depois do art. 171) ao **art. 307** (o art. 308 abre os
+regimes diferenciados da CBS). A `GuardaRegimeEspecifico`, depois dos validadores, **descarta** a
+resposta de lei em que todas as citações são da LC 214 nessa faixa e a pergunta não cita o setor de
+nenhum dos capítulos citados (combustíveis 172–180, serviços financeiros 181–233, planos de saúde
+234–243, prognósticos 244–250, bens imóveis 251–270, cooperativas 271–272, bares/hotelaria/transporte/
+turismo 273–291, SAF 292–296, missões diplomáticas 297–299, disposições comuns 300–307; as palavras do
+setor vêm do nome do capítulo). Um artigo fora da faixa (regra geral, Imposto Seletivo, outra lei)
+basta para a resposta passar. Vale também para a parte de lei do MISTO. **Saída:** o texto do modelo
+e os trechos de regime específico saem (mostrar combustível como "o trecho mais próximo" de uma
+pergunta geral confundiria); ficam os até 3 trechos mais próximos **fora** do regime específico, com
+a frase de `TRECHOS_SEM_CONFIRMACAO`, e, se não sobra nenhum (ou no MISTO sem parte legal separada),
+a frase de "não encontrei fundamento legal": é verdade que a regra geral não veio, e é melhor que uma
+resposta errada. **Auditoria:** desfecho próprio `REGIME_ESPECIFICO_SEM_SETOR` (cabe no
+`VARCHAR(40)` do changeSet 0025; sem changeSet novo); conta como recusa e como texto do modelo
+descartado na avaliação. Nos dados do diagnóstico (43 perguntas × 3 repetições) barraria 8 das 26
+respostas de outro artigo do 4B e 6 das 30 do 30B, e nenhuma certa.
+
 **Resultado vazio nunca vira "não tem" absoluto (#274, item 6).** O pior erro medido na VPS era a
 negativa falsa: "não tem débito pendente" com guias vencidas (#259), "não há notas devolvidas"
 filtrando as rejeitadas (#254). A garantia é do backend, não do prompt: o

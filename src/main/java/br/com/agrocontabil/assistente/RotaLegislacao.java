@@ -33,6 +33,8 @@ import org.springframework.stereotype.Component;
  *       dos metadados — citação inventada derruba a resposta;</li>
  *   <li>o {@link ValidadorNumeros} confere que percentuais, prazos e números de artigo da resposta
  *       estão nos trechos (ou na pergunta): um "redução de 70%" que a lei não diz não passa;</li>
+ *   <li>a {@link GuardaRegimeEspecifico} descarta a resposta que cita só regime específico (LC 214,
+ *       arts. 172 a 307) para pergunta que não cita o setor (#269);</li>
  *   <li>a resposta aceita ganha a linha "O que isso quer dizer" ({@link LinhaGlossario}) com a
  *       definição dos termos do glossário que ela usa sem explicar, montada pelo backend (#269).</li>
  * </ol>
@@ -230,6 +232,12 @@ public class RotaLegislacao {
           TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.NUMERO_SEM_FONTE, citacao.citacoes());
     }
 
+    if (GuardaRegimeEspecifico.barra(pergunta, citacao.citacoes())) {
+      // Todas as citacoes sao de regime especifico (LC 214, arts. 172 a 307) e a pergunta nao cita
+      // o setor: o modelo respondeu a regra geral com a de um regime (#269).
+      log.info("Ceres: resposta de lei so com regime especifico e a pergunta nao cita o setor");
+      return descartePorRegimeEspecifico(trechos, contexto, soRegraGeral, perguntaSeparada);
+    }
     contexto.registrarTrechosCitados(citacao.idsCitados());
     String regra = soRegraGeral && perguntaSeparada
         ? semSimOuNaoInicial(citacao.texto())
@@ -273,6 +281,30 @@ public class RotaLegislacao {
     contexto.registrarTrechosRelacionados();
     return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, desfecho,
         relacionados.stream().map(TrechoRecuperado::comoCitacao).toList());
+  }
+
+  /**
+   * Resposta barrada pela {@link GuardaRegimeEspecifico}: sai o texto do modelo e os trechos de
+   * regime específico (mostrar combustível ou imóvel como "o mais próximo" de uma pergunta geral
+   * confundiria). Ficam, sem afirmar que respondem, os até {@link #TRECHOS_RELACIONADOS} trechos mais
+   * próximos <em>fora</em> do regime específico; se não sobra nenhum, ou se é o MISTO sem parte legal
+   * separada (#260), a frase de "não encontrei fundamento legal": é verdade que a regra geral não
+   * veio, e é melhor que uma resposta afirmativa errada.
+   */
+  private static ResultadoRota descartePorRegimeEspecifico(List<TrechoRecuperado> trechos,
+      ContextoAssistente contexto, boolean soRegraGeral, boolean perguntaSeparada) {
+    List<TrechoRecuperado> gerais = trechos.stream()
+        .filter(t -> !GuardaRegimeEspecifico.emRegimeEspecifico(t.norma(), t.dispositivo()))
+        .limit(TRECHOS_RELACIONADOS)
+        .toList();
+    if (gerais.isEmpty() || (soRegraGeral && !perguntaSeparada)) {
+      return ResultadoRota.descartada(
+          ValidadorCitacao.SEM_FUNDAMENTO, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+    }
+    contexto.registrarTrechosCitados(gerais.stream().map(TrechoRecuperado::id).toList());
+    contexto.registrarTrechosRelacionados();
+    return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR,
+        gerais.stream().map(TrechoRecuperado::comoCitacao).toList());
   }
 
   /**

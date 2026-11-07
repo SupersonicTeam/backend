@@ -33,7 +33,7 @@ public final class AvaliadorResposta {
       DesfechoInteracao.CITACAO_INVALIDA, DesfechoInteracao.NUMERO_SEM_FONTE,
       DesfechoInteracao.SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA,
       DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.SEM_RESPOSTA,
-      DesfechoInteracao.RESPOSTA_CORTADA);
+      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
 
   /**
    * Desfechos em que o texto do modelo foi descartado, mesmo que a resposta mostre trechos. A lei
@@ -42,7 +42,7 @@ public final class AvaliadorResposta {
    */
   static final Set<DesfechoInteracao> RESPOSTA_DESCARTADA = EnumSet.of(
       DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.CITACAO_INVALIDA,
-      DesfechoInteracao.RESPOSTA_CORTADA);
+      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
 
   private static final Pattern TOKEN_DOCUMENTO = Pattern.compile("[\\d][\\d./-]*[\\d]");
   private static final Pattern NAO_DIGITO = Pattern.compile("\\D");
