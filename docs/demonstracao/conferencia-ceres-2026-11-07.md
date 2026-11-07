@@ -84,13 +84,18 @@ Antônio Carlos Pereira, pessoa física sem IE). As colunas de auditoria vêm de
   foi chamada (desfecho `SEM_RESPOSTA`, camada `LLM`). O sistema tem os números:
   `GET /api/apuracao?periodo=2026-10` devolve ABERTO, débito IBS 192,25, crédito IBS 124,33, saldo IBS
   67,92; débito CBS 1.730,32, crédito CBS 1.118,97, saldo CBS 611,35; 9 notas.
+  **Decisão (2026-11-07): encaminhada para correção em sessão própria, medida em conjunto independente.**
 - **A soja tem redução de alíquota?** (3 de 3, rota LEGISLACAO): cita `LC 214/2025, art. 137` e `art. 137,
   § 1º, inciso II`, mas diz "Sim, a soja tem redução de alíquota... reduzidos em 60%" sem a ressalva do
   enquadramento com o contador (#284). A linha "O que isso quer dizer" lista ICMS, ISS, PIS e Cofins,
   que a resposta não usa.
+  **Decisão (2026-11-07): encaminhada para correção em sessão própria, medida em conjunto independente.**
 - **ICMS a definir, pergunta geral** (3 de 3): foi para `listarNotas` com `situacao=PENDENTE_SEFAZ` e
   respondeu "Não encontrei notas aguardando a SEFAZ"; o sinal não aparece. **Com o número da nota
   (3191), o sinal aparece nas 3 repetições** ("está sem o CST do ICMS... combine o CST com seu contador").
+  **Decisão do Murillo (2026-11-07): resolvida no roteiro, sem mudança na Ceres.** O passo 4 de
+  `docs/demonstracao-banca.md` passou a usar a pergunta com o número da nota (que muda a cada
+  semeadura, com a indicação de onde achá-lo).
 - **Ressalva (Rogério):** a primeira pergunta livre respondeu sobre 09/08 a 07/11 (5 notas), não sobre
   "este mês". O que o roteiro verifica (200, depois 429 com `Retry-After`, depois o atalho 200) funciona.
 - **Falha técnica da primeira tentativa dos livres do Carlos:** a primeira chamada ao modelo depois do
