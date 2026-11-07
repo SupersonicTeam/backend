@@ -46,8 +46,10 @@ O embedding é sempre o `bge-m3`.
 - **Ollama local com `OLLAMA_KEEP_ALIVE` longo** (a produção usa `24h`, `deploy/compose.yaml`).
   Confira no contêiner que já existe (`docker inspect agrocontabil-ollama`, variáveis de ambiente) e
   **não o recrie por conta própria**: ele tem os modelos baixados; mudar a variável é decisão de quem
-  mantém o ambiente local. O executor não confere o valor. Com o padrão curto do Ollama o modelo sai da
-  memória entre as perguntas e a latência (e o disjuntor) mede a recarga, não a Ceres. Depois de
+  mantém o ambiente local. O executor não confere o valor. Com o padrão do Ollama (5 minutos sem uso), uma
+  pausa mais longa, como a subida da JVM, descarrega o modelo: a prova usa `keep_alive` de 30m, mas o padrão
+  do servidor volta a valer a partir da primeira chamada da JVM, e a latência (e o disjuntor) passa a medir a
+  recarga, não a Ceres. Depois de
   uma célula, confira onde o modelo rodou: o relatório mostra o `ondeRodou` de cada célula
   (GPU, CPU ou dividido, pelo `/api/ps`), e o contêiner do compose local **não reserva GPU**.
 - **A mesma máquina para as 6 células**, sem outra carga pesada durante a rodada.
@@ -110,7 +112,7 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
    liga o amostrador de memória (que também registra onde cada modelo rodou e se ele saiu da
    memória no meio da célula) e roda o comando de avaliação já existente:
    `java -jar` com `SPRING_PROFILES_ACTIVE=dev,avaliacao`, `AI_CHAT_MODEL=<modelo>`,
-   `AI_OLLAMA_THINK=false`, `--avaliacao.gabarito=<o conjunto, ou a cópia adaptada>`,
+   `AI_OLLAMA_THINK=false`, `AI_READ_TIMEOUT=<readTimeoutCelula>`, `--avaliacao.gabarito=<o conjunto, ou a cópia adaptada>`,
    `--avaliacao.repeticoes=3`, `--avaliacao.hardware=...` e `--avaliacao.saida` numa pasta da
    célula. Nada no comando de avaliação mudou: os dois commits já aceitam o gabarito por caminho.
 6. Renomeia a saída do comando para o nome da célula (`ceres-1--qwen3-0.6b.md`, `.json`,
@@ -464,7 +466,7 @@ propriedade). Na prática:
   `.env.example` **do próprio commit** (teto de tokens, `num_ctx`, timeouts), com uma exceção
   (`AI_READ_TIMEOUT`, abaixo); o executor não herda nenhum `AI_*`
   do seu shell (um `export AI_MAX_TOKENS` esquecido mediria outra configuração). Só o modelo (o da
-  célula), o endereço do Ollama e `AI_OLLAMA_THINK=false` vêm do executor. As duas configurações
+  célula), o endereço do Ollama, `AI_OLLAMA_THINK=false` e o `AI_READ_TIMEOUT` (do `readTimeoutCelula`) vêm do executor. As duas configurações
   vão no relatório, com o que difere entre os commits em negrito: é parte da arquitetura medida,
   não um erro de configuração.
 - **Queda de acerto em relação a um ensaio anterior:** gere o relatório com
@@ -493,7 +495,7 @@ propriedade). Na prática:
 ### Read-timeout da célula (#434)
 
 O `.env.example` publica `AI_READ_TIMEOUT=120s` nas duas arquiteturas. Com um modelo frio ou uma
-fila na máquina local, uma pergunta estoura os 120 s, o disjuntor (`DisponibilidadeModelo`) abre por
+fila na máquina local, uma chamada ao modelo estoura os 120 s, o disjuntor (`DisponibilidadeModelo`) abre por
 30 s e as perguntas seguintes saem em `MODO_FALLBACK`, que conta como falha técnica; se o estouro
 for numa pergunta medida, a célula ainda sai com código 0 e o `--retomar` a pula. O diagnóstico da
 #426 registrou exatamente isso (120,2 s na primeira pergunta e o resto em fallback).
@@ -510,7 +512,8 @@ configuração do relatório; retomar com outro valor (ou uma rodada de antes de
 O executor **não refaz célula sozinho**. Ao fim de cada célula, o `celula.json` ganha um aviso
 quando há falha técnica (a mesma conta do relatório: `MODELO_INDISPONIVEL`, `MODO_FALLBACK`,
 `TEMPO_ESGOTADO`, `CANCELADA` ou `ERRO`), com o número de respostas com falha e o número com
-latência de 120 s ou mais (o read-timeout de produção: na VPS essas cairiam no fallback). O relatório
+latência total de 120 s ou mais (a latência é a da pergunta inteira, que pode ter até 3 chamadas; o
+read-timeout publicado, 120 s, vale por chamada ao modelo; e a latência local não é a da VPS). O relatório
 mostra os avisos de cada célula.
 
 Critério, fixado antes de qualquer rodada: **refaz-se uma célula só quando o aviso de falha técnica
@@ -526,6 +529,12 @@ melhor tentativa). Procedimento:
 
 A pasta descartada fica ao lado, **fora de todas as tabelas** (só as células do `rodada.json`
 entram) e listada nos avisos do relatório, com o motivo. A célula refeita é a única que vale.
+
+**Limitação do critério:** ele não limita quantas vezes refazer, e refazer até o aviso sumir equivale a
+escolher a melhor tentativa, que o parágrafo acima proíbe. Falha técnica também pode ser propriedade da
+arquitetura (um MISTO a frio ainda passa do prazo da pergunta). Sugestão, a decidir pelo Murillo: no máximo
+uma refação por célula, valendo a refeita com ou sem falha. A decisão de `>=` (e não `>`) 120 s para contar a
+resposta como lenta é deste PR.
 
 ### Armadilhas conhecidas (sem código)
 

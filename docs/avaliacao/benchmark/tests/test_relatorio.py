@@ -589,7 +589,7 @@ class ExternasNoRelatorioTest(Base):
         self.assertNotIn("descartada", antes)
         descartada = self.pasta / "ceres-1--m-ref.descartada-2026-11-08"
         shutil.copytree(self.pasta / "ceres-1--m-ref", descartada)
-        (descartada / "motivo.txt").write_text("falha técnica em 7 de 30 respostas\nresto\n", encoding="utf-8")
+        (descartada / "motivo.txt").write_text("falha técnica em 7 de 30 respostas\nSEGUNDA-LINHA\n", encoding="utf-8")
         depois = rel.gerar(self.pasta)
         self.assertEqual([c.nome for c in rel.carregar_celulas(self.pasta)],
                          [c.nome for c in self.celulas.values()])
@@ -604,6 +604,30 @@ class ExternasNoRelatorioTest(Base):
         def junta(texto):
             return re.sub(r"\n{3,}", "\n\n", texto).strip()
         self.assertEqual(junta(sem_descartada), junta(antes))
+
+    def test_motivo_com_bom_ou_fora_do_utf8_nao_derruba_o_relatorio(self):
+        descartada = self.pasta / "ceres-1--m-ref.descartada-2026-11-08"
+        descartada.mkdir()
+        (descartada / "motivo.txt").write_bytes("\ufeffmotivo com BOM\n".encode("utf-8"))
+        outra = self.pasta / "ceres-2--m-ref.descartada-2026-11-08"
+        outra.mkdir()
+        (outra / "motivo.txt").write_bytes("motivo em cp1252: ação\n".encode("cp1252"))
+        texto = rel.gerar(self.pasta)
+        self.assertIn("motivo com BOM", texto)
+        self.assertNotIn("\ufeff", texto)
+        self.assertIn("motivo em cp1252", texto)
+
+    def test_aviso_de_falha_tecnica_aparece_inteiro_no_relatorio(self):
+        from ceres_benchmark import executor as ex
+        execucao = {"rota": "DADOS", "desfecho": "MODO_FALLBACK", "modoFallback": True, "erro": None,
+                    "latenciaMs": 130000}
+        aviso = ex.avisos_de_falha_tecnica([[{"id": f"T{i}", "execucao": execucao} for i in range(120)]] * 3)[0]
+        self.assertLess(len(aviso) + 60, 300)  # com o prefixo da celula, cabe no corte do relatorio
+        manifesto = self.pasta / "ceres-2--m-ref" / "celula.json"
+        dados = json.loads(manifesto.read_text(encoding="utf-8"))
+        dados["avisos"] = [aviso]
+        manifesto.write_text(json.dumps(dados), encoding="utf-8")
+        self.assertIn(aviso, rel.gerar(self.pasta))
 
     def test_condicoes_com_a_sessao_7_inteira_e_sem_a_8a(self):
         rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))

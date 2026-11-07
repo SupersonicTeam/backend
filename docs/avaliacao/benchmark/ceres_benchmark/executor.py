@@ -74,7 +74,7 @@ KEEP_ALIVE_PROVA = "30m"
 
 def segundos_de_duracao(texto: str) -> float:
     """``240s``, ``4m`` ou ``500ms`` (a forma simples do ``Duration`` do Spring) em segundos."""
-    m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(ms|s|m)\s*", str(texto), re.IGNORECASE)
+    m = re.fullmatch(r"\s*(\d+)\s*(ms|s|m)\s*", str(texto), re.IGNORECASE)
     if not m:
         raise RuntimeError(f"readTimeoutCelula invalido: {texto!r} (use 240s, 4m ou 500ms)")
     return float(m.group(1)) * {"ms": 0.001, "s": 1, "m": 60}[m.group(2).lower()]
@@ -98,15 +98,15 @@ def avisos_de_falha_tecnica(rodadas: list[list[dict]]) -> list[str]:
     lentas = sum(1 for r in execucoes
                  if ((r.get("execucao") or {}).get("latenciaMs") or 0) >= LIMITE_PRODUCAO_MS)
     limite = LIMITE_PRODUCAO_MS // 1000
+    # Curtos: o relatorio corta cada aviso em 300 caracteres, com o prefixo da celula.
     if falhas:
-        return [f"{falhas} de {len(execucoes)} respostas com falha técnica (modelo fora, fallback, "
-                f"tempo esgotado ou erro); {lentas} com latência de {limite} s ou mais (o read-timeout "
-                "de produção: na VPS essas cairiam no fallback). A latência e as taxas desta célula "
-                "incluem isso: ver no README o critério para refazer a célula inteira"]
+        return [f"{falhas} de {len(execucoes)} respostas com falha técnica; {lentas} com latência total de "
+                f"{limite} s ou mais (o read-timeout publicado, {limite} s, vale por chamada ao modelo; "
+                "a latência local não é a da VPS). Refazer: critério no README"]
     if lentas:
-        return [f"{lentas} de {len(execucoes)} respostas com latência de {limite} s ou mais (o "
-                "read-timeout de produção: na VPS essas cairiam no fallback), sem falha técnica "
-                "nesta célula (o read-timeout da célula é maior)"]
+        return [f"{lentas} de {len(execucoes)} respostas com latência total de {limite} s ou mais (o "
+                f"read-timeout publicado, {limite} s, vale por chamada ao modelo; a latência local não é "
+                "a da VPS), sem falha técnica"]
     return []
 
 

@@ -596,7 +596,7 @@ class ReadTimeoutDaCelulaTest(unittest.TestCase):
         self.assertLess(ex.segundos_de_duracao(config().read_timeout_celula), ex.PRAZO_PERGUNTA_S)
         ex.validar_read_timeout("300s")
         ex.validar_read_timeout("4m")
-        for invalido in ("305s", "6m", "5m5s", "duas horas"):
+        for invalido in ("305s", "6m", "5m5s", "duas horas", "2.5m"):
             with self.assertRaises(RuntimeError, msg=invalido):
                 ex.validar_read_timeout(invalido)
         e = ex.Executor(config())
@@ -735,7 +735,7 @@ class RodarCelulaTest(unittest.TestCase):
             avisos = [a for a in manifesto["avisos"] if "falha técnica" in a]
             self.assertEqual(len(avisos), 1)
             self.assertIn("1 de 1 respostas com falha técnica", avisos[0])
-            self.assertIn("1 com latência de 120 s ou mais", avisos[0])
+            self.assertIn("1 com latência total de 120 s ou mais", avisos[0])
 
     def test_json_ilegivel_com_codigo_zero_avisa(self):
         with tempfile.TemporaryDirectory() as d:
@@ -751,14 +751,14 @@ class RodarCelulaTest(unittest.TestCase):
                     "latenciaMs": ex.LIMITE_PRODUCAO_MS}
         avisos = ex.avisos_de_falha_tecnica([[{"id": "T1", "execucao": execucao}]])
         self.assertEqual(len(avisos), 1)
-        self.assertIn("1 de 1 respostas com latência de 120 s ou mais", avisos[0])
+        self.assertIn("1 de 1 respostas com latência total de 120 s ou mais", avisos[0])
 
     def test_so_lenta_sem_falha_avisa_a_latencia(self):
         with tempfile.TemporaryDirectory() as d:
             e, arquitetura, gabarito = self.preparar(d, latencia=130_000)
             manifesto = self.rodar_celula(e, arquitetura, gabarito, Path(d) / "rodada")
             self.assertEqual(len(manifesto["avisos"]), 1)
-            self.assertIn("latência de 120 s ou mais", manifesto["avisos"][0])
+            self.assertIn("latência total de 120 s ou mais", manifesto["avisos"][0])
             self.assertNotIn("respostas com falha técnica", manifesto["avisos"][0])
 
     def test_retomada_recusa_celula_medida_com_outro_read_timeout_ou_sem_o_campo(self):

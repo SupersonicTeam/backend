@@ -144,7 +144,9 @@ def celulas_descartadas(pasta: Path) -> list[tuple[str, str]]:
     achadas = []
     for pasta_celula in sorted(p for p in pasta.iterdir() if p.is_dir() and ".descartada-" in p.name):
         arquivo = pasta_celula / "motivo.txt"
-        linhas = arquivo.read_text(encoding="utf-8").strip().splitlines() if arquivo.exists() else []
+        # utf-8-sig: o Bloco de Notas grava BOM; errors=replace: um motivo em cp1252 nao derruba o relatorio.
+        linhas = (arquivo.read_text(encoding="utf-8-sig", errors="replace").strip().splitlines()
+                  if arquivo.exists() else [])
         achadas.append((pasta_celula.name, linhas[0].strip() if linhas else ""))
     return achadas
 
