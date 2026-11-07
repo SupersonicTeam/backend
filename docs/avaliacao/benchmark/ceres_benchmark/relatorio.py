@@ -135,6 +135,20 @@ def rodadas_do_json(avaliacao: dict) -> list[list[dict]]:
     raise ValueError("JSON da avaliacao sem 'rodadas' nem 'resultados'")
 
 
+def celulas_descartadas(pasta: Path) -> list[tuple[str, str]]:
+    """(pasta, motivo) das celulas descartadas e refeitas: ``<celula>.descartada-<data>``.
+
+    Ficam fora das tabelas (so as celulas do ``rodada.json`` entram) e so aparecem nos avisos. O
+    motivo e a primeira linha de ``motivo.txt``, registrado antes de refazer a celula.
+    """
+    achadas = []
+    for pasta_celula in sorted(p for p in pasta.iterdir() if p.is_dir() and ".descartada-" in p.name):
+        arquivo = pasta_celula / "motivo.txt"
+        linhas = arquivo.read_text(encoding="utf-8").strip().splitlines() if arquivo.exists() else []
+        achadas.append((pasta_celula.name, linhas[0].strip() if linhas else ""))
+    return achadas
+
+
 def carregar_celulas(pasta: Path) -> list[Celula]:
     """Celulas da rodada, na ordem do ``rodada.json`` (arquitetura, depois modelo)."""
     rodada = _ler_json(pasta / "rodada.json")
@@ -827,17 +841,26 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     opcoes = rodada.get("opcoesChat") or {}
     if opcoes and all(isinstance(v, dict) and "chat" in v for v in opcoes.values()):
         rotulos = dict(arquiteturas)
-        chaves = sorted({k for v in opcoes.values() for k in list(v["chat"]) + list(v["publicada"])})
+        # Efetiva = publicada, depois os ajustes da celula (hoje o read-timeout, matriz.json), depois
+        # as opcoes do chat. Rodada antiga nao tem "ajustes".
+        def efetiva(o):
+            return {**o["publicada"], **(o.get("ajustes") or {}), **o["chat"]}
+
+        ajustada = any(o.get("ajustes") for o in opcoes.values())
+        chaves = sorted({k for v in opcoes.values() for k in efetiva(v)})
         for arq, v in opcoes.items():
-            todas = {**v["publicada"], **v["chat"]}
-            diferentes = {k for k in chaves
-                          if len({{**o["publicada"], **o["chat"]}.get(k) for o in opcoes.values()}) > 1}
+            todas = efetiva(v)
+            diferentes = {k for k in chaves if len({efetiva(o).get(k) for o in opcoes.values()}) > 1}
             md.append(f"| Configuração da {rotulos.get(arq, arq)} | " + ", ".join(
                 (f"**{k}={todas.get(k, '—')}**" if k in diferentes else f"{k}={todas.get(k, '—')}")
                 for k in chaves) + " |")
-        md.append("| | A configuração de cada coluna é a **publicada** no `.env.example` do próprio "
-                  "commit, sem ajuste à mão. Em negrito, o que difere entre os commits: faz parte "
-                  "da arquitetura medida. |")
+        publicada_txt = ("**publicada** no `.env.example` do próprio commit, exceto o read-timeout "
+                         "da célula (`matriz.json`: `AI_READ_TIMEOUT` igual nas duas colunas, porque a "
+                         "carga a frio ou a fila da máquina local não é propriedade da arquitetura)"
+                         if ajustada else
+                         "**publicada** no `.env.example` do próprio commit, sem ajuste à mão")
+        md.append(f"| | A configuração de cada coluna é a {publicada_txt}. Em negrito, o que difere "
+                  "entre os commits: faz parte da arquitetura medida. |")
     elif opcoes:
         md.append("| Opções do chat | " + ", ".join(f"{k}={v}" for k, v in opcoes.items()) + " |")
     md.append("")
@@ -880,6 +903,13 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     if avisos:
         md.append("**Avisos das células** (leia a latência dessas células com isso):\n")
         md.extend(f"- {_celula_md(a, 300)}" for a in avisos)
+        md.append("")
+    descartadas = celulas_descartadas(pasta)
+    if descartadas:
+        md.append("**Células descartadas e refeitas** (fora de todas as tabelas; a pasta antiga "
+                  "fica ao lado da rodada):\n")
+        md.extend(f"- `{nome}`" + (f": {_celula_md(motivo, 300)}" if motivo else " (sem motivo registrado)")
+                  for nome, motivo in descartadas)
         md.append("")
     md.append("A VPS de produção tem 47 GiB (8 OCPU ARM) divididos com Postgres, backend, ClamAV e o BGE-M3: a "
               "coluna do pico inclui o BGE-M3 carregado junto.\n")

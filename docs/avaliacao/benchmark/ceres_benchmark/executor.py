@@ -63,6 +63,53 @@ def bytes_de_docker_stats(texto: str) -> int | None:
     return int(float(m.group(1)) * _UNIDADES[m.group(2).lower()])
 
 
+#: Prazo de uma pergunta no comando de avaliacao: ``AvaliacaoCeresRunner`` (5 min + 5 s).
+PRAZO_PERGUNTA_S = 305
+#: Read-timeout de producao (``AI_READ_TIMEOUT`` do ``.env.example``): na VPS, uma pergunta acima
+#: disso cairia no fallback. O aviso da celula conta quantas passaram.
+LIMITE_PRODUCAO_MS = 120_000
+#: As provas do pensamento mantem o modelo na memoria ate a celula comecar (e entre uma e outra).
+KEEP_ALIVE_PROVA = "30m"
+
+
+def segundos_de_duracao(texto: str) -> float:
+    """``240s``, ``4m`` ou ``500ms`` (a forma simples do ``Duration`` do Spring) em segundos."""
+    m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(ms|s|m)\s*", str(texto), re.IGNORECASE)
+    if not m:
+        raise RuntimeError(f"readTimeoutCelula invalido: {texto!r} (use 240s, 4m ou 500ms)")
+    return float(m.group(1)) * {"ms": 0.001, "s": 1, "m": 60}[m.group(2).lower()]
+
+
+def validar_read_timeout(valor: str | None) -> None:
+    """O read-timeout da celula tem de ficar abaixo do prazo da pergunta (senao o prazo da
+    pergunta dispara antes e a falha perde a causa)."""
+    if valor is not None and segundos_de_duracao(valor) >= PRAZO_PERGUNTA_S:
+        raise RuntimeError(f"readTimeoutCelula {valor} nao fica abaixo do prazo da pergunta "
+                           f"({PRAZO_PERGUNTA_S} s)")
+
+
+def avisos_de_falha_tecnica(rodadas: list[list[dict]]) -> list[str]:
+    """Aviso da celula com falha tecnica (a mesma regra do relatorio) e quantas respostas
+    passaram do read-timeout de producao. O executor nao refaz celula sozinho: o criterio e o
+    procedimento estao no README (\"Celula com falha tecnica\")."""
+    from . import relatorio  # so aqui: o executor nao precisa dele para o resto
+    execucoes = [r for resultados in rodadas for r in resultados]
+    falhas = sum(1 for r in execucoes if relatorio.falha_tecnica(r))
+    lentas = sum(1 for r in execucoes
+                 if ((r.get("execucao") or {}).get("latenciaMs") or 0) > LIMITE_PRODUCAO_MS)
+    limite = LIMITE_PRODUCAO_MS // 1000
+    if falhas:
+        return [f"{falhas} de {len(execucoes)} respostas com falha técnica (modelo fora, fallback, "
+                f"tempo esgotado ou erro); {lentas} com latência acima de {limite} s (o read-timeout "
+                "de produção: na VPS essas cairiam no fallback). A latência e as taxas desta célula "
+                "incluem isso: ver no README o critério para refazer a célula inteira"]
+    if lentas:
+        return [f"{lentas} de {len(execucoes)} respostas com latência acima de {limite} s (o "
+                "read-timeout de produção: na VPS essas cairiam no fallback), sem falha técnica "
+                "nesta célula (o read-timeout da célula é maior)"]
+    return []
+
+
 def resumo_pensamento(prova: dict) -> str:
     """Frase do relatorio a partir da prova de pensamento."""
     if prova.get("erro"):
@@ -73,8 +120,12 @@ def resumo_pensamento(prova: dict) -> str:
     return "desligado (think=false; nenhum raciocínio na prova)"
 
 
-def avaliar_prova(resposta: dict) -> dict:
-    """Le a resposta do ``/api/chat`` da prova: raciocinio em ``thinking`` ou ``<think>`` no texto."""
+def avaliar_prova(resposta: dict, num_ctx: int | None = None) -> dict:
+    """Le a resposta do ``/api/chat`` da prova: raciocinio em ``thinking`` ou ``<think>`` no texto.
+
+    ``numCtx`` e o contexto pedido na prova e ``carregamentoMs`` o ``load_duration`` do Ollama:
+    mostram se a prova carregou o modelo com o mesmo contexto da celula.
+    """
     mensagem = resposta.get("message") or {}
     pensamento = mensagem.get("thinking") or ""
     conteudo = mensagem.get("content") or ""
@@ -88,6 +139,9 @@ def avaliar_prova(resposta: dict) -> dict:
         "thinkNoTexto": no_texto,
         "tokensGerados": resposta.get("eval_count"),
         "duracaoMs": round((resposta.get("total_duration") or 0) / 1e6),
+        "numCtx": num_ctx,
+        "carregamentoMs": (round(resposta["load_duration"] / 1e6)
+                           if resposta.get("load_duration") is not None else None),
         "resposta": conteudo[:200],
     }
 
@@ -193,7 +247,8 @@ FORA_DA_CONFIGURACAO = {"AI_API_KEY", "AI_API_BASE_URL", "AI_API_COMPLETIONS_PAT
 
 def configuracao_publicada(env_example: str) -> dict[str, str]:
     """``AI_*`` do ``.env.example`` de um commit: a configuracao publicada da Ceres naquele SHA
-    (teto de tokens, ``num_ctx``, timeouts...). A rodada usa exatamente ela, sem ajuste a mao."""
+    (teto de tokens, ``num_ctx``, timeouts...). A rodada usa exatamente ela, exceto o read-timeout
+    da celula (``readTimeoutCelula`` do ``matriz.json``), que o ``ambiente_java`` aplica depois."""
     publicada = {}
     for linha in env_example.splitlines():
         linha = linha.strip()
@@ -243,6 +298,13 @@ class Config:
     @property
     def tipo(self) -> str:
         return "teste" if self.teste else "ensaio" if self.ensaio else "banca"
+
+    @property
+    def read_timeout_celula(self) -> str | None:
+        """``AI_READ_TIMEOUT`` da celula (``matriz.json``), aplicado depois da configuracao
+        publicada. A carga a frio ou a fila da maquina local nao e propriedade da arquitetura: o
+        desvio vale igual para as duas colunas. Sem a chave, vale o publicado."""
+        return self.matriz.get("readTimeoutCelula")
 
     @property
     def embedding(self) -> str:
@@ -358,6 +420,7 @@ class Executor:
                 raise RuntimeError(f"{programa} nao encontrado no PATH")
         if not os.environ.get("DB_PASSWORD"):
             raise RuntimeError("DB_PASSWORD ausente: exporte a senha do Postgres (a do .env)")
+        validar_read_timeout(self.cfg.read_timeout_celula)
         versao = self.ollama("/api/version").get("version", "?")
         trechos = int(self.psql(self.cfg.db_origem, "select count(*) from legislacao_trecho") or 0)
         esperado = self.cfg.matriz.get("trechosLegislacao")
@@ -399,10 +462,15 @@ class Executor:
 
     def ambiente_java(self, banco: str, modelo: str, arquitetura: dict | None = None) -> dict:
         """Ambiente da JVM: sem nenhum ``AI_*`` herdado do shell (um ``export AI_MAX_TOKENS``
-        esquecido mediria outra configuracao) e com a configuracao publicada do commit."""
+        esquecido mediria outra configuracao), com a configuracao publicada do commit e o
+        read-timeout da celula (``readTimeoutCelula``)."""
         env = {k: v for k, v in os.environ.items() if not k.startswith("AI_")}
         if arquitetura is not None:
             env.update(arquitetura.get("configuracaoPublicada") or {})
+        # Depois da publicada, a unica excecao a ela (``matriz.json``): ver Config.read_timeout_celula.
+        validar_read_timeout(self.cfg.read_timeout_celula)
+        if self.cfg.read_timeout_celula:
+            env["AI_READ_TIMEOUT"] = self.cfg.read_timeout_celula
         env.update({
             "SPRING_PROFILES_ACTIVE": "dev,avaliacao",
             "DB_NAME": banco,
@@ -545,12 +613,25 @@ class Executor:
             if nome and nome not in manter:
                 self.ollama("/api/generate", {"model": nome, "keep_alive": 0}, timeout=120)
 
-    def provar_pensamento(self, modelo: str) -> dict:
-        corpo = {"model": modelo, "stream": False, "think": False,
+    def num_ctx(self, arquitetura: dict) -> int | None:
+        """``num_ctx`` do chat da arquitetura, como inteiro (``self.opcoes`` guarda texto); ``None``
+        se o commit nao o publica ou nao e numero."""
+        valor = ((self.opcoes.get(arquitetura["nome"]) or {}).get("chat") or {}).get("num-ctx")
+        return int(valor) if valor is not None and str(valor).strip().isdigit() else None
+
+    def provar_pensamento(self, modelo: str, num_ctx: int | None = None) -> dict:
+        """Prova do ``think=false`` num ``/api/chat``. Com o ``num_ctx`` da celula o Ollama carrega
+        o modelo ja com o contexto da Ceres (sem ele, carrega com o padrao dele e a JVM recarrega
+        depois, com o amostrador de memoria ligado: o pico sairia superestimado). ``keep_alive``
+        explicito mantem o modelo carregado ate a celula comecar."""
+        opcoes = {"num_predict": 256, "temperature": 0.2}
+        if num_ctx is not None:
+            opcoes["num_ctx"] = num_ctx
+        corpo = {"model": modelo, "stream": False, "think": False, "keep_alive": KEEP_ALIVE_PROVA,
                  "messages": [{"role": "user", "content": PERGUNTA_PROVA}],
-                 "options": {"num_predict": 256, "temperature": 0.2}}
+                 "options": opcoes}
         try:
-            prova = avaliar_prova(self.ollama("/api/chat", corpo, timeout=600))
+            prova = avaliar_prova(self.ollama("/api/chat", corpo, timeout=600), num_ctx)
         except ERROS_HTTP as e:
             prova = {"erro": f"{type(e).__name__}: {e}"}
         try:
@@ -622,16 +703,21 @@ class Executor:
         manifesto_arquivo = destino / "celula.json"
         if manifesto_arquivo.exists():
             anterior = json.loads(manifesto_arquivo.read_text(encoding="utf-8"))
+            # O read-timeout entra na comparacao (sem default): celula medida antes dele existir, ou
+            # com outro valor, nao se mistura com as novas.
             mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes"),
-                     anterior.get("embedding", self.cfg.embedding)) == (
-                arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding)
+                     anterior.get("embedding", self.cfg.embedding),
+                     anterior.get("readTimeoutCelula")) == (
+                arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding,
+                self.cfg.read_timeout_celula)
             decisao = decidir_retomada(anterior, mesma)
             if decisao == "pular":
                 log(f"{nome}: ja medida nesta rodada, pulando")
                 return anterior
             if decisao == "outra":
-                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding ou "
-                                   "numero de repeticoes: use uma rodada nova em vez de --retomar")
+                raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding, numero "
+                                   "de repeticoes ou read-timeout da celula: use uma rodada nova "
+                                   "em vez de --retomar")
             if decisao == "sem_prova":
                 log(f"{nome}: medida sem nenhuma prova do pensamento, medindo de novo")
         destino.mkdir(parents=True, exist_ok=True)
@@ -641,7 +727,8 @@ class Executor:
 
         self.config_rodada = self.conferir_configuracao(self.config_rodada)
         self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
-        pensamento = self.provar_pensamento(modelo)
+        num_ctx = self.num_ctx(arquitetura)
+        pensamento = self.provar_pensamento(modelo, num_ctx)
         pensamento["raciocinouInicio"] = bool(pensamento.get("raciocinou"))
         log(f"{nome}: pensamento {pensamento['resumo']}")
 
@@ -663,7 +750,7 @@ class Executor:
         duracao = round(time.monotonic() - inicio)
         # A prova vale para a celula inteira: repetida no fim (o Ollama pode ter recarregado o
         # modelo com outro template no meio). Raciocinou em qualquer uma = celula invalida.
-        final = self.provar_pensamento(modelo)
+        final = self.provar_pensamento(modelo, num_ctx)
         pensamento = {**pensamento, "final": final,
                       "raciocinou": bool(pensamento.get("raciocinou") or final.get("raciocinou"))}
         if final.get("raciocinou") and not pensamento.get("raciocinouInicio"):
@@ -675,6 +762,9 @@ class Executor:
             avisos.append(aviso)
             log(f"AVISO: {nome}: {aviso}")
         arquivos = self._renomear_saida(temporario, destino, nome)
+        for aviso in self._avisos_de_falha_tecnica(destino / f"{nome}.json"):
+            avisos.append(aviso)
+            log(f"AVISO: {nome}: {aviso}")
         manifesto = {
             "celula": nome,
             "arquitetura": arquitetura["nome"],
@@ -683,6 +773,8 @@ class Executor:
             "modelo": modelo,
             "embedding": self.cfg.embedding,
             "repeticoes": self.cfg.repeticoes,
+            "readTimeoutCelula": self.cfg.read_timeout_celula,
+            "numCtx": num_ctx,
             "tipo": self.cfg.tipo,
             "perguntas": {**self.perguntas_info, **lido},
             "hardware": self.cfg.hardware,
@@ -701,6 +793,17 @@ class Executor:
         log(f"{nome}: codigo {codigo} em {duracao} s"
             + ("" if codigo == 0 else f" (ver {destino}/comando.log)"))
         return manifesto
+
+    @staticmethod
+    def _avisos_de_falha_tecnica(avaliacao: Path) -> list[str]:
+        """Avisos de falha tecnica a partir do JSON que o comando gravou (nenhum se ele nao existe:
+        a celula saiu com codigo diferente de zero e o relatorio ja a mostra assim)."""
+        from . import relatorio
+        try:
+            rodadas = relatorio.rodadas_do_json(json.loads(avaliacao.read_text(encoding="utf-8")))
+        except (OSError, ValueError, KeyError):
+            return []
+        return avisos_de_falha_tecnica(rodadas)
 
     @staticmethod
     def _renomear_saida(temporario: Path, destino: Path, nome: str) -> list[str]:
@@ -895,6 +998,11 @@ class Executor:
         if anterior.get("embedding", cfg.embedding) != cfg.embedding:
             raise RuntimeError(f"a rodada usou o embedding {anterior.get('embedding')}, nao "
                                f"{cfg.embedding} (--embedding-cpu): use a mesma opcao ou uma pasta nova")
+        # Sem o campo (rodada de antes dele), o valor e "ausente" e so bate com uma matriz sem a chave.
+        if anterior.get("readTimeoutCelula") != cfg.read_timeout_celula:
+            raise RuntimeError(f"a rodada usou o read-timeout da celula {anterior.get('readTimeoutCelula')},"
+                               f" nao {cfg.read_timeout_celula} (matriz.json): as celulas nao seriam "
+                               "comparaveis; use uma pasta nova")
 
     def gravar_similaridade(self, rodada_dir: Path) -> None:
         """Aviso (nao bloqueia) das perguntas parecidas com o treino, para a revisao humana."""
@@ -938,6 +1046,9 @@ class Executor:
                                 self.cfg.repo)
             por_arq[arquitetura["nome"]] = {
                 "publicada": arquitetura["configuracaoPublicada"],
+                # O que a celula muda sobre a publicada (hoje so o read-timeout, ``matriz.json``).
+                "ajustes": ({"AI_READ_TIMEOUT": env["AI_READ_TIMEOUT"]}
+                            if self.cfg.read_timeout_celula else {}),
                 "chat": {k: resolver_placeholder(v, env) for k, v in opcoes_chat_ollama(yml).items()},
             }
         diferentes = {k for d in por_arq.values() for k in d["chat"]
@@ -1033,6 +1144,7 @@ class Executor:
             "tipo": cfg.tipo,
             "repeticoes": cfg.repeticoes,
             "embedding": cfg.embedding,
+            "readTimeoutCelula": cfg.read_timeout_celula,
             "perguntas": self.perguntas_info,
             "configuracaoOllama": self.config_rodada,
             "opcoesChat": self.opcoes,
