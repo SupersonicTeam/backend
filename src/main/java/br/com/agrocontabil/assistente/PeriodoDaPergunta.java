@@ -1,11 +1,10 @@
 package br.com.agrocontabil.assistente;
 
-import java.text.Normalizer;
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -46,8 +45,6 @@ public final class PeriodoDaPergunta {
   static final int MAXIMO_MESES = 24;
   static final int MAXIMO_DIAS = 731;
 
-  private static final Pattern ACENTOS = Pattern.compile("\\p{M}+");
-
   private static final String ESTE = "(?:n?est[ea]|n?ess[ea]|dest[ea]|dess[ea])";
 
   private static final Map<String, Integer> POR_EXTENSO = Map.ofEntries(
@@ -61,10 +58,23 @@ public final class PeriodoDaPergunta {
   private static final String QUANTIDADE = "(\\d{1,3}|" + String.join("|", POR_EXTENSO.keySet())
       + ")";
 
-  /** Data explícita: com ela, o período não é relativo e quem preenche é o modelo. */
+  /**
+   * Data explícita: com ela, o período não é relativo e quem preenche é o modelo. O ano só conta
+   * fora do número de uma nota ("a nota 2045 do mês passado").
+   */
   private static final Pattern DATA_EXPLICITA = Pattern.compile("\\b(janeiro|fevereiro|marco"
-      + "|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|(19|20)\\d{2}"
-      + "|\\d{1,2}/\\d{1,2})\\b");
+      + "|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro"
+      + "|(?<!nota )(?<!numero )(?<!n )(19|20)\\d{2}|\\d{1,2}/\\d{1,2})\\b");
+
+  /**
+   * Parte de um período ("o primeiro trimestre do ano passado", "a primeira quinzena do mês
+   * passado", "o mesmo mês do ano passado", "o fim do mês passado"): o período inteiro estaria
+   * errado, então quem preenche é o modelo.
+   */
+  private static final Pattern SUBPERIODO = Pattern.compile("\\b(primeir[oa]s?|segund[oa]s?"
+      + "|terceir[oa]s?|quart[oa]s?|quinzenas?|semanas?|bimestres?|metade|comeco|inicio|fim"
+      + "|final|meados|mesm[oa] (mes|ano|periodo|epoca|trimestre|semestre)|dia \\d{1,2}"
+      + "|ate o dia)\\b");
 
   /** Expressão relativa → período, na ordem de prioridade de leitura. */
   private static final List<Regra> REGRAS = List.of(
@@ -85,10 +95,10 @@ public final class PeriodoDaPergunta {
       fixa("\\b" + ESTE + " semestre\\b|\\bsemestre (?:atual|corrente)\\b",
           h -> intervalo(semestre(h, 0).inicio(), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " meses\\b"),
-          (h, m) -> quantidade(m.group(1)) > MAXIMO_MESES ? null
+          (h, m) -> foraDoLimite(m.group(1), MAXIMO_MESES) ? null
               : intervalo(h.minusMonths(quantidade(m.group(1))).plusDays(1), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " dias\\b"),
-          (h, m) -> quantidade(m.group(1)) > MAXIMO_DIAS ? null
+          (h, m) -> foraDoLimite(m.group(1), MAXIMO_DIAS) ? null
               : intervalo(h.minusDays(quantidade(m.group(1)) - 1L), h)));
 
   private PeriodoDaPergunta() {}
@@ -119,7 +129,8 @@ public final class PeriodoDaPergunta {
    */
   public static Optional<Periodo> resolver(String pergunta, LocalDate hoje) {
     String texto = normalizar(pergunta);
-    if (texto.isEmpty() || DATA_EXPLICITA.matcher(texto).find()) {
+    if (texto.isEmpty() || DATA_EXPLICITA.matcher(texto).find()
+        || SUBPERIODO.matcher(texto).find()) {
       return Optional.empty();
     }
     Set<Periodo> achados = new LinkedHashSet<>();
@@ -159,13 +170,16 @@ public final class PeriodoDaPergunta {
     return false;
   }
 
+  /** A normalização da busca (sem acento, minúsculas), com a pontuação virando espaço. */
   static String normalizar(String pergunta) {
-    if (pergunta == null) {
-      return "";
-    }
-    String semAcento = ACENTOS.matcher(Normalizer.normalize(pergunta, Normalizer.Form.NFD))
-        .replaceAll("").toLowerCase(Locale.ROOT);
-    return semAcento.replaceAll("[^a-z0-9/ ]+", " ").replaceAll("\\s+", " ").strip();
+    return NormalizacaoBusca.normalizar(pergunta).replaceAll("[^a-z0-9/ ]+", " ")
+        .replaceAll("\\s+", " ").strip();
+  }
+
+  /** Zero ("últimos 0 dias") ou acima do teto das funções: não resolve. */
+  private static boolean foraDoLimite(String valor, int maximo) {
+    int n = quantidade(valor);
+    return n < 1 || n > maximo;
   }
 
   private static int quantidade(String valor) {

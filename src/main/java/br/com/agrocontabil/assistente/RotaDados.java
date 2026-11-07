@@ -268,16 +268,22 @@ public class RotaDados {
    * As chamadas escolhidas pelo modelo com o período da pergunta nos parâmetros de período
    * (#442): datas para as funções de datas, o mês para as de mês quando o período é um mês. As
    * demais funções e parâmetros (produto, tipo, situação) ficam como o modelo escolheu. Argumento
-   * que não é JSON de objeto fica intacto: a função o recusa como antes.
+   * que não é JSON de objeto fica intacto: a função o recusa como antes. A mesma função chamada
+   * mais de uma vez é uma comparação ("o mês passado contra a média do ano"): as janelas dela são
+   * as que o modelo escolheu, senão as duas virariam o mesmo período.
    */
   static ChatResponse comPeriodo(ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
+    Map<String, Long> vezes = resposta.getResults().stream()
+        .flatMap(g -> g.getOutput().getToolCalls().stream())
+        .collect(Collectors.groupingBy(AssistantMessage.ToolCall::name, Collectors.counting()));
     int ajustadas = 0;
     List<Generation> geracoes = new ArrayList<>();
     for (Generation geracao : resposta.getResults()) {
       AssistantMessage mensagem = geracao.getOutput();
       List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
       for (AssistantMessage.ToolCall chamada : mensagem.getToolCalls()) {
-        Optional<String> argumentos = argumentosComPeriodo(chamada, periodo);
+        Optional<String> argumentos = vezes.get(chamada.name()) > 1
+            ? Optional.empty() : argumentosComPeriodo(chamada, periodo);
         if (argumentos.isPresent()) {
           ajustadas++;
           chamadas.add(new AssistantMessage.ToolCall(

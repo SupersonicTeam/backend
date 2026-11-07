@@ -62,10 +62,47 @@ class PeriodoDaPerguntaTest {
       "Quanto vendi de girassol?",
       "Quanto comprei de diesel nos últimos 40 meses?",
       "Quanto vendi nesta safra?",
+      "Quanto comprei de sorgo no primeiro trimestre do ano passado?",
+      "E na primeira quinzena do mês passado?",
+      "Vendi mais que no mesmo mês do ano passado?",
+      "Quanto saiu de cevada no fim do mês passado?",
+      "Compras dos últimos 0 dias",
       ""})
   @DisplayName("data explícita, dois períodos, sem período ou fora do limite: não resolve")
   void naoResolve(String pergunta) {
     assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("número de nota não é ano: o mês passado ainda resolve")
+  void numeroDeNotaNaoEAno() {
+    assertThat(PeriodoDaPergunta.resolver("A nota 2045 do mês passado saiu?", HOJE))
+        .map(Periodo::mes).contains(YearMonth.of(2027, 1));
+  }
+
+  @Test
+  @DisplayName("as listas de funções batem com os parâmetros das @Tool de dados")
+  void listasBatemComAsFuncoes() {
+    java.util.Set<String> deDatas = new java.util.HashSet<>();
+    java.util.Set<String> deMes = new java.util.HashSet<>();
+    for (java.lang.reflect.Method m :
+        br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor.class.getMethods()) {
+      org.springframework.ai.tool.annotation.Tool tool =
+          m.getAnnotation(org.springframework.ai.tool.annotation.Tool.class);
+      if (tool == null) {
+        continue;
+      }
+      java.util.List<String> nomes = java.util.Arrays.stream(m.getParameters())
+          .map(java.lang.reflect.Parameter::getName).toList();
+      if (nomes.contains("dataInicio") && nomes.contains("dataFim")) {
+        deDatas.add(tool.name());
+      }
+      if (nomes.contains("mes")) {
+        deMes.add(tool.name());
+      }
+    }
+    assertThat(PeriodoDaPergunta.FUNCOES_DE_DATAS).isEqualTo(deDatas);
+    assertThat(PeriodoDaPergunta.FUNCOES_DE_MES).isEqualTo(deMes);
   }
 
   @Test

@@ -45,6 +45,18 @@ class RotaDadosPeriodoTest {
   }
 
   @Test
+  @DisplayName("a mesma função duas vezes é comparação: as janelas do modelo ficam")
+  void comparacaoFica() {
+    ChatResponse original = chamadas(
+        new ToolCall("z1", "function", "listarNotas",
+            "{\"dataInicio\":\"2026-01-01\",\"dataFim\":\"2026-06-30\"}"),
+        new ToolCall("z2", "function", "listarNotas",
+            "{\"dataInicio\":\"2025-01-01\",\"dataFim\":\"2025-12-31\"}"));
+
+    assertThat(RotaDados.comPeriodo(original, SEMESTRE)).isSameAs(original);
+  }
+
+  @Test
   @DisplayName("nada a mudar ou argumento que não é JSON: a resposta do modelo segue igual")
   void semMudanca() {
     ChatResponse original = chamadas(
