@@ -436,6 +436,7 @@ br.com.agrocontabil
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
 - **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix:`, `chore/` + worktree isolado.
 - **PRs pequenos e deployáveis** — uma responsabilidade lógica por PR (programação incremental).
+- **Merge só depois do code review `xhigh` (decisão do Murillo, 2026-11-07):** todo PR passa pela skill `code-review` em `xhigh`, com os achados reais corrigidos e os testes rodados; depois a sessão mergeia com `gh pr merge <n> --squash`, liberado no modo automático pelo `.claude/settings.json`. PR que muda o que a banca mede continua dependendo do OK do Murillo.
 - **Datas:** `YYYY-MM-DD`. Timezone `America/Sao_Paulo`.
 
 ## Testes
