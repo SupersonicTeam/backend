@@ -43,17 +43,29 @@ final class GuardaRegimeEspecifico {
     }
   }
 
+  /**
+   * Capítulos do título e o vocabulário de cada setor: o nome do capítulo, os objetos que a lei
+   * lista nele e as palavras do produtor rural para o mesmo assunto (propriedade, fazenda, terra e
+   * arrendamento para bens imóveis; CPR, cédula, financiamento e empréstimo para serviços
+   * financeiros). Palavra a mais só deixa passar uma resposta, nunca barra uma.
+   */
   static final List<Capitulo> CAPITULOS = List.of(
-      capitulo(172, 180, "combustíveis", "combust|gasolina|diesel|etanol|petroleo|gas natural"),
+      capitulo(172, 180, "combustíveis",
+          "combust|gasolina|diesel|etanol|biodiesel|petroleo|gas natural|lubrificante|querosene|abastec"),
       capitulo(181, 233, "serviços financeiros",
-          "financ|banc|segur|consorcio|previdencia|capitaliz|cambio|fundo"),
+          "financ|banc|segur|consorcio|previdencia|capitaliz|cambio|fundo|emprest|juro|cedula"
+              + "|\\bcpr\\b|cartao|\\bpix\\b|credito rural|custeio|debenture"),
       capitulo(234, 243, "planos de assistência à saúde", "saude|medic|hospital|assistencia"),
-      capitulo(244, 250, "concursos de prognósticos", "prognost|loteria|aposta|sorteio|bingo"),
+      capitulo(244, 250, "concursos de prognósticos",
+          "prognost|loteria|aposta|sorteio|bingo|rifa|premio"),
       capitulo(251, 270, "bens imóveis",
-          "imovel|imoveis|imobiliar|terreno|incorporac|locac|aluguel|constru|loteamento"),
+          "imovel|imoveis|imobiliar|terreno|\\blote|loteamento|\\bsolo\\b|incorporac|locac|alug"
+              + "|arrend|cessao|constru|propriedade|fazenda|sitio|gleba|\\bterras?\\b|apartamento"
+              + "|\\bcasa\\b"),
       capitulo(271, 272, "sociedades cooperativas", "cooperativ"),
       capitulo(273, 291, "bares, restaurantes, hotelaria, transporte e turismo",
-          "\\bbar\\b|\\bbares\\b|restaurante|hotel|turism|viagem|parque|transporte"),
+          "\\bbar\\b|\\bbares\\b|restaurante|lanchonete|hotel|hospedagem|pousada|turism|viagem"
+              + "|parque|transporte|passageiro"),
       capitulo(292, 296, "sociedade anônima do futebol", "futebol|\\bsaf\\b|clube"),
       capitulo(297, 299, "missões diplomáticas", "diplomat|consular|embaixada|tratado"),
       capitulo(300, 307, "disposições comuns aos regimes específicos",

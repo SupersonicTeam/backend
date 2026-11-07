@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
+import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,24 @@ class GuardaRegimeEspecificoTest {
   }
 
   @Test
+  @DisplayName("Palavras do produtor rural para o mesmo setor também contam (fazenda, terra, "
+      + "arrendamento, CPR, financiamento)")
+  void vocabularioDoProdutorRural() {
+    assertThat(GuardaRegimeEspecifico.barra(
+        "Quando surge o fato gerador na venda da minha fazenda?",
+        List.of(lc214("art. 254, inciso I")))).isFalse();
+    assertThat(GuardaRegimeEspecifico.barra("O arrendamento da terra paga IBS e CBS?",
+        List.of(lc214("art. 252")))).isFalse();
+    assertThat(GuardaRegimeEspecifico.barra("A CPR paga IBS e CBS?",
+        List.of(lc214("art. 200")))).isFalse();
+    assertThat(GuardaRegimeEspecifico.barra("Os juros do financiamento do trator pagam IBS?",
+        List.of(lc214("art. 200")))).isFalse();
+    // "rural" sozinho não é setor: pergunta geral do produtor rural continua sendo geral.
+    assertThat(GuardaRegimeEspecifico.barra("Como o produtor rural calcula o IBS e a CBS?",
+        List.of(lc214("art. 254")))).isTrue();
+  }
+
+  @Test
   @DisplayName("Basta uma citação fora da faixa (regra geral, outra lei, Imposto Seletivo) para passar")
   void citacaoMistaPassa() {
     assertThat(GuardaRegimeEspecifico.barra("Sobre qual valor se calcula o IBS e a CBS?",
@@ -93,7 +112,7 @@ class GuardaRegimeEspecificoTest {
   @Test
   @DisplayName("O desfecho novo cabe na coluna da auditoria (VARCHAR(40), changeSet 0025): sem changeSet")
   void desfechoCabeNaColuna() {
-    assertThat(br.com.agrocontabil.model.DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR.name().length())
+    assertThat(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR.name().length())
         .isLessThanOrEqualTo(40);
   }
 }
