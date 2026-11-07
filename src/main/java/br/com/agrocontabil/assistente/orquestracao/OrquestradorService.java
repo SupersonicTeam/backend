@@ -78,15 +78,18 @@ public class OrquestradorService {
   private final FundamentoRetencao fundamentoRetencao;
   private final TextosDoBackend textosDoBackend;
   private final AtalhoReformaTributaria atalhoReforma;
+  private final TratamentoNaPergunta tratamentoNaPergunta;
   private final double confiancaMinima;
 
   /** Constrói o orquestrador. */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
       RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
       FundamentoRetencao fundamentoRetencao, TextosDoBackend textosDoBackend,
-      AtalhoReformaTributaria atalhoReforma, ModoFallback fallback,
+      AtalhoReformaTributaria atalhoReforma, TratamentoNaPergunta tratamentoNaPergunta,
+      ModoFallback fallback,
       DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
     this.atalhoReforma = atalhoReforma;
+    this.tratamentoNaPergunta = tratamentoNaPergunta;
     this.classificador = classificador;
     this.rotaDados = rotaDados;
     this.rotaLegislacao = rotaLegislacao;
@@ -132,7 +135,7 @@ public class OrquestradorService {
     };
     // Tratamento de produto fora da tabela (#443): a pergunta de lei (ou de dados que nao
     // consultou a tabela) sobre um produto ganha o tratamento oficial com a ressalva.
-    tratamentoDaTabela(rota, resultado, pergunta, contexto);
+    tratamentoDaTabela(rota, pergunta, contexto);
     // Tratamento do produto pela tabela oficial (#283): texto e citacao do dado, nao do modelo.
     resultado = textosDoBackend.aplicar(resultado, contexto);
     // Retencao (RN009): as duas regras e as citacoes vem do backend, nao da memoria do modelo.
@@ -142,28 +145,18 @@ public class OrquestradorService {
   /**
    * Pergunta sobre o tratamento de um produto que a rota respondeu sem a tabela oficial (#443): a
    * rota de lei afirmava o percentual do artigo como definitivo, sem a ressalva do enquadramento.
-   * Com o sinal da pergunta ({@link PerguntaTratamentoProduto}), o modelo diz qual é o produto
-   * ({@link RotaDados#consultarTratamento}) e o texto da tabela, com a ressalva, entra pelo
-   * {@link TextosDoBackend}: no lugar da resposta de lei, depois da de dados ou do MISTO. No MISTO
-   * é a quarta chamada ao modelo no pior caso; a cota (#166) nunca cobra mais que o teto reservado
-   * para a pergunta, e o consumo real de quatro chamadas curtas fica abaixo dele. Sem o modelo, a
-   * resposta fica como está.
+   * Com o sinal da pergunta ({@link PerguntaTratamentoProduto}), o backend procura o produto nas
+   * palavras dela ({@link TratamentoNaPergunta}, sem o modelo) e o texto da tabela, com a
+   * ressalva, entra pelo {@link TextosDoBackend}: no lugar da resposta de lei, depois da de dados
+   * ou do MISTO.
    */
-  private void tratamentoDaTabela(Intencao rota, ResultadoOrquestracao resultado,
-      String pergunta, ContextoAssistente contexto) {
-    if (rota == Intencao.FORA_DE_ESCOPO || resultado.modoFallback()
-        || !PerguntaTratamentoProduto.parece(pergunta)
+  private void tratamentoDaTabela(Intencao rota, String pergunta, ContextoAssistente contexto) {
+    if (rota == Intencao.FORA_DE_ESCOPO || !PerguntaTratamentoProduto.parece(pergunta)
         || contexto.fontes().stream()
-            .anyMatch(f -> RotaDados.FUNCAO_TRATAMENTO.equals(f.funcao()))
-        || !disponibilidade.disponivel()) {
+            .anyMatch(f -> RotaDados.FUNCAO_TRATAMENTO.equals(f.funcao()))) {
       return;
     }
-    contexto.verificarAtiva();
-    try {
-      rotaDados.consultarTratamento(pergunta, contexto);
-    } catch (AssistenteIndisponivelException e) {
-      semModelo(contexto, "tratamento");
-    }
+    tratamentoNaPergunta.aplicar(pergunta, contexto);
   }
 
   /**

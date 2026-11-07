@@ -57,6 +57,7 @@ class OrquestradorServiceTest {
   @Mock private BuscaTextualLegislacaoService buscaTextual;
   @Mock private TrechosDasCompras trechosDasCompras;
   @Mock private AtalhoReformaTributaria atalhoReforma;
+  @Mock private TratamentoNaPergunta tratamentoNaPergunta;
 
   private OrquestradorService orquestrador;
   private DisponibilidadeModelo disponibilidade;
@@ -69,7 +70,7 @@ class OrquestradorServiceTest {
     disponibilidade = new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L);
     orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
         trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
-        atalhoReforma, new ModoFallback(buscaTextual, propriedades),
+        atalhoReforma, tratamentoNaPergunta, new ModoFallback(buscaTextual, propriedades),
         disponibilidade, propriedades);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 9, 29));
   }
@@ -590,7 +591,7 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.LEGISLACAO, 0.8);
     when(rotaLegislacao.responder(anyString(), any())).thenReturn(ResultadoRota.aceita(
         "A pimenta tem reducao de 60% [art. 137].", List.of(CITACAO)));
-    when(rotaDados.consultarTratamento(anyString(), any())).thenAnswer(chamada -> {
+    when(tratamentoNaPergunta.aplicar(anyString(), any())).thenAnswer(chamada -> {
       ContextoAssistente c = chamada.getArgument(1);
       c.registrarConsultaDeTabela(RotaDados.FUNCAO_TRATAMENTO,
           java.util.Map.of("produtoOuNcm", "pimenta"), false);
@@ -618,7 +619,7 @@ class OrquestradorServiceTest {
     when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("Vendas."));
     when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
         .thenReturn(ResultadoRota.aceita("Regra geral.", List.of(CITACAO)));
-    when(rotaDados.consultarTratamento(anyString(), any())).thenAnswer(chamada -> {
+    when(tratamentoNaPergunta.aplicar(anyString(), any())).thenAnswer(chamada -> {
       ContextoAssistente c = chamada.getArgument(1);
       c.registrarConsultaDeTabela(RotaDados.FUNCAO_TRATAMENTO,
           java.util.Map.of("produtoOuNcm", "noz"), false);
@@ -649,17 +650,16 @@ class OrquestradorServiceTest {
     classificarComo(Intencao.DADOS, 0.9);
     orquestrador.responder("O cravo tem redução de CBS?", contexto, rotasAvisadas::add);
 
-    verify(rotaDados, never()).consultarTratamento(anyString(), any());
+    verify(tratamentoNaPergunta, never()).aplicar(anyString(), any());
   }
 
   @Test
-  @DisplayName("#443: o modelo fora na consulta da tabela nao derruba a resposta da rota")
-  void tabelaSemModelo() {
+  @DisplayName("#443: produto nao achado na tabela: a resposta da rota fica como esta")
+  void produtoNaoAchado() {
     classificarComo(Intencao.LEGISLACAO, 0.8);
     when(rotaLegislacao.responder(anyString(), any()))
         .thenReturn(ResultadoRota.aceita("Regra do anexo.", List.of(CITACAO)));
-    when(rotaDados.consultarTratamento(anyString(), any()))
-        .thenThrow(new AssistenteIndisponivelException("fora", null));
+    when(tratamentoNaPergunta.aplicar(anyString(), any())).thenReturn(false);
 
     ResultadoOrquestracao r = orquestrador.responder(
         "Gengibre paga menos imposto na reforma?", contexto, rotasAvisadas::add);

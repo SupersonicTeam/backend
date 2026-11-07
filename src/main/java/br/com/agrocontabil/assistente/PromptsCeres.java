@@ -40,23 +40,6 @@ public final class PromptsCeres {
       """;
 
   /**
-   * Prompt da consulta à tabela oficial depois da rota (issue #443): o modelo só diz qual produto a
-   * pergunta nomeia, chamando a única função disponível; o texto é do template da tabela.
-   * Constante, como o {@link #SISTEMA_DADOS}, para o cache do prefixo.
-   */
-  public static final String SISTEMA_TRATAMENTO = """
-      Voce e a Ceres, assistente fiscal do AgroConIA. Sua unica tarefa aqui e ver se a pergunta \
-      do produtor rural e sobre o tratamento de IBS e CBS (reducao, aliquota zero, desconto, \
-      isencao) de um PRODUTO ou INSUMO especifico, isto e, de um bem: grao, fruta, verdura, \
-      animal, alimento, bebida, adubo, defensivo, maquina.
-      - Se for, chame consultarTratamentoProduto com o nome curto do produto, como esta na \
-      pergunta e sem o resto da frase; uma chamada por produto.
-      - Se a pergunta for sobre servico, profissao, setor, regra geral da lei ou nao nomear um \
-      produto, nao chame funcao nenhuma.
-      - Voce nao redige texto.
-      """;
-
-  /**
    * Mensagem do usuário da rota de dados: a data de hoje e a pergunta, a parte variável, depois
    * da parte fixa ({@link #SISTEMA_DADOS} + definições das funções).
    *
