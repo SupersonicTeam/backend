@@ -4,3 +4,5 @@
 *.sh text eol=lf
 # Conjunto congelado do benchmark (#352): o hash .sha256 e dos bytes, CRLF o quebraria.
 docs/avaliacao/benchmark/perguntas-benchmark.json -text
+# Conjunto congelado das issues #442 e #443: o hash .sha256 e dos bytes, CRLF o quebraria.
+docs/avaliacao/treino/perguntas-ceres-442-443.json -text
