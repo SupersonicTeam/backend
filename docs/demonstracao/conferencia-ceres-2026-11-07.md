@@ -97,7 +97,7 @@ Antônio Carlos Pereira, pessoa física sem IE). As colunas de auditoria vêm de
   aquecimento levou 120,2 s e estourou o read-timeout; o disjuntor abriu e as 8 seguintes saíram em
   `MODO_FALLBACK`. Isso não é veredito da Ceres. Reaqueci, rodei uma sonda (19,8 s, sem fallback) e
   repeti as 9: **vale a segunda tentativa**; as duas estão registradas abaixo.
-- **Sem o modelo, a pergunta da soja entrega trechos fora do assunto:** no fallback da primeira tentativa a resposta lista `LC 214/2025, Anexo VII, item 8` (óleos de soja), `LC 227/2026, art. 174` e `LC 214/2025, art. 473` (compras da administração pública), sem o art. 137. É o que a banca veria com o modelo fora (a busca textual do fallback não distingue o grão do óleo).
+- **Sem o modelo, a pergunta da soja entrega trechos fora do assunto:** no fallback da primeira tentativa a resposta lista `LC 214/2025, Anexo VII, item 8` (óleos de soja), `LC 227/2026, art. 174` e `LC 214/2025, art. 473` (compras da administração pública), sem o art. 137. É o que a banca veria com o modelo fora.
 - **Embedding:** a camada de embedding pausou 9 vezes no log ("prazo de 500 ms vencido; a rota cai no
   modelo", pausa de 30 s), 1 na primeira tentativa e 8 depois; nas perguntas livres isso empurra a
   classificação para o modelo (camada `LLM` na auditoria), o que soma uma chamada de classificação ao modelo.
