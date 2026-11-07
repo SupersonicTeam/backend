@@ -166,6 +166,17 @@ class AchadosReviewDelta361Test(unittest.TestCase):
             self.assertFalse(ext.avaliar(resultado("x", desfecho, citacao_valida=True), {})["fundamentacao"])
         self.assertTrue(ext.avaliar(resultado("x", citacao_valida=True), {})["fundamentacao"])
 
+    def test_conjuntos_da_regua_sao_os_mesmos_do_java(self):
+        """Sem deriva: ``DESCARTADAS`` e ``FUNCOES_COM_CITACAO_FIXA`` lidos do fonte do AvaliadorResposta."""
+        import re
+        from pathlib import Path
+        fonte = (Path(__file__).resolve().parents[4] / "src/main/java/br/com/agrocontabil/config/avaliacao"
+                 / "AvaliadorResposta.java").read_text(encoding="utf-8")
+        funcoes = re.search(r"FUNCOES_COM_CITACAO_FIXA\s*=\s*Set\.of\(([^)]*)\)", fonte).group(1)
+        self.assertEqual(set(re.findall(r'"(\w+)"', funcoes)), ext.FUNCOES_COM_CITACAO_FIXA)
+        bloco = re.search(r"RESPOSTA_DESCARTADA\s*=\s*EnumSet\.of\((.*?)\);", fonte, re.DOTALL).group(1)
+        self.assertEqual(set(re.findall(r"DesfechoInteracao\.(\w+)", bloco)), ext.DESCARTADAS)
+
     def test_regime_especifico_sem_setor_e_descartado_como_no_java(self):
         self.assertFalse(ext.citacao_vale(resultado("x", "REGIME_ESPECIFICO_SEM_SETOR", citacao_valida=True)))
 

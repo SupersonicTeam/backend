@@ -225,6 +225,23 @@ class AvaliadorRespostaTest {
     }
 
     @Test
+    @DisplayName("As funções de citação fixa da régua são as que o backend junta (sem deriva)")
+    @SuppressWarnings("unchecked")
+    void funcoesDeCitacaoFixaSaoAsDoBackend() throws Exception {
+      String pacote = "br.com.agrocontabil.assistente.orquestracao.";
+      java.lang.reflect.Field retencao =
+          Class.forName(pacote + "FundamentoRetencao").getDeclaredField("FUNCAO_RETENCOES");
+      java.lang.reflect.Field tratamento =
+          Class.forName(pacote + "TextosDoBackend").getDeclaredField("FUNCOES");
+      retencao.setAccessible(true);
+      tratamento.setAccessible(true);
+      java.util.Set<String> doBackend = new java.util.HashSet<>();
+      doBackend.add((String) retencao.get(null));
+      doBackend.addAll((java.util.Set<String>) tratamento.get(null));
+      assertThat(AvaliadorResposta.FUNCOES_COM_CITACAO_FIXA).isEqualTo(doBackend);
+    }
+
+    @Test
     @DisplayName("Desfecho geral NUMERO_SEM_FONTE com a lei SEM_FUNDAMENTO_LEGAL: não vale")
     void geralDescartadoPesaMesmoComFuncaoFixa() {
       assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
