@@ -145,6 +145,104 @@ class AvaliadorRespostaTest {
       assertThat(AvaliadorResposta.citaAlgum(List.of(ec),
           List.of("EC 132/2023, art. 1º (redação do art. 156-A"))).isTrue();
     }
+
+    // --- #433: citação do MISTO com a lei descartada ---
+
+    private static final List<String> ESPERADO = List.of("LC 214/2025, art. 138");
+
+    private PerguntaGabarito perguntaMisto() {
+      return new PerguntaGabarito("T01", Categoria.MISTO, "Pergunta fictícia de teste",
+          Intencao.MISTO, NENHUM, Map.of(), NENHUM, ESPERADO, false, NENHUM, NENHUM, NENHUM,
+          false, null, false);
+    }
+
+    private PerguntaGabarito perguntaLei() {
+      return new PerguntaGabarito("T02", Categoria.LEGISLACAO, "Outra pergunta fictícia",
+          Intencao.LEGISLACAO, NENHUM, Map.of(), NENHUM, ESPERADO, false, NENHUM, NENHUM, NENHUM,
+          false, null, false);
+    }
+
+    private ExecucaoPergunta execucao(Intencao rota, DesfechoInteracao geral,
+        DesfechoInteracao lei, String... funcoes) {
+      List<FonteDado> fontes = java.util.Arrays.stream(funcoes)
+          .map(f -> new FonteDado(f, Map.of())).toList();
+      return new ExecucaoPergunta(rota, "texto", geral, List.of(lc214("art. 138")), fontes,
+          false, 1000, null, DesfechoInteracao.RESPONDIDA, lei, null, null);
+    }
+
+    private Boolean citacaoValida(PerguntaGabarito pergunta, ExecucaoPergunta execucao) {
+      return AvaliadorResposta.avaliar(pergunta, execucao, NENHUM).citacaoValida();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = DesfechoInteracao.class, names = {
+        "NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA",
+        "REGIME_ESPECIFICO_SEM_SETOR"})
+    @DisplayName("MISTO com a lei descartada e sem função de citação fixa: não vale")
+    void mistoLeiDescartadaSemFuncaoFixa(DesfechoInteracao lei) {
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.RESPONDIDA, lei, "consultarNota"))).isFalse();
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.RESPONDIDA, lei))).isFalse();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = DesfechoInteracao.class, names = {
+        "NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA",
+        "REGIME_ESPECIFICO_SEM_SETOR"})
+    @DisplayName("MISTO com a lei descartada e função de citação fixa: vale")
+    void mistoLeiDescartadaComFuncaoFixa(DesfechoInteracao lei) {
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.RESPONDIDA, lei, "consultarRetencoes"))).isTrue();
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.RESPONDIDA, lei, "consultarNota", "consultarTratamentoProduto")))
+          .isTrue();
+    }
+
+    @Test
+    @DisplayName("MISTO com desfecho geral AFIRMACAO_SOBRE_DADOS: só vale com função fixa")
+    void mistoAfirmacaoSobreDados() {
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS,
+          "consultarNota"))).isFalse();
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS,
+          "consultarRetencoes"))).isTrue();
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS,
+          "consultarTratamentoProduto"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("MISTO com a lei respondida, ou sem desfecho da lei, segue a regra anterior")
+    void mistoLeiRespondidaOuNula() {
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.RESPONDIDA, DesfechoInteracao.RESPONDIDA, "consultarNota"))).isTrue();
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.RESPONDIDA, null, "consultarNota"))).isTrue();
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.NUMERO_SEM_FONTE, null, "consultarRetencoes"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Desfecho geral NUMERO_SEM_FONTE com a lei SEM_FUNDAMENTO_LEGAL: não vale")
+    void geralDescartadoPesaMesmoComFuncaoFixa() {
+      assertThat(citacaoValida(perguntaMisto(), execucao(Intencao.MISTO,
+          DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.SEM_FUNDAMENTO_LEGAL,
+          "consultarRetencoes"))).isFalse();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = DesfechoInteracao.class, names = {
+        "NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA",
+        "REGIME_ESPECIFICO_SEM_SETOR"})
+    @DisplayName("LEGISLACAO com desfecho descartado: não vale (regra anterior)")
+    void legislacaoDescartada(DesfechoInteracao geral) {
+      assertThat(citacaoValida(perguntaLei(), execucao(Intencao.LEGISLACAO, geral, null)))
+          .isFalse();
+      assertThat(citacaoValida(perguntaLei(), execucao(Intencao.LEGISLACAO,
+          DesfechoInteracao.RESPONDIDA, null))).isTrue();
+    }
   }
 
   @Nested

@@ -166,6 +166,50 @@ class AchadosReviewDelta361Test(unittest.TestCase):
             self.assertFalse(ext.avaliar(resultado("x", desfecho, citacao_valida=True), {})["fundamentacao"])
         self.assertTrue(ext.avaliar(resultado("x", citacao_valida=True), {})["fundamentacao"])
 
+    def test_regime_especifico_sem_setor_e_descartado_como_no_java(self):
+        self.assertFalse(ext.citacao_vale(resultado("x", "REGIME_ESPECIFICO_SEM_SETOR", citacao_valida=True)))
+
+    def test_misto_com_lei_descartada_so_vale_com_funcao_de_citacao_fixa(self):
+        # #433: pergunta e funcoes ficticias; mesma tabela do AvaliadorRespostaTest.
+        for lei in ("NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA", "REGIME_ESPECIFICO_SEM_SETOR"):
+            sem = resultado("x", rota="MISTO", citacao_valida=True, desfechoLegislacao=lei,
+                            fontes=[{"funcao": "consultarNota"}])
+            self.assertFalse(ext.citacao_vale(sem), lei)
+            self.assertFalse(ext.citacao_vale(resultado("x", rota="MISTO", citacao_valida=True,
+                                                        desfechoLegislacao=lei)), lei)
+            for funcao in ("consultarRetencoes", "consultarTratamentoProduto"):
+                com = resultado("x", rota="MISTO", citacao_valida=True, desfechoLegislacao=lei,
+                                fontes=[{"funcao": "consultarNota"}, {"funcao": funcao}])
+                self.assertTrue(ext.citacao_vale(com), (lei, funcao))
+
+    def test_misto_com_afirmacao_sobre_dados_so_vale_com_funcao_de_citacao_fixa(self):
+        base = dict(rota="MISTO", citacao_valida=True, desfechoLegislacao="AFIRMACAO_SOBRE_DADOS")
+        self.assertFalse(ext.citacao_vale(resultado("x", "AFIRMACAO_SOBRE_DADOS", **base,
+                                                    fontes=[{"funcao": "consultarNota"}])))
+        for funcao in ("consultarRetencoes", "consultarTratamentoProduto"):
+            self.assertTrue(ext.citacao_vale(resultado("x", "AFIRMACAO_SOBRE_DADOS", **base,
+                                                       fontes=[{"funcao": funcao}])))
+
+    def test_misto_com_lei_respondida_ou_nula_segue_a_regra_anterior(self):
+        for lei in ("RESPONDIDA", None):
+            self.assertTrue(ext.citacao_vale(resultado("x", rota="MISTO", citacao_valida=True,
+                                                       desfechoLegislacao=lei,
+                                                       fontes=[{"funcao": "consultarNota"}])))
+        # desfecho geral descartado pesa mesmo com funcao fixa e a lei sem fundamento
+        self.assertFalse(ext.citacao_vale(resultado("x", "NUMERO_SEM_FONTE", rota="MISTO", citacao_valida=True,
+                                                    desfechoLegislacao="SEM_FUNDAMENTO_LEGAL",
+                                                    fontes=[{"funcao": "consultarRetencoes"}])))
+
+    def test_legislacao_com_desfecho_descartado_nao_vale_e_a_regra_so_rebaixa(self):
+        for desfecho in ("NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA",
+                         "REGIME_ESPECIFICO_SEM_SETOR"):
+            self.assertFalse(ext.citacao_vale(resultado("x", desfecho, citacao_valida=True)))
+        # nao promove: falso e nulo seguem como vieram
+        self.assertIs(ext.citacao_vale(resultado("x", rota="MISTO", citacao_valida=False,
+                                                 desfechoLegislacao="RESPONDIDA")), False)
+        self.assertIsNone(ext.citacao_vale(resultado("x", rota="MISTO", desfechoLegislacao="NUMERO_SEM_FONTE")))
+        self.assertTrue(ext.citacao_vale(resultado("x", citacao_valida=True)))
+
     def test_sql_aceita_espaco_depois_da_chave_como_o_cita_algum(self):
         sql = ext.sql_conferencia({"perguntas": [{"origem": "inedita_externa_ia", "id": "X",
                                                   "dispositivosEsperados": ["LC 214/2025, art. 138"]}]})

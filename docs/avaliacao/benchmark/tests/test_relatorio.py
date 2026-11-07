@@ -546,6 +546,15 @@ class ExternasNoRelatorioTest(Base):
         r = {"citacaoValida": True, "execucao": {"desfecho": "CITACAO_INVALIDA"}}
         self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
 
+    def test_citacao_do_misto_com_lei_descartada_nao_conta_sem_funcao_de_citacao_fixa(self):
+        # #433: pergunta fictícia; a mesma regra do AvaliadorResposta, aplicada pelo criterio principal.
+        r = {"citacaoValida": True, "execucao": {
+            "rota": "MISTO", "desfecho": "RESPONDIDA", "desfechoLegislacao": "CITACAO_INVALIDA",
+            "fontes": [{"funcao": "consultarNota"}]}}
+        self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
+        r["execucao"]["fontes"].append({"funcao": "consultarRetencoes"})
+        self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], True)
+
     def test_origem_antiga_das_externas_ainda_e_externa(self):
         self._marcar()
         canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
