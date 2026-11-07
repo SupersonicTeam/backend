@@ -103,7 +103,7 @@ harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres
 citação por causa (busca, sentido, escolha, lei ausente), mede o recall por `k` e compara o
 `qwen3:30b-instruct` com o `qwen3:4b-instruct` na VPS. As ferramentas manuais
 `DiagnosticoRecallLeiManual` e `DiagnosticoCitacoesLeiManual` (`src/test/.../assistente/`) **não
-rodam no `./mvnw test`** (só com o modelo e o banco locais). **Decisão do Murillo, 2026-11-07: o
+rodam no `./mvnw test`** (`-Dtest=<classe> -Ddiagnostico.saida=<arquivo>` no profile `dev`, com o banco da base de lei e o Ollama locais; a de recall mede só a busca e não usa o modelo de chat). **Decisão do Murillo, 2026-11-07: o
 `qwen3:4b-instruct` segue como modelo padrão até a banca.** A frente de busca seguiu nas issues
 #433 (régua de citação do MISTO), #434 (executor do benchmark), #435 (conferência local das
 perguntas do roteiro da banca) e #436 (rebaixar capítulos de caso especial na busca, medido em
