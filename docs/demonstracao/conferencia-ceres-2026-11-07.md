@@ -13,7 +13,7 @@ Conferência da issue #435: as perguntas que o roteiro faz à Ceres, rodadas loc
 | Item | Valor |
 |---|---|
 | Data e hora | 2026-11-07, 10:09 a 10:25 (America/Sao_Paulo) |
-| Vale para o SHA | `4a0b3a8` (`main`; a branch rodada só tinha mudanças de documentação em cima dele) |
+| Vale para o SHA | `4a0b3a8` (`main`). A aplicação rodou da branch de documentação `fa03163`, que é o `4a0b3a8` mais mudanças só de documentação (nenhum arquivo de `src/` nem de `application*.yml`) |
 | Semeadura | 2026-11-07 10:10 (os valores do seed são relativos a este dia; cota da semana de 2026-11-02, 33 créditos, teto de uma pergunta 32) |
 | Banco | `agrocontabil_conferencia`, criado e removido por esta conferência; seed: 9 produtores, 157 notas (0 recusadas), 34 guias, 5 pendências, 6 meses fechados |
 | Base de legislação | 8.304 trechos, copiados do banco de desenvolvimento: LC 214/2025 5.004, LC 227/2026 2.211, Lei 8.212/1991 547, EC 132/2023 538, Lei 9.528/1997 4 |
@@ -66,13 +66,19 @@ python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl apuracao -
 docker exec agrocontabil-postgres psql -U agrocontabil -d postgres -c "DROP DATABASE agrocontabil_conferencia WITH (FORCE)"
 ```
 
+A auditoria foi lida à mão, só leitura, na ordem das chamadas (o 429 não grava linha):
+
+```bash
+docker exec agrocontabil-postgres psql -U agrocontabil -d agrocontabil_conferencia -tA -F '|' -c \n  "select rota, desfecho, desfecho_dados, desfecho_legislacao, camada_classificacao, latencia_ms, tokens_entrada, tokens_saida from assistente_interacao order by criado_em"
+```
+
 O rascunho de milho usado foi a nota 3191 (`GET /api/notas?status=RASCUNHO`, venda de milho ao
 Antônio Carlos Pereira, pessoa física sem IE). As colunas de auditoria vêm de `assistente_interacao`
 (só leitura), na ordem das chamadas.
 
 ## Resultado
 
-**Resumo: 3 divergências e 1 ressalva** (as divergências estão em negrito na coluna do veredito).
+**Resumo: 3 divergências e 1 ressalva** (as divergências estão em negrito na coluna do veredito). Duas são objetivas (apuração sem função chamada; pergunta geral de ICMS com a função errada); a da soja é uma leitura da regra do #284 (afirmar os 60% sem ressalva) e pode ser discutida.
 
 - **Apuração do mês passado** (3 de 3): "Não consegui identificar qual dado consultar". Nenhuma função
   foi chamada (desfecho `SEM_RESPOSTA`, camada `LLM`). O sistema tem os números:
@@ -91,6 +97,7 @@ Antônio Carlos Pereira, pessoa física sem IE). As colunas de auditoria vêm de
   aquecimento levou 120,2 s e estourou o read-timeout; o disjuntor abriu e as 8 seguintes saíram em
   `MODO_FALLBACK`. Isso não é veredito da Ceres. Reaqueci, rodei uma sonda (19,8 s, sem fallback) e
   repeti as 9: **vale a segunda tentativa**; as duas estão registradas abaixo.
+- **Sem o modelo, a pergunta da soja entrega trechos fora do assunto:** no fallback da primeira tentativa a resposta lista `LC 214/2025, Anexo VII, item 8` (óleos de soja), `LC 227/2026, art. 174` e `LC 214/2025, art. 473` (compras da administração pública), sem o art. 137. É o que a banca veria com o modelo fora (a busca textual do fallback não distingue o grão do óleo).
 - **Embedding:** a camada de embedding pausou 9 vezes no log ("prazo de 500 ms vencido; a rota cai no
   modelo", pausa de 30 s), 1 na primeira tentativa e 8 depois; nas perguntas livres isso empurra a
   classificação para o modelo (camada `LLM` na auditoria), o que soma uma chamada de classificação ao modelo.
