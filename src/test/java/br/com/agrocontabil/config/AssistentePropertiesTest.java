@@ -89,26 +89,24 @@ class AssistentePropertiesTest {
   }
 
   @Test
-  @DisplayName("#166/#270/#443: o teto da pergunta soma as 4 chamadas reais, cada uma com o seu"
-      + " teto")
+  @DisplayName("#166/#270: o teto da pergunta soma as 3 chamadas reais, cada uma com o seu teto")
   void tetoDaPerguntaSegueAsChamadasReais() {
     AssistenteProperties p = new AssistenteProperties();
     AssistenteProperties.Cota cota = p.getCota();
 
-    // 4 x 8.192 de entrada + (256 + 512 + 1.024 + 512, a tabela da #443) de saida x 4 = 41.984
-    // ponderados -> 42. A formula antiga (2 + 1 + 3 rodadas = 6 chamadas x 1.024 de saida) dava 73.
-    assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA).isEqualTo(4);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(42);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 2.0)).isEqualTo(84);
+    // 3 x 8.192 de entrada + (256 + 512 + 1.024) de saida x 4 = 31.744 ponderados -> 32.
+    // A formula antiga (2 + 1 + 3 rodadas = 6 chamadas x 1.024 de saida) dava 73.
+    assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA).isEqualTo(3);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(32);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 2.0)).isEqualTo(64);
 
-    // Cada teto entra com o peso da saida: +250 tokens na lei = +1.000 ponderados. O das funcoes
-    // entra duas vezes (escolha das funcoes e tabela oficial, #443).
+    // Cada teto entra uma vez, com o peso da saida: +250 tokens na lei = +1.000 ponderados.
     p.getTetos().setLegislacao(1274);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(43);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(33);
     p.getTetos().setClassificacao(506);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(44);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(34);
     p.getTetos().setFuncoes(762);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(46);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(35);
   }
 
   @Test
@@ -120,7 +118,7 @@ class AssistentePropertiesTest {
     p.getTetos().setLegislacao(2048);
 
     assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
-    assertThat(p.getCota().tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(47);
+    assertThat(p.getCota().tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(36);
   }
 
   @Test

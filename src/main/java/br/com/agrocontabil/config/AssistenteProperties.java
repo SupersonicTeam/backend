@@ -398,12 +398,11 @@ public class AssistenteProperties implements InitializingBean {
     /**
      * Chamadas ao modelo que uma pergunta pode fazer, no máximo: classificação (só no desempate
      * das camadas e na {@code perguntaLei} do MISTO, #265), escolha das funções de dados (uma
-     * só desde a #266), lei e a consulta à tabela oficial pelo produto da pergunta (#443, com o
-     * teto das funções). O pior caso é o MISTO com desempate e sinal de tratamento de produto.
-     * Uma chamada nova ao modelo exige rever este número e {@link #tetoDaPergunta}: o
-     * {@code TetoDaCotaCobreChamadasTest} quebra se aparecer outro ponto que chame o modelo.
+     * só desde a #266) e lei. O pior caso é o MISTO com desempate. Uma chamada nova ao modelo
+     * exige rever este número e {@link #tetoDaPergunta}: o {@code TetoDaCotaCobreChamadasTest}
+     * quebra se aparecer outro ponto que chame o modelo.
      */
-    public static final int CHAMADAS_POR_PERGUNTA = 4;
+    public static final int CHAMADAS_POR_PERGUNTA = 3;
 
     /** Desliga a cota (demonstração do TCC): nada é reservado nem bloqueado. */
     private boolean habilitada = true;
@@ -425,14 +424,12 @@ public class AssistenteProperties implements InitializingBean {
     /**
      * Custo máximo possível de uma pergunta (#166, revisto depois da #270): as
      * {@value #CHAMADAS_POR_PERGUNTA} chamadas, cada uma com o teto de entrada e com o próprio
-     * teto de saída ({@code app.assistente.tetos}: classificação + funções + lei + funções, a
-     * consulta à tabela da #443, que manda o teto das funções). O teto de saída
+     * teto de saída ({@code app.assistente.tetos}: classificação + funções + lei). O teto de saída
      * é o {@code maxTokens} que a própria chamada manda ao modelo, então a saída real nunca passa
      * dele.
      */
     public long tetoDaPergunta(Tetos tetos, double fator) {
-      long saida = (long) tetos.getClassificacao() + 2L * tetos.getFuncoes()
-          + tetos.getLegislacao();
+      long saida = (long) tetos.getClassificacao() + tetos.getFuncoes() + tetos.getLegislacao();
       return creditos(CHAMADAS_POR_PERGUNTA * tetoTokensEntradaPorChamada, saida, fator);
     }
 
