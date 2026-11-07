@@ -68,8 +68,10 @@ _GATILHO_REDUCAO = re.compile(r"redu[cç][aã]o|reduzid\w*|\bmenor que\b|\bdesco
 #: Igual ao ``AvaliadorResposta.RESPOSTA_DESCARTADA`` do Java (#433).
 DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA",
                "REGIME_ESPECIFICO_SEM_SETOR"}
-#: Funcoes cujas citacoes o backend junta por conta propria (``FundamentoRetencao`` e
-#: ``TextosDoBackend``): no MISTO com a lei descartada, so elas explicam uma citacao entregue.
+#: Funcoes que, ao rodar, sao o sinal (nos campos gravados) de que o backend pode ter juntado citacoes
+#: fixas (``FundamentoRetencao`` e ``TextosDoBackend``). E um sinal, nao uma garantia. Limites aceitos
+#: na #433: com a funcao, conta qualquer citacao da lista (inclusive a da lei descartada); sem ela, a
+#: regua rebaixa ate a citacao fixa que o FundamentoRetencao junta so pelo texto da pergunta.
 FUNCOES_COM_CITACAO_FIXA = {"consultarRetencoes", "consultarTratamentoProduto"}
 _DESFECHOS_CORTE = {"RESPOSTA_CORTADA"}
 #: Resposta redigida pelo modelo (as outras sao frase fixa do backend: recusa ou descarte).
@@ -203,8 +205,9 @@ def citacao_vale(resultado: dict) -> bool | None:
     """``citacaoValida`` do comando, com a regra da main nas duas arquiteturas (``AvaliadorResposta
     .citacaoValida``, #433): texto descartado (citacao invalida, numero sem fonte, corte, regime
     especifico sem setor) nao ganha credito de citacao. No MISTO com a lei descartada, ou com o
-    desfecho geral ``AFIRMACAO_SOBRE_DADOS``, so vale se rodou uma funcao de citacao fixa do
-    backend. A regra so rebaixa: ``citacaoValida`` falso ou nulo segue como veio. Regra unica: o
+    desfecho geral ``AFIRMACAO_SOBRE_DADOS``, a citacao so conta se rodou uma funcao de citacao
+    fixa (o sinal de que o backend pode ter juntado citacoes fixas; ver os limites acima).
+    A regra so rebaixa: ``citacaoValida`` falso ou nulo segue como veio. Regra unica: o
     criterio principal do relatorio e o das externas usam esta funcao."""
     valor = resultado.get("citacaoValida")
     if not valor:

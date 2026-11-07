@@ -225,8 +225,27 @@ class AvaliadorRespostaTest {
     }
 
     @Test
+    @DisplayName("Não promove: a função fixa não faz valer citação de outro dispositivo")
+    void funcaoFixaNaoPromoveCitacaoQueNaoCasa() {
+      ExecucaoPergunta outroDispositivo = new ExecucaoPergunta(Intencao.MISTO, "texto",
+          DesfechoInteracao.RESPONDIDA,
+          List.of(new CitacaoLegal("Lei 8.212/1991", "art. 30", "https://planalto", "texto")),
+          List.of(new FonteDado("consultarRetencoes", Map.of())), false, 1000, null,
+          DesfechoInteracao.RESPONDIDA, DesfechoInteracao.CITACAO_INVALIDA, null, null);
+      assertThat(citacaoValida(perguntaMisto(), outroDispositivo)).isFalse();
+      // sem dispositivo esperado, a citação continua nula (não se aplica)
+      PerguntaGabarito semEsperado = new PerguntaGabarito("T03", Categoria.MISTO,
+          "Pergunta fictícia sem citação esperada", Intencao.MISTO, NENHUM, Map.of(), NENHUM, NENHUM,
+          false, NENHUM, NENHUM, NENHUM, false, null, false);
+      assertThat(citacaoValida(semEsperado, outroDispositivo)).isNull();
+    }
+
+    @Test
     @DisplayName("As funções de citação fixa da régua são as que o backend junta (sem deriva)")
     @SuppressWarnings("unchecked")
+    // A guarda cobre só as duas constantes (FundamentoRetencao e TextosDoBackend.FUNCOES, que também
+    // decide o que substitui o texto do modelo na rota DADOS); outra chamada a CitacoesFixas.buscar
+    // em outra classe não seria pega.
     void funcoesDeCitacaoFixaSaoAsDoBackend() throws Exception {
       String pacote = "br.com.agrocontabil.assistente.orquestracao.";
       java.lang.reflect.Field retencao =

@@ -45,9 +45,11 @@ public final class AvaliadorResposta {
       DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
 
   /**
-   * Funções cujas citações o backend junta à resposta por conta própria (#145, #283): o
-   * {@code FundamentoRetencao} (retenção) e o {@code TextosDoBackend} (tratamento do produto). Num
-   * MISTO com a parte de lei descartada, só elas explicam uma citação que o produtor recebeu.
+   * Funções que, quando rodam, são o sinal (nos campos gravados) de que o backend pode ter juntado
+   * citações fixas à resposta (#145, #283): {@code consultarRetencoes}, do {@code
+   * FundamentoRetencao}, e {@code consultarTratamentoProduto}, do {@code TextosDoBackend}. É um
+   * sinal, não uma garantia: a função pode rodar sem gerar citação (sem produto ou sem artigo, ou
+   * com a base de lei fora). Limites aceitos na #433, em {@link #citacaoValida}.
    */
   static final Set<String> FUNCOES_COM_CITACAO_FIXA =
       Set.of("consultarRetencoes", "consultarTratamentoProduto");
@@ -102,21 +104,29 @@ public final class AvaliadorResposta {
    * A citação esperada aparece e conta. Não conta quando o texto do modelo foi descartado
    * ({@link #RESPOSTA_DESCARTADA}). No MISTO, o desfecho geral é {@code RESPONDIDA} sempre que a
    * parte de dados foi aceita, e as citações vêm de {@code lei.citacoes()} mesmo com a parte de lei
-   * descartada (#433): com a lei descartada ou com o desfecho geral {@code AFIRMACAO_SOBRE_DADOS},
-   * só valem as citações fixas do backend, que existem se rodou uma das
-   * {@link #FUNCOES_COM_CITACAO_FIXA}. A regra só rebaixa; nunca promove.
+   * descartada (#433). Por isso, no MISTO com a lei descartada ou com o desfecho geral {@code
+   * AFIRMACAO_SOBRE_DADOS}, a citação só conta se rodou uma das {@link #FUNCOES_COM_CITACAO_FIXA}:
+   * é o sinal, nos campos gravados, de que o backend pode ter juntado citações fixas.
+   *
+   * <p>A regra só rebaixa; nunca promove. Dois limites aceitos na #433: (1) com a função, conta
+   * qualquer citação da lista, inclusive a da lei descartada que veio junto; (2) sem a função, a
+   * régua rebaixa até a citação fixa que o {@code FundamentoRetencao} junta só porque a
+   * <em>pergunta</em> fala de retenção.
    */
   static boolean citacaoValida(ExecucaoPergunta execucao, List<String> dispositivosEsperados) {
     if (RESPOSTA_DESCARTADA.contains(execucao.desfecho())) {
       return false;
     }
-    boolean citacaoFixaDoBackend = execucao.fontes().stream()
-        .anyMatch(f -> FUNCOES_COM_CITACAO_FIXA.contains(f.funcao()));
     if (execucao.rota() == Intencao.MISTO && leiDescartadaNoMisto(execucao)
-        && !citacaoFixaDoBackend) {
+        && !rodouFuncaoDeCitacaoFixa(execucao)) {
       return false;
     }
     return citaAlgum(execucao.citacoes(), dispositivosEsperados);
+  }
+
+  private static boolean rodouFuncaoDeCitacaoFixa(ExecucaoPergunta execucao) {
+    return execucao.fontes().stream().map(FonteDado::funcao)
+        .anyMatch(f -> f != null && FUNCOES_COM_CITACAO_FIXA.contains(f));
   }
 
   private static boolean leiDescartadaNoMisto(ExecucaoPergunta execucao) {

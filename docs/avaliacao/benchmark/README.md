@@ -221,7 +221,7 @@ descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A 
 conjunto do `AvaliadorResposta`) não ganha crédito de citação. No MISTO, com a parte de lei
 descartada (`desfechoLegislacao` num desses quatro) ou com o desfecho geral `AFIRMACAO_SOBRE_DADOS`,
 a citação só vale se rodou `consultarRetencoes` ou `consultarTratamentoProduto`, as funções cujas
-citações fixas o backend junta (#433; `externas.citacao_vale`, regra única do criterio principal e
+citações fixas o backend junta (#433, 2026-11-07; `externas.citacao_vale`, regra única do critério principal e
 das externas). A regra só rebaixa; não há campo novo no JSON da rodada. Enquanto
 `aConferir`, a citação das externas fica **só** na seção delas, como provisória. O CSV (`;`, BOM
 UTF-8, protegido contra fórmula, como o `CsvCego` do Java) sai em **lotes**: regerar o relatório

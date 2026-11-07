@@ -84,6 +84,14 @@ citação válida publicada e texto descartado (a régua de então não descarta
 não têm `desfechoLegislacao`: ali só a parte do desfecho geral conta, e ela não muda nada. Os `.md`
 gerados das rodadas não foram editados.
 
+**Limites aceitos.** (1) Com a função, conta qualquer citação da lista, inclusive a da lei descartada que veio junto
+(`CitacoesFixas.juntar` mantém as da rota). (2) Sem a função, a régua rebaixa até a citação fixa que o
+`FundamentoRetencao` junta só porque a **pergunta** fala de retenção, Funrural, SENAR ou split payment. (3) Num MISTO
+com os dados em fallback e a lei em `AFIRMACAO_SOBRE_DADOS`, o desfecho geral é `MODO_FALLBACK` e o caso não é
+rebaixado (a régua olha `AFIRMACAO_SOBRE_DADOS` só no desfecho geral). Para uma decisão separada: o
+`FundamentoRetencao.DISPOSITIVOS` é estático, então dá para reconhecer a citação dele pelos dispositivos, sem campo
+novo no JSON.
+
 **Fora do escopo, só contado (proposta).** `classificar_falhas`, `possivelmente_cortadas`, o
 `redigida` de `externas.avaliar` e a tabela das externas olham o desfecho geral. Se usassem a mesma
 regra, tratariam como não redigida a resposta de um MISTO com lei descartada. Nas rodadas gravadas
