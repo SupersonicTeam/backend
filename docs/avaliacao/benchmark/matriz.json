@@ -39,6 +39,8 @@
   "modeloReferencia": "qwen3:4b-instruct",
   "embedding": "bge-m3",
   "repeticoes": 3,
+  "readTimeoutCelula": "240s",
+  "readTimeoutCelulaNota": "Unica excecao a configuracao publicada (.env.example, AI_READ_TIMEOUT=120s nas duas arquiteturas): a carga a frio do modelo ou a fila da maquina local nao e propriedade da arquitetura, e o desvio vale igual para as duas colunas. Tem de ficar abaixo do prazo da pergunta do comando de avaliacao (5 min + 5 s). Gravado no celula.json e no rodada.json; mudar o valor exige rodada nova.",
   "trechosLegislacao": 8304,
   "perguntas": "docs/avaliacao/benchmark/perguntas-benchmark.json",
   "sessaoParalela": {

@@ -54,6 +54,51 @@ Cada pergunta passa pelo mesmo `OrquestradorService` da API, com o mesmo timeout
 | Palavras por frase | média nas respostas redigidas pelo modelo (desfecho `RESPONDIDA`), por rota (`ClarezaTexto`) | as respondidas |
 | Sigla sem explicação | respostas com sigla do glossário (IBS, CBS, NF-e, NCM, CFOP, Funrural, DANFE, SEFAZ) sem nenhuma das explicações aceitas em qualquer ponto do texto | as respondidas |
 
+### Régua de citação do MISTO com a lei descartada (#433, 2026-11-07)
+
+O desfecho do MISTO é `RESPONDIDA` sempre que a parte de dados foi aceita, e as citações vêm da
+parte de lei mesmo quando ela foi descartada. Por isso a citação (`AvaliadorResposta.citacaoValida`,
+e `externas.citacao_vale` no benchmark) tem uma regra a mais: **no MISTO com `desfechoLegislacao`
+descartado** (`NUMERO_SEM_FONTE`, `CITACAO_INVALIDA`, `RESPOSTA_CORTADA` ou
+`REGIME_ESPECIFICO_SEM_SETOR`), **ou com o desfecho geral `AFIRMACAO_SOBRE_DADOS`, a citação só
+vale se rodou `consultarRetencoes` ou `consultarTratamentoProduto`**, as funções cujas citações
+fixas o backend junta à resposta de propósito (#145, #283). Nos outros casos a regra de antes
+segue. A mudança só rebaixa, nunca promove, e o conjunto de desfechos descartados é o mesmo no
+Java e no Python.
+
+Recontagem sobre as rodadas gravadas (só os campos estruturados `execucao.rota`, `.desfecho`,
+`.desfechoLegislacao`, `.fontes[].funcao` e `citacaoValida`; por repetição, sempre o número de
+perguntas com citação válida):
+
+| Rodada | Publicado | Régua da `main` | Régua nova |
+|---|---|---|---|
+| 2026-10-14 09:30 e 15:04 | 9 e 13 | 9 e 12 | 9 e 12 |
+| 2026-10-15 08:18, 08:52, 12:58 e 13:19 | 13, 12, 1 e 4 | 12, 11, 1 e 4 | 12, 11, 1 e 4 |
+| 2026-11-06 22:21 (30B), repetições 1 a 3 | 27, 27, 27 | 27, 27, 27 | 27, 27, 27 |
+| 2026-11-06 23:07 (4B), repetições 1 a 3 | 25, 25, 25 | 25, 25, 25 | 25, 25, 25 |
+
+Nenhuma execução gravada muda da régua da `main` para a nova: o defeito é latente (nenhuma rodada
+tem um MISTO com a lei descartada, citação válida e sem uma dessas duas funções). A diferença entre
+"publicado" e "régua da `main`" nas rodadas de 2026-10-14 e 2026-10-15 vem de execuções com a
+citação válida publicada e texto descartado (a régua de então não descartava), não desta regra. As duas rodadas de 2026-10-14
+não têm `desfechoLegislacao`: ali só a parte do desfecho geral conta, e ela não muda nada. Os `.md`
+gerados das rodadas não foram editados.
+
+**Limites aceitos.** (1) Com a função, conta qualquer citação da lista, inclusive a da lei descartada que veio junto
+(`CitacoesFixas.juntar` mantém as da rota). (2) Sem a função, a régua rebaixa até a citação fixa que o
+`FundamentoRetencao` junta só porque a **pergunta** fala de retenção, Funrural, SENAR ou split payment. (3) Num MISTO
+com os dados em fallback e a lei em `AFIRMACAO_SOBRE_DADOS`, o desfecho geral é `MODO_FALLBACK` e o caso não é
+rebaixado (a régua olha `AFIRMACAO_SOBRE_DADOS` só no desfecho geral). Para uma decisão separada: o
+`FundamentoRetencao.DISPOSITIVOS` é estático, então dá para reconhecer a citação dele pelos dispositivos, sem campo
+novo no JSON.
+
+**Fora do escopo, só contado (proposta).** `classificar_falhas`, `possivelmente_cortadas`, o
+`redigida` de `externas.avaliar` e a tabela das externas olham o desfecho geral. Se usassem a mesma
+regra, tratariam como não redigida a resposta de um MISTO com lei descartada. Nas rodadas gravadas
+isso atinge, por repetição: 2026-10-15 08:18, 12:58 e 13:19, 1 execução cada (todas com função de
+citação fixa); 2026-11-06 22:21 (30B), 5, 5 e 4 (todas sem função fixa); 2026-11-06 23:07 (4B), 7, 6
+e 6 (3, 2 e 2 com função fixa). Não mudo isso aqui; a decisão é separada.
+
 ### Repetições e perguntas instáveis (#264, absorve a #201)
 
 Uma rodada só não separa ganho de ruído: à temperatura 0,2, com 7 perguntas MISTO, uma pergunta
