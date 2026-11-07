@@ -6,20 +6,28 @@ import br.com.agrocontabil.assistente.ferramentas.ProcessadorErroFerramenta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.tool.DefaultToolCallingManager;
@@ -79,6 +87,11 @@ public class RotaDados {
 
   private static final Logger log = LoggerFactory.getLogger(RotaDados.class);
 
+  /** Só lê e escreve os argumentos das chamadas (mapa simples): sem configuração do contexto. */
+  private static final ObjectMapper JSON = new ObjectMapper();
+  private static final TypeReference<LinkedHashMap<String, Object>> ARGUMENTOS =
+      new TypeReference<>() {};
+
   private final ModeloLinguagem modelo;
   private final ToolCallingManager toolCallingManager;
   private final ValidadorNumeros validadorNumeros;
@@ -132,9 +145,14 @@ public class RotaDados {
         .toolContext(contexto.comoToolContext())
         .maxTokens(tetoSaida)
         .build();
+    // Periodo relativo ("mes passado", "este ano") resolvido pelo backend (#442): o modelo o ve ja
+    // calculado e, depois da escolha, as datas das funcoes de periodo sao as dele.
+    Optional<PeriodoDaPergunta.Periodo> periodo =
+        PeriodoDaPergunta.resolver(pergunta, contexto.hoje());
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.SISTEMA_DADOS),
-        new UserMessage(PromptsCeres.mensagemDados(contexto.hoje(), perguntaAoModelo))), opcoes);
+        new UserMessage(PromptsCeres.mensagemDados(contexto.hoje(), perguntaAoModelo, periodo))),
+        opcoes);
 
     // Uma chamada so (#266): o modelo escolhe as funcoes; o texto e do template do backend.
     contexto.verificarAtiva();
@@ -160,7 +178,8 @@ public class RotaDados {
           MENSAGEM_SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA);
     }
     contexto.verificarAtiva();
-    ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, resposta);
+    ChatResponse escolhida = periodo.map(p -> comPeriodo(resposta, p)).orElse(resposta);
+    ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, escolhida);
     List<String> resultados = new ArrayList<>();
     coletarResultados(execucao.conversationHistory(), resultados);
     contexto.verificarAtiva();
@@ -243,6 +262,63 @@ public class RotaDados {
     return verificadorNegativa.substituir(texto, contexto)
         .map(ResultadoRota::comNegativaSubstituida)
         .orElseGet(() -> ResultadoRota.aceita(texto));
+  }
+
+  /**
+   * As chamadas escolhidas pelo modelo com o período da pergunta nos parâmetros de período
+   * (#442): datas para as funções de datas, o mês para as de mês quando o período é um mês. As
+   * demais funções e parâmetros (produto, tipo, situação) ficam como o modelo escolheu. Argumento
+   * que não é JSON de objeto fica intacto: a função o recusa como antes.
+   */
+  static ChatResponse comPeriodo(ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
+    int ajustadas = 0;
+    List<Generation> geracoes = new ArrayList<>();
+    for (Generation geracao : resposta.getResults()) {
+      AssistantMessage mensagem = geracao.getOutput();
+      List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
+      for (AssistantMessage.ToolCall chamada : mensagem.getToolCalls()) {
+        Optional<String> argumentos = argumentosComPeriodo(chamada, periodo);
+        if (argumentos.isPresent()) {
+          ajustadas++;
+          chamadas.add(new AssistantMessage.ToolCall(
+              chamada.id(), chamada.type(), chamada.name(), argumentos.get()));
+        } else {
+          chamadas.add(chamada);
+        }
+      }
+      geracoes.add(new Generation(AssistantMessage.builder()
+          .content(mensagem.getText())
+          .properties(mensagem.getMetadata())
+          .toolCalls(chamadas)
+          .media(mensagem.getMedia())
+          .build(), geracao.getMetadata()));
+    }
+    if (ajustadas == 0) {
+      return resposta;
+    }
+    // So a contagem: as datas sao do produtor e ficam nas fontes da resposta.
+    log.info("Ceres: periodo da pergunta aplicado em {} chamada(s) de funcao", ajustadas);
+    return new ChatResponse(geracoes, resposta.getMetadata());
+  }
+
+  private static Optional<String> argumentosComPeriodo(
+      AssistantMessage.ToolCall chamada, PeriodoDaPergunta.Periodo periodo) {
+    Map<String, Object> argumentos;
+    try {
+      String bruto = chamada.arguments();
+      argumentos = bruto == null || bruto.isBlank() ? new LinkedHashMap<>()
+          : JSON.readValue(bruto, ARGUMENTOS);
+    } catch (JsonProcessingException e) {
+      return Optional.empty();
+    }
+    if (argumentos == null || !PeriodoDaPergunta.aplicar(chamada.name(), argumentos, periodo)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(JSON.writeValueAsString(argumentos));
+    } catch (JsonProcessingException e) {
+      return Optional.empty();
+    }
   }
 
   private static int quantidadeDeChamadas(ChatResponse resposta) {
