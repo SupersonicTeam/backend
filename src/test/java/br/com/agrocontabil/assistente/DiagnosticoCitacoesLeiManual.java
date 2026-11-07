@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -24,14 +25,15 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /**
- * Diagnóstico MANUAL das citações da rota de lei (#269). Não roda no {@code mvn test} (o nome não
- * casa com o padrão do surefire): precisa do Postgres com a base de lei e do Ollama locais, e é
- * chamado com {@code -Dtest=DiagnosticoCitacoesLeiManual -Ddiagnostico.saida=<arquivo.json>
- * [-Ddiagnostico.repeticoes=3]} no profile {@code dev}.
+ * Diagnóstico MANUAL das citações da rota de lei (#269, #436). Não roda no {@code mvn test} (o
+ * nome não casa com o padrão do surefire): precisa do Postgres com a base de lei e do Ollama locais,
+ * e é chamado com {@code -Dtest=DiagnosticoCitacoesLeiManual -Ddiagnostico.perguntas=<conjunto.json>
+ * -Ddiagnostico.saida=<arquivo.json> [-Ddiagnostico.repeticoes=3] [-Ddiagnostico.ids=id,id]} no
+ * profile {@code dev}. Os dois arquivos são obrigatórios, sem padrão ({@link ParametrosDiagnostico}).
  *
- * <p>Para cada pergunta de {@code docs/avaliacao/treino/perguntas-lei-diagnostico.json} registra
- * (1) os trechos que a busca entrega ao modelo, com a posição, e (2) o que a {@link RotaLegislacao}
- * real responde, em N repetições: desfecho, citações e texto. Nada é simulado nem alterado.
+ * <p>Para cada pergunta do conjunto registra (1) os trechos que a busca entrega ao modelo, na ordem
+ * e com a posição, e (2) o que a {@link RotaLegislacao} real responde, em N repetições: desfecho,
+ * citações e texto. Nada é simulado nem alterado. A saída é a entrada do {@code busca_contagem.py}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("dev")
@@ -49,13 +51,18 @@ class DiagnosticoCitacoesLeiManual {
 
   private final List<String> crus = new CopyOnWriteArrayList<>();
 
+  /** Sem os arquivos, falha antes de o contexto subir e de ler qualquer arquivo (#436). */
+  @BeforeAll
+  static void exigirParametros() {
+    ParametrosDiagnostico.exigir();
+  }
+
   @Test
   void diagnostico() throws Exception {
     ObjectMapper json = new ObjectMapper();
-    JsonNode entrada = json.readTree(
-        Files.readString(Path.of("docs/avaliacao/treino/perguntas-lei-diagnostico.json")));
+    Path saida = ParametrosDiagnostico.saida();
+    JsonNode entrada = json.readTree(Files.readString(ParametrosDiagnostico.perguntas()));
     int repeticoes = Integer.getInteger("diagnostico.repeticoes", 3);
-    Path saida = Path.of(System.getProperty("diagnostico.saida", "diagnostico-lei.json"));
     LocalDate hoje = LocalDate.now();
     Mockito.doAnswer(inv -> {
       Object r = inv.callRealMethod();
