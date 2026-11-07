@@ -1,7 +1,9 @@
 """Partes puras do executor da matriz (issue #348): nada aqui chama Ollama, banco nem git."""
 
 import argparse
+import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -353,14 +355,14 @@ class RevisaoSegundoPrTest(unittest.TestCase):
             atual = ex.sha256_arquivo(AQUI.parent / "perguntas-benchmark.json")
             e = ex.Executor(config(cego=str(pasta)))
             # A mesma: segue. Outra, ausente no inicio ou sumida agora: recusa.
-            e.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}}, "embedding": "bge-m3"})
+            e.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}}, "embedding": "bge-m3", "readTimeoutCelula": "240s"})
             for antes in ({"sha256": "0" * 64}, None):
                 with self.assertRaisesRegex(RuntimeError, "conjunto cego mudou"):
-                    e.conferir_retomada({"perguntas": {"sha256": atual, "cego": antes}, "embedding": "bge-m3"})
+                    e.conferir_retomada({"perguntas": {"sha256": atual, "cego": antes}, "embedding": "bge-m3", "readTimeoutCelula": "240s"})
             sem = ex.Executor(config())
             with self.assertRaisesRegex(RuntimeError, "conjunto cego mudou"):
                 sem.conferir_retomada({"perguntas": {"sha256": atual, "cego": {"sha256": cego_sha}},
-                                       "embedding": "bge-m3"})
+                                       "embedding": "bge-m3", "readTimeoutCelula": "240s"})
 
     def test_caminho_do_cego(self):
         import os
@@ -407,14 +409,14 @@ class RevisaoSegundoPrTest(unittest.TestCase):
     def test_retomada_recusa_rodada_antiga_conjunto_ou_embedding_diferente(self):
         e = ex.Executor(config())
         atual = ex.sha256_arquivo(self.REPO / e.cfg.matriz["perguntas"])
-        e.conferir_retomada({"perguntas": {"sha256": atual}, "embedding": "bge-m3"})
+        e.conferir_retomada({"perguntas": {"sha256": atual}, "embedding": "bge-m3", "readTimeoutCelula": "240s"})
         with self.assertRaises(RuntimeError):
             e.conferir_retomada({"embedding": "bge-m3"})  # rodada do #349, sem o conjunto
         with self.assertRaises(RuntimeError):
             e.conferir_retomada({"perguntas": {"sha256": "0" * 64}})
         with self.assertRaises(RuntimeError):
             ex.Executor(config(embedding_cpu=True)).conferir_retomada(
-                {"perguntas": {"sha256": atual}, "embedding": "bge-m3"})
+                {"perguntas": {"sha256": atual}, "embedding": "bge-m3", "readTimeoutCelula": "240s"})
 
     def _executor_com_stub(self, **extra):
         from ceres_benchmark import gabarito as gab
@@ -561,3 +563,235 @@ class ConfiguracaoPublicadaTest(unittest.TestCase):
         self.assertEqual(por_arq["ceres-1"]["chat"]["num-predict"], "1024")
         self.assertEqual(por_arq["ceres-2"]["chat"]["num-predict"], "512")
         self.assertEqual(nova["configuracaoPublicada"], {"AI_MAX_TOKENS": "512"})
+
+
+class ReadTimeoutDaCelulaTest(unittest.TestCase):
+    """#434: o unico desvio da configuracao publicada, e o que ele nao pode virar."""
+
+    REPO = AQUI.parents[3]
+
+    def test_valor_efetivo_com_o_env_example_real(self):
+        publicada = ex.configuracao_publicada((self.REPO / ".env.example").read_text(encoding="utf-8"))
+        self.assertEqual(publicada["AI_READ_TIMEOUT"], "120s")  # o que a producao usa
+        e = ex.Executor(config())
+        env = e.ambiente_java("b", "qwen3:0.6b", {"configuracaoPublicada": publicada})
+        self.assertEqual(env["AI_READ_TIMEOUT"], "240s")
+        # O resto da publicada segue como esta.
+        self.assertEqual(env["AI_MAX_TOKENS"], publicada["AI_MAX_TOKENS"])
+
+    def test_variavel_do_shell_nao_vaza(self):
+        os.environ["AI_READ_TIMEOUT"] = "999s"
+        try:
+            e = ex.Executor(config())
+            self.assertEqual(e.ambiente_java("b", "m")["AI_READ_TIMEOUT"], "240s")
+            sem_chave = ex.Executor(config())
+            sem_chave.cfg.matriz.pop("readTimeoutCelula")
+            self.assertNotIn("AI_READ_TIMEOUT", sem_chave.ambiente_java("b", "m"))
+        finally:
+            del os.environ["AI_READ_TIMEOUT"]
+
+    def test_fica_abaixo_do_prazo_da_pergunta(self):
+        # AvaliacaoCeresRunner: timeout da pergunta (5 min) + FOLGA_TIMEOUT (5 s).
+        self.assertEqual(ex.PRAZO_PERGUNTA_S, 5 * 60 + 5)
+        self.assertLess(ex.segundos_de_duracao(config().read_timeout_celula), ex.PRAZO_PERGUNTA_S)
+        ex.validar_read_timeout("300s")
+        ex.validar_read_timeout("4m")
+        for invalido in ("305s", "6m", "5m5s", "duas horas", "2.5m"):
+            with self.assertRaises(RuntimeError, msg=invalido):
+                ex.validar_read_timeout(invalido)
+        e = ex.Executor(config())
+        e.cfg.matriz["readTimeoutCelula"] = "10m"
+        with self.assertRaises(RuntimeError):
+            e.ambiente_java("b", "m")
+
+    def test_prazo_da_pergunta_e_o_do_backend(self):
+        """Sem deriva: 305 s = ``timeout-pergunta`` do application.yml + ``FOLGA_TIMEOUT`` do runner."""
+        yml = (self.REPO / "src/main/resources/application.yml").read_text(encoding="utf-8")
+        padrao = re.search(r"timeout-pergunta:\s*\$\{AI_TIMEOUT_PERGUNTA:([^}]+)\}", yml).group(1)
+        runner = (self.REPO / "src/main/java/br/com/agrocontabil/config/avaliacao/"
+                  "AvaliacaoCeresRunner.java").read_text(encoding="utf-8")
+        folga = int(re.search(r"FOLGA_TIMEOUT\s*=\s*Duration\.ofSeconds\((\d+)\)", runner).group(1))
+        self.assertEqual(ex.segundos_de_duracao(padrao) + folga, ex.PRAZO_PERGUNTA_S)
+
+    def test_opcoes_registram_o_ajuste_sem_mexer_na_publicada(self):
+        e = ex.Executor(config())
+        antiga, nova = e.cfg.todas_arquiteturas
+        antiga["sha"], nova["sha"] = "a" * 40, "b" * 40
+        yml = (self.REPO / "src/main/resources/application.yml").read_text(encoding="utf-8")
+        e.capturar = lambda comando, cwd=None: (
+            "AI_READ_TIMEOUT=120s\n" if comando[-1].endswith(":.env.example") else yml)
+        por_arq = e.conferir_opcoes_chat()
+        for v in por_arq.values():
+            self.assertEqual(v["publicada"], {"AI_READ_TIMEOUT": "120s"})
+            self.assertEqual(v["ajustes"], {"AI_READ_TIMEOUT": "240s"})
+
+
+class ProvaDoPensamentoComContextoTest(unittest.TestCase):
+    """#434: as provas carregam o modelo com o num_ctx da Ceres e dizem quanto levou."""
+
+    def executor(self):
+        e = ex.Executor(config())
+        e.chamadas = []
+
+        def ollama(caminho, corpo=None, timeout=30):
+            e.chamadas.append((caminho, corpo))
+            if caminho == "/api/chat":
+                return {"message": {"content": "<think>\n\n</think>\n\n4"}, "eval_count": 3,
+                        "total_duration": 3_000_000_000, "load_duration": 2_500_000_000}
+            if caminho == "/api/show":
+                return {"capabilities": ["completion"]}
+            return {"models": []}
+        e.ollama = ollama
+        return e
+
+    def test_corpo_da_prova_leva_num_ctx_inteiro_think_false_e_keep_alive(self):
+        e = self.executor()
+        prova = e.provar_pensamento("qwen3:0.6b", 8192)
+        corpo = next(c for caminho, c in e.chamadas if caminho == "/api/chat")
+        self.assertIs(type(corpo["options"]["num_ctx"]), int)
+        self.assertEqual(corpo["options"]["num_ctx"], 8192)
+        self.assertIs(corpo["think"], False)
+        self.assertEqual(corpo["keep_alive"], ex.KEEP_ALIVE_PROVA)
+        self.assertEqual((prova["numCtx"], prova["carregamentoMs"]), (8192, 2500))
+
+    def test_sem_num_ctx_nao_envia_e_grava_nulo(self):
+        e = self.executor()
+        prova = e.provar_pensamento("qwen3:0.6b")
+        corpo = next(c for caminho, c in e.chamadas if caminho == "/api/chat")
+        self.assertNotIn("num_ctx", corpo["options"])
+        self.assertEqual(corpo["keep_alive"], ex.KEEP_ALIVE_PROVA)
+        self.assertIsNone(prova["numCtx"])
+
+    def test_carregamento_ausente_e_nulo(self):
+        self.assertIsNone(ex.avaliar_prova({"message": {"content": "4"}})["carregamentoMs"])
+
+    def test_num_ctx_da_arquitetura_vem_do_texto_das_opcoes(self):
+        e = ex.Executor(config())
+        e.opcoes = {"ceres-1": {"chat": {"num-ctx": "4096"}}, "ceres-2": {"chat": {"num-ctx": "8192"}},
+                    "x": {"chat": {"num-ctx": "${X}"}}, "y": {"chat": {}}}
+        self.assertEqual(e.num_ctx({"nome": "ceres-1"}), 4096)
+        self.assertEqual(e.num_ctx({"nome": "ceres-2"}), 8192)
+        self.assertIsNone(e.num_ctx({"nome": "x"}))
+        self.assertIsNone(e.num_ctx({"nome": "y"}))
+        self.assertIsNone(e.num_ctx({"nome": "z"}))
+
+
+class RodarCelulaTest(unittest.TestCase):
+    """#434: ``rodar_celula`` de ponta a ponta com Ollama, Java e disco falsos."""
+
+    def preparar(self, temp, falha=False, latencia=1000):
+        e = ex.Executor(config())
+        e.chamadas = []
+        e.opcoes = {"ceres-1": {"chat": {"num-ctx": "8192"}}, "ceres-2": {"chat": {"num-ctx": "8192"}}}
+        e.config_rodada = None
+        e.conferir_configuracao = lambda gravada: {"versao": "x", "modelos": {}}
+        e.descarregar_outros = lambda manter: None
+
+        def ollama(caminho, corpo=None, timeout=30):
+            e.chamadas.append((caminho, corpo))
+            if caminho == "/api/chat":
+                return {"message": {"content": "<think>\n\n</think>\n\n4"}, "load_duration": 1_000_000_000}
+            return {"models": [], "capabilities": []}
+        e.ollama = ollama
+
+        def rodar(comando, cwd=None, entrada=None, env=None, saida=None, checar=True):
+            e.env_java = env
+            destino = next(Path(a.split("=", 1)[1]) for a in comando if a.startswith("--avaliacao.saida="))
+            execucao = {"rota": "DADOS", "desfecho": "MODO_FALLBACK" if falha else "RESPONDIDA",
+                        "modoFallback": falha, "latenciaMs": latencia, "erro": None}
+            (destino / "2026-11-07-1200-ollama-x.json").write_text(
+                json.dumps({"resultados": [{"id": "T1", "execucao": execucao}]}), encoding="utf-8")
+            return 0
+        e.rodar = rodar
+        gabarito = Path(temp) / "gabarito.json"
+        gabarito.write_text("{}", encoding="utf-8")
+        arquitetura = {"nome": "ceres-1", "rotulo": "Ceres 1", "sha": "a" * 40,
+                       "configuracaoPublicada": {"AI_READ_TIMEOUT": "120s"}}
+        return e, arquitetura, gabarito
+
+    def rodar_celula(self, e, arquitetura, gabarito, rodada):
+        return e.rodar_celula(rodada, arquitetura, Path(rodada), Path("x.jar"), "banco", gabarito,
+                              "qwen3:0.6b")
+
+    def test_as_duas_provas_recebem_o_num_ctx_e_o_manifesto_grava_o_timeout(self):
+        with tempfile.TemporaryDirectory() as d:
+            e, arquitetura, gabarito = self.preparar(d)
+            manifesto = self.rodar_celula(e, arquitetura, gabarito, Path(d) / "rodada")
+            chats = [c for caminho, c in e.chamadas if caminho == "/api/chat"]
+            self.assertEqual(len(chats), 2)  # inicio e fim da celula
+            for corpo in chats:
+                self.assertEqual(corpo["options"]["num_ctx"], 8192)
+                self.assertEqual(corpo["keep_alive"], ex.KEEP_ALIVE_PROVA)
+            self.assertEqual(e.env_java["AI_READ_TIMEOUT"], "240s")
+            self.assertEqual((manifesto["readTimeoutCelula"], manifesto["numCtx"]), ("240s", 8192))
+            self.assertEqual(manifesto["pensamento"]["numCtx"], 8192)
+            self.assertEqual(manifesto["pensamento"]["final"]["carregamentoMs"], 1000)
+            self.assertEqual(manifesto["avisos"], [])
+
+    def test_aviso_de_falha_tecnica_com_as_lentas(self):
+        with tempfile.TemporaryDirectory() as d:
+            e, arquitetura, gabarito = self.preparar(d, falha=True, latencia=130_000)
+            manifesto = self.rodar_celula(e, arquitetura, gabarito, Path(d) / "rodada")
+            avisos = [a for a in manifesto["avisos"] if "falha técnica" in a]
+            self.assertEqual(len(avisos), 1)
+            self.assertIn("1 de 1 respostas com falha técnica", avisos[0])
+            self.assertIn("1 com latência total de 120 s ou mais", avisos[0])
+
+    def test_json_ilegivel_com_codigo_zero_avisa(self):
+        with tempfile.TemporaryDirectory() as d:
+            quebrado = Path(d) / "c.json"
+            self.assertEqual(ex.Executor._avisos_de_falha_tecnica(quebrado), [])  # ausente: sem aviso
+            quebrado.write_text("{ nao e json", encoding="utf-8")
+            avisos = ex.Executor._avisos_de_falha_tecnica(quebrado)
+            self.assertEqual(len(avisos), 1)
+            self.assertIn("não foi possível ler c.json", avisos[0])
+
+    def test_latencia_exatamente_no_limite_de_producao_conta_como_lenta(self):
+        execucao = {"rota": "DADOS", "desfecho": "RESPONDIDA", "modoFallback": False, "erro": None,
+                    "latenciaMs": ex.LIMITE_PRODUCAO_MS}
+        avisos = ex.avisos_de_falha_tecnica([[{"id": "T1", "execucao": execucao}]])
+        self.assertEqual(len(avisos), 1)
+        self.assertIn("1 de 1 respostas com latência total de 120 s ou mais", avisos[0])
+
+    def test_so_lenta_sem_falha_avisa_a_latencia(self):
+        with tempfile.TemporaryDirectory() as d:
+            e, arquitetura, gabarito = self.preparar(d, latencia=130_000)
+            manifesto = self.rodar_celula(e, arquitetura, gabarito, Path(d) / "rodada")
+            self.assertEqual(len(manifesto["avisos"]), 1)
+            self.assertIn("latência total de 120 s ou mais", manifesto["avisos"][0])
+            self.assertNotIn("respostas com falha técnica", manifesto["avisos"][0])
+
+    def test_retomada_recusa_celula_medida_com_outro_read_timeout_ou_sem_o_campo(self):
+        with tempfile.TemporaryDirectory() as d:
+            e, arquitetura, gabarito = self.preparar(d)
+            rodada = Path(d) / "rodada"
+            manifesto = self.rodar_celula(e, arquitetura, gabarito, rodada)
+            arquivo = rodada / manifesto["celula"] / "celula.json"
+            # Mesma configuracao: pula.
+            self.assertEqual(self.rodar_celula(e, arquitetura, gabarito, rodada)["readTimeoutCelula"], "240s")
+            for alterado in ("120s", None):
+                gravado = json.loads(arquivo.read_text(encoding="utf-8"))
+                if alterado is None:
+                    del gravado["readTimeoutCelula"]
+                else:
+                    gravado["readTimeoutCelula"] = alterado
+                arquivo.write_text(json.dumps(gravado), encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "read-timeout"):
+                    self.rodar_celula(e, arquitetura, gabarito, rodada)
+
+    def test_retomada_da_rodada_recusa_read_timeout_diferente_ou_ausente(self):
+        e = ex.Executor(config())
+        atual = ex.sha256_arquivo(AQUI.parents[3] / e.cfg.matriz["perguntas"])
+        base = {"perguntas": {"sha256": atual}, "embedding": "bge-m3"}
+        e.conferir_retomada({**base, "readTimeoutCelula": "240s"})
+        for anterior in ({**base, "readTimeoutCelula": "120s"}, base):
+            with self.assertRaisesRegex(RuntimeError, "read-timeout"):
+                e.conferir_retomada(anterior)
+
+    def test_manifesto_da_rodada_grava_o_read_timeout(self):
+        e = ex.Executor(config())
+        e.fixar_shas = lambda anterior: None
+        for a in e.cfg.todas_arquiteturas:
+            a["sha"] = "a" * 40
+        rodada = e.manifesto_rodada(None, {"ollama": "0.12", "trechosLegislacao": 8304})
+        self.assertEqual(rodada["readTimeoutCelula"], "240s")
