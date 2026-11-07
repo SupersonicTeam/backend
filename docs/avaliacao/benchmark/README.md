@@ -43,8 +43,10 @@ O embedding é sempre o `bge-m3`.
   a contagem não for 8.304 e para se for zero).
 - **Ollama** acessível (`docker start agrocontabil-ollama`, ou instalado na máquina). O executor
   faz o `pull` dos três modelos e do `bge-m3` (~4,5 GB na primeira vez).
-- **Ollama local com `OLLAMA_KEEP_ALIVE` longo** (a produção usa `24h`, `deploy/compose.yaml`;
-  no contêiner local, `-e OLLAMA_KEEP_ALIVE=24h`). Com o padrão curto do Ollama o modelo sai da
+- **Ollama local com `OLLAMA_KEEP_ALIVE` longo** (a produção usa `24h`, `deploy/compose.yaml`).
+  Confira no contêiner que já existe (`docker inspect agrocontabil-ollama`, variáveis de ambiente) e
+  **não o recrie por conta própria**: ele tem os modelos baixados; mudar a variável é decisão de quem
+  mantém o ambiente local. O executor não confere o valor. Com o padrão curto do Ollama o modelo sai da
   memória entre as perguntas e a latência (e o disjuntor) mede a recarga, não a Ceres. Depois de
   uma célula, confira onde o modelo rodou: o relatório mostra o `ondeRodou` de cada célula
   (GPU, CPU ou dividido, pelo `/api/ps`), e o contêiner do compose local **não reserva GPU**.
@@ -508,7 +510,7 @@ configuração do relatório; retomar com outro valor (ou uma rodada de antes de
 O executor **não refaz célula sozinho**. Ao fim de cada célula, o `celula.json` ganha um aviso
 quando há falha técnica (a mesma conta do relatório: `MODELO_INDISPONIVEL`, `MODO_FALLBACK`,
 `TEMPO_ESGOTADO`, `CANCELADA` ou `ERRO`), com o número de respostas com falha e o número com
-latência acima de 120 s (o read-timeout de produção: na VPS essas cairiam no fallback). O relatório
+latência de 120 s ou mais (o read-timeout de produção: na VPS essas cairiam no fallback). O relatório
 mostra os avisos de cada célula.
 
 Critério, fixado antes de qualquer rodada: **refaz-se uma célula só quando o aviso de falha técnica

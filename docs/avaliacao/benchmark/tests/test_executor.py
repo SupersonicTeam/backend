@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -603,6 +604,15 @@ class ReadTimeoutDaCelulaTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             e.ambiente_java("b", "m")
 
+    def test_prazo_da_pergunta_e_o_do_backend(self):
+        """Sem deriva: 305 s = ``timeout-pergunta`` do application.yml + ``FOLGA_TIMEOUT`` do runner."""
+        yml = (self.REPO / "src/main/resources/application.yml").read_text(encoding="utf-8")
+        padrao = re.search(r"timeout-pergunta:\s*\$\{AI_TIMEOUT_PERGUNTA:([^}]+)\}", yml).group(1)
+        runner = (self.REPO / "src/main/java/br/com/agrocontabil/config/avaliacao/"
+                  "AvaliacaoCeresRunner.java").read_text(encoding="utf-8")
+        folga = int(re.search(r"FOLGA_TIMEOUT\s*=\s*Duration\.ofSeconds\((\d+)\)", runner).group(1))
+        self.assertEqual(ex.segundos_de_duracao(padrao) + folga, ex.PRAZO_PERGUNTA_S)
+
     def test_opcoes_registram_o_ajuste_sem_mexer_na_publicada(self):
         e = ex.Executor(config())
         antiga, nova = e.cfg.todas_arquiteturas
@@ -725,14 +735,30 @@ class RodarCelulaTest(unittest.TestCase):
             avisos = [a for a in manifesto["avisos"] if "falha técnica" in a]
             self.assertEqual(len(avisos), 1)
             self.assertIn("1 de 1 respostas com falha técnica", avisos[0])
-            self.assertIn("1 com latência acima de 120 s", avisos[0])
+            self.assertIn("1 com latência de 120 s ou mais", avisos[0])
+
+    def test_json_ilegivel_com_codigo_zero_avisa(self):
+        with tempfile.TemporaryDirectory() as d:
+            quebrado = Path(d) / "c.json"
+            self.assertEqual(ex.Executor._avisos_de_falha_tecnica(quebrado), [])  # ausente: sem aviso
+            quebrado.write_text("{ nao e json", encoding="utf-8")
+            avisos = ex.Executor._avisos_de_falha_tecnica(quebrado)
+            self.assertEqual(len(avisos), 1)
+            self.assertIn("não foi possível ler c.json", avisos[0])
+
+    def test_latencia_exatamente_no_limite_de_producao_conta_como_lenta(self):
+        execucao = {"rota": "DADOS", "desfecho": "RESPONDIDA", "modoFallback": False, "erro": None,
+                    "latenciaMs": ex.LIMITE_PRODUCAO_MS}
+        avisos = ex.avisos_de_falha_tecnica([[{"id": "T1", "execucao": execucao}]])
+        self.assertEqual(len(avisos), 1)
+        self.assertIn("1 de 1 respostas com latência de 120 s ou mais", avisos[0])
 
     def test_so_lenta_sem_falha_avisa_a_latencia(self):
         with tempfile.TemporaryDirectory() as d:
             e, arquitetura, gabarito = self.preparar(d, latencia=130_000)
             manifesto = self.rodar_celula(e, arquitetura, gabarito, Path(d) / "rodada")
             self.assertEqual(len(manifesto["avisos"]), 1)
-            self.assertIn("latência acima de 120 s", manifesto["avisos"][0])
+            self.assertIn("latência de 120 s ou mais", manifesto["avisos"][0])
             self.assertNotIn("respostas com falha técnica", manifesto["avisos"][0])
 
     def test_retomada_recusa_celula_medida_com_outro_read_timeout_ou_sem_o_campo(self):

@@ -96,15 +96,15 @@ def avisos_de_falha_tecnica(rodadas: list[list[dict]]) -> list[str]:
     execucoes = [r for resultados in rodadas for r in resultados]
     falhas = sum(1 for r in execucoes if relatorio.falha_tecnica(r))
     lentas = sum(1 for r in execucoes
-                 if ((r.get("execucao") or {}).get("latenciaMs") or 0) > LIMITE_PRODUCAO_MS)
+                 if ((r.get("execucao") or {}).get("latenciaMs") or 0) >= LIMITE_PRODUCAO_MS)
     limite = LIMITE_PRODUCAO_MS // 1000
     if falhas:
         return [f"{falhas} de {len(execucoes)} respostas com falha técnica (modelo fora, fallback, "
-                f"tempo esgotado ou erro); {lentas} com latência acima de {limite} s (o read-timeout "
+                f"tempo esgotado ou erro); {lentas} com latência de {limite} s ou mais (o read-timeout "
                 "de produção: na VPS essas cairiam no fallback). A latência e as taxas desta célula "
                 "incluem isso: ver no README o critério para refazer a célula inteira"]
     if lentas:
-        return [f"{lentas} de {len(execucoes)} respostas com latência acima de {limite} s (o "
+        return [f"{lentas} de {len(execucoes)} respostas com latência de {limite} s ou mais (o "
                 "read-timeout de produção: na VPS essas cairiam no fallback), sem falha técnica "
                 "nesta célula (o read-timeout da célula é maior)"]
     return []
@@ -799,10 +799,14 @@ class Executor:
         """Avisos de falha tecnica a partir do JSON que o comando gravou (nenhum se ele nao existe:
         a celula saiu com codigo diferente de zero e o relatorio ja a mostra assim)."""
         from . import relatorio
+        if not avaliacao.exists():
+            return []
         try:
             rodadas = relatorio.rodadas_do_json(json.loads(avaliacao.read_text(encoding="utf-8")))
-        except (OSError, ValueError, KeyError):
-            return []
+        except (OSError, ValueError, KeyError) as e:
+            # Celula com codigo 0 e JSON ilegivel: sem este aviso ela pareceria limpa.
+            return [f"não foi possível ler {avaliacao.name} para contar as falhas técnicas "
+                    f"({type(e).__name__}): confira a célula antes de usá-la"]
         return avisos_de_falha_tecnica(rodadas)
 
     @staticmethod
