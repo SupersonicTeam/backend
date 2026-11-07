@@ -353,8 +353,8 @@ daquela célula devem ser lidos com isso.
 Uma thread lê a cada 5 s o `/api/ps` do Ollama (memória do modelo de chat carregado com o
 `num_ctx` da Ceres, e quanto está na GPU) e a memória do processo do Ollama (`docker stats` do
 container ou a soma dos processos `ollama`), e guarda o pico. O pico do processo inclui o
-`bge-m3` carregado junto. Referência: a VPS de produção tem **24 GB** divididos com Postgres,
-backend, ClamAV e o BGE-M3.
+`bge-m3` carregado junto. Referência: a VPS de produção tem **47 GiB** (8 OCPU ARM, conferida em 2026-11-06) divididos com Postgres,
+backend, ClamAV e o BGE-M3. Qualquer tempo medido na VPS antes de 2026-11-06 é da máquina de 4 OCPU/24 GB e vale só para ela.
 
 ## Rodada local com GPU
 
@@ -473,7 +473,7 @@ propriedade). Na prática:
 
 ## Latência na VPS (produção)
 
-Só a configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS Always Free (CPU ARM, sem
+Só a configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS de produção (CPU ARM, sem
 GPU), pelo [harness da API](../harness-api/README.md). O relatório tem uma seção à parte para o
 time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
 

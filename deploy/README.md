@@ -5,7 +5,7 @@ ClamAV e Caddy (HTTPS automático) numa VM só.
 
 | Item | Valor |
 |------|-------|
-| VM | `agrocontabil`, Oracle Cloud, Brazil Southeast (Vinhedo), VM.Standard.A1.Flex (Ampere **arm64**), 4 OCPU / 24 GB, disco 100 GB, Ubuntu 24.04 |
+| VM | `agrocontabil`, Oracle Cloud, Brazil Southeast (Vinhedo), VM.Standard.A1.Flex (Ampere **arm64**), 8 OCPU / 47 GiB de RAM, disco de 96 GB (conferido em 2026-11-06), Ubuntu 24.04 |
 | Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele (`SITE_REDIRECIONA`) |
 | DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6) |
 | Acesso SSH | `ssh -i ~/.ssh/agrocontabil_lightsail ubuntu@<ip>` (a chave privada fica só no PC de quem fez o deploy) |
@@ -107,5 +107,7 @@ Deploy manual de uma versão (na VM): `./deploy.sh backend sha-xxxxxxx`.
 
 ## Custos
 
-Tudo dentro do Always Free (A1 até 4 OCPU/24 GB, até 200 GB de disco, IP público efêmero). A conta
-é Pay As You Go: aumentar OCPU/RAM além disso ou criar outra VM A1 é cobrado.
+A máquina conferida em 2026-11-06 (8 OCPU, 47 GiB) está acima do limite do Always Free para a A1
+(4 OCPU/24 GB). A conta é Pay As You Go: aumentar OCPU/RAM além desse limite ou criar outra VM A1
+é cobrado. O que isso significa em custo para esta VM o Murillo ainda vai confirmar. O restante
+(até 200 GB de disco, IP público efêmero) segue o Always Free.

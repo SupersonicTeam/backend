@@ -881,7 +881,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append("**Avisos das células** (leia a latência dessas células com isso):\n")
         md.extend(f"- {_celula_md(a, 300)}" for a in avisos)
         md.append("")
-    md.append("A VPS de produção tem 24 GB divididos com Postgres, backend, ClamAV e o BGE-M3: a "
+    md.append("A VPS de produção tem 47 GiB (8 OCPU ARM) divididos com Postgres, backend, ClamAV e o BGE-M3: a "
               "coluna do pico inclui o BGE-M3 carregado junto.\n")
 
     md.append(_secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq))
@@ -1060,7 +1060,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     md.append("## Latência na VPS (produção)\n")
     md.append("A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na "
-              "configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS Always Free (CPU "
+              "configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS de produção (CPU "
               "ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.\n")
     md.append("| Rota | p50 | p95 | Amostras | Data e SHA |\n|---|---|---|---|---|\n"
               "| DADOS | | | | |\n| LEGISLACAO | | | | |\n| MISTO | | | | |\n")
