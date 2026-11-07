@@ -23,12 +23,15 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VencimentosDoMes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VendasProduto;
+import br.com.agrocontabil.model.StatusNotaFiscal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** Templates da rota de dados (issue #266): valores, vazio, recorte, plural e singular, teto. */
 class RedatorRespostaDadosTest {
@@ -218,7 +221,7 @@ class RedatorRespostaDadosTest {
             List.of(new Inconsistencia("X", "peso", "Peso bruto menor que o liquido",
                 "confira o romaneio")), List.of())), null), HOJE);
 
-    assertThat(s.texto()).isEqualTo("A nota 118 (série 1), de venda emitida em 28/10/2026, está"
+    assertThat(s.texto()).isEqualTo("A nota 118 (série 1), de venda com data de 28/10/2026, está"
         + " devolvida pelo contador. Devolvida pelo contador. Valor: R$ 500,00; IBS: R$ 0,50;"
         + " CBS: R$ 4,50. Motivo da devolução: Peso divergente do romaneio. O que corrigir:\n-"
         + " Peso bruto menor que o liquido (confira o romaneio)");
@@ -226,6 +229,37 @@ class RedatorRespostaDadosTest {
     // O motivo e a inconsistencia sao texto livre: entram nas fontes do validador.
     assertThat(s.textosLivres()).contains("Peso divergente do romaneio",
         "Peso bruto menor que o liquido", "confira o romaneio");
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(StatusNotaFiscal.class)
+  @DisplayName("#444: venda so e 'emitida' depois de autorizada; antes, a data e so a da nota")
+  void vendaEmitidaSoDepoisDeAutorizada(StatusNotaFiscal status) {
+    SecaoResposta s = RedatorRespostaDados.nota(new NotaConsultada(4071, 1, List.of(
+        new NotaDetalhada(4071, 2, "03/09/2026", "SAIDA", status.name(), null, "R$ 1.250,00",
+            "R$ 1,25", "R$ 11,25", null, List.of(), List.of())), null), HOJE);
+
+    boolean emitida = status == StatusNotaFiscal.AUTORIZADA
+        || status == StatusNotaFiscal.CANCELANDO || status == StatusNotaFiscal.CANCELADA;
+    if (emitida) {
+      assertThat(s.texto()).startsWith("A nota 4071 (série 2), de venda emitida em 03/09/2026,");
+    } else {
+      assertThat(s.texto())
+          .startsWith("A nota 4071 (série 2), de venda com data de 03/09/2026,")
+          .doesNotContain("emitida em");
+    }
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(value = StatusNotaFiscal.class,
+      names = {"AUTORIZADA", "PENDENTE_SEFAZ", "REJEITADA", "CANCELADA"})
+  @DisplayName("#444: compra importada e sempre 'recebida', qualquer que seja a situacao")
+  void compraSempreRecebida(StatusNotaFiscal status) {
+    SecaoResposta s = RedatorRespostaDados.nota(new NotaConsultada(52, 1, List.of(
+        new NotaDetalhada(52, 7, "11/08/2026", "ENTRADA", status.name(), null, "R$ 640,00",
+            "R$ 0,64", "R$ 5,76", null, List.of(), List.of())), null), HOJE);
+
+    assertThat(s.texto()).startsWith("A nota 52 (série 7), de compra recebida em 11/08/2026,");
   }
 
   @Test

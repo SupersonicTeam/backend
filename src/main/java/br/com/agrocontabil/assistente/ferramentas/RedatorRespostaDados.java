@@ -47,6 +47,12 @@ public final class RedatorRespostaDados {
   static final Set<String> SITUACOES_PARADAS =
       Set.of("DEVOLVIDA", "AGUARDANDO_APROVACAO", "COM_INCONSISTENCIAS", "REJEITADA");
 
+  /**
+   * Situações de uma venda já emitida (#444): autorizada pela SEFAZ, inclusive a que foi ou está
+   * sendo cancelada depois. As demais ainda não são NF-e válida.
+   */
+  static final Set<String> VENDAS_EMITIDAS = Set.of("AUTORIZADA", "CANCELANDO", "CANCELADA");
+
   /** A situação de uma nota, no singular. */
   private static final Map<String, String> SITUACAO = Map.ofEntries(
       Map.entry("RASCUNHO", "em rascunho"),
@@ -298,8 +304,7 @@ public final class RedatorRespostaDados {
         t.append("\n\n");
       }
       t.append("A nota ").append(n.numero()).append(" (série ").append(n.serie()).append("), ")
-          .append("ENTRADA".equals(n.tipo()) ? "de compra recebida" : "de venda emitida")
-          .append(" em ").append(n.dataEmissao()).append(", está ")
+          .append(tipoEData(n)).append(", está ")
           .append(SITUACAO.getOrDefault(n.situacao(), n.situacao().toLowerCase())).append('.');
       if (n.explicacao() != null) {
         t.append(' ').append(n.explicacao());
@@ -333,6 +338,20 @@ public final class RedatorRespostaDados {
     }
     return new SecaoResposta(Assunto.NOTAS_PARADAS, t.toString(), (int) paradas,
         plural(paradas, "nota parada", "notas paradas"), null, false, true, livres);
+  }
+
+  /**
+   * Tipo e data da nota consultada, pela situação (#444). Venda só é "emitida" depois de
+   * autorizada pela SEFAZ; antes disso (rascunho, em revisão, devolvida, XML gerado, rejeitada...)
+   * a data é só a da nota. A compra importada foi emitida pelo fornecedor: "recebida" vale sempre.
+   */
+  static String tipoEData(NotaDetalhada n) {
+    if ("ENTRADA".equals(n.tipo())) {
+      return "de compra recebida em " + n.dataEmissao();
+    }
+    return VENDAS_EMITIDAS.contains(n.situacao())
+        ? "de venda emitida em " + n.dataEmissao()
+        : "de venda com data de " + n.dataEmissao();
   }
 
   /** {@code listarAlertas}. */
