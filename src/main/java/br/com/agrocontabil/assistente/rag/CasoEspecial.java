@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
  *       mesmo assunto (propriedade, fazenda, terra e arrendamento para bens imóveis; CPR, cédula,
  *       financiamento e empréstimo para serviços financeiros). Palavra a mais só deixa um trecho
  *       no lugar dele, nunca o rebaixa;</li>
- *   <li>{@link #AMPLIADA}: os regimes específicos mais as faixas da tabela
+ *   <li>{@link #ampliada()}: os regimes específicos mais as faixas da tabela
  *       {@code assistente/caso-especial-ampliada-2026-11-07.json} (importação, regimes aduaneiros,
  *       ZPE, bens de capital portuários e de infraestrutura, devolução personalizada, resíduos,
  *       usados, regime automotivo, benefícios do ICMS, Imposto Seletivo, Zona Franca, áreas de
@@ -107,16 +107,26 @@ public final class CasoEspecial {
       faixa(300, 307, "disposições comuns aos regimes específicos",
           "regime especifico|regimes especificos"));
 
-  /** Regimes específicos mais as faixas da tabela ampliada. */
-  public static final List<Faixa> AMPLIADA = ampliada();
-
   private CasoEspecial() {}
+
+  /**
+   * Regimes específicos mais as faixas da tabela ampliada. A tabela é lida do recurso só na
+   * primeira chamada: a guarda e a partição desligada ou de regimes específicos nunca dependem dele.
+   */
+  public static List<Faixa> ampliada() {
+    return Ampliada.FAIXAS;
+  }
+
+  /** Carga preguiçosa da tabela ampliada (idiom do holder: a classe só inicia no primeiro uso). */
+  private static final class Ampliada {
+    static final List<Faixa> FAIXAS = carregarAmpliada();
+  }
 
   private static Faixa faixa(int primeiro, int ultimo, String nome, String setor) {
     return new Faixa(primeiro, ultimo, nome, Pattern.compile(setor));
   }
 
-  private static List<Faixa> ampliada() {
+  private static List<Faixa> carregarAmpliada() {
     List<Faixa> faixas = new ArrayList<>(REGIMES_ESPECIFICOS);
     try (InputStream entrada = CasoEspecial.class.getResourceAsStream(RECURSO_AMPLIADA)) {
       if (entrada == null) {
@@ -161,8 +171,8 @@ public final class CasoEspecial {
   }
 
   /** A primeira faixa da lista que contém o artigo, se alguma. */
-  public static Optional<Faixa> faixaDe(List<Faixa> faixas, Optional<Artigo> artigo) {
-    return artigo.flatMap(a -> faixas.stream().filter(f -> f.contem(a)).findFirst());
+  public static Optional<Faixa> faixaDe(List<Faixa> faixas, Artigo artigo) {
+    return faixas.stream().filter(f -> f.contem(artigo)).findFirst();
   }
 
   /**
@@ -176,7 +186,8 @@ public final class CasoEspecial {
    */
   public static boolean casoEspecialSemSetor(List<Faixa> faixas, String norma, String dispositivo,
       String perguntaNormalizada) {
-    return faixaDe(faixas, artigoParaParticao(norma, dispositivo))
+    return artigoParaParticao(norma, dispositivo)
+        .flatMap(a -> faixaDe(faixas, a))
         .map(f -> !f.setorCitado(perguntaNormalizada))
         .orElse(false);
   }

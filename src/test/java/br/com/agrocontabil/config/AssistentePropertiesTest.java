@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 /** Validação das propriedades da Ceres na subida (timeouts da issue #157). */
 class AssistentePropertiesTest {
@@ -28,6 +31,23 @@ class AssistentePropertiesTest {
 
     assertThatThrownBy(nula::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.rag.particao-caso-especial");
+  }
+
+  @Test
+  @DisplayName("#436: os valores do yml e da variavel de ambiente ligam no enum da particao")
+  void particaoLigaOsValoresDoYml() {
+    Map<String, AssistenteProperties.ParticaoCasoEspecial> valores = Map.of(
+        "desligado", AssistenteProperties.ParticaoCasoEspecial.DESLIGADO,
+        "regimes-especificos", AssistenteProperties.ParticaoCasoEspecial.REGIMES_ESPECIFICOS,
+        "ampliada", AssistenteProperties.ParticaoCasoEspecial.AMPLIADA);
+    valores.forEach((texto, esperado) -> {
+      Binder binder = new Binder(new MapConfigurationPropertySource(
+          Map.of("app.assistente.rag.particao-caso-especial", texto)));
+
+      AssistenteProperties p = binder.bind("app.assistente", AssistenteProperties.class).get();
+
+      assertThat(p.getRag().getParticaoCasoEspecial()).as(texto).isEqualTo(esperado);
+    });
   }
 
   @Test

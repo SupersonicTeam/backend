@@ -120,7 +120,7 @@ public class BuscaLegislacaoService {
     return switch (particao) {
       case DESLIGADO -> List.of();
       case REGIMES_ESPECIFICOS -> CasoEspecial.REGIMES_ESPECIFICOS;
-      case AMPLIADA -> CasoEspecial.AMPLIADA;
+      case AMPLIADA -> CasoEspecial.ampliada();
     };
   }
 

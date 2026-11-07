@@ -21,7 +21,8 @@ class CasoEspecialTest {
       "7e427f3e19880a9d8e97f0b4f6fba88b8c5eff18a2765b0036ba213ce0a70c79";
 
   private static Optional<Faixa> faixa(List<Faixa> faixas, String norma, String dispositivo) {
-    return CasoEspecial.faixaDe(faixas, CasoEspecial.artigoParaParticao(norma, dispositivo));
+    return CasoEspecial.artigoParaParticao(norma, dispositivo)
+        .flatMap(a -> CasoEspecial.faixaDe(faixas, a));
   }
 
   @Test
@@ -40,11 +41,11 @@ class CasoEspecialTest {
   @Test
   @DisplayName("Ampliada: os regimes específicos mais as 16 faixas da tabela, na ordem dela")
   void ampliadaSomaATabela() {
-    assertThat(CasoEspecial.AMPLIADA).hasSize(26);
-    assertThat(CasoEspecial.AMPLIADA.subList(0, 10)).isEqualTo(CasoEspecial.REGIMES_ESPECIFICOS);
-    assertThat(CasoEspecial.AMPLIADA.get(10).primeiro()).isEqualTo(63);
-    assertThat(CasoEspecial.AMPLIADA.get(10).ultimo()).isEqualTo(78);
-    assertThat(CasoEspecial.AMPLIADA.get(25).primeiro()).isEqualTo(485);
+    assertThat(CasoEspecial.ampliada()).hasSize(26);
+    assertThat(CasoEspecial.ampliada().subList(0, 10)).isEqualTo(CasoEspecial.REGIMES_ESPECIFICOS);
+    assertThat(CasoEspecial.ampliada().get(10).primeiro()).isEqualTo(63);
+    assertThat(CasoEspecial.ampliada().get(10).ultimo()).isEqualTo(78);
+    assertThat(CasoEspecial.ampliada().get(25).primeiro()).isEqualTo(485);
   }
 
   @Test
@@ -98,12 +99,12 @@ class CasoEspecialTest {
   @Test
   @DisplayName("Sufixo: entra pelo número inteiro, exceto em faixa de um artigo só")
   void sufixo() {
-    assertThat(faixa(CasoEspecial.AMPLIADA, "LC 214/2025", "art. 98-B").map(Faixa::primeiro))
+    assertThat(faixa(CasoEspecial.ampliada(), "LC 214/2025", "art. 98-B").map(Faixa::primeiro))
         .contains(84);
-    assertThat(faixa(CasoEspecial.AMPLIADA, "LC 214/2025", "art. 471, § 1º").map(Faixa::primeiro))
+    assertThat(faixa(CasoEspecial.ampliada(), "LC 214/2025", "art. 471, § 1º").map(Faixa::primeiro))
         .contains(471);
-    assertThat(faixa(CasoEspecial.AMPLIADA, "LC 214/2025", "art. 471-A")).isEmpty();
-    assertThat(faixa(CasoEspecial.AMPLIADA, "LC 214/2025", "art. 471-F, inciso II")).isEmpty();
+    assertThat(faixa(CasoEspecial.ampliada(), "LC 214/2025", "art. 471-A")).isEmpty();
+    assertThat(faixa(CasoEspecial.ampliada(), "LC 214/2025", "art. 471-F, inciso II")).isEmpty();
     assertThat(faixa(CasoEspecial.REGIMES_ESPECIFICOS, "LC 214/2025", "art. 218-A")
         .map(Faixa::nome)).contains("serviços financeiros");
   }
@@ -139,9 +140,9 @@ class CasoEspecialTest {
   }
 
   @Test
-  @DisplayName("Todas as regex da ampliada compilam e casam o próprio vocabulário sem acento")
+  @DisplayName("Regex da ampliada (importação) casa a pergunta normalizada, sem acento nem caixa")
   void regexDaAmpliada() {
-    Faixa importacao = CasoEspecial.AMPLIADA.get(10);
+    Faixa importacao = CasoEspecial.ampliada().get(10);
 
     assertThat(importacao.setorCitado(NormalizacaoBusca.normalizar("Uma IMPORTAÇÃO de peças")))
         .isTrue();

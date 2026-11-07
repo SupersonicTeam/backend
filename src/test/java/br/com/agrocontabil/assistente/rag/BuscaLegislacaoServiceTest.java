@@ -93,7 +93,7 @@ class BuscaLegislacaoServiceTest {
   @DisplayName("Ampliada: a importação também desce quando a pergunta não fala dela")
   void particaoAmpliada() {
     List<Document> r = BuscaLegislacaoService.particionar(
-        candidatos(), SEM_SETOR, CasoEspecial.AMPLIADA, 10);
+        candidatos(), SEM_SETOR, CasoEspecial.ampliada(), 10);
 
     assertThat(ids(r)).containsExactly("geral12", "geral47", "ec", "geral49", "lei8212",
         "imovel", "combustivel", "redacao227", "importacao", "financeiro");
@@ -168,6 +168,6 @@ class BuscaLegislacaoServiceTest {
     assertThat(BuscaLegislacaoService.faixas(ParticaoCasoEspecial.REGIMES_ESPECIFICOS))
         .isSameAs(CasoEspecial.REGIMES_ESPECIFICOS);
     assertThat(BuscaLegislacaoService.faixas(ParticaoCasoEspecial.AMPLIADA))
-        .isSameAs(CasoEspecial.AMPLIADA);
+        .isSameAs(CasoEspecial.ampliada());
   }
 }

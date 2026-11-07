@@ -21,6 +21,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     max-conversas-simultaneas: 4   # perguntas em andamento ao mesmo tempo (issues #142, #157)
  *     timeout-pergunta: 5m           # tempo total de uma pergunta (issue #157)
  *     timeout-funcao: 10s            # tempo de cada consulta aos dados do produtor (issue #157)
+ *     rag:
+ *       particao-caso-especial: desligado   # ou regimes-especificos | ampliada (#436)
  *     tetos:                         # tokens gerados por tipo de chamada ao modelo (#270)
  *       funcoes: 512
  *       classificacao: 256

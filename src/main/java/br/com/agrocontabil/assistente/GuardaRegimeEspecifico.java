@@ -37,7 +37,8 @@ final class GuardaRegimeEspecifico {
 
   /** O capítulo do regime específico a que o dispositivo pertence, se pertence. */
   static Optional<CasoEspecial.Faixa> capituloDe(String norma, String dispositivo) {
-    return CasoEspecial.faixaDe(CAPITULOS, CasoEspecial.artigoDaLc214(norma, dispositivo));
+    return CasoEspecial.artigoDaLc214(norma, dispositivo)
+        .flatMap(a -> CasoEspecial.faixaDe(CAPITULOS, a));
   }
 
   /** {@code true} se o dispositivo é de regime específico (LC 214/2025, arts. 172 a 307). */
