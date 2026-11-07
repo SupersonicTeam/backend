@@ -647,7 +647,7 @@ o dado do evento).
 
 ## Inferência local na VPS: chamadas ao modelo e cache do prefixo (#270)
 
-Na VPS (4 núcleos ARM, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
+Na VPS (8 OCPU ARM e 47 GiB, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
 geração. O Ollama reaproveita o processamento de uma requisição para a seguinte **até o primeiro
 byte diferente** (cache do prefixo, um por vaga; o compose usa `OLLAMA_NUM_PARALLEL=1`, então uma
 vaga só). Por isso a parte fixa de cada chamada fica no início e igual byte a byte entre
@@ -854,7 +854,7 @@ python3 -I docs/avaliacao/harness-api/harness.py
 
 # acerto de rota, numero e citacao (gabarito da #158, 3 repeticoes)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,avaliacao \
-  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 4 nucleos'"
+  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 8 OCPU 47 GiB'"
 
 # memoria da VM durante a rodada
 docker stats --no-stream
