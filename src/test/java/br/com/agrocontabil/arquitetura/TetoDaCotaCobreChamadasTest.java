@@ -21,8 +21,9 @@ import org.springframework.ai.chat.model.ChatModel;
 
 /**
  * A reserva da cota semanal (#166) só é um teto de verdade se contar todas as chamadas que uma
- * pergunta pode fazer ao modelo. {@link AssistenteProperties.Cota#tetoDaPergunta} soma três —
- * classificação, escolha das funções de dados e lei, cada uma com o próprio teto de saída
+ * pergunta pode fazer ao modelo. {@link AssistenteProperties.Cota#tetoDaPergunta} soma quatro —
+ * classificação, escolha das funções de dados, lei e a consulta à tabela oficial pelo produto da
+ * pergunta (#443, na {@link RotaDados}), cada uma com o próprio teto de saída
  * ({@code app.assistente.tetos}, #270). Este teste quebra se surgir outro ponto que chame o modelo
  * (ou o mesmo ponto chamar duas vezes), ou se alguém chamar o {@link ChatModel} por fora da porta
  * {@link ModeloLinguagem}: nos dois casos a pergunta passaria a consumir mais do que o reservado.
@@ -41,7 +42,7 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270: exatamente as 3 chamadas da formula, uma por classe")
+  @DisplayName("#166/#270/#443: exatamente as 4 chamadas da formula")
   void soAsTresChamadasDaFormula() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
@@ -54,7 +55,7 @@ class TetoDaCotaCobreChamadasTest {
 
     assertThat(porClasse).containsOnly(
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
-        Map.entry(RotaDados.class.getName(), 1L),
+        Map.entry(RotaDados.class.getName(), 2L),
         Map.entry(RotaLegislacao.class.getName(), 1L));
     assertThat(chamadas).hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
   }
