@@ -602,14 +602,38 @@ class OrquestradorServiceTest {
     ResultadoOrquestracao r = orquestrador.responder(
         "A pimenta-do-reino tem alíquota reduzida de IBS?", contexto, rotasAvisadas::add);
 
+    // A tabela responde no lugar do RAG: sem dois percentuais para o mesmo produto.
     assertThat(r.rota()).isEqualTo(Intencao.LEGISLACAO);
-    assertThat(r.texto()).isEqualTo("A pimenta tem reducao de 60% [art. 137].\n\nPimenta (NCM"
-        + " 0904.11.00): redução de 60%. Confirme o enquadramento com o seu contador.");
-    assertThat(r.citacoes()).containsExactly(CITACAO);
+    assertThat(r.texto()).isEqualTo("Pimenta (NCM 0904.11.00): redução de 60%. Confirme o"
+        + " enquadramento com o seu contador.");
+    assertThat(r.citacoes()).isEmpty();
+    assertThat(r.exibirFontes()).isTrue();
   }
 
   @Test
-  @DisplayName("#443: sem sinal de tratamento, no MISTO ou com a tabela ja consultada: nada a mais")
+  @DisplayName("#443: o MISTO tambem consulta a tabela; o texto dela vem depois das duas partes")
+  void mistoConsultaATabela() {
+    when(classificador.classificar(anyString(), any()))
+        .thenReturn(new ClassificacaoIntencao(Intencao.MISTO, 0.9, null));
+    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("Vendas."));
+    when(rotaLegislacao.responderRegraGeral(anyString(), any(), any(), anyBoolean()))
+        .thenReturn(ResultadoRota.aceita("Regra geral.", List.of(CITACAO)));
+    when(rotaDados.consultarTratamento(anyString(), any())).thenAnswer(chamada -> {
+      ContextoAssistente c = chamada.getArgument(1);
+      c.registrarConsultaDeTabela(RotaDados.FUNCAO_TRATAMENTO,
+          java.util.Map.of("produtoOuNcm", "noz"), false);
+      c.registrarTextoDoBackend("Noz: redução de 60%.", List.of());
+      return true;
+    });
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Quanto vendi de noz e a noz tem redução de IBS?", contexto, rotasAvisadas::add);
+
+    assertThat(r.texto()).endsWith("\n\nNoz: redução de 60%.");
+  }
+
+  @Test
+  @DisplayName("#443: sem sinal de tratamento ou com a tabela ja consultada: nada a mais")
   void semConsultaDaTabela() {
     classificarComo(Intencao.LEGISLACAO, 0.8);
     when(rotaLegislacao.responder(anyString(), any()))

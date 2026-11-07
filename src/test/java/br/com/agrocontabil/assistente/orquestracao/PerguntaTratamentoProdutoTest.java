@@ -28,6 +28,8 @@ class PerguntaTratamentoProdutoTest {
       "Quem recolhe o IBS na importação?",
       "Tenho guia vencendo?",
       "Qual o desconto do fornecedor de adubo?",
+      "Qual a alíquota do IBS em 2027?",
+      "Quem define a alíquota da CBS?",
       ""})
   @DisplayName("sem falar de tratamento do tributo: não tenta")
   void naoParece(String pergunta) {

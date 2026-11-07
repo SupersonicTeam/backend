@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente.orquestracao;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.ContextoAssistente.TextoDoBackend;
 import br.com.agrocontabil.assistente.FonteDado;
+import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
@@ -27,6 +28,9 @@ import org.springframework.stereotype.Component;
  *       desfecho vira {@code RESPONDIDA} só quando o problema era o texto do modelo (número sem
  *       fonte, resposta vazia, negativa trocada); sinais como função não permitida, teto de rodadas
  *       e fallback ficam na auditoria.</li>
+ *   <li>Rota de lei (#443): o texto só existe quando a pergunta era o tratamento de um produto e
+ *       a tabela o achou ({@code RotaDados#consultarTratamento}); a tabela responde no lugar do
+ *       texto e das citações do RAG.</li>
  *   <li>Com outras consultas (ou no MISTO): o texto do backend vem depois do que a rota
  *       respondeu, sem repetir um texto que já está lá (a frase fixa da consulta vazia é a mesma da
  *       negativa e do MISTO sem dados) e sem a recusa "não encontrei fundamento legal" ao lado de um
@@ -39,7 +43,7 @@ import org.springframework.stereotype.Component;
 public class TextosDoBackend {
 
   /** Funções cujo resultado vira texto do backend. */
-  static final Set<String> FUNCOES = Set.of("consultarTratamentoProduto");
+  static final Set<String> FUNCOES = Set.of(RotaDados.FUNCAO_TRATAMENTO);
 
   /** Desfechos de texto do modelo que o texto do backend resolve. */
   static final Set<DesfechoInteracao> SUBSTITUIVEIS = EnumSet.of(DesfechoInteracao.RESPONDIDA,
@@ -71,8 +75,12 @@ public class TextosDoBackend {
     if (textos.isEmpty() || resultado.rota() == Intencao.FORA_DE_ESCOPO) {
       return resultado;
     }
-    boolean substitui = resultado.rota() == Intencao.DADOS
-        && contexto.fontes().stream().map(FonteDado::funcao).allMatch(FUNCOES::contains);
+    // Na lei, o texto do backend so existe se a pergunta era o tratamento de um produto achado na
+    // tabela (#443): a tabela responde, e o texto do RAG sai junto com as citacoes dele (podia
+    // afirmar outro percentual para o mesmo produto, sem a ressalva).
+    boolean substitui = resultado.rota() == Intencao.LEGISLACAO
+        || resultado.rota() == Intencao.DADOS
+            && contexto.fontes().stream().map(FonteDado::funcao).allMatch(FUNCOES::contains);
     String daRota = resultado.texto();
     List<TextoDoBackend> novos = textos.stream()
         .filter(t -> substitui || !daRota.contains(t.texto()))
@@ -92,7 +100,7 @@ public class TextosDoBackend {
         ? DesfechoInteracao.RESPONDIDA : resultado.desfecho();
     // Os trechos relacionados (#343) so fazem sentido com a frase que os apresenta: sem ela, ao
     // lado do artigo do dado, seriam artigos soltos. Os que o modelo citou (#258) ficam.
-    List<CitacaoLegal> daLei = !dispositivos.isEmpty() && relacionados
+    List<CitacaoLegal> daLei = substitui || !dispositivos.isEmpty() && relacionados
         ? List.of() : resultado.citacoes();
     return new ResultadoOrquestracao(resultado.rota(), texto, desfecho,
         CitacoesFixas.juntar(daLei, CitacoesFixas.buscar(busca,

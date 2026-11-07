@@ -9,6 +9,7 @@ import br.com.agrocontabil.model.DesfechoInteracao;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -93,6 +94,7 @@ public class RotaDados {
   private final List<ToolCallback> ferramentas;
   private final int tetoSaida;
   private final Set<String> nomesPermitidos;
+  private final ToolCallback tratamento;
 
   /** Constrói a rota com um {@link ToolCallingManager} restrito às funções de dados. */
   public RotaDados(
@@ -115,6 +117,11 @@ public class RotaDados {
     this.nomesPermitidos = ferramentas.stream()
         .map(f -> f.getToolDefinition().name())
         .collect(Collectors.toUnmodifiableSet());
+    this.tratamento = ferramentas.stream()
+        .filter(f -> f.getToolDefinition().name().equals(FUNCAO_TRATAMENTO))
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("Funcao da tabela ausente: "
+            + FUNCAO_TRATAMENTO));
     this.toolCallingManager = DefaultToolCallingManager.builder()
         .toolCallbackResolver(new StaticToolCallbackResolver(ferramentas))
         .toolExecutionExceptionProcessor(processadorErro)
@@ -227,10 +234,6 @@ public class RotaDados {
    * @throws br.com.agrocontabil.exception.AssistenteIndisponivelException se o modelo falhar
    */
   public boolean consultarTratamento(String pergunta, ContextoAssistente contexto) {
-    ToolCallback tratamento = ferramentas.stream()
-        .filter(f -> f.getToolDefinition().name().equals(FUNCAO_TRATAMENTO))
-        .findFirst()
-        .orElseThrow();
     ToolCallingChatOptions opcoes = ToolCallingChatOptions.builder()
         .toolCallbacks(List.of(tratamento))
         .internalToolExecutionEnabled(false)
@@ -246,9 +249,12 @@ public class RotaDados {
     if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida) || !resposta.hasToolCalls()) {
       return false;
     }
+    // O mesmo produto pedido duas vezes seria a mesma fonte duas vezes na resposta.
+    Set<String> pedidos = new HashSet<>();
     List<AssistantMessage.ToolCall> chamadas = resposta.getResults().stream()
         .flatMap(g -> g.getOutput().getToolCalls().stream())
         .filter(c -> FUNCAO_TRATAMENTO.equals(c.name()))
+        .filter(c -> pedidos.add(String.valueOf(c.arguments()).strip()))
         .limit(MAXIMO_PRODUTOS_TRATAMENTO)
         .toList();
     contexto.registrarChamadasDeFuncao(chamadas.size());

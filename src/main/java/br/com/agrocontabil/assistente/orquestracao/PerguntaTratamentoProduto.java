@@ -15,8 +15,9 @@ public final class PerguntaTratamentoProduto {
 
   /** Como o produtor pergunta pelo tratamento: redução, alíquota, isenção, imposto menor... */
   private static final Pattern TRATAMENTO = Pattern.compile("\\b(reducao|reduzid[ao]s?|reduz"
-      + "|desconto|descontos|aliquotas?|isent[oa]s?|isencao|zerad[oa]s?|zero|menor|menos"
-      + "|cheio|cheia|integral|mais barat[oa]|beneficio|incide|incidem|incidencia|cesta basica)\\b");
+      + "|desconto|descontos|aliquotas? (zero|reduzidas?|menor(es)?|cheias?)|isent[oa]s?|isencao"
+      + "|zerad[oa]s?|zero|menor|menos|cheio|cheia|mais barat[oa]|beneficio|incide|incidem"
+      + "|cesta basica)\\b");
 
   /** O tributo de que se fala. */
   private static final Pattern TRIBUTO = Pattern.compile("\\b(ibs|cbs|impostos?|tributos?"

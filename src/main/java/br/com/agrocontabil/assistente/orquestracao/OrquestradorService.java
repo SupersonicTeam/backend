@@ -143,14 +143,15 @@ public class OrquestradorService {
    * Pergunta sobre o tratamento de um produto que a rota respondeu sem a tabela oficial (#443): a
    * rota de lei afirmava o percentual do artigo como definitivo, sem a ressalva do enquadramento.
    * Com o sinal da pergunta ({@link PerguntaTratamentoProduto}), o modelo diz qual é o produto
-   * ({@link RotaDados#consultarTratamento}) e o texto da tabela, com a ressalva, entra depois da
-   * resposta pelo {@link TextosDoBackend}. Só nas rotas de lei e de dados: o MISTO já passa pela
-   * rota de dados, que tem a função da tabela, e uma quarta chamada ao modelo passaria do teto
-   * reservado da cota (#166). Sem o modelo, a resposta fica como está.
+   * ({@link RotaDados#consultarTratamento}) e o texto da tabela, com a ressalva, entra pelo
+   * {@link TextosDoBackend}: no lugar da resposta de lei, depois da de dados ou do MISTO. No MISTO
+   * é a quarta chamada ao modelo no pior caso; a cota (#166) nunca cobra mais que o teto reservado
+   * para a pergunta, e o consumo real de quatro chamadas curtas fica abaixo dele. Sem o modelo, a
+   * resposta fica como está.
    */
   private void tratamentoDaTabela(Intencao rota, ResultadoOrquestracao resultado,
       String pergunta, ContextoAssistente contexto) {
-    if ((rota != Intencao.LEGISLACAO && rota != Intencao.DADOS) || resultado.modoFallback()
+    if (rota == Intencao.FORA_DE_ESCOPO || resultado.modoFallback()
         || !PerguntaTratamentoProduto.parece(pergunta)
         || contexto.fontes().stream()
             .anyMatch(f -> RotaDados.FUNCAO_TRATAMENTO.equals(f.funcao()))
