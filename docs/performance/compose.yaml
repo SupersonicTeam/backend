@@ -1,0 +1,90 @@
+# Stack ISOLADA para o benchmark de p95 (issue #153). Nada aqui toca a stack da demonstracao:
+# projeto compose proprio (agro-perf), rede, volume e banco proprios (agro_perf), nenhuma porta
+# publicada no host. Roteiro completo em README.md.
+#
+# Limites de recurso (para nao disputar a VM com o Ollama e a demonstracao):
+#   postgres 2 GiB / 2 CPUs · backend 2 GiB (heap -Xmx1g) / 2 CPUs · k6 1 GiB / 1 CPU
+# Soma: 5 GiB e 5 CPUs. Rodar so na janela de medicao (sem merge, sem Ceres rodando).
+name: agro-perf
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg16
+    environment:
+      POSTGRES_DB: agro_perf
+      POSTGRES_USER: agro_perf
+      POSTGRES_PASSWORD: ${PERF_DB_PASSWORD:?gere o .env como no README}
+    volumes:
+      - pgdata_perf:/var/lib/postgresql/data
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agro_perf -d agro_perf']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    # A mesma imagem do deploy (ghcr) ou uma construida do codigo (README, "Imagem do backend").
+    image: ${BACKEND_IMAGE:-ghcr.io/supersonicteam/backend:latest}
+    mem_limit: 2g
+    cpus: 2
+    environment:
+      SPRING_PROFILES_ACTIVE: homolog
+      SPRING_DOCKER_COMPOSE_ENABLED: 'false'
+      DB_HOST: postgres
+      DB_NAME: agro_perf
+      DB_USER: agro_perf
+      DB_PASSWORD: ${PERF_DB_PASSWORD}
+      JWT_SECRET: ${PERF_JWT_SECRET:?defina no .env}
+      CRIPTO_CHAVE: ${PERF_CRIPTO_CHAVE:?defina no .env}
+      APP_CORS_ALLOWED_ORIGINS: http://localhost
+      # O DataLoader semeia o produtor A e, com a senha, a credencial de login do k6.
+      SEED_SENHA: ${PERF_SEED_SENHA:?defina no .env}
+      # Sem Ceres: nenhum modelo e carregado (o benchmark e da API, nao do Ollama).
+      AI_CHAT_PROVIDER: none
+      # Antivirus: o padrao (CLAMAV) sobe sem o clamd (anexo fica "em verificacao"); o benchmark
+      # nao usa anexo. SEM_VERIFICACAO e recusado fora de dev/test.
+      # Limites de taxa SO NESTA STACK. A API de producao limita login a 10/min por IP, cadastro a
+      # 5/min e /api/** a 100/min por identidade (#150, #208): o k6 de uma identidade e um IP so
+      # receberia 429 e o p95 mediria o limitador, nao a API. O codigo e os padroes de producao
+      # nao mudam; so este ambiente efemero recebe os valores abaixo (README, "Limites de taxa").
+      LIMITE_GERAL_POR_MINUTO: '1000000'
+      LIMITE_LOGIN_POR_MINUTO: '1000000'
+      LIMITE_REFRESH_POR_MINUTO: '1000000'
+      # Registro de queda mais baixo que o do homolog (DEBUG no pacote da aplicacao ocupa CPU).
+      LOGGING_LEVEL_BR_COM_AGROCONTABIL: INFO
+      JAVA_TOOL_OPTIONS: -Xmx1g -Duser.timezone=America/Sao_Paulo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # So sobe com `--profile k6` (README): `docker compose run --rm k6`.
+  k6:
+    profiles: [k6]
+    image: grafana/k6:1.0.0
+    mem_limit: 1g
+    cpus: 1
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://backend:8080
+      K6_EMAIL: joao.produtor@example.com
+      K6_SENHA: ${PERF_SEED_SENHA}
+      VUS: ${K6_VUS:-10}
+      DURACAO: ${K6_DURACAO:-3m}
+      K6_NO_USAGE_REPORT: 'true'
+    volumes:
+      - ./k6:/scripts:ro
+      - ./resultados:/resultados
+    command: run --summary-export=/resultados/resumo.json /scripts/carga.js
+
+volumes:
+  pgdata_perf:
