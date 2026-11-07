@@ -230,7 +230,12 @@ frase que um review usou para mostrar um erro da heurística fica no corpus de r
 (`tests/test_externas.py`, `CORPUS_*`). A resposta que não foi redigida pelo modelo (recusa,
 descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A fundamentação é o
 `citacaoValida` do comando com a regra da `main` nas duas arquiteturas: texto descartado
-(`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`) não ganha crédito de citação. Enquanto
+(`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`, `REGIME_ESPECIFICO_SEM_SETOR`, o mesmo
+conjunto do `AvaliadorResposta`) não ganha crédito de citação. No MISTO, com a parte de lei
+descartada (`desfechoLegislacao` num desses quatro) ou com o desfecho geral `AFIRMACAO_SOBRE_DADOS`,
+a citação só vale se rodou `consultarRetencoes` ou `consultarTratamentoProduto`, as funções cujas
+citações fixas o backend junta (#433, 2026-11-07; `externas.citacao_vale`, regra única do critério principal e
+das externas). A regra só rebaixa; não há campo novo no JSON da rodada. Enquanto
 `aConferir`, a citação das externas fica **só** na seção delas, como provisória. O CSV (`;`, BOM
 UTF-8, protegido contra fórmula, como o `CsvCego` do Java) sai em **lotes**: regerar o relatório
 não reembaralha o que já foi ao avaliador, e célula medida depois (`--retomar`) ou refeita vai num
