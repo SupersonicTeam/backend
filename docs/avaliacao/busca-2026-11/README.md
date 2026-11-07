@@ -10,6 +10,7 @@ classificador, busca): usado num ajuste, deixa de medir.
 |---------|---------|
 | [`../treino/perguntas-lei-busca-2026-11.json`](../treino/perguntas-lei-busca-2026-11.json) | O conjunto congelado: 40 perguntas (20 `geral`, 10 `setor`, 10 `ausente`), com o `.sha256` ao lado. Versão final no commit `6a7058a`, depois de duas rodadas de troca pedidas pela conferência contra as perguntas de avaliação |
 | [`regra-de-decisao.md`](regra-de-decisao.md) | A regra de decisão, gravada antes de qualquer rodada |
+| [`relatorio-2026-11-07.md`](relatorio-2026-11-07.md) | O relatório da medição: nenhuma variante passou; a partição fica desligada |
 | [`busca_contagem.py`](busca_contagem.py) | Rótulo de cada execução e de cada pergunta, top 5 e posição 1 dos trechos entregues (escrito antes da medição e aplicado sem mudança) |
 | [`decisao.py`](decisao.py) | Aplica a regra de decisão às saídas dos braços |
 | [`relatorio.py`](relatorio.py) | Tabelas do relatório: rótulos por braço e as medidas descritivas |

@@ -1,0 +1,5250 @@
+{
+  "topKProducao" : 5,
+  "limiarProducao" : 0.55,
+  "resumo" : {
+    "perguntasComEsperado" : 30,
+    "recall5Esperado" : 7,
+    "posicao1Esperado" : 5,
+    "recall5Aceitavel" : 9,
+    "posicao1Aceitavel" : 7,
+    "ausentes" : 10,
+    "ausentesComTrechoAcimaDoLimiar" : 1
+  },
+  "perguntas" : [ {
+    "id" : "busca-01",
+    "grupo" : "geral",
+    "pergunta" : "Troquei uns bezerros por milho com o vizinho, sem passar dinheiro nenhum. Essa troca também tem IBS e CBS?",
+    "esperado" : [ "LC 214/2025 art. 4º" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 4º" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 6º, inciso II",
+      "artigo" : "LC 214/2025 art. 6º",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 6º, inciso VIII",
+      "artigo" : "LC 214/2025 art. 6º",
+      "similaridade" : 0.555
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 252, § 2º, inciso I",
+      "artigo" : "LC 214/2025 art. 252",
+      "similaridade" : 0.572
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 252, § 5º-A",
+      "artigo" : "LC 214/2025 art. 252",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 252, § 5º-A, inciso I",
+      "artigo" : "LC 214/2025 art. 252",
+      "similaridade" : 0.553
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 2º, inciso I",
+      "similaridade" : 0.572
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso II",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso VIII",
+      "similaridade" : 0.555
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso I",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II, alínea a",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II, alínea c",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II, alínea b",
+      "similaridade" : 0.541
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º",
+      "similaridade" : 0.54
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso I, alínea b",
+      "similaridade" : 0.538
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso III",
+      "similaridade" : 0.538
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso IV",
+      "similaridade" : 0.537
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso VI",
+      "similaridade" : 0.536
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II",
+      "similaridade" : 0.536
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso I",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 94",
+      "dispositivo" : "art. 94, inciso II, alínea c",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 6º",
+      "dispositivo" : "art. 6º, inciso IX",
+      "similaridade" : 0.534
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 2º, inciso II",
+      "similaridade" : 0.534
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º, inciso I",
+      "similaridade" : 0.531
+    } ],
+    "posicaoEsperadoTop20" : 10,
+    "posicaoEsperadoOuAceitoTop20" : 10,
+    "trechosAcimaDoLimiarNoTop20" : 5
+  }, {
+    "id" : "busca-02",
+    "grupo" : "geral",
+    "pergunta" : "Levo o milho da minha fazenda para o armazém da minha outra fazenda, as duas no meu nome. Essa remessa paga IBS e CBS?",
+    "esperado" : [ "LC 214/2025 art. 6º" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 6º" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 24, inciso II",
+      "artigo" : "LC 214/2025 art. 24",
+      "similaridade" : 0.618
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 21, inciso III",
+      "artigo" : "LC 214/2025 art. 21",
+      "similaridade" : 0.615
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 24, inciso VI, alínea c",
+      "artigo" : "LC 214/2025 art. 24",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 24, inciso II, alínea b",
+      "artigo" : "LC 214/2025 art. 24",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 262",
+      "artigo" : "LC 214/2025 art. 262",
+      "similaridade" : 0.61
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso II",
+      "similaridade" : 0.618
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso III",
+      "similaridade" : 0.615
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 97",
+      "dispositivo" : "art. 97, inciso I",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso VI, alínea c",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 73",
+      "dispositivo" : "art. 73",
+      "similaridade" : 0.611
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso II, alínea b",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 72",
+      "dispositivo" : "art. 72, inciso II",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 72",
+      "dispositivo" : "art. 72",
+      "similaridade" : 0.606
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso IV",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 97",
+      "dispositivo" : "art. 97",
+      "similaridade" : 0.603
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 97",
+      "dispositivo" : "art. 97, inciso II",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso VI, alínea b",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso II, alínea a",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76",
+      "similaridade" : 0.599
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso VI, alínea d",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 4º",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso III",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 24",
+      "dispositivo" : "art. 24, inciso VI, alínea a",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 2º",
+      "similaridade" : 0.593
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-03",
+    "grupo" : "geral",
+    "pergunta" : "Para agradar um comprador grande, dei de bonificação dez sacas de milho a mais, sem cobrar. Esse milho que dei de graça paga IBS e CBS?",
+    "esperado" : [ "LC 214/2025 art. 5º" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 5º" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 9º, inciso VI",
+      "artigo" : "LC 214/2025 art. 9º",
+      "similaridade" : 0.557
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso VI",
+      "similaridade" : 0.557
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso II",
+      "similaridade" : 0.54
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso I",
+      "similaridade" : 0.537
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137, § 1º, inciso I",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 448",
+      "dispositivo" : "art. 448, § 3º",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21",
+      "similaridade" : 0.531
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 448",
+      "dispositivo" : "art. 448",
+      "similaridade" : 0.53
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110",
+      "similaridade" : 0.53
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110, inciso I",
+      "similaridade" : 0.529
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 5º",
+      "dispositivo" : "art. 5º, inciso II",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 219-A",
+      "dispositivo" : "art. 219-A, inciso II",
+      "similaridade" : 0.525
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 148",
+      "dispositivo" : "art. 148",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 148",
+      "dispositivo" : "art. 148, parágrafo único",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, inciso III",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso III",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 9º",
+      "dispositivo" : "art. 9º, § 3º",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137, § 1º, inciso II",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 137",
+      "dispositivo" : "art. 137, § 1º",
+      "similaridade" : 0.518
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110, inciso II",
+      "similaridade" : 0.518
+    } ],
+    "posicaoEsperadoTop20" : 10,
+    "posicaoEsperadoOuAceitoTop20" : 10,
+    "trechosAcimaDoLimiarNoTop20" : 1
+  }, {
+    "id" : "busca-04",
+    "grupo" : "geral",
+    "pergunta" : "Tenho placas solares na fazenda e vendo a energia que sobra. Para o imposto novo, essa energia é tratada como mercadoria?",
+    "esperado" : [ "LC 214/2025 art. 3º" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 3º" ],
+    "entregues" : [ ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 7º",
+      "similaridade" : 0.54
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 100",
+      "dispositivo" : "art. 100, § 4º",
+      "similaridade" : 0.536
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 517",
+      "dispositivo" : "art. 517, § 4º, inciso I",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 6º",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 28",
+      "dispositivo" : "art. 28, § 4º, inciso II",
+      "similaridade" : 0.525
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, inciso II)",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 12",
+      "dispositivo" : "art. 174 (redação do art. 12, § 9º)",
+      "similaridade" : 0.518
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, inciso III, alínea a)",
+      "similaridade" : 0.515
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, § 1º)",
+      "similaridade" : 0.515
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, inciso I)",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, inciso III, alínea b)",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 5º",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 100",
+      "dispositivo" : "art. 100, § 3º",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, § 2º)",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, inciso IV)",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28, inciso III)",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 175",
+      "dispositivo" : "art. 175, § 4º",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 517",
+      "dispositivo" : "art. 517, § 4º, inciso II",
+      "similaridade" : 0.503
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 28",
+      "dispositivo" : "art. 28, § 3º",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 28",
+      "dispositivo" : "art. 174 (redação do art. 28)",
+      "similaridade" : 0.502
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-05",
+    "grupo" : "geral",
+    "pergunta" : "Vendo novilhas por um aplicativo de vendas na internet. Quem responde pelo imposto dessa venda: eu ou o aplicativo?",
+    "esperado" : [ "LC 214/2025 art. 22" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 22" ],
+    "entregues" : [ ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 13, inciso II",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 13, inciso III",
+      "similaridade" : 0.547
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 13, inciso I",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 15, inciso I",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 15, inciso II",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 13",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.543
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 10, inciso I",
+      "similaridade" : 0.541
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 5º",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, inciso II, alínea b",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 1º, inciso I",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 11",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, inciso II, alínea c",
+      "similaridade" : 0.538
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 14",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 2º, inciso III",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 4º",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 471-D",
+      "dispositivo" : "art. 471-D, § 1º",
+      "similaridade" : 0.531
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, inciso I",
+      "similaridade" : 0.53
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 7º, inciso II",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 22",
+      "dispositivo" : "art. 22, § 3º",
+      "similaridade" : 0.527
+    } ],
+    "posicaoEsperadoTop20" : 1,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-06",
+    "grupo" : "geral",
+    "pergunta" : "Comprei uns garrotes de um vendedor que não me deu nota fiscal. Se ele não pagar o imposto, a cobrança pode sobrar para mim?",
+    "esperado" : [ "LC 214/2025 art. 24" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 154",
+      "artigo" : "LC 214/2025 art. 154",
+      "similaridade" : 0.555
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 154",
+      "dispositivo" : "art. 154",
+      "similaridade" : 0.555
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 427",
+      "dispositivo" : "art. 427, § 2º",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 37",
+      "dispositivo" : "art. 37, § 1º",
+      "similaridade" : 0.534
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 37",
+      "dispositivo" : "art. 37",
+      "similaridade" : 0.532
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 11",
+      "dispositivo" : "art. 11, § 6º",
+      "similaridade" : 0.531
+    }, {
+      "posicao" : 6,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 6º, inciso I",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 428",
+      "dispositivo" : "art. 428, § 3º, inciso I",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 427",
+      "dispositivo" : "art. 427, § 1º",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 10",
+      "dispositivo" : "art. 10, § 4º, inciso II, alínea a",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 425",
+      "dispositivo" : "art. 425, inciso III, alínea b",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 11,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso II",
+      "similaridade" : 0.525
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 37",
+      "dispositivo" : "art. 37, § 2º",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XIX",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, § 6º, inciso II",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XI",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 425",
+      "dispositivo" : "art. 425, inciso II",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso IX",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 1º",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 155",
+      "dispositivo" : "art. 155, § 1º",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A, inciso II",
+      "similaridade" : 0.52
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 1
+  }, {
+    "id" : "busca-07",
+    "grupo" : "geral",
+    "pergunta" : "Comprei de um fornecedor que vendeu com isenção, sem imposto na nota. Eu tenho algum crédito dessa compra?",
+    "esperado" : [ "LC 214/2025 art. 49" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 51, § 1º",
+      "artigo" : "LC 214/2025 art. 51",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 462, § 4º, inciso I",
+      "artigo" : "LC 214/2025 art. 462",
+      "similaridade" : 0.611
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 462, § 4º, inciso II [2]",
+      "artigo" : "LC 214/2025 art. 462",
+      "similaridade" : 0.606
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 462, § 4º, inciso II",
+      "artigo" : "LC 214/2025 art. 462",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 462, § 4º",
+      "artigo" : "LC 214/2025 art. 462",
+      "similaridade" : 0.599
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 4º, inciso I",
+      "similaridade" : 0.611
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 4º, inciso II [2]",
+      "similaridade" : 0.606
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 4º, inciso II",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 4º",
+      "similaridade" : 0.599
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 465",
+      "dispositivo" : "art. 465, § 2º, inciso II",
+      "similaridade" : 0.596
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 447",
+      "dispositivo" : "art. 447, § 1º, inciso II",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 2º",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 447",
+      "dispositivo" : "art. 447, § 1º, inciso I",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 444",
+      "dispositivo" : "art. 444, § 4º, inciso I",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 447",
+      "dispositivo" : "art. 447",
+      "similaridade" : 0.593
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 447",
+      "dispositivo" : "art. 447, § 2º, inciso II",
+      "similaridade" : 0.593
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 447",
+      "dispositivo" : "art. 447, § 3º",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 3º",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 447",
+      "dispositivo" : "art. 447, § 1º",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 51",
+      "dispositivo" : "art. 51, § 1º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 1º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso II, alínea a",
+      "similaridade" : 0.587
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 462",
+      "dispositivo" : "art. 462, § 5º",
+      "similaridade" : 0.587
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 465",
+      "dispositivo" : "art. 465, § 1º, inciso I",
+      "similaridade" : 0.587
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-08",
+    "grupo" : "geral",
+    "pergunta" : "Se eu atrasar o pagamento do IBS do mês, quanto vou pagar de multa?",
+    "esperado" : [ "LC 214/2025 art. 29" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 29" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 341-G, inciso IV, alínea a",
+      "artigo" : "LC 214/2025 art. 341-G",
+      "similaridade" : 0.711
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 341-G, inciso IV, alínea b",
+      "artigo" : "LC 214/2025 art. 341-G",
+      "similaridade" : 0.707
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 341-G, inciso IV",
+      "artigo" : "LC 214/2025 art. 341-G",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso IV, alínea a)",
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "similaridade" : 0.697
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 341-G, inciso XVIII",
+      "artigo" : "LC 214/2025 art. 341-G",
+      "similaridade" : 0.693
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso IV, alínea a",
+      "similaridade" : 0.711
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso IV, alínea b",
+      "similaridade" : 0.707
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso IV",
+      "similaridade" : 0.698
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso IV, alínea a)",
+      "similaridade" : 0.697
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XVIII",
+      "similaridade" : 0.693
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso IV, alínea b)",
+      "similaridade" : 0.693
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso IV)",
+      "similaridade" : 0.69
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XV",
+      "similaridade" : 0.681
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XVI",
+      "similaridade" : 0.681
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, § 5º, inciso III, alínea b",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso X",
+      "similaridade" : 0.675
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, § 1º",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XVII, alínea b",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, § 5º, inciso II",
+      "similaridade" : 0.671
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XIX",
+      "similaridade" : 0.671
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 471-D",
+      "dispositivo" : "art. 471-D, inciso II",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso XVIII)",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XVII, alínea a",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, § 5º, inciso III, alínea a",
+      "similaridade" : 0.667
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, § 7º, inciso III",
+      "similaridade" : 0.667
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-09",
+    "grupo" : "geral",
+    "pergunta" : "Ouvi falar que o governo vai mandar a conta do imposto do mês já pronta. Se eu não concordar com o valor, o que acontece?",
+    "esperado" : [ "LC 214/2025 art. 46" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 32-A, inciso I",
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 2,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 32-A, inciso II",
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "similaridade" : 0.575
+    }, {
+      "posicao" : 3,
+      "norma" : "EC 132/2023",
+      "dispositivo" : "art. 2º (redação do art. 125, § 2º)",
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 4,
+      "norma" : "EC 132/2023",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso III)",
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 5,
+      "norma" : "EC 132/2023",
+      "dispositivo" : "art. 1º (redação do art. 153, § 6º, inciso VII)",
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 153",
+      "similaridade" : 0.564
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 2º",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A, inciso I",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A, inciso II",
+      "similaridade" : 0.575
+    }, {
+      "posicao" : 4,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125, § 2º)",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 5,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso III)",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 395",
+      "dispositivo" : "art. 395, inciso II",
+      "similaridade" : 0.567
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 395",
+      "dispositivo" : "art. 395, § 2º",
+      "similaridade" : 0.566
+    }, {
+      "posicao" : 8,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 153",
+      "dispositivo" : "art. 1º (redação do art. 153, § 6º, inciso VII)",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 9,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso X)",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 10,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso XIII)",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 143",
+      "dispositivo" : "art. 143, § 1º",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A, § 3º, inciso I",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 13,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso VIII)",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 29",
+      "dispositivo" : "art. 29, § 2º, inciso I",
+      "similaridade" : 0.56
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A, § 2º, inciso II",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A, § 1º",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 395",
+      "dispositivo" : "art. 395, inciso III",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 32-A",
+      "dispositivo" : "art. 32-A",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 19,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso IX)",
+      "similaridade" : 0.557
+    }, {
+      "posicao" : 20,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso II)",
+      "similaridade" : 0.557
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-10",
+    "grupo" : "geral",
+    "pergunta" : "Vai ter algum sorteio ou prêmio para quem pedir nota fiscal nas compras, como as notas premiadas dos estados?",
+    "esperado" : [ "LC 214/2025 art. 61" ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 62",
+      "dispositivo" : "art. 62, § 1º, inciso I",
+      "similaridade" : 0.531
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 61",
+      "dispositivo" : "art. 61, § 2º",
+      "similaridade" : 0.525
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 23",
+      "dispositivo" : "art. 174 (redação do art. 23, § 1º)",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 438",
+      "dispositivo" : "art. 438",
+      "similaridade" : 0.512
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 384",
+      "dispositivo" : "art. 384, parágrafo único, inciso I",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 523 (redação do art. 10",
+      "dispositivo" : "art. 523 (redação do art. 10)",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 7,
+      "artigo" : "EC 132/2023 art. 12",
+      "dispositivo" : "art. 12, § 3º",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 384",
+      "dispositivo" : "art. 174 (redação do art. 384, parágrafo único, inciso IV)",
+      "similaridade" : 0.503
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 384",
+      "dispositivo" : "art. 174 (redação do art. 384, parágrafo único)",
+      "similaridade" : 0.501
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 384",
+      "dispositivo" : "art. 384, parágrafo único, inciso II",
+      "similaridade" : 0.501
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 384",
+      "dispositivo" : "art. 384, parágrafo único, inciso IV",
+      "similaridade" : 0.5
+    }, {
+      "posicao" : 12,
+      "artigo" : "EC 132/2023 art. 12",
+      "dispositivo" : "art. 12, § 4º, inciso I",
+      "similaridade" : 0.5
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso IV, alínea a",
+      "similaridade" : 0.499
+    }, {
+      "posicao" : 14,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 131",
+      "dispositivo" : "art. 2º (redação do art. 131, § 4º)",
+      "similaridade" : 0.498
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 61",
+      "dispositivo" : "art. 61",
+      "similaridade" : 0.498
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 384",
+      "dispositivo" : "art. 174 (redação do art. 384)",
+      "similaridade" : 0.497
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 384",
+      "dispositivo" : "art. 384, parágrafo único, inciso III",
+      "similaridade" : 0.496
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 517 (redação do art. 23",
+      "dispositivo" : "art. 517 (redação do art. 23, § 1º)",
+      "similaridade" : 0.496
+    }, {
+      "posicao" : 19,
+      "artigo" : "EC 132/2023 art. 12",
+      "dispositivo" : "art. 12, § 1º, inciso IV",
+      "similaridade" : 0.494
+    }, {
+      "posicao" : 20,
+      "artigo" : "EC 132/2023 art. 12",
+      "dispositivo" : "art. 12, § 1º, inciso V",
+      "similaridade" : 0.494
+    } ],
+    "posicaoEsperadoTop20" : 2,
+    "posicaoEsperadoOuAceitoTop20" : 2,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-11",
+    "grupo" : "geral",
+    "pergunta" : "Comprei ração com imposto e aproveitei o crédito, mas uma parte estragou no galpão com a chuva. Tenho que devolver o crédito dessa parte?",
+    "esperado" : [ "LC 214/2025 art. 47" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 47" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 379, parágrafo único",
+      "artigo" : "LC 214/2025 art. 379",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 39, § 1º",
+      "artigo" : "LC 214/2025 art. 39",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 378, inciso IV",
+      "artigo" : "LC 214/2025 art. 378",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 315, § 3º",
+      "artigo" : "LC 214/2025 art. 315",
+      "similaridade" : 0.57
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 315, § 2º, inciso II",
+      "artigo" : "LC 214/2025 art. 315",
+      "similaridade" : 0.563
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 315",
+      "dispositivo" : "art. 315, § 3º",
+      "similaridade" : 0.57
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 379",
+      "dispositivo" : "art. 379, parágrafo único",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 1º",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 315",
+      "dispositivo" : "art. 315, § 2º, inciso II",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 6º",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 378",
+      "dispositivo" : "art. 378, inciso IV",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 2º",
+      "similaridade" : 0.552
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 3º",
+      "similaridade" : 0.55
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 315",
+      "dispositivo" : "art. 315, § 2º, inciso III",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 394",
+      "dispositivo" : "art. 394, § 6º",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 1º",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, § 2º",
+      "similaridade" : 0.547
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 2º",
+      "similaridade" : 0.547
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 393",
+      "dispositivo" : "art. 393, § 5º, inciso II",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 315",
+      "dispositivo" : "art. 315, § 2º",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 394",
+      "dispositivo" : "art. 394, § 4º",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 380",
+      "dispositivo" : "art. 380, § 1º",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 45",
+      "dispositivo" : "art. 45, § 2º",
+      "similaridade" : 0.543
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 4º",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 7º",
+      "similaridade" : 0.541
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 8
+  }, {
+    "id" : "busca-12",
+    "grupo" : "geral",
+    "pergunta" : "Vou construir um galpão na fazenda e contratar o pedreiro por minha conta. Para o INSS, eu fico responsável como se fosse uma empresa nessa obra?",
+    "esperado" : [ "Lei 8.212/1991 art. 15" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25, § 11",
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "similaridade" : 0.566
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 11",
+      "similaridade" : 0.566
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea b",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea a",
+      "similaridade" : 0.543
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 3º",
+      "similaridade" : 0.541
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 15",
+      "dispositivo" : "art. 15, parágrafo único",
+      "similaridade" : 0.54
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, § 14",
+      "similaridade" : 0.536
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 8.212/1991 art. 48",
+      "dispositivo" : "art. 48, § 2º",
+      "similaridade" : 0.531
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 13",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 8.212/1991 art. 50",
+      "dispositivo" : "art. 50",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso I, alínea a",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 25-A",
+      "dispositivo" : "art. 25-A, § 2º",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 6º",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 61",
+      "dispositivo" : "art. 61",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 2º",
+      "similaridade" : 0.517
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso VI",
+      "similaridade" : 0.516
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 1º",
+      "similaridade" : 0.515
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 2º",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, inciso I",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 270",
+      "dispositivo" : "art. 270",
+      "similaridade" : 0.511
+    } ],
+    "posicaoEsperadoTop20" : 5,
+    "posicaoEsperadoOuAceitoTop20" : 5,
+    "trechosAcimaDoLimiarNoTop20" : 1
+  }, {
+    "id" : "busca-13",
+    "grupo" : "geral",
+    "pergunta" : "Tenho um saldo de crédito de ICMS acumulado. Quando o ICMS acabar, eu perco esse crédito?",
+    "esperado" : [ "EC 132/2023 art. 2º (redação do art. 134" ],
+    "aceito" : [ "LC 227/2026 art. 132" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 132, § 1º, inciso III",
+      "artigo" : "LC 227/2026 art. 132",
+      "similaridade" : 0.68
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 132, § 1º, inciso I",
+      "artigo" : "LC 227/2026 art. 132",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 132, § 1º, inciso II",
+      "artigo" : "LC 227/2026 art. 132",
+      "similaridade" : 0.667
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 132, § 2º",
+      "artigo" : "LC 227/2026 art. 132",
+      "similaridade" : 0.664
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 132, § 1º",
+      "artigo" : "LC 227/2026 art. 132",
+      "similaridade" : 0.658
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132, § 1º, inciso III",
+      "similaridade" : 0.68
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132, § 1º, inciso I",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132, § 1º, inciso II",
+      "similaridade" : 0.667
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132, § 2º",
+      "similaridade" : 0.664
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132, § 1º",
+      "similaridade" : 0.658
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 383",
+      "dispositivo" : "art. 383",
+      "similaridade" : 0.656
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132, § 1º, inciso IV",
+      "similaridade" : 0.652
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 132",
+      "dispositivo" : "art. 132",
+      "similaridade" : 0.64
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 452",
+      "dispositivo" : "art. 452, parágrafo único",
+      "similaridade" : 0.631
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 227/2026 art. 135",
+      "dispositivo" : "art. 135",
+      "similaridade" : 0.626
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 142",
+      "dispositivo" : "art. 142",
+      "similaridade" : 0.624
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 468",
+      "dispositivo" : "art. 468, parágrafo único",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 143",
+      "dispositivo" : "art. 143, § 2º",
+      "similaridade" : 0.608
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 143",
+      "dispositivo" : "art. 143, § 1º",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 13, inciso I",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 406",
+      "dispositivo" : "art. 406, § 3º, inciso II",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 408",
+      "dispositivo" : "art. 408, § 4º, inciso II, alínea b",
+      "similaridade" : 0.589
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 39",
+      "dispositivo" : "art. 39, § 7º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 47",
+      "dispositivo" : "art. 47, § 13, inciso II",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 45",
+      "dispositivo" : "art. 45, § 4º",
+      "similaridade" : 0.588
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-14",
+    "grupo" : "geral",
+    "pergunta" : "Eu e três vizinhos queremos contratar trabalhadores juntos, com um de nós contratando em nome de todos. Como fica a contribuição para o INSS nesse caso?",
+    "esperado" : [ "Lei 8.212/1991 art. 25-A" ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 15",
+      "dispositivo" : "art. 15, parágrafo único",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 20",
+      "dispositivo" : "art. 20, § 2º",
+      "similaridade" : 0.54
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso VI",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 25-A",
+      "dispositivo" : "art. 25-A, § 2º",
+      "similaridade" : 0.537
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, § 8º",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 24",
+      "dispositivo" : "art. 24, parágrafo único",
+      "similaridade" : 0.529
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 263",
+      "dispositivo" : "art. 263, § 2º",
+      "similaridade" : 0.525
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 8.212/1991 art. 67",
+      "dispositivo" : "art. 67",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 20",
+      "dispositivo" : "art. 20, § 1º",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 5º",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, § 4º",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 43",
+      "dispositivo" : "art. 43, § 3º",
+      "similaridade" : 0.518
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, § 5º",
+      "similaridade" : 0.517
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 20",
+      "dispositivo" : "art. 20",
+      "similaridade" : 0.517
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 14",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 13",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 263",
+      "dispositivo" : "art. 263, § 3º",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 4º",
+      "similaridade" : 0.512
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, § 9º",
+      "similaridade" : 0.51
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea f",
+      "similaridade" : 0.509
+    } ],
+    "posicaoEsperadoTop20" : 4,
+    "posicaoEsperadoOuAceitoTop20" : 4,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-15",
+    "grupo" : "geral",
+    "pergunta" : "Esse tal de IBS é imposto de quem: do governo federal, do estado ou da prefeitura?",
+    "esperado" : [ "EC 132/2023 art. 1º (redação do art. 156-A" ],
+    "aceito" : [ "LC 214/2025 art. 1º" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 2º, inciso II",
+      "artigo" : "LC 227/2026 art. 2º",
+      "similaridade" : 0.637
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+      "artigo" : "LC 214/2025 art. 473",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 113, inciso VI",
+      "artigo" : "LC 227/2026 art. 113",
+      "similaridade" : 0.632
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 113, § 2º",
+      "artigo" : "LC 227/2026 art. 113",
+      "similaridade" : 0.631
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 227/2026",
+      "dispositivo" : "art. 2º, inciso I",
+      "artigo" : "LC 227/2026 art. 2º",
+      "similaridade" : 0.63
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 227/2026 art. 2º",
+      "dispositivo" : "art. 2º, inciso II",
+      "similaridade" : 0.637
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso VI",
+      "similaridade" : 0.632
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, § 2º",
+      "similaridade" : 0.631
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 227/2026 art. 2º",
+      "dispositivo" : "art. 2º, inciso I",
+      "similaridade" : 0.63
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso I, alínea b",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso IV, alínea a",
+      "similaridade" : 0.629
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso III, alínea b",
+      "similaridade" : 0.628
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso I",
+      "similaridade" : 0.627
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113",
+      "similaridade" : 0.627
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso IV, alínea b",
+      "similaridade" : 0.626
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso II, alínea b",
+      "similaridade" : 0.625
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea a",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso IV",
+      "similaridade" : 0.622
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 227/2026 art. 2º",
+      "dispositivo" : "art. 2º, § 1º, inciso XII",
+      "similaridade" : 0.622
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso II, alínea e",
+      "similaridade" : 0.62
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 14",
+      "dispositivo" : "art. 14, inciso III",
+      "similaridade" : 0.619
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 227/2026 art. 2º",
+      "dispositivo" : "art. 2º, § 12",
+      "similaridade" : 0.619
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso V, alínea b",
+      "similaridade" : 0.618
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III",
+      "similaridade" : 0.618
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-16",
+    "grupo" : "geral",
+    "pergunta" : "O IBS e a CBS vão ter as mesmas regras ou cada um vai funcionar de um jeito diferente?",
+    "esperado" : [ "EC 132/2023 art. 1º (redação do art. 149-B" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 43",
+      "artigo" : "LC 214/2025 art. 43",
+      "similaridade" : 0.639
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 317, § 1º",
+      "artigo" : "LC 214/2025 art. 317",
+      "similaridade" : 0.635
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 126, § 6º",
+      "artigo" : "LC 214/2025 art. 126",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 4º",
+      "artigo" : "LC 214/2025 art. 4º",
+      "similaridade" : 0.632
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 14, inciso II",
+      "artigo" : "LC 214/2025 art. 14",
+      "similaridade" : 0.624
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 43",
+      "dispositivo" : "art. 43",
+      "similaridade" : 0.639
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 317",
+      "dispositivo" : "art. 317, § 1º",
+      "similaridade" : 0.635
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 6º",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 4º",
+      "dispositivo" : "art. 4º",
+      "similaridade" : 0.632
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 14",
+      "dispositivo" : "art. 14, inciso II",
+      "similaridade" : 0.624
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 307",
+      "dispositivo" : "art. 307",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 58",
+      "dispositivo" : "art. 58, § 1º",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 173",
+      "dispositivo" : "art. 173",
+      "similaridade" : 0.62
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126",
+      "similaridade" : 0.62
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 2º",
+      "similaridade" : 0.619
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 58",
+      "dispositivo" : "art. 58, § 3º",
+      "similaridade" : 0.617
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 14",
+      "dispositivo" : "art. 14, § 2º",
+      "similaridade" : 0.616
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 237",
+      "dispositivo" : "art. 237",
+      "similaridade" : 0.616
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 14",
+      "dispositivo" : "art. 14, § 2º, inciso II",
+      "similaridade" : 0.615
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 1º, inciso II",
+      "similaridade" : 0.613
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 318",
+      "dispositivo" : "art. 318",
+      "similaridade" : 0.613
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 4º",
+      "similaridade" : 0.613
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 3º",
+      "similaridade" : 0.611
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 126",
+      "dispositivo" : "art. 126, § 4º",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 14",
+      "dispositivo" : "art. 14, inciso III",
+      "similaridade" : 0.609
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-17",
+    "grupo" : "geral",
+    "pergunta" : "Sou agricultor familiar e contratei um ajudante por alguns dias na colheita. Como eu informo esse trabalhador e pago o INSS dele?",
+    "esperado" : [ "Lei 8.212/1991 art. 32-C" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 32-C, § 13",
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "similaridade" : 0.625
+    }, {
+      "posicao" : 2,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25, § 13",
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 3,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25, § 11",
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "similaridade" : 0.605
+    }, {
+      "posicao" : 4,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25-A, § 2º",
+      "artigo" : "Lei 8.212/1991 art. 25-A",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 5,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 69, § 1º, inciso II",
+      "artigo" : "Lei 8.212/1991 art. 69",
+      "similaridade" : 0.6
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : true,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 13",
+      "similaridade" : 0.625
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 13",
+      "similaridade" : 0.61
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 11",
+      "similaridade" : 0.605
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 25-A",
+      "dispositivo" : "art. 25-A, § 2º",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 69",
+      "dispositivo" : "art. 69, § 1º, inciso II",
+      "similaridade" : 0.6
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 25-A",
+      "dispositivo" : "art. 25-A, § 1º",
+      "similaridade" : 0.596
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 3º",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 4º",
+      "similaridade" : 0.594
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 32",
+      "dispositivo" : "art. 32, inciso VI",
+      "similaridade" : 0.59
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso III",
+      "similaridade" : 0.589
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso IV",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 7º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso I",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 2º",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 5º",
+      "similaridade" : 0.586
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso II",
+      "similaridade" : 0.584
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10",
+      "similaridade" : 0.584
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 11",
+      "similaridade" : 0.581
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 69",
+      "dispositivo" : "art. 69, § 1º, inciso I",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 32-C",
+      "dispositivo" : "art. 32-C, § 2º",
+      "similaridade" : 0.58
+    } ],
+    "posicaoEsperadoTop20" : 1,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-18",
+    "grupo" : "geral",
+    "pergunta" : "Trabalho na roça só eu, minha mulher e meus filhos, sem empregado. Para o INSS eu sou considerado o quê?",
+    "esperado" : [ "Lei 8.212/1991 art. 12" ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 12",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso III",
+      "similaridade" : 0.495
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea a",
+      "similaridade" : 0.493
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 3º",
+      "similaridade" : 0.491
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, § 1º",
+      "similaridade" : 0.487
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "similaridade" : 0.486
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso I",
+      "similaridade" : 0.485
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.484
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso IV",
+      "similaridade" : 0.484
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, § 12",
+      "similaridade" : 0.482
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso VI",
+      "similaridade" : 0.481
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, § 7º",
+      "similaridade" : 0.48
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso II",
+      "similaridade" : 0.48
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso II",
+      "similaridade" : 0.478
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 15",
+      "similaridade" : 0.478
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10",
+      "similaridade" : 0.477
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.476
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso V",
+      "similaridade" : 0.476
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea b",
+      "similaridade" : 0.475
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 11",
+      "similaridade" : 0.475
+    } ],
+    "posicaoEsperadoTop20" : 3,
+    "posicaoEsperadoOuAceitoTop20" : 3,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-19",
+    "grupo" : "geral",
+    "pergunta" : "Sou produtor pessoa física e tenho empregados na fazenda. Quanto é a contribuição para o INSS em cima do que eu vendo da produção?",
+    "esperado" : [ "Lei 8.212/1991 art. 25" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 22-A, inciso I",
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "similaridade" : 0.672
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164, § 6º",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.657
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.655
+    }, {
+      "posicao" : 4,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25, inciso I",
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "similaridade" : 0.652
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.651
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, inciso I",
+      "similaridade" : 0.672
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 6º",
+      "similaridade" : 0.657
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "similaridade" : 0.655
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, inciso I",
+      "similaridade" : 0.652
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.651
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º",
+      "similaridade" : 0.651
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 7º",
+      "similaridade" : 0.65
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 3º",
+      "similaridade" : 0.649
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 2º",
+      "similaridade" : 0.649
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.643
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 4º",
+      "similaridade" : 0.642
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso I",
+      "similaridade" : 0.642
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 14",
+      "similaridade" : 0.64
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, inciso II",
+      "similaridade" : 0.64
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 5º",
+      "similaridade" : 0.638
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 2º",
+      "similaridade" : 0.635
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso IV",
+      "similaridade" : 0.635
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 3º",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164",
+      "similaridade" : 0.632
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 11",
+      "similaridade" : 0.632
+    } ],
+    "posicaoEsperadoTop20" : 4,
+    "posicaoEsperadoOuAceitoTop20" : 4,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-20",
+    "grupo" : "geral",
+    "pergunta" : "Quero pagar o INSS por conta própria para garantir a minha aposentadoria. Qual é a porcentagem?",
+    "esperado" : [ "Lei 8.212/1991 art. 21" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 21, § 2º, inciso I",
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "similaridade" : 0.605
+    }, {
+      "posicao" : 2,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 21, § 2º, inciso II, alínea a",
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "similaridade" : 0.59
+    }, {
+      "posicao" : 3,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 45-A, § 1º, inciso II",
+      "artigo" : "Lei 8.212/1991 art. 45-A",
+      "similaridade" : 0.589
+    }, {
+      "posicao" : 4,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 21, § 2º, inciso II, alínea b",
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 5,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 21, § 2º, inciso II",
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "similaridade" : 0.587
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : true,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 2º, inciso I",
+      "similaridade" : 0.605
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 2º, inciso II, alínea a",
+      "similaridade" : 0.59
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 45-A",
+      "dispositivo" : "art. 45-A, § 1º, inciso II",
+      "similaridade" : 0.589
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 2º, inciso II, alínea b",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 2º, inciso II",
+      "similaridade" : 0.587
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 45-A",
+      "dispositivo" : "art. 45-A, § 1º",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 2º",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 3º",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 8.212/1991 art. 45-A",
+      "dispositivo" : "art. 45-A, § 1º, inciso I",
+      "similaridade" : 0.576
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 45-A",
+      "dispositivo" : "art. 45-A, § 2º",
+      "similaridade" : 0.566
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, inciso I",
+      "similaridade" : 0.566
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 5º",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, inciso II",
+      "similaridade" : 0.557
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 58",
+      "dispositivo" : "art. 58, § 2º",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 1º",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 21",
+      "dispositivo" : "art. 21, § 4º",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, inciso III",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, § 4º",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 58",
+      "dispositivo" : "art. 58",
+      "similaridade" : 0.543
+    } ],
+    "posicaoEsperadoTop20" : 1,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 15
+  }, {
+    "id" : "busca-21",
+    "grupo" : "setor",
+    "pergunta" : "O óleo diesel que eu compro no posto para abastecer o trator e a colheitadeira me dá direito a crédito do imposto novo?",
+    "esperado" : [ "LC 214/2025 art. 180" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 169, § 8º",
+      "artigo" : "LC 214/2025 art. 169",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 2,
+      "norma" : "EC 132/2023",
+      "dispositivo" : "art. 19, § 3º, inciso II, alínea b",
+      "artigo" : "EC 132/2023 art. 19",
+      "similaridade" : 0.551
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 170, § 4º",
+      "artigo" : "LC 214/2025 art. 170",
+      "similaridade" : 0.604
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 170, § 3º, inciso VI",
+      "artigo" : "LC 214/2025 art. 170",
+      "similaridade" : 0.565
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 170, § 2º",
+      "artigo" : "LC 214/2025 art. 170",
+      "similaridade" : 0.551
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 4º",
+      "similaridade" : 0.604
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 3º, inciso VI",
+      "similaridade" : 0.565
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 8º",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 4,
+      "artigo" : "EC 132/2023 art. 19",
+      "dispositivo" : "art. 19, § 3º, inciso II, alínea b",
+      "similaridade" : 0.551
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º",
+      "similaridade" : 0.551
+    }, {
+      "posicao" : 6,
+      "artigo" : "EC 132/2023 art. 19",
+      "dispositivo" : "art. 19, § 3º",
+      "similaridade" : 0.55
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 3º, inciso III",
+      "similaridade" : 0.55
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 3º, inciso I",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 9,
+      "artigo" : "EC 132/2023 art. 19",
+      "dispositivo" : "art. 19, § 3º, inciso II, alínea a",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 10,
+      "artigo" : "EC 132/2023 art. 19",
+      "dispositivo" : "art. 19, § 3º, inciso II, alínea c",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 1º, inciso II, alínea a",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 12,
+      "artigo" : "EC 132/2023 art. 19",
+      "dispositivo" : "art. 19, § 3º, inciso II",
+      "similaridade" : 0.547
+    }, {
+      "posicao" : 13,
+      "artigo" : "EC 132/2023 art. 19",
+      "dispositivo" : "art. 19, § 3º, inciso I",
+      "similaridade" : 0.547
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 1º, inciso II, alínea b",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 1º, inciso II, alínea c",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea a",
+      "similaridade" : 0.543
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea b",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso II",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I, alínea d",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 2º, inciso I",
+      "similaridade" : 0.542
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 5
+  }, {
+    "id" : "busca-22",
+    "grupo" : "setor",
+    "pergunta" : "Todo ano eu faço seguro da lavoura. O imposto que vem embutido no seguro eu posso usar como crédito?",
+    "esperado" : [ "LC 214/2025 art. 223" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 330, § 1º, inciso II",
+      "artigo" : "LC 214/2025 art. 330",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 330, § 3º",
+      "artigo" : "LC 214/2025 art. 330",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 330, § 1º, inciso VI",
+      "artigo" : "LC 214/2025 art. 330",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 330, § 1º, inciso I",
+      "artigo" : "LC 214/2025 art. 330",
+      "similaridade" : 0.56
+    }, {
+      "posicao" : 5,
+      "norma" : "EC 132/2023",
+      "dispositivo" : "art. 9º, § 5º, inciso II",
+      "artigo" : "EC 132/2023 art. 9º",
+      "similaridade" : 0.559
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, § 2º",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso II",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 3º",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso VI",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso I",
+      "similaridade" : 0.56
+    }, {
+      "posicao" : 6,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso II",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, inciso II",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso IV",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 2º",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 380",
+      "dispositivo" : "art. 380, § 1º",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso V",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 12,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso I",
+      "similaridade" : 0.554
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 135",
+      "dispositivo" : "art. 135",
+      "similaridade" : 0.554
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso III",
+      "similaridade" : 0.554
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 331",
+      "dispositivo" : "art. 331",
+      "similaridade" : 0.552
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 380",
+      "dispositivo" : "art. 380, § 2º",
+      "similaridade" : 0.55
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 330",
+      "dispositivo" : "art. 330, § 1º, inciso VII",
+      "similaridade" : 0.55
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 380",
+      "dispositivo" : "art. 380, inciso IV",
+      "similaridade" : 0.55
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-23",
+    "grupo" : "setor",
+    "pergunta" : "Pago plano de saúde para os meus funcionários da fazenda. Dá para aproveitar o imposto desse plano como crédito?",
+    "esperado" : [ "LC 214/2025 art. 238" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 238" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 238, parágrafo único, inciso I",
+      "artigo" : "LC 214/2025 art. 238",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 238, parágrafo único, inciso I, alínea b",
+      "artigo" : "LC 214/2025 art. 238",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 238, parágrafo único, inciso II",
+      "artigo" : "LC 214/2025 art. 238",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 238, parágrafo único",
+      "artigo" : "LC 214/2025 art. 238",
+      "similaridade" : 0.576
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 238, parágrafo único, inciso I, alínea a",
+      "artigo" : "LC 214/2025 art. 238",
+      "similaridade" : 0.573
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : true,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, § 2º",
+      "similaridade" : 0.582
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238, parágrafo único, inciso I",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238, parágrafo único, inciso I, alínea b",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238, parágrafo único, inciso II",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238, parágrafo único",
+      "similaridade" : 0.576
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238, parágrafo único, inciso I, alínea a",
+      "similaridade" : 0.573
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238, parágrafo único, inciso III",
+      "similaridade" : 0.559
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, inciso II",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 9,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso II",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 10,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso I",
+      "similaridade" : 0.552
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 238",
+      "dispositivo" : "art. 238",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 302",
+      "dispositivo" : "art. 302",
+      "similaridade" : 0.549
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 135",
+      "dispositivo" : "art. 135",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 380",
+      "dispositivo" : "art. 380, § 1º",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 302",
+      "dispositivo" : "art. 302, parágrafo único",
+      "similaridade" : 0.543
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 241",
+      "dispositivo" : "art. 241",
+      "similaridade" : 0.541
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, § 1º, inciso II",
+      "similaridade" : 0.541
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 203",
+      "dispositivo" : "art. 203",
+      "similaridade" : 0.538
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 9º",
+      "similaridade" : 0.537
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 170",
+      "dispositivo" : "art. 170, § 3º, inciso II",
+      "similaridade" : 0.537
+    } ],
+    "posicaoEsperadoTop20" : 2,
+    "posicaoEsperadoOuAceitoTop20" : 2,
+    "trechosAcimaDoLimiarNoTop20" : 10
+  }, {
+    "id" : "busca-24",
+    "grupo" : "setor",
+    "pergunta" : "Arrendo um pedaço da minha terra para o vizinho plantar e recebo em dinheiro. Nesse arrendamento o imposto é cheio ou tem desconto?",
+    "esperado" : [ "LC 214/2025 art. 261" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 201, inciso I, alínea b",
+      "artigo" : "LC 214/2025 art. 201",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 201, inciso II",
+      "artigo" : "LC 214/2025 art. 201",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 201, inciso I, alínea d",
+      "artigo" : "LC 214/2025 art. 201",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 201, inciso I, alínea a",
+      "artigo" : "LC 214/2025 art. 201",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 201, parágrafo único, inciso II",
+      "artigo" : "LC 214/2025 art. 201",
+      "similaridade" : 0.555
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso I, alínea b",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso II",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso I, alínea d",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso I, alínea a",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, parágrafo único, inciso II",
+      "similaridade" : 0.555
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, parágrafo único, inciso III",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso II, alínea b",
+      "similaridade" : 0.552
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 260",
+      "dispositivo" : "art. 260",
+      "similaridade" : 0.55
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 253",
+      "dispositivo" : "art. 253",
+      "similaridade" : 0.548
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso II, alínea a",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 261",
+      "dispositivo" : "art. 261, parágrafo único",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 203",
+      "dispositivo" : "art. 203",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 4º",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 260",
+      "dispositivo" : "art. 174 (redação do art. 260)",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 487",
+      "dispositivo" : "art. 487, § 2º",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 1º, inciso III",
+      "similaridade" : 0.544
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 201",
+      "dispositivo" : "art. 201, inciso I, alínea c",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259",
+      "similaridade" : 0.54
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 260",
+      "dispositivo" : "art. 260, parágrafo único",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 253",
+      "dispositivo" : "art. 253, § 1º",
+      "similaridade" : 0.539
+    } ],
+    "posicaoEsperadoTop20" : 11,
+    "posicaoEsperadoOuAceitoTop20" : 11,
+    "trechosAcimaDoLimiarNoTop20" : 7
+  }, {
+    "id" : "busca-25",
+    "grupo" : "setor",
+    "pergunta" : "Crio cavalo de corrida e levo para correr no jóquei. As apostas que o pessoal faz nessas corridas entram no IBS e na CBS?",
+    "esperado" : [ "LC 214/2025 art. 244" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 244, parágrafo único",
+      "artigo" : "LC 214/2025 art. 244",
+      "similaridade" : 0.593
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 244",
+      "artigo" : "LC 214/2025 art. 244",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 247",
+      "artigo" : "LC 214/2025 art. 247",
+      "similaridade" : 0.558
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : true,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 244",
+      "dispositivo" : "art. 244, parágrafo único",
+      "similaridade" : 0.593
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 244",
+      "dispositivo" : "art. 244",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 247",
+      "dispositivo" : "art. 247",
+      "similaridade" : 0.558
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 249",
+      "dispositivo" : "art. 249, § 2º",
+      "similaridade" : 0.547
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 249",
+      "dispositivo" : "art. 249",
+      "similaridade" : 0.546
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 245",
+      "dispositivo" : "art. 245, parágrafo único",
+      "similaridade" : 0.542
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 249",
+      "dispositivo" : "art. 249, § 1º",
+      "similaridade" : 0.535
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 280",
+      "dispositivo" : "art. 280",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 249",
+      "dispositivo" : "art. 249, § 3º",
+      "similaridade" : 0.533
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso IV, alínea a",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 245",
+      "dispositivo" : "art. 245, inciso I",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 3º, inciso II",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 3º, inciso I",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 255",
+      "dispositivo" : "art. 255, § 3º",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 280",
+      "dispositivo" : "art. 280, parágrafo único",
+      "similaridade" : 0.518
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso IV, alínea b",
+      "similaridade" : 0.518
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 245",
+      "dispositivo" : "art. 245",
+      "similaridade" : 0.516
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 295",
+      "dispositivo" : "art. 295",
+      "similaridade" : 0.516
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 173",
+      "dispositivo" : "art. 173",
+      "similaridade" : 0.514
+    } ],
+    "posicaoEsperadoTop20" : 1,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 3
+  }, {
+    "id" : "busca-26",
+    "grupo" : "setor",
+    "pergunta" : "Quero arrumar a casa velha da fazenda para receber turista no fim de semana, com pernoite e café da manhã. Essa hospedagem paga o imposto cheio?",
+    "esperado" : [ "LC 214/2025 art. 281" ],
+    "aceito" : [ "LC 214/2025 art. 277", "LC 214/2025 art. 278" ],
+    "entregues" : [ ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 253",
+      "dispositivo" : "art. 253",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 253",
+      "dispositivo" : "art. 253, § 2º",
+      "similaridade" : 0.501
+    }, {
+      "posicao" : 3,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 6º, inciso IV)",
+      "similaridade" : 0.499
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 253",
+      "dispositivo" : "art. 253, § 1º",
+      "similaridade" : 0.491
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso III",
+      "similaridade" : 0.484
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 278",
+      "dispositivo" : "art. 278, parágrafo único",
+      "similaridade" : 0.482
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea c",
+      "similaridade" : 0.479
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 278",
+      "dispositivo" : "art. 278, inciso II",
+      "similaridade" : 0.479
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 278",
+      "dispositivo" : "art. 278, inciso I",
+      "similaridade" : 0.475
+    }, {
+      "posicao" : 10,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 3º, inciso IV",
+      "similaridade" : 0.475
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 106",
+      "dispositivo" : "art. 106, inciso I, alínea c",
+      "similaridade" : 0.47
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso V, alínea a",
+      "similaridade" : 0.466
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 278",
+      "dispositivo" : "art. 278",
+      "similaridade" : 0.464
+    }, {
+      "posicao" : 14,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 4º",
+      "similaridade" : 0.464
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 289",
+      "dispositivo" : "art. 289, inciso II",
+      "similaridade" : 0.462
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso V, alínea b",
+      "similaridade" : 0.462
+    }, {
+      "posicao" : 17,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso I",
+      "similaridade" : 0.46
+    }, {
+      "posicao" : 18,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 3º, inciso II, alínea b",
+      "similaridade" : 0.459
+    }, {
+      "posicao" : 19,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 156-A",
+      "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso III)",
+      "similaridade" : 0.457
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso V",
+      "similaridade" : 0.456
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 6,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-27",
+    "grupo" : "setor",
+    "pergunta" : "Vou trazer dos Estados Unidos uma máquina de classificar grãos para usar na minha fazenda. Nessa importação eu pago IBS e CBS?",
+    "esperado" : [ "LC 214/2025 art. 63" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 69, § 2º, inciso II",
+      "artigo" : "LC 214/2025 art. 69",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 69, inciso II",
+      "artigo" : "LC 214/2025 art. 69",
+      "similaridade" : 0.677
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 69, § 2º, inciso III",
+      "artigo" : "LC 214/2025 art. 69",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 69, § 2º, inciso I",
+      "artigo" : "LC 214/2025 art. 69",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 110, inciso I",
+      "artigo" : "LC 214/2025 art. 110",
+      "similaridade" : 0.673
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : false,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º, inciso I",
+      "similaridade" : 0.705
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º, inciso II",
+      "similaridade" : 0.703
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 3º",
+      "similaridade" : 0.699
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 5º",
+      "similaridade" : 0.694
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, § 2º, inciso II",
+      "similaridade" : 0.678
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso II",
+      "similaridade" : 0.677
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, § 2º, inciso III",
+      "similaridade" : 0.676
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, § 2º, inciso I",
+      "similaridade" : 0.674
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110, inciso I",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 2º",
+      "similaridade" : 0.672
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso I",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 21",
+      "dispositivo" : "art. 21, inciso III",
+      "similaridade" : 0.669
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, § 1º",
+      "similaridade" : 0.668
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, § 2º",
+      "similaridade" : 0.667
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 1º",
+      "similaridade" : 0.665
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76, § 4º",
+      "similaridade" : 0.664
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 99",
+      "dispositivo" : "art. 99, § 1º",
+      "similaridade" : 0.663
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 69",
+      "dispositivo" : "art. 69, inciso IX",
+      "similaridade" : 0.662
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 76",
+      "dispositivo" : "art. 76",
+      "similaridade" : 0.661
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-28",
+    "grupo" : "setor",
+    "pergunta" : "Vou prestar serviço com a minha retroescavadeira para a prefeitura, arrumando estrada rural. Quando quem contrata é a prefeitura, muda alguma coisa no IBS e na CBS?",
+    "esperado" : [ "LC 214/2025 art. 472" ],
+    "aceito" : [ "LC 227/2026 art. 174 (redação do art. 472", "LC 214/2025 art. 473", "LC 227/2026 art. 174 (redação do art. 473" ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+      "artigo" : "LC 214/2025 art. 473",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea a",
+      "artigo" : "LC 214/2025 art. 473",
+      "similaridade" : 0.609
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 473, § 1º, inciso II, alínea a",
+      "artigo" : "LC 214/2025 art. 473",
+      "similaridade" : 0.599
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 473",
+      "artigo" : "LC 214/2025 art. 473",
+      "similaridade" : 0.596
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 473, § 1º, inciso III",
+      "artigo" : "LC 214/2025 art. 473",
+      "similaridade" : 0.595
+    } ],
+    "entregueK5Esperado" : false,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III, alínea a",
+      "similaridade" : 0.609
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso II, alínea a",
+      "similaridade" : 0.599
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473",
+      "similaridade" : 0.596
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso III",
+      "similaridade" : 0.595
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 4º, inciso I",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 374",
+      "dispositivo" : "art. 374",
+      "similaridade" : 0.592
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 Anexo XI",
+      "dispositivo" : "Anexo XI, item 2.5",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso II, alínea b",
+      "similaridade" : 0.59
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso I, alínea b",
+      "similaridade" : 0.587
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso IV, alínea b",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II, alínea b",
+      "similaridade" : 0.584
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 1º, inciso IV, alínea a",
+      "similaridade" : 0.583
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 6º",
+      "similaridade" : 0.581
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 2º",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II, alínea c",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 473",
+      "dispositivo" : "art. 473, § 4º",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110, inciso I",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 374",
+      "dispositivo" : "art. 374, § 2º",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 252",
+      "dispositivo" : "art. 252, § 5º-A, inciso II, alínea a",
+      "similaridade" : 0.578
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-29",
+    "grupo" : "setor",
+    "pergunta" : "Além de plantar, faço frete de grão com o meu caminhão, como autônomo, para uma empresa da região. A empresa que me contrata ganha algum crédito do imposto em cima desse frete?",
+    "esperado" : [ "LC 214/2025 art. 169" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 28, § 11",
+      "artigo" : "Lei 8.212/1991 art. 28",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 2,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 22, § 15",
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 169, § 8º",
+      "artigo" : "LC 214/2025 art. 169",
+      "similaridade" : 0.583
+    }, {
+      "posicao" : 4,
+      "norma" : "EC 132/2023",
+      "dispositivo" : "art. 9º, § 6º, inciso I",
+      "artigo" : "EC 132/2023 art. 9º",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 169, § 1º, inciso I",
+      "artigo" : "LC 214/2025 art. 169",
+      "similaridade" : 0.578
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : false,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 28",
+      "dispositivo" : "art. 28, § 11",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.601
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 8º",
+      "similaridade" : 0.583
+    }, {
+      "posicao" : 4,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 6º, inciso I",
+      "similaridade" : 0.58
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 1º, inciso I",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 6,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso II",
+      "similaridade" : 0.571
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 1º, inciso II",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 5º, inciso II, alínea b",
+      "similaridade" : 0.565
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 5º, inciso I",
+      "similaridade" : 0.564
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 5º, inciso II",
+      "similaridade" : 0.563
+    }, {
+      "posicao" : 11,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º, inciso I",
+      "similaridade" : 0.562
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 5º, inciso II, alínea a",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 3º",
+      "similaridade" : 0.561
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 313",
+      "dispositivo" : "art. 313, § 2º",
+      "similaridade" : 0.56
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 1º",
+      "similaridade" : 0.556
+    }, {
+      "posicao" : 16,
+      "artigo" : "EC 132/2023 art. 9º",
+      "dispositivo" : "art. 9º, § 5º",
+      "similaridade" : 0.554
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 5º",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169, § 5º, inciso III",
+      "similaridade" : 0.553
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 169",
+      "dispositivo" : "art. 169",
+      "similaridade" : 0.551
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 5º",
+      "similaridade" : 0.549
+    } ],
+    "posicaoEsperadoTop20" : 3,
+    "posicaoEsperadoOuAceitoTop20" : 3,
+    "trechosAcimaDoLimiarNoTop20" : 19
+  }, {
+    "id" : "busca-30",
+    "grupo" : "setor",
+    "pergunta" : "Sou produtor pequeno e não recolho IBS. Se eu comprar um trator novo, ele vem com IBS e CBS no preço?",
+    "esperado" : [ "LC 214/2025 art. 110" ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 110, inciso I",
+      "artigo" : "LC 214/2025 art. 110",
+      "similaridade" : 0.681
+    }, {
+      "posicao" : 2,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 3,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164, § 1º",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.665
+    }, {
+      "posicao" : 4,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164, § 4º",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.663
+    }, {
+      "posicao" : 5,
+      "norma" : "LC 214/2025",
+      "dispositivo" : "art. 164, § 6º",
+      "artigo" : "LC 214/2025 art. 164",
+      "similaridade" : 0.651
+    } ],
+    "entregueK5Esperado" : true,
+    "entreguePos1Esperado" : true,
+    "entregueK5Aceitavel" : true,
+    "entreguePos1Aceitavel" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 110",
+      "dispositivo" : "art. 110, inciso I",
+      "similaridade" : 0.681
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164",
+      "similaridade" : 0.673
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.665
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 4º",
+      "similaridade" : 0.663
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 6º",
+      "similaridade" : 0.651
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 3º",
+      "similaridade" : 0.642
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º",
+      "similaridade" : 0.64
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 2º",
+      "similaridade" : 0.639
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.633
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 472",
+      "dispositivo" : "art. 472, parágrafo único, inciso III",
+      "similaridade" : 0.625
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 2º",
+      "similaridade" : 0.622
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso II, alínea b",
+      "similaridade" : 0.621
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 5º, inciso II, alínea a",
+      "similaridade" : 0.618
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 3º",
+      "similaridade" : 0.616
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 10",
+      "similaridade" : 0.614
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 2º, inciso I",
+      "similaridade" : 0.614
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 4º",
+      "similaridade" : 0.614
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 138",
+      "dispositivo" : "art. 138, § 2º, inciso I, alínea b",
+      "similaridade" : 0.612
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 168",
+      "dispositivo" : "art. 168, § 6º",
+      "similaridade" : 0.612
+    } ],
+    "posicaoEsperadoTop20" : 1,
+    "posicaoEsperadoOuAceitoTop20" : 1,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-31",
+    "grupo" : "ausente",
+    "pergunta" : "Quero registrar a minha pequena queijaria no serviço de inspeção da prefeitura. Tenho que pagar alguma taxa para isso?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 4º, inciso I",
+      "similaridade" : 0.504
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 50",
+      "dispositivo" : "art. 50",
+      "similaridade" : 0.501
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 49",
+      "dispositivo" : "art. 49, § 6º",
+      "similaridade" : 0.499
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 49",
+      "dispositivo" : "art. 49, § 5º",
+      "similaridade" : 0.496
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 33",
+      "dispositivo" : "art. 33, § 6º",
+      "similaridade" : 0.484
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 5º",
+      "dispositivo" : "art. 5º, § 3º",
+      "similaridade" : 0.484
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 1º, inciso I)",
+      "similaridade" : 0.483
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 1º, inciso II)",
+      "similaridade" : 0.478
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 1º",
+      "similaridade" : 0.478
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 517 (redação do art. 38",
+      "dispositivo" : "art. 517 (redação do art. 38, § 3º)",
+      "similaridade" : 0.477
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 4º, inciso II",
+      "similaridade" : 0.476
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 2º)",
+      "similaridade" : 0.474
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 67",
+      "dispositivo" : "art. 67, § 7º",
+      "similaridade" : 0.472
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 4º, inciso III",
+      "similaridade" : 0.472
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 38",
+      "dispositivo" : "art. 165 (redação do art. 38, § 4º)",
+      "similaridade" : 0.47
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A)",
+      "similaridade" : 0.469
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 49",
+      "dispositivo" : "art. 49, § 1º",
+      "similaridade" : 0.469
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 1º)",
+      "similaridade" : 0.467
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 31",
+      "dispositivo" : "art. 31, § 4º",
+      "similaridade" : 0.466
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 327-A",
+      "dispositivo" : "art. 327-A, § 2º",
+      "similaridade" : 0.464
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-32",
+    "grupo" : "ausente",
+    "pergunta" : "Uso água do rio para irrigar a lavoura. Tenho que pagar alguma cobrança pelo uso dessa água?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 Anexo IX",
+      "dispositivo" : "Anexo IX, item 30",
+      "similaridade" : 0.468
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.466
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 11",
+      "dispositivo" : "art. 11, inciso VIII",
+      "similaridade" : 0.465
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 323-C",
+      "dispositivo" : "art. 323-C, parágrafo único, inciso I",
+      "similaridade" : 0.465
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 2º)",
+      "similaridade" : 0.458
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 509 (redação do art. 30",
+      "dispositivo" : "art. 509 (redação do art. 30)",
+      "similaridade" : 0.457
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 423",
+      "dispositivo" : "art. 423, § 2º, inciso I",
+      "similaridade" : 0.456
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 502 (redação do art. 64",
+      "dispositivo" : "art. 502 (redação do art. 64)",
+      "similaridade" : 0.454
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 423",
+      "dispositivo" : "art. 423, § 2º",
+      "similaridade" : 0.453
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 29",
+      "dispositivo" : "art. 29, § 2º, inciso II",
+      "similaridade" : 0.453
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 113",
+      "dispositivo" : "art. 113, inciso II, alínea g",
+      "similaridade" : 0.451
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 6º",
+      "similaridade" : 0.451
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 3º",
+      "similaridade" : 0.45
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 423",
+      "dispositivo" : "art. 423, § 2º, inciso II",
+      "similaridade" : 0.45
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea c",
+      "similaridade" : 0.448
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 423",
+      "dispositivo" : "art. 423",
+      "similaridade" : 0.447
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 323-C",
+      "dispositivo" : "art. 323-C, parágrafo único, inciso II",
+      "similaridade" : 0.447
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 509 (redação do art. 33",
+      "dispositivo" : "art. 509 (redação do art. 33)",
+      "similaridade" : 0.446
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 323-C",
+      "dispositivo" : "art. 174 (redação do art. 323-C, parágrafo único, inciso I)",
+      "similaridade" : 0.445
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 204",
+      "dispositivo" : "art. 204, § 1º",
+      "similaridade" : 0.445
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-33",
+    "grupo" : "ausente",
+    "pergunta" : "Quanto custa a taxa da GTA para levar o gado de uma fazenda para outra?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.462
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35, inciso I)",
+      "similaridade" : 0.458
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35, inciso III)",
+      "similaridade" : 0.449
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35, inciso II)",
+      "similaridade" : 0.448
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35)",
+      "similaridade" : 0.443
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 35",
+      "dispositivo" : "art. 165 (redação do art. 35, parágrafo único)",
+      "similaridade" : 0.442
+    }, {
+      "posicao" : 7,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125, § 3º, inciso I)",
+      "similaridade" : 0.42
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 156",
+      "dispositivo" : "art. 156, § 1º, inciso II",
+      "similaridade" : 0.414
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 227/2026 art. 165",
+      "dispositivo" : "art. 165",
+      "similaridade" : 0.413
+    }, {
+      "posicao" : 10,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125, § 3º, inciso II)",
+      "similaridade" : 0.41
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 159",
+      "dispositivo" : "art. 159, § 1º",
+      "similaridade" : 0.409
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 293",
+      "dispositivo" : "art. 293, § 4º, inciso II",
+      "similaridade" : 0.409
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 148",
+      "dispositivo" : "art. 148, § 1º",
+      "similaridade" : 0.409
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 162",
+      "dispositivo" : "art. 162, § 1º",
+      "similaridade" : 0.409
+    }, {
+      "posicao" : 15,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125, § 2º)",
+      "similaridade" : 0.408
+    }, {
+      "posicao" : 16,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125, § 1º)",
+      "similaridade" : 0.408
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 537 (redação do art. 5º",
+      "dispositivo" : "art. 537 (redação do art. 5º, § 4º-C)",
+      "similaridade" : 0.408
+    }, {
+      "posicao" : 18,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125)",
+      "similaridade" : 0.408
+    }, {
+      "posicao" : 19,
+      "artigo" : "EC 132/2023 art. 2º (redação do art. 125",
+      "dispositivo" : "art. 2º (redação do art. 125, § 3º)",
+      "similaridade" : 0.407
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 471",
+      "dispositivo" : "art. 471, § 2º, inciso III",
+      "similaridade" : 0.406
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-34",
+    "grupo" : "ausente",
+    "pergunta" : "Chegou um boleto da contribuição sindical rural da CNA. Sou obrigado a pagar?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ {
+      "posicao" : 1,
+      "norma" : "Lei 9.528/1997",
+      "dispositivo" : "art. 6º, parágrafo único, inciso I",
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 2,
+      "norma" : "Lei 9.528/1997",
+      "dispositivo" : "art. 6º, parágrafo único, inciso II",
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "similaridade" : 0.607
+    }, {
+      "posicao" : 3,
+      "norma" : "Lei 9.528/1997",
+      "dispositivo" : "art. 6º, parágrafo único",
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 4,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25, § 13",
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 5,
+      "norma" : "Lei 8.212/1991",
+      "dispositivo" : "art. 25, § 14",
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "similaridade" : 0.591
+    } ],
+    "algumTrechoAcimaDoLimiar" : true,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso I",
+      "similaridade" : 0.623
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso II",
+      "similaridade" : 0.607
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único",
+      "similaridade" : 0.602
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 13",
+      "similaridade" : 0.598
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 14",
+      "similaridade" : 0.591
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 15",
+      "similaridade" : 0.588
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 2º",
+      "similaridade" : 0.585
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso IV",
+      "similaridade" : 0.579
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea c",
+      "similaridade" : 0.578
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º",
+      "similaridade" : 0.577
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 12",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso I",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso III",
+      "similaridade" : 0.574
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 3º",
+      "similaridade" : 0.57
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 1º",
+      "similaridade" : 0.569
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso II",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII",
+      "similaridade" : 0.568
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, inciso I",
+      "similaridade" : 0.567
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 22-B",
+      "dispositivo" : "art. 22-B",
+      "similaridade" : 0.566
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea b",
+      "similaridade" : 0.565
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 20
+  }, {
+    "id" : "busca-35",
+    "grupo" : "ausente",
+    "pergunta" : "Preciso pagar a taxa de fiscalização ambiental do Ibama por causa da minha fazenda?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XXII",
+      "similaridade" : 0.527
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XXI",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 327-A",
+      "dispositivo" : "art. 327-A, § 1º",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 327-A",
+      "dispositivo" : "art. 174 (redação do art. 327-A, § 1º)",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 327-A",
+      "dispositivo" : "art. 327-A, § 2º",
+      "similaridade" : 0.51
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 327-A",
+      "dispositivo" : "art. 174 (redação do art. 327-A, § 2º)",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 446",
+      "dispositivo" : "art. 446, § 1º, inciso III",
+      "similaridade" : 0.506
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso XXII)",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 446",
+      "dispositivo" : "art. 446, § 1º, inciso II",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 486",
+      "dispositivo" : "art. 486, § 12",
+      "similaridade" : 0.501
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso XXI)",
+      "similaridade" : 0.5
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 445",
+      "dispositivo" : "art. 445, § 4º",
+      "similaridade" : 0.5
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 175",
+      "dispositivo" : "art. 175, § 4º",
+      "similaridade" : 0.498
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 486",
+      "dispositivo" : "art. 486, § 9º",
+      "similaridade" : 0.498
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso V",
+      "similaridade" : 0.497
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 445",
+      "dispositivo" : "art. 445, § 3º",
+      "similaridade" : 0.496
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 327-A",
+      "dispositivo" : "art. 327-A, § 3º",
+      "similaridade" : 0.495
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 486",
+      "dispositivo" : "art. 486, § 10",
+      "similaridade" : 0.494
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 6º",
+      "similaridade" : 0.494
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 327-A",
+      "dispositivo" : "art. 174 (redação do art. 327-A)",
+      "similaridade" : 0.493
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-36",
+    "grupo" : "ausente",
+    "pergunta" : "Tenho que recolher o salário-educação em cima do salário dos meus empregados da fazenda?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso I",
+      "similaridade" : 0.545
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso II",
+      "similaridade" : 0.543
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único",
+      "similaridade" : 0.534
+    }, {
+      "posicao" : 4,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 5º",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 5,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 3º",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 12",
+      "similaridade" : 0.512
+    }, {
+      "posicao" : 7,
+      "artigo" : "Lei 8.212/1991 art. 28",
+      "dispositivo" : "art. 28, § 9º",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 8,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea c",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 10,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso IV",
+      "similaridade" : 0.504
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 24",
+      "dispositivo" : "art. 24, parágrafo único",
+      "similaridade" : 0.504
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea b",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 13,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso III",
+      "similaridade" : 0.5
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10, inciso I",
+      "similaridade" : 0.499
+    }, {
+      "posicao" : 16,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 14",
+      "similaridade" : 0.498
+    }, {
+      "posicao" : 17,
+      "artigo" : "Lei 8.212/1991 art. 22-A",
+      "dispositivo" : "art. 22-A, § 6º",
+      "similaridade" : 0.495
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea a",
+      "similaridade" : 0.495
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.494
+    }, {
+      "posicao" : 20,
+      "artigo" : "Lei 8.212/1991 art. 25",
+      "dispositivo" : "art. 25, § 10",
+      "similaridade" : 0.493
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-37",
+    "grupo" : "ausente",
+    "pergunta" : "Quanto é a taxa para tirar o CCIR do imóvel rural no Incra?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 214/2025 art. 260",
+      "dispositivo" : "art. 260, parágrafo único",
+      "similaridade" : 0.539
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 3º",
+      "similaridade" : 0.538
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164",
+      "similaridade" : 0.532
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 2º",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 1º",
+      "similaridade" : 0.526
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 4º",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 1º, inciso II",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 3º",
+      "similaridade" : 0.523
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 1º, inciso I",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso II",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º, inciso I",
+      "similaridade" : 0.521
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 165",
+      "dispositivo" : "art. 165, § 3º",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 1º, inciso III",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 260",
+      "dispositivo" : "art. 174 (redação do art. 260)",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 6º",
+      "similaridade" : 0.516
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 2º",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 5º",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso I",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 259",
+      "dispositivo" : "art. 259, § 1º",
+      "similaridade" : 0.512
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-38",
+    "grupo" : "ausente",
+    "pergunta" : "A prefeitura asfaltou a estrada que passa na frente do sítio e quer cobrar contribuição de melhoria. Como esse valor é calculado?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 1º, inciso I)",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 2,
+      "artigo" : "LC 214/2025 art. 29",
+      "dispositivo" : "art. 29, § 2º, inciso I",
+      "similaridade" : 0.522
+    }, {
+      "posicao" : 3,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 2º)",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 29",
+      "dispositivo" : "art. 29, § 2º, inciso II",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 227/2026 art. 108",
+      "dispositivo" : "art. 108, § 3º, inciso III",
+      "similaridade" : 0.509
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 227/2026 art. 119",
+      "dispositivo" : "art. 119, inciso I",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 227/2026 art. 108",
+      "dispositivo" : "art. 108, § 3º, inciso II",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A, § 1º)",
+      "similaridade" : 0.506
+    }, {
+      "posicao" : 9,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.506
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 82-A",
+      "dispositivo" : "art. 165 (redação do art. 82-A)",
+      "similaridade" : 0.506
+    }, {
+      "posicao" : 11,
+      "artigo" : "LC 214/2025 art. 537 (redação do art. 5º",
+      "dispositivo" : "art. 537 (redação do art. 5º, § 4º)",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 227/2026 art. 170 (redação do art. 7º",
+      "dispositivo" : "art. 170 (redação do art. 7º)",
+      "similaridade" : 0.505
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 258",
+      "dispositivo" : "art. 258, § 7º, inciso I",
+      "similaridade" : 0.504
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 160",
+      "dispositivo" : "art. 160",
+      "similaridade" : 0.503
+    }, {
+      "posicao" : 15,
+      "artigo" : "EC 132/2023 art. 1º (redação do art. 149-A",
+      "dispositivo" : "art. 1º (redação do art. 149-A)",
+      "similaridade" : 0.503
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 537 (redação do art. 5º",
+      "dispositivo" : "art. 537 (redação do art. 5º, § 4º-D, inciso I)",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 537 (redação do art. 5º",
+      "dispositivo" : "art. 537 (redação do art. 5º, § 11)",
+      "similaridade" : 0.502
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 537 (redação do art. 5º",
+      "dispositivo" : "art. 537 (redação do art. 5º, § 10)",
+      "similaridade" : 0.501
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 227/2026 art. 108",
+      "dispositivo" : "art. 108, § 3º",
+      "similaridade" : 0.5
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 227/2026 art. 165 (redação do art. 41",
+      "dispositivo" : "art. 165 (redação do art. 41)",
+      "similaridade" : 0.5
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-39",
+    "grupo" : "ausente",
+    "pergunta" : "Tenho um armazém de grãos na fazenda e o Corpo de Bombeiros cobra uma taxa de vistoria todo ano. Sou obrigado a pagar?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "Lei 8.212/1991 art. 22",
+      "dispositivo" : "art. 22, § 15",
+      "similaridade" : 0.494
+    }, {
+      "posicao" : 2,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea c",
+      "similaridade" : 0.482
+    }, {
+      "posicao" : 3,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea a",
+      "similaridade" : 0.481
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XXI",
+      "similaridade" : 0.481
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 1º, inciso III",
+      "similaridade" : 0.478
+    }, {
+      "posicao" : 6,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 1º, inciso I",
+      "similaridade" : 0.475
+    }, {
+      "posicao" : 7,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262",
+      "similaridade" : 0.473
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 1º, inciso II",
+      "similaridade" : 0.47
+    }, {
+      "posicao" : 9,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 1º, inciso V",
+      "similaridade" : 0.469
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 3º, inciso II",
+      "similaridade" : 0.466
+    }, {
+      "posicao" : 11,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII",
+      "similaridade" : 0.465
+    }, {
+      "posicao" : 12,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, inciso V, alínea b",
+      "similaridade" : 0.465
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 214/2025 art. 341-G",
+      "dispositivo" : "art. 341-G, inciso XXII",
+      "similaridade" : 0.464
+    }, {
+      "posicao" : 14,
+      "artigo" : "Lei 8.212/1991 art. 12",
+      "dispositivo" : "art. 12, § 9º, inciso II",
+      "similaridade" : 0.464
+    }, {
+      "posicao" : 15,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, inciso XII, alínea b",
+      "similaridade" : 0.464
+    }, {
+      "posicao" : 16,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 1º",
+      "similaridade" : 0.461
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 227/2026 art. 174 (redação do art. 341-G",
+      "dispositivo" : "art. 174 (redação do art. 341-G, inciso XXI)",
+      "similaridade" : 0.461
+    }, {
+      "posicao" : 18,
+      "artigo" : "Lei 8.212/1991 art. 30",
+      "dispositivo" : "art. 30, § 7º",
+      "similaridade" : 0.46
+    }, {
+      "posicao" : 19,
+      "artigo" : "Lei 9.528/1997 art. 6º",
+      "dispositivo" : "art. 6º, parágrafo único, inciso I",
+      "similaridade" : 0.46
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 262",
+      "dispositivo" : "art. 262, § 1º, inciso IV",
+      "similaridade" : 0.459
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  }, {
+    "id" : "busca-40",
+    "grupo" : "ausente",
+    "pergunta" : "Tive prejuízo na safra passada por causa da seca. Dá para descontar esse prejuízo no imposto de renda dos próximos anos?",
+    "esperado" : [ ],
+    "aceito" : [ ],
+    "entregues" : [ ],
+    "algumTrechoAcimaDoLimiar" : false,
+    "top20" : [ {
+      "posicao" : 1,
+      "artigo" : "LC 227/2026 art. 118",
+      "dispositivo" : "art. 118, inciso II, alínea b",
+      "similaridade" : 0.525
+    }, {
+      "posicao" : 2,
+      "artigo" : "EC 132/2023 art. 7º",
+      "dispositivo" : "art. 7º, § 1º, inciso I",
+      "similaridade" : 0.524
+    }, {
+      "posicao" : 3,
+      "artigo" : "EC 132/2023 art. 7º",
+      "dispositivo" : "art. 7º, § 1º, inciso I, alínea b",
+      "similaridade" : 0.52
+    }, {
+      "posicao" : 4,
+      "artigo" : "LC 214/2025 art. 385",
+      "dispositivo" : "art. 385, inciso V, alínea c",
+      "similaridade" : 0.519
+    }, {
+      "posicao" : 5,
+      "artigo" : "LC 214/2025 art. 385",
+      "dispositivo" : "art. 385, § 3º",
+      "similaridade" : 0.518
+    }, {
+      "posicao" : 6,
+      "artigo" : "Lei 8.212/1991 art. 45-A",
+      "dispositivo" : "art. 45-A, § 4º",
+      "similaridade" : 0.516
+    }, {
+      "posicao" : 7,
+      "artigo" : "EC 132/2023 art. 7º",
+      "dispositivo" : "art. 7º, § 1º, inciso I, alínea a",
+      "similaridade" : 0.515
+    }, {
+      "posicao" : 8,
+      "artigo" : "LC 227/2026 art. 118",
+      "dispositivo" : "art. 118, inciso II, alínea a",
+      "similaridade" : 0.515
+    }, {
+      "posicao" : 9,
+      "artigo" : "EC 132/2023 art. 7º",
+      "dispositivo" : "art. 7º",
+      "similaridade" : 0.514
+    }, {
+      "posicao" : 10,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso II, alínea a",
+      "similaridade" : 0.513
+    }, {
+      "posicao" : 11,
+      "artigo" : "EC 132/2023 art. 7º",
+      "dispositivo" : "art. 7º, § 1º",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 12,
+      "artigo" : "LC 214/2025 art. 348",
+      "dispositivo" : "art. 348, inciso II, alínea a",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 13,
+      "artigo" : "LC 227/2026 art. 110",
+      "dispositivo" : "art. 110, inciso II",
+      "similaridade" : 0.511
+    }, {
+      "posicao" : 14,
+      "artigo" : "LC 214/2025 art. 488",
+      "dispositivo" : "art. 488, § 4º",
+      "similaridade" : 0.509
+    }, {
+      "posicao" : 15,
+      "artigo" : "LC 214/2025 art. 348",
+      "dispositivo" : "art. 348, inciso II, alínea b",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 16,
+      "artigo" : "EC 132/2023 art. 7º",
+      "dispositivo" : "art. 7º, § 1º, inciso II",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 17,
+      "artigo" : "LC 214/2025 art. 470",
+      "dispositivo" : "art. 470",
+      "similaridade" : 0.508
+    }, {
+      "posicao" : 18,
+      "artigo" : "LC 214/2025 art. 219",
+      "dispositivo" : "art. 219, § 3º",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 19,
+      "artigo" : "LC 214/2025 art. 164",
+      "dispositivo" : "art. 164, § 3º",
+      "similaridade" : 0.507
+    }, {
+      "posicao" : 20,
+      "artigo" : "LC 214/2025 art. 407",
+      "dispositivo" : "art. 407, § 4º, inciso I, alínea a",
+      "similaridade" : 0.506
+    } ],
+    "posicaoEsperadoTop20" : 0,
+    "posicaoEsperadoOuAceitoTop20" : 0,
+    "trechosAcimaDoLimiarNoTop20" : 0
+  } ]
+}
