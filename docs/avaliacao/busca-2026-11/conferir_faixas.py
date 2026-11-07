@@ -105,7 +105,7 @@ def conferir(conjunto: dict, tabela_ampliada: dict) -> dict:
                 com_regex.append({"id": p["id"], "grupo": p["grupo"], "faixas": casadas})
             chaves = list(p["esperado"]) + list(p["aceito"])
             if p["grupo"] == "geral":
-                caem = [(k, faixa_de(k, faixas)[2]) for k in chaves if faixa_de(k, faixas)]
+                caem = [(k, f[2]) for k in chaves if (f := faixa_de(k, faixas))]
                 if caem:
                     geral_na_faixa.append({"id": p["id"], "chaves": caem})
             elif p["grupo"] == "setor":
