@@ -346,14 +346,14 @@ class ConjuntoVersionadoTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as pasta:
             execucoes = Path(pasta) / "e.jsonl"
             saida = Path(pasta) / "r.json"
-            execucoes.write_text(json.dumps(registro("p443-32", 1, corpo(
-                fontes=[fonte("resumoDoProdutor")]))) + "\n", encoding="utf-8")
+            execucoes.write_text(json.dumps(registro("p443-26", 1, corpo(
+                fontes=[fonte("proximosVencimentos", dias=21)]))) + "\n", encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 codigo = pontuar.main(["pontuar", "--perguntas", str(CONJUNTO), "--execucoes",
                                        str(execucoes), "--saida", str(saida)])
             self.assertEqual(codigo, 0)
             resumo = json.loads(saida.read_text(encoding="utf-8"))
-            self.assertEqual(resumo["por_pergunta"]["p443-32"]["resultado"], "certa")
+            self.assertEqual(resumo["por_pergunta"]["p443-26"]["resultado"], "certa")
 
 
 if __name__ == "__main__":
