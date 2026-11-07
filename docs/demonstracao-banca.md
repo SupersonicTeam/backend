@@ -88,6 +88,11 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.
+   **Conferência local (#435):** as perguntas dos passos 4 e 7 foram rodadas com o
+   `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`; o resultado, com as divergências, está em
+   [`docs/demonstracao/conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md).
+   A conferência **se refaz no SHA congelado** se `assistente/**`, o seed da demonstração ou o
+   `application.yml` mudarem depois do SHA `4a0b3a8`.
 8. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
    **urgente**; na Helena, a GPS de daqui a 3 dias sai como **próximo**.
 
