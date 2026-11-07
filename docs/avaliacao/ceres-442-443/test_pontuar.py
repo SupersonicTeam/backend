@@ -179,6 +179,11 @@ class ProdutoTest(unittest.TestCase):
                       "do produto com o seu contador.")
         self.assertTrue(pontuar.confere_produto(esperado, certa))
 
+    def test_ressalva_no_imperativo_de_conferir(self):
+        esperado = {"reducao": 60, "ressalva": True}
+        self.assertTrue(pontuar.confere_produto(esperado, corpo(
+            "Redução de 60%. Confira com o seu contador se a venda atende à condição.")))
+
     def test_sem_ressalva_e_errada(self):
         esperado = {"reducao": 60, "ressalva": True}
         self.assertFalse(pontuar.confere_produto(

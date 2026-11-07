@@ -65,7 +65,8 @@ MARCAS_REDUCAO = {
     100: re.compile(r"100\s*%|100 por cento|cem por cento|\bzero\b|zerad|\bisent"),
     60: re.compile(r"\b60\s*%|\b60 por cento|sessenta por cento"),
 }
-VERBOS_RESSALVA = re.compile(r"confirm|enquadr|confer|valid|verific|cheq|consult")
+# "confir" cobre confirmar e o imperativo de conferir ("confira"), que "confer" não pega.
+VERBOS_RESSALVA = re.compile(r"confir|enquadr|confer|valid|verific|cheq|consult")
 ARTIGO = re.compile(r"\bart(?:igo)?s?\.?\s*(\d+)")
 
 
