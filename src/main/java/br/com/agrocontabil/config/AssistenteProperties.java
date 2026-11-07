@@ -94,6 +94,11 @@ public class AssistenteProperties implements InitializingBean {
           "app.assistente.rag.similaridade-minima deve estar em [0, 1), recebido: "
               + rag.getSimilaridadeMinima());
     }
+    if (rag.getParticaoCasoEspecial() == null) {
+      throw new IllegalStateException(
+          "app.assistente.rag.particao-caso-especial deve ser desligado, regimes-especificos ou"
+              + " ampliada");
+    }
     if (classificacao.getLimiarConfianca() < 0 || classificacao.getLimiarConfianca() > 1
         || classificacao.getSimilaridadeMinima() < -1 || classificacao.getSimilaridadeMinima() > 1
         || classificacao.getVizinhos() < 1 || classificacao.getVizinhos() > 50) {
@@ -364,6 +369,15 @@ public class AssistenteProperties implements InitializingBean {
      */
     private double similaridadeMinima = 0.55;
 
+    /**
+     * Partição dos trechos de caso especial da LC 214/2025 (#436): com ela ligada, a busca pede
+     * {@code 4 × top-k} candidatos (no máximo 40, porque o {@code top-k} vai até 10) com o mesmo
+     * limiar e o mesmo filtro de vigência, manda para o fim, sem tirar nenhum, os trechos de caso
+     * especial cuja palavra de setor a pergunta não cita, e só então corta no {@code top-k}.
+     * {@code desligado} chama a busca exatamente como antes.
+     */
+    private ParticaoCasoEspecial particaoCasoEspecial = ParticaoCasoEspecial.DESLIGADO;
+
     public int getTopK() {
       return topK;
     }
@@ -379,6 +393,27 @@ public class AssistenteProperties implements InitializingBean {
     public void setSimilaridadeMinima(double similaridadeMinima) {
       this.similaridadeMinima = similaridadeMinima;
     }
+
+    public ParticaoCasoEspecial getParticaoCasoEspecial() {
+      return particaoCasoEspecial;
+    }
+
+    public void setParticaoCasoEspecial(ParticaoCasoEspecial particaoCasoEspecial) {
+      this.particaoCasoEspecial = particaoCasoEspecial;
+    }
+  }
+
+  /**
+   * Faixas que a partição da busca de lei rebaixa (#436), no yml {@code desligado},
+   * {@code regimes-especificos} ou {@code ampliada}.
+   */
+  public enum ParticaoCasoEspecial {
+    /** Sem partição: a busca pede o {@code top-k} direto, como antes da #436. */
+    DESLIGADO,
+    /** Os capítulos dos regimes específicos (LC 214/2025, arts. 172 a 307). */
+    REGIMES_ESPECIFICOS,
+    /** Os regimes específicos mais as faixas da tabela ampliada. */
+    AMPLIADA
   }
 
   /**

@@ -78,8 +78,9 @@ public class RotaLegislacao {
           + "próximos da pergunta, para consulta.";
 
   /**
-   * Trechos mostrados quando o modelo não marca nenhum válido (#343): os primeiros da busca, já
-   * ordenados do mais para o menos próximo.
+   * Trechos mostrados quando o modelo não marca nenhum válido (#343): os primeiros da busca, na
+   * ordem dela (similaridade, com os de caso especial cujo setor a pergunta não cita no fim quando
+   * a partição da #436 está ligada).
    */
   static final int TRECHOS_RELACIONADOS = 3;
 
@@ -110,8 +111,8 @@ public class RotaLegislacao {
    * @return resposta com citações validadas; {@link #TRECHOS_SEM_CONFIRMACAO} quando o texto do
    *         modelo é descartado com trechos recuperados — com os trechos que ele marcou certo
    *         (marca inventada ao lado ou número sem fonte, #258) ou, sem marca válida ou com
-   *         {@code NAO_ENCONTREI}, com os mais próximos da busca (#343); sem trecho, a mensagem
-   *         fixa de "sem fundamento legal"
+   *         {@code NAO_ENCONTREI}, com os primeiros da busca, na ordem dela (#343, #436); sem
+   *         trecho, a mensagem fixa de "sem fundamento legal"
    * @throws br.com.agrocontabil.exception.AssistenteIndisponivelException se a busca ou o modelo
    *         falharem
    */
@@ -255,7 +256,8 @@ public class RotaLegislacao {
   /**
    * Resposta de lei descartada com trechos recuperados, sem nenhuma marca válida do modelo (ou com
    * o {@code NAO_ENCONTREI}): {@link #TRECHOS_SEM_CONFIRMACAO} com os {@link #TRECHOS_RELACIONADOS}
-   * mais próximos da busca, na ordem dela, em vez de "não encontrei fundamento legal" sobre um
+   * primeiros da busca, na ordem dela (similaridade, com os de caso especial sem o setor no fim
+   * quando a partição da #436 está ligada), em vez de "não encontrei fundamento legal" sobre um
    * assunto com artigos na base (#343). A frase não afirma que eles respondem: numa pergunta de
    * premissa falsa o descarte continua sendo o sinal de que não respondem, e o desfecho segue
    * {@code CITACAO_INVALIDA} (recusa na avaliação, como antes).
@@ -286,8 +288,10 @@ public class RotaLegislacao {
   /**
    * Resposta barrada pela {@link GuardaRegimeEspecifico}: sai o texto do modelo e os trechos de
    * regime específico (mostrar combustível ou imóvel como "o mais próximo" de uma pergunta geral
-   * confundiria). Ficam, sem afirmar que respondem, os até {@link #TRECHOS_RELACIONADOS} trechos mais
-   * próximos <em>fora</em> do regime específico; se não sobra nenhum, ou se é o MISTO sem parte legal
+   * confundiria). Ficam, sem afirmar que respondem, os até {@link #TRECHOS_RELACIONADOS} primeiros
+   * trechos da busca <em>fora</em> do regime específico, na ordem dela (similaridade, com os de caso
+   * especial sem o setor no fim quando a partição da #436 está ligada); se não sobra nenhum, ou se é
+   * o MISTO sem parte legal
    * separada (#260), a frase de "não encontrei fundamento legal": é verdade que a regra geral não
    * veio, e é melhor que uma resposta afirmativa errada.
    */

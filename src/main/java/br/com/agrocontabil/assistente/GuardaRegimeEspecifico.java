@@ -1,11 +1,10 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.rag.CasoEspecial;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Guarda da rota de lei contra resposta de regime específico para pergunta geral (issue #269).
@@ -23,71 +22,22 @@ import java.util.regex.Pattern;
  * Os limites e os capítulos vêm do texto da lei (o título abre logo depois do art. 171 e fecha no
  * art. 307; o art. 308 abre os regimes diferenciados da CBS); as palavras do setor vêm do nome de
  * cada capítulo, e não de pergunta de avaliação. Função pura, sem Spring.
+ *
+ * <p>Desde a #436 a tabela dos capítulos é a {@link CasoEspecial#REGIMES_ESPECIFICOS}, a mesma da
+ * partição da busca. A guarda continua olhando só as citações da própria LC 214/2025: a citação da
+ * redação dada pela LC 227/2026 a um artigo da faixa não conta como regime específico aqui (na
+ * partição, conta).
  */
 final class GuardaRegimeEspecifico {
 
-  /** Norma a que a faixa se aplica. */
-  static final String NORMA = "LC 214/2025";
-
-  /** Primeiro e último artigo do Título dos regimes específicos. */
-  static final int PRIMEIRO_ARTIGO = 172;
-  static final int ULTIMO_ARTIGO = 307;
-
-  private static final Pattern ARTIGO = Pattern.compile("^art\\. (\\d+)");
-
-  /** Capítulo do título, com as palavras que mostram que a pergunta é daquele setor. */
-  record Capitulo(int primeiro, int ultimo, String nome, Pattern setor) {
-
-    boolean contem(int artigo) {
-      return artigo >= primeiro && artigo <= ultimo;
-    }
-  }
-
-  /**
-   * Capítulos do título e o vocabulário de cada setor: o nome do capítulo, os objetos que a lei
-   * lista nele e as palavras do produtor rural para o mesmo assunto (propriedade, fazenda, terra e
-   * arrendamento para bens imóveis; CPR, cédula, financiamento e empréstimo para serviços
-   * financeiros). Palavra a mais só deixa passar uma resposta, nunca barra uma.
-   */
-  static final List<Capitulo> CAPITULOS = List.of(
-      capitulo(172, 180, "combustíveis",
-          "combust|gasolina|diesel|etanol|biodiesel|petroleo|gas natural|lubrificante|querosene|abastec"),
-      capitulo(181, 233, "serviços financeiros",
-          "financ|banc|segur|consorcio|previdencia|capitaliz|cambio|fundo|emprest|juro|cedula"
-              + "|\\bcpr\\b|cartao|\\bpix\\b|credito rural|custeio|debenture"),
-      capitulo(234, 243, "planos de assistência à saúde", "saude|medic|hospital|assistencia"),
-      capitulo(244, 250, "concursos de prognósticos",
-          "prognost|loteria|aposta|sorteio|bingo|rifa|premio"),
-      capitulo(251, 270, "bens imóveis",
-          "imovel|imoveis|imobiliar|terreno|\\blote|loteamento|\\bsolo\\b|incorporac|locac|alug"
-              + "|arrend|cessao|constru|propriedade|fazenda|sitio|gleba|\\bterras?\\b|apartamento"
-              + "|\\bcasa\\b"),
-      capitulo(271, 272, "sociedades cooperativas", "cooperativ"),
-      capitulo(273, 291, "bares, restaurantes, hotelaria, transporte e turismo",
-          "\\bbar\\b|\\bbares\\b|restaurante|lanchonete|hotel|hospedagem|pousada|turism|viagem"
-              + "|parque|transporte|passageiro"),
-      capitulo(292, 296, "sociedade anônima do futebol", "futebol|\\bsaf\\b|clube"),
-      capitulo(297, 299, "missões diplomáticas", "diplomat|consular|embaixada|tratado"),
-      capitulo(300, 307, "disposições comuns aos regimes específicos",
-          "regime especifico|regimes especificos"));
+  /** Capítulos do título, com as palavras de cada setor (tabela compartilhada, #436). */
+  static final List<CasoEspecial.Faixa> CAPITULOS = CasoEspecial.REGIMES_ESPECIFICOS;
 
   private GuardaRegimeEspecifico() {}
 
-  private static Capitulo capitulo(int primeiro, int ultimo, String nome, String setor) {
-    return new Capitulo(primeiro, ultimo, nome, Pattern.compile(setor));
-  }
-
   /** O capítulo do regime específico a que o dispositivo pertence, se pertence. */
-  static Optional<Capitulo> capituloDe(String norma, String dispositivo) {
-    if (!NORMA.equals(norma) || dispositivo == null) {
-      return Optional.empty();
-    }
-    Matcher m = ARTIGO.matcher(dispositivo);
-    if (!m.find()) {
-      return Optional.empty();
-    }
-    int artigo = Integer.parseInt(m.group(1));
-    return CAPITULOS.stream().filter(c -> c.contem(artigo)).findFirst();
+  static Optional<CasoEspecial.Faixa> capituloDe(String norma, String dispositivo) {
+    return CasoEspecial.faixaDe(CAPITULOS, CasoEspecial.artigoDaLc214(norma, dispositivo));
   }
 
   /** {@code true} se o dispositivo é de regime específico (LC 214/2025, arts. 172 a 307). */
@@ -109,8 +59,8 @@ final class GuardaRegimeEspecifico {
     }
     String simples = NormalizacaoBusca.normalizar(pergunta);
     for (CitacaoLegal citacao : citacoes) {
-      Optional<Capitulo> capitulo = capituloDe(citacao.norma(), citacao.dispositivo());
-      if (capitulo.isEmpty() || capitulo.get().setor().matcher(simples).find()) {
+      Optional<CasoEspecial.Faixa> capitulo = capituloDe(citacao.norma(), citacao.dispositivo());
+      if (capitulo.isEmpty() || capitulo.get().setorCitado(simples)) {
         return false;
       }
     }

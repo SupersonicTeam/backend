@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.assistente.rag.CasoEspecial;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.List;
@@ -107,6 +108,19 @@ class GuardaRegimeEspecificoTest {
   void setorDeOutroCapituloNaoSalva() {
     assertThat(GuardaRegimeEspecifico.barra("Quando surge o fato gerador na venda de um imóvel?",
         List.of(lc214("art. 173")))).isTrue();
+  }
+
+  @Test
+  @DisplayName("#436: a tabela da guarda é a mesma da partição da busca")
+  void tabelaCompartilhadaComAPartição() {
+    assertThat(GuardaRegimeEspecifico.CAPITULOS).isSameAs(CasoEspecial.REGIMES_ESPECIFICOS);
+  }
+
+  @Test
+  @DisplayName("#436: a redação dada pela LC 227/2026 a um artigo da faixa não conta para a guarda")
+  void redacaoDaLc227NaoContaNaGuarda() {
+    assertThat(GuardaRegimeEspecifico.barra("Como fica o crédito na compra de embalagens?",
+        List.of(c("LC 227/2026", "art. 174 (redação do art. 180, § 1º)")))).isFalse();
   }
 
   @Test

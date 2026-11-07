@@ -19,6 +19,18 @@ class AssistentePropertiesTest {
   }
 
   @Test
+  @DisplayName("#436: particao de caso especial desligada por padrao; nula e recusada")
+  void particaoCasoEspecial() {
+    assertThat(new AssistenteProperties().getRag().getParticaoCasoEspecial())
+        .isEqualTo(AssistenteProperties.ParticaoCasoEspecial.DESLIGADO);
+    AssistenteProperties nula = new AssistenteProperties();
+    nula.getRag().setParticaoCasoEspecial(null);
+
+    assertThatThrownBy(nula::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.rag.particao-caso-especial");
+  }
+
+  @Test
   @DisplayName("timeout-funcao abaixo de 1s e recusado (resolucao do timeout de transacao)")
   void timeoutFuncaoSubSegundo() {
     AssistenteProperties p = new AssistenteProperties();
