@@ -106,7 +106,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Rodar `./mvnw test` (profile test, H2) antes de abrir PR. Manter todos verdes.
 - Cobertura: `jacoco:check` exige LINE ≥ 93%, sem `config/**`, `dto/**` e a classe main (#151). Suba o piso quando a cobertura subir; não o reduza para acomodar PR.
 - Endpoint novo de leitura pesada (lista, agregação, janela de datas): entra no `ContagemStatementsPostgresIntegrationTest` (#153, #432), que compara a contagem de statements numa base pequena e noutra seis vezes maior. O p95 com k6 (`docs/performance/`) é medição da janela da S5, não teste de CI.
-- Texto fixo da Ceres com sigla: a sigla precisa de entrada em `resources/assistente/glossario-produtor.yml`, ou o `TextosFixosSiglasTest` quebra (#267). LC e EC só valem com número e ano.
+- Texto fixo da Ceres com sigla nova: cadastre a sigla em `resources/assistente/glossario-produtor.yml`. O `TextosFixosSiglasTest` só confere as siglas que já estão no yml (exige a explicação no texto); sigla fora dele passa sem aviso. No yml, LC e EC só casam com número e ano.
 - Teste em PostgreSQL: estender `support/PostgresIntegrationTestBase` (#152). Limpar com `limparDominio()`, nunca TRUNCATE CASCADE. Nos fluxos de emissão não vincule contador: com contador ativo, só nota `APROVADA` gera XML.
 
 ## Idioma do código (convenção híbrida)

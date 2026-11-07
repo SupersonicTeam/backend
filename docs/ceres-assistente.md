@@ -854,7 +854,7 @@ python3 -I docs/avaliacao/harness-api/harness.py
 
 # acerto de rota, numero e citacao (gabarito da #158, 3 repeticoes)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,avaliacao \
-  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 8 OCPU 47 GiB'"
+  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 8 OCPU, 47 GiB, sem GPU'"
 
 # memoria da VM durante a rodada
 docker stats --no-stream

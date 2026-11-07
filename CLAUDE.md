@@ -99,15 +99,16 @@ harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres
 `docs/avaliacao/treino/` não pode conter pergunta dele (o build quebra).
 
 **Diagnóstico das citações da rota de lei (#426, #269):** `docs/avaliacao/diagnostico-citacoes-lei-2026-11-06.md`
-(quatro rodadas; dados brutos em `docs/avaliacao/diagnostico-lei-2026-11-06/`) separa as falhas de
-citação por causa (busca, sentido, escolha, lei ausente), mede o recall por `k` e compara o
-`qwen3:30b-instruct` com o `qwen3:4b-instruct` na VPS. As ferramentas manuais
+(cinco rodadas; dados brutos em `docs/avaliacao/diagnostico-lei-2026-11-06/`, e os da quinta, a comparação
+30B × 4B, também em `docs/avaliacao/resultados/`) separa as falhas de citação por causa (busca, escolha,
+sentido, lei ausente e validador), mede o recall por `k` e compara o `qwen3:30b-instruct` com o
+`qwen3:4b-instruct` na VPS. As ferramentas manuais
 `DiagnosticoRecallLeiManual` e `DiagnosticoCitacoesLeiManual` (`src/test/.../assistente/`) **não
 rodam no `./mvnw test`** (`-Dtest=<classe> -Ddiagnostico.saida=<arquivo>` no profile `dev`, com o banco da base de lei e o Ollama locais; a de recall mede só a busca e não usa o modelo de chat). **Decisão do Murillo, 2026-11-07: o
-`qwen3:4b-instruct` segue como modelo padrão até a banca.** A frente de busca seguiu nas issues
-#433 (régua de citação do MISTO), #434 (executor do benchmark), #435 (conferência local das
-perguntas do roteiro da banca) e #436 (rebaixar capítulos de caso especial na busca, medido em
-conjunto novo, por outra sessão que nunca leu o gabarito).
+`qwen3:4b-instruct` segue como modelo padrão até a banca.** O trabalho seguiu nas issues
+#433 (régua de citação do MISTO), #434 (executor do benchmark) e #435 (conferência local das
+perguntas do roteiro da banca) e, na busca, na #436 (rebaixar capítulos de caso especial, medido
+em conjunto novo, por outra sessão que nunca leu o gabarito).
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
@@ -244,13 +245,13 @@ br.com.agrocontabil
 │                  # GlossarioProdutor + resources/assistente/glossario-produtor.yml (#267: siglas e termos do
 │                  #   produtor com definição curta, sem número nem artigo, revisada por humano; inline na
 │                  #   composição de dados, seção "O QUE QUER DIZER" no atalho de legislação, medição de
-│                  #   clareza e TextosFixosSiglasTest; sigla nova em texto fixo quebra o teste até entrar no yml;
-│                  #   o bean `GlossarioProdutor` em config/AssistenteConfig força a leitura do yml na subida
-│                  #   (#416: arquivo ausente ou termo inválido derruba a aplicação na hora); LC e EC só valem com
-│                  #   número e ano (`\bLC\s*\d+/\d{4}`: "LC" sozinho pode ser nome de cliente e "EC 250" é a
-│                  #   formulação de um defensivo); `semExplicacao` aceita a própria definição do glossário no
-│                  #   texto, `siglasSemNome` não (só a forma por extenso ou a expressão aceita: é a régua da
-│                  #   clareza, `ClarezaTexto`));
+│                  #   clareza e TextosFixosSiglasTest, que só confere as siglas que já estão no yml: sigla nova
+│                  #   em texto fixo, cadastre no yml; o bean glossarioProdutor() em config/AssistenteConfig força
+│                  #   a leitura do yml na subida (#416: arquivo ausente ou termo inválido derruba a aplicação na
+│                  #   hora); LC e EC só valem com número e ano (\bLC\s*\d+/\d{4}: "LC" sozinho pode ser nome de
+│                  #   cliente e "EC 250" é a formulação de um defensivo); semExplicacao aceita a própria definição
+│                  #   do glossário no texto, siglasSemNome não (só a forma por extenso ou a expressão aceita: é a
+│                  #   régua da clareza, ClarezaTexto));
 │                  # LinhaGlossario (#424: linha "O que isso quer dizer" ao fim da resposta de lei aceita, montada
 │                  #   pelo backend depois de todas as conferências, com a definição de cada termo do glossário que o
 │                  #   texto usa sem explicar; resposta descartada não leva);
@@ -754,7 +755,7 @@ no cadastro (decisão do Murillo, 2026-10-19).
   - `idx_nota_fiscal_produtor_id` (0002) ficou redundante para consultas por produtor; remover exigiria outro changeSet e outra decisão.
   - Lock distribuído dos jobs (`ShedLock`) entregue na Onda 5, issue **#87**.
 - **Homologação real da SEFAZ (#128):** o transporte está pronto e testado contra servidor simulado; falta rodar envio, consulta e cancelamento na homologação com cStat reais, o que depende do certificado A1 ICP-Brasil de um emitente de teste, do credenciamento na UF e do truststore da cadeia ICP-Brasil (`docs/sefaz-transporte-soap.md`).
-- **Ceres:** a parte de lei do MISTO recebe só a pergunta legal separada pelo classificador e passou a achar fundamento (Anexo IX, com o "Sim," inicial tirado quando a pergunta é a separada); falta a parte de **dados** do MISTO não afirmar regra legal; o gabarito `2026-10-15.1` aceita o item do Anexo IX além do art. 138; o desfecho de cada parte está na auditoria (changeSet 0030). Há também pergunta de dados com valor devido que o classificador manda para a rota de lei. Ver `docs/avaliacao/linha-de-base-2026-10-14.md`.
+- **Ceres:** a parte de lei do MISTO recebe só a pergunta legal separada pelo classificador e passou a achar fundamento (Anexo IX, com o "Sim," inicial tirado quando a pergunta é a separada); falta a parte de **dados** do MISTO não afirmar regra legal; a régua de citação do MISTO aceita o item do anexo além do artigo; o desfecho de cada parte está na auditoria (changeSet 0030). Há também pergunta de dados com valor devido que o classificador manda para a rota de lei. Ver `docs/avaliacao/linha-de-base-2026-10-14.md`.
 - **Depois da Sprint 8 (#205–#209, #150, #148, #149, #147):** login, JWT, refresh, recuperação de senha, rate limit, LGPD, auditoria e cifra em repouso entregues; o profile padrão `dev` caiu na #219 (subida recusada sem profile explícito). Abertos: **verificação de e-mail no cadastro** (depende de SMTP); cifra **sem AAD por coluna** (mesma cifra entre tabelas); **dados das notas e XML assinado em claro**; falha de contador sem `produtor_id` na auditoria; rate limit em memória (por réplica); o Angular ainda não tem tela de login.
 - ~~Contador não alcança dashboard/apuração/relatório (#93)~~ — resolvido na #255 com rotas da carteira (`/api/contador/produtores/{produtorId}/...`); as rotas do produtor seguem sem `produtorId`. Falta o Angular adotá-las (Fechamento e Acompanhamento por cliente; pré-requisito do login, frontend#93).
 - **Identidade declarada no mock (Onda 4):** em `dev`, requisição **sem** `Authorization` ainda pode declarar identidade por `X-Usuario-Id` (o JWT da #206 tem precedência). Desde a #221, nunca em homolog nem em prod.
