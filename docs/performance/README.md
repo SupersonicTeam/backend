@@ -45,9 +45,8 @@ propriedades (`app.seguranca.limite.*`, `app.seguranca.forca-bruta.*`) lidas de 
 ambiente, e **só o `compose.yaml` desta stack efêmera** as sobe (`LIMITE_GERAL_POR_MINUTO`,
 `LIMITE_LOGIN_POR_MINUTO`, `LIMITE_REFRESH_POR_MINUTO` = 1.000.000). Os padrões do `application.yml`
 e o `deploy/compose.yaml` não mudam. Além disso, o script **reprova** a execução se vir qualquer
-429 (`limite_429` com `count==0`) e renova o access token a cada 10 min (vale 15), então o cenário
-de produção do produtor (a mesma conta com poucas requisições por minuto) continua coberto pelo que
-o limitador faz de verdade: os testes de `LimiteTaxaGeralFilter` na CI.
+429 (`limite_429` com `count==0`) e renova o access token a cada 10 min (vale 15). O benchmark
+mede a API **sem** o limitador; o comportamento do limitador em si tem testes próprios na CI.
 
 ## Passo a passo
 
@@ -61,13 +60,13 @@ Tudo a partir de `docs/performance/` (na VPS, uma cópia do repositório ou só 
   echo "PERF_JWT_SECRET=$(openssl rand -base64 48 | tr -d '=\n')"
   echo "PERF_CRIPTO_CHAVE=$(openssl rand -base64 32)"
   echo "PERF_SEED_SENHA=Perf-$(openssl rand -hex 8)-k6"
-  echo "BACKEND_IMAGE=ghcr.io/supersonicteam/backend:latest"
+  echo "BACKEND_IMAGE=ghcr.io/supersonicteam/backend:sha-xxxxxxx"   # o SHA que roda na VPS
   echo "K6_VUS=10"
   echo "K6_DURACAO=3m"
 } > .env
 ```
 
-Imagem do backend: o padrão é a do deploy (`ghcr.io/supersonicteam/backend:latest`; na VPS use o
+Imagem do backend (`BACKEND_IMAGE`, obrigatória): a do deploy (na VPS use o
 `BACKEND_TAG` em produção, `sha-xxxxxxx`, para medir o mesmo artefato). Para medir o código de um
 checkout: `docker build -t agro-perf-backend:local ../..` e `BACKEND_IMAGE=agro-perf-backend:local`.
 

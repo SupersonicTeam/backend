@@ -53,6 +53,9 @@ class ContagemStatementsPostgresIntegrationTest extends PostgresIntegrationTestB
 
   private static final String SENHA = "cavalo bateria grampo correto";
   private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
+  /** Destinatários, UFs e NCMs variados: um lookup por valor distinto apareceria na contagem. */
+  private static final String[] UFS = {"MG", "SP", "MT", "GO", "PR", "RS", "BA"};
+  private static final String[] NCMS = {"12019000", "10059010", "10019900", "52010020"};
   private static final int NOTAS_BASE_PEQUENA = 10;
   private static final int NOTAS_BASE_GRANDE = 60;
   private static final int PAGINA_PEQUENA = 5;
@@ -183,10 +186,11 @@ class ContagemStatementsPostgresIntegrationTest extends PostgresIntegrationTestB
             valor_total_produtos, valor_total_nota, valor_total_ibs, valor_total_cbs,
             valor_total_credito_ibs, valor_total_credito_cbs, status, tipo_documento, origem,
             version, created_at, updated_at)
-          VALUES (?, ?, ?, 1, '55', 'Venda de producao rural', ?, ?, 'Comprador Sintetico',
-            '39053344705', 'MG', 1000.00, 1000.00, 1.00, 9.00, ?, ?, 'AUTORIZADA', 'NFE', ?,
+          VALUES (?, ?, ?, 1, '55', 'Venda de producao rural', ?, ?, ?,
+            '39053344705', ?, 1000.00, 1000.00, 1.00, 9.00, ?, ?, 'AUTORIZADA', 'NFE', ?,
             0, now(), now())
           """, notaId, "%044d".formatted(numero), (long) numero, emissao, produtorId,
+          "Comprador Sintetico " + (numero % 7), UFS[numero % UFS.length],
           importada ? BigDecimal.valueOf(1) : BigDecimal.ZERO,
           importada ? BigDecimal.valueOf(9) : BigDecimal.ZERO,
           importada ? "IMPORTADA" : "PROPRIA");
@@ -195,9 +199,10 @@ class ContagemStatementsPostgresIntegrationTest extends PostgresIntegrationTestB
             INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, descricao, ncm, cfop,
               unidade, quantidade, valor_unitario, valor_total, aliquota_ibs, valor_ibs,
               aliquota_cbs, valor_cbs, natureza_operacao, created_at, updated_at)
-            VALUES (?, ?, ?, 'Soja em graos', '12019000', ?, 'KG', 250.0000, 2.0000, 500.00,
+            VALUES (?, ?, ?, 'Produto sintetico', ?, ?, 'KG', 250.0000, 2.0000, 500.00,
               0.1000, 0.50, 0.9000, 4.50, ?, now(), now())
-            """, UUID.randomUUID(), notaId, item, importada ? "1101" : "5101",
+            """, UUID.randomUUID(), notaId, item, NCMS[(numero + item) % NCMS.length],
+            importada ? "1101" : "5101",
             importada ? "CREDITO" : "DEBITO");
       }
       jdbc.update("""

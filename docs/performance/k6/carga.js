@@ -84,8 +84,9 @@ export function setup() {
     headers: { Authorization: `Bearer ${t}` },
   });
   const total = lista.status === 200 ? lista.json('totalElements') : 0;
-  if (total < 1000) {
-    throw new Error(`so ${total} notas: rode docs/performance/seed-volume.sql antes (README)`);
+  const minimo = parseInt(__ENV.MIN_NOTAS || '1000', 10);
+  if (total < minimo) {
+    throw new Error(`so ${total} notas (minimo ${minimo}, MIN_NOTAS): rode seed-volume.sql antes`);
   }
   console.log(`produtor ${eu.json('usuarioId')} com ${total} notas`);
   return { produtorId: eu.json('usuarioId'), totalNotas: total };

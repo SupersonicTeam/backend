@@ -26,7 +26,8 @@ services:
 
   backend:
     # A mesma imagem do deploy (ghcr) ou uma construida do codigo (README, "Imagem do backend").
-    image: ${BACKEND_IMAGE:-ghcr.io/supersonicteam/backend:latest}
+    # Sem padrao de proposito: fixe o SHA que roda na VPS (sha-xxxxxxx) para medir o mesmo artefato.
+    image: ${BACKEND_IMAGE:?defina BACKEND_IMAGE no .env (README)}
     mem_limit: 2g
     cpus: 2
     environment:
