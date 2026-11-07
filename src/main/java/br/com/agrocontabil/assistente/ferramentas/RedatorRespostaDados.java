@@ -20,6 +20,7 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VencimentosDoMes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VendasProduto;
+import br.com.agrocontabil.model.StatusNotaFiscal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,8 @@ public final class RedatorRespostaDados {
    * Situações de uma venda já emitida (#444): autorizada pela SEFAZ, inclusive a que foi ou está
    * sendo cancelada depois. As demais ainda não são NF-e válida.
    */
-  static final Set<String> VENDAS_EMITIDAS = Set.of("AUTORIZADA", "CANCELANDO", "CANCELADA");
+  static final Set<String> VENDAS_EMITIDAS = Set.of(StatusNotaFiscal.AUTORIZADA.name(),
+      StatusNotaFiscal.CANCELANDO.name(), StatusNotaFiscal.CANCELADA.name());
 
   /** A situação de uma nota, no singular. */
   private static final Map<String, String> SITUACAO = Map.ofEntries(
