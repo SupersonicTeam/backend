@@ -96,8 +96,11 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    **Conferência local (#435):** as perguntas dos passos 4 e 7 foram rodadas com o
    `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`; o resultado, com as divergências, está em
    [`docs/demonstracao/conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md).
-   A conferência **se refaz no SHA congelado** se `assistente/**`, o seed da demonstração ou o
-   `application.yml` mudarem depois do SHA `4a0b3a8`.
+   A conferência **se refaz no SHA congelado** se mudar, depois do SHA `4a0b3a8`, qualquer um destes:
+   `assistente/**` (inclusive os adaptadores e os services e recursos que eles usam, como
+   `SinaisNotaConferirService` e `src/main/resources/sinais-nota/`), o treino do classificador
+   (`src/main/resources/ceres/treino/`), o seed da demonstração, o `application.yml`, a base de lei
+   (os 8.304 trechos) e o modelo ou a versão do Ollama.
 8. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
    **urgente**; na Helena, a GPS de daqui a 3 dias sai como **próximo**.
 

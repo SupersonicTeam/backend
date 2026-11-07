@@ -8,6 +8,21 @@
 Conferência da issue #435: as perguntas que o roteiro faz à Ceres, rodadas localmente com o
 `qwen3:4b-instruct`, contra o roteiro. Não corrige nada.
 
+## Perguntas
+
+**Literais do roteiro** (passo 7): os três atalhos da tela, na grafia exata, com o Carlos
+("Quanto eu tenho que pagar este mês?", "Quando vence a minha próxima guia?", "O que muda para mim com o
+IBS e o CBS?"), e as três livres dele ("quanto eu comprei de fertilizante?", "qual foi minha apuração de
+IBS e CBS do mês passado?", "a soja tem redução de alíquota?"). Três repetições nas livres.
+
+**Fixadas por esta conferência** (o roteiro não traz o texto): as de ICMS do passo 4, uma geral ("Tem
+alguma nota minha com o ICMS sem definir?") e uma com o número do rascunho ("A nota número N está com o
+CST do ICMS definido?"), 3 repetições cada; e a sequência do Rogério do passo 7 (duas livres,
+"Quais notas fiscais eu emiti neste mês?" e "Quanto eu vendi de soja neste ano?", e o atalho de texto
+exato). Os textos foram fixados antes da primeira execução. **O que o passo 4 mostra (o sinal de ICMS na
+nota) passou, com a pergunta que traz o número da nota (3 de 3);** por isso o passo 4 do roteiro passou a
+usar essa pergunta.
+
 ## Condições
 
 | Item | Valor |
@@ -19,7 +34,7 @@ Conferência da issue #435: as perguntas que o roteiro faz à Ceres, rodadas loc
 | Base de legislação | 8.304 trechos, copiados do banco de desenvolvimento: LC 214/2025 5.004, LC 227/2026 2.211, Lei 8.212/1991 547, EC 132/2023 538, Lei 9.528/1997 4 |
 | Modelo | `qwen3:4b-instruct`, `think` desligado, `num_ctx` 8192 (conferido no `/api/ps`); embedding `bge-m3` (exemplos do classificador carregados: 262) |
 | Onde rodou | **CPU**: `size_vram` 0 nos dois modelos; o contêiner `agrocontabil-ollama` não reserva GPU (16 processadores lógicos na máquina local) |
-| Configuração | a publicada: sem nenhuma variável `AI_*` no ambiente, nenhum `application*.yml` alterado; read-timeout do modelo 120 s |
+| Configuração | os padrões do `application.yml`, sem nenhuma variável `AI_*` no ambiente (read-timeout do modelo 120 s). Ollama 0.35.0 local (imagem `ollama/ollama:0.35.0`, a mesma da VPS). **Diferenças da VPS:** lá o Ollama tem `OLLAMA_KEEP_ALIVE=24h` e `OLLAMA_NUM_PARALLEL=1`; o contêiner local não define nenhum dos dois |
 | Latência | **local, de CPU de máquina de desenvolvimento; não é a da VPS** (8 OCPU ARM, sem GPU) |
 
 Antes de cada bloco, o `/api/ps` (`size_vram` 0 em todos):
@@ -29,9 +44,9 @@ Antes de cada bloco, o `/api/ps` (`size_vram` 0 em todos):
 - icms (10:20:17): `qwen3:4b-instruct` context_length 8192, size 3884460276, size_vram 0; `bge-m3:latest` context_length 4096, size 1218969598, size_vram 0
 - rogerio (10:23:20): `qwen3:4b-instruct` context_length 8192, size 3884460276, size_vram 0; `bge-m3:latest` context_length 4096, size 1218969598, size_vram 0
 
-O contêiner do Ollama não define `OLLAMA_KEEP_ALIVE` (vale o padrão de 5 minutos depois do último
-pedido): os blocos foram rodados em seguida, sem passar 5 minutos entre perguntas, depois do
-aquecimento dos dois modelos (`keep_alive` de 60 minutos, `num_ctx` 8192).
+Sem `OLLAMA_KEEP_ALIVE`, vale o padrão de 5 minutos depois do último pedido: os blocos foram rodados em
+seguida, sem passar 5 minutos entre perguntas, depois do aquecimento dos dois modelos (`keep_alive` de
+60 minutos, `num_ctx` 8192).
 
 ## Como repetir
 
@@ -53,14 +68,15 @@ docker exec -i agrocontabil-postgres psql -U agrocontabil -d agrocontabil \
  | docker exec -i agrocontabil-postgres psql -U agrocontabil -v ON_ERROR_STOP=1 -d agrocontabil_conferencia \
   -c '\copy legislacao_trecho(id, content, metadata, embedding) from stdin'
 
-# chamadas (docs/demonstracao/conferencia-ceres.py, so biblioteca padrao; SEED_SENHA no ambiente)
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl aquecer
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl ps carlos
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl carlos-atalhos
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl carlos-livres
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl icms --numero <rascunho de milho do Carlos>
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl rogerio
-python3 docs/demonstracao/conferencia-ceres.py --saida chamadas.jsonl apuracao --periodo <mes passado>
+# chamadas (docs/demonstracao/conferencia-ceres.py, so biblioteca padrao; SEED_SENHA no ambiente;
+# a saida vai para a pasta temporaria do sistema, fora do repositorio, e BASE_URL tem de ser local)
+python3 docs/demonstracao/conferencia-ceres.py aquecer
+python3 docs/demonstracao/conferencia-ceres.py ps carlos
+python3 docs/demonstracao/conferencia-ceres.py carlos-atalhos
+python3 docs/demonstracao/conferencia-ceres.py carlos-livres
+python3 docs/demonstracao/conferencia-ceres.py icms --numero <numero do rascunho de milho do Carlos>
+python3 docs/demonstracao/conferencia-ceres.py rogerio
+python3 docs/demonstracao/conferencia-ceres.py apuracao --periodo <mes passado, AAAA-MM>
 
 # no fim: parar a aplicação e só então
 docker exec agrocontabil-postgres psql -U agrocontabil -d postgres -c "DROP DATABASE agrocontabil_conferencia WITH (FORCE)"
@@ -69,87 +85,117 @@ docker exec agrocontabil-postgres psql -U agrocontabil -d postgres -c "DROP DATA
 A auditoria foi lida à mão, só leitura, na ordem das chamadas (o 429 não grava linha):
 
 ```bash
-docker exec agrocontabil-postgres psql -U agrocontabil -d agrocontabil_conferencia -tA -F '|' -c \n  "select rota, desfecho, desfecho_dados, desfecho_legislacao, camada_classificacao, latencia_ms, tokens_entrada, tokens_saida from assistente_interacao order by criado_em"
+docker exec agrocontabil-postgres psql -U agrocontabil -d agrocontabil_conferencia -tA -F '|' \
+  -c "select rota, desfecho, desfecho_dados, desfecho_legislacao, camada_classificacao, latencia_ms, tokens_entrada, tokens_saida from assistente_interacao order by criado_em"
 ```
 
-O rascunho de milho usado foi a nota 3191 (`GET /api/notas?status=RASCUNHO`, venda de milho ao
-Antônio Carlos Pereira, pessoa física sem IE). As colunas de auditoria vêm de `assistente_interacao`
-(só leitura), na ordem das chamadas.
+O rascunho de milho usado foi a nota 3191 (venda ao Antônio Carlos Pereira, pessoa física sem IE; está
+na lista de notas do Carlos filtrada por rascunho, `GET /api/notas?status=RASCUNHO`). **O número muda a
+cada semeadura.**
 
 ## Resultado
 
-**Resumo: 3 divergências e 1 ressalva** (as divergências estão em negrito na coluna do veredito). Duas são objetivas (apuração sem função chamada; pergunta geral de ICMS com a função errada); a da soja é uma leitura da regra do #284 (afirmar os 60% sem ressalva) e pode ser discutida.
+**Resumo: 3 divergências e 1 ressalva, todas "achado para decisão"** (negrito na coluna do veredito).
+A correção, se houver, é decidida fora daqui e medida num conjunto independente. **Decisões do Murillo,
+2026-11-07:** a divergência 3 foi resolvida no roteiro, sem mudança na Ceres; as divergências 1 e 2
+foram encaminhadas para correção em sessão própria, medida em conjunto independente. Duas divergências
+são objetivas (apuração sem função chamada; pergunta geral de ICMS com a função errada); a da soja é uma
+leitura da regra do #284 (afirmar os 60% sem ressalva) e pode ser discutida.
 
-- **Apuração do mês passado** (3 de 3): "Não consegui identificar qual dado consultar". Nenhuma função
-  foi chamada (desfecho `SEM_RESPOSTA`, camada `LLM`). O sistema tem os números:
-  `GET /api/apuracao?periodo=2026-10` devolve ABERTO, débito IBS 192,25, crédito IBS 124,33, saldo IBS
-  67,92; débito CBS 1.730,32, crédito CBS 1.118,97, saldo CBS 611,35; 9 notas.
-  **Decisão (2026-11-07): encaminhada para correção em sessão própria, medida em conjunto independente.**
-- **A soja tem redução de alíquota?** (3 de 3, rota LEGISLACAO): cita `LC 214/2025, art. 137` e `art. 137,
-  § 1º, inciso II`, mas diz "Sim, a soja tem redução de alíquota... reduzidos em 60%" sem a ressalva do
-  enquadramento com o contador (#284). A linha "O que isso quer dizer" lista ICMS, ISS, PIS e Cofins,
-  que a resposta não usa.
-  **Decisão (2026-11-07): encaminhada para correção em sessão própria, medida em conjunto independente.**
-- **ICMS a definir, pergunta geral** (3 de 3): foi para `listarNotas` com `situacao=PENDENTE_SEFAZ` e
-  respondeu "Não encontrei notas aguardando a SEFAZ"; o sinal não aparece. **Com o número da nota
-  (3191), o sinal aparece nas 3 repetições** ("está sem o CST do ICMS... combine o CST com seu contador").
-  **Decisão do Murillo (2026-11-07): resolvida no roteiro, sem mudança na Ceres.** O passo 4 de
-  `docs/demonstracao-banca.md` passou a usar a pergunta com o número da nota (que muda a cada
-  semeadura, com a indicação de onde achá-lo).
-- **Ressalva (Rogério):** a primeira pergunta livre respondeu sobre 09/08 a 07/11 (5 notas), não sobre
-  "este mês". O que o roteiro verifica (200, depois 429 com `Retry-After`, depois o atalho 200) funciona.
+1. **Apuração do mês passado — achado para decisão; encaminhada para correção em sessão própria, medida em conjunto independente.** 3 de 3: "Não consegui identificar qual
+   dado consultar". Nenhuma função foi chamada (desfecho `SEM_RESPOSTA`, camada `LLM`). O sistema tem os
+   números: `GET /api/apuracao?periodo=2026-10` devolve ABERTO, débito IBS 192,25, crédito IBS 124,33,
+   saldo IBS 67,92; débito CBS 1.730,32, crédito CBS 1.118,97, saldo CBS 611,35; 9 notas.
+2. **A soja tem redução de alíquota? — achado para decisão (#284); encaminhada para correção em sessão própria, medida em conjunto independente.** 3 de 3, rota LEGISLACAO:
+   cita `LC 214/2025, art. 137` e `art. 137, § 1º, inciso II`, mas diz "Sim, a soja tem redução de
+   alíquota... reduzidos em 60%" sem a ressalva do enquadramento com o contador. A linha "O que isso
+   quer dizer" lista também ICMS, ISS, PIS e Cofins: é o comportamento previsto, não defeito
+   (`GlossarioProdutor.aExplicar` inclui as siglas citadas nas definições, #267).
+3. **ICMS a definir, pergunta geral — achado para decisão; resolvida no roteiro em 2026-11-07, sem
+   mudança na Ceres.** 3 de 3: foi para `listarNotas` com `situacao=PENDENTE_SEFAZ` e respondeu "Não
+   encontrei notas aguardando a SEFAZ"; o sinal não aparece. **Com o número da nota (3191), o sinal
+   aparece nas 3 repetições** ("está sem o CST do ICMS... combine o CST com seu contador"), e é essa a
+   pergunta que o passo 4 do roteiro usa agora.
+4. **Ressalva (Rogério) — achado para decisão.** A primeira pergunta livre respondeu sobre 09/08 a 07/11
+   (5 notas), não sobre "este mês". O que o roteiro verifica (200, depois 429 com `Retry-After`, depois o
+   atalho 200) funciona.
+
+**Observações (sem mexer na Ceres):**
+
 - **Falha técnica da primeira tentativa dos livres do Carlos:** a primeira chamada ao modelo depois do
   aquecimento levou 120,2 s e estourou o read-timeout; o disjuntor abriu e as 8 seguintes saíram em
-  `MODO_FALLBACK`. Isso não é veredito da Ceres. Reaqueci, rodei uma sonda (19,8 s, sem fallback) e
-  repeti as 9: **vale a segunda tentativa**; as duas estão registradas abaixo.
-- **Sem o modelo, a pergunta da soja entrega trechos fora do assunto:** no fallback da primeira tentativa a resposta lista `LC 214/2025, Anexo VII, item 8` (óleos de soja), `LC 227/2026, art. 174` e `LC 214/2025, art. 473` (compras da administração pública), sem o art. 137. É o que a banca veria com o modelo fora.
+  fallback (`MODO_FALLBACK`). Isso não é veredito da Ceres. Reaqueci, rodei uma sonda (19,8 s, sem
+  fallback) e repeti as 9: **vale a segunda tentativa**; as duas estão registradas abaixo.
+- **Sem o modelo, a pergunta da soja entrega trechos fora do assunto:** no fallback da primeira
+  tentativa a resposta lista `LC 214/2025, Anexo VII, item 8` (óleos de soja), `LC 227/2026, art. 174` e
+  `LC 214/2025, art. 473` (compras da administração pública), sem o art. 137. É o que a banca veria com o
+  modelo fora, **desde que a base da VPS tenha os mesmos 8.304 trechos** (não conferido aqui).
+- **Texto do sinal da nota:** na resposta sobre a nota 3191 (um rascunho) o texto diz "de venda emitida em
+  05/06/2026". A data é a `dataEmissao` gravada no rascunho e a frase vem do template do `RedatorRespostaDados` (linha "de venda emitida").
+  Isso aparece no passo 4 da banca.
 - **Embedding:** a camada de embedding pausou 9 vezes no log ("prazo de 500 ms vencido; a rota cai no
   modelo", pausa de 30 s), 1 na primeira tentativa e 8 depois; nas perguntas livres isso empurra a
-  classificação para o modelo (camada `LLM` na auditoria), o que soma uma chamada de classificação ao modelo.
-  A rota de cada veredito acima cita a camada que a decidiu.
-- **Atalhos:** os três responderam em menos de 0,2 s, sem modelo (camada `ATALHO_FIXO`). O de IBS/CBS
-  trouxe 34 citações; o CLAUDE.md fala em 33 fixas.
+  classificação para o modelo (camada `LLM` na auditoria), o que soma uma chamada de classificação ao
+  modelo. A rota de cada veredito cita a camada que a decidiu.
+- **Atalhos:** os três responderam em até 0,2 s (o mais lento, 163 ms), sem modelo (camada
+  `ATALHO_FIXO`). O de IBS/CBS trouxe 34 citações: as 33 fixas do atalho mais o Funrural da pessoa física
+  (`Lei 8.212/1991, art. 30, inciso IV`); confere com o `CLAUDE.md`.
 - **Rogério:** `GET /api/assistente/uso` mostrou 33 restantes (967 consumidos de 1.000); a primeira
   livre passou (200); a segunda deu 429 `LIMITE_USO_ASSISTENTE` com `Retry-After` de 135.358 s (até a
   virada da semana, 2026-11-09 00:00); o atalho de texto exato respondeu 200.
 
-Latência do cliente na tabela; auditoria = `desfecho` · `camada_classificacao` · `latencia_ms` ·
-tokens de entrada/saída. `desfecho_dados` e `desfecho_legislacao` ficaram vazios em todas as linhas
-(só o MISTO os grava; nenhuma pergunta foi MISTO).
+### Números conferidos e a fonte
 
-| Conta | Pergunta | Rep. | Tentativa | Status | Rota | Fontes | Citações | Fallback | Latência | Auditoria | Veredito |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| carlos | Quanto eu tenho que pagar este mês? | 1 | — | 200 | DADOS | `vencimentosDoMes`(mes=2026-11) | — | False | 0.1 s | RESPONDIDA · camada ATALHO_FIXO · 76 ms · tokens —/— | OK: guias de novembro e atraso, pelas funções de guias, sem modelo |
-| carlos | Quando vence a minha próxima guia? | 1 | — | 200 | DADOS | `proximosVencimentos`(dias=30) | — | False | 0.1 s | RESPONDIDA · camada ATALHO_FIXO · 14 ms · tokens —/— | OK: próxima guia pela função de vencimentos, sem modelo |
-| carlos | O que muda para mim com o IBS e o CBS? | 1 | — | 200 | LEGISLACAO | — | 34: LC 214/2025, art. 1º, inciso I; LC 214/2025, art. 1º, inciso II; EC 132/2023, art. 2º (redação do art. 126, inciso I, alínea a); … | False | 0.2 s | RESPONDIDA · camada ATALHO_FIXO · 115 ms · tokens —/— | OK: texto explicado, 34 citações, soja/algodão/milho do Carlos e Funrural; sem modelo |
-| carlos | quanto eu comprei de fertilizante? | 1 | 1ª (falha técnica) | 200 | DADOS | — | — | True | 120.2 s | MODO_FALLBACK · camada REGRA · 120076 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | quanto eu comprei de fertilizante? | 2 | 1ª (falha técnica) | 200 | DADOS | — | — | True | 0.1 s | MODO_FALLBACK · camada REGRA · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | quanto eu comprei de fertilizante? | 3 | 1ª (falha técnica) | 200 | DADOS | — | — | True | 0.1 s | MODO_FALLBACK · camada REGRA · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | qual foi minha apuração de IBS e CBS do mês passado? | 1 | 1ª (falha técnica) | 200 | DADOS | — | — | True | 0.7 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 503 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | qual foi minha apuração de IBS e CBS do mês passado? | 2 | 1ª (falha técnica) | 200 | DADOS | — | — | True | 0.2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | qual foi minha apuração de IBS e CBS do mês passado? | 3 | 1ª (falha técnica) | 200 | DADOS | — | — | True | 0.2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | a soja tem redução de alíquota? | 1 | 1ª (falha técnica) | 200 | LEGISLACAO | — | 3: LC 214/2025, Anexo VII, item 8; LC 227/2026, art. 174 (redação do art. 544, inciso III); LC 214/2025, art. 473, § 1º, inciso I, alínea b | True | 0.2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 42 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | a soja tem redução de alíquota? | 2 | 1ª (falha técnica) | 200 | LEGISLACAO | — | 3: LC 214/2025, Anexo VII, item 8; LC 227/2026, art. 174 (redação do art. 544, inciso III); LC 214/2025, art. 473, § 1º, inciso I, alínea b | True | 0.2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 28 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | a soja tem redução de alíquota? | 3 | 1ª (falha técnica) | 200 | LEGISLACAO | — | 3: LC 214/2025, Anexo VII, item 8; LC 227/2026, art. 174 (redação do art. 544, inciso III); LC 214/2025, art. 473, § 1º, inciso I, alínea b | True | 0.3 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 22 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
-| carlos | quanto eu comprei de fertilizante? | 4 | sonda | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | False | 19.8 s | RESPONDIDA · camada REGRA · 19748 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
-| carlos | quanto eu comprei de fertilizante? | 1 | 2ª (vale) | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | False | 19.7 s | RESPONDIDA · camada REGRA · 19666 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
-| carlos | quanto eu comprei de fertilizante? | 2 | 2ª (vale) | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | False | 18.3 s | RESPONDIDA · camada REGRA · 18226 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
-| carlos | quanto eu comprei de fertilizante? | 3 | 2ª (vale) | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | False | 18.2 s | RESPONDIDA · camada REGRA · 18125 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
-| carlos | qual foi minha apuração de IBS e CBS do mês passado? | 1 | 2ª (vale) | 200 | DADOS | — | — | False | 60.9 s | SEM_RESPOSTA · camada LLM · 60821 ms · tokens 4111/53 | **divergente**: não chamou nenhuma função (SEM_RESPOSTA); o sistema tem a apuração de 2026-10 |
-| carlos | qual foi minha apuração de IBS e CBS do mês passado? | 2 | 2ª (vale) | 200 | DADOS | — | — | False | 33.8 s | SEM_RESPOSTA · camada LLM · 33725 ms · tokens 4111/53 | **divergente**: não chamou nenhuma função (SEM_RESPOSTA); o sistema tem a apuração de 2026-10 |
-| carlos | qual foi minha apuração de IBS e CBS do mês passado? | 3 | 2ª (vale) | 200 | DADOS | — | — | False | 24.5 s | SEM_RESPOSTA · camada LLM · 24383 ms · tokens 4111/53 | **divergente**: não chamou nenhuma função (SEM_RESPOSTA); o sistema tem a apuração de 2026-10 |
-| carlos | a soja tem redução de alíquota? | 1 | 2ª (vale) | 200 | LEGISLACAO | — | 2: LC 214/2025, art. 137; LC 214/2025, art. 137, § 1º, inciso II | False | 53.2 s | RESPONDIDA · camada LLM · 53068 ms · tokens 1356/89 | **divergente** (#284): cita o art. 137, mas afirma a redução de 60% sem a ressalva do enquadramento com o contador |
-| carlos | a soja tem redução de alíquota? | 2 | 2ª (vale) | 200 | LEGISLACAO | — | 2: LC 214/2025, art. 137; LC 214/2025, art. 137, § 1º, inciso II | False | 16.2 s | RESPONDIDA · camada LLM · 16071 ms · tokens 1356/89 | **divergente** (#284): cita o art. 137, mas afirma a redução de 60% sem a ressalva do enquadramento com o contador |
-| carlos | a soja tem redução de alíquota? | 3 | 2ª (vale) | 200 | LEGISLACAO | — | 2: LC 214/2025, art. 137; LC 214/2025, art. 137, § 1º, inciso II | False | 15.4 s | RESPONDIDA · camada LLM · 15301 ms · tokens 1356/89 | **divergente** (#284): cita o art. 137, mas afirma a redução de 60% sem a ressalva do enquadramento com o contador |
-| carlos | Tem alguma nota minha com o ICMS sem definir? | 1 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, situacao=PENDENTE_SEFAZ) | — | False | 33.9 s | RESPONDIDA · camada EMBEDDING · 33796 ms · tokens 3697/45 | **divergente**: escolheu `listarNotas` com situação PENDENTE_SEFAZ e respondeu que não há nota; não trouxe o sinal |
-| carlos | Tem alguma nota minha com o ICMS sem definir? | 2 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, situacao=PENDENTE_SEFAZ) | — | False | 28.2 s | RESPONDIDA · camada LLM · 28079 ms · tokens 4103/66 | **divergente**: escolheu `listarNotas` com situação PENDENTE_SEFAZ e respondeu que não há nota; não trouxe o sinal |
-| carlos | Tem alguma nota minha com o ICMS sem definir? | 3 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, situacao=PENDENTE_SEFAZ) | — | False | 19.9 s | RESPONDIDA · camada LLM · 19842 ms · tokens 4103/66 | **divergente**: escolheu `listarNotas` com situação PENDENTE_SEFAZ e respondeu que não há nota; não trouxe o sinal |
-| carlos | A nota número 3191 está com o CST do ICMS definido? | 1 | — | 200 | DADOS | `consultarNota`(numero=3191) | — | False | 34.9 s | RESPONDIDA · camada LLM · 34758 ms · tokens 4113/45 | OK: `consultarNota` traz o sinal: item sem o CST do ICMS, combinar com o contador |
-| carlos | A nota número 3191 está com o CST do ICMS definido? | 2 | — | 200 | DADOS | `consultarNota`(numero=3191) | — | False | 24.5 s | RESPONDIDA · camada LLM · 24345 ms · tokens 4113/45 | OK: `consultarNota` traz o sinal: item sem o CST do ICMS, combinar com o contador |
-| carlos | A nota número 3191 está com o CST do ICMS definido? | 3 | — | 200 | DADOS | `consultarNota`(numero=3191) | — | False | 28.1 s | RESPONDIDA · camada LLM · 28008 ms · tokens 4113/45 | OK: `consultarNota` traz o sinal: item sem o CST do ICMS, combinar com o contador |
-| rogerio | Quais notas fiscais eu emiti neste mês? | 1 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, tipo=SAIDA) | — | False | 40.0 s | RESPONDIDA · camada LLM · 39839 ms · tokens 4103/62 | OK com ressalva: 200 como o roteiro pede (cota); a janela foi de 09/08 a 07/11, não o mês, e a lista é de 5 notas |
-| rogerio | Quanto eu vendi de soja neste ano? | 1 | — | 429 LIMITE_USO_ASSISTENTE | — | — | — | None | 0.1 s | — | OK: 429 `LIMITE_USO_ASSISTENTE` com `Retry-After` |
-| rogerio | Quanto eu tenho que pagar este mês? | 1 | — | 200 | DADOS | `vencimentosDoMes`(mes=2026-11) | — | False | 0.1 s | RESPONDIDA · camada ATALHO_FIXO · 65 ms · tokens —/— | OK: atalho de texto exato depois do 429: 200, fora da cota |
+Conferidos em 2026-11-07, contra a API e o banco de uma nova semeadura do mesmo dia (os valores do seed
+são determinísticos no dia), só leitura:
+
+| O que a Ceres disse | Conferido em | Resultado |
+|---|---|---|
+| Fertilizante: R$ 438.992,40, 2 notas, 114.024 KG | `SELECT` nos itens das notas do Carlos com `descricao ilike '%fertilizante%'` (notas 42539, de 09/07, R$ 231.069,30, 60.018 KG, e 42540, de 15/08, R$ 207.923,10, 54.006 KG) | confere |
+| Apuração de outubro (débito, crédito e saldo de IBS e CBS) | `GET /api/apuracao?periodo=2026-10` com a conta do Carlos | confere (é a fonte do achado 1) |
+| Atalho "pagar este mês" do Carlos: 2 guias, R$ 4.442,67; atraso R$ 2.300,67 (20/10) e a vencer R$ 2.142,00 (20/11) | `GET /api/contador/guias?produtorId=<Carlos>` com a conta do Carlos | confere (FUNRURAL 20/11 2.142,00 pendente; 20/10 2.300,67 vencida) |
+| Atalho "próxima guia" do Carlos: R$ 2.142,00 em 20/11 | mesma consulta | confere |
+| Atalho do Rogério: 1 guia, R$ 913,50 em 20/11 | `GET /api/contador/guias?produtorId=<Rogério>` com a conta do Rogério | confere |
+| Nota 3191: série 1, rascunho, emissão 05/06/2026, valor R$ 40.952,64, IBS R$ 16,38, CBS R$ 147,43, item de milho sem CST do ICMS | `GET /api/notas?busca=3191&status=RASCUNHO` e `GET /api/notas/{id}` com a conta do Carlos | confere (CFOP 5101, `cstIcms` vazio) |
+| Lista do Rogério: notas 664 (04/11, R$ 38.125,89), 663 (15/10, R$ 78.525,16), 662 (07/10, R$ 65.885,54), 661 (06/09, R$ 38.783,25) e 660 (14/08, R$ 67.882,92), soma R$ 289.202,76 | `GET /api/notas` com a conta do Rogério e `SELECT` da soma dos itens por nota | confere, mas a janela é a de 09/08 a 07/11, não "este mês" (ressalva) |
+
+Latência do cliente na tabela; auditoria = `desfecho` · `camada_classificacao` · `latencia_ms` · tokens
+de entrada/saída. `desfecho_dados` e `desfecho_legislacao` ficaram vazios em todas as linhas (só o MISTO
+os grava; nenhuma pergunta foi MISTO).
+
+| Conta | Origem da pergunta | Pergunta | Rep. | Tentativa | Status | Rota | Fontes | Citações | Fallback | Latência | Auditoria | Veredito |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| carlos | roteiro | Quanto eu tenho que pagar este mês? | 1 | — | 200 | DADOS | `vencimentosDoMes`(mes=2026-11) | — | não | 0,1 s | RESPONDIDA · camada ATALHO_FIXO · 76 ms · tokens —/— | OK: guias de novembro e atraso, pelas funções de guias, sem modelo; valores conferidos na API |
+| carlos | roteiro | Quando vence a minha próxima guia? | 1 | — | 200 | DADOS | `proximosVencimentos`(dias=30) | — | não | 0,1 s | RESPONDIDA · camada ATALHO_FIXO · 14 ms · tokens —/— | OK: próxima guia pela função de vencimentos, sem modelo; valor conferido na API |
+| carlos | roteiro | O que muda para mim com o IBS e o CBS? | 1 | — | 200 | LEGISLACAO | — | 34: LC 214/2025, art. 1º, inciso I; LC 214/2025, art. 1º, inciso II; EC 132/2023, art. 2º (redação do art. 126, inciso I, alínea a); … | não | 0,2 s | RESPONDIDA · camada ATALHO_FIXO · 115 ms · tokens —/— | OK: texto explicado, 34 citações (33 fixas + Funrural da pessoa física), soja/algodão/milho do Carlos; sem modelo |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 1 | 1ª (falha técnica) | 200 | DADOS | — | — | sim | 120,2 s | MODO_FALLBACK · camada REGRA · 120076 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 2 | 1ª (falha técnica) | 200 | DADOS | — | — | sim | 0,1 s | MODO_FALLBACK · camada REGRA · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 3 | 1ª (falha técnica) | 200 | DADOS | — | — | sim | 0,1 s | MODO_FALLBACK · camada REGRA · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | qual foi minha apuração de IBS e CBS do mês passado? | 1 | 1ª (falha técnica) | 200 | DADOS | — | — | sim | 0,7 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 503 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | qual foi minha apuração de IBS e CBS do mês passado? | 2 | 1ª (falha técnica) | 200 | DADOS | — | — | sim | 0,2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | qual foi minha apuração de IBS e CBS do mês passado? | 3 | 1ª (falha técnica) | 200 | DADOS | — | — | sim | 0,2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 0 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | a soja tem redução de alíquota? | 1 | 1ª (falha técnica) | 200 | LEGISLACAO | — | 3: LC 214/2025, Anexo VII, item 8; LC 227/2026, art. 174 (redação do art. 544, inciso III); LC 214/2025, art. 473, § 1º, inciso I, alínea b | sim | 0,2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 42 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | a soja tem redução de alíquota? | 2 | 1ª (falha técnica) | 200 | LEGISLACAO | — | 3: LC 214/2025, Anexo VII, item 8; LC 227/2026, art. 174 (redação do art. 544, inciso III); LC 214/2025, art. 473, § 1º, inciso I, alínea b | sim | 0,2 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 28 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | a soja tem redução de alíquota? | 3 | 1ª (falha técnica) | 200 | LEGISLACAO | — | 3: LC 214/2025, Anexo VII, item 8; LC 227/2026, art. 174 (redação do art. 544, inciso III); LC 214/2025, art. 473, § 1º, inciso I, alínea b | sim | 0,3 s | MODO_FALLBACK · camada PALAVRAS_CHAVE · 22 ms · tokens —/— | falha técnica: primeira chamada ao modelo estourou o read-timeout de 120 s; o disjuntor abriu e as outras saíram em fallback; não é veredito |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 4 | sonda | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | não | 19,8 s | RESPONDIDA · camada REGRA · 19748 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 1 | 2ª (vale) | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | não | 19,7 s | RESPONDIDA · camada REGRA · 19666 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 2 | 2ª (vale) | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | não | 18,3 s | RESPONDIDA · camada REGRA · 18226 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
+| carlos | roteiro | quanto eu comprei de fertilizante? | 3 | 2ª (vale) | 200 | DADOS | `totalComprasPorInsumo`(descricaoOuNcm=fertilizante, dataInicio=2026-01-01, dataFim=2026-11-07) | — | não | 18,2 s | RESPONDIDA · camada REGRA · 18125 ms · tokens 3693/65 | OK: R$ 438.992,40, 2 notas, 114.024 KG: confere com o SELECT nas notas do Carlos |
+| carlos | roteiro | qual foi minha apuração de IBS e CBS do mês passado? | 1 | 2ª (vale) | 200 | DADOS | — | — | não | 60,9 s | SEM_RESPOSTA · camada LLM · 60821 ms · tokens 4111/53 | **divergente — achado para decisão** (encaminhada para correção em sessão própria, medida em conjunto independente): não chamou nenhuma função (SEM_RESPOSTA); o sistema tem a apuração de 2026-10 |
+| carlos | roteiro | qual foi minha apuração de IBS e CBS do mês passado? | 2 | 2ª (vale) | 200 | DADOS | — | — | não | 33,8 s | SEM_RESPOSTA · camada LLM · 33725 ms · tokens 4111/53 | **divergente — achado para decisão** (encaminhada para correção em sessão própria, medida em conjunto independente): não chamou nenhuma função (SEM_RESPOSTA); o sistema tem a apuração de 2026-10 |
+| carlos | roteiro | qual foi minha apuração de IBS e CBS do mês passado? | 3 | 2ª (vale) | 200 | DADOS | — | — | não | 24,5 s | SEM_RESPOSTA · camada LLM · 24383 ms · tokens 4111/53 | **divergente — achado para decisão** (encaminhada para correção em sessão própria, medida em conjunto independente): não chamou nenhuma função (SEM_RESPOSTA); o sistema tem a apuração de 2026-10 |
+| carlos | roteiro | a soja tem redução de alíquota? | 1 | 2ª (vale) | 200 | LEGISLACAO | — | 2: LC 214/2025, art. 137; LC 214/2025, art. 137, § 1º, inciso II | não | 53,2 s | RESPONDIDA · camada LLM · 53068 ms · tokens 1356/89 | **divergente — achado para decisão** (#284; encaminhada para correção em sessão própria, medida em conjunto independente): cita o art. 137, mas afirma a redução de 60% sem a ressalva do enquadramento com o contador |
+| carlos | roteiro | a soja tem redução de alíquota? | 2 | 2ª (vale) | 200 | LEGISLACAO | — | 2: LC 214/2025, art. 137; LC 214/2025, art. 137, § 1º, inciso II | não | 16,2 s | RESPONDIDA · camada LLM · 16071 ms · tokens 1356/89 | **divergente — achado para decisão** (#284; encaminhada para correção em sessão própria, medida em conjunto independente): cita o art. 137, mas afirma a redução de 60% sem a ressalva do enquadramento com o contador |
+| carlos | roteiro | a soja tem redução de alíquota? | 3 | 2ª (vale) | 200 | LEGISLACAO | — | 2: LC 214/2025, art. 137; LC 214/2025, art. 137, § 1º, inciso II | não | 15,4 s | RESPONDIDA · camada LLM · 15301 ms · tokens 1356/89 | **divergente — achado para decisão** (#284; encaminhada para correção em sessão própria, medida em conjunto independente): cita o art. 137, mas afirma a redução de 60% sem a ressalva do enquadramento com o contador |
+| carlos | fixada pela conferência | Tem alguma nota minha com o ICMS sem definir? | 1 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, situacao=PENDENTE_SEFAZ) | — | não | 33,9 s | RESPONDIDA · camada EMBEDDING · 33796 ms · tokens 3697/45 | **divergente — achado para decisão** (resolvida no roteiro em 2026-11-07, sem mudança na Ceres): escolheu `listarNotas` com situação PENDENTE_SEFAZ e respondeu que não há nota; não trouxe o sinal |
+| carlos | fixada pela conferência | Tem alguma nota minha com o ICMS sem definir? | 2 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, situacao=PENDENTE_SEFAZ) | — | não | 28,2 s | RESPONDIDA · camada LLM · 28079 ms · tokens 4103/66 | **divergente — achado para decisão** (resolvida no roteiro em 2026-11-07, sem mudança na Ceres): escolheu `listarNotas` com situação PENDENTE_SEFAZ e respondeu que não há nota; não trouxe o sinal |
+| carlos | fixada pela conferência | Tem alguma nota minha com o ICMS sem definir? | 3 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, situacao=PENDENTE_SEFAZ) | — | não | 19,9 s | RESPONDIDA · camada LLM · 19842 ms · tokens 4103/66 | **divergente — achado para decisão** (resolvida no roteiro em 2026-11-07, sem mudança na Ceres): escolheu `listarNotas` com situação PENDENTE_SEFAZ e respondeu que não há nota; não trouxe o sinal |
+| carlos | fixada pela conferência | A nota número 3191 está com o CST do ICMS definido? | 1 | — | 200 | DADOS | `consultarNota`(numero=3191) | — | não | 34,9 s | RESPONDIDA · camada LLM · 34758 ms · tokens 4113/45 | OK: `consultarNota` traz o sinal: item sem o CST do ICMS, combinar com o contador (é a pergunta do passo 4 do roteiro) |
+| carlos | fixada pela conferência | A nota número 3191 está com o CST do ICMS definido? | 2 | — | 200 | DADOS | `consultarNota`(numero=3191) | — | não | 24,5 s | RESPONDIDA · camada LLM · 24345 ms · tokens 4113/45 | OK: `consultarNota` traz o sinal: item sem o CST do ICMS, combinar com o contador (é a pergunta do passo 4 do roteiro) |
+| carlos | fixada pela conferência | A nota número 3191 está com o CST do ICMS definido? | 3 | — | 200 | DADOS | `consultarNota`(numero=3191) | — | não | 28,1 s | RESPONDIDA · camada LLM · 28008 ms · tokens 4113/45 | OK: `consultarNota` traz o sinal: item sem o CST do ICMS, combinar com o contador (é a pergunta do passo 4 do roteiro) |
+| rogerio | fixada pela conferência | Quais notas fiscais eu emiti neste mês? | 1 | — | 200 | DADOS | `listarNotas`(dataInicio=2026-08-09, dataFim=2026-11-07, limite=5, tipo=SAIDA) | — | não | 40,0 s | RESPONDIDA · camada LLM · 39839 ms · tokens 4103/62 | OK com ressalva — achado para decisão: 200 como o roteiro pede (cota); a janela foi de 09/08 a 07/11, não o mês, e a lista é de 5 notas |
+| rogerio | fixada pela conferência | Quanto eu vendi de soja neste ano? | 1 | — | 429 LIMITE_USO_ASSISTENTE | — | — | — | — | 0,1 s | — | OK: 429 `LIMITE_USO_ASSISTENTE` com `Retry-After` |
+| rogerio | fixada pela conferência | Quanto eu tenho que pagar este mês? | 1 | — | 200 | DADOS | `vencimentosDoMes`(mes=2026-11) | — | não | 0,1 s | RESPONDIDA · camada ATALHO_FIXO · 65 ms · tokens —/— | OK: atalho de texto exato depois do 429: 200, fora da cota; valor conferido na API |
 
 ## Textos integrais
 

@@ -5,24 +5,29 @@ So biblioteca padrao. Nada de segredo no arquivo: a senha das contas semeadas ve
 no ambiente de quem roda. Cada chamada acrescenta uma linha JSON (``--saida``) com o que o cliente
 viu: status, ``errors[0].code``, rota, fontes, citacoes, ``modoFallback``, latencia e o texto.
 
-Uso (a aplicacao e o Ollama ja no ar; ver o documento da conferencia):
+Uso (a aplicacao e o Ollama ja no ar; ver o documento da conferencia). A saida padrao fica na pasta
+temporaria do sistema (``chamadas-conferencia.jsonl``), fora do repositorio: ela guarda o texto das
+respostas. ``BASE_URL`` so pode ser local, a menos que se passe ``--permitir-base-remota``: o bloco
+do Rogerio gasta a cota da demonstracao.
 
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl aquecer
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl ps carlos
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl carlos-atalhos
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl carlos-livres
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl icms --numero 2041
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl rogerio
-    SEED_SENHA=... python3 conferencia-ceres.py --saida chamadas.jsonl apuracao --periodo 2026-10
+    SEED_SENHA=... python3 conferencia-ceres.py aquecer
+    SEED_SENHA=... python3 conferencia-ceres.py ps carlos
+    SEED_SENHA=... python3 conferencia-ceres.py carlos-atalhos
+    SEED_SENHA=... python3 conferencia-ceres.py carlos-livres
+    SEED_SENHA=... python3 conferencia-ceres.py icms --numero <numero do rascunho de milho>
+    SEED_SENHA=... python3 conferencia-ceres.py rogerio
+    SEED_SENHA=... python3 conferencia-ceres.py apuracao --periodo <mes passado, AAAA-MM>
 """
 
 import argparse
 import json
 import os
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 from datetime import datetime
 
 BASE = os.environ.get("BASE_URL", "http://localhost:8080")
@@ -142,7 +147,9 @@ def ps(saida, bloco):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--saida", default="chamadas.jsonl")
+    p.add_argument("--saida", default=os.path.join(tempfile.gettempdir(), "chamadas-conferencia.jsonl"))
+    p.add_argument("--permitir-base-remota", action="store_true",
+                   help="aceita um BASE_URL que nao seja local (gasta a cota de quem responde)")
     sub = p.add_subparsers(dest="comando", required=True)
     sub.add_parser("aquecer")
     sub.add_parser("ps").add_argument("bloco")
@@ -153,6 +160,9 @@ def main():
     sub.add_parser("rogerio")
     sub.add_parser("apuracao").add_argument("--periodo", required=True)
     a = p.parse_args()
+    host = urllib.parse.urlparse(BASE).hostname
+    if host not in ("localhost", "127.0.0.1", "::1") and not a.permitir_base_remota:
+        sys.exit(f"BASE_URL {BASE} nao e local: use --permitir-base-remota se for de proposito")
     s = a.saida
     if a.comando == "aquecer":
         aquecer(s)
