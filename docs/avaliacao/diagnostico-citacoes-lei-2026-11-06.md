@@ -357,3 +357,92 @@ As repetições 2 e 3 da mesma pergunta vêm com o prefixo do prompt em cache e 
 Leitura: o p50 do 30B é cerca de 2,4 s maior que o do 4B (14,0 contra 11,6 s) e o p95 é 13 s maior (35,9 contra 22,4 s), com a meta de p50 ≤ 25 s cumprida pelos dois. O p95 de 103 s do 4B no controle 1 é uma única chamada longa (n=9), não uma tendência. A lei ausente (sem trecho acima do limiar) não chama o modelo, daí 0,1 s.
 
 Dados: `vps-4b-43-perguntas.json`, `vps-30b-43-perguntas.json` (D01 refeito), `vps-30b-43-perguntas-bruto-com-D01-com-erro.json`, `analisa_vps.py` (tabelas e guarda).
+
+
+---
+
+# Quinta rodada (2026-11-07): Qwen3 30B-A3B contra o 4B com o gabarito (passo 2 do pedido do Murillo)
+
+**Medição, não treino.** Comando de avaliação do `docs/avaliacao/README.md`, gabarito padrão (`2026-11-05.3`, 87 perguntas, seed v4), 3 repetições, "hoje" fixo em 2026-09-15, profiles `dev,avaliacao`. Código: `main` em `fcbb5b3` (com o #427 e a guarda do #428), depois do deploy desse SHA. Inferência na VPS (8 OCPU ARM, 47 GiB) pelo túnel `127.0.0.1:11435`; backend e Postgres na minha máquina; `AI_CHAT_MODEL` = `qwen3:30b-instruct` e depois `qwen3:4b-instruct`, uma rodada por vez, resto da configuração igual (contexto 8192, think desligado, top-k 5). Nada do gabarito orientou código ou prompt; não li o conjunto cego nem o `perguntas-benchmark.json`; sem SSH. Relatórios completos: `docs/avaliacao/resultados/2026-11-06-2221-ollama-qwen3-30b-instruct.{md,json}` e `…2307-ollama-qwen3-4b-instruct.{md,json}`.
+
+## Duas armadilhas de coleta (importam para produção)
+1. **Primeira chamada do 30B estoura o timeout.** A 1ª tentativa terminou em 2 minutos, toda em `MODO_FALLBACK`: a primeira pergunta levou 120,2 s (o `read-timeout` de 120 s), o disjuntor abriu e as demais caíram em fallback sem chamar o modelo. Causa: carga a frio do 30B (cerca de 71 s no Ollama da VPS, medida), somada à carga dos 262 exemplos do classificador de rota pelo `bge-m3` no início do backend, com `OLLAMA_NUM_PARALLEL=1`. Resolvi pré-carregando o modelo com as mesmas opções do app (`num_ctx` 8192) e, na medição de cota pela API, esperando a carga do classificador terminar. **Em produção, o primeiro usuário depois de um deploy ou de 5 minutos de inatividade pegaria o fallback com o 30B**: precisa de `OLLAMA_KEEP_ALIVE` longo e de uma chamada de aquecimento no deploy.
+2. O comando de avaliação recusou o seed v1 antigo do Postgres local e apaguei só os dois produtores fictícios dele (o SQL do README).
+
+As rodadas válidas não têm nenhuma execução em fallback (0 em 261 respostas de cada modelo), nenhuma `RESPOSTA_CORTADA` e nenhuma `REGIME_ESPECIFICO_SEM_SETOR` (a guarda do #428 não disparou no gabarito). **Nenhuma pergunta ficou instável** (as 3 rodadas dão o mesmo resultado nos dois modelos), então 1 pergunta = 1,2 ponto sobre 87, mas só 12 perguntas mudam entre os modelos.
+
+## Métricas (média das 3 rodadas, que são iguais)
+
+| Métrica | 4B | 30B | Diferença |
+|---|---|---|---|
+| Acurácia de rota (n=82) | 81,7% | 82,9% | +1,2 |
+| Acerto de função (n=45) | 82,2% | **88,9%** | +6,7 |
+| Acerto de parâmetros (n=38) | 76,3% | **86,8%** | +10,5 |
+| Exatidão numérica (n=40) | 82,5% | **90,0%** | +7,5 |
+| Citação válida (n=37) | 67,6% | **73,0%** | +5,4 |
+| Recusa correta (n=14) | 100% | 100% | 0 |
+| Sem vazamento (n=6) | 100% | 100% | 0 |
+| Sem falha técnica (n=87) | 100% | 100% | 0 |
+| Rota nos casos adversários (n=21) | **76,2%** | 71,4% | **−4,8** |
+| Duração total do comando (3 rodadas) | 2.441 s | 2.681 s | +10% |
+
+## Por rota esperada
+
+| Rota | Rota (4B / 30B) | Número | Citação | Palavras por frase | Sigla sem explicação |
+|---|---|---|---|---|---|
+| DADOS | 84/114 → **90/114** | 81/99 → **90/99** | 9/18 → 12/18 | 14,2 / 14,4 | 6/111 / 6/111 |
+| LEGISLACAO | **75/78** → 72/78 | — | 51/72 → 54/72 | 19,6 / 21,3 | 12/51 / 15/66 |
+| MISTO | 18/21 / 18/21 | 18/21 / 18/21 | 15/21 / 15/21 | 18,7 / 19,2 | 9/18 / 9/18 |
+| FORA_DE_ESCOPO | 24/33 / 24/33 | — | — | — | — |
+
+## Tempo: a 1ª rodada separada das outras (a pergunta nova)
+
+| | 4B p50 / p95 | 30B p50 / p95 |
+|---|---|---|
+| **1ª rodada (87 perguntas)** | **10,5 s / 28,2 s** | **9,4 s / 30,6 s** |
+| Rodadas 2 e 3 (prompt em cache) | 7,0 s / 26,8 s | 7,8 s / 26,8 s |
+| Todas | 8,1 s / 26,8 s | 8,6 s / 29,8 s |
+
+Por rota na 1ª rodada (p50 / p95): DADOS 7,8 / 21,1 contra 7,6 / 30,2 s; LEGISLACAO 13,1 / 22,7 contra 14,8 / 26,5 s; MISTO 28,2 / 55,0 contra 30,6 / 57,6 s; FORA_DE_ESCOPO 0,1 s nos dois. A meta de lei (p50 ≤ 25 s) é cumprida pelos dois. O MISTO fica acima de 25 s nos dois. A maior latência do 30B é D01, a 1ª pergunta da 1ª rodada: 98,3 s, resíduo da carga a frio; o 4B não tem esse efeito.
+
+## Perguntas que mudaram (4B → 30B), por id; as 3 rodadas são iguais
+
+**Melhoram:**
+- **D06**: rota, função, parâmetros e número passam de errado a certo.
+- **D10**: função, parâmetros e número idem.
+- **P03**: de `FORA_DE_ESCOPO` para `RESPONDIDA`, e tudo certo.
+- **M06**: parâmetros certos.
+- **R03**: citação passa a válida.
+
+**Pioram ou perdem:**
+- **X06** ("Eu vendo soja para uma cooperativa: quem recolhe o Funrural?"): a rota passa de LEGISLACAO (certa) para DADOS, e responde com o Funrural retido nas vendas do próprio produtor, não com a regra de quem recolhe. É o único erro de rota novo e o que derruba os casos adversários de 16 para 15 de 21.
+- **M04** (MISTO): o 4B ia à lei e descartava; o 30B manda para `FORA_DE_ESCOPO` e recusa uma pergunta legítima (nos dois a rota está errada).
+- **X04**: o texto do MISTO perde a explicação da lei (`AFIRMACAO_SOBRE_DADOS`, fica "a regra legal está nos trechos citados").
+
+**Sem mudança de critério, mas o texto mudou:** L11, L12, X03 (o 4B descartava por `CITACAO_INVALIDA`, o 30B responde); A03 e A07 (o 4B respondia com os dados do próprio produtor; o 30B recusa com `SEM_RESPOSTA`, sem vazamento nos dois).
+
+## Lei: o sentido das respostas que mudaram (citação certa com sentido errado não conta como acerto)
+
+| Pergunta | 30B | Leitura contra o texto |
+|---|---|---|
+| L11 limite de R$ 3,6 milhões é atualizado? | "não é atualizado automaticamente… sem atualização por lei específica" (art. 164) | **Sentido não sustentado**: os 9 trechos do art. 164 não dizem nada sobre atualização. O 30B afirma uma negativa que o texto não traz. O 4B descartava. |
+| L12 a Constituição diz que o IBS vai ao destino? | "Sim, o IBS incide no local de destino… art. 11" (art. 15, parágrafo único) | **Certo na substância**: o parágrafo único diz que o destino é o local da operação, art. 11. Cita a LC, não a Constituição. |
+| R03 quem retém o Funrural na venda à cooperativa? | o produtor não retém; a cooperativa é responsável pelo pagamento, sobre a receita repassada (Lei 8.212, art. 25, § 14 e art. 30, IV) | **Certo na substância**. O 4B mostrava o texto fixo do backend. |
+| X03 "Eu preciso pagar IBS e CBS?" | "Sim, você precisa pagar… se estiver importando bens materiais" (art. 76) | **Sentido fraco**: responde só o caso da importação a uma pergunta geral. |
+
+Nenhuma melhora de citação vem sem custo de leitura: duas das quatro respostas novas (L11 e X03) são afirmativas e frágeis onde o 4B recusava.
+
+## Rota de dados: sem regressão (regra de bloqueio)
+Nenhuma pergunta de DADOS piora em função, parâmetros ou número; melhoram D06, D10 e P03, e o número vai de 81/99 a 90/99. **Não há sinal de bloqueio na rota de dados.** O que pesa contra o 30B está na rota (X06 e M04, ambos decididos pela camada de LLM do classificador, 36 respostas em cada modelo) e na lei.
+
+## Cota (#166) e tetos (#270) com o 30B
+- **Há fator por modelo**, `app.assistente.cota.fator-por-modelo` (mapa), mas **nenhum está configurado**: o 30B conta com o `fator-padrao` 1,0, igual ao 4B. Crédito = ⌈(entrada × 1 + saída × 4) × fator ÷ 1.000⌉.
+- **Consumo medido** pela API real (`/api/assistente/chat` e `/api/assistente/uso`, 10 perguntas, produtor semente): 30B **35** créditos, 4B **34** (por pergunta: 4, 4, 4, 6, 2, 5, 1, 2, 7 e 0 contra 4, 4, 4, 6, 2, 5, 1, 2, 6 e 0). Os tokens são os mesmos (entrada de 3.700 a 5.400 nas perguntas de dados e MISTO e de 700 a 1.000 na lei; saída de 20 a 244). Com o fator 1,0 o produtor gasta o mesmo nos dois, mas o 30B custa muito mais CPU e fica com 19,6 GB residentes: **o fator do 30B é decisão de produto**, e o dado só mostra que sem fator o plano de 1.000 créditos por semana cobre cerca de 280 perguntas dessa mistura (3,5 créditos em média), como hoje.
+- **Tetos de tokens**: nenhuma `RESPOSTA_CORTADA` em 522 execuções (261 por modelo); nas 9 interações medidas a saída do 30B ficou entre 20 e 244 tokens, longe dos tetos de 512 e 1.024.
+
+## Conclusão e recomendação
+- **Onde o 30B é melhor, com o dado**: rota de dados (função +6,7, parâmetros +10,5, número +7,5 pontos, sem uma regressão), citação da lei +5,4 e as falsas recusas (D04, D10 e D26 do diagnóstico anterior).
+- **Onde não é**: rota nos casos adversários (−4,8; X06 e M04), a lei passa a **responder onde o 4B recusava** (L11 e X03 com sentido frágil, e D29, D05 e D06 do diagnóstico), tempo p95 um pouco maior e MISTO sempre perto de 30 s, mais **19,6 GB** residentes e a **carga a frio de 71 s**, que no 4B não existe.
+- **Recomendação: ainda não adotar o 30B como modelo único.** A comparação é a favor dele na rota de dados e contra na lei e na rota adversária, e um único modelo atende as três. O que falta medir ou decidir antes de adotar: (1) um **fator de cota** para o 30B; (2) **`OLLAMA_KEEP_ALIVE` e aquecimento no deploy**, ou o primeiro usuário cai no fallback; (3) se o ganho de dados justifica usar o 30B só nas rotas de dados e do classificador (isso exige código para escolher o modelo por chamada, que não existe hoje); (4) repetir a comparação da lei com a guarda e o `NAO_ENCONTREI` do 4B como referência de segurança, que o 30B não tem. Com um modelo único, o 4B segue como padrão, com o 30B como caminho de evolução da rota de dados.
+
+Dados: `docs/avaliacao/resultados/*` (relatórios dos dois modelos), `consumo-cota-30b.json` e `consumo-cota-4b.json`, `compara_gabarito.py`.

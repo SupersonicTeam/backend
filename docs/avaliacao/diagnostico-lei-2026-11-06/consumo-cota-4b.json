@@ -1,0 +1,90 @@
+{
+ "antes": {
+  "plano": "padrao",
+  "habilitada": true,
+  "creditosSemana": 1000,
+  "consumidos": 69,
+  "restantes": 931,
+  "renovaEm": "2026-11-09T00:00:00-03:00"
+ },
+ "depois": {
+  "plano": "padrao",
+  "habilitada": true,
+  "creditosSemana": 1000,
+  "consumidos": 103,
+  "restantes": 897,
+  "renovaEm": "2026-11-09T00:00:00-03:00"
+ },
+ "perguntas": [
+  {
+   "pergunta": "Quanto vendi em agosto de 2026?",
+   "rota": "DADOS",
+   "segundos": 11.2,
+   "creditos": 4,
+   "fallback": false
+  },
+  {
+   "pergunta": "Tenho alguma guia em atraso?",
+   "rota": "DADOS",
+   "segundos": 4.3,
+   "creditos": 4,
+   "fallback": false
+  },
+  {
+   "pergunta": "Quanto comprei de fertilizante no primeiro semestre de 2026?",
+   "rota": "DADOS",
+   "segundos": 13.2,
+   "creditos": 4,
+   "fallback": false
+  },
+  {
+   "pergunta": "Qual foi o debito de CBS das minhas vendas em junho de 2026?",
+   "rota": "MISTO",
+   "segundos": 21.1,
+   "creditos": 6,
+   "fallback": false
+  },
+  {
+   "pergunta": "O que é o Imposto Seletivo?",
+   "rota": "LEGISLACAO",
+   "segundos": 16.4,
+   "creditos": 2,
+   "fallback": false
+  },
+  {
+   "pergunta": "Posso pedir de volta o saldo de crédito que sobrou no fim do mês?",
+   "rota": "DADOS",
+   "segundos": 13.1,
+   "creditos": 5,
+   "fallback": false
+  },
+  {
+   "pergunta": "Quem fixa a alíquota de referência do IBS e da CBS?",
+   "rota": "LEGISLACAO",
+   "segundos": 9.4,
+   "creditos": 1,
+   "fallback": false
+  },
+  {
+   "pergunta": "Por quanto tempo posso usar o crédito do IBS e da CBS?",
+   "rota": "LEGISLACAO",
+   "segundos": 14.4,
+   "creditos": 2,
+   "fallback": false
+  },
+  {
+   "pergunta": "Quanto comprei de fertilizante e ele tem redução de alíquota?",
+   "rota": "MISTO",
+   "segundos": 33.4,
+   "creditos": 6,
+   "fallback": false
+  },
+  {
+   "pergunta": "Escreva uma poesia sobre o mar.",
+   "rota": "FORA_DE_ESCOPO",
+   "segundos": 0.2,
+   "creditos": 0,
+   "fallback": false
+  }
+ ]
+}
