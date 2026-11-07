@@ -273,7 +273,7 @@ Autorizado pelo Murillo ("Autorizo na VPS"); o orquestrador baixou `qwen3:30b-in
 
 ## Tabela por modelo e por conjunto (execuções)
 
-| Conjunto | Modelo | Certa | Outro artigo | Descartada | Tempo p50 | p95 |
+| Conjunto | Modelo | Certa | Outro artigo | Descartada | Tempo p50 (todas as repetições) | p95 |
 |---|---|---|---|---|---|---|
 | Treino D01–D18 + D21 (57) | 4B | 33 | 15 | 9 | 3,8 s | 18,3 s |
 | | **30B** | **39** | **18** | **0** | 4,4 s | 19,4 s |
@@ -286,7 +286,7 @@ Autorizado pelo Murillo ("Autorizo na VPS"); o orquestrador baixou `qwen3:30b-in
 | **Todas as chamadas (129)** | 4B | 78 | 26 | 25 | **3,7 s** | **20,3 s** |
 | | 30B | 90 | 30 | 9 | **4,1 s** | **19,6 s** |
 
-- **Tempo:** os dois ficam bem abaixo da meta da #270 para lei (p50 ≤ 25 s). O p50 do 30B (4,1 s) é igual ao do 4B nesta VPS. O tempo inclui a busca (embedding) e a rota inteira.
+- **Tempo: ver a correção abaixo.** Os p50 de 4 s da tabela misturam as 3 repetições seguidas da mesma pergunta, com o prompt em cache; não valem como tempo de pergunta nova.
 - **O 30B não recusa:** zero `NAO_ENCONTREI` nos conjuntos com artigo (o 4B tinha 25 recusas). Na lei ausente a recusa continua, e vem do limiar de similaridade (antes do modelo): D19 e D22 sem trecho, D20 descartada pelos validadores, nos dois modelos. D21 (Senar) sai certa nos dois, graças ao #427.
 
 ## Regra do orquestrador (certa sobe e "outro artigo" não sobe, nos três conjuntos com artigo)
@@ -336,10 +336,24 @@ Limites conferidos no texto da lei: o título "Dos regimes específicos do IBS e
 A guarda não barra nenhuma resposta certa nos dois modelos, e pega só os erros que citam regime de combustível ou de imóveis para pergunta geral (31% das respostas de outro artigo no 4B, 20% no 30B). Fica de fora tudo que cita um artigo geral errado (D03, D05, D06, D14). Com o 30B, a guarda também não resolve a troca de recusa por erro de D29, D05 e D06.
 
 ## Conclusão desta rodada
-1. **Tempo não é problema**: 30B e 4B têm p50 de 4 s e p95 de 20 s nesta VPS, abaixo da meta da #270.
+1. **Tempo (pela 1ª repetição, ver a correção abaixo)**: p50 de 11,6 s no 4B e 14,0 s no 30B, os dois abaixo da meta da #270 para lei (p50 ≤ 25 s); o p95 do 30B (35,9 s) fica acima dela.
 2. **Qualidade: misto.** O 30B acerta o que o 4B recusava por medo (D04, D10, D26) e perde a proteção das recusas (D29, D05, D06). Em 129 execuções: +12 certas, +4 de outro artigo, −16 recusas. Pela regra combinada, **não é candidato**.
 3. **O sentido não melhora** nas perguntas em que o artigo certo não chega; só melhora onde o artigo chegou e o 4B recusava.
 4. **A guarda do regime específico** é segura nos dados (0 certa barrada) e cobre D15 e D16 em qualquer um dos dois modelos; com o 30B ela é ainda mais útil, porque o 30B deixa de recusar.
 5. **Fora do teste:** a rota de dados e o classificador de rota (só a rota de lei foi medida); um único modelo por vez; as mesmas 43 perguntas que orientaram as outras decisões (D23 a D43 só como controle).
+
+## Correção do tempo (apontada pelo orquestrador): só a 1ª repetição de cada pergunta
+
+As repetições 2 e 3 da mesma pergunta vêm com o prefixo do prompt em cache e a busca repetida, e por isso são bem mais rápidas (p50 de 2,3 s no 4B e 3,3 s no 30B). A 1ª repetição é o tempo de uma pergunta nova. Conferido nos dados brutos (`ms` de cada rodada, fora a falha de coleta):
+
+| Conjunto | 4B p50 / p95 (s) | 30B p50 / p95 (s) |
+|---|---|---|
+| treino (D01-D18, D21) | 12.8 / 22.4 (n=19) | 14.1 / 35.9 (n=19) |
+| controle 1 (D23-D31) | 11.4 / 103.2 (n=9) | 15.2 / 46.4 (n=9) |
+| controle 2 (D32-D43) | 11.6 / 14.3 (n=12) | 14.1 / 18.2 (n=12) |
+| lei ausente (D19, D20, D22) | 0.1 / 3.5 (n=3) | 0.2 / 4.1 (n=3) |
+| **Todas as perguntas** | **11.6 / 22.4 (n=43)** | **14.0 / 35.9 (n=43)** |
+
+Leitura: o p50 do 30B é cerca de 2,4 s maior que o do 4B (14,0 contra 11,6 s) e o p95 é 13 s maior (35,9 contra 22,4 s), com a meta de p50 ≤ 25 s cumprida pelos dois. O p95 de 103 s do 4B no controle 1 é uma única chamada longa (n=9), não uma tendência. A lei ausente (sem trecho acima do limiar) não chama o modelo, daí 0,1 s.
 
 Dados: `vps-4b-43-perguntas.json`, `vps-30b-43-perguntas.json` (D01 refeito), `vps-30b-43-perguntas-bruto-com-D01-com-erro.json`, `analisa_vps.py` (tabelas e guarda).
