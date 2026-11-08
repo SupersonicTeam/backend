@@ -1,0 +1,511 @@
+{
+  "versao_conjunto": "2026-11-07.3",
+  "sha256_conjunto": "b4af268c1cc599ffda3e49b0221bbc931feab9df0c93752292db15f7f2550ddf",
+  "datas_referencia": [
+    "2026-11-08"
+  ],
+  "por_grupo": {
+    "periodo": {
+      "certas": 9,
+      "total": 12,
+      "sem_medicao": 0
+    },
+    "produto": {
+      "certas": 4,
+      "total": 10,
+      "sem_medicao": 0
+    },
+    "controle-dados": {
+      "certas": 10,
+      "total": 10,
+      "sem_medicao": 0
+    },
+    "controle-lei": {
+      "certas": 8,
+      "total": 8,
+      "sem_medicao": 0
+    }
+  },
+  "por_pergunta": {
+    "p443-01": {
+      "grupo": "periodo",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-02": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-03": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-04": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "errada"
+      ],
+      "resultado": "certa",
+      "certas": 2,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-05": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-06": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-07": {
+      "grupo": "periodo",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-08": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-09": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-10": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-11": {
+      "grupo": "periodo",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-12": {
+      "grupo": "periodo",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-13": {
+      "grupo": "produto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-14": {
+      "grupo": "produto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-15": {
+      "grupo": "produto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-16": {
+      "grupo": "produto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-17": {
+      "grupo": "produto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-18": {
+      "grupo": "produto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-19": {
+      "grupo": "produto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-20": {
+      "grupo": "produto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-21": {
+      "grupo": "produto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-22": {
+      "grupo": "produto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-23": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-24": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-25": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-26": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-27": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-28": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-29": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-30": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-31": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-32": {
+      "grupo": "controle-dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-33": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-34": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-35": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-36": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-37": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-38": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-39": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "p443-40": {
+      "grupo": "controle-lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    }
+  }
+}
