@@ -1,0 +1,27 @@
+{
+  "issue": "443",
+  "grupo": "produto",
+  "sem_ids": [],
+  "certas_base": 4,
+  "certas_correcao": 9,
+  "controles_que_pioraram": [
+    "p443-35"
+  ],
+  "problemas": [],
+  "decisao": "NAO_ENTRA"
+}
+{
+  "issue": "443",
+  "grupo": "produto",
+  "sem_ids": [
+    "p443-01",
+    "p443-33"
+  ],
+  "certas_base": 4,
+  "certas_correcao": 9,
+  "controles_que_pioraram": [
+    "p443-35"
+  ],
+  "problemas": [],
+  "decisao": "NAO_ENTRA"
+}
