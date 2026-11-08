@@ -744,6 +744,34 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("#443: sem a funcao da tabela, o backend acha o produto na pergunta, no catalogo real")
+  void tratamentoAchadoPeloBackend() throws Exception {
+    // O modelo nao escolhe funcao nenhuma: antes, "nao consegui identificar o dado".
+    modelo.responderCom(prompt -> ChatModelSimulado.texto("Nao sei."));
+
+    perguntar(produtorA, "Quem colhe soja em grao paga menos IBS e CBS?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.allOf(
+            org.hamcrest.Matchers.containsString("(NCM 1201.90.00): redução de 60% do IBS e da CBS"),
+            org.hamcrest.Matchers.containsString("Confira com seu contador"))))
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("consultarTratamentoProduto"))
+        .andExpect(jsonPath("$.fontesDados[0].parametros.produtoOuNcm").value("soja"))
+        .andExpect(jsonPath("$.fontesDados[0].origem").value("TABELA_OFICIAL"));
+    // Uma chamada ao modelo so: a da rota. A tabela e do backend.
+    assertThat(modelo.promptsRecebidos()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("#443: palavras de tempo e de pagamento nao viram produto")
+  void tempoNaoViraProduto() throws Exception {
+    modelo.responderCom(prompt -> ChatModelSimulado.texto("Nao sei."));
+
+    perguntar(produtorA, "Quanto de IBS eu paguei a menos no mes passado, no ultimo trimestre?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fontesDados").isEmpty());
+  }
+
+  @Test
   @DisplayName("#283: 'e o adubo?' acha o item do Anexo IX; produto desconhecido vira a frase fixa")
   void tratamentoAduboEDesconhecido() throws Exception {
     modelo.responderCom(prompt -> ultimaMensagem(prompt) instanceof ToolResponseMessage

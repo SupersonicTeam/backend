@@ -10,6 +10,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -63,7 +65,21 @@ public class TratamentoNaPergunta {
       "estao", "produto", "produtos", "mercadoria", "mercadorias", "item", "itens", "servico",
       "servicos", "empresa", "empresas", "fazenda", "sitio", "propriedade", "produtor",
       "produtores", "rural", "agricola", "agro", "nota", "notas", "fiscal", "valor", "preco",
-      "quilo", "saca", "sacas", "litro", "caixa", "tonelada", "tipo", "gente", "vez"));
+      "quilo", "saca", "sacas", "litro", "caixa", "tonelada", "tipo", "gente", "vez",
+      "paguei", "pagou", "pagaram", "devo", "deve", "devia", "recebi", "recebo", "recebe",
+      "ganho", "ganhei", "gastei", "gasto", "tive", "teve", "tenha", "fiz", "fez", "posso",
+      "pode", "podem", "precisa", "preciso", "sei", "acho", "dizer", "diz", "falar", "conta",
+      "pagamento", "guia", "guias", "apuracao", "credito", "creditos", "debito", "saldo",
+      // tempo
+      "mes", "meses", "ano", "anos", "dia", "dias", "semana", "semanas", "passado", "passada",
+      "anterior", "proximo", "proxima", "atual", "ultimo", "ultima", "ultimos", "ultimas",
+      "trimestre", "semestre", "safra", "periodo", "data",
+      // categorias da lei, que pedem a regra geral, não um produto
+      "alimento", "alimentos", "insumo", "insumos", "agropecuario", "agropecuaria",
+      "agropecuarios", "agropecuarias", "bem", "bens", "consumo", "setor", "atividade",
+      "operacao", "operacoes", "exportacao", "importacao", "anexo", "artigo"));
+
+  private static final Logger log = LoggerFactory.getLogger(TratamentoNaPergunta.class);
 
   private final TratamentoProdutoPorta tabela;
 
@@ -82,7 +98,17 @@ public class TratamentoNaPergunta {
   public boolean aplicar(String pergunta, ContextoAssistente contexto) {
     for (String termo : candidatos(pergunta)) {
       contexto.verificarAtiva();
-      TratamentoConsultado consulta = tabela.consultar(termo, contexto.hoje());
+      TratamentoConsultado consulta;
+      try {
+        consulta = tabela.consultar(termo, contexto.hoje());
+      } catch (RuntimeException e) {
+        // Melhor esforco: a tabela fora (tempo da transacao, banco) nao derruba a resposta da
+        // rota, que ja foi validada. A interrupcao da pergunta segue pelo verificarAtiva.
+        contexto.verificarAtiva();
+        log.warn("Ceres: tabela oficial indisponivel no tratamento da pergunta: {}",
+            e.getClass().getSimpleName());
+        return false;
+      }
       if (!consulta.produtos().isEmpty()) {
         contexto.registrarConsultaDeTabela(RotaDados.FUNCAO_TRATAMENTO,
             Map.of("produtoOuNcm", termo), false);

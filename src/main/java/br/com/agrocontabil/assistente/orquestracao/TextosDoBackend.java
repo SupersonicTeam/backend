@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  *       fonte, resposta vazia, negativa trocada); sinais como função não permitida, teto de rodadas
  *       e fallback ficam na auditoria.</li>
  *   <li>Rota de lei (#443): o texto só existe quando a pergunta era o tratamento de um produto e
- *       a tabela o achou ({@code RotaDados#consultarTratamento}); a tabela responde no lugar do
+ *       a tabela o achou ({@link TratamentoNaPergunta}); a tabela responde no lugar do
  *       texto e das citações do RAG.</li>
  *   <li>Com outras consultas (ou no MISTO): o texto do backend vem depois do que a rota
  *       respondeu, sem repetir um texto que já está lá (a frase fixa da consulta vazia é a mesma da
