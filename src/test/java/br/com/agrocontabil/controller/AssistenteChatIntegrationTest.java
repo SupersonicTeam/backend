@@ -844,7 +844,7 @@ class AssistenteChatIntegrationTest {
 
     perguntar(produtorA, "Tem algo para conferir na nota 116?")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.resposta").value("A nota 116 (série 1), de venda emitida em "
+        .andExpect(jsonPath("$.resposta").value("A nota 116 (série 1), de venda com data de "
             + br(LocalDate.from(em(2026, 10, 20).atZoneSameInstant(ZONE))) + ", está em rascunho."
             + " Rascunho: a nota ainda não foi emitida. Valor: R$ 800,00; IBS (imposto sobre bens e"
             + " serviços): R$ 2,00; CBS (contribuição sobre bens e serviços): R$ 18,00."
