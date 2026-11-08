@@ -1,0 +1,23 @@
+{
+  "issue": "442",
+  "grupo": "periodo",
+  "sem_ids": [],
+  "certas_base": 9,
+  "certas_correcao": 11,
+  "controles_que_pioraram": [],
+  "problemas": [],
+  "decisao": "ENTRA"
+}
+{
+  "issue": "442",
+  "grupo": "periodo",
+  "sem_ids": [
+    "p443-01",
+    "p443-33"
+  ],
+  "certas_base": 9,
+  "certas_correcao": 10,
+  "controles_que_pioraram": [],
+  "problemas": [],
+  "decisao": "ENTRA"
+}
