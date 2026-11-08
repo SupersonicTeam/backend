@@ -291,6 +291,14 @@ class ComparacaoTest(unittest.TestCase):
                 "por_grupo": {"periodo": {"certas": periodo_certas, "total": 12}},
                 "por_pergunta": por_pergunta}
 
+    def test_base_sem_medicao_nao_conta_como_subida(self):
+        base = self.resumo(3, ["certa"])
+        base["por_pergunta"]["p-05"]["resultado"] = "sem_medicao"
+        correcao = self.resumo(6, ["certa"])
+        decisao = pontuar.comparar(base, correcao, "442")
+        self.assertEqual(decisao["decisao"], "NAO_ENTRA")
+        self.assertIn("perguntas sem execução válida na base: p-05", decisao["problemas"])
+
     def test_sem_ids_tira_as_perguntas_das_duas_rodadas(self):
         base = self.resumo(3, ["certa", "certa"])
         correcao = self.resumo(4, ["certa", "errada"])

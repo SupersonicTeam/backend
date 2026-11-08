@@ -479,11 +479,14 @@ def comparar(base: dict, candidato: dict, issue: str, sem_ids: frozenset = froze
         ident for ident, item in da_base.items()
         if item["grupo"] in GRUPOS_CONTROLE and item["resultado"] == "certa"
         and da_correcao.get(ident, {}).get("resultado") != "certa")
-    sem_medicao = sorted(
-        ident for ident, item in da_correcao.items()
-        if item["resultado"] == "sem_medicao")
-    if sem_medicao:
-        problemas.append("perguntas sem execução válida na correção: " + ", ".join(sem_medicao))
+    # Sem execução válida em qualquer das duas rodadas: a base sem medição contaria como errada e
+    # inflaria a subida da correção; a correção sem medição esconderia uma piora.
+    for nome, perguntas in (("base", da_base), ("correção", da_correcao)):
+        sem_medicao = sorted(
+            ident for ident, item in perguntas.items() if item["resultado"] == "sem_medicao")
+        if sem_medicao:
+            problemas.append(f"perguntas sem execução válida na {nome}: "
+                             + ", ".join(sem_medicao))
 
     entra = not problemas and certas_cand > certas_base and not pioras
     return {

@@ -104,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
         escolhidos = set(args.ids.split(","))
         perguntas = [p for p in perguntas if p["id"] in escolhidos]
 
+    if args.saida.exists() and args.saida.stat().st_size > 0:
+        # Duas rodadas no mesmo arquivo somariam os votos das duas.
+        raise SystemExit(f"{args.saida} já tem execuções: use outro arquivo para a rodada")
     token = entrar(args.url, args.email, senha)
     token_em = time.monotonic()
     aquecer(args.ollama, args.modelo, args.embedding)

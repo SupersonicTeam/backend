@@ -100,3 +100,12 @@ python3 pontuar.py comparar --base base.json --correcao correcao.json --issue 44
 python3 pontuar.py comparar --base base.json --correcao correcao.json --issue 442 \
     --sem-ids p443-01,p443-33
 ```
+
+## Mudanças nos scripts depois da declaração (2026-11-08, antes da linha de base)
+
+Do code review do PR 1, nenhuma muda a classificação de uma resposta:
+
+- `comparar`: pergunta sem execução válida na **base** também é problema de comparação (antes só
+  na correção). Contada como errada, ela inflaria a subida da correção.
+- `executar.py`: recusa gravar num JSONL que já tem execuções; duas rodadas no mesmo arquivo
+  somariam os votos das duas.
