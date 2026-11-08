@@ -123,7 +123,7 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
   - Armadilha: ao usar worktree, Read/Edit/Write e `mvnw` devem apontar para o path do worktree, não a raiz.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
 - **PRs pequenos e deployáveis:** uma responsabilidade lógica por PR.
-- **Merge (decisão do Murillo, 2026-11-07):** todo PR passa pela skill `code-review` em `xhigh` antes do merge, com os achados reais corrigidos e os testes rodados. Só depois disso a sessão mergeia com `gh pr merge <n> --squash` (o `.claude/settings.json` libera esse comando no modo automático). PR que muda o que a banca mede (código da Ceres, régua do avaliador, executor do benchmark) ainda depende do OK do Murillo.
+- **Merge (decisão do Murillo, 2026-11-07):** todo PR passa pela skill `code-review` em `xhigh` antes do merge, rodada na conversa da própria sessão (num subagente ela volta sem achados), com os achados reais corrigidos e os testes rodados. Só depois disso a sessão mergeia com `gh pr merge <n> --squash`, sem `--admin` nem `--repo` (o `.claude/settings.json` libera esse comando no modo automático, pela ferramenta Bash ou PowerShell). Travas que continuam: nenhum merge durante janela de medição na VPS (S5); de 26/11 a 03/12, só correção urgente com OK do Murillo; PR de glossário só com revisão da equipe ou do orientador; PR que muda o que a banca mede (código da Ceres, régua do avaliador, executor do benchmark) depende do OK do Murillo.
 - **Datas:** `YYYY-MM-DD`, timezone `America/Sao_Paulo`.
 
 ## Estado da nota fiscal (referência rápida)
