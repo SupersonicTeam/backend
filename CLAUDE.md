@@ -98,6 +98,18 @@ harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres
 `docs/avaliacao/linha-de-base-2026-10-14.md`. O gabarito é teste, nunca treino:
 `docs/avaliacao/treino/` não pode conter pergunta dele (o build quebra).
 
+**Diagnóstico das citações da rota de lei (#426, #269):** `docs/avaliacao/diagnostico-citacoes-lei-2026-11-06.md`
+(cinco rodadas; dados brutos em `docs/avaliacao/diagnostico-lei-2026-11-06/`, e os da quinta, a comparação
+30B × 4B, também em `docs/avaliacao/resultados/`) separa as falhas de citação por causa (busca, escolha,
+sentido, lei ausente e validador), mede o recall por `k` e compara o `qwen3:30b-instruct` com o
+`qwen3:4b-instruct` na VPS. As ferramentas manuais
+`DiagnosticoRecallLeiManual` e `DiagnosticoCitacoesLeiManual` (`src/test/.../assistente/`) **não
+rodam no `./mvnw test`** (`-Dtest=<classe> -Ddiagnostico.saida=<arquivo>` no profile `dev`, com o banco da base de lei e o Ollama locais; a de recall mede só a busca e não usa o modelo de chat). **Decisão do Murillo, 2026-11-07: o
+`qwen3:4b-instruct` segue como modelo padrão até a banca.** O trabalho seguiu nas issues
+#433 (régua de citação do MISTO), #434 (executor do benchmark) e #435 (conferência local das
+perguntas do roteiro da banca) e, na busca, na #436 (rebaixar capítulos de caso especial, medido
+em conjunto novo, por outra sessão que nunca leu o gabarito).
+
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
 `4b-instruct`), 3 repetições, com o gabarito da `main` nas duas (cópia adaptada para a Ceres 1),
@@ -233,7 +245,22 @@ br.com.agrocontabil
 │                  # GlossarioProdutor + resources/assistente/glossario-produtor.yml (#267: siglas e termos do
 │                  #   produtor com definição curta, sem número nem artigo, revisada por humano; inline na
 │                  #   composição de dados, seção "O QUE QUER DIZER" no atalho de legislação, medição de
-│                  #   clareza e TextosFixosSiglasTest; sigla nova em texto fixo quebra o teste até entrar no yml);
+│                  #   clareza e TextosFixosSiglasTest, que só confere as siglas que já estão no yml: sigla nova
+│                  #   em texto fixo, cadastre no yml; o bean glossarioProdutor() em config/AssistenteConfig força
+│                  #   a leitura do yml na subida (#416: arquivo ausente ou termo inválido derruba a aplicação na
+│                  #   hora); LC e EC só valem com número e ano (\bLC\s*\d+/\d{4}: "LC" sozinho pode ser nome de
+│                  #   cliente e "EC 250" é a formulação de um defensivo); semExplicacao aceita a própria definição
+│                  #   do glossário no texto, siglasSemNome não (só a forma por extenso ou a expressão aceita: é a
+│                  #   régua da clareza, ClarezaTexto));
+│                  # LinhaGlossario (#424: linha "O que isso quer dizer" ao fim da resposta de lei aceita, montada
+│                  #   pelo backend depois de todas as conferências, com a definição de cada termo do glossário que o
+│                  #   texto usa sem explicar; resposta descartada não leva);
+│                  # PercentualPorExtenso (#427: o ValidadorNumeros lê "zero vírgula dois por cento" como 0,2%; a
+│                  #   Lei 9.528, art. 6º, escreve o percentual do SENAR só por extenso);
+│                  # GuardaRegimeEspecifico (#428: a rota de lei descarta a resposta em que todas as citações são
+│                  #   da LC 214/2025, arts. 172 a 307, os regimes específicos, e a pergunta não cita o setor do
+│                  #   capítulo; desfecho REGIME_ESPECIFICO_SEM_SETOR, que a régua da avaliação conta como texto
+│                  #   descartado);
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo e fora da cota; dados → RotaDados.responderAtalho, lei →
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
@@ -407,8 +434,9 @@ br.com.agrocontabil
 - **Texto de catálogo ou seed que chega à tela leva acento, e competência sai em `MM/AAAA` (#408).** A guarda é `support/TextoSemAcento`. Modelo de obrigação muda por changeSet de `update` com id, `modelo = true` e texto antigo, para não tocar na versão do escritório. Nomes de clientes, endereços e produtos do `CenarioDemonstracao` seguem sem acento: os scripts de reset e os XMLs assinados dependem deles.
 - **Estilo:** Google Java Style Guide (checkstyle `google_checks.xml` no `verify`, severidade *warning* — não bloqueante).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
-- **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix:`, `chore/` + worktree isolado.
+- **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix/`, `chore/` + worktree isolado.
 - **PRs pequenos e deployáveis** — uma responsabilidade lógica por PR (programação incremental).
+- **Merge só depois do code review `xhigh` e da CI verde (decisão do Murillo, 2026-11-07):** a sessão mergeia o próprio PR com `gh pr merge`, liberado no modo automático pelo `.claude/settings.json`. A regra completa (como rodar o comando, sessões abertas antes da regra e travas da S5, do congelamento, do glossário e do que a banca mede) está na seção "Git / PRs" da skill `project-conventions`.
 - **Datas:** `YYYY-MM-DD`. Timezone `America/Sao_Paulo`.
 
 ## Testes
@@ -417,7 +445,8 @@ br.com.agrocontabil
 - Toda feature nova: testes unitários de service (Mockito) + teste de integração do fluxo crítico. Piso de cobertura no `jacoco:check`: LINE ≥ 93%, sem `config/**`, `dto/**` e a classe main (medido 94,7% em 2026-11-06, #151; meta da issue, 80%). A CI roda `./mvnw verify`, então cair abaixo do piso quebra o build. Suba o piso quando a cobertura subir; não o reduza para acomodar PR.
 - **Arquitetura travada por ArchUnit (issue #141):** `ArquiteturaCamadasTest` (Controller → Service → Repository no projeto inteiro, `FreezingArchRule` com linha de base em `src/test/resources/archunit_store` — hoje vazia) e `ArquiteturaAssistenteTest` (fronteira do módulo da Ceres). Violação nova quebra o build.
 - Mockito com strict stubs: não criar stub de objeto usado só após early return.
-- **Cobertura atual: 2.298 testes, sem falha** (2026-11-06, CI do PR #422, 4 ignorados) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase, pgvector, reset da demonstração e fluxos críticos) também rodam; sem Docker ficam *skipped*.
+- **Cobertura atual: 2.346 testes, sem falha** (2026-11-07, `./mvnw test` da `main` em `4a0b3a8`, 4 ignorados) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase, pgvector, reset da demonstração e fluxos críticos) também rodam; sem Docker ficam *skipped*.
+- **Contagem de statements (#153, #432):** `ContagemStatementsPostgresIntegrationTest` compara a contagem de comandos SQL de dashboard, listagem de notas, apuração (12 meses) e calendário fiscal numa base pequena e noutra seis vezes maior; N+1 quebra o build. **Endpoint novo de leitura pesada (lista, agregação, janela de datas) entra nesse teste.** A medição de p95 com k6 contra uma stack isolada está **preparada** em `docs/performance/` (`compose.yaml`, `seed-volume.sql`, `k6/carga.js`; limite RNF001: p95 < 2 s), mas **nenhum número foi medido**: a medição é da janela da S5, na VPS.
 - **Teste em PostgreSQL novo (#152):** estende `support/PostgresIntegrationTestBase` (Liquibase ligado, `ddl-auto: validate`). A limpeza é `limparDominio()`, DELETE de filho para pai, nunca TRUNCATE CASCADE, que apagaria os modelos de obrigação. Produtor com contador ativo só gera XML de nota `APROVADA`: nos fluxos de emissão não vincule contador. `FluxosCriticosPostgresIntegrationTest` cobre emissão até `AUTORIZADA`, cancelamento dentro e fora do prazo e reabertura dentro e fora do limite; a importação segue em H2.
 - **Swagger travado por teste (#154):** `OpenApiConfig.GRUPOS` é a lista única dos grupos (`/v3/api-docs/<grupo>`: notas, apuracao, chat, relatorios, contador, auth). Rota com prefixo novo entra num grupo, mapeamento novo exige `@Operation(summary)` e DTO novo, inclusive aninhado, exige `@Schema` na classe; senão o `OpenApiDocumentacaoIntegrationTest` quebra. O springdoc só é desligado em `prod`, mas na VPS o Caddy (`deploy/Caddyfile`) só encaminha `/api/*` ao backend: no domínio público, `/swagger-ui.html` e `/v3/api-docs` devolvem o `index.html` do Angular, com 200. Para ver o Swagger, rode local (`http://localhost:8080/swagger-ui.html`).
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
@@ -727,7 +756,7 @@ no cadastro (decisão do Murillo, 2026-10-19).
   - `idx_nota_fiscal_produtor_id` (0002) ficou redundante para consultas por produtor; remover exigiria outro changeSet e outra decisão.
   - Lock distribuído dos jobs (`ShedLock`) entregue na Onda 5, issue **#87**.
 - **Homologação real da SEFAZ (#128):** o transporte está pronto e testado contra servidor simulado; falta rodar envio, consulta e cancelamento na homologação com cStat reais, o que depende do certificado A1 ICP-Brasil de um emitente de teste, do credenciamento na UF e do truststore da cadeia ICP-Brasil (`docs/sefaz-transporte-soap.md`).
-- **Ceres:** a parte de lei do MISTO recebe só a pergunta legal separada pelo classificador e passou a achar fundamento (Anexo IX, com o "Sim," inicial tirado quando a pergunta é a separada); falta a parte de **dados** do MISTO não afirmar regra legal (M02, M05); o gabarito `2026-10-15.1` aceita o item do Anexo IX além do art. 138 (citação do MISTO 1/7 → 4/7); o desfecho de cada parte está na auditoria (changeSet 0030). Ver `docs/avaliacao/linha-de-base-2026-10-14.md`. E "quanto de IBS eu devo em março?" vai para LEGISLACAO (D06).
+- **Ceres:** a parte de lei do MISTO recebe só a pergunta legal separada pelo classificador e passou a achar fundamento (Anexo IX, com o "Sim," inicial tirado quando a pergunta é a separada); falta a parte de **dados** do MISTO não afirmar regra legal; a régua de citação do MISTO aceita o item do anexo além do artigo; o desfecho de cada parte está na auditoria (changeSet 0030). Há também pergunta de dados com valor devido que o classificador manda para a rota de lei. Ver `docs/avaliacao/linha-de-base-2026-10-14.md`.
 - **Depois da Sprint 8 (#205–#209, #150, #148, #149, #147):** login, JWT, refresh, recuperação de senha, rate limit, LGPD, auditoria e cifra em repouso entregues; o profile padrão `dev` caiu na #219 (subida recusada sem profile explícito). Abertos: **verificação de e-mail no cadastro** (depende de SMTP); cifra **sem AAD por coluna** (mesma cifra entre tabelas); **dados das notas e XML assinado em claro**; falha de contador sem `produtor_id` na auditoria; rate limit em memória (por réplica); o Angular ainda não tem tela de login.
 - ~~Contador não alcança dashboard/apuração/relatório (#93)~~ — resolvido na #255 com rotas da carteira (`/api/contador/produtores/{produtorId}/...`); as rotas do produtor seguem sem `produtorId`. Falta o Angular adotá-las (Fechamento e Acompanhamento por cliente; pré-requisito do login, frontend#93).
 - **Identidade declarada no mock (Onda 4):** em `dev`, requisição **sem** `Authorization` ainda pode declarar identidade por `X-Usuario-Id` (o JWT da #206 tem precedência). Desde a #221, nunca em homolog nem em prod.

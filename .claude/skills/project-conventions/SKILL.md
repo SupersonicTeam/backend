@@ -105,6 +105,8 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - Mockito **strict stubs**: não crie stub de objeto usado só após early return.
 - Rodar `./mvnw test` (profile test, H2) antes de abrir PR. Manter todos verdes.
 - Cobertura: `jacoco:check` exige LINE ≥ 93%, sem `config/**`, `dto/**` e a classe main (#151). Suba o piso quando a cobertura subir; não o reduza para acomodar PR.
+- Endpoint novo de leitura pesada (lista, agregação, janela de datas): entra no `ContagemStatementsPostgresIntegrationTest` (#153, #432), que compara a contagem de statements numa base pequena e noutra seis vezes maior. O p95 com k6 (`docs/performance/`) é medição da janela da S5, não teste de CI.
+- Texto fixo da Ceres com sigla nova: cadastre a sigla em `resources/assistente/glossario-produtor.yml`. O `TextosFixosSiglasTest` só confere as siglas que já estão no yml (exige a explicação no texto); sigla fora dele passa sem aviso. No yml, LC e EC só casam com número e ano.
 - Teste em PostgreSQL: estender `support/PostgresIntegrationTestBase` (#152). Limpar com `limparDominio()`, nunca TRUNCATE CASCADE. Nos fluxos de emissão não vincule contador: com contador ativo, só nota `APROVADA` gera XML.
 
 ## Idioma do código (convenção híbrida)
@@ -121,6 +123,12 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
   - Armadilha: ao usar worktree, Read/Edit/Write e `mvnw` devem apontar para o path do worktree, não a raiz.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
 - **PRs pequenos e deployáveis:** uma responsabilidade lógica por PR.
+- **Merge (decisão do Murillo, 2026-11-07):**
+  - Antes do merge, todo PR passa pela skill `code-review` em `xhigh`, rodada na conversa da própria sessão (num subagente ela volta sem achados), com os achados reais corrigidos. A CI precisa estar verde; com a CI fora do ar, vale a verificação local equivalente (`./mvnw verify` e os testes Python que a CI roda), registrada no PR.
+  - O merge é `gh pr merge <n> --squash --body-file <arquivo>`, rodado sozinho (sem `cd … &&`, sem `$(...)` nem heredoc no comando) e sem `--admin`, `--repo`, `-R` nem `--auto`. O `.claude/settings.json` libera esse comando no modo automático, pela ferramenta Bash ou PowerShell; comando composto cai no classificador e costuma ser negado.
+  - Sessão aberta antes de o `.claude/settings.json` existir não carrega a regra nem trazendo a `main`: precisa de sessão nova. Até lá, o merge sai pela sessão orquestradora.
+  - Travas que continuam: nenhum merge durante janela de medição na VPS (S5); de 26/11 a 03/12, só correção urgente com OK do Murillo; PR de glossário só com revisão da equipe ou do orientador; PR que muda o que a banca mede (código da Ceres, régua do avaliador, executor do benchmark) depende do OK do Murillo.
+  - A regra de permissão vale para toda sessão de Claude Code neste repositório e não confere o code review: ele é regra de processo, conferida pela orquestradora.
 - **Datas:** `YYYY-MM-DD`, timezone `America/Sao_Paulo`.
 
 ## Estado da nota fiscal (referência rápida)
