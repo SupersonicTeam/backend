@@ -37,6 +37,13 @@ class RefazerErrosTest(unittest.TestCase):
         _, persistem = re_.mesclar(saida, [])
         self.assertEqual(persistem, ["b"])
 
+    def test_linha_de_comando_sem_operandos_mostra_o_uso(self):
+        import io
+        from contextlib import redirect_stderr
+        for argv in ([], ["ids"], ["mesclar", "a.json"], ["outro"]):
+            with self.subTest(argv=argv), redirect_stderr(io.StringIO()):
+                self.assertEqual(re_.main(argv), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

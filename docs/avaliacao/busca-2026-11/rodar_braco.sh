@@ -21,17 +21,20 @@
 set -u
 
 BRACO=$1
-REPO=$2
 PARTICAO=$3
-DESTINO=$4
-LOGS=$5
 TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
-CONJUNTO="$REPO/docs/avaliacao/treino/perguntas-lei-busca-2026-11.json"
-META="$DESTINO/$BRACO-metadados.txt"
 AQUI=$(cd "$(dirname "$0")" && pwd)
 
-mkdir -p "$DESTINO" "$LOGS"
+# Caminhos absolutos: o roteiro faz "cd" para o REPO antes do Maven, e um caminho relativo passaria a
+# apontar para outro lugar no meio do braço.
+mkdir -p "$4" "$5" || exit 1
+REPO=$(cd "$2" && pwd) || exit 1
+DESTINO=$(cd "$4" && pwd) || exit 1
+LOGS=$(cd "$5" && pwd) || exit 1
+CONJUNTO="$REPO/docs/avaliacao/treino/perguntas-lei-busca-2026-11.json"
+META="$DESTINO/$BRACO-metadados.txt"
+
 ESPERADO=$(cut -d' ' -f1 "$CONJUNTO.sha256" 2>/dev/null)
 ATUAL=$(sha256sum "$CONJUNTO" | cut -d' ' -f1)
 if [ -z "$ESPERADO" ] || [ "$ESPERADO" != "$ATUAL" ]; then

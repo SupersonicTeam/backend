@@ -87,7 +87,12 @@ def montar(conjunto: dict, pasta: str, excluir: set[str]) -> dict:
     if "A" in saidas and "B" in saidas:
         rel["decisao"] = dc.decidir(conjunto, saidas["A"], saidas["B"], saidas.get("C"), saidas.get("D"), excluir)
     rel["por_execucao"] = {b: por_execucao(s, conjunto, excluir) for b, s in saidas.items()}
-    rel["tempo_primeira_repeticao"] = {b: tempo_primeira(s, excluir) for b, s in saidas.items()}
+    # Tempo da 1ª repetição pela saída bruta, quando existe: na mesclada, uma 1ª repetição com
+    # ERRO_MODELO foi trocada pela refeita no fim do braço, com outro estado do cache.
+    brutas = {b: _ler(os.path.join(pasta, f"{b}-citacoes-bruto.json")) for b in saidas
+              if os.path.exists(os.path.join(pasta, f"{b}-citacoes-bruto.json"))}
+    rel["tempo_primeira_repeticao"] = {b: tempo_primeira(brutas.get(b, s), excluir)
+                                       for b, s in saidas.items()}
     rel["recall"] = {b: r.get("resumo") for b, r in recalls.items()}
     if "B" in saidas:
         rel["top5_mudou_vs_B"] = {b: top5_mudou(saidas["B"], s, excluir) for b, s in saidas.items() if b != "B"}
@@ -133,7 +138,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     conjunto = _ler(args.conjunto)
     excluir = {x for x in args.excluir.split(",") if x}
-    rel = montar(conjunto, args.resultados, excluir)
+    try:
+        rel = montar(conjunto, args.resultados, excluir)
+    except bc.ConjuntoDivergente as erro:
+        print(f"erro: {erro}", file=sys.stderr)
+        return 2
+    except dc.IdsDivergentes as erro:
+        print(f"erro: {erro}", file=sys.stderr)
+        return 4
     if args.json_saida:
         with open(args.json_saida, "w", encoding="utf-8", newline="\n") as f:
             json.dump(rel, f, ensure_ascii=False, indent=2)

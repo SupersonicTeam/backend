@@ -143,8 +143,9 @@ pela de prognósticos, que tem "sorteio" e "premio") e 6 em D (mais a busca-13, 
 **Guarda (`REGIME_ESPECIFICO_SEM_SETOR`):** 6 execuções por braço, as mesmas nos quatro: busca-01
 (`geral`) e busca-24 (`setor`), 3 cada.
 
-**Tempo da 1ª repetição** (mediana / média): A 30,0 s / 33,8 s; B 5,5 s / 16,4 s; C 6,9 s / 11,5 s;
-D 6,2 s / 16,0 s. A comparação com A não vale: o A rodou primeiro, com o cache de prompt do Ollama
+**Tempo da 1ª repetição** (mediana / média, da saída bruta): A 30,0 s / 33,8 s; B 5,5 s / 16,4 s;
+C 6,6 s / 11,6 s (39 perguntas: a 1ª repetição da busca-01 deu `ERRO_MODELO` e fica de fora, em vez
+de entrar com o tempo da refeita no fim do braço); D 6,2 s / 16,0 s. A comparação com A não vale: o A rodou primeiro, com o cache de prompt do Ollama
 frio, e os braços seguintes reaproveitam os mesmos prompts e trechos. Entre B, C e D a partição não
 mostra custo de tempo visível.
 

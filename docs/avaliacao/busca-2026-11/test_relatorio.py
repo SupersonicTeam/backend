@@ -50,6 +50,41 @@ class RelatorioTest(unittest.TestCase):
         outra = [item("g1", [], e2), item("a1", [], e3)]
         self.assertEqual(rl.top5_mudou(base, outra, set()), ["a1"])
 
+    def test_tempo_vem_da_saida_bruta(self):
+        import json
+        import tempfile
+        mesclada = [item("g1", [{"desfecho": "RESPONDIDA", "citacoes": [], "ms": 99000}]),
+                    item("a1", [{"desfecho": "SEM_FUNDAMENTO_LEGAL", "ms": 2000}])]
+        bruta = [item("g1", [{"desfecho": "ERRO_MODELO"}]),
+                 item("a1", [{"desfecho": "SEM_FUNDAMENTO_LEGAL", "ms": 2000}])]
+        with tempfile.TemporaryDirectory() as pasta:
+            for nome, dados in (("A-citacoes.json", mesclada), ("A-citacoes-bruto.json", bruta)):
+                with open(os.path.join(pasta, nome), "w", encoding="utf-8") as f:
+                    json.dump(dados, f)
+            rel = rl.montar(CONJUNTO, pasta, set())
+        self.assertEqual(rel["tempo_primeira_repeticao"]["A"], {"n": 1, "mediana_s": 2.0, "media_s": 2.0, "total_s": 2})
+
+    def test_linha_de_comando_com_braco_divergente_sai_com_4(self):
+        import io
+        import json
+        import tempfile
+        from contextlib import redirect_stderr, redirect_stdout
+        completa = [item("g1", [{"desfecho": "SEM_FUNDAMENTO_LEGAL", "ms": 1}]),
+                    item("a1", [{"desfecho": "SEM_FUNDAMENTO_LEGAL", "ms": 1}])]
+        for p in completa:
+            p["esperado"] = next(x for x in CONJUNTO["perguntas"] if x["id"] == p["id"])["esperado"]
+            p["aceito"] = []
+        with tempfile.TemporaryDirectory() as pasta:
+            conj = os.path.join(pasta, "conj.json")
+            with open(conj, "w", encoding="utf-8") as f:
+                json.dump(CONJUNTO, f)
+            for nome, dados in (("A-citacoes.json", completa), ("B-citacoes.json", completa[:1])):
+                with open(os.path.join(pasta, nome), "w", encoding="utf-8") as f:
+                    json.dump(dados, f)
+            with redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+                codigo = rl.main(["--conjunto", conj, "--resultados", pasta])
+        self.assertEqual(codigo, 4)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -52,7 +52,10 @@ def chaves_do_banco(container: str) -> set[str]:
         "psql", "-U", "agrocontabil", "-d", "agrocontabil",
         "-At", "-F", "\t", "-c", CONSULTA,
     ]
-    resultado = subprocess.run(comando, capture_output=True, check=True)
+    resultado = subprocess.run(comando, capture_output=True)
+    if resultado.returncode != 0:
+        erro = resultado.stderr.decode("utf-8", errors="replace").strip()
+        raise SystemExit(f"psql no contêiner {container} falhou (saída {resultado.returncode}): {erro}")
     texto = resultado.stdout.decode("utf-8")
     chaves = set()
     for linha in texto.splitlines():

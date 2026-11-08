@@ -50,10 +50,10 @@ def _ler(caminho: str):
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    if argv[0] == "ids":
+    if argv[:1] == ["ids"] and len(argv) == 2:
         print(",".join(ids_com_erro(_ler(argv[1]))))
         return 0
-    if argv[0] == "mesclar":
+    if argv[:1] == ["mesclar"] and len(argv) == 4:
         mescladas, persistem = mesclar(_ler(argv[1]), _ler(argv[2]))
         with open(argv[3], "w", encoding="utf-8", newline="\n") as f:
             json.dump(mescladas, f, ensure_ascii=False, indent=2)

@@ -119,7 +119,7 @@ Correção separada, pequena e certa: fazer o `ValidadorNumeros` entender o perc
 ./mvnw test -Dtest=DiagnosticoCitacoesLeiManual -Ddiagnostico.saida=diag.json -Ddiagnostico.repeticoes=3
 AI_RAG_TOP_K=10 ./mvnw test -Dtest=DiagnosticoCitacoesLeiManual -Ddiagnostico.saida=diag_k10.json
 ```
-Desde a #436, as duas ferramentas exigem também `-Ddiagnostico.perguntas=docs/avaliacao/treino/perguntas-lei-diagnostico.json` (sem padrão), e a saída do recall mudou de formato (`posicaoEsperado` virou `posicaoEsperadoTop20`; saíram `k5`, `k10` e `k20`; entrou a lista `entregues`).
+Desde a #436, as duas ferramentas exigem também `-Ddiagnostico.perguntas=docs/avaliacao/treino/perguntas-lei-diagnostico.json` (sem padrão), e a saída do recall mudou de formato (`posicaoEsperado` e `posicaoEsperadoOuAceito` viraram `posicaoEsperadoTop20` e `posicaoEsperadoOuAceitoTop20`; saíram `k5`, `k10`, `k20` e `artigosDistintosNoTop20`; entraram a lista `entregues` e o `resumo`).
 
 ## Por pergunta
 
