@@ -1,0 +1,1555 @@
+[ {
+  "id" : "busca-01",
+  "pergunta" : "Troquei uns bezerros por milho com o vizinho, sem passar dinheiro nenhum. Essa troca também tem IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 4º" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 4º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 252, § 2º, inciso I",
+    "similaridade" : 0.572
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso II",
+    "similaridade" : 0.559
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 252, § 5º-A",
+    "similaridade" : 0.556
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 6º, inciso VIII",
+    "similaridade" : 0.555
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 252, § 5º-A, inciso I",
+    "similaridade" : 0.553
+  } ],
+  "rodadas" : [ {
+    "cru" : "A troca de bezerros por milho sem passar dinheiro não tem IBS e CBS, pois se trata de permuta entre bens imóveis e, segundo [T1], o IBS e a CBS não incidem nas operações de permuta entre bens imóveis, exceto sobre a torna. [T1]",
+    "ms" : 45529,
+    "desfecho" : "REGIME_ESPECIFICO_SEM_SETOR",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 6º, inciso II", "LC 214/2025 art. 6º, inciso VIII" ]
+  }, {
+    "cru" : "A troca de bezerros por milho sem passar dinheiro tem IBS e CBS, pois se trata de permuta entre bens imóveis, exceto sobre a torna. [T1]",
+    "ms" : 33708,
+    "desfecho" : "REGIME_ESPECIFICO_SEM_SETOR",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 6º, inciso II", "LC 214/2025 art. 6º, inciso VIII" ]
+  }, {
+    "cru" : "A troca de bezerros por milho sem passar dinheiro tem IBS e CBS, pois se trata de permuta entre bens imóveis, e o trecho [T1] diz que o IBS e a CBS não incidem apenas em permutas entre bens imóveis exceto sobre a torna. Como o milho é bem imóvel, e não há menção a \"torna\", a operação está sujeita ao IBS e CBS. [T1]",
+    "ms" : 90568,
+    "desfecho" : "REGIME_ESPECIFICO_SEM_SETOR",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 6º, inciso II", "LC 214/2025 art. 6º, inciso VIII" ]
+  } ]
+}, {
+  "id" : "busca-02",
+  "pergunta" : "Levo o milho da minha fazenda para o armazém da minha outra fazenda, as duas no meu nome. Essa remessa paga IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 6º" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 6º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 24, inciso II",
+    "similaridade" : 0.618
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 21, inciso III",
+    "similaridade" : 0.615
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 97, inciso I",
+    "similaridade" : 0.612
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 24, inciso VI, alínea c",
+    "similaridade" : 0.612
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 73",
+    "similaridade" : 0.611
+  } ],
+  "rodadas" : [ {
+    "cru" : "Sim, a remessa paga IBS e CBS, pois o destinatário de remessa internacional, ainda que não seja o importador, é solidariamente responsável pelo pagamento do IBS e da CBS relativos aos bens materiais objeto de remessa internacional caso o fornecedor residente ou domiciliado no exterior não esteja inscrito [T3].  \n\nNAO_ENCONTREI",
+    "ms" : 139684,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 24, inciso II", "LC 214/2025 art. 21, inciso III", "LC 214/2025 art. 97, inciso I" ]
+  }, {
+    "cru" : "Sim, a remessa paga IBS e CBS, pois o destinatário de remessa internacional, ainda que não seja o importador, é solidariamente responsável pelo pagamento do IBS e da CBS relativos aos bens materiais objeto de remessa internacional caso o fornecedor residente ou domiciliado no exterior não esteja inscrito [T3].  \n\nNAO_ENCONTREI",
+    "ms" : 53931,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 24, inciso II", "LC 214/2025 art. 21, inciso III", "LC 214/2025 art. 97, inciso I" ]
+  }, {
+    "cru" : "Sim, a remessa paga IBS e CBS, pois o destinatário de remessa internacional, ainda que não seja o importador, é solidariamente responsável pelo pagamento do IBS e da CBS relativos aos bens materiais objeto de remessa internacional caso o fornecedor residente ou domiciliado no exterior não esteja inscrito [T3].  \n\nNAO_ENCONTREI",
+    "ms" : 47626,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 24, inciso II", "LC 214/2025 art. 21, inciso III", "LC 214/2025 art. 97, inciso I" ]
+  } ]
+}, {
+  "id" : "busca-03",
+  "pergunta" : "Para agradar um comprador grande, dei de bonificação dez sacas de milho a mais, sem cobrar. Esse milho que dei de graça paga IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 5º" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 5º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 9º, inciso VI",
+    "similaridade" : 0.557
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 14653,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 9º, inciso VI" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 6466,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 9º, inciso VI" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3216,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 9º, inciso VI" ]
+  } ]
+}, {
+  "id" : "busca-04",
+  "pergunta" : "Tenho placas solares na fazenda e vendo a energia que sobra. Para o imposto novo, essa energia é tratada como mercadoria?",
+  "esperado" : [ "LC 214/2025 art. 3º" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 3º" ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 173,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 437,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 4087,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-05",
+  "pergunta" : "Vendo novilhas por um aplicativo de vendas na internet. Quem responde pelo imposto dessa venda: eu ou o aplicativo?",
+  "esperado" : [ "LC 214/2025 art. 22" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 22" ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 655,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 1910,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 304,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-06",
+  "pergunta" : "Comprei uns garrotes de um vendedor que não me deu nota fiscal. Se ele não pagar o imposto, a cobrança pode sobrar para mim?",
+  "esperado" : [ "LC 214/2025 art. 24" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 154",
+    "similaridade" : 0.555
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 7883,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 154" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 4494,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 154" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 4067,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 154" ]
+  } ]
+}, {
+  "id" : "busca-07",
+  "pergunta" : "Comprei de um fornecedor que vendeu com isenção, sem imposto na nota. Eu tenho algum crédito dessa compra?",
+  "esperado" : [ "LC 214/2025 art. 49" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 462, § 4º, inciso I",
+    "similaridade" : 0.611
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 462, § 4º, inciso II [2]",
+    "similaridade" : 0.606
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 462, § 4º, inciso II",
+    "similaridade" : 0.602
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 462, § 4º",
+    "similaridade" : 0.599
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 465, § 2º, inciso II",
+    "similaridade" : 0.596
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 38463,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 462, § 4º, inciso I", "LC 214/2025 art. 462, § 4º, inciso II [2]", "LC 214/2025 art. 462, § 4º, inciso II" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3351,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 462, § 4º, inciso I", "LC 214/2025 art. 462, § 4º, inciso II [2]", "LC 214/2025 art. 462, § 4º, inciso II" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3554,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 462, § 4º, inciso I", "LC 214/2025 art. 462, § 4º, inciso II [2]", "LC 214/2025 art. 462, § 4º, inciso II" ]
+  } ]
+}, {
+  "id" : "busca-08",
+  "pergunta" : "Se eu atrasar o pagamento do IBS do mês, quanto vou pagar de multa?",
+  "esperado" : [ "LC 214/2025 art. 29" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 29" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 341-G, inciso IV, alínea a",
+    "similaridade" : 0.711
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 341-G, inciso IV, alínea b",
+    "similaridade" : 0.707
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 341-G, inciso IV",
+    "similaridade" : 0.698
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 174 (redação do art. 341-G, inciso IV, alínea a)",
+    "similaridade" : 0.697
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 341-G, inciso XVIII",
+    "similaridade" : 0.693
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 41013,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 341-G, inciso IV, alínea a", "LC 214/2025 art. 341-G, inciso IV, alínea b", "LC 214/2025 art. 341-G, inciso IV" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 5446,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 341-G, inciso IV, alínea a", "LC 214/2025 art. 341-G, inciso IV, alínea b", "LC 214/2025 art. 341-G, inciso IV" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3217,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 341-G, inciso IV, alínea a", "LC 214/2025 art. 341-G, inciso IV, alínea b", "LC 214/2025 art. 341-G, inciso IV" ]
+  } ]
+}, {
+  "id" : "busca-09",
+  "pergunta" : "Ouvi falar que o governo vai mandar a conta do imposto do mês já pronta. Se eu não concordar com o valor, o que acontece?",
+  "esperado" : [ "LC 214/2025 art. 46" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 393, § 2º",
+    "similaridade" : 0.594
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 32-A, inciso I",
+    "similaridade" : 0.579
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 32-A, inciso II",
+    "similaridade" : 0.575
+  }, {
+    "posicao" : 4,
+    "norma" : "EC 132/2023",
+    "dispositivo" : "art. 2º (redação do art. 125, § 2º)",
+    "similaridade" : 0.568
+  }, {
+    "posicao" : 5,
+    "norma" : "EC 132/2023",
+    "dispositivo" : "art. 1º (redação do art. 156-A, § 1º, inciso III)",
+    "similaridade" : 0.568
+  } ],
+  "rodadas" : [ {
+    "cru" : "Se você não concordar com o valor da conta do imposto do mês, deverá regularizar a apuração fiscal retificando as informações prestadas na escrituração fiscal, conforme a regulamentação da RFB. [T1]",
+    "ms" : 52501,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Se você não concordar com o valor da conta do imposto do mês, deverá regularizar a apuração fiscal retificando as informações prestadas na escrituração fiscal, conforme a regulamentação da RFB. (LC 214/2025, art. 393, § 2º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- apuração: a conta do mês que compara o imposto das suas vendas com o das suas compras.",
+    "citacoes" : [ "LC 214/2025 art. 393, § 2º" ]
+  }, {
+    "cru" : "Se você não concordar com o valor da conta do imposto do mês já pronta, deverá regularizar a apuração do crédito apresentado, retificando as informações na escrituração fiscal, conforme a regulamentação da RFB. [T1]",
+    "ms" : 15370,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Se você não concordar com o valor da conta do imposto do mês já pronta, deverá regularizar a apuração do crédito apresentado, retificando as informações na escrituração fiscal, conforme a regulamentação da RFB. (LC 214/2025, art. 393, § 2º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.\n- apuração: a conta do mês que compara o imposto das suas vendas com o das suas compras.",
+    "citacoes" : [ "LC 214/2025 art. 393, § 2º" ]
+  }, {
+    "cru" : "Se você não concordar com o valor da conta do imposto do mês, deverá regularizar a apuração do crédito apresentado, retificando as informações na escrituração fiscal, conforme a regulamentação da RFB. [T1]",
+    "ms" : 16751,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Se você não concordar com o valor da conta do imposto do mês, deverá regularizar a apuração do crédito apresentado, retificando as informações na escrituração fiscal, conforme a regulamentação da RFB. (LC 214/2025, art. 393, § 2º)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.\n- apuração: a conta do mês que compara o imposto das suas vendas com o das suas compras.",
+    "citacoes" : [ "LC 214/2025 art. 393, § 2º" ]
+  } ]
+}, {
+  "id" : "busca-10",
+  "pergunta" : "Vai ter algum sorteio ou prêmio para quem pedir nota fiscal nas compras, como as notas premiadas dos estados?",
+  "esperado" : [ "LC 214/2025 art. 61" ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 259,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 232,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 200,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-11",
+  "pergunta" : "Comprei ração com imposto e aproveitei o crédito, mas uma parte estragou no galpão com a chuva. Tenho que devolver o crédito dessa parte?",
+  "esperado" : [ "LC 214/2025 art. 47" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 47" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 315, § 3º",
+    "similaridade" : 0.57
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 379, parágrafo único",
+    "similaridade" : 0.569
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 39, § 1º",
+    "similaridade" : 0.564
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 315, § 2º, inciso II",
+    "similaridade" : 0.563
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 393, § 6º",
+    "similaridade" : 0.563
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 33798,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 315, § 3º", "LC 214/2025 art. 379, parágrafo único", "LC 214/2025 art. 39, § 1º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 5608,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 315, § 3º", "LC 214/2025 art. 379, parágrafo único", "LC 214/2025 art. 39, § 1º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 4368,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 315, § 3º", "LC 214/2025 art. 379, parágrafo único", "LC 214/2025 art. 39, § 1º" ]
+  } ]
+}, {
+  "id" : "busca-12",
+  "pergunta" : "Vou construir um galpão na fazenda e contratar o pedreiro por minha conta. Para o INSS, eu fico responsável como se fosse uma empresa nessa obra?",
+  "esperado" : [ "Lei 8.212/1991 art. 15" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 11",
+    "similaridade" : 0.566
+  } ],
+  "rodadas" : [ {
+    "cru" : "Não, você não fica responsável como se fosse uma empresa para o INSS nessa obra, pois a obra é realizada por você por sua conta e o pedreiro não está sujeito à contribuição de empregador rural, conforme o art. 25, § 11, da Lei [T1].",
+    "ms" : 51046,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, você não fica responsável como se fosse uma empresa para o INSS nessa obra, pois a obra é realizada por você por sua conta e o pedreiro não está sujeito à contribuição de empregador rural, conforme o art. 25, § 11, da Lei (Lei 8.212/1991, art. 25, § 11).",
+    "citacoes" : [ "Lei 8.212/1991 art. 25, § 11" ]
+  }, {
+    "cru" : "Não, você não fica responsável como se fosse uma empresa para o INSS nessa obra, pois a obra é realizada por você por sua conta e o pedreiro não está sujeito à contribuição do empregador rural, conforme o art. 25, § 11, da Lei [T1].",
+    "ms" : 18823,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, você não fica responsável como se fosse uma empresa para o INSS nessa obra, pois a obra é realizada por você por sua conta e o pedreiro não está sujeito à contribuição do empregador rural, conforme o art. 25, § 11, da Lei (Lei 8.212/1991, art. 25, § 11).",
+    "citacoes" : [ "Lei 8.212/1991 art. 25, § 11" ]
+  }, {
+    "cru" : "Não, você não fica responsável como se fosse uma empresa para o INSS nessa obra, pois a obra é realizada por você por sua conta e o pedreiro é contratado diretamente por você, sem que haja a constituição de uma empresa ou atividade de empregado. [T1]",
+    "ms" : 15024,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, você não fica responsável como se fosse uma empresa para o INSS nessa obra, pois a obra é realizada por você por sua conta e o pedreiro é contratado diretamente por você, sem que haja a constituição de uma empresa ou atividade de empregado. (Lei 8.212/1991, art. 25, § 11)",
+    "citacoes" : [ "Lei 8.212/1991 art. 25, § 11" ]
+  } ]
+}, {
+  "id" : "busca-13",
+  "pergunta" : "Tenho um saldo de crédito de ICMS acumulado. Quando o ICMS acabar, eu perco esse crédito?",
+  "esperado" : [ "EC 132/2023 art. 2º (redação do art. 134" ],
+  "aceito" : [ "LC 227/2026 art. 132" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 132, § 1º, inciso III",
+    "similaridade" : 0.68
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 132, § 1º, inciso I",
+    "similaridade" : 0.669
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 132, § 1º, inciso II",
+    "similaridade" : 0.667
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 132, § 2º",
+    "similaridade" : 0.664
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 132, § 1º",
+    "similaridade" : 0.658
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 29421,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 227/2026 art. 132, § 1º, inciso III", "LC 227/2026 art. 132, § 1º, inciso I", "LC 227/2026 art. 132, § 1º, inciso II" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3065,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 227/2026 art. 132, § 1º, inciso III", "LC 227/2026 art. 132, § 1º, inciso I", "LC 227/2026 art. 132, § 1º, inciso II" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 2538,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 227/2026 art. 132, § 1º, inciso III", "LC 227/2026 art. 132, § 1º, inciso I", "LC 227/2026 art. 132, § 1º, inciso II" ]
+  } ]
+}, {
+  "id" : "busca-14",
+  "pergunta" : "Eu e três vizinhos queremos contratar trabalhadores juntos, com um de nós contratando em nome de todos. Como fica a contribuição para o INSS nesse caso?",
+  "esperado" : [ "Lei 8.212/1991 art. 25-A" ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 272,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 232,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 188,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-15",
+  "pergunta" : "Esse tal de IBS é imposto de quem: do governo federal, do estado ou da prefeitura?",
+  "esperado" : [ "EC 132/2023 art. 1º (redação do art. 156-A" ],
+  "aceito" : [ "LC 214/2025 art. 1º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 2º, inciso II",
+    "similaridade" : 0.637
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+    "similaridade" : 0.633
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 113, inciso VI",
+    "similaridade" : 0.632
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 113, § 2º",
+    "similaridade" : 0.631
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 2º, inciso I",
+    "similaridade" : 0.63
+  } ],
+  "rodadas" : [ {
+    "cru" : "O IBS é arrecadado pelos Estados, Distrito Federal e Municípios, por meio do CGIBS, e cada ente federativo exerce competência administrativa relativa ao imposto [T1]. A alíquota municipal do IBS é fixada com base na soma das alíquotas do IBS e da CBS, após redução, indicando que a prefeitura tem papel na sua aplicação [T2].  \n\nPortanto, o IBS é de responsabilidade dos três entes: federal, estadual e municipal [T1, T2].",
+    "ms" : 139574,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS é arrecadado pelos Estados, Distrito Federal e Municípios, por meio do CGIBS, e cada ente federativo exerce competência administrativa relativa ao imposto (LC 227/2026, art. 2º, inciso II). A alíquota municipal do IBS é fixada com base na soma das alíquotas do IBS e da CBS, após redução, indicando que a prefeitura tem papel na sua aplicação (LC 214/2025, art. 473, § 1º, inciso III, alínea b).  \n\nPortanto, o IBS é de responsabilidade dos três entes: federal, estadual e municipal (LC 227/2026, art. 2º, inciso II; LC 214/2025, art. 473, § 1º, inciso III, alínea b).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 227/2026 art. 2º, inciso II", "LC 214/2025 art. 473, § 1º, inciso III, alínea b" ]
+  }, {
+    "desfecho" : "ERRO_MODELO",
+    "texto" : "AssistenteIndisponivelException",
+    "cru" : "",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "O IBS é imposto dos Estados, do Distrito Federal e dos Municípios, exercido de forma integrada por meio do CGIBS [T1, T5].",
+    "ms" : 19678,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS é imposto dos Estados, do Distrito Federal e dos Municípios, exercido de forma integrada por meio do CGIBS (LC 227/2026, art. 2º, inciso II; LC 227/2026, art. 2º, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.",
+    "citacoes" : [ "LC 227/2026 art. 2º, inciso II", "LC 227/2026 art. 2º, inciso I" ]
+  } ]
+}, {
+  "id" : "busca-16",
+  "pergunta" : "O IBS e a CBS vão ter as mesmas regras ou cada um vai funcionar de um jeito diferente?",
+  "esperado" : [ "EC 132/2023 art. 1º (redação do art. 149-B" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 43",
+    "similaridade" : 0.639
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 317, § 1º",
+    "similaridade" : 0.635
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 126, § 6º",
+    "similaridade" : 0.633
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 4º",
+    "similaridade" : 0.632
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 14, inciso II",
+    "similaridade" : 0.624
+  } ],
+  "rodadas" : [ {
+    "cru" : "O IBS e a CBS terão regras comuns, mas com regimes diferenciados, conforme estabelecido na lei. [T3]",
+    "ms" : 36778,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS e a CBS terão regras comuns, mas com regimes diferenciados, conforme estabelecido na lei. (LC 214/2025, art. 126, § 6º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 126, § 6º" ]
+  }, {
+    "cru" : "O IBS e a CBS terão regras comuns, mas com regimes diferenciados, conforme estabelecido na lei. [T3]",
+    "ms" : 21979,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS e a CBS terão regras comuns, mas com regimes diferenciados, conforme estabelecido na lei. (LC 214/2025, art. 126, § 6º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 126, § 6º" ]
+  }, {
+    "cru" : "O IBS e a CBS terão regras comuns, mas com regimes diferenciados, conforme estabelecido na lei. [T3]",
+    "ms" : 16964,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS e a CBS terão regras comuns, mas com regimes diferenciados, conforme estabelecido na lei. (LC 214/2025, art. 126, § 6º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 126, § 6º" ]
+  } ]
+}, {
+  "id" : "busca-17",
+  "pergunta" : "Sou agricultor familiar e contratei um ajudante por alguns dias na colheita. Como eu informo esse trabalhador e pago o INSS dele?",
+  "esperado" : [ "Lei 8.212/1991 art. 32-C" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 32-C, § 13",
+    "similaridade" : 0.625
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 13",
+    "similaridade" : 0.61
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 11",
+    "similaridade" : 0.605
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25-A, § 2º",
+    "similaridade" : 0.602
+  }, {
+    "posicao" : 5,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 69, § 1º, inciso II",
+    "similaridade" : 0.6
+  } ],
+  "rodadas" : [ {
+    "cru" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto para o produtor rural pessoa física [T1].  \n\nA contribuição será feita na forma do art. 25, com opção de contribuir como empregador rural pessoa física, e será irretratável para todo o ano-calendário [T2].  \n\nComo o ajudante foi contratado por alguns dias, ele será considerado trabalhador rural individual, e o prazo para defesa em caso de irregularidade será de 60 dias [T5].  \n\nO pagamento do INSS deve ser feito com base na contribuição do empregador rural pessoa física, conforme o art. 25 [T2].  \n\n[ T1, T2, T5 ]",
+    "ms" : 156781,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto para o produtor rural pessoa física (Lei 8.212/1991, art. 32-C, § 13).  \n\nA contribuição será feita na forma do art. 25, com opção de contribuir como empregador rural pessoa física, e será irretratável para todo o ano-calendário (Lei 8.212/1991, art. 25, § 13).  \n\nComo o ajudante foi contratado por alguns dias, ele será considerado trabalhador rural individual, e o prazo para defesa em caso de irregularidade será de 60 dias (Lei 8.212/1991, art. 69, § 1º, inciso II).  \n\nO pagamento do INSS deve ser feito com base na contribuição do empregador rural pessoa física, conforme o art. 25 (Lei 8.212/1991, art. 25, § 13).  \n\n(Lei 8.212/1991, art. 32-C, § 13; Lei 8.212/1991, art. 25, § 13; Lei 8.212/1991, art. 69, § 1º, inciso II)",
+    "citacoes" : [ "Lei 8.212/1991 art. 32-C, § 13", "Lei 8.212/1991 art. 25, § 13", "Lei 8.212/1991 art. 69, § 1º, inciso II" ]
+  }, {
+    "cru" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto no art. 32-C, § 13, que estende a sistemática de entrega das informações e recolhimentos ao produtor rural pessoa física. [T1]",
+    "ms" : 74459,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto no art. 32-C, § 13, que estende a sistemática de entrega das informações e recolhimentos ao produtor rural pessoa física. (Lei 8.212/1991, art. 32-C, § 13)",
+    "citacoes" : [ "Lei 8.212/1991 art. 32-C, § 13" ]
+  }, {
+    "cru" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto para o produtor rural pessoa física [T1].  \n\nA contribuição será feita como segurado especial, e você poderá optar por contribuir na forma do art. 25 ou na forma dos incisos I e II do art. 22, manifestando sua opção com o pagamento da contribuição incidente sobre a folha de salários de janeiro ou da primeira competência subsequente ao início da atividade rural [T2].  \n\nO ajudante contratado por alguns dias na colheita é considerado trabalhador rural, e a contribuição será devida como parte do grupo familiar, conforme a sistemática estabelecida [T1].  \n\nNAO_ENCONTREI",
+    "ms" : 145820,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 8.212/1991 art. 32-C, § 13", "Lei 8.212/1991 art. 25, § 13", "Lei 8.212/1991 art. 25, § 11" ]
+  } ]
+}, {
+  "id" : "busca-18",
+  "pergunta" : "Trabalho na roça só eu, minha mulher e meus filhos, sem empregado. Para o INSS eu sou considerado o quê?",
+  "esperado" : [ "Lei 8.212/1991 art. 12" ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 1124,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 1350,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 1282,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-19",
+  "pergunta" : "Sou produtor pessoa física e tenho empregados na fazenda. Quanto é a contribuição para o INSS em cima do que eu vendo da produção?",
+  "esperado" : [ "Lei 8.212/1991 art. 25" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 22-A, inciso I",
+    "similaridade" : 0.672
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 6º",
+    "similaridade" : 0.657
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 5º, inciso II",
+    "similaridade" : 0.655
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, inciso I",
+    "similaridade" : 0.652
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 5º, inciso I",
+    "similaridade" : 0.651
+  } ],
+  "rodadas" : [ {
+    "cru" : "A contribuição para o INSS em cima do que você vende da produção é de 1,2% da receita bruta proveniente da comercialização da sua produção [T4].",
+    "ms" : 66466,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A contribuição para o INSS em cima do que você vende da produção é de 1,2% da receita bruta proveniente da comercialização da sua produção (Lei 8.212/1991, art. 25, inciso I).",
+    "citacoes" : [ "Lei 8.212/1991 art. 25, inciso I" ]
+  }, {
+    "cru" : "A contribuição para o INSS em cima do que você vende da produção é de 1,2% da receita bruta proveniente da comercialização da sua produção [T4].",
+    "ms" : 17690,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A contribuição para o INSS em cima do que você vende da produção é de 1,2% da receita bruta proveniente da comercialização da sua produção (Lei 8.212/1991, art. 25, inciso I).",
+    "citacoes" : [ "Lei 8.212/1991 art. 25, inciso I" ]
+  }, {
+    "cru" : "A contribuição para o INSS em cima do que você vende da produção é de 1,2% da receita bruta proveniente da comercialização da sua produção [T4].",
+    "ms" : 16277,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A contribuição para o INSS em cima do que você vende da produção é de 1,2% da receita bruta proveniente da comercialização da sua produção (Lei 8.212/1991, art. 25, inciso I).",
+    "citacoes" : [ "Lei 8.212/1991 art. 25, inciso I" ]
+  } ]
+}, {
+  "id" : "busca-20",
+  "pergunta" : "Quero pagar o INSS por conta própria para garantir a minha aposentadoria. Qual é a porcentagem?",
+  "esperado" : [ "Lei 8.212/1991 art. 21" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 21, § 2º, inciso I",
+    "similaridade" : 0.605
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 21, § 2º, inciso II, alínea a",
+    "similaridade" : 0.59
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 45-A, § 1º, inciso II",
+    "similaridade" : 0.589
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 21, § 2º, inciso II, alínea b",
+    "similaridade" : 0.588
+  }, {
+    "posicao" : 5,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 21, § 2º, inciso II",
+    "similaridade" : 0.587
+  } ],
+  "rodadas" : [ {
+    "cru" : "A porcentagem é de 20% sobre o salário-de-contribuição [T1].",
+    "ms" : 41516,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A porcentagem é de 20% sobre o salário-de-contribuição (Lei 8.212/1991, art. 21, § 2º, inciso I).",
+    "citacoes" : [ "Lei 8.212/1991 art. 21, § 2º, inciso I" ]
+  }, {
+    "cru" : "A porcentagem é de 20% sobre o respectivo salário-de-contribuição [T1].",
+    "ms" : 12247,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A porcentagem é de 20% sobre o respectivo salário-de-contribuição (Lei 8.212/1991, art. 21, § 2º, inciso I).",
+    "citacoes" : [ "Lei 8.212/1991 art. 21, § 2º, inciso I" ]
+  }, {
+    "cru" : "A porcentagem é de 20% sobre o respectivo salário-de-contribuição [T1].",
+    "ms" : 7055,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "A porcentagem é de 20% sobre o respectivo salário-de-contribuição (Lei 8.212/1991, art. 21, § 2º, inciso I).",
+    "citacoes" : [ "Lei 8.212/1991 art. 21, § 2º, inciso I" ]
+  } ]
+}, {
+  "id" : "busca-21",
+  "pergunta" : "O óleo diesel que eu compro no posto para abastecer o trator e a colheitadeira me dá direito a crédito do imposto novo?",
+  "esperado" : [ "LC 214/2025 art. 180" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 170, § 4º",
+    "similaridade" : 0.604
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 170, § 3º, inciso VI",
+    "similaridade" : 0.565
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 169, § 8º",
+    "similaridade" : 0.553
+  }, {
+    "posicao" : 4,
+    "norma" : "EC 132/2023",
+    "dispositivo" : "art. 19, § 3º, inciso II, alínea b",
+    "similaridade" : 0.551
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 170, § 2º",
+    "similaridade" : 0.551
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 37827,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 170, § 4º", "LC 214/2025 art. 170, § 3º, inciso VI", "LC 214/2025 art. 169, § 8º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 2546,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 170, § 4º", "LC 214/2025 art. 170, § 3º, inciso VI", "LC 214/2025 art. 169, § 8º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3051,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 170, § 4º", "LC 214/2025 art. 170, § 3º, inciso VI", "LC 214/2025 art. 169, § 8º" ]
+  } ]
+}, {
+  "id" : "busca-22",
+  "pergunta" : "Todo ano eu faço seguro da lavoura. O imposto que vem embutido no seguro eu posso usar como crédito?",
+  "esperado" : [ "LC 214/2025 art. 223" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 313, § 2º",
+    "similaridade" : 0.578
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 330, § 1º, inciso II",
+    "similaridade" : 0.569
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 330, § 3º",
+    "similaridade" : 0.563
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 330, § 1º, inciso VI",
+    "similaridade" : 0.562
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 330, § 1º, inciso I",
+    "similaridade" : 0.56
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 19615,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 313, § 2º", "LC 214/2025 art. 330, § 1º, inciso II", "LC 214/2025 art. 330, § 3º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 2087,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 313, § 2º", "LC 214/2025 art. 330, § 1º, inciso II", "LC 214/2025 art. 330, § 3º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 2087,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 313, § 2º", "LC 214/2025 art. 330, § 1º, inciso II", "LC 214/2025 art. 330, § 3º" ]
+  } ]
+}, {
+  "id" : "busca-23",
+  "pergunta" : "Pago plano de saúde para os meus funcionários da fazenda. Dá para aproveitar o imposto desse plano como crédito?",
+  "esperado" : [ "LC 214/2025 art. 238" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 238" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 313, § 2º",
+    "similaridade" : 0.582
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 238, parágrafo único, inciso I",
+    "similaridade" : 0.579
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 238, parágrafo único, inciso I, alínea b",
+    "similaridade" : 0.577
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 238, parágrafo único, inciso II",
+    "similaridade" : 0.577
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 238, parágrafo único",
+    "similaridade" : 0.576
+  } ],
+  "rodadas" : [ {
+    "cru" : "Sim, dá para aproveitar o imposto desse plano como crédito, desde que o plano seja coberto pelos titulares empregados e seus dependentes e o contratante seja contribuinte no regime regular. [T3, T4]",
+    "ms" : 30643,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, dá para aproveitar o imposto desse plano como crédito, desde que o plano seja coberto pelos titulares empregados e seus dependentes e o contratante seja contribuinte no regime regular. (LC 214/2025, art. 238, parágrafo único, inciso I, alínea b; LC 214/2025, art. 238, parágrafo único, inciso II)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 238, parágrafo único, inciso I, alínea b", "LC 214/2025 art. 238, parágrafo único, inciso II" ]
+  }, {
+    "cru" : "Sim, dá para aproveitar o imposto desse plano como crédito, desde que o plano seja coberto pelos titulares empregados e seus dependentes, e os prêmios não tenham ônus financeiro repassado aos empregados. [T3, T4]",
+    "ms" : 11038,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, dá para aproveitar o imposto desse plano como crédito, desde que o plano seja coberto pelos titulares empregados e seus dependentes, e os prêmios não tenham ônus financeiro repassado aos empregados. (LC 214/2025, art. 238, parágrafo único, inciso I, alínea b; LC 214/2025, art. 238, parágrafo único, inciso II)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 238, parágrafo único, inciso I, alínea b", "LC 214/2025 art. 238, parágrafo único, inciso II" ]
+  }, {
+    "cru" : "Sim, dá para aproveitar o imposto desse plano como crédito, desde que o plano seja coberto pelos titulares empregados e seus dependentes e o ônus financeiro não tenha sido repassado aos empregados. [T3, T4]",
+    "ms" : 17707,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, dá para aproveitar o imposto desse plano como crédito, desde que o plano seja coberto pelos titulares empregados e seus dependentes e o ônus financeiro não tenha sido repassado aos empregados. (LC 214/2025, art. 238, parágrafo único, inciso I, alínea b; LC 214/2025, art. 238, parágrafo único, inciso II)\n\nO que isso quer dizer:\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- crédito: a parte do imposto das suas compras que você pode descontar do imposto das suas vendas.",
+    "citacoes" : [ "LC 214/2025 art. 238, parágrafo único, inciso I, alínea b", "LC 214/2025 art. 238, parágrafo único, inciso II" ]
+  } ]
+}, {
+  "id" : "busca-24",
+  "pergunta" : "Arrendo um pedaço da minha terra para o vizinho plantar e recebo em dinheiro. Nesse arrendamento o imposto é cheio ou tem desconto?",
+  "esperado" : [ "LC 214/2025 art. 261" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 201, inciso I, alínea b",
+    "similaridade" : 0.562
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 201, inciso II",
+    "similaridade" : 0.558
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 201, inciso I, alínea d",
+    "similaridade" : 0.558
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 201, inciso I, alínea a",
+    "similaridade" : 0.556
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 201, parágrafo único, inciso II",
+    "similaridade" : 0.555
+  } ],
+  "rodadas" : [ {
+    "cru" : "O arrendamento de terra para plantio, com receita em dinheiro, é considerado arrendamento mercantil operacional. As receitas dos serviços ficam sujeitas ao regime de caixa, e as alíquotas aplicam-se conforme o tipo de bem. Como é um bem imóvel (terra), a alíquota é a aplicável à locação, no regime específico. Não há dedução permitida por participação de receitas sem créditos de IBS e CBS, pois não há operações que gerem créditos. Portanto, o imposto é cobrado integralmente.\n\n[T4]",
+    "ms" : 85005,
+    "desfecho" : "REGIME_ESPECIFICO_SEM_SETOR",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "O arrendamento de terra para plantio, com recebimento em dinheiro, é considerado arrendamento mercantil operacional. As receitas dos serviços ficarão sujeitas, na medida do recebimento, pelo regime de caixa, com alíquota aplicável à locação, no respectivo regime específico. A dedução é permitida na proporção da participação das receitas que não geram créditos de IBS e CBS.  \n\nPortanto, há desconto na base de cálculo, conforme a dedução permitida.  \n\n[T4, T2]",
+    "ms" : 58305,
+    "desfecho" : "REGIME_ESPECIFICO_SEM_SETOR",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "O arrendamento de terra para plantio, com recebimento em dinheiro, é considerado arrendamento mercantil operacional. As receitas dos serviços ficarão sujeitas, na medida do recebimento, pelo regime de caixa, com alíquota aplicável à locação, no respectivo regime específico. A dedução é permitida na proporção da participação das receitas que não geram créditos de IBS e CBS.  \n\nPortanto, há desconto na base de cálculo, conforme a dedução permitida.  \n\n[T4, T2]",
+    "ms" : 56127,
+    "desfecho" : "REGIME_ESPECIFICO_SEM_SETOR",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-25",
+  "pergunta" : "Crio cavalo de corrida e levo para correr no jóquei. As apostas que o pessoal faz nessas corridas entram no IBS e na CBS?",
+  "esperado" : [ "LC 214/2025 art. 244" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 244, parágrafo único",
+    "similaridade" : 0.593
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 244",
+    "similaridade" : 0.58
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 247",
+    "similaridade" : 0.558
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 20571,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 244, parágrafo único", "LC 214/2025 art. 244", "LC 214/2025 art. 247" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 5583,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 244, parágrafo único", "LC 214/2025 art. 244", "LC 214/2025 art. 247" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3527,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 244, parágrafo único", "LC 214/2025 art. 244", "LC 214/2025 art. 247" ]
+  } ]
+}, {
+  "id" : "busca-26",
+  "pergunta" : "Quero arrumar a casa velha da fazenda para receber turista no fim de semana, com pernoite e café da manhã. Essa hospedagem paga o imposto cheio?",
+  "esperado" : [ "LC 214/2025 art. 281" ],
+  "aceito" : [ "LC 214/2025 art. 277", "LC 214/2025 art. 278" ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 480,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 307,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 530,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-27",
+  "pergunta" : "Vou trazer dos Estados Unidos uma máquina de classificar grãos para usar na minha fazenda. Nessa importação eu pago IBS e CBS?",
+  "esperado" : [ "LC 214/2025 art. 63" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º, inciso I",
+    "similaridade" : 0.705
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º, inciso II",
+    "similaridade" : 0.703
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 3º",
+    "similaridade" : 0.699
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 99, § 5º",
+    "similaridade" : 0.694
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 69, § 2º, inciso II",
+    "similaridade" : 0.678
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 49743,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 99, § 3º, inciso I", "LC 214/2025 art. 99, § 3º, inciso II", "LC 214/2025 art. 99, § 3º" ]
+  }, {
+    "cru" : "Não, você não paga IBS e CBS nessa importação, pois a suspensão do pagamento do IBS e da CBS se aplica a empresas autorizadas a operar em zonas de processamento de exportação. [T1, T2, T3]",
+    "ms" : 30992,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, você não paga IBS e CBS nessa importação, pois a suspensão do pagamento do IBS e da CBS se aplica a empresas autorizadas a operar em zonas de processamento de exportação. (LC 214/2025, art. 99, § 3º, inciso I; LC 214/2025, art. 99, § 3º, inciso II; LC 214/2025, art. 99, § 3º)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 99, § 3º, inciso I", "LC 214/2025 art. 99, § 3º, inciso II", "LC 214/2025 art. 99, § 3º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 1991,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "LC 214/2025 art. 99, § 3º, inciso I", "LC 214/2025 art. 99, § 3º, inciso II", "LC 214/2025 art. 99, § 3º" ]
+  } ]
+}, {
+  "id" : "busca-28",
+  "pergunta" : "Vou prestar serviço com a minha retroescavadeira para a prefeitura, arrumando estrada rural. Quando quem contrata é a prefeitura, muda alguma coisa no IBS e na CBS?",
+  "esperado" : [ "LC 214/2025 art. 472" ],
+  "aceito" : [ "LC 227/2026 art. 174 (redação do art. 472", "LC 214/2025 art. 473", "LC 227/2026 art. 174 (redação do art. 473" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+    "similaridade" : 0.612
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso III, alínea a",
+    "similaridade" : 0.609
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso II, alínea a",
+    "similaridade" : 0.599
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473",
+    "similaridade" : 0.596
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso III",
+    "similaridade" : 0.595
+  } ],
+  "rodadas" : [ {
+    "cru" : "Sim, quando quem contrata é a prefeitura, a alíquota da CBS e a alíquota estadual do IBS serão reduzidas a zero. [T2]",
+    "ms" : 31020,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, quando quem contrata é a prefeitura, a alíquota da CBS e a alíquota estadual do IBS serão reduzidas a zero. (LC 214/2025, art. 473, § 1º, inciso III, alínea a)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 473, § 1º, inciso III, alínea a" ]
+  }, {
+    "cru" : "Sim, quando quem contrata é a prefeitura, a alíquota da CBS e a alíquota estadual do IBS serão reduzidas a zero. [T2]",
+    "ms" : 7718,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, quando quem contrata é a prefeitura, a alíquota da CBS e a alíquota estadual do IBS serão reduzidas a zero. (LC 214/2025, art. 473, § 1º, inciso III, alínea a)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 473, § 1º, inciso III, alínea a" ]
+  }, {
+    "cru" : "Sim, quando quem contrata é a prefeitura, a alíquota da CBS e a alíquota estadual do IBS serão reduzidas a zero. [T2]",
+    "ms" : 9325,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Sim, quando quem contrata é a prefeitura, a alíquota da CBS e a alíquota estadual do IBS serão reduzidas a zero. (LC 214/2025, art. 473, § 1º, inciso III, alínea a)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 473, § 1º, inciso III, alínea a" ]
+  } ]
+}, {
+  "id" : "busca-29",
+  "pergunta" : "Além de plantar, faço frete de grão com o meu caminhão, como autônomo, para uma empresa da região. A empresa que me contrata ganha algum crédito do imposto em cima desse frete?",
+  "esperado" : [ "LC 214/2025 art. 169" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 28, § 11",
+    "similaridade" : 0.602
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 22, § 15",
+    "similaridade" : 0.601
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 169, § 8º",
+    "similaridade" : 0.583
+  }, {
+    "posicao" : 4,
+    "norma" : "EC 132/2023",
+    "dispositivo" : "art. 9º, § 6º, inciso I",
+    "similaridade" : 0.58
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 169, § 1º, inciso I",
+    "similaridade" : 0.578
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 69084,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 8.212/1991 art. 28, § 11", "Lei 8.212/1991 art. 22, § 15", "LC 214/2025 art. 169, § 8º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 8118,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 8.212/1991 art. 28, § 11", "Lei 8.212/1991 art. 22, § 15", "LC 214/2025 art. 169, § 8º" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 10394,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 8.212/1991 art. 28, § 11", "Lei 8.212/1991 art. 22, § 15", "LC 214/2025 art. 169, § 8º" ]
+  } ]
+}, {
+  "id" : "busca-30",
+  "pergunta" : "Sou produtor pequeno e não recolho IBS. Se eu comprar um trator novo, ele vem com IBS e CBS no preço?",
+  "esperado" : [ "LC 214/2025 art. 110" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 110, inciso I",
+    "similaridade" : 0.681
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164",
+    "similaridade" : 0.673
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 1º",
+    "similaridade" : 0.665
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 4º",
+    "similaridade" : 0.663
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 164, § 6º",
+    "similaridade" : 0.651
+  } ],
+  "rodadas" : [ {
+    "cru" : "Não, o trator não vem com IBS e CBS no preço. O IBS e a CBS são reduzidos a zero para tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte. [T1]",
+    "ms" : 68302,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, o trator não vem com IBS e CBS no preço. O IBS e a CBS são reduzidos a zero para tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte. (LC 214/2025, art. 110, inciso I)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 110, inciso I" ]
+  }, {
+    "cru" : "Não, o trator não vem com IBS e CBS no preço. O IBS e a CBS são reduzidos a zero para tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte. [T1]",
+    "ms" : 29302,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, o trator não vem com IBS e CBS no preço. O IBS e a CBS são reduzidos a zero para tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte. (LC 214/2025, art. 110, inciso I)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 110, inciso I" ]
+  }, {
+    "cru" : "Não, o trator novo não vem com IBS e CBS no preço. A alíquota do IBS e da CBS é reduzida a zero para tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte [T1].  \n\nMas isso não significa que o trator esteja isento de impostos no preço — a isenção se aplica ao pagamento do IBS e da CBS, não ao preço de venda. O preço do trator pode conter outros custos, mas o IBS e a CBS não são cobrados pelo produtor rural não contribuinte [T1].  \n\nSe você não recolhe IBS, porque sua receita é inferior a R$ 3.600.000,00 no ano-calendário, então está isento [T2].  \n\n[T1, T2]",
+    "ms" : 163385,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Não, o trator novo não vem com IBS e CBS no preço. A alíquota do IBS e da CBS é reduzida a zero para tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte (LC 214/2025, art. 110, inciso I).  \n\nMas isso não significa que o trator esteja isento de impostos no preço — a isenção se aplica ao pagamento do IBS e da CBS, não ao preço de venda. O preço do trator pode conter outros custos, mas o IBS e a CBS não são cobrados pelo produtor rural não contribuinte (LC 214/2025, art. 110, inciso I).  \n\nSe você não recolhe IBS, porque sua receita é inferior a R$ 3.600.000,00 no ano-calendário, então está isento (LC 214/2025, art. 164).  \n\n(LC 214/2025, art. 110, inciso I; LC 214/2025, art. 164)\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- CBS (contribuição sobre bens e serviços): o novo tributo federal sobre a venda, que vai substituir o PIS e a Cofins.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.\n- PIS (Programa de Integração Social): contribuição federal sobre a receita, que a CBS vai substituir.\n- Cofins (Contribuição para o Financiamento da Seguridade Social): contribuição federal sobre a receita, que a CBS vai substituir junto com o PIS.",
+    "citacoes" : [ "LC 214/2025 art. 110, inciso I", "LC 214/2025 art. 164" ]
+  } ]
+}, {
+  "id" : "busca-31",
+  "pergunta" : "Quero registrar a minha pequena queijaria no serviço de inspeção da prefeitura. Tenho que pagar alguma taxa para isso?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 312,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 336,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 445,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-32",
+  "pergunta" : "Uso água do rio para irrigar a lavoura. Tenho que pagar alguma cobrança pelo uso dessa água?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 365,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 320,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 661,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-33",
+  "pergunta" : "Quanto custa a taxa da GTA para levar o gado de uma fazenda para outra?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 398,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 448,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 260,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-34",
+  "pergunta" : "Chegou um boleto da contribuição sindical rural da CNA. Sou obrigado a pagar?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único, inciso I",
+    "similaridade" : 0.623
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único, inciso II",
+    "similaridade" : 0.607
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 9.528/1997",
+    "dispositivo" : "art. 6º, parágrafo único",
+    "similaridade" : 0.602
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 13",
+    "similaridade" : 0.598
+  }, {
+    "posicao" : 5,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 14",
+    "similaridade" : 0.591
+  } ],
+  "rodadas" : [ {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 39235,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso I", "Lei 9.528/1997 art. 6º, parágrafo único, inciso II", "Lei 9.528/1997 art. 6º, parágrafo único" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 2973,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso I", "Lei 9.528/1997 art. 6º, parágrafo único, inciso II", "Lei 9.528/1997 art. 6º, parágrafo único" ]
+  }, {
+    "cru" : "NAO_ENCONTREI",
+    "ms" : 3107,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 9.528/1997 art. 6º, parágrafo único, inciso I", "Lei 9.528/1997 art. 6º, parágrafo único, inciso II", "Lei 9.528/1997 art. 6º, parágrafo único" ]
+  } ]
+}, {
+  "id" : "busca-35",
+  "pergunta" : "Preciso pagar a taxa de fiscalização ambiental do Ibama por causa da minha fazenda?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 404,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 204,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 243,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-36",
+  "pergunta" : "Tenho que recolher o salário-educação em cima do salário dos meus empregados da fazenda?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 218,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 194,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 268,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-37",
+  "pergunta" : "Quanto é a taxa para tirar o CCIR do imóvel rural no Incra?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 226,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 356,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 687,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-38",
+  "pergunta" : "A prefeitura asfaltou a estrada que passa na frente do sítio e quer cobrar contribuição de melhoria. Como esse valor é calculado?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 497,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 266,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 279,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-39",
+  "pergunta" : "Tenho um armazém de grãos na fazenda e o Corpo de Bombeiros cobra uma taxa de vistoria todo ano. Sou obrigado a pagar?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 422,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 374,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 955,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+}, {
+  "id" : "busca-40",
+  "pergunta" : "Tive prejuízo na safra passada por causa da seca. Dá para descontar esse prejuízo no imposto de renda dos próximos anos?",
+  "esperado" : [ ],
+  "aceito" : [ ],
+  "entregues" : [ ],
+  "rodadas" : [ {
+    "cru" : "",
+    "ms" : 465,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 469,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "",
+    "ms" : 789,
+    "desfecho" : "SEM_FUNDAMENTO_LEGAL",
+    "texto" : "Não encontrei fundamento legal para isso.",
+    "citacoes" : [ ]
+  } ]
+} ]

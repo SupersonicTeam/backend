@@ -1,0 +1,71 @@
+== regimes-especificos
+geral com esperado/aceito numa faixa: nenhuma
+setor:
+  busca-21 LC 214/2025 art. 180: faixa combustíveis, regex de setor casa
+  busca-22 LC 214/2025 art. 223: faixa serviços financeiros, regex de setor casa
+  busca-23 LC 214/2025 art. 238: faixa planos de assistência à saúde, regex de setor casa
+  busca-24 LC 214/2025 art. 261: faixa bens imóveis, regex de setor casa
+  busca-25 LC 214/2025 art. 244: faixa concursos de prognósticos, regex de setor casa
+  busca-26 LC 214/2025 art. 281: faixa bares, restaurantes, hotelaria, transporte e turismo, regex de setor casa
+  busca-27 LC 214/2025 art. 63: fora das faixas
+  busca-28 LC 214/2025 art. 472: fora das faixas
+  busca-29 LC 214/2025 art. 169: fora das faixas
+  busca-30 LC 214/2025 art. 110: fora das faixas
+perguntas geral com alguma regex de setor casando: 5
+  busca-02: bens imóveis
+  busca-04: bens imóveis
+  busca-10: concursos de prognósticos
+  busca-12: bens imóveis
+  busca-19: bens imóveis
+perguntas setor com alguma regex de setor casando: 7
+  busca-21: combustíveis
+  busca-22: serviços financeiros
+  busca-23: bens imóveis, planos de assistência à saúde
+  busca-24: bens imóveis
+  busca-25: concursos de prognósticos
+  busca-26: bares, restaurantes, hotelaria, transporte e turismo, bens imóveis
+  busca-27: bens imóveis
+perguntas ausente com alguma regex de setor casando: 6
+  busca-33: bens imóveis
+  busca-35: bens imóveis
+  busca-36: bens imóveis
+  busca-37: bens imóveis
+  busca-38: bens imóveis
+  busca-39: bens imóveis
+== ampliada
+geral com esperado/aceito numa faixa: nenhuma
+setor:
+  busca-21 LC 214/2025 art. 180: faixa combustíveis, regex de setor casa
+  busca-22 LC 214/2025 art. 223: faixa serviços financeiros, regex de setor casa
+  busca-23 LC 214/2025 art. 238: faixa planos de assistência à saúde, regex de setor casa
+  busca-24 LC 214/2025 art. 261: faixa bens imóveis, regex de setor casa
+  busca-25 LC 214/2025 art. 244: faixa concursos de prognósticos, regex de setor casa
+  busca-26 LC 214/2025 art. 281: faixa bares, restaurantes, hotelaria, transporte e turismo, regex de setor casa
+  busca-27 LC 214/2025 art. 63: faixa Importação de bens e serviços, regex de setor casa
+  busca-28 LC 214/2025 art. 472: fora das faixas
+  busca-29 LC 214/2025 art. 169: fora das faixas
+  busca-30 LC 214/2025 art. 110: fora das faixas
+perguntas geral com alguma regex de setor casando: 6
+  busca-02: bens imóveis
+  busca-04: bens imóveis
+  busca-10: concursos de prognósticos
+  busca-12: bens imóveis
+  busca-13: Compensação de benefícios onerosos do ICMS
+  busca-19: bens imóveis
+perguntas setor com alguma regex de setor casando: 9
+  busca-21: Venda e revenda de máquinas, veículos e equipamentos usados, combustíveis
+  busca-22: serviços financeiros
+  busca-23: bens imóveis, planos de assistência à saúde
+  busca-24: Transição das operações com bens imóveis, bens imóveis
+  busca-25: Imposto Seletivo, concursos de prognósticos
+  busca-26: Devolução do IBS e da CBS ao turista estrangeiro, Transição das operações com bens imóveis, bares, restaurantes, hotelaria, transporte e turismo, bens imóveis
+  busca-27: Importação de bens e serviços, Regimes aduaneiros especiais, bagagem, remessas internacionais e combustível de aeronave, Venda e revenda de máquinas, veículos e equipamentos usados, bens imóveis
+  busca-29: Imposto Seletivo, Venda e revenda de máquinas, veículos e equipamentos usados
+  busca-30: Venda e revenda de máquinas, veículos e equipamentos usados
+perguntas ausente com alguma regex de setor casando: 6
+  busca-33: bens imóveis
+  busca-35: bens imóveis
+  busca-36: bens imóveis
+  busca-37: Transição das operações com bens imóveis, bens imóveis
+  busca-38: Transição das operações com bens imóveis, bens imóveis
+  busca-39: bens imóveis

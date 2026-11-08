@@ -1,0 +1,413 @@
+{
+  "versao": "busca-2026-11-v1",
+  "observacao": "Conjunto de medição de USO ÚNICO da rota de lei da Ceres (busca-2026-11-v1). Não serve para ajustar a Ceres (prompt, exemplos, classificador, busca, gabarito ou treino): usado num ajuste, deixa de medir. Escrito por uma sessão que não leu as perguntas de avaliação, só o texto da base legislacao_trecho. Grupos: 20 gerais, 10 de setor e 10 ausentes (esperado vazio: o certo é a Ceres não responder). Chave de artigo = norma + espaço + dispositivo cortado na primeira vírgula, sem ')' final; resposta certa = citação em esperado ∪ aceito. Procedimento das gerais: lidos os caputs da LC 214/2025 (arts. 1º a 62, operações com bens e serviços), da EC 132/2023 e da Lei 8.212/1991, a regra geral foi dividida em 23 partes e as perguntas espalhadas entre elas, no máximo 3 por parte (usadas 15 partes): P01 instituição e definições (arts. 1º a 3º); P02 incidência e não incidência (4º a 7º-A); P03 imunidades (8º e 9º); P04 momento do fato gerador (10); P05 local da operação (11); P06 base de cálculo (12 e 13); P07 alíquotas (14 a 20); P08 contribuintes e responsáveis (21 a 26); P09 pagamento e split payment (27 a 37); P10 restituição e ressarcimento (38 a 40); P11 regime regular e apuração (41 a 46); P12 créditos (47 a 56); P13 uso e consumo pessoal (57); P14 cadastro e documento fiscal (58 a 62); EC 132/2023: P15 IBS (art. 156-A), P16 regras comuns ao IBS e à CBS (arts. 149-B e 195, V), P17 transição de 2026 a 2033 (ADCT, arts. 124 a 133); Lei 8.212/1991: P18 segurados (art. 12), P19 contribuição do empregador rural pessoa física e do segurado especial (arts. 25 e 25-A), P20 arrecadação e sub-rogação (art. 30), P21 obrigações acessórias (arts. 32 a 32-C), P22 contribuição dos segurados (arts. 20 e 21), P23 definições de empresa e equiparados (art. 15). Ficaram fora da regra geral as partes de caso especial da LC 214/2025 (importação, regimes aduaneiros, bens de capital, devolução personalizada, cesta básica, regimes diferenciados, produtor rural não contribuinte, regimes específicos, compras governamentais, Zona Franca, Imposto Seletivo), de onde saem as 10 de setor: 6 nos regimes específicos (arts. 172 a 307), uma em cada um de 6 capítulos, e 4 fora deles.",
+  "perguntas": [
+    {
+      "id": "busca-01",
+      "pergunta": "Troquei uns bezerros por milho com o vizinho, sem passar dinheiro nenhum. Essa troca também tem IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 4º"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 4º"
+      ],
+      "raciocinio": "Parte P02 (incidência e não incidência, LC 214/2025, arts. 4º a 7º-A). O caput do art. 4º faz o IBS e a CBS incidirem sobre operações onerosas, e o § 2º, inciso I, inclui na operação onerosa a troca ou permuta. A LC 227/2026 (art. 174) dá redação ao art. 4º da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-02",
+      "pergunta": "Levo o milho da minha fazenda para o armazém da minha outra fazenda, as duas no meu nome. Essa remessa paga IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 6º"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 6º"
+      ],
+      "raciocinio": "Parte P02 (incidência e não incidência, LC 214/2025, arts. 4º a 7º-A). O art. 6º, inciso II, diz que o IBS e a CBS não incidem sobre a transferência de bens entre estabelecimentos do mesmo contribuinte, com a nota fiscal obrigatória. A LC 227/2026 (art. 174) dá redação ao art. 6º da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-03",
+      "pergunta": "Para agradar um comprador grande, dei de bonificação dez sacas de milho a mais, sem cobrar. Esse milho que dei de graça paga IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 5º"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 5º"
+      ],
+      "raciocinio": "Parte P02 (incidência e não incidência, LC 214/2025, arts. 4º a 7º-A). O art. 5º, inciso II, faz o IBS e a CBS incidirem também sobre o fornecimento de brindes e bonificações, e o § 1º, inciso I, tira dessa regra a bonificação que consta do documento fiscal e não depende de evento posterior. A LC 227/2026 (art. 174) dá redação ao art. 5º da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-04",
+      "pergunta": "Tenho placas solares na fazenda e vendo a energia que sobra. Para o imposto novo, essa energia é tratada como mercadoria?",
+      "esperado": [
+        "LC 214/2025 art. 3º"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 3º"
+      ],
+      "raciocinio": "Parte P01 (instituição e definições, LC 214/2025, arts. 1º a 3º). O art. 3º, § 1º, equipara a bens materiais as energias que tenham valor econômico. A LC 227/2026 (art. 174) dá redação ao art. 3º da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-05",
+      "pergunta": "Vendo novilhas por um aplicativo de vendas na internet. Quem responde pelo imposto dessa venda: eu ou o aplicativo?",
+      "esperado": [
+        "LC 214/2025 art. 22"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 22"
+      ],
+      "raciocinio": "Parte P08 (contribuintes e responsáveis, LC 214/2025, arts. 21 a 26). O art. 22 faz a plataforma digital responsável pelo IBS e pela CBS das operações feitas por intermédio dela: com fornecedor do País, solidariamente nos casos do inciso II (a plataforma não presta as informações, ou a operação sai sem documento fiscal eletrônico), e os §§ 12 e 13 deixam a plataforma optar por emitir a nota ou ser substituta. A LC 227/2026 (art. 174) dá redação ao art. 22 da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-06",
+      "pergunta": "Comprei uns garrotes de um vendedor que não me deu nota fiscal. Se ele não pagar o imposto, a cobrança pode sobrar para mim?",
+      "esperado": [
+        "LC 214/2025 art. 24"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P08 (contribuintes e responsáveis, LC 214/2025, arts. 21 a 26). O art. 24, inciso I, faz solidariamente responsável pelo IBS e pela CBS quem adquire ou recebe bem não acobertado por documento fiscal idôneo.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-07",
+      "pergunta": "Comprei de um fornecedor que vendeu com isenção, sem imposto na nota. Eu tenho algum crédito dessa compra?",
+      "esperado": [
+        "LC 214/2025 art. 49"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P12 (créditos e não cumulatividade, LC 214/2025, arts. 47 a 56). O art. 49 diz que as operações imunes, isentas, com alíquota zero, diferimento ou suspensão não permitem ao adquirente apropriar créditos, ressalvados os créditos presumidos expressos na lei (parágrafo único).",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-08",
+      "pergunta": "Se eu atrasar o pagamento do IBS do mês, quanto vou pagar de multa?",
+      "esperado": [
+        "LC 214/2025 art. 29"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 29"
+      ],
+      "raciocinio": "Parte P09 (extinção do débito: pagamento e split payment, LC 214/2025, arts. 27 a 37). O art. 29, § 2º, acrescenta multa e juros ao pagamento feito depois do vencimento, e o § 4º limita a multa a 20%. A LC 227/2026 (art. 174) dá redação ao art. 29 da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-09",
+      "pergunta": "Ouvi falar que o governo vai mandar a conta do imposto do mês já pronta. Se eu não concordar com o valor, o que acontece?",
+      "esperado": [
+        "LC 214/2025 art. 46"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P11 (regime regular e apuração, LC 214/2025, arts. 41 a 46). O art. 46 deixa o Comitê Gestor e a RFB apresentarem a apuração assistida do saldo do mês; o § 2º só admite apuração do contribuinte por ajuste nela, e o § 4º presume correto o saldo se ele não se manifestar no prazo.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-10",
+      "pergunta": "Vai ter algum sorteio ou prêmio para quem pedir nota fiscal nas compras, como as notas premiadas dos estados?",
+      "esperado": [
+        "LC 214/2025 art. 61"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P14 (administração, cadastro e documento fiscal, LC 214/2025, arts. 58 a 62). O art. 61 deixa o Comitê Gestor e a RFB instituírem programas de incentivo à cidadania fiscal que estimulem o consumidor a exigir o documento fiscal, financiados por até 0,05% da arrecadação (§ 1º).",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-11",
+      "pergunta": "Comprei ração com imposto e aproveitei o crédito, mas uma parte estragou no galpão com a chuva. Tenho que devolver o crédito dessa parte?",
+      "esperado": [
+        "LC 214/2025 art. 47"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 47"
+      ],
+      "raciocinio": "Parte P12 (créditos e não cumulatividade, LC 214/2025, arts. 47 a 56). O art. 47, § 6º, manda estornar o crédito quando o bem adquirido perece, se deteriora ou é roubado, furtado ou extraviado. A LC 227/2026 (art. 174) dá redação ao art. 47 da LC 214/2025, por isso a chave dela vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-12",
+      "pergunta": "Vou construir um galpão na fazenda e contratar o pedreiro por minha conta. Para o INSS, eu fico responsável como se fosse uma empresa nessa obra?",
+      "esperado": [
+        "Lei 8.212/1991 art. 15"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P23 (definições de empresa e equiparados, Lei 8.212/1991, art. 15). O parágrafo único do art. 15 equipara a empresa, para os efeitos da lei, a pessoa física proprietária ou dona de obra de construção civil em relação ao segurado que lhe presta serviço.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-13",
+      "pergunta": "Tenho um saldo de crédito de ICMS acumulado. Quando o ICMS acabar, eu perco esse crédito?",
+      "esperado": [
+        "EC 132/2023 art. 2º (redação do art. 134"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 132"
+      ],
+      "raciocinio": "Parte P17 (transição de 2026 a 2033, ADCT na redação do art. 2º da EC 132/2023). O art. 134 do ADCT manda aproveitar os saldos credores de ICMS existentes no fim de 2032, homologados pelos estados, e o § 3º os compensa com o IBS. O art. 132 da LC 227/2026, que reconhece esses saldos e disciplina o uso, vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-14",
+      "pergunta": "Eu e três vizinhos queremos contratar trabalhadores juntos, com um de nós contratando em nome de todos. Como fica a contribuição para o INSS nesse caso?",
+      "esperado": [
+        "Lei 8.212/1991 art. 25-A"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P19 (contribuição do empregador rural pessoa física e do segurado especial, Lei 8.212/1991, arts. 25 e 25-A). O art. 25-A equipara ao empregador rural pessoa física o consórcio simplificado de produtores que outorga a um deles poderes para contratar trabalhadores só para os integrantes.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-15",
+      "pergunta": "Esse tal de IBS é imposto de quem: do governo federal, do estado ou da prefeitura?",
+      "esperado": [
+        "EC 132/2023 art. 1º (redação do art. 156-A"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 1º"
+      ],
+      "raciocinio": "Parte P15 (IBS na Constituição, EC 132/2023, art. 156-A). O caput do art. 156-A, na redação do art. 1º da EC 132/2023, cria o imposto sobre bens e serviços de competência compartilhada entre Estados, Distrito Federal e Municípios. O art. 1º da LC 214/2025, que institui o IBS com essa competência e a CBS da União, vai no aceito.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-16",
+      "pergunta": "O IBS e a CBS vão ter as mesmas regras ou cada um vai funcionar de um jeito diferente?",
+      "esperado": [
+        "EC 132/2023 art. 1º (redação do art. 149-B"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P16 (regras comuns ao IBS e à CBS, EC 132/2023, arts. 149-B e 195, V). O art. 149-B, na redação do art. 1º da EC 132/2023, manda os dois tributos seguirem as mesmas regras de fato gerador, base, sujeito passivo, imunidades, regimes e créditos.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-17",
+      "pergunta": "Sou agricultor familiar e contratei um ajudante por alguns dias na colheita. Como eu informo esse trabalhador e pago o INSS dele?",
+      "esperado": [
+        "Lei 8.212/1991 art. 32-C"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P21 (obrigações acessórias, Lei 8.212/1991, arts. 32 a 32-C). O art. 32-C manda o segurado especial que contratar trabalhador informar o registro, as bases e as contribuições por sistema eletrônico de entrada única e recolher por documento único de arrecadação.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-18",
+      "pergunta": "Trabalho na roça só eu, minha mulher e meus filhos, sem empregado. Para o INSS eu sou considerado o quê?",
+      "esperado": [
+        "Lei 8.212/1991 art. 12"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P18 (segurados, Lei 8.212/1991, art. 12). O art. 12, inciso VII, define o segurado especial: quem trabalha no imóvel rural sozinho ou em regime de economia familiar.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-19",
+      "pergunta": "Sou produtor pessoa física e tenho empregados na fazenda. Quanto é a contribuição para o INSS em cima do que eu vendo da produção?",
+      "esperado": [
+        "Lei 8.212/1991 art. 25"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P19 (contribuição do empregador rural pessoa física e do segurado especial, Lei 8.212/1991, arts. 25 e 25-A). O art. 25 fixa 1,2% (inciso I) mais 0,1% (inciso II) da receita bruta da comercialização da produção, em substituição à contribuição sobre a folha.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-20",
+      "pergunta": "Quero pagar o INSS por conta própria para garantir a minha aposentadoria. Qual é a porcentagem?",
+      "esperado": [
+        "Lei 8.212/1991 art. 21"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte P22 (contribuição dos segurados, Lei 8.212/1991, arts. 20 e 21). O caput do art. 21 fixa em 20% do salário de contribuição a alíquota do contribuinte individual e do facultativo, e o § 2º traz as alíquotas menores para quem abre mão da aposentadoria por tempo de contribuição.",
+      "grupo": "geral"
+    },
+    {
+      "id": "busca-21",
+      "pergunta": "O óleo diesel que eu compro no posto para abastecer o trator e a colheitadeira me dá direito a crédito do imposto novo?",
+      "esperado": [
+        "LC 214/2025 art. 180"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: regime específico dos combustíveis (LC 214/2025, arts. 172 a 180). O diesel está na incidência única do art. 172, inciso III; o art. 180 veda o crédito só na compra para revenda ou distribuição e o § 1º deixa o contribuinte do regime regular se creditar na compra de combustível.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-22",
+      "pergunta": "Todo ano eu faço seguro da lavoura. O imposto que vem embutido no seguro eu posso usar como crédito?",
+      "esperado": [
+        "LC 214/2025 art. 223"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: regime específico dos serviços financeiros (LC 214/2025, arts. 181 a 233). O seguro é serviço financeiro (art. 182, inciso XI); o art. 223, § 1º, deixa o segurado do regime regular apropriar crédito sobre o prêmio pelo valor dos tributos pagos.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-23",
+      "pergunta": "Pago plano de saúde para os meus funcionários da fazenda. Dá para aproveitar o imposto desse plano como crédito?",
+      "esperado": [
+        "LC 214/2025 art. 238"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 238"
+      ],
+      "raciocinio": "Parte de caso especial: regime específico dos planos de assistência à saúde (LC 214/2025, arts. 234 a 243). O caput do art. 238 veda o crédito ao adquirente de plano de saúde, e o parágrafo único abre a exceção do plano contratado para os empregados, com o crédito proporcional. A LC 227/2026 (art. 174) dá redação ao art. 238, por isso a chave dela vai no aceito.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-24",
+      "pergunta": "Arrendo um pedaço da minha terra para o vizinho plantar e recebo em dinheiro. Nesse arrendamento o imposto é cheio ou tem desconto?",
+      "esperado": [
+        "LC 214/2025 art. 261"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: regime específico dos bens imóveis (LC 214/2025, arts. 251 a 270). O arrendamento de imóvel é operação do regime (art. 252, inciso III), e o parágrafo único do art. 261 reduz em 70% as alíquotas na locação, cessão onerosa e arrendamento de bem imóvel.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-25",
+      "pergunta": "Crio cavalo de corrida e levo para correr no jóquei. As apostas que o pessoal faz nessas corridas entram no IBS e na CBS?",
+      "esperado": [
+        "LC 214/2025 art. 244"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: regime específico dos concursos de prognósticos (LC 214/2025, arts. 244 a 250). O art. 244 põe as apostas de turfe, com as demais modalidades lotéricas e apostas, no regime específico de incidência do IBS e da CBS dos concursos de prognósticos.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-26",
+      "pergunta": "Quero arrumar a casa velha da fazenda para receber turista no fim de semana, com pernoite e café da manhã. Essa hospedagem paga o imposto cheio?",
+      "esperado": [
+        "LC 214/2025 art. 281"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 277",
+        "LC 214/2025 art. 278"
+      ],
+      "raciocinio": "Parte de caso especial: regime específico da hotelaria, parques de diversão e parques temáticos (LC 214/2025, arts. 277 a 283). O art. 281 reduz em 40% as alíquotas dos serviços de hotelaria. O art. 277, que põe a hotelaria no regime, e o art. 278, que define hotelaria como alojamento temporário com serviços, vão no aceito.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-27",
+      "pergunta": "Vou trazer dos Estados Unidos uma máquina de classificar grãos para usar na minha fazenda. Nessa importação eu pago IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 63"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: importações (LC 214/2025, arts. 63 a 78), fora dos regimes específicos. O art. 63 faz o IBS e a CBS incidirem sobre a importação de bens do exterior por pessoa física ou jurídica, ainda que não inscrita ou obrigada a se inscrever no regime regular, qualquer que seja a finalidade.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-28",
+      "pergunta": "Vou prestar serviço com a minha retroescavadeira para a prefeitura, arrumando estrada rural. Quando quem contrata é a prefeitura, muda alguma coisa no IBS e na CBS?",
+      "esperado": [
+        "LC 214/2025 art. 472"
+      ],
+      "aceito": [
+        "LC 227/2026 art. 174 (redação do art. 472",
+        "LC 214/2025 art. 473",
+        "LC 227/2026 art. 174 (redação do art. 473"
+      ],
+      "raciocinio": "Parte de caso especial: aquisições de bens e serviços pela administração pública (LC 214/2025, arts. 472 e 473), fora dos regimes específicos. O art. 472 reduz as alíquotas do IBS e da CBS nas aquisições de bens e serviços por pessoa jurídica de direito público interno, na proporção do redutor fixado. O art. 473, que destina toda a arrecadação ao ente contratante, e as redações dos dois pela LC 227/2026 (art. 174) vão no aceito.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-29",
+      "pergunta": "Além de plantar, faço frete de grão com o meu caminhão, como autônomo, para uma empresa da região. A empresa que me contrata ganha algum crédito do imposto em cima desse frete?",
+      "esperado": [
+        "LC 214/2025 art. 169"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: transportador autônomo de carga pessoa física não contribuinte (LC 214/2025, art. 169), fora dos regimes específicos. O art. 169 deixa o contribuinte do regime regular apropriar créditos presumidos do IBS e da CBS na contratação de transporte de carga de transportador autônomo pessoa física não contribuinte ou MEI, com percentuais fixados por ato conjunto (§ 4º).",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-30",
+      "pergunta": "Sou produtor pequeno e não recolho IBS. Se eu comprar um trator novo, ele vem com IBS e CBS no preço?",
+      "esperado": [
+        "LC 214/2025 art. 110"
+      ],
+      "aceito": [],
+      "raciocinio": "Parte de caso especial: regimes de bens de capital (LC 214/2025, arts. 105 a 111), fora dos regimes específicos. O art. 110, inciso I, reduz a zero as alíquotas no fornecimento de tratores, máquinas e implementos agrícolas ao produtor rural não contribuinte do art. 164.",
+      "grupo": "setor"
+    },
+    {
+      "id": "busca-31",
+      "pergunta": "Quero registrar a minha pequena queijaria no serviço de inspeção da prefeitura. Tenho que pagar alguma taxa para isso?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: taxa do serviço de inspeção municipal de produtos de origem animal, de legislação municipal. Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%Serviço de Inspeção%' → 0; content ILIKE '%inspeção sanitária%' → 0; content ILIKE '%queijaria%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-32",
+      "pergunta": "Uso água do rio para irrigar a lavoura. Tenho que pagar alguma cobrança pelo uso dessa água?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: cobrança pelo uso de recursos hídricos (Lei 9.433/1997). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%recursos hídricos%' → 0; content ILIKE '%uso da água%' → 0; content ILIKE '%outorga de uso%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-33",
+      "pergunta": "Quanto custa a taxa da GTA para levar o gado de uma fazenda para outra?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: taxa estadual da Guia de Trânsito Animal (GTA). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ~ '\\mGTA\\M' → 0; content ILIKE '%guia de trânsito%' → 0; content ILIKE '%trânsito animal%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-34",
+      "pergunta": "Chegou um boleto da contribuição sindical rural da CNA. Sou obrigado a pagar?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: contribuição sindical rural (Decreto-Lei 1.166/1971). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%contribuição sindical%' → 0; content ~ '\\mCNA\\M' → 0; content ILIKE '%Confederação da Agricultura%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-35",
+      "pergunta": "Preciso pagar a taxa de fiscalização ambiental do Ibama por causa da minha fazenda?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: Taxa de Controle e Fiscalização Ambiental do Ibama (Lei 6.938/1981). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%Ibama%' → 0; content ILIKE '%fiscalização ambiental%' → 0; content ILIKE '%licença ambiental%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-36",
+      "pergunta": "Tenho que recolher o salário-educação em cima do salário dos meus empregados da fazenda?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: salário-educação (Lei 9.424/1996). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%salário-educação%' → 0; content ILIKE '%salário educação%' → 0; content ILIKE '%salario-educacao%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-37",
+      "pergunta": "Quanto é a taxa para tirar o CCIR do imóvel rural no Incra?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: taxa do Certificado de Cadastro de Imóvel Rural (CCIR) do Incra. Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ~ '\\mCCIR\\M' → 0; content ILIKE '%Certificado de Cadastro%' → 0; content ~ '\\mIncra\\M' → 1. O único trecho com Incra é o art. 163, inciso VIII, da LC 227/2026, que obriga o Incra a informar ao fisco as transmissões sujeitas ao ITCMD; não fala de taxa nem do CCIR. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-38",
+      "pergunta": "A prefeitura asfaltou a estrada que passa na frente do sítio e quer cobrar contribuição de melhoria. Como esse valor é calculado?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: contribuição de melhoria (CTN, arts. 81 e 82). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%contribuição de melhoria%' → 0; content ILIKE '%valorização imobiliária%' → 0; content ILIKE '%obra pública%' → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-39",
+      "pergunta": "Tenho um armazém de grãos na fazenda e o Corpo de Bombeiros cobra uma taxa de vistoria todo ano. Sou obrigado a pagar?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: taxa estadual de prevenção de incêndio cobrada pelo Corpo de Bombeiros. Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%Bombeiros%' → 0; content ILIKE '%armazém%' → 0; content ILIKE '%incêndio%' → 1. O único trecho com incêndio é o art. 162, inciso IV, alínea b, da LC 214/2025 (projetos de prevenção e combate a incêndio na reabilitação urbana); não trata de taxa. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    },
+    {
+      "id": "busca-40",
+      "pergunta": "Tive prejuízo na safra passada por causa da seca. Dá para descontar esse prejuízo no imposto de renda dos próximos anos?",
+      "esperado": [],
+      "aceito": [],
+      "raciocinio": "Tema ausente: compensação de prejuízo da atividade rural no imposto de renda (Lei 8.023/1990). Conferido na base (vigencia_fim = '9999-12-31', contagem de trechos): content ILIKE '%compensar o prejuízo%' → 0; content ILIKE '%prejuízo fiscal%' → 0; content ILIKE '%prejuízo%' AND (content ILIKE '%imposto de renda%' OR content ILIKE '%imposto sobre a renda%') → 0. Nenhum trecho responde; o certo é não responder.",
+      "grupo": "ausente"
+    }
+  ]
+}

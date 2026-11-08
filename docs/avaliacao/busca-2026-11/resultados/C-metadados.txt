@@ -1,0 +1,29 @@
+braco: C
+particao: regimes-especificos
+sha: 1746e48139d77fd5919d05f6e9d3cd69242e4490 (feat/436-particao-caso-especial)
+conjunto sha256: 0d6c08f2194da03abbc0cb585ddfd2fd24934b2ae73ea67f9909355068bdedf5
+inicio: 2026-11-07T14:33:42-0300
+ollama list:
+NAME                 ID              SIZE      MODIFIED    
+qwen3:4b-instruct    0edcdef34593    2.5 GB    5 weeks ago    
+bge-m3:latest        790764642607    1.2 GB    5 weeks ago    
+qwen3:4b             359d7dd4bcda    2.5 GB    5 weeks ago    
+ollama ps (antes):
+NAME                 ID              SIZE      PROCESSOR    CONTEXT    UNTIL            
+qwen3:4b-instruct    0edcdef34593    3.9 GB    100% CPU     8192       2 hours from now    
+bge-m3:latest        790764642607    1.2 GB    100% CPU     4096       2 hours from now    
+trechos por norma (vigentes):
+EC 132/2023|538
+LC 214/2025|5004
+LC 227/2026|2211
+Lei 8.212/1991|547
+Lei 9.528/1997|4
+recall: saida 0 em 2026-11-07T14:36:50-0300
+citacoes: saida 0 em 2026-11-07T15:07:05-0300
+ERRO_MODELO em: busca-01 (refeitas no fim do braco)
+ERRO_MODELO que persiste: nenhum
+ollama ps (depois):
+NAME                 ID              SIZE      PROCESSOR    CONTEXT    UNTIL            
+qwen3:4b-instruct    0edcdef34593    3.9 GB    100% CPU     8192       2 hours from now    
+bge-m3:latest        790764642607    1.2 GB    100% CPU     4096       2 hours from now    
+fim: 2026-11-07T15:08:48-0300

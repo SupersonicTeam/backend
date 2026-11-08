@@ -1,0 +1,50 @@
+[ {
+  "id" : "busca-15",
+  "pergunta" : "Esse tal de IBS é imposto de quem: do governo federal, do estado ou da prefeitura?",
+  "esperado" : [ "EC 132/2023 art. 1º (redação do art. 156-A" ],
+  "aceito" : [ "LC 214/2025 art. 1º" ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 2º, inciso II",
+    "similaridade" : 0.637
+  }, {
+    "posicao" : 2,
+    "norma" : "LC 214/2025",
+    "dispositivo" : "art. 473, § 1º, inciso III, alínea b",
+    "similaridade" : 0.633
+  }, {
+    "posicao" : 3,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 113, inciso VI",
+    "similaridade" : 0.632
+  }, {
+    "posicao" : 4,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 113, § 2º",
+    "similaridade" : 0.631
+  }, {
+    "posicao" : 5,
+    "norma" : "LC 227/2026",
+    "dispositivo" : "art. 2º, inciso I",
+    "similaridade" : 0.63
+  } ],
+  "rodadas" : [ {
+    "desfecho" : "ERRO_MODELO",
+    "texto" : "AssistenteIndisponivelException",
+    "cru" : "",
+    "citacoes" : [ ]
+  }, {
+    "cru" : "O IBS é imposto dos Estados, do Distrito Federal e dos Municípios, exercido de forma integrada por meio do CGIBS [T1, T5].",
+    "ms" : 15613,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS é imposto dos Estados, do Distrito Federal e dos Municípios, exercido de forma integrada por meio do CGIBS (LC 227/2026, art. 2º, inciso II; LC 227/2026, art. 2º, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.",
+    "citacoes" : [ "LC 227/2026 art. 2º, inciso II", "LC 227/2026 art. 2º, inciso I" ]
+  }, {
+    "cru" : "O IBS é imposto dos Estados, do Distrito Federal e dos Municípios, exercido de forma integrada por meio do CGIBS [T1, T5].",
+    "ms" : 11783,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "O IBS é imposto dos Estados, do Distrito Federal e dos Municípios, exercido de forma integrada por meio do CGIBS (LC 227/2026, art. 2º, inciso II; LC 227/2026, art. 2º, inciso I).\n\nO que isso quer dizer:\n- IBS (imposto sobre bens e serviços): o novo imposto sobre a venda, dividido entre estados e municípios, que vai substituir o ICMS e o ISS aos poucos.\n- LC: lei complementar, um tipo de lei federal que detalha o que a Constituição prevê.\n- ICMS (imposto sobre circulação de mercadorias e serviços): imposto dos estados sobre a circulação de mercadorias, que o IBS vai substituir aos poucos.\n- ISS (imposto sobre serviços): imposto dos municípios sobre serviços, que o IBS vai substituir aos poucos.",
+    "citacoes" : [ "LC 227/2026 art. 2º, inciso II", "LC 227/2026 art. 2º, inciso I" ]
+  } ]
+} ]

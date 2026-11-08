@@ -1,0 +1,496 @@
+{
+  "excluidas": [],
+  "decisao": {
+    "excluidas": [],
+    "entregues_a_b_diferentes": [],
+    "rotulos": {
+      "A": {
+        "busca-01": "descarte",
+        "busca-02": "descarte",
+        "busca-03": "descarte",
+        "busca-04": "descarte",
+        "busca-05": "descarte",
+        "busca-06": "descarte",
+        "busca-07": "descarte",
+        "busca-08": "descarte",
+        "busca-09": "outro_artigo",
+        "busca-10": "descarte",
+        "busca-11": "descarte",
+        "busca-12": "outro_artigo",
+        "busca-13": "descarte",
+        "busca-14": "descarte",
+        "busca-15": "outro_artigo",
+        "busca-16": "outro_artigo",
+        "busca-17": "certa",
+        "busca-18": "descarte",
+        "busca-19": "certa",
+        "busca-20": "certa",
+        "busca-21": "descarte",
+        "busca-22": "descarte",
+        "busca-23": "certa",
+        "busca-24": "descarte",
+        "busca-25": "descarte",
+        "busca-26": "descarte",
+        "busca-27": "descarte",
+        "busca-28": "certa",
+        "busca-29": "descarte",
+        "busca-30": "certa",
+        "busca-31": "descarte",
+        "busca-32": "descarte",
+        "busca-33": "descarte",
+        "busca-34": "descarte",
+        "busca-35": "descarte",
+        "busca-36": "descarte",
+        "busca-37": "descarte",
+        "busca-38": "descarte",
+        "busca-39": "descarte",
+        "busca-40": "descarte"
+      },
+      "B": {
+        "busca-01": "descarte",
+        "busca-02": "descarte",
+        "busca-03": "descarte",
+        "busca-04": "descarte",
+        "busca-05": "descarte",
+        "busca-06": "descarte",
+        "busca-07": "descarte",
+        "busca-08": "descarte",
+        "busca-09": "outro_artigo",
+        "busca-10": "descarte",
+        "busca-11": "descarte",
+        "busca-12": "outro_artigo",
+        "busca-13": "descarte",
+        "busca-14": "descarte",
+        "busca-15": "outro_artigo",
+        "busca-16": "outro_artigo",
+        "busca-17": "certa",
+        "busca-18": "descarte",
+        "busca-19": "certa",
+        "busca-20": "certa",
+        "busca-21": "descarte",
+        "busca-22": "descarte",
+        "busca-23": "certa",
+        "busca-24": "descarte",
+        "busca-25": "descarte",
+        "busca-26": "descarte",
+        "busca-27": "outro_artigo",
+        "busca-28": "certa",
+        "busca-29": "descarte",
+        "busca-30": "certa",
+        "busca-31": "descarte",
+        "busca-32": "descarte",
+        "busca-33": "descarte",
+        "busca-34": "descarte",
+        "busca-35": "descarte",
+        "busca-36": "descarte",
+        "busca-37": "descarte",
+        "busca-38": "descarte",
+        "busca-39": "descarte",
+        "busca-40": "descarte"
+      },
+      "C": {
+        "busca-01": "descarte",
+        "busca-02": "descarte",
+        "busca-03": "descarte",
+        "busca-04": "descarte",
+        "busca-05": "descarte",
+        "busca-06": "descarte",
+        "busca-07": "descarte",
+        "busca-08": "descarte",
+        "busca-09": "outro_artigo",
+        "busca-10": "descarte",
+        "busca-11": "descarte",
+        "busca-12": "outro_artigo",
+        "busca-13": "descarte",
+        "busca-14": "descarte",
+        "busca-15": "outro_artigo",
+        "busca-16": "outro_artigo",
+        "busca-17": "descarte",
+        "busca-18": "descarte",
+        "busca-19": "certa",
+        "busca-20": "certa",
+        "busca-21": "descarte",
+        "busca-22": "descarte",
+        "busca-23": "certa",
+        "busca-24": "descarte",
+        "busca-25": "descarte",
+        "busca-26": "descarte",
+        "busca-27": "outro_artigo",
+        "busca-28": "certa",
+        "busca-29": "descarte",
+        "busca-30": "certa",
+        "busca-31": "descarte",
+        "busca-32": "descarte",
+        "busca-33": "descarte",
+        "busca-34": "descarte",
+        "busca-35": "descarte",
+        "busca-36": "descarte",
+        "busca-37": "descarte",
+        "busca-38": "descarte",
+        "busca-39": "descarte",
+        "busca-40": "descarte"
+      },
+      "D": {
+        "busca-01": "descarte",
+        "busca-02": "descarte",
+        "busca-03": "descarte",
+        "busca-04": "descarte",
+        "busca-05": "descarte",
+        "busca-06": "descarte",
+        "busca-07": "descarte",
+        "busca-08": "descarte",
+        "busca-09": "descarte",
+        "busca-10": "descarte",
+        "busca-11": "descarte",
+        "busca-12": "outro_artigo",
+        "busca-13": "descarte",
+        "busca-14": "descarte",
+        "busca-15": "outro_artigo",
+        "busca-16": "outro_artigo",
+        "busca-17": "descarte",
+        "busca-18": "descarte",
+        "busca-19": "certa",
+        "busca-20": "certa",
+        "busca-21": "descarte",
+        "busca-22": "descarte",
+        "busca-23": "descarte",
+        "busca-24": "descarte",
+        "busca-25": "descarte",
+        "busca-26": "descarte",
+        "busca-27": "outro_artigo",
+        "busca-28": "certa",
+        "busca-29": "descarte",
+        "busca-30": "certa",
+        "busca-31": "descarte",
+        "busca-32": "descarte",
+        "busca-33": "descarte",
+        "busca-34": "descarte",
+        "busca-35": "descarte",
+        "busca-36": "descarte",
+        "busca-37": "descarte",
+        "busca-38": "descarte",
+        "busca-39": "descarte",
+        "busca-40": "descarte"
+      }
+    },
+    "ruido": {
+      "perguntas": [
+        "busca-27"
+      ],
+      "n": 1
+    },
+    "C": {
+      "viram_certa": [],
+      "deixam_certa": [
+        "busca-17"
+      ],
+      "saldo_certa": -1,
+      "viram_outro_artigo": [],
+      "deixam_outro_artigo": [],
+      "setor_perde_certa": [],
+      "ausente_passa_a_responder": [],
+      "condicoes": {
+        "a_saldo_certa_ge_3": false,
+        "b_outro_artigo_nao_sobe": true,
+        "c_nenhum_setor_perde_certa": true,
+        "d_nenhuma_ausente_passa_a_responder": true,
+        "e_saldo_maior_que_ruido": false
+      },
+      "passa": false
+    },
+    "D": {
+      "viram_certa": [],
+      "deixam_certa": [
+        "busca-17",
+        "busca-23"
+      ],
+      "saldo_certa": -2,
+      "viram_outro_artigo": [],
+      "deixam_outro_artigo": [
+        "busca-09"
+      ],
+      "setor_perde_certa": [
+        "busca-23"
+      ],
+      "ausente_passa_a_responder": [],
+      "condicoes": {
+        "a_saldo_certa_ge_3": false,
+        "b_outro_artigo_nao_sobe": true,
+        "c_nenhum_setor_perde_certa": false,
+        "d_nenhuma_ausente_passa_a_responder": true,
+        "e_saldo_maior_que_ruido": false
+      },
+      "passa": false
+    },
+    "decisao": "nenhuma"
+  },
+  "por_execucao": {
+    "A": {
+      "geral": {
+        "execucoes": 60,
+        "certa": 8,
+        "outro_artigo": 12,
+        "descarte": 40,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.4,
+        "cobertura": 0.333
+      },
+      "total": {
+        "execucoes": 120,
+        "certa": 17,
+        "outro_artigo": 13,
+        "descarte": 90,
+        "erro": 0,
+        "guarda": 6,
+        "precisao": 0.567,
+        "cobertura": 0.25
+      },
+      "setor": {
+        "execucoes": 30,
+        "certa": 9,
+        "outro_artigo": 1,
+        "descarte": 20,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.9,
+        "cobertura": 0.333
+      },
+      "ausente": {
+        "execucoes": 30,
+        "certa": 0,
+        "outro_artigo": 0,
+        "descarte": 30,
+        "erro": 0,
+        "guarda": 0,
+        "precisao": null,
+        "cobertura": 0.0
+      }
+    },
+    "B": {
+      "geral": {
+        "execucoes": 60,
+        "certa": 9,
+        "outro_artigo": 12,
+        "descarte": 39,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.429,
+        "cobertura": 0.35
+      },
+      "total": {
+        "execucoes": 120,
+        "certa": 18,
+        "outro_artigo": 15,
+        "descarte": 87,
+        "erro": 0,
+        "guarda": 6,
+        "precisao": 0.545,
+        "cobertura": 0.275
+      },
+      "setor": {
+        "execucoes": 30,
+        "certa": 9,
+        "outro_artigo": 3,
+        "descarte": 18,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.75,
+        "cobertura": 0.4
+      },
+      "ausente": {
+        "execucoes": 30,
+        "certa": 0,
+        "outro_artigo": 0,
+        "descarte": 30,
+        "erro": 0,
+        "guarda": 0,
+        "precisao": null,
+        "cobertura": 0.0
+      }
+    },
+    "C": {
+      "geral": {
+        "execucoes": 60,
+        "certa": 7,
+        "outro_artigo": 12,
+        "descarte": 41,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.368,
+        "cobertura": 0.317
+      },
+      "total": {
+        "execucoes": 120,
+        "certa": 16,
+        "outro_artigo": 15,
+        "descarte": 89,
+        "erro": 0,
+        "guarda": 6,
+        "precisao": 0.516,
+        "cobertura": 0.258
+      },
+      "setor": {
+        "execucoes": 30,
+        "certa": 9,
+        "outro_artigo": 3,
+        "descarte": 18,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.75,
+        "cobertura": 0.4
+      },
+      "ausente": {
+        "execucoes": 30,
+        "certa": 0,
+        "outro_artigo": 0,
+        "descarte": 30,
+        "erro": 0,
+        "guarda": 0,
+        "precisao": null,
+        "cobertura": 0.0
+      }
+    },
+    "D": {
+      "geral": {
+        "execucoes": 60,
+        "certa": 7,
+        "outro_artigo": 9,
+        "descarte": 44,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.438,
+        "cobertura": 0.267
+      },
+      "total": {
+        "execucoes": 120,
+        "certa": 13,
+        "outro_artigo": 12,
+        "descarte": 95,
+        "erro": 0,
+        "guarda": 6,
+        "precisao": 0.52,
+        "cobertura": 0.208
+      },
+      "setor": {
+        "execucoes": 30,
+        "certa": 6,
+        "outro_artigo": 3,
+        "descarte": 21,
+        "erro": 0,
+        "guarda": 3,
+        "precisao": 0.667,
+        "cobertura": 0.3
+      },
+      "ausente": {
+        "execucoes": 30,
+        "certa": 0,
+        "outro_artigo": 0,
+        "descarte": 30,
+        "erro": 0,
+        "guarda": 0,
+        "precisao": null,
+        "cobertura": 0.0
+      }
+    }
+  },
+  "tempo_primeira_repeticao": {
+    "A": {
+      "n": 40,
+      "mediana_s": 30.0,
+      "media_s": 33.8,
+      "total_s": 1352
+    },
+    "B": {
+      "n": 40,
+      "mediana_s": 5.5,
+      "media_s": 16.4,
+      "total_s": 655
+    },
+    "C": {
+      "n": 39,
+      "mediana_s": 6.6,
+      "media_s": 11.6,
+      "total_s": 453
+    },
+    "D": {
+      "n": 40,
+      "mediana_s": 6.2,
+      "media_s": 16.0,
+      "total_s": 641
+    }
+  },
+  "recall": {
+    "A": {
+      "perguntasComEsperado": 30,
+      "recall5Esperado": 7,
+      "posicao1Esperado": 4,
+      "recall5Aceitavel": 9,
+      "posicao1Aceitavel": 6,
+      "ausentes": 10,
+      "ausentesComTrechoAcimaDoLimiar": 1
+    },
+    "B": {
+      "perguntasComEsperado": 30,
+      "recall5Esperado": 7,
+      "posicao1Esperado": 4,
+      "recall5Aceitavel": 9,
+      "posicao1Aceitavel": 6,
+      "ausentes": 10,
+      "ausentesComTrechoAcimaDoLimiar": 1
+    },
+    "C": {
+      "perguntasComEsperado": 30,
+      "recall5Esperado": 7,
+      "posicao1Esperado": 4,
+      "recall5Aceitavel": 9,
+      "posicao1Aceitavel": 6,
+      "ausentes": 10,
+      "ausentesComTrechoAcimaDoLimiar": 1
+    },
+    "D": {
+      "perguntasComEsperado": 30,
+      "recall5Esperado": 7,
+      "posicao1Esperado": 5,
+      "recall5Aceitavel": 9,
+      "posicao1Aceitavel": 7,
+      "ausentes": 10,
+      "ausentesComTrechoAcimaDoLimiar": 1
+    }
+  },
+  "top5_mudou_vs_B": {
+    "A": [],
+    "C": [
+      "busca-01"
+    ],
+    "D": [
+      "busca-01",
+      "busca-02",
+      "busca-07",
+      "busca-09",
+      "busca-11",
+      "busca-21",
+      "busca-22",
+      "busca-23",
+      "busca-27"
+    ]
+  },
+  "guarda_por_pergunta": {
+    "A": [
+      "busca-01",
+      "busca-24"
+    ],
+    "B": [
+      "busca-01",
+      "busca-24"
+    ],
+    "C": [
+      "busca-01",
+      "busca-24"
+    ],
+    "D": [
+      "busca-01",
+      "busca-24"
+    ]
+  }
+}
