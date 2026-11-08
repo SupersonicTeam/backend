@@ -56,6 +56,25 @@ depende dela.
    localmente. **Segure o lock do deploy** enquanto mexe no serviço, para uma entrega
    da CI não entrar no meio: `exec 9>/opt/agrocontabil/.deploy.lock && flock 9` na sessão da janela
    (o `deploy.sh` espera até 15 min). Ao fim de cada variante, volte ao padrão.
+
+   **Variante que baixa o teto da pergunta estraga a cota do Rogério.** Todo reinício do backend
+   roda o `SeedDemonstracao`, que chama `CotaDemonstracaoCeres.prepararSemana()`: o consumo da
+   semana do Rogério sobe até `1000 − teto da pergunta − 1` e **nunca desce** (hoje 967, com o
+   teto 32). Com `AI_OLLAMA_NUM_CTX=6144` (passo 4, teto 26) ele vai a 973; com
+   `AI_TETO_LEGISLACAO=512` (passo 5, teto 30), a 969. Ao voltar ao padrão (teto 32) sobram 27 ou
+   31 créditos, menos que a reserva de 32, e a primeira pergunta dele já leva 429 até a virada de
+   segunda: o cenário da banca ("uma passa, a segunda leva 429") quebra. Por isso:
+
+   - os passos 4 e 5 rodam só em semana **anterior** à da banca (até domingo 29/11), nunca de
+     30/11 em diante, e longe de qualquer ensaio com o Rogério (se houver ensaio na mesma semana,
+     o ensaio vem antes ou a variante espera a segunda seguinte);
+   - em todo reinício, anote o teto: `docker compose logs --since <início> backend | grep
+     'cota da Ceres preparada'`;
+   - **reposição**, depois de voltar ao padrão: confira o consumo do Rogério da semana (a consulta
+     do item 8 trocando o nome) e escolha uma de duas saídas, ambas decisão do Murillo: esperar a
+     virada de segunda e conferir o mesmo log ou o consumo; ou devolver o `creditos_consumidos`
+     da semana a 967, que é **escrita no banco da demonstração** e só com OK explícito dele,
+     nomeando o `UPDATE`. Sem OK, vale a espera. Anote no "Registro das noites".
 6. **Aquecer depois de qualquer reinício.** Reiniciar o backend (toda variante) refaz o aquecimento
    da JVM e **recalcula em segundo plano os vetores do conjunto de treino do classificador**
    (`EmbeddingClassificadorIntencao`, log `exemplos do classificador de rota carregados`). Até esse
@@ -79,31 +98,36 @@ depende dela.
    escritório à parte). Nunca o Carlos, o Rogério nem as demais contas do roteiro. Não se cria
    conta nem se muda `AI_COTA_*` (o compose nem o repassa) nem se zera consumo.
 
-   **Orçamento.** "Perto de 900 créditos por rodada de 3 repetições do gabarito inteiro" (87
-   perguntas, 261 respostas) é **estimativa sem medição**; se o `prompt_eval_count` contar o
-   prefixo, pode passar de 1.000 (passo 3). Por isso:
+   **Orçamento.** O "~3,4 créditos por resposta" da primeira versão era baixo demais: as respostas
+   de dados custam **4 a 5** com o prefixo contado, e **toda pergunta reserva 32 créditos antes de
+   rodar** (o teto), então uma conta só pergunta enquanto sobrarem 32 livres, ou seja, **na
+   prática ~968 créditos por conta e semana**. O custo real ainda não foi medido (passo 3). Para
+   planejar, uso **5 créditos por resposta** (conservador para dados; lei e MISTO a medir) e um
+   teto de planejamento de **900 por conta e semana**. Por isso:
 
-   - Rodada completa só no passo 0 da **Fase B** (uma conta com a semana inteira de saldo).
+   - Rodada completa (87 perguntas × 3 = 261 respostas, ~1.300 créditos) **não cabe em uma conta**.
+     Só no passo 0 da **Fase B**, **dividida entre João e Maria** (metade dos ids para cada um, via
+     `AGRO_IDS`, ~650 cada, com a ordem do gabarito mantida dentro de cada metade e a divisão
+     registrada) ou, se a semana de 23/11 permitir, uma conta por rodada. O `dev,avaliacao`
+     (gabarito inteiro, fora da cota) cobre acerto de rota/número/citação.
    - Fase A: comparações relativas por **subconjuntos fixos de ids** (`AGRO_IDS`), os mesmos no
-     passo 0 e na variante da noite: ~30 ids (cerca de 12 de dados, 10 de lei, 4 de MISTO, 4 fora
-     de escopo) para os passos 0, 1 e 2; DADOS e LEG para o passo 4; só LEG e MISTO para o passo 5.
-     Registre a lista de ids usada. O acerto de rota/número/citação sai do `dev,avaliacao`
-     (gabarito inteiro, fora da cota).
-   - Meça o gasto real na primeira passada do subconjunto (consulta abaixo) e recalcule antes de
-     seguir.
-   - Previsão com a estimativa de ~3,4 créditos por resposta (~310 por passada de 30 ids × 3):
+     passo 0 e na variante da noite: **~20 ids** (cerca de 8 de dados, 6 de lei, 3 de MISTO, 3 fora
+     de escopo) para os passos 0, 1 e 2; DADOS, LEG e MISTO para o passo 4; só LEG e MISTO para o
+     passo 5. Registre a lista de ids usada.
+   - Meça o gasto real na primeira passada do subconjunto (consulta abaixo) e **recalcule antes de
+     seguir**; o quadro abaixo é só a previsão (20 ids × 3 repetições × 5 ≈ 300 por passada):
 
      | Semana | Conta | Uso previsto |
      |---|---|---|
-     | 09–15/11 | João | N1 (passo 3, ~20) + N2 (passo 0 do subconjunto + dados em paralelo, ~450) |
-     | 09–15/11 | Maria | N3 (Q4_0: passo 0 + variante, ~620) |
-     | 16–22/11 | João | N4 (8B: ~620) |
-     | 16–22/11 | Maria | N5 (`num_ctx` e teto de lei, subconjuntos menores, ~600) |
-     | 23–25/11 | João ou Maria | N6 (Fase B, rodada completa, ~900); sobra de um dia |
+     | 09–15/11 | João | N1 (passo 3, ~20) + N2 (passo 0 do subconjunto, ~300) |
+     | 09–15/11 | Maria | N2 (dados em paralelo para o "ocupado", ~120) + N3 (Q4_0: passo 0 + variante, ~600) = ~720 |
+     | 16–22/11 | João | N4 (8B: passo 0 + variante, ~600) |
+     | 16–22/11 | Maria | N5 (`num_ctx` e teto de lei, passo 0 + duas variantes menores, ~700), **só se não houver ensaio com o Rogério** (regra 5) |
+     | 23–25/11 | João e Maria | N6 (Fase B, rodada completa dividida, ~650 cada); sem folga para repetir |
 
-   - Se a medição real não couber, **decisão pendente do Murillo** (por exemplo, menos variantes
-     ou zerar o consumo das contas de medição, uma escrita no banco): não proponho nem faço nada
-     disso sem o OK dele.
+   - Se a medição real não couber, **decisão pendente do Murillo**, que já pode ir pensando nela:
+     dividir a rodada entre as duas contas (acima), menos variantes, ou zerar o consumo das contas
+     de medição (uma escrita no banco). Não proponho nem faço nada disso sem o OK dele.
 
    Saldo, antes e depois de cada bloco (só leitura, sem a senha da conta):
 
@@ -128,9 +152,32 @@ depende dela.
     `qwen3:8b`), `ollama stop`, recriar o backend com variante ou voltar ao padrão, criar ou apagar
     banco, carregar a `legislacao_trecho` no banco de avaliação, subir ou derrubar a stack
     `agro-perf`, `git clone`/checkout na VPS, qualquer SQL que escreva e qualquer arquivo gravado
-    na pasta do deploy. Leitura (`ps`, `stats`, `free`, `SELECT`, `logs`) é livre. Nunca
-    `docker compose down` da stack principal, nunca reset nem escrita no banco da demonstração,
-    nunca mexer na base de lei, nunca ler segredo do `.env` (só variáveis não secretas).
+    na pasta do deploy. **As rodadas do harness também entram na lista da noite**: elas gravam
+    consumo de cota e linhas de auditoria nas contas de medição. Leitura (`ps`, `stats`, `free`,
+    `SELECT`, `logs`) é livre. Nunca `docker compose down` da stack principal, nunca **escrita
+    direta no banco da demonstração** (SQL, reset ou carga; a exceção única é a reposição do
+    Rogério da regra 5, só com OK explícito que nomeie o `UPDATE`), nunca mexer na base de lei,
+    nunca ler segredo do `.env` (só variáveis não secretas). A senha da conta de medição é
+    **digitada pelo Murillo** no `read -rs`; eu não a leio nem do `.env`.
+11. **O site é público.** Peça, no aviso da janela, que ninguém use a Ceres durante ela. No fim de
+    cada bloco conte as interações de outras contas desde o início (deve dar 0) e anote no
+    "Registro das noites":
+
+    ```sql
+    SELECT count(*) FROM assistente_interacao
+    WHERE criado_em >= '<início, com offset>' AND produtor_id NOT IN ('<id João>', '<id Maria>');
+    ```
+
+    Se der mais que 0, a medição daquele bloco tem outra carga junto: diga, e o dado só vale com
+    essa ressalva.
+12. **Fuso.** Anote o início de cada bloco com offset (`2026-11-09T21:30:00-03:00`) ou capture com
+    `SELECT now()` no banco, e passe RFC3339 com offset ao `--since` dos logs e ao
+    `criado_em >=` das consultas (o contêiner roda em UTC; hora sem offset erra em 3 h).
+13. **Onde o harness roda.** Escolha com o Murillo e registre: (a) máquina do operador, contra
+    `https://www.agroconia.com.br` (inclui rede e Caddy na latência); ou (b) checkout na VPS (um
+    `git clone` com OK, no SHA da noite). Nos dois casos, `AGRO_GABARITO` e `AGRO_SAIDA` são
+    caminhos **absolutos fora de `/opt/agrocontabil`**, e o registro diz a origem das requisições
+    (hostname e se passou pelo Caddy). Sem registro da origem, a latência não se compara.
 
 ## Preparação (uma vez)
 
@@ -190,11 +237,22 @@ Procedimento previsto (cada passo de escrita precisa do OK do Murillo na noite):
    demonstração (só leitura), aplicado no `avaliacao`. Sem a lei, a rota de lei mede só o modo sem
    trechos. A base da demonstração nunca é alterada.
 4. **(d)** Rodar o contêiner com `SPRING_PROFILES_ACTIVE=dev,avaliacao`, **as mesmas variáveis `AI_*`
-   do backend da variante** e o gabarito montado de um checkout no mesmo SHA
-   (`/app/docs/avaliacao`; o diretório de trabalho da imagem é `/app`), com
-   `--avaliacao.repeticoes=3 --avaliacao.hardware='VPS ARM 8 OCPU, 47 GiB, sem GPU'` (a etiqueta
-   antiga "4 nucleos" está errada). O runner termina com `System.exit`. Saída em
-   `docs/avaliacao/resultados/` do checkout.
+   do backend da variante**, de um checkout no mesmo SHA (`<checkout>`; o diretório de trabalho da
+   imagem é `/app`). O runner confere **por caminho relativo** o conjunto de treino e **sai com
+   código 1 sem ele** (`exigirTreinoSeparado`, que olha `docs/avaliacao/treino` e
+   `src/main/resources/ceres/treino`); a imagem não traz nenhum dos dois. Monte, portanto:
+
+   - `<checkout>/docs/avaliacao` em `/app/docs/avaliacao:ro` (gabarito e `treino/`);
+   - `<checkout>/src/main/resources/ceres/treino` em `/app/src/main/resources/ceres/treino:ro`,
+     **do mesmo SHA** da imagem.
+
+   **Saída gravável.** A imagem roda como `spring` (UID de sistema) e o runner só grava no fim:
+   sem permissão, a rodada inteira se perde. Rode com `--user "$(id -u):$(id -g)"` e uma pasta
+   própria **fora do repositório** (`/opt/agrocontabil-s5/saida`, criada com OK), montada em
+   `/saida`, e `--avaliacao.saida=/saida`. **Valide antes com uma rodada curta**
+   (`--avaliacao.ids=<um id> --avaliacao.repeticoes=1`) e confirme que o arquivo apareceu; só
+   então a rodada real, com `--avaliacao.repeticoes=3 --avaliacao.hardware='VPS ARM 8 OCPU, 47 GiB,
+   sem GPU'` (a etiqueta antiga "4 nucleos" está errada). O runner termina com `System.exit`.
 5. Apagar o banco `avaliacao` ao fim da S5, com OK.
 
 O comando não passa pelo Caddy nem pela cota: mede o modelo e o orquestrador, e o tempo dele
@@ -215,11 +273,33 @@ tetos 512/256/1024).
 
 ### 1. Q4_0 contra Q4_K_M (#270, item 1)
 
-Variante: só `AI_CHAT_MODEL`. Obter o Q4_0: `docs/ceres-assistente.md`, seção "Quantização Q4_0".
+Variante: só `AI_CHAT_MODEL`. O caminho é o do Modelfile (reaproveita o template da tag oficial,
+de que as chamadas de função dependem). **A regra 5 deste roteiro prevalece** sobre a seção
+"Quantização Q4_0" de `docs/ceres-assistente.md`, que manda `up -d backend` e fala em ajustar o
+`ollama-init` (alinhar essa seção fica para o PR de resultados). Comandos completos, todos com OK
+na noite:
+
+```bash
+cd /opt/agrocontabil
+# 1) baixar o GGUF Q4_0 (a VPS precisa alcançar hf.co); falha aqui = o arquivo não existe, pare
+docker compose exec ollama ollama pull hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_0
+# 2) gerar o Modelfile da tag oficial DENTRO do contêiner, trocar só a linha FROM e conferir
+docker compose exec ollama sh -c '
+  ollama show qwen3:4b-instruct --modelfile > /tmp/Modelfile &&
+  sed -i "s|^FROM .*|FROM hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_0|" /tmp/Modelfile &&
+  grep -E "^(FROM|PARAMETER)" /tmp/Modelfile && grep -c "^TEMPLATE" /tmp/Modelfile'
+# 3) criar o modelo local e conferir o tamanho
+docker compose exec ollama ollama create qwen3-4b-instruct-q4_0 -f /tmp/Modelfile
+docker compose exec ollama ollama list
+# 4) subir a variante (nunca `up -d` sem serviço: o ollama-init tentaria baixar esse nome)
+AI_CHAT_MODEL=qwen3-4b-instruct-q4_0 docker compose up -d --no-deps backend
+```
+
 Se a rota de dados não devolver `tool_calls` (uma pergunta pelo harness com `AGRO_IDS=<um id de
 dados>`), a variante está reprovada sem medir mais. Registra o conjunto do passo 0 e o tamanho
 do arquivo. Adoção só sem regressão de acerto; troca de padrão depende de OK do Murillo e sai em PR
-próprio.
+próprio. Ao fim, volte ao padrão (regra 5); o `qwen3-4b-instruct-q4_0` fica no Ollama até o
+Murillo mandar remover (`ollama rm`, outra escrita).
 
 ### 2. `qwen3:8b` (#270, item 4, medição)
 
@@ -260,18 +340,29 @@ modelo no Ollama: nenhuma das duas o substitui. O desenho vira outro:
 ### 4. `AI_OLLAMA_NUM_CTX=6144` (#270)
 
 A conta é **prompt + teto de saída da chamada ≤ 6.144, com folga**: lei ≤ ~5.000 (como no
-`deploy/.env.example`, o teto de lei é 1.024) e dados ≤ ~5.500 (teto de funções 512). Meça o maior
-`prompt_eval_count` por chamada numa rodada com 8192 em **chamadas frias**: perguntas de DADOS ou
-LEG decididas por REGRA ou EMBEDDING, fora do MISTO, logo depois de uma pergunta de outro tipo. Se o
-passo 3 mostrar que com cache o Ollama conta só a parte nova, o `tokens_entrada` da auditoria deixa
-de ser limite superior: use só as chamadas frias. Se passar do limite, não adote 6144. Mude só
-`AI_OLLAMA_NUM_CTX`; aqueça de novo. Registra acerto, RAM (cache esperado ~0,9 GB contra ~1,2 GB),
-resposta que perde as regras do início (contexto estourado) e **truncamento no log do Ollama**
-(`docker compose logs --since <início> ollama | grep -i truncat`).
+`deploy/.env.example`, o teto de lei é 1.024) e dados ≤ ~5.500 (teto de funções 512). **A maior
+chamada de lei é a do MISTO** (top-k mais até 3 trechos das compras, regras maiores): o
+subconjunto do passo inclui **dados, lei e MISTO**.
+
+Meça o maior `prompt_eval_count` por chamada numa rodada com 8192 em **chamadas frias**. Uma chamada
+é fria quando vem **depois de uma chamada ao modelo de chat com outro prefixo**: por isso a ordem
+**alterna** dados e lei (dados, lei, dados, lei, ...) e o MISTO entra entre elas; as perguntas
+são decididas por REGRA ou EMBEDDING (confira pela `camada_classificacao`: uma `LLM` trocou o
+cache e a pergunta não vale como fria). Se o passo 3 mostrar que com cache o Ollama conta só a
+parte nova, o `tokens_entrada` da auditoria deixa de ser limite superior: use só as chamadas
+frias. Se alguma passar do limite, não adote 6144.
+
+Mude só `AI_OLLAMA_NUM_CTX`; aqueça de novo. **Teto menor mexe na cota do Rogério** (regra 5): só
+em semana anterior à da banca e com a reposição prevista. Registra acerto, RAM (cache esperado
+~0,9 GB contra ~1,2 GB), resposta que perde as regras do início (contexto estourado) e
+**truncamento no log do Ollama** (`docker compose logs --since <início, RFC3339 com offset> ollama
+| grep -i truncat`). **Qualquer "truncat" no log da rodada de 6144 reprova a variante**, mesmo que
+o acerto não caia.
 
 ### 5. `AI_TETO_LEGISLACAO=512` (#270)
 
-Mude só essa variável (`NUM_CTX` volta a 8192). Anote o ponto de partida e conte os cortes da
+Mude só essa variável (`NUM_CTX` volta a 8192). **Teto menor mexe na cota do Rogério** (regra 5):
+mesma restrição de data e a mesma reposição. Anote o ponto de partida e conte os cortes da
 rodada:
 
 ```sql
@@ -323,7 +414,10 @@ nula.
 - **Ocioso:** nada mais no Ollama. **Ocupado:** a mesma bateria enquanto a outra conta roda o
   harness de dados (`AGRO_IDS=<ids de dados>`, outro terminal).
 - **Prazo de 500 ms** (`app.assistente.classificacao.timeout-embedding`): conte os vencidos **pelo
-  log** (`docker compose logs --since <início> backend | grep -c 'prazo de 500 ms vencido'`). Vencido o prazo, a camada de embedding **pausa
+  log** (`docker compose logs --since <início, RFC3339 com offset> backend | grep 'prazo de 500 ms
+  vencido'`) e **case cada linha com a pergunta pelo horário** (`criado_em` da auditoria menos a
+  `latencia_ms`, em janela de poucos segundos). **A contagem do log é o número oficial**; o casamento
+  só diz quais perguntas foram afetadas. Vencido o prazo, a camada de embedding **pausa
   30 s** (`pausa-apos-falha`) e as perguntas desse intervalo vão ao LLM sem chamar o embedding:
   atribua ao prazo só a pergunta que foi `EMBEDDING` com o Ollama ocioso e `LLM` ou
   `PALAVRAS_CHAVE` com ele ocupado (o desempate ocupado pode passar de 120 s e virar
@@ -349,8 +443,12 @@ acima de 2 s vira issue própria.
 | Resumos do harness e do `dev,avaliacao` (p50/p95, contagens, acerto) | em tabelas nos documentos acima; o JSON bruto, o CSV cego e a chave **não** vão ao repositório (têm texto das respostas) e ficam na VPS ou fora dele |
 | p95 da API (k6) | comentário na #153 e `docs/performance/README.md` |
 | Decisão do 8B com memória medida | `docs/ceres-assistente.md` e comentário na #270 |
+| Fase A (números relativos, por variante e noite) | seção "Registro das noites" deste arquivo, nunca a tabela oficial |
 
-Números também em comentário nas issues (#270, #265, #153).
+Números também em comentário nas issues (#270, #265, #153). **Não se faz `git add` do JSON do
+harness nem do CSV do `dev,avaliacao`** que estiverem num checkout da VPS ou na pasta de saída:
+têm o texto das respostas. Vão ao repositório só tabelas e contagens, escritas à mão a partir do
+resumo.
 
 ## Depois da janela
 
@@ -369,13 +467,18 @@ Números também em comentário nas issues (#270, #265, #153).
 Números relativos da Fase A ficam aqui (nunca na tabela oficial). Um bloco por noite:
 
 ```text
-Data / noite:            SHA no início:        SHA no fim:
+Data / noite:            Início (offset -03):  Fim:
+SHA no início:           SHA no fim:           Origem do harness (máquina, Caddy sim/não):
 Variante / passos:       Conta:                Ids (AGRO_IDS):
 Créditos antes -> depois: ollama ps (modelo, tamanho, contexto):
 free -m (usado/total):   docker stats no meio:
 p50/p95 por rota (rodada 1 | todas):
 Falhas: n   modoFallback: n   MODO_FALLBACK na auditoria: n   RESPOSTA_CORTADA: n
 Acerto (dev,avaliacao): rota / número / citação
+Interações de outras contas desde o início (deve ser 0): n
+Teto da pergunta no log "cota da Ceres preparada" (início e fim):
+Cota do Rogério: consumo antes -> depois da variante -> depois de voltar ao padrão;
+  reposição (espera até a segunda / UPDATE com OK do Murillo):
 Observações:
 ```
 
@@ -405,3 +508,11 @@ Observações:
   `dev,avaliacao` em quatro passos (banco, schema, lei, avaliação); conta do passo 4 com teto de
   saída e truncamento; passo 6 com prazos vencidos pelo log, pausa de 30 s e fonte das perguntas;
   seção "Registro das noites"; versionamento só de números; `--no-deps` e `ollama-init`.
+- Segunda revisão (code review xhigh e leitura independente): variante que baixa o teto sobe o
+  consumo do Rogério (`prepararSemana`) e quebra o 429 da banca (regra 5, datas e reposição);
+  `dev,avaliacao` monta o treino embutido e grava numa pasta própria com `--user`, validada por
+  rodada curta; passo 4 inclui o MISTO, alterna dados e lei e reprova por qualquer "truncat";
+  orçamento refeito (5 créditos por resposta, reserva de 32, rodada completa dividida entre João e
+  Maria); regra 10 limitada à escrita direta na demonstração e com a senha digitada pelo Murillo;
+  regras novas 11 (site público), 12 (fuso) e 13 (onde o harness roda); Q4_0 com comandos completos
+  e a regra 5 acima da seção do `docs/ceres-assistente.md`; passo 6 casa o log com a pergunta.
