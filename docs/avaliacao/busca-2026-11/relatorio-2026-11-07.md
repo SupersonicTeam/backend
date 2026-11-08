@@ -17,9 +17,10 @@ mudança medida", abaixo). A busca da `main` segue como está.
 | **(e)** saldo maior que o ruído (1) | **não** | **não** |
 | **passa** | **não** | **não** |
 
-"Não passou" quer dizer ficar como está, não que a partição piora: as perdas são de uma e duas
-perguntas, do tamanho do ruído, e a de busca-17 aconteceu com a lista entregue idêntica à de B
-(abaixo).
+"Não passou" quer dizer ficar como está. C perde uma pergunta, o mesmo tamanho do ruído, e essa
+perda (busca-17) aconteceu com a lista entregue idêntica à de B, então não vem da partição. D perde
+duas: a mesma busca-17 e a busca-23, uma pergunta `setor` cuja lista mudou com a partição; por ela, D
+reprova também na condição (c), além de (a) e (e).
 
 ## A mudança medida (só no branch)
 
@@ -149,13 +150,18 @@ mostra custo de tempo visível.
 
 ## Por que a partição quase não age neste conjunto (achado para decisão do Murillo)
 
-Com o limiar de similaridade atual (0,55), a busca entrega em média **2,8 trechos** por pergunta, e
-**6 das 30** perguntas `geral`/`setor` ficam **sem nenhum trecho** (busca-04, 05, 10, 14, 18 e 26),
-o que vira "não encontrei fundamento legal" antes do modelo. Na lista sem limiar
-(`top20` do recall), o artigo aceitável está entre os 5 primeiros em 14 perguntas; na lista entregue,
-em 9. Com poucos candidatos acima do limiar, a partição tem pouco a reordenar (o top 5 de C mudou em
-uma pergunta só). E quando a lista tem o artigo, o 4B ainda descarta muito: 87 das 120 execuções do
-braço B (72,5%) não saem `RESPONDIDA`.
+Com o limiar de similaridade atual (0,55), a busca entrega em média **3,5 trechos** nas 30 perguntas
+`geral`/`setor` (2,8 nas 40), e **6 das 30** ficam **sem nenhum trecho** (busca-04, 05, 10, 14, 18 e
+26), o que vira "não encontrei fundamento legal" antes do modelo. Na lista sem limiar (`top20` do
+recall), o artigo aceitável está entre os 5 primeiros em 14 perguntas; na lista entregue, em 9. Com
+poucos candidatos acima do limiar, a partição tem pouco a reordenar (o top 5 de C mudou em uma
+pergunta só).
+
+Quando a lista tem o artigo, o 4B responde na maior parte das vezes: nas 9 perguntas em que o
+artigo aceitável está na lista entregue, 9 das 27 execuções do braço B não saem `RESPONDIDA` e as
+outras 18 são `certa`. As 87 execuções de B que não saem `RESPONDIDA` se dividem assim: 30 das
+`ausente` (o descarte certo), 18 das 6 perguntas com lista vazia, 30 das 15 perguntas com lista sem
+o artigo e 9 das 9 com o artigo na lista.
 
 É um achado para decisão do Murillo, não uma mudança: mexer no limiar ou no tamanho da lista muda a
 saída de `buscar` e exige medição nova, num conjunto novo, escrito por outra sessão.
@@ -169,8 +175,8 @@ saída de `buscar` e exige medição nova, num conjunto novo, escrito por outra 
   avaliação.
 - O critério é o artigo citado, não o sentido da resposta: uma resposta certa que cita outro artigo
   conta como `outro_artigo`, e uma errada que cita o artigo esperado conta como `certa`.
-- Medido só com o `qwen3:4b-instruct`, em CPU. Vale também para os modelos do benchmark, que não
-  foram medidos.
+- Medido só com o `qwen3:4b-instruct`, em CPU. O resultado não se estende aos modelos do benchmark
+  (0.6b e 1.7b), que não foram medidos.
 - A sessão que escreveu o conjunto viu, pelo `CLAUDE.md`, uma pergunta de dados da avaliação.
 - O ruído foi medido com uma repetição de braço (A × B: 1 pergunta); a busca-17 mostra que uma
   pergunta pode mudar de rótulo com a mesma entrada.

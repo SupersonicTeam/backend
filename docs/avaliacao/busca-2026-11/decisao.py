@@ -8,7 +8,9 @@ Uso:
                     [--excluir id,id] [--json RESULTADO.json]
 
 Com só A e B, confere os ``entregues`` e calcula o ruído (o passo antes de rodar C e D). Código de
-saída 3 se os ``entregues`` de A e B diferem; 2 se uma saída diverge do conjunto congelado.
+saída 3 se os ``entregues`` de A e B diferem; 2 se uma saída diverge do conjunto congelado; 4 se um
+braço não tem exatamente as perguntas do conjunto fora do ``--excluir`` (a comparação seria sobre
+populações diferentes).
 """
 
 from __future__ import annotations
@@ -24,6 +26,24 @@ import busca_contagem as bc  # noqa: E402
 
 GANHO_MINIMO = 3
 VANTAGEM_D_SOBRE_C = 2
+
+
+class IdsDivergentes(ValueError):
+    """Um braço não tem exatamente as perguntas do conjunto fora das excluídas."""
+
+
+def exigir_mesmos_ids(conjunto: dict, bracos: dict[str, list[dict] | None], excluir: set[str]) -> None:
+    """Cada braço presente tem as mesmas perguntas do conjunto, fora as excluídas, sem repetir."""
+    esperados = {p["id"] for p in conjunto["perguntas"]} - excluir
+    for nome, saida in bracos.items():
+        if saida is None:
+            continue
+        ids = [i["id"] for i in saida if i["id"] not in excluir]
+        if len(ids) != len(set(ids)) or set(ids) != esperados:
+            faltam = sorted(esperados - set(ids))
+            sobram = sorted(set(ids) - esperados)
+            raise IdsDivergentes(f"braço {nome}: faltam {faltam}, sobram {sobram}, "
+                                 f"repetidos {len(ids) - len(set(ids))}")
 
 
 def rotulos(saida: list[dict], conjunto: dict, excluir: set[str]) -> dict[str, str]:
@@ -104,6 +124,7 @@ def escolher(rc: dict[str, str] | None, rd: dict[str, str] | None, comp_c: dict 
 def decidir(conjunto: dict, a: list[dict], b: list[dict], c: list[dict] | None = None,
             d: list[dict] | None = None, excluir: set[str] | None = None) -> dict:
     excluir = excluir or set()
+    exigir_mesmos_ids(conjunto, {"A": a, "B": b, "C": c, "D": d}, excluir)
     grupos = {p["id"]: p.get("grupo", "") for p in conjunto["perguntas"]}
     resultado: dict = {"excluidas": sorted(excluir)}
     diferentes = diferencas_entregues(a, b, excluir)
@@ -154,6 +175,9 @@ def main(argv: list[str] | None = None) -> int:
     except bc.ConjuntoDivergente as erro:
         print(f"erro: {erro}", file=sys.stderr)
         return 2
+    except IdsDivergentes as erro:
+        print(f"erro: {erro}", file=sys.stderr)
+        return 4
     texto = json.dumps(resultado, ensure_ascii=False, indent=2)
     if args.json_saida:
         with open(args.json_saida, "w", encoding="utf-8", newline="\n") as f:

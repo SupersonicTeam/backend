@@ -10,11 +10,13 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
@@ -44,14 +46,18 @@ import org.springframework.test.context.ActiveProfiles;
  *       o limiar corta.</li>
  * </ul>
  *
- * <p>Chave de artigo: norma + dispositivo cortado na primeira vírgula, sem {@code )} final (a mesma
- * do {@code busca_contagem.py}). O limite de produção não é alterado.
+ * <p>Chave de artigo, com a regra do {@code busca_contagem.py}: texto em NFC, espaços Unicode
+ * colapsados, norma + dispositivo cortado na primeira vírgula e sem {@code )} final. O limite de
+ * produção não é alterado.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("dev")
 class DiagnosticoRecallLeiManual {
 
   private static final int TOP_N = 5;
+
+  /** Espaços Unicode (o NBSP inclusive), como o {@code str.split()} do Python. */
+  private static final Pattern ESPACOS = Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
 
   @Autowired
   private VectorStore vectorStore;
@@ -70,7 +76,8 @@ class DiagnosticoRecallLeiManual {
 
   /** "art. 1º, parágrafo único, inciso II" vira "art. 1º"; "(redação do art. 6º)" perde o ")". */
   static String artigo(String norma, String dispositivo) {
-    String chave = (norma + " " + dispositivo).strip().replaceAll("\\s+", " ");
+    String junto = Normalizer.normalize(norma + " " + dispositivo, Normalizer.Form.NFC);
+    String chave = ESPACOS.matcher(junto).replaceAll(" ").strip();
     int virgula = chave.indexOf(',');
     chave = (virgula < 0 ? chave : chave.substring(0, virgula)).strip();
     return chave.endsWith(")") ? chave.substring(0, chave.length() - 1).strip() : chave;

@@ -33,6 +33,10 @@ bash docs/avaliacao/busca-2026-11/rodar_braco.sh A "$PWD" - <pasta-de-resultados
 ```
 
 O terceiro argumento é a partição: `-` no braço A (código sem a propriedade), ou `desligado`,
-`regimes-especificos` e `ampliada`. O roteiro pega a trava compartilhada do Ollama
-(`agroconia-ollama-lock`, no temporário do usuário) e sai sem rodar se ela é de outra sessão. A senha
-do banco vai só no ambiente do comando do Maven, lida do `.env`.
+`regimes-especificos` e `ampliada` (as três só existem no branch `feat/436-particao-caso-especial`).
+Antes de tudo, o roteiro confere o sha256 do conjunto contra o `.sha256` ao lado dele e não roda se
+não bater. Depois pega a trava compartilhada do Ollama (`agroconia-ollama-lock`) e sai sem rodar se
+ela é de outra sessão. A senha do banco vai só no ambiente do comando do Maven, lida do `.env`.
+
+**O roteiro é da máquina em que a medição rodou:** os caminhos da trava (no temporário do usuário) e
+do `.env` estão fixos nele (`TRAVA` e `ENV_FILE`). Em outra máquina, ajuste os dois antes de rodar.

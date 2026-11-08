@@ -137,6 +137,38 @@ class DecisaoTest(unittest.TestCase):
         self.assertEqual(r["ruido"]["n"], 0)
         self.assertNotIn("q01", r["rotulos"]["A"])
 
+    def test_braco_sem_uma_pergunta_e_recusado(self):
+        c = saida(BASE)[1:]
+        with self.assertRaises(dc.IdsDivergentes) as erro:
+            dc.decidir(CONJUNTO, saida(BASE), saida(BASE), c, saida(BASE))
+        self.assertIn("braço C", str(erro.exception))
+        self.assertIn("q01", str(erro.exception))
+
+    def test_pergunta_repetida_e_recusada(self):
+        d = saida(BASE) + saida(BASE)[:1]
+        with self.assertRaises(dc.IdsDivergentes):
+            dc.decidir(CONJUNTO, saida(BASE), saida(BASE), saida(BASE), d)
+
+    def test_excluida_pode_faltar_num_braco(self):
+        b = saida(BASE)[1:]
+        r = dc.decidir(CONJUNTO, saida(BASE), b, excluir={"q01"})
+        self.assertEqual(r["entregues_a_b_diferentes"], [])
+
+    def test_linha_de_comando_sai_com_4(self):
+        import io
+        import json
+        import tempfile
+        from contextlib import redirect_stderr, redirect_stdout
+        with tempfile.TemporaryDirectory() as pasta:
+            caminhos = {}
+            for nome, dados in (("conj", CONJUNTO), ("a", saida(BASE)), ("b", saida(BASE)[1:])):
+                caminhos[nome] = os.path.join(pasta, nome + ".json")
+                with open(caminhos[nome], "w", encoding="utf-8") as f:
+                    json.dump(dados, f)
+            with redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+                codigo = dc.main(["--conjunto", caminhos["conj"], "--a", caminhos["a"], "--b", caminhos["b"]])
+            self.assertEqual(codigo, 4)
+
     def test_sem_maioria_nao_conta_como_certa(self):
         c = list(BASE)
         c[3] = c[4] = c[5] = "certa"

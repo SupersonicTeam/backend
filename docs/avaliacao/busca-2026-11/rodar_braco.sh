@@ -12,8 +12,12 @@
 # A senha do banco vai só no ambiente do comando do Maven, lida do .env, nunca ecoada.
 # Saída 10: a trava do Ollama é de outra sessão (nada roda). Saída 11: há outra JVM da Ceres, ou
 # não deu para conferir. Saída 12: o recall, as citações ou a repetição dos erros falhou (o motivo
-# fica nos metadados). Os braços de 2026-11-07 rodaram com a versão anterior deste roteiro, que só
-# registrava essas falhas nos metadados; nenhuma aconteceu.
+# fica nos metadados). Saída 13: o conjunto não confere com o .sha256 ao lado dele (nada roda).
+# Os braços de 2026-11-07 rodaram com a versão anterior deste roteiro, que só registrava as falhas
+# nos metadados e não conferia o .sha256; nenhuma falha aconteceu e o conjunto conferia.
+#
+# Os caminhos da trava e do .env são os da máquina em que a medição rodou: em outra máquina, ajuste
+# TRAVA e ENV_FILE antes de rodar.
 set -u
 
 BRACO=$1
@@ -28,6 +32,12 @@ META="$DESTINO/$BRACO-metadados.txt"
 AQUI=$(cd "$(dirname "$0")" && pwd)
 
 mkdir -p "$DESTINO" "$LOGS"
+ESPERADO=$(cut -d' ' -f1 "$CONJUNTO.sha256" 2>/dev/null)
+ATUAL=$(sha256sum "$CONJUNTO" | cut -d' ' -f1)
+if [ -z "$ESPERADO" ] || [ "$ESPERADO" != "$ATUAL" ]; then
+  echo "CONJUNTO DIFERENTE DO .sha256: esperado '$ESPERADO', arquivo '$ATUAL'"
+  exit 13
+fi
 if ! mkdir "$TRAVA" 2>/dev/null; then
   echo "TRAVA OCUPADA: $(cat "$TRAVA/dono.txt" 2>/dev/null)"
   exit 10
