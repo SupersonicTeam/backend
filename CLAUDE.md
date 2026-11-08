@@ -434,9 +434,9 @@ br.com.agrocontabil
 - **Texto de catálogo ou seed que chega à tela leva acento, e competência sai em `MM/AAAA` (#408).** A guarda é `support/TextoSemAcento`. Modelo de obrigação muda por changeSet de `update` com id, `modelo = true` e texto antigo, para não tocar na versão do escritório. Nomes de clientes, endereços e produtos do `CenarioDemonstracao` seguem sem acento: os scripts de reset e os XMLs assinados dependem deles.
 - **Estilo:** Google Java Style Guide (checkstyle `google_checks.xml` no `verify`, severidade *warning* — não bloqueante).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`).
-- **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix:`, `chore/` + worktree isolado.
+- **Branches:** nunca commitar direto em `main`/`dev`/`prod`. Usar `feature/`, `fix/`, `chore/` + worktree isolado.
 - **PRs pequenos e deployáveis** — uma responsabilidade lógica por PR (programação incremental).
-- **Merge só depois do code review `xhigh` (decisão do Murillo, 2026-11-07):** todo PR passa pela skill `code-review` em `xhigh`, rodada na conversa da própria sessão, com os achados reais corrigidos e os testes rodados; depois a sessão mergeia com `gh pr merge <n> --squash` (sem `--admin` nem `--repo`), liberado no modo automático pelo `.claude/settings.json` (Bash e PowerShell). Continuam valendo as travas: nenhum merge durante uma janela de medição na VPS (S5); de 26/11 a 03/12, só correção urgente, com OK do Murillo; PR de glossário só com a revisão da equipe ou do orientador; e PR que muda o que a banca mede depende do OK do Murillo. A regra de permissão vale para toda sessão de Claude Code neste repositório; o code review antes do merge é regra de processo.
+- **Merge só depois do code review `xhigh` e da CI verde (decisão do Murillo, 2026-11-07):** a sessão mergeia o próprio PR com `gh pr merge`, liberado no modo automático pelo `.claude/settings.json`. A regra completa (como rodar o comando, sessões abertas antes da regra e travas da S5, do congelamento, do glossário e do que a banca mede) está na seção "Git / PRs" da skill `project-conventions`.
 - **Datas:** `YYYY-MM-DD`. Timezone `America/Sao_Paulo`.
 
 ## Testes
