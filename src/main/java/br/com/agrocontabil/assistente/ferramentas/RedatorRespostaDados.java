@@ -348,12 +348,15 @@ public final class RedatorRespostaDados {
    * a data é só a da nota. A compra importada foi emitida pelo fornecedor: "recebida" vale sempre.
    */
   static String tipoEData(NotaDetalhada n) {
+    boolean semData = n.dataEmissao() == null || n.dataEmissao().isBlank();
     if ("ENTRADA".equals(n.tipo())) {
-      return "de compra recebida em " + n.dataEmissao();
+      return semData ? "de compra recebida" : "de compra recebida em " + n.dataEmissao();
     }
-    return VENDAS_EMITIDAS.contains(n.situacao())
-        ? "de venda emitida em " + n.dataEmissao()
-        : "de venda com data de " + n.dataEmissao();
+    if (VENDAS_EMITIDAS.contains(n.situacao())) {
+      return semData ? "de venda emitida" : "de venda emitida em " + n.dataEmissao();
+    }
+    // Sem data: nunca "com data de null".
+    return semData ? "de venda" : "de venda com data de " + n.dataEmissao();
   }
 
   /** {@code listarAlertas}. */

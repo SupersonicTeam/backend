@@ -239,15 +239,32 @@ class RedatorRespostaDadosTest {
         new NotaDetalhada(4071, 2, "03/09/2026", "SAIDA", status.name(), null, "R$ 1.250,00",
             "R$ 1,25", "R$ 11,25", null, List.of(), List.of())), null), HOJE);
 
-    boolean emitida = status == StatusNotaFiscal.AUTORIZADA
-        || status == StatusNotaFiscal.CANCELANDO || status == StatusNotaFiscal.CANCELADA;
-    if (emitida) {
+    if (RedatorRespostaDados.VENDAS_EMITIDAS.contains(status.name())) {
       assertThat(s.texto()).startsWith("A nota 4071 (série 2), de venda emitida em 03/09/2026,");
     } else {
       assertThat(s.texto())
           .startsWith("A nota 4071 (série 2), de venda com data de 03/09/2026,")
           .doesNotContain("emitida em");
     }
+  }
+
+  @org.junit.jupiter.api.Test
+  @DisplayName("#444: so as situacoes depois da autorizacao contam como venda emitida")
+  void situacoesDeVendaEmitida() {
+    assertThat(RedatorRespostaDados.VENDAS_EMITIDAS).containsExactlyInAnyOrder(
+        StatusNotaFiscal.AUTORIZADA.name(), StatusNotaFiscal.CANCELANDO.name(),
+        StatusNotaFiscal.CANCELADA.name());
+  }
+
+  @org.junit.jupiter.api.Test
+  @DisplayName("#444: nota sem data de emissao nao vira 'com data de null'")
+  void semDataDeEmissao() {
+    SecaoResposta s = RedatorRespostaDados.nota(new NotaConsultada(4072, 1, List.of(
+        new NotaDetalhada(4072, 2, null, "SAIDA", "RASCUNHO", null, "R$ 90,00", "R$ 0,09",
+            "R$ 0,81", null, List.of(), List.of())), null), HOJE);
+
+    assertThat(s.texto()).startsWith("A nota 4072 (série 2), de venda, está em rascunho.")
+        .doesNotContain("null");
   }
 
   @ParameterizedTest(name = "{0}")
