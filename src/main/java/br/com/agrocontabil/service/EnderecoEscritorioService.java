@@ -94,6 +94,12 @@ public class EnderecoEscritorioService {
     this.propriedades = propriedades;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
+    if (propriedades.tlsAskChaveForaDaForma()) {
+      // Nunca impede a subida (a API do www nao cai por um recurso opcional), mas grita no log.
+      log.error("app.escritorio.tls-ask-chave fora da forma (32+ caracteres, so letras, digitos, "
+          + "hifen e sublinhado; gere com openssl rand -hex 32): o ask do Caddy recusa todos os "
+          + "certificados dos enderecos dos escritorios ate a chave ser corrigida.");
+    }
   }
 
   /**
@@ -292,11 +298,10 @@ public class EnderecoEscritorioService {
 
   /** Comparação em tempo constante, pelos hashes (nem o tamanho vaza). Sem chave, nada passa. */
   private boolean chaveDoAskConfere(String chave) {
-    String configurada = propriedades.tlsAskChave();
-    if (configurada == null || configurada.isBlank() || chave == null) {
+    if (!propriedades.tlsAskChaveUtilizavel() || chave == null) {
       return false;
     }
-    return MessageDigest.isEqual(sha256(chave), sha256(configurada.strip()));
+    return MessageDigest.isEqual(sha256(chave), sha256(propriedades.tlsAskChave().strip()));
   }
 
   private static byte[] sha256(String valor) {

@@ -23,17 +23,21 @@ class EnderecoEscritorioPropertiesTest {
       "Chave_Segura-na-URL_0123456789abcdefXYZ"})
   @DisplayName("chave vazia (ask desligado) ou de 32+ caracteres seguros na URL sobe")
   void chaveAceita(String chave) {
-    assertThat(com("agroconia.com.br", chave).tlsAskChave()).isEqualTo(chave);
+    EnderecoEscritorioProperties props = com("agroconia.com.br", chave);
+    assertThat(props.tlsAskChave()).isEqualTo(chave);
+    assertThat(props.tlsAskChaveForaDaForma()).isFalse();
+    assertThat(props.tlsAskChaveUtilizavel()).isEqualTo(!chave.isBlank());
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"curta-demais", "AbCdEfGhIjKlMnOpQrStUvWxYz0123456+/=",
       "chave com espaco no meio 0123456789abc", "chave%2Bcodificada0123456789abcdefgh"})
-  @DisplayName("chave curta ou com caractere que a URL altera (+, /, =, espaco, %) nao sobe")
-  void chaveRecusada(String chave) {
-    assertThatThrownBy(() -> com("agroconia.com.br", chave))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("tls-ask-chave");
+  @DisplayName("chave curta ou com caractere que a URL altera sobe, mas inutilizavel (o www nao cai)")
+  void chaveForaDaForma(String chave) {
+    EnderecoEscritorioProperties props = com("agroconia.com.br", chave);
+    assertThat(props.tlsAskChaveUtilizavel()).isFalse();
+    assertThat(props.tlsAskChaveForaDaForma()).isTrue();
+    assertThat(props.toString()).contains("(fora da forma)").doesNotContain(chave);
   }
 
   @ParameterizedTest

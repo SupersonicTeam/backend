@@ -403,6 +403,21 @@ class EnderecoEscritorioServiceTest {
   }
 
   @Test
+  @DisplayName("ask: chave configurada fora da forma (Base64) recusa tudo, mesmo a propria chave")
+  void askComChaveForaDaForma() {
+    String base64 = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456+/=";
+    EnderecoEscritorioService comBase64 = new EnderecoEscritorioService(membroProvider,
+        escritorioRepository, anteriorRepository, contadorRepository, new SlugsReservados(),
+        new EnderecoEscritorioProperties("agroconia.com.br", base64,
+            new EnderecoEscritorioProperties.Endereco(Duration.ofDays(30), Duration.ofDays(90)),
+            new EnderecoEscritorioProperties.Publico(30, 10000)),
+        CLOCK, transactionManager);
+
+    assertThat(comBase64.certificadoPermitido(base64, "ruraloeste.agroconia.com.br")).isFalse();
+    verify(escritorioRepository, never()).findAtivoPorSlug(anyString());
+  }
+
+  @Test
   @DisplayName("membro do endereco: so contador, so slug servivel, pela consulta de membro ativo")
   void membroDoEndereco() {
     UUID contadorId = UUID.randomUUID();

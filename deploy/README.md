@@ -205,7 +205,11 @@ manuais e do Murillo, na VPS e na Hostinger.
    cd /opt/agrocontabil && cp .env .env.anterior
    echo "SITE_DOMINIO=agroconia.com.br" >> .env
    echo "TLS_ASK_CHAVE=$(openssl rand -hex 32)" >> .env   # so letras e digitos: vai na URL
+   grep -qE '^TLS_ASK_CHAVE=[A-Za-z0-9_-]{32,}$' .env && echo "chave ok"
    ```
+
+   **Hex, nunca Base64.** Uma chave com `+`, `/` ou `=` chega alterada na URL do ask. O backend
+   sobe assim mesmo, mas avisa em ERROR no log e o ask recusa todos os certificados.
 
 3. **DNS na Hostinger:**
    - **criar:** registro `A`, nome `*`, apontando para o IP da VPS, com o TTL padrão;
@@ -287,6 +291,11 @@ manuais e do Murillo, na VPS e na Hostinger.
 
 Trocar a `TLS_ASK_CHAVE` no `.env` e rodar `docker compose up -d backend caddy`. Os dois leem a
 mesma variável. Os certificados já emitidos continuam valendo; só os slugs novos dependem do ask.
+
+A chave vai na URL do ask, porque o módulo de permissão do Caddy 2.10 não manda cabeçalho. Por
+isso ela fica na configuração do Caddy (a API de admin, só dentro do container) e pode aparecer nos
+logs dele quando o ask falha. Ela só vale na rede interna do compose, mas não a cole em chat nem em
+issue. Se vazar, rotacione.
 
 ## Primeira subida
 
