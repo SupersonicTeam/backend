@@ -10,6 +10,7 @@ import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD
 import static org.springframework.http.HttpHeaders.ORIGIN;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -106,6 +109,42 @@ class CorsIntegrationTest {
     mockMvc.perform(options("/api/notas")
             .header(ORIGIN, "http://malicioso.example")
             .header(ACCESS_CONTROL_REQUEST_METHOD, "GET"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @DisplayName("Subdominio do escritorio: a SPA chama /api na mesma origem e nao e CORS (#464)")
+  void subdominioNaMesmaOrigemNaoECors() throws Exception {
+    // Como na VPS: HTTPS no Caddy, host do escritorio, Origin igual ao host. Sem CORS, o login
+    // segue para a regra de sempre (401 de credencial errada), nunca o 403 do CORS.
+    mockMvc.perform(post("/api/auth/login")
+            .with(request -> {
+              request.setScheme("https");
+              request.setSecure(true);
+              request.setServerPort(443);
+              return request;
+            })
+            .header(HttpHeaders.HOST, "ruraloeste.agroconia.com.br")
+            .header(ORIGIN, "https://ruraloeste.agroconia.com.br")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"ninguem@lugar.com\",\"senha\":\"x\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @DisplayName("Subdominio chamando outro host: e CORS e a origem nao esta na lista (403, #464)")
+  void outroSubdominioRecusado() throws Exception {
+    mockMvc.perform(post("/api/auth/login")
+            .with(request -> {
+              request.setScheme("https");
+              request.setSecure(true);
+              request.setServerPort(443);
+              return request;
+            })
+            .header(HttpHeaders.HOST, "ruraloeste.agroconia.com.br")
+            .header(ORIGIN, "https://outro.agroconia.com.br")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"ninguem@lugar.com\",\"senha\":\"x\"}"))
         .andExpect(status().isForbidden());
   }
 }

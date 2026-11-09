@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.security.RotasEscritorio;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
@@ -53,6 +54,12 @@ class OpenApiDocumentacaoIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
 
+  /**
+   * Rotas fora do Swagger por desenho: o "ask" do Caddy (#464) fica fora de {@code /api}, só na
+   * rede interna. O teste {@code askForaDoSwagger} prova que nenhum grupo o publica.
+   */
+  private static final Set<String> FORA_DO_SWAGGER = Set.of(RotasEscritorio.TLS_ASK);
+
   private List<Map.Entry<RequestMappingInfo, HandlerMethod>> mapeamentosDoProjeto() {
     return mapeamentos.getHandlerMethods().entrySet().stream()
         .filter(e -> e.getValue().getBeanType().getName().startsWith(PACOTE))
@@ -80,6 +87,9 @@ class OpenApiDocumentacaoIntegrationTest {
     List<String> orfaos = new ArrayList<>();
     for (var e : mapeamentosDoProjeto()) {
       for (String caminho : e.getKey().getPathPatternsCondition().getPatternValues()) {
+        if (FORA_DO_SWAGGER.contains(caminho)) {
+          continue;
+        }
         boolean coberto = OpenApiConfig.GRUPOS.values().stream()
             .flatMap(java.util.Arrays::stream)
             .anyMatch(padrao -> matcher.match(padrao, caminho));
@@ -89,6 +99,13 @@ class OpenApiDocumentacaoIntegrationTest {
       }
     }
     assertThat(orfaos).as("caminhos fora de qualquer grupo").isEmpty();
+  }
+
+  @Test
+  @DisplayName("o ask do Caddy nao aparece em nenhum grupo nem no JSON geral (#464)")
+  void askForaDoSwagger() throws Exception {
+    mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+        .andExpect(jsonPath("$.paths['" + RotasEscritorio.TLS_ASK + "']").doesNotExist());
   }
 
   @Test

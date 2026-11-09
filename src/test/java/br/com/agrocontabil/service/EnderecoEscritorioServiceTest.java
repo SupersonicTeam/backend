@@ -14,9 +14,11 @@ import br.com.agrocontabil.config.EnderecoEscritorioProperties;
 import br.com.agrocontabil.dto.EnderecoEscritorioRequest;
 import br.com.agrocontabil.exception.DomainException;
 import br.com.agrocontabil.exception.EnderecoExigeCnpjException;
+import br.com.agrocontabil.exception.EnderecoNaoEncontradoException;
 import br.com.agrocontabil.exception.EnderecoTrocaRecenteException;
 import br.com.agrocontabil.exception.SlugIndisponivelException;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.EscritorioSlugAnterior;
 import br.com.agrocontabil.model.FuncaoEscritorio;
@@ -24,6 +26,7 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
+import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.EnderecoEscritorioService.EnderecoAlterado;
 import java.time.Clock;
 import java.time.Duration;
@@ -51,6 +54,7 @@ class EnderecoEscritorioServiceTest {
   private static final Instant AGORA = Instant.parse("2026-11-09T15:00:00Z");
   private static final Clock CLOCK = Clock.fixed(AGORA, ZoneId.of("America/Sao_Paulo"));
   private static final OffsetDateTime AGORA_ODT = OffsetDateTime.now(CLOCK);
+  private static final String CHAVE = "chave-do-ask-com-mais-de-32-caracteres-0123";
 
   @Mock private MembroEscritorioProvider membroProvider;
   @Mock private EscritorioRepository escritorioRepository;
@@ -65,8 +69,9 @@ class EnderecoEscritorioServiceTest {
   @BeforeEach
   void setUp() {
     EnderecoEscritorioProperties propriedades = new EnderecoEscritorioProperties(
-        "agroconia.com.br",
-        new EnderecoEscritorioProperties.Endereco(Duration.ofDays(30), Duration.ofDays(90)));
+        "agroconia.com.br", CHAVE,
+        new EnderecoEscritorioProperties.Endereco(Duration.ofDays(30), Duration.ofDays(90)),
+        new EnderecoEscritorioProperties.Publico(30, 10000));
     service = new EnderecoEscritorioService(membroProvider, escritorioRepository,
         anteriorRepository, contadorRepository, new SlugsReservados(), propriedades, CLOCK,
         transactionManager);
@@ -313,5 +318,103 @@ class EnderecoEscritorioServiceTest {
     assertThat(resposta.enderecoAlteravelEm()).isNull();
     assertThat(resposta.membros()).isEqualTo(3L);
     assertThat(resposta.minhaFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Endpoint publico, "ask" do Caddy e membro do endereco (#464, PR do login)
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("publico: endereco ativo devolve so slug e nome")
+  void publicoAtivo() {
+    when(escritorioRepository.findAtivoPorSlug("ruraloeste")).thenReturn(Optional.of(escritorio));
+
+    var resposta = service.publico("ruraloeste");
+
+    assertThat(resposta.slug()).isEqualTo("ruraloeste");
+    assertThat(resposta.nome()).isEqualTo("Contabilidade Rural Oeste");
+    assertThat(resposta.slugAtual()).isNull();
+  }
+
+  @Test
+  @DisplayName("publico: slug em carencia de escritorio com outro endereco traz o slugAtual")
+  void publicoEmCarencia() {
+    escritorio.setSlug("oesterural");
+    when(escritorioRepository.findAtivoPorSlug("ruraloeste")).thenReturn(Optional.empty());
+    when(escritorioRepository.findDestinoDaCarencia("ruraloeste", AGORA_ODT))
+        .thenReturn(Optional.of(escritorio));
+
+    var resposta = service.publico("ruraloeste");
+
+    assertThat(resposta.slug()).isEqualTo("ruraloeste");
+    assertThat(resposta.slugAtual()).isEqualTo("oesterural");
+  }
+
+  @Test
+  @DisplayName("publico: inexistente, maiuscula, espaco, reservado e mal formado dao o mesmo 404, sem consulta")
+  void publicoNaoServido() {
+    when(escritorioRepository.findAtivoPorSlug("inexistente")).thenReturn(Optional.empty());
+    when(escritorioRepository.findDestinoDaCarencia("inexistente", AGORA_ODT))
+        .thenReturn(Optional.empty());
+
+    for (String slug : new String[] {"inexistente", "RuralOeste", " ruraloeste", "www", "ceres",
+        "xn--rural", "a.b", "agroconia-x", null}) {
+      assertThatThrownBy(() -> service.publico(slug))
+          .isInstanceOf(EnderecoNaoEncontradoException.class)
+          .satisfies(e -> {
+            assertThat(codigo(e)).isEqualTo(ErrorCode.ENDERECO_NAO_ENCONTRADO.code());
+            assertThat(((DomainException) e).getErrors().get(0).rejectedValue()).isNull();
+          });
+    }
+    verify(escritorioRepository).findAtivoPorSlug("inexistente");
+    verify(escritorioRepository, never()).findAtivoPorSlug("www");
+  }
+
+  @Test
+  @DisplayName("ask: so com a chave certa e um endereco servido sob o dominio base")
+  void ask() {
+    when(escritorioRepository.findAtivoPorSlug("ruraloeste")).thenReturn(Optional.of(escritorio));
+
+    assertThat(service.certificadoPermitido(CHAVE, "ruraloeste.agroconia.com.br")).isTrue();
+    assertThat(service.certificadoPermitido(null, "ruraloeste.agroconia.com.br")).isFalse();
+    assertThat(service.certificadoPermitido(CHAVE + "x", "ruraloeste.agroconia.com.br"))
+        .isFalse();
+    assertThat(service.certificadoPermitido(CHAVE, null)).isFalse();
+    for (String dominio : new String[] {"agroconia.com.br", ".agroconia.com.br",
+        "x.ruraloeste.agroconia.com.br", "ruraloeste.agroconia.com.br.evil.com",
+        "RURALOESTE.agroconia.com.br", "xn--rural.agroconia.com.br", "www.agroconia.com.br",
+        "api.agroconia.com.br", "ruraloeste.outro.com.br"}) {
+      assertThat(service.certificadoPermitido(CHAVE, dominio)).as(dominio).isFalse();
+    }
+  }
+
+  @Test
+  @DisplayName("ask: sem chave configurada, recusa tudo")
+  void askSemChaveConfigurada() {
+    EnderecoEscritorioService semChave = new EnderecoEscritorioService(membroProvider,
+        escritorioRepository, anteriorRepository, contadorRepository, new SlugsReservados(),
+        new EnderecoEscritorioProperties("agroconia.com.br", "",
+            new EnderecoEscritorioProperties.Endereco(Duration.ofDays(30), Duration.ofDays(90)),
+            new EnderecoEscritorioProperties.Publico(30, 10000)),
+        CLOCK, transactionManager);
+
+    assertThat(semChave.certificadoPermitido("", "ruraloeste.agroconia.com.br")).isFalse();
+    verify(escritorioRepository, never()).findAtivoPorSlug(anyString());
+  }
+
+  @Test
+  @DisplayName("membro do endereco: so contador, so slug servivel, pela consulta de membro ativo")
+  void membroDoEndereco() {
+    UUID contadorId = UUID.randomUUID();
+    CredencialUsuario contador = CredencialUsuario.builder().papel(PapelUsuario.CONTADOR)
+        .contadorId(contadorId).build();
+    CredencialUsuario produtor = CredencialUsuario.builder().papel(PapelUsuario.PRODUTOR)
+        .produtorId(UUID.randomUUID()).build();
+    when(escritorioRepository.membroDoEnderecoAtivo("ruraloeste", contadorId)).thenReturn(true);
+
+    assertThat(service.membroDoEndereco(contador, "ruraloeste")).isTrue();
+    assertThat(service.membroDoEndereco(produtor, "ruraloeste")).isFalse();
+    assertThat(service.membroDoEndereco(contador, "www")).isFalse();
+    assertThat(service.membroDoEndereco(contador, "a.b")).isFalse();
   }
 }

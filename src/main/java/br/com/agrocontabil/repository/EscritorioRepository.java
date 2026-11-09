@@ -42,4 +42,42 @@ public interface EscritorioRepository extends JpaRepository<Escritorio, UUID> {
       nativeQuery = true)
   boolean slugIndisponivel(@Param("slug") String slug, @Param("escritorioId") UUID escritorioId,
       @Param("agora") OffsetDateTime agora);
+
+  /**
+   * Escritório com este endereço ativo e CNPJ: sem CNPJ, o endereço não é servido (#464).
+   *
+   * @param slug slug normalizado
+   * @return o escritório, se houver
+   */
+  @Query("SELECT e FROM Escritorio e WHERE e.slug = :slug AND e.cnpj IS NOT NULL")
+  Optional<Escritorio> findAtivoPorSlug(@Param("slug") String slug);
+
+  /**
+   * Para onde redireciona um slug em carência (#464): o escritório de onde ele saiu, se ainda existe
+   * e tem outro endereço ativo e CNPJ. Carência vencida, de escritório apagado ou de escritório sem
+   * endereço: vazio.
+   *
+   * @param slug  slug normalizado
+   * @param agora instante da consulta
+   * @return o escritório de destino, se houver
+   */
+  @Query("SELECT e FROM EscritorioSlugAnterior a, Escritorio e WHERE a.slug = :slug"
+      + " AND a.liberadoEm > :agora AND a.escritorioId = e.id AND e.slug IS NOT NULL"
+      + " AND e.cnpj IS NOT NULL")
+  Optional<Escritorio> findDestinoDaCarencia(@Param("slug") String slug,
+      @Param("agora") OffsetDateTime agora);
+
+  /**
+   * O contador é membro do escritório que tem este endereço ativo e CNPJ? Regra do login e do
+   * refresh pelo subdomínio (#464).
+   *
+   * @param slug       slug normalizado
+   * @param contadorId contador da credencial
+   * @return {@code true} se for membro
+   */
+  @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Contador c, Escritorio e"
+      + " WHERE c.id = :contadorId AND c.escritorioId = e.id AND e.slug = :slug"
+      + " AND e.cnpj IS NOT NULL")
+  boolean membroDoEnderecoAtivo(@Param("slug") String slug,
+      @Param("contadorId") UUID contadorId);
 }

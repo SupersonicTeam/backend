@@ -197,6 +197,11 @@ public enum ErrorCode {
    * O endereço próprio exige o CNPJ do escritório (issue #464). HTTP 422.
    */
   ENDERECO_EXIGE_CNPJ,
+  /**
+   * Endereço de escritório que não é servido: inexistente, reservado, sem CNPJ ou com a carência
+   * vencida (issue #464). A mesma resposta para todos os casos. HTTP 404.
+   */
+  ENDERECO_NAO_ENCONTRADO,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:

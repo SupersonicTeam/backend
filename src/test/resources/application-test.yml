@@ -83,6 +83,11 @@ app:
       enabled: false
   # Carencia dos slugs dos escritorios (#464): limpeza desligada; o teste dela a instancia.
   escritorio:
+    # Chave do "ask" do Caddy so dos testes (publica, como o JWT de teste); limite publico folgado,
+    # como os outros: o teste do limite baixa o valor.
+    tls-ask-chave: chave-do-ask-so-dos-testes-0123456789abcdef
+    publico:
+      por-minuto: 100000
     endereco:
       limpeza:
         enabled: false
