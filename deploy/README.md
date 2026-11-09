@@ -60,23 +60,60 @@ abaixo) e deixar o seed recriar as contas.
 
 Três fluxos mandam e-mail: o link de "esqueci minha senha", o convite do escritório ao produtor e o
 convite de equipe. O envio é por SMTP (`spring.mail`), então trocar de provedor é só trocar
-variáveis e DNS. O `compose.yaml` passa ao backend estas variáveis, todas com padrão seguro:
+variáveis e DNS. **O provedor é a Resend** (decisão do Murillo, 2026-11-09; comparação na #460). O
+`compose.yaml` passa ao backend estas variáveis, todas com padrão seguro:
 
 | Variável | Padrão no compose | Observação |
 |----------|-------------------|------------|
 | `EMAIL_MODO` | `DESLIGADO` | `SMTP` liga o envio. `LOG` só sobe em dev |
 | `EMAIL_REMETENTE` | `AgroConIA <nao-responda@agroconia.com.br>` | Com `SMTP`, o domínio do endereço tem de ser `agroconia.com.br`, o verificado no provedor (`app.email.dominio-verificado`; o compose não repassa outro valor) |
-| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | vazio, `587` | Do provedor |
-| `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | vazios | **Só no `.env` (600)**, nunca em issue, chat ou repositório |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | vazio, `587` | Resend: `smtp.resend.com`, `587` |
+| `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | vazios | Resend: `resend` e a API key. **Só no `.env` (600)**, nunca em issue, chat ou repositório |
 | `EMAIL_SMTP_STARTTLS`, `EMAIL_SMTP_SSL` | `true`, `false` | Porta 587 com STARTTLS obrigatório. Na 465: `EMAIL_SMTP_SSL=true` e `EMAIL_SMTP_STARTTLS=false` |
-| `EMAIL_TETO_POR_HORA`, `EMAIL_TETO_POR_DIA` | `0`, `80` | Teto de envios em janelas deslizantes de 1 h e de 24 h (`0` = sem teto), abaixo da cota do provedor: Resend Free (100/dia UTC) `0` e `80`; SendPulse grátis (50/h, 400/dia) `40` e `320`; Resend Pro, `0` e `0` |
+| `EMAIL_TETO_POR_HORA`, `EMAIL_TETO_POR_DIA` | `0`, `80` | Teto de envios em janelas deslizantes de 1 h e de 24 h (`0` = sem teto), abaixo da cota da Resend Free (100 por dia UTC). No Pro (sem cota diária), suba o diário (por exemplo, `500`), mas não o zere: o teto também segura abuso e bounce. Ao voltar ao Free, `80` de novo |
 
 **Salvaguardas no envio** (só com `SMTP`): destino em domínio reservado (`example.com`, `.test`,
 `.invalid`, `.local` e afins; as contas do seed são `@example.com`) não sai; acima do teto, o
 e-mail é descartado e o log registra só o tipo do e-mail; até 5 links de "esqueci minha senha"
-seguidos por conta, e depois um a cada 4,8 horas. Nos três casos a resposta continua 202. As respostas vão para
-`contato@gwnext.com.br` (`Reply-To`). O teto fica em memória: reiniciar o backend zera a contagem.
-Nenhum log traz o endereço do destinatário.
+seguidos por conta, e depois um a cada 4,8 horas. Nos três casos a resposta continua 202. As
+respostas vão para `contato@gwnext.com.br` (`Reply-To`). O teto fica em memória: reiniciar o
+backend zera a contagem. Nenhum log traz o endereço do destinatário.
+
+### Resend: conta, DNS e chave
+
+Valores conferidos em 2026-11-09. Em qualquer divergência, vale o que o painel da Resend mostrar.
+
+1. **Conta e domínio.** Criar a conta em resend.com com o e-mail da GWNext e 2FA ligado. Em
+   Domains > Add Domain, `agroconia.com.br` com a região **São Paulo (`sa-east-1`)**. Trocar a
+   região depois exige apagar e recriar o domínio.
+2. **DNS na Hostinger** (hPanel > Domínios > `agroconia.com.br` > DNS / Nameservers). No campo Nome
+   vai só o prefixo, porque a Hostinger acrescenta o domínio. TXT sem aspas, TTL 3600. Nada vai na
+   raiz:
+
+   | Tipo | Nome | Valor |
+   |------|------|-------|
+   | MX | `send` | `feedback-smtp.sa-east-1.amazonses.com`, prioridade 10 |
+   | TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+   | TXT | `resend._domainkey` | a chave `p=...` inteira do painel |
+   | TXT | `_dmarc` | `v=DMARC1; p=none; adkim=r; aspf=r; fo=1` |
+
+   O painel pode mostrar CNAMEs no lugar do par MX/TXT de `send`; nesse caso, use os do painel.
+   Antes de clicar em "Verify DNS Records", confira com `nslookup -type=MX send.agroconia.com.br` e
+   `nslookup -type=TXT resend._domainkey.agroconia.com.br`. Erro conhecido: o MX ganha o domínio no
+   fim (`...amazonses.com.agroconia.com.br`); edite o registro com ponto final no destino. O DMARC
+   fica em `p=none` até depois da banca. Nenhuma mudança no DNS de e-mail entre 26/11 e 03/12.
+3. **Rastreamento.** Em Domain settings, Click Tracking e Open Tracking **desligados**: o link leva
+   o token no fragmento (`#token=`), e a reescrita do link o quebraria.
+4. **API key.** API Keys > Create, com permissão **Sending access** e só o domínio
+   `agroconia.com.br`. A chave `re_...` aparece uma vez só e vai direto para o `.env` da VPS
+   (`SPRING_MAIL_PASSWORD`). Se vazar, revogue-a no painel e crie outra; não precisa de deploy.
+5. **Cota e acompanhamento.** O Free dá 100 e-mails por dia UTC (zera às 21h de Brasília) e 3.000
+   por mês. O teto do app (80) fica abaixo disso. Em Usage e Metrics, mantenha o bounce abaixo de
+   4% e a reclamação abaixo de 0,08%, ou a Resend pode suspender a conta. A Resend não avisa
+   sozinha perto do fim da cota; o aviso aos 80% sai no log do backend.
+6. **LGPD.** A Resend guarda nos EUA os dados da conta e os logs, com o corpo do e-mail (e o link)
+   por 30 dias, qualquer que seja a região de envio, e não assina as cláusulas-padrão da ANPD. O
+   envio só liga com a D7 da #460 resolvida pelo jurídico e com a política de dados atualizada.
 
 Os links dos e-mails apontam para `https://${SITE_HOST}`: `/redefinir-senha`, `/escritorio` (onde o
 produtor vê os convites) e `/equipe/convite`.
@@ -95,29 +132,28 @@ autenticação ou cota; sai na 3ª falha seguida e a cada 10), `Teto de e-mail` 
 
 **Ordem para ligar** (o compose novo e a imagem nova podem chegar em qualquer ordem):
 
-1. Provedor, domínio e DNS (SPF, DKIM e DMARC `p=none`), com o rastreamento de clique e de abertura
-   desligado: o link leva o token no fragmento (`#token=`), e a reescrita do link o quebraria. A
-   recomendação, a comparação dos provedores e os registros DNS estão na #460 (Resend em
-   `sa-east-1`: `smtp.resend.com`, porta 587, usuário `resend`, senha = API key só de envio).
+1. Conta, domínio, DNS, rastreamento e API key da Resend (seção acima), com o domínio verificado.
 2. Credenciais no `.env` **com o envio ainda desligado**, `docker compose up -d backend` e o
    `/healthz` tem de seguir `UP`:
    ```
    EMAIL_MODO=DESLIGADO
    EMAIL_REMETENTE=AgroConIA <nao-responda@agroconia.com.br>
-   SPRING_MAIL_HOST=<host SMTP do provedor>
+   SPRING_MAIL_HOST=smtp.resend.com
    SPRING_MAIL_PORT=587
-   SPRING_MAIL_USERNAME=<usuário SMTP>
-   SPRING_MAIL_PASSWORD=<senha ou chave SMTP>
+   SPRING_MAIL_USERNAME=resend
+   SPRING_MAIL_PASSWORD=<API key re_... da Resend>
    ```
-3. Só depois da política de dados com o provedor como operador e da decisão sobre a transferência
+3. Só depois da política de dados com a Resend como operadora e da decisão sobre a transferência
    internacional (D7 da #460): `EMAIL_MODO=SMTP` e `docker compose up -d backend`. O aviso "Envio
-   de e-mail desligado" some do log. Com outro provedor que não a Resend Free, ajuste antes o
-   `EMAIL_TETO_POR_HORA` e o `EMAIL_TETO_POR_DIA`.
-4. Teste real: os três fluxos para uma caixa da equipe e para o mail-tester, com SPF, DKIM e DMARC
-   em `pass`, o link no host certo e nenhum envio para conta `@example.com` do seed.
+   de e-mail desligado" some do log. Se usar o Pro na janela da banca (D11), suba o
+   `EMAIL_TETO_POR_DIA` enquanto ele durar e volte a `80` quando a conta voltar ao Free.
+4. Teste real: os três fluxos para uma caixa da equipe e para o mail-tester. No
+   `Authentication-Results`, confira `spf=pass` (`send.agroconia.com.br`), `dkim=pass`
+   (`d=agroconia.com.br`) e `dmarc=pass`, o link no host certo e nenhum envio para conta
+   `@example.com` do seed.
 
 **Reverter:** `EMAIL_MODO=DESLIGADO` no `.env` e `docker compose up -d backend`. Não precisa de
-deploy de código. Se a chave SMTP vazar, revogue-a no painel do provedor e ponha a nova no `.env`.
+deploy de código.
 
 A Oracle bloqueia a porta 25 de saída; a 587 e a 465 são liberadas, mas confira a egress da security
 list se houver regra restritiva.
