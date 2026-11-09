@@ -623,7 +623,7 @@ no cadastro (decisão do Murillo, 2026-10-19).
   e-mail único normalizado, `(papel, cpf_cnpj)` único (barra a corrida de dois cadastros; a coluna
   de `produtores` não é única), `versao_sessao` para revogação em massa (contador levado no token, não timestamp: o `iat` tem resolução de segundo), CASCADE das
   identidades. Hash `DelegatingPasswordEncoder` + BCrypt custo 12 (`SenhaConfig`), calculado **fora**
-  de transação. `PoliticaSenha` (NIST 800-63B): 10 caracteres a 72 bytes UTF-8, NFKC. O cadastro
+  de transação. `PoliticaSenha` (NIST 800-63B): 10 caracteres a 72 bytes UTF-8, NFKC, sem sequência/fileira de teclado de 6+ nem trecho repetido (#252). O cadastro
   **nunca vincula** credencial a produtor/contador preexistente: quem soubesse o CPF tomaria a conta.
   O `GlobalExceptionHandler` não ecoa `rejectedValue` de campo anotado `@Sensivel` (ou com
   senha/token/segredo no nome, como rede de segurança).

@@ -11,10 +11,12 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +35,10 @@ import org.springframework.stereotype.Component;
  *       começo seriam a mesma senha — e o usuário nunca saberia;
  *   <li>não pode ser um único caractere repetido;
  *   <li>não pode conter o e-mail (nem a parte antes da arroba) nem o CPF/CNPJ do titular;
+ *   <li>não pode conter uma sequência de {@value #MINIMO_SEQUENCIA} ou mais caracteres seguidos
+ *       crescente ou decrescente de dígitos ou de letras ("12345678901", "abcdefghij"), uma fileira
+ *       do teclado ("qwerty", "asdfgh", "1q2w3e") nem ser um mesmo trecho repetido ("asdfasdfasdf")
+ *       — NIST 800-63B pede barrar "sequential or repetitive characters" (#252);
  *   <li>não pode estar na lista de senhas comuns ({@code seguranca/senhas-comuns.txt}).
  * </ul>
  *
@@ -50,6 +56,16 @@ public class PoliticaSenha {
 
   /** Abaixo disto a parte local do e-mail é curta demais para a regra "contém o e-mail" valer. */
   private static final int MINIMO_PARTE_LOCAL_EMAIL = 4;
+
+  /** Tamanho da menor sequência (ou fileira de teclado) recusada. */
+  public static final int MINIMO_SEQUENCIA = 6;
+
+  /** Fileiras e diagonais de teclado (QWERTY, comparadas em minúsculas, nos dois sentidos). */
+  private static final List<String> TECLADO = Stream.of(
+          "qwertyuiop", "asdfghjkl", "zxcvbnm", "1q2w3e4r5t6y7u8i9o0p", "qazwsxedcrfvtgbyhnujmikolp",
+          "1qaz2wsx3edc4rfv5tgb6yhn", "zaq12wsxcde34rfvbgt56yhn")
+      .flatMap(f -> Stream.of(f, new StringBuilder(f).reverse().toString()))
+      .toList();
 
   private static final String LISTA_SENHAS_COMUNS = "seguranca/senhas-comuns.txt";
 
@@ -107,6 +123,12 @@ public class PoliticaSenha {
     if (contemDadoDoTitular(minuscula, email, cpfCnpj)) {
       violacoes.add(violacao(campo, "A senha nao pode conter seu e-mail nem seu CPF/CNPJ."));
     }
+    if (temSequenciaOuPadrao(minuscula)) {
+      violacoes.add(violacao(campo,
+          "A senha nao pode ter sequencias como 123456 ou abcdef, teclas em fila como qwerty "
+              + "nem um mesmo trecho repetido.",
+          "Troque por palavras sem relacao entre si, por exemplo quatro palavras soltas."));
+    }
     if (senhasComuns.contains(minuscula)) {
       violacoes.add(violacao(campo,
           "Esta senha esta entre as mais usadas e e facil de adivinhar. Escolha outra."));
@@ -115,6 +137,66 @@ public class PoliticaSenha {
     if (!violacoes.isEmpty()) {
       throw new SenhaFracaException(violacoes);
     }
+  }
+
+  /**
+   * Sequência crescente ou decrescente (dígitos com a volta 9-0, letras de a a z), fileira de
+   * teclado ou trecho repetido. Recebe a senha já em minúsculas.
+   */
+  static boolean temSequenciaOuPadrao(String senha) {
+    int[] pontos = senha.codePoints().toArray();
+    return temSequencia(pontos) || temFileiraDeTeclado(senha) || ehTrechoRepetido(pontos);
+  }
+
+  private static boolean temSequencia(int[] pontos) {
+    int crescente = 1;
+    int decrescente = 1;
+    for (int i = 1; i < pontos.length; i++) {
+      crescente = passo(pontos[i - 1], pontos[i], 1) ? crescente + 1 : 1;
+      decrescente = passo(pontos[i - 1], pontos[i], -1) ? decrescente + 1 : 1;
+      if (crescente >= MINIMO_SEQUENCIA || decrescente >= MINIMO_SEQUENCIA) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Verdadeiro se {@code atual} vem {@code delta} depois de {@code anterior}, na mesma classe. */
+  private static boolean passo(int anterior, int atual, int delta) {
+    if (anterior >= '0' && anterior <= '9' && atual >= '0' && atual <= '9') {
+      return Math.floorMod(anterior - '0' + delta, 10) == atual - '0';
+    }
+    return anterior >= 'a' && anterior <= 'z' && atual >= 'a' && atual <= 'z'
+        && anterior + delta == atual;
+  }
+
+  private static boolean temFileiraDeTeclado(String senha) {
+    for (String fileira : TECLADO) {
+      for (int i = 0; i + MINIMO_SEQUENCIA <= fileira.length(); i++) {
+        if (senha.contains(fileira.substring(i, i + MINIMO_SEQUENCIA))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** A senha inteira é um trecho de 2+ caracteres distintos repetido ("asdfasdfasdf"). */
+  private static boolean ehTrechoRepetido(int[] pontos) {
+    int n = pontos.length;
+    for (int tamanho = 2; tamanho <= n / 2; tamanho++) {
+      if (n % tamanho != 0) {
+        continue;
+      }
+      boolean repete = true;
+      for (int i = tamanho; i < n && repete; i++) {
+        repete = pontos[i] == pontos[i - tamanho];
+      }
+      if (repete && Arrays.stream(pontos, 0, tamanho).distinct().count() > 1) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean contemDadoDoTitular(String senhaMinuscula, String email, String cpfCnpj) {
@@ -132,8 +214,12 @@ public class PoliticaSenha {
   }
 
   private static ErrorDetail violacao(String campo, String mensagem) {
-    return new ErrorDetail(ErrorCode.SENHA_FRACA.code(), campo, mensagem,
-        "Use uma frase longa e facil de lembrar, por exemplo quatro palavras soltas.", null, null);
+    return violacao(campo, mensagem,
+        "Use uma frase longa e facil de lembrar, por exemplo quatro palavras soltas.");
+  }
+
+  private static ErrorDetail violacao(String campo, String mensagem, String sugestao) {
+    return new ErrorDetail(ErrorCode.SENHA_FRACA.code(), campo, mensagem, sugestao, null, null);
   }
 
   private static Set<String> carregarSenhasComuns() {
