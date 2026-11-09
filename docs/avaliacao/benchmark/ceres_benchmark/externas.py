@@ -245,8 +245,9 @@ def cortada(resultado: dict) -> dict[str, bool]:
 
 
 def _celula_csv(valor: str) -> str:
-    """Celula de texto segura no Excel: ``= + - @`` no inicio viraria formula (como no ``CsvCego``)."""
-    return "'" + valor if valor[:1] in ("=", "+", "-", "@") else valor
+    """Celula de texto segura no Excel: ``= + - @``, tab e CR no inicio viram formula (#367; a mesma
+    lista do ``CsvCego``, em Java)."""
+    return "'" + valor if valor[:1] in ("=", "+", "-", "@", "\t", "\r") else valor
 
 
 def assinatura_celula(celula) -> str:
