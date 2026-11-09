@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -60,9 +61,11 @@ public class PoliticaSenha {
   public static final int MINIMO_SEQUENCIA = 6;
 
   /** Fileiras e diagonais de teclado (QWERTY, comparadas em minúsculas, nos dois sentidos). */
-  private static final List<String> TECLADO = List.of(
-      "qwertyuiop", "asdfghjkl", "zxcvbnm", "1q2w3e4r5t6y7u8i9o0p", "qazwsxedcrfvtgbyhnujmikolp",
-      "1qaz2wsx3edc4rfv5tgb6yhn", "zaq12wsxcde34rfvbgt56yhn");
+  private static final List<String> TECLADO = Stream.of(
+          "qwertyuiop", "asdfghjkl", "zxcvbnm", "1q2w3e4r5t6y7u8i9o0p", "qazwsxedcrfvtgbyhnujmikolp",
+          "1qaz2wsx3edc4rfv5tgb6yhn", "zaq12wsxcde34rfvbgt56yhn")
+      .flatMap(f -> Stream.of(f, new StringBuilder(f).reverse().toString()))
+      .toList();
 
   private static final String LISTA_SENHAS_COMUNS = "seguranca/senhas-comuns.txt";
 
@@ -169,10 +172,8 @@ public class PoliticaSenha {
 
   private static boolean temFileiraDeTeclado(String senha) {
     for (String fileira : TECLADO) {
-      String invertida = new StringBuilder(fileira).reverse().toString();
       for (int i = 0; i + MINIMO_SEQUENCIA <= fileira.length(); i++) {
-        if (senha.contains(fileira.substring(i, i + MINIMO_SEQUENCIA))
-            || senha.contains(invertida.substring(i, i + MINIMO_SEQUENCIA))) {
+        if (senha.contains(fileira.substring(i, i + MINIMO_SEQUENCIA))) {
           return true;
         }
       }
