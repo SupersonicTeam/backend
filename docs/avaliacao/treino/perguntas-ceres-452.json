@@ -1,0 +1,563 @@
+{
+  "versao": "ceres-452-v1",
+  "observacao": "Conjunto de medição de USO ÚNICO do período relativo nas perguntas de dados da Ceres (#452). Não serve para ajustar a Ceres (prompt, exemplos, classificador, regras de período, gabarito ou treino): usado num ajuste, deixa de medir. Escrito por uma sessão avaliadora que não leu as issues #442, #443 e #452, os PRs #447, #449 e #450, o conjunto da #442/#443, o gabarito, o benchmark nem o código que resolve o período (PeriodoDaPergunta, RotaDados); só as assinaturas @Tool de FerramentasDadosProdutor. Regra de decisão em docs/avaliacao/ceres-452/regra-de-decisao.md; pontuação em docs/avaliacao/ceres-452/pontuar.py, que define a gramática dos campos de 'esperado'. Toda data é calculada a partir da data da execução (fuso de Brasília), nunca fixa, exceto a safra 2025/26, que é absoluta. Tokens de data: 'hoje', 'ontem', 'mes:N:inicio' e 'mes:N:fim' (mês N a partir do corrente), 'ano:N:inicio' e 'ano:N:fim', 'nomeado:M:inicio' e 'nomeado:M:fim' (o mês M mais recente que não passa do mês corrente: em novembro, 'setembro' é o deste ano; em fevereiro, o do ano passado), sufixo '-1d' (um dia antes) e datas AAAA-MM-DD. 'mes' numa condição vale para as funções de mês (parâmetro mes = AAAA-MM) e para as de datas (dataInicio = primeiro dia, dataFim = último). Último trimestre e últimos três meses = os três meses-calendário completos antes do corrente (decisão do Murillo, 2026-11-09). Grupos: mes_seguinte (1), mes_corrente (2), trimestre (3), aberto (4), controle_dados, controle_lei e controle_fora (5).",
+  "perguntas": [
+    {
+      "id": "g1-01",
+      "grupo": "mes_seguinte",
+      "pergunta": "Quais guias eu tenho pra pagar no mês que vem?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-02",
+      "grupo": "mes_seguinte",
+      "pergunta": "Quanto vou ter que pagar de imposto no próximo mês?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-03",
+      "grupo": "mes_seguinte",
+      "pergunta": "Tem alguma guia vencendo no mês seguinte?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-04",
+      "grupo": "mes_seguinte",
+      "pergunta": "Mês que vem tem guia de Funrural pra pagar?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-05",
+      "grupo": "mes_seguinte",
+      "pergunta": "Preciso separar quanto de dinheiro pras guias do mês que vem?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-06",
+      "grupo": "mes_seguinte",
+      "pergunta": "quais impostos vencem mes que vem",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-07",
+      "grupo": "mes_seguinte",
+      "pergunta": "No próximo mês quais guias vão vencer?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-08",
+      "grupo": "mes_seguinte",
+      "pergunta": "Vou ter conta de imposto pra pagar no mês que vem ou tá tranquilo?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-09",
+      "grupo": "mes_seguinte",
+      "pergunta": "tem vencimento de guia no proximo mes?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g1-10",
+      "grupo": "mes_seguinte",
+      "pergunta": "Me mostra os vencimentos do mês que vem, por favor.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes"], "mes": "mes:0"},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "g2-01",
+      "grupo": "mes_corrente",
+      "pergunta": "Quais guias vencem este mês?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-02",
+      "grupo": "mes_corrente",
+      "pergunta": "O que eu tenho pra pagar de guia até o fim do mês?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-03",
+      "grupo": "mes_corrente",
+      "pergunta": "Ainda tem guia vencendo esse mês?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-04",
+      "grupo": "mes_corrente",
+      "pergunta": "Quanto preciso juntar pras guias deste mês?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-05",
+      "grupo": "mes_corrente",
+      "pergunta": "quais impostos vencem no mes atual",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-06",
+      "grupo": "mes_corrente",
+      "pergunta": "Neste mês ainda vence alguma guia de ICMS?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-07",
+      "grupo": "mes_corrente",
+      "pergunta": "Até o final do mês quanto ainda vence de imposto pra mim?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g2-08",
+      "grupo": "mes_corrente",
+      "pergunta": "Esse mês dá quanto de guia pra pagar, somando tudo?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "proibidas": [{"funcoes": ["vencimentosDoMes"], "mes_diferente_de": "mes:0"}],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "mes:13:fim"}
+      }
+    },
+    {
+      "id": "g3-01",
+      "grupo": "trimestre",
+      "pergunta": "Quanto rendeu a soja que eu vendi no último trimestre?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "g3-02",
+      "grupo": "trimestre",
+      "pergunta": "Quanto gastei com adubo nos últimos três meses?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["adubo", "fertiliz", "31"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "g3-03",
+      "grupo": "trimestre",
+      "pergunta": "Qual foi meu crédito de IBS e CBS no último trimestre?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "g3-04",
+      "grupo": "trimestre",
+      "pergunta": "Quanto de Funrural os compradores seguraram nos últimos 3 meses?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarRetencoes"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "g3-05",
+      "grupo": "trimestre",
+      "pergunta": "Quantas notas de venda eu emiti no último trimestre?",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}],
+          [{"funcoes": ["listarNotas"], "sem_tipo": true, "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]
+        ]
+      }
+    },
+    {
+      "id": "g3-06",
+      "grupo": "trimestre",
+      "pergunta": "Como ficou minha apuração de IBS e CBS no último trimestre?",
+      "esperado": {
+        "alternativas": [[
+          {"funcoes": ["consultarApuracao"], "mes": "mes:-3"},
+          {"funcoes": ["consultarApuracao"], "mes": "mes:-2"},
+          {"funcoes": ["consultarApuracao"], "mes": "mes:-1"}
+        ]],
+        "proibidas": [{"funcoes": ["consultarApuracao"], "mes_fora_de": ["mes:-3", "mes:-2", "mes:-1"]}]
+      }
+    },
+    {
+      "id": "g3-07",
+      "grupo": "trimestre",
+      "pergunta": "Me mostra as notas de compra dos ultimos tres meses",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "ENTRADA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "g3-08",
+      "grupo": "trimestre",
+      "pergunta": "quanto faturei com milho nos ultimos 3 meses",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["milho", "1005"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-01",
+      "grupo": "aberto",
+      "pergunta": "Desde agosto, quanto eu já vendi de soja?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "inicio": ["nomeado:8:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-02",
+      "grupo": "aberto",
+      "pergunta": "De setembro pra cá quanto eu comprei de fertilizante?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["adubo", "fertiliz", "31"], "inicio": ["nomeado:9:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-03",
+      "grupo": "aberto",
+      "pergunta": "A partir de julho, quanto de crédito de IBS eu juntei?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["nomeado:7:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-04",
+      "grupo": "aberto",
+      "pergunta": "Quanto eu vendi de milho até setembro?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["milho", "1005"], "inicio": {"antes_de": "nomeado:9:inicio"}, "fim": ["nomeado:9:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-05",
+      "grupo": "aberto",
+      "pergunta": "Antes de outubro, quanto eu tinha comprado de defensivo?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["defensiv", "agrotox", "herbicid", "fungicid", "insetic", "3808"], "inicio": {"antes_de": "nomeado:9:inicio"}, "fim": ["nomeado:10:inicio-1d"]}]]
+      }
+    },
+    {
+      "id": "g4-06",
+      "grupo": "aberto",
+      "pergunta": "Quantas notas de venda eu tenho de agosto pra trás?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": {"antes_de": "nomeado:8:inicio"}, "fim": ["nomeado:8:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-07",
+      "grupo": "aberto",
+      "pergunta": "Desde junho quanto foi retido de Funrural nas minhas vendas?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarRetencoes"], "inicio": ["nomeado:6:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-08",
+      "grupo": "aberto",
+      "pergunta": "Do mês retrasado pra cá quanto eu vendi de milho?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["milho", "1005"], "inicio": ["mes:-2:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "g4-09",
+      "grupo": "aberto",
+      "pergunta": "Quanto eu vendi de soja na safra 25/26?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "inicio": {"entre": ["2025-07-01", "2025-10-01"]}, "fim": {"entre": ["2026-06-30", "hoje"]}}]],
+        "esclarecimento": true
+      }
+    },
+    {
+      "id": "g4-10",
+      "grupo": "aberto",
+      "pergunta": "Em agosto e em setembro, quanto foi a venda de soja em cada mês?",
+      "esperado": {
+        "alternativas": [[
+          {"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "mes": "nomeado:8"},
+          {"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "mes": "nomeado:9"}
+        ]]
+      }
+    },
+    {
+      "id": "g4-11",
+      "grupo": "aberto",
+      "pergunta": "Comparando o mês passado com o retrasado, comprei mais ou menos adubo?",
+      "esperado": {
+        "alternativas": [[
+          {"funcoes": ["totalComprasPorInsumo"], "produto": ["adubo", "fertiliz", "31"], "mes": "mes:-1"},
+          {"funcoes": ["totalComprasPorInsumo"], "produto": ["adubo", "fertiliz", "31"], "mes": "mes:-2"}
+        ]]
+      }
+    },
+    {
+      "id": "g4-12",
+      "grupo": "aberto",
+      "pergunta": "O IBS da venda tem que ser recolhido até que dia do mês seguinte?",
+      "esperado": {"regra": true, "rotas": ["LEGISLACAO"]}
+    },
+    {
+      "id": "g4-13",
+      "grupo": "aberto",
+      "pergunta": "Se eu vender no fim do mês, o comprador só pode usar o crédito no mês seguinte?",
+      "esperado": {"regra": true, "rotas": ["LEGISLACAO"]}
+    },
+    {
+      "id": "g4-14",
+      "grupo": "aberto",
+      "pergunta": "Pela lei, a CBS apurada num mês é paga no mês seguinte ou no mesmo mês?",
+      "esperado": {"regra": true, "rotas": ["LEGISLACAO"]}
+    },
+    {
+      "id": "c-01",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto eu vendi de soja no mês passado?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "mes": "mes:-1"}]]
+      }
+    },
+    {
+      "id": "c-02",
+      "grupo": "controle_dados",
+      "pergunta": "Qual ficou o saldo de IBS e CBS do mês passado?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarApuracao"], "mes": "mes:-1"}]]
+      }
+    },
+    {
+      "id": "c-03",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto comprei de fertilizante no mês retrasado?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["adubo", "fertiliz", "31"], "mes": "mes:-2"}]]
+      }
+    },
+    {
+      "id": "c-04",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto entrou de venda de milho em setembro?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["milho", "1005"], "mes": "nomeado:9"}]]
+      }
+    },
+    {
+      "id": "c-05",
+      "grupo": "controle_dados",
+      "pergunta": "Como ficou a apuração de agosto?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarApuracao"], "mes": "nomeado:8"}]]
+      }
+    },
+    {
+      "id": "c-06",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto faturei com algodão este ano?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["algod", "5201"], "inicio": ["ano:0:inicio"], "fim": ["hoje", "ontem", "ano:0:fim"]}]]
+      }
+    },
+    {
+      "id": "c-07",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto já tenho de crédito de CBS esse ano?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["ano:0:inicio"], "fim": ["hoje", "ontem", "ano:0:fim"]}]]
+      }
+    },
+    {
+      "id": "c-08",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto deu a venda de soja no ano passado inteiro?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "inicio": ["ano:-1:inicio"], "fim": ["ano:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "c-09",
+      "grupo": "controle_dados",
+      "pergunta": "Ficou alguma guia minha atrasada?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["guiasEmAtraso"]}], [{"funcoes": ["resumoDoProdutor"]}]]
+      }
+    },
+    {
+      "id": "c-10",
+      "grupo": "controle_dados",
+      "pergunta": "Tem algum aviso de prazo pra mim?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarAlertas"]}], [{"funcoes": ["resumoDoProdutor"]}]]
+      }
+    },
+    {
+      "id": "c-11",
+      "grupo": "controle_dados",
+      "pergunta": "Quais foram as últimas notas que entraram no sistema?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"]}]]
+      }
+    },
+    {
+      "id": "c-12",
+      "grupo": "controle_dados",
+      "pergunta": "Tem nota minha devolvida pelo contador?",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"]}], [{"funcoes": ["resumoDoProdutor"]}]]
+      }
+    },
+    {
+      "id": "c-13",
+      "grupo": "controle_lei",
+      "pergunta": "Como funciona o split payment do IBS e da CBS na venda?",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": ["214"]}
+    },
+    {
+      "id": "c-14",
+      "grupo": "controle_lei",
+      "pergunta": "Quem a lei diz que é contribuinte da CBS?",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": ["214"]}
+    },
+    {
+      "id": "c-15",
+      "grupo": "controle_lei",
+      "pergunta": "Produtor rural pessoa física pode escolher entrar no regime regular do IBS e da CBS?",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": ["214"]}
+    },
+    {
+      "id": "c-16",
+      "grupo": "controle_lei",
+      "pergunta": "O que a reforma diz sobre aproveitar crédito de IBS na compra de máquina agrícola?",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": ["214"]}
+    },
+    {
+      "id": "c-17",
+      "grupo": "controle_fora",
+      "pergunta": "Qual vai ser o preço da saca de soja no mês que vem?",
+      "esperado": {"rotas": ["FORA_DE_ESCOPO"]}
+    },
+    {
+      "id": "c-18",
+      "grupo": "controle_fora",
+      "pergunta": "Quem ganhou o jogo do Grêmio no mês passado?",
+      "esperado": {"rotas": ["FORA_DE_ESCOPO"]}
+    },
+    {
+      "id": "c-19",
+      "grupo": "controle_fora",
+      "pergunta": "Me passa uma receita de pamonha pro fim de semana.",
+      "esperado": {"rotas": ["FORA_DE_ESCOPO"]}
+    }
+  ]
+}

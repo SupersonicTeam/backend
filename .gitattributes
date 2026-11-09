@@ -7,3 +7,4 @@ docs/avaliacao/treino/perguntas-ceres-442-443.json -text
 # Conjunto congelado do benchmark (#352): o hash .sha256 e dos bytes, CRLF o quebraria.
 docs/avaliacao/benchmark/perguntas-benchmark.json -text
 docs/avaliacao/treino/perguntas-lei-busca-2026-11.json -text
+docs/avaliacao/treino/perguntas-ceres-452.json -text
