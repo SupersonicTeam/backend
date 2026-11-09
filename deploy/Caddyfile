@@ -69,8 +69,12 @@ https:// {
 		on_demand
 	}
 
+	# O endereco do escritorio nao entra em buscador (frontend#175): toda resposta dele, pagina e
+	# API, leva o noindex. Os outros cabecalhos (HSTS, nosniff, no-referrer) vem do snippet (app),
+	# o mesmo do www: sem o no-referrer, o slug iria no Referer as fontes externas.
 	@escritorio host *.{$SITE_DOMINIO}
 	handle @escritorio {
+		header X-Robots-Tag "noindex"
 		import app
 	}
 
