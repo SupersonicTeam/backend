@@ -23,12 +23,18 @@ spring:
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
-  # Recuperacao de senha (#209): em prod o envio e por SMTP e o link precisa ser HTTPS (a aplicacao
-  # nao sobe com http:// nem sem a variavel).
+  # Recuperacao de senha (#209) e convites (#460): em prod o envio e por SMTP e os tres links
+  # precisam ser HTTPS (a aplicacao nao sobe com http:// nem sem a variavel).
   seguranca:
     redefinicao:
       url-frontend: ${REDEFINICAO_URL_FRONTEND}
       modo-email: ${EMAIL_MODO:SMTP}
+  carteira:
+    convite:
+      url-frontend: ${CARTEIRA_CONVITE_URL_FRONTEND}
+  escritorio:
+    convite:
+      url-frontend: ${ESCRITORIO_CONVITE_URL_FRONTEND}
 
 # Em prod nao expomos detalhes de health sem autorizacao.
 management:

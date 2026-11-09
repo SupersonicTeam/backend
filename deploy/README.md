@@ -65,7 +65,7 @@ variáveis e DNS. O `compose.yaml` passa ao backend estas variáveis, todas com 
 | Variável | Padrão no compose | Observação |
 |----------|-------------------|------------|
 | `EMAIL_MODO` | `DESLIGADO` | `SMTP` liga o envio. `LOG` só sobe em dev |
-| `EMAIL_REMETENTE` | `AgroConIA <nao-responda@agroconia.com.br>` | Com `SMTP`, o domínio do endereço tem de ser o verificado no provedor (`EMAIL_DOMINIO_VERIFICADO`, padrão `agroconia.com.br`) |
+| `EMAIL_REMETENTE` | `AgroConIA <nao-responda@agroconia.com.br>` | Com `SMTP`, o domínio do endereço tem de ser `agroconia.com.br`, o verificado no provedor (`app.email.dominio-verificado`; o compose não repassa outro valor) |
 | `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | vazio, `587` | Do provedor |
 | `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | vazios | **Só no `.env` (600)**, nunca em issue, chat ou repositório |
 | `EMAIL_SMTP_STARTTLS`, `EMAIL_SMTP_SSL` | `true`, `false` | Porta 587 com STARTTLS obrigatório. Na 465: `EMAIL_SMTP_SSL=true` e `EMAIL_SMTP_STARTTLS=false` |
