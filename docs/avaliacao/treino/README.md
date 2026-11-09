@@ -19,4 +19,6 @@ memória, não acerto.
 
 `perguntas-lei-busca-2026-11.json` é um conjunto de medição de uso único (#436): fica nesta pasta só para passar pela guarda contra o gabarito e não serve para ajustar a Ceres.
 
+`perguntas-ceres-452.json` também é de medição de uso único (#452, período relativo nas perguntas de dados), com a regra de decisão e os scripts em `../ceres-452/`. Não serve para ajustar a Ceres: usado num ajuste, deixa de medir.
+
 Este README não tem pergunta do gabarito; mantenha assim.
