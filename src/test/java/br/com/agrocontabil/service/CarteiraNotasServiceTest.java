@@ -127,6 +127,32 @@ class CarteiraNotasServiceTest {
   }
 
   @Test
+  @DisplayName("a lista leva origem e fornecedor: compra IMPORTADA com emitente, nota PROPRIA sem")
+  void origemEEmitenteNaLista() {
+    when(membroProvider.membro()).thenReturn(membro);
+    NotaDaCarteira compra = linha(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA,
+        "Posto Rota 163");
+    NotaDaCarteira propria = linha(br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA, null);
+    when(carteiraRepository.listar(any(), any()))
+        .thenReturn(new PageImpl<>(List.of(compra, propria)));
+
+    var pagina = service.listarDaCarteira(filtro(null, null), PageRequest.of(0, 20));
+
+    assertThat(pagina.getContent()).extracting("origem", "emitenteNome").containsExactly(
+        org.assertj.core.groups.Tuple.tuple(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA,
+            "Posto Rota 163"),
+        org.assertj.core.groups.Tuple.tuple(br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA,
+            null));
+  }
+
+  private static NotaDaCarteira linha(br.com.agrocontabil.model.OrigemNotaFiscal origem,
+      String emitente) {
+    return new NotaDaCarteira(UUID.randomUUID(), UUID.randomUUID(), "Fazenda A", 1L, 1,
+        "Venda", br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA, null, null, "Dest",
+        origem, emitente, null, null, null, null, null, null, null);
+  }
+
+  @Test
   @DisplayName("resumo soma as caixas; 'todas' inclui os estados que nenhuma caixa mostra")
   void resumoSomaAsCaixas() {
     when(membroProvider.membro()).thenReturn(membro);

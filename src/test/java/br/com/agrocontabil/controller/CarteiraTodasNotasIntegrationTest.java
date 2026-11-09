@@ -2,6 +2,7 @@ package br.com.agrocontabil.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -154,6 +155,30 @@ class CarteiraTodasNotasIntegrationTest {
         .andExpect(jsonPath("$[0].xmlGerado").doesNotExist())
         .andExpect(jsonPath("$[0].destinatarioCpfCnpj").doesNotExist())
         .andExpect(jsonPath("$[0].produtorCpfCnpj").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("compra importada traz origem e o fornecedor; a propria traz origem e emitente nulo; nunca o documento do emitente")
+  void origemEFornecedor() throws Exception {
+    NotaFiscal compra = NotaFiscal.builder()
+        .numero(900L).serie(1).modelo("55").naturezaOperacao("Compra de insumo")
+        .dataEmissao(BASE.plusDays(30)).produtor(clienteA)
+        .destinatarioNome("Fazenda A").destinatarioCpfCnpj("52998224725")
+        .origem(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA)
+        .emitenteNome("Posto Rota 163").emitenteCpfCnpj("12345678000195")
+        .status(StatusNotaFiscal.AUTORIZADA)
+        .valorTotalProdutos(new BigDecimal("500.00")).valorTotalNota(new BigDecimal("500.00"))
+        .build();
+    notaFiscalRepository.save(compra);
+
+    mockMvc.perform(como(admin, get(LISTA).param("size", "50")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[?(@.numero == 900)].origem").value(contains("IMPORTADA")))
+        .andExpect(jsonPath("$[?(@.numero == 900)].emitenteNome")
+            .value(contains("Posto Rota 163")))
+        .andExpect(jsonPath("$[?(@.numero == 1)].origem").value(contains("PROPRIA")))
+        .andExpect(jsonPath("$[?(@.numero == 1)].emitenteNome").value(contains(nullValue())))
+        .andExpect(jsonPath("$[0].emitenteCpfCnpj").doesNotExist());
   }
 
   @Test

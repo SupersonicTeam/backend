@@ -1,5 +1,6 @@
 package br.com.agrocontabil.repository;
 
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import java.math.BigDecimal;
@@ -21,6 +22,8 @@ import java.util.UUID;
  * @param tipoDocumento      NFE ou NFA
  * @param dataEmissao        emissão
  * @param destinatarioNome   nome do destinatário
+ * @param origem             PROPRIA (venda) ou IMPORTADA (compra)
+ * @param emitenteNome       fornecedor da compra importada (nulo na nota própria); sem o documento
  * @param valorTotalProdutos total dos produtos
  * @param valorTotalNota     total da nota
  * @param valorTotalIbs      IBS da nota
@@ -32,6 +35,7 @@ import java.util.UUID;
 public record NotaDaCarteira(UUID id, UUID produtorId, String produtorNome, Long numero,
     Integer serie, String naturezaOperacao, StatusNotaFiscal status,
     TipoDocumentoFiscal tipoDocumento, OffsetDateTime dataEmissao, String destinatarioNome,
+    OrigemNotaFiscal origem, String emitenteNome,
     BigDecimal valorTotalProdutos, BigDecimal valorTotalNota, BigDecimal valorTotalIbs,
     BigDecimal valorTotalCbs, String chaveAcesso, OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

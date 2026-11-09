@@ -64,6 +64,7 @@ public class NotaFiscalCarteiraRepository {
         nota.get("id"), produtor.get("id"), produtor.get("nomeCompleto"), nota.get("numero"),
         nota.get("serie"), nota.get("naturezaOperacao"), nota.get("status"),
         nota.get("tipoDocumento"), nota.get("dataEmissao"), nota.get("destinatarioNome"),
+        nota.get("origem"), nota.get("emitenteNome"),
         nota.get("valorTotalProdutos"), nota.get("valorTotalNota"), nota.get("valorTotalIbs"),
         nota.get("valorTotalCbs"), nota.get("chaveAcesso"), nota.get("createdAt"),
         nota.get("updatedAt")));
