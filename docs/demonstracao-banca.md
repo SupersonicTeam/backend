@@ -38,8 +38,12 @@ E-mails no domínio reservado `example.com`.
 | `arrozeira.schmitt@example.com` | Produtor PJ, Pelotas/RS | Vínculo **suspenso** (some da carteira ativa) |
 | `marcos.lacerda@example.com` | Produtor PF, Ponta Grossa/PR | Vínculo **encerrado** (só o nome no filtro `ENCERRADO`) |
 
-O escritório é a **Contabilidade Rural Oeste** (Cascavel/PR). As contas do `DataLoader` (João,
-Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte.
+O escritório é a **Contabilidade Rural Oeste** (Cascavel/PR), com o endereço próprio `ruraloeste`
+(`ruraloeste.agroconia.com.br`, #464). O endereço só chega à VPS pelo reset dos dados da
+demonstração (abaixo), rodado depois do deploy da versão com o changeSet 0059: o seed não regrava
+um escritório que já existe. O subdomínio só abre depois do registro `A *` e do Caddyfile curinga
+(`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
+existindo, num escritório à parte.
 
 ## Roteiro sugerido
 
@@ -160,11 +164,16 @@ contadores da equipe do seed (no escritório ou removidos dele num ensaio) e os 
 carteira do `CenarioDemonstracao` (nome na lista **e** vínculo com esse escritório: CPF/CNPJ vão
 cifrados ao banco), com notas, itens, validações, revisões, alertas, apurações, guias, pendências e
 anexos, notificações, vínculos e etiquetas, convites, obrigações do escritório, créditos e
-interações da Ceres, credenciais, sessões e links de senha. Contador de fora da equipe que entrou no
+interações da Ceres, credenciais, sessões e links de senha, e os endereços anteriores do escritório
+em carência (#464). Contador de fora da equipe que entrou no
 escritório (convite de equipe) **não** é apagado: sai do escritório, como na remoção pela tela, e a
 conta fica. Produtor de fora do seed com vínculo nesse escritório fica, sem o vínculo. **Nunca**
 entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de referência, a auditoria
 (`registro_auditoria`, que sobrevive ao que audita, #149) e os dados do `DataLoader`.
+
+**Ordem (#464):** os scripts consultam a carência dos endereços (`escritorio_slug_anterior`,
+changeSet 0059). Rode-os **depois** do deploy da versão que traz esse changeSet; antes dele, o
+passo 1 falha com "relation does not exist" e nada é apagado.
 
 Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
 `ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro

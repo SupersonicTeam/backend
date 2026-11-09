@@ -326,6 +326,7 @@ public class SeedDemonstracao implements CommandLineRunner {
     Escritorio escritorio = escritorioRepository.save(Escritorio.builder()
         .nome(CenarioDemonstracao.ESCRITORIO_NOME)
         .cnpj(CenarioDemonstracao.ESCRITORIO_CNPJ)
+        .slug(CenarioDemonstracao.ESCRITORIO_SLUG)
         .build());
 
     List<Contador> equipe = new ArrayList<>();

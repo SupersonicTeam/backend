@@ -81,6 +81,11 @@ app:
   guia-fiscal:
     sync:
       enabled: false
+  # Carencia dos slugs dos escritorios (#464): limpeza desligada; o teste dela a instancia.
+  escritorio:
+    endereco:
+      limpeza:
+        enabled: false
   # Retencao da auditoria (#149): job desativado; o teste dele o instancia.
   auditoria:
     retencao:

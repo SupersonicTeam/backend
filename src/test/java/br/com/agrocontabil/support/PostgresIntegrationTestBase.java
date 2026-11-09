@@ -47,7 +47,8 @@ public abstract class PostgresIntegrationTestBase {
   private static final List<String> TABELAS_DO_DOMINIO = List.of(
       "registro_auditoria", "nota_fiscal_validacao", "nota_fiscal_revisao", "apuracao_mensal",
       "guias_fiscais", "nota_fiscal", "carteira_vinculo", "sessao_refresh", "redefinicao_senha",
-      "credencial_usuario", "contadores", "escritorio", "produtores");
+      "credencial_usuario", "contadores", "escritorio_slug_anterior", "escritorio",
+      "produtores");
 
   @DynamicPropertySource
   static void propriedades(DynamicPropertyRegistry registry) {

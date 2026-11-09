@@ -5,11 +5,13 @@ import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.Sensivel;
 import br.com.agrocontabil.security.CookieRefresh;
+import br.com.agrocontabil.validation.SlugEscritorio;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -501,8 +503,10 @@ public class GlobalExceptionHandler {
     Object folha = violation.getLeafBean();
     String rejected = campoSensivel(folha == null ? null : folha.getClass(), field)
         ? null : resumirValorRejeitado(violation.getInvalidValue());
+    String constraint = violation.getConstraintDescriptor() == null ? null
+        : violation.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName();
     return new ErrorDetail(
-        ErrorCode.VALIDATION_ERROR.code(),
+        codigoDaConstraint(constraint).code(),
         field,
         violation.getMessage(),
         null,
@@ -581,11 +585,25 @@ public class GlobalExceptionHandler {
     return lastDot >= 0 ? path.substring(lastDot + 1) : path;
   }
 
+  /**
+   * Constraints com código próprio no envelope, no lugar do {@code VALIDATION_ERROR} genérico: o
+   * cliente trata o caso sem ler a mensagem. A chave é o nome simples da anotação (o
+   * {@code FieldError.getCode()} do Spring no corpo; o descriptor da violação nos parâmetros).
+   */
+  private static final Map<String, ErrorCode> CODIGO_POR_CONSTRAINT = Map.of(
+      SlugEscritorio.class.getSimpleName(), ErrorCode.SLUG_INVALIDO);
+
+  /** Código do erro de uma constraint: o próprio, se houver, ou o {@code VALIDATION_ERROR}. */
+  private static ErrorCode codigoDaConstraint(String constraint) {
+    return constraint == null ? ErrorCode.VALIDATION_ERROR
+        : CODIGO_POR_CONSTRAINT.getOrDefault(constraint, ErrorCode.VALIDATION_ERROR);
+  }
+
   private ErrorDetail toErrorDetail(FieldError error, Class<?> tipoAlvo) {
     String rejected = campoSensivel(tipoAlvo, error.getField())
         ? null : resumirValorRejeitado(error.getRejectedValue());
     return new ErrorDetail(
-        ErrorCode.VALIDATION_ERROR.code(),
+        codigoDaConstraint(error.getCode()).code(),
         error.getField(),
         error.getDefaultMessage(),
         null,

@@ -93,7 +93,7 @@ class PrivacidadeIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.controlador").value("GWNext"))
         .andExpect(jsonPath("$.contatoEncarregado").value("contato@gwnext.com.br"))
-        .andExpect(jsonPath("$.versao").value("2026-11-03"))
+        .andExpect(jsonPath("$.versao").value("2026-11-09"))
         .andExpect(jsonPath("$.basesLegais.length()").value(3))
         .andExpect(jsonPath("$.retencao[0]").value(org.hamcrest.Matchers.containsString("5 anos")))
         .andExpect(jsonPath("$.comoExercer").value(
