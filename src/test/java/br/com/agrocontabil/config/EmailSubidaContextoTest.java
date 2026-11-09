@@ -5,13 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.service.EnvioConviteCarteira;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
 import br.com.agrocontabil.service.EnvioEmail;
+import br.com.agrocontabil.service.TetoEnvioEmail;
+import java.time.Clock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
@@ -24,7 +28,12 @@ class EmailSubidaContextoTest {
 
   @Configuration
   @EnableConfigurationProperties(RedefinicaoSenhaProperties.class)
+  @Import(TetoEnvioEmail.class)
   static class Propriedades {
+    @Bean
+    Clock clock() {
+      return Clock.systemUTC();
+    }
   }
 
   private static final String[] SMTP_COMPLETO = {
