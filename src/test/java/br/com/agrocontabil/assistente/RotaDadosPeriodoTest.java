@@ -65,4 +65,51 @@ class RotaDadosPeriodoTest {
 
     assertThat(RotaDados.comPeriodo(original, SEMESTRE)).isSameAs(original);
   }
+
+  private static final LocalDate HOJE = LocalDate.of(2026, 11, 20);
+
+  private static Periodo periodo(String pergunta) {
+    return PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
+  }
+
+  @Test
+  @DisplayName("guias do mês que vem: proximosVencimentos vira vencimentosDoMes (#452, item 1)")
+  void proximosVencimentosViraVencimentosDoMes() {
+    ChatResponse ajustada = RotaDados.comPeriodo(chamadas(
+        new ToolCall("v1", "function", "proximosVencimentos", "{\"dias\":30}")),
+        periodo("Quais guias tenho de recolher no mês que vem?"));
+
+    List<ToolCall> resultado = chamadasDe(ajustada);
+    assertThat(resultado).hasSize(1);
+    assertThat(resultado.get(0).id()).isEqualTo("v1");
+    assertThat(resultado.get(0).name()).isEqualTo("vencimentosDoMes");
+    assertThat(resultado.get(0).arguments()).isEqualTo("{\"mes\":\"2026-12\"}");
+  }
+
+  @Test
+  @DisplayName("com vencimentosDoMes já chamada, proximosVencimentos sai (#452, item 1)")
+  void proximosVencimentosSaiQuandoJaHaVencimentosDoMes() {
+    ChatResponse ajustada = RotaDados.comPeriodo(chamadas(
+        new ToolCall("w1", "function", "proximosVencimentos", "{}"),
+        new ToolCall("w2", "function", "vencimentosDoMes", "{\"mes\":\"2026-11\"}")),
+        periodo("O que vence de guia no próximo mês?"));
+
+    List<ToolCall> resultado = chamadasDe(ajustada);
+    assertThat(resultado).extracting(ToolCall::id).containsExactly("w2");
+    assertThat(resultado.get(0).arguments()).isEqualTo("{\"mes\":\"2026-12\"}");
+  }
+
+  @Test
+  @DisplayName("mês corrente ou janela em dias: proximosVencimentos fica (#452, item 1)")
+  void proximosVencimentosFica() {
+    ChatResponse esteMes = chamadas(
+        new ToolCall("u1", "function", "proximosVencimentos", "{}"));
+    ChatResponse emDias = chamadas(
+        new ToolCall("u2", "function", "proximosVencimentos", "{\"dias\":10}"));
+
+    assertThat(RotaDados.comPeriodo(esteMes, periodo("Tenho guia vencendo neste mês?")))
+        .isSameAs(esteMes);
+    assertThat(RotaDados.comPeriodo(emDias,
+        periodo("Do mês que vem, que guias caem nos próximos 10 dias?"))).isSameAs(emDias);
+  }
 }

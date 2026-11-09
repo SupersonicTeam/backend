@@ -3,11 +3,13 @@ package br.com.agrocontabil.assistente;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,14 +24,32 @@ import java.util.regex.Pattern;
  * nos parâmetros de período de cada função ({@link #aplicar}).
  *
  * <p><strong>Só o inequívoco.</strong> Resolve quando a pergunta tem uma expressão relativa só (ou
- * várias que dão o mesmo período) e nenhuma data explícita (mês por extenso, ano, dia/mês): com
- * "julho" ou "2025" na pergunta, ou com dois períodos diferentes, quem preenche é o modelo, como
- * antes. "Esta safra" não entra: a safra não tem regra de datas no sistema.
+ * várias que dão o mesmo período) e nada que mude o sentido dela. Sem resolver, quem preenche as
+ * datas é o modelo, como antes do #442. Não resolve com (issue #452, item 3, e #442):
  *
  * <ul>
- *   <li>Mês e ano corrente vão do primeiro dia até hoje; mês, trimestre, semestre e ano passados
- *       são os do calendário, inteiros.</li>
- *   <li>"Últimos N meses" e "últimos N dias" são a janela móvel que termina hoje.</li>
+ *   <li>data explícita (mês por extenso, ano, dia/mês);</li>
+ *   <li>parte do período ("a primeira quinzena do mês passado");</li>
+ *   <li>período aberto ou contado de outro ponto: "desde", "até", "antes", "a partir", "pra cá",
+ *       "pra trás" e "safra" (a safra não tem regra de datas no sistema);</li>
+ *   <li>dois períodos, inclusive o segundo só pelo adjetivo ("no mês passado e no retrasado",
+ *       "este mês e o próximo");</li>
+ *   <li>frase de regra, em que o mês é contado a partir de um fato ("vence no mês seguinte ao da
+ *       venda").</li>
+ * </ul>
+ *
+ * <p>Os períodos:
+ *
+ * <ul>
+ *   <li>Mês e ano correntes (e trimestre e semestre correntes) vão do primeiro dia até hoje. Em
+ *       pergunta de vencimento (guia, boleto, prazo, pagar) vão até o último dia: o que vence
+ *       depois de hoje ainda é deste mês (#452, item 2).</li>
+ *   <li>Mês, semestre e ano passados são os do calendário, inteiros.</li>
+ *   <li>"Último trimestre" e "trimestre passado/anterior" são os três últimos meses fechados: os
+ *       três meses do calendário inteiros antes do mês corrente (decisão do Murillo, 2026-11-09,
+ *       #452, item 4). Em 09/11/2026, de 01/08 a 31/10.</li>
+ *   <li>"Últimos N meses" e "últimos N dias" são a janela móvel que termina hoje. Ela é outra regra
+ *       e não mudou com a decisão do trimestre: "últimos três meses" segue terminando hoje.</li>
  * </ul>
  */
 public final class PeriodoDaPergunta {
@@ -76,29 +96,60 @@ public final class PeriodoDaPergunta {
       + "|final|meados|mesm[oa] (mes|ano|periodo|epoca|trimestre|semestre)|dia \\d{1,2}"
       + "|ate o dia)\\b");
 
+  /**
+   * Período aberto ou contado de outro ponto ("desde o mês passado", "até o mês passado", "do ano
+   * passado pra cá") e a safra (#452, item 3): o período inteiro estaria errado.
+   */
+  private static final Pattern ABERTO = Pattern.compile("\\b(desde|ate|antes|a partir"
+      + "|pra ca|para ca|pra tras|para tras|safras?)\\b");
+
+  /**
+   * Frase de regra: o mês é contado a partir de um fato, não de hoje ("vence no mês seguinte ao
+   * da venda", "até o dia 20 do mês subsequente ao fato gerador") (#452, item 3).
+   */
+  private static final Pattern REGRA_DE_PRAZO = Pattern.compile("\\b(mes|ano|trimestre|semestre)"
+      + " (seguinte|anterior|subsequente|posterior) (a|ao|aos|as|aquele|aquela)\\b");
+
+  /**
+   * Segundo período só pelo adjetivo, depois de tirar as expressões já lidas ("no mês passado e
+   * no retrasado", "este mês e o próximo"): são dois períodos (#452, item 3).
+   */
+  private static final Pattern SEGUNDO_PERIODO = Pattern.compile("\\b(e|ou|com|contra|versus|vs)"
+      + " (?:(?:n|d)?(?:o|a|os|as) )?(?:mes |ano |trimestre |semestre )?(retrasad[oa]s?"
+      + "|passad[oa]s?|anterior(?:es)?|seguintes?|proxim[oa]s?|que vem|atua(?:l|is)|corrente)\\b");
+
+  /** Pergunta de vencimento: o período em curso vai até o último dia (#452, item 2). */
+  private static final Pattern VENCIMENTO = Pattern.compile("\\b(venc\\w*|guias?|boletos?"
+      + "|darfs?|pagar|prazos?)\\b");
+
+  /** Janela em dias na pergunta ("nos próximos 15 dias"): os vencimentos dela não são do mês. */
+  private static final Pattern DIAS = Pattern.compile("\\bdias?\\b");
+
   /** Expressão relativa → período, na ordem de prioridade de leitura. */
   private static final List<Regra> REGRAS = List.of(
       fixa("\\bmes (?:retrasado)\\b|\\bpenultimo mes\\b", h -> mes(h, -2)),
       fixa("\\bmes (?:passado|anterior)\\b|\\bultimo mes\\b|\\bmes que passou\\b",
           h -> mes(h, -1)),
       fixa("\\bmes que vem\\b|\\bproximo mes\\b|\\bmes seguinte\\b", h -> mes(h, 1)),
-      fixa("\\b" + ESTE + " mes\\b|\\bmes (?:atual|corrente)\\b", h -> mesAteHoje(h)),
+      emCurso("\\b" + ESTE + " mes\\b|\\bmes (?:atual|corrente)\\b",
+          (h, venc) -> new Periodo(h.withDayOfMonth(1),
+              venc ? YearMonth.from(h).atEndOfMonth() : h, YearMonth.from(h))),
       fixa("\\bano retrasado\\b", h -> ano(h, -2)),
       fixa("\\bano (?:passado|anterior)\\b", h -> ano(h, -1)),
-      fixa("\\b" + ESTE + " ano\\b|\\bano (?:atual|corrente)\\b",
-          h -> intervalo(h.withDayOfYear(1), h)),
+      emCurso("\\b" + ESTE + " ano\\b|\\bano (?:atual|corrente)\\b",
+          (h, venc) -> venc ? ano(h, 0) : intervalo(h.withDayOfYear(1), h)),
       fixa("\\bultimo trimestre\\b|\\btrimestre (?:passado|anterior)\\b",
-          h -> trimestre(h, -1)),
-      fixa("\\b" + ESTE + " trimestre\\b|\\btrimestre (?:atual|corrente)\\b",
-          h -> intervalo(trimestre(h, 0).inicio(), h)),
+          h -> mesesFechados(h, 3)),
+      emCurso("\\b" + ESTE + " trimestre\\b|\\btrimestre (?:atual|corrente)\\b",
+          (h, venc) -> venc ? trimestre(h) : intervalo(trimestre(h).inicio(), h)),
       fixa("\\bultimo semestre\\b|\\bsemestre (?:passado|anterior)\\b", h -> semestre(h, -1)),
-      fixa("\\b" + ESTE + " semestre\\b|\\bsemestre (?:atual|corrente)\\b",
-          h -> intervalo(semestre(h, 0).inicio(), h)),
+      emCurso("\\b" + ESTE + " semestre\\b|\\bsemestre (?:atual|corrente)\\b",
+          (h, venc) -> venc ? semestre(h, 0) : intervalo(semestre(h, 0).inicio(), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " meses\\b"),
-          (h, m) -> foraDoLimite(m.group(1), MAXIMO_MESES) ? null
+          (h, m, venc) -> foraDoLimite(m.group(1), MAXIMO_MESES) ? null
               : intervalo(h.minusMonths(quantidade(m.group(1))).plusDays(1), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " dias\\b"),
-          (h, m) -> foraDoLimite(m.group(1), MAXIMO_DIAS) ? null
+          (h, m, venc) -> foraDoLimite(m.group(1), MAXIMO_DIAS) ? null
               : intervalo(h.minusDays(quantidade(m.group(1)) - 1L), h)));
 
   private PeriodoDaPergunta() {}
@@ -106,12 +157,21 @@ public final class PeriodoDaPergunta {
   /**
    * Período da pergunta.
    *
-   * @param inicio primeiro dia
-   * @param fim    último dia
-   * @param mes    o mês, quando o período é um mês do calendário (passado, corrente ou futuro);
-   *               {@code null} nos demais
+   * @param inicio                   primeiro dia
+   * @param fim                      último dia
+   * @param mes                      o mês, quando o período é um mês do calendário (passado,
+   *                                 corrente ou futuro); {@code null} nos demais
+   * @param vencimentosDoMesFuturo   o período é um mês depois do corrente e a pergunta não traz
+   *                                 janela em dias: as guias a vencer da pergunta são as daquele
+   *                                 mês, não as dos próximos 30 dias a partir de hoje (#452,
+   *                                 item 1; ver {@code RotaDados.comPeriodo})
    */
-  public record Periodo(LocalDate inicio, LocalDate fim, YearMonth mes) {
+  public record Periodo(LocalDate inicio, LocalDate fim, YearMonth mes,
+      boolean vencimentosDoMesFuturo) {
+
+    Periodo(LocalDate inicio, LocalDate fim, YearMonth mes) {
+      this(inicio, fim, mes, false);
+    }
 
     /** Linha para o modelo, antes da pergunta: as datas já calculadas. */
     public String paraOModelo() {
@@ -121,7 +181,7 @@ public final class PeriodoDaPergunta {
   }
 
   /**
-   * O período relativo da pergunta, se houver um só e nenhuma data explícita.
+   * O período relativo da pergunta, se houver um só e nada que mude o sentido dele.
    *
    * @param pergunta pergunta do usuário
    * @param hoje     data de referência (Brasília)
@@ -130,21 +190,31 @@ public final class PeriodoDaPergunta {
   public static Optional<Periodo> resolver(String pergunta, LocalDate hoje) {
     String texto = normalizar(pergunta);
     if (texto.isEmpty() || DATA_EXPLICITA.matcher(texto).find()
-        || SUBPERIODO.matcher(texto).find()) {
+        || SUBPERIODO.matcher(texto).find() || ABERTO.matcher(texto).find()
+        || REGRA_DE_PRAZO.matcher(texto).find()) {
       return Optional.empty();
     }
+    boolean vencimento = VENCIMENTO.matcher(texto).find();
+    char[] semAsLidas = texto.toCharArray();
     Set<Periodo> achados = new LinkedHashSet<>();
     for (Regra regra : REGRAS) {
       Matcher m = regra.padrao().matcher(texto);
       while (m.find()) {
-        Periodo p = regra.calculo().calcular(hoje, m);
+        Periodo p = regra.calculo().calcular(hoje, m, vencimento);
         if (p == null) {
           return Optional.empty();
         }
         achados.add(p);
+        Arrays.fill(semAsLidas, m.start(), m.end(), '#');
       }
     }
-    return achados.size() == 1 ? Optional.of(achados.iterator().next()) : Optional.empty();
+    if (achados.size() != 1 || SEGUNDO_PERIODO.matcher(new String(semAsLidas)).find()) {
+      return Optional.empty();
+    }
+    Periodo periodo = achados.iterator().next();
+    boolean mesFuturo = periodo.mes() != null && periodo.mes().isAfter(YearMonth.from(hoje));
+    return Optional.of(mesFuturo && !DIAS.matcher(texto).find()
+        ? new Periodo(periodo.inicio(), periodo.fim(), periodo.mes(), true) : periodo);
   }
 
   /**
@@ -196,8 +266,10 @@ public final class PeriodoDaPergunta {
     return new Periodo(mes.atDay(1), mes.atEndOfMonth(), mes);
   }
 
-  private static Periodo mesAteHoje(LocalDate hoje) {
-    return new Periodo(hoje.withDayOfMonth(1), hoje, YearMonth.from(hoje));
+  /** Os {@code quantos} meses do calendário inteiros antes do mês corrente. */
+  private static Periodo mesesFechados(LocalDate hoje, int quantos) {
+    YearMonth atual = YearMonth.from(hoje);
+    return intervalo(atual.minusMonths(quantos).atDay(1), atual.minusMonths(1).atEndOfMonth());
   }
 
   private static Periodo ano(LocalDate hoje, int deslocamento) {
@@ -205,9 +277,9 @@ public final class PeriodoDaPergunta {
     return intervalo(LocalDate.of(ano, 1, 1), LocalDate.of(ano, 12, 31));
   }
 
-  private static Periodo trimestre(LocalDate hoje, int deslocamento) {
-    LocalDate inicio = LocalDate.of(hoje.getYear(), 3 * ((hoje.getMonthValue() - 1) / 3) + 1, 1)
-        .plusMonths(3L * deslocamento);
+  /** O trimestre do calendário de hoje, inteiro. */
+  private static Periodo trimestre(LocalDate hoje) {
+    LocalDate inicio = LocalDate.of(hoje.getYear(), 3 * ((hoje.getMonthValue() - 1) / 3) + 1, 1);
     return intervalo(inicio, inicio.plusMonths(3).minusDays(1));
   }
 
@@ -218,13 +290,22 @@ public final class PeriodoDaPergunta {
   }
 
   private static Regra fixa(String padrao, Function<LocalDate, Periodo> calculo) {
-    return new Regra(Pattern.compile(padrao), (hoje, m) -> calculo.apply(hoje));
+    return new Regra(Pattern.compile(padrao), (hoje, m, venc) -> calculo.apply(hoje));
+  }
+
+  /** Período em curso: até hoje, ou até o último dia em pergunta de vencimento. */
+  private static Regra emCurso(String padrao, BiFunction<LocalDate, Boolean, Periodo> calculo) {
+    return new Regra(Pattern.compile(padrao), (hoje, m, venc) -> calculo.apply(hoje, venc));
   }
 
   @FunctionalInterface
   private interface Calculo {
-    /** Período da expressão achada; {@code null} = expressão fora do limite (não resolve). */
-    Periodo calcular(LocalDate hoje, Matcher achado);
+    /**
+     * Período da expressão achada; {@code null} = expressão fora do limite (não resolve).
+     *
+     * @param vencimento a pergunta é de vencimento (o período em curso vai até o último dia)
+     */
+    Periodo calcular(LocalDate hoje, Matcher achado, boolean vencimento);
   }
 
   private record Regra(Pattern padrao, Calculo calculo) {}

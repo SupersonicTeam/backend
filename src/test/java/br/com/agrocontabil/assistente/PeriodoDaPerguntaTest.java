@@ -29,7 +29,7 @@ class PeriodoDaPerguntaTest {
       "Quanto vendi de cevada no ano passado?|2026-01-01|2026-12-31|",
       "Os créditos deste ano somam quanto?|2027-01-01|2027-02-17|",
       "Me fala as retenções do ano retrasado|2025-01-01|2025-12-31|",
-      "Quanto comprei de ureia no último trimestre?|2026-10-01|2026-12-31|",
+      "Quanto comprei de ureia no último trimestre?|2026-11-01|2027-01-31|",
       "E neste trimestre, já teve compra de sementes?|2027-01-01|2027-02-17|",
       "No semestre passado vendi quanto de feijão?|2026-07-01|2026-12-31|",
       "Quanto de nota emiti nos últimos quatro meses?|2026-10-18|2027-02-17|",
@@ -126,8 +126,8 @@ class PeriodoDaPerguntaTest {
 
     Map<String, Object> notas = new LinkedHashMap<>(Map.of("tipo", "SAIDA"));
     assertThat(PeriodoDaPergunta.aplicar("listarNotas", notas, trimestre)).isTrue();
-    assertThat(notas).containsEntry("dataInicio", "2026-10-01")
-        .containsEntry("dataFim", "2026-12-31").containsEntry("tipo", "SAIDA");
+    assertThat(notas).containsEntry("dataInicio", "2026-11-01")
+        .containsEntry("dataFim", "2027-01-31").containsEntry("tipo", "SAIDA");
 
     Map<String, Object> apuracao = new LinkedHashMap<>(Map.of("mes", "2027-02"));
     assertThat(PeriodoDaPergunta.aplicar("consultarApuracao", apuracao, mes)).isTrue();
@@ -153,5 +153,91 @@ class PeriodoDaPerguntaTest {
         .isEqualTo("Periodo da pergunta, ja calculado: de 2027-03-01 a 2027-03-31 (mes 2027-03).");
     assertThat(PeriodoDaPergunta.resolver("ano passado", HOJE).orElseThrow().paraOModelo())
         .isEqualTo("Periodo da pergunta, ja calculado: de 2026-01-01 a 2026-12-31.");
+  }
+
+  @ParameterizedTest(name = "[{index}] hoje {0}: {1}")
+  @CsvSource(delimiter = '|', value = {
+      "2026-11-09|Qual o total de crédito no último trimestre?|2026-08-01|2026-10-31",
+      "2026-12-03|Retenções do trimestre passado, por favor|2026-09-01|2026-11-30",
+      "2027-01-15|E no trimestre anterior, quanto entrou de girassol?|2026-10-01|2026-12-31",
+      "2026-11-30|Notas de saída do último trimestre|2026-08-01|2026-10-31"})
+  @DisplayName("último trimestre são os três últimos meses fechados (#452, item 4)")
+  void ultimoTrimestreSaoMesesFechados(String hoje, String pergunta, String inicio, String fim) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, LocalDate.parse(hoje)).orElseThrow();
+
+    assertThat(p.inicio()).isEqualTo(inicio);
+    assertThat(p.fim()).isEqualTo(fim);
+    assertThat(p.mes()).isNull();
+  }
+
+  @Test
+  @DisplayName("últimos três meses seguem sendo a janela que termina hoje (#452, item 4)")
+  void ultimosTresMesesSegueJanelaMovel() {
+    Periodo p = PeriodoDaPergunta.resolver("Compras de sorgo nos últimos três meses",
+        LocalDate.of(2026, 11, 9)).orElseThrow();
+
+    assertThat(p.inicio()).isEqualTo("2026-08-10");
+    assertThat(p.fim()).isEqualTo("2026-11-09");
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @CsvSource(delimiter = '|', value = {
+      "Que boletos de imposto vencem neste mês?|2027-02-01|2027-02-28|2027-02",
+      "Quanto tenho a pagar de tributo no mês atual?|2027-02-01|2027-02-28|2027-02",
+      "Os prazos de recolhimento deste ano|2027-01-01|2027-12-31|",
+      "Alguma guia cai neste trimestre?|2027-01-01|2027-03-31|",
+      "E os DARFs deste semestre?|2027-01-01|2027-06-30|"})
+  @DisplayName("período em curso de vencimento vai até o último dia (#452, item 2)")
+  void emCursoDeVencimentoVaiAteOFim(String pergunta, String inicio, String fim, String mes) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
+
+    assertThat(p.inicio()).isEqualTo(inicio);
+    assertThat(p.fim()).isEqualTo(fim);
+    assertThat(p.mes()).isEqualTo(mes == null ? null : YearMonth.parse(mes));
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @CsvSource(delimiter = '|', value = {
+      "Que guias tenho para quitar no próximo mês?|true",
+      "Quanto de DARF cai no mês seguinte?|true",
+      "Quanto de cevada vou entregar no mês que vem?|true",
+      "Das guias do mês que vem, quais caem nos próximos 10 dias?|false",
+      "Que guias vencem neste mês?|false",
+      "Ficou guia sem pagar no mês passado?|false"})
+  @DisplayName("guias de mês futuro marcam a troca de proximosVencimentos (#452, item 1)")
+  void marcaMesFuturo(String pergunta, boolean esperado) {
+    assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow()
+        .vencimentosDoMesFuturo()).isEqualTo(esperado);
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "Desde o mês passado, quanto entrou de girassol?",
+      "Vendi quanto de sorgo até o mês passado?",
+      "Teve compra de calcário antes do mês passado?",
+      "Quero as notas do mês passado pra trás",
+      "Quero as notas do mês passado para trás",
+      "Créditos a partir do ano passado",
+      "Quanto vendi de feijão do ano passado pra cá?",
+      "Quanto faturei na safra do ano passado?",
+      "Retenções no mês passado e no retrasado",
+      "Quanto tenho de guia neste mês e no próximo?",
+      "Compare o ano passado com o retrasado",
+      "Esse imposto vence no mês seguinte ao da entrega?",
+      "O recolhimento é no mês anterior ao embarque?"})
+  @DisplayName("período aberto, safra, dois períodos e frase de regra: não resolve (#452, item 3)")
+  void naoResolveAbertoOuRegra(String pergunta) {
+    assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE)).isEmpty();
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "Como ficou a apuração do mês passado?",
+      "Me diz a apuração do mês anterior",
+      "Quanto vendi de soja no mês passado, e de milho?"})
+  @DisplayName("apuração do mês passado segue resolvendo (passo 7 do roteiro)")
+  void apuracaoDoMesPassadoSegueResolvendo(String pergunta) {
+    assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE)).map(Periodo::mes)
+        .contains(YearMonth.of(2027, 1));
   }
 }
