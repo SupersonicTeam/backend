@@ -51,8 +51,9 @@ import java.util.regex.Pattern;
  *   <li>"Último trimestre" e "trimestre passado/anterior" são os três últimos meses fechados: os
  *       três meses do calendário inteiros antes do mês corrente (decisão do Murillo, 2026-11-09,
  *       #452, item 4). Em 09/11/2026, de 01/08 a 31/10.</li>
- *   <li>"Últimos N meses" e "últimos N dias" são a janela móvel que termina hoje. Ela é outra regra
- *       e não mudou com a decisão do trimestre: "últimos três meses" segue terminando hoje.</li>
+ *   <li>"Últimos três meses" ("últimos 3 meses") são os mesmos três meses fechados do "último
+ *       trimestre" (segunda decisão do Murillo, 2026-11-09, #452). Os demais "últimos N meses" e
+ *       os "últimos N dias" são a janela móvel que termina hoje: esses não foram decididos.</li>
  * </ul>
  */
 public final class PeriodoDaPergunta {
@@ -73,6 +74,12 @@ public final class PeriodoDaPergunta {
   /** Maior janela móvel aceita: a das funções de dados é de 24 meses. */
   static final int MAXIMO_MESES = 24;
   static final int MAXIMO_DIAS = 731;
+
+  /**
+   * "Último trimestre" e "últimos três meses": os três meses do calendário inteiros antes do mês
+   * corrente (decisões do Murillo, 2026-11-09, #452).
+   */
+  static final int MESES_FECHADOS_DO_TRIMESTRE = 3;
 
   private static final String ESTE = "(?:n?est[ea]|n?ess[ea]|dest[ea]|dess[ea])";
 
@@ -157,7 +164,7 @@ public final class PeriodoDaPergunta {
       emCurso("\\b" + ESTE + " ano\\b|\\bano (?:atual|corrente)\\b",
           (h, venc) -> venc ? ano(h, 0) : intervalo(h.withDayOfYear(1), h)),
       fixa("\\bultimo trimestre\\b|\\btrimestre (?:passado|anterior)\\b",
-          h -> mesesFechados(h, 3)),
+          h -> mesesFechados(h, MESES_FECHADOS_DO_TRIMESTRE)),
       emCurso("\\b" + ESTE + " trimestre\\b|\\btrimestre (?:atual|corrente)\\b",
           (h, venc) -> venc ? trimestre(h) : intervalo(trimestre(h).inicio(), h)),
       fixa("\\bultimo semestre\\b|\\bsemestre (?:passado|anterior)\\b", h -> semestre(h, -1)),
@@ -165,7 +172,9 @@ public final class PeriodoDaPergunta {
           (h, venc) -> venc ? semestre(h, 0) : intervalo(semestre(h, 0).inicio(), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " meses\\b"),
           (h, m, venc) -> foraDoLimite(m.group(1), MAXIMO_MESES) ? null
-              : intervalo(h.minusMonths(quantidade(m.group(1))).plusDays(1), h)),
+              : quantidade(m.group(1)) == MESES_FECHADOS_DO_TRIMESTRE
+                  ? mesesFechados(h, MESES_FECHADOS_DO_TRIMESTRE)
+                  : intervalo(h.minusMonths(quantidade(m.group(1))).plusDays(1), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " dias\\b"),
           (h, m, venc) -> foraDoLimite(m.group(1), MAXIMO_DIAS) ? null
               : intervalo(h.minusDays(quantidade(m.group(1)) - 1L), h)));

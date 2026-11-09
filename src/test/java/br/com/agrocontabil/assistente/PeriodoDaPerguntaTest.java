@@ -184,14 +184,33 @@ class PeriodoDaPerguntaTest {
     assertThat(p.mes()).isNull();
   }
 
-  @Test
-  @DisplayName("últimos três meses seguem sendo a janela que termina hoje (#452, item 4)")
-  void ultimosTresMesesSegueJanelaMovel() {
-    Periodo p = PeriodoDaPergunta.resolver("Compras de sorgo nos últimos três meses",
-        LocalDate.of(2026, 11, 9)).orElseThrow();
+  @ParameterizedTest(name = "[{index}] hoje {0}: {1}")
+  @CsvSource(delimiter = '|', value = {
+      "2026-11-09|Compras de sorgo nos últimos três meses|2026-08-01|2026-10-31",
+      "2026-12-03|Quanto entrou de retenção nos últimos 3 meses?|2026-09-01|2026-11-30",
+      "2027-01-02|Notas de saída dos últimos tres meses|2026-10-01|2026-12-31",
+      "2026-11-09|Créditos nos últimos 3 meses, isto é, no último trimestre|2026-08-01|2026-10-31"})
+  @DisplayName("últimos três meses são os três meses fechados, como o trimestre (#452)")
+  void ultimosTresMesesSaoMesesFechados(String hoje, String pergunta, String inicio,
+      String fim) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, LocalDate.parse(hoje)).orElseThrow();
 
-    assertThat(p.inicio()).isEqualTo("2026-08-10");
-    assertThat(p.fim()).isEqualTo("2026-11-09");
+    assertThat(p.inicio()).isEqualTo(inicio);
+    assertThat(p.fim()).isEqualTo(fim);
+    assertThat(p.fimDosDados()).isEqualTo(fim);
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @CsvSource(delimiter = '|', value = {
+      "Compras de adubo nos últimos dois meses|2026-09-10|2026-11-09",
+      "Vendas de aveia nos últimos 4 meses|2026-07-10|2026-11-09",
+      "Notas dos últimos 90 dias|2026-08-12|2026-11-09"})
+  @DisplayName("os demais últimos N meses e N dias seguem até hoje (não decididos)")
+  void demaisJanelasSeguemAteHoje(String pergunta, String inicio, String fim) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, LocalDate.of(2026, 11, 9)).orElseThrow();
+
+    assertThat(p.inicio()).isEqualTo(inicio);
+    assertThat(p.fim()).isEqualTo(fim);
   }
 
   @ParameterizedTest(name = "{0}")
