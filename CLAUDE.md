@@ -283,9 +283,11 @@ br.com.agrocontabil
 | Método | Path | Descrição |
 |--------|------|-----------|
 | POST | `/api/auth/cadastro` | **Público.** Cria conta de produtor ou contador (#205): `{papel, nomeCompleto, cpfCnpj (obrigatório, só dígitos, DV), email, senha}`; senha de 10 caracteres a 72 bytes, fora da lista de comuns, sem o e-mail/CPF (400 `SENHA_FRACA`, nunca ecoa a senha); e-mail ou CPF/CNPJ já existente → 409 `CADASTRO_CONFLITO` sem dizer qual — inclusive produtor/contador já cadastrado sem credencial (nunca reivindicado) |
-| POST | `/api/auth/login` | **Público.** `{email, senha}` → `{accessToken, tokenType: "Bearer", expiraEm, papel, usuarioId}` (#206); `Cache-Control: no-store`; qualquer falha (inclusive conta bloqueada por 5 erros, #208) = 401 `CREDENCIAIS_INVALIDAS`; 10/min por IP → 429 `MUITAS_TENTATIVAS` |
+| POST | `/api/auth/login` | **Público.** `{email, senha}` → `{accessToken, tokenType: "Bearer", expiraEm, papel, usuarioId}` (#206); `Cache-Control: no-store`; qualquer falha (inclusive conta bloqueada por 5 erros, #208) = 401 `CREDENCIAIS_INVALIDAS`; 10/min por IP → 429 `MUITAS_TENTATIVAS`. **Endereço do escritório (#464):** campo opcional `escritorio` (slug, sem validação de forma); pelo host de escritório (`HostDaRequisicao`) ou com o campo, só o contador membro do escritório daquele endereço (ativo, com CNPJ) recebe a sessão — o corpo, se veio, tem de nomear o mesmo rótulo do host, e pelo `www` o campo sozinho não basta; senha certa fora disso = o mesmo 401, com as falhas zeradas. Host principal sem o campo: idêntico |
 | GET | `/api/auth/me` | Identidade da requisição: `{usuarioId, papel, nome}` (#206) |
-| POST | `/api/auth/refresh` | **Público.** Lê o cookie `agro_refresh`, devolve access novo e troca o cookie (#207); refresh ausente/vencido/revogado/reusado → 401 `SESSAO_INVALIDA` (reuso revoga a família) |
+| POST | `/api/auth/refresh` | **Público.** Lê o cookie `agro_refresh`, devolve access novo e troca o cookie (#207); refresh ausente/vencido/revogado/reusado → 401 `SESSAO_INVALIDA` (reuso revoga a família). No host de escritório (#464), a credencial precisa seguir membro do escritório do endereço; senão a família é revogada (401). Host principal: idêntico |
+| GET | `/api/publico/escritorios/{slug}` | **Público** (#464): `{slug, nome, slugAtual}` para a tela de login do subdomínio — nunca id, CNPJ ou membros; `slugAtual` só quando o slug pedido está em carência de um escritório com outro endereço ativo (o frontend troca o host). O mesmo 404 `ENDERECO_NAO_ENCONTRADO` para inexistente, mal formado ou com maiúscula, reservado, sem CNPJ, carência vencida, de escritório apagado ou sem endereço; `Cache-Control: public, max-age=300` só no 200; 30/min por IP (`LimiteTaxaPublicoFilter`, `app.escritorio.publico.por-minuto`) → 429; ignora o Bearer |
+| GET | `/interno/tls/permitido?domain=&chave=` | "Ask" do On-Demand TLS do Caddy (#464), **fora de `/api`** (o Caddy só repassa `/api/*`; só a rede interna alcança) e fora do Swagger: 200 sem corpo só com `chave` = `APP_ESCRITORIO_TLS_ASK_CHAVE` (tempo constante; vazia = recusa tudo) e `domain` = `{slug}.` + domínio base com endereço servido (ativo, ou em carência com destino); senão 404 sem corpo |
 | POST | `/api/auth/logout` | **Público, idempotente.** Revoga a família do cookie e o apaga → 204 (#207) |
 | POST | `/api/auth/senha/esqueci` | **Público.** `{email}` → **sempre 202** (#209); com conta ativa, link de uso único (30 min, token no fragmento `#token=`) vai por e-mail em segundo plano |
 | POST | `/api/auth/senha/redefinir` | **Público.** `{token, novaSenha}` → 204 e cookie apagado; encerra todas as sessões; link inválido/expirado/usado → 400 `TOKEN_REDEFINICAO_INVALIDO`; senha fraca → 400 `SENHA_FRACA` (o link segue valendo) |
@@ -360,7 +362,8 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir`, `GET /api/politica-dados` | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir`, `GET /api/politica-dados`, `GET /api/publico/escritorios/{slug}` (#464) | público | público |
+  | `GET /interno/tls/permitido` (#464) | público na cadeia, protegido pela chave e pela rede interna | idem |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas`, `/api/notificacao/**` (#182) | próprios dados | **403** no service — o contador usa as rotas da carteira (linha abaixo, #255) |
   | `GET /api/contador/produtores/{produtorId}/apuracao`, `/relatorios/conformidade/**`, `/creditos`, `/dashboard` (#255) | **403** | qualquer membro, carteira ativa (404 fora dela) |
   | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
@@ -386,8 +389,13 @@ br.com.agrocontabil
 - **Importação de NF-e de terceiro (#223).** Nada do XML enviado vale como autorização: o `ImportacaoNotaFiscalService` exige o `dest` = produtor autenticado (só dígitos; sem documento na mensagem), a assinatura pelo `AssinaturaValidator` e a confirmação na SEFAZ pela chave, **fora de transação**, com o `digVal` do protocolo igual ao DigestValue do XML (`nfe/DigestAssinatura`) — a assinatura sozinha não basta, qualquer certificado assina um XML forjado com a chave de uma NF-e real. A nota entra `PENDENTE_SEFAZ` pelo mapper; autorizada vira `AUTORIZADA` com o protocolo da SEFAZ; 217/rejeitada/denegada/cancelada/conteúdo diferente → recusada, nada gravado; SEFAZ sem resposta → grava pendente e o `SefazService.aplicarRetorno` aplica as mesmas regras à importada (217 → `REJEITADA`, nunca `XML_GERADO`). A chave é única por (produtor, chave, origem) (changeSet **0045**, substitui a global da 0002): o emitente (PROPRIA) e o destinatário (IMPORTADA) têm a mesma NF-e e "duplicada" não revela chave de outra conta. O `MockSefazTransport` devolve o `digVal` do que transmitiu; `app.nfe.sefaz.mock.autorizar-terceiros` (só no `application-dev.yml`) dá a chave desconhecida como autorizada, sem `digVal`, para a demonstração.
 - **Endereço próprio do escritório (#464): o subdomínio é marca, nunca autorização.** O escritório é o
   tenant, mas o isolamento continua o do `MembroEscritorioProvider` e do vínculo `ATIVO`; o
-  `{slug}.agroconia.com.br` só identifica o escritório (e, a partir do PR do login, só **restringe**
-  o login). O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
+  `{slug}.agroconia.com.br` só identifica o escritório e **restringe** o login e o refresh. O host
+  vem de um ponto único, `security/HostDaRequisicao` (o `getServerName()`, em que o `RemoteIpValve`
+  só põe o `X-Forwarded-Host` de proxy interno, com `server.forward-headers-strategy=native` —
+  ligado na VPS e, desde a #464, em dev); nunca ler o cabeçalho cru. O cookie de refresh segue
+  *host-only* (nunca `Domain=.agroconia.com.br`) e o CORS segue a lista fixa: a SPA do subdomínio
+  chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
+  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
   log nem à auditoria, só existe com CNPJ, e a exclusão de dados o apaga sem carência. Lista de
   reservados versionada em `resources/escritorio/slugs-reservados.txt` (cresce ali, nunca no código).
   Contrato completo na #464 (comentário de 2026-11-09).

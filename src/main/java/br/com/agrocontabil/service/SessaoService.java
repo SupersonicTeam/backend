@@ -57,6 +57,7 @@ public class SessaoService {
   private final CredencialUsuarioRepository credencialRepository;
   private final JwtService jwtService;
   private final RefreshProperties propriedades;
+  private final EnderecoEscritorioService enderecoService;
   private final Clock clock;
   private final TransactionTemplate transacao;
 
@@ -65,12 +66,14 @@ public class SessaoService {
       CredencialUsuarioRepository credencialRepository,
       JwtService jwtService,
       RefreshProperties propriedades,
+      EnderecoEscritorioService enderecoService,
       Clock clock,
       PlatformTransactionManager transactionManager) {
     this.sessaoRepository = sessaoRepository;
     this.credencialRepository = credencialRepository;
     this.jwtService = jwtService;
     this.propriedades = propriedades;
+    this.enderecoService = enderecoService;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
   }
@@ -98,11 +101,26 @@ public class SessaoService {
    * @throws SessaoInvalidaException se o token não renovar, por qualquer motivo
    */
   public SessaoEmitida renovar(String refreshToken) {
+    return renovar(refreshToken, Optional.empty());
+  }
+
+  /**
+   * Troca um refresh token válido por um par novo, considerando o host (#464). No endereço de um
+   * escritório, a credencial precisa continuar membro dele: quem saiu da equipe, ou o escritório
+   * que perdeu o endereço, perde a família inteira (401, cookie apagado). No host principal, nada
+   * muda.
+   *
+   * @param refreshToken token do cookie
+   * @param rotuloDoHost rótulo de escritório do host; vazio no host principal
+   * @return access token e refresh token novos
+   * @throws SessaoInvalidaException se o token não renovar, por qualquer motivo
+   */
+  public SessaoEmitida renovar(String refreshToken, Optional<String> rotuloDoHost) {
     if (refreshToken == null || refreshToken.isBlank()) {
       throw new SessaoInvalidaException();
     }
     String hash = TokenOpaco.hash(refreshToken);
-    Renovacao renovacao = transacao.execute(status -> renovarSobLock(hash));
+    Renovacao renovacao = transacao.execute(status -> renovarSobLock(hash, rotuloDoHost));
     if (renovacao == null || renovacao.credencial() == null) {
       throw new SessaoInvalidaException();
     }
@@ -158,7 +176,7 @@ public class SessaoService {
     });
   }
 
-  private Renovacao renovarSobLock(String hash) {
+  private Renovacao renovarSobLock(String hash, Optional<String> rotuloDoHost) {
     Optional<SessaoRefresh> encontrada = sessaoRepository.findByTokenHashForUpdate(hash);
     if (encontrada.isEmpty()) {
       return Renovacao.INVALIDA;
@@ -187,6 +205,15 @@ public class SessaoService {
     if (credencial.isEmpty()) {
       // Senha trocada ou conta desativada depois do login: a familia morre junto.
       sessaoRepository.revogarFamilia(sessao.getFamiliaId(), agora);
+      return Renovacao.INVALIDA;
+    }
+
+    if (rotuloDoHost.isPresent()
+        && !enderecoService.membroDoEndereco(credencial.get(), rotuloDoHost.get())) {
+      // Endereco de escritorio (#464): fora da equipe, a familia morre junto.
+      sessaoRepository.revogarFamilia(sessao.getFamiliaId(), agora);
+      log.info("Refresh recusado (fora do escritorio do endereco): credencial={}",
+          MascaraDadosPessoais.referencia(sessao.getCredencialId()));
       return Renovacao.INVALIDA;
     }
 

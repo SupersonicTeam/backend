@@ -3,15 +3,18 @@ package br.com.agrocontabil.service;
 import br.com.agrocontabil.common.FormatoSlug;
 import br.com.agrocontabil.config.EnderecoEscritorioProperties;
 import br.com.agrocontabil.dto.EnderecoEscritorioRequest;
+import br.com.agrocontabil.dto.EscritorioPublicoResponse;
 import br.com.agrocontabil.dto.EscritorioResponse;
 import br.com.agrocontabil.dto.ResultadoAuditavel;
 import br.com.agrocontabil.exception.EnderecoExigeCnpjException;
+import br.com.agrocontabil.exception.EnderecoNaoEncontradoException;
 import br.com.agrocontabil.exception.EnderecoTrocaRecenteException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SlugIndisponivelException;
 import br.com.agrocontabil.mapper.EscritorioMapper;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.EscritorioSlugAnterior;
 import br.com.agrocontabil.model.FuncaoEscritorio;
@@ -20,10 +23,15 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
+import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.auditoria.Auditado;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,6 +178,54 @@ public class EnderecoEscritorioService {
   }
 
   /**
+   * Escritório público de um endereço (issue #464), para a tela de login com a marca dele. Só o
+   * nome: nunca id, CNPJ, membros ou contato.
+   *
+   * @param slug rótulo do host, como o navegador o mandou (sem normalizar)
+   * @return slug, nome e, se o slug pedido está em carência, o atual (para redirecionar)
+   * @throws EnderecoNaoEncontradoException a mesma resposta para tudo que não é servido (404)
+   */
+  public EscritorioPublicoResponse publico(String slug) {
+    return servido(slug, OffsetDateTime.now(clock))
+        .orElseThrow(EnderecoNaoEncontradoException::new);
+  }
+
+  /**
+   * O Caddy pode emitir certificado para este domínio? É o "ask" do On-Demand TLS (#464): só com
+   * a chave certa e um endereço servido (ativo, ou em carência com redirecionamento).
+   *
+   * @param chave   segredo compartilhado com o Caddy
+   * @param dominio domínio pedido no TLS, como o Caddy o mandou
+   * @return {@code true} se pode emitir
+   */
+  public boolean certificadoPermitido(String chave, String dominio) {
+    if (!chaveDoAskConfere(chave) || dominio == null) {
+      return false;
+    }
+    String sufixo = "." + propriedades.dominioBase();
+    if (!dominio.endsWith(sufixo) || dominio.length() == sufixo.length()) {
+      return false;
+    }
+    String rotulo = dominio.substring(0, dominio.length() - sufixo.length());
+    return servido(rotulo, OffsetDateTime.now(clock)).isPresent();
+  }
+
+  /**
+   * A credencial é de um contador membro do escritório que tem este endereço ativo (com CNPJ)?
+   * Regra única do login e do refresh pelo subdomínio (#464).
+   *
+   * @param credencial credencial que provou a senha, ou a do refresh
+   * @param rotulo     rótulo do host
+   * @return {@code true} só para contador membro daquele escritório
+   */
+  public boolean membroDoEndereco(CredencialUsuario credencial, String rotulo) {
+    return credencial.getPapel() == PapelUsuario.CONTADOR
+        && credencial.getContadorId() != null
+        && servivel(rotulo)
+        && escritorioRepository.membroDoEnderecoAtivo(rotulo, credencial.getContadorId());
+  }
+
+  /**
    * Escritório do contador montado para a resposta, com o endereço.
    *
    * @param escritorio escritório
@@ -211,6 +267,44 @@ public class EnderecoEscritorioService {
    */
   void apagarSemCarencia(UUID escritorioId) {
     anteriorRepository.apagarDoEscritorio(escritorioId);
+  }
+
+  private Optional<EscritorioPublicoResponse> servido(String slug, OffsetDateTime agora) {
+    if (!servivel(slug)) {
+      return Optional.empty();
+    }
+    Optional<Escritorio> ativo = escritorioRepository.findAtivoPorSlug(slug);
+    if (ativo.isPresent()) {
+      return Optional.of(new EscritorioPublicoResponse(slug, ativo.get().getNome(), null));
+    }
+    return escritorioRepository.findDestinoDaCarencia(slug, agora)
+        .map(destino -> new EscritorioPublicoResponse(slug, destino.getNome(), destino.getSlug()));
+  }
+
+  /**
+   * Já na forma canônica (o host chega em minúsculas: maiúscula é recusada, não corrigida), com a
+   * forma de slug e fora dos reservados.
+   */
+  private boolean servivel(String slug) {
+    return slug != null && slug.equals(FormatoSlug.normalizar(slug)) && FormatoSlug.valido(slug)
+        && !reservados.reservado(slug);
+  }
+
+  /** Comparação em tempo constante, pelos hashes (nem o tamanho vaza). Sem chave, nada passa. */
+  private boolean chaveDoAskConfere(String chave) {
+    String configurada = propriedades.tlsAskChave();
+    if (configurada == null || configurada.isBlank() || chave == null) {
+      return false;
+    }
+    return MessageDigest.isEqual(sha256(chave), sha256(configurada.strip()));
+  }
+
+  private static byte[] sha256(String valor) {
+    try {
+      return MessageDigest.getInstance("SHA-256").digest(valor.getBytes(StandardCharsets.UTF_8));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 indisponivel", e);
+    }
   }
 
   private Escritorio travado(UUID escritorioId) {

@@ -331,6 +331,13 @@ app:
     # escritorio e nunca autoriza nada. Uma gravacao de slug por intervalo; o slug que sai fica em
     # carencia (ninguem o registra). Em dev o dominio base e localhost (ruraloeste.localhost).
     dominio-base: ${APP_ESCRITORIO_DOMINIO_BASE:agroconia.com.br}
+    # Segredo do "ask" do On-Demand TLS do Caddy (GET /interno/tls/permitido): o Caddy o manda na
+    # URL e o backend o confere em tempo constante. Vazio = o ask recusa tudo (nenhum certificado
+    # de subdominio). 32+ caracteres: openssl rand -hex 32.
+    tls-ask-chave: ${APP_ESCRITORIO_TLS_ASK_CHAVE:}
+    # Endpoint publico do escritorio (GET /api/publico/escritorios/{slug}): limite por IP.
+    publico:
+      por-minuto: ${APP_ESCRITORIO_PUBLICO_POR_MINUTO:30}
     endereco:
       intervalo-troca: P30D
       carencia: P90D

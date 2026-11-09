@@ -26,6 +26,12 @@ spring:
       hibernate:
         format_sql: true
 
+# Endereco do escritorio em dev (#464): o proxy do Angular (xfwd: true) repassa o host original em
+# X-Forwarded-Host, e o Tomcat so o aceita de proxy interno (o localhost esta entre eles). Sem isto,
+# o login por ruraloeste.localhost:4200 seria sempre recusado, porque o backend veria localhost.
+server:
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:native}
+
 # Logs verbosos em dev para facilitar o desenvolvimento.
 logging:
   level:
