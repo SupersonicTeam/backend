@@ -9,6 +9,7 @@ import br.com.agrocontabil.exception.EnderecoExigeCnpjException;
 import br.com.agrocontabil.exception.EnderecoTrocaRecenteException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SlugIndisponivelException;
+import br.com.agrocontabil.mapper.EscritorioMapper;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Escritorio;
@@ -177,9 +178,9 @@ public class EnderecoEscritorioService {
    */
   public EscritorioResponse resposta(Escritorio escritorio, Contador membro) {
     String slug = escritorio.getSlug();
-    return new EscritorioResponse(escritorio.getId(), escritorio.getNome(), escritorio.getCnpj(),
-        membro.getFuncao(), contadorRepository.countByEscritorioId(escritorio.getId()),
-        slug, slug == null ? null : propriedades.host(slug), alteravelEm(escritorio));
+    return EscritorioMapper.paraResponse(escritorio, membro.getFuncao(),
+        contadorRepository.countByEscritorioId(escritorio.getId()),
+        slug == null ? null : propriedades.host(slug), alteravelEm(escritorio));
   }
 
   /**
@@ -191,9 +192,14 @@ public class EnderecoEscritorioService {
    * @param escritorioId escritório que vai ser apagado
    */
   void reservarAoApagar(UUID escritorioId) {
+    // Sob o lock do escritorio, como o PUT do endereco: um slug gravado ao mesmo tempo nao sai
+    // junto com o escritorio sem passar pela carencia.
+    String slug = escritorioRepository.findByIdForUpdate(escritorioId)
+        .map(Escritorio::getSlug).orElse(null);
     anteriorRepository.desvincularDoEscritorio(escritorioId);
-    escritorioRepository.findSlugById(escritorioId)
-        .ifPresent(slug -> reservar(slug, null, OffsetDateTime.now(clock)));
+    if (slug != null) {
+      reservar(slug, null, OffsetDateTime.now(clock));
+    }
   }
 
   /**

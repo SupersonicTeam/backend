@@ -171,6 +171,10 @@ conta fica. Produtor de fora do seed com vínculo nesse escritório fica, sem o 
 entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de referência, a auditoria
 (`registro_auditoria`, que sobrevive ao que audita, #149) e os dados do `DataLoader`.
 
+**Ordem (#464):** os scripts consultam a carência dos endereços (`escritorio_slug_anterior`,
+changeSet 0059). Rode-os **depois** do deploy da versão que traz esse changeSet; antes dele, o
+passo 1 falha com "relation does not exist" e nada é apagado.
+
 Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
 `ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro
 removido e contador convidado → reset → seed, com as contagens batendo e o que é de fora do seed

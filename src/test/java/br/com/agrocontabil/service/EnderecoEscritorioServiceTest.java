@@ -254,8 +254,9 @@ class EnderecoEscritorioServiceTest {
   @Test
   @DisplayName("aceite de equipe: slug ativo em carencia sem escritorio; os anteriores perdem o escritorio")
   void reservarAoApagar() {
-    when(escritorioRepository.findSlugById(escritorio.getId()))
-        .thenReturn(Optional.of("ruraloeste"));
+    escritorio.setSlug("ruraloeste");
+    when(escritorioRepository.findByIdForUpdate(escritorio.getId()))
+        .thenReturn(Optional.of(escritorio));
 
     service.reservarAoApagar(escritorio.getId());
 
@@ -271,12 +272,23 @@ class EnderecoEscritorioServiceTest {
   @Test
   @DisplayName("aceite de equipe sem endereco: so desvincula os anteriores")
   void reservarAoApagarSemEndereco() {
-    when(escritorioRepository.findSlugById(escritorio.getId())).thenReturn(Optional.empty());
+    when(escritorioRepository.findByIdForUpdate(escritorio.getId()))
+        .thenReturn(Optional.of(escritorio));
 
     service.reservarAoApagar(escritorio.getId());
 
     verify(anteriorRepository).desvincularDoEscritorio(escritorio.getId());
     verify(anteriorRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  @DisplayName("limpeza diaria: apaga as linhas com a carencia vencida")
+  void limpezaDaCarencia() {
+    when(anteriorRepository.apagarVencidos(AGORA_ODT)).thenReturn(2);
+
+    new EscritorioSlugCarenciaLimpezaJob(anteriorRepository, CLOCK).limpar();
+
+    verify(anteriorRepository).apagarVencidos(AGORA_ODT);
   }
 
   @Test

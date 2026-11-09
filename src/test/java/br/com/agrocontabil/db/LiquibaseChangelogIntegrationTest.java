@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
+import br.com.agrocontabil.repository.EscritorioRepository;
+import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -105,6 +110,15 @@ class LiquibaseChangelogIntegrationTest {
 
   @Autowired
   private LockProvider lockProvider;
+
+  @Autowired
+  private EscritorioRepository escritorioRepository;
+
+  @Autowired
+  private EscritorioSlugAnteriorRepository anteriorRepository;
+
+  @Autowired
+  private PlatformTransactionManager transactionManager;
 
   @Test
   @DisplayName("changeSet 0022 cria nota_fiscal.version como BIGINT NOT NULL com default 0")
@@ -259,7 +273,23 @@ class LiquibaseChangelogIntegrationTest {
     jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", primeiro);
     assertThat(jdbc.queryForList("SELECT escritorio_id FROM escritorio_slug_anterior"
         + " WHERE slug = 'antigo0059'", UUID.class)).containsExactly((UUID) null);
-    jdbc.update("DELETE FROM escritorio_slug_anterior WHERE slug = 'antigo0059'");
+    // A consulta nativa da disponibilidade (#464) no PostgreSQL: em uso por outro, em carencia
+    // de escritorio apagado, livre, e a propria carencia vencida liberada pela limpeza.
+    OffsetDateTime agora = OffsetDateTime.now();
+    UUID outroId = UUID.fromString(segundo);
+    jdbc.update("INSERT INTO escritorio (id, nome, slug) VALUES (?::uuid, 'Terceiro 0059',"
+        + " 'emuso0059')", UUID.randomUUID().toString());
+    assertThat(escritorioRepository.slugIndisponivel("emuso0059", outroId, agora)).isTrue();
+    assertThat(escritorioRepository.slugIndisponivel("antigo0059", outroId, agora)).isTrue();
+    assertThat(escritorioRepository.slugIndisponivel("livre0059", outroId, agora)).isFalse();
+    jdbc.update("UPDATE escritorio_slug_anterior SET liberado_em = now() - interval '1 day'"
+        + " WHERE slug = 'antigo0059'");
+    assertThat(escritorioRepository.slugIndisponivel("antigo0059", outroId, agora)).isFalse();
+    Integer apagados = new TransactionTemplate(transactionManager).execute(status ->
+        anteriorRepository.apagarVencidos(agora));
+    assertThat(apagados).isEqualTo(1);
+
+    jdbc.update("DELETE FROM escritorio WHERE slug = 'emuso0059'");
     jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", segundo);
   }
 

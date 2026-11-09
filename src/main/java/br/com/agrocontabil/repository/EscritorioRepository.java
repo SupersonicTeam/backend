@@ -25,15 +25,6 @@ public interface EscritorioRepository extends JpaRepository<Escritorio, UUID> {
   Optional<Escritorio> findByIdForUpdate(@Param("id") UUID id);
 
   /**
-   * Slug do escritório, sem carregar a entidade (nulo = sem endereço).
-   *
-   * @param id escritório
-   * @return o slug, se houver
-   */
-  @Query("SELECT e.slug FROM Escritorio e WHERE e.id = :id")
-  Optional<String> findSlugById(@Param("id") UUID id);
-
-  /**
    * O slug está em uso por outro escritório, ou em carência de outro escritório (ou de um
    * escritório apagado)? Uma consulta só, para as duas tabelas serem lidas no mesmo instante:
    * em duas, uma troca concorrente podia passar entre as leituras e liberar o slug em carência.

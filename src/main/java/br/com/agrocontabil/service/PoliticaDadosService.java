@@ -63,7 +63,8 @@ public class PoliticaDadosService {
             "Documentos fiscais: 5 anos (CTN art. 173), mesmo apos a exclusao da conta.",
             "Conta e contato: ate o titular pedir a exclusao.",
             "Sessoes: ate 30 dias; links de redefinicao de senha: 30 minutos.",
-            "Endereco anterior do escritorio: bloqueado por 90 dias depois da troca. A exclusao "
+            "Endereco anterior do escritorio: bloqueado por 90 dias depois da troca e apagado em "
+                + "seguida. A exclusao "
                 + "dos dados do titular apaga o endereco na hora, mas nao alcanca os registros "
                 + "publicos de certificados."),
         List.of(

@@ -300,6 +300,13 @@ app:
     endereco:
       intervalo-troca: P30D
       carencia: P90D
+      # Apaga os slugs com a carencia vencida (podem ser dado pessoal): todo dia, numa replica so.
+      limpeza:
+        enabled: ${ESCRITORIO_ENDERECO_LIMPEZA_ENABLED:true}
+        cron: ${ESCRITORIO_ENDERECO_LIMPEZA_CRON:0 20 3 * * *}
+        lock:
+          at-most-for: PT30M
+          at-least-for: PT5M
     convite:
       validade: ${ESCRITORIO_CONVITE_VALIDADE:P7D}
       url-frontend: ${ESCRITORIO_CONVITE_URL_FRONTEND:http://localhost:4200/equipe/convite}

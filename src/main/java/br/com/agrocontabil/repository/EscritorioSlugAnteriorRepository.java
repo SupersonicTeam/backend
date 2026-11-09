@@ -1,6 +1,7 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.EscritorioSlugAnterior;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -43,4 +44,14 @@ public interface EscritorioSlugAnteriorRepository
   @Modifying
   @Query("DELETE FROM EscritorioSlugAnterior a WHERE a.escritorioId = :escritorioId")
   int apagarDoEscritorio(@Param("escritorioId") UUID escritorioId);
+
+  /**
+   * Fim da carência: o slug que saiu não fica guardado além dela (pode ser dado pessoal).
+   *
+   * @param agora instante da limpeza
+   * @return linhas apagadas
+   */
+  @Modifying
+  @Query("DELETE FROM EscritorioSlugAnterior a WHERE a.liberadoEm <= :agora")
+  int apagarVencidos(@Param("agora") OffsetDateTime agora);
 }
