@@ -115,16 +115,54 @@ class RotaDadosPeriodoTest {
   }
 
   @Test
-  @DisplayName("mês corrente ou janela em dias: proximosVencimentos fica (#452, item 1)")
+  @DisplayName("janela em dias de mês futuro: proximosVencimentos fica (#452, item 1)")
   void proximosVencimentosFica() {
-    ChatResponse esteMes = chamadas(
-        new ToolCall("u1", "function", "proximosVencimentos", "{}"));
     ChatResponse emDias = chamadas(
         new ToolCall("u2", "function", "proximosVencimentos", "{\"dias\":10}"));
 
-    assertThat(RotaDados.comPeriodo(esteMes, periodo("Tenho guia vencendo neste mês?")))
-        .isSameAs(esteMes);
     assertThat(RotaDados.comPeriodo(emDias,
         periodo("Do mês que vem, que guias caem nos próximos 10 dias?"))).isSameAs(emDias);
+  }
+
+  @Test
+  @DisplayName("neste mês: a janela de proximosVencimentos para no último dia (#452, rodada 2)")
+  void esteMesLimitaAJanela() {
+    Periodo esteMes = periodo("Tenho guia de ICMS vencendo neste mês?");
+    ChatResponse padrao = chamadas(
+        new ToolCall("s1", "function", "proximosVencimentos", "{}"));
+    ChatResponse longa = chamadas(
+        new ToolCall("s2", "function", "proximosVencimentos", "{\"dias\":\"45\"}"));
+    ChatResponse curta = chamadas(
+        new ToolCall("s3", "function", "proximosVencimentos", "{\"dias\":5}"));
+
+    assertThat(chamadasDe(RotaDados.comPeriodo(padrao, esteMes)).get(0).arguments())
+        .isEqualTo("{\"dias\":10}");
+    assertThat(chamadasDe(RotaDados.comPeriodo(longa, esteMes)).get(0).arguments())
+        .isEqualTo("{\"dias\":10}");
+    assertThat(RotaDados.comPeriodo(curta, esteMes)).isSameAs(curta);
+  }
+
+  @Test
+  @DisplayName("último dia do mês: proximosVencimentos vira vencimentosDoMes (#452, rodada 2)")
+  void ultimoDiaDoMes() {
+    Periodo ultimoDia = PeriodoDaPergunta
+        .resolver("O que vence nesse mês?", LocalDate.of(2026, 11, 30)).orElseThrow();
+
+    List<ToolCall> resultado = chamadasDe(RotaDados.comPeriodo(chamadas(
+        new ToolCall("r1", "function", "proximosVencimentos", "{}")), ultimoDia));
+    assertThat(resultado).extracting(ToolCall::name).containsExactly("vencimentosDoMes");
+    assertThat(resultado.get(0).arguments()).isEqualTo("{\"mes\":\"2026-11\"}");
+  }
+
+  @Test
+  @DisplayName("apuração sem função escolhida: consultarApuracao de cada mês (#452, rodada 2)")
+  void apuracaoSemFuncao() {
+    List<ToolCall> resultado = chamadasDe(RotaDados.apuracaoSemFuncao(
+        "Quero ver a apuração do último trimestre", HOJE).orElseThrow());
+
+    assertThat(resultado).extracting(ToolCall::name).containsOnly("consultarApuracao");
+    assertThat(resultado).extracting(ToolCall::arguments).containsExactly(
+        "{\"mes\":\"2026-08\"}", "{\"mes\":\"2026-09\"}", "{\"mes\":\"2026-10\"}");
+    assertThat(RotaDados.apuracaoSemFuncao("Quanto vendi de soja?", HOJE)).isEmpty();
   }
 }

@@ -279,29 +279,108 @@ class PeriodoDaPerguntaTest {
 
   @ParameterizedTest(name = "[{index}] {0}")
   @ValueSource(strings = {
-      "Desde o mês passado, quanto entrou de girassol?",
-      "Vendi quanto de sorgo até o mês passado?",
-      "Teve compra de calcário antes do mês passado?",
-      "Quero as notas do mês passado pra trás",
-      "Quero as notas do mês passado para trás",
-      "Créditos a partir do ano passado",
-      "Quanto vendi de feijão do ano passado pra cá?",
       "Quanto faturei na safra do ano passado?",
       "Retenções no mês passado e no retrasado",
       "Quanto tenho de guia neste mês e no próximo?",
       "Compare o ano passado com o retrasado",
       "Esse imposto vence no mês seguinte ao da entrega?",
       "Compras de calcário nos seis últimos meses",
-      "Notas do mês passado em diante",
       "Créditos do ano passado pra frente",
-      "Vendas de aveia depois do mês passado",
-      "Compras de adubo após o ano retrasado",
       "Vendas do mês passado, o retrasado também",
       "Guias deste mês e também para o próximo",
-      "O recolhimento é no mês anterior ao embarque?"})
-  @DisplayName("período aberto, safra, dois períodos e frase de regra: não resolve (#452, item 3)")
+      "O recolhimento é no mês anterior ao embarque?",
+      "Vendas de girassol de março até o mês passado",
+      "Notas até 15/01",
+      "Compras de sorgo desde o mês passado e o retrasado",
+      "Vendas até dezembro",
+      "Safra 26/28 de milho",
+      "Na safra 25/26, quanto vendi no mês passado?",
+      "Notas da safra 27/28"})
+  @DisplayName("safra sem número, dois períodos, regra e âncora ambígua: não resolve (#452)")
   void naoResolveAbertoOuRegra(String pergunta) {
     assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE)).isEmpty();
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @CsvSource(delimiter = '|', value = {
+      "Desde o mês passado, quanto entrou de girassol?|2027-01-01|2027-02-17|2027-02-17",
+      "A partir do ano passado, quanto deu de crédito?|2026-01-01|2027-02-17|2027-02-17",
+      "Quanto vendi de feijão do ano passado pra cá?|2026-01-01|2027-02-17|2027-02-17",
+      "Notas do mês retrasado pra cá|2026-12-01|2027-02-17|2027-02-17",
+      "Compras do mês passado em diante|2027-01-01|2027-02-17|2027-02-17",
+      "Desde janeiro, quanto saiu de retenção?|2027-01-01|2027-02-17|2027-02-17",
+      "Vendas desde outubro de 2026|2026-10-01|2027-02-17|2027-02-17",
+      "Vendi quanto de sorgo até o mês passado?|2025-02-01|2027-01-31|2027-01-31",
+      "Créditos até janeiro|2025-02-01|2027-01-31|2027-01-31",
+      "Quero as notas de dezembro de 2026 pra trás|2025-01-01|2026-12-31|2026-12-31",
+      "Quero as notas do mês passado para trás|2025-02-01|2027-01-31|2027-01-31",
+      "Teve compra de calcário antes do mês passado?|2025-01-01|2026-12-31|2026-12-31",
+      "Vendas de aveia depois do mês retrasado|2027-01-01|2027-02-17|2027-02-17",
+      "Compras de adubo após o ano retrasado|2026-01-01|2027-02-17|2027-02-17",
+      "Retenções até o ano passado|2025-01-01|2026-12-31|2026-12-31",
+      "Quanto vendi na safra 26/27?|2026-07-01|2027-06-30|2027-02-17",
+      "Quanto vendi na safra 2025/2026?|2025-07-01|2026-06-30|2026-06-30",
+      "Compras da safra 2025/26|2025-07-01|2026-06-30|2026-06-30"})
+  @DisplayName("período aberto, contado de um ponto e safra numerada (#452, rodada 2)")
+  void resolveAbertoESafra(String pergunta, String inicio, String fim, String fimDosDados) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
+
+    assertThat(p.inicio()).isEqualTo(inicio);
+    assertThat(p.fim()).isEqualTo(fim);
+    assertThat(p.fimDosDados()).isEqualTo(fimDosDados);
+    assertThat(p.mes()).isNull();
+  }
+
+  @Test
+  @DisplayName("início aberto cabe no limite de 24 meses das funções")
+  void inicioAbertoCabeNoLimite() {
+    Periodo p = PeriodoDaPergunta.resolver("Vendas até o mês passado", HOJE).orElseThrow();
+
+    assertThat(java.time.temporal.ChronoUnit.DAYS.between(p.inicio(), p.fimDosDados()))
+        .isLessThanOrEqualTo(br.com.agrocontabil.assistente.ferramentas
+            .FerramentasDadosProdutor.MAXIMO_DIAS_PERIODO);
+  }
+
+  @ParameterizedTest(name = "[{index}] hoje {0}: {1}")
+  @CsvSource(delimiter = '|', value = {
+      "2026-11-09|Quais guias de Funrural vencem neste mês?|21",
+      "2026-11-30|O que vence neste mês?|0",
+      "2026-11-09|Vendas deste mês|21",
+      "2026-11-09|Guias do mês passado|-1",
+      "2026-11-09|Guias do mês que vem|-1"})
+  @DisplayName("mês corrente traz os dias que faltam até o fim dele (#452, rodada 2)")
+  void diasAteOFimDoMes(String hoje, String pergunta, int dias) {
+    assertThat(PeriodoDaPergunta.resolver(pergunta, LocalDate.parse(hoje)).orElseThrow()
+        .diasAteOFimDoMes()).isEqualTo(dias);
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @CsvSource(delimiter = '|', value = {
+      "Como ficou a apuração do último trimestre?|2026-08,2026-09,2026-10",
+      "Me mostra a apuração de setembro|2026-09",
+      "Apuração de agosto e de setembro de 2026|2026-08,2026-09",
+      "Qual o saldo de IBS do mês passado?|2026-10",
+      "A apuração deste mês já fechou?|2026-11",
+      "Apuração de março de 2025|2025-03"})
+  @DisplayName("meses da apuração sem função escolhida (#452, rodada 2)")
+  void mesesDaApuracao(String pergunta, String meses) {
+    assertThat(PeriodoDaPergunta.mesesDaApuracao(pergunta, LocalDate.of(2026, 11, 9)))
+        .extracting(YearMonth::toString)
+        .containsExactly(meses.split(","));
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "Quanto vendi de soja no último trimestre?",
+      "Como funciona a apuração do IBS?",
+      "Apuração de dezembro",
+      "Apuração do mês que vem",
+      "Apuração dos últimos 18 meses",
+      "Apuração de setembro até o mês passado"})
+  @DisplayName("sem apuração, sem período, mês ambíguo ou futuro e mais de 12 meses: nada")
+  void semMesesDaApuracao(String pergunta) {
+    assertThat(PeriodoDaPergunta.mesesDaApuracao(pergunta, LocalDate.of(2026, 11, 9)))
+        .isEmpty();
   }
 
   @ParameterizedTest(name = "[{index}] {0}")

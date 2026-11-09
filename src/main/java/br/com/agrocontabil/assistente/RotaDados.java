@@ -10,6 +10,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.observation.ObservationRegistry;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -156,15 +158,17 @@ public class RotaDados {
 
     // Uma chamada so (#266): o modelo escolhe as funcoes; o texto e do template do backend.
     contexto.verificarAtiva();
-    ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(prompt, resposta);
-    if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
+    ChatResponse doModelo = modelo.chamar(prompt);
+    contexto.registrarUso(prompt, doModelo);
+    if (ModeloLinguagem.cortadaPeloTeto(doModelo, tetoSaida)) {
       // Cortada no teto (#270): a ultima chamada pode ter se perdido e as outras sairiam como a
       // resposta inteira. Nada e executado.
       log.warn("Ceres: escolha de funcoes cortada pelo teto de {} tokens", tetoSaida);
       return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.RESPOSTA_CORTADA, List.of(),
           ModoFallback.atalhos(pergunta));
     }
+    ChatResponse resposta = doModelo.hasToolCalls() ? doModelo
+        : apuracaoSemFuncao(pergunta, contexto.hoje()).orElse(doModelo);
     if (!resposta.hasToolCalls()) {
       // Sem funcao, nao ha dado para afirmar nada: nunca "nao tem" (#266, item 3).
       return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.SEM_RESPOSTA, List.of(),
@@ -278,6 +282,11 @@ public class RotaDados {
    * já chamou {@code vencimentosDoMes}. Pergunta com janela em dias ("nos próximos 15 dias") ou
    * da próxima guia não troca ({@link PeriodoDaPergunta.Periodo#vencimentosDoMesFuturo()}). A
    * contagem de chamadas da auditoria é a do modelo, feita antes desta troca.
+   *
+   * <p>Pergunta do mês corrente ("o que vence neste mês") com {@code proximosVencimentos} (#452,
+   * rodada 2): a janela termina no último dia do mês, nunca depois
+   * ({@link PeriodoDaPergunta.Periodo#diasAteOFimDoMes()}); no último dia, a chamada vira
+   * {@code vencimentosDoMes} do mês corrente, porque a janela de um dia já passaria do mês.
    */
   static ChatResponse comPeriodo(ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
     Map<String, Long> vezes = resposta.getResults().stream()
@@ -289,14 +298,25 @@ public class RotaDados {
       AssistantMessage mensagem = geracao.getOutput();
       List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
       for (AssistantMessage.ToolCall chamada : mensagem.getToolCalls()) {
-        if (periodo.vencimentosDoMesFuturo()
-            && PeriodoDaPergunta.FUNCAO_PROXIMOS_VENCIMENTOS.equals(chamada.name())
-            && vezes.get(chamada.name()) == 1) {
+        boolean proximos = PeriodoDaPergunta.FUNCAO_PROXIMOS_VENCIMENTOS.equals(chamada.name())
+            && vezes.get(chamada.name()) == 1;
+        if (proximos && (periodo.vencimentosDoMesFuturo() || periodo.diasAteOFimDoMes() == 0)) {
           ajustadas++;
           if (!vezes.containsKey(PeriodoDaPergunta.FUNCAO_VENCIMENTOS_DO_MES)) {
             chamadas.add(new AssistantMessage.ToolCall(chamada.id(), chamada.type(),
                 PeriodoDaPergunta.FUNCAO_VENCIMENTOS_DO_MES,
                 "{\"mes\":\"" + periodo.mes() + "\"}"));
+          }
+          continue;
+        }
+        if (proximos && periodo.diasAteOFimDoMes() > 0) {
+          Optional<String> ateOFim = diasAteOFimDoMes(chamada, periodo.diasAteOFimDoMes());
+          if (ateOFim.isPresent()) {
+            ajustadas++;
+            chamadas.add(new AssistantMessage.ToolCall(
+                chamada.id(), chamada.type(), chamada.name(), ateOFim.get()));
+          } else {
+            chamadas.add(chamada);
           }
           continue;
         }
@@ -323,6 +343,69 @@ public class RotaDados {
     // So a contagem: as datas sao do produtor e ficam nas fontes da resposta.
     log.info("Ceres: periodo da pergunta aplicado em {} chamada(s) de funcao", ajustadas);
     return new ChatResponse(geracoes, resposta.getMetadata());
+  }
+
+  /**
+   * Os argumentos de {@code proximosVencimentos} com a janela até o último dia do mês corrente;
+   * vazio se a do modelo já cabia ou se o argumento não é legível (a função o recusa como antes).
+   */
+  private static Optional<String> diasAteOFimDoMes(AssistantMessage.ToolCall chamada, int teto) {
+    Map<String, Object> argumentos;
+    try {
+      String bruto = chamada.arguments();
+      argumentos = bruto == null || bruto.isBlank() ? new LinkedHashMap<>()
+          : JSON.readValue(bruto, ARGUMENTOS);
+    } catch (JsonProcessingException e) {
+      return Optional.empty();
+    }
+    if (argumentos == null) {
+      return Optional.empty();
+    }
+    Object dias = argumentos.get("dias");
+    int janela;
+    if (dias == null) {
+      janela = FerramentasDadosProdutor.DIAS_VENCIMENTO_PADRAO;
+    } else if (dias instanceof Number numero) {
+      janela = numero.intValue();
+    } else {
+      try {
+        janela = Integer.parseInt(dias.toString().trim());
+      } catch (NumberFormatException e) {
+        return Optional.empty();
+      }
+    }
+    if (janela <= teto) {
+      return Optional.empty();
+    }
+    argumentos.put("dias", teto);
+    try {
+      return Optional.of(JSON.writeValueAsString(argumentos));
+    } catch (JsonProcessingException e) {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Pergunta de apuração com período em que o modelo não escolheu função nenhuma (#452, rodada
+   * 2): {@code consultarApuracao} de cada mês do período, como o modelo deveria ter pedido. Sem
+   * período de apuração legível ({@link PeriodoDaPergunta#mesesDaApuracao}), vazio: a mensagem
+   * honesta de sempre.
+   */
+  static Optional<ChatResponse> apuracaoSemFuncao(String pergunta, LocalDate hoje) {
+    List<YearMonth> meses = PeriodoDaPergunta.mesesDaApuracao(pergunta, hoje);
+    if (meses.isEmpty()) {
+      return Optional.empty();
+    }
+    List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
+    for (YearMonth mes : meses) {
+      chamadas.add(new AssistantMessage.ToolCall("apuracao-" + mes, "function",
+          PeriodoDaPergunta.FUNCAO_APURACAO, "{\"mes\":\"" + mes + "\"}"));
+    }
+    // So a contagem: os meses sao da pergunta do produtor.
+    log.info("Ceres: modelo sem funcao em pergunta de apuracao; {} mes(es) consultado(s)",
+        meses.size());
+    return Optional.of(new ChatResponse(List.of(new Generation(
+        AssistantMessage.builder().content("").toolCalls(chamadas).build()))));
   }
 
   private static Optional<String> argumentosComPeriodo(

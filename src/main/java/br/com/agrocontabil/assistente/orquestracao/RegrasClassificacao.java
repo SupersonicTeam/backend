@@ -25,6 +25,12 @@ import java.util.regex.Pattern;
  *   <li><strong>Bloqueio:</strong> pedido criativo, de recomendação ou de cotação ("escreva uma
  *       música sobre o IBS", "indique um contador para o meu Funrural") nunca é decidido pela
  *       regra, por mais que cite um termo de lei.</li>
+ *   <li><strong>Caso hipotético</strong> com tema tributário e sem dado real do produtor ("se eu
+ *       vender milho, o Funrural vence no mês seguinte?") é LEGISLACAO; o tratamento de um produto
+ *       ("se eu vender arroz, a alíquota é zero?") segue para as camadas seguintes (#452).</li>
+ *   <li><strong>Guia do produtor a pagar num período próximo</strong> ("tem guia de Funrural pra
+ *       pagar no mês que vem?") é DADOS, mesmo com o nome do tributo; com regra da obrigação
+ *       ("todo mês", "posso parcelar", "mês seguinte à venda"), não decide (#452).</li>
  * </ul>
  */
 public final class RegrasClassificacao {
@@ -96,6 +102,52 @@ public final class RegrasClassificacao {
       + "|piadas?|historias?|receitas? de|traduz[ai]r?|traducao|indiqu?e|indicar|recomend[ae]r?"
       + "|melhor(es)?|cotacao|cotacoes|previsao do tempo|futebol|campeonato)\\b");
 
+  /**
+   * Caso hipotético ("se eu vender soja hoje...", "suponha que...", "em tese"): o produtor pergunta
+   * a regra de uma situação, não os dados dele (#452, rodada 2). Com tema tributário e sem dado
+   * real do produtor, é LEGISLACAO: um período citado no caso ("vence no mês seguinte") não pode
+   * puxar uma parte de dados, que cairia num mês que a pergunta não pediu.
+   */
+  private static final Pattern HIPOTESE = Pattern.compile("\\b(?:se|caso) (?:eu |o produtor "
+      + "|um produtor |a gente |nos |ele )?(?:vend|compr|emit|export|fatur|receb|pag|colh|entreg"
+      + "|tiver|tivesse|fizer|fosse|for\\b)\\w*"
+      + "|\\b(?:suponha|supondo|hipotetic\\w*|imagine|imaginando|digamos que|em tese)\\b");
+
+  /** O que já aconteceu nos dados do produtor ("vendi", "paguei"): não é hipótese. */
+  private static final Pattern FATO_DO_PRODUTOR = Pattern.compile("\\b(vendi|comprei|paguei"
+      + "|emiti|recebi|faturei|colhi|entreguei|exportei|tive|fiz)\\b");
+
+  /** Tema tributário do caso hipotético. */
+  private static final Pattern TEMA_TRIBUTARIO = Pattern.compile("\\b(impostos?|tributos?"
+      + "|tribut\\w*|guias?|venc\\w*|prazos?|recolh\\w*|retenc\\w*|retid[oa]s?|creditos?"
+      + "|debitos?|nota fiscal|notas fiscais|darfs?)\\b");
+
+  /**
+   * Tratamento de um produto ("se eu vender arroz, a alíquota é zero?"): fica para as camadas
+   * seguintes, que podem mandar à tabela oficial pela rota de dados (#283).
+   */
+  private static final Pattern TRATAMENTO = Pattern.compile("\\b(aliquotas?|reducao|reduzid\\w*"
+      + "|isencao|isent\\w*|zero|zerad\\w*|tributad\\w*)\\b");
+
+  /**
+   * O produtor perguntando se tem guia a pagar num período próximo ("tem guia de Funrural pra
+   * pagar no mês que vem?") (#452, rodada 2): é dado dele, mesmo com o nome do tributo, que é só
+   * o tipo da guia.
+   */
+  private static final Pattern GUIA_DO_PRODUTOR = Pattern.compile("\\b(?:tem|tenho|ha|existe"
+      + "|vou ter|terei)(?: alguma| algum)? (?:guias?|boletos?|darfs?)\\b");
+
+  private static final Pattern PAGAR = Pattern.compile("\\b(?:pagar|vencer|vence|vencem"
+      + "|vencendo|quitar|recolher)\\b");
+
+  private static final Pattern PERIODO_PROXIMO = Pattern.compile("\\b(?:mes que vem|proximo mes"
+      + "|mes seguinte(?! (?:a|ao|aos|as)\\b)|(?:n?est|n?ess)[ea] (?:mes|semana)"
+      + "|mes (?:atual|corrente)|semana que vem|proxima semana|amanha|hoje)\\b");
+
+  /** Regra da obrigação ("todo mês", "posso parcelar", "como pago"): não é só o dado. */
+  private static final Pattern REGRA_DA_GUIA = Pattern.compile("\\b(?:todo mes|todos os meses"
+      + "|mensal\\w*|sempre|posso|parcel\\w*|como)\\b");
+
   private RegrasClassificacao() {}
 
   /**
@@ -111,6 +163,16 @@ public final class RegrasClassificacao {
     }
     boolean lei = TERMO_LEI.matcher(texto).find();
     boolean dados = MARCADOR_DADOS.matcher(texto).find();
+    if (HIPOTESE.matcher(texto).find() && !dados && !FATO_DO_PRODUTOR.matcher(texto).find()
+        && (lei || TEMA_TRIBUTARIO.matcher(texto).find())
+        && !(PRODUTO.matcher(texto).find() && TRATAMENTO.matcher(texto).find())) {
+      return Optional.of(Intencao.LEGISLACAO);
+    }
+    if (GUIA_DO_PRODUTOR.matcher(texto).find() && PAGAR.matcher(texto).find()
+        && PERIODO_PROXIMO.matcher(texto).find() && !LEI_GENERICA.matcher(texto).find()
+        && !REGRA_DA_GUIA.matcher(texto).find()) {
+      return Optional.of(Intencao.DADOS);
+    }
     if (lei && !dados) {
       return PRODUTO.matcher(texto).find() || QUANTIA_PESSOAL.matcher(texto).find()
           ? Optional.empty() : Optional.of(Intencao.LEGISLACAO);

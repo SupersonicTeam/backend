@@ -3,6 +3,8 @@ package br.com.agrocontabil.assistente;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,12 +30,11 @@ import java.util.regex.Pattern;
  * datas é o modelo, como antes do #442. Não resolve com (issue #452, item 3, e #442):
  *
  * <ul>
- *   <li>data explícita (mês por extenso, ano, dia/mês);</li>
+ *   <li>data explícita (mês por extenso, ano, dia/mês), fora do período aberto abaixo;</li>
  *   <li>parte do período ("a primeira quinzena do mês passado");</li>
- *   <li>período aberto ou contado de outro ponto: "desde", "até" (menos "até hoje", "até agora" e
- *       "até o momento", que são o período em curso), "antes", "depois de", "após", "a partir",
- *       "em diante", "pra cá", "pra frente", "pra trás" e "safra" (a safra não tem regra de datas
- *       no sistema);</li>
+ *   <li>período aberto ou contado de um ponto que o {@link PeriodoAberto} não lê com uma âncora
+ *       e uma operação só ("de março até o mês passado", "do ano passado pra frente", "até
+ *       15/01") e safra sem número ("safra do ano passado");</li>
  *   <li>dois períodos, inclusive o segundo só pelo adjetivo ("no mês passado e no retrasado",
  *       "este mês e o próximo");</li>
  *   <li>frase de regra, em que o mês é contado a partir de um fato ("vence no mês seguinte ao da
@@ -55,7 +56,14 @@ import java.util.regex.Pattern;
  *       meses fechados do "último trimestre" (segunda decisão do Murillo, 2026-11-09, #452). Os
  *       demais "últimos N meses" e os "últimos N dias" são a janela móvel que termina hoje, e "N
  *       últimos meses" com N diferente de três não resolve: esses não foram decididos.</li>
+ *   <li>Período aberto e safra numerada (#452, rodada 2): ver {@link PeriodoAberto} ("desde o mês
+ *       passado", "até setembro", "do mês retrasado pra cá", "safra 25/26"). "Até hoje", "até
+ *       agora" e "até o momento" são o período em curso.</li>
  * </ul>
+ *
+ * <p>No mês corrente, {@link Periodo#diasAteOFimDoMes()} limita a janela de
+ * {@code proximosVencimentos} ao último dia; {@link #mesesDaApuracao} dá os meses de uma pergunta
+ * de apuração em que o modelo não escolheu função (#452, rodada 2).
  */
 public final class PeriodoDaPergunta {
 
@@ -71,6 +79,9 @@ public final class PeriodoDaPergunta {
 
   /** Guias a pagar num mês do calendário (#452, item 1). */
   public static final String FUNCAO_VENCIMENTOS_DO_MES = "vencimentosDoMes";
+
+  /** Apuração de IBS/CBS de um mês (#452, rodada 2). */
+  public static final String FUNCAO_APURACAO = "consultarApuracao";
 
   /** Maior janela móvel aceita: a das funções de dados é de 24 meses. */
   static final int MAXIMO_MESES = 24;
@@ -139,6 +150,13 @@ public final class PeriodoDaPergunta {
       + " (?:(?:n|d)?(?:o|a|os|as) )?(?:mes |ano |trimestre |semestre )?(?:passad[oa]s?"
       + "|anterior(?:es)?|seguintes?|proxim[oa]s?|que vem|atua(?:l|is)|corrente)\\b");
 
+  /** Pergunta de apuração (IBS/CBS do mês): a classe 4 da rodada 2 da #452. */
+  private static final Pattern APURACAO = Pattern.compile("\\b(apurac\\w*|saldo (?:de|do|da)"
+      + " (?:ibs|cbs))\\b");
+
+  /** Mais meses que isso, a apuração sem função escolhida fica com a mensagem de sempre. */
+  static final int MAXIMO_MESES_APURACAO = 12;
+
   /** Pergunta de vencimento: o período em curso vai até o último dia (#452, item 2). */
   private static final Pattern VENCIMENTO = Pattern.compile("\\b(venc\\w*|guias?|boletos?"
       + "|darfs?|pagar|pagamentos?|quitar|recolh\\w*|debitos?|prazos?)\\b");
@@ -196,12 +214,16 @@ public final class PeriodoDaPergunta {
    *                                 janela em dias nem a próxima guia: as guias a vencer da
    *                                 pergunta são as daquele mês, não as dos próximos 30 dias a
    *                                 partir de hoje (#452, item 1; ver {@code RotaDados.comPeriodo})
+   * @param diasAteOFimDoMes         o período é o mês corrente: quantos dias faltam até o último
+   *                                 dia dele (zero no último dia), o teto da janela de
+   *                                 {@code proximosVencimentos} (#452, rodada 2); {@code -1} nos
+   *                                 demais
    */
   public record Periodo(LocalDate inicio, LocalDate fim, YearMonth mes, LocalDate fimDosDados,
-      boolean vencimentosDoMesFuturo) {
+      boolean vencimentosDoMesFuturo, int diasAteOFimDoMes) {
 
     Periodo(LocalDate inicio, LocalDate fim, YearMonth mes) {
-      this(inicio, fim, mes, fim, false);
+      this(inicio, fim, mes, fim, false, -1);
     }
 
     /** Linha para o modelo, antes da pergunta: as datas já calculadas. */
@@ -220,9 +242,20 @@ public final class PeriodoDaPergunta {
    */
   public static Optional<Periodo> resolver(String pergunta, LocalDate hoje) {
     String texto = normalizar(pergunta);
-    if (texto.isEmpty() || DATA_EXPLICITA.matcher(texto).find()
-        || SUBPERIODO.matcher(texto).find() || ABERTO.matcher(texto).find()
+    if (texto.isEmpty() || SUBPERIODO.matcher(texto).find()
         || REGRA_DE_PRAZO.matcher(texto).find()) {
+      return Optional.empty();
+    }
+    // Rodada 2 da #452: safra numerada e periodo aberto ou contado de um ponto tem leitura propria.
+    if (PeriodoAberto.temSafraNumerada(texto)) {
+      return PeriodoAberto.safra(texto, hoje).map(p -> completo(p, hoje, texto));
+    }
+    if (ABERTO.matcher(texto).find()) {
+      return PeriodoAberto.resolver(texto, hoje)
+          .filter(p -> !SEGUNDO_PERIODO.matcher(semExpressoesRelativas(texto)).find())
+          .map(p -> completo(p, hoje, texto));
+    }
+    if (DATA_EXPLICITA.matcher(texto).find()) {
       return Optional.empty();
     }
     boolean vencimento = VENCIMENTO.matcher(texto).find();
@@ -242,12 +275,73 @@ public final class PeriodoDaPergunta {
     if (achados.size() != 1 || SEGUNDO_PERIODO.matcher(new String(semAsLidas)).find()) {
       return Optional.empty();
     }
-    Periodo periodo = achados.iterator().next();
+    return Optional.of(completo(achados.iterator().next(), hoje, texto));
+  }
+
+  /**
+   * Os meses da apuração pedida, para quando o modelo não escolheu função nenhuma (#452, rodada
+   * 2): o período da pergunta, mês a mês até o mês corrente, ou os meses por extenso. Vazio se a
+   * pergunta não é de apuração, se não há período ou se ele passa de 12 meses.
+   *
+   * @param pergunta pergunta do usuário
+   * @param hoje     data de referência (Brasília)
+   * @return os meses, do mais antigo ao mais recente
+   */
+  public static List<YearMonth> mesesDaApuracao(String pergunta, LocalDate hoje) {
+    String texto = normalizar(pergunta);
+    if (!APURACAO.matcher(texto).find()) {
+      return List.of();
+    }
+    YearMonth atual = YearMonth.from(hoje);
+    Optional<Periodo> periodo = resolver(pergunta, hoje);
+    List<YearMonth> meses = new ArrayList<>();
+    if (periodo.isPresent()) {
+      YearMonth ultimo = YearMonth.from(periodo.get().fim());
+      for (YearMonth m = YearMonth.from(periodo.get().inicio());
+          !m.isAfter(ultimo) && !m.isAfter(atual); m = m.plusMonths(1)) {
+        meses.add(m);
+      }
+    } else if (expressoesRelativas(texto) == 0 && !SUBPERIODO.matcher(texto).find()
+        && !ABERTO.matcher(texto).find()) {
+      meses.addAll(PeriodoAberto.mesesNomeados(texto, hoje));
+      meses.sort(null);
+    }
+    return meses.size() > MAXIMO_MESES_APURACAO ? List.of() : List.copyOf(meses);
+  }
+
+  /** O texto com as expressões relativas trocadas por {@code #}, para ver o que sobra. */
+  private static String semExpressoesRelativas(String texto) {
+    char[] semAsLidas = texto.toCharArray();
+    for (Regra regra : REGRAS) {
+      Matcher m = regra.padrao().matcher(texto);
+      while (m.find()) {
+        Arrays.fill(semAsLidas, m.start(), m.end(), '#');
+      }
+    }
+    return new String(semAsLidas);
+  }
+
+  /** Quantas expressões relativas ("mês passado", "este ano"...) a pergunta normalizada tem. */
+  static int expressoesRelativas(String texto) {
+    int n = 0;
+    for (Regra regra : REGRAS) {
+      Matcher m = regra.padrao().matcher(texto);
+      while (m.find()) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /** O período com o que depende de hoje e do texto: fim dos dados, mês futuro e mês corrente. */
+  private static Periodo completo(Periodo periodo, LocalDate hoje, String texto) {
     boolean mesFuturo = periodo.mes() != null && periodo.mes().isAfter(YearMonth.from(hoje));
     boolean emCurso = !periodo.inicio().isAfter(hoje) && periodo.fim().isAfter(hoje);
-    return Optional.of(new Periodo(periodo.inicio(), periodo.fim(), periodo.mes(),
+    int diasAteOFimDoMes = YearMonth.from(hoje).equals(periodo.mes())
+        ? (int) ChronoUnit.DAYS.between(hoje, periodo.mes().atEndOfMonth()) : -1;
+    return new Periodo(periodo.inicio(), periodo.fim(), periodo.mes(),
         emCurso ? hoje : periodo.fim(),
-        mesFuturo && !GUIAS_A_PARTIR_DE_HOJE.matcher(texto).find()));
+        mesFuturo && !GUIAS_A_PARTIR_DE_HOJE.matcher(texto).find(), diasAteOFimDoMes);
   }
 
   /**
