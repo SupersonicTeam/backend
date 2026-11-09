@@ -94,6 +94,15 @@ class CsvCegoTest(unittest.TestCase):
         self.assertTrue(all("ceres" not in ";".join(l) for l in linhas))
         self.assertEqual({v["celula"] for v in json.loads(chave).values()}, {"ceres-1--m", "ceres-2--m"})
 
+    def test_celula_csv_protege_todos_os_prefixos_de_formula_do_csvcego(self):
+        for prefixo in ("=", "+", "-", "@", "\t", "\r"):
+            with self.subTest(prefixo=repr(prefixo)):
+                self.assertEqual(ext._celula_csv(prefixo + "x"), "'" + prefixo + "x")
+        # Texto comum, vazio e prefixo so no meio nao ganham o apostrofo.
+        for valor in ("texto", "", "a=1", "a\tb", " =1"):
+            with self.subTest(valor=valor):
+                self.assertEqual(ext._celula_csv(valor), valor)
+
     def test_csv_cego_protege_formula_e_pula_vazia_e_contaminada(self):
         from ceres_benchmark.relatorio import Celula
         canonico = {"E01": {"pergunta": "=HYPERLINK(1)", "origem": "inedita_externa_ia"},
