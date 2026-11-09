@@ -395,7 +395,11 @@ br.com.agrocontabil
   ligado na VPS e, desde a #464, em dev); nunca ler o cabeçalho cru. O cookie de refresh segue
   *host-only* (nunca `Domain=.agroconia.com.br`) e o CORS segue a lista fixa: a SPA do subdomínio
   chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
-  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
+  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). **Infra:** no Caddy, os
+  endereços dos escritórios são um site *catch-all* `https://` com `tls { on_demand }` e o "ask" do
+  backend (`deploy/Caddyfile`); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o
+  `www` perder o certificado próprio (testado em 2026-11-09). Ligar é manual (registro `A *`,
+  `.env`, CA de staging antes): passo a passo em `deploy/README.md`. O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
   log nem à auditoria, só existe com CNPJ, e a exclusão de dados o apaga sem carência. Lista de
   reservados versionada em `resources/escritorio/slugs-reservados.txt` (cresce ali, nunca no código).
   Contrato completo na #464 (comentário de 2026-11-09).
