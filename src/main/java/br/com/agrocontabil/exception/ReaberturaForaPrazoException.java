@@ -4,7 +4,6 @@ import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import java.time.YearMonth;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -21,15 +20,14 @@ public class ReaberturaForaPrazoException extends DomainException {
   /**
    * Cria a exceção descrevendo a apuração, seu período e o período-limite retroativo.
    *
-   * @param id             identificador da apuração
    * @param periodo        período da apuração (fora do prazo)
    * @param periodoLimite  período mais antigo ainda reabrível (3º mês retroativo)
    */
-  public ReaberturaForaPrazoException(UUID id, YearMonth periodo, YearMonth periodoLimite) {
+  public ReaberturaForaPrazoException(YearMonth periodo, YearMonth periodoLimite) {
     super(
         HttpStatus.UNPROCESSABLE_ENTITY,
-        "Apuracao '%s' do periodo %s nao pode ser reaberta: "
-            .formatted(id, periodo)
+        "Apuracao do periodo %s nao pode ser reaberta: "
+            .formatted(periodo)
             + "a reabertura so e permitida ate 3 meses retroativos "
             + "(periodo mais antigo reabrivel: %s) — RN005.".formatted(periodoLimite),
         List.of(new ErrorDetail(

@@ -198,11 +198,12 @@ class CarteiraApuracaoIntegrationTest {
   @DisplayName("RN005: 4o mes retroativo 422, periodo nao fechado 409, sem apuracao 404, formato 400")
   void regrasDaReabertura() throws Exception {
     String quatroMeses = YearMonth.now(clock).minusMonths(4).toString();
-    fechada(produtorA.usuarioId(), quatroMeses);
+    UUID apuracaoAntiga = fechada(produtorA.usuarioId(), quatroMeses);
     mockMvc.perform(post(ROTA, produtorA.usuarioId(), quatroMeses)
             .header(HttpHeaders.AUTHORIZATION, tokenContador))
         .andExpect(status().isUnprocessableEntity())
-        .andExpect(jsonPath("$.errors[0].code").value("REABERTURA_FORA_PRAZO"));
+        .andExpect(jsonPath("$.errors[0].code").value("REABERTURA_FORA_PRAZO"))
+        .andExpect(result -> semIdInterno(result.getResponse().getContentAsString(), apuracaoAntiga));
 
     mockMvc.perform(post(ROTA, produtorA.usuarioId(), mesPassado)
             .header(HttpHeaders.AUTHORIZATION, tokenContador))
@@ -210,7 +211,8 @@ class CarteiraApuracaoIntegrationTest {
     mockMvc.perform(post(ROTA, produtorA.usuarioId(), mesPassado)
             .header(HttpHeaders.AUTHORIZATION, tokenContador))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.errors[0].code").value("APURACAO_NAO_REABRIVEL"));
+        .andExpect(jsonPath("$.errors[0].code").value("APURACAO_NAO_REABRIVEL"))
+        .andExpect(result -> semIdInterno(result.getResponse().getContentAsString(), apuracaoA));
 
     String semApuracao = YearMonth.now(clock).minusMonths(2).toString();
     mockMvc.perform(post(ROTA, produtorA.usuarioId(), semApuracao)
@@ -220,5 +222,10 @@ class CarteiraApuracaoIntegrationTest {
     mockMvc.perform(post(ROTA, produtorA.usuarioId(), "2026-13")
             .header(HttpHeaders.AUTHORIZATION, tokenContador))
         .andExpect(status().isBadRequest());
+  }
+
+  /** #289: nem o message de topo nem o errors[] trazem o UUID interno da apuracao. */
+  private static void semIdInterno(String corpo, UUID apuracaoId) {
+    assertThat(corpo).doesNotContain(apuracaoId.toString());
   }
 }

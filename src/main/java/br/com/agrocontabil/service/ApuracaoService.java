@@ -383,15 +383,14 @@ public class ApuracaoService {
     ApuracaoMensal apuracao = apuracaoRepository
         .findByProdutorIdAndPeriodoForUpdate(produtorId, mes.toString())
         .orElseThrow(() -> new ResourceNotFoundException("Apuracao", mes));
-    UUID id = apuracao.getId();
 
     if (apuracao.getStatus() != StatusApuracao.FECHADO) {
-      throw new ApuracaoNaoReabrivelException(id, apuracao.getStatus());
+      throw new ApuracaoNaoReabrivelException(apuracao.getStatus());
     }
 
     YearMonth periodoLimite = YearMonth.now(clock).minusMonths(MESES_MAX_REABERTURA);
     if (mes.isBefore(periodoLimite)) {
-      throw new ReaberturaForaPrazoException(id, mes, periodoLimite);
+      throw new ReaberturaForaPrazoException(mes, periodoLimite);
     }
 
     apuracao.setStatus(StatusApuracao.ABERTO);
