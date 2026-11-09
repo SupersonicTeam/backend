@@ -183,6 +183,10 @@ manuais e do Murillo, na VPS e na Hostinger.
   do `www`** (passa a esperar o certificado curinga, que o `on_demand` nunca emite), e o `www` cai.
   Com o catch-all, os sites com nome (`www`, os redirecionamentos) seguem com o certificado próprio,
   e o matcher `host *.{$SITE_DOMINIO}` mais o `abort` barram o resto.
+- **Cabeçalhos:** o site dos escritórios importa o mesmo snippet `(app)` do `www` (HSTS, `nosniff`,
+  `Referrer-Policy: no-referrer`, sem `Server`). Sem o `no-referrer`, o slug iria no `Referer` para
+  as fontes externas. Ele também leva `X-Robots-Tag: noindex`, porque o endereço do escritório não
+  entra em buscador (frontend#175).
 - **Exposição:** cada slug emitido vai para os registros públicos de Certificate Transparency
   (crt.sh), de forma permanente. Por isso o `PUT /api/escritorio/endereco` exige a ciência do
   administrador e o CNPJ do escritório.
@@ -266,6 +270,7 @@ manuais e do Murillo, na VPS e na Hostinger.
    docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
    docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=naoexiste.agroconia.com.br" 2>&1 | head -1'    # 404
    curl -vk https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i "issuer"   # (STAGING); o 1o acesso espera alguns segundos
+   curl -skI https://ruraloeste.agroconia.com.br/ | grep -iE "x-robots-tag|referrer-policy"   # noindex e no-referrer
    curl -v https://naoexiste.agroconia.com.br/ 2>&1 | tail -2              # falha no handshake
    docker compose logs caddy | grep -iE "on_demand|obtain|error" | tail
    ```

@@ -397,7 +397,8 @@ br.com.agrocontabil
   chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
   enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). **Infra:** no Caddy, os
   endereços dos escritórios são um site *catch-all* `https://` com `tls { on_demand }` e o "ask" do
-  backend (`deploy/Caddyfile`); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o
+  backend (`deploy/Caddyfile`), com o mesmo snippet `(app)` de cabeçalhos do `www` e
+  `X-Robots-Tag: noindex` (frontend#175); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o
   `www` perder o certificado próprio (testado em 2026-11-09). Ligar é manual (registro `A *`,
   `.env`, CA de staging antes): passo a passo em `deploy/README.md`. O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
   log nem à auditoria, só existe com CNPJ, e a exclusão de dados o apaga sem carência. Lista de
