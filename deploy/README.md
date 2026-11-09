@@ -70,7 +70,7 @@ variáveis e DNS. **O provedor é a Resend** (decisão do Murillo, 2026-11-09; c
 | `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | vazio, `587` | Resend: `smtp.resend.com`, `587` |
 | `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | vazios | Resend: `resend` e a API key. **Só no `.env` (600)**, nunca em issue, chat ou repositório |
 | `EMAIL_SMTP_STARTTLS`, `EMAIL_SMTP_SSL` | `true`, `false` | Porta 587 com STARTTLS obrigatório. Na 465: `EMAIL_SMTP_SSL=true` e `EMAIL_SMTP_STARTTLS=false` |
-| `EMAIL_TETO_POR_HORA`, `EMAIL_TETO_POR_DIA` | `0`, `80` | Teto de envios em janelas deslizantes de 1 h e de 24 h (`0` = sem teto), abaixo da cota da Resend Free (100 por dia UTC). No Pro (sem teto diário), `0` e `0` |
+| `EMAIL_TETO_POR_HORA`, `EMAIL_TETO_POR_DIA` | `0`, `80` | Teto de envios em janelas deslizantes de 1 h e de 24 h (`0` = sem teto), abaixo da cota da Resend Free (100 por dia UTC). No Pro (sem cota diária), suba o diário (por exemplo, `500`), mas não o zere: o teto também segura abuso e bounce. Ao voltar ao Free, `80` de novo |
 
 **Salvaguardas no envio** (só com `SMTP`): destino em domínio reservado (`example.com`, `.test`,
 `.invalid`, `.local` e afins; as contas do seed são `@example.com`) não sai; acima do teto, o
@@ -145,7 +145,8 @@ autenticação ou cota; sai na 3ª falha seguida e a cada 10), `Teto de e-mail` 
    ```
 3. Só depois da política de dados com a Resend como operadora e da decisão sobre a transferência
    internacional (D7 da #460): `EMAIL_MODO=SMTP` e `docker compose up -d backend`. O aviso "Envio
-   de e-mail desligado" some do log. No plano Pro, `EMAIL_TETO_POR_DIA=0` antes.
+   de e-mail desligado" some do log. Se usar o Pro na janela da banca (D11), suba o
+   `EMAIL_TETO_POR_DIA` enquanto ele durar e volte a `80` quando a conta voltar ao Free.
 4. Teste real: os três fluxos para uma caixa da equipe e para o mail-tester. No
    `Authentication-Results`, confira `spf=pass` (`send.agroconia.com.br`), `dkim=pass`
    (`d=agroconia.com.br`) e `dmarc=pass`, o link no host certo e nenhum envio para conta

@@ -120,7 +120,7 @@ services:
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       EMAIL_SMTP_STARTTLS: ${EMAIL_SMTP_STARTTLS:-true}
       EMAIL_SMTP_SSL: ${EMAIL_SMTP_SSL:-false}
-      # Teto de envios abaixo da cota do provedor (#460): Resend Free 0/80, Resend Pro 0/0.
+      # Teto de envios abaixo da cota do provedor (#460): Resend Free 0/80. Nunca 0 no diario.
       EMAIL_TETO_POR_HORA: ${EMAIL_TETO_POR_HORA:-0}
       EMAIL_TETO_POR_DIA: ${EMAIL_TETO_POR_DIA:-80}
       # Ja vem desligado na imagem da #460; repetido aqui para a imagem anterior nao cair em DOWN com
