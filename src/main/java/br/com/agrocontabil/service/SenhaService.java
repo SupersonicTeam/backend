@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.common.MascaraDadosPessoais;
+import br.com.agrocontabil.config.EmailProperties;
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties;
 import br.com.agrocontabil.exception.SenhaAtualIncorretaException;
 import br.com.agrocontabil.exception.TokenRedefinicaoInvalidoException;
@@ -10,6 +11,7 @@ import br.com.agrocontabil.model.RecursoAuditado;
 import br.com.agrocontabil.model.RedefinicaoSenha;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
+import br.com.agrocontabil.security.LimitadorTaxa;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.TokenOpaco;
 import br.com.agrocontabil.security.UsuarioAutenticado;
@@ -44,7 +46,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p><strong>Link de uso único e curto.</strong> Token de 256 bits ({@link TokenOpaco}), só o
  * SHA-256 no banco, 30 minutos; um pedido novo apaga os anteriores (só o último link vale). O
  * token vai no fragmento da URL ({@code #token=}): o navegador não o manda ao servidor do frontend
- * nem o põe no {@code Referer}.
+ * nem o põe no {@code Referer}. No máximo {@code app.email.links-redefinicao-por-dia} links por
+ * conta em 24 horas (#460): o intervalo mínimo de 1 minuto sozinho ainda deixava 1.440 e-mails por
+ * dia para um endereço conhecido, gastando a cota do provedor e enchendo a caixa do titular.
  *
  * <p><strong>Trocar a senha encerra todas as sessões</strong> ({@code SessaoService.revogarTodas}):
  * redefinição e troca derrubam na hora os access tokens e os refresh já emitidos — inclusive os do
@@ -70,6 +74,9 @@ public class SenhaService {
   /** Intervalo mínimo entre dois links para a mesma conta. */
   static final Duration INTERVALO_MINIMO_ENTRE_LINKS = Duration.ofMinutes(1);
 
+  /** Contas acompanhadas ao mesmo tempo pelo limite diário de links (LRU). */
+  private static final int MAX_CONTAS_NO_LIMITE = 10_000;
+
   private final CredencialUsuarioRepository credencialRepository;
   private final RedefinicaoSenhaRepository redefinicaoRepository;
   private final PasswordEncoder passwordEncoder;
@@ -82,6 +89,7 @@ public class SenhaService {
   private final Clock clock;
   private final TransactionTemplate transacao;
   private final ThreadPoolTaskExecutor executor;
+  private final LimitadorTaxa linksPorConta;
   private final String hashFicticio;
 
   public SenhaService(
@@ -93,6 +101,7 @@ public class SenhaService {
       BloqueioContaService bloqueioConta,
       EnvioEmail envioEmail,
       RedefinicaoSenhaProperties propriedades,
+      EmailProperties email,
       UsuarioAutenticadoProvider usuarioProvider,
       Clock clock,
       PlatformTransactionManager transactionManager) {
@@ -107,6 +116,8 @@ public class SenhaService {
     this.usuarioProvider = usuarioProvider;
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
+    this.linksPorConta = new LimitadorTaxa(email.linksRedefinicaoPorDia(), Duration.ofDays(1),
+        MAX_CONTAS_NO_LIMITE);
     this.hashFicticio = passwordEncoder.encode(UUID.randomUUID().toString());
     // Pool proprio, fora do contexto: um Executor como bean desligaria o applicationTaskExecutor do
     // Boot (usado pelo SSE da Ceres) — mesmo cuidado do AssistenteService.
@@ -167,6 +178,12 @@ public class SenhaService {
             MascaraDadosPessoais.referencia(credencialId));
         return;
       }
+      if (linksPorConta.tentar(credencialId.toString()) > 0) {
+        // Antes do token: o link que o titular ja recebeu continua valendo.
+        log.info("Pedido de redefinicao ignorado (limite diario de links): credencial={}",
+            MascaraDadosPessoais.referencia(credencialId));
+        return;
+      }
       String token = TokenOpaco.gerar();
       transacao.executeWithoutResult(status -> {
         redefinicaoRepository.apagarDaCredencial(credencialId);
@@ -182,8 +199,11 @@ public class SenhaService {
       log.info("Link de redefinicao de senha emitido: credencial={}",
           MascaraDadosPessoais.referencia(credencialId));
     } catch (RuntimeException e) {
-      // Sem o e-mail no log (LGPD) e sem propagar: ninguem espera por este resultado.
-      log.error("Falha ao processar pedido de redefinicao de senha.", e);
+      // Sem o e-mail no log (LGPD) e sem propagar: ninguem espera por este resultado. So a classe
+      // (ou a descricao segura da falha de envio): a SendFailedException e a resposta do servidor
+      // SMTP trazem o endereco, e o log nao deve depender so da mascara (#460).
+      log.error("Falha ao processar pedido de redefinicao de senha: {}",
+          EnvioEmailFalhouException.paraLog(e));
     }
   }
 

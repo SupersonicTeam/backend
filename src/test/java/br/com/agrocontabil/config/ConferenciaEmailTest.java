@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -144,9 +145,39 @@ class ConferenciaEmailTest {
   }
 
   @Test
-  @DisplayName("dominio verificado vazio impede a subida")
-  void dominioVazio() {
-    assertThatThrownBy(() -> new EmailProperties(" "))
+  @DisplayName("dominio verificado vazio, teto negativo ou links zerados impedem a subida")
+  void propriedadesInvalidas() {
+    assertThatThrownBy(() -> propriedades(" ", "contato@gwnext.com.br", 0, 80, 5))
         .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> propriedades(DOMINIO, "contato@gwnext.com.br", -1, 80, 5))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> propriedades(DOMINIO, "contato@gwnext.com.br", 0, -1, 5))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> propriedades(DOMINIO, "contato@gwnext.com.br", 0, 80, 0))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(new EmailProperties(DOMINIO, "", 0, 0, 1, null).dominiosReservados()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("SMTP com Reply-To invalido impede a subida; vazio e aceito (sem Reply-To)")
+  void replyTo() {
+    StaticListableBeanFactory fabrica = new StaticListableBeanFactory();
+    fabrica.addBean("mailSender", new JavaMailSenderImpl());
+    assertThatThrownBy(() -> ConferenciaEmail.conferirSmtp(smtp(),
+        fabrica.getBeanProvider(JavaMailSender.class), REMETENTE,
+        propriedades(DOMINIO, "contato gwnext", 0, 80, 5)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("EMAIL_REPLY_TO");
+    assertThatCode(() -> ConferenciaEmail.conferirSmtp(smtp(),
+        fabrica.getBeanProvider(JavaMailSender.class), REMETENTE,
+        propriedades(DOMINIO, "", 0, 80, 5))).doesNotThrowAnyException();
+    assertThatCode(() -> ConferenciaEmail.conferirSmtp(smtp(),
+        fabrica.getBeanProvider(JavaMailSender.class), REMETENTE,
+        propriedades(DOMINIO, "contato@gwnext.com.br", 0, 80, 5))).doesNotThrowAnyException();
+  }
+
+  private static EmailProperties propriedades(String dominio, String replyTo, int porHora,
+      int porDia, int links) {
+    return new EmailProperties(dominio, replyTo, porHora, porDia, links, List.of());
   }
 }

@@ -457,7 +457,7 @@ public class EquipeEscritorioService {
           envio.enviarConvite(email, escritorio, link, propriedades.validade());
         } catch (RuntimeException e) {
           log.warn("Falha ao enviar o e-mail do convite de equipe: {}",
-              e.getClass().getSimpleName());
+              EnvioEmailFalhouException.paraLog(e));
         }
       });
     } catch (TaskRejectedException e) {

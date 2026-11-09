@@ -69,6 +69,14 @@ variáveis e DNS. O `compose.yaml` passa ao backend estas variáveis, todas com 
 | `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | vazio, `587` | Do provedor |
 | `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | vazios | **Só no `.env` (600)**, nunca em issue, chat ou repositório |
 | `EMAIL_SMTP_STARTTLS`, `EMAIL_SMTP_SSL` | `true`, `false` | Porta 587 com STARTTLS obrigatório. Na 465: `EMAIL_SMTP_SSL=true` e `EMAIL_SMTP_STARTTLS=false` |
+| `EMAIL_TETO_POR_HORA`, `EMAIL_TETO_POR_DIA` | `0`, `80` | Teto de envios em janelas deslizantes de 1 h e de 24 h (`0` = sem teto), abaixo da cota do provedor: Resend Free (100/dia UTC) `0` e `80`; SendPulse grátis (50/h, 400/dia) `40` e `320`; Resend Pro, `0` e `0` |
+
+**Salvaguardas no envio** (só com `SMTP`): destino em domínio reservado (`example.com`, `.test`,
+`.invalid`, `.local` e afins; as contas do seed são `@example.com`) não sai; acima do teto, o
+e-mail é descartado e o log registra só o tipo do e-mail; no máximo 5 links de "esqueci minha
+senha" por conta em 24 horas. Nos três casos a resposta continua 202. As respostas vão para
+`contato@gwnext.com.br` (`Reply-To`). O teto fica em memória: reiniciar o backend zera a contagem.
+Nenhum log traz o endereço do destinatário.
 
 Os links dos e-mails apontam para `https://${SITE_HOST}`: `/redefinir-senha`, `/escritorio` (onde o
 produtor vê os convites) e `/equipe/convite`.
@@ -81,7 +89,9 @@ domínio verificado e link que não seja `https` (fora de dev/test). Com o envio
 **Health:** o health do SMTP fica desligado (`management.health.mail.enabled: false` no
 `application.yml` e `MANAGEMENT_HEALTH_MAIL_ENABLED` no compose). Com ele ligado, o provedor fora do
 ar ou o `SPRING_MAIL_HOST` vazio poriam o `/actuator/health` em `DOWN`, e o `deploy.sh` reverteria o
-deploy. A falha de envio aparece só no log do backend.
+deploy. A falha de envio aparece só no log do backend: procure `SMTP: N falhas seguidas` (conexão,
+autenticação ou cota; sai na 3ª falha seguida e a cada 10), `Teto de e-mail` e
+`envios permitidos em` (aviso aos 80% do teto).
 
 **Ordem para ligar** (o compose novo e a imagem nova podem chegar em qualquer ordem):
 
@@ -99,9 +109,10 @@ deploy. A falha de envio aparece só no log do backend.
    SPRING_MAIL_USERNAME=<usuário SMTP>
    SPRING_MAIL_PASSWORD=<senha ou chave SMTP>
    ```
-3. Só depois do teto de envios no app, da política de dados com o provedor como operador e da
-   decisão sobre a transferência internacional (D7 da #460): `EMAIL_MODO=SMTP` e
-   `docker compose up -d backend`. O aviso "Envio de e-mail desligado" some do log.
+3. Só depois da política de dados com o provedor como operador e da decisão sobre a transferência
+   internacional (D7 da #460): `EMAIL_MODO=SMTP` e `docker compose up -d backend`. O aviso "Envio
+   de e-mail desligado" some do log. Com outro provedor que não a Resend Free, ajuste antes o
+   `EMAIL_TETO_POR_HORA` e o `EMAIL_TETO_POR_DIA`.
 4. Teste real: os três fluxos para uma caixa da equipe e para o mail-tester, com SPF, DKIM e DMARC
    em `pass`, o link no host certo e nenhum envio para conta `@example.com` do seed.
 

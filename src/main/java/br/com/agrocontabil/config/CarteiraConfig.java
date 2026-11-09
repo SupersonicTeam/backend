@@ -3,6 +3,8 @@ package br.com.agrocontabil.config;
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties.ModoEmail;
 import br.com.agrocontabil.service.EnvioConviteCarteira;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
+import br.com.agrocontabil.service.MensagensEmail;
+import br.com.agrocontabil.service.TipoEmail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -10,7 +12,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
@@ -18,7 +19,8 @@ import org.springframework.mail.javamail.JavaMailSender;
  *
  * <p>O modo de envio é o mesmo da recuperação de senha ({@code app.seguranca.redefinicao
  * .modo-email}, validado no {@link EmailConfig}): um servidor de e-mail só para o sistema. No modo
- * {@code LOG} vai ao log só o fato de o convite existir — o e-mail não leva segredo.
+ * {@code SMTP} os dois convites saem pelo {@link EnvioEmailSmtp}, com os textos do
+ * {@link MensagensEmail} (#460). No modo {@code LOG} vai ao log só o fato de o convite existir.
  */
 @Configuration
 @EnableConfigurationProperties({ConviteCarteiraProperties.class, ConviteEquipeProperties.class})
@@ -26,28 +28,31 @@ public class CarteiraConfig {
 
   private static final Logger log = LoggerFactory.getLogger(CarteiraConfig.class);
 
-  private static final String ASSUNTO = "Convite de escritorio de contabilidade - AgroConIA";
-
   /**
    * Implementação do envio do convite conforme o modo de e-mail.
    *
    * @param redefinicao configuração de e-mail (modo e remetente)
-   * @param email       domínio verificado do remetente
+   * @param email       domínio verificado do remetente e {@code Reply-To}
    * @param convite     link do convite
    * @param mailSender  cliente SMTP do Boot, se configurado
+   * @param smtp        envio pelo SMTP
    * @param ambiente    profiles e {@code spring.mail.*}, para as conferências de subida (#460)
    * @return a porta de envio
    */
   @Bean
   public EnvioConviteCarteira envioConviteCarteira(RedefinicaoSenhaProperties redefinicao,
       EmailProperties email, ConviteCarteiraProperties convite,
-      ObjectProvider<JavaMailSender> mailSender, Environment ambiente) {
+      ObjectProvider<JavaMailSender> mailSender, EnvioEmailSmtp smtp, Environment ambiente) {
     ConferenciaEmail.exigirHttps("app.carteira.convite.url-frontend "
         + "(CARTEIRA_CONVITE_URL_FRONTEND)", convite.urlFrontend(),
         redefinicao.modoEmail() == ModoEmail.SMTP, ambiente);
     return switch (redefinicao.modoEmail()) {
-      case SMTP -> smtp(ConferenciaEmail.clienteSmtp(ambiente, mailSender,
-          redefinicao.remetente(), email.dominioVerificado()), redefinicao.remetente());
+      case SMTP -> {
+        ConferenciaEmail.conferirSmtp(ambiente, mailSender, redefinicao.remetente(), email);
+        yield (destinatario, escritorio, link, validade) -> smtp.enviar(
+            TipoEmail.CONVITE_CARTEIRA, destinatario,
+            MensagensEmail.conviteCarteira(escritorio, link, validade));
+      }
       case LOG -> (destinatario, escritorio, link, validade) ->
           log.warn("[DEV] E-mail de convite da carteira NAO enviado (modo LOG).");
       case DESLIGADO -> (destinatario, escritorio, link, validade) ->
@@ -60,68 +65,31 @@ public class CarteiraConfig {
    * token do convite.
    *
    * @param redefinicao configuração de e-mail (modo e remetente)
-   * @param email       domínio verificado do remetente
+   * @param email       domínio verificado do remetente e {@code Reply-To}
    * @param convite     link do convite
    * @param mailSender  cliente SMTP do Boot, se configurado
+   * @param smtp        envio pelo SMTP
    * @param ambiente    profiles e {@code spring.mail.*}, para as conferências de subida (#460)
    * @return a porta de envio
    */
   @Bean
   public EnvioConviteEquipe envioConviteEquipe(RedefinicaoSenhaProperties redefinicao,
       EmailProperties email, ConviteEquipeProperties convite,
-      ObjectProvider<JavaMailSender> mailSender, Environment ambiente) {
+      ObjectProvider<JavaMailSender> mailSender, EnvioEmailSmtp smtp, Environment ambiente) {
     ConferenciaEmail.exigirHttps("app.escritorio.convite.url-frontend "
         + "(ESCRITORIO_CONVITE_URL_FRONTEND)", convite.urlFrontend(),
         redefinicao.modoEmail() == ModoEmail.SMTP, ambiente);
     return switch (redefinicao.modoEmail()) {
       case SMTP -> {
-        String remetente = redefinicao.remetente();
-        JavaMailSender cliente = ConferenciaEmail.clienteSmtp(ambiente, mailSender, remetente,
-            email.dominioVerificado());
-        yield (destinatario, escritorio, link, validade) -> {
-          SimpleMailMessage mensagem = new SimpleMailMessage();
-          mensagem.setFrom(remetente);
-          mensagem.setTo(destinatario);
-          mensagem.setSubject("Convite para a equipe do escritorio - AgroConIA");
-          mensagem.setText("""
-              Voce foi convidado para a equipe do escritorio "%s" no AgroConIA.
-
-              Para aceitar, abra o link abaixo em ate %d dias e entre (ou crie sua conta) com
-              este e-mail:
-
-              %s
-
-              O link vale uma vez so. Se nao conhece o escritorio, ignore este e-mail.
-              """.formatted(escritorio, Math.max(1, validade.toDays()), link));
-          cliente.send(mensagem);
-        };
+        ConferenciaEmail.conferirSmtp(ambiente, mailSender, redefinicao.remetente(), email);
+        yield (destinatario, escritorio, link, validade) -> smtp.enviar(
+            TipoEmail.CONVITE_EQUIPE, destinatario,
+            MensagensEmail.conviteEquipe(escritorio, link, validade));
       }
       case LOG -> (destinatario, escritorio, link, validade) ->
           log.warn("[DEV] E-mail de convite de equipe NAO enviado (modo LOG).");
       case DESLIGADO -> (destinatario, escritorio, link, validade) ->
           log.info("Convite de equipe sem envio de e-mail (modo-email=DESLIGADO).");
-    };
-  }
-
-  private static EnvioConviteCarteira smtp(JavaMailSender mailSender, String remetente) {
-    return (destinatario, escritorio, link, validade) -> {
-      SimpleMailMessage mensagem = new SimpleMailMessage();
-      mensagem.setFrom(remetente);
-      mensagem.setTo(destinatario);
-      mensagem.setSubject(ASSUNTO);
-      mensagem.setText("""
-          O escritorio de contabilidade "%s" convidou voce para a carteira de clientes dele no
-          AgroConIA.
-
-          Para responder, entre no AgroConIA com este e-mail (ou crie sua conta com ele) e
-          abra a pagina de convites em ate %d dias:
-
-          %s
-
-          O escritorio so passa a ver seus dados depois que voce aceitar. Se nao conhece o
-          escritorio, recuse ou ignore este e-mail.
-          """.formatted(escritorio, validade.toDays(), link));
-      mailSender.send(mensagem);
     };
   }
 }

@@ -27,6 +27,27 @@ final class ConferenciaEmail {
   }
 
   /**
+   * Confere a configuração do modo {@code SMTP}: a de {@link #clienteSmtp} e o {@code Reply-To}.
+   *
+   * @param ambiente   propriedades {@code spring.mail.*}
+   * @param mailSender cliente SMTP do Boot, se configurado
+   * @param remetente  endereço {@code From}
+   * @param email      domínio verificado e {@code Reply-To}
+   */
+  static void conferirSmtp(Environment ambiente, ObjectProvider<JavaMailSender> mailSender,
+      String remetente, EmailProperties email) {
+    clienteSmtp(ambiente, mailSender, remetente, email.dominioVerificado());
+    if (StringUtils.hasText(email.replyTo())) {
+      try {
+        new InternetAddress(email.replyTo().strip(), true).validate();
+      } catch (AddressException e) {
+        throw new IllegalStateException("app.email.reply-to (EMAIL_REPLY_TO) nao e um endereco de "
+            + "e-mail valido.");
+      }
+    }
+  }
+
+  /**
    * Cliente SMTP do modo {@code SMTP}, conferido.
    *
    * <p>O host é conferido pelo texto, não pela existência do cliente: o compose entrega

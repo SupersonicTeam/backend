@@ -4,9 +4,13 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties.ModoEmail;
+import br.com.agrocontabil.service.TetoEnvioEmail;
+import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -15,7 +19,8 @@ import org.springframework.mock.env.MockEnvironment;
 @DisplayName("EmailConfig — guardas do envio do link de redefinicao (#209, #460)")
 class EmailConfigTest {
 
-  private static final EmailProperties DOMINIO = new EmailProperties("agroconia.com.br");
+  private static final EmailProperties DOMINIO = new EmailProperties("agroconia.com.br",
+      "contato@gwnext.com.br", 0, 80, 5, List.of());
 
   private static RedefinicaoSenhaProperties props(ModoEmail modo, String url) {
     return props(modo, url, "AgroConIA <nao-responda@agroconia.com.br>");
@@ -40,15 +45,21 @@ class EmailConfigTest {
   }
 
   private static void criar(RedefinicaoSenhaProperties props, MockEnvironment ambiente) {
-    new EmailConfig().envioEmail(props, DOMINIO,
-        new StaticListableBeanFactory().getBeanProvider(JavaMailSender.class), ambiente);
+    criar(props, ambiente, new StaticListableBeanFactory());
   }
 
   private static void criarComCliente(RedefinicaoSenhaProperties props, MockEnvironment ambiente) {
     StaticListableBeanFactory fabrica = new StaticListableBeanFactory();
     fabrica.addBean("mailSender", new JavaMailSenderImpl());
-    new EmailConfig().envioEmail(props, DOMINIO, fabrica.getBeanProvider(JavaMailSender.class),
-        ambiente);
+    criar(props, ambiente, fabrica);
+  }
+
+  private static void criar(RedefinicaoSenhaProperties props, MockEnvironment ambiente,
+      StaticListableBeanFactory fabrica) {
+    EmailConfig config = new EmailConfig();
+    ObjectProvider<JavaMailSender> cliente = fabrica.getBeanProvider(JavaMailSender.class);
+    config.envioEmail(props, DOMINIO, cliente, config.envioEmailSmtp(cliente, props, DOMINIO,
+        new TetoEnvioEmail(DOMINIO, Clock.systemUTC())), ambiente);
   }
 
   @Test
