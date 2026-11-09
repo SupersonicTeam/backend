@@ -106,11 +106,18 @@ public final class RegrasClassificacao {
    * Caso hipotético ("se eu vender soja hoje...", "suponha que...", "em tese"): o produtor pergunta
    * a regra de uma situação, não os dados dele (#452, rodada 2). Com tema tributário e sem dado
    * real do produtor, é LEGISLACAO: um período citado no caso ("vence no mês seguinte") não pode
-   * puxar uma parte de dados, que cairia num mês que a pergunta não pediu.
+   * puxar uma parte de dados, que cairia num mês que a pergunta não pediu. Só o futuro do
+   * subjuntivo e o imperfeito ("se eu vender", "se eu vendesse"): "veja se pago", "se vendi" e
+   * "como se paga" não são caso hipotético.
    */
   private static final Pattern HIPOTESE = Pattern.compile("\\b(?:se|caso) (?:eu |o produtor "
-      + "|um produtor |a gente |nos |ele )?(?:vend|compr|emit|export|fatur|receb|pag|colh|entreg"
-      + "|tiver|tivesse|fizer|fosse|for\\b)\\w*"
+      + "|um produtor |a gente |nos |ele )?(?:vend|compr|export|fatur|pag|entreg)(?:ar|er|asse"
+      + "|esse|armos|ermos)\\b|\\b(?:se|caso) (?:eu |o produtor |um produtor |a gente |nos "
+      + "|ele )?(?:emitir|emitisse|receber|recebesse|colher|colhesse|tiver|tivesse|fizer"
+      + "|fizesse|for|fosse)\\b"
+      + "|\\bcaso (?:eu |o produtor |um produtor |a gente |nos |ele )?(?:venda|vendam|compre"
+      + "|comprem|exporte|exportem|fature|faturem|pague|paguem|entregue|entreguem|emita|emitam"
+      + "|receba|recebam|colha|colham|tenha|tenham|faca|facam|seja|sejam)\\b"
       + "|\\b(?:suponha|supondo|hipotetic\\w*|imagine|imaginando|digamos que|em tese)\\b");
 
   /** O que já aconteceu nos dados do produtor ("vendi", "paguei"): não é hipótese. */

@@ -69,6 +69,8 @@ class RegrasClassificacaoTest {
       "Caso o produtor exporte gado, tem credito no mes que vem?  | LEGISLACAO",
       "Se eu vender arroz, a aliquota e zero?                     | NADA",
       "Se eu paguei a guia do mes passado, ela ainda aparece?     | NADA",
+      "Veja se pago alguma guia este mes                          | NADA",
+      "Se eu vendesse soja hoje, o imposto venceria quando?       | LEGISLACAO",
       // guia do produtor a pagar num periodo proximo, com o tributo no nome (#452, rodada 2)
       "Tem guia de Funrural pra pagar no mes que vem?             | DADOS",
       "Tenho algum DARF para pagar nesta semana?                  | DADOS",

@@ -46,9 +46,10 @@ final class PeriodoAberto {
   static final Pattern MES_NOMEADO = Pattern.compile("\\b(" + MESES
       + ")(?: (?:de|do ano de) ((?:19|20)\\d{2}))?\\b");
 
-  /** Ano solto, fora do número de uma nota. */
+  /** Ano solto, fora do número de uma nota e de uma quantia ("2000 reais", "1950 sacas"). */
   private static final Pattern ANO = Pattern.compile(
-      "(?<!nota )(?<!numero )(?<!n )\\b((?:19|20)\\d{2})\\b");
+      "(?<!nota )(?<!numero )(?<!n )(?<!r )\\b((?:19|20)\\d{2})\\b(?! (?:reais|real|mil|kg"
+      + "|quilos?|sacas?|toneladas?|litros?|cabecas?|hectares?|unidades?|arrobas?)\\b)");
 
   /** Data com dia ("15/10"): o período não é de mês inteiro. */
   private static final Pattern DATA_COM_DIA = Pattern.compile("\\b\\d{1,2}/\\d{1,2}\\b");
@@ -74,9 +75,12 @@ final class PeriodoAberto {
       forma("\\bdepois d[eoa]s? " + ANCORA + "\\b", Operacao.DEPOIS),
       forma("\\bapos (?:[oa] )?" + ANCORA + "\\b", Operacao.DEPOIS));
 
-  /** Safra numerada: "safra 25/26", "safra 2025/2026", "safra 2025/26". */
-  private static final Pattern SAFRA = Pattern.compile(
-      "\\bsafras? (?:de )?(\\d{2}|\\d{4}) ?/ ?(\\d{2}|\\d{4})\\b");
+  /**
+   * Safra numerada: "safra 25/26", "safra 2025/2026", "safra 2025/26", "safra de soja 25/26",
+   * "safra 25-26" (o hífen vira espaço na normalização) e "safra 2025 a 2026".
+   */
+  private static final Pattern SAFRA = Pattern.compile("\\bsafras?(?: d[eoa]s? [a-z]+)?(?: de)?"
+      + " (\\d{2}|\\d{4})(?: ?/ ?| a | )(\\d{2}|\\d{4})\\b");
 
   private PeriodoAberto() {}
 
@@ -141,6 +145,20 @@ final class PeriodoAberto {
     }
     LocalDate a0 = ponto.get().inicio();
     LocalDate a1 = ponto.get().fim();
+    return calcular(operacao, a0, a1, hoje).filter(PeriodoAberto::cabeNasFuncoes);
+  }
+
+  /**
+   * A janela que as funções vão consultar (até hoje) cabe no limite delas: "do ano retrasado pra
+   * cá" passaria de 24 meses e a função recusaria a consulta; sem resolver, fica com o modelo.
+   */
+  private static boolean cabeNasFuncoes(Periodo periodo) {
+    return java.time.temporal.ChronoUnit.DAYS.between(periodo.inicio(), periodo.fim())
+        <= PeriodoDaPergunta.MAXIMO_DIAS;
+  }
+
+  private static Optional<Periodo> calcular(Operacao operacao, LocalDate a0, LocalDate a1,
+      LocalDate hoje) {
     return switch (operacao) {
       case DESDE -> a0.isAfter(hoje) ? Optional.empty()
           : Optional.of(new Periodo(a0, hoje, null));

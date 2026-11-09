@@ -93,6 +93,32 @@ class RotaDadosOllamaFioTest {
   }
 
   @Test
+  @DisplayName("Apuracao com mes e nenhuma funcao escolhida: consultarApuracao do mes (#452)")
+  void apuracaoSemFuncaoConsultaOMes() {
+    ollama.responder(OllamaHttpSimulado.resposta("Nao sei qual funcao usar.", null));
+    ContextoAssistente contexto = new ContextoAssistente(PRODUTOR, LocalDate.of(2026, 9, 29));
+
+    ResultadoRota resultado = rota.responder("E a minha apuração de julho, como ficou?", contexto);
+
+    assertThat(resultado.aceita()).isTrue();
+    assertThat(resultado.texto()).startsWith("Na apuração de 07/2026 (ainda aberta");
+    assertThat(contexto.fontes()).extracting(FonteDado::funcao)
+        .containsExactly("consultarApuracao");
+    assertThat(corpos).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("Sem funcao escolhida e sem apuracao com periodo: a mensagem honesta de sempre")
+  void semFuncaoSemApuracao() {
+    ollama.responder(OllamaHttpSimulado.resposta("Nao sei.", null));
+
+    ResultadoRota resultado = rota.responder("Como anda a fazenda?",
+        new ContextoAssistente(PRODUTOR, LocalDate.of(2026, 9, 29)));
+
+    assertThat(resultado.texto()).isEqualTo(RotaDados.MENSAGEM_SEM_FUNCAO);
+  }
+
+  @Test
   @DisplayName("Funcao fora da lista (alucinada ou injetada): nada executa, pergunta encerrada")
   void funcaoForaDaListaNaoExecuta() {
     ollama.responder(OllamaHttpSimulado.resposta("",

@@ -295,7 +295,9 @@ class PeriodoDaPerguntaTest {
       "Vendas até dezembro",
       "Safra 26/28 de milho",
       "Na safra 25/26, quanto vendi no mês passado?",
-      "Notas da safra 27/28"})
+      "Notas da safra 27/28",
+      "Vendas do ano retrasado pra cá",
+      "Créditos desde 2024"})
   @DisplayName("safra sem número, dois períodos, regra e âncora ambígua: não resolve (#452)")
   void naoResolveAbertoOuRegra(String pergunta) {
     assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE)).isEmpty();
@@ -320,7 +322,11 @@ class PeriodoDaPerguntaTest {
       "Retenções até o ano passado|2025-01-01|2026-12-31|2026-12-31",
       "Quanto vendi na safra 26/27?|2026-07-01|2027-06-30|2027-02-17",
       "Quanto vendi na safra 2025/2026?|2025-07-01|2026-06-30|2026-06-30",
-      "Compras da safra 2025/26|2025-07-01|2026-06-30|2026-06-30"})
+      "Compras da safra 2025/26|2025-07-01|2026-06-30|2026-06-30",
+      "Quanto vendi na safra de soja 25/26?|2025-07-01|2026-06-30|2026-06-30",
+      "Compras da safra 25-26|2025-07-01|2026-06-30|2026-06-30",
+      "Vendas da safra 2025 a 2026|2025-07-01|2026-06-30|2026-06-30",
+      "Vendas acima de 2000 reais desde o mês passado|2027-01-01|2027-02-17|2027-02-17"})
   @DisplayName("período aberto, contado de um ponto e safra numerada (#452, rodada 2)")
   void resolveAbertoESafra(String pergunta, String inicio, String fim, String fimDosDados) {
     Periodo p = PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
