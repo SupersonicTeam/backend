@@ -2,6 +2,7 @@ package br.com.agrocontabil.config;
 
 import java.time.Duration;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -26,6 +27,10 @@ public record EnderecoEscritorioProperties(
   /** Tamanho mínimo da chave do "ask", quando definida. */
   static final int CHAVE_MINIMA = 32;
 
+  /** Chave que passa pela query do Caddy sem codificação: nada que a URL altere. */
+  private static final Pattern CHAVE_SEGURA_NA_URL =
+      Pattern.compile("[A-Za-z0-9_-]{" + CHAVE_MINIMA + ",}");
+
   /** Valores fora da forma impedem a subida. */
   public EnderecoEscritorioProperties {
     if (dominioBase == null || dominioBase.isBlank()
@@ -35,9 +40,12 @@ public record EnderecoEscritorioProperties(
           + "minusculas, sem ponto nas pontas (ex.: agroconia.com.br).");
     }
     if (tlsAskChave != null && !tlsAskChave.isBlank()
-        && tlsAskChave.strip().length() < CHAVE_MINIMA) {
+        && !CHAVE_SEGURA_NA_URL.matcher(tlsAskChave.strip()).matches()) {
+      // O Caddy manda a chave na query do ask: `+`, `/`, `=` ou espaco chegariam alterados (o `+`
+      // vira espaco) e todo certificado seria recusado em silencio.
       throw new IllegalStateException("app.escritorio.tls-ask-chave precisa de " + CHAVE_MINIMA
-          + " caracteres ou mais (gere com: openssl rand -hex 32). Vazia desliga o ask.");
+          + " caracteres ou mais, so letras, digitos, hifen e sublinhado (gere com: openssl rand "
+          + "-hex 32). Vazia desliga o ask.");
     }
   }
 

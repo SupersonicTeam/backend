@@ -289,6 +289,25 @@ class LiquibaseChangelogIntegrationTest {
         anteriorRepository.apagarVencidos(agora));
     assertThat(apagados).isEqualTo(1);
 
+    // As consultas do lado publico e do login no subdominio (#464) no PostgreSQL.
+    UUID emUsoId = jdbc.queryForObject("SELECT id FROM escritorio WHERE slug = 'emuso0059'",
+        UUID.class);
+    jdbc.update("UPDATE escritorio SET cnpj = '11222333000181' WHERE id = ?", emUsoId);
+    jdbc.update("INSERT INTO escritorio_slug_anterior (slug, escritorio_id, liberado_em)"
+        + " VALUES ('carencia0059', ?, now() + interval '90 days')", emUsoId);
+    UUID contadorId = UUID.randomUUID();
+    jdbc.update("INSERT INTO contadores (id, nome_completo, escritorio_id, funcao_escritorio)"
+        + " VALUES (?, 'Contador 0059', ?, 'ADMINISTRADOR')", contadorId, emUsoId);
+    assertThat(escritorioRepository.findAtivoPorSlug("emuso0059")).isPresent();
+    assertThat(escritorioRepository.findDestinoDaCarencia("carencia0059", agora))
+        .hasValueSatisfying(destino -> assertThat(destino.getSlug()).isEqualTo("emuso0059"));
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("emuso0059", contadorId)).isTrue();
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("carencia0059", contadorId)).isFalse();
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("emuso0059", UUID.randomUUID()))
+        .isFalse();
+
+    jdbc.update("DELETE FROM contadores WHERE id = ?", contadorId);
+    jdbc.update("DELETE FROM escritorio_slug_anterior WHERE slug = 'carencia0059'");
     jdbc.update("DELETE FROM escritorio WHERE slug = 'emuso0059'");
     jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", segundo);
   }

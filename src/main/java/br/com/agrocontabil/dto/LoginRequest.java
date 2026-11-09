@@ -13,8 +13,9 @@ import jakarta.validation.constraints.Size;
  * credencial errada, em vez de um 400 que diferenciaria a resposta.
  *
  * <p>{@code escritorio} (#464) é o slug do endereço do escritório, mandado pela tela de login de
- * {@code {slug}.agroconia.com.br}. Também sem validação de forma: um valor estranho recebe o mesmo
- * 401. Ausente ou em branco no host principal, o login é o de sempre.
+ * {@code {slug}.agroconia.com.br}. Sem validação nenhuma, nem de tamanho: um valor estranho recebe o
+ * mesmo 401, nunca um 400 que diferencie a resposta (contrato da #464). Ausente ou em branco no
+ * host principal, o login é o de sempre.
  *
  * @param email      e-mail de login
  * @param senha      senha
@@ -33,7 +34,6 @@ public record LoginRequest(
     @Schema(format = "password", accessMode = Schema.AccessMode.WRITE_ONLY)
     String senha,
 
-    @Size(max = 63)
     @Schema(description = "Slug do endereco do escritorio, so na tela de login do subdominio "
         + "(opcional)", example = "ruraloeste", nullable = true)
     String escritorio) {
