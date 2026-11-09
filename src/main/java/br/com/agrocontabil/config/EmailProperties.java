@@ -19,7 +19,9 @@ import org.springframework.util.StringUtils;
  *                               e-mail é descartado. {@code 0} = sem teto
  * @param tetoPorDia             o mesmo em qualquer janela de 24 horas. {@code 0} = sem teto. Fica
  *                               abaixo do limite do provedor (Resend Free: 100 por dia)
- * @param linksRedefinicaoPorDia links de redefinição de senha por conta em 24 horas
+ * @param linksRedefinicaoPorDia links de redefinição de senha seguidos por conta; depois, um a cada
+ *                               24 horas divididas por este número (balde de fichas do
+ *                               {@code LimitadorTaxa})
  * @param dominiosReservados     destinos que nunca recebem e-mail: o domínio igual ou subdomínio
  *                               da entrada; entrada com ponto no início vale como sufixo
  *                               ({@code .test}). As contas do seed são {@code @example.com}

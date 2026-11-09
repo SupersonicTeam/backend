@@ -73,8 +73,8 @@ variáveis e DNS. O `compose.yaml` passa ao backend estas variáveis, todas com 
 
 **Salvaguardas no envio** (só com `SMTP`): destino em domínio reservado (`example.com`, `.test`,
 `.invalid`, `.local` e afins; as contas do seed são `@example.com`) não sai; acima do teto, o
-e-mail é descartado e o log registra só o tipo do e-mail; no máximo 5 links de "esqueci minha
-senha" por conta em 24 horas. Nos três casos a resposta continua 202. As respostas vão para
+e-mail é descartado e o log registra só o tipo do e-mail; até 5 links de "esqueci minha senha"
+seguidos por conta, e depois um a cada 4,8 horas. Nos três casos a resposta continua 202. As respostas vão para
 `contato@gwnext.com.br` (`Reply-To`). O teto fica em memória: reiniciar o backend zera a contagem.
 Nenhum log traz o endereço do destinatário.
 

@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -35,6 +36,9 @@ class EnvioEmailSmtp {
 
   /** Falhas seguidas de conexão ou autenticação que disparam o primeiro WARN. */
   static final int FALHAS_PARA_AVISO = 3;
+
+  /** Categorias que apontam o provedor (e contam nas falhas seguidas). */
+  private static final List<String> PROVEDOR = List.of("conexao", "autenticacao");
 
   private final ObjectProvider<JavaMailSender> mailSender;
   private final String remetente;
@@ -81,7 +85,7 @@ class EnvioEmailSmtp {
       falhasSeguidas.set(0);
     } catch (MailException e) {
       String categoria = categoria(e);
-      if (!"destinatario".equals(categoria)) {
+      if (PROVEDOR.contains(categoria)) {
         int seguidas = falhasSeguidas.incrementAndGet();
         if (seguidas == FALHAS_PARA_AVISO || (seguidas > FALHAS_PARA_AVISO && seguidas % 10 == 0)) {
           log.warn("SMTP: {} falhas seguidas de {} (provedor fora do ar, credencial errada ou "
@@ -102,6 +106,10 @@ class EnvioEmailSmtp {
   static String categoria(MailException e) {
     if (e instanceof MailAuthenticationException) {
       return "autenticacao";
+    }
+    if (e instanceof MailPreparationException) {
+      // Mensagem ou endereco que o Jakarta Mail nao montou: nao chegou ao provedor.
+      return "mensagem";
     }
     if (e instanceof MailSendException envio && !envio.getFailedMessages().isEmpty()
         && envio.getFailedMessages().values().stream()

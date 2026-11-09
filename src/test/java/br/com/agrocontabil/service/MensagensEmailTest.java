@@ -22,7 +22,8 @@ class MensagensEmailTest {
         .contains("\n" + LINK + "\n")
         .contains("vale uma vez só")
         .contains("Se você não pediu")
-        .contains("AgroConIA\nEste e-mail é automático");
+        .contains("AgroConIA\nEste e-mail é automático. Se precisar de ajuda, responda a ele: a "
+            + "resposta chega à equipe do AgroConIA.\n");
   }
 
   @Test

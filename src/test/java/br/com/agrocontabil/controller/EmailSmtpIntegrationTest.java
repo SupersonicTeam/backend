@@ -192,7 +192,7 @@ class EmailSmtpIntegrationTest {
   }
 
   @Test
-  @DisplayName("limite por conta: o 3o link do dia nao sai (resposta 202) e o 2o continua valendo")
+  @DisplayName("limite por conta: o 3o link seguido nao sai (resposta 202) e o 2o continua valendo")
   void limiteDeLinksPorConta() throws Exception {
     for (int pedido = 1; pedido <= 2; pedido++) {
       assertThat(esqueci(EMAIL_PRODUTOR)).isEqualTo(202);

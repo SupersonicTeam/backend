@@ -275,7 +275,8 @@ app:
     # 320. Acima, o e-mail e descartado e a resposta continua 202. Em memoria (uma replica so).
     teto-por-hora: ${EMAIL_TETO_POR_HORA:0}
     teto-por-dia: ${EMAIL_TETO_POR_DIA:80}
-    # Links de "esqueci minha senha" por conta em 24 horas.
+    # Links de "esqueci minha senha" seguidos por conta; depois, um a cada 24 h / este numero
+    # (com 5, um a cada 4,8 h).
     links-redefinicao-por-dia: ${EMAIL_LINKS_REDEFINICAO_POR_DIA:5}
     # Destinos que nunca recebem (RFC 2606/6761): as contas do seed sao @example.com.
     dominios-reservados: example.com,example.net,example.org,.example,.test,.invalid,.local,.localhost

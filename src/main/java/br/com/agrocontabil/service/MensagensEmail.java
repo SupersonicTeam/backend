@@ -17,10 +17,15 @@ public final class MensagensEmail {
   public record Mensagem(String assunto, String texto) {
   }
 
+  /**
+   * O remetente é {@code nao-responda@}, mas a resposta vai para o {@code Reply-To} (o contato da
+   * GWNext): o rodapé diz isso, senão o leitor recebe duas instruções opostas.
+   */
   private static final String RODAPE = """
 
       AgroConIA
-      Este e-mail é automático. Se precisar de ajuda, responda a esta mensagem.
+      Este e-mail é automático. Se precisar de ajuda, responda a ele: a resposta chega à equipe \
+      do AgroConIA.
       """;
 
   private MensagensEmail() {

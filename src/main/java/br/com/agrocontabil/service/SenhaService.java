@@ -46,9 +46,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p><strong>Link de uso único e curto.</strong> Token de 256 bits ({@link TokenOpaco}), só o
  * SHA-256 no banco, 30 minutos; um pedido novo apaga os anteriores (só o último link vale). O
  * token vai no fragmento da URL ({@code #token=}): o navegador não o manda ao servidor do frontend
- * nem o põe no {@code Referer}. No máximo {@code app.email.links-redefinicao-por-dia} links por
- * conta em 24 horas (#460): o intervalo mínimo de 1 minuto sozinho ainda deixava 1.440 e-mails por
- * dia para um endereço conhecido, gastando a cota do provedor e enchendo a caixa do titular.
+ * nem o põe no {@code Referer}. Links por conta limitados por um balde de fichas (#460):
+ * {@code app.email.links-redefinicao-por-dia} seguidos, depois um a cada 24 h divididas por esse
+ * número (com 5, um a cada 4,8 h; no máximo 9 em 24 h). O intervalo mínimo de 1 minuto sozinho
+ * deixava 1.440 e-mails por dia para um endereço conhecido, gastando a cota do provedor e enchendo
+ * a caixa do titular.
  *
  * <p><strong>Trocar a senha encerra todas as sessões</strong> ({@code SessaoService.revogarTodas}):
  * redefinição e troca derrubam na hora os access tokens e os refresh já emitidos — inclusive os do
@@ -180,7 +182,7 @@ public class SenhaService {
       }
       if (linksPorConta.tentar(credencialId.toString()) > 0) {
         // Antes do token: o link que o titular ja recebeu continua valendo.
-        log.info("Pedido de redefinicao ignorado (limite diario de links): credencial={}",
+        log.info("Pedido de redefinicao ignorado (limite de links por conta): credencial={}",
             MascaraDadosPessoais.referencia(credencialId));
         return;
       }
