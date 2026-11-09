@@ -1,0 +1,103 @@
+{
+  "commit_base": [
+    "8e086421cc080635a318318580d119ce0c7f6145"
+  ],
+  "commit_correcao": [
+    "22cd4cd020b83271c913eb9bf931d2d12a984c7e"
+  ],
+  "data_referencia": [
+    "2026-11-09"
+  ],
+  "grupos_da_correcao": {
+    "mes_seguinte": {
+      "base": 2,
+      "correcao": 9,
+      "total": 10,
+      "sobe": true,
+      "no_teto": false
+    },
+    "mes_corrente": {
+      "base": 7,
+      "correcao": 7,
+      "total": 8,
+      "sobe": false,
+      "no_teto": false
+    },
+    "trimestre": {
+      "base": 0,
+      "correcao": 7,
+      "total": 8,
+      "sobe": true,
+      "no_teto": false
+    },
+    "aberto": {
+      "base": 10,
+      "correcao": 9,
+      "total": 14,
+      "sobe": false,
+      "no_teto": false
+    }
+  },
+  "controles": {
+    "controle_dados": {
+      "base": 12,
+      "correcao": 11,
+      "total": 12
+    },
+    "controle_lei": {
+      "base": 3,
+      "correcao": 3,
+      "total": 4
+    },
+    "controle_fora": {
+      "base": 2,
+      "correcao": 2,
+      "total": 3
+    }
+  },
+  "controles_que_pioraram": [
+    "c-05"
+  ],
+  "subiram": [
+    "g1-01",
+    "g1-03",
+    "g1-06",
+    "g1-07",
+    "g1-08",
+    "g1-09",
+    "g1-10",
+    "g3-01",
+    "g3-02",
+    "g3-03",
+    "g3-04",
+    "g3-05",
+    "g3-07",
+    "g3-08"
+  ],
+  "cairam": [
+    "c-05",
+    "g4-13"
+  ],
+  "latencia_mediana_segundos": {
+    "base": {
+      "aberto": 19.9,
+      "controle_dados": 13.5,
+      "controle_fora": 0.4,
+      "controle_lei": 11.9,
+      "mes_corrente": 11.2,
+      "mes_seguinte": 9.9,
+      "trimestre": 20.9
+    },
+    "correcao": {
+      "aberto": 19.4,
+      "controle_dados": 13.7,
+      "controle_fora": 0.4,
+      "controle_lei": 5.8,
+      "mes_corrente": 11.4,
+      "mes_seguinte": 9.9,
+      "trimestre": 20.1
+    }
+  },
+  "problemas": [],
+  "decisao": "NAO_ENTRA"
+}
