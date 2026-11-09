@@ -14,6 +14,11 @@
 #   por SEED_SENHA e CERES_SENHA. Nunca em arquivo nem na saída.
 # - Cota da Ceres alta nos dois braços (AI_COTA_CREDITOS_PRODUTOR): as perguntas do conjunto x 3
 #   repetições passam da cota semanal padrão; a mesma configuração nos dois braços.
+# - Paridade que barra a rodada: só o que as funções da Ceres leem para o produtor da medição
+#   (paridade_produtor.sql: notas e itens, guias, apuração, alertas e pendências dele, obrigações
+#   do catálogo do escritório que o atende, trechos de lei). A paridade geral do banco fica em
+#   paridade-geral-*.txt, sem barrar: a ordem do DataLoader e do SeedDemonstracao pode mudar de
+#   um JAR para outro, e os produtores do DataLoader (sem nota) ganham ou não apurações zeradas.
 set -u
 
 [ $# -eq 4 ] || { echo "Uso: $0 <worktree da main> <worktree da correcao> <saida> <conjunto>"; exit 1; }
@@ -26,6 +31,10 @@ SAIDA=$(cd "$3" && pwd) || exit 1
 TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
 EMAIL=carlos.rossi@example.com
+# O mesmo produtor pelo nome do seed: o e-mail e o CPF ficam cifrados no banco.
+NOME_PRODUTOR='Carlos Eduardo Rossi'
+SQL_PARIDADE="$MAIN_WT/docs/avaliacao/ceres-452/paridade_produtor.sql"
+[ -f "$SQL_PARIDADE" ] || { echo "PARIDADE SEM A CONSULTA: $SQL_PARIDADE"; exit 13; }
 PIDS=()
 
 ESPERADO=$(cut -d' ' -f1 "$CONJUNTO.sha256")
@@ -116,8 +125,12 @@ for db in agroconia_452_base agroconia_452_correcao; do
     >/dev/null || { echo "COPIA DA BASE DE LEI FALHOU: $db"; exit 16; }
 done
 
-# Paridade dos dois bancos: o que a Ceres consulta do produtor da medição.
-paridade() {
+# Paridade que barra: o que a Ceres consulta do produtor da medição (ver o topo do arquivo).
+paridade_produtor() {  # banco
+  psql_ -d "$1" -At -v nome="$NOME_PRODUTOR" < "$SQL_PARIDADE"
+}
+# Paridade geral do banco: só registro, não barra.
+paridade_geral() {  # banco
   psql_ -d "$1" -Atc "
     select 'trechos', count(*)::text from legislacao_trecho
     union all select 'notas ' || status || ' ' || origem, count(*) || ' ' || coalesce(sum(valor_total_nota),0)
@@ -129,11 +142,22 @@ paridade() {
       from apuracao_mensal group by periodo, status
     order by 1"
 }
-paridade agroconia_452_base > "$SAIDA/paridade-base.txt"
-paridade agroconia_452_correcao > "$SAIDA/paridade-correcao.txt"
+for braco in base correcao; do
+  paridade_produtor "agroconia_452_$braco" > "$SAIDA/paridade-$braco.txt" \
+    || { echo "PARIDADE FALHOU: $braco"; exit 17; }
+  grep -qx 'produtor da medicao|1' "$SAIDA/paridade-$braco.txt" \
+    || { echo "PRODUTOR DA MEDICAO AUSENTE OU REPETIDO: $braco"; exit 17; }
+  paridade_geral "agroconia_452_$braco" > "$SAIDA/paridade-geral-$braco.txt" \
+    || { echo "PARIDADE GERAL FALHOU: $braco"; exit 17; }
+done
 if ! diff -q "$SAIDA/paridade-base.txt" "$SAIDA/paridade-correcao.txt" >/dev/null; then
-  echo "BANCOS DIFERENTES ENTRE OS BRACOS"; diff "$SAIDA/paridade-base.txt" "$SAIDA/paridade-correcao.txt"
+  echo "BANCOS DIFERENTES ENTRE OS BRACOS (produtor da medicao)"
+  diff "$SAIDA/paridade-base.txt" "$SAIDA/paridade-correcao.txt"
   exit 17
+fi
+if ! diff -q "$SAIDA/paridade-geral-base.txt" "$SAIDA/paridade-geral-correcao.txt" >/dev/null; then
+  echo "AVISO: paridade geral difere fora do produtor da medicao (nao barra; arquivos paridade-geral-*)"
+  diff "$SAIDA/paridade-geral-base.txt" "$SAIDA/paridade-geral-correcao.txt"
 fi
 
 python "$MAIN_WT/docs/avaliacao/ceres-452/executar.py" \
