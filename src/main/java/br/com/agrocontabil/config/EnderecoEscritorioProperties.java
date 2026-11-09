@@ -13,7 +13,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param dominioBase domínio sob o qual ficam os subdomínios dos escritórios
  *                    ({@code agroconia.com.br}; {@code localhost} em dev)
  * @param tlsAskChave segredo que o Caddy manda no "ask" do On-Demand TLS
- *                    ({@code APP_ESCRITORIO_TLS_ASK_CHAVE}); vazio = o "ask" recusa tudo
+ *                    ({@code APP_ESCRITORIO_TLS_ASK_CHAVE}); vazio ou fora da forma = o "ask"
+ *                    recusa tudo (nunca impede a subida: o recurso é opcional e o www não pode
+ *                    cair por ele)
  * @param endereco    regras da troca do slug
  * @param publico     limite do endpoint público do escritório
  */
@@ -39,14 +41,27 @@ public record EnderecoEscritorioProperties(
       throw new IllegalStateException("app.escritorio.dominio-base precisa ser um dominio em "
           + "minusculas, sem ponto nas pontas (ex.: agroconia.com.br).");
     }
-    if (tlsAskChave != null && !tlsAskChave.isBlank()
-        && !CHAVE_SEGURA_NA_URL.matcher(tlsAskChave.strip()).matches()) {
-      // O Caddy manda a chave na query do ask: `+`, `/`, `=` ou espaco chegariam alterados (o `+`
-      // vira espaco) e todo certificado seria recusado em silencio.
-      throw new IllegalStateException("app.escritorio.tls-ask-chave precisa de " + CHAVE_MINIMA
-          + " caracteres ou mais, so letras, digitos, hifen e sublinhado (gere com: openssl rand "
-          + "-hex 32). Vazia desliga o ask.");
-    }
+  }
+
+  /**
+   * A chave do "ask" está definida e na forma? Fora dela, o ask recusa tudo, e o
+   * {@code EnderecoEscritorioService} avisa em ERROR na subida, sem impedi-la: uma chave errada
+   * no {@code .env} não pode derrubar a API do www (#464). A forma é a que passa pela query do
+   * Caddy sem codificação: `+`, `/`, `=` ou espaço chegariam alterados (o `+` vira espaço).
+   *
+   * @return {@code true} com 32+ caracteres {@code [A-Za-z0-9_-]}
+   */
+  public boolean tlsAskChaveUtilizavel() {
+    return tlsAskChave != null && CHAVE_SEGURA_NA_URL.matcher(tlsAskChave.strip()).matches();
+  }
+
+  /**
+   * A chave do "ask" foi definida, mas fora da forma.
+   *
+   * @return {@code true} se há chave e ela não é utilizável
+   */
+  public boolean tlsAskChaveForaDaForma() {
+    return tlsAskChave != null && !tlsAskChave.isBlank() && !tlsAskChaveUtilizavel();
   }
 
   /**
@@ -93,7 +108,8 @@ public record EnderecoEscritorioProperties(
   @Override
   public String toString() {
     return "EnderecoEscritorioProperties[dominioBase=" + dominioBase + ", tlsAskChave="
-        + (tlsAskChave == null || tlsAskChave.isBlank() ? "(vazia)" : "(definida)")
+        + (tlsAskChave == null || tlsAskChave.isBlank() ? "(vazia)"
+            : tlsAskChaveUtilizavel() ? "(definida)" : "(fora da forma)")
         + ", endereco=" + endereco + ", publico=" + publico + "]";
   }
 

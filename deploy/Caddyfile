@@ -1,8 +1,44 @@
-{$SITE_HOST} {
+# Opcoes globais. On-Demand TLS dos enderecos dos escritorios (#464): antes de pedir o certificado
+# de um {slug}.agroconia.com.br, o Caddy pergunta ao backend (rede interna, fora de /api) se o slug
+# e de um escritorio. So 2xx emite; o backend so responde 2xx com a chave certa e um slug servido.
+# A chave vai na URL: so letras, digitos, hifen e sublinhado (openssl rand -hex 32).
+{
+	on_demand_tls {
+		ask http://backend:8080/interno/tls/permitido?chave={$TLS_ASK_CHAVE}
+	}
+}
+
+# O que todo site da aplicacao serve: API no backend, o resto no frontend (o mesmo SPA em todo host:
+# o subdominio nunca serve conteudo enviado pelo cliente, #464).
+(app) {
 	encode zstd gzip
 
+	# Sem senha no Caddy: o backend roda em homolog, onde so o JWT do login autentica (o mock do
+	# X-Usuario-Id existe so em dev, #221). Quem protege a API e o backend; aqui fica o HTTPS.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	# API direto no backend (sem o Actuator: so /api e publico). SSE da Ceres sai sem buffer. O
+	# Caddy repassa o Host original e reescreve o X-Forwarded-Host/-For/-Proto; o backend so os
+	# aceita de proxy interno (server.forward-headers-strategy=native).
+	handle /api/* {
+		reverse_proxy backend:8080 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}
+
+{$SITE_HOST} {
 	# Monitor externo (UptimeRobot). Responde so UP/DOWN pelo health do backend, sem repassar o
-	# corpo: o Actuator nunca sai daqui (so /api e o frontend sao repassados).
+	# corpo: o Actuator nunca sai daqui (so /api e o frontend sao repassados). So no www.
 	handle /healthz {
 		rewrite * /actuator/health
 		reverse_proxy backend:8080 {
@@ -16,24 +52,30 @@
 		}
 	}
 
-	# Sem senha no Caddy: o backend roda em homolog, onde so o JWT do login autentica (o mock do
-	# X-Usuario-Id existe so em dev, #221). Quem protege a API e o backend; aqui fica o HTTPS.
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
-		-Server
+	import app
+}
+
+# Enderecos dos escritorios, {slug}.agroconia.com.br (#464): certificado sob demanda, um por slug,
+# so com o "ask" do backend respondendo 2xx. Slug inexistente ou reservado (inclusive o www) nunca
+# ganha certificado: o handshake falha. Cada slug emitido vai para os registros publicos de
+# Certificate Transparency. Mudou algo aqui: CA de staging antes (deploy/README.md).
+#
+# Site catch-all de proposito, NUNCA *.{$SITE_DOMINIO}: no Caddy 2.10 o site curinga faz o Caddy
+# deixar de emitir o certificado proprio do www (ele passa a esperar o certificado curinga, que o
+# on_demand nunca emite) e o www cai. Os sites com nome acima continuam mais especificos. Host fora
+# do dominio base nem chega aqui (o ask recusa), e o abort e a segunda barreira.
+https:// {
+	tls {
+		on_demand
 	}
 
-	# API direto no backend (sem o Actuator: so /api e publico). SSE da Ceres sai sem buffer.
-	handle /api/* {
-		reverse_proxy backend:8080 {
-			flush_interval -1
-		}
+	@escritorio host *.{$SITE_DOMINIO}
+	handle @escritorio {
+		import app
 	}
 
 	handle {
-		reverse_proxy frontend:80
+		abort
 	}
 }
 

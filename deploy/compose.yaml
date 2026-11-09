@@ -110,6 +110,11 @@ services:
       # Links dos convites (#460): o da carteira abre /escritorio, onde o produtor ve os convites.
       CARTEIRA_CONVITE_URL_FRONTEND: https://${SITE_HOST}/escritorio
       ESCRITORIO_CONVITE_URL_FRONTEND: https://${SITE_HOST}/equipe/convite
+      # Endereco proprio do escritorio, {slug}.SITE_DOMINIO (#464): o dominio base dos subdominios e a
+      # chave do "ask" do Caddy (GET /interno/tls/permitido, so na rede interna). Passo a passo no
+      # deploy/README.md, secao Endereco proprio do escritorio.
+      APP_ESCRITORIO_DOMINIO_BASE: ${SITE_DOMINIO:?defina SITE_DOMINIO no .env (deploy/README.md, Endereco proprio do escritorio)}
+      APP_ESCRITORIO_TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
       # E-mail (#460). DESLIGADO ate o passo a passo do README; credenciais so no .env. Com SMTP, host,
       # usuario ou senha vazios, remetente fora do dominio verificado ou link http impedem a subida.
       EMAIL_MODO: ${EMAIL_MODO:-DESLIGADO}
@@ -189,7 +194,8 @@ services:
     depends_on:
       - backend
 
-  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST.
+  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST e, sob demanda, nos enderecos
+  # dos escritorios ({slug}.SITE_DOMINIO, #464), so com o "ask" do backend autorizando.
   caddy:
     image: caddy:2.10-alpine
     logging: *logging
@@ -201,6 +207,8 @@ services:
     environment:
       SITE_HOST: ${SITE_HOST:?defina SITE_HOST no .env}
       SITE_REDIRECIONA: ${SITE_REDIRECIONA:?defina SITE_REDIRECIONA no .env}
+      SITE_DOMINIO: ${SITE_DOMINIO:?defina SITE_DOMINIO no .env (deploy/README.md, Endereco proprio do escritorio)}
+      TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

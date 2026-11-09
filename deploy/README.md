@@ -7,7 +7,7 @@ ClamAV e Caddy (HTTPS automático) numa VM só.
 |------|-------|
 | VM | `agrocontabil`, Oracle Cloud, Brazil Southeast (Vinhedo), VM.Standard.A1.Flex (Ampere **arm64**), 8 OCPU / 47 GiB de RAM, disco de 96 GB (conferido em 2026-11-06), Ubuntu 24.04 |
 | Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele (`SITE_REDIRECIONA`) |
-| DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6) |
+| DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6). O `A *` dos endereços dos escritórios entra pela seção [Endereço próprio do escritório](#endereço-próprio-do-escritório-464) |
 | Acesso SSH | `ssh -i ~/.ssh/agrocontabil_lightsail ubuntu@<ip>` (a chave privada fica só no PC de quem fez o deploy) |
 | Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `Caddyfile`, `.env` (600), `certs/nfe-teste.p12` |
 | Imagens | `ghcr.io/supersonicteam/backend` e `ghcr.io/supersonicteam/frontend` (workflow `docker-publish.yml` de cada repo, amd64 + arm64) |
@@ -158,6 +158,145 @@ deploy de código.
 A Oracle bloqueia a porta 25 de saída; a 587 e a 465 são liberadas, mas confira a egress da security
 list se houver regra restritiva.
 
+## Endereço próprio do escritório (#464)
+
+Cada escritório pode ter o próprio endereço, `{slug}.agroconia.com.br`. O produtor continua em
+`www`. O backend já serve o recurso: slug, endpoint público, o "ask" do Caddy e o login no
+subdomínio. Até os passos abaixo, ele fica **dormente**: sem o registro `A *` e sem o Caddyfile
+novo, nenhum subdomínio abre, e o `www` não muda.
+
+**Quando ligar:** só com o backend e o frontend (modo escritório) prontos e ensaiados. Se não
+estiver pronto até o congelamento (26/11), fica para depois da banca (03/12). Todos os passos são
+manuais e do Murillo, na VPS e na Hostinger.
+
+### Como funciona
+
+- **Certificados sob demanda:** o Caddy pede um certificado por slug, no primeiro acesso, via
+  On-Demand TLS. Antes de pedir, ele pergunta ao backend: `GET
+  http://backend:8080/interno/tls/permitido?chave=...&domain=...`. Essa rota fica fora de `/api`,
+  então só a rede interna a alcança.
+- **Quem o backend autoriza:** só responde 200 com a `TLS_ASK_CHAVE` certa e um slug servido
+  (ativo, com CNPJ, ou em carência com redirecionamento). Slug inexistente ou reservado, inclusive o
+  `www`, nunca ganha certificado, e o handshake falha.
+- **Site catch-all, nunca o curinga:** o bloco é `https://`, e não `*.{$SITE_DOMINIO}`. Testado em
+  2026-11-09 com o `caddy:2.10-alpine`: com o site curinga, o Caddy **deixa de emitir o certificado
+  do `www`** (passa a esperar o certificado curinga, que o `on_demand` nunca emite), e o `www` cai.
+  Com o catch-all, os sites com nome (`www`, os redirecionamentos) seguem com o certificado próprio,
+  e o matcher `host *.{$SITE_DOMINIO}` mais o `abort` barram o resto.
+- **Exposição:** cada slug emitido vai para os registros públicos de Certificate Transparency
+  (crt.sh), de forma permanente. Por isso o `PUT /api/escritorio/endereco` exige a ciência do
+  administrador e o CNPJ do escritório.
+- **Limites do Let's Encrypt:**
+  - 50 certificados novos por domínio registrado a cada 7 dias (renovações não contam);
+  - 5 validações com falha por nome por hora.
+
+  Por isso o primeiro teste é na CA de staging.
+
+### Passo a passo
+
+1. **Pré-requisitos:**
+   - o backend com a #464 já no ar (o CD implanta a `main`);
+   - o frontend com o modo escritório;
+   - o reset da demonstração ([`docs/demonstracao-banca.md`](../docs/demonstracao-banca.md)), que
+     dá o slug `ruraloeste` à Contabilidade Rural Oeste.
+2. **`.env`** (antes de copiar o `compose.yaml` novo, que exige as duas variáveis):
+
+   ```bash
+   cd /opt/agrocontabil && cp .env .env.anterior
+   echo "SITE_DOMINIO=agroconia.com.br" >> .env
+   echo "TLS_ASK_CHAVE=$(openssl rand -hex 32)" >> .env   # so letras e digitos: vai na URL
+   grep -qE '^TLS_ASK_CHAVE=[A-Za-z0-9_-]{32,}$' .env && echo "chave ok"
+   ```
+
+   **Hex, nunca Base64.** Uma chave com `+`, `/` ou `=` chega alterada na URL do ask. O backend
+   sobe assim mesmo, mas avisa em ERROR no log e o ask recusa todos os certificados.
+
+3. **DNS na Hostinger:**
+   - **criar:** registro `A`, nome `*`, apontando para o IP da VPS, com o TTL padrão;
+   - **não criar:** registro `AAAA`;
+   - **manter:** os registros de `@` e de `www` (o curinga não os sobrepõe).
+
+   Conferir, de fora da VPS:
+
+   ```bash
+   dig +short qualquercoisa.agroconia.com.br   # o IP da VPS
+   dig +short ruraloeste.agroconia.com.br      # o IP da VPS
+   dig +short www.agroconia.com.br             # o IP da VPS, como antes
+   ```
+
+   A Hostinger ressalva que domínio *hospedado* nela exige criar cada subdomínio. Aqui só o DNS
+   está lá, e o `dig` tira a dúvida.
+4. **Arquivos**, guardando os anteriores para reverter:
+
+   ```bash
+   cp Caddyfile Caddyfile.anterior && cp compose.yaml compose.yaml.anterior
+   # copiar deploy/Caddyfile e deploy/compose.yaml do repositorio para /opt/agrocontabil
+   ```
+
+5. **CA de staging primeiro.** No `Caddyfile` da VPS, dentro do bloco `https://`, acrescentar a
+   linha da CA de staging ao `tls`:
+
+   ```caddyfile
+   tls {
+   	on_demand
+   	ca https://acme-staging-v02.api.letsencrypt.org/directory
+   }
+   ```
+
+6. **Validar antes de aplicar.** Um Caddyfile inválido derruba o `www` na subida do container.
+
+   ```bash
+   docker compose config -q && echo "compose ok"
+   docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
+   ```
+
+   O segundo comando precisa dizer `Valid configuration`.
+7. **Aplicar.** O backend e o Caddy são recriados com as variáveis novas. O backend leva ~2 min
+   para ficar `healthy`, e o Caddy reinicia em segundos; os certificados ficam no volume
+   `caddy_data`. Fazer num horário calmo.
+
+   ```bash
+   docker compose up -d
+   ```
+
+8. **Conferir:**
+
+   ```bash
+   curl -s https://www.agroconia.com.br/healthz        # UP: o www segue igual
+   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
+   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=naoexiste.agroconia.com.br" 2>&1 | head -1'    # 404
+   curl -vk https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i "issuer"   # (STAGING); o 1o acesso espera alguns segundos
+   curl -v https://naoexiste.agroconia.com.br/ 2>&1 | tail -2              # falha no handshake
+   docker compose logs caddy | grep -iE "on_demand|obtain|error" | tail
+   ```
+
+   Depois, o login de `ruraloeste.agroconia.com.br` com a administradora da demonstração. Pelo
+   `www`, todas as contas entram como sempre.
+9. **Produção.**
+   - Tirar a linha `ca` do `Caddyfile`, validar de novo (passo 6) e reiniciar o Caddy:
+     `docker compose restart caddy`. O reinício limpa o certificado de staging da memória, e o
+     próximo acesso pede o de produção.
+   - Conferir com `curl -v https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i issuer`: o emissor
+     tem de ser o Let's Encrypt, sem "STAGING".
+10. **Reverter**, se algo der errado:
+
+    ```bash
+    cp Caddyfile.anterior Caddyfile && docker compose restart caddy
+    ```
+
+    Isso volta ao site único, e o `www` segue. O registro `A *` e as variáveis do `.env` podem
+    ficar: sem o bloco `https://`, o Caddy não atende os subdomínios.
+
+### Rotação da chave do ask
+
+Trocar a `TLS_ASK_CHAVE` no `.env` e rodar `docker compose up -d backend caddy`. Os dois leem a
+mesma variável. Os certificados já emitidos continuam valendo; só os slugs novos dependem do ask.
+
+A chave vai na URL do ask, porque o módulo de permissão do Caddy 2.10 não manda cabeçalho. Por
+isso ela fica na configuração do Caddy (a API de admin, só dentro do container) e pode aparecer nos
+logs dele quando o ask falha. Ela só vale na rede interna do compose, mas não a cole em chat nem em
+issue. Se vazar, rotacione.
+
 ## Primeira subida
 
 ```bash
@@ -165,6 +304,7 @@ cd /opt/agrocontabil
 cp .env.example .env && chmod 600 .env   # preencher; segredos:
 openssl rand -base64 48   # JWT_SECRET
 openssl rand -base64 32   # CRIPTO_CHAVE
+openssl rand -hex 32      # TLS_ASK_CHAVE (vai na URL do ask: hex, nunca base64); e SITE_DOMINIO=agroconia.com.br
 docker login ghcr.io -u <usuario-github>   # token clássico só com read:packages
 docker compose up -d
 ```

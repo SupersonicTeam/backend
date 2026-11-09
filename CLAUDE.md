@@ -287,7 +287,7 @@ br.com.agrocontabil
 | GET | `/api/auth/me` | Identidade da requisição: `{usuarioId, papel, nome}` (#206) |
 | POST | `/api/auth/refresh` | **Público.** Lê o cookie `agro_refresh`, devolve access novo e troca o cookie (#207); refresh ausente/vencido/revogado/reusado → 401 `SESSAO_INVALIDA` (reuso revoga a família). No host de escritório (#464), a credencial precisa seguir membro do escritório do endereço; senão a família é revogada (401). Host principal: idêntico |
 | GET | `/api/publico/escritorios/{slug}` | **Público** (#464): `{slug, nome, slugAtual}` para a tela de login do subdomínio — nunca id, CNPJ ou membros; `slugAtual` só quando o slug pedido está em carência de um escritório com outro endereço ativo (o frontend troca o host). O mesmo 404 `ENDERECO_NAO_ENCONTRADO` para inexistente, mal formado ou com maiúscula, reservado, sem CNPJ, carência vencida, de escritório apagado ou sem endereço; `Cache-Control: public, max-age=300` só no 200; 30/min por IP (`LimiteTaxaPublicoFilter`, `app.escritorio.publico.por-minuto`) → 429; ignora o Bearer |
-| GET | `/interno/tls/permitido?domain=&chave=` | "Ask" do On-Demand TLS do Caddy (#464), **fora de `/api`** (o Caddy só repassa `/api/*`; só a rede interna alcança) e fora do Swagger: 200 sem corpo só com `chave` = `APP_ESCRITORIO_TLS_ASK_CHAVE` (tempo constante; vazia = recusa tudo) e `domain` = `{slug}.` + domínio base com endereço servido (ativo, ou em carência com destino); senão 404 sem corpo |
+| GET | `/interno/tls/permitido?domain=&chave=` | "Ask" do On-Demand TLS do Caddy (#464), **fora de `/api`** (o Caddy só repassa `/api/*`; só a rede interna alcança) e fora do Swagger: 200 sem corpo só com `chave` = `APP_ESCRITORIO_TLS_ASK_CHAVE` (tempo constante; 32+ caracteres `[A-Za-z0-9_-]`, porque vai na URL; vazia ou fora da forma = recusa tudo, com ERROR na subida, que nunca é impedida) e `domain` = `{slug}.` + domínio base com endereço servido (ativo, ou em carência com destino); senão 404 sem corpo |
 | POST | `/api/auth/logout` | **Público, idempotente.** Revoga a família do cookie e o apaga → 204 (#207) |
 | POST | `/api/auth/senha/esqueci` | **Público.** `{email}` → **sempre 202** (#209); com conta ativa, link de uso único (30 min, token no fragmento `#token=`) vai por e-mail em segundo plano |
 | POST | `/api/auth/senha/redefinir` | **Público.** `{token, novaSenha}` → 204 e cookie apagado; encerra todas as sessões; link inválido/expirado/usado → 400 `TOKEN_REDEFINICAO_INVALIDO`; senha fraca → 400 `SENHA_FRACA` (o link segue valendo) |
@@ -395,7 +395,11 @@ br.com.agrocontabil
   ligado na VPS e, desde a #464, em dev); nunca ler o cabeçalho cru. O cookie de refresh segue
   *host-only* (nunca `Domain=.agroconia.com.br`) e o CORS segue a lista fixa: a SPA do subdomínio
   chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
-  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
+  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). **Infra:** no Caddy, os
+  endereços dos escritórios são um site *catch-all* `https://` com `tls { on_demand }` e o "ask" do
+  backend (`deploy/Caddyfile`); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o
+  `www` perder o certificado próprio (testado em 2026-11-09). Ligar é manual (registro `A *`,
+  `.env`, CA de staging antes): passo a passo em `deploy/README.md`. O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
   log nem à auditoria, só existe com CNPJ, e a exclusão de dados o apaga sem carência. Lista de
   reservados versionada em `resources/escritorio/slugs-reservados.txt` (cresce ali, nunca no código).
   Contrato completo na #464 (comentário de 2026-11-09).
