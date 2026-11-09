@@ -1,0 +1,51 @@
+[ {
+  "id" : "busca-17",
+  "pergunta" : "Sou agricultor familiar e contratei um ajudante por alguns dias na colheita. Como eu informo esse trabalhador e pago o INSS dele?",
+  "esperado" : [ "Lei 8.212/1991 art. 32-C" ],
+  "aceito" : [ ],
+  "entregues" : [ {
+    "posicao" : 1,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 32-C, § 13",
+    "similaridade" : 0.625
+  }, {
+    "posicao" : 2,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 13",
+    "similaridade" : 0.61
+  }, {
+    "posicao" : 3,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25, § 11",
+    "similaridade" : 0.605
+  }, {
+    "posicao" : 4,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 25-A, § 2º",
+    "similaridade" : 0.602
+  }, {
+    "posicao" : 5,
+    "norma" : "Lei 8.212/1991",
+    "dispositivo" : "art. 69, § 1º, inciso II",
+    "similaridade" : 0.6
+  } ],
+  "rodadas" : [ {
+    "cru" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto para o produtor rural pessoa física [T1].  \n\nA contribuição será feita na forma do art. 25, com opção de contribuir como empregador rural pessoa física, mediante o pagamento da contribuição incidente sobre a folha de salários relativa a janeiro de cada ano ou à primeira competência subsequente ao início da atividade rural [T2].  \n\nO ajudante contratado por alguns dias está sujeito à contribuição do empregador rural pessoa física, desde que o trabalho seja realizado com vínculo de emprego [T2].  \n\nNAO_ENCONTREI",
+    "ms" : 220102,
+    "desfecho" : "CITACAO_INVALIDA",
+    "texto" : "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+    "citacoes" : [ "Lei 8.212/1991 art. 32-C, § 13", "Lei 8.212/1991 art. 25, § 13", "Lei 8.212/1991 art. 25, § 11" ]
+  }, {
+    "cru" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto no art. 32-C, § 13, que estende a sistemática de entrega das informações e recolhimentos ao produtor rural pessoa física. [T1]",
+    "ms" : 32600,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto no art. 32-C, § 13, que estende a sistemática de entrega das informações e recolhimentos ao produtor rural pessoa física. (Lei 8.212/1991, art. 32-C, § 13)",
+    "citacoes" : [ "Lei 8.212/1991 art. 32-C, § 13" ]
+  }, {
+    "cru" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto no art. 32-C, § 13, que estende a sistemática de entrega das informações e recolhimentos ao produtor rural pessoa física. [T1]",
+    "ms" : 18772,
+    "desfecho" : "RESPONDIDA",
+    "texto" : "Você deve informar o trabalhador e efetuar o recolhimento do INSS por meio do sistema eletrônico com entrada única de dados, como previsto no art. 32-C, § 13, que estende a sistemática de entrega das informações e recolhimentos ao produtor rural pessoa física. (Lei 8.212/1991, art. 32-C, § 13)",
+    "citacoes" : [ "Lei 8.212/1991 art. 32-C, § 13" ]
+  } ]
+} ]

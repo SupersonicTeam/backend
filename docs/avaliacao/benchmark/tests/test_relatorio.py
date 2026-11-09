@@ -546,6 +546,15 @@ class ExternasNoRelatorioTest(Base):
         r = {"citacaoValida": True, "execucao": {"desfecho": "CITACAO_INVALIDA"}}
         self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
 
+    def test_citacao_do_misto_com_lei_descartada_nao_conta_sem_funcao_de_citacao_fixa(self):
+        # #433: pergunta fictícia; a mesma regra do AvaliadorResposta, aplicada pelo criterio principal.
+        r = {"citacaoValida": True, "execucao": {
+            "rota": "MISTO", "desfecho": "RESPONDIDA", "desfechoLegislacao": "CITACAO_INVALIDA",
+            "fontes": [{"funcao": "consultarNota"}]}}
+        self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], False)
+        r["execucao"]["fontes"].append({"funcao": "consultarRetencoes"})
+        self.assertEqual(rel.valor_criterio(r, "citacao", {}, [], rel.RECORTE_COMUM)[0], True)
+
     def test_origem_antiga_das_externas_ainda_e_externa(self):
         self._marcar()
         canonico = json.loads((self.pasta / "gabarito-canonico.json").read_text(encoding="utf-8"))
@@ -561,6 +570,73 @@ class ExternasNoRelatorioTest(Base):
                                             rel.RECORTE_COMUM), (None, True, False))
         self.assertEqual(rel.valor_criterio({"citacaoValida": False}, "citacao", {}, [],
                                             rel.RECORTE_COMUM)[0], False)
+
+    def _com_opcoes(self, ajustes):
+        rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))
+        rodada["opcoesChat"] = {
+            nome: {"publicada": {"AI_READ_TIMEOUT": "120s", "AI_MAX_TOKENS": "1024"},
+                   **({"ajustes": {"AI_READ_TIMEOUT": "240s"}} if ajustes else {}),
+                   "chat": {"num-ctx": "8192"}}
+            for nome in ("ceres-1", "ceres-2")}
+        (self.pasta / "rodada.json").write_text(json.dumps(rodada), encoding="utf-8")
+        return rel.gerar(self.pasta)
+
+    def test_configuracao_mostra_o_read_timeout_efetivo_e_a_excecao(self):
+        texto = self._com_opcoes(ajustes=True)
+        self.assertIn("AI_READ_TIMEOUT=240s", texto)
+        self.assertNotIn("AI_READ_TIMEOUT=120s", texto)
+        self.assertIn("exceto o read-timeout da célula (`matriz.json`", texto)
+        self.assertNotIn("sem ajuste à mão", texto)
+
+    def test_rodada_sem_ajustes_continua_dizendo_sem_ajuste_a_mao(self):
+        texto = self._com_opcoes(ajustes=False)
+        self.assertIn("AI_READ_TIMEOUT=120s", texto)
+        self.assertIn("sem ajuste à mão", texto)
+
+    def test_celula_descartada_fica_fora_das_tabelas_e_aparece_nos_avisos(self):
+        antes = rel.gerar(self.pasta)
+        self.assertNotIn("descartada", antes)
+        descartada = self.pasta / "ceres-1--m-ref.descartada-2026-11-08"
+        shutil.copytree(self.pasta / "ceres-1--m-ref", descartada)
+        (descartada / "motivo.txt").write_text("falha técnica em 7 de 30 respostas\nSEGUNDA-LINHA\n", encoding="utf-8")
+        depois = rel.gerar(self.pasta)
+        self.assertEqual([c.nome for c in rel.carregar_celulas(self.pasta)],
+                         [c.nome for c in self.celulas.values()])
+        self.assertIn("ceres-1--m-ref.descartada-2026-11-08", depois)
+        self.assertIn("falha técnica em 7 de 30 respostas", depois)
+        self.assertNotIn("SEGUNDA-LINHA", depois)
+        # Tirada a lista dos descartados, o relatorio e o mesmo: nenhuma tabela mudou.
+        sem_descartada = "\n".join(l for l in depois.splitlines() if "descartada" not in l
+                                  and "Células descartadas" not in l and "falha técnica em 7" not in l)
+        import re
+
+        def junta(texto):
+            return re.sub(r"\n{3,}", "\n\n", texto).strip()
+        self.assertEqual(junta(sem_descartada), junta(antes))
+
+    def test_motivo_com_bom_ou_fora_do_utf8_nao_derruba_o_relatorio(self):
+        descartada = self.pasta / "ceres-1--m-ref.descartada-2026-11-08"
+        descartada.mkdir()
+        (descartada / "motivo.txt").write_bytes("\ufeffmotivo com BOM\n".encode("utf-8"))
+        outra = self.pasta / "ceres-2--m-ref.descartada-2026-11-08"
+        outra.mkdir()
+        (outra / "motivo.txt").write_bytes("motivo em cp1252: ação\n".encode("cp1252"))
+        texto = rel.gerar(self.pasta)
+        self.assertIn("motivo com BOM", texto)
+        self.assertNotIn("\ufeff", texto)
+        self.assertIn("motivo em cp1252", texto)
+
+    def test_aviso_de_falha_tecnica_aparece_inteiro_no_relatorio(self):
+        from ceres_benchmark import executor as ex
+        execucao = {"rota": "DADOS", "desfecho": "MODO_FALLBACK", "modoFallback": True, "erro": None,
+                    "latenciaMs": 130000}
+        aviso = ex.avisos_de_falha_tecnica([[{"id": f"T{i}", "execucao": execucao} for i in range(120)]] * 3)[0]
+        self.assertLess(len(aviso) + 60, 300)  # com o prefixo da celula, cabe no corte do relatorio
+        manifesto = self.pasta / "ceres-2--m-ref" / "celula.json"
+        dados = json.loads(manifesto.read_text(encoding="utf-8"))
+        dados["avisos"] = [aviso]
+        manifesto.write_text(json.dumps(dados), encoding="utf-8")
+        self.assertIn(aviso, rel.gerar(self.pasta))
 
     def test_condicoes_com_a_sessao_7_inteira_e_sem_a_8a(self):
         rodada = json.loads((self.pasta / "rodada.json").read_text(encoding="utf-8"))

@@ -43,6 +43,15 @@ O embedding é sempre o `bge-m3`.
   a contagem não for 8.304 e para se for zero).
 - **Ollama** acessível (`docker start agrocontabil-ollama`, ou instalado na máquina). O executor
   faz o `pull` dos três modelos e do `bge-m3` (~4,5 GB na primeira vez).
+- **Ollama local com `OLLAMA_KEEP_ALIVE` longo** (a produção usa `24h`, `deploy/compose.yaml`).
+  Confira no contêiner que já existe (`docker inspect agrocontabil-ollama`, variáveis de ambiente) e
+  **não o recrie por conta própria**: ele tem os modelos baixados; mudar a variável é decisão de quem
+  mantém o ambiente local. O executor não confere o valor. Com o padrão do Ollama (5 minutos sem uso), uma
+  pausa mais longa, como a subida da JVM, descarrega o modelo: a prova usa `keep_alive` de 30m, mas o padrão
+  do servidor volta a valer a partir da primeira chamada da JVM, e a latência (e o disjuntor) passa a medir a
+  recarga, não a Ceres. Depois de
+  uma célula, confira onde o modelo rodou: o relatório mostra o `ondeRodou` de cada célula
+  (GPU, CPU ou dividido, pelo `/api/ps`), e o contêiner do compose local **não reserva GPU**.
 - **A mesma máquina para as 6 células**, sem outra carga pesada durante a rodada.
 
 ## Comando único
@@ -61,7 +70,7 @@ Ao fim, o relatório comparativo está em
 `graficos/`. Uma rodada interrompida continua de onde parou com
 `--retomar docs/avaliacao/resultados/benchmark/<rodada>` (as células com código 0 são puladas).
 A retomada reusa os SHAs gravados na rodada (a `main` pode ter andado), recusa uma célula já
-medida com outro SHA, modelo ou número de repetições, e o relatório soma as células das execuções
+medida com outro SHA, modelo, número de repetições ou read-timeout da célula, e o relatório soma as células das execuções
 anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avaliacao/benchmark/gerar_relatorio.py <rodada>`.
 
 | Opção / variável | Padrão | Para quê |
@@ -89,17 +98,21 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
    (versão; quantização e digest de cada modelo) e a configuração publicada de cada commit (os
    `AI_*` do `.env.example` e as opções do chat do `application.yml`). A do Ollama é conferida de
    novo antes de cada célula e, se mudar, para a rodada; a de cada commit é a que aquela coluna
-   usa, e a diferença entre os commits vai para o relatório.
+   usa, e a diferença entre os commits vai para o relatório. **Uma só exceção à publicada:** o
+   `AI_READ_TIMEOUT` da célula vem de `readTimeoutCelula` no `matriz.json` (240 s; o publicado é
+   120 s nas duas arquiteturas), aplicado depois da configuração publicada, conferido contra o
+   prazo da pergunta e gravado no `celula.json` e no `rodada.json` (ver "Read-timeout da célula").
 4. Para cada arquitetura: `git worktree add --detach` no commit, `mvnw package` ali dentro, e um
    **banco próprio**. O schema do `2463c27` não é o da `main` (changeSets novos, seed `v2` × `v4`):
    o banco é recriado, o Liquibase do commit cria o schema (o comando de avaliação sobe com um id
    inexistente em `avaliacao.ids` e para antes do seed) e a base de lei é copiada do banco de
    origem, conferindo a contagem.
-5. Para cada modelo: descarrega os outros modelos de chat, faz a **prova do pensamento** (abaixo),
+5. Para cada modelo: descarrega os outros modelos de chat, faz a **prova do pensamento** (abaixo,
+   com o `num_ctx` da Ceres da arquitetura),
    liga o amostrador de memória (que também registra onde cada modelo rodou e se ele saiu da
    memória no meio da célula) e roda o comando de avaliação já existente:
    `java -jar` com `SPRING_PROFILES_ACTIVE=dev,avaliacao`, `AI_CHAT_MODEL=<modelo>`,
-   `AI_OLLAMA_THINK=false`, `--avaliacao.gabarito=<o conjunto, ou a cópia adaptada>`,
+   `AI_OLLAMA_THINK=false`, `AI_READ_TIMEOUT=<readTimeoutCelula>`, `--avaliacao.gabarito=<o conjunto, ou a cópia adaptada>`,
    `--avaliacao.repeticoes=3`, `--avaliacao.hardware=...` e `--avaliacao.saida` numa pasta da
    célula. Nada no comando de avaliação mudou: os dois commits já aceitam o gabarito por caminho.
 6. Renomeia a saída do comando para o nome da célula (`ceres-1--qwen3-0.6b.md`, `.json`,
@@ -217,7 +230,12 @@ frase que um review usou para mostrar um erro da heurística fica no corpus de r
 (`tests/test_externas.py`, `CORPUS_*`). A resposta que não foi redigida pelo modelo (recusa,
 descarte, corte) não ganha crédito de classe, precisão nem encaminhamento. A fundamentação é o
 `citacaoValida` do comando com a regra da `main` nas duas arquiteturas: texto descartado
-(`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`) não ganha crédito de citação. Enquanto
+(`CITACAO_INVALIDA`, `NUMERO_SEM_FONTE`, `RESPOSTA_CORTADA`, `REGIME_ESPECIFICO_SEM_SETOR`, o mesmo
+conjunto do `AvaliadorResposta`) não ganha crédito de citação. No MISTO, com a parte de lei
+descartada (`desfechoLegislacao` num desses quatro) ou com o desfecho geral `AFIRMACAO_SOBRE_DADOS`,
+a citação só vale se rodou `consultarRetencoes` ou `consultarTratamentoProduto`, as funções cujas
+citações fixas o backend junta (#433, 2026-11-07; `externas.citacao_vale`, regra única do critério principal e
+das externas). A regra só rebaixa; não há campo novo no JSON da rodada. Enquanto
 `aConferir`, a citação das externas fica **só** na seção delas, como provisória. O CSV (`;`, BOM
 UTF-8, protegido contra fórmula, como o `CsvCego` do Java) sai em **lotes**: regerar o relatório
 não reembaralha o que já foi ao avaliador, e célula medida depois (`--retomar`) ou refeita vai num
@@ -348,6 +366,13 @@ As duas arquiteturas desligam o raciocínio pelo mesmo `AI_OLLAMA_THINK=false`
 apesar do `think=false`, aparece ali como ATIVO**, e a latência e os cortes por `num_predict`
 daquela célula devem ser lidos com isso.
 
+As duas provas (início e fim da célula) mandam `options.num_ctx` com o valor que a Ceres daquela
+arquitetura usa (inteiro, lido das opções do chat do commit; sem o valor, a prova não envia e
+grava `numCtx` nulo) e `keep_alive: "30m"`. Sem o `num_ctx`, o Ollama carregaria o modelo com o
+contexto padrão dele e a JVM o recarregaria com 8192 já com o amostrador de memória ligado, que
+guarda o máximo: o pico sairia superestimado e o aviso de descarga seria falso. A prova grava
+`numCtx` e `carregamentoMs` (o `load_duration` do Ollama) no `celula.json`.
+
 ### Memória
 
 Uma thread lê a cada 5 s o `/api/ps` do Ollama (memória do modelo de chat carregado com o
@@ -442,10 +467,11 @@ propriedade). Na prática:
   `--ref-ceres2 <SHA>` de um commit que contenha o `54a4201`; o relatório confere pela
   ancestralidade e diz que a coluna inclui as mudanças da #270 (itens 2 e 3). Um SHA sem ele sai
   como **ensaio** e não entra no relatório final.
-- **Configuração publicada, sem ajuste à mão.** Cada coluna roda com os `AI_*` do `.env.example`
-  **do próprio commit** (teto de tokens, `num_ctx`, timeouts); o executor não herda nenhum `AI_*`
+- **Configuração publicada, exceto o read-timeout da célula.** Cada coluna roda com os `AI_*` do
+  `.env.example` **do próprio commit** (teto de tokens, `num_ctx`, timeouts), com uma exceção
+  (`AI_READ_TIMEOUT`, abaixo); o executor não herda nenhum `AI_*`
   do seu shell (um `export AI_MAX_TOKENS` esquecido mediria outra configuração). Só o modelo (o da
-  célula), o endereço do Ollama e `AI_OLLAMA_THINK=false` vêm do executor. As duas configurações
+  célula), o endereço do Ollama, `AI_OLLAMA_THINK=false` e o `AI_READ_TIMEOUT` (do `readTimeoutCelula`) vêm do executor. As duas configurações
   vão no relatório, com o que difere entre os commits em negrito: é parte da arquitetura medida,
   não um erro de configuração.
 - **Queda de acerto em relação a um ensaio anterior:** gere o relatório com
@@ -470,6 +496,65 @@ propriedade). Na prática:
   se uma falhar, o aviso diz qual valeu, e se as duas falharem a célula também é inválida (não há
   como mostrar que o pensamento estava desligado) e o `--retomar` a mede de novo. Com a célula do `qwen3:4b-instruct` inválida ou
   ausente numa das colunas, a conclusão não afirma ganho nem regressão entre as arquiteturas.
+
+### Read-timeout da célula (#434)
+
+O `.env.example` publica `AI_READ_TIMEOUT=120s` nas duas arquiteturas. Com um modelo frio ou uma
+fila na máquina local, uma chamada ao modelo estoura os 120 s, o disjuntor (`DisponibilidadeModelo`) abre por
+30 s e as perguntas seguintes saem em `MODO_FALLBACK`, que conta como falha técnica; se o estouro
+for numa pergunta medida, a célula ainda sai com código 0 e o `--retomar` a pula. O diagnóstico da
+#426 registrou exatamente isso (120,2 s na primeira pergunta e o resto em fallback).
+
+Por isso a rodada aplica `AI_READ_TIMEOUT=240s` (`readTimeoutCelula` no `matriz.json`), **depois**
+da configuração publicada. É a única exceção à regra "a publicada, sem ajuste": a carga a frio ou
+a fila da máquina local não é propriedade da arquitetura, e o desvio vale igual para as duas
+colunas. O valor tem de ficar abaixo do prazo da pergunta no comando de avaliação (5 min + 5 s; o
+executor recusa um valor que não fique); está no `celula.json`, no `rodada.json` e na tabela de
+configuração do relatório; retomar com outro valor (ou uma rodada de antes dele) é recusado.
+
+### Célula com falha técnica: critério e procedimento
+
+O executor **não refaz célula sozinho**. Ao fim de cada célula, o `celula.json` ganha um aviso
+quando há falha técnica (a mesma conta do relatório: `MODELO_INDISPONIVEL`, `MODO_FALLBACK`,
+`TEMPO_ESGOTADO`, `CANCELADA` ou `ERRO`), com o número de respostas com falha e o número com
+latência total de 120 s ou mais (a latência é a da pergunta inteira, que pode ter até 3 chamadas; o
+read-timeout publicado, 120 s, vale por chamada ao modelo; e a latência local não é a da VPS). O relatório
+mostra os avisos de cada célula.
+
+Critério, fixado antes de qualquer rodada: **refaz-se uma célula só quando o aviso de falha técnica
+dispara**, e refaz-se a **célula inteira** (nunca só as perguntas que falharam, nem escolhendo a
+melhor tentativa). Procedimento:
+
+1. Escreva o motivo **antes** de rodar de novo, no `motivo.txt` da pasta da célula (a primeira
+   linha vai para o relatório): o que o aviso disse e o que mudou (por exemplo, o Ollama estava
+   frio ou ocupado).
+2. Renomeie a pasta da célula para `<celula>.descartada-<AAAA-MM-DD>`.
+3. Rode `--retomar docs/avaliacao/resultados/benchmark/<rodada>` (a célula sem manifesto é medida
+   de novo; as outras são puladas).
+
+A pasta descartada fica ao lado, **fora de todas as tabelas** (só as células do `rodada.json`
+entram) e listada nos avisos do relatório, com o motivo. A célula refeita é a única que vale.
+
+**Limitação do critério:** ele não limita quantas vezes refazer, e refazer até o aviso sumir equivale a
+escolher a melhor tentativa, que o parágrafo acima proíbe. Falha técnica também pode ser propriedade da
+arquitetura (um MISTO a frio ainda passa do prazo da pergunta). Sugestão, a decidir pelo Murillo: no máximo
+uma refação por célula, valendo a refeita com ou sem falha. A decisão de `>=` (e não `>`) 120 s para contar a
+resposta como lenta é deste PR.
+
+### Armadilhas conhecidas (sem código)
+
+- **A latência tem as falhas técnicas dentro.** As tabelas de latência somam todas as respostas,
+  inclusive as que caíram no fallback; leia-as com o aviso da célula.
+- **A ordem das células é fixa** (arquitetura, depois modelo, do menor ao maior): a primeira
+  célula de cada modelo paga a carga a frio, sempre na mesma posição.
+- **O embedding da Ceres 2.0 tem prazo de 500 ms** (`timeout-embedding`): com o Ollama ocupado em
+  uma geração, o classificador pausa a camada de embedding e cai nas outras. Em máquina lenta isso
+  muda a camada que decide a rota (a seção "Quem decidiu a rota" mostra).
+- **O compose local não reserva GPU.** O `ondeRodou` do relatório diz onde o modelo rodou de fato;
+  se for CPU, a latência é de CPU.
+- **Um MISTO a frio (até 3 chamadas ao modelo) ainda pode passar do prazo da pergunta** (5 min + 5 s),
+  mesmo com o read-timeout da célula abaixo dele: a pergunta sai como `TEMPO_ESGOTADO` e o aviso
+  de falha técnica dispara.
 
 ## Latência na VPS (produção)
 

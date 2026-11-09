@@ -17,4 +17,6 @@ memória, não acerto.
 - Precisa de um exemplo parecido com uma pergunta do gabarito? Escreva outro, com outro produto,
   período e forma de perguntar.
 
+`perguntas-lei-busca-2026-11.json` é um conjunto de medição de uso único (#436): fica nesta pasta só para passar pela guarda contra o gabarito e não serve para ajustar a Ceres.
+
 Este README não tem pergunta do gabarito; mantenha assim.

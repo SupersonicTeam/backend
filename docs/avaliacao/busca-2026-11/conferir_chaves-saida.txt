@@ -1,0 +1,45 @@
+chaves de artigo vigentes no banco: 1199
+busca-01 [geral] esperado: LC 214/2025 art. 4º | aceito: LC 227/2026 art. 174 (redação do art. 4º
+busca-02 [geral] esperado: LC 214/2025 art. 6º | aceito: LC 227/2026 art. 174 (redação do art. 6º
+busca-03 [geral] esperado: LC 214/2025 art. 5º | aceito: LC 227/2026 art. 174 (redação do art. 5º
+busca-04 [geral] esperado: LC 214/2025 art. 3º | aceito: LC 227/2026 art. 174 (redação do art. 3º
+busca-05 [geral] esperado: LC 214/2025 art. 22 | aceito: LC 227/2026 art. 174 (redação do art. 22
+busca-06 [geral] esperado: LC 214/2025 art. 24
+busca-07 [geral] esperado: LC 214/2025 art. 49
+busca-08 [geral] esperado: LC 214/2025 art. 29 | aceito: LC 227/2026 art. 174 (redação do art. 29
+busca-09 [geral] esperado: LC 214/2025 art. 46
+busca-10 [geral] esperado: LC 214/2025 art. 61
+busca-11 [geral] esperado: LC 214/2025 art. 47 | aceito: LC 227/2026 art. 174 (redação do art. 47
+busca-12 [geral] esperado: Lei 8.212/1991 art. 15
+busca-13 [geral] esperado: EC 132/2023 art. 2º (redação do art. 134 | aceito: LC 227/2026 art. 132
+busca-14 [geral] esperado: Lei 8.212/1991 art. 25-A
+busca-15 [geral] esperado: EC 132/2023 art. 1º (redação do art. 156-A | aceito: LC 214/2025 art. 1º
+busca-16 [geral] esperado: EC 132/2023 art. 1º (redação do art. 149-B
+busca-17 [geral] esperado: Lei 8.212/1991 art. 32-C
+busca-18 [geral] esperado: Lei 8.212/1991 art. 12
+busca-19 [geral] esperado: Lei 8.212/1991 art. 25
+busca-20 [geral] esperado: Lei 8.212/1991 art. 21
+busca-21 [setor] esperado: LC 214/2025 art. 180
+busca-22 [setor] esperado: LC 214/2025 art. 223
+busca-23 [setor] esperado: LC 214/2025 art. 238 | aceito: LC 227/2026 art. 174 (redação do art. 238
+busca-24 [setor] esperado: LC 214/2025 art. 261
+busca-25 [setor] esperado: LC 214/2025 art. 244
+busca-26 [setor] esperado: LC 214/2025 art. 281 | aceito: LC 214/2025 art. 277, LC 214/2025 art. 278
+busca-27 [setor] esperado: LC 214/2025 art. 63
+busca-28 [setor] esperado: LC 214/2025 art. 472 | aceito: LC 227/2026 art. 174 (redação do art. 472, LC 214/2025 art. 473, LC 227/2026 art. 174 (redação do art. 473
+busca-29 [setor] esperado: LC 214/2025 art. 169
+busca-30 [setor] esperado: LC 214/2025 art. 110
+busca-31 [ausente] esperado: (vazio)
+busca-32 [ausente] esperado: (vazio)
+busca-33 [ausente] esperado: (vazio)
+busca-34 [ausente] esperado: (vazio)
+busca-35 [ausente] esperado: (vazio)
+busca-36 [ausente] esperado: (vazio)
+busca-37 [ausente] esperado: (vazio)
+busca-38 [ausente] esperado: (vazio)
+busca-39 [ausente] esperado: (vazio)
+busca-40 [ausente] esperado: (vazio)
+grupos: {'geral': 20, 'setor': 10, 'ausente': 10}
+setor com esperado entre os arts. 172 e 307 da LC 214/2025: 6 (busca-21, busca-22, busca-23, busca-24, busca-25, busca-26)
+chaves conferidas: 45
+OK: todas as chaves existem no banco e a forma do conjunto confere

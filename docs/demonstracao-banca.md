@@ -60,8 +60,13 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
 4. **ICMS a definir (Carlos e Três Pontes).** Os rascunhos de venda de milho do Carlos ao
    pecuarista Antônio Carlos Pereira (pessoa física **sem IE**) e o do touro reprodutor da Três
    Pontes para MG não têm CST de ICMS. O sistema só preenche sozinho o **51 (diferimento)** na venda
-   interna de produção própria a quem tem IE. Mostrar: a Ceres aponta o sinal "esta sem o CST do
-   ICMS" na nota; enviar para revisão ou gerar o XML responde **422 `ICMS_A_DEFINIR`**, com a
+   interna de produção própria a quem tem IE. Mostrar: como Carlos, perguntar à Ceres **"A nota número
+   N está com o CST do ICMS definido?"**, com N o número de um desses rascunhos de milho; a Ceres
+   aponta o sinal "está sem o CST do ICMS" na nota (conferência de 2026-11-07: 3 de 3 com o número
+   da nota). **O número muda a cada semeadura, então não o decore:** o apresentador o acha na lista
+   de notas do Carlos, filtrando por rascunho (`GET /api/notas?status=RASCUNHO` na API), na venda de
+   milho ao Antônio Carlos Pereira. Não use a pergunta geral ("tem alguma nota minha com o ICMS sem
+   definir?"): sem o número a Ceres escolhe outra função e responde que não há nota. Enviar para revisão ou gerar o XML responde **422 `ICMS_A_DEFINIR`**, com a
    sugestão "Informe o CST do ICMS combinado com o contador: 40, 41, 50, 51 ou 90". O sistema nunca
    escolhe o CST. Sem o grupo de ICMS, a SEFAZ rejeitaria a NF-e (rejeição 1002, NT 2025.002, regra
    B25-90).
@@ -88,6 +93,14 @@ Maria e o Escritório Campo Certo) continuam existindo, num escritório à parte
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.
+   **Conferência local (#435):** as perguntas dos passos 4 e 7 foram rodadas com o
+   `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`; o resultado, com as divergências, está em
+   [`docs/demonstracao/conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md).
+   A conferência **se refaz no SHA congelado** se mudar, depois do SHA `4a0b3a8`, qualquer um destes:
+   `assistente/**` (inclusive os adaptadores e os services e recursos que eles usam, como
+   `SinaisNotaConferirService` e `src/main/resources/sinais-nota/`), o treino do classificador
+   (`src/main/resources/ceres/treino/`), o seed da demonstração, o `application.yml`, a base de lei
+   (os 8.304 trechos) e o modelo ou a versão do Ollama.
 8. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
    **urgente**; na Helena, a GPS de daqui a 3 dias sai como **próximo**.
 
