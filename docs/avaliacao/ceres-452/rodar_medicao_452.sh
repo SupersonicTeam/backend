@@ -32,6 +32,9 @@ if ! mkdir "$TRAVA" 2>/dev/null; then
   exit 10
 fi
 encerrar() {
+  # O kill só alcança a subshell que lançou o java (no Git Bash a JVM é processo do Windows): quem
+  # encerra as JVMs é o Stop-Process pela porta, logo abaixo. As portas 8452 e 8453 são só desta
+  # medição.
   for pid in "${PIDS[@]}"; do kill "$pid" 2>/dev/null; done
   sleep 5
   powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | Where-Object { \$_.CommandLine -match 'server.port=845[23]' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }" 2>/dev/null
@@ -50,12 +53,11 @@ docker start agrocontabil-postgres agrocontabil-ollama >/dev/null || exit 12
 sleep 5
 DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\r')
 [ -n "$DB_PASSWORD" ] || { echo "DB_PASSWORD ausente no .env"; exit 12; }
-SENHA=$(python -c "
-import secrets, string
-a = string.ascii_letters + string.digits
-print('Rx' + ''.join(secrets.choice(a) for _ in range(18)) + '!9')")
+SENHA=$(python -c "import secrets; print(secrets.token_urlsafe(24))")
 export DB_PASSWORD SEED_SENHA="$SENHA" CERES_SENHA="$SENHA"
 unset SENHA
+# Saída do Python em UTF-8 também no console do Windows (o tee gravava cp1252).
+export PYTHONUTF8=1
 
 psql_() { docker exec -i agrocontabil-postgres psql -v ON_ERROR_STOP=1 -U agrocontabil "$@"; }
 for db in agroconia_452_base agroconia_452_correcao; do
@@ -84,11 +86,24 @@ esperar() {  # porta
   done
   echo "APP NA PORTA $1 NAO SUBIU"; exit 15
 }
+# O SeedDemonstracao é CommandLineRunner: roda depois de o Tomcat aceitar conexões, então o health
+# responde antes de o seed terminar. Espera a linha final do seed no log da aplicação.
+esperar_seed() {  # nome
+  local log="$SAIDA/$1-app.log"
+  for _ in $(seq 1 120); do
+    grep -q "Demonstracao da banca nao semeada" "$log" && { echo "SEED FALHOU: $1"; exit 15; }
+    grep -Eq "Demonstracao da banca (ja )?semeada" "$log" && return 0
+    sleep 5
+  done
+  echo "SEED NAO TERMINOU: $1"; exit 15
+}
 
 subir base "$MAIN_WT" 8452 agroconia_452_base
 subir correcao "$CORR_WT" 8453 agroconia_452_correcao
 esperar 8452
 esperar 8453
+esperar_seed base
+esperar_seed correcao
 
 for db in agroconia_452_base agroconia_452_correcao; do
   docker exec agrocontabil-postgres sh -c \
@@ -104,6 +119,9 @@ paridade() {
       from nota_fiscal group by status, origem
     union all select 'guias ' || status || ' ' || to_char(data_vencimento,'YYYY-MM'), count(*) || ' ' || sum(valor)
       from guias_fiscais group by status, to_char(data_vencimento,'YYYY-MM')
+    union all select 'apuracao ' || periodo || ' ' || status,
+        count(*) || ' ' || sum(saldo_ibs) || ' ' || sum(saldo_cbs) || ' ' || sum(total_notas)
+      from apuracao_mensal group by periodo, status
     order by 1"
 }
 paridade agroconia_452_base > "$SAIDA/paridade-base.txt"

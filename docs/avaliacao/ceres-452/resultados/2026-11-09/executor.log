@@ -1,4 +1,4 @@
-Conjunto ceres-452-v1 (7f1b2bca3087), modelo qwen3:4b-instruct (0edcdef34593), braços: base=8e086421cc08, correcao=22cd4cd020b8
+Conjunto ceres-452-v1 (7f1b2bca3087), modelo qwen3:4b-instruct (0edcdef34593), braÃ§os: base=8e086421cc08, correcao=22cd4cd020b8
 [base] aquecimento r0 t1 HTTP 200 DADOS 115.0s
 [base] aquecimento r0 t1 HTTP 200 LEGISLACAO 34.0s
 [correcao] aquecimento r0 t1 HTTP 200 DADOS 18.5s

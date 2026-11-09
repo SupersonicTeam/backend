@@ -14,15 +14,21 @@ Regra aplicada exatamente como gravada em `../../regra-de-decisao.md`, sobre o c
 - A correção saiu de `da99dbb`. De `da99dbb` para `8e08642` só entraram docs, testes e CI (o
   PR #458), sem código da Ceres. Em `src/main`, a correção muda só `PeriodoDaPergunta` e
   `RotaDados`.
-- Data de referência 2026-11-09, das 14h17 às 15h57 (Brasília); modelo `qwen3:4b-instruct`
+- Data de referência 2026-11-09; chamadas das 14h19min53s às 15h57min03s (Brasília), pelo campo
+  `horario` do JSONL; modelo `qwen3:4b-instruct`
   (digest `0edcdef34593…`, o mesmo nos dois braços), Ollama e PostgreSQL dos containers originais,
   com a trava do Ollama local.
 - Execução: 3 repetições, ordem alternada (base primeiro nas repetições 1 e 3), aquecimento do
   modelo e duas perguntas de aquecimento por braço.
 - Bancos: um por braço no `agrocontabil-postgres`, criados do zero, com o seed da demonstração
   (profile `dev`). Os 8.304 trechos de `legislacao_trecho` foram copiados do banco `agrocontabil`
-  depois do Liquibase. A paridade bateu antes da primeira pergunta (`paridade-*.txt`: trechos,
-  notas e guias por status e mês, com as somas).
+  depois do Liquibase. A paridade bateu antes da primeira pergunta (`paridade-base.txt` e
+  `paridade-correcao.txt`: trechos, notas e guias por status e mês, com as somas), às 14h19min35s,
+  depois do fim do seed nos dois braços (14h18min26s e 14h19min09s, pelo log das aplicações).
+- A paridade da `apuracao_mensal` (que o `consultarApuracao` lê) não estava no roteiro da rodada e
+  foi conferida **depois** dela, nos mesmos bancos, com as aplicações paradas:
+  `paridade-apuracao-*.txt`, iguais (6 períodos). O roteiro passou a conferi-la antes da rodada, e
+  a esperar a linha final do seed no log, não só o health (o seed roda depois de o Tomcat subir).
 - Conta `carlos.rossi@example.com`. A senha foi gerada no processo e passada só por variável de
   ambiente, sem ir para arquivo nem para a saída. A cota semanal da Ceres ficou alta e igual nos
   dois braços (`AI_COTA_CREDITOS_PRODUTOR`), porque 59 × 3 perguntas passam da cota padrão.
@@ -90,5 +96,26 @@ O texto abaixo é interpretação das respostas gravadas. Não altera a regra ne
 - `resumo-base.json` e `resumo-correcao.json`: saída de `pontuar.py pontuar`.
 - `decisao.json`: saída de `pontuar.py comparar`.
 - `paridade-base.txt` e `paridade-correcao.txt`: conferência dos dois bancos antes da rodada.
-- `executor.log`: progresso do executor. Os logs das aplicações e dos builds ficaram fora: são
-  grandes e não entram na conta.
+- `executor.log`: progresso do executor. Saiu do console do Windows em cp1252 e foi convertido
+  para UTF-8 sem outra mudança; o roteiro agora exporta `PYTHONUTF8=1`. Os logs das aplicações e
+  dos builds ficaram fora: são grandes e não entram na conta.
+- `paridade-apuracao-base.txt` e `paridade-apuracao-correcao.txt`: a apuração dos dois bancos,
+  conferida depois da rodada.
+
+## Como refazer a pontuação
+
+Da raiz do repositório:
+
+```bash
+python docs/avaliacao/ceres-452/pontuar.py pontuar --perguntas docs/avaliacao/treino/perguntas-ceres-452.json --execucoes docs/avaliacao/ceres-452/resultados/2026-11-09/base.jsonl --saida resumo-base.json
+```
+
+```bash
+python docs/avaliacao/ceres-452/pontuar.py pontuar --perguntas docs/avaliacao/treino/perguntas-ceres-452.json --execucoes docs/avaliacao/ceres-452/resultados/2026-11-09/correcao.jsonl --saida resumo-correcao.json
+```
+
+```bash
+python docs/avaliacao/ceres-452/pontuar.py comparar --base resumo-base.json --correcao resumo-correcao.json
+```
+
+O resultado tem o mesmo conteúdo de `resumo-*.json` e `decisao.json` (conferido antes do PR).
