@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,6 +18,7 @@ import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaDaCarteira;
 import br.com.agrocontabil.repository.NotaFiscalCarteiraRepository;
@@ -130,25 +132,25 @@ class CarteiraNotasServiceTest {
   @DisplayName("a lista leva origem e fornecedor: compra IMPORTADA com emitente, nota PROPRIA sem")
   void origemEEmitenteNaLista() {
     when(membroProvider.membro()).thenReturn(membro);
-    NotaDaCarteira compra = linha(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA,
+    NotaDaCarteira compra = linha(OrigemNotaFiscal.IMPORTADA,
         "Posto Rota 163");
-    NotaDaCarteira propria = linha(br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA, null);
+    NotaDaCarteira propria = linha(OrigemNotaFiscal.PROPRIA, null);
     when(carteiraRepository.listar(any(), any()))
         .thenReturn(new PageImpl<>(List.of(compra, propria)));
 
     var pagina = service.listarDaCarteira(filtro(null, null), PageRequest.of(0, 20));
 
     assertThat(pagina.getContent()).extracting("origem", "emitenteNome").containsExactly(
-        org.assertj.core.groups.Tuple.tuple(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA,
+        tuple(OrigemNotaFiscal.IMPORTADA,
             "Posto Rota 163"),
-        org.assertj.core.groups.Tuple.tuple(br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA,
+        tuple(OrigemNotaFiscal.PROPRIA,
             null));
   }
 
-  private static NotaDaCarteira linha(br.com.agrocontabil.model.OrigemNotaFiscal origem,
+  private static NotaDaCarteira linha(OrigemNotaFiscal origem,
       String emitente) {
     return new NotaDaCarteira(UUID.randomUUID(), UUID.randomUUID(), "Fazenda A", 1L, 1,
-        "Venda", br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA, null, null, "Dest",
+        "Venda", StatusNotaFiscal.AUTORIZADA, null, null, "Dest",
         origem, emitente, null, null, null, null, null, null, null);
   }
 

@@ -10,7 +10,8 @@ import java.util.UUID;
 /**
  * Linha da listagem de notas da carteira do escritório (issue #341): só o que a lista mostra, lido
  * por projeção. Sem os itens e sem o XML (a coluna {@code xml_gerado} é grande e a lista nunca a
- * usa), e sem o documento do produtor nem o do destinatário.
+ * usa), e sem o documento do produtor, do destinatário e do emitente (minimização, #451: o emitente
+ * da compra pode ser pessoa física; o documento só vem no detalhe da nota).
  *
  * @param id                 nota
  * @param produtorId         dono da nota
