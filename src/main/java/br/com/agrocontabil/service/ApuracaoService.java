@@ -383,7 +383,6 @@ public class ApuracaoService {
     ApuracaoMensal apuracao = apuracaoRepository
         .findByProdutorIdAndPeriodoForUpdate(produtorId, mes.toString())
         .orElseThrow(() -> new ResourceNotFoundException("Apuracao", mes));
-    UUID id = apuracao.getId();
 
     if (apuracao.getStatus() != StatusApuracao.FECHADO) {
       throw new ApuracaoNaoReabrivelException(apuracao.getStatus());
