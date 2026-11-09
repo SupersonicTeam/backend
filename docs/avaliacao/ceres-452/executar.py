@@ -19,8 +19,13 @@ gravada com `falha_tecnica: true`; o modelo é reaquecido e a chamada se repete 
 `--tentativas` vezes. 429 de cota da Ceres (LIMITE_USO_ASSISTENTE) interrompe a rodada: esperar
 a semana virar não é opção.
 
+O conjunto congelado vem de `--conjunto` (obrigatório: v1 `perguntas-ceres-452.json`, v2
+`perguntas-ceres-452-v2.json`, os dois em docs/avaliacao/treino/); o executor confere o hash do
+`.sha256` ao lado antes da primeira chamada.
+
 Exemplo:
   CERES_SENHA=... python executar.py --email produtor@example.com --saida-dir rodada \\
+      --conjunto ../treino/perguntas-ceres-452-v2.json \\
       --braco base http://localhost:8452 ../../../../main-worktree \\
       --braco correcao http://localhost:8453 ../../../../correcao-worktree
 """
@@ -40,7 +45,6 @@ import urllib.request
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
-CONJUNTO = AQUI.parent / "treino" / "perguntas-ceres-452.json"
 # Brasília não tem horário de verão desde 2019: o fuso fixo dispensa o tzdata no Windows.
 BRASILIA = dt.timezone(dt.timedelta(hours=-3))
 # Fora do conjunto e sem período relativo: só aquecem o modelo, o JIT e os caches de cada braço.
@@ -219,6 +223,8 @@ def main(argv: list[str] | None = None) -> int:
                             metavar=("NOME", "URL", "PASTA_OU_SHA"),
                             help="repita para os dois braços, a base primeiro")
     analisador.add_argument("--email", required=True)
+    analisador.add_argument("--conjunto", type=Path, required=True,
+                            help="conjunto congelado (JSON com o .sha256 ao lado)")
     analisador.add_argument("--saida-dir", type=Path, required=True)
     analisador.add_argument("--repeticoes", type=int, default=3)
     analisador.add_argument("--tentativas", type=int, default=3,
@@ -236,7 +242,9 @@ def main(argv: list[str] | None = None) -> int:
     nomes = [b[0] for b in args.braco]
     if len(set(nomes)) != len(nomes):
         raise SystemExit("Nomes de braço repetidos")
-    conjunto = pontuar.carregar_conjunto(CONJUNTO)
+    if not args.conjunto.is_file():
+        raise SystemExit(f"Conjunto não encontrado: {args.conjunto}")
+    conjunto = pontuar.carregar_conjunto(args.conjunto)
     pontuar.validar_conjunto(conjunto, agora_brasilia().date())
     perguntas = conjunto["perguntas"]
     if args.ids:

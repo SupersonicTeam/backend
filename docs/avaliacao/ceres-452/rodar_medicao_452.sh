@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Rodada da medição da #452: base (main) x correção, local, profile dev, seed da demonstração.
 #
-# Uso: rodar_medicao_452.sh <worktree da main> <worktree da correção> <pasta de saída>
+# Uso: rodar_medicao_452.sh <worktree da main> <worktree da correção> <pasta de saída> <conjunto>
+#
+# <conjunto> é o caminho do conjunto congelado relativo à raiz do worktree da main, por exemplo
+# docs/avaliacao/treino/perguntas-ceres-452-v2.json (a regra de cada conjunto diz qual usar).
 #
 # - Pega a trava do Ollama local (mkdir) e recusa com outra JVM da Ceres no ar.
 # - Um banco por braço no container agrocontabil-postgres (agroconia_452_base e
@@ -9,17 +12,19 @@
 #   banco agrocontabil depois do Liquibase.
 # - A senha das contas semeadas é gerada aqui, fica só na memória do processo e vai para os filhos
 #   por SEED_SENHA e CERES_SENHA. Nunca em arquivo nem na saída.
-# - Cota da Ceres alta nos dois braços (AI_COTA_CREDITOS_PRODUTOR): 59 x 3 perguntas passam da
-#   cota semanal padrão; a mesma configuração nos dois braços.
+# - Cota da Ceres alta nos dois braços (AI_COTA_CREDITOS_PRODUTOR): as perguntas do conjunto x 3
+#   repetições passam da cota semanal padrão; a mesma configuração nos dois braços.
 set -u
 
+[ $# -eq 4 ] || { echo "Uso: $0 <worktree da main> <worktree da correcao> <saida> <conjunto>"; exit 1; }
 MAIN_WT=$(cd "$1" && pwd) || exit 1
 CORR_WT=$(cd "$2" && pwd) || exit 1
+CONJUNTO="$MAIN_WT/$4"
+[ -f "$CONJUNTO" ] && [ -f "$CONJUNTO.sha256" ] || { echo "CONJUNTO OU .sha256 AUSENTE: $CONJUNTO"; exit 13; }
 mkdir -p "$3" || exit 1
 SAIDA=$(cd "$3" && pwd) || exit 1
 TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
-CONJUNTO="$MAIN_WT/docs/avaliacao/treino/perguntas-ceres-452.json"
 EMAIL=carlos.rossi@example.com
 PIDS=()
 
@@ -134,7 +139,7 @@ fi
 python "$MAIN_WT/docs/avaliacao/ceres-452/executar.py" \
   --braco base http://localhost:8452 "$MAIN_WT" \
   --braco correcao http://localhost:8453 "$CORR_WT" \
-  --email "$EMAIL" --saida-dir "$SAIDA" 2>&1 | tee "$SAIDA/executor.log"
+  --email "$EMAIL" --conjunto "$CONJUNTO" --saida-dir "$SAIDA" 2>&1 | tee "$SAIDA/executor.log"
 STATUS=${PIPESTATUS[0]}
 [ "$STATUS" = 0 ] || { echo "EXECUTOR SAIU COM $STATUS"; exit 18; }
 

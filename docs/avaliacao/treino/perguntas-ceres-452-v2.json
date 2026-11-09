@@ -1,0 +1,429 @@
+{
+  "versao": "ceres-452-v2",
+  "escrito_em": "2026-11-09",
+  "descricao": "Medição de uso único da #452 (período relativo nas perguntas de dados da Ceres), conjunto v2. Escrito por uma sessão que não leu o conjunto v1, os resultados da rodada 1, as issues #442, #443 e #452, os PRs #447, #449, #450, #459 e #462, o branch da correção, o gabarito, o benchmark nem o código que resolve o período e escolhe a rota. Não serve para ajustar a Ceres. Regra: docs/avaliacao/ceres-452/regra-de-decisao-v2.md; gramática de 'esperado' no topo de docs/avaliacao/ceres-452/pontuar.py.",
+  "conta": "carlos.rossi@example.com (seed da demonstração)",
+  "perguntas": [
+    {
+      "id": "v2-g1-01",
+      "grupo": "mes_seguinte",
+      "pergunta": "No mês que vem vence algum imposto meu?",
+      "criterio": "vencimentosDoMes do mês seguinte; nenhuma fonte do mês corrente, de proximosVencimentos, guiasEmAtraso, listarAlertas ou resumoDoProdutor; nenhuma data do mês corrente no texto.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes", "consultarApuracao", "totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "mes": "mes:0"},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:1:inicio"}, "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "v2-g1-02",
+      "grupo": "mes_seguinte",
+      "pergunta": "Quanto vou ter de guia pra pagar no próximo mês?",
+      "criterio": "vencimentosDoMes do mês seguinte; nenhuma fonte do mês corrente, de proximosVencimentos, guiasEmAtraso, listarAlertas ou resumoDoProdutor; nenhuma data do mês corrente no texto.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes", "consultarApuracao", "totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "mes": "mes:0"},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:1:inicio"}, "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "v2-g1-03",
+      "grupo": "mes_seguinte",
+      "pergunta": "Preciso deixar dinheiro separado pras guias do mês seguinte? Quanto?",
+      "criterio": "vencimentosDoMes do mês seguinte; nenhuma fonte do mês corrente, de proximosVencimentos, guiasEmAtraso, listarAlertas ou resumoDoProdutor; nenhuma data do mês corrente no texto.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes", "consultarApuracao", "totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "mes": "mes:0"},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:1:inicio"}, "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "v2-g1-04",
+      "grupo": "mes_seguinte",
+      "pergunta": "Me passa o que vence de guia mês que vem.",
+      "criterio": "vencimentosDoMes do mês seguinte; nenhuma fonte do mês corrente, de proximosVencimentos, guiasEmAtraso, listarAlertas ou resumoDoProdutor; nenhuma data do mês corrente no texto.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes", "consultarApuracao", "totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "mes": "mes:0"},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:1:inicio"}, "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "v2-g1-05",
+      "grupo": "mes_seguinte",
+      "pergunta": "O Funrural que vence no mês que entra já está lançado?",
+      "criterio": "\"Mês que entra\" é o mês seguinte: vencimentosDoMes do mês seguinte; nenhuma fonte do mês corrente, de proximosVencimentos, guiasEmAtraso, listarAlertas ou resumoDoProdutor; nenhuma data do mês corrente no texto.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes", "consultarApuracao", "totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "mes": "mes:0"},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:1:inicio"}, "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "v2-g1-06",
+      "grupo": "mes_seguinte",
+      "pergunta": "Pensando já no próximo mês: tenho alguma guia de imposto programada?",
+      "criterio": "vencimentosDoMes do mês seguinte; nenhuma fonte do mês corrente, de proximosVencimentos, guiasEmAtraso, listarAlertas ou resumoDoProdutor; nenhuma data do mês corrente no texto.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["vencimentosDoMes"], "mes": "mes:1"}]],
+        "proibidas": [
+          {"funcoes": ["vencimentosDoMes", "consultarApuracao", "totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "mes": "mes:0"},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:1:inicio"}, "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}},
+          {"funcoes": ["proximosVencimentos", "guiasEmAtraso", "listarAlertas", "resumoDoProdutor"]}
+        ],
+        "datas_proibidas": {"de": "mes:0:inicio", "ate": "mes:0:fim"}
+      }
+    },
+    {
+      "id": "v2-g2-01",
+      "grupo": "mes_corrente",
+      "pergunta": "Este mês ainda tem alguma guia pra vencer?",
+      "criterio": "vencimentosDoMes do mês corrente, ou proximosVencimentos com a janela até o último dia do mês; nenhuma data depois do fim do mês no texto.",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "ano:20:fim"}
+      }
+    },
+    {
+      "id": "v2-g2-02",
+      "grupo": "mes_corrente",
+      "pergunta": "Quanto de guia eu tenho que quitar até o fim do mês?",
+      "criterio": "\"Até o fim do mês\" é o mês corrente: vencimentosDoMes do mês corrente, ou proximosVencimentos com a janela até o último dia do mês; nenhuma data depois do fim do mês no texto.",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "ano:20:fim"}
+      }
+    },
+    {
+      "id": "v2-g2-03",
+      "grupo": "mes_corrente",
+      "pergunta": "Me diz o total de imposto deste mês, contando o que está atrasado.",
+      "criterio": "vencimentosDoMes do mês corrente (que soma o atrasado e o que vence até o fim do mês), ou proximosVencimentos com a janela até o último dia do mês; nenhuma data depois do fim do mês no texto.",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "ano:20:fim"}
+      }
+    },
+    {
+      "id": "v2-g2-04",
+      "grupo": "mes_corrente",
+      "pergunta": "Quais vencimentos de guia eu tenho dentro deste mês?",
+      "criterio": "vencimentosDoMes do mês corrente, ou proximosVencimentos com a janela até o último dia do mês; nenhuma data depois do fim do mês no texto.",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "ano:20:fim"}
+      }
+    },
+    {
+      "id": "v2-g2-05",
+      "grupo": "mes_corrente",
+      "pergunta": "Tô fechando o caixa do mês: quais guias caem ainda este mês?",
+      "criterio": "vencimentosDoMes do mês corrente, ou proximosVencimentos com a janela até o último dia do mês; nenhuma data depois do fim do mês no texto.",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "ano:20:fim"}
+      }
+    },
+    {
+      "id": "v2-g2-06",
+      "grupo": "mes_corrente",
+      "pergunta": "Neste mês em que a gente está, sobra alguma conta de imposto pra pagar?",
+      "criterio": "vencimentosDoMes do mês corrente, ou proximosVencimentos com a janela até o último dia do mês; nenhuma data depois do fim do mês no texto.",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}],
+          [{"funcoes": ["proximosVencimentos"], "dias_ate": "mes:0:fim"}]
+        ],
+        "datas_proibidas": {"de": "mes:1:inicio", "ate": "ano:20:fim"}
+      }
+    },
+    {
+      "id": "v2-g3-01",
+      "grupo": "trimestre",
+      "pergunta": "Quanto rendeu a venda de algodão no último trimestre?",
+      "criterio": "totalVendasPorProduto de algodão (nome ou NCM 5201) do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["algodao", "5201"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g3-02",
+      "grupo": "trimestre",
+      "pergunta": "Nos últimos três meses, quanto gastei com diesel?",
+      "criterio": "totalComprasPorInsumo de diesel (nome ou NCM 2710) do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["diesel", "2710"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g3-03",
+      "grupo": "trimestre",
+      "pergunta": "Qual foi o saldo da apuração de IBS e CBS nos últimos 3 meses?",
+      "criterio": "As três consultarApuracao dos meses fechados antes do corrente (em 09/11/2026: 2026-08, 2026-09 e 2026-10), sem consultarApuracao de outro mês.",
+      "esperado": {
+        "alternativas": [[
+          {"funcoes": ["consultarApuracao"], "mes": "mes:-3"},
+          {"funcoes": ["consultarApuracao"], "mes": "mes:-2"},
+          {"funcoes": ["consultarApuracao"], "mes": "mes:-1"}
+        ]],
+        "proibidas": [{"funcoes": ["consultarApuracao"], "mes_fora_de": ["mes:-3", "mes:-2", "mes:-1"]}]
+      }
+    },
+    {
+      "id": "v2-g3-04",
+      "grupo": "trimestre",
+      "pergunta": "Quanto de Funrural ficou retido nas minhas vendas do último trimestre?",
+      "criterio": "consultarRetencoes do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarRetencoes"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g3-05",
+      "grupo": "trimestre",
+      "pergunta": "Quanto acumulei de crédito de IBS e CBS nos últimos 3 meses?",
+      "criterio": "consultarCreditos do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g3-06",
+      "grupo": "trimestre",
+      "pergunta": "Somando tudo, quanto eu faturei com vendas nos últimos três meses?",
+      "criterio": "listarNotas de SAIDA do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-01",
+      "grupo": "aberto",
+      "pergunta": "Desde julho, quanto já comprei de óleo diesel?",
+      "criterio": "totalComprasPorInsumo de diesel (nome ou NCM 2710) com início em 1º de julho (o julho mais recente que não passa do mês corrente) e fim hoje, ontem ou no último dia do mês corrente.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["diesel", "2710"], "inicio": ["nomeado:7:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-02",
+      "grupo": "aberto",
+      "pergunta": "A partir de agosto, quanto juntei de crédito de IBS e CBS?",
+      "criterio": "consultarCreditos com início em 1º de agosto (o mais recente que não passa do mês corrente) e fim hoje, ontem ou no último dia do mês corrente.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["nomeado:8:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-03",
+      "grupo": "aberto",
+      "pergunta": "De setembro pra cá, quanto deu o total das minhas vendas?",
+      "criterio": "listarNotas de SAIDA com início em 1º de setembro (o mais recente que não passa do mês corrente) e fim hoje, ontem ou no último dia do mês corrente.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["nomeado:9:inicio"], "fim": ["hoje", "ontem", "mes:0:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-04",
+      "grupo": "aberto",
+      "pergunta": "Quanto eu tinha vendido de soja até o fim de junho?",
+      "criterio": "totalVendasPorProduto de soja (nome ou NCM 1201) com fim em 30 de junho (o junho mais recente que não passa do mês corrente) e início aberto, antes de 1º de junho (por exemplo, 1º de janeiro); junho sozinho não vale.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "inicio": {"antes_de": "nomeado:6:inicio"}, "fim": ["nomeado:6:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-05",
+      "grupo": "aberto",
+      "pergunta": "Antes de agosto, quanto de milho eu já tinha vendido?",
+      "criterio": "totalVendasPorProduto de milho (nome ou NCM 1005) com fim em 31 de julho (o dia antes de agosto, o agosto mais recente que não passa do mês corrente) e início aberto, antes de 1º de julho (por exemplo, 1º de janeiro); julho sozinho não vale.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["milho", "1005"], "inicio": {"antes_de": "nomeado:7:inicio"}, "fim": ["nomeado:8:inicio-1d"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-06",
+      "grupo": "aberto",
+      "pergunta": "Do mês de julho pra trás, quanto foi retido de Funrural nas vendas?",
+      "criterio": "consultarRetencoes com fim em 31 de julho (o julho mais recente que não passa do mês corrente) e início aberto, antes de 1º de julho (por exemplo, 1º de janeiro); julho sozinho não vale.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarRetencoes"], "inicio": {"antes_de": "nomeado:7:inicio"}, "fim": ["nomeado:7:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-g4-07",
+      "grupo": "aberto",
+      "pergunta": "Na safra 25/26, quanto vendi de milho?",
+      "criterio": "totalVendasPorProduto de milho (nome ou NCM 1005) na safra 2025/26: início de 01/07/2025 a 01/10/2025 e fim de 30/06/2026 a hoje; ou, na rota de dados e sem fonte com período, uma pergunta de volta sobre o período.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["milho", "1005"], "inicio": {"entre": ["2025-07-01", "2025-10-01"]}, "fim": {"entre": ["2026-06-30", "hoje"]}}]],
+        "esclarecimento": true
+      }
+    },
+    {
+      "id": "v2-g4-08",
+      "grupo": "aberto",
+      "pergunta": "Gastei mais com diesel em maio ou em outubro?",
+      "criterio": "Dois períodos: totalComprasPorInsumo de diesel (nome ou NCM 2710) de maio inteiro e de outubro inteiro (os mais recentes que não passam do mês corrente); as duas fontes.",
+      "esperado": {
+        "alternativas": [[
+          {"funcoes": ["totalComprasPorInsumo"], "produto": ["diesel", "2710"], "mes": "nomeado:5"},
+          {"funcoes": ["totalComprasPorInsumo"], "produto": ["diesel", "2710"], "mes": "nomeado:10"}
+        ]]
+      }
+    },
+    {
+      "id": "v2-g4-09",
+      "grupo": "aberto",
+      "pergunta": "Pela LC 214, o crédito de IBS que eu não usar num mês pode ser aproveitado no mês seguinte?",
+      "criterio": "Pergunta de regra: rota LEGISLACAO e nenhuma fonte de dados do produtor (o desfecho da lei não importa).",
+      "esperado": {"regra": true, "rotas": ["LEGISLACAO"]}
+    },
+    {
+      "id": "v2-g4-10",
+      "grupo": "aberto",
+      "pergunta": "A lei manda pagar a CBS apurada até que dia do mês seguinte?",
+      "criterio": "Pergunta de regra: rota LEGISLACAO e nenhuma fonte de dados do produtor (o desfecho da lei não importa).",
+      "esperado": {"regra": true, "rotas": ["LEGISLACAO"]}
+    },
+    {
+      "id": "v2-c-01",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto comprei de fungicida no mês passado?",
+      "criterio": "Mês passado: totalComprasPorInsumo de fungicida (nome ou NCM 3808.92) do mês anterior inteiro.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["fungicida", "380892"], "mes": "mes:-1"}]]
+      }
+    },
+    {
+      "id": "v2-c-02",
+      "grupo": "controle_dados",
+      "pergunta": "Como fechou a apuração de IBS e CBS do mês retrasado?",
+      "criterio": "Mês retrasado: consultarApuracao de dois meses antes do corrente.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarApuracao"], "mes": "mes:-2"}]]
+      }
+    },
+    {
+      "id": "v2-c-03",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto entrou de venda de algodão em setembro?",
+      "criterio": "Mês nomeado: totalVendasPorProduto de algodão (nome ou NCM 5201) de setembro inteiro (o mais recente que não passa do mês corrente).",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["algodao", "5201"], "mes": "nomeado:9"}]]
+      }
+    },
+    {
+      "id": "v2-c-04",
+      "grupo": "controle_dados",
+      "pergunta": "Teve Funrural retido nas vendas de julho?",
+      "criterio": "Mês nomeado: consultarRetencoes de julho inteiro (o mais recente que não passa do mês corrente).",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarRetencoes"], "mes": "nomeado:7"}]]
+      }
+    },
+    {
+      "id": "v2-c-05",
+      "grupo": "controle_dados",
+      "pergunta": "Neste ano, quanto já vendi de soja?",
+      "criterio": "Este ano: totalVendasPorProduto de soja (nome ou NCM 1201) de 1º de janeiro do ano corrente até hoje, ontem ou 31 de dezembro.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja", "1201"], "inicio": ["ano:0:inicio"], "fim": ["hoje", "ontem", "ano:0:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-c-06",
+      "grupo": "controle_dados",
+      "pergunta": "Quanto eu tive de crédito de IBS e CBS no ano passado?",
+      "criterio": "Ano passado: consultarCreditos de 1º de janeiro a 31 de dezembro do ano anterior.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["ano:-1:inicio"], "fim": ["ano:-1:fim"]}]]
+      }
+    },
+    {
+      "id": "v2-c-07",
+      "grupo": "controle_dados",
+      "pergunta": "Esqueci de pagar alguma guia que já venceu?",
+      "criterio": "Sem período: guiasEmAtraso, resumoDoProdutor ou vencimentosDoMes do mês corrente (que soma as guias em atraso).",
+      "esperado": {
+        "alternativas": [
+          [{"funcoes": ["guiasEmAtraso"]}],
+          [{"funcoes": ["resumoDoProdutor"]}],
+          [{"funcoes": ["vencimentosDoMes"], "mes": "mes:0"}]
+        ]
+      }
+    },
+    {
+      "id": "v2-c-08",
+      "grupo": "controle_dados",
+      "pergunta": "Me mostra as notas de venda mais recentes.",
+      "criterio": "Sem período: listarNotas de SAIDA, qualquer período.",
+      "esperado": {
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA"}]]
+      }
+    },
+    {
+      "id": "v2-c-09",
+      "grupo": "controle_lei",
+      "pergunta": "Como funciona o split payment do IBS e da CBS pela LC 214?",
+      "criterio": "Lei: rota LEGISLACAO, resposta não descartada e alguma citação da LC 214/2025.",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": ["214/2025", "lc 214", "complementar 214"]}
+    },
+    {
+      "id": "v2-c-10",
+      "grupo": "controle_lei",
+      "pergunta": "Qual artigo da lei complementar da reforma reduz a alíquota dos insumos agropecuários?",
+      "criterio": "Lei: rota LEGISLACAO, resposta não descartada e alguma citação da LC 214/2025.",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": ["214/2025", "lc 214", "complementar 214"]}
+    },
+    {
+      "id": "v2-c-11",
+      "grupo": "controle_fora",
+      "pergunta": "Como vai estar o tempo em Sorriso nos próximos dias?",
+      "criterio": "Fora do escopo: rota FORA_DE_ESCOPO.",
+      "esperado": {"rotas": ["FORA_DE_ESCOPO"]}
+    },
+    {
+      "id": "v2-c-12",
+      "grupo": "controle_fora",
+      "pergunta": "Qual variedade de algodão rende mais no cerrado?",
+      "criterio": "Fora do escopo: rota FORA_DE_ESCOPO.",
+      "esperado": {"rotas": ["FORA_DE_ESCOPO"]}
+    }
+  ]
+}
