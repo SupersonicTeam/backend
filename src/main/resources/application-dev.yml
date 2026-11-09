@@ -51,6 +51,10 @@ app:
   pendencias:
     antivirus:
       modo: ${ANTIVIRUS_MODO:SEM_VERIFICACAO}
+  # Endereco proprio do escritorio em dev (#464): ruraloeste.localhost, que o navegador resolve
+  # para o loopback sem mexer no arquivo de hosts.
+  escritorio:
+    dominio-base: ${APP_ESCRITORIO_DOMINIO_BASE:localhost}
   # Senha das contas semeadas (#206). Vazia = seed sem credencial; precisa passar na politica.
   seed:
     senha: ${SEED_SENHA:}

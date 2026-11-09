@@ -106,5 +106,7 @@ SELECT tabela, linhas FROM (
   UNION ALL SELECT 26, 'atencao_titular_anonimizado',
       (SELECT COUNT(*) FROM produtores p WHERE p.nome_completo = 'Titular excluido (LGPD)'
           AND NOT EXISTS (SELECT 1 FROM carteira_vinculo v WHERE v.produtor_id = p.id))
+  UNION ALL SELECT 27, 'escritorio_slug_anterior',
+      (SELECT COUNT(*) FROM escritorio_slug_anterior WHERE escritorio_id IN (SELECT id FROM esc))
 ) contagem
 ORDER BY ordem;

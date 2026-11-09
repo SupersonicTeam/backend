@@ -221,6 +221,49 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0059: slug unico do escritorio e carencia que sobrevive ao escritorio apagado (#464)")
+  void changeSet0059SlugDoEscritorio() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'escritorio'"
+            + " AND column_name IN ('slug', 'slug_alterado_em') ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("slug", "character varying", "YES", 32),
+            tuple("slug_alterado_em", "timestamp with time zone", "YES", null));
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'escritorio_slug_anterior' ORDER BY column_name", String.class))
+        .containsExactly("escritorio_id", "liberado_em", "slug");
+    assertThat(jdbc.queryForObject("SELECT delete_rule FROM"
+        + " information_schema.referential_constraints"
+        + " WHERE constraint_name = 'fk_escritorio_slug_anterior_escritorio'", String.class))
+        .isEqualTo("SET NULL");
+
+    String primeiro = UUID.randomUUID().toString();
+    String segundo = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome, slug) VALUES (?::uuid, 'Escritorio 0059',"
+        + " 'slug0059')", primeiro);
+    // O indice unico barra o mesmo slug em dois escritorios; nulo pode repetir.
+    assertThatThrownBy(() -> jdbc.update("INSERT INTO escritorio (id, nome, slug)"
+        + " VALUES (?::uuid, 'Outro 0059', 'slug0059')", segundo))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Outro 0059')", segundo);
+
+    // A carencia sobrevive ao escritorio apagado, sem ele (SET NULL, nunca CASCADE).
+    jdbc.update("INSERT INTO escritorio_slug_anterior (slug, escritorio_id, liberado_em)"
+        + " VALUES ('antigo0059', ?::uuid, now() + interval '90 days')", primeiro);
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", primeiro);
+    assertThat(jdbc.queryForList("SELECT escritorio_id FROM escritorio_slug_anterior"
+        + " WHERE slug = 'antigo0059'", UUID.class)).containsExactly((UUID) null);
+    jdbc.update("DELETE FROM escritorio_slug_anterior WHERE slug = 'antigo0059'");
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", segundo);
+  }
+
+  @Test
   @DisplayName("changeSet 0058: quem encerrou o vinculo e o motivo, colunas anulaveis; linha antiga fica sem registro (#402)")
   void changeSet0058EncerramentoDoVinculo() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

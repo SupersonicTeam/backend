@@ -5,11 +5,13 @@ import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.Sensivel;
 import br.com.agrocontabil.security.CookieRefresh;
+import br.com.agrocontabil.validation.SlugEscritorio;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -581,11 +583,21 @@ public class GlobalExceptionHandler {
     return lastDot >= 0 ? path.substring(lastDot + 1) : path;
   }
 
+  /**
+   * Constraints com código próprio no envelope, no lugar do {@code VALIDATION_ERROR} genérico: o
+   * cliente trata o caso sem ler a mensagem. A chave é o nome simples da anotação (o
+   * {@code FieldError.getCode()} do Spring).
+   */
+  private static final Map<String, ErrorCode> CODIGO_POR_CONSTRAINT = Map.of(
+      SlugEscritorio.class.getSimpleName(), ErrorCode.SLUG_INVALIDO);
+
   private ErrorDetail toErrorDetail(FieldError error, Class<?> tipoAlvo) {
     String rejected = campoSensivel(tipoAlvo, error.getField())
         ? null : resumirValorRejeitado(error.getRejectedValue());
+    ErrorCode codigo = error.getCode() == null ? ErrorCode.VALIDATION_ERROR
+        : CODIGO_POR_CONSTRAINT.getOrDefault(error.getCode(), ErrorCode.VALIDATION_ERROR);
     return new ErrorDetail(
-        ErrorCode.VALIDATION_ERROR.code(),
+        codigo.code(),
         error.getField(),
         error.getDefaultMessage(),
         null,

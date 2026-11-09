@@ -293,6 +293,13 @@ app:
         at-least-for: PT5M
   # Equipe do escritorio (issue #228): convite com token de uso unico no fragmento do link.
   escritorio:
+    # Endereco proprio do escritorio, {slug}.{dominio-base} (issue #464): o subdominio identifica o
+    # escritorio e nunca autoriza nada. Uma gravacao de slug por intervalo; o slug que sai fica em
+    # carencia (ninguem o registra). Em dev o dominio base e localhost (ruraloeste.localhost).
+    dominio-base: ${APP_ESCRITORIO_DOMINIO_BASE:agroconia.com.br}
+    endereco:
+      intervalo-troca: P30D
+      carencia: P90D
     convite:
       validade: ${ESCRITORIO_CONVITE_VALIDADE:P7D}
       url-frontend: ${ESCRITORIO_CONVITE_URL_FRONTEND:http://localhost:4200/equipe/convite}
@@ -315,7 +322,7 @@ app:
   lgpd:
     controlador: ${LGPD_CONTROLADOR:GWNext}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:contato@gwnext.com.br}
-    versao-politica: 2026-11-03
+    versao-politica: 2026-11-09
   # Autenticacao (Sprint 8).
   seguranca:
     senha:

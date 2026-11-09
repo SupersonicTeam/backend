@@ -8,6 +8,7 @@ import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.ConviteMembroRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
+import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -58,6 +59,7 @@ public class TestDatabaseCleaner {
   private final EtiquetaCarteiraRepository etiquetaRepository;
   private final ConviteMembroRepository conviteMembroRepository;
   private final EscritorioRepository escritorioRepository;
+  private final EscritorioSlugAnteriorRepository escritorioSlugAnteriorRepository;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
   private final NotaFiscalRevisaoRepository revisaoRepository;
   private final PendenciaAnexoRepository pendenciaAnexoRepository;
@@ -83,6 +85,7 @@ public class TestDatabaseCleaner {
       EtiquetaCarteiraRepository etiquetaRepository,
       ConviteMembroRepository conviteMembroRepository,
       EscritorioRepository escritorioRepository,
+      EscritorioSlugAnteriorRepository escritorioSlugAnteriorRepository,
       ObrigacaoFiscalRepository obrigacaoRepository,
       NotaFiscalRevisaoRepository revisaoRepository,
       PendenciaAnexoRepository pendenciaAnexoRepository,
@@ -105,6 +108,7 @@ public class TestDatabaseCleaner {
     this.etiquetaRepository = etiquetaRepository;
     this.conviteMembroRepository = conviteMembroRepository;
     this.escritorioRepository = escritorioRepository;
+    this.escritorioSlugAnteriorRepository = escritorioSlugAnteriorRepository;
     this.obrigacaoRepository = obrigacaoRepository;
     this.revisaoRepository = revisaoRepository;
     this.pendenciaAnexoRepository = pendenciaAnexoRepository;
@@ -151,6 +155,8 @@ public class TestDatabaseCleaner {
     contadorRepository.deleteAll();
     // Obrigacoes dos escritorios (#181); os modelos do sistema ficam (vem do script, nao do teste).
     obrigacaoRepository.apagarDosEscritorios();
+    // Carencia dos slugs (#464): sem ela, um slug de um teste ficaria bloqueado no seguinte.
+    escritorioSlugAnteriorRepository.deleteAllInBatch();
     // Escritorio (#228) depois dos contadores, que o referenciam.
     escritorioRepository.deleteAll();
     produtorRepository.deleteAll();

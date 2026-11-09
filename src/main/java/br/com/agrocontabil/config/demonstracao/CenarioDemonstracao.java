@@ -81,6 +81,12 @@ final class CenarioDemonstracao {
   static final String ESCRITORIO_NOME = "Contabilidade Rural Oeste";
   static final String ESCRITORIO_CNPJ = cnpj("483152760001");
 
+  /**
+   * Endereço próprio do escritório, {@code ruraloeste.agroconia.com.br} (issue #464). Na VPS só
+   * chega pelo reset dos dados da demonstração: o seed não toca num escritório já gravado.
+   */
+  static final String ESCRITORIO_SLUG = "ruraloeste";
+
   /** Administradora, contador e assistente: as três funções da #228. */
   static final List<Membro> EQUIPE = List.of(
       new Membro("Patricia Moreira Lopes", cpf("318452906"), "PR-061245/O",

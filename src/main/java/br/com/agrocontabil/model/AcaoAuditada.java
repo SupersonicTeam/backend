@@ -34,6 +34,8 @@ public enum AcaoAuditada {
   FUNCAO_ALTERADA,
   RESPONSAVEL_ALTERADO,
   ESCRITORIO_ALTERADO,
+  // Endereco proprio do escritorio (issue #464): definir, trocar ou remover o slug
+  ESCRITORIO_ENDERECO_ALTERADO,
   // Revisao da nota pelo contador (issue #178)
   NOTA_ENVIADA_REVISAO,
   NOTA_RETIRADA_REVISAO,
