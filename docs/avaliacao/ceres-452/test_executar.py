@@ -9,7 +9,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
@@ -17,6 +17,9 @@ from unittest import mock
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 import executar  # noqa: E402
+
+CONJUNTO_V1 = AQUI.parent / "treino" / "perguntas-ceres-452.json"
+CONJUNTO_V2 = AQUI.parent / "treino" / "perguntas-ceres-452-v2.json"
 
 CHAMADAS: list[tuple[str, str]] = []
 
@@ -110,7 +113,8 @@ class Funcoes(unittest.TestCase):
                 executar.resolver_commit(str(raiz))
 
 
-class Rodada(unittest.TestCase):
+class ServidoresFalsos(unittest.TestCase):
+    """Base dos testes de rodada: dois backends falsos, um Ollama falso e a pasta de saída."""
 
     def setUp(self):
         CHAMADAS.clear()
@@ -122,12 +126,12 @@ class Rodada(unittest.TestCase):
         for srv in (self.base, self.corr, self.ollama):
             self.addCleanup(fechar, srv)
 
-    def rodar(self, *extra):
+    def rodar(self, *extra, conjunto: Path | None = CONJUNTO_V1):
         argv = ["--braco", "base", url(self.base), "a" * 40,
                 "--braco", "corr", url(self.corr), "b" * 40,
                 "--email", "x@example.com", "--saida-dir", self.pasta.name,
                 "--ids", "g1-01,c-17", "--repeticoes", "2", "--ollama", url(self.ollama),
-                *extra]
+                *(["--conjunto", str(conjunto)] if conjunto else []), *extra]
         with mock.patch.dict(os.environ, {"CERES_SENHA": "segredo-de-teste"}), \
                 redirect_stdout(io.StringIO()) as saida:
             executar.main(argv)
@@ -136,6 +140,9 @@ class Rodada(unittest.TestCase):
     def linhas(self, nome: str) -> list[dict]:
         caminho = Path(self.pasta.name) / f"{nome}.jsonl"
         return [json.loads(l) for l in caminho.read_text(encoding="utf-8").splitlines()]
+
+
+class Rodada(ServidoresFalsos):
 
     def test_grava_proveniencia_aquece_alterna_e_repete_falha_tecnica(self):
         saida = self.rodar()
@@ -190,9 +197,58 @@ class Rodada(unittest.TestCase):
             self.rodar()
 
     def test_recusa_sem_senha(self):
-        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+                self.assertRaisesRegex(SystemExit, "CERES_SENHA"):
             executar.main(["--braco", "base", url(self.base), "a" * 40, "--email", "x",
-                           "--saida-dir", self.pasta.name])
+                           "--conjunto", str(CONJUNTO_V2), "--saida-dir", self.pasta.name])
+
+
+class Conjuntos(ServidoresFalsos):
+    """O conjunto vem de --conjunto: o v2 manda as perguntas dele e só aceita os ids dele."""
+
+    def test_conjunto_v2_manda_as_perguntas_dele(self):
+        perguntas = {p["id"]: p["pergunta"] for p in
+                     json.loads(CONJUNTO_V2.read_text(encoding="utf-8"))["perguntas"]}
+        ids = ["v2-g1-01", "v2-g4-09", "v2-c-11"]
+        saida = self.rodar("--repeticoes", "1", "--ids", ",".join(ids), conjunto=CONJUNTO_V2)
+        self.assertIn("ceres-452-v2", saida)
+        sha = Path(str(CONJUNTO_V2) + ".sha256").read_text(encoding="utf-8").split()[0]
+        for nome in ("base", "corr"):
+            linhas = self.linhas(nome)
+            self.assertEqual({(l["conjunto_versao"], l["conjunto_sha256"]) for l in linhas},
+                             {("ceres-452-v2", sha)})
+            pontuadas = [l for l in linhas if not l["aquecimento"]]
+            self.assertEqual(sorted({l["id"] for l in pontuadas}), sorted(ids))
+        enviadas = {texto for _, texto in CHAMADAS} - set(executar.PERGUNTAS_DE_AQUECIMENTO)
+        self.assertEqual(enviadas, {perguntas[i] for i in ids})
+
+    def test_id_do_v1_recusado_no_v2(self):
+        with self.assertRaisesRegex(SystemExit, "ids fora do conjunto"):
+            self.rodar("--ids", "g1-01", conjunto=CONJUNTO_V2)
+        self.assertEqual(CHAMADAS, [])
+
+    def test_conjunto_obrigatorio(self):
+        with redirect_stderr(io.StringIO()) as erro, self.assertRaises(SystemExit):
+            self.rodar(conjunto=None)
+        self.assertIn("--conjunto", erro.getvalue())
+        self.assertEqual(CHAMADAS, [])
+
+    def test_conjunto_inexistente(self):
+        with self.assertRaisesRegex(SystemExit, "não encontrado"):
+            self.rodar(conjunto=Path(self.pasta.name) / "nao-existe.json")
+
+    def test_conjunto_alterado_recusado_antes_de_chamar(self):
+        copia = Path(self.pasta.name) / "conjunto"
+        copia.mkdir()
+        alterado = copia / CONJUNTO_V2.name
+        original = CONJUNTO_V2.read_bytes()
+        alterado.write_bytes(original.replace(b'"ceres-452-v2"', b'"ceres-452-vX"'))
+        self.assertNotEqual(alterado.read_bytes(), original)
+        (copia / (CONJUNTO_V2.name + ".sha256")).write_bytes(
+            Path(str(CONJUNTO_V2) + ".sha256").read_bytes())
+        with self.assertRaisesRegex(SystemExit, "Conjunto alterado"):
+            self.rodar("--ids", "v2-g1-01", conjunto=alterado)
+        self.assertEqual(CHAMADAS, [])
 
 
 if __name__ == "__main__":

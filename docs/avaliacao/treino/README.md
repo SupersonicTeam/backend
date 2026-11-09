@@ -21,4 +21,6 @@ memória, não acerto.
 
 `perguntas-ceres-452.json` também é de medição de uso único (#452, período relativo nas perguntas de dados), com a regra de decisão e os scripts em `../ceres-452/`. Não serve para ajustar a Ceres: usado num ajuste, deixa de medir.
 
+`perguntas-ceres-452-v2.json` é o conjunto v2 da mesma medição, escrito sem ver o v1 nem a correção, com a regra em `../ceres-452/regra-de-decisao-v2.md`. Vale o mesmo: uso único, nunca ajuste.
+
 Este README não tem pergunta do gabarito; mantenha assim.

@@ -12,6 +12,7 @@ sys.path.insert(0, str(AQUI))
 import pontuar  # noqa: E402
 
 CONJUNTO = AQUI.parent / "treino" / "perguntas-ceres-452.json"
+CONJUNTO_V2 = AQUI.parent / "treino" / "perguntas-ceres-452-v2.json"
 NOV = dt.date(2026, 11, 9)
 DEZ = dt.date(2026, 12, 3)
 
@@ -274,6 +275,293 @@ class ConjuntoReal(unittest.TestCase):
         self.assertEqual(pontuar.classificar(p, registro("g1-01", fallback), NOV), "tecnica")
         cota = {"errors": [{"code": "LIMITE_USO_ASSISTENTE"}]}
         self.assertEqual(pontuar.classificar(p, registro("g1-01", cota), NOV), "tecnica")
+
+
+class ConjuntoV2(unittest.TestCase):
+    """Conjunto v2 (regra-de-decisao-v2.md): tamanhos, ids próprios e o critério de cada grupo."""
+
+    ATALHOS = {"quanto eu tenho que pagar este mes", "quando vence a minha proxima guia",
+               "o que muda para mim com o ibs e o cbs"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.conjunto = pontuar.carregar_conjunto(CONJUNTO_V2)
+        cls.perguntas = {p["id"]: p for p in cls.conjunto["perguntas"]}
+
+    def ids(self, grupo: str) -> list[str]:
+        return [i for i, p in self.perguntas.items() if p["grupo"] == grupo]
+
+    def classificar(self, ident: str, corpo_: dict, data: dt.date = NOV) -> str:
+        return pontuar.classificar(self.perguntas[ident], registro(ident, corpo_, data), data)
+
+    def confere(self, ident: str, casos: list, data: dt.date = NOV) -> None:
+        for esperado, corpo_ in casos:
+            self.assertEqual(self.classificar(ident, corpo_, data), esperado, (ident, corpo_))
+
+    # --- forma do conjunto -------------------------------------------------------------------
+
+    def test_versao_congelada_e_valida_em_qualquer_dia(self):
+        self.assertEqual(self.conjunto["versao"], "ceres-452-v2")
+        dia = dt.date(2026, 1, 1)
+        while dia <= dt.date(2027, 12, 31):
+            pontuar.validar_conjunto(self.conjunto, dia)
+            dia += dt.timedelta(days=1)
+
+    def test_tamanhos_da_regra_v2(self):
+        contagem = {}
+        for p in self.conjunto["perguntas"]:
+            contagem[p["grupo"]] = contagem.get(p["grupo"], 0) + 1
+        self.assertEqual(contagem, {"mes_seguinte": 6, "mes_corrente": 6, "trimestre": 6,
+                                    "aberto": 10, "controle_dados": 8, "controle_lei": 2,
+                                    "controle_fora": 2})
+
+    def test_ids_e_textos_proprios_e_criterio_explicito(self):
+        v1 = pontuar.carregar_conjunto(CONJUNTO)["perguntas"]
+        self.assertFalse({p["id"] for p in v1} & set(self.perguntas))
+        textos_v1 = {pontuar.normalizar(p["pergunta"]).strip(" ?.!") for p in v1}
+        for ident, p in self.perguntas.items():
+            self.assertTrue(ident.startswith("v2-"), ident)
+            self.assertTrue(p.get("criterio", "").strip(), ident)
+            self.assertNotIn(pontuar.normalizar(p["pergunta"]).strip(" ?.!"), textos_v1, ident)
+
+    def test_nenhum_texto_de_atalho_nem_de_aquecimento(self):
+        import executar
+        proibidos = self.ATALHOS | {pontuar.normalizar(t).strip(" ?.!")
+                                    for t in executar.PERGUNTAS_DE_AQUECIMENTO}
+        for ident, p in self.perguntas.items():
+            self.assertNotIn(pontuar.normalizar(p["pergunta"]).strip(" ?.!"), proibidos, ident)
+
+    def test_vocabulario_dos_grupos(self):
+        def textos(grupo):
+            return [pontuar.normalizar(self.perguntas[i]["pergunta"]) for i in self.ids(grupo)]
+        for expressao in ("ultimo trimestre", "ultimos tres meses", "ultimos 3 meses"):
+            self.assertEqual(sum(expressao in t for t in textos("trimestre")), 2, expressao)
+        aberto = " ".join(textos("aberto"))
+        for marca in ("desde", "ate o fim", "antes de", "a partir de", "pra ca", "pra tras",
+                      "safra"):
+            self.assertIn(marca, aberto, marca)
+        regras = [i for i, p in self.perguntas.items() if p["esperado"].get("regra")]
+        self.assertEqual(len(regras), 2)
+        for ident in regras:
+            self.assertEqual(self.perguntas[ident]["grupo"], "aberto")
+            self.assertIn("mes seguinte", pontuar.normalizar(self.perguntas[ident]["pergunta"]))
+
+    def test_execucao_do_v1_nao_pontua_no_v2(self):
+        with self.assertRaises(SystemExit):
+            pontuar.pontuar(self.conjunto, [registro("g1-01", corpo())])
+
+    def test_execucao_de_outro_conjunto_recusada_pelo_hash(self):
+        certo = corpo(fonte("vencimentosDoMes", mes="2026-12"))
+        linha = registro("v2-g1-01", certo, conjunto_sha256=self.conjunto["_sha256"])
+        self.assertEqual(pontuar.pontuar(self.conjunto, [linha])["por_grupo"]["mes_seguinte"]
+                         ["certas"], 1)
+        sem_campo = registro("v2-g1-01", certo)
+        self.assertEqual(pontuar.pontuar(self.conjunto, [sem_campo])["por_grupo"]
+                         ["mes_seguinte"]["certas"], 1)
+        for outro in (registro("v2-g1-01", certo, conjunto_sha256="0" * 64),
+                      registro("aquecimento", corpo(), aquecimento=True,
+                               conjunto_sha256="0" * 64)):
+            with self.assertRaisesRegex(SystemExit, "outro conjunto"):
+                pontuar.pontuar(self.conjunto, [outro])
+
+    # --- critério por grupo ------------------------------------------------------------------
+
+    def test_mes_seguinte(self):
+        dez = fonte("vencimentosDoMes", mes="2026-12")
+        for ident in self.ids("mes_seguinte"):
+            self.confere(ident, [
+                ("certa", corpo(dez, resposta="Em dezembro de 2026 não há guia a vencer.")),
+                ("certa", corpo(dez, fonte("listarNotas", dataInicio="2026-12-01",
+                                           dataFim="2026-12-31"))),
+                ("errada", corpo(fonte("vencimentosDoMes", mes="2026-11"))),
+                ("errada", corpo(dez, fonte("vencimentosDoMes", mes="2026-11"))),
+                ("errada", corpo(dez, fonte("guiasEmAtraso"))),
+                ("errada", corpo(dez, fonte("proximosVencimentos", dias=45))),
+                ("errada", corpo(dez, fonte("listarAlertas"))),
+                ("errada", corpo(dez, fonte("resumoDoProdutor"))),
+                ("errada", corpo(dez, fonte("listarNotas", dataInicio="2026-11-01",
+                                            dataFim="2026-11-09"))),
+                ("errada", corpo(dez, resposta="A guia do Funrural vence em 20/11/2026.")),
+                ("errada", corpo(dez, resposta="Não consegui confirmar os valores da resposta.")),
+                ("errada", corpo()),
+            ])
+            self.confere(ident, [("certa", corpo(fonte("vencimentosDoMes", mes="2027-01"))),
+                                 ("errada", corpo(dez))], DEZ)
+
+    def test_mes_corrente(self):
+        for ident in self.ids("mes_corrente"):
+            self.confere(ident, [
+                ("certa", corpo(fonte("vencimentosDoMes", mes="2026-11"),
+                                resposta="Em atraso desde 20/10/2026; vence 20/11/2026.")),
+                ("certa", corpo(fonte("proximosVencimentos", dias=21))),
+                ("errada", corpo(fonte("proximosVencimentos", dias=30))),
+                ("errada", corpo(fonte("vencimentosDoMes", mes="2026-12"))),
+                ("errada", corpo(fonte("vencimentosDoMes", mes="2026-11"),
+                                 resposta="E a próxima vence em 05/12/2026.")),
+                ("errada", corpo(fonte("guiasEmAtraso"))),
+            ])
+
+    def test_trimestre_sao_os_tres_meses_fechados(self):
+        casos = {"v2-g3-01": ("totalVendasPorProduto", {"descricaoOuNcm": "algodão em caroço"}),
+                 "v2-g3-02": ("totalComprasPorInsumo", {"descricaoOuNcm": "óleo diesel"}),
+                 "v2-g3-04": ("consultarRetencoes", {}),
+                 "v2-g3-05": ("consultarCreditos", {}),
+                 "v2-g3-06": ("listarNotas", {"tipo": "SAIDA"})}
+        self.assertEqual(set(casos) | {"v2-g3-03"}, set(self.ids("trimestre")))
+        for ident, (funcao, extra) in casos.items():
+            def f(inicio, fim, **outros):
+                return corpo(fonte(funcao, dataInicio=inicio, dataFim=fim, **{**extra, **outros}))
+            self.confere(ident, [("certa", f("2026-08-01", "2026-10-31")),
+                                 ("errada", f("2026-07-01", "2026-09-30")),
+                                 ("errada", f("2026-08-11", "2026-11-09")),
+                                 ("errada", f("2026-08-01", "2026-11-09"))])
+            self.confere(ident, [("certa", f("2026-09-01", "2026-11-30")),
+                                 ("errada", f("2026-08-01", "2026-10-31"))], DEZ)
+            # Os dois períodos na mesma resposta: "nem o trimestre do calendário nem os 90 dias".
+            certo = f("2026-08-01", "2026-10-31")["fontesDados"][0]
+            outro = {"descricaoOuNcm": "soja"}
+            self.confere(ident, [
+                ("errada", corpo(certo, *f("2026-07-01", "2026-09-30")["fontesDados"])),
+                ("errada", corpo(certo, *f("2026-08-11", "2026-11-09")["fontesDados"])),
+                ("errada", corpo(certo, fonte("totalVendasPorProduto", dataInicio="2026-08-10",
+                                              dataFim="2026-11-09", **outro))),
+                ("certa", corpo(certo, fonte("totalVendasPorProduto", dataInicio="2026-08-01",
+                                             dataFim="2026-10-31", **outro))),
+                ("certa", corpo(certo, fonte("consultarApuracao", mes="2026-11")))])
+        produto_errado = corpo(fonte("totalComprasPorInsumo", descricaoOuNcm="ureia",
+                                     dataInicio="2026-08-01", dataFim="2026-10-31"))
+        self.assertEqual(self.classificar("v2-g3-02", produto_errado), "errada")
+        sem_tipo = corpo(fonte("listarNotas", dataInicio="2026-08-01", dataFim="2026-10-31"))
+        self.assertEqual(self.classificar("v2-g3-06", sem_tipo), "errada")
+
+    def test_apuracao_dos_ultimos_3_meses(self):
+        def ap(*meses):
+            return corpo(*(fonte("consultarApuracao", mes=m) for m in meses))
+        self.confere("v2-g3-03", [("certa", ap("2026-08", "2026-09", "2026-10")),
+                                  ("errada", ap("2026-09", "2026-10")),
+                                  ("errada", ap("2026-08", "2026-09", "2026-10", "2026-11")),
+                                  ("errada", ap("2026-07", "2026-08", "2026-09"))])
+        self.confere("v2-g3-03", [("certa", ap("2026-09", "2026-10", "2026-11"))], DEZ)
+
+    def test_intervalos_abertos(self):
+        def f(funcao, inicio, fim, **extra):
+            return corpo(fonte(funcao, dataInicio=inicio, dataFim=fim, **extra))
+        diesel = {"descricaoOuNcm": "diesel"}
+        self.confere("v2-g4-01", [
+            ("certa", f("totalComprasPorInsumo", "2026-07-01", "2026-11-09", **diesel)),
+            ("certa", f("totalComprasPorInsumo", "2026-07-01", "2026-11-08", **diesel)),
+            ("certa", f("totalComprasPorInsumo", "2026-07-01", "2026-11-30", **diesel)),
+            ("errada", f("totalComprasPorInsumo", "2026-07-01", "2026-07-31", **diesel)),
+            ("errada", f("totalComprasPorInsumo", "2025-07-01", "2026-11-09", **diesel))])
+        self.confere("v2-g4-01", [
+            ("certa", f("totalComprasPorInsumo", "2026-07-01", "2027-02-10", **diesel))],
+            dt.date(2027, 2, 10))
+        self.confere("v2-g4-02", [
+            ("certa", f("consultarCreditos", "2026-08-01", "2026-11-09")),
+            ("errada", f("consultarCreditos", "2026-08-01", "2026-08-31"))])
+        self.confere("v2-g4-03", [
+            ("certa", f("listarNotas", "2026-09-01", "2026-11-09", tipo="SAIDA")),
+            ("errada", f("listarNotas", "2026-09-01", "2026-11-09")),
+            ("errada", f("listarNotas", "2026-09-01", "2026-09-30", tipo="SAIDA"))])
+        self.confere("v2-g4-04", [
+            ("certa", f("totalVendasPorProduto", "2026-01-01", "2026-06-30",
+                        descricaoOuNcm="soja")),
+            ("errada", f("totalVendasPorProduto", "2026-06-01", "2026-06-30",
+                         descricaoOuNcm="soja")),
+            ("errada", f("totalVendasPorProduto", "2026-01-01", "2026-11-09",
+                         descricaoOuNcm="soja"))])
+        self.confere("v2-g4-05", [
+            ("certa", f("totalVendasPorProduto", "2026-01-01", "2026-07-31",
+                        descricaoOuNcm="milho")),
+            ("errada", f("totalVendasPorProduto", "2026-07-01", "2026-07-31",
+                         descricaoOuNcm="milho")),
+            ("errada", f("totalVendasPorProduto", "2026-01-01", "2026-08-31",
+                         descricaoOuNcm="milho"))])
+        self.confere("v2-g4-06", [
+            ("certa", f("consultarRetencoes", "2026-01-01", "2026-07-31")),
+            ("errada", f("consultarRetencoes", "2026-07-01", "2026-07-31")),
+            ("errada", f("consultarRetencoes", "2026-07-01", "2026-11-09"))])
+
+    def test_safra_e_dois_periodos(self):
+        def milho(inicio, fim):
+            return fonte("totalVendasPorProduto", descricaoOuNcm="milho", dataInicio=inicio,
+                         dataFim=fim)
+        volta = corpo(resposta="Qual período você chama de safra 25/26: de quando a quando?")
+        self.confere("v2-g4-07", [
+            ("certa", corpo(milho("2025-07-01", "2026-06-30"))),
+            ("certa", corpo(milho("2025-09-01", "2026-11-09"))),
+            ("errada", corpo(milho("2026-01-01", "2026-11-09"))),
+            ("certa", volta),
+            ("errada", dict(volta, rota="FORA_DE_ESCOPO"))])
+
+        def diesel(inicio, fim):
+            return fonte("totalComprasPorInsumo", descricaoOuNcm="diesel", dataInicio=inicio,
+                         dataFim=fim)
+        maio, outubro = diesel("2026-05-01", "2026-05-31"), diesel("2026-10-01", "2026-10-31")
+        self.confere("v2-g4-08", [("certa", corpo(maio, outubro)),
+                                  ("errada", corpo(outubro)),
+                                  ("errada", corpo(diesel("2026-05-01", "2026-10-31")))])
+
+    def test_regra_com_mes_seguinte(self):
+        for ident in ("v2-g4-09", "v2-g4-10"):
+            self.confere(ident, [
+                ("certa", corpo(rota="LEGISLACAO",
+                                resposta="Não consegui confirmar uma resposta com a legislação.")),
+                ("errada", corpo(fonte("vencimentosDoMes", mes="2026-12"), rota="LEGISLACAO")),
+                ("errada", corpo(rota="DADOS")),
+                ("errada", corpo(rota="MISTO"))])
+
+    def test_controles(self):
+        def f(funcao, inicio, fim, **extra):
+            return corpo(fonte(funcao, dataInicio=inicio, dataFim=fim, **extra))
+        self.confere("v2-c-01", [
+            ("certa", f("totalComprasPorInsumo", "2026-10-01", "2026-10-31",
+                        descricaoOuNcm="fungicida")),
+            ("certa", f("totalComprasPorInsumo", "2026-10-01", "2026-10-31",
+                        descricaoOuNcm="38089219")),
+            ("errada", f("totalComprasPorInsumo", "2026-10-01", "2026-10-31",
+                         descricaoOuNcm="3808")),
+            ("errada", f("totalComprasPorInsumo", "2026-09-01", "2026-09-30",
+                         descricaoOuNcm="fungicida"))])
+        self.confere("v2-c-02", [("certa", corpo(fonte("consultarApuracao", mes="2026-09"))),
+                                 ("errada", corpo(fonte("consultarApuracao", mes="2026-10")))])
+        self.confere("v2-c-03", [
+            ("certa", f("totalVendasPorProduto", "2026-09-01", "2026-09-30",
+                        descricaoOuNcm="algodão")),
+            ("errada", f("totalVendasPorProduto", "2025-09-01", "2025-09-30",
+                         descricaoOuNcm="algodão"))])
+        self.confere("v2-c-04", [("certa", f("consultarRetencoes", "2026-07-01", "2026-07-31")),
+                                 ("errada", f("consultarRetencoes", "2026-07-01", "2026-11-09"))])
+        self.confere("v2-c-05", [
+            ("certa", f("totalVendasPorProduto", "2026-01-01", "2026-11-09",
+                        descricaoOuNcm="soja")),
+            ("certa", f("totalVendasPorProduto", "2026-01-01", "2026-12-31",
+                        descricaoOuNcm="soja")),
+            ("errada", f("totalVendasPorProduto", "2025-11-10", "2026-11-09",
+                         descricaoOuNcm="soja"))])
+        self.confere("v2-c-06", [("certa", f("consultarCreditos", "2025-01-01", "2025-12-31")),
+                                 ("errada", f("consultarCreditos", "2026-01-01", "2026-11-09"))])
+        self.confere("v2-c-07", [("certa", corpo(fonte("guiasEmAtraso"))),
+                                 ("certa", corpo(fonte("resumoDoProdutor"))),
+                                 ("certa", corpo(fonte("vencimentosDoMes", mes="2026-11"))),
+                                 ("errada", corpo(fonte("vencimentosDoMes", mes="2026-12"))),
+                                 ("errada", corpo(fonte("listarNotas")))])
+        self.confere("v2-c-08", [("certa", corpo(fonte("listarNotas", tipo="SAIDA"))),
+                                 ("errada", corpo(fonte("listarNotas", tipo="ENTRADA")))])
+        lei = corpo(rota="LEGISLACAO", citacoes=[{"norma": "LC 214/2025", "dispositivo": "art. 138"}])
+        extenso = corpo(rota="LEGISLACAO",
+                        citacoes=[{"norma": "Lei Complementar nº 214/2025", "dispositivo": "art. 31"}])
+        for ident in self.ids("controle_lei"):
+            self.confere(ident, [
+                ("certa", lei), ("certa", extenso),
+                ("errada", dict(lei, resposta="Não consegui confirmar uma resposta com a lei.")),
+                ("errada", corpo(rota="LEGISLACAO")),
+                ("errada", dict(lei, rota="DADOS")),
+                ("errada", corpo(rota="LEGISLACAO",
+                                 citacoes=[{"norma": "EC 132/2023", "dispositivo": "art. 1"}]))])
+        for ident in self.ids("controle_fora"):
+            self.confere(ident, [("certa", corpo(rota="FORA_DE_ESCOPO")),
+                                 ("errada", corpo(rota="DADOS"))])
 
 
 def resumo(certas_por_grupo: dict, commit: str = "a" * 40, data: str = "2026-11-09",
