@@ -16,6 +16,7 @@ import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.VinculoSituacaoInvalidaException;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.EncerradoPor;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.SituacaoVinculo;
@@ -207,6 +208,89 @@ class CarteiraServiceTest {
         .isInstanceOf(VinculoSituacaoInvalidaException.class);
     assertThatThrownBy(() -> service.suspender(semVinculo))
         .isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  @Test
+  @DisplayName("escritorio encerra: grava ESCRITORIO, o administrador e o motivo (#402)")
+  void escritorioEncerraComMotivo() {
+    when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deContador(contador));
+    VinculoCarteira ativo = vinculo("Joao");
+    when(vinculoRepository.findAbertoForUpdate(contador.getEscritorioId(), ativo.getProdutorId()))
+        .thenReturn(Optional.of(ativo));
+
+    var resposta = service.encerrar(ativo.getProdutorId(), "Mudou de escritorio");
+
+    assertThat(resposta.situacao()).isEqualTo(SituacaoVinculo.ENCERRADO);
+    assertThat(ativo.getEncerradoPor()).isEqualTo(EncerradoPor.ESCRITORIO);
+    assertThat(ativo.getEncerradoPorMembroId()).isEqualTo(contador.getId());
+    assertThat(ativo.getMotivoEncerramento()).isEqualTo("Mudou de escritorio");
+    assertThat(ativo.getFim()).isEqualTo(OffsetDateTime.now(clock));
+  }
+
+  @Test
+  @DisplayName("escritorio encerra sem motivo: ESCRITORIO registrado, motivo nulo (#402)")
+  void escritorioEncerraSemMotivo() {
+    when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deContador(contador));
+    VinculoCarteira ativo = vinculo("Joao");
+    when(vinculoRepository.findAbertoForUpdate(contador.getEscritorioId(), ativo.getProdutorId()))
+        .thenReturn(Optional.of(ativo));
+
+    service.encerrar(ativo.getProdutorId(), null);
+
+    assertThat(ativo.getEncerradoPor()).isEqualTo(EncerradoPor.ESCRITORIO);
+    assertThat(ativo.getMotivoEncerramento()).isNull();
+  }
+
+  @Test
+  @DisplayName("so administrador encerra; assistente cai antes de qualquer consulta (#402)")
+  void encerrarSoAdministrador() {
+    Contador assistente = Contador.builder().id(UUID.randomUUID()).nomeCompleto("Assistente")
+        .escritorioId(contador.getEscritorioId()).funcao(FuncaoEscritorio.ASSISTENTE).build();
+    when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deContador(assistente));
+
+    assertThatThrownBy(() -> service.encerrar(UUID.randomUUID(), "x"))
+        .isInstanceOf(FuncaoNaoAutorizadaException.class);
+    verifyNoInteractions(vinculoRepository);
+  }
+
+  @Test
+  @DisplayName("produtor encerra: grava PRODUTOR, sem membro, com o motivo; vinculo de outro e 404 (#402)")
+  void produtorEncerra() {
+    Produtor produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Ana").build();
+    when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deProdutor(produtor));
+    VinculoCarteira meu = vinculo("Ana");
+    UUID deOutro = UUID.randomUUID();
+    when(vinculoRepository.findByIdAndProdutorIdForUpdate(meu.getId(), produtor.getId()))
+        .thenReturn(Optional.of(meu));
+    when(vinculoRepository.findByIdAndProdutorIdForUpdate(deOutro, produtor.getId()))
+        .thenReturn(Optional.empty());
+
+    var resposta = service.encerrarPeloProdutor(meu.getId(), "Prefiro outro escritorio");
+
+    assertThat(resposta.encerradoPor()).isEqualTo(EncerradoPor.PRODUTOR);
+    assertThat(resposta.motivoEncerramento()).isEqualTo("Prefiro outro escritorio");
+    assertThat(meu.getEncerradoPorMembroId()).isNull();
+    assertThat(meu.getSituacao()).isEqualTo(SituacaoVinculo.ENCERRADO);
+    assertThatThrownBy(() -> service.encerrarPeloProdutor(deOutro, "x"))
+        .isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  @Test
+  @DisplayName("produtor nao reencerra vinculo ja encerrado, e o registro de quem encerrou nao muda (#402)")
+  void produtorNaoReencerra() {
+    Produtor produtor = Produtor.builder().id(UUID.randomUUID()).nomeCompleto("Ana").build();
+    when(usuarioProvider.get()).thenReturn(UsuarioAutenticado.deProdutor(produtor));
+    VinculoCarteira encerrado = vinculo("Ana");
+    encerrado.setSituacao(SituacaoVinculo.ENCERRADO);
+    encerrado.setEncerradoPor(EncerradoPor.ESCRITORIO);
+    encerrado.setMotivoEncerramento("original");
+    when(vinculoRepository.findByIdAndProdutorIdForUpdate(encerrado.getId(), produtor.getId()))
+        .thenReturn(Optional.of(encerrado));
+
+    assertThatThrownBy(() -> service.encerrarPeloProdutor(encerrado.getId(), "novo"))
+        .isInstanceOf(ResourceNotFoundException.class);
+    assertThat(encerrado.getEncerradoPor()).isEqualTo(EncerradoPor.ESCRITORIO);
+    assertThat(encerrado.getMotivoEncerramento()).isEqualTo("original");
   }
 
   @Test
