@@ -83,10 +83,22 @@ class Funcoes(unittest.TestCase):
         self.assertEqual(executar.ordem_dos_bracos(["base", "corr"], 2), ["corr", "base"])
         self.assertEqual(executar.ordem_dos_bracos(["base", "corr"], 3), ["base", "corr"])
 
-    def test_commit_por_sha_ou_recusa(self):
-        self.assertEqual(executar.resolver_commit("abc1234"), "abc1234")
-        with self.assertRaises(SystemExit):
-            executar.resolver_commit("nao-e-sha-nem-pasta")
+    def test_commit_por_sha_completo_ou_recusa(self):
+        self.assertEqual(executar.resolver_commit("c" * 40), "c" * 40)
+        for invalido in ("abc1234", "nao-e-sha-nem-pasta"):
+            with self.assertRaises(SystemExit):
+                executar.resolver_commit(invalido)
+
+    def test_pasta_sem_git_vira_mensagem(self):
+        erro = executar.subprocess.CalledProcessError(128, "git", stderr="not a git repository")
+        with mock.patch.object(executar.subprocess, "run", side_effect=erro), \
+                self.assertRaises(SystemExit):
+            executar.resolver_commit(str(AQUI))
+
+    def test_retry_after_em_data_cai_no_padrao(self):
+        self.assertEqual(executar.segundos_de_espera("12"), 12.0)
+        self.assertEqual(executar.segundos_de_espera("Wed, 21 Oct 2026 07:28:00 GMT"), 30)
+        self.assertEqual(executar.segundos_de_espera(None), 30)
 
     def test_commit_da_pasta_do_repositorio(self):
         raiz = AQUI.parents[2]
@@ -162,6 +174,15 @@ class Rodada(unittest.TestCase):
         pontuadas = [l for l in self.linhas("corr") if not l["aquecimento"]]
         self.assertEqual([l["tentativa"] for l in pontuadas], [1, 2])
         self.assertEqual([l["falha_tecnica"] for l in pontuadas], [True, False])
+
+    def test_recusa_id_desconhecido(self):
+        with self.assertRaises(SystemExit):
+            self.rodar("--ids", "g1-1")
+
+    def test_backend_fora_do_ar_interrompe(self):
+        fechar(self.corr)
+        with self.assertRaises(SystemExit):
+            self.rodar("--repeticoes", "1", "--ids", "g1-01")
 
     def test_recusa_pasta_com_execucoes(self):
         (Path(self.pasta.name) / "base.jsonl").write_text("{}\n", encoding="utf-8")

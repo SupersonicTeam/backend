@@ -9,7 +9,9 @@ no começo de cada bloco o modelo é aquecido de novo.
 
 Cada linha traz o braço, o commit, o modelo (nome e digest do Ollama), o horário (ISO, Brasília)
 e a data de referência. O commit vem de uma pasta (`git rev-parse HEAD`, e a pasta precisa estar
-limpa) ou de um SHA informado.
+limpa) ou de um SHA completo. O executor não pergunta ao servidor de que commit ele é nem que
+modelo usa: quem roda sobe cada braço a partir da pasta informada, sem trocar de commit depois, e
+com a mesma configuração de modelo da Ceres nos dois.
 
 A senha da conta vem da variável de ambiente CERES_SENHA e nunca vai para o arquivo nem para a
 saída. Falha técnica (HTTP diferente de 200, `modoFallback`, indisponibilidade ou tempo) é
@@ -76,18 +78,23 @@ def requisitar(metodo: str, url: str, corpo=None, token: str | None = None,
 
 
 def resolver_commit(referencia: str) -> str:
-    """SHA de uma pasta git limpa, ou o próprio SHA informado (7 a 40 hex)."""
+    """SHA de uma pasta git limpa, ou o próprio SHA informado (40 hex: o curto escaparia da
+    conferência de "mesmo commit" do pontuar.py)."""
     pasta = Path(referencia)
     if pasta.is_dir():
-        sujo = subprocess.run(["git", "-C", str(pasta), "status", "--porcelain"],
-                              capture_output=True, text=True, check=True).stdout.strip()
-        if sujo:
-            raise SystemExit(f"{pasta} tem mudanças fora de commit: o commit não descreve o braço")
-        return subprocess.run(["git", "-C", str(pasta), "rev-parse", "HEAD"],
-                              capture_output=True, text=True, check=True).stdout.strip()
-    if re.fullmatch(r"[0-9a-f]{7,40}", referencia):
+        try:
+            sujo = subprocess.run(["git", "-C", str(pasta), "status", "--porcelain"],
+                                  capture_output=True, text=True, check=True).stdout.strip()
+            if sujo:
+                raise SystemExit(
+                    f"{pasta} tem mudanças fora de commit: o commit não descreve o braço")
+            return subprocess.run(["git", "-C", str(pasta), "rev-parse", "HEAD"],
+                                  capture_output=True, text=True, check=True).stdout.strip()
+        except subprocess.CalledProcessError as erro:
+            raise SystemExit(f"{pasta} não é um repositório git: {erro.stderr.strip()}") from None
+    if re.fullmatch(r"[0-9a-f]{40}", referencia):
         return referencia
-    raise SystemExit(f"Commit inválido (nem pasta nem SHA): {referencia}")
+    raise SystemExit(f"Commit inválido (nem pasta nem SHA de 40 hex): {referencia}")
 
 
 def ordem_dos_bracos(bracos: list, repeticao: int) -> list:
@@ -125,6 +132,14 @@ def aquecer(ollama: str, modelo: str, embedding: str) -> None:
 
 def agora_brasilia() -> dt.datetime:
     return dt.datetime.now(BRASILIA)
+
+
+def segundos_de_espera(valor, padrao: float = 30) -> float:
+    """Retry-After em segundos; a forma de data HTTP (ou lixo) cai no padrão."""
+    try:
+        return max(0.0, float(valor))
+    except (TypeError, ValueError):
+        return padrao
 
 
 def codigos_de_erro(corpo) -> set:
@@ -177,6 +192,7 @@ def perguntar(braco: Braco, args, senha: str, pergunta: str, base: dict) -> dict
 
 
 def executar_pergunta(braco: Braco, args, senha: str, pergunta: dict, repeticao: int) -> None:
+    sem_conexao = 0
     for tentativa in range(1, args.tentativas + 1):
         registro = perguntar(braco, args, senha, pergunta["pergunta"], {
             "id": pergunta["id"], "repeticao": repeticao, "tentativa": tentativa,
@@ -187,8 +203,12 @@ def executar_pergunta(braco: Braco, args, senha: str, pergunta: dict, repeticao:
         if "LIMITE_USO_ASSISTENTE" in codigos:
             raise SystemExit(f"[{braco.nome}] cota semanal da Ceres esgotada: rodada interrompida "
                              "(aumente a cota do plano no ambiente local e refaça os dois braços)")
+        sem_conexao += registro["http_status"] == 0
+        if sem_conexao == args.tentativas:
+            raise SystemExit(f"[{braco.nome}] backend fora do ar em {braco.url}: rodada "
+                             "interrompida (refaça os dois braços em pasta nova)")
         if registro["http_status"] == 429 or "ASSISTENTE_OCUPADO" in codigos:
-            time.sleep(float(registro.get("_retry_after") or 30))
+            time.sleep(segundos_de_espera(registro.get("_retry_after")))
         else:
             aquecer(args.ollama, args.modelo, args.embedding)
 
@@ -221,6 +241,9 @@ def main(argv: list[str] | None = None) -> int:
     perguntas = conjunto["perguntas"]
     if args.ids:
         escolhidos = set(args.ids.split(","))
+        desconhecidos = escolhidos - {p["id"] for p in perguntas}
+        if desconhecidos:
+            raise SystemExit("ids fora do conjunto: " + ", ".join(sorted(desconhecidos)))
         perguntas = [p for p in perguntas if p["id"] in escolhidos]
 
     args.saida_dir.mkdir(parents=True, exist_ok=True)

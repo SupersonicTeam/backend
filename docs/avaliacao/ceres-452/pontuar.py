@@ -20,8 +20,9 @@ Gramática de `esperado` (uma pergunta):
                    quando cada condição casa com alguma fonte de `fontesDados`.
   proibidas        condições que não podem casar com nenhuma fonte.
   datas_proibidas  {"de": tok, "ate": tok}: nenhuma data dd/mm/aaaa da resposta nessa faixa.
-  esclarecimento   também certa a resposta sem fonte com período que devolve uma pergunta sobre o
-                   período (tem "?" e fala de período, datas ou safra).
+  esclarecimento   também certa a resposta da rota de dados (DADOS ou MISTO) sem fonte com
+                   período que devolve uma pergunta sobre o período (tem "?" e fala de período,
+                   datas ou safra).
   regra            pergunta de regra legal: certa se a rota está em `rotas` e nenhuma fonte é de
                    dados do produtor (desfecho da lei não importa).
   rotas            rotas aceitas (`rota` do corpo).
@@ -331,6 +332,8 @@ def _datas_na_faixa(texto: str, de: dt.date, ate: dt.date) -> list[dt.date]:
 
 
 def _esclarecimento(corpo: dict) -> bool:
+    if corpo.get("rota") not in ("DADOS", "MISTO"):
+        return False
     if any(f.get("funcao") in FUNCOES_COM_PERIODO for f in _fontes(corpo)):
         return False
     texto = normalizar(corpo.get("resposta") or "")
@@ -479,7 +482,8 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
         commits.add(registro.get("commit"))
         modelos.add((registro.get("modelo"), registro.get("modelo_digest")))
         if registro.get("aquecimento"):
-            aquecido = True
+            # Só aquece de fato a chamada que o backend respondeu.
+            aquecido = aquecido or not falha_tecnica(registro)
             continue
         pergunta = perguntas.get(registro.get("id"))
         if pergunta is None:
@@ -515,7 +519,8 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
         "sha256_conjunto": conjunto["_sha256"],
         "bracos": sorted(b for b in bracos if b),
         "commits": sorted(c for c in commits if c),
-        "modelos": sorted([m, d] for m, d in modelos if m),
+        "modelos": sorted(([m, d] for m, d in modelos if m),
+                          key=lambda par: [str(x) for x in par]),
         "datas_referencia": sorted(datas),
         "aquecido": aquecido,
         "mediana_segundos": {g: round(statistics.median(v), 1)

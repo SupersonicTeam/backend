@@ -230,6 +230,8 @@ class ConjuntoReal(unittest.TestCase):
         self.assertEqual(self.classificar("g4-09", safra), "certa")
         self.assertEqual(self.classificar("g4-09", este_ano), "errada")
         self.assertEqual(self.classificar("g4-09", pergunta), "certa")
+        fora = dict(pergunta, rota="FORA_DE_ESCOPO")
+        self.assertEqual(self.classificar("g4-09", fora), "errada")
 
     def test_dois_periodos_exigem_as_duas_fontes(self):
         ago = fonte("totalVendasPorProduto", descricaoOuNcm="soja", dataInicio="2026-08-01",
@@ -308,6 +310,10 @@ class Votacao(unittest.TestCase):
         self.assertEqual(r["por_pergunta"]["g1-02"]["resultado"], "errada")
         self.assertEqual(r["por_pergunta"]["g1-03"]["resultado"], "sem_medicao")
         self.assertTrue(r["aquecido"])
+        frio = pontuar.pontuar(self.conjunto, [
+            registro("aquecimento", None, status=503, aquecimento=True),
+            registro("g1-01", certo, modelo_digest=None)])
+        self.assertFalse(frio["aquecido"])
         self.assertEqual(r["commits"], ["a" * 40])
         self.assertEqual(r["datas_referencia"], ["2026-11-09"])
 

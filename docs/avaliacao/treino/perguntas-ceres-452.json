@@ -273,10 +273,7 @@
       "grupo": "trimestre",
       "pergunta": "Quantas notas de venda eu emiti no último trimestre?",
       "esperado": {
-        "alternativas": [
-          [{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}],
-          [{"funcoes": ["listarNotas"], "sem_tipo": true, "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]
-        ]
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
       }
     },
     {
