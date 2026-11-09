@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailParseException;
 import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
@@ -107,7 +108,7 @@ class EnvioEmailSmtp {
     if (e instanceof MailAuthenticationException) {
       return "autenticacao";
     }
-    if (e instanceof MailPreparationException) {
+    if (e instanceof MailPreparationException || e instanceof MailParseException) {
       // Mensagem ou endereco que o Jakarta Mail nao montou: nao chegou ao provedor.
       return "mensagem";
     }

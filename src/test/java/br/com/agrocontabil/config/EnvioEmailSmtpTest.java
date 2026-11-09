@@ -35,6 +35,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailParseException;
+import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -125,6 +126,8 @@ class EnvioEmailSmtpTest {
     assertThat(EnvioEmailSmtp.categoria(new MailAuthenticationException("x")))
         .isEqualTo("autenticacao");
     assertThat(EnvioEmailSmtp.categoria(new MailParseException("endereco malformado")))
+        .isEqualTo("mensagem");
+    assertThat(EnvioEmailSmtp.categoria(new MailPreparationException("mensagem malformada")))
         .isEqualTo("mensagem");
     SendFailedException comEndereco = new SendFailedException("x", null, null, null,
         new InternetAddress[] {new InternetAddress("a@b.com")});
