@@ -120,3 +120,5 @@ databaseChangeLog:
       file: db/changelog/changes/0056-nota-fiscal-busca-itens-documento.xml
   - include:
       file: db/changelog/changes/0057-obrigacao-fiscal-acentos.xml
+  - include:
+      file: db/changelog/changes/0058-carteira-vinculo-encerramento.xml

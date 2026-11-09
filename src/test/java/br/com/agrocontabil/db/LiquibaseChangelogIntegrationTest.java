@@ -221,6 +221,40 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0058: quem encerrou o vinculo e o motivo, colunas anulaveis; linha antiga fica sem registro (#402)")
+  void changeSet0058EncerramentoDoVinculo() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'carteira_vinculo'"
+            + " AND column_name IN ('encerrado_por', 'encerrado_por_membro_id',"
+            + " 'motivo_encerramento') ORDER BY column_name");
+
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("encerrado_por", "character varying", "YES", 20),
+            tuple("encerrado_por_membro_id", "uuid", "YES", null),
+            tuple("motivo_encerramento", "character varying", "YES", 500));
+
+    // Um vinculo gravado como antes (sem as colunas novas) fica "nao registrado": tudo nulo.
+    String escritorioId = UUID.randomUUID().toString();
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio 0058')",
+        escritorioId);
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0058')",
+        produtorId);
+    jdbc.update("INSERT INTO carteira_vinculo (id, escritorio_id, produtor_id, situacao, inicio,"
+        + " fim) VALUES (gen_random_uuid(), ?::uuid, ?::uuid, 'ENCERRADO', now(), now())",
+        escritorioId, produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM carteira_vinculo WHERE produtor_id ="
+        + " ?::uuid AND encerrado_por IS NULL AND encerrado_por_membro_id IS NULL"
+        + " AND motivo_encerramento IS NULL", Integer.class, produtorId)).isEqualTo(1);
+  }
+
+  @Test
   @DisplayName("changeSet 0057: descricao dos 11 modelos de obrigacao com acento; versao de escritorio intacta (#408)")
   void changeSet0057ObrigacoesComAcento() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -520,7 +554,8 @@ class LiquibaseChangelogIntegrationTest {
         + " WHERE table_name = 'contador_produtor'", Integer.class)).isZero();
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'carteira_vinculo' ORDER BY column_name", String.class))
-        .containsExactly("created_at", "escritorio_id", "fim", "id", "inicio", "observacoes",
+        .containsExactly("created_at", "encerrado_por", "encerrado_por_membro_id",
+            "escritorio_id", "fim", "id", "inicio", "motivo_encerramento", "observacoes",
             "produtor_id", "responsavel_id", "situacao", "updated_at");
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'convite_carteira' ORDER BY column_name", String.class))

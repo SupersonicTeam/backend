@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0058-carteira-vinculo-encerramento.xml
+         Quem encerrou o vinculo e o motivo (#402, follow-up da #353).
+
+         encerrado_por: PRODUTOR ou ESCRITORIO. encerrado_por_membro_id:
+         o membro do escritorio que encerrou (so quando ESCRITORIO; vai a
+         nulo se o membro sai da equipe ou exclui os dados). motivo_encerramento:
+         texto livre opcional, pode ter dado pessoal, nunca vai a log nem a
+         auditoria.
+
+         Sem preenchimento das linhas existentes: nulo = encerrado antes
+         deste changeSet ("nao registrado"). A tela nao deve ler nulo como
+         "o produtor encerrou".
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0058-carteira-vinculo-encerramento" author="supersonic-team">
+        <addColumn tableName="carteira_vinculo">
+            <column name="encerrado_por" type="VARCHAR(20)" remarks="PRODUTOR ou ESCRITORIO; nulo = encerrado antes do registro (ou nao encerrado)"/>
+            <column name="encerrado_por_membro_id" type="UUID" remarks="Membro do escritorio que encerrou (so quando ESCRITORIO)"/>
+            <column name="motivo_encerramento" type="VARCHAR(500)" remarks="Motivo opcional, texto livre; pode ter dado pessoal"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>
