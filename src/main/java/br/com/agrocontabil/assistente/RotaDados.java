@@ -88,8 +88,6 @@ public class RotaDados {
   private static final Logger log = LoggerFactory.getLogger(RotaDados.class);
 
   /** Só lê e escreve os argumentos das chamadas (mapa simples): sem configuração do contexto. */
-  private static final String FUNCAO_PROXIMOS_VENCIMENTOS = "proximosVencimentos";
-  private static final String FUNCAO_VENCIMENTOS_DO_MES = "vencimentosDoMes";
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final TypeReference<LinkedHashMap<String, Object>> ARGUMENTOS =
       new TypeReference<>() {};
@@ -277,8 +275,9 @@ public class RotaDados {
    * <p>Pergunta de guias de um mês futuro ("o que vence no mês que vem") em que o modelo escolheu
    * {@code proximosVencimentos} (#452, item 1): essa função olha 30 dias a partir de hoje e traria
    * guia deste mês. A chamada vira {@code vencimentosDoMes} do mês da pergunta, ou sai, se o modelo
-   * já chamou {@code vencimentosDoMes}. Pergunta com janela em dias ("nos próximos 15 dias") não
-   * troca ({@link PeriodoDaPergunta.Periodo#vencimentosDoMesFuturo()}).
+   * já chamou {@code vencimentosDoMes}. Pergunta com janela em dias ("nos próximos 15 dias") ou
+   * da próxima guia não troca ({@link PeriodoDaPergunta.Periodo#vencimentosDoMesFuturo()}). A
+   * contagem de chamadas da auditoria é a do modelo, feita antes desta troca.
    */
   static ChatResponse comPeriodo(ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
     Map<String, Long> vezes = resposta.getResults().stream()
@@ -290,12 +289,14 @@ public class RotaDados {
       AssistantMessage mensagem = geracao.getOutput();
       List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
       for (AssistantMessage.ToolCall chamada : mensagem.getToolCalls()) {
-        if (periodo.vencimentosDoMesFuturo() && FUNCAO_PROXIMOS_VENCIMENTOS.equals(chamada.name())
+        if (periodo.vencimentosDoMesFuturo()
+            && PeriodoDaPergunta.FUNCAO_PROXIMOS_VENCIMENTOS.equals(chamada.name())
             && vezes.get(chamada.name()) == 1) {
           ajustadas++;
-          if (!vezes.containsKey(FUNCAO_VENCIMENTOS_DO_MES)) {
+          if (!vezes.containsKey(PeriodoDaPergunta.FUNCAO_VENCIMENTOS_DO_MES)) {
             chamadas.add(new AssistantMessage.ToolCall(chamada.id(), chamada.type(),
-                FUNCAO_VENCIMENTOS_DO_MES, "{\"mes\":\"" + periodo.mes() + "\"}"));
+                PeriodoDaPergunta.FUNCAO_VENCIMENTOS_DO_MES,
+                "{\"mes\":\"" + periodo.mes() + "\"}"));
           }
           continue;
         }

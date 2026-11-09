@@ -30,8 +30,10 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li>data explícita (mês por extenso, ano, dia/mês);</li>
  *   <li>parte do período ("a primeira quinzena do mês passado");</li>
- *   <li>período aberto ou contado de outro ponto: "desde", "até", "antes", "a partir", "pra cá",
- *       "pra trás" e "safra" (a safra não tem regra de datas no sistema);</li>
+ *   <li>período aberto ou contado de outro ponto: "desde", "até" (menos "até hoje", "até agora" e
+ *       "até o momento", que são o período em curso), "antes", "depois de", "após", "a partir",
+ *       "em diante", "pra cá", "pra frente", "pra trás" e "safra" (a safra não tem regra de datas
+ *       no sistema);</li>
  *   <li>dois períodos, inclusive o segundo só pelo adjetivo ("no mês passado e no retrasado",
  *       "este mês e o próximo");</li>
  *   <li>frase de regra, em que o mês é contado a partir de um fato ("vence no mês seguinte ao da
@@ -42,8 +44,9 @@ import java.util.regex.Pattern;
  *
  * <ul>
  *   <li>Mês e ano correntes (e trimestre e semestre correntes) vão do primeiro dia até hoje. Em
- *       pergunta de vencimento (guia, boleto, prazo, pagar) vão até o último dia: o que vence
- *       depois de hoje ainda é deste mês (#452, item 2).</li>
+ *       pergunta de vencimento (guia, boleto, DARF, prazo, pagar, recolher, débito) vão até o
+ *       último dia: o que vence depois de hoje ainda é deste mês (#452, item 2). As funções de
+ *       datas (vendas, compras, notas) seguem até hoje.</li>
  *   <li>Mês, semestre e ano passados são os do calendário, inteiros.</li>
  *   <li>"Último trimestre" e "trimestre passado/anterior" são os três últimos meses fechados: os
  *       três meses do calendário inteiros antes do mês corrente (decisão do Murillo, 2026-11-09,
@@ -60,6 +63,12 @@ public final class PeriodoDaPergunta {
 
   /** Funções que recebem um mês ({@code mes}, AAAA-MM). */
   public static final Set<String> FUNCOES_DE_MES = Set.of("consultarApuracao", "vencimentosDoMes");
+
+  /** Guias a vencer nos próximos dias a partir de hoje (#452, item 1). */
+  public static final String FUNCAO_PROXIMOS_VENCIMENTOS = "proximosVencimentos";
+
+  /** Guias a pagar num mês do calendário (#452, item 1). */
+  public static final String FUNCAO_VENCIMENTOS_DO_MES = "vencimentosDoMes";
 
   /** Maior janela móvel aceita: a das funções de dados é de 24 meses. */
   static final int MAXIMO_MESES = 24;
@@ -100,8 +109,9 @@ public final class PeriodoDaPergunta {
    * Período aberto ou contado de outro ponto ("desde o mês passado", "até o mês passado", "do ano
    * passado pra cá") e a safra (#452, item 3): o período inteiro estaria errado.
    */
-  private static final Pattern ABERTO = Pattern.compile("\\b(desde|ate|antes|a partir"
-      + "|pra ca|para ca|pra tras|para tras|safras?)\\b");
+  private static final Pattern ABERTO = Pattern.compile("\\b(desde|ate(?! (?:hoje|agora"
+      + "|o momento)\\b)|antes|a partir|pra ca|para ca|pra tras|para tras|em diante"
+      + "|pra frente|para frente|depois d[eoa]s?|apos|safras?)\\b");
 
   /**
    * Frase de regra: o mês é contado a partir de um fato, não de hoje ("vence no mês seguinte ao
@@ -112,18 +122,26 @@ public final class PeriodoDaPergunta {
 
   /**
    * Segundo período só pelo adjetivo, depois de tirar as expressões já lidas ("no mês passado e
-   * no retrasado", "este mês e o próximo"): são dois períodos (#452, item 3).
+   * no retrasado", "este mês e também para o próximo"): são dois períodos (#452, item 3). O
+   * "retrasado" que sobra é sempre outro período; os demais adjetivos só contam depois de "e",
+   * "ou", "com" ou "contra" ("e o próximo passo" também deixa de resolver: volta ao modelo).
    */
-  private static final Pattern SEGUNDO_PERIODO = Pattern.compile("\\b(e|ou|com|contra|versus|vs)"
-      + " (?:(?:n|d)?(?:o|a|os|as) )?(?:mes |ano |trimestre |semestre )?(retrasad[oa]s?"
-      + "|passad[oa]s?|anterior(?:es)?|seguintes?|proxim[oa]s?|que vem|atua(?:l|is)|corrente)\\b");
+  private static final Pattern SEGUNDO_PERIODO = Pattern.compile("\\bretrasad[oa]s?\\b"
+      + "|\\b(?:e|ou|com|contra|versus|vs)(?: tambem)?(?: (?:para|pra|pro|ate))?"
+      + " (?:(?:n|d)?(?:o|a|os|as) )?(?:mes |ano |trimestre |semestre )?(?:passad[oa]s?"
+      + "|anterior(?:es)?|seguintes?|proxim[oa]s?|que vem|atua(?:l|is)|corrente)\\b");
 
   /** Pergunta de vencimento: o período em curso vai até o último dia (#452, item 2). */
   private static final Pattern VENCIMENTO = Pattern.compile("\\b(venc\\w*|guias?|boletos?"
-      + "|darfs?|pagar|prazos?)\\b");
+      + "|darfs?|pagar|pagamentos?|quitar|recolh\\w*|debitos?|prazos?)\\b");
 
-  /** Janela em dias na pergunta ("nos próximos 15 dias"): os vencimentos dela não são do mês. */
-  private static final Pattern DIAS = Pattern.compile("\\bdias?\\b");
+  /**
+   * Janela em dias na pergunta ("nos próximos 15 dias") ou a próxima guia a partir de hoje ("quando
+   * vence a minha próxima guia"): as guias dela não são as do mês futuro da pergunta, então
+   * {@code proximosVencimentos} fica (#452, item 1). "Bom dia" não é janela.
+   */
+  private static final Pattern GUIAS_A_PARTIR_DE_HOJE = Pattern.compile("\\b" + QUANTIDADE
+      + " dias\\b|\\bproxim[oa]s? (?:guias?|vencimentos?|boletos?|darfs?|pagamentos?)\\b");
 
   /** Expressão relativa → período, na ordem de prioridade de leitura. */
   private static final List<Regra> REGRAS = List.of(
@@ -161,16 +179,20 @@ public final class PeriodoDaPergunta {
    * @param fim                      último dia
    * @param mes                      o mês, quando o período é um mês do calendário (passado,
    *                                 corrente ou futuro); {@code null} nos demais
+   * @param fimDosDados              último dia para as funções de datas (vendas, compras,
+   *                                 créditos, retenções, notas): o que já aconteceu vai até hoje,
+   *                                 mesmo quando o período em curso de uma pergunta de vencimento
+   *                                 vai até o fim do mês (#452, item 2)
    * @param vencimentosDoMesFuturo   o período é um mês depois do corrente e a pergunta não traz
-   *                                 janela em dias: as guias a vencer da pergunta são as daquele
-   *                                 mês, não as dos próximos 30 dias a partir de hoje (#452,
-   *                                 item 1; ver {@code RotaDados.comPeriodo})
+   *                                 janela em dias nem a próxima guia: as guias a vencer da
+   *                                 pergunta são as daquele mês, não as dos próximos 30 dias a
+   *                                 partir de hoje (#452, item 1; ver {@code RotaDados.comPeriodo})
    */
-  public record Periodo(LocalDate inicio, LocalDate fim, YearMonth mes,
+  public record Periodo(LocalDate inicio, LocalDate fim, YearMonth mes, LocalDate fimDosDados,
       boolean vencimentosDoMesFuturo) {
 
     Periodo(LocalDate inicio, LocalDate fim, YearMonth mes) {
-      this(inicio, fim, mes, false);
+      this(inicio, fim, mes, fim, false);
     }
 
     /** Linha para o modelo, antes da pergunta: as datas já calculadas. */
@@ -213,13 +235,16 @@ public final class PeriodoDaPergunta {
     }
     Periodo periodo = achados.iterator().next();
     boolean mesFuturo = periodo.mes() != null && periodo.mes().isAfter(YearMonth.from(hoje));
-    return Optional.of(mesFuturo && !DIAS.matcher(texto).find()
-        ? new Periodo(periodo.inicio(), periodo.fim(), periodo.mes(), true) : periodo);
+    boolean emCurso = !periodo.inicio().isAfter(hoje) && periodo.fim().isAfter(hoje);
+    return Optional.of(new Periodo(periodo.inicio(), periodo.fim(), periodo.mes(),
+        emCurso ? hoje : periodo.fim(),
+        mesFuturo && !GUIAS_A_PARTIR_DE_HOJE.matcher(texto).find()));
   }
 
   /**
    * Os parâmetros de período de uma função com o período da pergunta. Função de datas recebe
-   * {@code dataInicio}/{@code dataFim}; função de mês recebe {@code mes} só quando o período é um
+   * {@code dataInicio}/{@code dataFim} (o fim nunca depois de hoje num período em curso:
+   * {@link Periodo#fimDosDados()}); função de mês recebe {@code mes} só quando o período é um
    * mês do calendário (trimestre ou janela móvel não cabem num mês: fica o que o modelo pôs).
    *
    * @param funcao     nome da função
@@ -230,9 +255,9 @@ public final class PeriodoDaPergunta {
   public static boolean aplicar(String funcao, Map<String, Object> argumentos, Periodo periodo) {
     if (FUNCOES_DE_DATAS.contains(funcao)) {
       Object antesInicio = argumentos.put("dataInicio", periodo.inicio().toString());
-      Object antesFim = argumentos.put("dataFim", periodo.fim().toString());
+      Object antesFim = argumentos.put("dataFim", periodo.fimDosDados().toString());
       return !periodo.inicio().toString().equals(antesInicio)
-          || !periodo.fim().toString().equals(antesFim);
+          || !periodo.fimDosDados().toString().equals(antesFim);
     }
     if (FUNCOES_DE_MES.contains(funcao) && periodo.mes() != null) {
       return !periodo.mes().toString().equals(argumentos.put("mes", periodo.mes().toString()));

@@ -100,6 +100,21 @@ class RotaDadosPeriodoTest {
   }
 
   @Test
+  @DisplayName("vencimentosDoMes duas vezes: proximosVencimentos sai e as duas ficam (#452)")
+  void vencimentosDoMesDuasVezes() {
+    ChatResponse ajustada = RotaDados.comPeriodo(chamadas(
+        new ToolCall("t1", "function", "vencimentosDoMes", "{\"mes\":\"2026-12\"}"),
+        new ToolCall("t2", "function", "proximosVencimentos", "{}"),
+        new ToolCall("t3", "function", "vencimentosDoMes", "{\"mes\":\"2027-01\"}")),
+        periodo("Bom dia, que guias tenho no mês que vem?"));
+
+    List<ToolCall> resultado = chamadasDe(ajustada);
+    assertThat(resultado).extracting(ToolCall::id).containsExactly("t1", "t3");
+    assertThat(resultado).extracting(ToolCall::arguments)
+        .containsExactly("{\"mes\":\"2026-12\"}", "{\"mes\":\"2027-01\"}");
+  }
+
+  @Test
   @DisplayName("mês corrente ou janela em dias: proximosVencimentos fica (#452, item 1)")
   void proximosVencimentosFica() {
     ChatResponse esteMes = chamadas(

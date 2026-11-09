@@ -106,6 +106,20 @@ class PeriodoDaPerguntaTest {
   }
 
   @Test
+  @DisplayName("as funções da troca do item 1 existem com esses nomes (#452)")
+  void funcoesDaTrocaExistem() {
+    java.util.Set<String> nomes = java.util.Arrays.stream(
+            br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor.class.getMethods())
+        .map(m -> m.getAnnotation(org.springframework.ai.tool.annotation.Tool.class))
+        .filter(java.util.Objects::nonNull)
+        .map(org.springframework.ai.tool.annotation.Tool::name)
+        .collect(java.util.stream.Collectors.toSet());
+
+    assertThat(nomes).contains(PeriodoDaPergunta.FUNCAO_PROXIMOS_VENCIMENTOS,
+        PeriodoDaPergunta.FUNCAO_VENCIMENTOS_DO_MES);
+  }
+
+  @Test
   @DisplayName("duas expressões com o mesmo período contam como uma")
   void mesmoPeriodoDuasVezes() {
     assertThat(PeriodoDaPergunta.resolver("mês passado, isto é, o mês anterior", HOJE))
@@ -186,7 +200,9 @@ class PeriodoDaPerguntaTest {
       "Quanto tenho a pagar de tributo no mês atual?|2027-02-01|2027-02-28|2027-02",
       "Os prazos de recolhimento deste ano|2027-01-01|2027-12-31|",
       "Alguma guia cai neste trimestre?|2027-01-01|2027-03-31|",
-      "E os DARFs deste semestre?|2027-01-01|2027-06-30|"})
+      "E os DARFs deste semestre?|2027-01-01|2027-06-30|",
+      "Quanto de imposto vou recolher neste mês?|2027-02-01|2027-02-28|2027-02",
+      "Tenho débito para quitar no mês corrente?|2027-02-01|2027-02-28|2027-02"})
   @DisplayName("período em curso de vencimento vai até o último dia (#452, item 2)")
   void emCursoDeVencimentoVaiAteOFim(String pergunta, String inicio, String fim, String mes) {
     Periodo p = PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
@@ -194,6 +210,33 @@ class PeriodoDaPerguntaTest {
     assertThat(p.inicio()).isEqualTo(inicio);
     assertThat(p.fim()).isEqualTo(fim);
     assertThat(p.mes()).isEqualTo(mes == null ? null : YearMonth.parse(mes));
+    assertThat(p.fimDosDados()).isEqualTo(HOJE);
+  }
+
+  @Test
+  @DisplayName("pergunta mista: as funções de datas seguem até hoje (#452, item 2)")
+  void funcoesDeDatasSeguemAteHoje() {
+    Periodo p = PeriodoDaPergunta
+        .resolver("Quanto vendi de aveia neste mês e quanto falta pagar?", HOJE).orElseThrow();
+
+    Map<String, Object> vendas = new LinkedHashMap<>(Map.of("descricaoOuNcm", "aveia"));
+    assertThat(PeriodoDaPergunta.aplicar("totalVendasPorProduto", vendas, p)).isTrue();
+    assertThat(vendas).containsEntry("dataInicio", "2027-02-01")
+        .containsEntry("dataFim", "2027-02-17");
+    assertThat(p.paraOModelo()).contains("de 2027-02-01 a 2027-02-28 (mes 2027-02)");
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "Quanto vendi de sorgo este ano até agora?",
+      "Até hoje, quanto entrou de crédito neste ano?",
+      "Neste ano, até o momento, quanto saiu de retenção?"})
+  @DisplayName("até hoje, até agora e até o momento são o período em curso: resolve")
+  void ateHojeResolve(String pergunta) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
+
+    assertThat(p.inicio()).isEqualTo("2027-01-01");
+    assertThat(p.fim()).isEqualTo(HOJE);
   }
 
   @ParameterizedTest(name = "[{index}] {0}")
@@ -202,6 +245,9 @@ class PeriodoDaPerguntaTest {
       "Quanto de DARF cai no mês seguinte?|true",
       "Quanto de cevada vou entregar no mês que vem?|true",
       "Das guias do mês que vem, quais caem nos próximos 10 dias?|false",
+      "Bom dia! Quais guias vencem no mês que vem?|true",
+      "Vou entregar cevada no mês que vem; quando vence a minha próxima guia?|false",
+      "Para o mês seguinte, qual o próximo vencimento?|false",
       "Que guias vencem neste mês?|false",
       "Ficou guia sem pagar no mês passado?|false"})
   @DisplayName("guias de mês futuro marcam a troca de proximosVencimentos (#452, item 1)")
@@ -224,6 +270,12 @@ class PeriodoDaPerguntaTest {
       "Quanto tenho de guia neste mês e no próximo?",
       "Compare o ano passado com o retrasado",
       "Esse imposto vence no mês seguinte ao da entrega?",
+      "Notas do mês passado em diante",
+      "Créditos do ano passado pra frente",
+      "Vendas de aveia depois do mês passado",
+      "Compras de adubo após o ano retrasado",
+      "Vendas do mês passado, o retrasado também",
+      "Guias deste mês e também para o próximo",
       "O recolhimento é no mês anterior ao embarque?"})
   @DisplayName("período aberto, safra, dois períodos e frase de regra: não resolve (#452, item 3)")
   void naoResolveAbertoOuRegra(String pergunta) {
