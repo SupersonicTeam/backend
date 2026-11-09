@@ -51,9 +51,10 @@ import java.util.regex.Pattern;
  *   <li>"Último trimestre" e "trimestre passado/anterior" são os três últimos meses fechados: os
  *       três meses do calendário inteiros antes do mês corrente (decisão do Murillo, 2026-11-09,
  *       #452, item 4). Em 09/11/2026, de 01/08 a 31/10.</li>
- *   <li>"Últimos três meses" ("últimos 3 meses") são os mesmos três meses fechados do "último
- *       trimestre" (segunda decisão do Murillo, 2026-11-09, #452). Os demais "últimos N meses" e
- *       os "últimos N dias" são a janela móvel que termina hoje: esses não foram decididos.</li>
+ *   <li>"Últimos três meses" ("últimos 3 meses", "três últimos meses") são os mesmos três
+ *       meses fechados do "último trimestre" (segunda decisão do Murillo, 2026-11-09, #452). Os
+ *       demais "últimos N meses" e os "últimos N dias" são a janela móvel que termina hoje, e "N
+ *       últimos meses" com N diferente de três não resolve: esses não foram decididos.</li>
  * </ul>
  */
 public final class PeriodoDaPergunta {
@@ -171,10 +172,9 @@ public final class PeriodoDaPergunta {
       emCurso("\\b" + ESTE + " semestre\\b|\\bsemestre (?:atual|corrente)\\b",
           (h, venc) -> venc ? semestre(h, 0) : intervalo(semestre(h, 0).inicio(), h)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " meses\\b"),
-          (h, m, venc) -> foraDoLimite(m.group(1), MAXIMO_MESES) ? null
-              : quantidade(m.group(1)) == MESES_FECHADOS_DO_TRIMESTRE
-                  ? mesesFechados(h, MESES_FECHADOS_DO_TRIMESTRE)
-                  : intervalo(h.minusMonths(quantidade(m.group(1))).plusDays(1), h)),
+          (h, m, venc) -> ultimosMeses(h, m.group(1))),
+      fixa("\\b(?:3|tres) ultimos meses\\b",
+          h -> mesesFechados(h, MESES_FECHADOS_DO_TRIMESTRE)),
       new Regra(Pattern.compile("\\bultimos " + QUANTIDADE + " dias\\b"),
           (h, m, venc) -> foraDoLimite(m.group(1), MAXIMO_DIAS) ? null
               : intervalo(h.minusDays(quantidade(m.group(1)) - 1L), h)));
@@ -298,6 +298,20 @@ public final class PeriodoDaPergunta {
   private static Periodo mes(LocalDate hoje, int deslocamento) {
     YearMonth mes = YearMonth.from(hoje).plusMonths(deslocamento);
     return new Periodo(mes.atDay(1), mes.atEndOfMonth(), mes);
+  }
+
+  /**
+   * "Últimos N meses": com três, os três meses fechados (como o "último trimestre"); com outro N,
+   * a janela móvel que termina hoje; zero ou acima do teto, não resolve. A ordem inversa ("três
+   * últimos meses") só é lida com três: com outro N não foi decidida e fica com o modelo.
+   */
+  private static Periodo ultimosMeses(LocalDate hoje, String valor) {
+    if (foraDoLimite(valor, MAXIMO_MESES)) {
+      return null;
+    }
+    int n = quantidade(valor);
+    return n == MESES_FECHADOS_DO_TRIMESTRE ? mesesFechados(hoje, n)
+        : intervalo(hoje.minusMonths(n).plusDays(1), hoje);
   }
 
   /** Os {@code quantos} meses do calendário inteiros antes do mês corrente. */

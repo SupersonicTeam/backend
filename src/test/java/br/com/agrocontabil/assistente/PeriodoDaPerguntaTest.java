@@ -189,7 +189,9 @@ class PeriodoDaPerguntaTest {
       "2026-11-09|Compras de sorgo nos últimos três meses|2026-08-01|2026-10-31",
       "2026-12-03|Quanto entrou de retenção nos últimos 3 meses?|2026-09-01|2026-11-30",
       "2027-01-02|Notas de saída dos últimos tres meses|2026-10-01|2026-12-31",
-      "2026-11-09|Créditos nos últimos 3 meses, isto é, no último trimestre|2026-08-01|2026-10-31"})
+      "2026-11-09|Créditos nos últimos 3 meses, isto é, no último trimestre|2026-08-01|2026-10-31",
+      "2026-12-01|Quanto vendi de aveia nos três últimos meses?|2026-09-01|2026-11-30",
+      "2027-03-31|Retenções dos 3 últimos meses|2026-12-01|2027-02-28"})
   @DisplayName("últimos três meses são os três meses fechados, como o trimestre (#452)")
   void ultimosTresMesesSaoMesesFechados(String hoje, String pergunta, String inicio,
       String fim) {
@@ -289,6 +291,7 @@ class PeriodoDaPerguntaTest {
       "Quanto tenho de guia neste mês e no próximo?",
       "Compare o ano passado com o retrasado",
       "Esse imposto vence no mês seguinte ao da entrega?",
+      "Compras de calcário nos seis últimos meses",
       "Notas do mês passado em diante",
       "Créditos do ano passado pra frente",
       "Vendas de aveia depois do mês passado",
