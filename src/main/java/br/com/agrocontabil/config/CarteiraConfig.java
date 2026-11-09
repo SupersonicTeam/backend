@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.config.RedefinicaoSenhaProperties.ModoEmail;
 import br.com.agrocontabil.service.EnvioConviteCarteira;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
 import org.slf4j.Logger;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -30,14 +32,22 @@ public class CarteiraConfig {
    * Implementação do envio do convite conforme o modo de e-mail.
    *
    * @param redefinicao configuração de e-mail (modo e remetente)
+   * @param email       domínio verificado do remetente
+   * @param convite     link do convite
    * @param mailSender  cliente SMTP do Boot, se configurado
+   * @param ambiente    profiles e {@code spring.mail.*}, para as conferências de subida (#460)
    * @return a porta de envio
    */
   @Bean
-  public EnvioConviteCarteira envioConviteCarteira(
-      RedefinicaoSenhaProperties redefinicao, ObjectProvider<JavaMailSender> mailSender) {
+  public EnvioConviteCarteira envioConviteCarteira(RedefinicaoSenhaProperties redefinicao,
+      EmailProperties email, ConviteCarteiraProperties convite,
+      ObjectProvider<JavaMailSender> mailSender, Environment ambiente) {
+    ConferenciaEmail.exigirHttps("app.carteira.convite.url-frontend "
+        + "(CARTEIRA_CONVITE_URL_FRONTEND)", convite.urlFrontend(),
+        redefinicao.modoEmail() == ModoEmail.SMTP, ambiente);
     return switch (redefinicao.modoEmail()) {
-      case SMTP -> smtp(mailSender.getIfAvailable(), redefinicao.remetente());
+      case SMTP -> smtp(ConferenciaEmail.clienteSmtp(ambiente, mailSender,
+          redefinicao.remetente(), email.dominioVerificado()), redefinicao.remetente());
       case LOG -> (destinatario, escritorio, link, validade) ->
           log.warn("[DEV] E-mail de convite da carteira NAO enviado (modo LOG).");
       case DESLIGADO -> (destinatario, escritorio, link, validade) ->
@@ -50,20 +60,24 @@ public class CarteiraConfig {
    * token do convite.
    *
    * @param redefinicao configuração de e-mail (modo e remetente)
+   * @param email       domínio verificado do remetente
+   * @param convite     link do convite
    * @param mailSender  cliente SMTP do Boot, se configurado
+   * @param ambiente    profiles e {@code spring.mail.*}, para as conferências de subida (#460)
    * @return a porta de envio
    */
   @Bean
-  public EnvioConviteEquipe envioConviteEquipe(
-      RedefinicaoSenhaProperties redefinicao, ObjectProvider<JavaMailSender> mailSender) {
+  public EnvioConviteEquipe envioConviteEquipe(RedefinicaoSenhaProperties redefinicao,
+      EmailProperties email, ConviteEquipeProperties convite,
+      ObjectProvider<JavaMailSender> mailSender, Environment ambiente) {
+    ConferenciaEmail.exigirHttps("app.escritorio.convite.url-frontend "
+        + "(ESCRITORIO_CONVITE_URL_FRONTEND)", convite.urlFrontend(),
+        redefinicao.modoEmail() == ModoEmail.SMTP, ambiente);
     return switch (redefinicao.modoEmail()) {
       case SMTP -> {
-        JavaMailSender cliente = mailSender.getIfAvailable();
-        if (cliente == null) {
-          throw new IllegalStateException(
-              "app.seguranca.redefinicao.modo-email=SMTP exige spring.mail.host configurado.");
-        }
         String remetente = redefinicao.remetente();
+        JavaMailSender cliente = ConferenciaEmail.clienteSmtp(ambiente, mailSender, remetente,
+            email.dominioVerificado());
         yield (destinatario, escritorio, link, validade) -> {
           SimpleMailMessage mensagem = new SimpleMailMessage();
           mensagem.setFrom(remetente);
@@ -90,10 +104,6 @@ public class CarteiraConfig {
   }
 
   private static EnvioConviteCarteira smtp(JavaMailSender mailSender, String remetente) {
-    if (mailSender == null) {
-      throw new IllegalStateException(
-          "app.seguranca.redefinicao.modo-email=SMTP exige spring.mail.host configurado.");
-    }
     return (destinatario, escritorio, link, validade) -> {
       SimpleMailMessage mensagem = new SimpleMailMessage();
       mensagem.setFrom(remetente);

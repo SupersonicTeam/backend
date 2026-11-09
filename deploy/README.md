@@ -21,8 +21,9 @@ então o backend rodava em `dev`, onde qualquer requisição declarava qualquer 
 auth era a única barreira.
 
 Continua sendo **demonstração com dados fictícios**: o certificado da NF-e é o de teste (público),
-a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro) e não há
-SMTP (`EMAIL_MODO` = `DESLIGADO`: "esqueci minha senha" responde 202 e nada é enviado). As contas
+a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro) e o envio
+de e-mail está desligado (`EMAIL_MODO` = `DESLIGADO`: "esqueci minha senha" e os convites respondem
+normalmente e nada é enviado) até a seção [E-mail](#e-mail-460) ser cumprida. As contas
 semeadas entram pelo login com a `SEED_SENHA`, inclusive as da **demonstração da banca**
 (`DEMONSTRACAO_HABILITADA`, #315): escritório com equipe, carteira e meses de notas. Contas e
 roteiro em [`docs/demonstracao-banca.md`](../docs/demonstracao-banca.md).
@@ -54,6 +55,61 @@ abaixo) e deixar o seed recriar as contas.
   `/etc/fail2ban/jail.d/sshd.local` fixa o `journalmatch` — o padrão do fail2ban nunca casaria.
 - **Arquivos de configuração** (`compose.yaml`, `Caddyfile`, scripts) não vão pelo CD, que só troca
   imagem: ao mudar algum, copie para `/opt/agrocontabil` e rode `docker compose up -d`.
+
+## E-mail (#460)
+
+Três fluxos mandam e-mail: o link de "esqueci minha senha", o convite do escritório ao produtor e o
+convite de equipe. O envio é por SMTP (`spring.mail`), então trocar de provedor é só trocar
+variáveis e DNS. O `compose.yaml` passa ao backend estas variáveis, todas com padrão seguro:
+
+| Variável | Padrão no compose | Observação |
+|----------|-------------------|------------|
+| `EMAIL_MODO` | `DESLIGADO` | `SMTP` liga o envio. `LOG` só sobe em dev |
+| `EMAIL_REMETENTE` | `AgroConIA <nao-responda@agroconia.com.br>` | Com `SMTP`, o domínio do endereço tem de ser o verificado no provedor (`EMAIL_DOMINIO_VERIFICADO`, padrão `agroconia.com.br`) |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | vazio, `587` | Do provedor |
+| `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | vazios | **Só no `.env` (600)**, nunca em issue, chat ou repositório |
+| `EMAIL_SMTP_STARTTLS`, `EMAIL_SMTP_SSL` | `true`, `false` | Porta 587 com STARTTLS obrigatório. Na 465: `EMAIL_SMTP_SSL=true` e `EMAIL_SMTP_STARTTLS=false` |
+
+Os links dos e-mails apontam para `https://${SITE_HOST}`: `/redefinir-senha`, `/escritorio` (onde o
+produtor vê os convites) e `/equipe/convite`.
+
+**O que impede a subida com `EMAIL_MODO=SMTP`:** host, usuário ou senha vazios, remetente fora do
+domínio verificado e link que não seja `https` (fora de dev/test). Com o envio desligado nada disso
+é conferido. Quem sobe `homolog` na própria máquina com `SMTP` precisa passar as três URLs em
+`https`.
+
+**Health:** o health do SMTP fica desligado (`management.health.mail.enabled: false` no
+`application.yml` e `MANAGEMENT_HEALTH_MAIL_ENABLED` no compose). Com ele ligado, o provedor fora do
+ar ou o `SPRING_MAIL_HOST` vazio poriam o `/actuator/health` em `DOWN`, e o `deploy.sh` reverteria o
+deploy. A falha de envio aparece só no log do backend.
+
+**Ordem para ligar** (o compose novo e a imagem nova podem chegar em qualquer ordem):
+
+1. Provedor, domínio e DNS (SPF, DKIM e DMARC `p=none`), com o rastreamento de clique e de abertura
+   desligado: o link leva o token no fragmento (`#token=`), e a reescrita do link o quebraria. A
+   recomendação, a comparação dos provedores e os registros DNS estão na #460 (Resend em
+   `sa-east-1`: `smtp.resend.com`, porta 587, usuário `resend`, senha = API key só de envio).
+2. Credenciais no `.env` **com o envio ainda desligado**, `docker compose up -d backend` e o
+   `/healthz` tem de seguir `UP`:
+   ```
+   EMAIL_MODO=DESLIGADO
+   EMAIL_REMETENTE=AgroConIA <nao-responda@agroconia.com.br>
+   SPRING_MAIL_HOST=<host SMTP do provedor>
+   SPRING_MAIL_PORT=587
+   SPRING_MAIL_USERNAME=<usuário SMTP>
+   SPRING_MAIL_PASSWORD=<senha ou chave SMTP>
+   ```
+3. Só depois do teto de envios no app, da política de dados com o provedor como operador e da
+   decisão sobre a transferência internacional (D7 da #460): `EMAIL_MODO=SMTP` e
+   `docker compose up -d backend`. O aviso "Envio de e-mail desligado" some do log.
+4. Teste real: os três fluxos para uma caixa da equipe e para o mail-tester, com SPF, DKIM e DMARC
+   em `pass`, o link no host certo e nenhum envio para conta `@example.com` do seed.
+
+**Reverter:** `EMAIL_MODO=DESLIGADO` no `.env` e `docker compose up -d backend`. Não precisa de
+deploy de código. Se a chave SMTP vazar, revogue-a no painel do provedor e ponha a nova no `.env`.
+
+A Oracle bloqueia a porta 25 de saída; a 587 e a 465 são liberadas, mas confira a egress da security
+list se houver regra restritiva.
 
 ## Primeira subida
 

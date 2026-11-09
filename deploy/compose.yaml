@@ -107,6 +107,22 @@ services:
       # Atras do Caddy (HTTPS): o cookie de refresh pode e deve ser Secure.
       REFRESH_COOKIE_SEGURO: 'true'
       REDEFINICAO_URL_FRONTEND: https://${SITE_HOST}/redefinir-senha
+      # Links dos convites (#460): o da carteira abre /escritorio, onde o produtor ve os convites.
+      CARTEIRA_CONVITE_URL_FRONTEND: https://${SITE_HOST}/escritorio
+      ESCRITORIO_CONVITE_URL_FRONTEND: https://${SITE_HOST}/equipe/convite
+      # E-mail (#460). DESLIGADO ate o passo a passo do README; credenciais so no .env. Com SMTP, host,
+      # usuario ou senha vazios, remetente fora do dominio verificado ou link http impedem a subida.
+      EMAIL_MODO: ${EMAIL_MODO:-DESLIGADO}
+      EMAIL_REMETENTE: '${EMAIL_REMETENTE:-AgroConIA <nao-responda@agroconia.com.br>}'
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      EMAIL_SMTP_STARTTLS: ${EMAIL_SMTP_STARTTLS:-true}
+      EMAIL_SMTP_SSL: ${EMAIL_SMTP_SSL:-false}
+      # Ja vem desligado na imagem da #460; repetido aqui para a imagem anterior nao cair em DOWN com
+      # o SPRING_MAIL_HOST vazio, se este compose chegar antes dela.
+      MANAGEMENT_HEALTH_MAIL_ENABLED: 'false'
       SEED_SENHA: ${SEED_SENHA:-}
       # Escritorio, carteira e notas da banca (#315), com as contas na SEED_SENHA. Idempotente.
       DEMONSTRACAO_HABILITADA: 'true'

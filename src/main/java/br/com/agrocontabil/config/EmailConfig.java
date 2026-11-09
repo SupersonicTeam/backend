@@ -7,6 +7,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -18,7 +19,9 @@ import org.springframework.mail.javamail.JavaMailSender;
  *
  * <ul>
  *   <li>{@code SMTP}: envio real pelo {@link JavaMailSender} do Spring Boot ({@code spring.mail.*});
- *       sem {@code spring.mail.host} a aplicação não sobe;
+ *       sem host, sem usuário e senha, com remetente fora do domínio verificado ou, fora de
+ *       {@code dev}/{@code test}, com link {@code http}, a aplicação não sobe
+ *       ({@link ConferenciaEmail}, issue #460);
  *   <li>{@code LOG}: o link vai para o log em WARN. É um segredo em log, aceitável só na máquina do
  *       desenvolvedor — <strong>a aplicação só sobe com {@code LOG} nos profiles {@code dev} e
  *       {@code test}</strong>;
@@ -27,6 +30,7 @@ import org.springframework.mail.javamail.JavaMailSender;
  * </ul>
  */
 @Configuration
+@EnableConfigurationProperties(EmailProperties.class)
 public class EmailConfig {
 
   private static final Logger log = LoggerFactory.getLogger(EmailConfig.class);
@@ -34,12 +38,13 @@ public class EmailConfig {
   private static final String ASSUNTO = "Redefinicao de senha - AgroConIA";
 
   /** Profiles em que o modo LOG é aceito: a máquina do desenvolvedor e os testes. */
-  static final List<String> PERFIS_COM_LOG = List.of("dev", "test");
+  static final List<String> PERFIS_COM_LOG = ConferenciaEmail.PERFIS_LOCAIS;
 
   /**
    * Implementação da porta de e-mail conforme o modo configurado.
    *
    * @param propriedades configuração da redefinição
+   * @param email        domínio verificado do remetente
    * @param mailSender   cliente SMTP do Boot, se configurado
    * @param ambiente     para recusar o modo LOG em produção
    * @return a porta de envio
@@ -47,6 +52,7 @@ public class EmailConfig {
   @Bean
   public EnvioEmail envioEmail(
       RedefinicaoSenhaProperties propriedades,
+      EmailProperties email,
       ObjectProvider<JavaMailSender> mailSender,
       Environment ambiente) {
     ModoEmail modo = propriedades.modoEmail();
@@ -58,12 +64,12 @@ public class EmailConfig {
           + "redefinicao (um segredo) no log: permitido so nos profiles " + PERFIS_COM_LOG
           + ". Use SMTP.");
     }
-    if (perfis.contains("prod") && !propriedades.urlFrontend().startsWith("https://")) {
-      throw new IllegalStateException("app.seguranca.redefinicao.url-frontend precisa ser HTTPS "
-          + "em prod (REDEFINICAO_URL_FRONTEND): o link leva o token de redefinicao.");
-    }
+    ConferenciaEmail.exigirHttps("app.seguranca.redefinicao.url-frontend "
+        + "(REDEFINICAO_URL_FRONTEND)", propriedades.urlFrontend(), modo == ModoEmail.SMTP,
+        ambiente);
     return switch (modo) {
-      case SMTP -> smtp(mailSender.getIfAvailable(), propriedades.remetente());
+      case SMTP -> smtp(ConferenciaEmail.clienteSmtp(ambiente, mailSender,
+          propriedades.remetente(), email.dominioVerificado()), propriedades.remetente());
       case LOG -> (destinatario, link, validade) ->
           log.warn("[DEV] E-mail de redefinicao de senha NAO enviado (modo LOG). Link: {}", link);
       case DESLIGADO -> {
@@ -75,10 +81,6 @@ public class EmailConfig {
   }
 
   private static EnvioEmail smtp(JavaMailSender mailSender, String remetente) {
-    if (mailSender == null) {
-      throw new IllegalStateException(
-          "app.seguranca.redefinicao.modo-email=SMTP exige spring.mail.host configurado.");
-    }
     return (destinatario, link, validade) -> {
       SimpleMailMessage mensagem = new SimpleMailMessage();
       mensagem.setFrom(remetente);
