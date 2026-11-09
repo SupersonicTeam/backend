@@ -14,9 +14,16 @@ período. Grupos:
 |-------|-----------------------|--------------|
 | 1 `mes_seguinte` (10) | guias do mês seguinte ("mês que vem", "próximo mês", "mês seguinte") | `vencimentosDoMes` com o mês seguinte; nenhuma fonte do mês corrente, de `proximosVencimentos`, `guiasEmAtraso`, `listarAlertas` ou `resumoDoProdutor`; nenhuma data do mês corrente no texto |
 | 2 `mes_corrente` (8) | vencimentos deste mês, em pergunta livre (nunca o texto exato dos atalhos) | `vencimentosDoMes` do mês corrente ou `proximosVencimentos` até o último dia do mês; nenhuma data depois do fim do mês no texto |
-| 3 `trimestre` (8) | "último trimestre", "últimos três meses" | período = os três meses-calendário completos antes do corrente (decisão do Murillo, 2026-11-09): em 09/11/2026, 01/08 a 31/10; em 03/12, 01/09 a 30/11. Nem o trimestre do calendário nem os 90 dias. Apuração: as três `consultarApuracao`, sem outro mês |
+| 3 `trimestre` (8) | "último trimestre", "últimos três meses" | período = os três meses-calendário completos antes do corrente (decisão do Murillo, 2026-11-09, ver a nota abaixo): em 09/11/2026, 01/08 a 31/10; em 03/12, 01/09 a 30/11. Nem o trimestre do calendário nem os 90 dias. Apuração: as três `consultarApuracao`, sem outro mês |
 | 4 `aberto` (14) | intervalo aberto (desde, até, antes de, a partir de, pra cá, pra trás), safra, dois períodos, regra com "mês seguinte" | o período corresponde ao pedido: o limite dado fixo e o outro aberto (fim hoje, ontem ou fim do mês; início antes do mês citado); safra 2025/26 de 01/07 a 01/10/2025 até 30/06/2026 a hoje, ou uma pergunta de volta sobre o período; dois períodos = as duas fontes; regra = rota `LEGISLACAO` sem fonte de dados |
 | 5 controles (19) | mês passado, retrasado, mês nomeado, este ano, ano passado, sem período (12); lei (4); fora do escopo (3) | período e função certos; lei com citação da LC 214/2025; fora do escopo com rota `FORA_DE_ESCOPO` |
+
+**Nota sobre o grupo 3 (2026-11-09, antes de qualquer rodada).** As duas leituras são do Murillo,
+em duas respostas do mesmo dia: "último trimestre" = os três meses fechados, na primeira; "últimos
+três meses" e "últimos 3 meses" = também os três meses fechados ("Sim, meses fechados"), na
+segunda. O brief desta medição já trazia as duas expressões juntas, porque a sessão orquestradora
+estendeu a primeira decisão à segunda expressão. O Murillo confirmou a extensão depois, antes da
+primeira rodada, e as perguntas g3-02, g3-04, g3-07 e g3-08 ficaram como estavam.
 
 A gramática exata de cada campo está no topo de `pontuar.py`, e os testes em `test_pontuar.py`
 fixam os casos de borda. As datas são calculadas a partir da data de cada chamada, no fuso de
