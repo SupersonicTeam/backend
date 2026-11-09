@@ -250,6 +250,9 @@ CREATE TABLE IF NOT EXISTS carteira_vinculo (
     inicio        TIMESTAMP WITH TIME ZONE  NOT NULL,
     fim           TIMESTAMP WITH TIME ZONE,
     observacoes   VARCHAR(1000),
+    encerrado_por           VARCHAR(20),
+    encerrado_por_membro_id UUID,
+    motivo_encerramento     VARCHAR(500),
     created_at    TIMESTAMP WITH TIME ZONE,
     updated_at    TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)

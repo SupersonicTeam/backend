@@ -201,6 +201,18 @@ public interface VinculoCarteiraRepository extends JpaRepository<VinculoCarteira
   int limparResponsavel(@Param("responsavelId") UUID responsavelId);
 
   /**
+   * Desfaz a referência ao membro que encerrou vínculos (removido da equipe ou excluído, #402):
+   * o registro de que o escritório encerrou, e o motivo, ficam; só o autor deixa de ser apontado.
+   *
+   * @param membroId contador
+   * @return vínculos alterados
+   */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("UPDATE VinculoCarteira v SET v.encerradoPorMembroId = NULL"
+      + " WHERE v.encerradoPorMembroId = :membroId")
+  int limparAutorDoEncerramento(@Param("membroId") UUID membroId);
+
+  /**
    * Quantos vínculos não encerrados o escritório tem (o unipessoal só sai de cena vazio).
    *
    * @param escritorioId escritório

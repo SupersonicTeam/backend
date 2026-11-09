@@ -417,6 +417,7 @@ public class EquipeEscritorioService {
 
   private void sairDoEscritorio(Contador contador) {
     vinculoRepository.limparResponsavel(contador.getId());
+    vinculoRepository.limparAutorDoEncerramento(contador.getId());
     contador.setEscritorioId(null);
     contador.setFuncao(null);
     contadorRepository.saveAndFlush(contador);
