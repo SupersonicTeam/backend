@@ -176,18 +176,28 @@
       "id": "v2-g3-01",
       "grupo": "trimestre",
       "pergunta": "Quanto rendeu a venda de algodão no último trimestre?",
-      "criterio": "totalVendasPorProduto de algodão (nome ou NCM 5201) do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "criterio": "totalVendasPorProduto de algodão (nome ou NCM 5201) do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nenhuma fonte de datas com outro período: nem o trimestre do calendário, nem os 90 dias, nem até hoje.",
       "esperado": {
-        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["algodao", "5201"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+        "alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["algodao", "5201"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]],
+        "proibidas": [
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:-3:inicio"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"antes_de": "mes:-1:fim"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}}
+        ]
       }
     },
     {
       "id": "v2-g3-02",
       "grupo": "trimestre",
       "pergunta": "Nos últimos três meses, quanto gastei com diesel?",
-      "criterio": "totalComprasPorInsumo de diesel (nome ou NCM 2710) do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "criterio": "totalComprasPorInsumo de diesel (nome ou NCM 2710) do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nenhuma fonte de datas com outro período: nem o trimestre do calendário, nem os 90 dias, nem até hoje.",
       "esperado": {
-        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["diesel", "2710"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+        "alternativas": [[{"funcoes": ["totalComprasPorInsumo"], "produto": ["diesel", "2710"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]],
+        "proibidas": [
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:-3:inicio"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"antes_de": "mes:-1:fim"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}}
+        ]
       }
     },
     {
@@ -208,27 +218,42 @@
       "id": "v2-g3-04",
       "grupo": "trimestre",
       "pergunta": "Quanto de Funrural ficou retido nas minhas vendas do último trimestre?",
-      "criterio": "consultarRetencoes do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "criterio": "consultarRetencoes do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nenhuma fonte de datas com outro período: nem o trimestre do calendário, nem os 90 dias, nem até hoje.",
       "esperado": {
-        "alternativas": [[{"funcoes": ["consultarRetencoes"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+        "alternativas": [[{"funcoes": ["consultarRetencoes"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]],
+        "proibidas": [
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:-3:inicio"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"antes_de": "mes:-1:fim"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}}
+        ]
       }
     },
     {
       "id": "v2-g3-05",
       "grupo": "trimestre",
       "pergunta": "Quanto acumulei de crédito de IBS e CBS nos últimos 3 meses?",
-      "criterio": "consultarCreditos do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "criterio": "consultarCreditos do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nenhuma fonte de datas com outro período: nem o trimestre do calendário, nem os 90 dias, nem até hoje.",
       "esperado": {
-        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+        "alternativas": [[{"funcoes": ["consultarCreditos"], "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]],
+        "proibidas": [
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:-3:inicio"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"antes_de": "mes:-1:fim"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}}
+        ]
       }
     },
     {
       "id": "v2-g3-06",
       "grupo": "trimestre",
       "pergunta": "Somando tudo, quanto eu faturei com vendas nos últimos três meses?",
-      "criterio": "listarNotas de SAIDA do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nem o trimestre do calendário nem os 90 dias.",
+      "criterio": "listarNotas de SAIDA do 1º dia do terceiro mês antes do corrente ao último dia do mês passado (em 09/11/2026: 01/08 a 31/10/2026). Nenhuma fonte de datas com outro período: nem o trimestre do calendário, nem os 90 dias, nem até hoje.",
       "esperado": {
-        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]]
+        "alternativas": [[{"funcoes": ["listarNotas"], "tipo": "SAIDA", "inicio": ["mes:-3:inicio"], "fim": ["mes:-1:fim"]}]],
+        "proibidas": [
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "inicio": {"antes_de": "mes:-3:inicio"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"antes_de": "mes:-1:fim"}},
+          {"funcoes": ["totalComprasPorInsumo", "totalVendasPorProduto", "consultarCreditos", "consultarRetencoes", "listarNotas"], "fim": {"entre": ["mes:0:inicio", "ano:20:fim"]}}
+        ]
       }
     },
     {

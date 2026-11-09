@@ -12,7 +12,8 @@ Só biblioteca padrão. Dois comandos:
 Cada linha do JSONL (gravada pelo executar.py) traz `id`, `repeticao`, `tentativa`, `braco`,
 `commit`, `modelo`, `modelo_digest`, `horario`, `data_referencia` (data de Brasília da chamada),
 `http_status`, `corpo` (resposta de POST /api/assistente/chat), `segundos`, `falha_tecnica` e
-`aquecimento`. Linhas de aquecimento não são pontuadas.
+`aquecimento` e, desde o conjunto v2, `conjunto_versao` e `conjunto_sha256` (o conjunto
+perguntado: linha com outro hash recusa a pontuação). Linhas de aquecimento não são pontuadas.
 
 Gramática de `esperado` (uma pergunta):
 
@@ -478,6 +479,11 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
     segundos: dict[str, list] = {}
     aquecido = False
     for registro in registros:
+        executado = registro.get("conjunto_sha256")
+        if executado is not None and executado != conjunto["_sha256"]:
+            # Linhas antigas (rodada 1 do v1) não têm o campo e seguem aceitas.
+            raise SystemExit(f"Execução de outro conjunto: sha256 {executado}, "
+                             f"o pontuado é {conjunto['_sha256']}")
         bracos.add(registro.get("braco"))
         commits.add(registro.get("commit"))
         modelos.add((registro.get("modelo"), registro.get("modelo_digest")))

@@ -350,6 +350,20 @@ class ConjuntoV2(unittest.TestCase):
         with self.assertRaises(SystemExit):
             pontuar.pontuar(self.conjunto, [registro("g1-01", corpo())])
 
+    def test_execucao_de_outro_conjunto_recusada_pelo_hash(self):
+        certo = corpo(fonte("vencimentosDoMes", mes="2026-12"))
+        linha = registro("v2-g1-01", certo, conjunto_sha256=self.conjunto["_sha256"])
+        self.assertEqual(pontuar.pontuar(self.conjunto, [linha])["por_grupo"]["mes_seguinte"]
+                         ["certas"], 1)
+        sem_campo = registro("v2-g1-01", certo)
+        self.assertEqual(pontuar.pontuar(self.conjunto, [sem_campo])["por_grupo"]
+                         ["mes_seguinte"]["certas"], 1)
+        for outro in (registro("v2-g1-01", certo, conjunto_sha256="0" * 64),
+                      registro("aquecimento", corpo(), aquecimento=True,
+                               conjunto_sha256="0" * 64)):
+            with self.assertRaisesRegex(SystemExit, "outro conjunto"):
+                pontuar.pontuar(self.conjunto, [outro])
+
     # --- critério por grupo ------------------------------------------------------------------
 
     def test_mes_seguinte(self):
@@ -403,6 +417,17 @@ class ConjuntoV2(unittest.TestCase):
                                  ("errada", f("2026-08-01", "2026-11-09"))])
             self.confere(ident, [("certa", f("2026-09-01", "2026-11-30")),
                                  ("errada", f("2026-08-01", "2026-10-31"))], DEZ)
+            # Os dois períodos na mesma resposta: "nem o trimestre do calendário nem os 90 dias".
+            certo = f("2026-08-01", "2026-10-31")["fontesDados"][0]
+            outro = {"descricaoOuNcm": "soja"}
+            self.confere(ident, [
+                ("errada", corpo(certo, *f("2026-07-01", "2026-09-30")["fontesDados"])),
+                ("errada", corpo(certo, *f("2026-08-11", "2026-11-09")["fontesDados"])),
+                ("errada", corpo(certo, fonte("totalVendasPorProduto", dataInicio="2026-08-10",
+                                              dataFim="2026-11-09", **outro))),
+                ("certa", corpo(certo, fonte("totalVendasPorProduto", dataInicio="2026-08-01",
+                                             dataFim="2026-10-31", **outro))),
+                ("certa", corpo(certo, fonte("consultarApuracao", mes="2026-11")))])
         produto_errado = corpo(fonte("totalComprasPorInsumo", descricaoOuNcm="ureia",
                                      dataInicio="2026-08-01", dataFim="2026-10-31"))
         self.assertEqual(self.classificar("v2-g3-02", produto_errado), "errada")

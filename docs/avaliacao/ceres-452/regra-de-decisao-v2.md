@@ -24,7 +24,15 @@ código que resolve o período e escolhe a rota. Grupos:
 **Nota sobre o grupo 3 (2026-11-09, antes de qualquer rodada).** As duas leituras são do Murillo,
 em duas respostas do mesmo dia: "último trimestre" = os três meses fechados, na primeira; "últimos
 três meses" e "últimos 3 meses" = também os três meses fechados ("Sim, meses fechados"), na
-segunda. O conjunto v2 usa as três expressões, duas perguntas de cada.
+segunda. O conjunto v2 usa as três expressões, duas perguntas de cada. Nas perguntas de trimestre
+com função de datas, uma fonte de datas com outro período na mesma resposta (o trimestre do
+calendário, os 90 dias, até hoje) também a torna errada, pelo "nem o trimestre do calendário nem os
+90 dias" da tabela.
+
+**Nota sobre "antes de" e "pra trás" no grupo 4.** O "mês citado" do início aberto é o mês do
+limite dado. Em "de julho pra trás", o limite é 31/07 e o início vem antes de 1º de julho. Em
+"antes de agosto", o limite também é 31/07, o mês do limite é julho e o início vem antes de 1º de
+julho. Nos dois casos julho fechado sozinho não vale.
 
 O critério de cada pergunta está no campo `criterio` do conjunto, em texto, e no campo `esperado`,
 na gramática que o `pontuar.py` lê (no topo do arquivo); os testes em `test_pontuar.py` fixam os

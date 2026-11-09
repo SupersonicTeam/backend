@@ -212,8 +212,12 @@ class Conjuntos(ServidoresFalsos):
         ids = ["v2-g1-01", "v2-g4-09", "v2-c-11"]
         saida = self.rodar("--repeticoes", "1", "--ids", ",".join(ids), conjunto=CONJUNTO_V2)
         self.assertIn("ceres-452-v2", saida)
+        sha = Path(str(CONJUNTO_V2) + ".sha256").read_text(encoding="utf-8").split()[0]
         for nome in ("base", "corr"):
-            pontuadas = [l for l in self.linhas(nome) if not l["aquecimento"]]
+            linhas = self.linhas(nome)
+            self.assertEqual({(l["conjunto_versao"], l["conjunto_sha256"]) for l in linhas},
+                             {("ceres-452-v2", sha)})
+            pontuadas = [l for l in linhas if not l["aquecimento"]]
             self.assertEqual(sorted({l["id"] for l in pontuadas}), sorted(ids))
         enviadas = {texto for _, texto in CHAMADAS} - set(executar.PERGUNTAS_DE_AQUECIMENTO)
         self.assertEqual(enviadas, {perguntas[i] for i in ids})

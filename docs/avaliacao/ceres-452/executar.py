@@ -178,6 +178,7 @@ def perguntar(braco: Braco, args, senha: str, pergunta: str, base: dict) -> dict
         braco.token = None
     registro = dict(base)
     registro.update({
+        "conjunto_versao": args.conjunto_versao, "conjunto_sha256": args.conjunto_sha256,
         "braco": braco.nome, "commit": braco.commit, "modelo": args.modelo,
         "modelo_digest": args.modelo_digest, "horario": momento.isoformat(timespec="seconds"),
         "data_referencia": momento.date().isoformat(), "http_status": status, "corpo": corpo,
@@ -246,6 +247,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"Conjunto não encontrado: {args.conjunto}")
     conjunto = pontuar.carregar_conjunto(args.conjunto)
     pontuar.validar_conjunto(conjunto, agora_brasilia().date())
+    # Cada linha leva o conjunto perguntado: o pontuar.py recusa pontuar contra outro.
+    args.conjunto_versao, args.conjunto_sha256 = conjunto.get("versao"), conjunto["_sha256"]
     perguntas = conjunto["perguntas"]
     if args.ids:
         escolhidos = set(args.ids.split(","))
