@@ -151,7 +151,7 @@ public final class NotaFiscalMapper {
     return new NotaCarteiraResponse(nota.id(), nota.produtorId(), nota.produtorNome(),
         nota.numero(), nota.serie(), nota.naturezaOperacao(), nota.status(),
         nota.tipoDocumento(), nota.dataEmissao(), nota.destinatarioNome(),
-        nota.valorTotalProdutos(), nota.valorTotalNota(), nota.valorTotalIbs(),
+        nota.origem(), nota.emitenteNome(), nota.valorTotalProdutos(), nota.valorTotalNota(), nota.valorTotalIbs(),
         nota.valorTotalCbs(), nota.chaveAcesso(), nota.createdAt(), nota.updatedAt());
   }
 

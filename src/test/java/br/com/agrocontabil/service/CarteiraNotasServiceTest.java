@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,6 +18,7 @@ import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.NotaFiscal;
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.NotaDaCarteira;
 import br.com.agrocontabil.repository.NotaFiscalCarteiraRepository;
@@ -124,6 +126,32 @@ class CarteiraNotasServiceTest {
     assertThat(pagina.getValue().getSort()).containsExactly(Sort.Order.desc("dataEmissao"),
         Sort.Order.asc("id"));
     assertThat(especificacao.getValue()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("a lista leva origem e fornecedor: compra IMPORTADA com emitente, nota PROPRIA sem")
+  void origemEEmitenteNaLista() {
+    when(membroProvider.membro()).thenReturn(membro);
+    NotaDaCarteira compra = linha(OrigemNotaFiscal.IMPORTADA,
+        "Posto Rota 163");
+    NotaDaCarteira propria = linha(OrigemNotaFiscal.PROPRIA, null);
+    when(carteiraRepository.listar(any(), any()))
+        .thenReturn(new PageImpl<>(List.of(compra, propria)));
+
+    var pagina = service.listarDaCarteira(filtro(null, null), PageRequest.of(0, 20));
+
+    assertThat(pagina.getContent()).extracting("origem", "emitenteNome").containsExactly(
+        tuple(OrigemNotaFiscal.IMPORTADA,
+            "Posto Rota 163"),
+        tuple(OrigemNotaFiscal.PROPRIA,
+            null));
+  }
+
+  private static NotaDaCarteira linha(OrigemNotaFiscal origem,
+      String emitente) {
+    return new NotaDaCarteira(UUID.randomUUID(), UUID.randomUUID(), "Fazenda A", 1L, 1,
+        "Venda", StatusNotaFiscal.AUTORIZADA, null, null, "Dest",
+        origem, emitente, null, null, null, null, null, null, null);
   }
 
   @Test
