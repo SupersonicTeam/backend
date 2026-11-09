@@ -855,6 +855,58 @@ class AssistenteChatIntegrationTest {
             + " contador antes de emitir."));
   }
 
+  @Test
+  @DisplayName("#442: periodo relativo vem calculado ao modelo e as datas das funcoes sao as dele")
+  void periodoRelativoResolvidoPeloBackend() throws Exception {
+    LocalDate hoje = LocalDate.now(ZONE);
+    YearMonth anterior = YearMonth.from(hoje).minusMonths(1);
+    // O modelo erra as datas e o mes; o backend grava o periodo da pergunta nas duas funcoes.
+    modelo.responderCom(prompt -> {
+      try {
+        AssistantMessage pedido = AssistantMessage.builder()
+            .content("")
+            .toolCalls(List.of(
+                new AssistantMessage.ToolCall("c1", "function", "totalComprasPorInsumo",
+                    JSON.writeValueAsString(Map.of("descricaoOuNcm", "calcario",
+                        "dataInicio", "2020-01-01", "dataFim", "2020-03-31"))),
+                new AssistantMessage.ToolCall("c2", "function", "consultarApuracao",
+                    JSON.writeValueAsString(Map.of("mes", "2020-02")))))
+            .build();
+        return new ChatResponse(List.of(new Generation(pedido)));
+      } catch (Exception e) {
+        throw new IllegalStateException(e);
+      }
+    });
+
+    perguntar(produtorA, "Gastei quanto com calcário no mês passado e como ficou a apuração?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fontesDados[0].funcao").value("totalComprasPorInsumo"))
+        .andExpect(jsonPath("$.fontesDados[0].parametros.descricaoOuNcm").value("calcario"))
+        .andExpect(jsonPath("$.fontesDados[0].parametros.dataInicio")
+            .value(anterior.atDay(1).toString()))
+        .andExpect(jsonPath("$.fontesDados[0].parametros.dataFim")
+            .value(anterior.atEndOfMonth().toString()))
+        .andExpect(jsonPath("$.fontesDados[1].funcao").value("consultarApuracao"))
+        .andExpect(jsonPath("$.fontesDados[1].parametros.mes").value(anterior.toString()));
+    String mensagem = ultimaMensagem(modelo.promptsRecebidos().get(0)).getText();
+    assertThat(mensagem).contains("Periodo da pergunta, ja calculado: de " + anterior.atDay(1)
+        + " a " + anterior.atEndOfMonth() + " (mes " + anterior + ").");
+  }
+
+  @Test
+  @DisplayName("#442: com data explicita na pergunta, as datas sao as que o modelo escolheu")
+  void dataExplicitaFicaComOModelo() throws Exception {
+    modelo.responderCom(modeloFiel(Map.of(
+        "descricaoOuNcm", "fertilizante", "dataInicio", "2026-05-01", "dataFim", "2026-05-31")));
+
+    perguntar(produtorA, "Quanto saiu de fertilizante em maio de 2026, o mês passado?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fontesDados[0].parametros.dataInicio").value("2026-05-01"))
+        .andExpect(jsonPath("$.fontesDados[0].parametros.dataFim").value("2026-05-31"));
+    assertThat(ultimaMensagem(modelo.promptsRecebidos().get(0)).getText())
+        .doesNotContain("Periodo da pergunta");
+  }
+
   private static java.util.function.Function<Prompt, ChatResponse> modeloFiel(
       Map<String, Object> argumentos) {
     return prompt -> {

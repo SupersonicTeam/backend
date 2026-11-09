@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * Instruções de sistema da Ceres (issues #142 e #157).
@@ -50,6 +51,23 @@ public final class PromptsCeres {
    */
   public static String mensagemDados(LocalDate hoje, String pergunta) {
     return "Hoje e " + hoje + ".\n\nPergunta: " + pergunta;
+  }
+
+  /**
+   * Mensagem do usuário da rota de dados com o período relativo da pergunta já calculado pelo
+   * backend (issue #442): o modelo não precisa transformar "mês passado" em datas. Sem período,
+   * a mesma mensagem de {@link #mensagemDados(LocalDate, String)}.
+   *
+   * @param hoje     data de referência em {@code America/Sao_Paulo}
+   * @param pergunta pergunta já mascarada ({@code DataSanitizer})
+   * @param periodo  período relativo da pergunta ({@link PeriodoDaPergunta})
+   * @return conteúdo da mensagem do usuário
+   */
+  public static String mensagemDados(LocalDate hoje, String pergunta,
+      Optional<PeriodoDaPergunta.Periodo> periodo) {
+    return periodo
+        .map(p -> "Hoje e " + hoje + ".\n" + p.paraOModelo() + "\n\nPergunta: " + pergunta)
+        .orElseGet(() -> mensagemDados(hoje, pergunta));
   }
 
   /**
