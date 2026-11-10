@@ -1,0 +1,31 @@
+# v2-g4-06 na v2e: auditoria da Ceres e log da aplicação da correção
+#
+# Auditoria: tabela assistente_interacao dos bancos agroconia_452_base e
+# agroconia_452_correcao, lida em 2026-11-10, antes de a próxima rodada recriar os bancos.
+# Uma linha por execução da pergunta no JSONL (fora o aquecimento), casada pelo horário:
+# gravada perto do fim da chamada, com a latência mais perto dos segundos do JSONL (até 1 s).
+# Sem produtor_id.
+# Colunas: braço | rep | tent | início (JSONL) | gravada | rota | desfecho | chamadas_funcao
+#          | latencia_ms | tokens_entrada | tokens_saida
+
+base | 1 | 1 | 01:59:45 | 02:00:04 | MISTO | RESPONDIDA | 1 | 18361 | 4121 | 71
+base | 2 | 1 | 02:30:50 | 02:31:08 | MISTO | RESPONDIDA | 1 | 18013 | 4121 | 71
+base | 3 | 1 | 02:40:13 | 02:40:35 | DADOS | RESPONDIDA | 1 | 21191 | 4121 | 71
+correcao | 1 | 1 | 02:09:07 | 02:11:11 | MISTO | MODO_FALLBACK | 0 | 123390 | 415 | 21
+correcao | 1 | 2 | 02:11:16 | 02:11:16 | MISTO | MODO_FALLBACK | 0 | 102 | - | -
+correcao | 1 | 3 | 02:11:20 | 02:11:20 | MISTO | MODO_FALLBACK | 0 | 95 | - | -
+correcao | 2 | 1 | 02:20:19 | 02:21:52 | MISTO | RESPONDIDA | 7 | 92614 | 4156 | 371
+correcao | 3 | 1 | 02:49:51 | 02:51:54 | MISTO | MODO_FALLBACK | 0 | 123399 | 415 | 21
+correcao | 3 | 2 | 02:51:59 | 02:51:59 | MISTO | MODO_FALLBACK | 0 | 102 | - | -
+correcao | 3 | 3 | 02:52:03 | 02:52:03 | MISTO | MODO_FALLBACK | 0 | 101 | - | -
+
+# Log da aplicação da correção (correcao-app.log, fora da pasta porque traz o id do
+# usuário no login): as linhas das janelas da v2-g4-06, fora as de login.
+
+2026-11-10T02:11:11.411-03:00 WARN 35492 --- [agrocontabil-backend] [ agro-ceres-2] b.c.a.config.AssistenteConfig : Falha na chamada ao modelo (tentativa 1): org.springframework.web.client.ResourceAccessException
+2026-11-10T02:11:11.412-03:00 WARN 35492 --- [agrocontabil-backend] [ agro-ceres-2] b.c.a.assistente.llm.ModeloLinguagem : Falha ao chamar o modelo de linguagem: provedor=ollama falha=org.springframework.web.client.ResourceAccessException
+2026-11-10T02:11:11.412-03:00 INFO 35492 --- [agrocontabil-backend] [ agro-ceres-2] b.c.a.a.o.OrquestradorService : Ceres em modo fallback: modelo indisponivel na etapa dados
+2026-11-10T02:21:52.295-03:00 INFO 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.a.f.ProcessadorErroFerramenta : Funcao consultarRetencoes chamada com parametro invalido
+2026-11-10T02:51:54.512-03:00 WARN 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.config.AssistenteConfig : Falha na chamada ao modelo (tentativa 1): org.springframework.web.client.ResourceAccessException
+2026-11-10T02:51:54.512-03:00 WARN 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.assistente.llm.ModeloLinguagem : Falha ao chamar o modelo de linguagem: provedor=ollama falha=org.springframework.web.client.ResourceAccessException
+2026-11-10T02:51:54.512-03:00 INFO 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.a.o.OrquestradorService : Ceres em modo fallback: modelo indisponivel na etapa dados
