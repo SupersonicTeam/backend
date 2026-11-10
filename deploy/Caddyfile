@@ -37,6 +37,49 @@
 }
 
 {$SITE_HOST} {
+	# Acessos da pagina inicial, para contar o QR do cartao de visita (?utm_source=cartao, #484).
+	# Minimizado (LGPD), sem dado pessoal: so a raiz "/" entra (nunca /api, que leva CPF/CNPJ na
+	# busca, nem o /healthz do monitor, nem as rotas do SPA, cuja query vem da tela) e saem IP,
+	# porta, cabecalhos e cookies. Fica data, metodo, host, URI, status, tamanho, duracao e o user
+	# agent (separa robo de pessoa). Retencao curta: arquivo de 1 MiB (~3.600 acessos) e 3 antigos
+	# compactados, apagados 30 dias depois. Contar e aplicar: deploy/README.md, secao Acessos.
+	log {
+		output file /data/acessos/www.log {
+			roll_size 1MiB
+			roll_keep 3
+			roll_keep_for 720h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers delete
+				request>tls delete
+				resp_headers delete
+				user_id delete
+				# Identificadores de clique que redes e anuncios acrescentam ao link: ligam o
+				# acesso a um perfil. O utm_source fica (e o que se conta).
+				request>uri query {
+					delete fbclid
+					delete gclid
+					delete gbraid
+					delete wbraid
+					delete msclkid
+					delete ttclid
+					delete twclid
+					delete li_fat_id
+					delete igshid
+					delete mc_eid
+				}
+			}
+		}
+	}
+	@foraDaContagem not path /
+	log_skip @foraDaContagem
+	log_append agente {http.request.header.User-Agent}
+
 	# Monitor externo (UptimeRobot). Responde so UP/DOWN pelo health do backend, sem repassar o
 	# corpo: o Actuator nunca sai daqui (so /api e o frontend sao repassados). So no www.
 	handle /healthz {
