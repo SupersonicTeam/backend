@@ -10,7 +10,7 @@ correção, com o conjunto `ceres-452-v2` e pela regra `../../regra-de-decisao-v
 | | |
 |---|---|
 | Base | `af1124b5ac6e570cf78329cd220a0211a0daab8e` (`origin/main` de 2026-11-10, 01h46) |
-| Correção | `1e0134a11f0f66ffa8bd10eeae196ddb9c3bf87a`: a `ffea5a8` aplicada sobre a `af1124b` por merge local, sem conflito (commit não publicado) |
+| Correção | `1e0134a11f0f66ffa8bd10eeae196ddb9c3bf87a`: a `ffea5a8` aplicada sobre a `af1124b` por merge local, sem conflito. O commit não foi publicado; a árvore dele é `5841d171505779a4639c0cca3cacf53dfda94ce5` |
 | Conjunto | `ceres-452-v2`, sha256 `ce688217d06f269f2c1e4fc465307c2db9dc5d51757713040dd3e42c6dc2bc19`, 40 perguntas |
 | Modelo | `qwen3:4b-instruct`, digest `0edcdef34593`, Ollama local |
 | Data de referência | 2026-11-10 nos dois braços |
@@ -20,14 +20,23 @@ correção, com o conjunto `ceres-452-v2` e pela regra `../../regra-de-decisao-v
 Blocos, em ordem de execução: base r1 01:54–02:03, correção r1 02:03–02:15, correção r2 02:15–02:25,
 base r2 02:25–02:34, base r3 02:34–02:44, correção r3 02:44–02:55.
 
+O commit da correção não está no GitHub, mas a árvore dele se confere sem mexer no checkout (git 2.38
+ou mais novo). O comando abaixo imprime `5841d171505779a4639c0cca3cacf53dfda94ce5`. Um merge refeito
+daria outro SHA de commit, porque autor e data mudam, mas a mesma árvore:
+
+```bash
+git merge-tree --write-tree af1124b5ac6e570cf78329cd220a0211a0daab8e ffea5a8b1ba51080b2152d74eab20353327b6a50
+```
+
 ### Carga da máquina
 
 - Antes do início, nenhum `java`, `mvn`, `python` ou `node` estava no ar. A memória livre era de 6,1 GiB
   de 31,7 GiB, e a CPU estava ociosa.
-- Durante a rodada, a carga foi lida a cada 2 minutos (`carga.log`, 33 leituras). Nenhum `java` ou
-  `mvn` de outra sessão apareceu.
-- A CPU ficou entre 57% e 90% e a memória livre entre 3,3 e 4,1 GiB. Essa carga vem das duas aplicações
-  da medição e do Ollama.
+- Durante a rodada, a carga foi lida a cada 2 minutos (`carga.log`, 33 leituras de 01:51 a 02:57).
+  Nenhum `java` ou `mvn` de outra sessão apareceu.
+- Até o fim da rodada, a CPU ficou entre 57% e 90% e a memória livre entre 3,3 e 4,1 GiB. Essa carga vem
+  das duas aplicações da medição e do Ollama. A última leitura (02:57:23, CPU 19%, 5,3 GiB livres) já é
+  de depois do fim.
 
 ### Paridade dos dados
 
@@ -35,8 +44,10 @@ base r2 02:25–02:34, base r3 02:34–02:44, correção r3 02:44–02:55.
   braços.
 - Na paridade geral (`paridade-geral-*.txt`), a única diferença é a quantidade de apurações por mês: 9
   na base e 11 na correção.
-- Os valores das apurações são iguais, e essa contagem fica fora do produtor da medição. A diferença
-  vem da ordem dos runners de seed, assunto da #470.
+- Os valores das apurações são iguais, e essa contagem fica fora do produtor da medição.
+- A contagem não acompanha a correção: na v2d, os dois braços tinham 11. Ela varia entre subidas da
+  aplicação, e o seed fora do produtor da medição fica com a #470 (ordem dos runners de seed). A causa
+  exata dessa variação não foi apurada aqui.
 
 ## Resultado por grupo (perguntas certas / total)
 
@@ -73,8 +84,9 @@ Mediana em segundos, só das execuções válidas. A latência fica fora da deci
 - **Base:** nenhuma, com 120 execuções válidas de 120.
 - **Correção:** 14 tentativas técnicas, em duas cascatas iguais.
   - A v2-g4-06 estourou o tempo na r1 (02h09) e na r3 (02h49), com 123,5 s cada.
-  - O log da aplicação registra a falha na chamada ao modelo (`ResourceAccessException`) na etapa de
-    dados da rota MISTO.
+  - O log da aplicação da correção, que ficou fora desta pasta, registra às 02:11:11 e às 02:51:54 a
+    falha na chamada ao modelo (`ResourceAccessException`) e o modo fallback na etapa de dados da rota
+    MISTO. No JSONL, as duas execuções aparecem com `modoFallback` e 123,5 s.
   - Depois de cada estouro, as tentativas seguintes caíram no disjuntor do modelo ainda aberto, com
     fallback em 0,1 a 0,2 s. A v2-g4-06 e a v2-g4-07 gastaram as três tentativas, e a v2-g4-08 perdeu a
     primeira e respondeu na segunda.
@@ -111,20 +123,20 @@ A pergunta é "Do mês de julho pra trás, quanto foi retido de Funrural nas ven
 
 Os logs das aplicações ficaram fora, porque trazem o id do usuário no login.
 
-Para reproduzir a pontuação, rode da raiz do repositório:
+Para reproduzir a pontuação, rode da raiz do repositório, com a saída numa pasta temporária fora dele:
 
 ```bash
-python docs/avaliacao/ceres-452/pontuar.py pontuar --perguntas docs/avaliacao/treino/perguntas-ceres-452-v2.json --execucoes docs/avaliacao/ceres-452/resultados/2026-11-10-v2e/base.jsonl --saida resumo-base.json
+SAIDA=$(mktemp -d)
+P=docs/avaliacao/ceres-452/pontuar.py
+R=docs/avaliacao/ceres-452/resultados/2026-11-10-v2e
+for b in base correcao; do python3 $P pontuar --perguntas docs/avaliacao/treino/perguntas-ceres-452-v2.json --execucoes $R/$b.jsonl --saida $SAIDA/resumo-$b.json; done
+python3 $P comparar --base $SAIDA/resumo-base.json --correcao $SAIDA/resumo-correcao.json > $SAIDA/decisao.json
+for f in resumo-base.json resumo-correcao.json decisao.json; do diff --strip-trailing-cr $R/$f $SAIDA/$f && echo "$f igual"; done
 ```
 
-Rode o mesmo comando para `correcao.jsonl` e depois:
-
-```bash
-python docs/avaliacao/ceres-452/pontuar.py comparar --base resumo-base.json --correcao resumo-correcao.json
-```
-
-As saídas são iguais, byte a byte, aos `resumo-*.json` e ao `decisao.json` desta pasta (conferido em
-2026-11-10).
+Os JSONL, os resumos e a decisão foram gravados no Windows, com fim de linha CRLF. No Windows, a saída
+refeita é igual byte a byte à desta pasta (conferido em 2026-11-10). Em outro sistema, ela sai com LF, e
+por isso a comparação ignora o fim de linha.
 
 ## Rodadas anteriores do mesmo dia
 
