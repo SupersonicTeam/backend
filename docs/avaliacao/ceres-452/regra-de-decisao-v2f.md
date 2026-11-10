@@ -49,3 +49,6 @@ docs/avaliacao/ceres-452/rodar_medicao_452.sh <worktree da main> <worktree da co
   diferentes da decisão, a rodada é INCONCLUSIVA.
 - Para refazer a pontuação, use a mesma opção nos dois braços. Sem ela, o resumo sai como o da
   regra v2, com a pergunta no grupo 4.
+- Se a rodada for lançada sem o id, o `decisao.json` dela segue a regra v2 e **não vale como
+  v2f**: não tem o campo `fora_da_decisao`. A rodada não precisa ser refeita, porque a pontuação
+  sai dos JSONL: basta refazê-la com a opção nos dois braços.

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import io
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -724,16 +728,37 @@ class ForaDaDecisao(unittest.TestCase):
             pontuar.pontuar(self.conjunto, self.linhas(), ("v2-g4-99",))
 
     def test_so_tecnicas_na_pergunta_fora_nao_tornam_inconclusiva(self):
-        so_estouro = [linha for linha in self.linhas() if linha["id"] != "v2-g4-06"
-                      or linha["tentativa"] == 2 and linha["repeticao"] == 1]
-        base = pontuar.pontuar(self.conjunto, self.linhas(), self.FORA)
-        correcao = pontuar.pontuar(self.conjunto, [dict(linha, commit="b" * 40)
-                                                   for linha in so_estouro], self.FORA)
-        self.assertEqual(correcao["fora_da_decisao"]["v2-g4-06"]["resultado"], "sem_medicao")
+        # No pontuar: só tentativas técnicas = sem_medicao, mas fora de por_pergunta.
+        so_estouro = [linha for linha in self.linhas()
+                      if linha["id"] != "v2-g4-06" or linha["falha_tecnica"]]
+        r = pontuar.pontuar(self.conjunto, so_estouro, self.FORA)
+        self.assertEqual(r["fora_da_decisao"]["v2-g4-06"]["resultado"], "sem_medicao")
+        self.assertNotIn("v2-g4-06", r["por_pergunta"])
+        self.assertEqual(r["por_grupo"]["aberto"]["sem_medicao"], 8)
+        # No comparar: com as outras perguntas medidas, a decisão sai normal.
+        base, correcao = self.resumos()
+        base["fora_da_decisao"] = {"v2-g4-06": {"grupo": "aberto", "resultado": "errada"}}
+        correcao["fora_da_decisao"] = {"v2-g4-06": r["fora_da_decisao"]["v2-g4-06"]}
         decisao = pontuar.comparar(base, correcao)
-        self.assertFalse(any("v2-g4-06" in p for p in decisao["problemas"]), decisao["problemas"])
+        self.assertEqual((decisao["decisao"], decisao["problemas"]), ("ENTRA", []))
         self.assertEqual(decisao["fora_da_decisao"]["v2-g4-06"]["correcao"]["resultado"],
                          "sem_medicao")
+
+    def test_linha_de_comando_repassa_a_opcao(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            execucoes = Path(pasta) / "base.jsonl"
+            execucoes.write_text("".join(json.dumps(linha) + "\n" for linha in self.linhas()),
+                                 encoding="utf-8")
+            saida = Path(pasta) / "resumo.json"
+            with contextlib.redirect_stdout(io.StringIO()) as impresso:
+                pontuar.main(["pontuar", "--perguntas", str(CONJUNTO_V2), "--execucoes",
+                              str(execucoes), "--saida", str(saida),
+                              "--fora-da-decisao", "v2-g4-06"])
+            resumo_ = json.loads(saida.read_text(encoding="utf-8"))
+        self.assertEqual(list(resumo_["fora_da_decisao"]), ["v2-g4-06"])
+        self.assertEqual(resumo_["por_grupo"]["aberto"]["total"], 9)
+        self.assertIn("v2-g4-06 aberto          errada       fora da decisão: r1 t1 tecnica 123.5 s",
+                      impresso.getvalue())
 
     @staticmethod
     def resumos(aberto_base=(1, 4), aberto_correcao=(3, 4)) -> tuple[dict, dict]:

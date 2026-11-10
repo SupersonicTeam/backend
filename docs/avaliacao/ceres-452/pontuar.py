@@ -664,8 +664,10 @@ def _imprimir_resumo(resumo: dict) -> None:
         print(f"  {ident:6} {item['grupo']:15} {item['resultado']:12} "
               f"{item['certas']}/{item['validas']} válidas, {item['tecnicas']} técnicas")
     for ident, item in resumo.get("fora_da_decisao", {}).items():
-        tempos = ", ".join(f"r{e['repeticao']} t{e['tentativa']} {e['resultado']} {e['segundos']} s"
-                           for e in item["execucoes"])
+        tempos = ", ".join(
+            f"r{e['repeticao']} t{e['tentativa']} {e['resultado']} "
+            + (f"{e['segundos']} s" if e["segundos"] is not None else "sem tempo")
+            for e in item["execucoes"])
         print(f"  {ident:6} {item['grupo']:15} {item['resultado']:12} fora da decisão: {tempos}")
 
 
