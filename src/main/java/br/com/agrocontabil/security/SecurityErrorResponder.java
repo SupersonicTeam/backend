@@ -46,19 +46,19 @@ public class SecurityErrorResponder implements AuthenticationEntryPoint, AccessD
   /** Desafio do 401 sem identidade — {@code Bearer} desde a Sprint 8 (#206). */
   static final String DESAFIO = NaoAutenticadoException.DESAFIO;
 
-  private static final String MENSAGEM_401 = "Requisicao sem identidade de usuario valida.";
+  private static final String MENSAGEM_401 = "Requisição sem identidade de usuário válida.";
   private static final String SUGESTAO_401 = NaoAutenticadoException.SUGESTAO;
-  private static final String MENSAGEM_TOKEN_INVALIDO = "Token de acesso invalido ou expirado.";
+  private static final String MENSAGEM_TOKEN_INVALIDO = "Token de acesso inválido ou expirado.";
   private static final String SUGESTAO_TOKEN_INVALIDO =
-      "Entre de novo em POST /api/auth/login para obter um token valido.";
+      "Entre de novo em POST /api/auth/login para obter um token válido.";
   private static final String MENSAGEM_429 = "Muitas tentativas em pouco tempo.";
   private static final String SUGESTAO_429 =
       "Aguarde o tempo indicado no header Retry-After e tente de novo.";
-  private static final String MENSAGEM_500 = "Erro interno ao processar a requisicao.";
+  private static final String MENSAGEM_500 = "Erro interno ao processar a requisição.";
   private static final String SUGESTAO_500 = "Tente novamente em instantes.";
-  private static final String MENSAGEM_403 = "Seu papel nao tem acesso a este recurso.";
+  private static final String MENSAGEM_403 = "Seu papel não tem acesso a este recurso.";
   private static final String SUGESTAO_403 =
-      "Autentique-se com um usuario que tenha o papel exigido por este recurso.";
+      "Autentique-se com um usuário que tenha o papel exigido por este recurso.";
 
   private final ObjectMapper objectMapper;
 

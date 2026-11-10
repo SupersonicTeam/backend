@@ -26,10 +26,10 @@ public class NotaFiscalNaoEnviavelException extends DomainException {
   public NotaFiscalNaoEnviavelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "Nota fiscal '%s' nao pode ser enviada a SEFAZ no status '%s'. "
+        "Nota fiscal '%s' não pode ser enviada à SEFAZ no status '%s'. "
             .formatted(id, status)
             + "Somente notas em status XML_GERADO podem ser transmitidas.",
         List.of(ErrorDetail.of(ErrorCode.NOTA_NAO_ENVIAVEL,
-            "Gere o XML da nota (POST /api/notas/{id}/gerar-xml) antes de enviar a SEFAZ.")));
+            "Gere o XML da nota (POST /api/notas/{id}/gerar-xml) antes de enviar à SEFAZ.")));
   }
 }

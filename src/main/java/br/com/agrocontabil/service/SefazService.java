@@ -795,7 +795,7 @@ public class SefazService {
       log.warn("NF-e importada {} com conteudo diferente do autorizado na SEFAZ (digVal)",
           nota.getId());
       nota.setStatus(StatusNotaFiscal.REJEITADA);
-      nota.setSefazMotivo("Conteudo do XML importado difere da NF-e autorizada na SEFAZ");
+      nota.setSefazMotivo("Conteúdo do XML importado difere da NF-e autorizada na SEFAZ");
       return false;
     }
     return true;

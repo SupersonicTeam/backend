@@ -185,7 +185,7 @@ class IcmsObrigatorioNaNfeNormalTest {
             .filteredOn(d -> "item[1].cstIcms".equals(d.field())).singleElement()
             .satisfies(d -> {
               assertThat(d.code()).isEqualTo("ICMS_A_DEFINIR");
-              assertThat(d.suggestion()).startsWith("Na exportacao o CST do ICMS e o 41");
+              assertThat(d.suggestion()).startsWith("Na exportação o CST do ICMS é o 41");
             }));
   }
 
@@ -225,7 +225,7 @@ class IcmsObrigatorioNaNfeNormalTest {
     assertThatThrownBy(() -> service.gerarXml(nota))
         .isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class)
         .extracting(e -> ((NotaFiscalInvalidaParaEmissaoException) e).getErrors().get(0).message())
-        .asString().contains("exige o calculo do ICMS");
+        .asString().contains("exige o cálculo do ICMS");
   }
 
   @ParameterizedTest(name = "B25-90: {0}")

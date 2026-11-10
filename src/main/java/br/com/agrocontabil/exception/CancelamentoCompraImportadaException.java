@@ -22,7 +22,7 @@ public class CancelamentoCompraImportadaException extends DomainException {
   public CancelamentoCompraImportadaException(UUID id) {
     super(
         HttpStatus.CONFLICT,
-        "Nota fiscal '%s' e uma compra importada e nao pode ser cancelada pelo destinatario."
+        "Nota fiscal '%s' é uma compra importada e não pode ser cancelada pelo destinatário."
             .formatted(id),
         List.of(ErrorDetail.of(ErrorCode.CANCELAMENTO_COMPRA_IMPORTADA,
             "Esta nota é uma compra: o cancelamento cabe ao fornecedor que a emitiu.")));

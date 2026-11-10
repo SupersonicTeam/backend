@@ -15,7 +15,7 @@ import org.springframework.http.HttpStatus;
 public class AssinaturaDigitalException extends DomainException {
 
   private static final String CLIENT_MESSAGE =
-      "Nao foi possivel assinar digitalmente a NF-e. Contate o suporte.";
+      "Não foi possível assinar digitalmente a NF-e. Contate o suporte.";
 
   public AssinaturaDigitalException(ErrorCode code, String technicalMessage) {
     super(HttpStatus.INTERNAL_SERVER_ERROR, technicalMessage,

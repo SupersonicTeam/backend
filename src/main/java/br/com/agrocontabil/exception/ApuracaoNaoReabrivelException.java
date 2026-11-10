@@ -23,10 +23,10 @@ public class ApuracaoNaoReabrivelException extends DomainException {
   public ApuracaoNaoReabrivelException(StatusApuracao status) {
     super(
         HttpStatus.CONFLICT,
-        "Apuracao nao pode ser reaberta no status '%s'. "
+        "Apuração não pode ser reaberta no status '%s'. "
             .formatted(status)
-            + "Somente apuracoes FECHADAS podem ser reabertas.",
+            + "Somente apurações FECHADAS podem ser reabertas.",
         List.of(ErrorDetail.of(ErrorCode.APURACAO_NAO_REABRIVEL,
-            "Apenas apuracoes em status FECHADO podem ser reabertas.")));
+            "Apenas apurações em status FECHADO podem ser reabertas.")));
   }
 }

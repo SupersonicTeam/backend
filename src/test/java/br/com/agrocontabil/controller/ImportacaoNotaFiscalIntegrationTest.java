@@ -185,7 +185,7 @@ class ImportacaoNotaFiscalIntegrationTest {
         .andExpect(jsonPath("$[0].status").value("INVALIDA"))
         .andExpect(jsonPath("$[0].sucesso").value(false))
         .andExpect(jsonPath("$[0].motivo").value(
-            org.hamcrest.Matchers.containsString("destinatario")));
+            org.hamcrest.Matchers.containsString("destinatário")));
 
     org.assertj.core.api.Assertions.assertThat(notaFiscalRepository.findAll()).isEmpty();
   }

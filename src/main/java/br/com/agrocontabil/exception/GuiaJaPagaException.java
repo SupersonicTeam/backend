@@ -20,8 +20,8 @@ public class GuiaJaPagaException extends DomainException {
   public GuiaJaPagaException(UUID id) {
     super(
         HttpStatus.CONFLICT,
-        "Guia fiscal '%s' ja esta marcada como paga.".formatted(id),
+        "Guia fiscal '%s' já está marcada como paga.".formatted(id),
         List.of(ErrorDetail.of(ErrorCode.GUIA_JA_PAGA,
-            "Esta guia fiscal ja foi marcada como paga anteriormente.")));
+            "Esta guia fiscal já foi marcada como paga anteriormente.")));
   }
 }

@@ -25,12 +25,12 @@ public class VinculoSituacaoInvalidaException extends DomainException {
         ErrorCode.VINCULO_SITUACAO_INVALIDA.code(),
         "situacao",
         mensagem(atual),
-        "Recarregue a carteira: a situacao do vinculo mudou ou nao permite esta operacao.",
+        "Recarregue a carteira: a situação do vínculo mudou ou não permite esta operação.",
         atual.name(),
         exigidas.toString())));
   }
 
   private static String mensagem(SituacaoVinculo atual) {
-    return "O vinculo esta " + atual.name() + " e nao permite esta operacao.";
+    return "O vínculo está " + atual.name() + " e não permite esta operação.";
   }
 }

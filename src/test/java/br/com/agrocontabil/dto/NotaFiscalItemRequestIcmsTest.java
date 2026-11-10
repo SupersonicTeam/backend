@@ -32,7 +32,7 @@ class NotaFiscalItemRequestIcmsTest {
   void recusaOutros(String cst) {
     assertThat(VALIDATOR.validateValue(NotaFiscalItemRequest.class, "cstIcms", cst))
         .singleElement().satisfies(v -> assertThat(v.getMessage())
-            .isEqualTo("cstIcms deve ser 40, 41, 50, 51 ou 90 (o sistema nao calcula ICMS)"));
+            .isEqualTo("cstIcms deve ser 40, 41, 50, 51 ou 90 (o sistema não calcula ICMS)"));
   }
 
   @Test

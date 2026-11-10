@@ -27,7 +27,7 @@ public class XmlImportacaoInvalidaException extends DomainException {
   public XmlImportacaoInvalidaException(String detalhe) {
     super(
         HttpStatus.UNPROCESSABLE_ENTITY,
-        "XML de nota fiscal invalido para importacao.",
+        "XML de nota fiscal inválido para importação.",
         List.of(ErrorDetail.of(ErrorCode.XML_IMPORTACAO_INVALIDA, detalhe)));
   }
 
@@ -39,7 +39,7 @@ public class XmlImportacaoInvalidaException extends DomainException {
   public XmlImportacaoInvalidaException(List<ErrorDetail> errors) {
     super(
         HttpStatus.UNPROCESSABLE_ENTITY,
-        "XML de nota fiscal invalido para importacao.",
+        "XML de nota fiscal inválido para importação.",
         errors);
   }
 }

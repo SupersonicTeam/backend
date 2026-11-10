@@ -112,26 +112,26 @@ public class PoliticaSenha {
     }
     if (senha.getBytes(StandardCharsets.UTF_8).length > MAXIMO_BYTES) {
       violacoes.add(violacao(campo,
-          "A senha pode ter no maximo " + MAXIMO_BYTES
+          "A senha pode ter no máximo " + MAXIMO_BYTES
               + " bytes (cerca de 72 letras sem acento; letras acentuadas ocupam 2)."));
     }
     if (senha.codePoints().distinct().count() == 1) {
-      violacoes.add(violacao(campo, "A senha nao pode ser um unico caractere repetido."));
+      violacoes.add(violacao(campo, "A senha não pode ser um único caractere repetido."));
     }
 
     String minuscula = senha.toLowerCase(Locale.ROOT);
     if (contemDadoDoTitular(minuscula, email, cpfCnpj)) {
-      violacoes.add(violacao(campo, "A senha nao pode conter seu e-mail nem seu CPF/CNPJ."));
+      violacoes.add(violacao(campo, "A senha não pode conter seu e-mail nem seu CPF/CNPJ."));
     }
     if (temSequenciaOuPadrao(minuscula)) {
       violacoes.add(violacao(campo,
-          "A senha nao pode ter sequencias como 123456 ou abcdef, teclas em fila como qwerty "
+          "A senha não pode ter sequências como 123456 ou abcdef, teclas em fila como qwerty "
               + "nem um mesmo trecho repetido.",
-          "Troque por palavras sem relacao entre si, por exemplo quatro palavras soltas."));
+          "Troque por palavras sem relação entre si, por exemplo quatro palavras soltas."));
     }
     if (senhasComuns.contains(minuscula)) {
       violacoes.add(violacao(campo,
-          "Esta senha esta entre as mais usadas e e facil de adivinhar. Escolha outra."));
+          "Esta senha está entre as mais usadas e é fácil de adivinhar. Escolha outra."));
     }
 
     if (!violacoes.isEmpty()) {
@@ -215,7 +215,7 @@ public class PoliticaSenha {
 
   private static ErrorDetail violacao(String campo, String mensagem) {
     return violacao(campo, mensagem,
-        "Use uma frase longa e facil de lembrar, por exemplo quatro palavras soltas.");
+        "Use uma frase longa e fácil de lembrar, por exemplo quatro palavras soltas.");
   }
 
   private static ErrorDetail violacao(String campo, String mensagem, String sugestao) {

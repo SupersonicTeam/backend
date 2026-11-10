@@ -25,7 +25,7 @@ public class NotaFiscalNaoCancelavelException extends DomainException {
   public NotaFiscalNaoCancelavelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "Nota fiscal '%s' nao pode ser cancelada no status '%s'. "
+        "Nota fiscal '%s' não pode ser cancelada no status '%s'. "
             .formatted(id, status)
             + "Somente notas AUTORIZADAS pela SEFAZ podem ser canceladas.",
         List.of(ErrorDetail.of(ErrorCode.NOTA_NAO_CANCELAVEL,

@@ -18,8 +18,8 @@ public class CredenciaisInvalidasException extends DomainException {
   private static final String MENSAGEM = "E-mail ou senha incorretos.";
 
   private static final String SUGESTAO =
-      "Confira o e-mail e a senha. Depois de varias tentativas erradas o acesso fica bloqueado "
-          + "por alguns minutos. Se esqueceu a senha, use a recuperacao de senha.";
+      "Confira o e-mail e a senha. Depois de várias tentativas erradas o acesso fica bloqueado "
+          + "por alguns minutos. Se esqueceu a senha, use a recuperação de senha.";
 
   public CredenciaisInvalidasException() {
     super(

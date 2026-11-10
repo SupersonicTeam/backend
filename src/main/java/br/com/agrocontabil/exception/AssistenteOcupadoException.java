@@ -24,6 +24,14 @@ public class AssistenteOcupadoException extends DomainException implements ComRe
   /** Segundos sugeridos no header {@code Retry-After}. */
   public static final int RETRY_AFTER_SEGUNDOS = 5;
 
+  /** Texto ao cliente quando o limite global de perguntas simultâneas foi atingido. */
+  private static final String MENSAGEM_LIMITE_GLOBAL =
+      "A Ceres está atendendo muitas perguntas agora. Tente novamente em instantes.";
+
+  /** Texto ao cliente quando o produtor já tem uma pergunta em andamento. */
+  private static final String MENSAGEM_PERGUNTA_EM_ANDAMENTO =
+      "Aguarde a resposta da pergunta anterior antes de enviar outra.";
+
   private AssistenteOcupadoException(String mensagemLog, String mensagemCliente) {
     super(HttpStatus.SERVICE_UNAVAILABLE, mensagemLog,
         List.of(ErrorDetail.of(ErrorCode.ASSISTENTE_OCUPADO, mensagemCliente)));
@@ -32,15 +40,13 @@ public class AssistenteOcupadoException extends DomainException implements ComRe
   /** Limite global de perguntas simultâneas atingido. */
   public static AssistenteOcupadoException limiteGlobal() {
     return new AssistenteOcupadoException(
-        "Limite de perguntas simultaneas da Ceres atingido",
-        "A Ceres está atendendo muitas perguntas agora. Tente novamente em instantes.");
+        "Limite de perguntas simultaneas da Ceres atingido", MENSAGEM_LIMITE_GLOBAL);
   }
 
   /** O produtor já tem uma pergunta em andamento. */
   public static AssistenteOcupadoException perguntaEmAndamento() {
     return new AssistenteOcupadoException(
-        "Produtor ja tem uma pergunta em andamento na Ceres",
-        "Aguarde a resposta da pergunta anterior antes de enviar outra.");
+        "Produtor ja tem uma pergunta em andamento na Ceres", MENSAGEM_PERGUNTA_EM_ANDAMENTO);
   }
 
   /** Valor do header {@code Retry-After}, em segundos. */

@@ -18,6 +18,6 @@ public class SenhaFracaException extends DomainException {
    * @param violacoes regras que a senha não cumpre (sem o valor da senha)
    */
   public SenhaFracaException(List<ErrorDetail> violacoes) {
-    super(HttpStatus.BAD_REQUEST, "A senha nao atende a politica de senha.", violacoes);
+    super(HttpStatus.BAD_REQUEST, "A senha não atende à política de senha.", violacoes);
   }
 }

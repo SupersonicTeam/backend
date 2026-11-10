@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
 public class PapelNaoAutorizadoException extends DomainException {
 
   private static final String SUGESTAO =
-      "Autentique-se com um usuario que tenha o papel exigido por este recurso.";
+      "Autentique-se com um usuário que tenha o papel exigido por este recurso.";
 
   /**
    * Cria a exceção para um papel que não atende à operação.
@@ -42,6 +42,6 @@ public class PapelNaoAutorizadoException extends DomainException {
   }
 
   private static String mensagem(PapelUsuario papelExigido) {
-    return "Operacao restrita ao papel " + papelExigido.name() + ".";
+    return "Operação restrita ao papel " + papelExigido.name() + ".";
   }
 }

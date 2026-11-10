@@ -203,7 +203,7 @@ class CalendarioFiscalServiceTest {
         .isInstanceOfSatisfying(JanelaCalendarioInvalidaException.class, e -> {
           assertThat(e.getErrors()).singleElement().satisfies(erro -> {
             assertThat(erro.field()).isEqualTo("ate");
-            assertThat(erro.expectedValue()).isEqualTo("ate 2026-12-31");
+            assertThat(erro.expectedValue()).isEqualTo("até 2026-12-31");
           });
         });
     verify(guiaFiscalRepository, never()).findVencimentosNaJanela(any(), any(), any());

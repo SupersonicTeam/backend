@@ -24,7 +24,7 @@ public class DanfeGenerationException extends DomainException {
         HttpStatus.INTERNAL_SERVER_ERROR,
         mensagemTecnica,
         List.of(ErrorDetail.of(ErrorCode.DANFE_GENERATION_ERROR,
-            "Nao foi possivel gerar o PDF da DANFE. Tente novamente em instantes.")));
+            "Não foi possível gerar o PDF da DANFE. Tente novamente em instantes.")));
     if (cause != null) {
       initCause(cause);
     }

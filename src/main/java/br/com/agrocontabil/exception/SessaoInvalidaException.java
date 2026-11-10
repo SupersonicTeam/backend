@@ -14,7 +14,7 @@ import org.springframework.http.HttpStatus;
  */
 public class SessaoInvalidaException extends DomainException {
 
-  private static final String MENSAGEM = "Sessao expirada ou encerrada.";
+  private static final String MENSAGEM = "Sessão expirada ou encerrada.";
 
   private static final String SUGESTAO = "Entre de novo com e-mail e senha em POST /api/auth/login.";
 

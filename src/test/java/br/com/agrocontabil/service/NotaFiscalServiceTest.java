@@ -804,7 +804,7 @@ class NotaFiscalServiceTest {
 
     var violation = new br.com.agrocontabil.exception
         .NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-        "item[1].ncm", "NCM e obrigatorio no layout da NF-e");
+        "item[1].ncm", "NCM é obrigatório no layout da NF-e");
     var emissaoException = new br.com.agrocontabil.exception
         .NotaFiscalInvalidaParaEmissaoException(List.of(violation));
 

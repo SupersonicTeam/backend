@@ -22,7 +22,7 @@ public record CadastroEquipeRequest(
     @NotBlank @Size(max = 100) @Sensivel String token,
     @NotBlank @Size(max = 255) String nomeCompleto,
     @NotBlank
-    @Pattern(regexp = "\\d{11}|\\d{14}", message = "Informe o CPF (11) ou CNPJ (14) so com digitos")
+    @Pattern(regexp = "\\d{11}|\\d{14}", message = "Informe o CPF (11) ou CNPJ (14) só com dígitos")
     @ValidCpfCnpj
     String cpfCnpj,
     @NotNull @Sensivel

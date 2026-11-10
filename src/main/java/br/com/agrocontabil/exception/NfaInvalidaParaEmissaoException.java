@@ -24,7 +24,7 @@ public class NfaInvalidaParaEmissaoException extends DomainException {
   private NfaInvalidaParaEmissaoException(ErrorDetail detail) {
     super(
         HttpStatus.UNPROCESSABLE_ENTITY,
-        "Nota fiscal avulsa (NFA) invalida para emissao. Corrija os dados do emitente.",
+        "Nota fiscal avulsa (NFA) inválida para emissão. Corrija os dados do emitente.",
         List.of(detail));
   }
 
@@ -34,7 +34,7 @@ public class NfaInvalidaParaEmissaoException extends DomainException {
         ErrorDetail.of(
             ErrorCode.NFA_PRODUTOR_NAO_PF,
             "produtor.tipoProdutor",
-            "A NFA (Nota Fiscal Avulsa) so pode ser emitida por produtor pessoa fisica."));
+            "A NFA (Nota Fiscal Avulsa) só pode ser emitida por produtor pessoa física."));
   }
 
   /** CPF do emitente ausente ou com digito verificador invalido. */
@@ -43,6 +43,6 @@ public class NfaInvalidaParaEmissaoException extends DomainException {
         ErrorDetail.of(
             ErrorCode.DOCUMENTO_INVALIDO,
             "produtor.cpfCnpj",
-            "O CPF do emitente e obrigatorio e deve ter digito verificador valido para emitir NFA."));
+            "O CPF do emitente é obrigatório e deve ter dígito verificador válido para emitir NFA."));
   }
 }

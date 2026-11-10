@@ -35,7 +35,7 @@ public class NaoAutenticadoException extends DomainException {
   public static final String DESAFIO_TOKEN_INVALIDO =
       "Bearer realm=\"agrocontabil\", error=\"invalid_token\"";
 
-  static final String MENSAGEM = "Requisicao sem identidade de usuario valida.";
+  static final String MENSAGEM = "Requisição sem identidade de usuário válida.";
 
   /** Sugestão de todo 401 de identidade ausente ou inválida. */
   public static final String SUGESTAO =

@@ -31,44 +31,44 @@ import java.math.BigDecimal;
 public record NotaFiscalItemRequest(
 
     @Schema(description = "Sequencial do item dentro da nota (1-based)", example = "1")
-    @NotNull(message = "numeroItem e obrigatorio")
+    @NotNull(message = "numeroItem é obrigatório")
     @Positive(message = "numeroItem deve ser positivo")
     Integer numeroItem,
 
     @Schema(description = "Codigo interno do produto no sistema do emissor (opcional)",
         example = "PROD-001")
-    @Size(max = 60, message = "codigoProduto deve ter no maximo 60 caracteres")
+    @Size(max = 60, message = "codigoProduto deve ter no máximo 60 caracteres")
     String codigoProduto,
 
     @Schema(description = "Descricao do produto ou servico", example = "Soja em graos")
-    @NotBlank(message = "descricao e obrigatoria")
+    @NotBlank(message = "descrição é obrigatória")
     String descricao,
 
     @Schema(description = "Codigo NCM com 8 digitos numericos", example = "12019000")
-    @NotBlank(message = "ncm e obrigatorio")
-    @Pattern(regexp = "\\d{8}", message = "ncm deve ter exatamente 8 digitos numericos")
+    @NotBlank(message = "ncm é obrigatório")
+    @Pattern(regexp = "\\d{8}", message = "ncm deve ter exatamente 8 dígitos numéricos")
     @ValidNcm
     String ncm,
 
     @Schema(description = "CFOP — Codigo Fiscal de Operacoes e Prestacoes (4 digitos)",
         example = "6101")
-    @NotBlank(message = "cfop e obrigatorio")
-    @Pattern(regexp = "\\d{4}", message = "cfop deve ter exatamente 4 digitos numericos")
+    @NotBlank(message = "cfop é obrigatório")
+    @Pattern(regexp = "\\d{4}", message = "cfop deve ter exatamente 4 dígitos numéricos")
     @ValidCfop
     String cfop,
 
     @Schema(description = "Unidade comercial (ex.: UN, KG, CX)", example = "KG")
-    @NotBlank(message = "unidade e obrigatoria")
-    @Size(max = 6, message = "unidade deve ter no maximo 6 caracteres")
+    @NotBlank(message = "unidade é obrigatória")
+    @Size(max = 6, message = "unidade deve ter no máximo 6 caracteres")
     String unidade,
 
     @Schema(description = "Quantidade comercializada", example = "500.0")
-    @NotNull(message = "quantidade e obrigatoria")
+    @NotNull(message = "quantidade é obrigatória")
     @Positive(message = "quantidade deve ser positiva")
     BigDecimal quantidade,
 
     @Schema(description = "Valor unitario do produto", example = "2.50")
-    @NotNull(message = "valorUnitario e obrigatorio")
+    @NotNull(message = "valorUnitario é obrigatório")
     @Positive(message = "valorUnitario deve ser positivo")
     BigDecimal valorUnitario,
 
@@ -86,7 +86,7 @@ public record NotaFiscalItemRequest(
         example = "200")
     @Pattern(
         regexp = "\\d{3}",
-        message = "cstIbsCbs deve ter exatamente 3 digitos numericos")
+        message = "cstIbsCbs deve ter exatamente 3 dígitos numéricos")
     String cstIbsCbs,
 
     @Schema(
@@ -97,7 +97,7 @@ public record NotaFiscalItemRequest(
         example = "200036")
     @Pattern(
         regexp = "\\d{6}",
-        message = "cClassTrib deve ter exatamente 6 digitos numericos")
+        message = "cClassTrib deve ter exatamente 6 dígitos numéricos")
     String cClassTrib,
 
     @Schema(
@@ -127,12 +127,12 @@ public record NotaFiscalItemRequest(
         example = "51")
     @Pattern(
         regexp = TributacaoIcms.CSTS_SEM_CALCULO_REGEX,
-        message = "cstIcms deve ser 40, 41, 50, 51 ou 90 (o sistema nao calcula ICMS)")
+        message = "cstIcms deve ser 40, 41, 50, 51 ou 90 (o sistema não calcula ICMS)")
     String cstIcms,
 
     @Schema(description = "Origem da mercadoria (tabela Torig, 0 a 8). Opcional; padrao 0, "
         + "nacional.", example = "0")
-    @Pattern(regexp = "|[0-8]", message = "origemIcms deve ser um digito de 0 a 8")
+    @Pattern(regexp = "|[0-8]", message = "origemIcms deve ser um dígito de 0 a 8")
     String origemIcms
 ) {
 

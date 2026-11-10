@@ -202,7 +202,7 @@ class ImportacaoNotaFiscalServiceTest {
     ImportacaoNotaResultado resultado = service.importar(List.of(arquivo)).get(0);
 
     assertThat(resultado.status()).isEqualTo(Status.INVALIDA);
-    assertThat(resultado.motivo()).contains("destinatario").doesNotContain("39053344705");
+    assertThat(resultado.motivo()).contains("destinatário").doesNotContain("39053344705");
     verifyNoInteractions(assinaturaValidator, nfeToNotaFiscalMapper, sefazClient,
         transactionTemplate);
   }

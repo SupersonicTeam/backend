@@ -64,7 +64,7 @@ public class DashboardController {
       @RequestParam(required = false)
       @Pattern(
           regexp = "\\d{4}-(0[1-9]|1[0-2])",
-          message = "Periodo deve estar no formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).")
+          message = "Período deve estar no formato YYYY-MM com mês entre 01 e 12 (ex.: 2026-07).")
       String periodo) {
     return ResponseEntity.ok(dashboardService.montar(periodo));
   }

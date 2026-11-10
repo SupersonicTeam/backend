@@ -187,7 +187,7 @@ class LeiteInNaturaEmissaoIntegrationTest {
               assertThat(d.message()).contains("200003").contains("12019000");
               assertThat(d.rejectedValue()).isEqualTo("200003");
               assertThat(d.expectedValue()).isEqualTo("200036, 200038, 200034");
-              assertThat(d.suggestion()).contains("200036").contains("60% de reducao");
+              assertThat(d.suggestion()).contains("200036").contains("60% de redução");
             }));
   }
 

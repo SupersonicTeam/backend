@@ -27,7 +27,7 @@ public class LimiteNotificacoesException extends DomainException implements ComR
   }
 
   private static String mensagem(int maximo) {
-    return "Limite de " + maximo + " notificacoes por hora para este produtor atingido.";
+    return "Limite de " + maximo + " notificações por hora para este produtor atingido.";
   }
 
   @Override

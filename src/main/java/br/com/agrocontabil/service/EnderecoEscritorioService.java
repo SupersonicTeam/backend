@@ -314,7 +314,7 @@ public class EnderecoEscritorioService {
 
   private Escritorio travado(UUID escritorioId) {
     return escritorioRepository.findByIdForUpdate(escritorioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+        .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
   }
 
   private void exigirIntervalo(Escritorio escritorio, OffsetDateTime agora) {

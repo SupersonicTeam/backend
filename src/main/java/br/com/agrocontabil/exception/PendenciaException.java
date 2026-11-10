@@ -32,8 +32,8 @@ public class PendenciaException extends DomainException {
   public static PendenciaException transicao(UUID id, StatusPendencia atual,
       Collection<StatusPendencia> permitidos) {
     return new PendenciaException(HttpStatus.CONFLICT, ErrorCode.TRANSICAO_PENDENCIA_INVALIDA,
-        "status", "A pendencia " + id + " esta " + atual + " e nao permite esta acao.",
-        "Recarregue a pendencia: o status mudou ou nao aceita esta acao.", atual.name(),
+        "status", "A pendência " + id + " está " + atual + " e não permite esta ação.",
+        "Recarregue a pendência: o status mudou ou não aceita esta ação.", atual.name(),
         permitidos.toString());
   }
 
@@ -45,8 +45,8 @@ public class PendenciaException extends DomainException {
    */
   public static PendenciaException anexoInvalido(String motivo) {
     return new PendenciaException(HttpStatus.BAD_REQUEST, ErrorCode.ANEXO_INVALIDO, "arquivo",
-        motivo, "Envie um PDF, JPEG, PNG ou XML de ate 5 MB.", null,
-        "PDF, JPEG, PNG ou XML, ate 5 MB");
+        motivo, "Envie um PDF, JPEG, PNG ou XML de até 5 MB.", null,
+        "PDF, JPEG, PNG ou XML, até 5 MB");
   }
 
   /**
@@ -57,8 +57,8 @@ public class PendenciaException extends DomainException {
    */
   public static PendenciaException anexoInfectado(String assinatura) {
     return new PendenciaException(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.ANEXO_INFECTADO,
-        "arquivo", "O antivirus encontrou uma ameaca no arquivo; ele nao foi guardado.",
-        "Passe um antivirus no seu computador e envie o documento de novo, de preferencia "
+        "arquivo", "O antivírus encontrou uma ameaça no arquivo; ele não foi guardado.",
+        "Passe um antivírus no seu computador e envie o documento de novo, de preferência "
             + "gerado outra vez a partir do original.", assinatura, null);
   }
 
@@ -70,7 +70,7 @@ public class PendenciaException extends DomainException {
    */
   public static PendenciaException anexoEmVerificacao(UUID anexoId) {
     return new PendenciaException(HttpStatus.CONFLICT, ErrorCode.ANEXO_EM_VERIFICACAO, "anexoId",
-        "O anexo " + anexoId + " ainda esta em verificacao de antivirus.",
+        "O anexo " + anexoId + " ainda está em verificação de antivírus.",
         "Tente baixar de novo em alguns minutos.", "EM_VERIFICACAO", "LIMPO");
   }
 
@@ -82,8 +82,8 @@ public class PendenciaException extends DomainException {
    */
   public static PendenciaException limiteAnexos(int maximo) {
     return new PendenciaException(HttpStatus.CONFLICT, ErrorCode.LIMITE_ANEXOS, "arquivo",
-        "A pendencia ja tem " + maximo + " anexos.",
-        "Junte os documentos num PDF so, ou peca ao escritorio para revisar os enviados.", null,
+        "A pendência já tem " + maximo + " anexos.",
+        "Junte os documentos num PDF só, ou peça ao escritório para revisar os enviados.", null,
         String.valueOf(maximo));
   }
 }
