@@ -897,12 +897,21 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                   f"`{(detalhe.get('digest') or '?')[:12]}` |")
     for api in rodada.get("modelosApi") or []:
         o = api.get("opcoes") or {}
+        # O que a celula realmente usou, do manifesto dela (nao do texto fixo).
+        da_api = [c for c in celulas if c.modelo == api["modelo"]]
+        efetivos = sorted({c.manifesto.get("readTimeoutEfetivo") for c in da_api
+                           if c.manifesto.get("readTimeoutEfetivo")})
+        redigida = any("apareceu em" in a for c in da_api for a in c.manifesto.get("avisos") or [])
         md.append(f"| `{api['modelo']}` (API) | provedor {api.get('provedor')} (API pela rede, sem "
                   f"Ollama, sem digest); raciocínio {api.get('raciocinio')}; "
                   + (", ".join(f"{k}={v}" for k, v in o.items()) + " (application.yml do commit); "
                      if o else "")
-                  + "`AI_READ_TIMEOUT` publicado, sem o ajuste da célula; a chave vem só do ambiente "
-                  "de quem rodou e não consta em nenhum arquivo da rodada |")
+                  + ("`AI_READ_TIMEOUT=" + "/".join(efetivos) + "` (o publicado, sem o ajuste da célula); "
+                     if efetivos else "`AI_READ_TIMEOUT` não registrado na célula; ")
+                  + "a chave vem só do ambiente de quem rodou"
+                  + ("; **a chave apareceu em arquivos da célula e foi redigida (ver os avisos)**"
+                     if redigida else "")
+                  + " |")
     opcoes = rodada.get("opcoesChat") or {}
     if opcoes and all(isinstance(v, dict) and "chat" in v for v in opcoes.values()):
         rotulos = dict(arquiteturas)
@@ -1163,8 +1172,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     md.append("## Latência na VPS (produção)\n")
     md.append("A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na "
-              "configuração de produção (o modelo do `.env` da VPS, hoje o `claude-haiku-5-5` pela API se a "
-              "troca já foi feita, e a Ceres 2.0), na VPS de produção (CPU "
+              "configuração de produção (o modelo do `.env` da VPS e a Ceres 2.0), na VPS de produção (CPU "
               "ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.\n")
     md.append("| Rota | p50 | p95 | Amostras | Data e SHA |\n|---|---|---|---|---|\n"
               "| DADOS | | | | |\n| LEGISLACAO | | | | |\n| MISTO | | | | |\n")

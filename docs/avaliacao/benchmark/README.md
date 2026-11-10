@@ -60,7 +60,9 @@ O embedding é sempre o `bge-m3`.
 - **Para a célula do `claude-haiku-5-5`:** a variável `ANTHROPIC_API_KEY` no ambiente de quem roda
   (uma chave ligada a um workspace da conta do Murillo; **nunca** em arquivo, `.env` versionado,
   issue nem mensagem) e rede até `api.anthropic.com`. Sem a chave o executor **recusa antes de
-  começar** a rodada; para rodar só os modelos locais, use `--modelos`.
+  começar** a rodada; para rodar só os modelos locais, use `--modelos`. Com a chave, ele faz **uma
+  prova do raciocínio por modelo por API antes de tocar no Ollama** (a célula por API é a última de
+  cada arquitetura, e chave errada, sem saldo ou sem acesso ao modelo só apareceria depois de horas).
 - **A mesma máquina para as 6 células locais** (e para a JVM, o banco e o embedding da célula por API),
   sem outra carga pesada durante a rodada.
 
@@ -97,7 +99,7 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 | `BENCH_OLLAMA_URL` | `http://localhost:11434` | |
 | `BENCH_OLLAMA_CONTAINER` | vazio | container do Ollama, para medir a memória pelo `docker stats` |
 | `ANTHROPIC_API_KEY` | ausente | chave da API da Anthropic, **só do ambiente**: só a JVM da célula por API a recebe (as locais, não), e o executor a oculta em log, relatório, JSON e mensagem de erro |
-| `BENCH_ANTHROPIC_URL` | `https://api.anthropic.com` | endereço da prova do raciocínio por API; só `https` (ou `http` local, de teste), porque a chave vai nele |
+| `BENCH_ANTHROPIC_URL` | `https://api.anthropic.com` | endereço da prova do raciocínio por API; só `https` (ou `http` em localhost, de teste) e sem usuário na URL, e sem seguir redirecionamento, porque a chave vai nele |
 
 ## O que o executor faz
 
@@ -626,7 +628,7 @@ python3 docs/avaliacao/benchmark/executar_matriz.py --retomar docs/avaliacao/res
 
 ## Latência na VPS (produção)
 
-Só a configuração de produção (o modelo do `.env` da VPS, hoje o `claude-haiku-5-5` pela API se a troca já foi feita, e a Ceres 2.0), na VPS de produção (CPU ARM, sem
+Só a configuração de produção (o modelo do `.env` da VPS e a Ceres 2.0), na VPS de produção (CPU ARM, sem
 GPU), pelo [harness da API](../harness-api/README.md). O relatório tem uma seção à parte para o
 time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
 

@@ -24,7 +24,7 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | `qwen3:0.6b` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
 | `qwen3:1.7b` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
 | `qwen3:4b-instruct` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
-| `claude-haiku-5-5` (API) | provedor anthropic (API pela rede, sem Ollama, sem digest); raciocínio disabled; `AI_READ_TIMEOUT` publicado, sem o ajuste da célula; a chave vem só do ambiente de quem rodou e não consta em nenhum arquivo da rodada |
+| `claude-haiku-5-5` (API) | provedor anthropic (API pela rede, sem Ollama, sem digest); raciocínio disabled; `AI_READ_TIMEOUT` não registrado na célula; a chave vem só do ambiente de quem rodou |
 | Opções do chat | temperature=0.2, num-ctx=8192, num-predict=1024, think-option=false |
 
 Todas as células rodaram **na mesma máquina**, uma por vez. **A latência é local e relativa**: serve para comparar modelos e arquiteturas entre si nesta máquina. **Não é a latência de produção**: a da VPS (CPU ARM, sem GPU) fica na seção "Latência na VPS", medida pelo harness da API.
@@ -620,7 +620,7 @@ Heurísticas do README sobre os vereditos da régua; o texto é a resposta entre
 
 ## Latência na VPS (produção)
 
-A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na configuração de produção (o modelo do `.env` da VPS, hoje o `claude-haiku-5-5` pela API se a troca já foi feita, e a Ceres 2.0), na VPS de produção (CPU ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.
+A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na configuração de produção (o modelo do `.env` da VPS e a Ceres 2.0), na VPS de produção (CPU ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.
 
 | Rota | p50 | p95 | Amostras | Data e SHA |
 |---|---|---|---|---|

@@ -116,6 +116,81 @@ class PreRequisitosTest(ComChave):
                     e.conferir_celulas_api()
 
 
+class VooDeTesteTest(ComChave):
+    """A chave, o saldo e o acesso ao modelo sao conferidos antes das celulas locais (horas)."""
+
+    def provar(self, **prova):
+        with mock.patch.object(self.e, "provar_pensamento_api", return_value={
+                "resumo": prova.pop("resumo", "desligado"), **prova}):
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.e.provar_celulas_api()
+
+    def test_api_que_responde_sem_raciocinio_passa(self):
+        self.provar(raciocinou=False)
+
+    def test_api_que_nao_responde_para_a_rodada_com_a_causa(self):
+        with self.assertRaises(RuntimeError) as erro:
+            self.provar(erro="HTTPError: HTTP Error 401: Unauthorized")
+        self.assertIn("401", str(erro.exception))
+        self.assertIn("antes de comecar a rodada", str(erro.exception))
+
+    def test_raciocinio_ligado_para_a_rodada(self):
+        with self.assertRaises(RuntimeError) as erro:
+            self.provar(raciocinou=True)
+        self.assertIn("raciocinou apesar de thinking=disabled", str(erro.exception))
+
+    def test_so_os_locais_nao_chamam_a_api(self):
+        e = ex.Executor(config(modelos="qwen3:1.7b"))
+        with mock.patch.object(e, "provar_pensamento_api") as prova:
+            e.provar_celulas_api()
+        prova.assert_not_called()
+
+    def test_pre_requisitos_recusam_sem_a_chave_antes_de_falar_com_o_ollama(self):
+        f = ExecutorFalso(config())  # o Ollama levanta AssertionError se for tocado
+        with mock.patch.dict(os.environ, {"DB_PASSWORD": "x"}), mock.patch("shutil.which", return_value="x"):
+            os.environ.pop("ANTHROPIC_API_KEY")
+            with self.assertRaises(RuntimeError) as erro:
+                f.conferir_pre_requisitos()
+        self.assertIn("ANTHROPIC_API_KEY ausente", str(erro.exception))
+
+    def pre_requisitos(self, prova):
+        class Pronto(ExecutorFalso):
+            def ollama(self, caminho, corpo=None, timeout=30):
+                return {"version": "0.0"}
+
+            def psql(self, banco, sql):
+                return "8304"
+
+        f = Pronto(config())
+        with mock.patch.dict(os.environ, {"DB_PASSWORD": "x"}), mock.patch("shutil.which", return_value="x"), \
+                mock.patch.object(f, "provar_pensamento_api", return_value=prova) as provar, \
+                contextlib.redirect_stdout(io.StringIO()):
+            try:
+                return f.conferir_pre_requisitos(), provar
+            except RuntimeError as erro:
+                return erro, provar
+
+    def test_pre_requisitos_fazem_o_voo_de_teste_e_param_se_a_api_falha(self):
+        resultado, provar = self.pre_requisitos({"erro": "HTTPError: HTTP Error 401: Unauthorized",
+                                                 "resumo": "prova falhou"})
+        self.assertIsInstance(resultado, RuntimeError)
+        self.assertIn("401", str(resultado))
+        provar.assert_called_once()
+
+    def test_pre_requisitos_seguem_se_a_api_responde(self):
+        resultado, provar = self.pre_requisitos({"raciocinou": False, "resumo": "desligado"})
+        self.assertEqual(resultado, {"ollama": "0.0", "trechosLegislacao": 8304})
+        provar.assert_called_once()
+
+    def test_pre_requisitos_recusam_endereco_invalido_antes_do_ollama(self):
+        f = ExecutorFalso(config())
+        with mock.patch.dict(os.environ, {"DB_PASSWORD": "x", "BENCH_ANTHROPIC_URL": "http://evil.example"}), \
+                mock.patch("shutil.which", return_value="x"):
+            with self.assertRaises(RuntimeError) as erro:
+                f.conferir_pre_requisitos()
+        self.assertIn("BENCH_ANTHROPIC_URL", str(erro.exception))
+
+
 class AmbienteTest(ComChave):
     def arquitetura(self):
         return {"nome": "ceres-2", "configuracaoPublicada": {"AI_READ_TIMEOUT": "120s", "AI_MAX_TOKENS": "1024"}}
@@ -173,6 +248,12 @@ class ConfiguracaoRealTest(unittest.TestCase):
         self.assertEqual(opcoes["thinking"], "${AI_ANTHROPIC_THINKING:disabled}")
         self.assertEqual(ex.resolver_placeholder(opcoes["thinking"], {}), "disabled")
         self.assertIn("max-tokens", opcoes)
+
+    def test_opcoes_do_ollama_seguem_as_mesmas_depois_de_compartilhar_o_parser(self):
+        yml = (self.REPO / "src/main/resources/application.yml").read_text(encoding="utf-8")
+        opcoes = ex.opcoes_chat_ollama(yml)
+        self.assertEqual(sorted(opcoes), ["num-ctx", "num-predict", "temperature", "think-option"])
+        self.assertNotIn("thinking", opcoes)
 
     def test_commit_sem_o_provedor_nao_tem_opcoes_da_anthropic(self):
         self.assertEqual(ex.opcoes_chat_anthropic("spring:\n  ai:\n    ollama:\n      chat:\n"), {})
@@ -277,21 +358,69 @@ class ProtocoloHttpTest(ComChave):
         self.assertEqual(visto["versao"], ex.VERSAO_API_ANTHROPIC)
         self.assertNotIn(CHAVE, json.dumps(visto["corpo"]))
 
-    def test_endereco_que_nao_e_https_nem_local_e_recusado_antes_de_enviar(self):
-        for url in ("http://exemplo.com", "ftp://x", "http://localhost.evil.com"):
+    def test_endereco_que_poderia_levar_a_chave_a_outro_destino_e_recusado(self):
+        recusados = ("http://exemplo.com", "ftp://x", "http://localhost.evil.com",
+                     # usuario na URL: o host real e o depois do @
+                     "http://localhost:80@evil.example/", "https://api.anthropic.com@evil.example",
+                     "https://usuario:senha@api.anthropic.com", "http://127.0.0.1:porta", "https://", "")
+        for url in recusados:
             with self.subTest(url=url), mock.patch.dict(os.environ, {"BENCH_ANTHROPIC_URL": url}):
-                with mock.patch("urllib.request.urlopen") as urlopen:
+                with mock.patch.object(urllib.request.OpenerDirector, "open") as abrir:
                     with self.assertRaises(RuntimeError):
                         self.e.anthropic({})
-                urlopen.assert_not_called()
+                abrir.assert_not_called()
+
+    def test_enderecos_aceitos(self):
+        for url in ("https://api.anthropic.com", "https://api.anthropic.com/", "http://localhost:8080",
+                    "http://127.0.0.1:9/x", "http://[::1]:9"):
+            with self.subTest(url=url):
+                self.assertEqual(ex.validar_url_anthropic(url), url.rstrip("/"))
 
     def test_endereco_padrao_e_o_da_anthropic(self):
         with mock.patch.dict(os.environ):
             os.environ.pop("BENCH_ANTHROPIC_URL", None)
-            with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("sem rede")) as u:
+            with mock.patch.object(urllib.request.OpenerDirector, "open",
+                                   side_effect=urllib.error.URLError("sem rede")) as abrir:
                 with self.assertRaises(urllib.error.URLError):
                     self.e.anthropic({})
-        self.assertEqual(u.call_args.args[0].full_url, "https://api.anthropic.com/v1/messages")
+        self.assertEqual(abrir.call_args.args[0].full_url, "https://api.anthropic.com/v1/messages")
+
+    def test_redirecionamento_nao_leva_a_chave_a_outro_host(self):
+        class Destino(BaseHTTPRequestHandler):
+            visto = []
+
+            def do_GET(self):  # noqa: N802 (o urllib refaz o POST 302 como GET)
+                Destino.visto.append(self.headers.get("x-api-key"))
+                self.send_response(200)
+                self.send_header("content-length", "0")
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        destino = HTTPServer(("127.0.0.1", 0), Destino)
+
+        class Origem(BaseHTTPRequestHandler):
+            def do_POST(self):  # noqa: N802
+                self.rfile.read(int(self.headers.get("content-length") or 0))
+                # 302: o urllib seguiria (refazendo como GET e copiando os cabecalhos, a chave inclusive).
+                self.send_response(302)
+                self.send_header("location", f"http://127.0.0.1:{destino.server_port}/v1/messages")
+                self.send_header("content-length", "0")
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        origem = HTTPServer(("127.0.0.1", 0), Origem)
+        for servidor in (destino, origem):
+            threading.Thread(target=servidor.serve_forever, daemon=True).start()
+            self.addCleanup(servidor.server_close)
+            self.addCleanup(servidor.shutdown)
+        with mock.patch.dict(os.environ, {"BENCH_ANTHROPIC_URL": f"http://127.0.0.1:{origem.server_port}"}):
+            with self.assertRaises(urllib.error.HTTPError):
+                self.e.anthropic({"model": MODELO}, timeout=10)
+        self.assertEqual(Destino.visto, [])
 
 
 class SegredoTest(ComChave):
@@ -461,7 +590,8 @@ class CelulaPorApiTest(ComChave):
 # --------------------------------------------------------------------------- relatorio
 
 
-def copiar_celula(pasta: Path, pensamento: dict | None = None, avisos: list | None = None) -> None:
+def copiar_celula(pasta: Path, pensamento: dict | None = None, avisos: list | None = None,
+                  read_timeout: str | None = "120s") -> None:
     """Acrescenta a rodada minima uma celula ``ceres-2--claude-haiku-5-5`` (copia da ``m-ref``)."""
     origem = pasta / "ceres-2--m-ref"
     destino = pasta / f"ceres-2--{MODELO}"
@@ -470,7 +600,7 @@ def copiar_celula(pasta: Path, pensamento: dict | None = None, avisos: list | No
     manifesto = json.loads((destino / "celula.json").read_text(encoding="utf-8"))
     manifesto.update({
         "celula": f"ceres-2--{MODELO}", "modelo": MODELO, "provedor": "anthropic",
-        "inferenciaEm": "API da Anthropic (rede)", "memoria": {},
+        "inferenciaEm": "API da Anthropic (rede)", "memoria": {}, "readTimeoutEfetivo": read_timeout,
         "pensamento": pensamento or {
             "resumo": "desligado (thinking=disabled; nenhum bloco de raciocínio na prova)"},
         "avisos": avisos or [],
@@ -529,6 +659,19 @@ class RelatorioComHaikuTest(unittest.TestCase):
         self.assertIn("thinking=disabled", linha)
         self.assertIn("só do ambiente", linha)
         self.assertNotIn("sk-ant", texto)
+
+    def test_condicoes_leem_o_read_timeout_e_o_aviso_da_chave_do_manifesto(self):
+        copiar_celula(self.pasta, read_timeout="90s")
+        linha = next(l for l in self.gerar().splitlines() if l.startswith(f"| `{MODELO}` (API) |"))
+        self.assertIn("`AI_READ_TIMEOUT=90s`", linha)
+        self.assertNotIn("apareceu em arquivos", linha)
+        shutil.rmtree(self.pasta)
+        shutil.copytree(FIXTURE, self.pasta)
+        copiar_celula(self.pasta, read_timeout=None,
+                      avisos=["a chave da API apareceu em comando.log e foi redigida; confira"])
+        linha = next(l for l in self.gerar().splitlines() if l.startswith(f"| `{MODELO}` (API) |"))
+        self.assertIn("não registrado na célula", linha)
+        self.assertIn("a chave apareceu em arquivos da célula e foi redigida", linha)
 
     def test_tabela_modelo_x_arquitetura_nao_diz_nao_rodou_na_ceres_1(self):
         copiar_celula(self.pasta)

@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -109,6 +110,32 @@ KEEP_ALIVE_PROVA = "30m"
 #: troca o endereco (so https, ou http local para um servidor de teste): a chave vai nele.
 URL_ANTHROPIC = "https://api.anthropic.com"
 VERSAO_API_ANTHROPIC = "2023-06-01"
+
+
+def validar_url_anthropic(url: str) -> str:
+    """O endereco para onde a chave vai: ``https``, ou ``http`` so em localhost/127.0.0.1/[::1] (servidor
+    de teste), e nunca com usuario ou senha na URL (``http://localhost@outro-host`` tem outro host).
+
+    :raises RuntimeError: endereco que poderia mandar a chave a um destino nao confiavel
+    """
+    partes = urllib.parse.urlsplit(url)
+    try:
+        partes.port  # noqa: B018 (porta invalida levanta ValueError)
+    except ValueError:
+        raise RuntimeError(f"BENCH_ANTHROPIC_URL com porta invalida: {url!r}") from None
+    local = partes.hostname in ("localhost", "127.0.0.1", "::1")
+    if (partes.scheme != "https" and not (partes.scheme == "http" and local)) \
+            or not partes.hostname or partes.username is not None or partes.password is not None:
+        raise RuntimeError("BENCH_ANTHROPIC_URL precisa ser https (ou http em localhost, de teste) "
+                           "e sem usuario na URL: a chave da API vai nesse endereco")
+    return url.rstrip("/")
+
+
+class _SemRedirecionamento(urllib.request.HTTPRedirectHandler):
+    """A chave nao acompanha um redirecionamento: o urllib copiaria os cabecalhos para o novo host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def segundos_de_duracao(texto: str) -> float:
@@ -216,32 +243,10 @@ def sha256_arquivo(caminho: Path) -> str:
     return hashlib.sha256(caminho.read_bytes()).hexdigest()
 
 
-def opcoes_chat_ollama(application_yml: str) -> dict[str, str]:
-    """Opcoes do chat do Ollama no ``application.yml`` de um commit (o bloco
-    ``spring.ai.ollama.chat.options``), como texto: ``temperature``, ``num-ctx``,
-    ``num-predict``, ``think-option``. So as que mudam a resposta; o modelo vem do executor."""
-    linhas = application_yml.splitlines()
-    caminho: list[tuple[int, str]] = []
-    opcoes: dict[str, str] = {}
-    for linha in linhas:
-        if not linha.strip() or linha.lstrip().startswith("#"):
-            continue
-        recuo = len(linha) - len(linha.lstrip())
-        chave, _, valor = linha.strip().partition(":")
-        while caminho and caminho[-1][0] >= recuo:
-            caminho.pop()
-        nomes = [c[1] for c in caminho]
-        if nomes[-3:] == ["ollama", "chat", "options"] and chave in (
-                "temperature", "num-ctx", "num-predict", "think-option"):
-            opcoes[chave] = valor.split(" #")[0].strip()
-        caminho.append((recuo, chave))
-    return opcoes
-
-
-def opcoes_chat_anthropic(application_yml: str) -> dict[str, str]:
-    """Opcoes do chat da Anthropic no ``application.yml`` de um commit (bloco
-    ``spring.ai.anthropic.chat.options``): ``temperature``, ``max-tokens`` e ``thinking.type``
-    (como ``thinking``). Vazio se o commit nao tem o provedor (antes do #483)."""
+def _opcoes_do_yml(application_yml: str, regras: dict[tuple[str, ...], dict[str, str]]) -> dict[str, str]:
+    """Le chaves do ``application.yml`` pelo caminho dos nomes pais. ``regras`` mapeia o caminho (os
+    ultimos nomes antes da chave) para ``{chave no yml: nome na saida}``; o valor sai como texto,
+    sem o comentario do fim da linha."""
     caminho: list[tuple[int, str]] = []
     opcoes: dict[str, str] = {}
     for linha in application_yml.splitlines():
@@ -252,12 +257,28 @@ def opcoes_chat_anthropic(application_yml: str) -> dict[str, str]:
         while caminho and caminho[-1][0] >= recuo:
             caminho.pop()
         nomes = [c[1] for c in caminho]
-        if nomes[-3:] == ["anthropic", "chat", "options"] and chave in ("temperature", "max-tokens"):
-            opcoes[chave] = valor.split(" #")[0].strip()
-        if nomes[-4:] == ["anthropic", "chat", "options", "thinking"] and chave == "type":
-            opcoes["thinking"] = valor.split(" #")[0].strip()
+        for pais, aceitas in regras.items():
+            if tuple(nomes[-len(pais):]) == pais and chave in aceitas:
+                opcoes[aceitas[chave]] = valor.split(" #")[0].strip()
         caminho.append((recuo, chave))
     return opcoes
+
+
+def opcoes_chat_ollama(application_yml: str) -> dict[str, str]:
+    """Opcoes do chat do Ollama no ``application.yml`` de um commit (o bloco
+    ``spring.ai.ollama.chat.options``), como texto: ``temperature``, ``num-ctx``,
+    ``num-predict``, ``think-option``. So as que mudam a resposta; o modelo vem do executor."""
+    return _opcoes_do_yml(application_yml, {("ollama", "chat", "options"): {
+        k: k for k in ("temperature", "num-ctx", "num-predict", "think-option")}})
+
+
+def opcoes_chat_anthropic(application_yml: str) -> dict[str, str]:
+    """Opcoes do chat da Anthropic no ``application.yml`` de um commit (bloco
+    ``spring.ai.anthropic.chat.options``): ``temperature``, ``max-tokens`` e ``thinking.type``
+    (como ``thinking``). Vazio se o commit nao tem o provedor (antes do #483)."""
+    return _opcoes_do_yml(application_yml, {
+        ("anthropic", "chat", "options"): {"temperature": "temperature", "max-tokens": "max-tokens"},
+        ("anthropic", "chat", "options", "thinking"): {"type": "thinking"}})
 
 
 def resolver_placeholder(valor: str, env: dict) -> str:
@@ -520,16 +541,17 @@ class Executor:
     def anthropic(self, corpo: dict, timeout: float = 120) -> dict:
         """``POST /v1/messages`` com a chave do ambiente (``ANTHROPIC_API_KEY``). So a prova do
         raciocinio usa: as perguntas da celula vao pela JVM. Nenhum teste chama este metodo de verdade."""
-        base = os.environ.get("BENCH_ANTHROPIC_URL", URL_ANTHROPIC).rstrip("/")
-        if not re.match(r"https://|http://(localhost|127\.0\.0\.1)(:|/|$)", base):
-            raise RuntimeError("BENCH_ANTHROPIC_URL precisa ser https (ou http local de teste): "
-                               "a chave da API vai nesse endereco")
         requisicao = urllib.request.Request(
-            base + "/v1/messages", data=json.dumps(corpo).encode(), method="POST",
+            self.url_anthropic() + "/v1/messages", data=json.dumps(corpo).encode(), method="POST",
             headers={"content-type": "application/json", "anthropic-version": VERSAO_API_ANTHROPIC,
                      "x-api-key": os.environ.get("ANTHROPIC_API_KEY", "")})
-        with urllib.request.urlopen(requisicao, timeout=timeout) as resposta:
+        with urllib.request.build_opener(_SemRedirecionamento).open(requisicao, timeout=timeout) as resposta:
             return json.loads(resposta.read().decode() or "{}")
+
+    @staticmethod
+    def url_anthropic() -> str:
+        """Endereco da API (``BENCH_ANTHROPIC_URL`` ou o padrao), ja validado."""
+        return validar_url_anthropic(os.environ.get("BENCH_ANTHROPIC_URL", URL_ANTHROPIC))
 
     # ------------------------------------------------------------------ passos
 
@@ -542,6 +564,7 @@ class Executor:
         validar_read_timeout(self.cfg.read_timeout_celula)
         self.conferir_celulas_api()
         versao = self.ollama("/api/version").get("version", "?")
+        self.provar_celulas_api()
         trechos = int(self.psql(self.cfg.db_origem, "select count(*) from legislacao_trecho") or 0)
         esperado = self.cfg.matriz.get("trechosLegislacao")
         if trechos == 0:
@@ -567,11 +590,34 @@ class Executor:
             if api.get("raciocinio") != "disabled":
                 raise RuntimeError(f"{api.get('modelo')}: o raciocinio tem de ficar desligado "
                                    "(raciocinio=disabled na matriz): ele gastaria os tetos por chamada")
+        self.url_anthropic()  # endereco invalido para aqui, nao na ultima celula
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError(
                 "ANTHROPIC_API_KEY ausente: a celula " + ", ".join(sorted({a["modelo"] for _, a in pedidas}))
                 + " chama a API da Anthropic com a chave do ambiente de quem roda (nunca de arquivo). "
                 "Exporte a variavel, ou rode so os modelos locais com --modelos")
+
+    def provar_celulas_api(self) -> None:
+        """Uma prova do raciocinio por modelo por API **antes** da rodada: a celula por API e a
+        ultima de cada arquitetura, e chave errada, sem saldo ou sem acesso ao modelo so apareceria
+        depois das celulas locais (horas). Custa uma pergunta curta por modelo.
+
+        :raises RuntimeError: a API nao respondeu, ou o raciocinio veio ligado
+        """
+        vistos = set()
+        for _, api in self.cfg.celulas_api():
+            if api["modelo"] in vistos:
+                continue
+            vistos.add(api["modelo"])
+            prova = self.provar_pensamento_api(api["modelo"], api)
+            if prova.get("erro"):
+                raise RuntimeError(f"a API da Anthropic nao respondeu a prova de {api['modelo']} "
+                                   f"({prova['erro']}): confira a chave, o saldo e o acesso ao modelo "
+                                   "antes de comecar a rodada")
+            if prova.get("raciocinou"):
+                raise RuntimeError(f"{api['modelo']} raciocinou apesar de thinking={api['raciocinio']}: "
+                                   "a celula seria invalida; nao vale comecar a rodada")
+            log(f"{api['modelo']} (API): pensamento {prova['resumo']}")
 
     def resolver_sha(self, ref: str) -> str:
         return self.capturar(["git", "rev-parse", "--verify", ref + "^{commit}"], self.cfg.repo)
@@ -622,8 +668,9 @@ class Executor:
             env.update(arquitetura.get("configuracaoPublicada") or {})
         # Depois da publicada, a unica excecao a ela (``matriz.json``): ver Config.read_timeout_celula.
         validar_read_timeout(self.cfg.read_timeout_celula)
-        if self.read_timeout(api):
-            env["AI_READ_TIMEOUT"] = self.read_timeout(api)
+        leitura = self.read_timeout(api)
+        if leitura:
+            env["AI_READ_TIMEOUT"] = leitura
         env.update({
             "SPRING_PROFILES_ACTIVE": "dev,avaliacao",
             "DB_NAME": banco,
