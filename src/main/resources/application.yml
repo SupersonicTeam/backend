@@ -126,8 +126,8 @@ spring:
   # Ceres — assistente fiscal (issue #141). Arquitetura: Tool Calling + RAG + orquestracao.
   ai:
     model:
-      # Provedor do modelo de chat: "ollama" (local, padrao) ou "openai" (qualquer API compativel
-      # com a da OpenAI: OpenAI, Maritaca...). Trocar e so configuracao, nenhum codigo muda.
+      # Provedor do modelo de chat: "ollama" (local, padrao), "openai" (qualquer API compativel
+      # com a da OpenAI: OpenAI, Maritaca...) ou "anthropic" (Claude). Trocar e so configuracao.
       chat: ${AI_CHAT_PROVIDER:ollama}
       # Embedding e SEMPRE local (bge-m3, 1024 dimensoes). Nao e env var de proposito: trocar o
       # modelo de embedding obriga a reindexar toda a legislacao (issue #156).
@@ -180,6 +180,27 @@ spring:
           model: ${AI_CHAT_MODEL:gpt-4o-mini}
           temperature: 0.2
           max-tokens: ${AI_MAX_TOKENS:1024}
+    # API da Anthropic (Claude), com spring.ai.model.chat=anthropic. Chave propria, para nao se
+    # misturar com a de um provedor compativel com a OpenAI; sem ela a aplicacao nao sobe
+    # (AnthropicApiKeyConfig).
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          # Variavel propria, nao o AI_CHAT_MODEL: os compose sempre exportam AI_CHAT_MODEL com o
+          # modelo do Ollama, e trocar so o provedor mandaria "qwen3:4b-instruct" a Anthropic (404).
+          model: ${AI_ANTHROPIC_MODEL:claude-haiku-5-5}
+          # Os modelos atuais recusam (400) temperatura diferente do padrao; 1.0 e o padrao da API.
+          # Sem esta linha o Spring AI mandaria a dele (0.8).
+          temperature: 1.0
+          max-tokens: ${AI_MAX_TOKENS:1024}
+          # O raciocinio vem ligado e gasta o teto de cada chamada (app.assistente.tetos, #270):
+          # resposta cortada. O Haiku 5.5 aceita desligar. Vazio = nao enviar o campo; "enabled"
+          # nao serve aos modelos atuais (400). Modelo que nao desliga o raciocinio (Opus 5.5,
+          # Sonnet 5.5) NAO e suportado: o bloco de raciocinio chega como primeira Generation, e a
+          # rota de lei e o classificador leem so a primeira.
+          thinking:
+            type: ${AI_ANTHROPIC_THINKING:disabled}
     # Retry curto: a pergunta do usuario esta esperando. Erro 4xx (chave invalida, requisicao
     # malformada) nao melhora repetindo. A excecao e o 429 (limite de taxa do provedor por API),
     # que e transitorio: on-http-codes vale antes de on-client-errors. Esgotadas as tentativas, o

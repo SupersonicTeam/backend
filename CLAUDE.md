@@ -72,7 +72,7 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
 
 ## Stack fixada
 
-Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 (+ pgvector) · Liquibase · Spring Security · Bean Validation · Spring Actuator · springdoc-openapi 2.8.x · Spring AI 1.1.8 (Ollama local + API compatível com a da OpenAI) · JUnit 5 + Mockito · Docker Compose.
+Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 (+ pgvector) · Liquibase · Spring Security · Bean Validation · Spring Actuator · springdoc-openapi 2.8.x · Spring AI 1.1.8 (Ollama local + API compatível com a da OpenAI + API da Anthropic, #483) · JUnit 5 + Mockito · Docker Compose.
 
 > Spring AI **fixado na linha 1.1.x** (a 2.x exige Boot 4). Detalhes da Ceres em `docs/ceres-assistente.md`.
 
