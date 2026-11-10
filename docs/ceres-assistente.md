@@ -13,6 +13,7 @@ página cobre a base de infraestrutura (issue #141); o desenho completo está em
 | Integração | Spring AI **1.1.8** | Linha compatível com o Boot 3.5.14 (a 2.x exige Boot 4) |
 | Modelo de chat | `qwen3:4b-instruct` no **Ollama** (local) | Orientação do prof. Luan: arquitetura completa com modelo simples, escalar depois. Variante *instruct* (Qwen3-4B-Instruct-2507): a tag `qwen3:4b` virou a variante *thinking*, que ignora `think=false` e levava 80–120 s só para classificar uma pergunta em CPU |
 | Provedor por API | qualquer API compatível com a da OpenAI (OpenAI, Maritaca) | Só configuração: `AI_CHAT_PROVIDER=openai` + `AI_API_KEY` |
+| Claude (Anthropic) | `claude-haiku-5-5` pela API da Anthropic | Só configuração: `AI_CHAT_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` (o modelo é o `AI_ANTHROPIC_MODEL`, não o `AI_CHAT_MODEL`). Temperatura no padrão da API (1.0; outro valor é recusado) e raciocínio desligado, para não gastar os tetos por chamada. **Modelo que não desliga o raciocínio (Opus 5.5, Sonnet 5.5) não é suportado:** o Spring AI entrega o bloco de raciocínio como primeira `Generation`, e a rota de lei e o classificador leem só a primeira |
 | Embedding | `bge-m3` no Ollama, 1024 dimensões | **Sempre local.** Trocar o modelo obriga a reindexar a legislação |
 | Vector store | pgvector no mesmo PostgreSQL 16 | Imagem `pgvector/pgvector:0.8.6-pg16`; schema pelo Liquibase (#156) |
 
@@ -41,10 +42,13 @@ modelos. Sem Ollama o backend sobe normalmente; a Ceres responde **503**
 |---|---|
 | Modelo local maior | `AI_CHAT_MODEL=qwen3:8b` (o `ollama-init` baixa na próxima subida) |
 | API da OpenAI | `AI_CHAT_PROVIDER=openai`, `AI_API_KEY=...`, `AI_CHAT_MODEL=gpt-4o-mini` |
+| Claude (API da Anthropic) | `AI_CHAT_PROVIDER=anthropic`, `ANTHROPIC_API_KEY=...` (chave ligada a um workspace); opcional `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`) |
 | Outra API compatível (ex.: Maritaca) | `AI_CHAT_PROVIDER=openai`, `AI_API_BASE_URL`, `AI_API_COMPLETIONS_PATH` (a Maritaca usa `/chat/completions`, sem `/v1`; confira na documentação do provedor), `AI_API_KEY`, `AI_CHAT_MODEL` |
 
 Com `AI_CHAT_PROVIDER=openai` e sem `AI_API_KEY`, a aplicação **não sobe** (falha na subida, não
-na primeira pergunta). A chave vem só de variável de ambiente.
+na primeira pergunta). A chave vem só de variável de ambiente. O mesmo vale para
+`AI_CHAT_PROVIDER=anthropic` sem `ANTHROPIC_API_KEY` (`config/AnthropicApiKeyConfig`): o starter da
+Anthropic subiria com a chave vazia e a Ceres responderia tudo em modo fallback, sem sinal no health.
 
 ## Garantias desta camada
 

@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente.llm;
 
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
+import java.util.Locale;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -23,7 +25,7 @@ import org.springframework.stereotype.Component;
  *       com a mensagem genérica no envelope {@code errors[]}. O erro do provedor fica só no log —
  *       e sem a mensagem dele, que pode ecoar trechos da requisição.</li>
  *   <li><strong>O provedor é detalhe de configuração.</strong> Quem chama não sabe se atrás do
- *       {@link ChatModel} está o Ollama ou uma API compatível com a da OpenAI
+ *       {@link ChatModel} está o Ollama, uma API compatível com a da OpenAI ou a da Anthropic
  *       ({@code spring.ai.model.chat}).</li>
  * </ul>
  *
@@ -37,6 +39,9 @@ import org.springframework.stereotype.Component;
 public class ModeloLinguagem {
 
   private static final Logger log = LoggerFactory.getLogger(ModeloLinguagem.class);
+
+  /** Motivo do fim quando a geração parou no teto: Ollama e API da OpenAI; API da Anthropic. */
+  private static final Set<String> MOTIVOS_DE_CORTE = Set.of("length", "max_tokens");
 
   private final ObjectProvider<ChatModel> chatModel;
   private final String provedor;
@@ -102,7 +107,7 @@ public class ModeloLinguagem {
    * Opções de uma chamada só com o teto de tokens gerados (#270). O resto (modelo, temperatura,
    * {@code num_ctx}, thinking) vem das opções padrão do provedor, mescladas pelo Spring AI. O
    * {@code maxTokens} vira {@code num_predict} no Ollama e {@code max_tokens} na API compatível com
-   * a da OpenAI.
+   * a da OpenAI e na da Anthropic.
    *
    * @param maxTokens teto de tokens gerados desta chamada
    * @return opções da chamada
@@ -118,7 +123,8 @@ public class ModeloLinguagem {
    * descarta, em vez de conferir o texto.
    *
    * <p>Dois sinais, qualquer um basta: o motivo do fim ({@code done_reason: "length"} no Ollama,
-   * {@code finish_reason: "length"} na API da OpenAI, que o Spring AI expõe como {@code LENGTH}) e
+   * {@code finish_reason: "length"} na API da OpenAI, que o Spring AI expõe como {@code LENGTH},
+   * {@code stop_reason: "max_tokens"} na da Anthropic) e
    * os tokens gerados no teto ou acima. O segundo cobre o motivo ausente: o {@code OllamaChatModel}
    * só o preenche quando o Ollama manda as contagens, e um provedor compatível pode mandar um
    * motivo que o Spring AI não conhece.
@@ -133,7 +139,8 @@ public class ModeloLinguagem {
     }
     if (resposta.getResult().getMetadata() != null) {
       String motivo = resposta.getResult().getMetadata().getFinishReason();
-      if (motivo != null && motivo.strip().equalsIgnoreCase("length")) {
+      if (motivo != null
+          && MOTIVOS_DE_CORTE.contains(motivo.strip().toLowerCase(Locale.ROOT))) {
         return true;
       }
     }

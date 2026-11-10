@@ -67,8 +67,16 @@ services:
     logging: *logging
     environment:
       OLLAMA_HOST: http://ollama:11434
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
-    entrypoint: ['/bin/sh', '-c', 'ollama pull bge-m3 && ollama pull "$$AI_CHAT_MODEL"']
+    # O modelo de chat so e baixado quando o chat e local; com a API da Anthropic ele nao e usado.
+    # O bge-m3 (embedding) e sempre local.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        ollama pull bge-m3 &&
+        if [ "$$AI_CHAT_PROVIDER" = "ollama" ]; then ollama pull "$$AI_CHAT_MODEL"; fi
     networks: [interna]
     depends_on:
       ollama:
@@ -148,8 +156,15 @@ services:
       # da a chave desconhecida como autorizada (#223; padrao so no application-dev.yml).
       APP_NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS: 'true'
       AI_OLLAMA_BASE_URL: http://ollama:11434
-      AI_CHAT_PROVIDER: ollama
+      # ollama (padrao) ou anthropic (Claude pela API; sem ANTHROPIC_API_KEY o backend nao sobe).
+      # "openai" nao e suportado aqui: este compose nao repassa AI_API_KEY nem a URL.
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
+      # AI_CHAT_MODEL e so o modelo do Ollama; o da Anthropic e AI_ANTHROPIC_MODEL.
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_ANTHROPIC_MODEL: ${AI_ANTHROPIC_MODEL:-claude-haiku-5-5}
+      # Sem os dois-pontos: vazio no .env chega vazio (= nao enviar o campo de raciocinio).
+      AI_ANTHROPIC_THINKING: ${AI_ANTHROPIC_THINKING-disabled}
       # Janela de contexto, teto geral e tetos por tipo de chamada (#270); padroes = os do yml.
       AI_OLLAMA_NUM_CTX: ${AI_OLLAMA_NUM_CTX:-8192}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1024}

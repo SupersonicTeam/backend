@@ -52,6 +52,24 @@ as sessões. Irreversível. O CPF/CNPJ fica no registro anonimizado, então um n
 mesmo documento é recusado (409); a reativação passa pelo escritório. O contador, que não guarda
 o documento, pode se cadastrar de novo.
 
+## Provedor externo do modelo da Ceres
+
+Com o modelo local (Ollama, o padrão), nada do que a Ceres processa sai do servidor. Com um
+provedor por API (`AI_CHAT_PROVIDER=anthropic` ou `openai`), **cada pergunta e o resultado de cada
+função de dados são enviados ao provedor**, que é operador (LGPD, art. 5º, VII) e fica fora do
+país (transferência internacional, art. 33). O que vai:
+
+- a pergunta e os resultados das funções **depois do `DataSanitizer`**: sem CPF, CNPJ, e-mail nem
+  telefone;
+- dados de negócio do produtor que a resposta exige: valores, datas, números de nota, categorias
+  de produto e NCM;
+- trechos de lei, que são públicos.
+
+O que não vai: nome, documento, contato e endereço do produtor, e o XML das notas. A política
+pública (`GET /api/politica-dados`) declara o compartilhamento em "Provedor do modelo da Ceres,
+quando configurado por API". A retenção e o uso dos dados pelo provedor seguem o contrato dele;
+conferir os termos da conta antes de ligar para produtores reais.
+
 ## Limites conhecidos
 
 - **Reativação do produtor:** não há fluxo no código; o documento retido bloqueia um novo cadastro
