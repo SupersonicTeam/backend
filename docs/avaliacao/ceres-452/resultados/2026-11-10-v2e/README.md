@@ -118,7 +118,9 @@ inteiro fica fora desta pasta.
 
 ### Por que a correção demora nessa pergunta
 
-Os números desta seção vêm de `auditoria-v2-g4-06.txt` e do JSONL.
+Os números desta seção vêm de `auditoria-v2-g4-06.txt`, do JSONL e do log do Ollama
+(`docker logs --tail 60000 agrocontabil-ollama`, horários em UTC). As linhas citadas do Ollama
+estão no fim de `auditoria-v2-g4-06.txt`.
 
 - **O Ollama da medição roda em CPU.** O container `agrocontabil-ollama` não tem GPU (o
   `docker inspect` não traz `DeviceRequests`). Na r2 da correção, a Ceres gerou 371 tokens em
@@ -134,10 +136,15 @@ Os números desta seção vêm de `auditoria-v2-g4-06.txt` e do JSONL.
 - **Nas execuções cortadas, o tempo acaba antes do teto.** A geração ainda corria quando venceu o
   read-timeout de 120 s (`spring.http.client.read-timeout`): o log registra
   `ResourceAccessException` na etapa de dados, e não a resposta cortada pelo teto de 512 tokens da
-  escolha de funções (`app.assistente.tetos.funcoes`). Na taxa da r2, são perto de 450 a 480
-  tokens até o corte. O número exato não ficou registrado: a auditoria só guarda os 21 tokens da
-  classificação, porque a chamada cortada não volta, e o log do Ollama desta rodada não foi
-  guardado.
+  escolha de funções (`app.assistente.tetos.funcoes`). O log do Ollama mostra a chamada de escolha
+  de funções com prompt de 3741 tokens, cortada com HTTP 500 depois de 2 minutos e gerando de 3,98 a
+  4,14 tokens por segundo:
+  - **r1:** 469 tokens gerados no corte. O registro logo depois do 500 dá `n_gen = 469`, e o fim da
+    tarefa dá `n_tokens = 4210`, ou seja, 3741 + 469.
+  - **r3:** cerca de 470 tokens gerados. O fim da tarefa dá `n_tokens = 4211`, e o último registro
+    periódico, 0,9 s antes do corte, marcava 466.
+
+  A auditoria da Ceres só guarda os 21 tokens da classificação, porque a chamada cortada não volta.
 - **Depois da falha, o modelo fica 30 s fora.** O disjuntor do modelo abre por 30 s
   (`app.assistente.fallback.pausa-apos-falha`). As tentativas seguintes começam 4,5 a 5,5 s depois
   do estouro e por isso caem no fallback em 0,1 a 0,2 s.
@@ -152,7 +159,7 @@ Os números desta seção vêm de `auditoria-v2-g4-06.txt` e do JSONL.
 | `executor.log` | saída do `executar.py` |
 | `paridade-*.txt` | paridade do produtor e geral de cada braço |
 | `carga.log` | memória livre, CPU e processos Java ou Maven de fora, a cada 2 minutos |
-| `auditoria-v2-g4-06.txt` | auditoria da Ceres das execuções da `v2-g4-06` nos dois braços e as linhas do log da correção nas janelas dela, sem dado pessoal |
+| `auditoria-v2-g4-06.txt` | auditoria da Ceres das execuções da `v2-g4-06` nos dois braços, as linhas do log da correção nas janelas dela e as linhas do log do Ollama das duas chamadas cortadas, sem dado pessoal nem prompt |
 
 Os logs inteiros das aplicações ficaram fora, porque trazem o id do usuário no login. Só as linhas
 das janelas da `v2-g4-06`, sem as de login, estão em `auditoria-v2-g4-06.txt`.

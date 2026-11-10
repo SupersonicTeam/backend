@@ -1,4 +1,4 @@
-# v2-g4-06 na v2e: auditoria da Ceres e log da aplicação da correção
+# v2-g4-06 na v2e: auditoria da Ceres, log da aplicação da correção e log do Ollama
 #
 # Auditoria: tabela assistente_interacao dos bancos agroconia_452_base e
 # agroconia_452_correcao, lida em 2026-11-10, antes de a próxima rodada recriar os bancos.
@@ -29,3 +29,78 @@ correcao | 3 | 3 | 02:52:03 | 02:52:03 | MISTO | MODO_FALLBACK | 0 | 101 | - | -
 2026-11-10T02:51:54.512-03:00 WARN 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.config.AssistenteConfig : Falha na chamada ao modelo (tentativa 1): org.springframework.web.client.ResourceAccessException
 2026-11-10T02:51:54.512-03:00 WARN 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.assistente.llm.ModeloLinguagem : Falha ao chamar o modelo de linguagem: provedor=ollama falha=org.springframework.web.client.ResourceAccessException
 2026-11-10T02:51:54.512-03:00 INFO 35492 --- [agrocontabil-backend] [ agro-ceres-3] b.c.a.a.o.OrquestradorService : Ceres em modo fallback: modelo indisponivel na etapa dados
+
+# Log do Ollama (docker logs --tail 60000 agrocontabil-ollama, lido em 2026-11-10; horários em UTC,
+# BRT = UTC-3):
+# as duas chamadas de escolha de funções cortadas da correção (tarefas 14908, r1, e 24278, r3).
+# Para cada uma: o prompt, os registros periódicos da geração, o HTTP 500 do corte e o fim da
+# tarefa. Só essas linhas; o log tem prompts com dados da demonstração.
+
+2026-11-10T05:09:11.568798452Z slot operator(): id 0 | task 14908 | new prompt, n_ctx_slot = 8192, n_keep = 4, task.n_tokens = 3741
+2026-11-10T05:09:38.245107862Z slot print_timing: id 0 | task 14908 | n_gen = 100, tg = 4.06 t/s, tg_3s = 4.10 t/s
+2026-11-10T05:09:41.385112200Z slot print_timing: id 0 | task 14908 | n_gen = 113, tg = 4.07 t/s, tg_3s = 4.14 t/s
+2026-11-10T05:09:44.478997964Z slot print_timing: id 0 | task 14908 | n_gen = 125, tg = 4.05 t/s, tg_3s = 3.88 t/s
+2026-11-10T05:09:47.481656805Z slot print_timing: id 0 | task 14908 | n_gen = 137, tg = 4.05 t/s, tg_3s = 4.00 t/s
+2026-11-10T05:09:50.689153651Z slot print_timing: id 0 | task 14908 | n_gen = 150, tg = 4.05 t/s, tg_3s = 4.05 t/s
+2026-11-10T05:09:53.763523839Z slot print_timing: id 0 | task 14908 | n_gen = 162, tg = 4.04 t/s, tg_3s = 3.90 t/s
+2026-11-10T05:09:56.846770868Z slot print_timing: id 0 | task 14908 | n_gen = 174, tg = 4.03 t/s, tg_3s = 3.89 t/s
+2026-11-10T05:09:59.983682770Z slot print_timing: id 0 | task 14908 | n_gen = 187, tg = 4.03 t/s, tg_3s = 4.14 t/s
+2026-11-10T05:10:03.006388333Z slot print_timing: id 0 | task 14908 | n_gen = 199, tg = 4.03 t/s, tg_3s = 3.97 t/s
+2026-11-10T05:10:06.218031511Z slot print_timing: id 0 | task 14908 | n_gen = 212, tg = 4.03 t/s, tg_3s = 4.05 t/s
+2026-11-10T05:10:09.231928967Z slot print_timing: id 0 | task 14908 | n_gen = 224, tg = 4.03 t/s, tg_3s = 3.98 t/s
+2026-11-10T05:10:12.471183486Z slot print_timing: id 0 | task 14908 | n_gen = 237, tg = 4.03 t/s, tg_3s = 4.01 t/s
+2026-11-10T05:10:15.488767230Z slot print_timing: id 0 | task 14908 | n_gen = 249, tg = 4.02 t/s, tg_3s = 3.98 t/s
+2026-11-10T05:10:18.651933986Z slot print_timing: id 0 | task 14908 | n_gen = 262, tg = 4.03 t/s, tg_3s = 4.11 t/s
+2026-11-10T05:10:21.880735155Z slot print_timing: id 0 | task 14908 | n_gen = 275, tg = 4.03 t/s, tg_3s = 4.02 t/s
+2026-11-10T05:10:24.933651365Z slot print_timing: id 0 | task 14908 | n_gen = 287, tg = 4.02 t/s, tg_3s = 3.93 t/s
+2026-11-10T05:10:27.971130431Z slot print_timing: id 0 | task 14908 | n_gen = 299, tg = 4.02 t/s, tg_3s = 3.95 t/s
+2026-11-10T05:10:31.183987337Z slot print_timing: id 0 | task 14908 | n_gen = 312, tg = 4.02 t/s, tg_3s = 4.05 t/s
+2026-11-10T05:10:34.363951568Z slot print_timing: id 0 | task 14908 | n_gen = 325, tg = 4.03 t/s, tg_3s = 4.08 t/s
+2026-11-10T05:10:37.420731544Z slot print_timing: id 0 | task 14908 | n_gen = 337, tg = 4.02 t/s, tg_3s = 3.93 t/s
+2026-11-10T05:10:40.443034141Z slot print_timing: id 0 | task 14908 | n_gen = 349, tg = 4.02 t/s, tg_3s = 3.97 t/s
+2026-11-10T05:10:43.473142076Z slot print_timing: id 0 | task 14908 | n_gen = 361, tg = 4.02 t/s, tg_3s = 3.96 t/s
+2026-11-10T05:10:46.588454395Z slot print_timing: id 0 | task 14908 | n_gen = 373, tg = 4.01 t/s, tg_3s = 3.85 t/s
+2026-11-10T05:10:49.721305605Z slot print_timing: id 0 | task 14908 | n_gen = 385, tg = 4.01 t/s, tg_3s = 3.83 t/s
+2026-11-10T05:10:52.856105194Z slot print_timing: id 0 | task 14908 | n_gen = 397, tg = 4.00 t/s, tg_3s = 3.83 t/s
+2026-11-10T05:10:56.047096197Z slot print_timing: id 0 | task 14908 | n_gen = 409, tg = 3.99 t/s, tg_3s = 3.76 t/s
+2026-11-10T05:10:59.137148696Z slot print_timing: id 0 | task 14908 | n_gen = 421, tg = 3.99 t/s, tg_3s = 3.88 t/s
+2026-11-10T05:11:02.165198728Z slot print_timing: id 0 | task 14908 | n_gen = 433, tg = 3.99 t/s, tg_3s = 3.96 t/s
+2026-11-10T05:11:05.307838397Z slot print_timing: id 0 | task 14908 | n_gen = 445, tg = 3.98 t/s, tg_3s = 3.82 t/s
+2026-11-10T05:11:08.395152975Z slot print_timing: id 0 | task 14908 | n_gen = 457, tg = 3.98 t/s, tg_3s = 3.89 t/s
+2026-11-10T05:11:11.413021359Z [GIN] 2026/11/10 - 05:11:11 | 500 | 2m0s | 172.20.0.1 | POST "/api/chat"
+2026-11-10T05:11:11.516749232Z slot print_timing: id 0 | task 14908 | n_gen = 469, tg = 3.98 t/s, tg_3s = 3.84 t/s
+2026-11-10T05:11:11.788654098Z slot release: id 0 | task 14908 | stop processing: n_tokens = 4210, truncated = 0
+2026-11-10T05:49:54.675307840Z slot operator(): id 0 | task 24278 | new prompt, n_ctx_slot = 8192, n_keep = 4, task.n_tokens = 3741
+2026-11-10T05:50:20.947632752Z slot print_timing: id 0 | task 24278 | n_gen = 100, tg = 4.14 t/s, tg_3s = 4.18 t/s
+2026-11-10T05:50:24.084997789Z slot print_timing: id 0 | task 24278 | n_gen = 113, tg = 4.14 t/s, tg_3s = 4.14 t/s
+2026-11-10T05:50:27.258542411Z slot print_timing: id 0 | task 24278 | n_gen = 126, tg = 4.14 t/s, tg_3s = 4.10 t/s
+2026-11-10T05:50:30.294312974Z slot print_timing: id 0 | task 24278 | n_gen = 138, tg = 4.12 t/s, tg_3s = 3.95 t/s
+2026-11-10T05:50:33.306202099Z slot print_timing: id 0 | task 24278 | n_gen = 150, tg = 4.11 t/s, tg_3s = 3.98 t/s
+2026-11-10T05:50:36.314150535Z slot print_timing: id 0 | task 24278 | n_gen = 162, tg = 4.10 t/s, tg_3s = 3.99 t/s
+2026-11-10T05:50:39.322015672Z slot print_timing: id 0 | task 24278 | n_gen = 174, tg = 4.09 t/s, tg_3s = 3.99 t/s
+2026-11-10T05:50:42.561050284Z slot print_timing: id 0 | task 24278 | n_gen = 187, tg = 4.09 t/s, tg_3s = 4.01 t/s
+2026-11-10T05:50:45.584291863Z slot print_timing: id 0 | task 24278 | n_gen = 199, tg = 4.08 t/s, tg_3s = 3.97 t/s
+2026-11-10T05:50:48.671851078Z slot print_timing: id 0 | task 24278 | n_gen = 211, tg = 4.07 t/s, tg_3s = 3.89 t/s
+2026-11-10T05:50:51.709450012Z slot print_timing: id 0 | task 24278 | n_gen = 223, tg = 4.06 t/s, tg_3s = 3.95 t/s
+2026-11-10T05:50:54.732668488Z slot print_timing: id 0 | task 24278 | n_gen = 235, tg = 4.06 t/s, tg_3s = 3.97 t/s
+2026-11-10T05:50:57.816092643Z slot print_timing: id 0 | task 24278 | n_gen = 247, tg = 4.05 t/s, tg_3s = 3.89 t/s
+2026-11-10T05:51:00.854727564Z slot print_timing: id 0 | task 24278 | n_gen = 259, tg = 4.04 t/s, tg_3s = 3.95 t/s
+2026-11-10T05:51:03.928758801Z slot print_timing: id 0 | task 24278 | n_gen = 271, tg = 4.04 t/s, tg_3s = 3.90 t/s
+2026-11-10T05:51:07.119175908Z slot print_timing: id 0 | task 24278 | n_gen = 283, tg = 4.02 t/s, tg_3s = 3.76 t/s
+2026-11-10T05:51:10.191889474Z slot print_timing: id 0 | task 24278 | n_gen = 295, tg = 4.02 t/s, tg_3s = 3.91 t/s
+2026-11-10T05:51:13.443860748Z slot print_timing: id 0 | task 24278 | n_gen = 308, tg = 4.02 t/s, tg_3s = 4.00 t/s
+2026-11-10T05:51:16.524723486Z slot print_timing: id 0 | task 24278 | n_gen = 320, tg = 4.01 t/s, tg_3s = 3.90 t/s
+2026-11-10T05:51:19.577018888Z slot print_timing: id 0 | task 24278 | n_gen = 332, tg = 4.01 t/s, tg_3s = 3.93 t/s
+2026-11-10T05:51:22.597855608Z slot print_timing: id 0 | task 24278 | n_gen = 344, tg = 4.01 t/s, tg_3s = 3.97 t/s
+2026-11-10T05:51:25.795665527Z slot print_timing: id 0 | task 24278 | n_gen = 357, tg = 4.01 t/s, tg_3s = 4.07 t/s
+2026-11-10T05:51:29.011257153Z slot print_timing: id 0 | task 24278 | n_gen = 370, tg = 4.01 t/s, tg_3s = 4.04 t/s
+2026-11-10T05:51:32.026932936Z slot print_timing: id 0 | task 24278 | n_gen = 382, tg = 4.01 t/s, tg_3s = 3.97 t/s
+2026-11-10T05:51:35.100953154Z slot print_timing: id 0 | task 24278 | n_gen = 394, tg = 4.01 t/s, tg_3s = 3.90 t/s
+2026-11-10T05:51:38.227613158Z slot print_timing: id 0 | task 24278 | n_gen = 406, tg = 4.00 t/s, tg_3s = 3.84 t/s
+2026-11-10T05:51:41.305335474Z slot print_timing: id 0 | task 24278 | n_gen = 418, tg = 4.00 t/s, tg_3s = 3.90 t/s
+2026-11-10T05:51:44.433566428Z slot print_timing: id 0 | task 24278 | n_gen = 430, tg = 3.99 t/s, tg_3s = 3.84 t/s
+2026-11-10T05:51:47.533375917Z slot print_timing: id 0 | task 24278 | n_gen = 442, tg = 3.99 t/s, tg_3s = 3.87 t/s
+2026-11-10T05:51:50.601708496Z slot print_timing: id 0 | task 24278 | n_gen = 454, tg = 3.99 t/s, tg_3s = 3.91 t/s
+2026-11-10T05:51:53.654456448Z slot print_timing: id 0 | task 24278 | n_gen = 466, tg = 3.99 t/s, tg_3s = 3.93 t/s
+2026-11-10T05:51:54.516834588Z [GIN] 2026/11/10 - 05:51:54 | 500 | 2m0s | 172.20.0.1 | POST "/api/chat"
+2026-11-10T05:51:54.930486901Z slot release: id 0 | task 24278 | stop processing: n_tokens = 4211, truncated = 0
