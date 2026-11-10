@@ -168,6 +168,11 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-openai</artifactId>
 		</dependency>
+		<!-- API da Anthropic (Claude), selecionavel por spring.ai.model.chat=anthropic. -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-anthropic</artifactId>
+		</dependency>
 		<!-- RAG da Ceres (issue #156): legislacao vetorizada no mesmo PostgreSQL (pgvector). O schema
 		     e do Liquibase (initialize-schema desligado). -->
 		<dependency>

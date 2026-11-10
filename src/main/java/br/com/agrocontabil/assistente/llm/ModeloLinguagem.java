@@ -118,7 +118,8 @@ public class ModeloLinguagem {
    * descarta, em vez de conferir o texto.
    *
    * <p>Dois sinais, qualquer um basta: o motivo do fim ({@code done_reason: "length"} no Ollama,
-   * {@code finish_reason: "length"} na API da OpenAI, que o Spring AI expõe como {@code LENGTH}) e
+   * {@code finish_reason: "length"} na API da OpenAI, que o Spring AI expõe como {@code LENGTH},
+   * {@code stop_reason: "max_tokens"} na da Anthropic) e
    * os tokens gerados no teto ou acima. O segundo cobre o motivo ausente: o {@code OllamaChatModel}
    * só o preenche quando o Ollama manda as contagens, e um provedor compatível pode mandar um
    * motivo que o Spring AI não conhece.
@@ -133,7 +134,8 @@ public class ModeloLinguagem {
     }
     if (resposta.getResult().getMetadata() != null) {
       String motivo = resposta.getResult().getMetadata().getFinishReason();
-      if (motivo != null && motivo.strip().equalsIgnoreCase("length")) {
+      if (motivo != null && (motivo.strip().equalsIgnoreCase("length")
+          || motivo.strip().equalsIgnoreCase("max_tokens"))) {
         return true;
       }
     }

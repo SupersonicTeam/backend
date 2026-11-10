@@ -126,8 +126,8 @@ spring:
   # Ceres — assistente fiscal (issue #141). Arquitetura: Tool Calling + RAG + orquestracao.
   ai:
     model:
-      # Provedor do modelo de chat: "ollama" (local, padrao) ou "openai" (qualquer API compativel
-      # com a da OpenAI: OpenAI, Maritaca...). Trocar e so configuracao, nenhum codigo muda.
+      # Provedor do modelo de chat: "ollama" (local, padrao), "openai" (qualquer API compativel
+      # com a da OpenAI: OpenAI, Maritaca...) ou "anthropic" (Claude). Trocar e so configuracao.
       chat: ${AI_CHAT_PROVIDER:ollama}
       # Embedding e SEMPRE local (bge-m3, 1024 dimensoes). Nao e env var de proposito: trocar o
       # modelo de embedding obriga a reindexar toda a legislacao (issue #156).
@@ -180,6 +180,21 @@ spring:
           model: ${AI_CHAT_MODEL:gpt-4o-mini}
           temperature: 0.2
           max-tokens: ${AI_MAX_TOKENS:1024}
+    # API da Anthropic (Claude), com spring.ai.model.chat=anthropic. Chave propria, para nao se
+    # misturar com a de um provedor compativel com a OpenAI.
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: ${AI_CHAT_MODEL:claude-haiku-5-5}
+          # Os modelos atuais recusam (400) temperatura diferente do padrao; 1.0 e o padrao da API.
+          # Sem esta linha o Spring AI mandaria a dele (0.8).
+          temperature: 1.0
+          max-tokens: ${AI_MAX_TOKENS:1024}
+          # O raciocinio vem ligado e gasta o teto de cada chamada (app.assistente.tetos, #270):
+          # resposta cortada. O Haiku 5.5 aceita desligar; Opus 5.5 e Sonnet 5.5 nao (400).
+          thinking:
+            type: ${AI_ANTHROPIC_THINKING:disabled}
     # Retry curto: a pergunta do usuario esta esperando. Erro 4xx (chave invalida, requisicao
     # malformada) nao melhora repetindo.
     retry:
