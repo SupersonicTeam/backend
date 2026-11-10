@@ -669,5 +669,106 @@ class Regra(unittest.TestCase):
             pontuar.comparar(self.base(), self.correcao())["latencia_mediana_segundos"])
 
 
+class ForaDaDecisao(unittest.TestCase):
+    """Regra da v2f (regra-de-decisao-v2f.md): a v2-g4-06 roda, mas fica fora da decisão."""
+
+    FORA = ("v2-g4-06",)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.conjunto = pontuar.carregar_conjunto(CONJUNTO_V2)
+
+    def linhas(self) -> list[dict]:
+        julho_sozinho = corpo(fonte("consultarRetencoes", dataInicio="2026-07-01",
+                                    dataFim="2026-07-31"), rota="MISTO")
+        desde_janeiro = corpo(fonte("consultarRetencoes", dataInicio="2026-01-01",
+                                    dataFim="2026-07-31"), rota="MISTO")
+        diesel = corpo(fonte("totalComprasPorInsumo", descricaoOuNcm="diesel",
+                             dataInicio="2026-07-01", dataFim="2026-11-09"))
+        estouro = {"resposta": "Sem o modelo.", "modoFallback": True, "fontesDados": []}
+        return [
+            registro("v2-g4-06", estouro, repeticao=1, tentativa=1, segundos=123.5,
+                     falha_tecnica=True),
+            registro("v2-g4-06", estouro, repeticao=1, tentativa=2, segundos=0.2,
+                     falha_tecnica=True),
+            registro("v2-g4-06", desde_janeiro, repeticao=2, segundos=92.7),
+            registro("v2-g4-06", julho_sozinho, repeticao=3, segundos=18.4),
+            registro("v2-g4-01", diesel, segundos=10.0),
+        ]
+
+    def test_sai_do_grupo_e_aparece_a_parte_com_o_tempo(self):
+        r = pontuar.pontuar(self.conjunto, self.linhas(), self.FORA)
+        self.assertNotIn("v2-g4-06", r["por_pergunta"])
+        self.assertEqual(r["por_grupo"]["aberto"]["total"], 9)
+        self.assertEqual(r["por_grupo"]["aberto"]["certas"], 1)
+        # A mediana do grupo só tem a v2-g4-01: nem os 92,7 nem os 18,4 s da v2-g4-06.
+        self.assertEqual(r["mediana_segundos"]["aberto"], 10.0)
+        separada = r["fora_da_decisao"]["v2-g4-06"]
+        self.assertEqual(separada["grupo"], "aberto")
+        # 1 certa e 1 errada nas válidas: empate, errada, como na regra v2.
+        self.assertEqual((separada["resultado"], separada["validas"], separada["tecnicas"]),
+                         ("errada", 2, 2))
+        self.assertEqual([(e["repeticao"], e["tentativa"], e["resultado"], e["segundos"])
+                          for e in separada["execucoes"]],
+                         [(1, 1, "tecnica", 123.5), (1, 2, "tecnica", 0.2),
+                          (2, 1, "certa", 92.7), (3, 1, "errada", 18.4)])
+
+    def test_sem_a_opcao_o_resumo_e_o_de_antes(self):
+        r = pontuar.pontuar(self.conjunto, self.linhas())
+        self.assertNotIn("fora_da_decisao", r)
+        self.assertIn("v2-g4-06", r["por_pergunta"])
+        self.assertEqual(r["por_grupo"]["aberto"]["total"], 10)
+
+    def test_id_fora_do_conjunto_quebra(self):
+        with self.assertRaises(SystemExit):
+            pontuar.pontuar(self.conjunto, self.linhas(), ("v2-g4-99",))
+
+    def test_so_tecnicas_na_pergunta_fora_nao_tornam_inconclusiva(self):
+        so_estouro = [linha for linha in self.linhas() if linha["id"] != "v2-g4-06"
+                      or linha["tentativa"] == 2 and linha["repeticao"] == 1]
+        base = pontuar.pontuar(self.conjunto, self.linhas(), self.FORA)
+        correcao = pontuar.pontuar(self.conjunto, [dict(linha, commit="b" * 40)
+                                                   for linha in so_estouro], self.FORA)
+        self.assertEqual(correcao["fora_da_decisao"]["v2-g4-06"]["resultado"], "sem_medicao")
+        decisao = pontuar.comparar(base, correcao)
+        self.assertFalse(any("v2-g4-06" in p for p in decisao["problemas"]), decisao["problemas"])
+        self.assertEqual(decisao["fora_da_decisao"]["v2-g4-06"]["correcao"]["resultado"],
+                         "sem_medicao")
+
+    @staticmethod
+    def resumos(aberto_base=(1, 4), aberto_correcao=(3, 4)) -> tuple[dict, dict]:
+        """Base com 1 de 4 e correção com 3 de 4 em cada grupo da correção, salvo o aberto."""
+        base = {g: (1, 4) for g in pontuar.GRUPOS_CORRECAO}
+        correcao = {g: (3, 4) for g in pontuar.GRUPOS_CORRECAO}
+        base["aberto"], correcao["aberto"] = aberto_base, aberto_correcao
+        return resumo(base, commit="a" * 40), resumo(correcao, commit="b" * 40)
+
+    def test_a_pergunta_fora_nao_faz_o_grupo_subir(self):
+        base, correcao = self.resumos(aberto_base=(6, 9), aberto_correcao=(6, 9))
+        base["fora_da_decisao"] = {"v2-g4-06": {"grupo": "aberto", "resultado": "errada"}}
+        correcao["fora_da_decisao"] = {"v2-g4-06": {"grupo": "aberto", "resultado": "certa"}}
+        decisao = pontuar.comparar(base, correcao)
+        self.assertEqual(decisao["decisao"], "NAO_ENTRA")
+        self.assertFalse(decisao["grupos_da_correcao"]["aberto"]["sobe"])
+        self.assertNotIn("v2-g4-06", decisao["subiram"])
+        self.assertEqual(decisao["problemas"], [])
+        self.assertEqual(decisao["fora_da_decisao"]["v2-g4-06"]["correcao"]["resultado"],
+                         "certa")
+
+    def test_bracos_com_perguntas_fora_diferentes_inconclui(self):
+        base, correcao = self.resumos()
+        correcao["fora_da_decisao"] = {"v2-g4-06": {"grupo": "aberto", "resultado": "certa"}}
+        decisao = pontuar.comparar(base, correcao)
+        self.assertEqual(decisao["decisao"], "INCONCLUSIVA")
+        self.assertIn("os dois resumos tiraram perguntas diferentes da decisão",
+                      decisao["problemas"])
+
+    def test_sem_pergunta_fora_a_decisao_nao_ganha_campo(self):
+        decisao = pontuar.comparar(*self.resumos())
+        self.assertEqual(decisao["decisao"], "ENTRA")
+        self.assertNotIn("fora_da_decisao", decisao)
+        self.assertEqual(list(decisao)[-2:], ["problemas", "decisao"])
+
+
 if __name__ == "__main__":
     unittest.main()

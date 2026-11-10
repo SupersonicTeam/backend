@@ -9,6 +9,11 @@ Só biblioteca padrão. Dois comandos:
   comparar  aplica a regra de decisão (regra-de-decisao.md) a dois resumos: a base (main) e a
             correção, medidas no mesmo dia.
 
+`pontuar --fora-da-decisao ID` (repetível) tira a pergunta da decisão, como manda a regra da v2f
+(regra-de-decisao-v2f.md): ela sai de `por_pergunta`, da contagem e da mediana do grupo e vai
+para `fora_da_decisao`, com o resultado e o tempo de cada execução. Sem a opção, o resumo é o de
+antes.
+
 Cada linha do JSONL (gravada pelo executar.py) traz `id`, `repeticao`, `tentativa`, `braco`,
 `commit`, `modelo`, `modelo_digest`, `horario`, `data_referencia` (data de Brasília da chamada),
 `http_status`, `corpo` (resposta de POST /api/assistente/chat), `segundos`, `falha_tecnica` e
@@ -472,9 +477,15 @@ def ler_execucoes(caminho: Path) -> list[dict]:
     return registros
 
 
-def pontuar(conjunto: dict, registros: list[dict]) -> dict:
+def pontuar(conjunto: dict, registros: list[dict], fora_da_decisao: tuple = ()) -> dict:
     perguntas = {p["id"]: p for p in conjunto["perguntas"]}
+    fora = set(fora_da_decisao)
+    desconhecidas = sorted(fora - set(perguntas))
+    if desconhecidas:
+        raise SystemExit("Pergunta fora da decisão que não está no conjunto: "
+                         + ", ".join(desconhecidas))
     por_pergunta = {i: {"grupo": p["grupo"], "execucoes": []} for i, p in perguntas.items()}
+    tempos: dict[str, list] = {i: [] for i in fora}
     datas, commits, modelos, bracos = set(), set(), set(), set()
     segundos: dict[str, list] = {}
     aquecido = False
@@ -500,11 +511,17 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
         datas.add(hoje.isoformat())
         resultado = classificar(pergunta, registro, hoje)
         por_pergunta[pergunta["id"]]["execucoes"].append(resultado)
-        if resultado != "tecnica" and isinstance(registro.get("segundos"), (int, float)):
+        if pergunta["id"] in fora:
+            # Fora da decisão: o tempo de cada execução, técnicas inclusive, aparece à parte.
+            tempos[pergunta["id"]].append({
+                "repeticao": registro.get("repeticao"), "tentativa": registro.get("tentativa"),
+                "resultado": resultado, "segundos": registro.get("segundos")})
+        elif resultado != "tecnica" and isinstance(registro.get("segundos"), (int, float)):
             segundos.setdefault(pergunta["grupo"], []).append(registro["segundos"])
 
     por_grupo: dict = {g: {"certas": 0, "total": 0, "sem_medicao": 0} for g in GRUPOS}
-    for item in por_pergunta.values():
+    separadas = {}
+    for ident, item in por_pergunta.items():
         execucoes = item["execucoes"]
         validas = [e for e in execucoes if e != "tecnica"]
         certas = validas.count("certa")
@@ -515,12 +532,15 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
             resultado = "certa" if 2 * certas > len(validas) else "errada"
         item.update(resultado=resultado, certas=certas, validas=len(validas),
                     tecnicas=len(execucoes) - len(validas))
+        if ident in fora:
+            separadas[ident] = dict(item, execucoes=tempos[ident])
+            continue
         grupo = por_grupo[item["grupo"]]
         grupo["total"] += 1
         grupo["certas"] += resultado == "certa"
         grupo["sem_medicao"] += resultado == "sem_medicao"
 
-    return {
+    resumo = {
         "versao_conjunto": conjunto.get("versao"),
         "sha256_conjunto": conjunto["_sha256"],
         "bracos": sorted(b for b in bracos if b),
@@ -532,8 +552,12 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
         "mediana_segundos": {g: round(statistics.median(v), 1)
                              for g, v in sorted(segundos.items())},
         "por_grupo": por_grupo,
-        "por_pergunta": por_pergunta,
+        "por_pergunta": {i: p for i, p in por_pergunta.items() if i not in fora},
     }
+    if fora:
+        # Só com a opção: sem ela, o resumo sai igual ao de antes (as rodadas antigas se refazem).
+        resumo["fora_da_decisao"] = dict(sorted(separadas.items()))
+    return resumo
 
 
 # ---------------------------------------------------------------------------------------------
@@ -542,10 +566,19 @@ def pontuar(conjunto: dict, registros: list[dict]) -> dict:
 
 
 def comparar(base: dict, correcao: dict) -> dict:
-    """Aplica a regra de decisão gravada em regra-de-decisao.md."""
+    """Aplica a regra de decisão gravada em regra-de-decisao.md.
+
+    As perguntas em `fora_da_decisao` (regra-de-decisao-v2f.md) já saíram de `por_pergunta` e
+    da contagem no `pontuar`; aqui só se confere que os dois braços tiraram as mesmas e elas
+    aparecem à parte na saída.
+    """
     problemas = []
     if base["sha256_conjunto"] != correcao["sha256_conjunto"]:
         problemas.append("os dois resumos são de conjuntos diferentes")
+    fora_base = base.get("fora_da_decisao", {})
+    fora_correcao = correcao.get("fora_da_decisao", {})
+    if set(fora_base) != set(fora_correcao):
+        problemas.append("os dois resumos tiraram perguntas diferentes da decisão")
     if len(base["datas_referencia"]) != 1 or \
             base["datas_referencia"] != correcao["datas_referencia"]:
         problemas.append("as rodadas não são do mesmo dia (uma data de referência só, a mesma)")
@@ -593,7 +626,7 @@ def comparar(base: dict, correcao: dict) -> dict:
     latencia = None
     if base.get("aquecido") and correcao.get("aquecido"):
         latencia = {"base": base["mediana_segundos"], "correcao": correcao["mediana_segundos"]}
-    return {
+    saida = {
         "commit_base": base["commits"],
         "commit_correcao": correcao["commits"],
         "data_referencia": base["datas_referencia"],
@@ -605,9 +638,13 @@ def comparar(base: dict, correcao: dict) -> dict:
         "subiram": mudancas("errada", "certa", lambda g: True),
         "cairam": mudancas("certa", "errada", lambda g: True),
         "latencia_mediana_segundos": latencia,
-        "problemas": problemas,
-        "decisao": decisao,
     }
+    if fora_base or fora_correcao:
+        saida["fora_da_decisao"] = {
+            i: {"base": fora_base.get(i), "correcao": fora_correcao.get(i)}
+            for i in sorted(set(fora_base) | set(fora_correcao))}
+    saida.update(problemas=problemas, decisao=decisao)
+    return saida
 
 
 # ---------------------------------------------------------------------------------------------
@@ -626,6 +663,10 @@ def _imprimir_resumo(resumo: dict) -> None:
     for ident, item in sorted(resumo["por_pergunta"].items()):
         print(f"  {ident:6} {item['grupo']:15} {item['resultado']:12} "
               f"{item['certas']}/{item['validas']} válidas, {item['tecnicas']} técnicas")
+    for ident, item in resumo.get("fora_da_decisao", {}).items():
+        tempos = ", ".join(f"r{e['repeticao']} t{e['tentativa']} {e['resultado']} {e['segundos']} s"
+                           for e in item["execucoes"])
+        print(f"  {ident:6} {item['grupo']:15} {item['resultado']:12} fora da decisão: {tempos}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -636,6 +677,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--perguntas", type=Path, required=True)
     p.add_argument("--execucoes", type=Path, required=True)
     p.add_argument("--saida", type=Path)
+    p.add_argument("--fora-da-decisao", action="append", default=[], metavar="ID",
+                   help="pergunta que a regra tira da decisão (repetível)")
 
     c = comandos.add_parser("comparar", help="aplica a regra de decisão a dois resumos")
     c.add_argument("--base", type=Path, required=True)
@@ -643,7 +686,8 @@ def main(argv: list[str] | None = None) -> int:
 
     args = analisador.parse_args(argv)
     if args.comando == "pontuar":
-        resumo = pontuar(carregar_conjunto(args.perguntas), ler_execucoes(args.execucoes))
+        resumo = pontuar(carregar_conjunto(args.perguntas), ler_execucoes(args.execucoes),
+                         tuple(args.fora_da_decisao))
         _imprimir_resumo(resumo)
         if args.saida:
             args.saida.write_text(json.dumps(resumo, ensure_ascii=False, indent=2) + "\n",

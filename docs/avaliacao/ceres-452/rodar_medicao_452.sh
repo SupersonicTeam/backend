@@ -2,9 +2,12 @@
 # Rodada da medição da #452: base (main) x correção, local, profile dev, seed da demonstração.
 #
 # Uso: rodar_medicao_452.sh <worktree da main> <worktree da correção> <pasta de saída> <conjunto>
+#        [<id fora da decisão> ...]
 #
 # <conjunto> é o caminho do conjunto congelado relativo à raiz do worktree da main, por exemplo
 # docs/avaliacao/treino/perguntas-ceres-452-v2.json (a regra de cada conjunto diz qual usar).
+# Os ids depois dele são as perguntas que a regra da rodada tira da decisão (na v2f, v2-g4-06,
+# regra-de-decisao-v2f.md): rodam nos dois braços e vão ao `pontuar --fora-da-decisao`.
 #
 # - Pega a trava do Ollama local (mkdir) e recusa com outra JVM da Ceres no ar.
 # - Um banco por braço no container agrocontabil-postgres (agroconia_452_base e
@@ -21,13 +24,26 @@
 #   um JAR para outro, e os produtores do DataLoader (sem nota) ganham ou não apurações zeradas.
 set -u
 
-[ $# -eq 4 ] || { echo "Uso: $0 <worktree da main> <worktree da correcao> <saida> <conjunto>"; exit 1; }
+[ $# -ge 4 ] || { echo "Uso: $0 <worktree da main> <worktree da correcao> <saida> <conjunto> [<id fora da decisao> ...]"; exit 1; }
 MAIN_WT=$(cd "$1" && pwd) || exit 1
 CORR_WT=$(cd "$2" && pwd) || exit 1
 CONJUNTO="$MAIN_WT/$4"
 [ -f "$CONJUNTO" ] && [ -f "$CONJUNTO.sha256" ] || { echo "CONJUNTO OU .sha256 AUSENTE: $CONJUNTO"; exit 13; }
 mkdir -p "$3" || exit 1
 SAIDA=$(cd "$3" && pwd) || exit 1
+shift 4
+FORA=()
+for id in "$@"; do FORA+=(--fora-da-decisao "$id"); done
+# Id fora do conjunto quebra aqui, antes da rodada, e não no pontuar, uma hora depois.
+if [ $# -gt 0 ]; then
+  PYTHONUTF8=1 python - "$CONJUNTO" "$@" <<'EOF' || exit 13
+import json, sys
+ids = {p["id"] for p in json.load(open(sys.argv[1], encoding="utf-8"))["perguntas"]}
+fora = [i for i in sys.argv[2:] if i not in ids]
+if fora:
+    sys.exit("PERGUNTA FORA DA DECISAO QUE NAO ESTA NO CONJUNTO: " + ", ".join(fora))
+EOF
+fi
 TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
 EMAIL=carlos.rossi@example.com
@@ -168,8 +184,10 @@ STATUS=${PIPESTATUS[0]}
 [ "$STATUS" = 0 ] || { echo "EXECUTOR SAIU COM $STATUS"; exit 18; }
 
 P="$MAIN_WT/docs/avaliacao/ceres-452/pontuar.py"
-python "$P" pontuar --perguntas "$CONJUNTO" --execucoes "$SAIDA/base.jsonl" --saida "$SAIDA/resumo-base.json"
-python "$P" pontuar --perguntas "$CONJUNTO" --execucoes "$SAIDA/correcao.jsonl" --saida "$SAIDA/resumo-correcao.json"
+python "$P" pontuar --perguntas "$CONJUNTO" --execucoes "$SAIDA/base.jsonl" --saida "$SAIDA/resumo-base.json" \
+  ${FORA[@]+"${FORA[@]}"}
+python "$P" pontuar --perguntas "$CONJUNTO" --execucoes "$SAIDA/correcao.jsonl" --saida "$SAIDA/resumo-correcao.json" \
+  ${FORA[@]+"${FORA[@]}"}
 python "$P" comparar --base "$SAIDA/resumo-base.json" --correcao "$SAIDA/resumo-correcao.json" \
   | tee "$SAIDA/decisao.json"
 echo "FIM"
