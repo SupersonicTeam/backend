@@ -233,9 +233,9 @@ conta os acessos à página inicial.
 
 ### Aplicar na VPS
 
-O Caddyfile da VPS pode estar atrás deste (o do endereço dos escritórios, #464, ainda não foi
-ligado lá). Nesse caso, entram só as linhas do `log` no bloco `{$SITE_HOST}`: o bloco `log { ... }`,
-o `@foraDaContagem`, o `log_skip` e o `log_append`.
+Desde 2026-11-10, a VPS roda o `Caddyfile` da `main`, que já traz o registro. Num Caddyfile mais
+antigo, entram só as linhas do `log` no bloco `{$SITE_HOST}`: o bloco `log { ... }`, o
+`@foraDaContagem`, o `log_skip` e o `log_append`.
 
 ```bash
 cd /opt/agrocontabil && cp Caddyfile Caddyfile.anterior
@@ -315,12 +315,14 @@ a cota de falhas do Let's Encrypt.
    **Hex, nunca Base64.** Uma chave com `+`, `/` ou `=` chega alterada na URL do ask. O backend
    sobe assim mesmo, mas avisa em ERROR no log e o ask recusa todos os certificados. Para gerar uma
    nova: `openssl rand -hex 32` (e veja "Rotação da chave do ask").
-3. **Conferir os arquivos**, já os da `main` desde 2026-11-10. O `Caddyfile` da VPS tem de ter o
-   bloco `https://` com `tls { on_demand }` e o `on_demand_tls` com o ask. Guardar uma cópia para
-   reverter:
+3. **Conferir os arquivos**, já os da `main` desde 2026-11-10. O `Caddyfile` tem de ter o bloco
+   `https://` com `tls { on_demand }` e o `on_demand_tls` com o ask. O `compose.yaml` tem de
+   repassar a chave ao backend (`APP_ESCRITORIO_TLS_ASK_CHAVE`) e ao Caddy (`TLS_ASK_CHAVE`). Guardar
+   uma cópia do Caddyfile para reverter:
 
    ```bash
    grep -n "on_demand" Caddyfile
+   grep -n "TLS_ASK_CHAVE" compose.yaml   # duas linhas: backend e caddy
    cp Caddyfile Caddyfile.anterior
    ```
 
@@ -334,15 +336,22 @@ a cota de falhas do Let's Encrypt.
    }
    ```
 
-5. **Validar e reiniciar o Caddy.** Um Caddyfile inválido derruba o `www` na subida do container.
+5. **Validar, aplicar e conferir o ask, ainda sem DNS.**
 
    ```bash
-   docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
-   docker compose restart caddy
+   docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
+   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=naoexiste.agroconia.com.br" 2>&1 | head -1'    # 404
    ```
 
-   O primeiro comando precisa dizer `Valid configuration`. O reinício leva segundos, e os
-   certificados ficam no volume `caddy_data`.
+   - O `validate` precisa dizer `Valid configuration`.
+   - O `reload` troca a configuração sem derrubar o `www`. Com o arquivo inválido, ele recusa e
+     segue com a anterior.
+   - Um editor que grava o arquivo novo por cima, com outro inode, deixa o container com o antigo.
+     Nesse caso, `docker compose restart caddy`.
+   - Sem o 200 no `ruraloeste`, pare aqui: a chave não bate entre o backend e o Caddy, ou falta o
+     reset da demonstração. Com o DNS ainda sem o `A *`, nada mudou para fora.
 6. **DNS na Hostinger**, só agora:
    - **criar:** registro `A`, nome `*`, apontando para o IP da VPS, com o TTL padrão;
    - **não criar:** registro `AAAA`;
@@ -363,8 +372,6 @@ a cota de falhas do Let's Encrypt.
 
    ```bash
    curl -s https://www.agroconia.com.br/healthz        # UP: o www segue igual
-   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
-   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=naoexiste.agroconia.com.br" 2>&1 | head -1'    # 404
    curl -vk https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i "issuer"   # (STAGING); o 1o acesso espera alguns segundos
    curl -skI https://ruraloeste.agroconia.com.br/ | grep -iE "x-robots-tag|referrer-policy"   # noindex e no-referrer
    curl -v https://naoexiste.agroconia.com.br/ 2>&1 | tail -2              # falha no handshake
@@ -380,11 +387,16 @@ a cota de falhas do Let's Encrypt.
    - Conferir com `curl -v https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i issuer`: o emissor
      tem de ser o Let's Encrypt, sem "STAGING".
 9. **Reverter**, se algo der errado: apagar o registro `A *` na Hostinger. Sem ele, nenhum
-   subdomínio resolve, e o `www` segue igual. Para voltar o Caddyfile ao de antes do passo 4:
+   subdomínio resolve, e o `www` segue igual. O efeito não é imediato: os resolvedores guardam a
+   resposta até o TTL vencer.
+   - **Cortar na hora:** comentar com `#` todas as linhas do bloco `https://` do Caddyfile e
+     aplicar como no passo 5 (`validate` e `reload`). Sem o bloco, o Caddy não atende os
+     subdomínios.
+   - **Voltar o Caddyfile ao de antes do passo 4** (com o bloco, sem a CA de staging):
 
-    ```bash
-    cp Caddyfile.anterior Caddyfile && docker compose restart caddy
-    ```
+     ```bash
+     cp Caddyfile.anterior Caddyfile && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+     ```
 
 ### Rotação da chave do ask
 
