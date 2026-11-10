@@ -75,6 +75,10 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
 Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 (+ pgvector) · Liquibase · Spring Security · Bean Validation · Spring Actuator · springdoc-openapi 2.8.x · Spring AI 1.1.8 (Ollama local + API compatível com a da OpenAI + API da Anthropic, #483) · JUnit 5 + Mockito · Docker Compose.
 
 > Spring AI **fixado na linha 1.1.x** (a 2.x exige Boot 4). Detalhes da Ceres em `docs/ceres-assistente.md`.
+>
+> Provedor do chat da Ceres por `AI_CHAT_PROVIDER`: `ollama` (padrão do código), API compatível com a da OpenAI
+> ou `anthropic`. Desde 2026-11-10 a Ceres usa o `claude-haiku-5-5` pela API da Anthropic; o Ollama segue
+> só para o embedding (`bge-m3`). Ver "Modelo da Ceres" abaixo.
 
 > Versão do Spring Boot **fixada em 3.5.14** (não usar SNAPSHOT). Linha 3.5 com EOL OSS em 30/06/2026 — aceitável para o escopo do TCC. Migração para 4.x exigiria revisar springdoc e Spring Cloud; só fazer com decisão explícita do Murillo.
 
@@ -104,11 +108,36 @@ harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres
 sentido, lei ausente e validador), mede o recall por `k` e compara o `qwen3:30b-instruct` com o
 `qwen3:4b-instruct` na VPS. As ferramentas manuais
 `DiagnosticoRecallLeiManual` e `DiagnosticoCitacoesLeiManual` (`src/test/.../assistente/`) **não
-rodam no `./mvnw test`** (`-Dtest=<classe> -Ddiagnostico.saida=<arquivo>` no profile `dev`, com o banco da base de lei e o Ollama locais; a de recall mede só a busca e não usa o modelo de chat). **Decisão do Murillo, 2026-11-07: o
-`qwen3:4b-instruct` segue como modelo padrão até a banca.** O trabalho seguiu nas issues
+rodam no `./mvnw test`** (`-Dtest=<classe> -Ddiagnostico.saida=<arquivo>` no profile `dev`, com o banco da base de lei e o Ollama locais; a de recall mede só a busca e não usa o modelo de chat). Decisão do Murillo de 2026-11-07, **superada pela de 2026-11-10** ("Modelo da Ceres",
+abaixo): o `qwen3:4b-instruct` seguiria como modelo padrão até a banca. O trabalho seguiu nas issues
 #433 (régua de citação do MISTO), #434 (executor do benchmark) e #435 (conferência local das
 perguntas do roteiro da banca) e, na busca, na #436 (rebaixar capítulos de caso especial, medido
 em conjunto novo, por outra sessão que nunca leu o gabarito).
+
+**Modelo da Ceres (decisão do Murillo, 2026-11-10; #483):** a Ceres passou a usar o
+`claude-haiku-5-5` pela API da Anthropic. É só configuração: `AI_CHAT_PROVIDER=anthropic` e
+`ANTHROPIC_API_KEY` no `.env` da VPS (chave ligada a um workspace; sem ela a aplicação não sobe,
+`config/AnthropicApiKeyConfig`). O **padrão do código continua `ollama`**: sem as variáveis, nada
+muda em nenhum ambiente. O Ollama segue no ar para o embedding (`bge-m3`). Temperatura 1.0 (o
+padrão da API: os modelos atuais recusam outro valor) e raciocínio desligado
+(`AI_ANTHROPIC_THINKING=disabled`), para não gastar os tetos por chamada (#270). O modelo da API é
+o `AI_ANTHROPIC_MODEL`, não o `AI_CHAT_MODEL`. Isso **substitui** a decisão de 2026-11-07 ("o
+`qwen3:4b-instruct` segue como padrão até a banca"); trocar o modelo na VPS é passo manual (copiar
+o `deploy/compose.yaml` e pôr as variáveis no `.env` de lá). O Haiku 5.5 **entra** na matriz do
+benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o provedor Anthropic.
+- **Medição do #483** (gabarito 2026-11-05.3, 87 perguntas × 3 repetições; qwen3 de 06/11 em
+  `fcbb5b3` na VPS, Haiku em `3fe8a957` pela API): função 82,2% → 93,3%, parâmetros 76,3% →
+  92,1%, número 82,5% → 92,5%, citação 67,6% → 73,0%, rota 81,7% → 82,9%, p50 de 8,1 s para
+  1,4 s e p95 de 26,8 s para 4,2 s.
+- **Ressalva (sem investigação):** a recusa correta caiu de 100% para 92,9% e a rota nos casos
+  adversários de 76,2% para 66,7%. As duas rodadas não são do mesmo commit (o qwen3 não foi
+  rodado de novo na `main` de hoje).
+- **Pendência de LGPD, do próprio #483:** com o provedor por API, a pergunta sanitizada e dados
+  de negócio do produtor (valores, datas, números de nota, categorias de produto e NCM) saem do
+  servidor; nome, documento, contato, endereço e o XML das notas não saem (`docs/lgpd.md`,
+  seção "Provedor externo do modelo da Ceres"). A transferência internacional (LGPD, art. 33) e a
+  política de dados ficam com o jurídico, junto da D7 do envio de e-mail (#460), e precisam estar
+  resolvidas antes de valer para produtores reais.
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
@@ -157,7 +186,8 @@ oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`), a 8b (`d8b0b36`) e a
 br.com.agrocontabil
 ├── config/        # SecurityConfig, CorsConfig, OpenApiConfig, MockIdentidadeFilter,
 │                  # TributosProperties/Config, CertificadoDigitalProperties/Config,
-│                  # SefazProperties/Config, RetryConfig, SchedulingConfig, DataLoader
+│                  # SefazProperties/Config, RetryConfig, SchedulingConfig, DataLoader,
+│                  # AnthropicApiKeyConfig (#483: AI_CHAT_PROVIDER=anthropic sem ANTHROPIC_API_KEY derruba a subida)
 │                  # avaliacao/: comando de avaliacao da Ceres com gabarito (#158, profile
 │                  #   avaliacao + dev): SeedAvaliacao, ValoresEsperados, AvaliadorResposta;
 │                  #   régua da Ceres 2.0 (#264): RelatorioRepeticoes (3 repetições, faixa,
@@ -413,6 +443,8 @@ br.com.agrocontabil
   `assistente_interacao` **sem o texto da pergunta nem da resposta** (changeSet 0025). Isolamento
   de recursos (#157): nenhuma transação durante a chamada ao modelo, bulkhead (503
   `ASSISTENTE_OCUPADO` + `Retry-After`), pool próprio e timeouts por pergunta e por função.
+  Com o provedor por API (`anthropic`/`openai`), o que passou pelo `DataSanitizer` e os dados de negócio
+  das funções saem do servidor: pendência de LGPD com o jurídico (ver "Modelo da Ceres" e `docs/lgpd.md`).
   Detalhes em `docs/ceres-assistente.md`.
 - **`message` de topo do envelope (#251):** em **5xx** de domínio é a mensagem do `errors[0]`
   (texto para o cliente por contrato; o `getMessage()` de um 5xx é técnico) — a Ceres ocupada fala
@@ -767,6 +799,10 @@ no cadastro (decisão do Murillo, 2026-10-19).
 
 ### Débitos técnicos abertos
 
+- **LGPD e o provedor da Ceres por API (#483):** política de dados e transferência internacional (art. 33) com o
+  jurídico, junto da D7 do envio de e-mail (#460); antes de a Ceres atender produtores reais no Haiku.
+- **Haiku 5.5 sem investigação (#483):** recusa correta de 100% para 92,9% e rota nos casos adversários de 76,2%
+  para 66,7%, não investigadas (as duas rodadas não são do mesmo commit).
 - **Ceres (Sprint 6):**
   - **Vigência por dispositivo:** cada norma entra com uma vigência só. Os dispositivos da LC 214 com redação dada pela LC 227/2026 aparecem vigentes desde 16/01/2025; pergunta sobre data anterior a 2026 receberia a redação atual. Derivar a vigência das anotações "(Redação dada pela...)" resolve.
   - **Anexo XVIII da LC 214** (tabelas do Simples Nacional, sem itens numerados) não vira trecho.
@@ -800,7 +836,7 @@ Quando a fundação estiver validada, nesta ordem aproximada:
 3. **CI/CD (GitHub Actions):** rodar testes → build do JAR → build da imagem Docker → deploy automático na VPS.
 4. ~~Rate limiting na API~~ — entregue na Sprint 8 (#150; em memória, por réplica — distribuído fica para quando houver 2+ instâncias).
 5. ~~Auth JWT completa~~ — entregue na Sprint 8 (#205–#209).
-6. **Extrair a Ceres (módulo `assistente`) como serviço separado — só sob critério.** Decisão de 2026-09-29: hoje ela é módulo do monólito, e só a inferência roda à parte (Ollama; serviço Python dos classificadores na fase 2). A fronteira é travada pelo `ArquiteturaAssistenteTest` (backend#141): o módulo só fala com o resto do backend pelas interfaces de `assistente.porta`, implementadas em `assistente.adaptador`. Extrair = trocar o adaptador por um cliente HTTP. **Gatilhos:** (a) o chat precisar escalar independente da emissão; (b) outra equipe assumir a IA, com ritmo de deploy próprio; (c) a orquestração migrar para Python; (d) o bulkhead da backend#157 deixar de proteger a emissão em produção. Antes de algum gatilho se confirmar, não extrair: um serviço separado duplicaria a regra fiscal ou exigiria propagar identidade a cada chamada de ferramenta.
+6. **Extrair a Ceres (módulo `assistente`) como serviço separado — só sob critério.** Decisão de 2026-09-29: hoje ela é módulo do monólito, e só a inferência roda à parte (Ollama para o embedding e, desde 2026-11-10, a API da Anthropic para o chat; serviço Python dos classificadores na fase 2). A fronteira é travada pelo `ArquiteturaAssistenteTest` (backend#141): o módulo só fala com o resto do backend pelas interfaces de `assistente.porta`, implementadas em `assistente.adaptador`. Extrair = trocar o adaptador por um cliente HTTP. **Gatilhos:** (a) o chat precisar escalar independente da emissão; (b) outra equipe assumir a IA, com ritmo de deploy próprio; (c) a orquestração migrar para Python; (d) o bulkhead da backend#157 deixar de proteger a emissão em produção. Antes de algum gatilho se confirmar, não extrair: um serviço separado duplicaria a regra fiscal ou exigiria propagar identidade a cada chamada de ferramenta.
 7. **Planos de assinatura com créditos semanais da Ceres (épico SupersonicTeam/Agrocontabil#72).** Decisão de 2026-09-30, no estilo dos planos do Claude: **cobrança mensal, uso limitado por semana, sem limite de janela curta** (nada de reset a cada 5 horas nem teto diário). O uso é medido em **créditos** = (tokens de entrada × peso + tokens de saída × peso) × fator do modelo, então pergunta complexa e modelo maior gastam mais. A **etapa A** (backend#166) entrega o mecanismo de cota com plano padrão por configuração: reserva do teto antes da chamada ao modelo, acerto pelo consumo real, 429 `LIMITE_USO_ASSISTENTE`. A **etapa B** (o épico) traz `Plano` versionado (créditos por semana + modelos permitidos), `Assinatura`, gateway de pagamento e, provavelmente, a entidade `Escritorio` para cota compartilhada entre contadores. Não confundir com o bulkhead (#157) nem com o rate limit (#150), que são proteção técnica.
 
 ## Referências do domínio
