@@ -18,6 +18,10 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * Limite próprio do endpoint público do escritório (issue #464): acima dele, 429 com
  * {@code Retry-After}, mesmo para slug que não existe (a varredura é o que se quer frear).
+ *
+ * <p>Sem banco de propósito: os slugs têm maiúscula, que o serviço recusa (404) antes de qualquer
+ * consulta. Esta classe não roda o {@code schema-nota-fiscal-test.sql}, e o H2 é compartilhado
+ * entre contextos: uma consulta aqui dependeria de outro contexto não ter apagado as tabelas.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -31,13 +35,13 @@ class LimitePublicoEscritorioIntegrationTest {
   @Test
   @DisplayName("a terceira consulta no minuto recebe 429 MUITAS_TENTATIVAS com Retry-After")
   void limitePorIp() throws Exception {
-    mockMvc.perform(get("/api/publico/escritorios/varredura1")).andExpect(status().isNotFound());
-    mockMvc.perform(get("/api/publico/escritorios/varredura2")).andExpect(status().isNotFound());
-    mockMvc.perform(get("/api/publico/escritorios/varredura3"))
+    mockMvc.perform(get("/api/publico/escritorios/Varredura1")).andExpect(status().isNotFound());
+    mockMvc.perform(get("/api/publico/escritorios/Varredura2")).andExpect(status().isNotFound());
+    mockMvc.perform(get("/api/publico/escritorios/Varredura3"))
         .andExpect(status().isTooManyRequests())
         .andExpect(header().exists(HttpHeaders.RETRY_AFTER))
         .andExpect(jsonPath("$.errors[0].code").value("MUITAS_TENTATIVAS"));
-    // O ask fica fora: e outra rota, so da rede interna.
+    // O ask fica fora: e outra rota, so da rede interna (sem chave, recusa sem consultar o banco).
     mockMvc.perform(get("/interno/tls/permitido")).andExpect(status().isNotFound());
   }
 }

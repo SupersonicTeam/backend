@@ -21,9 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * Contrato de CORS para o frontend Angular em {@code http://localhost:4200}
@@ -112,39 +112,39 @@ class CorsIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
+  /**
+   * Um POST do SPA do endereco do escritorio, como na VPS: HTTPS no Caddy e o host do escritorio.
+   *
+   * <p>O alvo e o logout sem cookie, que responde 204 sem tocar no banco: o que se prova aqui e so
+   * a decisao do CORS. Um login de verdade dependeria das tabelas do H2, que esta classe nao cria
+   * (nao roda o schema-nota-fiscal-test.sql) e que outro contexto pode ter apagado ao fechar.
+   */
+  private ResultActions postDoSubdominio(String origem) throws Exception {
+    return mockMvc.perform(post("/api/auth/logout")
+        .with(request -> {
+          request.setScheme("https");
+          request.setSecure(true);
+          request.setServerPort(443);
+          return request;
+        })
+        .header(HttpHeaders.HOST, "ruraloeste.agroconia.com.br")
+        .header(ORIGIN, origem));
+  }
+
   @Test
   @DisplayName("Subdominio do escritorio: a SPA chama /api na mesma origem e nao e CORS (#464)")
   void subdominioNaMesmaOrigemNaoECors() throws Exception {
-    // Como na VPS: HTTPS no Caddy, host do escritorio, Origin igual ao host. Sem CORS, o login
-    // segue para a regra de sempre (401 de credencial errada), nunca o 403 do CORS.
-    mockMvc.perform(post("/api/auth/login")
-            .with(request -> {
-              request.setScheme("https");
-              request.setSecure(true);
-              request.setServerPort(443);
-              return request;
-            })
-            .header(HttpHeaders.HOST, "ruraloeste.agroconia.com.br")
-            .header(ORIGIN, "https://ruraloeste.agroconia.com.br")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"email\":\"ninguem@lugar.com\",\"senha\":\"x\"}"))
-        .andExpect(status().isUnauthorized());
+    // Origin igual ao host: a requisicao segue para a regra da rota (204), sem o 403 do CORS e sem
+    // cabecalho de CORS na resposta.
+    postDoSubdominio("https://ruraloeste.agroconia.com.br")
+        .andExpect(status().isNoContent())
+        .andExpect(header().doesNotExist(ACCESS_CONTROL_ALLOW_ORIGIN));
   }
 
   @Test
   @DisplayName("Subdominio chamando outro host: e CORS e a origem nao esta na lista (403, #464)")
   void outroSubdominioRecusado() throws Exception {
-    mockMvc.perform(post("/api/auth/login")
-            .with(request -> {
-              request.setScheme("https");
-              request.setSecure(true);
-              request.setServerPort(443);
-              return request;
-            })
-            .header(HttpHeaders.HOST, "ruraloeste.agroconia.com.br")
-            .header(ORIGIN, "https://outro.agroconia.com.br")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"email\":\"ninguem@lugar.com\",\"senha\":\"x\"}"))
+    postDoSubdominio("https://outro.agroconia.com.br")
         .andExpect(status().isForbidden());
   }
 }
