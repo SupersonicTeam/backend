@@ -221,8 +221,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
                   for c in celulas]
     valores_tema = [[(pc[t].media, pc[t].total) if t in pc else (None, 0) for pc in por_celula]
                     for t in ordem]
-    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" + (" (inválida)" if c.invalida else "")
-               for c in celulas]
+    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" + (" (API)" if c.por_api else "")
+               + (" (inválida)" if c.invalida else "") for c in celulas]
     rodadas_txt = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
     arquivo = destino / "acerto-por-tema.svg"
     arquivo.write_text(mapa_tema_celula(
@@ -266,7 +266,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
         lat.append(linha)
     arquivo = destino / "latencia-p50.svg"
     arquivo.write_text(barras_agrupadas("Latência p50 por pergunta",
-                                        "Capacidade comum, todas as rodadas; latência LOCAL e relativa, não a da VPS",
+                                        "Capacidade comum, todas as rodadas; latência LOCAL e relativa, não a da VPS "
+                                        "(modelo por API: latência de rede)",
                                         modelos, series, lat, "s", None, marca or False), encoding="utf-8")
     arquivos.append(arquivo)
 

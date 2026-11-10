@@ -5,14 +5,18 @@ Explica com números reproduzíveis duas escolhas:
 1. **por que não usamos `qwen3:0.6b` nem `qwen3:1.7b`** e ficamos no `qwen3:4b-instruct`, na
    arquitetura **antiga** (Ceres 1: o modelo classifica a rota e **redige** a resposta);
 2. **o efeito da Ceres 2.0** (regras + embeddings na classificação, resposta de dados por
-   template, o modelo só escolhe a função) com os mesmos três modelos.
+   template, o modelo só escolhe a função) com os mesmos três modelos;
+3. **onde fica o `claude-haiku-5-5`**, o modelo que a Ceres passa a usar pela API da Anthropic
+   (decisão do Murillo, 2026-11-10; #483), numa **célula a mais, só na Ceres 2.0** ("Célula do
+   modelo por API", abaixo).
 
 Substitui o teste manual de 2026-10-28 (15 perguntas, 1 rodada; resumido na milestone Ceres 2.0
 e na #270), que não é reproduzível e fica só como origem da pergunta.
 
 ## Matriz
 
-**2 arquiteturas × 3 modelos = 6 células**, cada uma com o **mesmo conjunto de 100 perguntas**
+**2 arquiteturas × 3 modelos locais = 6 células, mais 1 célula por API (Ceres 2.0 ×
+`claude-haiku-5-5`) = 7**, cada uma com o **mesmo conjunto de 100 perguntas**
 ([`perguntas-benchmark.json`](perguntas-benchmark.json), abaixo) em **3 repetições**
 (`--avaliacao.repeticoes=3`, a régua da #264): ~1.800 respostas. Configurada em
 [`matriz.json`](matriz.json).
@@ -26,7 +30,8 @@ e na #270), que não é reproduzível e fica só como origem da pergunta.
 |---|---|
 | `qwen3:0.6b` | híbrido (thinking): o pensamento é desligado e **conferido** em cada célula |
 | `qwen3:1.7b` | o pedido falava em "2b": o Qwen3 não tem 2B. A lista é configurável (`--modelos` ou `matriz.json`) |
-| `qwen3:4b-instruct` | o de produção (não o `qwen3:4b`, que é a variante thinking e ignora `think=false`) |
+| `qwen3:4b-instruct` | o de produção até 2026-11-10 (não o `qwen3:4b`, que é a variante thinking e ignora `think=false`); segue como **referência** do relatório |
+| `claude-haiku-5-5` | **por API** (`modelosApi` da `matriz.json`, só na Ceres 2.0): sem Ollama, raciocínio desligado, chave só do ambiente. Ver "Célula do modelo por API" |
 
 O embedding é sempre o `bge-m3`.
 
@@ -52,7 +57,12 @@ O embedding é sempre o `bge-m3`.
   recarga, não a Ceres. Depois de
   uma célula, confira onde o modelo rodou: o relatório mostra o `ondeRodou` de cada célula
   (GPU, CPU ou dividido, pelo `/api/ps`), e o contêiner do compose local **não reserva GPU**.
-- **A mesma máquina para as 6 células**, sem outra carga pesada durante a rodada.
+- **Para a célula do `claude-haiku-5-5`:** a variável `ANTHROPIC_API_KEY` no ambiente de quem roda
+  (uma chave ligada a um workspace da conta do Murillo; **nunca** em arquivo, `.env` versionado,
+  issue nem mensagem) e rede até `api.anthropic.com`. Sem a chave o executor **recusa antes de
+  começar** a rodada; para rodar só os modelos locais, use `--modelos`.
+- **A mesma máquina para as 6 células locais** (e para a JVM, o banco e o embedding da célula por API),
+  sem outra carga pesada durante a rodada.
 
 ## Comando único
 
@@ -75,7 +85,7 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 
 | Opção / variável | Padrão | Para quê |
 |---|---|---|
-| `--modelos` | os da matriz | ex.: `qwen3:1.7b` para refazer uma célula |
+| `--modelos` | os da matriz (locais e `modelosApi`) | ex.: `qwen3:1.7b` para refazer uma célula; `claude-haiku-5-5` só a célula por API; sem ele vale tudo, e a célula por API pede a chave |
 | `--arquiteturas` | `ceres-1,ceres-2` | |
 | `--ref-ceres2` | `origin/main` | fixar o commit da Ceres 2.0 (faça `git fetch` antes) |
 | `--repeticoes` | 3 | só para depurar; **o relatório da banca usa 3** |
@@ -86,10 +96,13 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 | `BENCH_DB_PREFIXO` | `agro_bench` | bancos criados, um por commit: `agro_bench_ceres_1_2463c27`, `agro_bench_ceres_2_<sha7>` (apague os antigos com `DROP DATABASE`) |
 | `BENCH_OLLAMA_URL` | `http://localhost:11434` | |
 | `BENCH_OLLAMA_CONTAINER` | vazio | container do Ollama, para medir a memória pelo `docker stats` |
+| `ANTHROPIC_API_KEY` | ausente | chave da API da Anthropic, **só do ambiente**: só a JVM da célula por API a recebe (as locais, não), e o executor a oculta em log, relatório, JSON e mensagem de erro |
+| `BENCH_ANTHROPIC_URL` | `https://api.anthropic.com` | endereço da prova do raciocínio por API; só `https` (ou `http` local, de teste), porque a chave vai nele |
 
 ## O que o executor faz
 
-1. Confere `git`, `java`, `DB_PASSWORD`, Ollama e a contagem da base de lei.
+1. Confere `git`, `java`, `DB_PASSWORD`, Ollama e a contagem da base de lei; havendo célula por API,
+   confere também o provedor (`anthropic`), o raciocínio desligado na matriz e a `ANTHROPIC_API_KEY`.
 2. Resolve os SHAs; confere o conjunto de perguntas contra o `.sha256` ao lado, grava a cópia
    adaptada para a Ceres 1, confere o campo `capacidade` contra as funções reais de cada commit
    (`funcoesConhecidas` da matriz) e grava o aviso de semelhança com o treino
@@ -119,6 +132,8 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
    `-clareza-cego.csv`; a chave do CSV fica fora do git pelo `.gitignore` de `resultados/`) e grava
    `celula.json` com SHA, hardware, modelo, versão e sha256 do conjunto e do arquivo que a célula
    leu, prova do pensamento, memória, onde rodou, avisos, duração e código de saída.
+   A célula por API (`claude-haiku-5-5`) **pula** o que é só do Ollama: `pull`, descarga de modelos,
+   amostra de memória e "onde rodou". Ver "Célula do modelo por API".
 7. Gera o relatório comparativo.
 
 ### O conjunto de perguntas (#352) e o repositório cego (#387)
@@ -441,6 +456,7 @@ real vai no `celula.json`. Por célula = 100 perguntas × 3 rodadas + 1–2 min 
 | Ceres 2.0 · `qwen3:0.6b` | 5–10 min | 20–30 min |
 | Ceres 2.0 · `qwen3:1.7b` | 6–12 min | 30–50 min |
 | Ceres 2.0 · `qwen3:4b-instruct` | 10–20 min | 1h–1h40 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | ~15–30 min (a inferência não é da máquina) | ~15–30 min |
 | **Matriz inteira** (+ builds, bancos e `pull`) | **~1h30–2h30** | **~6h–8h** |
 
 **Rodada de teste (não vale para a banca):** `--teste` roda 1 repetição. Use para conferir o
@@ -556,9 +572,61 @@ resposta como lenta é deste PR.
   mesmo com o read-timeout da célula abaixo dele: a pergunta sai como `TEMPO_ESGOTADO` e o aviso
   de falha técnica dispara.
 
+## Célula do modelo por API (`claude-haiku-5-5`)
+
+Decisão do Murillo de 2026-11-10: a Ceres passa a usar o `claude-haiku-5-5` pela API da Anthropic
+(#483) e o modelo **entra** neste benchmark. É **uma célula só, na Ceres 2.0**: a Ceres 1
+(`2463c27`) não tem o provedor da Anthropic. Fica em `modelosApi` do `matriz.json` (modelo,
+provedor `anthropic`, `arquiteturas`, `raciocinio: disabled`), separada de `modelos`, que segue
+sendo a lista do Ollama.
+
+**O que a célula não faz** (nada disso existe nela): `ollama pull`, descarga dos outros modelos,
+amostra de memória do modelo, "onde rodou" (GPU, CPU) e `num_ctx`. O embedding (`bge-m3`) continua
+no Ollama local, como na produção. O comando de avaliação é o mesmo, com `AI_CHAT_PROVIDER=anthropic`,
+`AI_ANTHROPIC_MODEL`, `AI_ANTHROPIC_THINKING=disabled` e `ANTHROPIC_API_KEY`; o `--avaliacao.hardware`
+da célula diz que o chat foi pela API. A célula usa o **`AI_READ_TIMEOUT` publicado** (120 s) e não o
+`readTimeoutCelula`: a carga a frio e a fila da máquina local, que justificam o ajuste, não existem
+na API, e um valor maior esconderia chamadas que a produção cortaria.
+
+**Prova do raciocínio desligado.** No início e no fim da célula o executor manda à API
+(`/v1/messages`) a mesma pergunta curta da prova do Ollama, com `thinking: {"type": "disabled"}`
+(o que a JVM manda) e confere que **nenhum bloco `thinking` nem `redacted_thinking`** voltou. O
+resultado vai em `pensamento` do `celula.json` (com `modeloRetornado`, `tokensGerados`), e a regra
+é a das células locais: raciocínio em qualquer uma das provas, ou nenhuma prova válida, torna a
+célula **inválida para comparar**. A prova só confere a chamada dela; não olha o texto de cada
+resposta da rodada.
+
+**A chave.** Vem só da variável de ambiente de quem roda e só a JVM desta célula a recebe; o
+executor a oculta em tudo que loga e em mensagens de erro, e depois da célula varre a pasta dela
+(log da JVM, relatórios do comando) e **redige** qualquer ocorrência, com aviso na célula. Nada a
+grava em `celula.json`, `rodada.json` nem no relatório. Os testes não usam a API real (dublê da
+prova e servidor local de brinquedo).
+
+**Como ler a latência.** É a de **API pela rede**, com a fila do provedor, e não a de inferência
+local: o relatório marca a célula com **(API)**, escreve isso na seção de condições, no aviso da
+célula, na tabela modelo × arquitetura e no gráfico, e **não compara** a latência dela com a dos
+`qwen3` (nem é a da VPS). A célula também fica **fora da viabilidade dos modelos locais menores**
+(que mede se um modelo local serve, por memória e latência): a conclusão tem um parágrafo próprio,
+com a diferença em pontos percentuais para a referência local (`qwen3:4b-instruct`) na mesma
+arquitetura. Memória e "onde rodou" saem como `n/a (API)`.
+
+**Custo e privacidade.** A célula gasta créditos da conta da chave (3 repetições do conjunto
+inteiro) e **as perguntas do conjunto, inclusive as inéditas do repositório cego, saem da máquina
+para a API da Anthropic**; a retenção segue o contrato da conta (`docs/lgpd.md`, "Provedor externo
+do modelo da Ceres"). O seed é fictício, mas o texto das inéditas é sigiloso até a banca: confirme
+que os termos da conta servem antes de rodar com o cego.
+
+**Rodar só esta célula**, numa rodada que já tem as locais:
+
+```bash
+export ANTHROPIC_API_KEY='<a chave, só nesta sessão do shell>'
+python3 docs/avaliacao/benchmark/executar_matriz.py --retomar docs/avaliacao/resultados/benchmark/<rodada> \
+  --modelos claude-haiku-5-5 --arquiteturas ceres-2
+```
+
 ## Latência na VPS (produção)
 
-Só a configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS de produção (CPU ARM, sem
+Só a configuração de produção (o modelo do `.env` da VPS, hoje o `claude-haiku-5-5` pela API se a troca já foi feita, e a Ceres 2.0), na VPS de produção (CPU ARM, sem
 GPU), pelo [harness da API](../harness-api/README.md). O relatório tem uma seção à parte para o
 time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
 
@@ -573,7 +641,8 @@ time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
   sem vazamento, sem beco sem saída (`n/d` na Ceres 1: a régua do `2463c27` não tinha) e sem falha
   técnica, cada um com **média (mínimo–máximo)** das 3 rodadas; p50/p95 de latência por rota
   esperada; perguntas instáveis.
-- **Tabela modelo × arquitetura** com a diferença em pontos percentuais.
+- **Tabela modelo × arquitetura** com a diferença em pontos percentuais; o modelo por API sai
+  marcado **(API)**, com `n/a (sem provedor)` na Ceres 1.
 - **Clareza automática** (palavras por frase, sigla sem explicação), do próprio comando.
 - **Quem decidiu a rota** na Ceres 2.0 (atalho, filtro, regra, embedding, modelo).
 - **Exemplos de falha típicos** de cada modelo na Ceres 1, com o texto entregue. Heurísticas sobre
@@ -590,7 +659,8 @@ time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
   `qwen3:4b-instruct` na mesma arquitetura menos uma pergunta** (100/n pontos — a faixa das 3
   rodadas e uma pergunta de diferença são ruído, não perda). Se a Ceres 2.0 tornar um modelo menor
   viável, o relatório diz isso com todas as letras e mostra a memória economizada. O texto é
-  gerado: revise a redação antes da banca, os números não mudam.
+  gerado: revise a redação antes da banca, os números não mudam. O modelo por API não entra
+  nessa lista; ele tem um parágrafo à parte, com a diferença para a referência local.
 - **Gráficos SVG** 16:9 para slide: acerto por tema × célula (o principal; percentual escrito em
   cada casa, o cinza só reforça) e rota, número, citação, recusa, vazamento, falha técnica,
   latência p50 (local) e memória: barras agrupadas por modelo, **hachura para a Ceres 1 e sólido para a
@@ -610,7 +680,10 @@ Rodam na CI (passo próprio no `ci.yml`). Os JSONs de exemplo de `tests/fixtures
 têm as duas arquiteturas nos dois esquemas (o do `2463c27`, sem `semBecoSemSaida` nem
 `camadaClassificacao`, e o da `main`), com o recorte comum, a penalização por capacidade, o valor
 esperado divergente, a viabilidade, os exemplos de falha e a marca de dados fictícios conferidos
-contra números calculados à mão. O `ConjuntoRealTest` confere o `capacidade` e o hash do conjunto
+contra números calculados à mão. O `test_celula_api` cobre a célula do Haiku sem a API real: matriz,
+`--modelos`, recusa sem a chave, ambiente da JVM (a chave só na célula por API), prova do raciocínio
+(dublê e servidor local), ocultação da chave, `rodar_celula` com executor falso e o relatório com a
+célula marcada **(API)**. O `ConjuntoRealTest` confere o `capacidade` e o hash do conjunto
 real, e o `test_similaridade` o aviso de semelhança. No Java (`./mvnw verify`), o
 `PerguntasBenchmarkIntegrationTest` confere hash, compromisso, perguntas herdadas iguais às do
 gabarito e, com o repositório cego ao lado, a estrutura inteira, as externas literais e os valores

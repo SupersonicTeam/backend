@@ -117,6 +117,17 @@ class Celula:
         return bool(self.manifesto.get("ficticio"))
 
     @property
+    def por_api(self) -> bool:
+        """Chat pela API de um provedor (``claude-haiku-5-5``): latencia de rede, sem memoria local
+        do modelo, e fora da viabilidade dos modelos locais menores. Celula antiga = Ollama."""
+        return self.manifesto.get("provedor", "ollama") != "ollama"
+
+    @property
+    def titulo(self) -> str:
+        """``Ceres 2.0 · `modelo` `` (e ``(API)`` na celula por API), o rotulo das tabelas."""
+        return f"{self.rotulo_arquitetura} · `{self.modelo}`" + (" (API)" if self.por_api else "")
+
+    @property
     def perguntas(self) -> dict[str, str]:
         return self.avaliacao.get("perguntas", {})
 
@@ -567,7 +578,9 @@ def conclusao(
     ]
     viaveis_por_arq: dict[str, list[str]] = {}
     for arq, rotulo in arquiteturas:
-        das = [c for c in celulas if c.arquitetura == arq]
+        # Modelo por API fora: a viabilidade responde se um modelo LOCAL menor serve (memoria e
+        # latencia na VPS); o Haiku e outro provedor e tem o paragrafo dele, abaixo.
+        das = [c for c in celulas if c.arquitetura == arq and not c.por_api]
         resultado = viabilidade(das, referencia, ids_comum, canonico, adaptacoes)
         viaveis_por_arq[arq] = [v.modelo for v in resultado if v.viavel and v.modelo != referencia]
         linhas.append(f"**{rotulo}.**")
@@ -582,6 +595,7 @@ def conclusao(
             else:
                 linhas.append(f"- `{v.modelo}`: não viável — " + "; ".join(v.motivos) + ".")
         linhas.append("")
+    linhas.extend(_modelos_por_api(celulas, referencia, ids_comum, canonico, adaptacoes))
     if len(arquiteturas) == 2:
         (arq1, rot1), (arq2, rot2) = arquiteturas
         ref1 = next((c for c in celulas if c.arquitetura == arq1 and c.modelo == referencia), None)
@@ -653,6 +667,47 @@ def conclusao(
     return "\n".join(linhas) + "\n"
 
 
+def _modelos_por_api(celulas, referencia, ids_comum, canonico, adaptacoes) -> list[str]:
+    """Paragrafo dos modelos por API (``claude-haiku-5-5``) contra a referencia local da mesma
+    arquitetura, so com os numeros da rodada. Nao e viabilidade: o criterio dela mede se um modelo
+    local menor serve, e a latencia da API (rede, fila do provedor) nao se compara com a local."""
+    linhas = []
+    for c in celulas:
+        if not c.por_api:
+            continue
+        ref = next((r for r in celulas if r.arquitetura == c.arquitetura and r.modelo == referencia
+                    and not r.por_api and r.rodadas and not r.invalida), None)
+        if not c.rodadas or c.invalida:
+            linhas.append(f"**Modelo por API, {c.titulo}:** a célula não rodou até o fim ou é inválida "
+                          "(o raciocínio não ficou desligado, ou nenhuma prova valeu): sem números.")
+            linhas.append("")
+            continue
+        partes = []
+        for criterio in CRITERIOS_VIABILIDADE:
+            a = faixa(c, criterio, ids_comum, canonico, adaptacoes,
+                      RECORTE_COMUM).media
+            if ref is not None:
+                b = faixa(ref, criterio, ids_comum, canonico, adaptacoes,
+                          RECORTE_COMUM).media
+                partes.append(f"{CRITERIOS[criterio][0].lower()} {_n(a) + '%' if a is not None else 'n/d'}"
+                              f" ({_pontos(a, b)})")
+            else:
+                partes.append(f"{CRITERIOS[criterio][0].lower()} {_n(a) + '%' if a is not None else 'n/d'}")
+        lat = latencias(c, ids_comum, canonico).get("TODAS", (None,))[0]
+        lat_ref = latencias(ref, ids_comum, canonico).get("TODAS", (None,))[0] if ref else None
+        linhas.append(
+            f"**Modelo por API, {c.titulo}** (capacidade comum"
+            + (f", entre parênteses a diferença para o `{referencia}` local" if ref else
+               f"; sem a célula do `{referencia}` nesta arquitetura, não há com o que comparar")
+            + "): " + ", ".join(partes) + f"; latência p50 {_s(lat)}"
+            + (f" contra {_s(lat_ref)} do local nesta máquina" if ref else "")
+            + ". **A latência da API é de rede e de fila do provedor, não de inferência local**: não "
+            "mede o mesmo que a dos qwen3 e não é a da VPS. Não entra nos critérios de viabilidade "
+            "dos modelos locais menores.")
+        linhas.append("")
+    return linhas
+
+
 # --------------------------------------------------------------------------- markdown
 
 
@@ -697,7 +752,7 @@ def comparar_rodadas(atual: list[Celula], anterior: list[Celula], ids: list[str]
             fa = faixa(antes, criterio, ids, canonico, adaptacoes, RECORTE_COMUM)
             if f.media is None or fa.media is None:
                 continue
-            linhas.append({"celula": c.nome, "rotulo": f"{c.rotulo_arquitetura} · `{c.modelo}`",
+            linhas.append({"celula": c.nome, "rotulo": f"{c.titulo}",
                            "criterio": criterio, "antes": fa, "agora": f,
                            "queda": f.maximo < fa.minimo})
     return linhas
@@ -840,6 +895,14 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append(f"| `{modelo}` | quantização {detalhe.get('quantizacao', '?')}, "
                   f"{detalhe.get('parametros', '?')} parâmetros, digest "
                   f"`{(detalhe.get('digest') or '?')[:12]}` |")
+    for api in rodada.get("modelosApi") or []:
+        o = api.get("opcoes") or {}
+        md.append(f"| `{api['modelo']}` (API) | provedor {api.get('provedor')} (API pela rede, sem "
+                  f"Ollama, sem digest); raciocínio {api.get('raciocinio')}; "
+                  + (", ".join(f"{k}={v}" for k, v in o.items()) + " (application.yml do commit); "
+                     if o else "")
+                  + "`AI_READ_TIMEOUT` publicado, sem o ajuste da célula; a chave vem só do ambiente "
+                  "de quem rodou e não consta em nenhum arquivo da rodada |")
     opcoes = rodada.get("opcoesChat") or {}
     if opcoes and all(isinstance(v, dict) and "chat" in v for v in opcoes.values()):
         rotulos = dict(arquiteturas)
@@ -872,6 +935,11 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                                        for h in rodada.get("hardware", [])) else "")
               + ". **Não é a latência de produção**: a da VPS (CPU ARM, sem GPU) fica na seção "
               "\"Latência na VPS\", medida pelo harness da API.\n")
+    if any(c.por_api for c in celulas):
+        md.append("As células marcadas **(API)** têm o chat pela API de um provedor: a máquina roda só "
+                  "a JVM, o banco e o embedding. **A latência delas é de API pela rede** (inclui a "
+                  "fila do provedor), não de inferência local: **não a compare com a das células do "
+                  "qwen3**, e ela também não é a da VPS.\n")
     md.append("O **valor esperado** de cada pergunta é calculado na hora por cada arquitetura, sobre "
               "o próprio backend e o próprio seed (padrão da #158): o acerto de número mede se a "
               "Ceres repete o número **do próprio sistema**. O cálculo fiscal mudou depois do "
@@ -895,12 +963,15 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         pensamento = c.manifesto.get("pensamento") or {}
         mem = c.manifesto.get("memoria") or {}
         onde = "; ".join(f"{m}: {', '.join(v)}" for m, v in (mem.get("ondeRodou") or {}).items())
+        # Celula por API: sem modelo no Ollama, nada de memoria nem de "onde rodou".
+        sem_local = "n/a (API)"
         md.append(
-            f"| {c.rotulo_arquitetura} · `{c.modelo}` | {_celula_md(pensamento.get('resumo', 'n/d'), 160)} "
-            f"| {_gb(mem.get('modeloBytes'))} | {_gb(mem.get('processoPicoBytes'))} "
-            f"| {_celula_md(onde or 'n/d', 160)} "
+            f"| {c.titulo} | {_celula_md(pensamento.get('resumo', 'n/d'), 160)} "
+            f"| {sem_local if c.por_api else _gb(mem.get('modeloBytes'))} "
+            f"| {sem_local if c.por_api else _gb(mem.get('processoPicoBytes'))} "
+            f"| {_celula_md('API da Anthropic (rede)' if c.por_api else (onde or 'n/d'), 160)} "
             f"| {c.manifesto.get('duracaoSegundos', 'n/d')} s | {c.manifesto.get('codigoSaida', 'n/d')} |")
-        avisos += [f"{c.rotulo_arquitetura} · `{c.modelo}`: {a}" for a in c.manifesto.get("avisos") or []]
+        avisos += [f"{c.titulo}: {a}" for a in c.manifesto.get("avisos") or []]
     md.append("")
     if avisos:
         md.append("**Avisos das células** (leia a latência dessas células com isso):\n")
@@ -979,7 +1050,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                 if f.penalizadas:
                     texto += f" (pen. {f.penalizadas})"
                 colunas.append(texto)
-            md.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | " + " | ".join(colunas) + " |")
+            md.append(f"| {c.titulo} | " + " | ".join(colunas) + " |")
         md.append("")
         md.append("### Tabela modelo × arquitetura\n")
         md.append(_tabela_modelo_arquitetura(celulas, modelos, arquiteturas, ids, canonico,
@@ -992,12 +1063,12 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
             colunas = [
                 f"{_s(lat[r][0])} / {_s(lat[r][1])}" if r in lat else "—" for r in rotas
             ]
-            md.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | " + " | ".join(colunas) + " |")
+            md.append(f"| {c.titulo} | " + " | ".join(colunas) + " |")
         md.append("\nCada casa é p50 / p95 (nearest-rank, como o comando de avaliação).\n")
         md.append("### Perguntas instáveis entre rodadas\n")
         for c in celulas:
             lista = instaveis(c, ids, canonico)
-            md.append(f"- {c.rotulo_arquitetura} · `{c.modelo}`: "
+            md.append(f"- {c.titulo}: "
                       + (f"{len(lista)} — " + ", ".join(lista) if lista else "nenhuma"))
         md.append("")
 
@@ -1008,7 +1079,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append("**Células inválidas para comparar** (o pensamento não desligou na prova, ou as duas "
                   "provas falharam; o teto "
                   "de tokens cortaria o raciocínio e o acerto mediria o corte): "
-                  + ", ".join(f"{c.rotulo_arquitetura} · `{c.modelo}`" for c in celulas if c.invalida)
+                  + ", ".join(f"{c.titulo}" for c in celulas if c.invalida)
                   + ". Ficam nas tabelas, fora da conclusão e dos gráficos.\n")
 
     parecidas = [i for i in rodada.get("parecidasComTreino") or [] if i in canonico]
@@ -1027,7 +1098,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
               "|---|---|---|---|")
     for c in celulas:
         palavras, siglas, medidas = clareza(c)
-        md.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | "
+        md.append(f"| {c.titulo} | "
                   + ("n/d" if palavras is None else f"{palavras:.1f}".replace(".", ","))
                   + " | " + ("n/d" if siglas is None else f"{siglas:.1f}%".replace(".", ","))
                   + f" | {medidas} |")
@@ -1040,7 +1111,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md.append("| Célula | Possivelmente cortadas | Respostas redigidas |\n|---|---|---|")
     for c in celulas:
         cortadas, total = possivelmente_cortadas(c)
-        md.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {cortadas}"
+        md.append(f"| {c.titulo} | {cortadas}"
                   + (f" ({100.0 * cortadas / total:.0f}%)".replace(".", ",") if total else "")
                   + f" | {total} |")
     md.append("")
@@ -1056,7 +1127,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         if not contagem:
             continue
         total = sum(contagem.values())
-        md.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | " + " | ".join(
+        md.append(f"| {c.titulo} | " + " | ".join(
             f"{100.0 * contagem.get(k, 0) / total:.0f}%" for k in colunas_camada) + " |")
     md.append("\nNa Ceres 1 a rota é sempre do modelo (o JSON do `2463c27` não tem a camada).\n")
 
@@ -1092,7 +1163,8 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     md.append("## Latência na VPS (produção)\n")
     md.append("A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na "
-              "configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS de produção (CPU "
+              "configuração de produção (o modelo do `.env` da VPS, hoje o `claude-haiku-5-5` pela API se a "
+              "troca já foi feita, e a Ceres 2.0), na VPS de produção (CPU "
               "ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.\n")
     md.append("| Rota | p50 | p95 | Amostras | Data e SHA |\n|---|---|---|---|---|\n"
               "| DADOS | | | | |\n| LEGISLACAO | | | | |\n| MISTO | | | | |\n")
@@ -1238,7 +1310,7 @@ def _secao_externas(celulas, ids, canonico) -> str:
                     total = len(valores)
             casas.append(Faixa(statistics.fmean(taxas), min(taxas), max(taxas), total).formatada()
                          if taxas else "n/d")
-        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | " + " | ".join(casas) + " |")
+        linhas.append(f"| {c.titulo} | " + " | ".join(casas) + " |")
     especiais = [p for p in perguntas if p.get("observacao")]
     for p in especiais:
         linhas.append(f"\n### {p['id']} (pergunta {p.get('numeroOriginal', '?')} do Murillo)\n")
@@ -1261,7 +1333,7 @@ def _secao_externas(celulas, ids, canonico) -> str:
                     # mas tambem nao e "afirmou o proibido".
                     proibida = ("— (frase fixa)" if desfecho not in REDIGIDAS
                                 else "**sim**" if criterio is False else "não")
-                    linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {numero} "
+                    linhas.append(f"| {c.titulo} | {numero} "
                                   f"| `{desfecho}` "
                                   f"| {classe} "
                                   f"| {proibida} "
@@ -1289,7 +1361,7 @@ def _secao_cortadas(celulas) -> str:
             for corte in cortes:
                 for tipo in tipos:
                     tipos[tipo] += 1 if corte[tipo] else 0
-        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {' · '.join(por_rodada) or 'n/d'} "
+        linhas.append(f"| {c.titulo} | {' · '.join(por_rodada) or 'n/d'} "
                       f"| {tipos['classificacao']} | {tipos['funcoes']} | {tipos['lei']} "
                       f"| {cortadas}/{total}"
                       + (f" ({_n(100.0 * cortadas / total)}%)" if total else "") + " |")
@@ -1313,9 +1385,9 @@ def _secao_cortadas(celulas) -> str:
                     else:
                         limpas += 1
         if not aplicaveis:
-            linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | — | — | — |")
+            linhas.append(f"| {c.titulo} | — | — | — |")
             continue
-        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {_n(100.0 * acertos / aplicaveis)}% "
+        linhas.append(f"| {c.titulo} | {_n(100.0 * acertos / aplicaveis)}% "
                       f"| {_n(100.0 * limpas / aplicaveis)}% | {por_corte} |")
     linhas.append("\nTodas as rodadas juntas (respostas = perguntas × rodadas).")
     return "\n".join(linhas) + "\n"
@@ -1333,7 +1405,7 @@ def _secao_parecidas(celulas, parecidas, ids_comum, canonico, adaptacoes_por_arq
         adapt = adaptacoes_por_arq.get(c.arquitetura, {})
         com_f = acerto_geral(c, ids_comum, canonico, adapt, RECORTE_COMUM)
         sem_f = acerto_geral(c, sem, canonico, adapt, RECORTE_COMUM)
-        linhas.append(f"| {c.rotulo_arquitetura} · `{c.modelo}` | {com_f.formatada()} | "
+        linhas.append(f"| {c.titulo} | {com_f.formatada()} | "
                       f"{sem_f.formatada()} | {_pontos(sem_f.media, com_f.media)} |")
     return "\n".join(linhas) + "\n"
 
@@ -1363,7 +1435,7 @@ def _secao_temas(celulas, canonico_json, canonico, ids_comum, adaptacoes_por_arq
         linhas.append("Pergunta certa = todo critério que se aplica a ela acertou (rota, função, "
                       "parâmetros, número, citação, recusa, sem vazamento e sem falha técnica). "
                       "Média (mínimo–máximo) das rodadas.\n")
-        linhas.append("| Tema | " + " | ".join(f"{c.rotulo_arquitetura} · `{c.modelo}`" for c in celulas)
+        linhas.append("| Tema | " + " | ".join(f"{c.titulo}" for c in celulas)
                       + " |\n|---|" + "---|" * len(celulas))
         por_celula = [por_tema(c, ids, canonico, adaptacoes_por_arq.get(c.arquitetura, {}), recorte)
                       for c in celulas]
@@ -1382,20 +1454,24 @@ def _tabela_modelo_arquitetura(celulas, modelos, arquiteturas, ids, canonico, ad
     linhas = ["| Modelo | Critério | " + " | ".join(r for _, r in arquiteturas)
               + (" | Diferença |" if len(arquiteturas) == 2 else " |"),
               "|---|---|" + "---|" * len(arquiteturas) + ("---|" if len(arquiteturas) == 2 else "")]
+    por_api = {c.modelo for c in celulas if c.por_api}
     for modelo in modelos:
+        # Modelo por API so existe nas arquiteturas da matriz: nas outras nao e "nao rodou".
+        ausente = "n/a (sem provedor)" if modelo in por_api else "não rodou"
+        rotulo = f"`{modelo}`" + (" (API)" if modelo in por_api else "")
         for criterio in principais:
             valores, medias = [], []
             for arq, _ in arquiteturas:
                 c = next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
                 f = faixa(c, criterio, ids, canonico, adaptacoes.get(arq, {}), recorte) if c else None
-                valores.append(f.formatada() if f else "não rodou")
+                valores.append(f.formatada() if f else ausente)
                 medias.append(f.media if f else None)
             dif = f" | {_pontos(medias[1], medias[0])} |" if len(arquiteturas) == 2 else " |"
-            linhas.append(f"| `{modelo}` | {CRITERIOS[criterio][0]} | " + " | ".join(valores) + dif)
+            linhas.append(f"| {rotulo} | {CRITERIOS[criterio][0]} | " + " | ".join(valores) + dif)
         lats = []
         for arq, _ in arquiteturas:
             c = next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
             lats.append(latencias(c, ids, canonico).get("TODAS") if c else None)
-        linhas.append(f"| `{modelo}` | Latência p50 | " + " | ".join(
+        linhas.append(f"| {rotulo} | Latência p50{' (rede)' if modelo in por_api else ''} | " + " | ".join(
             _s(l[0]) if l else "n/d" for l in lats) + (" | |" if len(arquiteturas) == 2 else " |"))
     return "\n".join(linhas) + "\n"

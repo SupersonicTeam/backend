@@ -1,4 +1,4 @@
-# Benchmark da Ceres — 2 arquiteturas × 3 modelos (DADOS FICTÍCIOS)
+# Benchmark da Ceres — 2 arquiteturas × 4 modelos (DADOS FICTÍCIOS)
 
 > ⚠️ **DADOS FICTÍCIOS DE TESTE.** Este relatório foi gerado a partir de JSONs inventados pelo `gerar_exemplo_ficticio.py`, só para mostrar o formato. **Nenhum número aqui foi medido.** Não use em slide, artigo nem banca.
 
@@ -13,9 +13,9 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | Rodada | FICTÍCIO |
 | Máquina | FICTÍCIO: máquina inventada |
 | Ceres 1 | `2463c27630c6397106b6addea74e2424c139b60b` (merge da regua (#264, PR #302): o modelo classifica a rota e redige a resposta; sem #274, #265 e #266) |
-| Ceres 2.0 | `6dcc8a666b263e724fb84c5610d348d495d66c72` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
+| Ceres 2.0 | `f2c660a713e36e30cfa787f8e54f5135eb24f9a6` (main: regras + embeddings na classificacao, resposta de dados por template, o modelo so escolhe a funcao) |
 | Conjunto de perguntas | 2026-11-05.13 (93 perguntas, sha256 `7caacef430fc…`), o mesmo nas células (a Ceres 1 lê a cópia adaptada) |
-| Inéditas (repositório cego) | 6 perguntas, versão ficticio.1, sha256 `d5fa2462e0bb…` — **não confere com o compromisso do backend** (só ensaio) |
+| Inéditas (repositório cego) | 6 perguntas, versão ficticio.1, sha256 `af9e2fed89cc…` — **não confere com o compromisso do backend** (só ensaio) |
 | Capacidade comum | 75 perguntas (a comparação justa; por tema abaixo) |
 | Ceres 2.0 e a Sessão 7 (#270: só as funções da rota, prefixo fixo do prompt, teto de tokens por chamada, num_ctx por propriedade) (#270) | **depois** dela inteira (o SHA medido contém o merge do último PR) — a coluna inclui as mudanças dela |
 | Repetições | 3 |
@@ -24,9 +24,12 @@ Gerado por `docs/avaliacao/benchmark/gerar_relatorio.py` (issue #348). Não edit
 | `qwen3:0.6b` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
 | `qwen3:1.7b` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
 | `qwen3:4b-instruct` | quantização FICTÍCIO, ? parâmetros, digest `000000000000` |
+| `claude-haiku-5-5` (API) | provedor anthropic (API pela rede, sem Ollama, sem digest); raciocínio disabled; `AI_READ_TIMEOUT` publicado, sem o ajuste da célula; a chave vem só do ambiente de quem rodou e não consta em nenhum arquivo da rodada |
 | Opções do chat | temperature=0.2, num-ctx=8192, num-predict=1024, think-option=false |
 
 Todas as células rodaram **na mesma máquina**, uma por vez. **A latência é local e relativa**: serve para comparar modelos e arquiteturas entre si nesta máquina. **Não é a latência de produção**: a da VPS (CPU ARM, sem GPU) fica na seção "Latência na VPS", medida pelo harness da API.
+
+As células marcadas **(API)** têm o chat pela API de um provedor: a máquina roda só a JVM, o banco e o embedding. **A latência delas é de API pela rede** (inclui a fila do provedor), não de inferência local: **não a compare com a das células do qwen3**, e ela também não é a da VPS.
 
 O **valor esperado** de cada pergunta é calculado na hora por cada arquitetura, sobre o próprio backend e o próprio seed (padrão da #158): o acerto de número mede se a Ceres repete o número **do próprio sistema**. O cálculo fiscal mudou depois do `2463c27` (#272, #277, #298); pergunta cujo valor esperado difere entre as arquiteturas sai do recorte de capacidade comum.
 
@@ -42,6 +45,11 @@ Fora da capacidade comum por valor esperado diferente entre os seeds dos commits
 | Ceres 2.0 · `qwen3:0.6b` | FICTÍCIO: desligado (think=false; nenhum raciocínio na prova) | 0,6 GB | 2,0 GB | qwen3:0.6b: GPU; bge-m3: CPU | 669 s | 0 |
 | Ceres 2.0 · `qwen3:1.7b` | FICTÍCIO: desligado (think=false; nenhum raciocínio na prova) | 1,5 GB | 2,9 GB | qwen3:1.7b: GPU; bge-m3: CPU | 1116 s | 0 |
 | Ceres 2.0 · `qwen3:4b-instruct` | FICTÍCIO: desligado (think=false; nenhum raciocínio na prova) | 3,3 GB | 4,7 GB | qwen3:4b-instruct: GPU; bge-m3: CPU | 1953 s | 0 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | FICTÍCIO: desligado (thinking=disabled; nenhum bloco de raciocínio na prova) | n/a (API) | n/a (API) | API da Anthropic (rede) | 390 s | 0 |
+
+**Avisos das células** (leia a latência dessas células com isso):
+
+- Ceres 2.0 · `claude-haiku-5-5` (API): o chat desta célula foi pela API da Anthropic: a latência é de API pela rede (com a fila do provedor), não de inferência local; não a compare com a das células do qwen3
 
 A VPS de produção tem 47 GiB (8 OCPU ARM) divididos com Postgres, backend, ClamAV e o BGE-M3: a coluna do pico inclui o BGE-M3 carregado junto.
 
@@ -73,47 +81,47 @@ Quantas perguntas cada tema tem no conjunto e quantas ficaram na capacidade comu
 
 Pergunta certa = todo critério que se aplica a ela acertou (rota, função, parâmetros, número, citação, recusa, sem vazamento e sem falha técnica). Média (mínimo–máximo) das rodadas.
 
-| Tema | Ceres 1 · `qwen3:0.6b` | Ceres 1 · `qwen3:1.7b` | Ceres 1 · `qwen3:4b-instruct` | Ceres 2.0 · `qwen3:0.6b` | Ceres 2.0 · `qwen3:1.7b` | Ceres 2.0 · `qwen3:4b-instruct` |
-|---|---|---|---|---|---|---|
-| Guias e vencimentos | 16,7% (0,0–50,0) n=2 | 16,7% (0,0–50,0) n=2 | 83,3% (50,0–100,0) n=2 | 66,7% (50,0–100,0) n=2 | 83,3% (50,0–100,0) n=2 | 66,7% (0,0–100,0) n=2 |
-| Notas fiscais | 16,7% (0,0–25,0) n=4 | 25,0% (0,0–50,0) n=4 | 33,3% (0,0–75,0) n=4 | 25,0% (0,0–50,0) n=4 | 50,0% (0,0–75,0) n=4 | 91,7% (75,0–100,0) n=4 |
-| Compras e insumos | 0,0% n=5 | 26,7% (0,0–60,0) n=5 | 66,7% (60,0–80,0) n=5 | 33,3% (20,0–60,0) n=5 | 73,3% (60,0–100,0) n=5 | 73,3% (60,0–100,0) n=5 |
-| Vendas e produtos | 0,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 |
-| Apuração e créditos de IBS/CBS | 0,0% n=6 | 16,7% (0,0–33,3) n=6 | 33,3% (0,0–66,7) n=6 | 50,0% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 83,3% (66,7–100,0) n=6 |
-| Retenções (Funrural/Senar, split payment) | 11,1% (0,0–33,3) n=6 | 16,7% (0,0–33,3) n=6 | 61,1% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 61,1% (50,0–66,7) n=6 | 66,7% (50,0–83,3) n=6 |
-| Legislação geral da reforma | 10,0% (0,0–20,0) n=10 | 36,7% (30,0–50,0) n=10 | 73,3% (60,0–90,0) n=10 | 63,3% (60,0–70,0) n=10 | 86,7% (80,0–90,0) n=10 | 93,3% (90,0–100,0) n=10 |
-| Legislação do agro | 13,3% (10,0–20,0) n=10 | 33,3% (20,0–50,0) n=10 | 73,3% (60,0–80,0) n=10 | 60,0% (50,0–70,0) n=10 | 80,0% (70,0–90,0) n=10 | 83,3% (80,0–90,0) n=10 |
-| MISTO (dado + lei) | 0,0% n=7 | 9,5% (0,0–14,3) n=7 | 28,6% (14,3–42,9) n=7 | 14,3% (0,0–42,9) n=7 | 38,1% (14,3–71,4) n=7 | 61,9% (28,6–85,7) n=7 |
-| Fora de escopo e recusa | 26,7% (20,0–40,0) n=10 | 43,3% (20,0–60,0) n=10 | 70,0% (60,0–80,0) n=10 | 66,7% (60,0–80,0) n=10 | 60,0% (40,0–70,0) n=10 | 90,0% (80,0–100,0) n=10 |
-| Segurança (injeção, dado de outro produtor) | 58,3% (50,0–62,5) n=8 | 58,3% (50,0–75,0) n=8 | 79,2% (62,5–87,5) n=8 | 75,0% (62,5–87,5) n=8 | 91,7% (87,5–100,0) n=8 | 91,7% (87,5–100,0) n=8 |
-| Linguagem do dia a dia | 16,7% (0,0–50,0) n=2 | 66,7% (50,0–100,0) n=2 | 83,3% (50,0–100,0) n=2 | 50,0% (0,0–100,0) n=2 | 83,3% (50,0–100,0) n=2 | 100,0% n=2 |
-| Externas: alíquotas de produtos agropecuários | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
-| Externas: tributação de insumos agrícolas e pecuários | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
-| Externas: situações práticas do produtor rural | 33,3% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
-| Externas: planejamento, notas fiscais e transição | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
+| Tema | Ceres 1 · `qwen3:0.6b` | Ceres 1 · `qwen3:1.7b` | Ceres 1 · `qwen3:4b-instruct` | Ceres 2.0 · `qwen3:0.6b` | Ceres 2.0 · `qwen3:1.7b` | Ceres 2.0 · `qwen3:4b-instruct` | Ceres 2.0 · `claude-haiku-5-5` (API) |
+|---|---|---|---|---|---|---|---|
+| Guias e vencimentos | 16,7% (0,0–50,0) n=2 | 16,7% (0,0–50,0) n=2 | 83,3% (50,0–100,0) n=2 | 66,7% (50,0–100,0) n=2 | 83,3% (50,0–100,0) n=2 | 66,7% (0,0–100,0) n=2 | 100,0% n=2 |
+| Notas fiscais | 16,7% (0,0–25,0) n=4 | 25,0% (0,0–50,0) n=4 | 33,3% (0,0–75,0) n=4 | 25,0% (0,0–50,0) n=4 | 50,0% (0,0–75,0) n=4 | 91,7% (75,0–100,0) n=4 | 91,7% (75,0–100,0) n=4 |
+| Compras e insumos | 0,0% n=5 | 26,7% (0,0–60,0) n=5 | 66,7% (60,0–80,0) n=5 | 33,3% (20,0–60,0) n=5 | 73,3% (60,0–100,0) n=5 | 73,3% (60,0–100,0) n=5 | 86,7% (80,0–100,0) n=5 |
+| Vendas e produtos | 0,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
+| Apuração e créditos de IBS/CBS | 0,0% n=6 | 16,7% (0,0–33,3) n=6 | 33,3% (0,0–66,7) n=6 | 50,0% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 83,3% (66,7–100,0) n=6 | 83,3% (66,7–100,0) n=6 |
+| Retenções (Funrural/Senar, split payment) | 11,1% (0,0–33,3) n=6 | 16,7% (0,0–33,3) n=6 | 61,1% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 61,1% (50,0–66,7) n=6 | 66,7% (50,0–83,3) n=6 | 83,3% n=6 |
+| Legislação geral da reforma | 10,0% (0,0–20,0) n=10 | 36,7% (30,0–50,0) n=10 | 73,3% (60,0–90,0) n=10 | 63,3% (60,0–70,0) n=10 | 86,7% (80,0–90,0) n=10 | 93,3% (90,0–100,0) n=10 | 86,7% (80,0–100,0) n=10 |
+| Legislação do agro | 13,3% (10,0–20,0) n=10 | 33,3% (20,0–50,0) n=10 | 73,3% (60,0–80,0) n=10 | 60,0% (50,0–70,0) n=10 | 80,0% (70,0–90,0) n=10 | 83,3% (80,0–90,0) n=10 | 93,3% (90,0–100,0) n=10 |
+| MISTO (dado + lei) | 0,0% n=7 | 9,5% (0,0–14,3) n=7 | 28,6% (14,3–42,9) n=7 | 14,3% (0,0–42,9) n=7 | 38,1% (14,3–71,4) n=7 | 61,9% (28,6–85,7) n=7 | 66,7% (57,1–85,7) n=7 |
+| Fora de escopo e recusa | 26,7% (20,0–40,0) n=10 | 43,3% (20,0–60,0) n=10 | 70,0% (60,0–80,0) n=10 | 66,7% (60,0–80,0) n=10 | 60,0% (40,0–70,0) n=10 | 90,0% (80,0–100,0) n=10 | 83,3% (70,0–90,0) n=10 |
+| Segurança (injeção, dado de outro produtor) | 58,3% (50,0–62,5) n=8 | 58,3% (50,0–75,0) n=8 | 79,2% (62,5–87,5) n=8 | 75,0% (62,5–87,5) n=8 | 91,7% (87,5–100,0) n=8 | 91,7% (87,5–100,0) n=8 | 83,3% (75,0–100,0) n=8 |
+| Linguagem do dia a dia | 16,7% (0,0–50,0) n=2 | 66,7% (50,0–100,0) n=2 | 83,3% (50,0–100,0) n=2 | 50,0% (0,0–100,0) n=2 | 83,3% (50,0–100,0) n=2 | 100,0% n=2 | 100,0% n=2 |
+| Externas: alíquotas de produtos agropecuários | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 | 100,0% n=1 |
+| Externas: tributação de insumos agrícolas e pecuários | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
+| Externas: situações práticas do produtor rural | 33,3% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
+| Externas: planejamento, notas fiscais e transição | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
 
 ### Acerto por tema × célula — conjunto inteiro
 
 Pergunta certa = todo critério que se aplica a ela acertou (rota, função, parâmetros, número, citação, recusa, sem vazamento e sem falha técnica). Média (mínimo–máximo) das rodadas.
 
-| Tema | Ceres 1 · `qwen3:0.6b` | Ceres 1 · `qwen3:1.7b` | Ceres 1 · `qwen3:4b-instruct` | Ceres 2.0 · `qwen3:0.6b` | Ceres 2.0 · `qwen3:1.7b` | Ceres 2.0 · `qwen3:4b-instruct` |
-|---|---|---|---|---|---|---|
-| Guias e vencimentos | 6,7% (0,0–10,0) n=10 | 3,3% (0,0–10,0) n=10 | 26,7% (20,0–40,0) n=10 | 26,7% (10,0–40,0) n=10 | 50,0% (40,0–60,0) n=10 | 76,7% (60,0–90,0) n=10 |
-| Notas fiscais | 8,3% (0,0–12,5) n=8 | 16,7% (0,0–37,5) n=8 | 20,8% (0,0–50,0) n=8 | 29,2% (0,0–62,5) n=8 | 45,8% (12,5–75,0) n=8 | 83,3% (75,0–87,5) n=8 |
-| Compras e insumos | 0,0% n=5 | 26,7% (0,0–60,0) n=5 | 66,7% (60,0–80,0) n=5 | 33,3% (20,0–60,0) n=5 | 73,3% (60,0–100,0) n=5 | 73,3% (60,0–100,0) n=5 |
-| Vendas e produtos | 0,0% n=4 | 16,7% (0,0–25,0) n=4 | 16,7% (0,0–25,0) n=4 | 8,3% (0,0–25,0) n=4 | 33,3% (25,0–50,0) n=4 | 66,7% (50,0–75,0) n=4 |
-| Apuração e créditos de IBS/CBS | 0,0% n=6 | 16,7% (0,0–33,3) n=6 | 33,3% (0,0–66,7) n=6 | 50,0% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 83,3% (66,7–100,0) n=6 |
-| Retenções (Funrural/Senar, split payment) | 11,1% (0,0–33,3) n=6 | 16,7% (0,0–33,3) n=6 | 61,1% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 61,1% (50,0–66,7) n=6 | 66,7% (50,0–83,3) n=6 |
-| Legislação geral da reforma | 10,0% (0,0–20,0) n=10 | 36,7% (30,0–50,0) n=10 | 73,3% (60,0–90,0) n=10 | 63,3% (60,0–70,0) n=10 | 86,7% (80,0–90,0) n=10 | 93,3% (90,0–100,0) n=10 |
-| Legislação do agro | 13,3% (10,0–20,0) n=10 | 33,3% (20,0–50,0) n=10 | 73,3% (60,0–80,0) n=10 | 60,0% (50,0–70,0) n=10 | 80,0% (70,0–90,0) n=10 | 83,3% (80,0–90,0) n=10 |
-| MISTO (dado + lei) | 0,0% n=7 | 9,5% (0,0–14,3) n=7 | 28,6% (14,3–42,9) n=7 | 14,3% (0,0–42,9) n=7 | 38,1% (14,3–71,4) n=7 | 61,9% (28,6–85,7) n=7 |
-| Fora de escopo e recusa | 26,7% (20,0–40,0) n=10 | 43,3% (20,0–60,0) n=10 | 70,0% (60,0–80,0) n=10 | 66,7% (60,0–80,0) n=10 | 60,0% (40,0–70,0) n=10 | 90,0% (80,0–100,0) n=10 |
-| Segurança (injeção, dado de outro produtor) | 58,3% (50,0–62,5) n=8 | 58,3% (50,0–75,0) n=8 | 79,2% (62,5–87,5) n=8 | 75,0% (62,5–87,5) n=8 | 91,7% (87,5–100,0) n=8 | 91,7% (87,5–100,0) n=8 |
-| Linguagem do dia a dia | 6,7% (0,0–20,0) n=5 | 26,7% (20,0–40,0) n=5 | 33,3% (20,0–40,0) n=5 | 26,7% (0,0–60,0) n=5 | 60,0% (20,0–100,0) n=5 | 86,7% (80,0–100,0) n=5 |
-| Externas: alíquotas de produtos agropecuários | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
-| Externas: tributação de insumos agrícolas e pecuários | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
-| Externas: situações práticas do produtor rural | 33,3% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
-| Externas: planejamento, notas fiscais e transição | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 |
+| Tema | Ceres 1 · `qwen3:0.6b` | Ceres 1 · `qwen3:1.7b` | Ceres 1 · `qwen3:4b-instruct` | Ceres 2.0 · `qwen3:0.6b` | Ceres 2.0 · `qwen3:1.7b` | Ceres 2.0 · `qwen3:4b-instruct` | Ceres 2.0 · `claude-haiku-5-5` (API) |
+|---|---|---|---|---|---|---|---|
+| Guias e vencimentos | 6,7% (0,0–10,0) n=10 | 3,3% (0,0–10,0) n=10 | 26,7% (20,0–40,0) n=10 | 26,7% (10,0–40,0) n=10 | 50,0% (40,0–60,0) n=10 | 76,7% (60,0–90,0) n=10 | 90,0% (70,0–100,0) n=10 |
+| Notas fiscais | 8,3% (0,0–12,5) n=8 | 16,7% (0,0–37,5) n=8 | 20,8% (0,0–50,0) n=8 | 29,2% (0,0–62,5) n=8 | 45,8% (12,5–75,0) n=8 | 83,3% (75,0–87,5) n=8 | 75,0% (50,0–87,5) n=8 |
+| Compras e insumos | 0,0% n=5 | 26,7% (0,0–60,0) n=5 | 66,7% (60,0–80,0) n=5 | 33,3% (20,0–60,0) n=5 | 73,3% (60,0–100,0) n=5 | 73,3% (60,0–100,0) n=5 | 86,7% (80,0–100,0) n=5 |
+| Vendas e produtos | 0,0% n=4 | 16,7% (0,0–25,0) n=4 | 16,7% (0,0–25,0) n=4 | 8,3% (0,0–25,0) n=4 | 33,3% (25,0–50,0) n=4 | 66,7% (50,0–75,0) n=4 | 75,0% (50,0–100,0) n=4 |
+| Apuração e créditos de IBS/CBS | 0,0% n=6 | 16,7% (0,0–33,3) n=6 | 33,3% (0,0–66,7) n=6 | 50,0% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 83,3% (66,7–100,0) n=6 | 83,3% (66,7–100,0) n=6 |
+| Retenções (Funrural/Senar, split payment) | 11,1% (0,0–33,3) n=6 | 16,7% (0,0–33,3) n=6 | 61,1% (33,3–83,3) n=6 | 38,9% (16,7–66,7) n=6 | 61,1% (50,0–66,7) n=6 | 66,7% (50,0–83,3) n=6 | 83,3% n=6 |
+| Legislação geral da reforma | 10,0% (0,0–20,0) n=10 | 36,7% (30,0–50,0) n=10 | 73,3% (60,0–90,0) n=10 | 63,3% (60,0–70,0) n=10 | 86,7% (80,0–90,0) n=10 | 93,3% (90,0–100,0) n=10 | 86,7% (80,0–100,0) n=10 |
+| Legislação do agro | 13,3% (10,0–20,0) n=10 | 33,3% (20,0–50,0) n=10 | 73,3% (60,0–80,0) n=10 | 60,0% (50,0–70,0) n=10 | 80,0% (70,0–90,0) n=10 | 83,3% (80,0–90,0) n=10 | 93,3% (90,0–100,0) n=10 |
+| MISTO (dado + lei) | 0,0% n=7 | 9,5% (0,0–14,3) n=7 | 28,6% (14,3–42,9) n=7 | 14,3% (0,0–42,9) n=7 | 38,1% (14,3–71,4) n=7 | 61,9% (28,6–85,7) n=7 | 66,7% (57,1–85,7) n=7 |
+| Fora de escopo e recusa | 26,7% (20,0–40,0) n=10 | 43,3% (20,0–60,0) n=10 | 70,0% (60,0–80,0) n=10 | 66,7% (60,0–80,0) n=10 | 60,0% (40,0–70,0) n=10 | 90,0% (80,0–100,0) n=10 | 83,3% (70,0–90,0) n=10 |
+| Segurança (injeção, dado de outro produtor) | 58,3% (50,0–62,5) n=8 | 58,3% (50,0–75,0) n=8 | 79,2% (62,5–87,5) n=8 | 75,0% (62,5–87,5) n=8 | 91,7% (87,5–100,0) n=8 | 91,7% (87,5–100,0) n=8 | 83,3% (75,0–100,0) n=8 |
+| Linguagem do dia a dia | 6,7% (0,0–20,0) n=5 | 26,7% (20,0–40,0) n=5 | 33,3% (20,0–40,0) n=5 | 26,7% (0,0–60,0) n=5 | 60,0% (20,0–100,0) n=5 | 86,7% (80,0–100,0) n=5 | 86,7% (80,0–100,0) n=5 |
+| Externas: alíquotas de produtos agropecuários | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 | 100,0% n=1 |
+| Externas: tributação de insumos agrícolas e pecuários | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
+| Externas: situações práticas do produtor rural | 33,3% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
+| Externas: planejamento, notas fiscais e transição | 66,7% (0,0–100,0) n=1 | 33,3% (0,0–100,0) n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | 100,0% n=1 |
 
 
 **Contaminadas** (alguém mudou a Ceres conhecendo o texto ou a resposta delas; fora dos recortes inéditos): ZE04.
@@ -128,6 +136,7 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 | Ceres 2.0 · `qwen3:0.6b` | 77,6% (71,4–85,7) n=70 | 79,8% (75,0–85,7) n=28 | 74,4% (65,4–88,5) n=26 | 78,7% (64,0–88,0) n=25 | 71,7% (63,6–78,8) n=33 | 69,0% (64,3–71,4) n=14 | 69,0% (64,3–71,4) n=14 | 83,3% n=6 | 83,3% (50,0–100,0) n=2 | 96,9% (94,7–98,7) n=75 |
 | Ceres 2.0 · `qwen3:1.7b` | 83,8% (78,6–90,0) n=70 | 82,1% (75,0–85,7) n=28 | 91,0% (88,5–96,2) n=26 | 90,7% (84,0–96,0) n=25 | 88,9% (81,8–97,0) n=33 | 78,6% (64,3–85,7) n=14 | 78,6% (64,3–85,7) n=14 | 100,0% n=6 | 100,0% n=2 | 99,6% (98,7–100,0) n=75 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 94,8% (92,9–97,1) n=70 | 92,9% (82,1–100,0) n=28 | 93,6% (88,5–96,2) n=26 | 90,7% (88,0–92,0) n=25 | 94,9% (90,9–97,0) n=33 | 90,5% (85,7–92,9) n=14 | 90,5% (85,7–92,9) n=14 | 100,0% n=6 | 50,0% (0,0–100,0) n=2 | 99,6% (98,7–100,0) n=75 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 93,8% (91,4–95,7) n=70 | 96,4% (92,9–100,0) n=28 | 96,2% (92,3–100,0) n=26 | 97,3% (92,0–100,0) n=25 | 92,9% (87,9–97,0) n=33 | 92,9% (85,7–100,0) n=14 | 92,9% (85,7–100,0) n=14 | 88,9% (83,3–100,0) n=6 | 100,0% n=2 | 100,0% n=75 |
 
 ### Tabela modelo × arquitetura
 
@@ -157,6 +166,14 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 | `qwen3:4b-instruct` | Sem vazamento | 94,4% (83,3–100,0) n=6 | 100,0% n=6 | +5,6 p.p. |
 | `qwen3:4b-instruct` | Sem falha técnica | 98,7% (97,3–100,0) n=75 | 99,6% (98,7–100,0) n=75 | +0,9 p.p. |
 | `qwen3:4b-instruct` | Latência p50 | 19,7 s | 6,9 s | |
+| `claude-haiku-5-5` (API) | Acurácia de rota | n/a (sem provedor) | 93,8% (91,4–95,7) n=70 | n/d |
+| `claude-haiku-5-5` (API) | Acerto de função | n/a (sem provedor) | 96,4% (92,9–100,0) n=28 | n/d |
+| `claude-haiku-5-5` (API) | Exatidão numérica | n/a (sem provedor) | 97,3% (92,0–100,0) n=25 | n/d |
+| `claude-haiku-5-5` (API) | Citação válida | n/a (sem provedor) | 92,9% (87,9–97,0) n=33 | n/d |
+| `claude-haiku-5-5` (API) | Recusa correta | n/a (sem provedor) | 92,9% (85,7–100,0) n=14 | n/d |
+| `claude-haiku-5-5` (API) | Sem vazamento | n/a (sem provedor) | 88,9% (83,3–100,0) n=6 | n/d |
+| `claude-haiku-5-5` (API) | Sem falha técnica | n/a (sem provedor) | 100,0% n=75 | n/d |
+| `claude-haiku-5-5` (API) | Latência p50 (rede) | n/d | 1,4 s | |
 
 ### Latência por rota esperada (todas as rodadas juntas)
 
@@ -168,6 +185,7 @@ Pergunta certa = todo critério que se aplica a ela acertou (rota, função, par
 | Ceres 2.0 · `qwen3:0.6b` | 2,3 s / 4,1 s | 2,4 s / 4,1 s | 2,3 s / 3,7 s | 2,4 s / 3,9 s | 2,5 s / 4,0 s | 2,4 s / 4,0 s |
 | Ceres 2.0 · `qwen3:1.7b` | 3,9 s / 6,4 s | 4,1 s / 7,0 s | 3,8 s / 5,9 s | 3,3 s / 6,0 s | 4,4 s / 7,2 s | 3,9 s / 6,6 s |
 | Ceres 2.0 · `qwen3:4b-instruct` | 6,5 s / 11,3 s | 7,2 s / 12,2 s | 5,6 s / 9,4 s | 6,9 s / 12,8 s | 7,6 s / 15,7 s | 6,9 s / 11,9 s |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 1,3 s / 2,6 s | 1,4 s / 2,5 s | 1,4 s / 2,0 s | 1,4 s / 2,8 s | 1,4 s / 2,1 s | 1,4 s / 2,5 s |
 
 Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
@@ -179,6 +197,7 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:0.6b`: 62 — T02, D11, D12, D16, X19, D01, D02, D03, D04, D10, D05, D06, D07, D08, X15, R01, X14, X16, R03, X06, X01, L03, L12, T03, T09, T14, X02, L08, L11, L01, L02, L04, L06, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F04, X09, X10, X11, X12, X13, A05, A06, A08, T13, ZI01, ZI02, ZE01, ZE02, ZE03, ZE04
 - Ceres 2.0 · `qwen3:1.7b`: 47 — T02, D11, D12, D16, X19, D01, D03, D04, D10, D05, D06, D07, D08, D09, X15, R01, X14, X16, X06, L03, L10, T09, L11, L07, X03, X05, X07, R02, M01, M02, M03, M04, M05, M06, F01, F02, F04, T12, X10, X12, X13, A06, A08, ZI02, ZE02, ZE03, ZE04
 - Ceres 2.0 · `qwen3:4b-instruct`: 32 — D15, T02, X19, D01, D03, D10, D05, D07, X15, R01, X14, X16, R03, T03, T14, X02, L01, L02, L04, L05, L06, R02, M02, M03, M05, M06, F03, T12, X11, A05, A08, ZI01
+- Ceres 2.0 · `claude-haiku-5-5` (API): 28 — D16, D03, D04, D06, D07, X15, X14, X06, L12, T03, X02, L11, L01, L05, M01, M02, M03, M04, M06, F01, F03, T12, X10, X11, A04, A05, A07, A08
 
 ## (b) Conjunto inteiro
 
@@ -194,6 +213,7 @@ Inclui as 16 perguntas adaptadas para a Ceres 1. Em 15 delas (T01, T07, T08, X17
 | Ceres 2.0 · `qwen3:0.6b` | 75,4% (71,6–78,4) n=88 | 76,1% (67,4–84,8) n=46 | 70,9% (64,1–84,6) n=39 | 77,2% (73,2–82,9) n=41 | 71,1% (63,2–76,3) n=38 | 69,0% (64,3–71,4) n=14 | 69,0% (64,3–71,4) n=14 | 83,3% n=6 | 83,3% (50,0–100,0) n=2 | 97,5% (95,7–98,9) n=93 |
 | Ceres 2.0 · `qwen3:1.7b` | 82,6% (77,3–87,5) n=88 | 84,1% (78,3–87,0) n=46 | 87,2% (84,6–89,7) n=39 | 87,8% (85,4–90,2) n=41 | 86,8% (78,9–97,4) n=38 | 78,6% (64,3–85,7) n=14 | 78,6% (64,3–85,7) n=14 | 100,0% n=6 | 100,0% n=2 | 99,3% (98,9–100,0) n=93 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 94,3% (92,0–96,6) n=88 | 93,5% (89,1–97,8) n=46 | 94,0% (92,3–97,4) n=39 | 92,7% (90,2–95,1) n=41 | 93,9% (89,5–97,4) n=38 | 90,5% (85,7–92,9) n=14 | 90,5% (85,7–92,9) n=14 | 100,0% n=6 | 50,0% (0,0–100,0) n=2 | 98,9% (97,8–100,0) n=93 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 93,6% (92,0–94,3) n=88 | 95,7% (93,5–97,8) n=46 | 95,7% (92,3–97,4) n=39 | 94,3% (92,7–95,1) n=41 | 93,9% (89,5–97,4) n=38 | 92,9% (85,7–100,0) n=14 | 92,9% (85,7–100,0) n=14 | 88,9% (83,3–100,0) n=6 | 100,0% n=2 | 100,0% n=93 |
 
 ### Tabela modelo × arquitetura
 
@@ -223,6 +243,14 @@ Inclui as 16 perguntas adaptadas para a Ceres 1. Em 15 delas (T01, T07, T08, X17
 | `qwen3:4b-instruct` | Sem vazamento | 94,4% (83,3–100,0) n=6 | 100,0% n=6 | +5,6 p.p. |
 | `qwen3:4b-instruct` | Sem falha técnica | 98,6% (96,8–100,0) n=93 | 98,9% (97,8–100,0) n=93 | +0,4 p.p. |
 | `qwen3:4b-instruct` | Latência p50 | 19,7 s | 7,0 s | |
+| `claude-haiku-5-5` (API) | Acurácia de rota | n/a (sem provedor) | 93,6% (92,0–94,3) n=88 | n/d |
+| `claude-haiku-5-5` (API) | Acerto de função | n/a (sem provedor) | 95,7% (93,5–97,8) n=46 | n/d |
+| `claude-haiku-5-5` (API) | Exatidão numérica | n/a (sem provedor) | 94,3% (92,7–95,1) n=41 | n/d |
+| `claude-haiku-5-5` (API) | Citação válida | n/a (sem provedor) | 93,9% (89,5–97,4) n=38 | n/d |
+| `claude-haiku-5-5` (API) | Recusa correta | n/a (sem provedor) | 92,9% (85,7–100,0) n=14 | n/d |
+| `claude-haiku-5-5` (API) | Sem vazamento | n/a (sem provedor) | 88,9% (83,3–100,0) n=6 | n/d |
+| `claude-haiku-5-5` (API) | Sem falha técnica | n/a (sem provedor) | 100,0% n=93 | n/d |
+| `claude-haiku-5-5` (API) | Latência p50 (rede) | n/d | 1,4 s | |
 
 ### Latência por rota esperada (todas as rodadas juntas)
 
@@ -234,6 +262,7 @@ Inclui as 16 perguntas adaptadas para a Ceres 1. Em 15 delas (T01, T07, T08, X17
 | Ceres 2.0 · `qwen3:0.6b` | 2,3 s / 4,0 s | 2,4 s / 4,1 s | 2,3 s / 3,7 s | 2,4 s / 3,9 s | 2,5 s / 4,0 s | 2,4 s / 4,0 s |
 | Ceres 2.0 · `qwen3:1.7b` | 3,9 s / 6,4 s | 4,1 s / 7,0 s | 3,8 s / 5,9 s | 3,3 s / 6,0 s | 4,4 s / 7,2 s | 3,9 s / 6,6 s |
 | Ceres 2.0 · `qwen3:4b-instruct` | 6,9 s / 11,5 s | 7,2 s / 12,2 s | 5,6 s / 9,4 s | 6,9 s / 12,8 s | 7,6 s / 15,7 s | 7,0 s / 11,9 s |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 1,4 s / 2,6 s | 1,4 s / 2,5 s | 1,4 s / 2,0 s | 1,4 s / 2,8 s | 1,4 s / 2,1 s | 1,4 s / 2,5 s |
 
 Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
@@ -245,6 +274,7 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:0.6b`: 80 — D13, D14, T01, T02, T07, T08, X17, X18, C01, D11, D12, D16, T04, T05, T06, T10, X19, D01, D02, D03, D04, D10, T11, P01, X04, D05, D06, D07, D08, X15, R01, X14, X16, R03, X06, X01, L03, L12, T03, T09, T14, X02, L08, L11, L01, L02, L04, L06, X03, X05, X07, X08, R02, M01, M02, M03, M04, M05, M06, F01, F02, F04, X09, X10, X11, X12, X13, A05, A06, A08, T13, P02, P03, P04, ZI01, ZI02, ZE01, ZE02, ZE03, ZE04
 - Ceres 2.0 · `qwen3:1.7b`: 63 — D13, D14, T01, T02, T08, X17, X18, C01, D11, D12, D16, T04, T06, T10, X19, D01, D03, D04, D10, T11, P01, X04, D05, D06, D07, D08, D09, X15, R01, X14, X16, X06, L03, L10, T09, L11, L07, X03, X05, X07, R02, M01, M02, M03, M04, M05, M06, F01, F02, F04, T12, X10, X12, X13, A06, A08, P02, P03, P04, ZI02, ZE02, ZE03, ZE04
 - Ceres 2.0 · `qwen3:4b-instruct`: 42 — D13, D14, D15, T02, T08, X18, T05, T06, X19, D01, D03, D10, T11, X04, D05, D07, X15, R01, X14, X16, R03, T03, T14, X02, L01, L02, L04, L05, L06, R02, M02, M03, M05, M06, F03, T12, X11, A05, A08, P02, P03, ZI01
+- Ceres 2.0 · `claude-haiku-5-5` (API): 38 — D14, T08, X18, D16, T05, T06, T10, D03, D04, T11, X04, D06, D07, X15, X14, X06, L12, T03, X02, L11, L01, L05, M01, M02, M03, M04, M06, F01, F03, T12, X10, X11, A04, A05, A07, A08, P02, P04
 
 ## (c) Inéditas (equipe + geradas por IA) — generalização
 
@@ -258,6 +288,7 @@ As 5 perguntas fora do gabarito (equipe e geradas por IA), fora do gabarito cont
 | Ceres 2.0 · `qwen3:0.6b` | 60,0% (40,0–80,0) n=5 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | — | — | — | — | 93,3% (80,0–100,0) n=5 |
 | Ceres 2.0 · `qwen3:1.7b` | 80,0% (60,0–100,0) n=5 | 100,0% n=1 | 100,0% n=1 | 100,0% n=1 | 100,0% n=1 | — | — | — | — | 100,0% n=5 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 100,0% n=5 | 100,0% n=1 | 100,0% n=1 | 66,7% (0,0–100,0) n=1 | 100,0% n=1 | — | — | — | — | 100,0% n=5 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 100,0% n=5 | 100,0% n=1 | 100,0% n=1 | 100,0% n=1 | 100,0% n=1 | — | — | — | — | 100,0% n=5 |
 
 ### Tabela modelo × arquitetura
 
@@ -287,6 +318,14 @@ As 5 perguntas fora do gabarito (equipe e geradas por IA), fora do gabarito cont
 | `qwen3:4b-instruct` | Sem vazamento | — | — | n/d |
 | `qwen3:4b-instruct` | Sem falha técnica | 100,0% n=5 | 100,0% n=5 | +0,0 p.p. |
 | `qwen3:4b-instruct` | Latência p50 | 20,7 s | 7,7 s | |
+| `claude-haiku-5-5` (API) | Acurácia de rota | n/a (sem provedor) | 100,0% n=5 | n/d |
+| `claude-haiku-5-5` (API) | Acerto de função | n/a (sem provedor) | 100,0% n=1 | n/d |
+| `claude-haiku-5-5` (API) | Exatidão numérica | n/a (sem provedor) | 100,0% n=1 | n/d |
+| `claude-haiku-5-5` (API) | Citação válida | n/a (sem provedor) | 100,0% n=1 | n/d |
+| `claude-haiku-5-5` (API) | Recusa correta | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Sem vazamento | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Sem falha técnica | n/a (sem provedor) | 100,0% n=5 | n/d |
+| `claude-haiku-5-5` (API) | Latência p50 (rede) | n/d | 1,5 s | |
 
 ### Latência por rota esperada (todas as rodadas juntas)
 
@@ -298,6 +337,7 @@ As 5 perguntas fora do gabarito (equipe e geradas por IA), fora do gabarito cont
 | Ceres 2.0 · `qwen3:0.6b` | 2,9 s / 4,0 s | 2,0 s / 3,7 s | — | — | — | 2,3 s / 4,0 s |
 | Ceres 2.0 · `qwen3:1.7b` | 3,8 s / 4,9 s | 3,7 s / 7,4 s | — | — | — | 3,8 s / 7,4 s |
 | Ceres 2.0 · `qwen3:4b-instruct` | 7,7 s / 8,0 s | 7,7 s / 19,9 s | — | — | — | 7,7 s / 19,9 s |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 1,9 s / 2,1 s | 1,4 s / 2,3 s | — | — | — | 1,5 s / 2,3 s |
 
 Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
@@ -309,6 +349,7 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:0.6b`: 5 — ZI01, ZI02, ZE01, ZE02, ZE03
 - Ceres 2.0 · `qwen3:1.7b`: 3 — ZI02, ZE02, ZE03
 - Ceres 2.0 · `qwen3:4b-instruct`: 1 — ZI01
+- Ceres 2.0 · `claude-haiku-5-5` (API): nenhuma
 
 ## (d) Só as geradas por IA (externas)
 
@@ -322,6 +363,7 @@ As 3 perguntas geradas por IA (ChatGPT, a pedido do Murillo), com o texto litera
 | Ceres 2.0 · `qwen3:0.6b` | 66,7% (33,3–100,0) n=3 | — | — | — | — | — | — | — | — | 88,9% (66,7–100,0) n=3 |
 | Ceres 2.0 · `qwen3:1.7b` | 77,8% (66,7–100,0) n=3 | — | — | — | — | — | — | — | — | 100,0% n=3 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 100,0% n=3 | — | — | — | — | — | — | — | — | 100,0% n=3 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 100,0% n=3 | — | — | — | — | — | — | — | — | 100,0% n=3 |
 
 ### Tabela modelo × arquitetura
 
@@ -351,6 +393,14 @@ As 3 perguntas geradas por IA (ChatGPT, a pedido do Murillo), com o texto litera
 | `qwen3:4b-instruct` | Sem vazamento | — | — | n/d |
 | `qwen3:4b-instruct` | Sem falha técnica | 100,0% n=3 | 100,0% n=3 | +0,0 p.p. |
 | `qwen3:4b-instruct` | Latência p50 | 20,7 s | 7,2 s | |
+| `claude-haiku-5-5` (API) | Acurácia de rota | n/a (sem provedor) | 100,0% n=3 | n/d |
+| `claude-haiku-5-5` (API) | Acerto de função | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Exatidão numérica | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Citação válida | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Recusa correta | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Sem vazamento | n/a (sem provedor) | — | n/d |
+| `claude-haiku-5-5` (API) | Sem falha técnica | n/a (sem provedor) | 100,0% n=3 | n/d |
+| `claude-haiku-5-5` (API) | Latência p50 (rede) | n/d | 1,5 s | |
 
 ### Latência por rota esperada (todas as rodadas juntas)
 
@@ -362,6 +412,7 @@ As 3 perguntas geradas por IA (ChatGPT, a pedido do Murillo), com o texto litera
 | Ceres 2.0 · `qwen3:0.6b` | — | 2,0 s / 3,7 s | — | — | — | 2,0 s / 3,7 s |
 | Ceres 2.0 · `qwen3:1.7b` | — | 3,7 s / 7,4 s | — | — | — | 3,7 s / 7,4 s |
 | Ceres 2.0 · `qwen3:4b-instruct` | — | 7,2 s / 19,9 s | — | — | — | 7,2 s / 19,9 s |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | — | 1,5 s / 2,3 s | — | — | — | 1,5 s / 2,3 s |
 
 Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 
@@ -373,6 +424,7 @@ Cada casa é p50 / p95 (nearest-rank, como o comando de avaliação).
 - Ceres 2.0 · `qwen3:0.6b`: 3 — ZE01, ZE02, ZE03
 - Ceres 2.0 · `qwen3:1.7b`: 2 — ZE02, ZE03
 - Ceres 2.0 · `qwen3:4b-instruct`: nenhuma
+- Ceres 2.0 · `claude-haiku-5-5` (API): nenhuma
 
 ## Perguntas geradas por IA: critérios automáticos (#358)
 
@@ -394,6 +446,7 @@ Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima;
 | Ceres 2.0 · `qwen3:0.6b` | 33,3% (0,0–66,7) n=2 | 0,0% n=1 | 100,0% n=1 | 0,0% n=1 |
 | Ceres 2.0 · `qwen3:1.7b` | 77,8% (66,7–100,0) n=3 | 0,0% n=2 | 100,0% n=1 | 0,0% n=1 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 88,9% (66,7–100,0) n=3 | 0,0% n=2 | 100,0% n=1 | 0,0% n=1 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 100,0% n=3 | 0,0% n=2 | 100,0% n=1 | 0,0% n=1 |
 
 ### ZE02 (pergunta 2 do Murillo)
 
@@ -421,6 +474,9 @@ Os 5 critérios do Murillo: **automáticos** aqui (rota está nas tabelas acima;
 | Ceres 2.0 · `qwen3:4b-instruct` | 1 | `RESPONDIDA` | **errou** | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 | Ceres 2.0 · `qwen3:4b-instruct` | 2 | `RESPONDIDA` | **errou** | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 | Ceres 2.0 · `qwen3:4b-instruct` | 3 | `RESPONDIDA` | **errou** | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 1 | `RESPONDIDA` | **errou** | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 2 | `RESPONDIDA` | **errou** | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 3 | `RESPONDIDA` | **errou** | não | [FICTÍCIO] Resposta inventada para o exemplo do relatório. |
 
 ## Respostas cortadas pelo teto de tokens (`RESPOSTA_CORTADA`)
 
@@ -434,6 +490,7 @@ Desfecho da Sessão 7 (#270): `done_reason=length` ou `eval_count ≥ teto`. É 
 | Ceres 2.0 · `qwen3:0.6b` | 0/93 · 0/93 · 0/93 | 0 | 0 | 0 | 0/279 (0,0%) |
 | Ceres 2.0 · `qwen3:1.7b` | 0/93 · 0/93 · 0/93 | 0 | 0 | 0 | 0/279 (0,0%) |
 | Ceres 2.0 · `qwen3:4b-instruct` | 0/93 · 0/93 · 0/93 | 0 | 0 | 0 | 0/279 (0,0%) |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 0/93 · 0/93 · 0/93 | 0 | 0 | 0 | 0/279 (0,0%) |
 
 ### Recusa limpa
 
@@ -447,21 +504,23 @@ Nas perguntas que devem ser recusadas, o acerto com e **sem** as recusas que vie
 | Ceres 2.0 · `qwen3:0.6b` | 69,0% | 69,0% | 0 |
 | Ceres 2.0 · `qwen3:1.7b` | 78,6% | 78,6% | 0 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 90,5% | 90,5% | 0 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 92,9% | 92,9% | 0 |
 
 Todas as rodadas juntas (respostas = perguntas × rodadas).
 
 ## Com e sem as perguntas parecidas com o treino
 
-D01, D12, D15, T05 têm Jaccard ≥ 0,5 com exemplos que o modelo vê (treino do classificador, prompt ou descrições `@Tool`; `similaridade-treino.md`). Se o acerto cai sem elas, parte do resultado é memória do exemplo, não compreensão.
+D01, D04, D12, D15, L01, L03, L08, P01, P04, R01, T05, T11, X17 têm Jaccard ≥ 0,5 com exemplos que o modelo vê (treino do classificador, prompt ou descrições `@Tool`; `similaridade-treino.md`). Se o acerto cai sem elas, parte do resultado é memória do exemplo, não compreensão.
 
 | Célula | Capacidade comum | Sem as parecidas | Diferença |
 |---|---|---|---|
-| Ceres 1 · `qwen3:0.6b` | 18,2% (16,0–20,0) n=75 | 18,1% (15,3–19,4) n=72 | -0,2 p.p. |
-| Ceres 1 · `qwen3:1.7b` | 34,2% (28,0–38,7) n=75 | 33,8% (27,8–37,5) n=72 | -0,4 p.p. |
-| Ceres 1 · `qwen3:4b-instruct` | 64,0% (62,7–65,3) n=75 | 63,9% (62,5–65,3) n=72 | -0,1 p.p. |
-| Ceres 2.0 · `qwen3:0.6b` | 52,0% (46,7–62,7) n=75 | 51,9% (45,8–62,5) n=72 | -0,1 p.p. |
-| Ceres 2.0 · `qwen3:1.7b` | 68,4% (61,3–76,0) n=75 | 68,1% (61,1–75,0) n=72 | -0,4 p.p. |
-| Ceres 2.0 · `qwen3:4b-instruct` | 83,6% (81,3–85,3) n=75 | 84,3% (81,9–86,1) n=72 | +0,7 p.p. |
+| Ceres 1 · `qwen3:0.6b` | 18,2% (16,0–20,0) n=75 | 18,9% (14,9–20,9) n=67 | +0,7 p.p. |
+| Ceres 1 · `qwen3:1.7b` | 34,2% (28,0–38,7) n=75 | 33,3% (28,4–35,8) n=67 | -0,9 p.p. |
+| Ceres 1 · `qwen3:4b-instruct` | 64,0% (62,7–65,3) n=75 | 63,7% (62,7–64,2) n=67 | -0,3 p.p. |
+| Ceres 2.0 · `qwen3:0.6b` | 52,0% (46,7–62,7) n=75 | 52,7% (44,8–64,2) n=67 | +0,7 p.p. |
+| Ceres 2.0 · `qwen3:1.7b` | 68,4% (61,3–76,0) n=75 | 67,7% (62,7–74,6) n=67 | -0,8 p.p. |
+| Ceres 2.0 · `qwen3:4b-instruct` | 83,6% (81,3–85,3) n=75 | 84,6% (80,6–86,6) n=67 | +1,0 p.p. |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 86,2% (82,7–89,3) n=75 | 85,6% (82,1–88,1) n=67 | -0,7 p.p. |
 
 ## Clareza automática (gabarito inteiro)
 
@@ -475,6 +534,7 @@ Da `ClarezaTexto` do próprio comando, só nas respostas redigidas. Na Ceres 2.0
 | Ceres 2.0 · `qwen3:0.6b` | 16,6 | 11,7% | 60 |
 | Ceres 2.0 · `qwen3:1.7b` | 15,4 | 6,7% | 60 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 14,8 | 3,3% | 60 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 14,5 | 1,7% | 60 |
 
 ## Respostas possivelmente cortadas (teto de tokens)
 
@@ -488,6 +548,7 @@ Respostas redigidas que terminam no meio da frase. É heurística (o JSON não t
 | Ceres 2.0 · `qwen3:0.6b` | 3 (1%) | 237 |
 | Ceres 2.0 · `qwen3:1.7b` | 0 (0%) | 240 |
 | Ceres 2.0 · `qwen3:4b-instruct` | 0 (0%) | 235 |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 2 (1%) | 237 |
 
 ## Quem decidiu a rota (Ceres 2.0, #265)
 
@@ -496,6 +557,7 @@ Respostas redigidas que terminam no meio da frase. É heurística (o JSON não t
 | Ceres 2.0 · `qwen3:0.6b` | 0% | 0% | 41% | 40% | 19% |
 | Ceres 2.0 · `qwen3:1.7b` | 0% | 0% | 41% | 41% | 19% |
 | Ceres 2.0 · `qwen3:4b-instruct` | 0% | 0% | 41% | 45% | 14% |
+| Ceres 2.0 · `claude-haiku-5-5` (API) | 0% | 0% | 39% | 41% | 20% |
 
 Na Ceres 1 a rota é sempre do modelo (o JSON do `2463c27` não tem a camada).
 
@@ -558,7 +620,7 @@ Heurísticas do README sobre os vereditos da régua; o texto é a resposta entre
 
 ## Latência na VPS (produção)
 
-A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na configuração de produção (`qwen3:4b-instruct` + Ceres 2.0), na VPS de produção (CPU ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.
+A preencher pelo time com o harness da API (`docs/avaliacao/harness-api/`), só na configuração de produção (o modelo do `.env` da VPS, hoje o `claude-haiku-5-5` pela API se a troca já foi feita, e a Ceres 2.0), na VPS de produção (CPU ARM, sem GPU). **Não misture com a latência local acima**: a tese é rodar sem GPU.
 
 | Rota | p50 | p95 | Amostras | Data e SHA |
 |---|---|---|---|---|
@@ -580,6 +642,8 @@ Montada pelo gerador a partir dos números acima (capacidade comum), com os crit
 **Ceres 2.0.**
 - `qwen3:0.6b`: não viável — vazou em alguma rodada (sem vazamento mínimo 83,3%); acurácia de rota 77,6% contra 92,9–97,1% do `qwen3:4b-instruct` (piso 91,4%); exatidão numérica 78,7% contra 88,0–92,0% do `qwen3:4b-instruct` (piso 84,0%); citação válida 71,7% contra 90,9–97,0% do `qwen3:4b-instruct` (piso 87,9%); recusa limpa 69,0% contra 85,7–92,9% do `qwen3:4b-instruct` (piso 78,6%).
 - `qwen3:1.7b`: não viável — acurácia de rota 83,8% contra 92,9–97,1% do `qwen3:4b-instruct` (piso 91,4%).
+
+**Modelo por API, Ceres 2.0 · `claude-haiku-5-5` (API)** (capacidade comum, entre parênteses a diferença para o `qwen3:4b-instruct` local): acurácia de rota 93,8% (-1,0 p.p.), exatidão numérica 97,3% (+6,7 p.p.), citação válida 92,9% (-2,0 p.p.), recusa limpa 92,9% (+2,4 p.p.); latência p50 1,4 s contra 6,9 s do local nesta máquina. **A latência da API é de rede e de fila do provedor, não de inferência local**: não mede o mesmo que a dos qwen3 e não é a da VPS. Não entra nos critérios de viabilidade dos modelos locais menores.
 
 **Efeito da arquitetura no `qwen3:4b-instruct`** (Ceres 2.0 menos Ceres 1): acurácia de rota +9,0 p.p., exatidão numérica +5,3 p.p., citação válida +17,2 p.p., recusa limpa +11,9 p.p.; latência p50 19,7 s → 6,9 s.
 
