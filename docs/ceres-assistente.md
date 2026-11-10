@@ -53,7 +53,9 @@ na primeira pergunta). A chave vem só de variável de ambiente.
   `AssistenteIndisponivelException`. O cliente recebe mensagem genérica; o log registra só o tipo
   da falha (a mensagem de erro de um provedor por API pode ecoar a requisição).
 - **Timeout e retry:** `AI_CONNECT_TIMEOUT` (5 s), `AI_READ_TIMEOUT` (120 s — modelo local em CPU é
-  lento), `AI_RETRY_MAX_ATTEMPTS` (2, sem retry em erro 4xx).
+  lento), `AI_RETRY_MAX_ATTEMPTS` (2, sem retry em erro 4xx). A exceção é o HTTP 429 (limite de
+  taxa do provedor por API): ele é re-tentado (`spring.ai.retry.on-http-codes`) e, esgotadas as
+  tentativas, não abre o disjuntor do modo fallback, porque a falha é só daquela pergunta.
 - **Prompt e resposta nunca vão para log** (`spring.ai.chat.observations.log-*: false`).
 - **Ollama só em loopback** (`127.0.0.1:11434`): ele não tem autenticação.
 - **Health com cliente próprio** (timeout de 2 s, cache de 10 s): o `/actuator/health` é público e
@@ -217,7 +219,8 @@ Com o modelo fora, a Ceres responde **sem gerar texto**, parte por parte (`Orque
 
 - **Disjuntor** (`DisponibilidadeModelo`): toda chamada ao modelo informa o desfecho. Depois de
   uma falha, as perguntas pulam o modelo por `app.assistente.fallback.pausa-apos-falha` (30 s); a
-  primeira depois da pausa tenta de novo. Falha de thread interrompida não abre o disjuntor. O
+  primeira depois da pausa tenta de novo. Falha de thread interrompida não abre o disjuntor, nem
+  recusa 4xx do provedor à pergunta, nem o 429 de limite de taxa que esgotou as tentativas. O
   health do Ollama não decide: ele mistura chat e embedding.
 - **Intenção:** o classificador do modelo; sem ele, palavras-chave (`ModoFallback.classificar`).
 - **Legislação:** `BuscaTextualLegislacaoService` — OU dos lexemas da pergunta, cada um citado com

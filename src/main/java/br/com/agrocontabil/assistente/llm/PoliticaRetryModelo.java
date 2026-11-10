@@ -23,11 +23,20 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
  *
  * <p>Re-tenta:
  * <ul>
- *   <li>{@link TransientAiException}: o provedor respondeu com erro transitório (429, 5xx);</li>
+ *   <li>{@link TransientAiException}: o provedor respondeu com erro transitório. É o 5xx e, por
+ *       {@code spring.ai.retry.on-http-codes}, o 429 (limite de taxa), que chega como
+ *       {@link LimiteTaxaProvedorException}. Sem essa propriedade o 429 seria um 4xx como os
+ *       outros, porque {@code on-client-errors} é {@code false};</li>
  *   <li>falha de I/O em que a requisição comprovadamente <strong>não saiu</strong>: conexão
  *       recusada, host desconhecido, sem rota, connect-timeout.</li>
  * </ul>
- * Não re-tenta read-timeout, erro permanente do provedor (4xx) nem qualquer outra falha.
+ * Não re-tenta read-timeout, erro permanente do provedor (os demais 4xx: chave inválida,
+ * requisição malformada) nem qualquer outra falha.
+ *
+ * <p>O 429 usa o mesmo backoff das outras falhas ({@code spring.ai.retry.backoff.*}), sem ler o
+ * {@code Retry-After}: com o padrão de duas tentativas, é uma nova tentativa depois de um segundo.
+ * Cobre o pico curto; limite por minuto já estourado segue para o modo fallback, sem abrir o
+ * disjuntor ({@link ModeloLinguagem}).
  */
 public class PoliticaRetryModelo extends SimpleRetryPolicy {
 

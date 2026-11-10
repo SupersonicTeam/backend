@@ -165,6 +165,45 @@ class ModeloLinguagemTest {
   }
 
   @Test
+  @DisplayName("429 que esgotou as tentativas vira 503 e nao abre o disjuntor; 5xx segue abrindo")
+  void limiteDeTaxaNaoAbreDisjuntor() {
+    // O limite de taxa e desta chamada: o provedor esta no ar. Abrir o disjuntor mandaria todos
+    // os produtores ao fallback pela pausa inteira.
+    chatModel.falharCom(new LimiteTaxaProvedorException("HTTP 429 - rate_limit_exceeded sk-abc"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class)
+        .satisfies(e -> assertThat(e.getMessage()).doesNotContain("sk-abc", "HTTP"));
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    // Embrulhado por quem chamou o provedor, continua sendo limite de taxa.
+    chatModel.falharCom(new IllegalStateException("falha na chamada",
+        new LimiteTaxaProvedorException("HTTP 429 - rate_limit_exceeded")));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    // 5xx e queda do provedor: abre, como antes.
+    chatModel.falharCom(new TransientAiException("HTTP 503 - overloaded"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isFalse();
+  }
+
+  @Test
+  @DisplayName("Falha de conexao segue abrindo o disjuntor, mesmo depois de um 429")
+  void conexaoSegueAbrindoDepoisDeLimiteDeTaxa() {
+    chatModel.falharCom(new LimiteTaxaProvedorException("HTTP 429 - rate_limit_exceeded"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isTrue();
+
+    chatModel.falharCom(new ResourceAccessException("Connection refused"));
+    assertThatThrownBy(() -> modelo.chamar(new Prompt("pergunta")))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(disponibilidade.disponivel()).isFalse();
+  }
+
+  @Test
   @DisplayName("#146: thread interrompida (pergunta cancelada) nao abre o disjuntor dos outros")
   void interrupcaoNaoAbreDisjuntor() {
     chatModel.falharCom(new ResourceAccessException("I/O interrompido"));

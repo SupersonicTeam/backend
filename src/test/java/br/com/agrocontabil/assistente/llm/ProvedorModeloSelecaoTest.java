@@ -8,6 +8,7 @@ import br.com.agrocontabil.config.AssistenteConfig;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +31,8 @@ import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.ollama.api.ThinkOption;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.retry.NonTransientAiException;
+import org.springframework.ai.retry.TransientAiException;
 import org.springframework.ai.retry.autoconfigure.SpringAiRetryAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
@@ -40,8 +43,11 @@ import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.http.client.MockClientHttpResponse;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.ResponseErrorHandler;
 
 /**
  * Trava a DoD "trocar para um provedor por API sem alterar código" (issue #141) contra o
@@ -130,6 +136,64 @@ class ProvedorModeloSelecaoTest {
           // A falha tem de ser a chave ausente, nao qualquer outra quebra de contexto.
           assertThat(ctx.getStartupFailure()).rootCause().hasMessageContaining("API key");
         });
+  }
+
+  @Test
+  @DisplayName("application.yml: 429 do provedor e transitorio com tipo proprio; 400 e 401 nao")
+  void classificacaoDosErrosHttpPeloApplicationYml() {
+    contexto.run(ctx -> {
+      assertThat(ctx).hasNotFailed();
+      // Um tratador so: o do projeto, com o do Spring AI por baixo.
+      assertThat(ctx).hasSingleBean(ResponseErrorHandler.class);
+      ResponseErrorHandler tratador = ctx.getBean(ResponseErrorHandler.class);
+
+      assertThat(tratador.hasError(resposta(HttpStatus.OK))).isFalse();
+      assertThat(tratador.hasError(resposta(HttpStatus.TOO_MANY_REQUESTS))).isTrue();
+      assertThatThrownBy(() -> tratador.handleError(resposta(HttpStatus.TOO_MANY_REQUESTS)))
+          .isInstanceOf(LimiteTaxaProvedorException.class);
+      for (HttpStatus permanente : List.of(HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED)) {
+        assertThatThrownBy(() -> tratador.handleError(resposta(permanente)))
+            .isInstanceOf(NonTransientAiException.class);
+      }
+      for (HttpStatus queda : List.of(
+          HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.SERVICE_UNAVAILABLE)) {
+        assertThatThrownBy(() -> tratador.handleError(resposta(queda)))
+            .isInstanceOf(TransientAiException.class)
+            .isNotInstanceOf(LimiteTaxaProvedorException.class);
+      }
+
+      // Ponta a ponta com o RetryTemplate do contexto: o 429 e repetido ate max-attempts (2 no
+      // application.yml), o 401 nao.
+      RetryTemplate retry = ctx.getBean(RetryTemplate.class);
+      assertThat(tentativas(retry, tratador, HttpStatus.TOO_MANY_REQUESTS)).isEqualTo(2);
+      assertThat(tentativas(retry, tratador, HttpStatus.UNAUTHORIZED)).isEqualTo(1);
+    });
+  }
+
+  @Test
+  @DisplayName("Sem on-http-codes, o 429 e um 4xx como os outros: nem repetido nem tipo proprio")
+  void semAPropriedadeO429NaoETransitorio() {
+    contexto
+        .withPropertyValues("spring.ai.retry.on-http-codes=")
+        .run(ctx -> assertThatThrownBy(() -> ctx.getBean(ResponseErrorHandler.class)
+            .handleError(resposta(HttpStatus.TOO_MANY_REQUESTS)))
+            .isInstanceOf(NonTransientAiException.class));
+  }
+
+  private static int tentativas(
+      RetryTemplate retry, ResponseErrorHandler tratador, HttpStatus status) {
+    AtomicInteger tentativas = new AtomicInteger();
+    assertThatThrownBy(() -> retry.execute(c -> {
+      tentativas.incrementAndGet();
+      tratador.handleError(resposta(status));
+      return null;
+    })).isInstanceOf(RuntimeException.class);
+    return tentativas.get();
+  }
+
+  private static MockClientHttpResponse resposta(HttpStatus status) {
+    return new MockClientHttpResponse(
+        "{\"error\":\"corpo do provedor\"}".getBytes(StandardCharsets.UTF_8), status);
   }
 
   private static PropertySource<?> applicationYml() {

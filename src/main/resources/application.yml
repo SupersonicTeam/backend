@@ -181,10 +181,13 @@ spring:
           temperature: 0.2
           max-tokens: ${AI_MAX_TOKENS:1024}
     # Retry curto: a pergunta do usuario esta esperando. Erro 4xx (chave invalida, requisicao
-    # malformada) nao melhora repetindo.
+    # malformada) nao melhora repetindo. A excecao e o 429 (limite de taxa do provedor por API),
+    # que e transitorio: on-http-codes vale antes de on-client-errors. Esgotadas as tentativas, o
+    # 429 nao abre o disjuntor do modo fallback (ModeloLinguagem.abreDisjuntor).
     retry:
       max-attempts: ${AI_RETRY_MAX_ATTEMPTS:2}
       on-client-errors: false
+      on-http-codes: 429
       backoff:
         initial-interval: 1s
         multiplier: 2
