@@ -12,11 +12,17 @@ import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.ServerSetupTest;
+import jakarta.mail.BodyPart;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -114,7 +120,7 @@ class EmailSmtpIntegrationTest {
   }
 
   @Test
-  @DisplayName("redefinicao: acento em UTF-8, From com nome, Reply-To e o token so no fragmento")
+  @DisplayName("redefinicao: texto e HTML em UTF-8, From com nome, Reply-To e o token no fragmento")
   void redefinicaoDeSenha() throws Exception {
     esqueci(EMAIL_PRODUTOR);
 
@@ -126,14 +132,22 @@ class EmailSmtpIntegrationTest {
     assertThat(remetente.getAddress()).isEqualTo("nao-responda@agroconia.com.br");
     assertThat(mensagem.getReplyTo()).extracting(Object::toString)
         .containsExactly("contato@gwnext.com.br");
-    assertThat(mensagem.getSubject()).isEqualTo("Redefinição de senha do AgroConIA");
-    assertThat(mensagem.getContentType()).containsIgnoringCase("charset=UTF-8");
-    String texto = texto(mensagem);
-    assertThat(texto)
-        .contains("em até 30 minutos")
-        .contains("Se você não pediu")
-        .containsPattern("https://www\\.agroconia\\.com\\.br/redefinir-senha#token=[\\w-]{40,}")
+    assertThat(mensagem.getSubject()).isEqualTo("Link para criar uma nova senha no AgroConIA");
+    assertThat(mensagem.getHeader("Auto-Submitted")).containsExactly("auto-generated");
+    String link = "https://www\\.agroconia\\.com\\.br/redefinir-senha#token=[\\w-]{40,}";
+    assertThat(texto(mensagem))
+        .contains("O link vale por 30 minutos e só uma vez.")
+        .contains("Se não foi você que pediu, ignore este e-mail: a sua senha não muda.")
+        .contains("O AgroConIA nunca pede a sua senha por e-mail, telefone ou mensagem.")
+        .containsPattern("Criar nova senha:\n" + link)
         .doesNotContain("?token");
+    String html = html(mensagem);
+    assertThat(html)
+        .containsPattern("<a href=\"" + link + "\" target=\"_blank\"")
+        .contains(">Criar nova senha</a>")
+        .contains("Este é um e-mail automático.")
+        .contains("AgroConIA, da GWNext Technologies LTDA");
+    semRastreamento(html);
   }
 
   @Test
@@ -151,12 +165,18 @@ class EmailSmtpIntegrationTest {
     MimeMessage mensagem = unicaRecebida();
     assertThat(mensagem.getSubject())
         .isEqualTo("Convite de escritório de contabilidade no AgroConIA");
-    String texto = texto(mensagem);
-    assertThat(texto)
-        .contains("O escritório de contabilidade \"Contabilidade São João\" convidou você")
-        .contains("\nhttps://www.agroconia.com.br/escritorio\n")
-        .contains("em até 14 dias")
+    String prazo = prazo("SELECT expira_em FROM convite_carteira");
+    assertThat(texto(mensagem))
+        .contains("O escritório Contabilidade São João convidou você para a carteira")
+        .contains("Ver convite:\nhttps://www.agroconia.com.br/escritorio\n")
+        .contains("O convite vale até " + prazo + " (horário de Brasília).")
         .doesNotContain("golpe");
+    String html = html(mensagem);
+    assertThat(html)
+        .contains("<strong>Contabilidade São João</strong>")
+        .contains("<a href=\"https://www.agroconia.com.br/escritorio\" target=\"_blank\"")
+        .doesNotContain("golpe");
+    semRastreamento(html);
   }
 
   @Test
@@ -171,10 +191,15 @@ class EmailSmtpIntegrationTest {
     MimeMessage mensagem = unicaRecebida();
     assertThat(mensagem.getSubject())
         .isEqualTo("Convite para a equipe de um escritório no AgroConIA");
+    String link = "https://www\\.agroconia\\.com\\.br/equipe/convite#token=[\\w-]{40,}";
+    String prazo = prazo("SELECT expira_em FROM convite_membro");
     assertThat(texto(mensagem))
-        .contains("equipe do escritório \"Maria Contadora\"")
-        .containsPattern("https://www\\.agroconia\\.com\\.br/equipe/convite#token=[\\w-]{40,}")
-        .contains("em até 7 dias");
+        .contains("O escritório Maria Contadora convidou você para a equipe dele no AgroConIA.")
+        .containsPattern("Entrar na equipe:\n" + link)
+        .contains("O convite vale até " + prazo + " (horário de Brasília) e só uma vez.");
+    String html = html(mensagem);
+    assertThat(html).containsPattern("<a href=\"" + link + "\" target=\"_blank\"");
+    semRastreamento(html);
   }
 
   @Test
@@ -231,9 +256,54 @@ class EmailSmtpIntegrationTest {
         .content("{\"email\":\"%s\"}".formatted(email))).andReturn().getResponse().getStatus();
   }
 
-  /** Corpo decodificado, com as quebras de linha do SMTP ({@code \r\n}) como {@code \n}. */
+  /**
+   * Parte {@code text/plain} decodificada, com as quebras de linha do SMTP ({@code \r\n}) como
+   * {@code \n}. Confere antes o envelope: {@code multipart/alternative} com o texto e o HTML, as
+   * duas em UTF-8.
+   */
   private static String texto(MimeMessage mensagem) throws Exception {
-    return ((String) mensagem.getContent()).replace("\r\n", "\n");
+    return parte(mensagem, 0, "text/plain");
+  }
+
+  /** Parte {@code text/html} decodificada. */
+  private static String html(MimeMessage mensagem) throws Exception {
+    return parte(mensagem, 1, "text/html");
+  }
+
+  private static String parte(MimeMessage mensagem, int indice, String tipo) throws Exception {
+    assertThat(mensagem.getContentType()).startsWith("multipart/alternative");
+    MimeMultipart partes = (MimeMultipart) mensagem.getContent();
+    assertThat(partes.getCount()).isEqualTo(2);
+    BodyPart parte = partes.getBodyPart(indice);
+    assertThat(parte.getContentType()).startsWith(tipo).containsIgnoringCase("charset=UTF-8");
+    return ((String) parte.getContent()).replace("\r\n", "\n");
+  }
+
+  /**
+   * Sem rastreamento: uma imagem só (o símbolo, no site), e todo link vai ao site ou ao
+   * {@code mailto:} do contato, sem parâmetro de campanha.
+   */
+  private static void semRastreamento(String html) {
+    assertThat(Pattern.compile("<img ").matcher(html).results().count()).isEqualTo(1);
+    assertThat(html).contains("<img src=\"https://www.agroconia.com.br/apple-touch-icon.png\"");
+    Matcher links = Pattern.compile("href=\"([^\"]*)\"").matcher(html);
+    int quantidade = 0;
+    while (links.find()) {
+      quantidade++;
+      String link = links.group(1);
+      assertThat(link.startsWith("https://www.agroconia.com.br/")
+          || link.equals("mailto:contato@gwnext.com.br")).as(link).isTrue();
+      assertThat(link).doesNotContain("utm_");
+    }
+    assertThat(quantidade).isGreaterThanOrEqualTo(4);
+    assertThat(html).doesNotContainIgnoringCase("<script").doesNotContainIgnoringCase("<link ");
+  }
+
+  /** Data e hora de vencimento do convite gravado, como o e-mail as escreve (Brasília). */
+  private String prazo(String consulta) {
+    OffsetDateTime expiraEm = jdbcTemplate.queryForObject(consulta, OffsetDateTime.class);
+    return DateTimeFormatter.ofPattern("dd/MM/yyyy', às 'HH'h'mm")
+        .format(expiraEm.atZoneSameInstant(ZoneId.of("America/Sao_Paulo")));
   }
 
   private MimeMessage unicaRecebida() {

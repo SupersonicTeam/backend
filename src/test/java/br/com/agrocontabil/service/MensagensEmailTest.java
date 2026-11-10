@@ -96,6 +96,22 @@ class MensagensEmailTest {
   }
 
   @Test
+  @DisplayName("origem do site sai do proprio link: logo e politica de dados no mesmo host")
+  void origemDoLink() {
+    assertThat(ModeloEmail.origem("https://www.agroconia.com.br/redefinir-senha#token=x"))
+        .isEqualTo("https://www.agroconia.com.br");
+    assertThat(ModeloEmail.origem("http://localhost:4200/equipe/convite#token=x"))
+        .isEqualTo("http://localhost:4200");
+    assertThat(ModeloEmail.origem("https://www.agroconia.com.br?a=1"))
+        .isEqualTo("https://www.agroconia.com.br");
+    assertThat(ModeloEmail.origem("https://www.agroconia.com.br"))
+        .isEqualTo("https://www.agroconia.com.br");
+    assertThat(MensagensEmail.conviteCarteira("X", "http://localhost:4200/escritorio", VENCE,
+        CONTATO).html()).contains("src=\"http://localhost:4200/apple-touch-icon.png\"")
+        .contains("href=\"http://localhost:4200/politica-dados\"");
+  }
+
+  @Test
   @DisplayName("data e hora em Brasilia, inclusive perto da meia-noite UTC")
   void dataEmBrasilia() {
     assertThat(MensagensEmail.dataHora(OffsetDateTime.parse("2026-11-25T02:59:00Z")))
