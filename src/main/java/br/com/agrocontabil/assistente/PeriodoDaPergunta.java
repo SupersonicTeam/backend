@@ -218,18 +218,30 @@ public final class PeriodoDaPergunta {
    *                                 dia dele (zero no último dia), o teto da janela de
    *                                 {@code proximosVencimentos} (#452, rodada 2); {@code -1} nos
    *                                 demais
+   * @param aberto                   o período veio do {@link PeriodoAberto} (aberto, contado de
+   *                                 uma âncora, ou safra): a pergunta tem uma referência de tempo
+   *                                 só, então nunca é comparação entre períodos. O modelo não vê
+   *                                 a linha do período ({@link #paraOModelo()}), como antes do
+   *                                 #449: com uma janela longa à vista, ele pedia uma chamada por
+   *                                 mês e a escolha passava do tempo (#452, rodada 3). As datas
+   *                                 continuam sendo as do backend ({@code RotaDados.comPeriodo})
    */
   public record Periodo(LocalDate inicio, LocalDate fim, YearMonth mes, LocalDate fimDosDados,
-      boolean vencimentosDoMesFuturo, int diasAteOFimDoMes) {
+      boolean vencimentosDoMesFuturo, int diasAteOFimDoMes, boolean aberto) {
 
     Periodo(LocalDate inicio, LocalDate fim, YearMonth mes) {
-      this(inicio, fim, mes, fim, false, -1);
+      this(inicio, fim, mes, fim, false, -1, false);
     }
 
     /** Linha para o modelo, antes da pergunta: as datas já calculadas. */
     public String paraOModelo() {
       return "Periodo da pergunta, ja calculado: de " + inicio + " a " + fim
           + (mes == null ? "" : " (mes " + mes + ")") + ".";
+    }
+
+    /** O período que o modelo vê: nenhum, no período aberto ({@link #aberto()}). */
+    public Optional<Periodo> visivelAoModelo() {
+      return aberto ? Optional.empty() : Optional.of(this);
     }
   }
 
@@ -248,12 +260,12 @@ public final class PeriodoDaPergunta {
     }
     // Rodada 2 da #452: safra numerada e periodo aberto ou contado de um ponto tem leitura propria.
     if (PeriodoAberto.temSafraNumerada(texto)) {
-      return PeriodoAberto.safra(texto, hoje).map(p -> completo(p, hoje, texto));
+      return PeriodoAberto.safra(texto, hoje).map(p -> completo(p, hoje, texto, true));
     }
     if (ABERTO.matcher(texto).find()) {
       return PeriodoAberto.resolver(texto, hoje)
           .filter(p -> !SEGUNDO_PERIODO.matcher(semExpressoesRelativas(texto)).find())
-          .map(p -> completo(p, hoje, texto));
+          .map(p -> completo(p, hoje, texto, true));
     }
     if (DATA_EXPLICITA.matcher(texto).find()) {
       return Optional.empty();
@@ -275,7 +287,7 @@ public final class PeriodoDaPergunta {
     if (achados.size() != 1 || SEGUNDO_PERIODO.matcher(new String(semAsLidas)).find()) {
       return Optional.empty();
     }
-    return Optional.of(completo(achados.iterator().next(), hoje, texto));
+    return Optional.of(completo(achados.iterator().next(), hoje, texto, false));
   }
 
   /**
@@ -333,15 +345,18 @@ public final class PeriodoDaPergunta {
     return n;
   }
 
-  /** O período com o que depende de hoje e do texto: fim dos dados, mês futuro e mês corrente. */
-  private static Periodo completo(Periodo periodo, LocalDate hoje, String texto) {
+  /**
+   * O período com o que depende de hoje e do texto: fim dos dados, mês futuro, mês corrente e se
+   * veio do {@link PeriodoAberto}.
+   */
+  private static Periodo completo(Periodo periodo, LocalDate hoje, String texto, boolean aberto) {
     boolean mesFuturo = periodo.mes() != null && periodo.mes().isAfter(YearMonth.from(hoje));
     boolean emCurso = !periodo.inicio().isAfter(hoje) && periodo.fim().isAfter(hoje);
     int diasAteOFimDoMes = YearMonth.from(hoje).equals(periodo.mes())
         ? (int) ChronoUnit.DAYS.between(hoje, periodo.mes().atEndOfMonth()) : -1;
     return new Periodo(periodo.inicio(), periodo.fim(), periodo.mes(),
         emCurso ? hoje : periodo.fim(),
-        mesFuturo && !GUIAS_A_PARTIR_DE_HOJE.matcher(texto).find(), diasAteOFimDoMes);
+        mesFuturo && !GUIAS_A_PARTIR_DE_HOJE.matcher(texto).find(), diasAteOFimDoMes, aberto);
   }
 
   /**

@@ -165,4 +165,54 @@ class RotaDadosPeriodoTest {
         "{\"mes\":\"2026-08\"}", "{\"mes\":\"2026-09\"}", "{\"mes\":\"2026-10\"}");
     assertThat(RotaDados.apuracaoSemFuncao("Quanto vendi de soja?", HOJE)).isEmpty();
   }
+
+  @Test
+  @DisplayName("período aberto fatiado pelo modelo vira uma chamada com o período inteiro (#452)")
+  void periodoAbertoFatiadoViraUmaChamada() {
+    Periodo aberto = periodo("Quanto saiu de Funrural de maio pra trás?");
+    assertThat(aberto.aberto()).isTrue();
+    assertThat(aberto.visivelAoModelo()).isEmpty();
+
+    List<ToolCall> resultado = chamadasDe(RotaDados.comPeriodo(chamadas(
+        new ToolCall("f1", "function", "consultarRetencoes",
+            "{\"dataInicio\":\"2026-03-01\",\"dataFim\":\"2026-03-31\"}"),
+        new ToolCall("f2", "function", "consultarRetencoes",
+            "{\"dataInicio\":\"2026-04-01\",\"dataFim\":\"2026-04-30\"}"),
+        new ToolCall("g1", "function", "listarAlertas", "{}"),
+        new ToolCall("f3", "function", "consultarRetencoes",
+            "{\"dataInicio\":\"2026-05-01\",\"dataFim\":\"2026-05-31\"}")), aberto));
+
+    assertThat(resultado).extracting(ToolCall::id).containsExactly("f1", "g1");
+    assertThat(resultado.get(0).arguments())
+        .isEqualTo("{\"dataInicio\":\"2024-06-01\",\"dataFim\":\"2026-05-31\"}");
+  }
+
+  @Test
+  @DisplayName("período aberto com produtos diferentes na mesma função: as chamadas ficam (#452)")
+  void periodoAbertoComProdutosDiferentesFica() {
+    Periodo aberto = periodo("Vendas desde o mês passado");
+    ChatResponse original = chamadas(
+        new ToolCall("p1", "function", "totalVendasPorProduto",
+            "{\"descricaoOuNcm\":\"soja\",\"dataInicio\":\"2026-10-01\"}"),
+        new ToolCall("p2", "function", "totalVendasPorProduto",
+            "{\"descricaoOuNcm\":\"milho\",\"dataInicio\":\"2026-10-01\"}"));
+
+    assertThat(RotaDados.comPeriodo(original, aberto)).isSameAs(original);
+  }
+
+  @Test
+  @DisplayName("comparação de período fechado segue com as janelas do modelo (#452)")
+  void comparacaoFechadaFica() {
+    Periodo fechado = periodo("Vendas do mês passado contra a média do ano");
+    assertThat(fechado.aberto()).isFalse();
+    ChatResponse original = chamadas(
+        new ToolCall("c1", "function", "totalVendasPorProduto",
+            "{\"descricaoOuNcm\":\"aveia\",\"dataInicio\":\"2026-10-01\","
+                + "\"dataFim\":\"2026-10-31\"}"),
+        new ToolCall("c2", "function", "totalVendasPorProduto",
+            "{\"descricaoOuNcm\":\"aveia\",\"dataInicio\":\"2026-01-01\","
+                + "\"dataFim\":\"2026-10-31\"}"));
+
+    assertThat(RotaDados.comPeriodo(original, fechado)).isSameAs(original);
+  }
 }

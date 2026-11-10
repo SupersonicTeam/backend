@@ -399,4 +399,26 @@ class PeriodoDaPerguntaTest {
     assertThat(PeriodoDaPergunta.resolver(pergunta, HOJE)).map(Periodo::mes)
         .contains(YearMonth.of(2027, 1));
   }
+
+  @ParameterizedTest(name = "[{index}] {0} -> aberto {1}")
+  @CsvSource(delimiter = '|', value = {
+      "Retenções de janeiro pra trás|true",
+      "Compras desde o ano passado|true",
+      "Vendas da safra 25/26|true",
+      "Vendas do mês passado|false",
+      "Notas do último trimestre|false"})
+  @DisplayName("período aberto não vai ao modelo; o fechado vai (#452, rodada 3)")
+  void abertoNaoVaiAoModelo(String pergunta, boolean aberto) {
+    Periodo p = PeriodoDaPergunta.resolver(pergunta, HOJE).orElseThrow();
+
+    assertThat(p.aberto()).isEqualTo(aberto);
+    assertThat(p.visivelAoModelo().isPresent()).isEqualTo(!aberto);
+  }
+
+  @Test
+  @DisplayName("comparação entre dois meses não vira período: as datas ficam com o modelo")
+  void comparacaoEntreMesesNaoResolve() {
+    assertThat(PeriodoDaPergunta.resolver("Vendas de julho contra junho", HOJE)).isEmpty();
+    assertThat(PeriodoDaPergunta.resolver("Retenções de janeiro até fevereiro", HOJE)).isEmpty();
+  }
 }

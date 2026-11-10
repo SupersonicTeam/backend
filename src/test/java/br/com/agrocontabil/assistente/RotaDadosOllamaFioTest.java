@@ -36,13 +36,14 @@ class RotaDadosOllamaFioTest {
   private OllamaHttpSimulado ollama;
   private List<String> corpos;
   private RotaDados rota;
+  private DadosProdutorPorta dados;
 
   @BeforeEach
   void setUp() throws IOException {
     ollama = OllamaHttpSimulado.iniciar();
     corpos = ollama.corpos();
 
-    DadosProdutorPorta dados = mock(DadosProdutorPorta.class);
+    dados = mock(DadosProdutorPorta.class);
     when(dados.apuracao(PRODUTOR, "2026-07")).thenReturn(new DadosProdutorPorta.Apuracao(
         "2026-07", "ABERTO", new BigDecimal("150.00"), new BigDecimal("1350.00"),
         new BigDecimal("30.00"), new BigDecimal("270.00"), new BigDecimal("120.00"),
@@ -105,6 +106,34 @@ class RotaDadosOllamaFioTest {
     assertThat(contexto.fontes()).extracting(FonteDado::funcao)
         .containsExactly("consultarApuracao");
     assertThat(corpos).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("Periodo aberto: sem linha de periodo ao modelo e uma consulta so (#452, rodada 3)")
+  void periodoAbertoUmaConsultaSo() {
+    DadosProdutorPorta.Funrural zero = new DadosProdutorPorta.Funrural(0, BigDecimal.ZERO,
+        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+    when(dados.retencoes(org.mockito.ArgumentMatchers.eq(PRODUTOR),
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(new DadosProdutorPorta.Retencoes(true, zero, zero, zero, BigDecimal.ZERO,
+            BigDecimal.ZERO, 0));
+    // O modelo fatia o periodo: uma chamada por mes.
+    ollama.responder(OllamaHttpSimulado.resposta("", String.join(",",
+        "{\"function\":{\"name\":\"consultarRetencoes\",\"arguments\":"
+            + "{\"dataInicio\":\"2026-03-01\",\"dataFim\":\"2026-03-31\"}}}",
+        "{\"function\":{\"name\":\"consultarRetencoes\",\"arguments\":"
+            + "{\"dataInicio\":\"2026-04-01\",\"dataFim\":\"2026-04-30\"}}}",
+        "{\"function\":{\"name\":\"consultarRetencoes\",\"arguments\":"
+            + "{\"dataInicio\":\"2026-05-01\",\"dataFim\":\"2026-05-31\"}}}")));
+
+    rota.responder("Quanto saiu de Funrural de maio pra trás?",
+        new ContextoAssistente(PRODUTOR, LocalDate.of(2026, 11, 20)));
+
+    assertThat(corpos).hasSize(1);
+    assertThat(corpos.get(0)).doesNotContain("Periodo da pergunta");
+    org.mockito.Mockito.verify(dados, org.mockito.Mockito.times(1))
+        .retencoes(PRODUTOR, LocalDate.of(2024, 6, 1), LocalDate.of(2026, 5, 31));
+    org.mockito.Mockito.verifyNoMoreInteractions(dados);
   }
 
   @Test
