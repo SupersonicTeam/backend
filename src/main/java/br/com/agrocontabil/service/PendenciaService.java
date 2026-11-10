@@ -292,7 +292,7 @@ public class PendenciaService {
       // A ameaca fica registrada mesmo se a pendencia fechou ou encheu durante a verificacao: o
       // registro nao ocupa vaga nem muda o status. So o dono (404) e reconferido.
       Pendencia pendencia = infectado
-          ? travada.orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId))
+          ? travada.orElseThrow(() -> new ResourceNotFoundException("Pendência", pendenciaId))
           : conferirAnexavel(travada, pendenciaId);
       PendenciaAnexo anexo = PendenciaAnexo.builder()
           .pendenciaId(pendenciaId)
@@ -326,7 +326,7 @@ public class PendenciaService {
   /** Dono (404), status e teto; o anexo infectado não ocupa vaga. */
   private Pendencia conferirAnexavel(Optional<Pendencia> encontrada, UUID pendenciaId) {
     Pendencia pendencia = encontrada
-        .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
+        .orElseThrow(() -> new ResourceNotFoundException("Pendência", pendenciaId));
     exigir(pendencia, EnumSet.of(StatusPendencia.PENDENTE, StatusPendencia.ENVIADA));
     if (anexoRepository.contarVisiveis(pendenciaId) >= MAXIMO_ANEXOS) {
       throw PendenciaException.limiteAnexos(MAXIMO_ANEXOS);
@@ -357,18 +357,18 @@ public class PendenciaService {
     return pendenciaRepository.findById(pendenciaId)
         .filter(p -> p.getEscritorioId().equals(escritorioId))
         .filter(p -> p.getProdutorId().equals(produtorId))
-        .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
+        .orElseThrow(() -> new ResourceNotFoundException("Pendência", pendenciaId));
   }
 
   private Pendencia travadaDoEscritorio(UUID pendenciaId, UUID produtorId) {
     UUID escritorioId = escritorio(produtorId);
     return pendenciaRepository.findDoEscritorioForUpdate(pendenciaId, escritorioId, produtorId)
-        .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
+        .orElseThrow(() -> new ResourceNotFoundException("Pendência", pendenciaId));
   }
 
   private Pendencia doProdutor(UUID pendenciaId) {
     return pendenciaRepository.findDoProdutorAtiva(pendenciaId, produtorProvider.get().getId())
-        .orElseThrow(() -> new ResourceNotFoundException("Pendencia", pendenciaId));
+        .orElseThrow(() -> new ResourceNotFoundException("Pendência", pendenciaId));
   }
 
   /** Só {@code LIMPO}: em verificação é 409; infectado não existe para quem baixa (404). */

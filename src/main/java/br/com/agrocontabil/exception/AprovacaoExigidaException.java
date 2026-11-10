@@ -22,12 +22,12 @@ public class AprovacaoExigidaException extends DomainException {
   public AprovacaoExigidaException(UUID notaId, StatusNotaFiscal atual) {
     super(HttpStatus.CONFLICT, mensagem(notaId), List.of(new ErrorDetail(
         ErrorCode.APROVACAO_EXIGIDA.code(), "status", mensagem(notaId),
-        "Envie a nota para revisao (POST /api/notas/{id}/enviar-para-revisao) e aguarde a "
-            + "aprovacao do contador.",
+        "Envie a nota para revisão (POST /api/notas/{id}/enviar-para-revisao) e aguarde a "
+            + "aprovação do contador.",
         atual.name(), StatusNotaFiscal.APROVADA.name())));
   }
 
   private static String mensagem(UUID notaId) {
-    return "A nota " + notaId + " precisa da aprovacao do contador antes da emissao.";
+    return "A nota " + notaId + " precisa da aprovação do contador antes da emissão.";
   }
 }

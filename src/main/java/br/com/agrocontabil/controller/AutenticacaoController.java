@@ -7,6 +7,7 @@ import br.com.agrocontabil.dto.LoginRequest;
 import br.com.agrocontabil.dto.LoginResponse;
 import br.com.agrocontabil.dto.UsuarioLogadoResponse;
 import br.com.agrocontabil.security.CookieRefresh;
+import br.com.agrocontabil.security.HostDaRequisicao;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.LoginService;
 import br.com.agrocontabil.service.SessaoService;
@@ -47,13 +48,16 @@ public class AutenticacaoController {
   private final LoginService loginService;
   private final SessaoService sessaoService;
   private final CookieRefresh cookieRefresh;
+  private final HostDaRequisicao hostDaRequisicao;
 
   public AutenticacaoController(CadastroService cadastroService, LoginService loginService,
-      SessaoService sessaoService, CookieRefresh cookieRefresh) {
+      SessaoService sessaoService, CookieRefresh cookieRefresh,
+      HostDaRequisicao hostDaRequisicao) {
     this.cadastroService = cadastroService;
     this.loginService = loginService;
     this.sessaoService = sessaoService;
     this.cookieRefresh = cookieRefresh;
+    this.hostDaRequisicao = hostDaRequisicao;
   }
 
   /**
@@ -94,14 +98,17 @@ public class AutenticacaoController {
       description = "Publico. Devolve o JWT de acesso (validade de 15 minutos) a enviar em "
           + "Authorization: Bearer, e grava o refresh token num cookie HttpOnly (Path=/api/auth). "
           + "E-mail sem conta, senha errada e conta desativada respondem o mesmo 401 "
-          + "CREDENCIAIS_INVALIDAS.")
+          + "CREDENCIAIS_INVALIDAS. Pelo endereco de um escritorio ({slug}.agroconia.com.br, "
+          + "#464) ou com o campo escritorio, so o contador membro daquele escritorio entra; "
+          + "qualquer outro recebe o mesmo 401.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Token emitido e cookie de refresh gravado"),
       @ApiResponse(responseCode = "401", description = "E-mail ou senha incorretos",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
-  public ResponseEntity<LoginResponse> entrar(@Valid @RequestBody LoginRequest request) {
-    return comSessao(loginService.entrar(request));
+  public ResponseEntity<LoginResponse> entrar(@Valid @RequestBody LoginRequest request,
+      HttpServletRequest http) {
+    return comSessao(loginService.entrar(request, hostDaRequisicao.rotuloDeEscritorio(http)));
   }
 
   /**
@@ -117,14 +124,16 @@ public class AutenticacaoController {
       description = "Publico (o access token pode ja ter expirado). Le o cookie HttpOnly gravado "
           + "no login, devolve um access token novo e troca o cookie. Refresh ausente, vencido, "
           + "revogado ou ja usado responde 401 SESSAO_INVALIDA; o reuso de um refresh ja trocado "
-          + "encerra todas as renovacoes daquele login.")
+          + "encerra todas as renovacoes daquele login. Pelo endereco de um escritorio (#464), "
+          + "quem nao e mais membro dele perde a sessao (401).")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Par renovado"),
       @ApiResponse(responseCode = "401", description = "Sessao expirada ou encerrada",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public ResponseEntity<LoginResponse> renovar(HttpServletRequest request) {
-    return comSessao(sessaoService.renovar(cookieRefresh.ler(request).orElse(null)));
+    return comSessao(sessaoService.renovar(cookieRefresh.ler(request).orElse(null),
+        hostDaRequisicao.rotuloDeEscritorio(request)));
   }
 
   /**

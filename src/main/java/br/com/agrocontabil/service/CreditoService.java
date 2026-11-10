@@ -134,7 +134,7 @@ public class CreditoService {
       return YearMonth.parse(periodo);
     } catch (DateTimeParseException | NullPointerException e) {
       throw new IllegalArgumentException(
-          "Periodo invalido: use o formato YYYY-MM (ex.: 2026-07).");
+          "Período inválido: use o formato YYYY-MM (ex.: 2026-07).");
     }
   }
 

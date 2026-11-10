@@ -29,23 +29,23 @@ import java.util.List;
 public record NotaFiscalRequest(
 
     @Schema(description = "Numero sequencial da NF-e (1 a 999.999.999)", example = "1")
-    @NotNull(message = "numero e obrigatorio")
-    @Positive(message = "numero deve ser positivo")
-    @Max(value = 999_999_999, message = "numero deve ser no maximo 999999999 (layout da NF-e)")
+    @NotNull(message = "número é obrigatório")
+    @Positive(message = "número deve ser positivo")
+    @Max(value = 999_999_999, message = "número deve ser no máximo 999999999 (layout da NF-e)")
     Long numero,
 
     @Schema(description = "Serie da NF-e, 1 a 999 (padrao 1 quando omitido)", example = "1")
-    @Positive(message = "serie deve ser positiva")
-    @Max(value = 999, message = "serie deve ser no maximo 999 (layout da NF-e)")
+    @Positive(message = "série deve ser positiva")
+    @Max(value = 999, message = "série deve ser no máximo 999 (layout da NF-e)")
     Integer serie,
 
     @Schema(description = "Natureza da operacao", example = "Venda de producao rural")
-    @NotBlank(message = "naturezaOperacao e obrigatoria")
+    @NotBlank(message = "naturezaOperacao é obrigatória")
     @Size(max = 255)
     String naturezaOperacao,
 
     @Schema(description = "Data e hora de emissao da nota", example = "2026-06-10T10:00:00-03:00")
-    @NotNull(message = "dataEmissao e obrigatoria")
+    @NotNull(message = "dataEmissao é obrigatória")
     OffsetDateTime dataEmissao,
 
     @Schema(description = "Data e hora de saida/entrega (opcional)",
@@ -59,17 +59,17 @@ public record NotaFiscalRequest(
     TipoDocumentoFiscal tipoDocumento,
 
     @Schema(description = "Nome ou razao social do destinatario", example = "Jose Comprador")
-    @NotBlank(message = "destinatarioNome e obrigatorio")
+    @NotBlank(message = "destinatarioNome é obrigatório")
     @Size(max = 255)
     String destinatarioNome,
 
     @Schema(
         description = "CPF (11 digitos) ou CNPJ (14 digitos) do destinatario, apenas numeros",
         example = "12345678901")
-    @NotBlank(message = "destinatarioCpfCnpj e obrigatorio")
+    @NotBlank(message = "destinatarioCpfCnpj é obrigatório")
     @Pattern(
         regexp = "\\d{11}|\\d{14}",
-        message = "destinatarioCpfCnpj deve ter 11 digitos (CPF) ou 14 digitos (CNPJ)")
+        message = "destinatarioCpfCnpj deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ)")
     @ValidCpfCnpj
     String destinatarioCpfCnpj,
 
@@ -82,8 +82,8 @@ public record NotaFiscalRequest(
     EnderecoDestinatarioRequest destinatarioEndereco,
 
     @Schema(description = "Lista de itens da nota fiscal (ao menos 1 item obrigatorio)")
-    @NotEmpty(message = "itens nao pode ser vazio")
-    @Size(max = 990, message = "A nota fiscal pode ter no maximo 990 itens")
+    @NotEmpty(message = "itens não pode ser vazio")
+    @Size(max = 990, message = "A nota fiscal pode ter no máximo 990 itens")
     @Valid
     List<NotaFiscalItemRequest> itens
 ) {
@@ -98,21 +98,21 @@ public record NotaFiscalRequest(
   public record EnderecoDestinatarioRequest(
 
       @Schema(description = "Logradouro (rua, avenida etc.)", example = "Rua das Flores")
-      @Size(max = 255, message = "logradouro deve ter no maximo 255 caracteres")
+      @Size(max = 255, message = "logradouro deve ter no máximo 255 caracteres")
       String logradouro,
 
       @Schema(description = "Numero do imovel", example = "100")
-      @Size(max = 20, message = "numero deve ter no maximo 20 caracteres")
+      @Size(max = 20, message = "número deve ter no máximo 20 caracteres")
       String numero,
 
       @Schema(description = "Nome do municipio", example = "Cuiaba")
-      @Size(max = 255, message = "municipio deve ter no maximo 255 caracteres")
+      @Size(max = 255, message = "município deve ter no máximo 255 caracteres")
       String municipio,
 
       @Schema(description = "Codigo IBGE do municipio (7 digitos)", example = "5103403")
       @Pattern(
           regexp = "\\d{7}",
-          message = "codigoMunicipioIbge deve ter exatamente 7 digitos numericos")
+          message = "codigoMunicipioIbge deve ter exatamente 7 dígitos numéricos")
       String codigoMunicipioIbge,
 
       @Schema(description = "Sigla da UF (2 letras maiusculas)", example = "MT")
@@ -120,7 +120,7 @@ public record NotaFiscalRequest(
       String uf,
 
       @Schema(description = "CEP sem formatacao (8 digitos)", example = "78000000")
-      @Pattern(regexp = "\\d{8}", message = "cep deve ter exatamente 8 digitos numericos")
+      @Pattern(regexp = "\\d{8}", message = "cep deve ter exatamente 8 dígitos numéricos")
       String cep
   ) {}
 }

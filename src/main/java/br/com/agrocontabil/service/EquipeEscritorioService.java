@@ -9,6 +9,7 @@ import br.com.agrocontabil.dto.EscritorioRequest;
 import br.com.agrocontabil.dto.EscritorioResponse;
 import br.com.agrocontabil.dto.MembroResponse;
 import br.com.agrocontabil.exception.ConviteEquipeInvalidoException;
+import br.com.agrocontabil.exception.EnderecoExigeCnpjException;
 import br.com.agrocontabil.exception.EscritorioAtualEmUsoException;
 import br.com.agrocontabil.exception.LimiteConvitesException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
@@ -85,6 +86,7 @@ public class EquipeEscritorioService {
   private final PendenciaAnexoRepository anexoRepository;
   private final NotificacaoRepository notificacaoRepository;
   private final CadastroService cadastroService;
+  private final EnderecoEscritorioService enderecoService;
   private final EnvioConviteEquipe envio;
   private final ConviteEquipeProperties propriedades;
   private final Clock clock;
@@ -105,6 +107,7 @@ public class EquipeEscritorioService {
       PendenciaAnexoRepository anexoRepository,
       NotificacaoRepository notificacaoRepository,
       CadastroService cadastroService,
+      EnderecoEscritorioService enderecoService,
       EnvioConviteEquipe envio,
       ConviteEquipeProperties propriedades,
       Clock clock,
@@ -122,6 +125,7 @@ public class EquipeEscritorioService {
     this.anexoRepository = anexoRepository;
     this.notificacaoRepository = notificacaoRepository;
     this.cadastroService = cadastroService;
+    this.enderecoService = enderecoService;
     this.envio = envio;
     this.propriedades = propriedades;
     this.clock = clock;
@@ -148,26 +152,32 @@ public class EquipeEscritorioService {
   public EscritorioResponse escritorio() {
     Contador membro = membroProvider.membro();
     Escritorio escritorio = escritorioRepository.findById(membro.getEscritorioId())
-        .orElseThrow(() -> new ResourceNotFoundException("Escritorio", membro.getEscritorioId()));
+        .orElseThrow(() -> new ResourceNotFoundException("Escritório", membro.getEscritorioId()));
     return resposta(escritorio, membro);
   }
 
   /**
    * Edita nome e CNPJ do escritório (só administrador). O nome aparece nos e-mails de convite.
+   * Com endereço próprio (#464), o CNPJ não sai: o endereço exige CNPJ.
    *
    * @param request dados novos
    * @return o escritório
+   * @throws EnderecoExigeCnpjException apagar o CNPJ de um escritório com endereço (422)
    */
   @Auditado(acao = AcaoAuditada.ESCRITORIO_ALTERADO, recurso = RecursoAuditado.ESCRITORIO)
   public EscritorioResponse atualizar(EscritorioRequest request) {
     Contador membro = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR);
     return transacao.execute(status -> {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(membro.getEscritorioId())
-          .orElseThrow(() -> new ResourceNotFoundException("Escritorio",
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório",
               membro.getEscritorioId()));
       escritorio.setNome(request.nome().strip());
       // PATCH: CNPJ ausente fica como esta; vazio apaga.
       if (request.cnpj() != null) {
+        if (request.cnpj().isBlank() && escritorio.getSlug() != null) {
+          throw new EnderecoExigeCnpjException("Remova o endereço do escritório (DELETE "
+              + "/api/escritorio/endereco) antes de apagar o CNPJ.");
+        }
         escritorio.setCnpj(request.cnpj().isBlank() ? null : request.cnpj());
       }
       return resposta(escritorio, membro);
@@ -253,7 +263,7 @@ public class EquipeEscritorioService {
 
     ConviteMembro convite = transacao.execute(status -> {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(escritorioId)
-          .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
       var vigente = conviteRepository
           .findFirstByEscritorioIdAndEmailAndUsadoEmIsNullOrderByCriadoEmDesc(
               escritorioId, normalizado)
@@ -397,6 +407,8 @@ public class EquipeEscritorioService {
     List<Contador> equipe = contadorRepository.findByEscritorioIdForUpdate(escritorioId);
     if (equipe.size() <= 1) {
       sairDoEscritorio(contador);
+      // Dado do titular (#464): o endereco e os anteriores saem sem carencia.
+      enderecoService.apagarSemCarencia(escritorioId);
       apagarEscritorio(escritorioId);
       return;
     }
@@ -412,6 +424,8 @@ public class EquipeEscritorioService {
       throw new EscritorioAtualEmUsoException();
     }
     sairDoEscritorio(contador);
+    // O endereco que circula em e-mails antigos fica em carencia (#464): ninguem o toma.
+    enderecoService.reservarAoApagar(anterior);
     apagarEscritorio(anterior);
   }
 
@@ -423,7 +437,11 @@ public class EquipeEscritorioService {
     contadorRepository.saveAndFlush(contador);
   }
 
-  /** Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogos, pendências). */
+  /**
+   * Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogos, pendências). O
+   * destino do endereço (#464) é decidido antes, por quem chama: carência no aceite de equipe,
+   * nada na exclusão de dados.
+   */
   private void apagarEscritorio(UUID escritorioId) {
     List<UUID> vinculos = vinculoRepository.findIdsDoEscritorio(escritorioId);
     if (!vinculos.isEmpty()) {
@@ -457,7 +475,7 @@ public class EquipeEscritorioService {
           envio.enviarConvite(email, escritorio, link, propriedades.validade());
         } catch (RuntimeException e) {
           log.warn("Falha ao enviar o e-mail do convite de equipe: {}",
-              e.getClass().getSimpleName());
+              EnvioEmailFalhouException.paraLog(e));
         }
       });
     } catch (TaskRejectedException e) {
@@ -475,8 +493,7 @@ public class EquipeEscritorioService {
   }
 
   private EscritorioResponse resposta(Escritorio escritorio, Contador membro) {
-    return new EscritorioResponse(escritorio.getId(), escritorio.getNome(), escritorio.getCnpj(),
-        membro.getFuncao(), contadorRepository.countByEscritorioId(escritorio.getId()));
+    return enderecoService.resposta(escritorio, membro);
   }
 
   private static MembroResponse membro(Contador contador) {

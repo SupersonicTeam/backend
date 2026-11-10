@@ -58,7 +58,7 @@ final class ConferenciaAnexo {
       conferirXml(bytes);
       return XML;
     }
-    throw PendenciaException.anexoInvalido("Tipo de arquivo nao aceito.");
+    throw PendenciaException.anexoInvalido("Tipo de arquivo não aceito.");
   }
 
   /**

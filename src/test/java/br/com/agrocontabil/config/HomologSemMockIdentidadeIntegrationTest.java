@@ -10,9 +10,11 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -54,7 +56,11 @@ import org.springframework.test.web.servlet.MockMvc;
     "app.notificacao.aviso.enabled=false",
     "app.notificacao.retencao.enabled=false",
     "app.pendencias.antivirus.reverificacao.enabled=false",
-    "app.seguranca.refresh.limpeza.enabled=false"})
+    "app.seguranca.refresh.limpeza.enabled=false",
+    // Como o deploy/compose.yaml com o envio desligado (#460).
+    "spring.mail.host=",
+    "spring.mail.username=",
+    "spring.mail.password="})
 @AutoConfigureMockMvc
 @ActiveProfiles("homolog")
 @DisplayName("homolog autentica so por JWT: sem mock de identidade (#221)")
@@ -91,5 +97,16 @@ class HomologSemMockIdentidadeIntegrationTest {
     mockMvc.perform(get("/api/notas")
             .header(MockIdentidadeFilter.HEADER_USUARIO_ID, semente.getId().toString()))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @DisplayName("SPRING_MAIL_HOST vazio, como o compose entrega: cliente SMTP criado e health 200 (#460)")
+  void hostSmtpVazioNaoDerrubaHealth() throws Exception {
+    // O compose passa SPRING_MAIL_HOST="" com o envio desligado. O Boot cria o cliente SMTP mesmo
+    // assim, e o MailHealthIndicator testaria localhost:25 e responderia DOWN (503): o healthcheck
+    // do compose falharia e o deploy.sh reverteria o deploy.
+    assertThat(contexto.getBeanNamesForType(JavaMailSender.class)).isNotEmpty();
+    assertThat(contexto.getBean(HealthContributorRegistry.class).getContributor("mail")).isNull();
+    mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
   }
 }

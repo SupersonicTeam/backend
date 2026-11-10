@@ -12,8 +12,14 @@ import jakarta.validation.constraints.Size;
  * <p>Sem {@code @Email} de propósito: um e-mail malformado recebe o mesmo 401 de qualquer
  * credencial errada, em vez de um 400 que diferenciaria a resposta.
  *
- * @param email e-mail de login
- * @param senha senha
+ * <p>{@code escritorio} (#464) é o slug do endereço do escritório, mandado pela tela de login de
+ * {@code {slug}.agroconia.com.br}. Sem validação nenhuma, nem de tamanho: um valor estranho recebe o
+ * mesmo 401, nunca um 400 que diferencie a resposta (contrato da #464). Ausente ou em branco no
+ * host principal, o login é o de sempre.
+ *
+ * @param email      e-mail de login
+ * @param senha      senha
+ * @param escritorio slug do endereço do escritório (opcional)
  */
 @Schema(description = "Login por e-mail e senha")
 public record LoginRequest(
@@ -26,7 +32,21 @@ public record LoginRequest(
     @Sensivel
     @Size(max = 1024)
     @Schema(format = "password", accessMode = Schema.AccessMode.WRITE_ONLY)
-    String senha) {
+    String senha,
+
+    @Schema(description = "Slug do endereco do escritorio, so na tela de login do subdominio "
+        + "(opcional)", example = "ruraloeste", nullable = true)
+    String escritorio) {
+
+  /**
+   * Login sem escritório (o de sempre).
+   *
+   * @param email e-mail de login
+   * @param senha senha
+   */
+  public LoginRequest(String email, String senha) {
+    this(email, senha, null);
+  }
 
   /** Sem e-mail nem senha (LGPD e segredo). */
   @Override

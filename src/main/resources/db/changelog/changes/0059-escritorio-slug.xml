@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0059-escritorio-slug.xml
+         Endereco proprio do escritorio, {slug}.agroconia.com.br (#464).
+
+         escritorio.slug: rotulo do subdominio, ja normalizado (minusculas,
+         ASCII), unico. Nulo = o escritorio usa o www. Pode ser dado pessoal
+         (o nome do escritorio unipessoal e o do contador): nunca vai a log
+         nem a auditoria.
+
+         escritorio.slug_alterado_em: ultima definicao, troca ou remocao do
+         slug; a proxima gravacao so depois do intervalo (30 dias).
+
+         escritorio_slug_anterior: slug que saiu de um escritorio (troca,
+         remocao, escritorio apagado pelo aceite de equipe) e fica em
+         carencia ate liberado_em: ninguem mais o registra nesse periodo.
+         A FK e ON DELETE SET NULL, nunca CASCADE: a carencia sobrevive ao
+         escritorio apagado. escritorio_id nulo = slug bloqueado, mas nunca
+         servido. A exclusao de dados (LGPD) apaga as linhas do escritorio
+         antes de apaga-lo.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0059-escritorio-slug" author="supersonic-team">
+        <addColumn tableName="escritorio">
+            <column name="slug" type="VARCHAR(32)" remarks="Rotulo do subdominio do escritorio (#464), normalizado; nulo = usa o www"/>
+            <column name="slug_alterado_em" type="TIMESTAMP WITH TIME ZONE" remarks="Ultima definicao, troca ou remocao do slug (intervalo entre trocas)"/>
+        </addColumn>
+        <addUniqueConstraint tableName="escritorio" columnNames="slug"
+                             constraintName="uq_escritorio_slug"/>
+
+        <createTable tableName="escritorio_slug_anterior"
+                     remarks="Slug em carencia depois de sair de um escritorio (#464)">
+            <column name="slug" type="VARCHAR(32)">
+                <constraints primaryKey="true" primaryKeyName="pk_escritorio_slug_anterior"/>
+            </column>
+            <column name="escritorio_id" type="UUID"
+                    remarks="Escritorio de onde saiu; nulo = escritorio apagado (bloqueado, nao servido)"/>
+            <column name="liberado_em" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="escritorio_slug_anterior"
+                                 baseColumnNames="escritorio_id"
+                                 constraintName="fk_escritorio_slug_anterior_escritorio"
+                                 referencedTableName="escritorio"
+                                 referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+        <createIndex tableName="escritorio_slug_anterior"
+                     indexName="idx_escritorio_slug_anterior_escritorio">
+            <column name="escritorio_id"/>
+        </createIndex>
+        <createIndex tableName="escritorio_slug_anterior"
+                     indexName="idx_escritorio_slug_anterior_liberado">
+            <column name="liberado_em"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

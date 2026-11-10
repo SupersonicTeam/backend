@@ -5,11 +5,13 @@ import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.Sensivel;
 import br.com.agrocontabil.security.CookieRefresh;
+import br.com.agrocontabil.validation.SlugEscritorio;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -111,7 +113,7 @@ public class GlobalExceptionHandler {
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Um ou mais campos sao invalidos.",
+        "Um ou mais campos são inválidos.",
         request.getRequestURI(),
         errors);
     return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
@@ -130,7 +132,7 @@ public class GlobalExceptionHandler {
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Um ou mais parametros sao invalidos.",
+        "Um ou mais parâmetros são inválidos.",
         request.getRequestURI(),
         errors);
     return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
@@ -143,11 +145,11 @@ public class GlobalExceptionHandler {
     ErrorDetail detail = ErrorDetail.of(
         ErrorCode.VALIDATION_ERROR,
         ex.getParameterName(),
-        "Parametro obrigatorio ausente: " + ex.getParameterName() + ".");
+        "Parâmetro obrigatório ausente: " + ex.getParameterName() + ".");
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Parametro obrigatorio ausente.",
+        "Parâmetro obrigatório ausente.",
         request.getRequestURI(),
         List.of(detail));
     return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
@@ -174,10 +176,10 @@ public class GlobalExceptionHandler {
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Corpo da requisicao invalido ou malformado.",
+        "Corpo da requisição inválido ou malformado.",
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.VALIDATION_ERROR,
-            "Corpo da requisicao invalido ou malformado. Verifique a sintaxe do JSON enviado.")));
+            "Corpo da requisição inválido ou malformado. Verifique a sintaxe do JSON enviado.")));
     return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
@@ -189,14 +191,14 @@ public class GlobalExceptionHandler {
     ErrorDetail detail = new ErrorDetail(
         ErrorCode.VALIDATION_ERROR.code(),
         ex.getName(),
-        "Valor invalido para o parametro '" + ex.getName() + "'.",
+        "Valor inválido para o parâmetro '" + ex.getName() + "'.",
         null,
         ex.getValue() == null ? null : String.valueOf(ex.getValue()),
         expected);
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        "Um ou mais parametros sao invalidos.",
+        "Um ou mais parâmetros são inválidos.",
         request.getRequestURI(),
         List.of(detail));
     return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
@@ -209,9 +211,9 @@ public class GlobalExceptionHandler {
     ApiError body = ApiError.of(
         HttpStatus.NOT_FOUND.value(),
         HttpStatus.NOT_FOUND.getReasonPhrase(),
-        "Recurso nao encontrado.",
+        "Recurso não encontrado.",
         request.getRequestURI(),
-        List.of(ErrorDetail.of(ErrorCode.RESOURCE_NOT_FOUND, "Recurso nao encontrado.")));
+        List.of(ErrorDetail.of(ErrorCode.RESOURCE_NOT_FOUND, "Recurso não encontrado.")));
     return ResponseEntity.status(HttpStatus.NOT_FOUND).contentType(tipoDoErro()).body(body);
   }
 
@@ -225,14 +227,14 @@ public class GlobalExceptionHandler {
     ErrorDetail detail = new ErrorDetail(
         ErrorCode.METHOD_NOT_ALLOWED.code(),
         null,
-        "Metodo " + ex.getMethod() + " nao suportado para esta rota.",
+        "Método " + ex.getMethod() + " não suportado para esta rota.",
         null,
         ex.getMethod(),
         suportados);
     ApiError body = ApiError.of(
         HttpStatus.METHOD_NOT_ALLOWED.value(),
         HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase(),
-        "Metodo HTTP nao suportado para esta rota.",
+        "Método HTTP não suportado para esta rota.",
         request.getRequestURI(),
         List.of(detail));
     // RFC 7231 §6.5.5: resposta 405 deve informar os metodos permitidos no header Allow
@@ -262,7 +264,7 @@ public class GlobalExceptionHandler {
       HttpMediaTypeNotAcceptableException ex, HttpServletRequest request) {
     String accept = resumirValorRejeitado(request.getHeader(HttpHeaders.ACCEPT));
     log.warn("Accept sem representacao em {}: {}", request.getRequestURI(), accept);
-    String message = "Este endpoint nao produz nenhum dos formatos aceitos pelo cliente.";
+    String message = "Este endpoint não produz nenhum dos formatos aceitos pelo cliente.";
     // So os tipos concretos: na falha ao escrever o retorno o Spring lista os intervalos de todos
     // os conversores (application/*+json etc.), que nao servem de Accept.
     String produzidos = MediaType.toString(ex.getSupportedMediaTypes().stream()
@@ -276,7 +278,7 @@ public class GlobalExceptionHandler {
         ErrorCode.MEDIA_TYPE_NOT_ACCEPTABLE.code(),
         null,
         message,
-        temProduzidos ? "Envie um Accept compativel com " + produzidos + "." : null,
+        temProduzidos ? "Envie um Accept compatível com " + produzidos + "." : null,
         accept,
         temProduzidos ? produzidos : null);
     ApiError body = ApiError.of(
@@ -295,14 +297,14 @@ public class GlobalExceptionHandler {
     ErrorDetail detail = new ErrorDetail(
         ErrorCode.MEDIA_TYPE_NOT_SUPPORTED.code(),
         null,
-        "Content-Type nao suportado por este endpoint.",
+        "Content-Type não suportado por este endpoint.",
         null,
         ex.getContentType() == null ? null : ex.getContentType().toString(),
         null);
     ApiError body = ApiError.of(
         HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
         HttpStatus.UNSUPPORTED_MEDIA_TYPE.getReasonPhrase(),
-        "Content-Type nao suportado por este endpoint.",
+        "Content-Type não suportado por este endpoint.",
         request.getRequestURI(),
         List.of(detail));
     // RFC 7231 §6.5.13: resposta 415 deve informar os media types aceitos no header Accept
@@ -323,10 +325,10 @@ public class GlobalExceptionHandler {
     ApiError body = ApiError.of(
         HttpStatus.PAYLOAD_TOO_LARGE.value(),
         HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase(),
-        "Arquivo excede o tamanho maximo permitido.",
+        "Arquivo excede o tamanho máximo permitido.",
         request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.PAYLOAD_TOO_LARGE,
-            "Arquivo excede o tamanho maximo permitido. Envie um arquivo menor.")));
+            "Arquivo excede o tamanho máximo permitido. Envie um arquivo menor.")));
     return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).contentType(tipoDoErro()).body(body);
   }
 
@@ -343,7 +345,7 @@ public class GlobalExceptionHandler {
         request.getMethod(), request.getRequestURI(),
         ex.getMostSpecificCause().getMessage());
     String message =
-        "A operacao conflita com um registro existente ou viola uma restricao de integridade.";
+        "A operação conflita com um registro existente ou viola uma restrição de integridade.";
     ApiError body = ApiError.of(
         HttpStatus.CONFLICT.value(),
         HttpStatus.CONFLICT.getReasonPhrase(),
@@ -370,9 +372,9 @@ public class GlobalExceptionHandler {
       OptimisticLockingFailureException ex, HttpServletRequest request) {
     log.warn("Conflito de concorrencia em {} {}: {}",
         request.getMethod(), request.getRequestURI(), ex.getMostSpecificCause().getMessage());
-    String message = "A nota foi modificada em outra operacao; recarregue e tente de novo.";
+    String message = "A nota foi modificada em outra operação; recarregue e tente de novo.";
     String suggestion =
-        "Recarregue a nota (GET /api/notas/{id}) e repita a operacao com os dados atualizados.";
+        "Recarregue a nota (GET /api/notas/{id}) e repita a operação com os dados atualizados.";
     ApiError body = ApiError.of(
         HttpStatus.CONFLICT.value(),
         HttpStatus.CONFLICT.getReasonPhrase(),
@@ -501,8 +503,10 @@ public class GlobalExceptionHandler {
     Object folha = violation.getLeafBean();
     String rejected = campoSensivel(folha == null ? null : folha.getClass(), field)
         ? null : resumirValorRejeitado(violation.getInvalidValue());
+    String constraint = violation.getConstraintDescriptor() == null ? null
+        : violation.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName();
     return new ErrorDetail(
-        ErrorCode.VALIDATION_ERROR.code(),
+        codigoDaConstraint(constraint).code(),
         field,
         violation.getMessage(),
         null,
@@ -581,11 +585,25 @@ public class GlobalExceptionHandler {
     return lastDot >= 0 ? path.substring(lastDot + 1) : path;
   }
 
+  /**
+   * Constraints com código próprio no envelope, no lugar do {@code VALIDATION_ERROR} genérico: o
+   * cliente trata o caso sem ler a mensagem. A chave é o nome simples da anotação (o
+   * {@code FieldError.getCode()} do Spring no corpo; o descriptor da violação nos parâmetros).
+   */
+  private static final Map<String, ErrorCode> CODIGO_POR_CONSTRAINT = Map.of(
+      SlugEscritorio.class.getSimpleName(), ErrorCode.SLUG_INVALIDO);
+
+  /** Código do erro de uma constraint: o próprio, se houver, ou o {@code VALIDATION_ERROR}. */
+  private static ErrorCode codigoDaConstraint(String constraint) {
+    return constraint == null ? ErrorCode.VALIDATION_ERROR
+        : CODIGO_POR_CONSTRAINT.getOrDefault(constraint, ErrorCode.VALIDATION_ERROR);
+  }
+
   private ErrorDetail toErrorDetail(FieldError error, Class<?> tipoAlvo) {
     String rejected = campoSensivel(tipoAlvo, error.getField())
         ? null : resumirValorRejeitado(error.getRejectedValue());
     return new ErrorDetail(
-        ErrorCode.VALIDATION_ERROR.code(),
+        codigoDaConstraint(error.getCode()).code(),
         error.getField(),
         error.getDefaultMessage(),
         null,

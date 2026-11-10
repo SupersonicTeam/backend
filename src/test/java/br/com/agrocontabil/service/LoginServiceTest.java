@@ -43,6 +43,7 @@ class LoginServiceTest {
   @Mock private SessaoService sessaoService;
   @Mock private BloqueioContaService bloqueioConta;
   @Mock private UsuarioAutenticadoProvider usuarioProvider;
+  @Mock private EnderecoEscritorioService enderecoService;
 
   private LoginService service;
 
@@ -50,7 +51,7 @@ class LoginServiceTest {
   void setUp() {
     when(passwordEncoder.encode(anyString())).thenReturn("{bcrypt}ficticio");
     service = new LoginService(credencialRepository, passwordEncoder, sessaoService, bloqueioConta,
-        usuarioProvider);
+        usuarioProvider, enderecoService);
   }
 
   private CredencialUsuario credencial(boolean ativo) {
@@ -202,5 +203,95 @@ class LoginServiceTest {
     verify(credencialRepository)
         .atualizarSenhaHashSeIgual(credencial.getId(), "{bcrypt}real", "{bcrypt}novo");
     verify(credencialRepository, never()).save(any());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Endereco do escritorio (#464): o host so restringe
+  // ---------------------------------------------------------------------------------------------
+
+  private CredencialUsuario contador() {
+    return CredencialUsuario.builder()
+        .id(UUID.randomUUID()).email(EMAIL).senhaHash("{bcrypt}real")
+        .papel(PapelUsuario.CONTADOR).cpfCnpj("52998224725").contadorId(UUID.randomUUID())
+        .ativo(true).versaoSessao(2).build();
+  }
+
+  private void senhaCerta(CredencialUsuario credencial) {
+    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.reservarTentativa(credencial.getId())).thenReturn(true);
+    when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(true);
+  }
+
+  @Test
+  @DisplayName("subdominio: membro do escritorio do endereco entra")
+  void membroEntraNoSubdominio() {
+    CredencialUsuario credencial = contador();
+    senhaCerta(credencial);
+    when(enderecoService.membroDoEndereco(credencial, "ruraloeste")).thenReturn(true);
+    SessaoEmitida sessao = new SessaoEmitida(new LoginResponse("jwt", "Bearer",
+        Instant.parse("2026-11-09T12:15:00Z"), PapelUsuario.CONTADOR, credencial.getContadorId()),
+        "refresh", Instant.parse("2026-11-16T12:00:00Z"));
+    when(sessaoService.abrir(credencial)).thenReturn(sessao);
+
+    assertThat(service.entrar(new LoginRequest(EMAIL, SENHA, "RuralOeste"),
+        Optional.of("ruraloeste"))).isSameAs(sessao);
+    verify(bloqueioConta).liberar(credencial.getId());
+  }
+
+  @Test
+  @DisplayName("subdominio: senha certa fora do escritorio = o mesmo 401, falhas zeradas, sem sessao")
+  void foraDoEscritorioRecebeO401() {
+    CredencialUsuario credencial = contador();
+    senhaCerta(credencial);
+    when(enderecoService.membroDoEndereco(credencial, "ruraloeste")).thenReturn(false);
+
+    assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA, null),
+        Optional.of("ruraloeste")))
+        .isInstanceOf(CredenciaisInvalidasException.class);
+    verify(bloqueioConta).liberar(credencial.getId());
+    verify(sessaoService, never()).abrir(any());
+  }
+
+  @Test
+  @DisplayName("corpo com escritorio diferente do host, ou escritorio pelo www: 401 sem consultar o membro")
+  void corpoEHostPrecisamBater() {
+    CredencialUsuario credencial = contador();
+    senhaCerta(credencial);
+
+    assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA, "outro"),
+        Optional.of("ruraloeste"))).isInstanceOf(CredenciaisInvalidasException.class);
+    assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA, "ruraloeste"),
+        Optional.empty())).isInstanceOf(CredenciaisInvalidasException.class);
+    verify(enderecoService, never()).membroDoEndereco(any(), any());
+    verify(sessaoService, never()).abrir(any());
+  }
+
+  @Test
+  @DisplayName("subdominio com senha errada: conta a falha como sempre, sem olhar o escritorio")
+  void senhaErradaNoSubdominio() {
+    CredencialUsuario credencial = contador();
+    when(credencialRepository.findByEmail(EMAIL)).thenReturn(Optional.of(credencial));
+    when(bloqueioConta.reservarTentativa(credencial.getId())).thenReturn(true);
+    when(passwordEncoder.matches(SENHA, "{bcrypt}real")).thenReturn(false);
+
+    assertThatThrownBy(() -> service.entrar(new LoginRequest(EMAIL, SENHA, "ruraloeste"),
+        Optional.of("ruraloeste"))).isInstanceOf(CredenciaisInvalidasException.class);
+    verify(bloqueioConta, never()).liberar(any());
+    verify(enderecoService, never()).membroDoEndereco(any(), any());
+  }
+
+  @Test
+  @DisplayName("host principal com escritorio em branco: o login de sempre")
+  void escritorioEmBrancoNoPrincipal() {
+    CredencialUsuario credencial = credencial(true);
+    senhaCerta(credencial);
+    SessaoEmitida sessao = new SessaoEmitida(new LoginResponse("jwt", "Bearer",
+        Instant.parse("2026-11-09T12:15:00Z"), PapelUsuario.PRODUTOR, credencial.getProdutorId()),
+        "refresh", Instant.parse("2026-11-16T12:00:00Z"));
+    when(sessaoService.abrir(credencial)).thenReturn(sessao);
+
+    assertThat(service.entrar(new LoginRequest(EMAIL, SENHA, "  "), Optional.empty()))
+        .isSameAs(sessao);
+    verify(enderecoService, never()).membroDoEndereco(any(), any());
   }
 }

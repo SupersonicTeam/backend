@@ -27,10 +27,10 @@ public class XmlIndisponivelException extends DomainException {
   public XmlIndisponivelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "XML da NF-e indisponivel para a nota '%s' no status '%s'. "
+        "XML da NF-e indisponível para a nota '%s' no status '%s'. "
             .formatted(id, status)
-            + "Gere o XML da nota antes de baixa-lo.",
+            + "Gere o XML da nota antes de baixá-lo.",
         List.of(ErrorDetail.of(ErrorCode.XML_INDISPONIVEL,
-            "Gere o XML da nota (POST /api/notas/{id}/gerar-xml) antes de baixa-lo.")));
+            "Gere o XML da nota (POST /api/notas/{id}/gerar-xml) antes de baixá-lo.")));
   }
 }

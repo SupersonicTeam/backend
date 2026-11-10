@@ -72,7 +72,7 @@ public class NfeToNotaFiscalMapper {
         .status(StatusNotaFiscal.PENDENTE_SEFAZ)
         .tipoDocumento(TipoDocumentoFiscal.NFE)
         .chaveAcesso(chaveAcesso)
-        .numero(parseLong(ide.getNNF(), "numero da NF-e (nNF)"))
+        .numero(parseLong(ide.getNNF(), "número da NF-e (nNF)"))
         .serie(parseInt(ide.getSerie()))
         .modelo(ide.getMod() != null ? ide.getMod() : "55")
         .naturezaOperacao(ide.getNatOp() != null ? ide.getNatOp() : "IMPORTACAO DE XML")
@@ -218,7 +218,7 @@ public class NfeToNotaFiscalMapper {
 
   private Ide requireIde(InfNFe infNFe) {
     if (infNFe.getIde() == null) {
-      throw new XmlImportacaoInvalidaException("XML sem o grupo de identificacao <ide>.");
+      throw new XmlImportacaoInvalidaException("XML sem o grupo de identificação <ide>.");
     }
     return infNFe.getIde();
   }
@@ -238,7 +238,7 @@ public class NfeToNotaFiscalMapper {
     String chave = id.startsWith("NFe") ? id.substring(3) : id;
     if (!chave.matches("\\d{44}")) {
       throw new XmlImportacaoInvalidaException(
-          "Chave de acesso invalida no XML (esperado NFe + 44 digitos numericos).");
+          "Chave de acesso inválida no XML (esperado NFe + 44 dígitos numéricos).");
     }
     return chave;
   }
@@ -249,12 +249,12 @@ public class NfeToNotaFiscalMapper {
 
   private OffsetDateTime parseData(String valor) {
     if (valor == null || valor.isBlank()) {
-      throw new XmlImportacaoInvalidaException("Data de emissao (dhEmi) ausente no XML.");
+      throw new XmlImportacaoInvalidaException("Data de emissão (dhEmi) ausente no XML.");
     }
     try {
       return OffsetDateTime.parse(valor);
     } catch (DateTimeParseException e) {
-      throw new XmlImportacaoInvalidaException("Data de emissao (dhEmi) em formato invalido.");
+      throw new XmlImportacaoInvalidaException("Data de emissão (dhEmi) em formato inválido.");
     }
   }
 
@@ -270,7 +270,7 @@ public class NfeToNotaFiscalMapper {
     try {
       return Long.parseLong(valor.trim());
     } catch (NumberFormatException | NullPointerException e) {
-      throw new XmlImportacaoInvalidaException("Campo " + campo + " ausente ou invalido no XML.");
+      throw new XmlImportacaoInvalidaException("Campo " + campo + " ausente ou inválido no XML.");
     }
   }
 

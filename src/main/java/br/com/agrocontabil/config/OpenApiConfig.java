@@ -44,7 +44,8 @@ public class OpenApiConfig {
                 "/api/vinculos/**", "/api/pendencias/**", "/api/notificacao/**",
                 "/api/auditoria/**", "/api/calendario-fiscal/**"},
             "auth", new String[] {"/api/auth/**", "/api/usuarios/**", "/api/politica-dados",
-                "/api/v1/health"});
+                "/api/v1/health"},
+            "publico", new String[] {"/api/publico/**"});
 
     @Bean
     public GroupedOpenApi grupoNotas() {
@@ -54,6 +55,11 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi grupoApuracao() {
         return grupo("apuracao");
+    }
+
+    @Bean
+    public GroupedOpenApi grupoPublico() {
+        return grupo("publico");
     }
 
     @Bean

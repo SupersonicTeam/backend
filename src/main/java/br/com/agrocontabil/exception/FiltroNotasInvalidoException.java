@@ -28,7 +28,7 @@ public class FiltroNotasInvalidoException extends DomainException {
    */
   public static FiltroNotasInvalidoException faixaInvertida(
       LocalDate emitidaDe, LocalDate emitidaAte) {
-    String mensagem = "Faixa invalida: emitidaDe (%s) e posterior a emitidaAte (%s)."
+    String mensagem = "Faixa inválida: emitidaDe (%s) é posterior a emitidaAte (%s)."
         .formatted(emitidaDe, emitidaAte);
     return new FiltroNotasInvalidoException(mensagem, new ErrorDetail(
         ErrorCode.FILTRO_NOTAS_INVALIDO.code(),
@@ -36,7 +36,7 @@ public class FiltroNotasInvalidoException extends DomainException {
         mensagem,
         "Informe emitidaDe anterior ou igual a emitidaAte.",
         emitidaDe.toString(),
-        "ate " + emitidaAte));
+        "até " + emitidaAte));
   }
 
   /**
@@ -49,7 +49,7 @@ public class FiltroNotasInvalidoException extends DomainException {
   public static FiltroNotasInvalidoException ordenacaoNaoPermitida(
       String propriedade, Collection<String> permitidas) {
     String lista = String.join(", ", permitidas);
-    String mensagem = "Ordenacao nao permitida: %s.".formatted(propriedade);
+    String mensagem = "Ordenação não permitida: %s.".formatted(propriedade);
     return new FiltroNotasInvalidoException(mensagem, new ErrorDetail(
         ErrorCode.FILTRO_NOTAS_INVALIDO.code(),
         "sort",

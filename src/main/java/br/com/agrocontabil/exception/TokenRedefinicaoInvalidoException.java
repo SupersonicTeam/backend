@@ -14,10 +14,10 @@ import org.springframework.http.HttpStatus;
  */
 public class TokenRedefinicaoInvalidoException extends DomainException {
 
-  private static final String MENSAGEM = "Link de redefinicao de senha invalido ou expirado.";
+  private static final String MENSAGEM = "Link de redefinição de senha inválido ou expirado.";
 
   private static final String SUGESTAO =
-      "Peca um link novo em 'Esqueci minha senha'. Cada link vale uma vez e por pouco tempo.";
+      "Peça um link novo em 'Esqueci minha senha'. Cada link vale uma vez e por pouco tempo.";
 
   public TokenRedefinicaoInvalidoException() {
     super(

@@ -29,13 +29,13 @@ public class CancelamentoForaPrazoException extends DomainException {
   public CancelamentoForaPrazoException(UUID id, OffsetDateTime dataLimite) {
     super(
         HttpStatus.UNPROCESSABLE_ENTITY,
-        "Nota fiscal '%s' nao pode ser cancelada: o prazo legal de 30 dias da emissao "
+        "Nota fiscal '%s' não pode ser cancelada: o prazo legal de 30 dias da emissão "
             .formatted(id)
             + "expirou em %s (RN006).".formatted(DATA.format(dataLimite)),
         List.of(new ErrorDetail(
             ErrorCode.CANCELAMENTO_FORA_PRAZO.code(),
             null,
-            "O cancelamento so e permitido dentro de 30 dias corridos da emissao (RN006). "
+            "O cancelamento só é permitido dentro de 30 dias corridos da emissão (RN006). "
                 + "Prazo expirado em " + DATA.format(dataLimite) + ".",
             "Notas fora do prazo devem ser tratadas por outro procedimento fiscal.",
             null,

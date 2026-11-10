@@ -39,7 +39,10 @@ public class PoliticaDadosService {
             "Dados fiscais: notas fiscais emitidas e importadas, guias, apuracoes de IBS/CBS.",
             "Seguranca: tentativas de login e sessoes ativas (sem guardar o token em si).",
             "Uso da assistente Ceres: metadados de cada pergunta, sem o texto da pergunta nem da "
-                + "resposta."),
+                + "resposta.",
+            "Endereco proprio do escritorio de contabilidade ({slug}.agroconia.com.br), quando o "
+                + "administrador o cria: fica publico e permanente nos registros de certificados "
+                + "da internet (Certificate Transparency). Nao use o nome de uma pessoa."),
         List.of(
             "Emitir, importar e guardar documentos fiscais do produtor.",
             "Calcular e apurar IBS/CBS e prazos tributarios.",
@@ -53,11 +56,17 @@ public class PoliticaDadosService {
             "SEFAZ: notas fiscais, por obrigacao legal.",
             "Escritorio de contabilidade vinculado pelo produtor.",
             "Provedor do modelo da Ceres, quando configurado por API: so dados ja mascarados "
-                + "(sem CPF, CNPJ, e-mail ou telefone)."),
+                + "(sem CPF, CNPJ, e-mail ou telefone).",
+            "Autoridade certificadora (Let's Encrypt) e registros publicos de certificados: o "
+                + "endereco proprio do escritorio, para emitir o certificado HTTPS."),
         List.of(
             "Documentos fiscais: 5 anos (CTN art. 173), mesmo apos a exclusao da conta.",
             "Conta e contato: ate o titular pedir a exclusao.",
-            "Sessoes: ate 30 dias; links de redefinicao de senha: 30 minutos."),
+            "Sessoes: ate 30 dias; links de redefinicao de senha: 30 minutos.",
+            "Endereco anterior do escritorio: bloqueado por 90 dias depois da troca e apagado em "
+                + "seguida. A exclusao "
+                + "dos dados do titular apaga o endereco na hora, mas nao alcanca os registros "
+                + "publicos de certificados."),
         List.of(
             "Confirmar o tratamento e acessar os dados (art. 18, I e II).",
             "Corrigir dados incompletos ou desatualizados (art. 18, III).",

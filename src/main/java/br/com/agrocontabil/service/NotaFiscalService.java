@@ -436,8 +436,8 @@ public class NotaFiscalService {
     try {
       avisos = sinaisService.avisosDoRascunho(salva).stream()
           .map(s -> new AvisoNotaResponse(s.codigo().name(), s.numeroItem(), "cClassTrib",
-              "O cClassTrib informado no item " + s.numeroItem() + " nao vale para o NCM dele: "
-                  + "o imposto mostrado nao vale na emissao e o gerar-xml sera recusado. "
+              "O cClassTrib informado no item " + s.numeroItem() + " não vale para o NCM dele: "
+                  + "o imposto mostrado não vale na emissão e o gerar-xml será recusado. "
                   + "Corrija o cClassTrib ou retire-o do item."))
           .toList();
     } catch (RuntimeException falha) {

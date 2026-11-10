@@ -151,17 +151,17 @@ public class ObrigacaoFiscalService {
     UUID modeloId = obrigacaoRepository.findByIdAndEscritorioId(id, escritorioId)
         .map(propria -> {
           if (propria.getModeloId() == null) {
-            throw new ObrigacaoInvalidaException("id", "Obrigacao propria nao tem padrao.",
-                "Para tira-la do calendario, desative-a.");
+            throw new ObrigacaoInvalidaException("id", "Obrigação própria não tem padrão.",
+                "Para tirá-la do calendário, desative-a.");
           }
           return propria.getModeloId();
         })
         .orElseGet(() -> obrigacaoRepository.findModeloById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Obrigacao", id)).getId());
+            .orElseThrow(() -> new ResourceNotFoundException("Obrigação", id)).getId());
     obrigacaoRepository.findByEscritorioIdAndModeloId(escritorioId, modeloId)
         .ifPresent(obrigacaoRepository::delete);
     return resposta(obrigacaoRepository.findModeloById(modeloId)
-        .orElseThrow(() -> new ResourceNotFoundException("Obrigacao", modeloId)));
+        .orElseThrow(() -> new ResourceNotFoundException("Obrigação", modeloId)));
   }
 
   /**
@@ -275,7 +275,7 @@ public class ObrigacaoFiscalService {
     return obrigacaoRepository.findByIdAndEscritorioId(id, escritorioId)
         .orElseGet(() -> {
           ObrigacaoFiscal modelo = obrigacaoRepository.findModeloById(id)
-              .orElseThrow(() -> new ResourceNotFoundException("Obrigacao", id));
+              .orElseThrow(() -> new ResourceNotFoundException("Obrigação", id));
           return obrigacaoRepository.findByEscritorioIdAndModeloId(escritorioId, id)
               .orElseGet(() -> versaoDoEscritorio(modelo, escritorioId).build());
         });
@@ -310,18 +310,18 @@ public class ObrigacaoFiscalService {
     UUID escritorioId = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR)
         .getEscritorioId();
     escritorioRepository.findByIdForUpdate(escritorioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+        .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
     return escritorioId;
   }
 
   private static void validarPrazo(ObrigacaoRequest request) {
     if (request.periodicidade() == Periodicidade.ANUAL && request.mes() == null) {
-      throw new ObrigacaoInvalidaException("mes", "Obrigacao anual precisa do mes.",
-          "Informe o mes (1 a 12).");
+      throw new ObrigacaoInvalidaException("mes", "Obrigação anual precisa do mês.",
+          "Informe o mês (1 a 12).");
     }
     if (request.periodicidade() == Periodicidade.MENSAL && request.mes() != null) {
-      throw new ObrigacaoInvalidaException("mes", "Obrigacao mensal nao tem mes.",
-          "Tire o mes, ou use periodicidade ANUAL.");
+      throw new ObrigacaoInvalidaException("mes", "Obrigação mensal não tem mês.",
+          "Tire o mês, ou use periodicidade ANUAL.");
     }
   }
 

@@ -2,23 +2,29 @@ package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.config.RedefinicaoSenhaProperties.ModoEmail;
 import br.com.agrocontabil.service.EnvioEmail;
+import br.com.agrocontabil.service.MensagensEmail;
+import br.com.agrocontabil.service.TetoEnvioEmail;
+import br.com.agrocontabil.service.TipoEmail;
 import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
  * Escolhe como o link de redefinição de senha chega ao titular (issue #209).
  *
  * <ul>
- *   <li>{@code SMTP}: envio real pelo {@link JavaMailSender} do Spring Boot ({@code spring.mail.*});
- *       sem {@code spring.mail.host} a aplicação não sobe;
+ *   <li>{@code SMTP}: envio real pelo {@link JavaMailSender} do Spring Boot ({@code spring.mail.*}),
+ *       pelo {@link EnvioEmailSmtp} (destino reservado, teto, {@code Reply-To}); sem host, sem
+ *       usuário e senha, com remetente fora do domínio verificado ou, fora de
+ *       {@code dev}/{@code test}, com link {@code http}, a aplicação não sobe
+ *       ({@link ConferenciaEmail}, issue #460);
  *   <li>{@code LOG}: o link vai para o log em WARN. É um segredo em log, aceitável só na máquina do
  *       desenvolvedor — <strong>a aplicação só sobe com {@code LOG} nos profiles {@code dev} e
  *       {@code test}</strong>;
@@ -27,27 +33,46 @@ import org.springframework.mail.javamail.JavaMailSender;
  * </ul>
  */
 @Configuration
+@EnableConfigurationProperties(EmailProperties.class)
 public class EmailConfig {
 
   private static final Logger log = LoggerFactory.getLogger(EmailConfig.class);
 
-  private static final String ASSUNTO = "Redefinicao de senha - AgroConIA";
-
   /** Profiles em que o modo LOG é aceito: a máquina do desenvolvedor e os testes. */
-  static final List<String> PERFIS_COM_LOG = List.of("dev", "test");
+  static final List<String> PERFIS_COM_LOG = ConferenciaEmail.PERFIS_LOCAIS;
+
+  /**
+   * Envio pelo SMTP, comum às três portas (o teto de envios é um só). Sem efeito fora do modo
+   * {@code SMTP}: o cliente SMTP só é pedido no envio.
+   *
+   * @param mailSender   cliente SMTP do Boot, se configurado
+   * @param propriedades remetente
+   * @param email        {@code Reply-To} e domínios reservados
+   * @param teto         teto de envios
+   * @return o envio SMTP
+   */
+  @Bean
+  EnvioEmailSmtp envioEmailSmtp(ObjectProvider<JavaMailSender> mailSender,
+      RedefinicaoSenhaProperties propriedades, EmailProperties email, TetoEnvioEmail teto) {
+    return new EnvioEmailSmtp(mailSender, propriedades.remetente(), email, teto);
+  }
 
   /**
    * Implementação da porta de e-mail conforme o modo configurado.
    *
    * @param propriedades configuração da redefinição
+   * @param email        domínio verificado do remetente e {@code Reply-To}
    * @param mailSender   cliente SMTP do Boot, se configurado
+   * @param smtp         envio pelo SMTP
    * @param ambiente     para recusar o modo LOG em produção
    * @return a porta de envio
    */
   @Bean
   public EnvioEmail envioEmail(
       RedefinicaoSenhaProperties propriedades,
+      EmailProperties email,
       ObjectProvider<JavaMailSender> mailSender,
+      EnvioEmailSmtp smtp,
       Environment ambiente) {
     ModoEmail modo = propriedades.modoEmail();
     List<String> perfis = Arrays.asList(ambiente.getActiveProfiles());
@@ -58,12 +83,15 @@ public class EmailConfig {
           + "redefinicao (um segredo) no log: permitido so nos profiles " + PERFIS_COM_LOG
           + ". Use SMTP.");
     }
-    if (perfis.contains("prod") && !propriedades.urlFrontend().startsWith("https://")) {
-      throw new IllegalStateException("app.seguranca.redefinicao.url-frontend precisa ser HTTPS "
-          + "em prod (REDEFINICAO_URL_FRONTEND): o link leva o token de redefinicao.");
-    }
+    ConferenciaEmail.exigirHttps("app.seguranca.redefinicao.url-frontend "
+        + "(REDEFINICAO_URL_FRONTEND)", propriedades.urlFrontend(), modo == ModoEmail.SMTP,
+        ambiente);
     return switch (modo) {
-      case SMTP -> smtp(mailSender.getIfAvailable(), propriedades.remetente());
+      case SMTP -> {
+        ConferenciaEmail.conferirSmtp(ambiente, mailSender, propriedades.remetente(), email);
+        yield (destinatario, link, validade) -> smtp.enviar(TipoEmail.REDEFINICAO_SENHA,
+            destinatario, MensagensEmail.redefinicaoSenha(link, validade));
+      }
       case LOG -> (destinatario, link, validade) ->
           log.warn("[DEV] E-mail de redefinicao de senha NAO enviado (modo LOG). Link: {}", link);
       case DESLIGADO -> {
@@ -71,30 +99,6 @@ public class EmailConfig {
         yield (destinatario, link, validade) -> log.info("Pedido de redefinicao sem envio "
             + "(modo-email=DESLIGADO).");
       }
-    };
-  }
-
-  private static EnvioEmail smtp(JavaMailSender mailSender, String remetente) {
-    if (mailSender == null) {
-      throw new IllegalStateException(
-          "app.seguranca.redefinicao.modo-email=SMTP exige spring.mail.host configurado.");
-    }
-    return (destinatario, link, validade) -> {
-      SimpleMailMessage mensagem = new SimpleMailMessage();
-      mensagem.setFrom(remetente);
-      mensagem.setTo(destinatario);
-      mensagem.setSubject(ASSUNTO);
-      mensagem.setText("""
-          Recebemos um pedido para redefinir a senha da sua conta no AgroConIA.
-
-          Para escolher uma senha nova, abra o link abaixo em ate %d minutos:
-
-          %s
-
-          O link vale uma vez so. Se voce nao pediu a redefinicao, ignore este e-mail: sua senha
-          continua a mesma.
-          """.formatted(validade.toMinutes(), link));
-      mailSender.send(mensagem);
     };
   }
 }

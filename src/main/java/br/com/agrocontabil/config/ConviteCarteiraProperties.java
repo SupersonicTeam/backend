@@ -8,15 +8,16 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * Convites da carteira do escritório (issue #177), em {@code app.carteira.convite}.
  *
  * @param validade    vida do convite (padrão 14 dias)
- * @param urlFrontend página do Angular onde o produtor vê e responde os convites; vai no e-mail,
- *                    sem token — aceitar exige estar logado com o e-mail convidado
+ * @param urlFrontend página do Angular onde o produtor vê e responde os convites ({@code /escritorio}
+ *                    desde a #460: o frontend não tem {@code /convites}); vai no e-mail, sem token —
+ *                    aceitar exige estar logado com o e-mail convidado
  * @param maxPorDia   teto de convites por escritório em 24 horas (o convite manda e-mail)
  * @param retencao    por quanto tempo o convite fica depois de vencer (o job o apaga depois)
  */
 @ConfigurationProperties(prefix = "app.carteira.convite")
 public record ConviteCarteiraProperties(
     @DefaultValue("P14D") Duration validade,
-    @DefaultValue("http://localhost:4200/convites") String urlFrontend,
+    @DefaultValue("http://localhost:4200/escritorio") String urlFrontend,
     @DefaultValue("30") int maxPorDia,
     @DefaultValue("P30D") Duration retencao) {
 

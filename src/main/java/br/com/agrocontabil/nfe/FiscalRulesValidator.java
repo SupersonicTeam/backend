@@ -134,33 +134,33 @@ public class FiscalRulesValidator {
     if (isBlank(nota.getNaturezaOperacao())) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "naturezaOperacao", "Natureza da operacao e obrigatoria para emissao da NF-e"));
+              "naturezaOperacao", "Natureza da operação é obrigatória para emissão da NF-e"));
     }
 
     if (nota.getNumero() == null || nota.getNumero() <= 0) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "numero", "Numero da NF-e deve ser maior que zero"));
+              "numero", "Número da NF-e deve ser maior que zero"));
     } else if (nota.getNumero() > NUMERO_MAXIMO) {
       // Defesa em profundidade: o DTO ja barra com 400, mas notas importadas/legadas nao passam
       // pelo Bean Validation. Acima deste limite o nNF nao cabe nos 9 digitos da chave.
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "numero", "Numero da NF-e deve ser no maximo " + NUMERO_MAXIMO
-                  + " (9 digitos no layout e na chave de acesso)"));
+              "numero", "Número da NF-e deve ser no máximo " + NUMERO_MAXIMO
+                  + " (9 dígitos no layout e na chave de acesso)"));
     }
 
     if (nota.getSerie() != null && nota.getSerie() > SERIE_MAXIMA) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "serie", "Serie da NF-e deve ser no maximo " + SERIE_MAXIMA
-                  + " (3 digitos no layout e na chave de acesso)"));
+              "serie", "Série da NF-e deve ser no máximo " + SERIE_MAXIMA
+                  + " (3 dígitos no layout e na chave de acesso)"));
     }
 
     if (nota.getDataEmissao() == null) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "dataEmissao", "Data de emissao e obrigatoria"));
+              "dataEmissao", "Data de emissão é obrigatória"));
     }
   }
 
@@ -173,7 +173,7 @@ public class FiscalRulesValidator {
     if (produtor == null) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "produtor", "Produtor emitente nao associado a nota fiscal"));
+              "produtor", "Produtor emitente não associado à nota fiscal"));
       return; // sem produtor não há como validar sub-campos
     }
 
@@ -181,7 +181,7 @@ public class FiscalRulesValidator {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.cpfCnpj",
-              "CPF/CNPJ do emitente e obrigatorio para emissao da NF-e"));
+              "CPF/CNPJ do emitente é obrigatório para emissão da NF-e"));
     }
 
     // A IE e obrigatoria para a NF-e modelo 55. Na NFA (produtor rural pessoa fisica), a ausencia
@@ -191,22 +191,22 @@ public class FiscalRulesValidator {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.inscricaoEstadual",
-              "Inscricao Estadual do emitente e obrigatoria para emissao da NF-e modelo 55"));
+              "Inscrição Estadual do emitente é obrigatória para emissão da NF-e modelo 55"));
     }
 
     if (isBlank(produtor.getEstado())) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.estado",
-              "UF do emitente e obrigatoria para determinar o codigo IBGE da UF na chave de acesso"));
+              "UF do emitente é obrigatória para determinar o código IBGE da UF na chave de acesso"));
     } else if (UfIbge.codigo(produtor.getEstado()).isEmpty()) {
       // Sem cUF nao ha como montar a chave de acesso: barrar aqui (422) em vez de deixar o mapper
       // lancar IllegalStateException, que viraria 500 generico sem registro de inconsistencia.
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.estado",
-              "UF do emitente invalida: '" + produtor.getEstado()
-                  + "' nao corresponde a nenhuma das 27 unidades federativas"));
+              "UF do emitente inválida: '" + produtor.getEstado()
+                  + "' não corresponde a nenhuma das 27 unidades federativas"));
     }
 
     validarEnderecoEmitente(produtor, violations);
@@ -225,13 +225,13 @@ public class FiscalRulesValidator {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.endereco",
-              "Endereco do emitente e obrigatorio para emissao da NF-e"));
+              "Endereço do emitente é obrigatório para emissão da NF-e"));
       return;
     }
 
     exigir(endereco.getLogradouro(), "produtor.endereco.logradouro", "Logradouro", violations);
     exigir(endereco.getNumero(), "produtor.endereco.numero",
-        "Numero (use S/N quando nao houver)", violations);
+        "Número (use S/N quando não houver)", violations);
     exigir(endereco.getBairro(), "produtor.endereco.bairro", "Bairro", violations);
     exigir(endereco.getMunicipio(), "produtor.endereco.municipio", "Municipio", violations);
     exigir(endereco.getCep(), "produtor.endereco.cep", "CEP", violations);
@@ -240,13 +240,13 @@ public class FiscalRulesValidator {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.endereco.codigoMunicipioIbge",
-              "Codigo IBGE do municipio do emitente e obrigatorio para o layout da NF-e"));
+              "Código IBGE do município do emitente é obrigatório para o layout da NF-e"));
     } else if (!isBlank(produtor.getEstado())
         && !UfIbge.prefixoCoerente(endereco.getCodigoMunicipioIbge(), produtor.getEstado())) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
               "produtor.endereco.codigoMunicipioIbge",
-              "Codigo IBGE do municipio do emitente nao pertence a UF "
+              "Código IBGE do município do emitente não pertence à UF "
                   + produtor.getEstado().toUpperCase()));
     }
   }
@@ -259,7 +259,7 @@ public class FiscalRulesValidator {
     if (isBlank(valor)) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              campo, rotulo + " do emitente e obrigatorio para emissao da NF-e"));
+              campo, rotulo + " do emitente é obrigatório para emissão da NF-e"));
     }
   }
 
@@ -270,43 +270,43 @@ public class FiscalRulesValidator {
     if (isBlank(nota.getDestinatarioNome())) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "destinatarioNome", "Nome do destinatario e obrigatorio"));
+              "destinatarioNome", "Nome do destinatário é obrigatório"));
     }
 
     if (isBlank(nota.getDestinatarioCpfCnpj())) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "destinatarioCpfCnpj", "CPF/CNPJ do destinatario e obrigatorio"));
+              "destinatarioCpfCnpj", "CPF/CNPJ do destinatário é obrigatório"));
     }
 
     EnderecoDestinatario end = nota.getDestinatarioEndereco();
     if (end == null) {
       violations.add(
           new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              "destinatarioEndereco", "Endereco do destinatario e obrigatorio para emissao da NF-e"));
+              "destinatarioEndereco", "Endereço do destinatário é obrigatório para emissão da NF-e"));
     } else {
       if (isBlank(end.getUf())) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-                "destinatarioEndereco.uf", "UF do destinatario e obrigatoria"));
+                "destinatarioEndereco.uf", "UF do destinatário é obrigatória"));
       }
       if (isBlank(end.getMunicipio())) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-                "destinatarioEndereco.municipio", "Municipio do destinatario e obrigatorio"));
+                "destinatarioEndereco.municipio", "Município do destinatário é obrigatório"));
       }
       if (isBlank(end.getLogradouro())) {
         // O XSD exige xLgr com 2 a 60 caracteres; sem o fallback removido na issue #88, a
         // ausencia geraria XML invalido com mensagem opaca em vez de um erro por campo.
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-                "destinatarioEndereco.logradouro", "Logradouro do destinatario e obrigatorio"));
+                "destinatarioEndereco.logradouro", "Logradouro do destinatário é obrigatório"));
       }
       if (isBlank(end.getCodigoMunicipioIbge())) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 "destinatarioEndereco.codigoMunicipioIbge",
-                "Codigo IBGE do municipio do destinatario e obrigatorio para o layout da NF-e"));
+                "Código IBGE do município do destinatário é obrigatório para o layout da NF-e"));
       } else if (!isBlank(end.getUf())
           && !UfIbge.isExterior(end.getUf())
           && !UfIbge.prefixoCoerente(end.getCodigoMunicipioIbge(), end.getUf())) {
@@ -315,7 +315,7 @@ public class FiscalRulesValidator {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                 "destinatarioEndereco.codigoMunicipioIbge",
-                "Codigo IBGE do municipio do destinatario nao pertence a UF "
+                "Código IBGE do município do destinatário não pertence à UF "
                     + end.getUf().toUpperCase()));
       }
     }
@@ -338,18 +338,18 @@ public class FiscalRulesValidator {
       if (isBlank(item.getNcm())) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-                prefixo + ".ncm", "NCM e obrigatorio no layout da NF-e"));
+                prefixo + ".ncm", "NCM é obrigatório no layout da NF-e"));
       } else if (ncmValidator != null && !ncmValidator.isValid(item.getNcm(), null)) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-                prefixo + ".ncm", "NCM " + item.getNcm() + " nao consta na tabela de referencia"
-                    + " (nomenclatura oficial); edite o item e escolha o codigo correto"));
+                prefixo + ".ncm", "NCM " + item.getNcm() + " não consta na tabela de referência"
+                    + " (nomenclatura oficial); edite o item e escolha o código correto"));
       }
 
       if (isBlank(item.getCfop())) {
         violations.add(
             new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-                prefixo + ".cfop", "CFOP e obrigatorio no layout da NF-e"));
+                prefixo + ".cfop", "CFOP é obrigatório no layout da NF-e"));
       } else {
         validarAmbitoCfop(nota, item, prefixo, violations);
       }
@@ -389,26 +389,26 @@ public class FiscalRulesValidator {
     String cst = item.getCstIcms() == null ? "" : item.getCstIcms().strip();
     violations.add(switch (problema.get()) {
       case A_DEFINIR -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
-          "ICMS a definir com o contador: o CST do ICMS so tem padrao na venda interna de"
-              + " producao propria (CFOP " + TributacaoIcms.CFOP_VENDA_PRODUCAO_INTERNA
-              + ") a destinatario com inscricao estadual (diferimento, CST 51)",
+          "ICMS a definir com o contador: o CST do ICMS só tem padrão na venda interna de"
+              + " produção própria (CFOP " + TributacaoIcms.CFOP_VENDA_PRODUCAO_INTERNA
+              + ") a destinatário com inscrição estadual (diferimento, CST 51)",
           ErrorCode.ICMS_A_DEFINIR, "Informe o CST do ICMS combinado com o contador: "
               + TributacaoIcms.CSTS_SEM_CALCULO_TEXTO);
       case EXPORTACAO_A_DEFINIR -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-          campo, "ICMS a definir: exportacao (CFOP " + item.getCfop() + ") sem o CST do ICMS",
-          ErrorCode.ICMS_A_DEFINIR, "Na exportacao o CST do ICMS e o "
-              + TributacaoIcms.CST_NAO_TRIBUTADA + " (rejeicao 527 da SEFAZ); confirme com o"
+          campo, "ICMS a definir: exportação (CFOP " + item.getCfop() + ") sem o CST do ICMS",
+          ErrorCode.ICMS_A_DEFINIR, "Na exportação o CST do ICMS é o "
+              + TributacaoIcms.CST_NAO_TRIBUTADA + " (rejeição 527 da SEFAZ); confirme com o"
               + " contador e informe-o");
       case FORA_DA_LISTA -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
-          "CST do ICMS " + cst + " exige o calculo do ICMS, que o sistema nao faz: use "
+          "CST do ICMS " + cst + " exige o cálculo do ICMS, que o sistema não faz: use "
               + TributacaoIcms.CSTS_SEM_CALCULO_TEXTO);
       case EXPORTACAO_SEM_41 -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
-          "Exportacao (CFOP " + item.getCfop() + ") exige o CST do ICMS "
-              + TributacaoIcms.CST_NAO_TRIBUTADA + " (rejeicao 527 da SEFAZ); informado " + cst);
+          "Exportação (CFOP " + item.getCfop() + ") exige o CST do ICMS "
+              + TributacaoIcms.CST_NAO_TRIBUTADA + " (rejeição 527 da SEFAZ); informado " + cst);
       case EMITENTE_SIMPLES -> new NotaFiscalInvalidaParaEmissaoException.FieldViolation(campo,
           "Emitente do Simples Nacional ou MEI informa o ICMS por CSOSN (grupos ICMSSN), que o"
-              + " sistema ainda nao emite: a SEFAZ rejeita CST para esse emitente (rejeicao 590)",
-          ErrorCode.ICMS_A_DEFINIR, "Emita esta nota com o contador ate o sistema tratar o"
+              + " sistema ainda não emite: a SEFAZ rejeita CST para esse emitente (rejeição 590)",
+          ErrorCode.ICMS_A_DEFINIR, "Emita esta nota com o contador até o sistema tratar o"
               + " Simples Nacional");
     });
   }
@@ -427,7 +427,7 @@ public class FiscalRulesValidator {
     if (cClassTrib == null) {
       violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
           prefixo + ".cClassTrib", "Informe o cClassTrib do IBS/CBS: o item tem percentual de"
-              + " reducao informado e nenhuma classificacao tributaria"));
+              + " redução informado e nenhuma classificação tributária"));
       return;
     }
     String cst = NotaFiscalNfeMapper.cst(item);
@@ -436,14 +436,14 @@ public class FiscalRulesValidator {
       // sem gIBSCBS no 410) e calculo proprio: barrar antes de emitir errado.
       violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
           prefixo + ".cClassTrib", "cClassTrib " + cClassTrib + " (CST "
-              + cClassTrib.substring(0, 3) + ") nao e suportado na emissao: so tributacao"
-              + " integral (CST 000) e reducao de aliquota (CST 200)"));
+              + cClassTrib.substring(0, 3) + ") não é suportado na emissão: só tributação"
+              + " integral (CST 000) e redução de alíquota (CST 200)"));
       return;
     }
     if (!cClassTrib.startsWith(cst)) {
       violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-          prefixo + ".cstIbsCbs", "CST " + cst + " nao corresponde ao cClassTrib " + cClassTrib
-              + " (os tres primeiros digitos sao o CST)"));
+          prefixo + ".cstIbsCbs", "CST " + cst + " não corresponde ao cClassTrib " + cClassTrib
+              + " (os três primeiros dígitos são o CST)"));
     }
     if (classificacaoService == null || nota.getDataEmissao() == null) {
       return;
@@ -453,15 +453,15 @@ public class FiscalRulesValidator {
         classificacaoService.classificacao(cClassTrib, data);
     if (oficial.isEmpty()) {
       violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-          prefixo + ".cClassTrib", "cClassTrib " + cClassTrib + " nao existe na tabela oficial"
-              + " de classificacao tributaria vigente em " + data));
+          prefixo + ".cClassTrib", "cClassTrib " + cClassTrib + " não existe na tabela oficial"
+              + " de classificação tributária vigente em " + data));
       return;
     }
     BigDecimal reducao = NotaFiscalNfeMapper.reducao(item);
     if (oficial.get().getPercentualReducaoIbs().compareTo(reducao) != 0) {
       violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-          prefixo + ".percentualReducao", "Reducao de " + reducao.stripTrailingZeros()
-              .toPlainString() + "% nao corresponde ao cClassTrib " + cClassTrib + " ("
+          prefixo + ".percentualReducao", "Redução de " + reducao.stripTrailingZeros()
+              .toPlainString() + "% não corresponde ao cClassTrib " + cClassTrib + " ("
               + oficial.get().getPercentualReducaoIbs().stripTrailingZeros().toPlainString()
               + "% na tabela oficial)"));
     }
@@ -485,13 +485,13 @@ public class FiscalRulesValidator {
         .ifPresent(nao -> {
           String admitidos = String.join(", ", nao.admitidos());
           violations.add(new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
-              prefixo + ".cClassTrib", "cClassTrib " + item.getCClassTrib() + " nao vale para o"
-                  + " NCM " + item.getNcm() + ": a hipotese de reducao dele nao inclui esse NCM"
+              prefixo + ".cClassTrib", "cClassTrib " + item.getCClassTrib() + " não vale para o"
+                  + " NCM " + item.getNcm() + ": a hipótese de redução dele não inclui esse NCM"
                   + " na tabela oficial (LC 214/2025). Para este NCM valem: " + admitidos
-                  + " (alem de 000001 e 200036)",
+                  + " (além de 000001 e 200036)",
               null, "Informe o cClassTrib " + nao.regra().cClassTrib() + " ("
                   + nao.regra().percentualReducao().stripTrailingZeros().toPlainString()
-                  + "% de reducao, a regra do NCM), outro da lista ou retire o cClassTrib do"
+                  + "% de redução, a regra do NCM), outro da lista ou retire o cClassTrib do"
                   + " item",
               item.getCClassTrib(), admitidos));
         });
@@ -543,7 +543,7 @@ public class FiscalRulesValidator {
           violations.add(
               new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                   prefixo + ".cfop",
-                  "CFOP de operacao interna (iniciado em 5) e incompativel com operacao "
+                  "CFOP de operação interna (iniciado em 5) é incompatível com operação "
                       + "interestadual (" + emitente + " -> " + destinatario
                       + "). Use um CFOP iniciado em 6."));
         }
@@ -553,7 +553,7 @@ public class FiscalRulesValidator {
           violations.add(
               new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                   prefixo + ".cfop",
-                  "CFOP de operacao interestadual (iniciado em 6) e incompativel com operacao "
+                  "CFOP de operação interestadual (iniciado em 6) é incompatível com operação "
                       + "interna (mesma UF " + emitente
                       + "). Use um CFOP iniciado em 5."));
         }
@@ -563,8 +563,8 @@ public class FiscalRulesValidator {
           violations.add(
               new NotaFiscalInvalidaParaEmissaoException.FieldViolation(
                   prefixo + ".cfop",
-                  "CFOP de operacao com o exterior (iniciado em 7) exige destinatario no "
-                      + "exterior (UF 'EX'). Para operacao nacional use CFOP iniciado em 5 ou 6."));
+                  "CFOP de operação com o exterior (iniciado em 7) exige destinatário no "
+                      + "exterior (UF 'EX'). Para operação nacional use CFOP iniciado em 5 ou 6."));
         }
       }
       default -> {

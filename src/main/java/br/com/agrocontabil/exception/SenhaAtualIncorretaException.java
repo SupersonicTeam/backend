@@ -15,14 +15,14 @@ import org.springframework.http.HttpStatus;
  */
 public class SenhaAtualIncorretaException extends DomainException {
 
-  private static final String MENSAGEM = "A senha atual nao confere.";
+  private static final String MENSAGEM = "A senha atual não confere.";
 
   public SenhaAtualIncorretaException() {
     super(
         HttpStatus.BAD_REQUEST,
         MENSAGEM,
         List.of(new ErrorDetail(ErrorCode.SENHA_ATUAL_INCORRETA.code(), "senhaAtual", MENSAGEM,
-            "Confira a senha atual. Depois de varias tentativas erradas a conta fica bloqueada "
+            "Confira a senha atual. Depois de várias tentativas erradas a conta fica bloqueada "
                 + "por alguns minutos.", null, null)));
   }
 }

@@ -95,7 +95,7 @@ public class NfeXmlImporter {
     Node nfeNode = localizarNfe(document);
     if (nfeNode == null) {
       throw new XmlImportacaoInvalidaException(
-          "Elemento <NFe> nao encontrado no XML. Envie uma NF-e (nfeProc ou NFe) valida.");
+          "Elemento <NFe> não encontrado no XML. Envie uma NF-e (nfeProc ou NFe) válida.");
     }
 
     // 2) Serializa o subtree <NFe> (preservando ds:Signature) e valida contra o XSD 4.00.
@@ -122,7 +122,7 @@ public class NfeXmlImporter {
       log.warn("Falha ao parsear XML importado (rejeitado por seguranca ou malformacao): {}",
           e.getMessage());
       throw new XmlImportacaoInvalidaException(
-          "XML malformado ou nao permitido (DOCTYPE/entidades externas sao bloqueados).");
+          "XML malformado ou não permitido (DOCTYPE/entidades externas são bloqueados).");
     }
   }
 
@@ -147,7 +147,7 @@ public class NfeXmlImporter {
       return writer.toString();
     } catch (TransformerException e) {
       log.warn("Falha ao serializar o elemento <NFe> do XML importado: {}", e.getMessage());
-      throw new XmlImportacaoInvalidaException("Nao foi possivel processar o elemento <NFe>.");
+      throw new XmlImportacaoInvalidaException("Não foi possível processar o elemento <NFe>.");
     }
   }
 
@@ -160,7 +160,7 @@ public class NfeXmlImporter {
       // semantica de importacao sem vazar detalhe tecnico sensivel ao cliente.
       log.warn("XML importado reprovado na validacao XSD: {}", e.getMessage());
       throw new XmlImportacaoInvalidaException(
-          "XML nao esta em conformidade com o layout oficial da NF-e (XSD 4.00).");
+          "XML não está em conformidade com o layout oficial da NF-e (XSD 4.00).");
     }
   }
 
@@ -178,7 +178,7 @@ public class NfeXmlImporter {
     } catch (JAXBException | XMLStreamException e) {
       log.warn("Falha ao desserializar (unmarshal) o XML importado: {}", e.getMessage());
       throw new XmlImportacaoInvalidaException(
-          "Nao foi possivel interpretar a estrutura da NF-e no XML enviado.");
+          "Não foi possível interpretar a estrutura da NF-e no XML enviado.");
     } finally {
       if (reader != null) {
         try {

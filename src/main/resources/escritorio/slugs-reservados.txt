@@ -1,0 +1,94 @@
+# Slugs que nenhum escritorio registra (issue #464, decisoes do Murillo de 2026-11-09).
+#
+# Um nome por linha, ja normalizado (minusculas, ASCII). "contem:" = termo que nenhum slug pode
+# conter, contra phishing (agroconia-suporte.agroconia.com.br). Linhas com "#" sao comentario.
+# Reservado ou contido recebe o mesmo 409 SLUG_INDISPONIVEL de um slug em uso. A lista cresce com
+# os proximos servicos: acrescente aqui, nunca no codigo. O SlugsReservadosTest confere o arquivo.
+
+# Infraestrutura
+www
+api
+app
+admin
+administrador
+mail
+email
+smtp
+imap
+pop
+webmail
+mx
+ns1
+ns2
+dns
+ftp
+autodiscover
+autoconfig
+cdn
+static
+assets
+img
+status
+healthz
+interno
+
+# Ambientes
+dev
+homolog
+staging
+test
+teste
+demo
+demonstracao
+banca
+
+# Produto e autenticacao
+login
+entrar
+cadastro
+conta
+auth
+sso
+oauth
+senha
+seguranca
+ajuda
+suporte
+help
+docs
+blog
+contato
+pagamento
+cobranca
+billing
+planos
+precos
+
+# Marcas e orgaos ("ceres" e a assistente fiscal do produto)
+agroconia
+agrocontabil
+gwnext
+supersonic
+ceres
+sefaz
+receita
+gov
+nfe
+
+# Atendimento e areas da empresa (decisao de 2026-11-09)
+atendimento
+comercial
+vendas
+financeiro
+sac
+ouvidoria
+parceiros
+ia
+assistente
+
+# Termos que nenhum slug pode conter
+contem:agroconia
+contem:agrocontabil
+contem:gwnext
+contem:sefaz
+contem:receita

@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
 public @interface ValidCfop {
 
   String message() default
-      "CFOP informado nao existe ou nao e aplicavel as operacoes do produtor rural";
+      "CFOP informado não existe ou não é aplicável às operações do produtor rural";
 
   Class<?>[] groups() default {};
 

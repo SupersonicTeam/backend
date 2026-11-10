@@ -7,10 +7,12 @@ import br.com.agrocontabil.dto.CadastroEquipeRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.dto.ConviteMembroRequest;
 import br.com.agrocontabil.dto.ConviteMembroResponse;
+import br.com.agrocontabil.dto.EnderecoEscritorioRequest;
 import br.com.agrocontabil.dto.EscritorioRequest;
 import br.com.agrocontabil.dto.EscritorioResponse;
 import br.com.agrocontabil.dto.MembroResponse;
 import br.com.agrocontabil.security.RotasAutenticacao;
+import br.com.agrocontabil.service.EnderecoEscritorioService;
 import br.com.agrocontabil.service.EquipeEscritorioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,9 +45,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class EscritorioController {
 
   private final EquipeEscritorioService equipeService;
+  private final EnderecoEscritorioService enderecoService;
 
-  public EscritorioController(EquipeEscritorioService equipeService) {
+  public EscritorioController(EquipeEscritorioService equipeService,
+      EnderecoEscritorioService enderecoService) {
     this.equipeService = equipeService;
+    this.enderecoService = enderecoService;
   }
 
   /** Escritório de quem pergunta. */
@@ -56,9 +62,44 @@ public class EscritorioController {
 
   /** Edita nome e CNPJ. */
   @PatchMapping("/api/escritorio")
-  @Operation(summary = "Edita nome e CNPJ do escritorio (administrador)")
+  @Operation(summary = "Edita nome e CNPJ do escritorio (administrador)",
+      description = "Com endereco proprio, apagar o CNPJ responde 422 ENDERECO_EXIGE_CNPJ.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "422", description = "ENDERECO_EXIGE_CNPJ",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
   public EscritorioResponse atualizar(@Valid @RequestBody EscritorioRequest request) {
     return equipeService.atualizar(request);
+  }
+
+  /** Define ou troca o endereço próprio do escritório (issue #464). */
+  @PutMapping("/api/escritorio/endereco")
+  @Operation(summary = "Define ou troca o endereco proprio do escritorio (administrador)",
+      description = "Endereco {slug}.agroconia.com.br. Exige CNPJ e a ciencia de que o endereco "
+          + "fica publico e permanente. Uma gravacao a cada 30 dias; o slug que sai fica 90 dias "
+          + "em carencia. Reenviar o slug atual nao muda nada.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "400", description = "SLUG_INVALIDO ou VALIDATION_ERROR",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "SLUG_INDISPONIVEL ou ENDERECO_TROCA_RECENTE",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "422", description = "ENDERECO_EXIGE_CNPJ",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public EscritorioResponse definirEndereco(
+      @Valid @RequestBody EnderecoEscritorioRequest request) {
+    return enderecoService.definir(request).escritorio();
+  }
+
+  /** Remove o endereço próprio do escritório (issue #464). */
+  @DeleteMapping("/api/escritorio/endereco")
+  @Operation(summary = "Remove o endereco proprio do escritorio (administrador)",
+      description = "Sempre permitido, mesmo antes de 30 dias da ultima troca. O slug fica 90 dias "
+          + "em carencia. Sem endereco, tambem 204.")
+  public ResponseEntity<Void> removerEndereco() {
+    enderecoService.remover();
+    return ResponseEntity.noContent().build();
   }
 
   /** Membros da equipe. */

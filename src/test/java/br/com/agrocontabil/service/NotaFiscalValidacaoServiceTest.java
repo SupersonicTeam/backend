@@ -95,7 +95,7 @@ class NotaFiscalValidacaoServiceTest {
         new ErrorDetail("NOTA_INVALIDA_EMISSAO", "item[1].ncm",
             "NCM e obrigatorio", "Informe o NCM", "1234567", "8 digitos"),
         ErrorDetail.of(ErrorCode.NOTA_INVALIDA_EMISSAO, "destinatarioNome",
-            "Nome do destinatario e obrigatorio"));
+            "Nome do destinatário é obrigatório"));
 
     when(notaFiscalRepository.findById(notaId)).thenReturn(Optional.of(nota));
 

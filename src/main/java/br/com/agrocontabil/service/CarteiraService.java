@@ -346,7 +346,7 @@ public class CarteiraService {
     VinculoCarteira vinculo = vinculoRepository
         .findByIdAndProdutorIdForUpdate(vinculoId, produtorId)
         .filter(v -> v.getSituacao() != SituacaoVinculo.ENCERRADO)
-        .orElseThrow(() -> new ResourceNotFoundException("Vinculo", vinculoId));
+        .orElseThrow(() -> new ResourceNotFoundException("Vínculo", vinculoId));
     encerrarVinculo(vinculo, EncerradoPor.PRODUTOR, null, motivo);
     return vinculoDoProdutor(vinculo,
         escritorioRepository.findById(vinculo.getEscritorioId()).orElse(null),

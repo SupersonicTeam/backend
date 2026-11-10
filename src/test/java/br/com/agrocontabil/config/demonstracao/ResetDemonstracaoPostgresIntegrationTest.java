@@ -131,10 +131,16 @@ class ResetDemonstracaoPostgresIntegrationTest {
     Escritorio outro = escritorioRepository.save(Escritorio.builder()
         .nome(CenarioDemonstracao.ESCRITORIO_NOME).cnpj(CenarioDemonstracao.cnpj("111222333000"))
         .build());
+    // No ensaio, a administradora trocou o endereco (#464): o antigo ficou em carencia.
+    jdbc.update("UPDATE escritorio SET slug = 'rural-oeste-ensaio' WHERE id = ?", escritorioSeed);
+    jdbc.update("INSERT INTO escritorio_slug_anterior (slug, escritorio_id, liberado_em)"
+        + " VALUES (?, ?, now() + interval '90 days')", CenarioDemonstracao.ESCRITORIO_SLUG,
+        escritorioSeed);
 
     Map<String, Long> aApagar = conferencia(jdbc);
     assertThat(aApagar).containsEntry("contadores", (long) CenarioDemonstracao.EQUIPE.size())
-        .containsEntry("contadores_fora_da_equipe", 1L);
+        .containsEntry("contadores_fora_da_equipe", 1L)
+        .containsEntry("escritorio_slug_anterior", 1L);
     Map<String, Long> antes = totais(jdbc);
     executar(APAGAR);
     Map<String, Long> depois = totais(jdbc);
@@ -161,6 +167,11 @@ class ResetDemonstracaoPostgresIntegrationTest {
     cotaCeres.prepararSemana(); // como o run(): a cota da Ceres no limite
     assertThat(resumo.notasRecusadas()).isZero();
     assertThat(conferencia(jdbc)).isEqualTo(primeira);
+    // O endereco da banca volta, e a carencia do ensaio nao sobrou (#464).
+    assertThat(jdbc.queryForObject("SELECT slug FROM escritorio WHERE cnpj = ?", String.class,
+        CenarioDemonstracao.ESCRITORIO_CNPJ)).isEqualTo(CenarioDemonstracao.ESCRITORIO_SLUG);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM escritorio_slug_anterior", Long.class))
+        .isZero();
     // O leite UHT do Luiz vai ao supermercado, nao ao laticinio (#284).
     assertThat(jdbc.queryForList("SELECT DISTINCT n.destinatario_nome FROM nota_fiscal n"
             + " JOIN nota_fiscal_item i ON i.nota_fiscal_id = n.id"
