@@ -33,12 +33,16 @@ import org.springframework.stereotype.Component;
  * aplicação sobe e só a Ceres responde 503 — o restante do sistema não depende do modelo.
  *
  * <p>Timeout e retry vêm da configuração do Spring AI e do Boot ({@code spring.ai.retry.*},
- * {@code spring.http.client.*}); ver o {@code application.yml}.
+ * {@code spring.http.client.*}); ver o {@code application.yml}. O HTTP 429 do provedor por API é
+ * re-tentado e, esgotadas as tentativas, não abre o disjuntor ({@link #abreDisjuntor}).
  */
 @Component
 public class ModeloLinguagem {
 
   private static final Logger log = LoggerFactory.getLogger(ModeloLinguagem.class);
+
+  /** Profundidade máxima percorrida na cadeia de causas (defesa contra ciclo). */
+  private static final int PROFUNDIDADE_MAXIMA = 16;
 
   /** Motivo do fim quando a geração parou no teto: Ollama e API da OpenAI; API da Anthropic. */
   private static final Set<String> MOTIVOS_DE_CORTE = Set.of("length", "max_tokens");
@@ -156,10 +160,29 @@ public class ModeloLinguagem {
    * uma pergunta feita para ser recusada, deixaria a Ceres em fallback para todo mundo. Chave de
    * API inválida também é 4xx e também não abre — mas falha rápido, sem esperar timeout.
    *
+   * <p>Limite de taxa do provedor por API (HTTP 429, {@link LimiteTaxaProvedorException}) que
+   * esgotou as tentativas também não abre: o provedor está no ar e só recusou esta chamada. Abrir
+   * deixaria todos os produtores em fallback pela pausa inteira por causa de um limite por minuto.
+   * Erro 5xx e falha de conexão seguem abrindo.
+   *
    * <p>Thread interrompida (tempo esgotado ou cliente que saiu) também não: a falha é da pergunta.
    */
   static boolean abreDisjuntor(RuntimeException falha) {
-    return !(falha instanceof NonTransientAiException) && !Thread.currentThread().isInterrupted();
+    return !(falha instanceof NonTransientAiException)
+        && !limiteDeTaxa(falha)
+        && !Thread.currentThread().isInterrupted();
+  }
+
+  /** Procura o limite de taxa na falha e nas causas dela (o chamador pode tê-la embrulhado). */
+  private static boolean limiteDeTaxa(Throwable falha) {
+    Throwable atual = falha;
+    for (int i = 0; atual != null && i < PROFUNDIDADE_MAXIMA; i++) {
+      if (atual instanceof LimiteTaxaProvedorException) {
+        return true;
+      }
+      atual = atual.getCause() == atual ? null : atual.getCause();
+    }
+    return false;
   }
 
   /**
