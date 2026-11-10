@@ -3,8 +3,10 @@ package br.com.agrocontabil.config;
 import br.com.agrocontabil.security.JwtAutenticacaoFilter;
 import br.com.agrocontabil.security.LimiteTaxaAutenticacaoFilter;
 import br.com.agrocontabil.security.LimiteTaxaGeralFilter;
+import br.com.agrocontabil.security.LimiteTaxaPublicoFilter;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.security.RotasAutenticacao;
+import br.com.agrocontabil.security.RotasEscritorio;
 import br.com.agrocontabil.security.SecurityErrorResponder;
 import br.com.agrocontabil.service.AutenticacaoTokenService;
 import jakarta.servlet.DispatcherType;
@@ -100,6 +102,7 @@ public class SecurityConfig {
   private final ForcaBrutaProperties forcaBruta;
   private final LimiteTaxaProperties limiteTaxa;
   private final MockIdentidadeFilter mockIdentidadeFilter;
+  private final EnderecoEscritorioProperties endereco;
 
   public SecurityConfig(
       CorsConfigurationSource corsConfigurationSource,
@@ -107,6 +110,7 @@ public class SecurityConfig {
       AutenticacaoTokenService autenticacaoTokenService,
       ForcaBrutaProperties forcaBruta,
       LimiteTaxaProperties limiteTaxa,
+      EnderecoEscritorioProperties endereco,
       @Autowired(required = false) MockIdentidadeFilter mockIdentidadeFilter) {
     this.corsConfigurationSource = corsConfigurationSource;
     this.errorResponder = errorResponder;
@@ -114,6 +118,7 @@ public class SecurityConfig {
     this.forcaBruta = forcaBruta;
     this.limiteTaxa = limiteTaxa;
     this.mockIdentidadeFilter = mockIdentidadeFilter;
+    this.endereco = endereco;
   }
 
   @Bean
@@ -139,6 +144,14 @@ public class SecurityConfig {
                     // POST — um GET ou DELETE no mesmo caminho cai na regra de /api/** abaixo.
                     .requestMatchers(HttpMethod.POST,
                         RotasAutenticacao.PUBLICAS_POST.toArray(String[]::new)).permitAll()
+                    // Endereco do escritorio (#464): a tela de login do subdominio pergunta de
+                    // quem e o endereco antes de haver sessao. So o GET, so o nome.
+                    .requestMatchers(HttpMethod.GET, RotasEscritorio.PUBLICO_PREFIXO + "*")
+                    .permitAll()
+                    // "Ask" do On-Demand TLS do Caddy (#464): fora de /api, so na rede interna, e
+                    // a chave compartilhada e conferida no service. Sem isto, o 401 da cadeia
+                    // recusaria todo certificado.
+                    .requestMatchers(HttpMethod.GET, RotasEscritorio.TLS_ASK).permitAll()
                     // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
                     .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
                     .hasRole(PapelUsuario.PRODUTOR.name())
@@ -163,6 +176,11 @@ public class SecurityConfig {
     // identidade, nao o IP, quando ha uma. Antes da autorizacao, para nao gastar o resto da cadeia.
     http.addFilterAfter(
         new LimiteTaxaGeralFilter(limiteTaxa, errorResponder), AnonymousAuthenticationFilter.class);
+    // Endpoint publico do escritorio (#464): balde proprio por IP, contra a varredura de slugs.
+    http.addFilterAfter(
+        new LimiteTaxaPublicoFilter(endereco.publico().porMinuto(), endereco.publico().maxChaves(),
+            errorResponder),
+        LimiteTaxaGeralFilter.class);
 
     http.headers(headers -> headers
         // HSTS: o navegador so fala HTTPS com a API por 1 ano. So sai em requisicao segura (atras

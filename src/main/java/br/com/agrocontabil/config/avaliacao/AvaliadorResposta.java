@@ -33,7 +33,7 @@ public final class AvaliadorResposta {
       DesfechoInteracao.CITACAO_INVALIDA, DesfechoInteracao.NUMERO_SEM_FONTE,
       DesfechoInteracao.SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA,
       DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.SEM_RESPOSTA,
-      DesfechoInteracao.RESPOSTA_CORTADA);
+      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
 
   /**
    * Desfechos em que o texto do modelo foi descartado, mesmo que a resposta mostre trechos. A lei
@@ -42,7 +42,17 @@ public final class AvaliadorResposta {
    */
   static final Set<DesfechoInteracao> RESPOSTA_DESCARTADA = EnumSet.of(
       DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.CITACAO_INVALIDA,
-      DesfechoInteracao.RESPOSTA_CORTADA);
+      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+
+  /**
+   * Funções que, quando rodam, são o sinal (nos campos gravados) de que o backend pode ter juntado
+   * citações fixas à resposta (#145, #283): {@code consultarRetencoes}, do {@code
+   * FundamentoRetencao}, e {@code consultarTratamentoProduto}, do {@code TextosDoBackend}. É um
+   * sinal, não uma garantia: a função pode rodar sem gerar citação (sem produto ou sem artigo, ou
+   * com a base de lei fora). Limites aceitos na #433, em {@link #citacaoValida}.
+   */
+  static final Set<String> FUNCOES_COM_CITACAO_FIXA =
+      Set.of("consultarRetencoes", "consultarTratamentoProduto");
 
   private static final Pattern TOKEN_DOCUMENTO = Pattern.compile("[\\d][\\d./-]*[\\d]");
   private static final Pattern NAO_DIGITO = Pattern.compile("\\D");
@@ -77,8 +87,7 @@ public final class AvaliadorResposta {
             ? null
             // Resposta de lei descartada que mostra so os trechos (#258) nao conta como citacao
             // valida: o texto do modelo saiu, e a taxa nao pode subir com isso.
-            : !RESPOSTA_DESCARTADA.contains(execucao.desfecho())
-                && citaAlgum(execucao.citacoes(), pergunta.dispositivosEsperados()),
+            : citacaoValida(execucao, pergunta.dispositivosEsperados()),
         pergunta.deveRecusar() ? recusou(pergunta, execucao, texto) : null,
         pergunta.valoresProibidos().isEmpty() && pergunta.textosProibidos().isEmpty()
             ? null
@@ -89,6 +98,41 @@ public final class AvaliadorResposta {
         // conteudo da resposta com o modelo no ar.
         pergunta.semBecoSemSaida() && !RelatorioAvaliacao.falhaTecnica(execucao)
             ? !becoSemSaida(texto) : null);
+  }
+
+  /**
+   * A citação esperada aparece e conta. Não conta quando o texto do modelo foi descartado
+   * ({@link #RESPOSTA_DESCARTADA}). No MISTO, o desfecho geral é {@code RESPONDIDA} sempre que a
+   * parte de dados foi aceita, e as citações vêm de {@code lei.citacoes()} mesmo com a parte de lei
+   * descartada (#433). Por isso, no MISTO com a lei descartada ou com o desfecho geral {@code
+   * AFIRMACAO_SOBRE_DADOS}, a citação só conta se rodou uma das {@link #FUNCOES_COM_CITACAO_FIXA}:
+   * é o sinal, nos campos gravados, de que o backend pode ter juntado citações fixas.
+   *
+   * <p>A regra só rebaixa; nunca promove. Dois limites aceitos na #433: (1) com a função, conta
+   * qualquer citação da lista, inclusive a da lei descartada que veio junto; (2) sem a função, a
+   * régua rebaixa até a citação fixa que o {@code FundamentoRetencao} junta só porque a
+   * <em>pergunta</em> fala de retenção.
+   */
+  static boolean citacaoValida(ExecucaoPergunta execucao, List<String> dispositivosEsperados) {
+    if (RESPOSTA_DESCARTADA.contains(execucao.desfecho())) {
+      return false;
+    }
+    if (execucao.rota() == Intencao.MISTO && leiDescartadaNoMisto(execucao)
+        && !rodouFuncaoDeCitacaoFixa(execucao)) {
+      return false;
+    }
+    return citaAlgum(execucao.citacoes(), dispositivosEsperados);
+  }
+
+  private static boolean rodouFuncaoDeCitacaoFixa(ExecucaoPergunta execucao) {
+    return execucao.fontes().stream().map(FonteDado::funcao)
+        .anyMatch(f -> f != null && FUNCOES_COM_CITACAO_FIXA.contains(f));
+  }
+
+  private static boolean leiDescartadaNoMisto(ExecucaoPergunta execucao) {
+    return execucao.desfecho() == DesfechoInteracao.AFIRMACAO_SOBRE_DADOS
+        || (execucao.desfechoLegislacao() != null
+            && RESPOSTA_DESCARTADA.contains(execucao.desfechoLegislacao()));
   }
 
   /**

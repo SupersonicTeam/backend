@@ -67,8 +67,16 @@ services:
     logging: *logging
     environment:
       OLLAMA_HOST: http://ollama:11434
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
-    entrypoint: ['/bin/sh', '-c', 'ollama pull bge-m3 && ollama pull "$$AI_CHAT_MODEL"']
+    # O modelo de chat so e baixado quando o chat e local; com a API da Anthropic ele nao e usado.
+    # O bge-m3 (embedding) e sempre local.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        ollama pull bge-m3 &&
+        if [ "$$AI_CHAT_PROVIDER" = "ollama" ]; then ollama pull "$$AI_CHAT_MODEL"; fi
     networks: [interna]
     depends_on:
       ollama:
@@ -107,6 +115,30 @@ services:
       # Atras do Caddy (HTTPS): o cookie de refresh pode e deve ser Secure.
       REFRESH_COOKIE_SEGURO: 'true'
       REDEFINICAO_URL_FRONTEND: https://${SITE_HOST}/redefinir-senha
+      # Links dos convites (#460): o da carteira abre /escritorio, onde o produtor ve os convites.
+      CARTEIRA_CONVITE_URL_FRONTEND: https://${SITE_HOST}/escritorio
+      ESCRITORIO_CONVITE_URL_FRONTEND: https://${SITE_HOST}/equipe/convite
+      # Endereco proprio do escritorio, {slug}.SITE_DOMINIO (#464): o dominio base dos subdominios e a
+      # chave do "ask" do Caddy (GET /interno/tls/permitido, so na rede interna). Passo a passo no
+      # deploy/README.md, secao Endereco proprio do escritorio.
+      APP_ESCRITORIO_DOMINIO_BASE: ${SITE_DOMINIO:?defina SITE_DOMINIO no .env (deploy/README.md, Endereco proprio do escritorio)}
+      APP_ESCRITORIO_TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
+      # E-mail (#460). DESLIGADO ate o passo a passo do README; credenciais so no .env. Com SMTP, host,
+      # usuario ou senha vazios, remetente fora do dominio verificado ou link http impedem a subida.
+      EMAIL_MODO: ${EMAIL_MODO:-DESLIGADO}
+      EMAIL_REMETENTE: '${EMAIL_REMETENTE:-AgroConIA <nao-responda@agroconia.com.br>}'
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      EMAIL_SMTP_STARTTLS: ${EMAIL_SMTP_STARTTLS:-true}
+      EMAIL_SMTP_SSL: ${EMAIL_SMTP_SSL:-false}
+      # Teto de envios abaixo da cota do provedor (#460): Resend Free 0/80. Nunca 0 no diario.
+      EMAIL_TETO_POR_HORA: ${EMAIL_TETO_POR_HORA:-0}
+      EMAIL_TETO_POR_DIA: ${EMAIL_TETO_POR_DIA:-80}
+      # Ja vem desligado na imagem da #460; repetido aqui para a imagem anterior nao cair em DOWN com
+      # o SPRING_MAIL_HOST vazio, se este compose chegar antes dela.
+      MANAGEMENT_HEALTH_MAIL_ENABLED: 'false'
       SEED_SENHA: ${SEED_SENHA:-}
       # Escritorio, carteira e notas da banca (#315), com as contas na SEED_SENHA. Idempotente.
       DEMONSTRACAO_HABILITADA: 'true'
@@ -124,8 +156,15 @@ services:
       # da a chave desconhecida como autorizada (#223; padrao so no application-dev.yml).
       APP_NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS: 'true'
       AI_OLLAMA_BASE_URL: http://ollama:11434
-      AI_CHAT_PROVIDER: ollama
+      # ollama (padrao) ou anthropic (Claude pela API; sem ANTHROPIC_API_KEY o backend nao sobe).
+      # "openai" nao e suportado aqui: este compose nao repassa AI_API_KEY nem a URL.
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-ollama}
+      # AI_CHAT_MODEL e so o modelo do Ollama; o da Anthropic e AI_ANTHROPIC_MODEL.
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_ANTHROPIC_MODEL: ${AI_ANTHROPIC_MODEL:-claude-haiku-5-5}
+      # Sem os dois-pontos: vazio no .env chega vazio (= nao enviar o campo de raciocinio).
+      AI_ANTHROPIC_THINKING: ${AI_ANTHROPIC_THINKING-disabled}
       # Janela de contexto, teto geral e tetos por tipo de chamada (#270); padroes = os do yml.
       AI_OLLAMA_NUM_CTX: ${AI_OLLAMA_NUM_CTX:-8192}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1024}
@@ -170,7 +209,8 @@ services:
     depends_on:
       - backend
 
-  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST.
+  # Unica porta publica. HTTPS automatico (Let's Encrypt) no SITE_HOST e, sob demanda, nos enderecos
+  # dos escritorios ({slug}.SITE_DOMINIO, #464), so com o "ask" do backend autorizando.
   caddy:
     image: caddy:2.10-alpine
     logging: *logging
@@ -182,6 +222,8 @@ services:
     environment:
       SITE_HOST: ${SITE_HOST:?defina SITE_HOST no .env}
       SITE_REDIRECIONA: ${SITE_REDIRECIONA:?defina SITE_REDIRECIONA no .env}
+      SITE_DOMINIO: ${SITE_DOMINIO:?defina SITE_DOMINIO no .env (deploy/README.md, Endereco proprio do escritorio)}
+      TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

@@ -77,6 +77,36 @@ class PoliticaSenhaTest {
         .anySatisfy(e -> assertThat(e.message()).contains("mais usadas"));
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "12345678901", "01234567890", "98765432109", "abcdefghijk", "ZYXWVUTSRQP", "qwertyuiopas",
+      "poiuytrewq12", "asdfghjklç", "zxcvbnm,.-x", "1q2w3e4r5t6y", "asdfasdfasdf", "Fazenda123456",
+      "654321Fazenda", "meusucesso-abcdef"})
+  @DisplayName("sequencia, fileira de teclado ou trecho repetido e recusado (#252)")
+  void sequenciasEPadroes(String senha) {
+    assertThat(violacoes(senha))
+        .anySatisfy(e -> {
+          assertThat(e.message()).contains("sequências");
+          assertThat(e.rejectedValue()).isNull();
+        });
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "cavalo bateria grampo correto", "Fazenda-Sao-Jose-2026", "Banca-AgroConIA-demonstracao-2026",
+      "abcde-fghij-klmno", "12345 e 54321 e 1357924680", "colheita2026safra2027", "xaxbxcxdxexf9"})
+  @DisplayName("sequencias curtas (ate 5) e senhas sem padrao passam (#252)")
+  void casosLimiteQuePassam(String senha) {
+    assertThat(violacoes(senha)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("lista ampliada com SecLists: senhas vazadas de 10+ caracteres sao recusadas (#252)")
+  void listaAmpliada() {
+    assertThat(violacoes("trustno1234")).isNotEmpty();
+    assertThat(violacoes("passw0rd123")).isNotEmpty();
+  }
+
   @Test
   @DisplayName("todas as violacoes vem juntas, com codigo SENHA_FRACA e sem ecoar a senha")
   void violacoesSemEcoarSenha() {

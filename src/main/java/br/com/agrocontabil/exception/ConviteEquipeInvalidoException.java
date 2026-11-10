@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
  */
 public class ConviteEquipeInvalidoException extends DomainException {
 
-  private static final String MENSAGEM = "Convite de equipe invalido ou expirado.";
+  private static final String MENSAGEM = "Convite de equipe inválido ou expirado.";
 
   /** Cria a exceção. */
   public ConviteEquipeInvalidoException() {
@@ -19,7 +19,7 @@ public class ConviteEquipeInvalidoException extends DomainException {
         ErrorCode.CONVITE_EQUIPE_INVALIDO.code(),
         "token",
         MENSAGEM,
-        "Peca um convite novo ao administrador do escritorio; ele vale 7 dias e uma vez so.",
+        "Peça um convite novo ao administrador do escritório; ele vale 7 dias e uma vez só.",
         null,
         null)));
   }

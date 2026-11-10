@@ -1,0 +1,456 @@
+{
+  "versao": "2026-11-06.4",
+  "observacao": "Perguntas de TREINO para o diagnostico das citacoes da rota de lei (#269). Nenhuma e do gabarito, de parafrase dele nem do conjunto cego. O dispositivo esperado foi definido lendo o texto da lei (tabela legislacao_trecho), nunca olhando resposta do modelo. 'esperado' = artigo que responde; 'aceito' = artigo que tambem serve. Comparacao no nivel do artigo (os trechos sao um por paragrafo/inciso). D19, D20 e D22 sao perguntas do produtor rural cuja norma pode estar FORA da base (hipotese verificada por busca no texto da base, ver o relatorio); D21 e controle de pergunta cuja norma esta na base. D23 a D31 sao o CONJUNTO DE CONTROLE (holdout) escrito depois de D01-D22: nao se ajusta regra nenhuma olhando para elas; servem so para medir se uma candidata de busca generaliza. D32 a D43 sao o SEGUNDO CONTROLE, escrito ANTES da tabela de vocabulario da busca (frente de expansao de consulta) e sem ajustar nada olhando para elas.",
+  "perguntas": [
+    {
+      "id": "D01",
+      "pergunta": "O que é o Comitê Gestor do IBS e para que ele serve?",
+      "esperado": [
+        "LC 227/2026 art. 1º"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 480"
+      ],
+      "raciocinio": "O art. 1º da LC 227/2026 institui o CGIBS e diz que é entidade pública, técnica e operacional, com independência, para a competência compartilhada de administrar o IBS. O art. 480 da LC 214 diz o mesmo em texto anterior."
+    },
+    {
+      "id": "D02",
+      "pergunta": "O que é o Imposto Seletivo?",
+      "esperado": [
+        "LC 214/2025 art. 409"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 409 da LC 214 institui o Imposto Seletivo (art. 153, VIII, da Constituição) sobre bens e serviços prejudiciais à saúde ou ao meio ambiente."
+    },
+    {
+      "id": "D03",
+      "pergunta": "Até quando existem o ICMS e o ISS durante a transição para o IBS?",
+      "esperado": [
+        "EC 132/2023 art. 2º"
+      ],
+      "aceito": [
+        "EC 132/2023 art. 22"
+      ],
+      "raciocinio": "O art. 2º da EC 132 dá ao ADCT o art. 129: ficam extintos, a partir de 2033, os impostos dos arts. 155, II, e 156, III. O art. 22, II, da EC revoga os dispositivos em 2033."
+    },
+    {
+      "id": "D04",
+      "pergunta": "Como funciona o cashback do IBS e da CBS para famílias de baixa renda?",
+      "esperado": [
+        "LC 214/2025 art. 112"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 113",
+        "LC 214/2025 art. 117"
+      ],
+      "raciocinio": "O art. 112 abre o capítulo da devolução: CBS pela União e IBS pelos entes, para pessoas físicas de famílias de baixa renda. O art. 113 define o destinatário (CadÚnico) e o 117 o cálculo por percentual."
+    },
+    {
+      "id": "D05",
+      "pergunta": "A venda de grãos para o exterior paga IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 79"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 8º"
+      ],
+      "raciocinio": "O art. 79 diz que são imunes ao IBS e à CBS as exportações de bens e serviços, com manutenção dos créditos. O art. 8º declara a mesma imunidade, remetendo ao capítulo das exportações. O art. 82, § 11, trata de suspensão na venda à indústria exportadora, que é outra situação."
+    },
+    {
+      "id": "D06",
+      "pergunta": "Como funciona o crédito do IBS e da CBS nas compras de quem é contribuinte?",
+      "esperado": [
+        "LC 214/2025 art. 47"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 45"
+      ],
+      "raciocinio": "O art. 47 é a regra geral: o contribuinte do regime regular apropria créditos nas operações em que é adquirente, salvo uso ou consumo pessoal. O art. 45 apura o saldo. O art. 171 é crédito presumido na revenda de bem usado, caso especial."
+    },
+    {
+      "id": "D07",
+      "pergunta": "Quando surge a obrigação de pagar o IBS e a CBS na importação de bens?",
+      "esperado": [
+        "LC 214/2025 art. 67"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 65",
+        "LC 214/2025 art. 76"
+      ],
+      "raciocinio": "O art. 65 define o fato gerador (entrada do bem), o 67 diz o momento para o cálculo e o 76 o prazo de pagamento (até a entrega para despacho)."
+    },
+    {
+      "id": "D08",
+      "pergunta": "Quem é contribuinte do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 21"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 21 lista: o fornecedor que realiza operações em atividade econômica, de modo habitual ou profissional, o adquirente em certos casos, o importador e os previstos em outras hipóteses."
+    },
+    {
+      "id": "D09",
+      "pergunta": "Se a minha venda for isenta, eu perco os créditos das minhas compras?",
+      "esperado": [
+        "LC 214/2025 art. 51"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 52"
+      ],
+      "raciocinio": "O art. 51 diz que a imunidade e a isenção anulam os créditos das operações anteriores, proporcionalmente, sem alcançar exportações; o art. 52 mantém os créditos na alíquota zero."
+    },
+    {
+      "id": "D10",
+      "pergunta": "Posso descontar o crédito de um carro que comprei para uso pessoal?",
+      "esperado": [
+        "LC 214/2025 art. 57"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 47"
+      ],
+      "raciocinio": "O art. 57 define uso ou consumo pessoal (inclui veículo e seguro, § 1º, II) e veda o crédito (§ 5º). O art. 47 exclui esses casos da regra geral."
+    },
+    {
+      "id": "D11",
+      "pergunta": "Sou obrigado a emitir nota fiscal eletrônica nas minhas vendas?",
+      "esperado": [
+        "LC 214/2025 art. 60"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 60 obriga o sujeito passivo do IBS e da CBS a emitir documento fiscal eletrônico nas operações com bens e serviços, inclusive exportações e importações."
+    },
+    {
+      "id": "D12",
+      "pergunta": "Posso pedir de volta o saldo de crédito que sobrou no fim do mês?",
+      "esperado": [
+        "LC 214/2025 art. 39"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 40",
+        "LC 214/2025 art. 45"
+      ],
+      "raciocinio": "O art. 39 permite ao contribuinte com saldo a recuperar (art. 45) pedir o ressarcimento integral ou parcial."
+    },
+    {
+      "id": "D13",
+      "pergunta": "Uma cooperativa de produtores pode ter alíquota zero de IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 271"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 271 permite às sociedades cooperativas optar por regime específico com alíquotas reduzidas a zero em operações descritas nos incisos."
+    },
+    {
+      "id": "D14",
+      "pergunta": "Por quanto tempo posso usar o crédito do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 54"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 54 diz que o direito de utilização dos créditos se extingue em 5 anos, contados do primeiro dia do período seguinte ao da apuração em que foi apropriado."
+    },
+    {
+      "id": "D15",
+      "pergunta": "Quando se considera que aconteceu o fato gerador do IBS e da CBS numa venda?",
+      "esperado": [
+        "LC 214/2025 art. 10"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 10 diz que o fato gerador ocorre no momento do fornecimento nas operações com bens ou serviços, ainda que de execução continuada ou fracionada."
+    },
+    {
+      "id": "D16",
+      "pergunta": "Sobre qual valor se calcula o IBS e a CBS?",
+      "esperado": [
+        "LC 214/2025 art. 12"
+      ],
+      "aceito": [],
+      "raciocinio": "O art. 12 diz que a base de cálculo é o valor da operação, salvo disposição em contrário."
+    },
+    {
+      "id": "D17",
+      "pergunta": "Em quais operações o IBS e a CBS não incidem?",
+      "esperado": [
+        "LC 214/2025 art. 6º"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 9º"
+      ],
+      "raciocinio": "O art. 6º lista as operações sobre as quais o IBS e a CBS não incidem. O art. 9º trata das imunidades."
+    },
+    {
+      "id": "D18",
+      "pergunta": "Quais operações são imunes ao IBS e à CBS?",
+      "esperado": [
+        "LC 214/2025 art. 9º"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 8º",
+        "LC 214/2025 art. 79"
+      ],
+      "raciocinio": "O art. 8º declara imunes as exportações (detalhadas no art. 79) e o art. 9º acrescenta os fornecimentos também imunes."
+    },
+    {
+      "id": "D19",
+      "pergunta": "Qual a alíquota de ICMS na venda de soja dentro de Mato Grosso?",
+      "esperado": [],
+      "aceito": [],
+      "foraDaBaseHipotese": true,
+      "raciocinio": "ICMS de soja depende do regulamento estadual (RICMS-MT) e de convênios do Confaz; a base só tem LC 214, LC 227, EC 132 e as leis do Funrural. Pergunta do produtor, fora da reforma que a Ceres explica."
+    },
+    {
+      "id": "D20",
+      "pergunta": "Como funciona o ITR, o imposto territorial rural?",
+      "esperado": [],
+      "aceito": [],
+      "foraDaBaseHipotese": true,
+      "raciocinio": "O ITR é regido pela Lei 9.393/1996, que não está na base. Pergunta do produtor rural, de outro tributo."
+    },
+    {
+      "id": "D21",
+      "pergunta": "Quanto o produtor rural pessoa física paga de contribuição ao Senar?",
+      "esperado": [
+        "Lei 9.528/1997 art. 6º"
+      ],
+      "aceito": [],
+      "foraDaBaseHipotese": false,
+      "raciocinio": "O art. 6º da Lei 9.528/1997 fixa em 0,2% da receita bruta da comercialização a contribuição do empregador rural pessoa física ao SENAR. Está na base (controle)."
+    },
+    {
+      "id": "D22",
+      "pergunta": "Como funciona o livro caixa digital do produtor rural, o LCDPR?",
+      "esperado": [],
+      "aceito": [],
+      "foraDaBaseHipotese": true,
+      "raciocinio": "O LCDPR é regido por instrução normativa da RFB, que não está na base. Pergunta do produtor rural, fora da reforma tributária."
+    },
+    {
+      "id": "D23",
+      "pergunta": "O IBS e a CBS incidem sobre uma doação?",
+      "esperado": [
+        "LC 214/2025 art. 4º"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 4º diz que o IBS e a CBS incidem sobre operações onerosas com bens ou serviços; doação não é onerosa."
+    },
+    {
+      "id": "D24",
+      "pergunta": "Quem fixa a alíquota de referência do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 18"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 18 diz que as alíquotas de referência serão fixadas por resolução do Senado Federal."
+    },
+    {
+      "id": "D25",
+      "pergunta": "A importação de serviços paga IBS e CBS?",
+      "esperado": [
+        "LC 214/2025 art. 64"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 63"
+      ],
+      "holdout": true,
+      "raciocinio": "O art. 64 define importação de serviço ou de bem imaterial (fornecimento por residente no exterior) para o art. 63, que trata da incidência na importação."
+    },
+    {
+      "id": "D26",
+      "pergunta": "Posso vender os meus créditos de IBS e CBS para outra empresa?",
+      "esperado": [
+        "LC 214/2025 art. 55"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 55 veda a transferência, a qualquer título, de créditos do IBS e da CBS."
+    },
+    {
+      "id": "D27",
+      "pergunta": "O valor do transporte que cobro do cliente entra na base de cálculo?",
+      "esperado": [
+        "LC 214/2025 art. 12"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 12, § 1º, IV, inclui no valor da operação o transporte cobrado como parte dela."
+    },
+    {
+      "id": "D28",
+      "pergunta": "Quem não é contribuinte do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 26"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 26 lista quem não é contribuinte, ressalvado o inciso II do § 1º do art. 156-A da Constituição."
+    },
+    {
+      "id": "D29",
+      "pergunta": "Posso compensar crédito de IBS com débito de CBS?",
+      "esperado": [
+        "LC 214/2025 art. 47"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 47, § 1º, I, diz que a apropriação é segregada para IBS e CBS, vedada a compensação de créditos de um com o outro."
+    },
+    {
+      "id": "D30",
+      "pergunta": "Onde se considera feita a importação de bens materiais?",
+      "esperado": [
+        "LC 214/2025 art. 68"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 68 define o local da importação de bens materiais."
+    },
+    {
+      "id": "D31",
+      "pergunta": "O que a lei considera bens e serviços de uso ou consumo pessoal?",
+      "esperado": [
+        "LC 214/2025 art. 57"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "raciocinio": "O art. 57 define uso ou consumo pessoal (joias, bebidas, veículos, bens dados a sócios e empregados etc.)."
+    },
+    {
+      "id": "D32",
+      "pergunta": "Qual o período de apuração do IBS e da CBS?",
+      "esperado": [
+        "LC 214/2025 art. 43"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 43 diz que o período de apuração do IBS e da CBS será mensal."
+    },
+    {
+      "id": "D33",
+      "pergunta": "Até quando devo pagar o saldo do IBS e da CBS do mês?",
+      "esperado": [
+        "LC 214/2025 art. 29"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 29 manda o contribuinte pagar, até a data de vencimento, o saldo a recolher apurado (art. 45)."
+    },
+    {
+      "id": "D34",
+      "pergunta": "Posso pedir a restituição de um imposto que paguei a maior?",
+      "esperado": [
+        "LC 214/2025 art. 38"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 38 trata da restituição do IBS e da CBS pago indevidamente ou a maior, devida ao contribuinte só em certas hipóteses."
+    },
+    {
+      "id": "D35",
+      "pergunta": "A apuração junta todos os meus estabelecimentos ou é separada por estabelecimento?",
+      "esperado": [
+        "LC 214/2025 art. 42"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 42 diz que a apuração consolida as operações de todos os estabelecimentos do contribuinte."
+    },
+    {
+      "id": "D36",
+      "pergunta": "Em que ordem posso usar os créditos que acumulei?",
+      "esperado": [
+        "LC 214/2025 art. 53"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 53 define a ordem de utilização dos créditos apropriados em cada período."
+    },
+    {
+      "id": "D37",
+      "pergunta": "Se um cliente devolver a mercadoria, qual alíquota vale na devolução?",
+      "esperado": [
+        "LC 214/2025 art. 17"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 17 diz que a alíquota para devolução ou cancelamento da operação é a mesma cobrada na operação original."
+    },
+    {
+      "id": "D38",
+      "pergunta": "Sobre qual valor se calcula o imposto numa importação de bens?",
+      "esperado": [
+        "LC 214/2025 art. 69"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 69 fixa a base de cálculo na importação de bens materiais: o valor aduaneiro acrescido de outros valores."
+    },
+    {
+      "id": "D39",
+      "pergunta": "Quem responde junto com o importador pelo imposto de uma importação?",
+      "esperado": [
+        "LC 214/2025 art. 74"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 73"
+      ],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 74 define o responsável solidário na importação de bens materiais; o art. 73 o responsável em substituição."
+    },
+    {
+      "id": "D40",
+      "pergunta": "Uma pessoa física precisa se cadastrar para o IBS e a CBS?",
+      "esperado": [
+        "LC 214/2025 art. 59"
+      ],
+      "aceito": [
+        "LC 214/2025 art. 21"
+      ],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 59 obriga as pessoas físicas e jurídicas sujeitas ao IBS e à CBS a se registrar em cadastro único; o art. 21, § 1º, obriga o contribuinte a se inscrever."
+    },
+    {
+      "id": "D41",
+      "pergunta": "Quando um serviço prestado a quem mora fora do país conta como exportação?",
+      "esperado": [
+        "LC 214/2025 art. 80"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 80 considera exportação de serviço o fornecimento para residente ou domiciliado no exterior, nas condições que descreve."
+    },
+    {
+      "id": "D42",
+      "pergunta": "Em que situação o fisco pode arbitrar o valor da minha venda?",
+      "esperado": [
+        "LC 214/2025 art. 13"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 13 lista quando o valor da operação será arbitrado pela administração tributária."
+    },
+    {
+      "id": "D43",
+      "pergunta": "Se eu vendo vários produtos juntos, preciso detalhar o valor de cada um?",
+      "esperado": [
+        "LC 214/2025 art. 7º"
+      ],
+      "aceito": [],
+      "holdout": true,
+      "controle": 2,
+      "raciocinio": "O art. 7º torna obrigatória a especificação de cada fornecimento e do seu valor quando há bens e serviços diferentes na mesma operação."
+    }
+  ]
+}

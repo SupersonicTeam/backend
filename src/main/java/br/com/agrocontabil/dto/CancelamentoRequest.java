@@ -21,7 +21,7 @@ public record CancelamentoRequest(
         example = "Cancelamento por erro na quantidade dos produtos vendidos",
         minLength = 15,
         maxLength = 255)
-    @NotBlank(message = "O motivo do cancelamento e obrigatorio.")
+    @NotBlank(message = "O motivo do cancelamento é obrigatório.")
     @Size(min = 15, max = 255,
         message = "O motivo do cancelamento deve ter entre 15 e 255 caracteres.")
     String motivo) {}

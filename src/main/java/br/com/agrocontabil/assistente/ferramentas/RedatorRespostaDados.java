@@ -20,6 +20,7 @@ import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Retencoes
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.Vencimentos;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VencimentosDoMes;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.VendasProduto;
+import br.com.agrocontabil.model.StatusNotaFiscal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,13 @@ public final class RedatorRespostaDados {
   /** Situações em que a nota está parada, esperando o produtor ou o contador. */
   static final Set<String> SITUACOES_PARADAS =
       Set.of("DEVOLVIDA", "AGUARDANDO_APROVACAO", "COM_INCONSISTENCIAS", "REJEITADA");
+
+  /**
+   * Situações de uma venda já emitida (#444): autorizada pela SEFAZ, inclusive a que foi ou está
+   * sendo cancelada depois. As demais ainda não são NF-e válida.
+   */
+  static final Set<String> VENDAS_EMITIDAS = Set.of(StatusNotaFiscal.AUTORIZADA.name(),
+      StatusNotaFiscal.CANCELANDO.name(), StatusNotaFiscal.CANCELADA.name());
 
   /** A situação de uma nota, no singular. */
   private static final Map<String, String> SITUACAO = Map.ofEntries(
@@ -298,8 +306,7 @@ public final class RedatorRespostaDados {
         t.append("\n\n");
       }
       t.append("A nota ").append(n.numero()).append(" (série ").append(n.serie()).append("), ")
-          .append("ENTRADA".equals(n.tipo()) ? "de compra recebida" : "de venda emitida")
-          .append(" em ").append(n.dataEmissao()).append(", está ")
+          .append(tipoEData(n)).append(", está ")
           .append(SITUACAO.getOrDefault(n.situacao(), n.situacao().toLowerCase())).append('.');
       if (n.explicacao() != null) {
         t.append(' ').append(n.explicacao());
@@ -333,6 +340,23 @@ public final class RedatorRespostaDados {
     }
     return new SecaoResposta(Assunto.NOTAS_PARADAS, t.toString(), (int) paradas,
         plural(paradas, "nota parada", "notas paradas"), null, false, true, livres);
+  }
+
+  /**
+   * Tipo e data da nota consultada, pela situação (#444). Venda só é "emitida" depois de
+   * autorizada pela SEFAZ; antes disso (rascunho, em revisão, devolvida, XML gerado, rejeitada...)
+   * a data é só a da nota. A compra importada foi emitida pelo fornecedor: "recebida" vale sempre.
+   */
+  static String tipoEData(NotaDetalhada n) {
+    boolean semData = n.dataEmissao() == null || n.dataEmissao().isBlank();
+    if ("ENTRADA".equals(n.tipo())) {
+      return semData ? "de compra recebida" : "de compra recebida em " + n.dataEmissao();
+    }
+    if (VENDAS_EMITIDAS.contains(n.situacao())) {
+      return semData ? "de venda emitida" : "de venda emitida em " + n.dataEmissao();
+    }
+    // Sem data: nunca "com data de null".
+    return semData ? "de venda" : "de venda com data de " + n.dataEmissao();
   }
 
   /** {@code listarAlertas}. */

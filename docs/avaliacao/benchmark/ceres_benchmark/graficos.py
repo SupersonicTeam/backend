@@ -280,7 +280,7 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
         mem.append(linha)
     arquivo = destino / "memoria.svg"
     arquivo.write_text(barras_agrupadas("Memória do modelo carregado no Ollama",
-                                        "GB do /api/ps com o num_ctx da Ceres (VPS: 24 GB no total)",
+                                        "GB do /api/ps com o num_ctx da Ceres (VPS: 47 GiB no total)",
                                         modelos, series, mem, "GB", None, marca or False), encoding="utf-8")
     arquivos.append(arquivo)
     return arquivos

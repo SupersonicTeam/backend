@@ -26,22 +26,22 @@ import java.util.UUID;
 public record GuiaFiscalRequest(
 
     @Schema(description = "Identificador do produtor destinatario da guia")
-    @NotNull(message = "O produtorId e obrigatorio.")
+    @NotNull(message = "O produtorId é obrigatório.")
     UUID produtorId,
 
     @Schema(description = "Tipo da guia fiscal", example = "ICMS")
-    @NotNull(message = "O tipoGuia e obrigatorio.")
+    @NotNull(message = "O tipoGuia é obrigatório.")
     TipoGuiaFiscal tipoGuia,
 
     @Schema(description = "Data de vencimento da guia", example = "2026-08-20")
-    @NotNull(message = "A dataVencimento e obrigatoria.")
+    @NotNull(message = "A dataVencimento é obrigatória.")
     LocalDate dataVencimento,
 
     @Schema(description = "Valor da guia", example = "1250.00")
-    @NotNull(message = "O valor e obrigatorio.")
+    @NotNull(message = "O valor é obrigatório.")
     @DecimalMin(value = "0.01", message = "O valor deve ser maior que zero.")
     BigDecimal valor,
 
     @Schema(description = "Observacoes livres do Contador", example = "Referente a agosto/2026")
-    @Size(max = 255, message = "As observacoes devem ter no maximo 255 caracteres.")
+    @Size(max = 255, message = "As observações devem ter no máximo 255 caracteres.")
     String observacoes) {}

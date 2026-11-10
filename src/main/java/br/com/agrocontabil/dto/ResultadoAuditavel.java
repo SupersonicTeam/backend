@@ -20,6 +20,16 @@ public interface ResultadoAuditavel {
   Object status();
 
   /**
+   * Estado do recurso antes da operação, quando a auditoria não o lê pelo id dos argumentos (ex.:
+   * o endereço do escritório, #464, que vem do membro autenticado, não do path).
+   *
+   * @return estado anterior, ou nulo
+   */
+  default Object statusAnterior() {
+    return null;
+  }
+
+  /**
    * Recurso criado pela operação, quando o id não vem nos argumentos (criação).
    *
    * @return id do recurso, ou nulo

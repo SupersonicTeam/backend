@@ -84,6 +84,20 @@ public class VinculoCarteira {
   @Column(name = "fim")
   private OffsetDateTime fim;
 
+  /** Quem encerrou; nulo = não encerrado ou encerrado antes do registro (#402). */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "encerrado_por", length = 20, columnDefinition = "VARCHAR(20)")
+  private EncerradoPor encerradoPor;
+
+  /** Membro do escritório que encerrou (só quando {@link EncerradoPor#ESCRITORIO}). */
+  @Column(name = "encerrado_por_membro_id")
+  private UUID encerradoPorMembroId;
+
+  /** Motivo livre do encerramento: pode ter dado pessoal, nunca vai a log nem a auditoria. */
+  @ToString.Exclude
+  @Column(name = "motivo_encerramento", length = 500)
+  private String motivoEncerramento;
+
   /** Observações internas do escritório: nunca vão ao produtor nem ao log. */
   @ToString.Exclude
   @Column(name = "observacoes", length = 1000)

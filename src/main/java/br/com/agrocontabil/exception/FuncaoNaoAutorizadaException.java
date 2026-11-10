@@ -28,15 +28,15 @@ public class FuncaoNaoAutorizadaException extends DomainException {
         null,
         mensagem(atual),
         atual == null
-            ? "Entre num escritorio (aceite um convite de equipe) para atender clientes."
-            : "Peca a um administrador do escritorio para fazer esta operacao.",
+            ? "Entre num escritório (aceite um convite de equipe) para atender clientes."
+            : "Peça a um administrador do escritório para fazer esta operação.",
         atual == null ? SEM_ESCRITORIO : atual.name(),
         permitidas.toString())));
   }
 
   private static String mensagem(FuncaoEscritorio atual) {
     return atual == null
-        ? "Contador sem escritorio."
-        : "Operacao nao permitida para a funcao " + atual.name() + " no escritorio.";
+        ? "Contador sem escritório."
+        : "Operação não permitida para a função " + atual.name() + " no escritório.";
   }
 }

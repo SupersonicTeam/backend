@@ -1,0 +1,286 @@
+{
+  "versao": "2026-11-07.3",
+  "observacao": "Conjunto de medição de uso único das issues #442 (período relativo nas perguntas de dados) e #443 (tratamento de produto com a ressalva do enquadramento). Escrito e congelado antes de qualquer rodada e antes de ler o código da Ceres, por uma sessão que nunca leu o gabarito nem o benchmark. Não serve para ajustar a Ceres: nenhuma pergunta daqui entra em exemplo de classificação, prompt, descrição de função, template ou teste. Mudou uma pergunta, mude a versão e o .sha256 ao lado. Pontuação em docs/avaliacao/ceres-442-443/pontuar.py; regra em docs/avaliacao/ceres-442-443/regra-de-decisao.md. Conta da medição: produtor principal do seed da demonstração (Carlos Eduardo Rossi, Sorriso/MT: vende soja, milho e algodão; compra adubo, semente, defensivos e diesel; guias mensais de Funrural). Períodos relativos são calculados pelo script a partir da data da rodada, no fuso de Brasília.",
+  "perguntas": [
+    {
+      "id": "p443-01",
+      "pergunta": "Quanto deu o IBS e a CBS que eu tenho que recolher referente ao mês passado?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["consultarApuracao"], "periodo": "mes_anterior"},
+      "raciocinio": "Apuração mensal de um mês dito de forma relativa: a função recebe o mês (AAAA-MM) e o certo é o mês anterior ao da rodada."
+    },
+    {
+      "id": "p443-02",
+      "pergunta": "Como tá a minha apuração deste mês até agora, o que eu devo e o que tenho de crédito?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["consultarApuracao"], "periodo": "mes_corrente"},
+      "raciocinio": "Apuração do mês corrente, ainda aberto (valores parciais); o mês certo é o da rodada."
+    },
+    {
+      "id": "p443-03",
+      "pergunta": "Quanto entrou de dinheiro com o algodão no mês passado?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["totalVendasPorProduto"], "periodo": "mes_anterior", "produto": ["algod", "5201"]},
+      "raciocinio": "Total de vendas de um produto (algodão, vendido nos meses 1 a 3 do seed) no mês anterior inteiro."
+    },
+    {
+      "id": "p443-04",
+      "pergunta": "Me fala o total que eu vendi de milho nos últimos seis meses.",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["totalVendasPorProduto"], "periodo": "ultimos_6_meses", "produto": ["milho", "1005"]},
+      "raciocinio": "Janela móvel de seis meses até a rodada; o padrão da função (1º de janeiro até hoje) não é a janela pedida."
+    },
+    {
+      "id": "p443-05",
+      "pergunta": "Quanto eu gastei de óleo diesel no último trimestre?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["totalComprasPorInsumo"], "periodo": "trimestre_anterior", "produto": ["diesel", "oleo", "2710"]},
+      "raciocinio": "Compra de insumo (diesel, comprado todo mês no seed) no último trimestre: vale o trimestre civil anterior ou os três últimos meses."
+    },
+    {
+      "id": "p443-06",
+      "pergunta": "Quanto eu paguei em adubo no ano passado inteiro?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["totalComprasPorInsumo"], "periodo": "ano_anterior", "produto": ["adubo", "fertiliz", "npk", "31"]},
+      "raciocinio": "Compra de insumo no ano civil anterior ao da rodada (1º de janeiro a 31 de dezembro). O seed pode não ter compra nesse ano: conta a função e o período, não o valor."
+    },
+    {
+      "id": "p443-07",
+      "pergunta": "Quanto de crédito de CBS eu juntei com as compras do mês retrasado?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["consultarCreditos"], "periodo": "mes_retrasado"},
+      "raciocinio": "Créditos das compras de dois meses antes da rodada, mês inteiro."
+    },
+    {
+      "id": "p443-08",
+      "pergunta": "E os créditos de IBS das minhas compras do ano passado, quanto deu?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["consultarCreditos"], "periodo": "ano_anterior"},
+      "raciocinio": "Créditos do ano civil anterior ao da rodada."
+    },
+    {
+      "id": "p443-09",
+      "pergunta": "Quanto me descontaram de Funrural nas vendas deste mês?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["consultarRetencoes"], "periodo": "mes_corrente"},
+      "raciocinio": "Retenções das vendas do mês corrente: do 1º dia do mês até hoje (ou até o fim do mês)."
+    },
+    {
+      "id": "p443-10",
+      "pergunta": "Teve retenção de Funrural nas minhas vendas do último trimestre?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["consultarRetencoes"], "periodo": "trimestre_anterior"},
+      "raciocinio": "Retenções no último trimestre: trimestre civil anterior ou os três últimos meses."
+    },
+    {
+      "id": "p443-11",
+      "pergunta": "Quais notas de venda eu emiti no mês passado?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["listarNotas"], "periodo": "mes_anterior", "tipo": "SAIDA"},
+      "raciocinio": "Lista de notas de saída do mês anterior inteiro; sem as datas, a função usa os últimos 90 dias, que não é o pedido."
+    },
+    {
+      "id": "p443-12",
+      "pergunta": "Quanto eu vou ter de guia pra pagar no mês que vem?",
+      "grupo": "periodo",
+      "esperado": {"funcoes": ["vencimentosDoMes"], "periodo": "mes_seguinte"},
+      "raciocinio": "Guias que vencem no mês seguinte ao da rodada; sem o mês, a função usa o mês atual, que não é o pedido."
+    },
+    {
+      "id": "p443-13",
+      "pergunta": "O café que eu colho, arábica cru em grão, paga menos IBS e CBS com a reforma?",
+      "grupo": "produto",
+      "esperado": {"reducao": 100, "ressalva": true},
+      "raciocinio": "Café da posição 09.01: LC 214/2025, Anexo I, item 8 (art. 125), alíquota reduzida a zero. A resposta traz a redução e a ressalva de que o enquadramento se confirma com o contador."
+    },
+    {
+      "id": "p443-14",
+      "pergunta": "A erva-mate que eu colho e vendo pro ervateiro tem redução no IBS e na CBS?",
+      "grupo": "produto",
+      "esperado": {"reducao": 100, "ressalva": true},
+      "raciocinio": "Mate da posição 09.03: LC 214/2025, Anexo I, item 23 (art. 125), alíquota reduzida a zero. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-15",
+      "pergunta": "Quem planta mandioca e vende a raiz paga IBS e CBS cheio ou tem redução?",
+      "grupo": "produto",
+      "esperado": {"reducao": 100, "ressalva": true},
+      "raciocinio": "Raízes e tubérculos da posição 07.14: Anexo XV, item 5 (redução de 100%). Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-16",
+      "pergunta": "Queijo minas feito aqui no sítio paga IBS e CBS cheio?",
+      "grupo": "produto",
+      "esperado": {"reducao": 100, "ressalva": true},
+      "raciocinio": "Queijo tipo minas (0406.10.10 e outros): Anexo I, item 21, alíquota zero. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-17",
+      "pergunta": "Eu vendo mel de abelha. Tem alíquota menor de IBS e CBS pra ele?",
+      "grupo": "produto",
+      "esperado": {"reducao": 60, "ressalva": true},
+      "raciocinio": "Mel natural 0409.00.00: Anexo VII, item 3 (redução de 60%). Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-18",
+      "pergunta": "O trigo em grão que eu entrego no moinho tem redução de imposto na reforma?",
+      "grupo": "produto",
+      "esperado": {"reducao": 60, "ressalva": true},
+      "raciocinio": "Trigo em grão: produto agropecuário in natura (art. 137) e cereal do capítulo 10 (Anexo VII, item 15), redução de 60% pelos dois caminhos. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-19",
+      "pergunta": "Eu crio tilápia em tanque. O peixe que eu vendo tem imposto reduzido na reforma?",
+      "grupo": "produto",
+      "esperado": {"reducao": 100, "ressalva": true},
+      "raciocinio": "Peixes e carnes de peixes das posições 03.02 a 03.04, exceto salmonídeos, atuns e outros listados (a tilápia não está entre as exceções): Anexo I, item 20, alíquota zero. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-20",
+      "pergunta": "Vacina pra brucelose do gado tem desconto de IBS e CBS na hora de comprar?",
+      "grupo": "produto",
+      "esperado": {"reducao": 60, "ressalva": true},
+      "raciocinio": "Vacinas de uso veterinário, exceto de animais domésticos: insumo agropecuário do Anexo IX, item 12, redução de 60%. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-21",
+      "pergunta": "Ração pra vaca de leite tem redução no IBS e na CBS?",
+      "grupo": "produto",
+      "esperado": {"reducao": 60, "ressalva": true},
+      "raciocinio": "Rações para animais (exceto domésticos), 2309.90: Anexo IX, item 18, redução de 60%. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-22",
+      "pergunta": "Touro reprodutor com registro genealógico paga IBS e CBS com alguma redução?",
+      "grupo": "produto",
+      "esperado": {"reducao": 60, "ressalva": true},
+      "raciocinio": "Reprodutores de raça pura com registro genealógico: Anexo IX, item 15, redução de 60%. Com a ressalva do enquadramento."
+    },
+    {
+      "id": "p443-23",
+      "pergunta": "Me mostra como ficou a apuração do IBS e da CBS em junho de 2026.",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["consultarApuracao"], "mes": "2026-06"},
+      "raciocinio": "Apuração de um mês dito por extenso, com o ano: AAAA-MM direto."
+    },
+    {
+      "id": "p443-24",
+      "pergunta": "Quanto eu vendi de algodão entre 1º de agosto e 30 de setembro de 2026?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["totalVendasPorProduto"], "inicio": "2026-08-01", "fim": "2026-09-30", "produto": ["algod", "5201"]},
+      "raciocinio": "Vendas de um produto com as duas datas explícitas."
+    },
+    {
+      "id": "p443-25",
+      "pergunta": "Quanto eu tenho de guia com vencimento em fevereiro de 2027?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["vencimentosDoMes"], "mes": "2027-02"},
+      "raciocinio": "Guias de um mês futuro dito por extenso, com o ano."
+    },
+    {
+      "id": "p443-26",
+      "pergunta": "Nas próximas três semanas eu tenho alguma guia pra pagar?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["proximosVencimentos"]},
+      "raciocinio": "Janela em dias para a frente, que a função recebe como número de dias; conta a função."
+    },
+    {
+      "id": "p443-27",
+      "pergunta": "O que tem na nota número 3200?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["consultarNota"], "numero": 3200},
+      "raciocinio": "Uma nota pelo número (a numeração do produtor principal começa em 3184)."
+    },
+    {
+      "id": "p443-28",
+      "pergunta": "Quais notas de compra eu recebi entre 1º e 15 de setembro de 2026?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["listarNotas"], "inicio": "2026-09-01", "fim": "2026-09-15", "tipo": "ENTRADA"},
+      "raciocinio": "Notas de entrada com as duas datas explícitas."
+    },
+    {
+      "id": "p443-29",
+      "pergunta": "Quanto eu comprei de defensivo entre 1º de julho e 30 de setembro de 2026?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["totalComprasPorInsumo"], "inicio": "2026-07-01", "fim": "2026-09-30", "produto": ["defens", "herbic", "fungic", "insetic", "agrotox", "3808"]},
+      "raciocinio": "Compra de insumo com as duas datas explícitas."
+    },
+    {
+      "id": "p443-30",
+      "pergunta": "Qual foi o meu crédito de IBS e CBS nas compras de 1º de junho a 31 de outubro de 2026?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["consultarCreditos"], "inicio": "2026-06-01", "fim": "2026-10-31"},
+      "raciocinio": "Créditos com as duas datas explícitas."
+    },
+    {
+      "id": "p443-31",
+      "pergunta": "Quanto ficou retido nas vendas que eu fiz de 10 de junho a 20 de julho de 2026?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["consultarRetencoes"], "inicio": "2026-06-10", "fim": "2026-07-20"},
+      "raciocinio": "Retenções com as duas datas explícitas, fora do começo e do fim do mês."
+    },
+    {
+      "id": "p443-32",
+      "pergunta": "Quanto rendeu o milho que eu vendi de 1º de junho a 31 de julho de 2026?",
+      "grupo": "controle-dados",
+      "esperado": {"funcoes": ["totalVendasPorProduto"], "inicio": "2026-06-01", "fim": "2026-07-31", "produto": ["milho", "1005"]},
+      "raciocinio": "Vendas de um produto com as duas datas explícitas, em dois meses (o seed vende milho nesses meses)."
+    },
+    {
+      "id": "p443-33",
+      "pergunta": "Na reforma, venda e aluguel de imóvel pagam IBS e CBS?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261]},
+      "raciocinio": "Lei geral: regime específico das operações com bens imóveis, LC 214/2025, arts. 251 a 261 (incidência no art. 252, redução de 50% no art. 261)."
+    },
+    {
+      "id": "p443-34",
+      "pergunta": "O que é essa tal de apuração assistida do IBS e da CBS?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [46]},
+      "raciocinio": "Lei geral: apuração assistida pelo Comitê Gestor e pela RFB, LC 214/2025, art. 46."
+    },
+    {
+      "id": "p443-35",
+      "pergunta": "Serviço de advogado e de contador tem alguma redução de IBS e CBS por ser profissão regulamentada?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [127]},
+      "raciocinio": "Lei geral: redução de 30% para profissionais com conselho profissional, LC 214/2025, art. 127."
+    },
+    {
+      "id": "p443-36",
+      "pergunta": "Escola e faculdade pagam IBS e CBS com redução?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [129]},
+      "raciocinio": "Lei geral: redução de 60% dos serviços de educação do Anexo II, LC 214/2025, art. 129."
+    },
+    {
+      "id": "p443-37",
+      "pergunta": "Quando a empresa contrata frete de caminhoneiro autônomo que não é contribuinte, ela pode ter crédito presumido?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [169]},
+      "raciocinio": "Lei geral: crédito presumido no transporte de carga por autônomo não contribuinte ou MEI, LC 214/2025, art. 169."
+    },
+    {
+      "id": "p443-38",
+      "pergunta": "Empresa que compra material reciclável de catador tem direito a crédito presumido de IBS e CBS?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [170]},
+      "raciocinio": "Lei geral: crédito presumido na aquisição de resíduos sólidos de coletores incentivados, LC 214/2025, art. 170."
+    },
+    {
+      "id": "p443-39",
+      "pergunta": "Como fica o IBS e a CBS quando se vende mercadoria pra uma empresa da Zona Franca de Manaus?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [444, 445, 446, 447, 448, 449, 450]},
+      "raciocinio": "Lei geral: regime da Zona Franca de Manaus, LC 214/2025, art. 445 (alíquota zero na venda a contribuinte habilitado) e seguintes."
+    },
+    {
+      "id": "p443-40",
+      "pergunta": "Uma loja que compra trator usado de pessoa física pra revender pode tomar crédito presumido?",
+      "grupo": "controle-lei",
+      "esperado": {"rotas": ["LEGISLACAO"], "norma": "214", "artigos": [171]},
+      "raciocinio": "Lei geral: crédito presumido na compra de bem móvel usado de pessoa física para revenda, LC 214/2025, art. 171."
+    }
+  ]
+}

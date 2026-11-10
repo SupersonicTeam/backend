@@ -39,6 +39,13 @@ public enum DesfechoInteracao {
    * mais próximos sem afirmar que respondem. Desfecho próprio para medir se o teto está curto.
    */
   RESPOSTA_CORTADA,
+  /**
+   * Resposta de lei descartada: todas as citações eram de regime específico da LC 214/2025 (arts.
+   * 172 a 307) e a pergunta não cita o setor (#269, {@code GuardaRegimeEspecifico}). O texto do
+   * modelo sai; os trechos mais próximos que <em>não</em> são do regime específico ficam, ou a
+   * frase de "sem fundamento" se não sobra nenhum.
+   */
+  REGIME_ESPECIFICO_SEM_SETOR,
   /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
   FORA_DE_ESCOPO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */

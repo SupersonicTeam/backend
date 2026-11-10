@@ -17,9 +17,9 @@ public record AssistenteChatRequest(
 
     @Schema(description = "Pergunta em linguagem natural",
         example = "Quanto comprei de fertilizante no primeiro semestre?")
-    @NotBlank(message = "A pergunta e obrigatoria.")
+    @NotBlank(message = "A pergunta é obrigatória.")
     @Size(max = AssistenteChatRequest.TAMANHO_MAXIMO,
-        message = "A pergunta deve ter no maximo " + AssistenteChatRequest.TAMANHO_MAXIMO
+        message = "A pergunta deve ter no máximo " + AssistenteChatRequest.TAMANHO_MAXIMO
             + " caracteres.")
     String pergunta) {
 

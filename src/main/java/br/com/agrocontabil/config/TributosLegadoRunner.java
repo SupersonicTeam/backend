@@ -78,7 +78,7 @@ public class TributosLegadoRunner implements SmartInitializingSingleton {
       + " 'AGUARDANDO_APROVACAO', 'APROVADA')";
 
   static final String MOTIVO_CADUCADA =
-      "Valores recalculados pela tabela oficial de reducao do IBS/CBS (IT 2025.002)";
+      "Valores recalculados pela tabela oficial de redução do IBS/CBS (IT 2025.002)";
 
   private final JdbcTemplate jdbc;
   private final TransactionTemplate transacao;

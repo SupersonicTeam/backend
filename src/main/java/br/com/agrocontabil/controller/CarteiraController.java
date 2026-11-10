@@ -3,6 +3,7 @@ package br.com.agrocontabil.controller;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.dto.ConviteEnviadoResponse;
 import br.com.agrocontabil.dto.ConviteRequest;
+import br.com.agrocontabil.dto.EncerramentoRequest;
 import br.com.agrocontabil.dto.EtiquetaResponse;
 import br.com.agrocontabil.dto.EtiquetasClienteRequest;
 import br.com.agrocontabil.dto.FichaClienteRequest;
@@ -137,9 +138,12 @@ public class CarteiraController {
 
   /** Encerra o cliente. */
   @PostMapping("/produtores/{produtorId}/encerrar")
-  @Operation(summary = "Encerra o vinculo; voltar exige novo convite")
-  public SituacaoVinculoResponse encerrar(@PathVariable UUID produtorId) {
-    return carteiraService.encerrar(produtorId);
+  @Operation(summary = "Encerra o vinculo; voltar exige novo convite",
+      description = "Corpo opcional {motivo} (ate 500 caracteres, texto livre). Sem corpo ou com "
+          + "motivo em branco encerra sem motivo. O motivo nunca vai a log nem a auditoria.")
+  public SituacaoVinculoResponse encerrar(@PathVariable UUID produtorId,
+      @RequestBody(required = false) @Valid EncerramentoRequest request) {
+    return carteiraService.encerrar(produtorId, EncerramentoRequest.motivoDe(request));
   }
 
   /** Catálogo de etiquetas do escritório. */

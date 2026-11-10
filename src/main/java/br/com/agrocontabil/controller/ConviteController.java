@@ -1,18 +1,21 @@
 package br.com.agrocontabil.controller;
 
 import br.com.agrocontabil.dto.ConviteRecebidoResponse;
+import br.com.agrocontabil.dto.EncerramentoRequest;
 import br.com.agrocontabil.dto.VinculoProdutorResponse;
 import br.com.agrocontabil.model.SituacaoVinculo;
 import br.com.agrocontabil.service.CarteiraService;
 import br.com.agrocontabil.service.ConviteCarteiraService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -74,8 +77,11 @@ public class ConviteController {
 
   /** O produtor encerra o vínculo com um escritório. */
   @PostMapping("/api/vinculos/{vinculoId}/encerrar")
-  @Operation(summary = "Encerra o vinculo com o escritorio: o acesso dele acaba na hora")
-  public VinculoProdutorResponse encerrar(@PathVariable UUID vinculoId) {
-    return carteiraService.encerrarPeloProdutor(vinculoId);
+  @Operation(summary = "Encerra o vinculo com o escritorio: o acesso dele acaba na hora",
+      description = "Corpo opcional {motivo} (ate 500 caracteres, texto livre). Sem corpo ou com "
+          + "motivo em branco encerra sem motivo. O motivo nunca vai a log nem a auditoria.")
+  public VinculoProdutorResponse encerrar(@PathVariable UUID vinculoId,
+      @RequestBody(required = false) @Valid EncerramentoRequest request) {
+    return carteiraService.encerrarPeloProdutor(vinculoId, EncerramentoRequest.motivoDe(request));
   }
 }

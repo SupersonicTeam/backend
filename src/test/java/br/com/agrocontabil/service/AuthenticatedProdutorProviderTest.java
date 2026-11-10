@@ -79,7 +79,7 @@ class AuthenticatedProdutorProviderTest {
     // SecurityContextHolder foi limpo no setUp — nao ha Authentication
     assertThatThrownBy(() -> provider.get())
         .isInstanceOf(NaoAutenticadoException.class)
-        .hasMessageContaining("identidade de usuario");
+        .hasMessageContaining("identidade de usuário");
   }
 
   @Test
@@ -89,7 +89,7 @@ class AuthenticatedProdutorProviderTest {
 
     assertThatThrownBy(() -> provider.get())
         .isInstanceOf(NaoAutenticadoException.class)
-        .hasMessageContaining("identidade de usuario");
+        .hasMessageContaining("identidade de usuário");
   }
 
   // -------------------------------------------------------------------------
@@ -105,7 +105,7 @@ class AuthenticatedProdutorProviderTest {
 
     assertThatThrownBy(() -> provider.get())
         .isInstanceOf(NaoAutenticadoException.class)
-        .hasMessageContaining("identidade de usuario");
+        .hasMessageContaining("identidade de usuário");
   }
 
   @Test
@@ -118,7 +118,7 @@ class AuthenticatedProdutorProviderTest {
 
     assertThatThrownBy(() -> provider.get())
         .isInstanceOf(NaoAutenticadoException.class)
-        .hasMessageContaining("identidade de usuario");
+        .hasMessageContaining("identidade de usuário");
   }
 
   // -------------------------------------------------------------------------

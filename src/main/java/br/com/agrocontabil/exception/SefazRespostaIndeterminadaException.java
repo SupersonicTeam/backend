@@ -16,6 +16,11 @@ package br.com.agrocontabil.exception;
  */
 public class SefazRespostaIndeterminadaException extends SefazComunicacaoException {
 
+  /** Texto ao cliente ({@code errors[0]} e {@code message} de topo do 5xx, #251). */
+  private static final String MENSAGEM_CLIENTE =
+      "A SEFAZ não confirmou o recebimento. A situação da nota será conferida pela chave de "
+          + "acesso; consulte o status antes de tentar de novo.";
+
   /**
    * Cria a exceção com a causa técnica encadeada.
    *
@@ -23,9 +28,7 @@ public class SefazRespostaIndeterminadaException extends SefazComunicacaoExcepti
    * @param cause           causa original (ex.: {@code SocketTimeoutException}); pode ser nula
    */
   public SefazRespostaIndeterminadaException(String mensagemTecnica, Throwable cause) {
-    super(mensagemTecnica, cause,
-        "A SEFAZ nao confirmou o recebimento. A situacao da nota sera conferida pela chave de "
-            + "acesso; consulte o status antes de tentar de novo.");
+    super(mensagemTecnica, cause, MENSAGEM_CLIENTE);
   }
 
   /**

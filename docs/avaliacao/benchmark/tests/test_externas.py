@@ -94,6 +94,15 @@ class CsvCegoTest(unittest.TestCase):
         self.assertTrue(all("ceres" not in ";".join(l) for l in linhas))
         self.assertEqual({v["celula"] for v in json.loads(chave).values()}, {"ceres-1--m", "ceres-2--m"})
 
+    def test_celula_csv_protege_todos_os_prefixos_de_formula_do_csvcego(self):
+        for prefixo in ("=", "+", "-", "@", "\t", "\r"):
+            with self.subTest(prefixo=repr(prefixo)):
+                self.assertEqual(ext._celula_csv(prefixo + "x"), "'" + prefixo + "x")
+        # Texto comum, vazio e prefixo so no meio nao ganham o apostrofo.
+        for valor in ("texto", "", "a=1", "a\tb", " =1"):
+            with self.subTest(valor=valor):
+                self.assertEqual(ext._celula_csv(valor), valor)
+
     def test_csv_cego_protege_formula_e_pula_vazia_e_contaminada(self):
         from ceres_benchmark.relatorio import Celula
         canonico = {"E01": {"pergunta": "=HYPERLINK(1)", "origem": "inedita_externa_ia"},
@@ -165,6 +174,61 @@ class AchadosReviewDelta361Test(unittest.TestCase):
         for desfecho in ("CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"):
             self.assertFalse(ext.avaliar(resultado("x", desfecho, citacao_valida=True), {})["fundamentacao"])
         self.assertTrue(ext.avaliar(resultado("x", citacao_valida=True), {})["fundamentacao"])
+
+    def test_conjuntos_da_regua_sao_os_mesmos_do_java(self):
+        """Sem deriva: ``DESCARTADAS`` e ``FUNCOES_COM_CITACAO_FIXA`` lidos do fonte do AvaliadorResposta."""
+        import re
+        from pathlib import Path
+        fonte = (Path(__file__).resolve().parents[4] / "src/main/java/br/com/agrocontabil/config/avaliacao"
+                 / "AvaliadorResposta.java").read_text(encoding="utf-8")
+        funcoes = re.search(r"FUNCOES_COM_CITACAO_FIXA\s*=\s*Set\.of\(([^)]*)\)", fonte).group(1)
+        self.assertEqual(set(re.findall(r'"(\w+)"', funcoes)), ext.FUNCOES_COM_CITACAO_FIXA)
+        bloco = re.search(r"RESPOSTA_DESCARTADA\s*=\s*EnumSet\.of\((.*?)\);", fonte, re.DOTALL).group(1)
+        self.assertEqual(set(re.findall(r"DesfechoInteracao\.(\w+)", bloco)), ext.DESCARTADAS)
+
+    def test_regime_especifico_sem_setor_e_descartado_como_no_java(self):
+        self.assertFalse(ext.citacao_vale(resultado("x", "REGIME_ESPECIFICO_SEM_SETOR", citacao_valida=True)))
+
+    def test_misto_com_lei_descartada_so_vale_com_funcao_de_citacao_fixa(self):
+        # #433: pergunta e funcoes ficticias; mesma tabela do AvaliadorRespostaTest.
+        for lei in ("NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA", "REGIME_ESPECIFICO_SEM_SETOR"):
+            sem = resultado("x", rota="MISTO", citacao_valida=True, desfechoLegislacao=lei,
+                            fontes=[{"funcao": "consultarNota"}])
+            self.assertFalse(ext.citacao_vale(sem), lei)
+            self.assertFalse(ext.citacao_vale(resultado("x", rota="MISTO", citacao_valida=True,
+                                                        desfechoLegislacao=lei)), lei)
+            for funcao in ("consultarRetencoes", "consultarTratamentoProduto"):
+                com = resultado("x", rota="MISTO", citacao_valida=True, desfechoLegislacao=lei,
+                                fontes=[{"funcao": "consultarNota"}, {"funcao": funcao}])
+                self.assertTrue(ext.citacao_vale(com), (lei, funcao))
+
+    def test_misto_com_afirmacao_sobre_dados_so_vale_com_funcao_de_citacao_fixa(self):
+        base = dict(rota="MISTO", citacao_valida=True, desfechoLegislacao="AFIRMACAO_SOBRE_DADOS")
+        self.assertFalse(ext.citacao_vale(resultado("x", "AFIRMACAO_SOBRE_DADOS", **base,
+                                                    fontes=[{"funcao": "consultarNota"}])))
+        for funcao in ("consultarRetencoes", "consultarTratamentoProduto"):
+            self.assertTrue(ext.citacao_vale(resultado("x", "AFIRMACAO_SOBRE_DADOS", **base,
+                                                       fontes=[{"funcao": funcao}])))
+
+    def test_misto_com_lei_respondida_ou_nula_segue_a_regra_anterior(self):
+        for lei in ("RESPONDIDA", None):
+            self.assertTrue(ext.citacao_vale(resultado("x", rota="MISTO", citacao_valida=True,
+                                                       desfechoLegislacao=lei,
+                                                       fontes=[{"funcao": "consultarNota"}])))
+        # desfecho geral descartado pesa mesmo com funcao fixa e a lei sem fundamento
+        self.assertFalse(ext.citacao_vale(resultado("x", "NUMERO_SEM_FONTE", rota="MISTO", citacao_valida=True,
+                                                    desfechoLegislacao="SEM_FUNDAMENTO_LEGAL",
+                                                    fontes=[{"funcao": "consultarRetencoes"}])))
+
+    def test_legislacao_com_desfecho_descartado_nao_vale_e_a_regra_so_rebaixa(self):
+        for desfecho in ("NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA",
+                         "REGIME_ESPECIFICO_SEM_SETOR"):
+            self.assertFalse(ext.citacao_vale(resultado("x", desfecho, citacao_valida=True)))
+        # nao promove: falso e nulo seguem como vieram
+        self.assertIs(ext.citacao_vale(resultado("x", rota="MISTO", citacao_valida=False,
+                                                 desfechoLegislacao="RESPONDIDA")), False)
+        self.assertIsNone(ext.citacao_vale(resultado("x", rota="MISTO", desfechoLegislacao="NUMERO_SEM_FONTE")))
+        self.assertTrue(ext.citacao_vale(resultado("x", citacao_valida=True)))
 
     def test_sql_aceita_espaco_depois_da_chave_como_o_cita_algum(self):
         sql = ext.sql_conferencia({"perguntas": [{"origem": "inedita_externa_ia", "id": "X",

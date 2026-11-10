@@ -179,6 +179,29 @@ public enum ErrorCode {
    * convite (issue #228). HTTP 409.
    */
   ESCRITORIO_ATUAL_EM_USO,
+  /**
+   * O slug do endereço do escritório não tem a forma exigida (issue #464). HTTP 400.
+   */
+  SLUG_INVALIDO,
+  /**
+   * O slug é reservado, está em uso por outro escritório ou em carência (issue #464). A resposta é
+   * a mesma nos três casos, para não virar oráculo. HTTP 409.
+   */
+  SLUG_INDISPONIVEL,
+  /**
+   * O endereço do escritório foi alterado há menos do intervalo mínimo entre trocas (issue #464).
+   * HTTP 409.
+   */
+  ENDERECO_TROCA_RECENTE,
+  /**
+   * O endereço próprio exige o CNPJ do escritório (issue #464). HTTP 422.
+   */
+  ENDERECO_EXIGE_CNPJ,
+  /**
+   * Endereço de escritório que não é servido: inexistente, reservado, sem CNPJ ou com a carência
+   * vencida (issue #464). A mesma resposta para todos os casos. HTTP 404.
+   */
+  ENDERECO_NAO_ENCONTRADO,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:

@@ -17,6 +17,6 @@ public record EscritorioRequest(
     @Schema(description = "Nome do escritório", example = "Escritório Campo Verde")
     @NotBlank @Size(max = 255) String nome,
     @Schema(description = "CNPJ só com dígitos; vazio apaga (contador autônomo)")
-    @Pattern(regexp = "\\d{14}|", message = "Informe o CNPJ com 14 digitos (vazio apaga)") @ValidCpfCnpj
+    @Pattern(regexp = "\\d{14}|", message = "Informe o CNPJ com 14 dígitos (vazio apaga)") @ValidCpfCnpj
     String cnpj) {
 }

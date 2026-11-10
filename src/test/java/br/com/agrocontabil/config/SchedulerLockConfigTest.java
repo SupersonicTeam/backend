@@ -7,6 +7,7 @@ import br.com.agrocontabil.sefaz.SefazStatusSyncJob;
 import br.com.agrocontabil.service.AlertaTributarioJob;
 import br.com.agrocontabil.service.ApuracaoFechamentoJob;
 import br.com.agrocontabil.service.ConviteCarteiraLimpezaJob;
+import br.com.agrocontabil.service.EscritorioSlugCarenciaLimpezaJob;
 import br.com.agrocontabil.service.GuiaFiscalStatusSyncJob;
 import br.com.agrocontabil.service.PendenciaAnexoRetencaoJob;
 import br.com.agrocontabil.service.VerificacaoAnexoJob;
@@ -36,7 +37,8 @@ class SchedulerLockConfigTest {
       SefazStatusSyncJob.class, ApuracaoFechamentoJob.class, GuiaFiscalStatusSyncJob.class,
       AlertaTributarioJob.class, SessaoRefreshLimpezaJob.class,
       ConviteCarteiraLimpezaJob.class, PendenciaAnexoRetencaoJob.class, VerificacaoAnexoJob.class,
-      AvisoVencimentoJob.class, NotificacaoRetencaoJob.class, CotaDemonstracaoCeres.class);
+      AvisoVencimentoJob.class, NotificacaoRetencaoJob.class, CotaDemonstracaoCeres.class,
+      EscritorioSlugCarenciaLimpezaJob.class);
 
   @Test
   @DisplayName("Todo metodo @Scheduled dos jobs tem @SchedulerLock com teto e piso declarados")
@@ -68,7 +70,7 @@ class SchedulerLockConfigTest {
             GuiaFiscalStatusSyncJob.LOCK, AlertaTributarioJob.LOCK, SessaoRefreshLimpezaJob.LOCK,
             ConviteCarteiraLimpezaJob.LOCK, PendenciaAnexoRetencaoJob.LOCK,
             VerificacaoAnexoJob.LOCK, AvisoVencimentoJob.LOCK, NotificacaoRetencaoJob.LOCK,
-            CotaDemonstracaoCeres.LOCK);
+            CotaDemonstracaoCeres.LOCK, EscritorioSlugCarenciaLimpezaJob.LOCK);
   }
 
   @Test

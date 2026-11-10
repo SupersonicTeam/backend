@@ -73,9 +73,9 @@ public class ApuracaoFaixaService {
       AgrupamentoApuracao agrupamento) {
     if (de != null || ate != null || ultimos != null || agrupamento != null) {
       throw new FaixaApuracaoInvalidaException("periodo",
-          "Use periodo sozinho ou uma faixa (de/ate ou ultimos), nao os dois.",
-          "Para um mes, informe so periodo; para varios, de/ate ou ultimos.", null,
-          "periodo OU de/ate OU ultimos");
+          "Use 'periodo' sozinho ou uma faixa ('de'/'ate' ou 'ultimos'), não os dois.",
+          "Para um mês, informe só 'periodo'; para vários, 'de'/'ate' ou 'ultimos'.", null,
+          "'periodo' OU 'de'/'ate' OU 'ultimos'");
     }
   }
 
@@ -128,14 +128,14 @@ public class ApuracaoFaixaService {
     if (ultimos != null) {
       if (de != null || ate != null) {
         throw new FaixaApuracaoInvalidaException("ultimos",
-            "Use ultimos ou de/ate, nao os dois.",
-            "Informe so ultimos (6, 12, 36 ou 60) ou so de/ate.", String.valueOf(ultimos),
-            "ultimos OU de/ate");
+            "Use 'ultimos' ou 'de'/'ate', não os dois.",
+            "Informe só 'ultimos' (6, 12, 36 ou 60) ou só 'de'/'ate'.", String.valueOf(ultimos),
+            "'ultimos' OU 'de'/'ate'");
       }
       if (!ULTIMOS_PERMITIDOS.contains(ultimos)) {
         throw new FaixaApuracaoInvalidaException("ultimos",
-            "ultimos aceita 6, 12, 36 ou 60 meses.",
-            "Para outra faixa, informe de/ate (ate 60 meses).", String.valueOf(ultimos),
+            "'ultimos' aceita 6, 12, 36 ou 60 meses.",
+            "Para outra faixa, informe 'de'/'ate' (até 60 meses).", String.valueOf(ultimos),
             "6, 12, 36, 60");
       }
       YearMonth atual = YearMonth.now(clock);
@@ -144,22 +144,22 @@ public class ApuracaoFaixaService {
     if (de == null || ate == null) {
       String faltando = de == null ? "de" : "ate";
       throw new FaixaApuracaoInvalidaException(faltando,
-          "Informe periodo, a faixa completa (de e ate) ou ultimos.",
-          "Ex.: ?de=2026-01&ate=2026-06 ou ?ultimos=6.", null, "YYYY-MM");
+          "Informe 'periodo', a faixa completa ('de' e 'ate') ou 'ultimos'.",
+          "Ex.: '?de=2026-01&ate=2026-06' ou '?ultimos=6'.", null, "YYYY-MM");
     }
     YearMonth inicio = YearMonth.parse(de);
     YearMonth fim = YearMonth.parse(ate);
     if (inicio.isAfter(fim)) {
       throw new FaixaApuracaoInvalidaException("de",
-          "Faixa invalida: de (%s) e posterior a ate (%s).".formatted(de, ate),
-          "Informe de anterior ou igual a ate.", de, "ate " + ate);
+          "Faixa inválida: 'de' (%s) é posterior a 'ate' (%s).".formatted(de, ate),
+          "Informe 'de' anterior ou igual a 'ate'.", de, "até " + ate);
     }
     if (inicio.until(fim, ChronoUnit.MONTHS) + 1 > MESES_MAXIMO) {
       throw new FaixaApuracaoInvalidaException("ate",
-          "Faixa invalida: de %s a %s passa do maximo de %d meses."
+          "Faixa inválida: de %s a %s passa do máximo de %d meses."
               .formatted(de, ate, MESES_MAXIMO),
-          "Consulte faixas de ate %d meses ou agrupe por ano.".formatted(MESES_MAXIMO), ate,
-          "ate " + inicio.plusMonths(MESES_MAXIMO - 1L));
+          "Consulte faixas de até %d meses ou agrupe por ano.".formatted(MESES_MAXIMO), ate,
+          "até " + inicio.plusMonths(MESES_MAXIMO - 1L));
     }
     return new YearMonth[] {inicio, fim};
   }

@@ -29,8 +29,8 @@ public class TransicaoRevisaoInvalidaException extends DomainException {
   public static TransicaoRevisaoInvalidaException status(UUID notaId, StatusNotaFiscal atual,
       Collection<StatusNotaFiscal> permitidos) {
     return new TransicaoRevisaoInvalidaException(
-        "A nota " + notaId + " esta em " + atual + " e nao permite esta acao.",
-        "Recarregue a nota: o status mudou ou nao aceita esta acao.",
+        "A nota " + notaId + " está em " + atual + " e não permite esta ação.",
+        "Recarregue a nota: o status mudou ou não aceita esta ação.",
         atual.name(), permitidos.toString());
   }
 
@@ -41,7 +41,7 @@ public class TransicaoRevisaoInvalidaException extends DomainException {
    */
   public static TransicaoRevisaoInvalidaException semContador() {
     return new TransicaoRevisaoInvalidaException(
-        "Nenhum escritorio de contabilidade atende o produtor para revisar a nota.",
+        "Nenhum escritório de contabilidade atende o produtor para revisar a nota.",
         "Sem contador vinculado, gere o XML direto.", null, null);
   }
 }

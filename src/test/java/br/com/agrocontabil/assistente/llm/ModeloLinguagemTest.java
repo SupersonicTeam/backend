@@ -12,8 +12,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.ai.retry.TransientAiException;
@@ -177,6 +180,19 @@ class ModeloLinguagemTest {
     }
 
     assertThat(disponibilidade.disponivel()).isTrue();
+  }
+
+  @Test
+  @DisplayName("#270: stop_reason max_tokens da Anthropic conta como resposta cortada pelo teto")
+  void motivoDaAnthropicContaComoCorte() {
+    assertThat(ModeloLinguagem.cortadaPeloTeto(respostaComMotivo("max_tokens"), 512)).isTrue();
+    assertThat(ModeloLinguagem.cortadaPeloTeto(respostaComMotivo("length"), 512)).isTrue();
+    assertThat(ModeloLinguagem.cortadaPeloTeto(respostaComMotivo("end_turn"), 512)).isFalse();
+  }
+
+  private static ChatResponse respostaComMotivo(String motivo) {
+    return new ChatResponse(List.of(new Generation(new AssistantMessage("texto"),
+        ChatGenerationMetadata.builder().finishReason(motivo).build())));
   }
 
   private static ModeloLinguagem gatewayCom(

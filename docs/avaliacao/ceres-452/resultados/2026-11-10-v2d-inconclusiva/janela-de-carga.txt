@@ -1,0 +1,17 @@
+== base
+ r1: 00:16:35-00:47:36  chamadas 41, na janela 38
+ r2: 01:26:36-01:40:51  chamadas 40, na janela 40
+ r3: 01:40:55-01:48:23  chamadas 29, na janela 2
+ na janela: chamadas 80, válidas 79, técnicas 1, estouros 1, mediana válida 22.9s
+   mediana por grupo: {'c': 22.549999999999997, 'g1': 11.4, 'g2': 25.0, 'g3': 44.35, 'g4': 26.299999999999997}
+ fora: chamadas 30, válidas 30, técnicas 0, estouros 0, mediana válida 18.05s
+   mediana por grupo: {'c': 19.8, 'g1': 10.0, 'g2': 11.649999999999999, 'g3': 20.7, 'g4': 18.05}
+ execuções sem resposta válida (id, rep, na janela): []
+== correcao
+ r1: 00:47:43-01:09:21  chamadas 45, na janela 45
+ r2: 01:09:26-01:26:31  chamadas 49, na janela 49
+ na janela: chamadas 94, válidas 74, técnicas 20, estouros 3, mediana válida 21.6s
+   mediana por grupo: {'c': 20.55, 'g1': 18.3, 'g2': 20.0, 'g3': 23.9, 'g4': 21.6}
+ fora: chamadas 0, válidas 0, técnicas 0, estouros 0, mediana válida sem execução
+   mediana por grupo: {}
+ execuções sem resposta válida (id, rep, na janela): [(('v2-g3-06', 2), True), (('v2-g4-01', 2), True), (('v2-g4-06', 1), True), (('v2-g4-06', 2), True), (('v2-g4-07', 1), True), (('v2-g4-07', 2), True)]

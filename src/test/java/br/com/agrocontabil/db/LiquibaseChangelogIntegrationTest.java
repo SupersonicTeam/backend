@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
+import br.com.agrocontabil.repository.EscritorioRepository;
+import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -105,6 +110,15 @@ class LiquibaseChangelogIntegrationTest {
 
   @Autowired
   private LockProvider lockProvider;
+
+  @Autowired
+  private EscritorioRepository escritorioRepository;
+
+  @Autowired
+  private EscritorioSlugAnteriorRepository anteriorRepository;
+
+  @Autowired
+  private PlatformTransactionManager transactionManager;
 
   @Test
   @DisplayName("changeSet 0022 cria nota_fiscal.version como BIGINT NOT NULL com default 0")
@@ -218,6 +232,118 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
         c -> c.get("is_nullable"))
         .containsExactly(tuple("versao_regra_fiscal", "integer", "YES"));
+  }
+
+  @Test
+  @DisplayName("changeSet 0059: slug unico do escritorio e carencia que sobrevive ao escritorio apagado (#464)")
+  void changeSet0059SlugDoEscritorio() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'escritorio'"
+            + " AND column_name IN ('slug', 'slug_alterado_em') ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("slug", "character varying", "YES", 32),
+            tuple("slug_alterado_em", "timestamp with time zone", "YES", null));
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'escritorio_slug_anterior' ORDER BY column_name", String.class))
+        .containsExactly("escritorio_id", "liberado_em", "slug");
+    assertThat(jdbc.queryForObject("SELECT delete_rule FROM"
+        + " information_schema.referential_constraints"
+        + " WHERE constraint_name = 'fk_escritorio_slug_anterior_escritorio'", String.class))
+        .isEqualTo("SET NULL");
+
+    String primeiro = UUID.randomUUID().toString();
+    String segundo = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome, slug) VALUES (?::uuid, 'Escritorio 0059',"
+        + " 'slug0059')", primeiro);
+    // O indice unico barra o mesmo slug em dois escritorios; nulo pode repetir.
+    assertThatThrownBy(() -> jdbc.update("INSERT INTO escritorio (id, nome, slug)"
+        + " VALUES (?::uuid, 'Outro 0059', 'slug0059')", segundo))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Outro 0059')", segundo);
+
+    // A carencia sobrevive ao escritorio apagado, sem ele (SET NULL, nunca CASCADE).
+    jdbc.update("INSERT INTO escritorio_slug_anterior (slug, escritorio_id, liberado_em)"
+        + " VALUES ('antigo0059', ?::uuid, now() + interval '90 days')", primeiro);
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", primeiro);
+    assertThat(jdbc.queryForList("SELECT escritorio_id FROM escritorio_slug_anterior"
+        + " WHERE slug = 'antigo0059'", UUID.class)).containsExactly((UUID) null);
+    // A consulta nativa da disponibilidade (#464) no PostgreSQL: em uso por outro, em carencia
+    // de escritorio apagado, livre, e a propria carencia vencida liberada pela limpeza.
+    OffsetDateTime agora = OffsetDateTime.now();
+    UUID outroId = UUID.fromString(segundo);
+    jdbc.update("INSERT INTO escritorio (id, nome, slug) VALUES (?::uuid, 'Terceiro 0059',"
+        + " 'emuso0059')", UUID.randomUUID().toString());
+    assertThat(escritorioRepository.slugIndisponivel("emuso0059", outroId, agora)).isTrue();
+    assertThat(escritorioRepository.slugIndisponivel("antigo0059", outroId, agora)).isTrue();
+    assertThat(escritorioRepository.slugIndisponivel("livre0059", outroId, agora)).isFalse();
+    jdbc.update("UPDATE escritorio_slug_anterior SET liberado_em = now() - interval '1 day'"
+        + " WHERE slug = 'antigo0059'");
+    assertThat(escritorioRepository.slugIndisponivel("antigo0059", outroId, agora)).isFalse();
+    Integer apagados = new TransactionTemplate(transactionManager).execute(status ->
+        anteriorRepository.apagarVencidos(agora));
+    assertThat(apagados).isEqualTo(1);
+
+    // As consultas do lado publico e do login no subdominio (#464) no PostgreSQL.
+    UUID emUsoId = jdbc.queryForObject("SELECT id FROM escritorio WHERE slug = 'emuso0059'",
+        UUID.class);
+    jdbc.update("UPDATE escritorio SET cnpj = '11222333000181' WHERE id = ?", emUsoId);
+    jdbc.update("INSERT INTO escritorio_slug_anterior (slug, escritorio_id, liberado_em)"
+        + " VALUES ('carencia0059', ?, now() + interval '90 days')", emUsoId);
+    UUID contadorId = UUID.randomUUID();
+    jdbc.update("INSERT INTO contadores (id, nome_completo, escritorio_id, funcao_escritorio)"
+        + " VALUES (?, 'Contador 0059', ?, 'ADMINISTRADOR')", contadorId, emUsoId);
+    assertThat(escritorioRepository.findAtivoPorSlug("emuso0059")).isPresent();
+    assertThat(escritorioRepository.findDestinoDaCarencia("carencia0059", agora))
+        .hasValueSatisfying(destino -> assertThat(destino.getSlug()).isEqualTo("emuso0059"));
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("emuso0059", contadorId)).isTrue();
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("carencia0059", contadorId)).isFalse();
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("emuso0059", UUID.randomUUID()))
+        .isFalse();
+
+    jdbc.update("DELETE FROM contadores WHERE id = ?", contadorId);
+    jdbc.update("DELETE FROM escritorio_slug_anterior WHERE slug = 'carencia0059'");
+    jdbc.update("DELETE FROM escritorio WHERE slug = 'emuso0059'");
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", segundo);
+  }
+
+  @Test
+  @DisplayName("changeSet 0058: quem encerrou o vinculo e o motivo, colunas anulaveis; linha antiga fica sem registro (#402)")
+  void changeSet0058EncerramentoDoVinculo() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'carteira_vinculo'"
+            + " AND column_name IN ('encerrado_por', 'encerrado_por_membro_id',"
+            + " 'motivo_encerramento') ORDER BY column_name");
+
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("encerrado_por", "character varying", "YES", 20),
+            tuple("encerrado_por_membro_id", "uuid", "YES", null),
+            tuple("motivo_encerramento", "character varying", "YES", 500));
+
+    // Um vinculo gravado como antes (sem as colunas novas) fica "nao registrado": tudo nulo.
+    String escritorioId = UUID.randomUUID().toString();
+    String produtorId = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio 0058')",
+        escritorioId);
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0058')",
+        produtorId);
+    jdbc.update("INSERT INTO carteira_vinculo (id, escritorio_id, produtor_id, situacao, inicio,"
+        + " fim) VALUES (gen_random_uuid(), ?::uuid, ?::uuid, 'ENCERRADO', now(), now())",
+        escritorioId, produtorId);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM carteira_vinculo WHERE produtor_id ="
+        + " ?::uuid AND encerrado_por IS NULL AND encerrado_por_membro_id IS NULL"
+        + " AND motivo_encerramento IS NULL", Integer.class, produtorId)).isEqualTo(1);
   }
 
   @Test
@@ -520,7 +646,8 @@ class LiquibaseChangelogIntegrationTest {
         + " WHERE table_name = 'contador_produtor'", Integer.class)).isZero();
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'carteira_vinculo' ORDER BY column_name", String.class))
-        .containsExactly("created_at", "escritorio_id", "fim", "id", "inicio", "observacoes",
+        .containsExactly("created_at", "encerrado_por", "encerrado_por_membro_id",
+            "escritorio_id", "fim", "id", "inicio", "motivo_encerramento", "observacoes",
             "produtor_id", "responsavel_id", "situacao", "updated_at");
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'convite_carteira' ORDER BY column_name", String.class))

@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
  */
 public class ContatoAusenteException extends DomainException {
 
-  private static final String MENSAGEM = "O produtor nao tem WhatsApp cadastrado.";
+  private static final String MENSAGEM = "O produtor não tem WhatsApp cadastrado.";
 
   /** Cria a exceção. */
   public ContatoAusenteException() {

@@ -22,6 +22,7 @@ import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.security.MembroEscritorioProvider;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import jakarta.annotation.PreDestroy;
+import java.text.Normalizer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -31,6 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +73,14 @@ public class ConviteCarteiraService {
 
   /** Tamanho máximo do nome do escritório no texto do e-mail. */
   private static final int NOME_MAXIMO_NO_EMAIL = 120;
+
+  /** Endereço no nome do escritório: URL com esquema, {@code www.}, e-mail ou domínio (#460). */
+  private static final Pattern ENDERECO_NO_NOME = Pattern.compile(
+      "(?iu)[a-z][a-z0-9+.-]*://\\S*"
+          + "|\\bwww\\.\\S*"
+          + "|\\S+@\\S+"
+          + "|(?<![\\p{L}\\p{N}])[\\p{L}\\p{N}-]+(?:\\.[\\p{L}\\p{N}-]+)*\\.\\p{L}{2,}"
+          + "(?![\\p{L}\\p{N}])\\S*");
 
   private final MembroEscritorioProvider membroProvider;
   private final AuthenticatedProdutorProvider produtorProvider;
@@ -144,7 +154,7 @@ public class ConviteCarteiraService {
       // Serializa os convites do escritorio: sem o lock, requisicoes simultaneas leriam a mesma
       // contagem e passariam juntas do teto.
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(escritorioId)
-          .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
       OffsetDateTime inicioJanela = agora.minus(JANELA_TETO);
       long naJanela = conviteRepository.countByEscritorioIdAndCriadoEmAfter(
           escritorioId, inicioJanela);
@@ -294,7 +304,7 @@ public class ConviteCarteiraService {
         } catch (RuntimeException e) {
           // Sem o e-mail no log (LGPD); o convite ja existe e aparece para o produtor no login.
           log.warn("Falha ao enviar o e-mail do convite da carteira: {}",
-              e.getClass().getSimpleName());
+              EnvioEmailFalhouException.paraLog(e));
         }
       });
     } catch (TaskRejectedException e) {
@@ -302,9 +312,22 @@ public class ConviteCarteiraService {
     }
   }
 
-  /** Nome do escritório sem caractere de controle, no tamanho do texto do e-mail. */
+  /**
+   * Nome do escritório para o corpo dos dois convites: sem caractere de controle, sem endereço e
+   * no tamanho do texto do e-mail.
+   *
+   * <p>O nome é livre e o cadastro de contador é público: sem tirar o endereço, um atacante
+   * mandaria de {@code nao-responda@agroconia.com.br} um convite com "acesse
+   * golpe.com.br" no nome, e queimaria a reputação do domínio (#460). Sai qualquer
+   * {@code esquema://...}, {@code www....}, e-mail e domínio ({@code rótulo.rótulo}, com o último
+   * rótulo de duas letras ou mais). O NFKC antes faz o ponto e as letras de largura total valerem
+   * como os comuns ({@code golpe．com}). Efeito aceito: nome como {@code Contab.Rural} perde o
+   * trecho com ponto.
+   */
   static String nomeParaEmail(String nome) {
-    String limpo = nome == null ? "" : nome.replaceAll("\\p{Cntrl}", " ").strip();
+    String limpo = nome == null ? ""
+        : Normalizer.normalize(nome, Normalizer.Form.NFKC).replaceAll("\\p{Cntrl}", " ");
+    limpo = ENDERECO_NO_NOME.matcher(limpo).replaceAll(" ").replaceAll("\\s+", " ").strip();
     return limpo.length() > NOME_MAXIMO_NO_EMAIL ? limpo.substring(0, NOME_MAXIMO_NO_EMAIL)
         : limpo;
   }

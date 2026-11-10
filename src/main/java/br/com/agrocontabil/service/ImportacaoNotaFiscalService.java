@@ -157,7 +157,7 @@ public class ImportacaoNotaFiscalService {
     try {
       // O multipart aceita 5 MB por arquivo desde os anexos da #180; um XML de NF-e segue com 2 MB.
       if (arquivo.conteudo() != null && arquivo.conteudo().length > TAMANHO_MAXIMO_XML) {
-        throw new XmlImportacaoInvalidaException("Arquivo acima de 2 MB: nao e um XML de NF-e.");
+        throw new XmlImportacaoInvalidaException("Arquivo acima de 2 MB: não é um XML de NF-e.");
       }
       NfeXmlImporter.ResultadoImportacao parsed = nfeXmlImporter.importar(arquivo.conteudo());
       exigirDestinatario(parsed.nfe(), produtor);
@@ -216,7 +216,7 @@ public class ImportacaoNotaFiscalService {
       log.error("Falha inesperada ao importar XML: arquivo={} produtor={}",
           nome, produtor.getId(), e);
       return ImportacaoNotaResultado.invalida(nome,
-          "Nao foi possivel processar o arquivo. Verifique se e um XML de NF-e valido.");
+          "Não foi possível processar o arquivo. Verifique se é um XML de NF-e válido.");
     }
   }
 
@@ -235,7 +235,7 @@ public class ImportacaoNotaFiscalService {
     if (documentoDest == null || documentoProdutor == null
         || !digitos(documentoDest).equals(digitos(documentoProdutor))) {
       // Sem o documento na mensagem (LGPD): o produtor sabe o proprio e nao precisa do alheio.
-      throw new XmlImportacaoInvalidaException("O destinatario desta NF-e nao e voce: so a nota "
+      throw new XmlImportacaoInvalidaException("O destinatário desta NF-e não é você: só a nota "
           + "emitida para o seu CPF/CNPJ pode ser importada.");
     }
   }
@@ -246,7 +246,7 @@ public class ImportacaoNotaFiscalService {
       assinaturaValidator.validar(nfeXml);
     } catch (AssinaturaDigitalException e) {
       log.info("XML importado com assinatura invalida: {}", e.getMessage());
-      throw new XmlImportacaoInvalidaException("Assinatura digital da NF-e ausente ou invalida: "
+      throw new XmlImportacaoInvalidaException("Assinatura digital da NF-e ausente ou inválida: "
           + "o XML foi alterado depois de assinado. Importe o arquivo original do emitente.");
     }
   }
@@ -282,11 +282,11 @@ public class ImportacaoNotaFiscalService {
       return;
     }
     if (situacao != SituacaoSefaz.AUTORIZADA) {
-      throw new XmlImportacaoInvalidaException("A SEFAZ nao confirma esta NF-e como autorizada ("
-          + situacao + ", cStat " + retorno.cStat() + "). So NF-e autorizada pode ser importada.");
+      throw new XmlImportacaoInvalidaException("A SEFAZ não confirma esta NF-e como autorizada ("
+          + situacao + ", cStat " + retorno.cStat() + "). Só NF-e autorizada pode ser importada.");
     }
     if (!DigestAssinatura.confere(nota.getXmlGerado(), retorno.digestValue())) {
-      throw new XmlImportacaoInvalidaException("O conteudo do XML difere da NF-e autorizada na "
+      throw new XmlImportacaoInvalidaException("O conteúdo do XML difere da NF-e autorizada na "
           + "SEFAZ. Importe o arquivo original do emitente.");
     }
     nota.setStatus(StatusNotaFiscal.AUTORIZADA);

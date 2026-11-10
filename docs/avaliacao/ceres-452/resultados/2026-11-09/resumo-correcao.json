@@ -1,0 +1,776 @@
+{
+  "versao_conjunto": "ceres-452-v1",
+  "sha256_conjunto": "7f1b2bca30874412624c9850eeaa4ae44112707c82fcdebe4da49189b378fd74",
+  "bracos": [
+    "correcao"
+  ],
+  "commits": [
+    "22cd4cd020b83271c913eb9bf931d2d12a984c7e"
+  ],
+  "modelos": [
+    [
+      "qwen3:4b-instruct",
+      "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0"
+    ]
+  ],
+  "datas_referencia": [
+    "2026-11-09"
+  ],
+  "aquecido": true,
+  "mediana_segundos": {
+    "aberto": 19.4,
+    "controle_dados": 13.7,
+    "controle_fora": 0.4,
+    "controle_lei": 5.8,
+    "mes_corrente": 11.4,
+    "mes_seguinte": 9.9,
+    "trimestre": 20.1
+  },
+  "por_grupo": {
+    "mes_seguinte": {
+      "certas": 9,
+      "total": 10,
+      "sem_medicao": 0
+    },
+    "mes_corrente": {
+      "certas": 7,
+      "total": 8,
+      "sem_medicao": 0
+    },
+    "trimestre": {
+      "certas": 7,
+      "total": 8,
+      "sem_medicao": 0
+    },
+    "aberto": {
+      "certas": 9,
+      "total": 14,
+      "sem_medicao": 0
+    },
+    "controle_dados": {
+      "certas": 11,
+      "total": 12,
+      "sem_medicao": 0
+    },
+    "controle_lei": {
+      "certas": 3,
+      "total": 4,
+      "sem_medicao": 0
+    },
+    "controle_fora": {
+      "certas": 2,
+      "total": 3,
+      "sem_medicao": 0
+    }
+  },
+  "por_pergunta": {
+    "g1-01": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-02": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-03": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-04": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-05": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-06": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-07": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-08": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-09": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g1-10": {
+      "grupo": "mes_seguinte",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-01": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-02": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-03": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-04": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-05": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-06": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-07": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g2-08": {
+      "grupo": "mes_corrente",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-01": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-02": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-03": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-04": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-05": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-06": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-07": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g3-08": {
+      "grupo": "trimestre",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-01": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-02": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-03": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-04": {
+      "grupo": "aberto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-05": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-06": {
+      "grupo": "aberto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-07": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-08": {
+      "grupo": "aberto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-09": {
+      "grupo": "aberto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-10": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-11": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-12": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-13": {
+      "grupo": "aberto",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "g4-14": {
+      "grupo": "aberto",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-01": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-02": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-03": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-04": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-05": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 1,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-06": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-07": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-08": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-09": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-10": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-11": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-12": {
+      "grupo": "controle_dados",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-13": {
+      "grupo": "controle_lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-14": {
+      "grupo": "controle_lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-15": {
+      "grupo": "controle_lei",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-16": {
+      "grupo": "controle_lei",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-17": {
+      "grupo": "controle_fora",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-18": {
+      "grupo": "controle_fora",
+      "execucoes": [
+        "errada",
+        "errada",
+        "errada"
+      ],
+      "resultado": "errada",
+      "certas": 0,
+      "validas": 3,
+      "tecnicas": 0
+    },
+    "c-19": {
+      "grupo": "controle_fora",
+      "execucoes": [
+        "certa",
+        "certa",
+        "certa"
+      ],
+      "resultado": "certa",
+      "certas": 3,
+      "validas": 3,
+      "tecnicas": 0
+    }
+  }
+}

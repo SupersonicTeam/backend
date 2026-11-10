@@ -168,6 +168,11 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-openai</artifactId>
 		</dependency>
+		<!-- API da Anthropic (Claude), selecionavel por spring.ai.model.chat=anthropic. -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-anthropic</artifactId>
+		</dependency>
 		<!-- RAG da Ceres (issue #156): legislacao vetorizada no mesmo PostgreSQL (pgvector). O schema
 		     e do Liquibase (initialize-schema desligado). -->
 		<dependency>
@@ -237,6 +242,15 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Servidor SMTP falso dos testes de e-mail (#460). A 2.1.x usa Jakarta Mail 2.1 e a
+		     Angus Mail 2.0, as mesmas do Spring Boot 3.5 (que gerencia as versoes). -->
+		<dependency>
+			<groupId>com.icegreen</groupId>
+			<artifactId>greenmail</artifactId>
+			<version>2.1.3</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

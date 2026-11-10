@@ -163,14 +163,14 @@ public class NotaFiscalValidacaoService {
     }
     OffsetDateTime agora = OffsetDateTime.now();
     String versao = nota.getVersaoRegraFiscal() == null ? "sem marca"
-        : "versao " + nota.getVersaoRegraFiscal();
+        : "versão " + nota.getVersaoRegraFiscal();
     validacaoRepository.save(NotaFiscalValidacao.builder()
         .notaFiscal(nota)
         .loteValidacao(UUID.randomUUID())
         .code(ErrorCode.XML_REGRA_FISCAL_DESATUALIZADA.code())
         .field("versaoRegraFiscal")
-        .message("O XML foi gerado com regras fiscais anteriores as atuais (" + versao + ").")
-        .suggestion("Revise os itens e gere o XML de novo; nada foi enviado a SEFAZ.")
+        .message("O XML foi gerado com regras fiscais anteriores às atuais (" + versao + ").")
+        .suggestion("Revise os itens e gere o XML de novo; nada foi enviado à SEFAZ.")
         .rejectedValue(nota.getVersaoRegraFiscal() == null ? null
             : nota.getVersaoRegraFiscal().toString())
         .expectedValue(String.valueOf(VersaoRegraFiscal.ATUAL))

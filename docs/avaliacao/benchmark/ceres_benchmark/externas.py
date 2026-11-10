@@ -65,7 +65,14 @@ _GATILHO_REDUCAO = re.compile(r"redu[cç][aã]o|reduzid\w*|\bmenor que\b|\bdesco
                               r"sessenta por cento", re.IGNORECASE)
 #: Desfechos em que o comando descarta o texto: a citacao dele nao conta (regra do AvaliadorResposta
 #: da main; o do 2463c27 nao a aplica, e as duas arquiteturas tem de ser medidas pela mesma regua).
-DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA"}
+#: Igual ao ``AvaliadorResposta.RESPOSTA_DESCARTADA`` do Java (#433).
+DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA",
+               "REGIME_ESPECIFICO_SEM_SETOR"}
+#: Funcoes que, ao rodar, sao o sinal (nos campos gravados) de que o backend pode ter juntado citacoes
+#: fixas (``FundamentoRetencao`` e ``TextosDoBackend``). E um sinal, nao uma garantia. Limites aceitos
+#: na #433: com a funcao, conta qualquer citacao da lista (inclusive a da lei descartada); sem ela, a
+#: regua rebaixa ate a citacao fixa que o FundamentoRetencao junta so pelo texto da pergunta.
+FUNCOES_COM_CITACAO_FIXA = {"consultarRetencoes", "consultarTratamentoProduto"}
 _DESFECHOS_CORTE = {"RESPOSTA_CORTADA"}
 #: Resposta redigida pelo modelo (as outras sao frase fixa do backend: recusa ou descarte).
 _REDIGIDAS = {"RESPONDIDA", "NEGATIVA_SUBSTITUIDA"}
@@ -195,12 +202,25 @@ def avaliar(resultado: dict, pergunta: dict) -> dict[str, bool | None]:
 
 
 def citacao_vale(resultado: dict) -> bool | None:
-    """``citacaoValida`` do comando, com a regra da main nas duas arquiteturas: texto descartado
-    (citacao invalida, numero sem fonte, corte) nao ganha credito de citacao. Regra unica: o
+    """``citacaoValida`` do comando, com a regra da main nas duas arquiteturas (``AvaliadorResposta
+    .citacaoValida``, #433): texto descartado (citacao invalida, numero sem fonte, corte, regime
+    especifico sem setor) nao ganha credito de citacao. No MISTO com a lei descartada, ou com o
+    desfecho geral ``AFIRMACAO_SOBRE_DADOS``, a citacao so conta se rodou uma funcao de citacao
+    fixa (o sinal de que o backend pode ter juntado citacoes fixas; ver os limites acima).
+    A regra so rebaixa: ``citacaoValida`` falso ou nulo segue como veio. Regra unica: o
     criterio principal do relatorio e o das externas usam esta funcao."""
     valor = resultado.get("citacaoValida")
-    if valor and (resultado.get("execucao") or {}).get("desfecho") in DESCARTADAS:
+    if not valor:
+        return valor
+    execucao = resultado.get("execucao") or {}
+    if execucao.get("desfecho") in DESCARTADAS:
         return False
+    if execucao.get("rota") == "MISTO" and (
+            execucao.get("desfecho") == "AFIRMACAO_SOBRE_DADOS"
+            or execucao.get("desfechoLegislacao") in DESCARTADAS):
+        funcoes = {f.get("funcao") for f in execucao.get("fontes") or []}
+        if not funcoes & FUNCOES_COM_CITACAO_FIXA:
+            return False
     return valor
 
 
@@ -225,8 +245,9 @@ def cortada(resultado: dict) -> dict[str, bool]:
 
 
 def _celula_csv(valor: str) -> str:
-    """Celula de texto segura no Excel: ``= + - @`` no inicio viraria formula (como no ``CsvCego``)."""
-    return "'" + valor if valor[:1] in ("=", "+", "-", "@") else valor
+    """Celula de texto segura no Excel: ``= + - @``, tab e CR no inicio viram formula (#367; a mesma
+    lista do ``CsvCego``, em Java)."""
+    return "'" + valor if valor[:1] in ("=", "+", "-", "@", "\t", "\r") else valor
 
 
 def assinatura_celula(celula) -> str:

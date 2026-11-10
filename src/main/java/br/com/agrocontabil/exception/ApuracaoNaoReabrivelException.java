@@ -4,7 +4,6 @@ import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.model.StatusApuracao;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -19,16 +18,15 @@ public class ApuracaoNaoReabrivelException extends DomainException {
   /**
    * Cria a exceção descrevendo a apuração e o status inválido para reabertura.
    *
-   * @param id     identificador da apuração
    * @param status status atual (diferente de FECHADO)
    */
-  public ApuracaoNaoReabrivelException(UUID id, StatusApuracao status) {
+  public ApuracaoNaoReabrivelException(StatusApuracao status) {
     super(
         HttpStatus.CONFLICT,
-        "Apuracao '%s' nao pode ser reaberta no status '%s'. "
-            .formatted(id, status)
-            + "Somente apuracoes FECHADAS podem ser reabertas.",
+        "Apuração não pode ser reaberta no status '%s'. "
+            .formatted(status)
+            + "Somente apurações FECHADAS podem ser reabertas.",
         List.of(ErrorDetail.of(ErrorCode.APURACAO_NAO_REABRIVEL,
-            "Apenas apuracoes em status FECHADO podem ser reabertas.")));
+            "Apenas apurações em status FECHADO podem ser reabertas.")));
   }
 }

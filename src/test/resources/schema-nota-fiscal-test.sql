@@ -219,8 +219,29 @@ CREATE TABLE IF NOT EXISTS escritorio (
     cnpj        VARCHAR(14),
     created_at  TIMESTAMP WITH TIME ZONE,
     updated_at  TIMESTAMP WITH TIME ZONE,
+    slug              VARCHAR(32),
+    slug_alterado_em  TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
 );
+
+-- Endereco proprio do escritorio (migration 0059, issue #464): slug unico e a carencia do slug
+-- que saiu. Os ALTER cobrem o contexto em que o Hibernate ja criou a tabela sem eles.
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS slug VARCHAR(32);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS slug_alterado_em TIMESTAMP WITH TIME ZONE;
+ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS uq_escritorio_slug UNIQUE (slug);
+
+CREATE TABLE IF NOT EXISTS escritorio_slug_anterior (
+    slug           VARCHAR(32)               NOT NULL,
+    escritorio_id  UUID,
+    liberado_em    TIMESTAMP WITH TIME ZONE  NOT NULL,
+    PRIMARY KEY (slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_escritorio_slug_anterior_escritorio
+    ON escritorio_slug_anterior (escritorio_id);
+
+CREATE INDEX IF NOT EXISTS idx_escritorio_slug_anterior_liberado
+    ON escritorio_slug_anterior (liberado_em);
 
 CREATE TABLE IF NOT EXISTS contadores (
     id             UUID          NOT NULL,
@@ -250,6 +271,9 @@ CREATE TABLE IF NOT EXISTS carteira_vinculo (
     inicio        TIMESTAMP WITH TIME ZONE  NOT NULL,
     fim           TIMESTAMP WITH TIME ZONE,
     observacoes   VARCHAR(1000),
+    encerrado_por           VARCHAR(20),
+    encerrado_por_membro_id UUID,
+    motivo_encerramento     VARCHAR(500),
     created_at    TIMESTAMP WITH TIME ZONE,
     updated_at    TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
@@ -434,6 +458,11 @@ ALTER TABLE guias_fiscais ADD CONSTRAINT IF NOT EXISTS fk_guia_fiscal_produtor
 -- Carteira (migration 0038): CASCADE em tudo, como era o contador_produtor da 0024. Sem isso,
 -- apagar um produtor ou contador semeado num teste falharia por integridade referencial.
 ALTER TABLE contadores ADD CONSTRAINT IF NOT EXISTS fk_contador_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE SET NULL;
+
+-- Carencia do slug (0059, #464): SET NULL, nunca CASCADE; a carencia sobrevive ao escritorio.
+ALTER TABLE escritorio_slug_anterior ADD CONSTRAINT IF NOT EXISTS
+    fk_escritorio_slug_anterior_escritorio
     FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE SET NULL;
 
 ALTER TABLE carteira_vinculo ADD CONSTRAINT IF NOT EXISTS fk_carteira_vinculo_escritorio

@@ -3,10 +3,11 @@ package br.com.agrocontabil.config.demonstracao;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import br.com.agrocontabil.common.FormatoSlug;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.ApuracaoMensal;
+import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.NotaFiscal;
-import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -17,9 +18,11 @@ import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.nfe.AssinaturaValidator;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
+import br.com.agrocontabil.nfe.VersaoRegraFiscal;
 import br.com.agrocontabil.repository.ApuracaoMensalRepository;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
@@ -28,6 +31,7 @@ import br.com.agrocontabil.repository.PendenciaRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.service.CotaUsoAssistenteService;
+import br.com.agrocontabil.service.SlugsReservados;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
@@ -79,6 +83,8 @@ class SeedDemonstracaoIntegrationTest {
   @Autowired private PendenciaRepository pendenciaRepository;
   @Autowired private ApuracaoMensalRepository apuracaoRepository;
   @Autowired private AssinaturaValidator assinaturaValidator;
+  @Autowired private EscritorioRepository escritorioRepository;
+  @Autowired private SlugsReservados slugsReservados;
 
   @Test
   @DisplayName("escritorio com tres funcoes, nove clientes e conta para todos")
@@ -95,6 +101,18 @@ class SeedDemonstracaoIntegrationTest {
     assertThat(porSituacao).containsEntry(SituacaoVinculo.SUSPENSO, 1L)
         .containsEntry(SituacaoVinculo.ENCERRADO, 1L)
         .containsEntry(SituacaoVinculo.ATIVO, (long) CenarioDemonstracao.CARTEIRA.size() - 2);
+  }
+
+  @Test
+  @DisplayName("escritorio da banca com endereco proprio ruraloeste, com CNPJ e fora dos reservados (#464)")
+  void escritorioComEnderecoProprio() {
+    Escritorio escritorio = escritorioRepository.findAll().stream()
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_NOME.equals(e.getNome()))
+        .findFirst().orElseThrow();
+    assertThat(escritorio.getSlug()).isEqualTo("ruraloeste");
+    assertThat(escritorio.getCnpj()).isNotBlank();
+    assertThat(FormatoSlug.valido(escritorio.getSlug())).isTrue();
+    assertThat(slugsReservados.reservado(escritorio.getSlug())).isFalse();
   }
 
   @Test

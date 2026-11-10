@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -37,6 +38,13 @@ public record NotaCarteiraResponse(
     @Schema(description = "Emissão") OffsetDateTime dataEmissao,
 
     @Schema(description = "Nome do destinatário") String destinatarioNome,
+
+    @Schema(description = "PROPRIA (venda do cliente) ou IMPORTADA (compra: o cliente é o"
+        + " destinatário)", example = "PROPRIA") OrigemNotaFiscal origem,
+
+    @Schema(description = "Fornecedor que emitiu a compra importada; nulo na nota própria. O"
+        + " documento do emitente só vem no detalhe da nota", example = "Posto Rota 163")
+    String emitenteNome,
 
     @Schema(description = "Total dos produtos") BigDecimal valorTotalProdutos,
 

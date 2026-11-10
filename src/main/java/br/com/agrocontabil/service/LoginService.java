@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.common.FormatoSlug;
 import br.com.agrocontabil.common.MascaraDadosPessoais;
 import br.com.agrocontabil.dto.LoginRequest;
 import br.com.agrocontabil.dto.UsuarioLogadoResponse;
@@ -48,6 +49,7 @@ public class LoginService {
   private final SessaoService sessaoService;
   private final BloqueioContaService bloqueioConta;
   private final UsuarioAutenticadoProvider usuarioProvider;
+  private final EnderecoEscritorioService enderecoService;
 
   /** Senha conferida contra o hash fictício quando a enviada não pode chegar ao BCrypt. */
   private static final String SENHA_FICTICIA = "senha-ficticia-de-igualacao";
@@ -60,23 +62,45 @@ public class LoginService {
       PasswordEncoder passwordEncoder,
       SessaoService sessaoService,
       BloqueioContaService bloqueioConta,
-      UsuarioAutenticadoProvider usuarioProvider) {
+      UsuarioAutenticadoProvider usuarioProvider,
+      EnderecoEscritorioService enderecoService) {
     this.credencialRepository = credencialRepository;
     this.passwordEncoder = passwordEncoder;
     this.sessaoService = sessaoService;
     this.bloqueioConta = bloqueioConta;
     this.usuarioProvider = usuarioProvider;
+    this.enderecoService = enderecoService;
     this.hashFicticio = passwordEncoder.encode(UUID.randomUUID().toString());
   }
 
   /**
-   * Confere e-mail e senha e emite o token de acesso.
+   * Confere e-mail e senha e emite o token de acesso, pelo host principal.
    *
    * @param request e-mail e senha
    * @return access token (corpo da resposta) e refresh token (cookie)
    * @throws CredenciaisInvalidasException se e-mail e senha não conferirem, por qualquer motivo
    */
   public SessaoEmitida entrar(LoginRequest request) {
+    return entrar(request, Optional.empty());
+  }
+
+  /**
+   * Confere e-mail e senha e emite o token de acesso (issue #206), considerando o host (#464).
+   *
+   * <p><strong>Modo escritório</strong> quando o host é de escritório ou o corpo traz
+   * {@code escritorio}. A ordem de sempre não muda — reserva da tentativa e BCrypt (#208) — e a
+   * senha errada segue contando. Com a senha <em>certa</em>, a sessão só sai para o contador
+   * membro do escritório daquele endereço; fora disso, o mesmo 401 de qualquer credencial errada,
+   * com as falhas zeradas (quem acertou a senha não é atacante, e travar o titular seria pior). O
+   * BCrypt já rodou, então o tempo também é o mesmo.
+   *
+   * @param request          e-mail, senha e, opcionalmente, o slug do escritório
+   * @param rotuloDoHost     rótulo de escritório do host ({@code HostDaRequisicao}); vazio no
+   *                         host principal
+   * @return access token (corpo da resposta) e refresh token (cookie)
+   * @throws CredenciaisInvalidasException se e-mail e senha não conferirem, por qualquer motivo
+   */
+  public SessaoEmitida entrar(LoginRequest request, Optional<String> rotuloDoHost) {
     String email = CadastroService.normalizarEmail(request.email());
     String senha = PoliticaSenha.normalizar(request.senha());
 
@@ -119,11 +143,43 @@ public class LoginService {
       throw new CredenciaisInvalidasException();
     }
 
+    if (modoEscritorio(request, rotuloDoHost)
+        && !membroDoEnderecoDoHost(credencial, request, rotuloDoHost)) {
+      bloqueioConta.liberar(credencial.getId());
+      log.info("Login recusado (fora do escritorio do endereco): credencial={}",
+          MascaraDadosPessoais.referencia(credencial.getId()));
+      throw new CredenciaisInvalidasException();
+    }
+
     bloqueioConta.liberar(credencial.getId());
     atualizarHashSeDefasado(credencial, senha);
 
     log.info("Login: papel={}, usuarioId={}", credencial.getPapel(), credencial.usuarioId());
     return sessaoService.abrir(credencial);
+  }
+
+  /** O host é de escritório ou o corpo traz o escritório (em branco conta como ausente). */
+  private static boolean modoEscritorio(LoginRequest request, Optional<String> rotuloDoHost) {
+    return rotuloDoHost.isPresent()
+        || (request.escritorio() != null && !request.escritorio().isBlank());
+  }
+
+  /**
+   * O host é de escritório, o corpo (se veio) nomeia o mesmo e a credencial é de um membro dele.
+   * Pelo {@code www}, o corpo com escritório não basta: o host decide.
+   */
+  private boolean membroDoEnderecoDoHost(CredencialUsuario credencial, LoginRequest request,
+      Optional<String> rotuloDoHost) {
+    if (rotuloDoHost.isEmpty()) {
+      return false;
+    }
+    String rotulo = rotuloDoHost.get();
+    String doCorpo = request.escritorio();
+    if (doCorpo != null && !doCorpo.isBlank()
+        && !rotulo.equals(FormatoSlug.normalizar(doCorpo))) {
+      return false;
+    }
+    return enderecoService.membroDoEndereco(credencial, rotulo);
   }
 
   /**

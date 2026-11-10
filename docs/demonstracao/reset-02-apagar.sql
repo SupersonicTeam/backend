@@ -18,7 +18,9 @@
 --   * o que pende deles: notas (itens, validações, revisões), alertas, apurações, guias,
 --     pendências (e anexos), notificações, vínculos e etiquetas, convites, obrigações do
 --     escritório, uso da Ceres (créditos, do produtor e do escritório), interações com a Ceres,
---     credenciais, sessões e links de senha. Vínculo, pendência e notificação de produtor de fora
+--     credenciais, sessões e links de senha, e os endereços anteriores do escritório (carência do
+--     slug, #464: um ensaio que troque o endereço não deixa o "ruraloeste" bloqueado, e o seed o
+--     grava de novo). Vínculo, pendência e notificação de produtor de fora
 --     do seed com esse escritório também saem (o escritório deixa de existir), mas o produtor e a
 --     conta dele ficam.
 --
@@ -82,6 +84,7 @@ DELETE FROM contadores WHERE id IN (SELECT id FROM reset_cont);
 -- Contador de fora da equipe do seed que entrou no escritório: sai dele, a conta fica.
 UPDATE contadores SET escritorio_id = NULL, funcao_escritorio = NULL
  WHERE escritorio_id IN (SELECT id FROM reset_esc);
+DELETE FROM escritorio_slug_anterior WHERE escritorio_id IN (SELECT id FROM reset_esc);
 DELETE FROM escritorio WHERE id IN (SELECT id FROM reset_esc);
 DELETE FROM produtores WHERE id IN (SELECT id FROM reset_prod);
 

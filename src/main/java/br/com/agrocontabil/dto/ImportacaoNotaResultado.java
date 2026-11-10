@@ -68,15 +68,15 @@ public record ImportacaoNotaResultado(
    */
   public static ImportacaoNotaResultado aguardandoSefaz(String arquivo, UUID notaId, String chave) {
     return new ImportacaoNotaResultado(arquivo, true, Status.IMPORTADA, notaId, chave,
-        "Nota importada; a SEFAZ nao respondeu e a autorizacao sera confirmada depois. O credito "
-            + "so entra na apuracao com a confirmacao.");
+        "Nota importada; a SEFAZ não respondeu e a autorização será confirmada depois. O crédito "
+            + "só entra na apuração com a confirmação.");
   }
 
   /** Fabrica um resultado de duplicidade (nota ja existente pela chave de acesso). */
   public static ImportacaoNotaResultado duplicada(String arquivo, String chave) {
     return new ImportacaoNotaResultado(
         arquivo, false, Status.DUPLICADA, null, chave,
-        "Ja existe uma nota importada com esta chave de acesso.");
+        "Já existe uma nota importada com esta chave de acesso.");
   }
 
   /** Fabrica um resultado de arquivo invalido. */

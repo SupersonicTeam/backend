@@ -1,0 +1,596 @@
+# S5 — Roteiro da janela de medição na VPS (#270, #265, #153)
+
+Roteiro para quem for à VPS (8 OCPU ARM, 47 GiB, conferida em 2026-11-06) nas janelas sem merges.
+Plano: `plano.md`, seção S5. Script k6 (#153): `docs/performance/README.md`. O que foi medido e
+quando fica nas tabelas de `docs/ceres-assistente.md` (números oficiais, Fase B) e na seção
+"Registro das noites" deste arquivo (números relativos da Fase A).
+
+Revisado em 2026-11-07 contra o código da `main` (`4a0b3a8`): as correções em relação à primeira
+versão estão na seção "O que mudou nesta revisão".
+
+## Duas fases
+
+A rota de lei ainda pode mudar até 2026-11-19 (#436, PR #425). Por isso a S5 começa pelo que não
+depende dela.
+
+- **Fase A (até a rota de lei fechar):** k6 da #153 (passo 7), `prompt_eval_count` com cache e efeito
+  na cota (passo 3), latência do classificador com o Ollama ocioso e ocupado (passo 6, parte
+  numérica) e as comparações **relativas** de configuração (passos 1, 2, 4 e 5). Cada variante tem o
+  **seu passo 0 na mesma noite e no mesmo SHA**, e o registro diz o SHA. Número absoluto da Fase A
+  não vai para a tabela "antes" oficial.
+- **Fase B (só com o sinal verde do Murillo, previsto 2026-11-19):** passo 0 com o código final, linha de
+  base da Ceres 2.0 (acerto de rota, erros das regras, proporção de desempate) e a tabela
+  antes/depois em `docs/ceres-assistente.md`.
+
+## Regras da janela
+
+1. **Nenhum merge na `main` durante a janela.** Todo merge reimplanta o backend na VPS e suja os
+   tempos (inclusive o de docs). Antes de cada janela: avisar início e fim previstos e esperar a
+   confirmação de que os merges estão segurados; no fim, avisar que acabou. Anote o SHA em
+   `docker compose images backend` no início e no fim; mudou, a medição vale só até a troca.
+2. **Uma coisa por vez, 3 repetições** de cada variante. Entre variantes, mude **uma** variável.
+3. **Modelo:** `MODELO='qwen3:4b-instruct'` (decisão do Murillo de 2026-11-07, mantido até a banca).
+   O 30B já foi comparado (#426) e não entra; o `qwen3:8b` é a medição extra do passo 2.
+4. **Configuração de produção, sem atalhos.** A medição usa o que o `deploy/compose.yaml` passa ao
+   backend. O compose **não repassa** `AI_READ_TIMEOUT` (nem `AI_TIMEOUT_PERGUNTA`): valem os padrões
+   do `application.yml` (120 s por chamada ao modelo, 5 min por pergunta). Não os mude na janela.
+   Uma chamada que passe de 120 s **não** dá erro: o read-timeout abre o disjuntor e a pergunta sai
+   em **HTTP 200 com `modoFallback: true`** (desfecho `MODO_FALLBACK` na auditoria), e as perguntas
+   dos **30 s seguintes** (`pausa-apos-falha`) também saem em fallback, rápidas. O resumo abaixo
+   trata `modoFallback` como **falha**, fora da latência, e cada variante registra a contagem de
+   `MODO_FALLBACK` da auditoria. O 8B com a lei em CPU é o caso mais provável.
+5. **Como mudar uma variável sem tocar no `.env`.** O `deploy.sh` regrava `BACKEND_TAG` no `.env`
+   a cada deploy; editar o arquivo na janela corre contra ele e arrisca o segredo. A variável de
+   ambiente do shell vence a do `.env` na interpolação do compose:
+
+   ```bash
+   cd /opt/agrocontabil
+   AI_OLLAMA_NUM_CTX=6144 docker compose up -d --no-deps backend    # variante
+   docker compose up -d --no-deps backend                           # volta ao padrão do .env
+   ```
+
+   Confira o que subiu: `docker compose exec backend printenv AI_OLLAMA_NUM_CTX AI_CHAT_MODEL
+   AI_TETO_LEGISLACAO` (só essas, nunca `printenv` inteiro). Use `docker compose up -d --no-deps
+   backend`, como o `deploy.sh`. **Nunca `docker compose up -d` sem nome de serviço na janela:** ele
+   roda o `ollama-init` com o `AI_CHAT_MODEL` da variante e o pull falha com um Q4_0 criado
+   localmente. **Segure o lock do deploy** enquanto mexe no serviço, para uma entrega
+   da CI não entrar no meio: `exec 9>/opt/agrocontabil/.deploy.lock && flock 9` na sessão da janela
+   (o `deploy.sh` espera até 15 min). Ao fim de cada variante, volte ao padrão.
+
+   **Variante que baixa o teto da pergunta estraga a cota do Rogério.** Todo reinício do backend
+   roda o `SeedDemonstracao`, que chama `CotaDemonstracaoCeres.prepararSemana()`: o consumo da
+   semana do Rogério sobe até `1000 − teto da pergunta − 1` e **nunca desce** (hoje 967, com o
+   teto 32). Com `AI_OLLAMA_NUM_CTX=6144` (passo 4, teto 26) ele vai a 973; com
+   `AI_TETO_LEGISLACAO=512` (passo 5, teto 30), a 969. Ao voltar ao padrão (teto 32) sobram 27 ou
+   31 créditos, menos que a reserva de 32, e a primeira pergunta dele já leva 429 até a virada de
+   segunda: o cenário da banca ("uma passa, a segunda leva 429") quebra. Por isso:
+
+   - os passos 4 e 5 rodam só em semana **anterior** à da banca (até domingo 2026-11-29), nunca de
+     2026-11-30 em diante, e longe de qualquer ensaio com o Rogério (se houver ensaio na mesma semana,
+     o ensaio vem antes ou a variante espera a segunda seguinte);
+   - em todo reinício, anote o teto: `docker compose logs --since <início> backend | grep
+     'cota da Ceres preparada'`;
+   - **reposição**, depois de voltar ao padrão: confira o consumo do Rogério da semana (a consulta
+     do item 8 trocando o nome) e escolha uma de duas saídas, ambas decisão do Murillo: esperar a
+     virada de segunda e conferir o mesmo log ou o consumo; ou devolver o `creditos_consumidos`
+     da semana a 967, que é **escrita no banco da demonstração** e só com OK explícito dele,
+     nomeando o `UPDATE`. Sem OK, vale a espera. Anote no "Registro das noites".
+6. **Aquecer depois de qualquer reinício.** Reiniciar o backend (toda variante) refaz o aquecimento
+   da JVM e **recalcula em segundo plano os vetores do conjunto de treino do classificador**
+   (`EmbeddingClassificadorIntencao`, log `exemplos do classificador de rota carregados`). Até esse
+   log, a camada de embeddings não decide (as regras continuam decidindo) e o restante cai no LLM: medir antes distorce o tempo e
+   a proporção de desempate. Espere o log (`docker compose logs --since <hora do reinício> backend |
+   grep classificador`), depois faça, descartando: uma pergunta de dados, uma de lei, uma que caia no
+   desempate e uma decidida pelas embeddings. Trocar `AI_CHAT_MODEL` ou `AI_OLLAMA_NUM_CTX` carrega
+   o modelo de novo no Ollama (primeira pergunta lenta). `OLLAMA_KEEP_ALIVE=24h` mantém **o modelo
+   anterior carregado**: ao trocar de modelo, descarregue o antigo (`ollama stop <modelo>`) antes de
+   medir a RAM.
+7. **Tempo: a rodada 1 é a referência.** O harness percorre o gabarito inteiro em cada rodada
+   (`for rodada: for pergunta`), então a mesma pergunta só volta depois de todas as outras e o cache
+   de prefixo (uma vaga, `OLLAMA_NUM_PARALLEL=1`) **não** é reaproveitado entre repetições. O cache
+   que importa é o das perguntas **seguidas do mesmo tipo** (a ordem do gabarito agrupa por rota só em parte: os blocos T e X alternam), e
+   vale igual nas três rodadas. Registre mesmo assim **dois** p50/p95 por rota, o da `rodada == 1`
+   e o de todas: a diferença mostra deriva (aquecimento, térmica, outro processo), não cache.
+8. **Contas e cota (#166).** Cota de 1.000 créditos por semana e produtor (segunda a domingo,
+   Brasília). **Contas da medição: as do `DataLoader`** (`joao.produtor@example.com`, "João da
+   Silva Produtor", e `maria.agricultora@example.com`, "Maria Agricultora"), fora da tabela de
+   contas e do roteiro sugerido de `docs/demonstracao-banca.md` (o documento as cita só como
+   escritório à parte). Nunca o Carlos, o Rogério nem as demais contas do roteiro. Não se cria
+   conta nem se muda `AI_COTA_*` (o compose nem o repassa) nem se zera consumo.
+
+   **Orçamento.** O "~3,4 créditos por resposta" da primeira versão era baixo demais: as respostas
+   de dados custam **4 a 5** com o prefixo contado, e **toda pergunta reserva 32 créditos antes de
+   rodar** (o teto), então uma conta só pergunta enquanto sobrarem 32 livres, ou seja, **na
+   prática ~968 créditos por conta e semana**. O custo real ainda não foi medido (passo 3). Para
+   planejar, uso **5 créditos por resposta** (conservador para dados; lei e MISTO a medir) e um
+   teto de planejamento de **900 por conta e semana**. Por isso:
+
+   - Rodada completa (87 perguntas × 3 = 261 respostas, ~1.300 créditos) **não cabe em uma conta**.
+     Só no passo 0 da **Fase B**, **dividida entre João e Maria** (metade dos ids para cada um, via
+     `AGRO_IDS`, ~650 cada, com a ordem do gabarito mantida dentro de cada metade e a divisão
+     registrada) ou, se a semana de 2026-11-23 permitir, uma conta por rodada. O `dev,avaliacao`
+     (gabarito inteiro, fora da cota) cobre acerto de rota/número/citação.
+   - Fase A: comparações relativas por **subconjuntos fixos de ids** (`AGRO_IDS`), os mesmos no
+     passo 0 e na variante da noite: **~20 ids** (cerca de 8 de dados, 6 de lei, 3 de MISTO, 3 fora
+     de escopo) para os passos 0, 1 e 2; DADOS, LEG e MISTO para o passo 4; só LEG e MISTO para o
+     passo 5. Registre a lista de ids usada.
+   - Meça o gasto real na primeira passada do subconjunto (consulta abaixo) e **recalcule antes de
+     seguir**; o quadro abaixo é só a previsão (20 ids × 3 repetições × 5 ≈ 300 por passada):
+
+     | Semana | Conta | Uso previsto |
+     |---|---|---|
+     | 2026-11-09 a 11-15 | João | N1 (passo 3, ~20) + N2 (passo 0 do subconjunto, ~300) |
+     | 2026-11-09 a 11-15 | Maria | N2 (dados em paralelo para o "ocupado", ~120) + N3 (Q4_0: passo 0 + variante, ~600) = ~720 |
+     | 2026-11-16 a 11-22 | João | N4 (8B: passo 0 + variante, ~600) |
+     | 2026-11-16 a 11-22 | Maria | N5 (`num_ctx` e teto de lei, passo 0 + duas variantes menores, ~700), **só se não houver ensaio com o Rogério** (regra 5) |
+     | 2026-11-23 a 11-25 | João e Maria | N6 (Fase B, rodada completa dividida, ~650 cada); sem folga para repetir |
+
+   - Se a medição real não couber, **decisão pendente do Murillo**, que já pode ir pensando nela:
+     dividir a rodada entre as duas contas (acima), menos variantes, ou zerar o consumo das contas
+     de medição (uma escrita no banco). Não proponho nem faço nada disso sem o OK dele.
+
+   Saldo, antes e depois de cada bloco (só leitura, sem a senha da conta):
+
+   ```sql
+   SELECT p.nome_completo, u.semana_inicio, u.creditos_consumidos, u.creditos_reservados,
+          u.perguntas, u.tokens_entrada, u.tokens_saida
+   FROM assistente_uso_semanal u JOIN produtores p ON p.id = u.titular_id
+   WHERE u.titular_tipo = 'PRODUTOR'
+     AND u.semana_inicio >= date_trunc('week', now() AT TIME ZONE 'America/Sao_Paulo')::date
+     AND p.nome_completo IN ('João da Silva Produtor', 'Maria Agricultora');
+   ```
+
+   Ressalva a registrar: essas contas têm poucos dados, então as funções de dados devolvem
+   resultados menores que os do Carlos. O tempo é dominado pelo modelo (prefill das 13 definições
+   de função), mas a latência de dados da S5 vale para conta pequena.
+9. **Antes de cada variante** registre `docker stats --no-stream`, `free -m` (memória usada da VM,
+   sem cache: o critério é 85%) e `docker compose exec ollama ollama ps` (tamanho do modelo
+   carregado e contexto); durante, um segundo `docker stats` no meio da rodada.
+
+10. **Toda escrita na VPS precisa do OK explícito do Murillo, na noite, com a lista exata dos
+    comandos.** Conta como escrita: `ollama pull` ou `ollama create` (inclusive o Q4_0 e o
+    `qwen3:8b`), `ollama stop`, recriar o backend com variante ou voltar ao padrão, criar ou apagar
+    banco, carregar a `legislacao_trecho` no banco de avaliação, subir ou derrubar a stack
+    `agro-perf`, `git clone`/checkout na VPS, qualquer SQL que escreva e qualquer arquivo gravado
+    na pasta do deploy. **As rodadas do harness também entram na lista da noite**: elas gravam
+    consumo de cota e linhas de auditoria nas contas de medição. Leitura (`ps`, `stats`, `free`,
+    `SELECT`, `logs`) é livre. Nunca `docker compose down` da stack principal, nunca **escrita
+    direta no banco da demonstração** (SQL, reset ou carga; a exceção única é a reposição do
+    Rogério da regra 5, só com OK explícito que nomeie o `UPDATE`), nunca mexer na base de lei,
+    nunca ler segredo do `.env` (só variáveis não secretas). A senha da conta de medição é
+    **digitada pelo Murillo** no `read -rs`; eu não a leio nem do `.env`.
+11. **O site é público.** Peça, no aviso da janela, que ninguém use a Ceres durante ela. No fim de
+    cada bloco conte as interações de outras contas desde o início (deve dar 0) e anote no
+    "Registro das noites":
+
+    ```sql
+    SELECT produtor_id, count(*) FROM assistente_interacao
+    WHERE criado_em >= '<início, com offset>' GROUP BY produtor_id;
+    ```
+
+    Fora João e Maria, tudo deve dar 0. **João e Maria são as contas de teste do `DataLoader`**, que
+    a equipe do frontend (Luiz e Herick) pode estar usando na VPS: a contagem delas tem de bater com
+    o número de perguntas que o harness enviou; a diferença é uso de fora e gastou a cota da
+    medição. Avise os dois antes da janela. Se houver carga de fora, diga, e o dado só vale com
+    essa ressalva.
+12. **Fuso.** Anote o início de cada bloco com offset (`2026-11-09T21:30:00-03:00`) ou capture com
+    `SELECT now()` no banco, e passe RFC3339 com offset ao `--since` dos logs e ao
+    `criado_em >=` das consultas (host, Postgres e JVM não usam o mesmo fuso: o backend roda em `America/Sao_Paulo`; hora sem
+    offset é lida no fuso de quem consulta e pode errar em 3 h).
+13. **Onde o harness roda.** Escolha com o Murillo e registre: (a) máquina do operador, contra
+    `https://www.agroconia.com.br` (inclui rede e Caddy na latência); ou (b) checkout na VPS (um
+    `git clone` com OK em `/opt/agrocontabil-s5/backend`, no SHA da noite, fora da pasta do deploy).
+    Nos dois casos, `AGRO_GABARITO` e `AGRO_SAIDA` são
+    caminhos **absolutos fora de `/opt/agrocontabil`**, e o registro diz a origem das requisições
+    (hostname e se passou pelo Caddy). Sem registro da origem, a latência não se compara.
+
+## Preparação (uma vez)
+
+```bash
+# na VPS, em /opt/agrocontabil
+cd /opt/agrocontabil && docker compose images backend && docker compose ps
+docker compose exec ollama ollama list
+export AGRO_API_URL='https://www.agroconia.com.br' AGRO_EMAIL='<conta de medição>'
+read -rs AGRO_SENHA && export AGRO_SENHA        # nunca em arquivo nem no histórico
+curl -s "$AGRO_API_URL/api/v1/health"
+```
+
+O Caddy só encaminha `/api/*` ao backend: fora disso, 200 não prova rota do backend (confira por
+`docker exec agrocontabil-caddy-1 wget -qO- http://backend:8080/...`). O Basic Auth do Caddy não
+existe mais no login (frontend#93): `AGRO_BASIC_*` não são necessárias.
+
+O harness grava `<saída>/<data>-<hora>-harness-api.json`. Use `AGRO_SAIDA` por variante
+(`.../s5/<noite>-<variante>/`) para não misturar. O gabarito do harness é o da #158
+(`docs/avaliacao/gabarito-ceres.json`), que **não** é o conjunto cego; mesmo assim a pasta de
+resultados não é versionada: o JSON do harness grava `resposta` (texto). Vão ao repositório só os
+números (tabelas e contagens); ver "O que fica registrado". O `porRota` que o próprio harness
+imprime inclui fallbacks e falhas na latência: use o resumo abaixo.
+
+Resumo de uma rodada (p50/p95 por rota, rodada 1 e todas), Python da biblioteca padrão:
+
+```bash
+python3 -I - <<'PY' arquivo.json
+import json, sys, statistics as s
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+def pct(v, p):  # nearest-rank, igual ao harness e ao relatório Java
+    v = sorted(v); return v[max(1, -(-p * len(v) // 100)) - 1] if v else None
+for rotulo, filtro in (("rodada 1", lambda r: r["rodada"] == 1), ("todas", lambda r: True)):
+    grupos = {}
+    for r in d["resultados"]:
+        if filtro(r) and r["status"] == 200 and not r.get("modoFallback"):
+            grupos.setdefault(r.get("rotaEsperada") or "SEM_ROTA", []).append(r["latenciaMs"])
+    for rota, v in sorted(grupos.items()):
+        print(f"{rotulo:9} {rota:16} n={len(v):3} p50={pct(v,50)} p95={pct(v,95)} media={round(s.mean(v))}")
+    falhas = [r for r in d["resultados"] if filtro(r) and r["status"] != 200]
+    fallback = [r for r in d["resultados"] if filtro(r) and r["status"] == 200 and r.get("modoFallback")]
+    print(f"{rotulo:9} falhas={len(falhas)} modoFallback={len(fallback)} (fora da latência)")
+PY
+```
+
+### Acerto de rota, número e citação: o comando `dev,avaliacao` na VPS
+
+O comando grava um seed fictício e só roda com `dev`: **nunca contra o banco da demonstração.**
+Esse é o ponto de maior risco do roteiro, por dois motivos que o código confirma:
+
+- o `application-dev.yml` aponta para `jdbc:postgresql://localhost:5432/${DB_NAME}`, mas o serviço
+  `backend` do `deploy/compose.yaml` define `SPRING_DATASOURCE_URL` **já interpolado com o banco da
+  demonstração**, e essa variável vence a do profile. `docker compose run … backend` só com
+  `-e DB_NAME=avaliacao` herda a URL antiga e o `SeedAvaliacao` grava o seed fictício em
+  `agrocontabil`;
+- o serviço traz `DEMONSTRACAO_HABILITADA: 'true'` e `dev` está entre os profiles permitidos do
+  `SeedDemonstracao`: o contêiner de uso único também semearia a demonstração (e a cota do Rogério)
+  no banco que a URL apontar.
+
+**Opção A (recomendada, nada é escrito no Postgres da VPS):** rodar o comando na máquina do
+operador, com Postgres local (Docker), a `legislacao_trecho` trazida por `pg_dump` da VPS (só
+leitura) e o Ollama da VPS por túnel SSH (`ssh -L 11434:localhost:11434`, ou o endereço do serviço
+`ollama` na rede). Custo: o tempo de cada chamada inclui o túnel (serve para acerto de
+rota/número/citação, não para latência) e o operador precisa do JDK 21/Docker local. As mesmas
+variáveis `AI_*` da variante vão como variáveis de ambiente, e o gabarito e o treino saem do próprio
+checkout local (`./mvnw spring-boot:run`, `-Dspring-boot.run.profiles=dev,avaliacao`).
+
+**Opção B (na VPS, só com OK do Murillo na noite):** contêiner de uso único com `docker compose
+run`, que herda `DB_PASSWORD`, a URL do Ollama e os `AI_*` do serviço **sem eu ler o `.env`**, e
+com a URL do banco e o seed da demonstração **sobrescritos na linha de comando**:
+
+```bash
+cd /opt/agrocontabil
+OV=(-e SPRING_PROFILES_ACTIVE=dev
+    -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/avaliacao
+    -e DB_NAME=avaliacao -e DEMONSTRACAO_HABILITADA=false -e SEED_SENHA=)
+# 0) antes de qualquer seed: o contêiner enxerga o banco certo? (deve mostrar .../avaliacao, false, dev)
+docker compose run --rm --no-deps --entrypoint printenv "${OV[@]}" backend \
+  SPRING_DATASOURCE_URL DB_NAME DEMONSTRACAO_HABILITADA SPRING_PROFILES_ACTIVE
+# contagem de controle do banco da demonstração (leitura; repita ao fim, tem de ser igual)
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc \
+  "select (select count(*) from produtores), (select count(*) from nota_fiscal)"'
+```
+
+Se a primeira saída não for exatamente a esperada, **pare**. Não use `--use-aliases` (o contêiner de
+uso único não pode entrar na rede com o nome `backend`, ou o Caddy o sorteia). Passos:
+
+1. **(a)** Banco novo `avaliacao` no Postgres que já roda (não toca o `agrocontabil`):
+   `docker compose exec postgres sh -c 'createdb -U "$POSTGRES_USER" avaliacao'`.
+2. **(b)** Schema: `docker compose run -d --no-deps --name s5-schema "${OV[@]}" backend` (a mesma
+   imagem, mesmo SHA, só `dev`, sem `avaliacao`); espere o `Started` em `docker logs s5-schema` (o
+   Liquibase terminou; o usuário do compose é o dono do Postgres e cria `vector`) e então
+   `docker rm -f s5-schema`.
+3. **(c)** Carregar a base de lei (leitura no banco da demonstração, escrita só no `avaliacao`);
+   sem ela a rota de lei mede o modo sem trechos:
+
+   ```bash
+   docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+     --data-only -t legislacao_trecho' \
+   | docker compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d avaliacao'
+   docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d avaliacao -Atc \
+     "select count(*) from legislacao_trecho"'      # tem de bater com a contagem da demonstração
+   ```
+4. **(d)** Avaliação. Prefixe **as mesmas variáveis `AI_*` da variante** à linha (o compose as
+   interpola, como na regra 5). O runner confere **por caminho relativo** o conjunto de treino e
+   **sai com código 1 sem ele** (`exigirTreinoSeparado`, que olha `docs/avaliacao/treino` e
+   `src/main/resources/ceres/treino`); a imagem (`WORKDIR /app`) não traz nenhum dos dois, e o
+   `ENTRYPOINT` é `java -jar app.jar`, então os argumentos depois do nome do serviço vão ao
+   aplicativo. Monte, de um checkout **no mesmo SHA da imagem**:
+
+   - `<checkout>/docs/avaliacao` em `/app/docs/avaliacao:ro` (gabarito e `treino/`);
+   - `<checkout>/src/main/resources/ceres/treino` em `/app/src/main/resources/ceres/treino:ro`.
+
+   **Saída gravável.** A imagem roda como `spring` (UID de sistema) e o runner só grava no fim:
+   sem permissão, a rodada inteira se perde. Use `--user "$(id -u):$(id -g)"` e uma pasta própria
+   **fora do repositório e de `/opt/agrocontabil`** (`/opt/agrocontabil-s5/saida`, criada com OK),
+   montada em `/saida`, com `--avaliacao.saida=/saida`. **Valide antes com uma rodada curta**
+   (`--avaliacao.ids=<um id> --avaliacao.repeticoes=1`) e confirme que o arquivo apareceu; só então a
+   real:
+
+   ```bash
+   <AI_* da variante> docker compose run --rm --no-deps --user "$(id -u):$(id -g)" "${OV[@]}" \
+     -v <checkout>/docs/avaliacao:/app/docs/avaliacao:ro \
+     -v <checkout>/src/main/resources/ceres/treino:/app/src/main/resources/ceres/treino:ro \
+     -v /opt/agrocontabil-s5/saida:/saida backend \
+     --avaliacao.saida=/saida --avaliacao.repeticoes=3 \
+     --avaliacao.hardware='VPS ARM 8 OCPU, 47 GiB, sem GPU'
+   ```
+
+   (a etiqueta antiga "4 nucleos" está errada). O runner termina com `System.exit`; o contêiner
+   some pelo `--rm`. O arquivo `.md` traz tabelas; o CSV cego e o JSON ficam fora do repositório.
+5. Ao fim: repita a contagem de controle do banco da demonstração (igual à de antes) e apague o
+   banco `avaliacao` ao fim da S5, com OK.
+
+**O `dev,avaliacao` e o harness da API não rodam ao mesmo tempo:** o Ollama tem uma vaga
+(`OLLAMA_NUM_PARALLEL=1`), e as duas medições disputariam o mesmo processador de inferência,
+inflando os tempos de ambas (a exceção é o teste "ocupado" do passo 6, que é de propósito).
+
+O comando não passa pelo Caddy nem pela cota: mede o modelo e o orquestrador, e o tempo dele
+**não** é o tempo de ponta a ponta da API. As duas medições se complementam e não se misturam.
+
+## Ordem das medições
+
+### 0. Linha de base (obrigatória, uma por variante e noite)
+
+Variante: padrões do `deploy/.env.example` (`AI_CHAT_MODEL=$MODELO`, `AI_OLLAMA_NUM_CTX=8192`,
+tetos 512/256/1024).
+
+- Harness (3 rodadas) e `dev,avaliacao` (3 repetições), **um depois do outro**, nunca juntos
+  (uma vaga no Ollama).
+- Registra: p50/p95 por rota (rodada 1 e todas), acerto de rota/número/citação, `docker stats`,
+  `free -m`, `ollama ps`, falhas, SHA.
+- Fase B: tabela "antes" oficial em `docs/ceres-assistente.md`; relatório em
+  `docs/avaliacao/resultados/` (só o `.md` de tabelas, copiado à mão; o CSV cego e o JSON não);
+  para a #265, as consultas do passo 6.
+
+### 1. Q4_0 contra Q4_K_M (#270, item 1)
+
+Variante: só `AI_CHAT_MODEL`. O caminho é o do Modelfile (reaproveita o template da tag oficial,
+de que as chamadas de função dependem). **A regra 5 deste roteiro prevalece** sobre a seção
+"Quantização Q4_0" de `docs/ceres-assistente.md`, que manda `up -d backend` e fala em ajustar o
+`ollama-init` (alinhar essa seção fica para o PR de resultados). Comandos completos, todos com OK
+na noite:
+
+```bash
+cd /opt/agrocontabil
+# 1) baixar o GGUF Q4_0 (a VPS precisa alcançar hf.co); falha aqui = o arquivo não existe, pare
+docker compose exec ollama ollama pull hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_0
+# 2) gerar o Modelfile da tag oficial DENTRO do contêiner, trocar só a linha FROM e conferir
+docker compose exec ollama sh -c '
+  ollama show qwen3:4b-instruct --modelfile > /tmp/Modelfile &&
+  sed -i "s|^FROM .*|FROM hf.co/unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_0|" /tmp/Modelfile &&
+  grep -E "^(FROM|PARAMETER)" /tmp/Modelfile && grep -c "^TEMPLATE" /tmp/Modelfile'
+# 3) criar o modelo local e conferir o tamanho
+docker compose exec ollama ollama create qwen3-4b-instruct-q4_0 -f /tmp/Modelfile
+docker compose exec ollama ollama list
+# 4) subir a variante (nunca `up -d` sem serviço: o ollama-init tentaria baixar esse nome)
+AI_CHAT_MODEL=qwen3-4b-instruct-q4_0 docker compose up -d --no-deps backend
+```
+
+Se a rota de dados não devolver `tool_calls` (uma pergunta pelo harness com `AGRO_IDS=<um id de
+dados>`), a variante está reprovada sem medir mais. Registra o conjunto do passo 0 e o tamanho
+do arquivo. Adoção só sem regressão de acerto; troca de padrão depende de OK do Murillo e sai em PR
+próprio. Ao fim, volte ao padrão (regra 5); o `qwen3-4b-instruct-q4_0` fica no Ollama até o
+Murillo mandar remover (`ollama rm`, outra escrita).
+
+### 2. `qwen3:8b` (#270, item 4, medição)
+
+Mesma coisa com `AI_CHAT_MODEL=qwen3:8b` (`ollama pull qwen3:8b` antes). Descarregue o 4B para medir a
+RAM do 8B sozinho e meça também os dois juntos (é o que ocorreria sem o `ollama stop`).
+
+### 3. `prompt_eval_count` com prefixo em cache, cota e auditoria (#270)
+
+Objetivo: saber se, com o prefixo no cache, o Ollama conta só a parte nova em `prompt_eval_count`
+(muda o que a cota #166 e a auditoria registram).
+
+Com o classificador em camadas, só chamadas **ao modelo de chat** trocam o cache de prefixo
+(uma vaga). A classificação por regra não usa modelo nenhum e a por embedding usa o BGE-M3, que é outro
+modelo no Ollama: nenhuma das duas o substitui. O desenho vira outro:
+
+1. Conta só para isso, sem mais nada rodando no Ollama. Anote o saldo (consulta do item 8).
+2. Escolha **perguntas de dados que as regras ou as embeddings decidam** (confira depois pela
+   `camada_classificacao`: se alguma foi `LLM`, essa chamada de classificação trocou o cache e a
+   pergunta não vale). Sequência, uma a uma, sem outras chamadas no meio:
+   1. uma pergunta de **lei** (troca o cache para outro prefixo: garante o ponto de partida frio);
+   2. dados **A** (prefixo de dados frio);
+   3. dados **B**, diferente de A (prefixo de dados quente);
+   4. dados **A** de novo (quente).
+3. Leia a auditoria (mais recente primeiro):
+
+   ```sql
+   SELECT criado_em, rota, camada_classificacao, tokens_entrada, tokens_saida, tokens_estimados,
+          latencia_ms
+   FROM assistente_interacao WHERE produtor_id = '<id da conta>' ORDER BY criado_em DESC LIMIT 10;
+   ```
+
+   e o saldo de novo (`tokens_entrada` e `creditos_consumidos` da semana, antes e depois).
+4. Registra: `tokens_entrada` de A (frio) contra B e A (quentes). **Descarte a medição se
+   `tokens_estimados` for verdadeiro** (o provedor não informou o uso). Se cair, dizer o efeito na
+   cota e na auditoria; se não cair, dizer que a contagem inclui o prefixo. Onde:
+   `docs/ceres-assistente.md`, linha "Tokens com cache".
+
+### 4. `AI_OLLAMA_NUM_CTX=6144` (#270)
+
+A conta é **prompt + teto de saída da chamada ≤ 6.144, com folga**: lei ≤ ~5.000 (como no
+`deploy/.env.example`, o teto de lei é 1.024) e dados ≤ ~5.500 (teto de funções 512). **A maior
+chamada de lei é a do MISTO** (top-k mais até 3 trechos das compras, regras maiores): o
+subconjunto do passo inclui **dados, lei e MISTO**.
+
+Meça o maior `prompt_eval_count` por chamada numa rodada com 8192 em **chamadas frias**. Uma chamada
+é fria quando vem **depois de uma chamada ao modelo de chat com outro prefixo**: por isso a ordem
+**alterna** dados e lei (dados, lei, dados, lei, ...) e o MISTO entra entre elas; as perguntas
+são decididas por REGRA ou EMBEDDING (confira pela `camada_classificacao`: uma `LLM` trocou o
+cache e a pergunta não vale como fria). Se o passo 3 mostrar que com cache o Ollama conta só a
+parte nova, o `tokens_entrada` da auditoria deixa de ser limite superior: use só as chamadas
+frias. No MISTO, `tokens_entrada` é a **soma** das chamadas da pergunta (separação da pergunta de
+lei, dados e lei): ela é limite superior da maior chamada, e se passar de 6.144 a decisão
+conservadora é não adotar (sem investigar mais na janela). Se alguma passar do limite, não adote
+6144.
+
+Mude só `AI_OLLAMA_NUM_CTX`; aqueça de novo. **Teto menor mexe na cota do Rogério** (regra 5): só
+em semana anterior à da banca e com a reposição prevista. Registra acerto, RAM (cache esperado
+~0,9 GB contra ~1,2 GB), resposta que perde as regras do início (contexto estourado) e
+**truncamento no log do Ollama** (`docker compose logs --since <início, RFC3339 com offset> ollama
+| grep -i truncat`). **Qualquer "truncat" no log da rodada de 6144 reprova a variante**, mesmo que
+o acerto não caia.
+
+### 5. `AI_TETO_LEGISLACAO=512` (#270)
+
+Mude só essa variável (`NUM_CTX` volta a 8192). **Teto menor mexe na cota do Rogério** (regra 5):
+mesma restrição de data e a mesma reposição. Anote o ponto de partida e conte os cortes da
+rodada:
+
+```sql
+SELECT count(*) FROM assistente_interacao
+WHERE produtor_id = '<id da conta>' AND criado_em >= '<início da rodada>'
+  AND (desfecho = 'RESPOSTA_CORTADA' OR desfecho_dados = 'RESPOSTA_CORTADA'
+       OR desfecho_legislacao = 'RESPOSTA_CORTADA');
+```
+
+Registra a contagem, o acerto de citação e a latência da rota de lei. Zero cortes e citação igual
+ao passo 0 = o teto cabe. Este passo depende da rota de lei: a conclusão da Fase A vale só se a
+rota não mudar; refaça na Fase B se mudar.
+
+### 6. Classificador (#265)
+
+**Acerto e erros das regras (Fase B, na rodada do passo 0):** relatório do `dev,avaliacao`
+(tabela por camada), em `docs/avaliacao/linha-de-base-ceres-2-0.md`.
+
+**Proporção de desempate (Fase B):**
+
+```sql
+SELECT camada_classificacao, count(*) AS n,
+       round(100.0 * count(*) / sum(count(*)) OVER (), 1) AS pct,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY latencia_ms) AS p50_ms,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY latencia_ms) AS p95_ms
+FROM assistente_interacao
+WHERE produtor_id = '<id da conta>' AND criado_em >= '<início da rodada>'
+  AND camada_classificacao IN ('REGRA','EMBEDDING','LLM','PALAVRAS_CHAVE')
+GROUP BY 1;
+```
+
+As camadas `ATALHO_FIXO` e `FILTRO_INJECAO` ficam fora (não classificam). A latência é da pergunta
+inteira. Desempate = linhas `LLM`; **a pergunta MISTO decidida por embeddings também chama o modelo**
+(para separar a `perguntaLei`) e aparece como `EMBEDDING`: conte-a à parte
+(`rota = 'MISTO' AND camada_classificacao = 'EMBEDDING'`).
+
+**Latência da classificação, com o Ollama ocioso e ocupado (Fase A):** o critério de 300 ms (p95)
+vale para regras e embeddings, **não** para o desempate pelo LLM. O código não registra o tempo da
+classificação sozinha; use como proxy as perguntas **fora de escopo decididas por embedding**
+(camada `EMBEDDING`, resposta fixa, sem chamada ao modelo de chat): a `latencia_ms` da auditoria é
+a classificação mais o resto de uma pergunta curta. Confirme que são fixas pela `tokens_entrada`
+nula.
+
+- **Fonte das perguntas:** pelo menos 15 perguntas fora de escopo **diferentes entre si**, num
+  arquivo local fora do repositório (formato do gabarito, passado por `AGRO_GABARITO`), escritas
+  pela sessão da S5; nunca tiradas do benchmark nem de arquivo cego. O gabarito da #158 tem só 11
+  fora de escopo, parte decidida pelo `FILTRO_INJECAO`, e não basta. As mesmas listas nas duas
+  condições.
+- **Ocioso:** nada mais no Ollama. **Ocupado:** a mesma bateria enquanto a outra conta roda o
+  harness de dados (`AGRO_IDS=<ids de dados>`, outro terminal).
+- **Prazo de 500 ms** (`app.assistente.classificacao.timeout-embedding`): conte os vencidos **pelo
+  log** (`docker compose logs --since <início, RFC3339 com offset> backend | grep 'prazo de 500 ms
+  vencido'`) e **case cada linha com a pergunta pelo horário** (`criado_em` da auditoria menos a
+  `latencia_ms`, em janela de poucos segundos). **A contagem do log é o número oficial**; o casamento
+  só diz quais perguntas foram afetadas. Vencido o prazo, a camada de embedding **pausa
+  30 s** (`pausa-apos-falha`) e as perguntas desse intervalo vão ao LLM sem chamar o embedding:
+  atribua ao prazo só a pergunta que foi `EMBEDDING` com o Ollama ocioso e `LLM` ou
+  `PALAVRAS_CHAVE` com ele ocupado (o desempate ocupado pode passar de 120 s e virar
+  `PALAVRAS_CHAVE`, que também se conta). Espaçar as perguntas em mais de 30 s evita a
+  contaminação, ao custo de tempo.
+- Registre p50/p95 e a contagem de prazos vencidos nas duas condições. O desempate do LLM sozinho
+  (pergunta ambígua) é uma segunda medição, com a latência total da pergunta.
+
+### 7. Carga da API sem Ceres (#153)
+
+`docs/performance/README.md`. O k6 não pode competir com o Ollama: rode com o Ollama **ocioso**
+(nenhuma pergunta da Ceres em andamento; o modelo carregado parado não gasta CPU). Imagem
+`BACKEND_IMAGE` = a que roda na VPS, anotando o SHA. Subir, medir 3 vezes e derrubar a stack
+`agro-perf` (só o volume `agro-perf_pgdata_perf`). p95 por endpoint no comentário da #153; algum
+acima de 2 s vira issue própria.
+
+## O que fica registrado, e onde
+
+| Medição | Onde |
+|---|---|
+| Tabela quantização × contexto × teto × modelo (p50/p95 por rota, acerto, RAM) | `docs/ceres-assistente.md`, seção da #270 |
+| Linha de base da Ceres 2.0 e números do classificador | `docs/avaliacao/linha-de-base-ceres-2-0.md` |
+| Resumos do harness e do `dev,avaliacao` (p50/p95, contagens, acerto) | em tabelas nos documentos acima; o JSON bruto, o CSV cego e a chave **não** vão ao repositório (têm texto das respostas) e ficam na VPS ou fora dele |
+| p95 da API (k6) | comentário na #153 e `docs/performance/README.md` |
+| Decisão do 8B com memória medida | `docs/ceres-assistente.md` e comentário na #270 |
+| Fase A (números relativos, por variante e noite) | seção "Registro das noites" deste arquivo, nunca a tabela oficial |
+
+Números também em comentário nas issues (#270, #265, #153). **Não se faz `git add` do JSON do
+harness nem do CSV do `dev,avaliacao`** que estiverem num checkout da VPS ou na pasta de saída:
+têm o texto das respostas. Vão ao repositório só tabelas e contagens, escritas à mão a partir do
+resumo.
+
+## Depois da janela
+
+- `AI_*` adotado vai ao `deploy/.env.example` e ao `.env` da VPS **só com OK do Murillo**, em PR
+  próprio.
+- Volte o backend ao padrão (`docker compose up -d --no-deps backend` sem variáveis de ambiente) ao
+  fim de cada variante. Solte o lock do deploy com `exec 9>&-` (como em
+  `docs/demonstracao-banca.md`); um deploy da CI barrado pelo lock por mais de 15 min sai com código
+  75 e precisa ser refeito.
+- Critério que falhar (dados p50 ≤ 10 s até o número, lei p50 ≤ 25 s, p95 da API < 2 s, VM abaixo
+  de 85% de memória usada em uso normal) vira issue própria, sem otimizar na janela. Achado de
+  segurança vira issue separada.
+
+## Registro das noites
+
+Números relativos da Fase A ficam aqui (nunca na tabela oficial). Um bloco por noite:
+
+```text
+Data / noite:            Início (offset -03):  Fim:
+SHA no início:           SHA no fim:           Origem do harness (máquina, Caddy sim/não):
+Variante / passos:       Conta:                Ids (AGRO_IDS):
+Créditos antes -> depois: ollama ps (modelo, tamanho, contexto):
+free -m (usado/total):   docker stats no meio:
+p50/p95 por rota (rodada 1 | todas):
+Falhas: n   modoFallback: n   MODO_FALLBACK na auditoria: n   RESPOSTA_CORTADA: n
+Acerto (dev,avaliacao): rota / número / citação
+Interações de outras contas desde o início (deve ser 0): n
+Teto da pergunta no log "cota da Ceres preparada" (início e fim):
+Cota do Rogério: consumo antes -> depois da variante -> depois de voltar ao padrão;
+  reposição (espera até a segunda / UPDATE com OK do Murillo):
+Observações:
+```
+
+(sem registros ainda)
+
+## O que mudou nesta revisão (2026-11-07)
+
+- Duas fases (A e B) e modelo fixo em `qwen3:4b-instruct`; o 30B saiu (já comparado na #426).
+- Configuração de produção: o compose não repassa `AI_READ_TIMEOUT` (valem 120 s e 5 min).
+- Variável por ambiente do shell em vez de editar o `.env` (o `deploy.sh` regrava `BACKEND_TAG`
+  nele); lock do deploy enquanto se mexe no serviço.
+- Aquecimento depois de reiniciar o backend inclui esperar os vetores do classificador.
+- A rodada não reaproveita cache entre repetições (o harness percorre o gabarito inteiro por
+  rodada); a razão dos dois p50 foi corrigida.
+- Passo 3 refeito para o classificador em camadas (a classificação por regra ou embedding não troca
+  o cache do modelo de chat) e com `tokens_estimados`.
+- Passo 6: o critério de 300 ms é de regras e embeddings, não do desempate; proxy por pergunta fora
+  de escopo, condição ocupado e tempo limite de 500 ms dos embeddings; MISTO por embeddings também
+  chama o modelo.
+- SQL de cota e auditoria com as colunas reais (`assistente_uso_semanal` por `titular_id` e
+  `semana_inicio`; `produtor_id` e `tokens_estimados` na auditoria).
+- Procedimento do `dev,avaliacao` na VPS (banco `avaliacao`, contêiner da imagem, cópia da base de
+  lei) e contas de medição fora do roteiro da banca.
+- RAM: `ollama ps` e `free -m`; o `ollama stop` do modelo anterior antes de medir.
+- Revisão independente (9 correções): read-timeout é 200 com `modoFallback` e pausa de 30 s, não
+  erro; orçamento de créditos e subconjuntos por `AGRO_IDS`; regra geral de OK para escrita;
+  `dev,avaliacao` em quatro passos (banco, schema, lei, avaliação); conta do passo 4 com teto de
+  saída e truncamento; passo 6 com prazos vencidos pelo log, pausa de 30 s e fonte das perguntas;
+  seção "Registro das noites"; versionamento só de números; `--no-deps` e `ollama-init`.
+- Segunda revisão (code review xhigh e leitura independente): variante que baixa o teto sobe o
+  consumo do Rogério (`prepararSemana`) e quebra o 429 da banca (regra 5, datas e reposição);
+  `dev,avaliacao` monta o treino embutido e grava numa pasta própria com `--user`, validada por
+  rodada curta; passo 4 inclui o MISTO, alterna dados e lei e reprova por qualquer "truncat";
+  orçamento refeito (5 créditos por resposta, reserva de 32, rodada completa dividida entre João e
+  Maria); regra 10 limitada à escrita direta na demonstração e com a senha digitada pelo Murillo;
+  regras novas 11 (site público), 12 (fuso) e 13 (onde o harness roda); Q4_0 com comandos completos
+  e a regra 5 acima da seção do `docs/ceres-assistente.md`; passo 6 casa o log com a pergunta.
+- Terceira revisão (code review xhigh): `dev,avaliacao` na VPS herdava a URL do banco da
+  demonstração e o `DEMONSTRACAO_HABILITADA` do compose (escreveria o seed em `agrocontabil`); agora
+  há a opção A (máquina do operador, nada escrito no Postgres da VPS) e a B (`docker compose run`
+  com URL, seed e senha sobrescritos, `printenv` e contagem de controle antes e depois); `pg_dump`
+  da lei com comando e conferência; harness e `dev,avaliacao` nunca em paralelo; regra 11 conta
+  João e Maria contra o enviado e avisa a equipe do frontend; datas em `YYYY-MM-DD`; MISTO soma
+  as chamadas. A suspeita de que `AI_TETO_LEGISLACAO` não chega ao backend não procede: o
+  `deploy/compose.yaml` a repassa (linha `AI_TETO_LEGISLACAO`).

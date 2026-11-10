@@ -132,7 +132,7 @@ public class ExclusaoDadosService {
     UsuarioAutenticado usuario = usuarioProvider.get();
     if (!usuario.id().equals(id)) {
       // 404, nao 403: nao confirma que o id existe.
-      throw new ResourceNotFoundException("Usuario", id);
+      throw new ResourceNotFoundException("Usuário", id);
     }
     CredencialUsuario credencial = senhaService.confirmarSenhaAtual(senha);
 

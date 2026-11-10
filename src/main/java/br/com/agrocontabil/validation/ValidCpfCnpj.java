@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidCpfCnpj {
 
-  String message() default "CPF/CNPJ informado tem digito verificador invalido";
+  String message() default "CPF/CNPJ informado tem dígito verificador inválido";
 
   Class<?>[] groups() default {};
 

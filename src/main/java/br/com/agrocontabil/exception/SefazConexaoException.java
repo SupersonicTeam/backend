@@ -15,6 +15,10 @@ package br.com.agrocontabil.exception;
  */
 public class SefazConexaoException extends SefazComunicacaoException {
 
+  /** Texto ao cliente ({@code errors[0]} e {@code message} de topo do 5xx, #251). */
+  private static final String MENSAGEM_CLIENTE =
+      "Não foi possível conectar à SEFAZ. Nada foi transmitido; tente novamente em instantes.";
+
   /**
    * Cria a exceção com a causa técnica encadeada.
    *
@@ -22,8 +26,7 @@ public class SefazConexaoException extends SefazComunicacaoException {
    * @param cause           causa original (ex.: {@code ConnectException}); pode ser nula
    */
   public SefazConexaoException(String mensagemTecnica, Throwable cause) {
-    super(mensagemTecnica, cause,
-        "Nao foi possivel conectar a SEFAZ. Nada foi transmitido; tente novamente em instantes.");
+    super(mensagemTecnica, cause, MENSAGEM_CLIENTE);
   }
 
   /**

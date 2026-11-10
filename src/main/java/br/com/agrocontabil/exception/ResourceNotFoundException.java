@@ -16,6 +16,6 @@ public class ResourceNotFoundException extends DomainException {
   }
 
   public ResourceNotFoundException(String resource, Object id) {
-    this("%s nao encontrado(a) para o identificador '%s'".formatted(resource, id));
+    this("%s não encontrado(a) para o identificador '%s'".formatted(resource, id));
   }
 }

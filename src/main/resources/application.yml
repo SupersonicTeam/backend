@@ -88,6 +88,28 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
+  # Cliente SMTP (issue #460). Host, porta, usuario e senha vem de SPRING_MAIL_HOST/PORT/USERNAME/
+  # PASSWORD, so no .env. Sem host nao ha cliente; com EMAIL_MODO=SMTP, host ou credencial vazios
+  # impedem a subida (EmailConfig). Os timeouts impedem que um provedor lento prenda o pool
+  # agro-email- (sem eles o JavaMail espera para sempre).
+  mail:
+    properties:
+      mail:
+        smtp:
+          auth: true
+          # STARTTLS obrigatorio na 587: sem o "required", um servidor (ou um intermediario) que
+          # nao anuncie STARTTLS receberia a senha em claro. Na 465, EMAIL_SMTP_SSL=true e
+          # EMAIL_SMTP_STARTTLS=false.
+          starttls:
+            enable: ${EMAIL_SMTP_STARTTLS:true}
+            required: ${EMAIL_SMTP_STARTTLS:true}
+          ssl:
+            enable: ${EMAIL_SMTP_SSL:false}
+            checkserveridentity: true
+          connectiontimeout: ${EMAIL_SMTP_CONNECT_TIMEOUT_MS:5000}
+          timeout: ${EMAIL_SMTP_TIMEOUT_MS:10000}
+          writetimeout: ${EMAIL_SMTP_TIMEOUT_MS:10000}
+
   # Timeouts dos clientes HTTP criados pelo Boot (issue #141). Hoje os unicos consumidores sao os
   # clientes do Spring AI (Ollama / API compativel com a da OpenAI): o projeto nao tinha nenhum
   # RestClient/WebClient antes. O read-timeout e generoso porque um modelo local em CPU pode levar
@@ -104,8 +126,8 @@ spring:
   # Ceres — assistente fiscal (issue #141). Arquitetura: Tool Calling + RAG + orquestracao.
   ai:
     model:
-      # Provedor do modelo de chat: "ollama" (local, padrao) ou "openai" (qualquer API compativel
-      # com a da OpenAI: OpenAI, Maritaca...). Trocar e so configuracao, nenhum codigo muda.
+      # Provedor do modelo de chat: "ollama" (local, padrao), "openai" (qualquer API compativel
+      # com a da OpenAI: OpenAI, Maritaca...) ou "anthropic" (Claude). Trocar e so configuracao.
       chat: ${AI_CHAT_PROVIDER:ollama}
       # Embedding e SEMPRE local (bge-m3, 1024 dimensoes). Nao e env var de proposito: trocar o
       # modelo de embedding obriga a reindexar toda a legislacao (issue #156).
@@ -158,6 +180,27 @@ spring:
           model: ${AI_CHAT_MODEL:gpt-4o-mini}
           temperature: 0.2
           max-tokens: ${AI_MAX_TOKENS:1024}
+    # API da Anthropic (Claude), com spring.ai.model.chat=anthropic. Chave propria, para nao se
+    # misturar com a de um provedor compativel com a OpenAI; sem ela a aplicacao nao sobe
+    # (AnthropicApiKeyConfig).
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          # Variavel propria, nao o AI_CHAT_MODEL: os compose sempre exportam AI_CHAT_MODEL com o
+          # modelo do Ollama, e trocar so o provedor mandaria "qwen3:4b-instruct" a Anthropic (404).
+          model: ${AI_ANTHROPIC_MODEL:claude-haiku-5-5}
+          # Os modelos atuais recusam (400) temperatura diferente do padrao; 1.0 e o padrao da API.
+          # Sem esta linha o Spring AI mandaria a dele (0.8).
+          temperature: 1.0
+          max-tokens: ${AI_MAX_TOKENS:1024}
+          # O raciocinio vem ligado e gasta o teto de cada chamada (app.assistente.tetos, #270):
+          # resposta cortada. O Haiku 5.5 aceita desligar. Vazio = nao enviar o campo; "enabled"
+          # nao serve aos modelos atuais (400). Modelo que nao desliga o raciocinio (Opus 5.5,
+          # Sonnet 5.5) NAO e suportado: o bloco de raciocinio chega como primeira Generation, e a
+          # rota de lei e o classificador leem so a primeira.
+          thinking:
+            type: ${AI_ANTHROPIC_THINKING:disabled}
     # Retry curto: a pergunta do usuario esta esperando. Erro 4xx (chave invalida, requisicao
     # malformada) nao melhora repetindo.
     retry:
@@ -219,6 +262,12 @@ management:
       # saudavel. Status fora do http-mapping respondem 200.
       status:
         order: DOWN, OUT_OF_SERVICE, DEGRADED, UP, UNKNOWN
+  # Sem o health do SMTP (issue #460). Com spring.mail.host presente, mesmo vazio (o compose o passa
+  # assim), o Boot cria o cliente e o MailHealthIndicator, que poe o /actuator/health em DOWN quando
+  # o provedor cai ou o host esta vazio, e o deploy.sh reverte o deploy. A falha de envio fica no log.
+  health:
+    mail:
+      enabled: false
 
 # Configuracoes da aplicacao (namespace proprio)
 app:
@@ -235,11 +284,30 @@ app:
     # emitidas calculadas antes do changeSet 0048 (sem o tratamento aplicado gravado).
     tributos:
       recalcular-legado: ${NOTAS_TRIBUTOS_RECALCULAR_LEGADO:true}
-  # Carteira do contador (issue #177): convite por e-mail, aceito pelo produtor.
+  # E-mail transacional (issue #460). O modo e o remetente seguem em app.seguranca.redefinicao.
+  # Com EMAIL_MODO=SMTP o remetente tem de ser deste dominio, o verificado no provedor (SPF/DKIM):
+  # de outro, o e-mail sai sem DKIM alinhado e cai no spam ou e recusado.
+  email:
+    dominio-verificado: ${EMAIL_DOMINIO_VERIFICADO:agroconia.com.br}
+    # Respostas vao para a GWNext: o remetente nao recebe e-mail.
+    reply-to: ${EMAIL_REPLY_TO:contato@gwnext.com.br}
+    # Teto de envios por SMTP em janelas deslizantes (0 = sem teto), abaixo da cota do provedor:
+    # Resend Free (100/dia UTC) = 0 por hora e 80 por dia. No Pro, suba o diario sem zera-lo: o teto
+    # tambem segura abuso e bounce. Acima, o e-mail e descartado e a resposta continua 202. Em
+    # memoria (uma replica so).
+    teto-por-hora: ${EMAIL_TETO_POR_HORA:0}
+    teto-por-dia: ${EMAIL_TETO_POR_DIA:80}
+    # Links de "esqueci minha senha" seguidos por conta; depois, um a cada 24 h / este numero
+    # (com 5, um a cada 4,8 h).
+    links-redefinicao-por-dia: ${EMAIL_LINKS_REDEFINICAO_POR_DIA:5}
+    # Destinos que nunca recebem (RFC 2606/6761): as contas do seed sao @example.com.
+    dominios-reservados: example.com,example.net,example.org,.example,.test,.invalid,.local,.localhost
+  # Carteira do contador (issue #177): convite por e-mail, aceito pelo produtor. O link leva a
+  # pagina /escritorio do produtor, onde ficam os convites (o frontend nao tem /convites, #460).
   carteira:
     convite:
       validade: ${CARTEIRA_CONVITE_VALIDADE:P14D}
-      url-frontend: ${CARTEIRA_CONVITE_URL_FRONTEND:http://localhost:4200/convites}
+      url-frontend: ${CARTEIRA_CONVITE_URL_FRONTEND:http://localhost:4200/escritorio}
       max-por-dia: ${CARTEIRA_CONVITE_MAX_POR_DIA:30}
       retencao: ${CARTEIRA_CONVITE_RETENCAO:P30D}
       limpeza:
@@ -293,6 +361,27 @@ app:
         at-least-for: PT5M
   # Equipe do escritorio (issue #228): convite com token de uso unico no fragmento do link.
   escritorio:
+    # Endereco proprio do escritorio, {slug}.{dominio-base} (issue #464): o subdominio identifica o
+    # escritorio e nunca autoriza nada. Uma gravacao de slug por intervalo; o slug que sai fica em
+    # carencia (ninguem o registra). Em dev o dominio base e localhost (ruraloeste.localhost).
+    dominio-base: ${APP_ESCRITORIO_DOMINIO_BASE:agroconia.com.br}
+    # Segredo do "ask" do On-Demand TLS do Caddy (GET /interno/tls/permitido): o Caddy o manda na
+    # URL e o backend o confere em tempo constante. Vazio = o ask recusa tudo (nenhum certificado
+    # de subdominio). 32+ caracteres: openssl rand -hex 32.
+    tls-ask-chave: ${APP_ESCRITORIO_TLS_ASK_CHAVE:}
+    # Endpoint publico do escritorio (GET /api/publico/escritorios/{slug}): limite por IP.
+    publico:
+      por-minuto: ${APP_ESCRITORIO_PUBLICO_POR_MINUTO:30}
+    endereco:
+      intervalo-troca: P30D
+      carencia: P90D
+      # Apaga os slugs com a carencia vencida (podem ser dado pessoal): todo dia, numa replica so.
+      limpeza:
+        enabled: ${ESCRITORIO_ENDERECO_LIMPEZA_ENABLED:true}
+        cron: ${ESCRITORIO_ENDERECO_LIMPEZA_CRON:0 20 3 * * *}
+        lock:
+          at-most-for: PT30M
+          at-least-for: PT5M
     convite:
       validade: ${ESCRITORIO_CONVITE_VALIDADE:P7D}
       url-frontend: ${ESCRITORIO_CONVITE_URL_FRONTEND:http://localhost:4200/equipe/convite}
@@ -315,7 +404,7 @@ app:
   lgpd:
     controlador: ${LGPD_CONTROLADOR:GWNext}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:contato@gwnext.com.br}
-    versao-politica: 2026-11-03
+    versao-politica: 2026-11-09
   # Autenticacao (Sprint 8).
   seguranca:
     senha:
@@ -351,7 +440,8 @@ app:
       chat-por-minuto: ${LIMITE_CHAT_POR_MINUTO:20}
       max-chaves: 10000
     # Recuperacao de senha (#209). modo-email: SMTP (prod, com spring.mail.*), LOG (so dev: o link
-    # vai para o log; proibido em prod) ou DESLIGADO.
+    # vai para o log; proibido em prod) ou DESLIGADO. O modo e o remetente valem para os tres
+    # e-mails (redefinicao e os dois convites). Remetente com nome: "AgroConIA <x@dominio>".
     redefinicao:
       validade: ${REDEFINICAO_VALIDADE:PT30M}
       url-frontend: ${REDEFINICAO_URL_FRONTEND:http://localhost:4200/redefinir-senha}

@@ -39,7 +39,7 @@ public class NotaFiscalInvalidaParaEmissaoException extends DomainException {
   public NotaFiscalInvalidaParaEmissaoException(List<FieldViolation> violations) {
     super(
         HttpStatus.UNPROCESSABLE_ENTITY,
-        "Nota fiscal invalida para emissao da NF-e. Corrija os campos listados.",
+        "Nota fiscal inválida para emissão da NF-e. Corrija os campos listados.",
         toErrors(violations));
   }
 

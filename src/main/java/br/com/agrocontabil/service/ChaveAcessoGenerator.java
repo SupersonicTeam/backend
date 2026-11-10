@@ -150,7 +150,7 @@ public class ChaveAcessoGenerator {
   public int calcularDv(String base) {
     if (base == null || base.length() != 43) {
       throw new IllegalArgumentException(
-          "Base para calculo de DV deve ter 43 digitos; recebido: "
+          "Base para cálculo do DV deve ter 43 dígitos; recebido: "
               + (base != null ? base.length() : "null"));
     }
     int soma = 0;
@@ -209,7 +209,7 @@ public class ChaveAcessoGenerator {
       // contagens de digitos, nunca o valor: zeroPad tambem recebe CPF/CNPJ e o
       // GlobalExceptionHandler devolve a mensagem de IllegalArgumentException ao cliente (LGPD).
       throw new IllegalArgumentException(
-          String.format("Valor com %d digitos excede o limite de %d para o campo da chave de"
+          String.format("Valor com %d dígitos excede o limite de %d para o campo da chave de"
               + " acesso", value.length(), length));
     }
     if (value.length() == length) {

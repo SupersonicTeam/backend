@@ -13,6 +13,7 @@ página cobre a base de infraestrutura (issue #141); o desenho completo está em
 | Integração | Spring AI **1.1.8** | Linha compatível com o Boot 3.5.14 (a 2.x exige Boot 4) |
 | Modelo de chat | `qwen3:4b-instruct` no **Ollama** (local) | Orientação do prof. Luan: arquitetura completa com modelo simples, escalar depois. Variante *instruct* (Qwen3-4B-Instruct-2507): a tag `qwen3:4b` virou a variante *thinking*, que ignora `think=false` e levava 80–120 s só para classificar uma pergunta em CPU |
 | Provedor por API | qualquer API compatível com a da OpenAI (OpenAI, Maritaca) | Só configuração: `AI_CHAT_PROVIDER=openai` + `AI_API_KEY` |
+| Claude (Anthropic) | `claude-haiku-5-5` pela API da Anthropic | Só configuração: `AI_CHAT_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` (o modelo é o `AI_ANTHROPIC_MODEL`, não o `AI_CHAT_MODEL`). Temperatura no padrão da API (1.0; outro valor é recusado) e raciocínio desligado, para não gastar os tetos por chamada. **Modelo que não desliga o raciocínio (Opus 5.5, Sonnet 5.5) não é suportado:** o Spring AI entrega o bloco de raciocínio como primeira `Generation`, e a rota de lei e o classificador leem só a primeira |
 | Embedding | `bge-m3` no Ollama, 1024 dimensões | **Sempre local.** Trocar o modelo obriga a reindexar a legislação |
 | Vector store | pgvector no mesmo PostgreSQL 16 | Imagem `pgvector/pgvector:0.8.6-pg16`; schema pelo Liquibase (#156) |
 
@@ -41,10 +42,13 @@ modelos. Sem Ollama o backend sobe normalmente; a Ceres responde **503**
 |---|---|
 | Modelo local maior | `AI_CHAT_MODEL=qwen3:8b` (o `ollama-init` baixa na próxima subida) |
 | API da OpenAI | `AI_CHAT_PROVIDER=openai`, `AI_API_KEY=...`, `AI_CHAT_MODEL=gpt-4o-mini` |
+| Claude (API da Anthropic) | `AI_CHAT_PROVIDER=anthropic`, `ANTHROPIC_API_KEY=...` (chave ligada a um workspace); opcional `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`) |
 | Outra API compatível (ex.: Maritaca) | `AI_CHAT_PROVIDER=openai`, `AI_API_BASE_URL`, `AI_API_COMPLETIONS_PATH` (a Maritaca usa `/chat/completions`, sem `/v1`; confira na documentação do provedor), `AI_API_KEY`, `AI_CHAT_MODEL` |
 
 Com `AI_CHAT_PROVIDER=openai` e sem `AI_API_KEY`, a aplicação **não sobe** (falha na subida, não
-na primeira pergunta). A chave vem só de variável de ambiente.
+na primeira pergunta). A chave vem só de variável de ambiente. O mesmo vale para
+`AI_CHAT_PROVIDER=anthropic` sem `ANTHROPIC_API_KEY` (`config/AnthropicApiKeyConfig`): o starter da
+Anthropic subiria com a chave vazia e a Ceres responderia tudo em modo fallback, sem sinal no health.
 
 ## Garantias desta camada
 
@@ -525,6 +529,26 @@ ao SENAR "de zero vírgula dois por cento"; a resposta certa "0,2%" caía como n
 fontes **e na resposta**: "setenta por cento" na resposta precisa do 70 nas fontes, em dígitos ou por
 extenso. O mesmo validador serve à rota de dados.
 
+**Guarda do regime específico (#269, diagnóstico das citações).** Numa pergunta geral ("sobre qual
+valor se calcula o IBS e a CBS?") o modelo pequeno cita o regime de combustíveis ou de imóveis como
+se fosse a regra geral, e a resposta sai afirmativa e errada. O Título dos regimes específicos da LC
+214/2025 vai do **art. 172** (abre logo depois do art. 171) ao **art. 307** (o art. 308 abre os
+regimes diferenciados da CBS). A `GuardaRegimeEspecifico`, depois dos validadores, **descarta** a
+resposta de lei em que todas as citações são da LC 214 nessa faixa e a pergunta não cita o setor de
+nenhum dos capítulos citados (combustíveis 172–180, serviços financeiros 181–233, planos de saúde
+234–243, prognósticos 244–250, bens imóveis 251–270, cooperativas 271–272, bares/hotelaria/transporte/
+turismo 273–291, SAF 292–296, missões diplomáticas 297–299, disposições comuns 300–307; as palavras do
+setor vêm do nome do capítulo). Um artigo fora da faixa (regra geral, Imposto Seletivo, outra lei)
+basta para a resposta passar. Vale também para a parte de lei do MISTO. **Saída:** o texto do modelo
+e os trechos de regime específico saem (mostrar combustível como "o trecho mais próximo" de uma
+pergunta geral confundiria); ficam os até 3 trechos mais próximos **fora** do regime específico, com
+a frase de `TRECHOS_SEM_CONFIRMACAO`, e, se não sobra nenhum (ou no MISTO sem parte legal separada),
+a frase de "não encontrei fundamento legal": é verdade que a regra geral não veio, e é melhor que uma
+resposta errada. **Auditoria:** desfecho próprio `REGIME_ESPECIFICO_SEM_SETOR` (cabe no
+`VARCHAR(40)` do changeSet 0025; sem changeSet novo); conta como recusa e como texto do modelo
+descartado na avaliação. Nos dados do diagnóstico (43 perguntas × 3 repetições) barraria 8 das 26
+respostas de outro artigo do 4B e 6 das 30 do 30B, e nenhuma certa.
+
 **Resultado vazio nunca vira "não tem" absoluto (#274, item 6).** O pior erro medido na VPS era a
 negativa falsa: "não tem débito pendente" com guias vencidas (#259), "não há notas devolvidas"
 filtrando as rejeitadas (#254). A garantia é do backend, não do prompt: o
@@ -637,7 +661,7 @@ o dado do evento).
 
 ## Inferência local na VPS: chamadas ao modelo e cache do prefixo (#270)
 
-Na VPS (4 núcleos ARM, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
+Na VPS (8 OCPU ARM e 47 GiB, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
 geração. O Ollama reaproveita o processamento de uma requisição para a seguinte **até o primeiro
 byte diferente** (cache do prefixo, um por vaga; o compose usa `OLLAMA_NUM_PARALLEL=1`, então uma
 vaga só). Por isso a parte fixa de cada chamada fica no início e igual byte a byte entre
@@ -844,7 +868,7 @@ python3 -I docs/avaliacao/harness-api/harness.py
 
 # acerto de rota, numero e citacao (gabarito da #158, 3 repeticoes)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,avaliacao \
-  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 4 nucleos'"
+  -Dspring-boot.run.arguments="--spring.docker.compose.enabled=false --avaliacao.hardware='VPS ARM 8 OCPU, 47 GiB, sem GPU'"
 
 # memoria da VM durante a rodada
 docker stats --no-stream

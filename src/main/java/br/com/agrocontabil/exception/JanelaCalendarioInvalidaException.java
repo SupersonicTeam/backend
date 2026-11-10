@@ -26,14 +26,14 @@ public class JanelaCalendarioInvalidaException extends DomainException {
    * @return exceção com o erro apontado para o campo {@code de}
    */
   public static JanelaCalendarioInvalidaException inicioDepoisDoFim(LocalDate de, LocalDate ate) {
-    String mensagem = "Janela invalida: de (%s) e posterior a ate (%s).".formatted(de, ate);
+    String mensagem = "Janela inválida: 'de' (%s) é posterior a 'ate' (%s).".formatted(de, ate);
     return new JanelaCalendarioInvalidaException(mensagem, new ErrorDetail(
         ErrorCode.JANELA_CALENDARIO_INVALIDA.code(),
         "de",
         mensagem,
-        "Informe de anterior ou igual a ate.",
+        "Informe 'de' anterior ou igual a 'ate'.",
         de.toString(),
-        "ate " + ate));
+        "até " + ate));
   }
 
   /**
@@ -47,15 +47,15 @@ public class JanelaCalendarioInvalidaException extends DomainException {
   public static JanelaCalendarioInvalidaException excedeMaximo(
       LocalDate de, LocalDate ate, int mesesMaximo) {
     LocalDate limite = de.plusMonths(mesesMaximo).minusDays(1);
-    String mensagem = "Janela invalida: de %s a %s passa do maximo de %d meses."
+    String mensagem = "Janela inválida: de %s a %s passa do máximo de %d meses."
         .formatted(de, ate, mesesMaximo);
     return new JanelaCalendarioInvalidaException(mensagem, new ErrorDetail(
         ErrorCode.JANELA_CALENDARIO_INVALIDA.code(),
         "ate",
         mensagem,
-        "Consulte o calendario em janelas de ate %d meses (informe de e ate)."
+        "Consulte o calendário em janelas de até %d meses (informe 'de' e 'ate')."
             .formatted(mesesMaximo),
         ate.toString(),
-        "ate " + limite));
+        "até " + limite));
   }
 }

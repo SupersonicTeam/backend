@@ -15,7 +15,7 @@ public class NotaFiscalNaoEditavelException extends DomainException {
   public NotaFiscalNaoEditavelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "Nota fiscal '%s' nao pode ser editada ou excluida no status '%s'. "
+        "Nota fiscal '%s' não pode ser editada ou excluída no status '%s'. "
             .formatted(id, status)
             + "Somente notas em status RASCUNHO podem ser alteradas.",
         List.of(ErrorDetail.of(ErrorCode.NOTA_NAO_EDITAVEL,

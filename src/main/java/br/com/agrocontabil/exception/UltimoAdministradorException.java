@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
  */
 public class UltimoAdministradorException extends DomainException {
 
-  private static final String MENSAGEM = "O escritorio ficaria sem administrador.";
+  private static final String MENSAGEM = "O escritório ficaria sem administrador.";
 
   /** Cria a exceção. */
   public UltimoAdministradorException() {

@@ -27,6 +27,10 @@ import org.springframework.http.HttpStatus;
  */
 public class SefazComunicacaoException extends DomainException {
 
+  /** Texto ao cliente ({@code errors[0]} e {@code message} de topo do 5xx, #251). */
+  private static final String MENSAGEM_CLIENTE =
+      "Falha de comunicação com a SEFAZ. Tente novamente em instantes.";
+
   /**
    * Cria a exceção com a causa técnica encadeada.
    *
@@ -34,8 +38,7 @@ public class SefazComunicacaoException extends DomainException {
    * @param cause           causa original (I/O, timeout etc.)
    */
   public SefazComunicacaoException(String mensagemTecnica, Throwable cause) {
-    this(mensagemTecnica, cause,
-        "Falha de comunicacao com a SEFAZ. Tente novamente em instantes.");
+    this(mensagemTecnica, cause, MENSAGEM_CLIENTE);
   }
 
   /**

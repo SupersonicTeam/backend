@@ -14,6 +14,7 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.VinculoSituacaoInvalidaException;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.Contador;
+import br.com.agrocontabil.model.EncerradoPor;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
@@ -251,14 +252,16 @@ public class CarteiraService {
    * administrador.
    *
    * @param produtorId cliente
+   * @param motivo     motivo opcional (nulo se não informado); nunca vai a log nem à auditoria
    * @return a situação nova
    * @throws ResourceNotFoundException sem vínculo aberto com o produtor (404)
    */
   @Transactional
   @Auditado(acao = AcaoAuditada.VINCULO_ENCERRADO, recurso = RecursoAuditado.VINCULO_CARTEIRA)
-  public SituacaoVinculoResponse encerrar(UUID produtorId) {
-    VinculoCarteira vinculo = vinculoAberto(produtorId);
-    encerrarVinculo(vinculo);
+  public SituacaoVinculoResponse encerrar(UUID produtorId, String motivo) {
+    Contador administrador = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR);
+    VinculoCarteira vinculo = vinculoAberto(administrador, produtorId);
+    encerrarVinculo(vinculo, EncerradoPor.ESCRITORIO, administrador.getId(), motivo);
     return situacao(vinculo);
   }
 
@@ -332,18 +335,19 @@ public class CarteiraService {
    * O produtor encerra o vínculo com um escritório.
    *
    * @param vinculoId vínculo
+   * @param motivo    motivo opcional (nulo se não informado); nunca vai a log nem à auditoria
    * @return o vínculo encerrado
    * @throws ResourceNotFoundException se o vínculo não for do produtor ou já estiver encerrado
    */
   @Transactional
   @Auditado(acao = AcaoAuditada.VINCULO_ENCERRADO, recurso = RecursoAuditado.VINCULO_CARTEIRA)
-  public VinculoProdutorResponse encerrarPeloProdutor(UUID vinculoId) {
+  public VinculoProdutorResponse encerrarPeloProdutor(UUID vinculoId, String motivo) {
     UUID produtorId = produtorProvider.get().getId();
     VinculoCarteira vinculo = vinculoRepository
         .findByIdAndProdutorIdForUpdate(vinculoId, produtorId)
         .filter(v -> v.getSituacao() != SituacaoVinculo.ENCERRADO)
-        .orElseThrow(() -> new ResourceNotFoundException("Vinculo", vinculoId));
-    encerrarVinculo(vinculo);
+        .orElseThrow(() -> new ResourceNotFoundException("Vínculo", vinculoId));
+    encerrarVinculo(vinculo, EncerradoPor.PRODUTOR, null, motivo);
     return vinculoDoProdutor(vinculo,
         escritorioRepository.findById(vinculo.getEscritorioId()).orElse(null),
         vinculo.getResponsavelId() == null ? null
@@ -374,15 +378,21 @@ public class CarteiraService {
   }
 
   private VinculoCarteira vinculoAberto(UUID produtorId) {
-    UUID escritorioId = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR)
-        .getEscritorioId();
-    return vinculoRepository.findAbertoForUpdate(escritorioId, produtorId)
+    return vinculoAberto(membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR), produtorId);
+  }
+
+  private VinculoCarteira vinculoAberto(Contador administrador, UUID produtorId) {
+    return vinculoRepository.findAbertoForUpdate(administrador.getEscritorioId(), produtorId)
         .orElseThrow(() -> new ResourceNotFoundException("Produtor", produtorId));
   }
 
-  private void encerrarVinculo(VinculoCarteira vinculo) {
+  private void encerrarVinculo(VinculoCarteira vinculo, EncerradoPor encerradoPor, UUID membroId,
+      String motivo) {
     vinculo.setSituacao(SituacaoVinculo.ENCERRADO);
     vinculo.setFim(OffsetDateTime.now(clock));
+    vinculo.setEncerradoPor(encerradoPor);
+    vinculo.setEncerradoPorMembroId(membroId);
+    vinculo.setMotivoEncerramento(motivo);
   }
 
   private static void exigirSituacao(VinculoCarteira vinculo, SituacaoVinculo exigida) {
@@ -567,6 +577,8 @@ public class CarteiraService {
         responsavel == null ? null : responsavel.getCrc(),
         vinculo.getSituacao(),
         vinculo.getInicio(),
-        vinculo.getFim());
+        vinculo.getFim(),
+        vinculo.getEncerradoPor(),
+        vinculo.getMotivoEncerramento());
   }
 }

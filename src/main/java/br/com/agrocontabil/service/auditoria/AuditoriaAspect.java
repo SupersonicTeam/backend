@@ -92,7 +92,7 @@ public class AuditoriaAspect {
         ? auditavel.recursoAuditado() : recursoArgumento;
     auditoria.registrar(base(auditado, usuario, recurso, auditavel)
         .sucesso(true)
-        .estadoAntes(estadoAntes)
+        .estadoAntes(estadoAntes != null ? estadoAntes : estadoAnterior(auditavel))
         .estadoDepois(estadoDepois(resultado, auditavel))
         .build());
     return resultado;
@@ -146,6 +146,12 @@ public class AuditoriaAspect {
       return "itens=" + itens.size();
     }
     return null;
+  }
+
+  /** Estado anterior que a própria operação informa, quando não há id para lê-lo antes. */
+  private static String estadoAnterior(ResultadoAuditavel auditavel) {
+    return auditavel != null && auditavel.statusAnterior() != null
+        ? limitarEstado(auditavel.statusAnterior().toString()) : null;
   }
 
   private static String codigo(Throwable erro) {

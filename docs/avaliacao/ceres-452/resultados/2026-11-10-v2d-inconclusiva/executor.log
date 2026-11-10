@@ -1,0 +1,209 @@
+Conjunto ceres-452-v2 (ce688217d06f), modelo qwen3:4b-instruct (0edcdef34593), braços: base=d67adc4bbbd3, correcao=ffea5a8b1ba5
+[base] aquecimento r0 t1 HTTP 200 DADOS 121.2s TECNICA
+[base] aquecimento r0 t1 HTTP 200 LEGISLACAO 0.7s TECNICA
+[correcao] aquecimento r0 t1 HTTP 200 DADOS 120.6s TECNICA
+[correcao] aquecimento r0 t1 HTTP 200 LEGISLACAO 0.4s TECNICA
+[base] v2-g1-01 r1 t1 HTTP 200 DADOS 26.4s
+[base] v2-g1-02 r1 t1 HTTP 200 DADOS 21.7s
+[base] v2-g1-03 r1 t1 HTTP 200 DADOS 21.2s
+[base] v2-g1-04 r1 t1 HTTP 200 DADOS 106.4s
+[base] v2-g1-05 r1 t1 HTTP 200 LEGISLACAO 1.1s
+[base] v2-g1-06 r1 t1 HTTP 200 DADOS 29.2s
+[base] v2-g2-01 r1 t1 HTTP 200 DADOS 58.9s
+[base] v2-g2-02 r1 t1 HTTP 200 DADOS 62.6s
+[base] v2-g2-03 r1 t1 HTTP 200 DADOS 111.9s
+[base] v2-g2-04 r1 t1 HTTP 200 DADOS 44.4s
+[base] v2-g2-05 r1 t1 HTTP 200 DADOS 45.7s
+[base] v2-g2-06 r1 t1 HTTP 200 DADOS 33.5s
+[base] v2-g3-01 r1 t1 HTTP 200 DADOS 53.4s
+[base] v2-g3-02 r1 t1 HTTP 200 DADOS 35.2s
+[base] v2-g3-03 r1 t1 HTTP 200 DADOS 127.4s TECNICA
+[base] v2-g3-03 r1 t2 HTTP 200 DADOS 53.8s
+[base] v2-g3-04 r1 t1 HTTP 200 DADOS 40.7s
+[base] v2-g3-05 r1 t1 HTTP 200 DADOS 40.4s
+[base] v2-g3-06 r1 t1 HTTP 200 DADOS 48.0s
+[base] v2-g4-01 r1 t1 HTTP 200 DADOS 36.1s
+[base] v2-g4-02 r1 t1 HTTP 200 DADOS 35.9s
+[base] v2-g4-03 r1 t1 HTTP 200 DADOS 29.3s
+[base] v2-g4-04 r1 t1 HTTP 200 DADOS 20.4s
+[base] v2-g4-05 r1 t1 HTTP 200 DADOS 31.1s
+[base] v2-g4-06 r1 t1 HTTP 200 DADOS 50.3s
+[base] v2-g4-07 r1 t1 HTTP 200 DADOS 27.9s
+[base] v2-g4-08 r1 t1 HTTP 200 DADOS 81.2s
+[base] v2-g4-09 r1 t1 HTTP 200 LEGISLACAO 37.2s
+[base] v2-g4-10 r1 t1 HTTP 200 LEGISLACAO 35.8s
+[base] v2-c-01 r1 t1 HTTP 200 DADOS 49.2s
+[base] v2-c-02 r1 t1 HTTP 200 DADOS 22.2s
+[base] v2-c-03 r1 t1 HTTP 200 DADOS 37.9s
+[base] v2-c-04 r1 t1 HTTP 200 MISTO 32.5s
+[base] v2-c-05 r1 t1 HTTP 200 DADOS 28.7s
+[base] v2-c-06 r1 t1 HTTP 200 DADOS 22.9s
+[base] v2-c-07 r1 t1 HTTP 200 DADOS 10.9s
+[base] v2-c-08 r1 t1 HTTP 200 DADOS 8.8s
+[base] v2-c-09 r1 t1 HTTP 200 LEGISLACAO 72.1s
+[base] v2-c-10 r1 t1 HTTP 200 LEGISLACAO 40.6s
+[base] v2-c-11 r1 t1 HTTP 200 FORA_DE_ESCOPO 0.5s
+[base] v2-c-12 r1 t1 HTTP 200 FORA_DE_ESCOPO 4.8s
+[correcao] v2-g1-01 r1 t1 HTTP 200 DADOS 81.4s
+[correcao] v2-g1-02 r1 t1 HTTP 200 DADOS 97.0s
+[correcao] v2-g1-03 r1 t1 HTTP 200 DADOS 79.2s
+[correcao] v2-g1-04 r1 t1 HTTP 200 DADOS 43.7s
+[correcao] v2-g1-05 r1 t1 HTTP 200 LEGISLACAO 0.8s
+[correcao] v2-g1-06 r1 t1 HTTP 200 DADOS 21.8s
+[correcao] v2-g2-01 r1 t1 HTTP 200 DADOS 113.0s
+[correcao] v2-g2-02 r1 t1 HTTP 200 DADOS 79.3s
+[correcao] v2-g2-03 r1 t1 HTTP 200 DADOS 57.8s
+[correcao] v2-g2-04 r1 t1 HTTP 200 DADOS 12.3s
+[correcao] v2-g2-05 r1 t1 HTTP 200 DADOS 11.8s
+[correcao] v2-g2-06 r1 t1 HTTP 200 DADOS 17.9s
+[correcao] v2-g3-01 r1 t1 HTTP 200 DADOS 24.1s
+[correcao] v2-g3-02 r1 t1 HTTP 200 DADOS 19.3s
+[correcao] v2-g3-03 r1 t1 HTTP 200 DADOS 33.0s
+[correcao] v2-g3-04 r1 t1 HTTP 200 MISTO 22.1s
+[correcao] v2-g3-05 r1 t1 HTTP 200 DADOS 19.8s
+[correcao] v2-g3-06 r1 t1 HTTP 200 DADOS 25.6s
+[correcao] v2-g4-01 r1 t1 HTTP 200 DADOS 21.6s
+[correcao] v2-g4-02 r1 t1 HTTP 200 DADOS 21.6s
+[correcao] v2-g4-03 r1 t1 HTTP 200 DADOS 23.0s
+[correcao] v2-g4-04 r1 t1 HTTP 200 DADOS 16.6s
+[correcao] v2-g4-05 r1 t1 HTTP 200 DADOS 22.7s
+[correcao] v2-g4-06 r1 t1 HTTP 200 MISTO 124.8s TECNICA
+[correcao] v2-g4-06 r1 t2 HTTP 200 MISTO 0.2s TECNICA
+[correcao] v2-g4-06 r1 t3 HTTP 200 MISTO 0.2s TECNICA
+[correcao] v2-g4-07 r1 t1 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-07 r1 t2 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-07 r1 t3 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-08 r1 t1 HTTP 200 DADOS 0.2s TECNICA
+[correcao] v2-g4-08 r1 t2 HTTP 200 DADOS 39.5s
+[correcao] v2-g4-09 r1 t1 HTTP 200 LEGISLACAO 2.0s
+[correcao] v2-g4-10 r1 t1 HTTP 200 LEGISLACAO 1.9s
+[correcao] v2-c-01 r1 t1 HTTP 200 DADOS 21.0s
+[correcao] v2-c-02 r1 t1 HTTP 200 DADOS 24.2s
+[correcao] v2-c-03 r1 t1 HTTP 200 DADOS 25.1s
+[correcao] v2-c-04 r1 t1 HTTP 200 MISTO 20.1s
+[correcao] v2-c-05 r1 t1 HTTP 200 DADOS 29.1s
+[correcao] v2-c-06 r1 t1 HTTP 200 DADOS 30.9s
+[correcao] v2-c-07 r1 t1 HTTP 200 DADOS 10.9s
+[correcao] v2-c-08 r1 t1 HTTP 200 DADOS 7.5s
+[correcao] v2-c-09 r1 t1 HTTP 200 LEGISLACAO 42.2s
+[correcao] v2-c-10 r1 t1 HTTP 200 LEGISLACAO 10.8s
+[correcao] v2-c-11 r1 t1 HTTP 200 FORA_DE_ESCOPO 0.4s
+[correcao] v2-c-12 r1 t1 HTTP 200 FORA_DE_ESCOPO 10.3s
+[correcao] v2-g1-01 r2 t1 HTTP 200 DADOS 11.1s
+[correcao] v2-g1-02 r2 t1 HTTP 200 DADOS 13.6s
+[correcao] v2-g1-03 r2 t1 HTTP 200 DADOS 20.8s
+[correcao] v2-g1-04 r2 t1 HTTP 200 DADOS 15.8s
+[correcao] v2-g1-05 r2 t1 HTTP 200 LEGISLACAO 0.4s
+[correcao] v2-g1-06 r2 t1 HTTP 200 DADOS 12.1s
+[correcao] v2-g2-01 r2 t1 HTTP 200 DADOS 16.9s
+[correcao] v2-g2-02 r2 t1 HTTP 200 DADOS 18.4s
+[correcao] v2-g2-03 r2 t1 HTTP 200 DADOS 21.6s
+[correcao] v2-g2-04 r2 t1 HTTP 200 DADOS 16.6s
+[correcao] v2-g2-05 r2 t1 HTTP 200 DADOS 23.5s
+[correcao] v2-g2-06 r2 t1 HTTP 200 DADOS 26.5s
+[correcao] v2-g3-01 r2 t1 HTTP 200 DADOS 23.9s
+[correcao] v2-g3-02 r2 t1 HTTP 200 DADOS 19.8s
+[correcao] v2-g3-03 r2 t1 HTTP 200 DADOS 31.7s
+[correcao] v2-g3-04 r2 t1 HTTP 200 MISTO 21.9s
+[correcao] v2-g3-05 r2 t1 HTTP 200 DADOS 80.8s
+[correcao] v2-g3-06 r2 t1 HTTP 200 DADOS 120.3s TECNICA
+[correcao] v2-g3-06 r2 t2 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g3-06 r2 t3 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-01 r2 t1 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-01 r2 t2 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-01 r2 t3 HTTP 200 DADOS 0.2s TECNICA
+[correcao] v2-g4-02 r2 t1 HTTP 200 DADOS 21.7s
+[correcao] v2-g4-03 r2 t1 HTTP 200 DADOS 12.4s
+[correcao] v2-g4-04 r2 t1 HTTP 200 DADOS 17.8s
+[correcao] v2-g4-05 r2 t1 HTTP 200 DADOS 23.3s
+[correcao] v2-g4-06 r2 t1 HTTP 200 MISTO 124.9s TECNICA
+[correcao] v2-g4-06 r2 t2 HTTP 200 MISTO 0.3s TECNICA
+[correcao] v2-g4-06 r2 t3 HTTP 200 MISTO 0.3s TECNICA
+[correcao] v2-g4-07 r2 t1 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-07 r2 t2 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-07 r2 t3 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-08 r2 t1 HTTP 200 DADOS 0.1s TECNICA
+[correcao] v2-g4-08 r2 t2 HTTP 200 DADOS 38.0s
+[correcao] v2-g4-09 r2 t1 HTTP 200 LEGISLACAO 3.2s
+[correcao] v2-g4-10 r2 t1 HTTP 200 LEGISLACAO 2.6s
+[correcao] v2-c-01 r2 t1 HTTP 200 DADOS 24.4s
+[correcao] v2-c-02 r2 t1 HTTP 200 DADOS 14.8s
+[correcao] v2-c-03 r2 t1 HTTP 200 DADOS 23.1s
+[correcao] v2-c-04 r2 t1 HTTP 200 MISTO 25.6s
+[correcao] v2-c-05 r2 t1 HTTP 200 DADOS 25.5s
+[correcao] v2-c-06 r2 t1 HTTP 200 DADOS 29.8s
+[correcao] v2-c-07 r2 t1 HTTP 200 DADOS 9.2s
+[correcao] v2-c-08 r2 t1 HTTP 200 DADOS 8.1s
+[correcao] v2-c-09 r2 t1 HTTP 200 LEGISLACAO 47.2s
+[correcao] v2-c-10 r2 t1 HTTP 200 LEGISLACAO 10.2s
+[correcao] v2-c-11 r2 t1 HTTP 200 FORA_DE_ESCOPO 0.5s
+[correcao] v2-c-12 r2 t1 HTTP 200 FORA_DE_ESCOPO 5.0s
+[base] v2-g1-01 r2 t1 HTTP 200 DADOS 11.4s
+[base] v2-g1-02 r2 t1 HTTP 200 DADOS 19.0s
+[base] v2-g1-03 r2 t1 HTTP 200 DADOS 12.4s
+[base] v2-g1-04 r2 t1 HTTP 200 DADOS 9.5s
+[base] v2-g1-05 r2 t1 HTTP 200 LEGISLACAO 0.7s
+[base] v2-g1-06 r2 t1 HTTP 200 DADOS 10.3s
+[base] v2-g2-01 r2 t1 HTTP 200 DADOS 12.7s
+[base] v2-g2-02 r2 t1 HTTP 200 DADOS 12.9s
+[base] v2-g2-03 r2 t1 HTTP 200 DADOS 12.3s
+[base] v2-g2-04 r2 t1 HTTP 200 DADOS 10.1s
+[base] v2-g2-05 r2 t1 HTTP 200 DADOS 10.6s
+[base] v2-g2-06 r2 t1 HTTP 200 DADOS 16.5s
+[base] v2-g3-01 r2 t1 HTTP 200 DADOS 22.6s
+[base] v2-g3-02 r2 t1 HTTP 200 DADOS 20.1s
+[base] v2-g3-03 r2 t1 HTTP 200 DADOS 50.0s
+[base] v2-g3-04 r2 t1 HTTP 200 DADOS 121.0s
+[base] v2-g3-05 r2 t1 HTTP 200 DADOS 81.2s
+[base] v2-g3-06 r2 t1 HTTP 200 DADOS 24.6s
+[base] v2-g4-01 r2 t1 HTTP 200 DADOS 24.7s
+[base] v2-g4-02 r2 t1 HTTP 200 DADOS 21.6s
+[base] v2-g4-03 r2 t1 HTTP 200 DADOS 19.6s
+[base] v2-g4-04 r2 t1 HTTP 200 DADOS 18.3s
+[base] v2-g4-05 r2 t1 HTTP 200 DADOS 22.9s
+[base] v2-g4-06 r2 t1 HTTP 200 MISTO 20.4s
+[base] v2-g4-07 r2 t1 HTTP 200 DADOS 19.2s
+[base] v2-g4-08 r2 t1 HTTP 200 DADOS 36.4s
+[base] v2-g4-09 r2 t1 HTTP 200 LEGISLACAO 2.3s
+[base] v2-g4-10 r2 t1 HTTP 200 LEGISLACAO 2.8s
+[base] v2-c-01 r2 t1 HTTP 200 DADOS 25.3s
+[base] v2-c-02 r2 t1 HTTP 200 DADOS 14.6s
+[base] v2-c-03 r2 t1 HTTP 200 DADOS 22.9s
+[base] v2-c-04 r2 t1 HTTP 200 MISTO 20.1s
+[base] v2-c-05 r2 t1 HTTP 200 DADOS 26.7s
+[base] v2-c-06 r2 t1 HTTP 200 DADOS 25.9s
+[base] v2-c-07 r2 t1 HTTP 200 DADOS 9.0s
+[base] v2-c-08 r2 t1 HTTP 200 DADOS 8.1s
+[base] v2-c-09 r2 t1 HTTP 200 LEGISLACAO 35.3s
+[base] v2-c-10 r2 t1 HTTP 200 LEGISLACAO 15.7s
+[base] v2-c-11 r2 t1 HTTP 200 FORA_DE_ESCOPO 0.5s
+[base] v2-c-12 r2 t1 HTTP 200 FORA_DE_ESCOPO 4.3s
+[base] v2-g1-01 r3 t1 HTTP 200 DADOS 12.6s
+[base] v2-g1-02 r3 t1 HTTP 200 DADOS 10.5s
+[base] v2-g1-03 r3 t1 HTTP 200 DADOS 10.0s
+[base] v2-g1-04 r3 t1 HTTP 200 DADOS 8.9s
+[base] v2-g1-05 r3 t1 HTTP 200 LEGISLACAO 0.5s
+[base] v2-g1-06 r3 t1 HTTP 200 DADOS 8.7s
+[base] v2-g2-01 r3 t1 HTTP 200 DADOS 11.1s
+[base] v2-g2-02 r3 t1 HTTP 200 DADOS 9.7s
+[base] v2-g2-03 r3 t1 HTTP 200 DADOS 11.0s
+[base] v2-g2-04 r3 t1 HTTP 200 DADOS 12.2s
+[base] v2-g2-05 r3 t1 HTTP 200 DADOS 13.5s
+[base] v2-g2-06 r3 t1 HTTP 200 DADOS 17.1s
+[base] v2-g3-01 r3 t1 HTTP 200 DADOS 20.4s
+[base] v2-g3-02 r3 t1 HTTP 200 DADOS 20.0s
+[base] v2-g3-03 r3 t1 HTTP 200 DADOS 31.0s
+[base] v2-g3-04 r3 t1 HTTP 200 MISTO 21.0s
+[base] v2-g3-05 r3 t1 HTTP 200 DADOS 20.0s
+[base] v2-g3-06 r3 t1 HTTP 200 DADOS 23.8s
+[base] v2-g4-01 r3 t1 HTTP 200 DADOS 21.2s
+[base] v2-g4-02 r3 t1 HTTP 200 DADOS 19.1s
+[base] v2-g4-03 r3 t1 HTTP 200 DADOS 18.3s
+[base] v2-g4-04 r3 t1 HTTP 200 DADOS 14.6s
+[base] v2-g4-05 r3 t1 HTTP 200 DADOS 17.8s
+[base] v2-g4-06 r3 t1 HTTP 200 MISTO 19.1s
+[base] v2-g4-07 r3 t1 HTTP 200 DADOS 17.5s
+[base] v2-g4-08 r3 t1 HTTP 200 DADOS 34.7s
+[base] v2-g4-09 r3 t1 HTTP 200 LEGISLACAO 1.8s
+[base] v2-g4-10 r3 t1 HTTP 200 LEGISLACAO 1.8s
+[base] v2-c-01 r3 t1 HTTP 200 DADOS 19.8s

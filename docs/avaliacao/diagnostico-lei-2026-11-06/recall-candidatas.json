@@ -1,0 +1,248 @@
+{
+ "treino (D01-D18, D21)": {
+  "total": 19,
+  "recall": {
+   "base": 13,
+   "a": 15,
+   "b1": 12,
+   "b2": 14
+  },
+  "casos": {
+   "D01": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D02": {
+    "base": true,
+    "a": true,
+    "b1": false,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 409"
+    ]
+   },
+   "D03": {
+    "base": false,
+    "a": false,
+    "b1": false,
+    "b2": false,
+    "demovidos": []
+   },
+   "D04": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D05": {
+    "base": false,
+    "a": false,
+    "b1": false,
+    "b2": false,
+    "demovidos": [
+     "LC 214/2025 art. 242"
+    ]
+   },
+   "D06": {
+    "base": false,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 171"
+    ]
+   },
+   "D07": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D08": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 176"
+    ]
+   },
+   "D09": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D10": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 171"
+    ]
+   },
+   "D11": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D12": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D13": {
+    "base": true,
+    "a": true,
+    "b1": false,
+    "b2": false,
+    "demovidos": [
+     "LC 214/2025 art. 271"
+    ]
+   },
+   "D14": {
+    "base": false,
+    "a": false,
+    "b1": false,
+    "b2": false,
+    "demovidos": [
+     "LC 214/2025 art. 168",
+     "LC 214/2025 art. 452",
+     "LC 214/2025 art. 468"
+    ]
+   },
+   "D15": {
+    "base": false,
+    "a": true,
+    "b1": false,
+    "b2": true,
+    "demovidos": []
+   },
+   "D16": {
+    "base": false,
+    "a": false,
+    "b1": false,
+    "b2": false,
+    "demovidos": [
+     "LC 214/2025 art. 173"
+    ]
+   },
+   "D17": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 252"
+    ]
+   },
+   "D18": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D21": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   }
+  }
+ },
+ "controle (D23-D31)": {
+  "total": 9,
+  "recall": {
+   "base": 7,
+   "a": 8,
+   "b1": 8,
+   "b2": 9
+  },
+  "casos": {
+   "D23": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D24": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D25": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 231"
+    ]
+   },
+   "D26": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 171",
+     "LC 214/2025 art. 272"
+    ]
+   },
+   "D27": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D28": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   },
+   "D29": {
+    "base": false,
+    "a": false,
+    "b1": true,
+    "b2": true,
+    "demovidos": [
+     "LC 214/2025 art. 452",
+     "LC 214/2025 art. 468"
+    ]
+   },
+   "D30": {
+    "base": false,
+    "a": true,
+    "b1": false,
+    "b2": true,
+    "demovidos": []
+   },
+   "D31": {
+    "base": true,
+    "a": true,
+    "b1": true,
+    "b2": true,
+    "demovidos": []
+   }
+  }
+ }
+}
