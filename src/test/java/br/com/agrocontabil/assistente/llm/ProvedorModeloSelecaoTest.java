@@ -58,26 +58,34 @@ import org.springframework.web.client.ResponseErrorHandler;
  */
 class ProvedorModeloSelecaoTest {
 
-  private final ApplicationContextRunner contexto = new ApplicationContextRunner()
-      .withInitializer(ctx -> ctx.getEnvironment().getPropertySources()
-          .addLast(applicationYml()))
-      .withUserConfiguration(AssistenteConfig.class)
-      .withConfiguration(AutoConfigurations.of(
-          JacksonAutoConfiguration.class,
-          HttpMessageConvertersAutoConfiguration.class,
-          RestClientAutoConfiguration.class,
-          WebClientAutoConfiguration.class,
-          SpringAiRetryAutoConfiguration.class,
-          ToolCallingAutoConfiguration.class,
-          OllamaApiAutoConfiguration.class,
-          OllamaChatAutoConfiguration.class,
-          OllamaEmbeddingAutoConfiguration.class,
-          OpenAiChatAutoConfiguration.class,
-          OpenAiEmbeddingAutoConfiguration.class,
-          OpenAiImageAutoConfiguration.class,
-          OpenAiAudioSpeechAutoConfiguration.class,
-          OpenAiAudioTranscriptionAutoConfiguration.class,
-          OpenAiModerationAutoConfiguration.class));
+  private final ApplicationContextRunner contexto = contextoDoApplicationYml();
+
+  /**
+   * Contexto com o {@code application.yml} de verdade, a configuração da Ceres e as
+   * autoconfigurações do Spring AI (Ollama e API compatível com a da OpenAI).
+   */
+  static ApplicationContextRunner contextoDoApplicationYml() {
+    return new ApplicationContextRunner()
+        .withInitializer(ctx -> ctx.getEnvironment().getPropertySources()
+            .addLast(applicationYml()))
+        .withUserConfiguration(AssistenteConfig.class)
+        .withConfiguration(AutoConfigurations.of(
+            JacksonAutoConfiguration.class,
+            HttpMessageConvertersAutoConfiguration.class,
+            RestClientAutoConfiguration.class,
+            WebClientAutoConfiguration.class,
+            SpringAiRetryAutoConfiguration.class,
+            ToolCallingAutoConfiguration.class,
+            OllamaApiAutoConfiguration.class,
+            OllamaChatAutoConfiguration.class,
+            OllamaEmbeddingAutoConfiguration.class,
+            OpenAiChatAutoConfiguration.class,
+            OpenAiEmbeddingAutoConfiguration.class,
+            OpenAiImageAutoConfiguration.class,
+            OpenAiAudioSpeechAutoConfiguration.class,
+            OpenAiAudioTranscriptionAutoConfiguration.class,
+            OpenAiModerationAutoConfiguration.class));
+  }
 
   @Test
   @DisplayName("Padrao: chat e embedding pelo Ollama, sem exigir chave de API")
@@ -162,11 +170,10 @@ class ProvedorModeloSelecaoTest {
             .isNotInstanceOf(LimiteTaxaProvedorException.class);
       }
 
-      // Ponta a ponta com o RetryTemplate do contexto: o 429 e repetido ate max-attempts (2 no
-      // application.yml), o 401 nao.
-      RetryTemplate retry = ctx.getBean(RetryTemplate.class);
-      assertThat(tentativas(retry, tratador, HttpStatus.TOO_MANY_REQUESTS)).isEqualTo(2);
-      assertThat(tentativas(retry, tratador, HttpStatus.UNAUTHORIZED)).isEqualTo(1);
+      // Com o RetryTemplate do contexto, o 401 nao e repetido. O 429 repetido ate max-attempts
+      // esta no LimiteTaxaProvedorFioTest, pelo fio e sem esperar o backoff de producao.
+      assertThat(tentativas(ctx.getBean(RetryTemplate.class), tratador, HttpStatus.UNAUTHORIZED))
+          .isEqualTo(1);
     });
   }
 
@@ -175,9 +182,14 @@ class ProvedorModeloSelecaoTest {
   void semAPropriedadeO429NaoETransitorio() {
     contexto
         .withPropertyValues("spring.ai.retry.on-http-codes=")
-        .run(ctx -> assertThatThrownBy(() -> ctx.getBean(ResponseErrorHandler.class)
-            .handleError(resposta(HttpStatus.TOO_MANY_REQUESTS)))
-            .isInstanceOf(NonTransientAiException.class));
+        .run(ctx -> {
+          ResponseErrorHandler tratador = ctx.getBean(ResponseErrorHandler.class);
+          assertThatThrownBy(() -> tratador.handleError(resposta(HttpStatus.TOO_MANY_REQUESTS)))
+              .isInstanceOf(NonTransientAiException.class);
+          assertThat(tentativas(
+              ctx.getBean(RetryTemplate.class), tratador, HttpStatus.TOO_MANY_REQUESTS))
+              .isEqualTo(1);
+        });
   }
 
   private static int tentativas(
