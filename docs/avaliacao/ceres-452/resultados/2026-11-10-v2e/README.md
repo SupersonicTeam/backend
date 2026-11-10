@@ -139,10 +139,10 @@ estão no fim de `auditoria-v2-g4-06.txt`.
   escolha de funções (`app.assistente.tetos.funcoes`). O log do Ollama mostra a chamada de escolha
   de funções com prompt de 3741 tokens, cortada com HTTP 500 depois de 2 minutos e gerando de 3,98 a
   4,14 tokens por segundo:
-  - **r1:** 469 tokens gerados no corte. O registro logo depois do 500 dá `n_gen = 469`, e o fim da
-    tarefa dá `n_tokens = 4210`, ou seja, 3741 + 469.
-  - **r3:** cerca de 470 tokens gerados. O fim da tarefa dá `n_tokens = 4211`, e o último registro
-    periódico, 0,9 s antes do corte, marcava 466.
+  - **r1 (tarefa 14908 do Ollama):** 469 tokens gerados no corte. O `print_timing` logo depois do
+    500 dá `n_gen = 469`, e o `release` da tarefa dá `n_tokens = 4210`, ou seja, 3741 + 469.
+  - **r3 (tarefa 24278):** cerca de 470 tokens gerados. O `release` dá `n_tokens = 4211`, e o
+    último `print_timing`, 0,9 s antes do corte, marcava `n_gen = 466`.
 
   A auditoria da Ceres só guarda os 21 tokens da classificação, porque a chamada cortada não volta.
 - **Depois da falha, o modelo fica 30 s fora.** O disjuntor do modelo abre por 30 s

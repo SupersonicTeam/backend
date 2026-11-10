@@ -33,8 +33,9 @@ correcao | 3 | 3 | 02:52:03 | 02:52:03 | MISTO | MODO_FALLBACK | 0 | 101 | - | -
 # Log do Ollama (docker logs --tail 60000 agrocontabil-ollama, lido em 2026-11-10; horários em UTC,
 # BRT = UTC-3):
 # as duas chamadas de escolha de funções cortadas da correção (tarefas 14908, r1, e 24278, r3).
-# Para cada uma: o prompt, os registros periódicos da geração, o HTTP 500 do corte e o fim da
-# tarefa. Só essas linhas; o log tem prompts com dados da demonstração.
+# Para cada uma: o tamanho do prompt (new prompt), os registros periódicos da geração (print_timing),
+# o HTTP 500 do corte e o fim da tarefa (release). Só essas linhas: o texto dos prompts, com dados
+# da demonstração, fica fora.
 
 2026-11-10T05:09:11.568798452Z slot operator(): id 0 | task 14908 | new prompt, n_ctx_slot = 8192, n_keep = 4, task.n_tokens = 3741
 2026-11-10T05:09:38.245107862Z slot print_timing: id 0 | task 14908 | n_gen = 100, tg = 4.06 t/s, tg_3s = 4.10 t/s
