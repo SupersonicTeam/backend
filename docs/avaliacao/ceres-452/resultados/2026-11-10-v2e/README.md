@@ -102,13 +102,38 @@ A pergunta é "Do mês de julho pra trás, quanto foi retido de Funrural nas ven
 | Rodada | Braço | O que aconteceu |
 |---|---|---|
 | v2d (sob carga) | correção | estouro na r1 e na r2 (124,8 e 124,9 s) |
-| v2e | correção | estouro na r1 e na r3 (123,5 s); a r2 levou 92,7 s, chamou `consultarRetencoes` três vezes (julho, junho e maio, um mês por chamada) e errou |
+| v2e | correção | estouro na r1 e na r3 (123,5 s). A r2 levou 92,7 s e errou: pediu 7 chamadas de `consultarRetencoes`, uma por mês. Seis valeram (julho, junho, maio, abril, março e janeiro de 2026) e uma foi recusada por parâmetro inválido; fevereiro ficou de fora |
 | v2d e v2e | base | 18 a 21 s (50 s sob carga), uma chamada só (`2026-07-01` a `2026-07-31`), errada porque julho sozinho não vale |
+
+As 7 chamadas da r2 estão no `correcao.jsonl` (linha 71, as 6 válidas em `fontesDados`) e na
+auditoria da Ceres (`assistente_interacao.chamadas_funcao` = 7). A recusa está no log da aplicação
+da correção, às 02:21:52 ("Funcao consultarRetencoes chamada com parametro invalido").
 
 - Somando a v2d e a v2e, a correção estourou o tempo em 4 de 5 execuções dessa pergunta. Para o
   produtor, isso é cerca de 2 minutos de espera e uma resposta em modo fallback.
 - A regra conta o estouro como falha técnica e deixa a latência fora da decisão, então o ENTRA não muda.
 - Esse comportamento pesa no merge da correção e fica para o Murillo decidir.
+
+### Por que a correção demora nessa pergunta
+
+- **O Ollama da medição roda em CPU.** O container `agrocontabil-ollama` não tem GPU (o
+  `docker inspect` não traz `DeviceRequests`), e nesta máquina o modelo gera cerca de 4 a 5 tokens
+  por segundo.
+- **O modelo enumera os meses na escolha de funções.** Na correção, ele pede uma chamada por mês, e
+  todas saem de uma única chamada ao modelo, a de escolha de funções. Na r2, essa chamada gerou
+  350 tokens: a auditoria registra 371 tokens de saída, e 21 deles são da classificação. A 4 ou 5
+  tokens por segundo, isso leva de 70 a 90 s, quase todo o tempo da r2.
+- **Na base, a geração é curta.** A mesma pergunta gera 71 tokens de saída no total
+  (classificação e uma chamada de função) e responde em 18 a 21 s.
+- **Nas execuções cortadas, o tempo acaba antes do teto.** A geração ainda corria quando venceu o
+  read-timeout de 120 s (`spring.http.client.read-timeout`), antes de chegar ao teto de 512 tokens
+  da escolha de funções (`app.assistente.tetos.funcoes`). Na taxa da r2, isso dá perto de 450 a 480
+  tokens até o corte. O número exato não ficou registrado: a auditoria só guarda os 21 tokens da
+  classificação, porque a chamada cortada não volta, e o log do Ollama desta rodada não foi
+  guardado.
+- **Depois da falha, o modelo fica 30 s fora.** O disjuntor do modelo abre por 30 s
+  (`app.assistente.fallback.pausa-apos-falha`). Por isso as tentativas seguintes, 4 a 5 s depois,
+  caem no fallback em 0,1 a 0,2 s.
 
 ## Arquivos
 
