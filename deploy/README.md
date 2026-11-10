@@ -256,8 +256,10 @@ docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 Cada escritório pode ter o próprio endereço, `{slug}.agroconia.com.br`. O produtor continua em
 `www`. O backend já serve o recurso: slug, endpoint público, o "ask" do Caddy e o login no
-subdomínio. Até os passos abaixo, ele fica **dormente**: sem o registro `A *` e sem o Caddyfile
-novo, nenhum subdomínio abre, e o `www` não muda.
+subdomínio. Desde 2026-11-10, a VPS já roda o `Caddyfile` e o `compose.yaml` da `main`, com o
+bloco `https://` e o "ask" no ar, e o `.env` já tem `SITE_DOMINIO` e `TLS_ASK_CHAVE`. O recurso
+segue **dormente** só porque falta o registro `A *`: sem ele, nenhum subdomínio resolve, e o `www`
+não muda.
 
 **Quando ligar:** só com o backend e o frontend (modo escritório) prontos e ensaiados. Se não
 estiver pronto até o congelamento (26/11), fica para depois da banca (03/12). Todos os passos são
@@ -292,24 +294,56 @@ manuais e do Murillo, na VPS e na Hostinger.
 
 ### Passo a passo
 
+**A ordem importa.** O bloco `https://` já está no ar: no instante em que o registro `A *`
+existir, o primeiro acesso a um slug servido pede o certificado. Por isso a CA de staging entra
+**antes** do DNS. Na ordem inversa, o primeiro certificado sai direto em produção, e um erro gasta
+a cota de falhas do Let's Encrypt.
+
 1. **Pré-requisitos:**
    - o backend com a #464 já no ar (o CD implanta a `main`);
    - o frontend com o modo escritório;
    - o reset da demonstração ([`docs/demonstracao-banca.md`](../docs/demonstracao-banca.md)), que
      dá o slug `ruraloeste` à Contabilidade Rural Oeste.
-2. **`.env`** (antes de copiar o `compose.yaml` novo, que exige as duas variáveis):
+2. **Conferir o `.env`** (já preenchido desde 2026-11-10):
 
    ```bash
-   cd /opt/agrocontabil && cp .env .env.anterior
-   echo "SITE_DOMINIO=agroconia.com.br" >> .env
-   echo "TLS_ASK_CHAVE=$(openssl rand -hex 32)" >> .env   # so letras e digitos: vai na URL
+   cd /opt/agrocontabil
+   grep -q '^SITE_DOMINIO=agroconia.com.br$' .env && echo "dominio ok"
    grep -qE '^TLS_ASK_CHAVE=[A-Za-z0-9_-]{32,}$' .env && echo "chave ok"
    ```
 
    **Hex, nunca Base64.** Uma chave com `+`, `/` ou `=` chega alterada na URL do ask. O backend
-   sobe assim mesmo, mas avisa em ERROR no log e o ask recusa todos os certificados.
+   sobe assim mesmo, mas avisa em ERROR no log e o ask recusa todos os certificados. Para gerar uma
+   nova: `openssl rand -hex 32` (e veja "Rotação da chave do ask").
+3. **Conferir os arquivos**, já os da `main` desde 2026-11-10. O `Caddyfile` da VPS tem de ter o
+   bloco `https://` com `tls { on_demand }` e o `on_demand_tls` com o ask. Guardar uma cópia para
+   reverter:
 
-3. **DNS na Hostinger:**
+   ```bash
+   grep -n "on_demand" Caddyfile
+   cp Caddyfile Caddyfile.anterior
+   ```
+
+4. **CA de staging, antes do DNS.** No `Caddyfile` da VPS, dentro do bloco `https://`,
+   acrescentar a linha da CA de staging ao `tls`:
+
+   ```caddyfile
+   tls {
+   	on_demand
+   	ca https://acme-staging-v02.api.letsencrypt.org/directory
+   }
+   ```
+
+5. **Validar e reiniciar o Caddy.** Um Caddyfile inválido derruba o `www` na subida do container.
+
+   ```bash
+   docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
+   docker compose restart caddy
+   ```
+
+   O primeiro comando precisa dizer `Valid configuration`. O reinício leva segundos, e os
+   certificados ficam no volume `caddy_data`.
+6. **DNS na Hostinger**, só agora:
    - **criar:** registro `A`, nome `*`, apontando para o IP da VPS, com o TTL padrão;
    - **não criar:** registro `AAAA`;
    - **manter:** os registros de `@` e de `www` (o curinga não os sobrepõe).
@@ -324,40 +358,8 @@ manuais e do Murillo, na VPS e na Hostinger.
 
    A Hostinger ressalva que domínio *hospedado* nela exige criar cada subdomínio. Aqui só o DNS
    está lá, e o `dig` tira a dúvida.
-4. **Arquivos**, guardando os anteriores para reverter:
-
-   ```bash
-   cp Caddyfile Caddyfile.anterior && cp compose.yaml compose.yaml.anterior
-   # copiar deploy/Caddyfile e deploy/compose.yaml do repositorio para /opt/agrocontabil
-   ```
-
-5. **CA de staging primeiro.** No `Caddyfile` da VPS, dentro do bloco `https://`, acrescentar a
-   linha da CA de staging ao `tls`:
-
-   ```caddyfile
-   tls {
-   	on_demand
-   	ca https://acme-staging-v02.api.letsencrypt.org/directory
-   }
-   ```
-
-6. **Validar antes de aplicar.** Um Caddyfile inválido derruba o `www` na subida do container.
-
-   ```bash
-   docker compose config -q && echo "compose ok"
-   docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
-   ```
-
-   O segundo comando precisa dizer `Valid configuration`.
-7. **Aplicar.** O backend e o Caddy são recriados com as variáveis novas. O backend leva ~2 min
-   para ficar `healthy`, e o Caddy reinicia em segundos; os certificados ficam no volume
-   `caddy_data`. Fazer num horário calmo.
-
-   ```bash
-   docker compose up -d
-   ```
-
-8. **Conferir:**
+7. **Conferir.** O `sed` do último comando mascara a chave do ask: com o backend fora do ar, o
+   Caddy loga em ERROR a URL inteira do ask, com a chave.
 
    ```bash
    curl -s https://www.agroconia.com.br/healthz        # UP: o www segue igual
@@ -366,25 +368,23 @@ manuais e do Murillo, na VPS e na Hostinger.
    curl -vk https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i "issuer"   # (STAGING); o 1o acesso espera alguns segundos
    curl -skI https://ruraloeste.agroconia.com.br/ | grep -iE "x-robots-tag|referrer-policy"   # noindex e no-referrer
    curl -v https://naoexiste.agroconia.com.br/ 2>&1 | tail -2              # falha no handshake
-   docker compose logs caddy | grep -iE "on_demand|obtain|error" | tail
+   docker compose logs caddy | grep -iE "on_demand|obtain|error" | sed -E 's/chave=[^&" ]+/chave=***/g' | tail
    ```
 
    Depois, o login de `ruraloeste.agroconia.com.br` com a administradora da demonstração. Pelo
    `www`, todas as contas entram como sempre.
-9. **Produção.**
-   - Tirar a linha `ca` do `Caddyfile`, validar de novo (passo 6) e reiniciar o Caddy:
+8. **Produção.**
+   - Tirar a linha `ca` do `Caddyfile`, validar de novo (passo 5) e reiniciar o Caddy:
      `docker compose restart caddy`. O reinício limpa o certificado de staging da memória, e o
      próximo acesso pede o de produção.
    - Conferir com `curl -v https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i issuer`: o emissor
      tem de ser o Let's Encrypt, sem "STAGING".
-10. **Reverter**, se algo der errado:
+9. **Reverter**, se algo der errado: apagar o registro `A *` na Hostinger. Sem ele, nenhum
+   subdomínio resolve, e o `www` segue igual. Para voltar o Caddyfile ao de antes do passo 4:
 
     ```bash
     cp Caddyfile.anterior Caddyfile && docker compose restart caddy
     ```
-
-    Isso volta ao site único, e o `www` segue. O registro `A *` e as variáveis do `.env` podem
-    ficar: sem o bloco `https://`, o Caddy não atende os subdomínios.
 
 ### Rotação da chave do ask
 
