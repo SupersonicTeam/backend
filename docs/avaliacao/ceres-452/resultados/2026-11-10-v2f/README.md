@@ -43,8 +43,8 @@ git merge-tree --write-tree f958ec16c7236b569477d5e3e027535bdd35c944 671d4a30f0b
 
 ### Carga da máquina
 
-- Antes do início, nenhum `java`, `mvn`, `python` ou `node` estava no ar, e havia 12,8 GiB livres de
-  31,7 GiB.
+- No início da rodada (09h49:57), nenhum `java`, `mvn`, `python` ou `node` estava no ar, e havia
+  9,7 GiB livres de 31,7 GiB.
 - Durante a rodada, nenhum `java` ou `mvn` de outra sessão apareceu (`carga.log`, 64 leituras de
   09:50 a 10:54).
 - Duas vigias gravaram no mesmo arquivo, com cerca de 30 s de defasagem: a da primeira tentativa não
@@ -105,8 +105,10 @@ saem nos dois braços, e o que muda é o fim de maio que o modelo escreve:
 
 - Outubro sai igual nas duas rodadas (`2026-10-01` a `2026-10-31`), e o valor também (R$ 82.785,06),
   porque a nota de maio cai antes do dia 30.
-- O código da base é o mesmo nas duas rodadas, sem mudança em `src/`. A troca vem do modelo, que ora
-  escreve 30, ora 31, como último dia de maio, nos dois braços.
+- Na base, o código e a data de referência são os mesmos nas duas rodadas (nada muda em `src/`), e o
+  modelo escreveu 30 numa e 31 na outra. A troca do dia, ali, vem do modelo.
+- Na correção, o código mudou entre a v2e e a v2f (a rodada 3 do #459). Ali não dá para separar o
+  efeito da mudança do efeito do modelo, que a base mostra trocar o dia sozinho.
 - Essa pergunta sozinha leva o grupo aberto da subida (v2e) ao empate (v2f). A regra não muda depois
   do resultado, então a decisão registrada é NAO_ENTRA.
 
@@ -158,8 +160,9 @@ A pergunta é "Do mês de julho pra trás, quanto foi retido de Funrural nas ven
 - **Nas outras perguntas:** nenhuma resposta, em nenhum dos braços, tem fonte de dados repetida.
 - **Na auditoria:** as chamadas pedidas batem com as executadas, fora 9 recusas de
   `consultarApuracao` por parâmetro inválido (3 por repetição), que se repetem iguais na base.
-- **Não há linha de log para contar isso.** O log da correção não registra a junção. As mensagens da
-  Ceres nele são:
+- **Não há linha de log para contar isso.** No nível em que a medição roda (INFO, sem DEBUG), o log
+  da correção não tem linha sobre a junção. A sessão avaliadora não leu o código para saber se ela
+  registra em outro nível. As mensagens da Ceres no log são:
   - "periodo da pergunta aplicado em 1 chamada(s) de funcao" (24);
   - a negativa trocada pela frase do backend (15);
   - o parâmetro inválido (9);
