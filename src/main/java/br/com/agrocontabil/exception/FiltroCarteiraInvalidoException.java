@@ -21,11 +21,11 @@ public class FiltroCarteiraInvalidoException extends DomainException {
    */
   public FiltroCarteiraInvalidoException(String campo, String valor,
       Collection<String> permitidas) {
-    super(HttpStatus.BAD_REQUEST, "Valor nao permitido em " + campo + ": " + valor + ".",
+    super(HttpStatus.BAD_REQUEST, "Valor não permitido em " + campo + ": " + valor + ".",
         List.of(new ErrorDetail(
             ErrorCode.FILTRO_CARTEIRA_INVALIDO.code(),
             campo,
-            "Valor nao permitido em " + campo + ": " + valor + ".",
+            "Valor não permitido em " + campo + ": " + valor + ".",
             "Use um destes: " + String.join(", ", permitidas) + ".",
             valor,
             String.join(", ", permitidas))));

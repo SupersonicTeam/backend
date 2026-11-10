@@ -382,7 +382,7 @@ public class ApuracaoService {
     YearMonth mes = YearMonth.parse(periodo);
     ApuracaoMensal apuracao = apuracaoRepository
         .findByProdutorIdAndPeriodoForUpdate(produtorId, mes.toString())
-        .orElseThrow(() -> new ResourceNotFoundException("Apuracao", mes));
+        .orElseThrow(() -> new ResourceNotFoundException("Apuração", mes));
 
     if (apuracao.getStatus() != StatusApuracao.FECHADO) {
       throw new ApuracaoNaoReabrivelException(apuracao.getStatus());
@@ -579,7 +579,7 @@ public class ApuracaoService {
       return YearMonth.parse(periodo);
     } catch (DateTimeParseException | NullPointerException e) {
       throw new IllegalArgumentException(
-          "Periodo invalido: use o formato YYYY-MM (ex.: 2026-07).");
+          "Período inválido: use o formato YYYY-MM (ex.: 2026-07).");
     }
   }
 

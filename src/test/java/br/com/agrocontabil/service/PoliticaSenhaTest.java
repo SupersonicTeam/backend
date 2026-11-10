@@ -86,7 +86,7 @@ class PoliticaSenhaTest {
   void sequenciasEPadroes(String senha) {
     assertThat(violacoes(senha))
         .anySatisfy(e -> {
-          assertThat(e.message()).contains("sequencias");
+          assertThat(e.message()).contains("sequências");
           assertThat(e.rejectedValue()).isNull();
         });
   }

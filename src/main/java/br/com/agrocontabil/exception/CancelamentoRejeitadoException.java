@@ -47,7 +47,7 @@ public class CancelamentoRejeitadoException extends DomainException {
             xmotivo != null && !xmotivo.isBlank()
                 ? xmotivo
                 : "A SEFAZ recusou o cancelamento (cStat " + cstat + ").",
-            "Resolva a pendencia apontada pela SEFAZ e tente novamente. "
+            "Resolva a pendência apontada pela SEFAZ e tente novamente. "
                 + "A nota permanece autorizada.",
             cstat,
             null)));

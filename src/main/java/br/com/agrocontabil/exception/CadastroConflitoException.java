@@ -20,11 +20,11 @@ import org.springframework.http.HttpStatus;
 public class CadastroConflitoException extends DomainException {
 
   private static final String MENSAGEM =
-      "Nao foi possivel concluir o cadastro com os dados informados.";
+      "Não foi possível concluir o cadastro com os dados informados.";
 
   private static final String SUGESTAO =
-      "Se voce ja tem conta, entre com seu e-mail ou recupere a senha. Se o seu CPF/CNPJ ja foi "
-          + "cadastrado pelo escritorio de contabilidade, peca a ele o acesso.";
+      "Se você já tem conta, entre com seu e-mail ou recupere a senha. Se o seu CPF/CNPJ já foi "
+          + "cadastrado pelo escritório de contabilidade, peça a ele o acesso.";
 
   public CadastroConflitoException() {
     super(

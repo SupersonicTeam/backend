@@ -154,7 +154,7 @@ public class ConviteCarteiraService {
       // Serializa os convites do escritorio: sem o lock, requisicoes simultaneas leriam a mesma
       // contagem e passariam juntas do teto.
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(escritorioId)
-          .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
       OffsetDateTime inicioJanela = agora.minus(JANELA_TETO);
       long naJanela = conviteRepository.countByEscritorioIdAndCriadoEmAfter(
           escritorioId, inicioJanela);

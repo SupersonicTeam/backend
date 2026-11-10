@@ -24,7 +24,7 @@ public class DanfeIndisponivelException extends DomainException {
   public DanfeIndisponivelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "DANFE indisponivel para a nota '%s' no status '%s'. "
+        "DANFE indisponível para a nota '%s' no status '%s'. "
             .formatted(id, status)
             + "Gere o XML da nota antes de baixar a DANFE.",
         List.of(ErrorDetail.of(ErrorCode.DANFE_INDISPONIVEL,

@@ -35,7 +35,7 @@ public record CadastroRequest(
     String nomeCompleto,
 
     @NotBlank
-    @Pattern(regexp = "\\d{11}|\\d{14}", message = "Informe o CPF (11) ou CNPJ (14) so com digitos")
+    @Pattern(regexp = "\\d{11}|\\d{14}", message = "Informe o CPF (11) ou CNPJ (14) só com dígitos")
     @ValidCpfCnpj
     @Schema(description = "CPF ou CNPJ, so digitos", example = "52998224725")
     String cpfCnpj,

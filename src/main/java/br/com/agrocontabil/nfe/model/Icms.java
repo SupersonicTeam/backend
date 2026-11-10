@@ -114,7 +114,7 @@ public class Icms {
       case "51" -> icms.gICMS51 = grupo;
       case "90" -> icms.gICMS90 = grupo;
       default -> throw new IllegalArgumentException(
-          "CST " + cst + " exige o calculo do ICMS, fora do escopo do sistema");
+          "CST " + cst + " exige o cálculo do ICMS, fora do escopo do sistema");
     }
     return icms;
   }

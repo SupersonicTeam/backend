@@ -29,7 +29,7 @@ public class NotaFiscalNaoConsultavelException extends DomainException {
   public NotaFiscalNaoConsultavelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "Nota fiscal '%s' no status '%s' nao permite sincronizacao de status com a SEFAZ. "
+        "Nota fiscal '%s' no status '%s' não permite sincronização de status com a SEFAZ. "
             .formatted(id, status)
             + "Apenas notas pendentes de retorno (PENDENTE_SEFAZ) podem ser sincronizadas.",
         List.of(ErrorDetail.of(ErrorCode.NOTA_NAO_CONSULTAVEL, sugestaoPara(status))));
@@ -39,9 +39,9 @@ public class NotaFiscalNaoConsultavelException extends DomainException {
   private static String sugestaoPara(StatusNotaFiscal status) {
     return switch (status) {
       case AUTORIZADA, REJEITADA, CANCELADA ->
-          "A nota ja tem um desfecho definitivo na SEFAZ; nao ha status pendente a sincronizar.";
+          "A nota já tem um desfecho definitivo na SEFAZ; não há status pendente a sincronizar.";
       default ->
-          "Gere o XML e envie a nota a SEFAZ (enviar-sefaz) antes de sincronizar o status.";
+          "Gere o XML e envie a nota à SEFAZ (enviar-sefaz) antes de sincronizar o status.";
     };
   }
 }

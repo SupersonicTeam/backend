@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CodigoIbgeCoerenteComUf {
 
-  String message() default "codigoMunicipioIbge nao pertence a UF informada";
+  String message() default "codigoMunicipioIbge não pertence à UF informada";
 
   Class<?>[] groups() default {};
 

@@ -25,11 +25,11 @@ public class DanfePreviewIndisponivelException extends DomainException {
   public DanfePreviewIndisponivelException(UUID id, StatusNotaFiscal status) {
     super(
         HttpStatus.CONFLICT,
-        "Preview da DANFE indisponivel para a nota '%s' no status '%s'.".formatted(id, status),
+        "Preview da DANFE indisponível para a nota '%s' no status '%s'.".formatted(id, status),
         List.of(new ErrorDetail(
             ErrorCode.DANFE_PREVIEW_INDISPONIVEL.code(),
             null,
-            "O preview so existe antes da emissao (RASCUNHO ou COM_INCONSISTENCIAS).",
+            "O preview só existe antes da emissão (RASCUNHO ou COM_INCONSISTENCIAS).",
             "Para nota com XML gerado, baixe a DANFE em GET /api/notas/{id}/pdf.",
             status.name(),
             "RASCUNHO, COM_INCONSISTENCIAS")));

@@ -19,11 +19,11 @@ public class RegimeIncompativelComTipoProdutorException extends DomainException 
    */
   public RegimeIncompativelComTipoProdutorException(RegimeTributario regime) {
     super(HttpStatus.UNPROCESSABLE_ENTITY,
-        "Produtor pessoa fisica nao pode ter o regime " + regime + ".",
+        "Produtor pessoa física não pode ter o regime " + regime + ".",
         List.of(new ErrorDetail(ErrorCode.REGIME_INCOMPATIVEL_COM_TIPO_PRODUTOR.code(),
             "regimeTributario",
-            "Produtor rural pessoa fisica nao se inscreve no Simples Nacional nem no MEI "
-                + "(LC 123/2006, arts. 3o e 18-A).",
+            "Produtor rural pessoa física não se inscreve no Simples Nacional nem no MEI "
+                + "(LC 123/2006, arts. 3º e 18-A).",
             "Use o regime normal (PRESUMIDO ou REAL), que sai como CRT 3 na NF-e.",
             regime.name(), "PRESUMIDO ou REAL")));
   }

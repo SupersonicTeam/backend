@@ -37,7 +37,7 @@ public class CodigoIbgeCoerenteComUfValidator
     context.disableDefaultConstraintViolation();
     context
         .buildConstraintViolationWithTemplate(
-            "codigoMunicipioIbge nao pertence a UF " + uf.trim().toUpperCase())
+            "codigoMunicipioIbge não pertence à UF " + uf.trim().toUpperCase())
         .addPropertyNode("codigoMunicipioIbge")
         .addConstraintViolation();
     return false;

@@ -152,7 +152,7 @@ public class EquipeEscritorioService {
   public EscritorioResponse escritorio() {
     Contador membro = membroProvider.membro();
     Escritorio escritorio = escritorioRepository.findById(membro.getEscritorioId())
-        .orElseThrow(() -> new ResourceNotFoundException("Escritorio", membro.getEscritorioId()));
+        .orElseThrow(() -> new ResourceNotFoundException("Escritório", membro.getEscritorioId()));
     return resposta(escritorio, membro);
   }
 
@@ -169,7 +169,7 @@ public class EquipeEscritorioService {
     Contador membro = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR);
     return transacao.execute(status -> {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(membro.getEscritorioId())
-          .orElseThrow(() -> new ResourceNotFoundException("Escritorio",
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório",
               membro.getEscritorioId()));
       escritorio.setNome(request.nome().strip());
       // PATCH: CNPJ ausente fica como esta; vazio apaga.
@@ -263,7 +263,7 @@ public class EquipeEscritorioService {
 
     ConviteMembro convite = transacao.execute(status -> {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(escritorioId)
-          .orElseThrow(() -> new ResourceNotFoundException("Escritorio", escritorioId));
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
       var vigente = conviteRepository
           .findFirstByEscritorioIdAndEmailAndUsadoEmIsNullOrderByCriadoEmDesc(
               escritorioId, normalizado)

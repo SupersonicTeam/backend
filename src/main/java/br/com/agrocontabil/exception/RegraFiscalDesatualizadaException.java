@@ -23,14 +23,14 @@ public class RegraFiscalDesatualizadaException extends DomainException {
   public RegraFiscalDesatualizadaException(UUID notaId, Integer versaoDoXml) {
     super(HttpStatus.CONFLICT, mensagem(notaId), List.of(new ErrorDetail(
         ErrorCode.XML_REGRA_FISCAL_DESATUALIZADA.code(), "versaoRegraFiscal", mensagem(notaId),
-        "Nada foi enviado a SEFAZ. A nota voltou para correcao: revise os itens, envie para "
-            + "revisao se houver contador e gere o XML de novo (POST /api/notas/{id}/gerar-xml).",
+        "Nada foi enviado à SEFAZ. A nota voltou para correção: revise os itens, envie para "
+            + "revisão se houver contador e gere o XML de novo (POST /api/notas/{id}/gerar-xml).",
         versaoDoXml == null ? null : versaoDoXml.toString(),
         String.valueOf(VersaoRegraFiscal.ATUAL))));
   }
 
   private static String mensagem(UUID notaId) {
-    return "O XML da nota " + notaId + " foi gerado com regras fiscais anteriores as atuais e "
-        + "nao pode ser enviado a SEFAZ.";
+    return "O XML da nota " + notaId + " foi gerado com regras fiscais anteriores às atuais e "
+        + "não pode ser enviado à SEFAZ.";
   }
 }

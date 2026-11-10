@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus;
 public class EscritorioAtualEmUsoException extends DomainException {
 
   private static final String MENSAGEM =
-      "O seu escritorio atual tem clientes ou equipe; nao da para trocar pelo do convite.";
+      "O seu escritório atual tem clientes ou equipe; não dá para trocar pelo do convite.";
 
   /** Cria a exceção. */
   public EscritorioAtualEmUsoException() {

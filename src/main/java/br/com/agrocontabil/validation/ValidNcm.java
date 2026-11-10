@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidNcm {
 
-  String message() default "NCM informado nao existe na tabela de referencia do agronegocio";
+  String message() default "NCM informado não existe na tabela de referência do agronegócio";
 
   Class<?>[] groups() default {};
 

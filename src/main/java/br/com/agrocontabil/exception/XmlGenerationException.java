@@ -14,8 +14,8 @@ import org.springframework.http.HttpStatus;
 public class XmlGenerationException extends DomainException implements ComMensagemCliente {
 
   private static final String CLIENT_MESSAGE =
-      "Nao foi possivel gerar o XML da NF-e. "
-          + "Verifique os dados cadastrais do emitente e do destinatario.";
+      "Não foi possível gerar o XML da NF-e. "
+          + "Verifique os dados cadastrais do emitente e do destinatário.";
 
   public XmlGenerationException(String technicalMessage) {
     super(HttpStatus.UNPROCESSABLE_ENTITY, technicalMessage,

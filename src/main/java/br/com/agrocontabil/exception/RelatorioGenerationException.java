@@ -26,7 +26,7 @@ public class RelatorioGenerationException extends DomainException {
         HttpStatus.INTERNAL_SERVER_ERROR,
         mensagemTecnica,
         List.of(ErrorDetail.of(ErrorCode.RELATORIO_GENERATION_ERROR,
-            "Nao foi possivel gerar o PDF do relatorio de conformidade. "
+            "Não foi possível gerar o PDF do relatório de conformidade. "
                 + "Tente novamente em instantes.")));
     if (cause != null) {
       initCause(cause);

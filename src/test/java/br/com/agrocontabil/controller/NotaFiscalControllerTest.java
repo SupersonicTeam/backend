@@ -623,7 +623,7 @@ class NotaFiscalControllerTest {
         lote,
         "NOTA_INVALIDA_EMISSAO",
         "item[1].ncm",
-        "NCM e obrigatorio no layout da NF-e",
+        "NCM é obrigatório no layout da NF-e",
         null,
         null,
         null,

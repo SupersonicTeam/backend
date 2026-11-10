@@ -77,9 +77,9 @@ public class LimiteCorpoAssistenteFilter extends OncePerRequestFilter {
       throws IOException {
     HttpStatus status = HttpStatus.PAYLOAD_TOO_LARGE;
     ApiError corpo = ApiError.of(status.value(), status.getReasonPhrase(),
-        "A requisicao excede o tamanho maximo permitido.", request.getRequestURI(),
+        "A requisição excede o tamanho máximo permitido.", request.getRequestURI(),
         List.of(ErrorDetail.of(ErrorCode.PAYLOAD_TOO_LARGE,
-            "O corpo da requisicao deve ter no maximo " + LIMITE_BYTES + " bytes.")));
+            "O corpo da requisição deve ter no máximo " + LIMITE_BYTES + " bytes.")));
     response.setStatus(status.value());
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     response.setCharacterEncoding("UTF-8");

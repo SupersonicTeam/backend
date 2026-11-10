@@ -38,7 +38,7 @@ public class RelatorioConformidadeController {
   /** Formato aceito para o período: {@code YYYY-MM} com mês entre 01 e 12. */
   private static final String PERIODO_REGEX = "\\d{4}-(0[1-9]|1[0-2])";
   private static final String PERIODO_MSG =
-      "Periodo deve estar no formato YYYY-MM com mes entre 01 e 12 (ex.: 2026-07).";
+      "Período deve estar no formato YYYY-MM com mês entre 01 e 12 (ex.: 2026-07).";
 
   private final RelatorioConformidadeService relatorioService;
 

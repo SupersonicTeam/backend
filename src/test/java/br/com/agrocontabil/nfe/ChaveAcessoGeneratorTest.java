@@ -234,7 +234,7 @@ class ChaveAcessoGeneratorTest {
   void deveLancarExcecaoParaBaseComTamanhoErrado() {
     assertThatThrownBy(() -> generator.calcularDv("123"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("43 digitos");
+        .hasMessageContaining("43 dígitos");
   }
 
   @Test
