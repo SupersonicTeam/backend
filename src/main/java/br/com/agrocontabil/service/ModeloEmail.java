@@ -1,5 +1,7 @@
 package br.com.agrocontabil.service;
 
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import java.util.List;
 import org.springframework.web.util.HtmlUtils;
 
@@ -128,7 +130,7 @@ final class ModeloEmail {
     return texto.append(SEGURANCA).append("\n\n")
         .append("--\n")
         .append("Este é um e-mail automático.")
-        .append(vazio(email.contato()) ? "" : " Dúvidas: " + email.contato().strip())
+        .append(vazio(email.contato()) ? "" : " Dúvidas: " + endereco(email.contato()))
         .append('\n')
         .append("Política de dados: ").append(email.urlSite()).append("/politica-dados\n")
         .append(EMPRESA).append('\n')
@@ -289,9 +291,21 @@ final class ModeloEmail {
     if (vazio(contato)) {
       return "";
     }
-    String endereco = esc(contato.strip());
+    String endereco = esc(endereco(contato));
     return " Dúvidas: <a href=\"mailto:" + endereco + "\" class=\"link\" style=\"color:" + VERDE
         + ";\">" + endereco + "</a>";
+  }
+
+  /**
+   * Só o endereço do contato: o {@code app.email.reply-to} aceita nome de exibição
+   * ({@code GWNext <contato@gwnext.com.br>}), que quebraria o {@code mailto:} do rodapé.
+   */
+  static String endereco(String contato) {
+    try {
+      return new InternetAddress(contato.strip()).getAddress();
+    } catch (AddressException e) {
+      return contato.strip();
+    }
   }
 
   private static boolean vazio(String texto) {

@@ -88,6 +88,16 @@ class MensagensEmailTest {
   }
 
   @Test
+  @DisplayName("contato com nome de exibicao: o rodape usa so o endereco")
+  void contatoComNome() {
+    Mensagem m = MensagensEmail.redefinicaoSenha(LINK_SENHA, Duration.ofMinutes(30),
+        "GWNext <contato@gwnext.com.br>");
+    assertThat(m.html()).contains("href=\"mailto:contato@gwnext.com.br\"")
+        .doesNotContain("&lt;contato");
+    assertThat(m.texto()).contains("Dúvidas: contato@gwnext.com.br\n");
+  }
+
+  @Test
   @DisplayName("sem contato configurado, o rodape so diz que e automatico")
   void semContato() {
     Mensagem m = MensagensEmail.redefinicaoSenha(LINK_SENHA, Duration.ofMinutes(30), "");

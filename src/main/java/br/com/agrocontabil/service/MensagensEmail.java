@@ -79,17 +79,12 @@ public final class MensagensEmail {
    */
   public static Mensagem conviteCarteira(String escritorio, String link, OffsetDateTime expiraEm,
       String contato) {
-    boolean semNome = vazio(escritorio);
-    List<Trecho> quem = semNome
-        ? List.of(Trecho.de("Um escritório de contabilidade convidou você"))
-        : List.of(Trecho.de("O escritório "), Trecho.forte(escritorio), Trecho.de(" convidou você"));
     return montar(new Email(
         "Convite de escritório de contabilidade no AgroConIA",
-        (semNome ? "Um escritório de contabilidade" : escritorio)
-            + " quer atender você pelo AgroConIA. O convite vale até " + data(expiraEm) + ".",
+        quemNoPreCabecalho(escritorio) + " quer atender você pelo AgroConIA. O convite vale até " + data(expiraEm) + ".",
         "Você recebeu um convite de escritório",
         List.of(
-            new Paragrafo(concatenar(quem,
+            new Paragrafo(concatenar(quemConvidou(escritorio),
                 Trecho.de(" para a carteira de clientes dele no AgroConIA."))),
             new Secao("O que muda se você aceitar", List.of(
                 List.of(Trecho.de("O escritório passa a ver as suas notas fiscais, a apuração e "
@@ -125,17 +120,13 @@ public final class MensagensEmail {
    */
   public static Mensagem conviteEquipe(String escritorio, String link, OffsetDateTime expiraEm,
       String contato) {
-    boolean semNome = vazio(escritorio);
-    List<Trecho> quem = semNome
-        ? List.of(Trecho.de("Um escritório de contabilidade convidou você"))
-        : List.of(Trecho.de("O escritório "), Trecho.forte(escritorio), Trecho.de(" convidou você"));
     return montar(new Email(
         "Convite para a equipe de um escritório no AgroConIA",
-        (semNome ? "Um escritório de contabilidade" : escritorio)
-            + " convidou você para a equipe. O convite vale até " + data(expiraEm) + ".",
+        quemNoPreCabecalho(escritorio) + " convidou você para a equipe. O convite vale até " + data(expiraEm) + ".",
         "Você recebeu um convite para uma equipe",
         List.of(
-            new Paragrafo(concatenar(quem, Trecho.de(" para a equipe dele no AgroConIA."))),
+            new Paragrafo(concatenar(quemConvidou(escritorio),
+                Trecho.de(" para a equipe dele no AgroConIA."))),
             new Secao("O que muda se você aceitar", List.of(
                 List.of(Trecho.de("Você passa a atender os clientes do escritório com a sua "
                     + "própria conta: notas, apuração, vencimentos e pedidos de documento.")),
@@ -190,6 +181,18 @@ public final class MensagensEmail {
 
   private static String plural(long quantidade, String singular, String plural) {
     return quantidade + " " + (quantidade == 1 ? singular : plural);
+  }
+
+  /** "O escritório **Nome** convidou você", ou sem o nome quando ele ficou vazio na limpeza. */
+  private static List<Trecho> quemConvidou(String escritorio) {
+    return vazio(escritorio)
+        ? List.of(Trecho.de("Um escritório de contabilidade convidou você"))
+        : List.of(Trecho.de("O escritório "), Trecho.forte(escritorio),
+            Trecho.de(" convidou você"));
+  }
+
+  private static String quemNoPreCabecalho(String escritorio) {
+    return vazio(escritorio) ? "Um escritório de contabilidade" : escritorio;
   }
 
   private static List<Trecho> concatenar(List<Trecho> inicio, Trecho fim) {
