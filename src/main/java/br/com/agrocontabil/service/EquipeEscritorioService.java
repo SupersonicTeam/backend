@@ -300,7 +300,8 @@ public class EquipeEscritorioService {
       TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
         @Override
         public void afterCommit() {
-          enviarEmSegundoPlano(normalizado, nome, propriedades.urlFrontend() + "#token=" + token);
+          enviarEmSegundoPlano(normalizado, nome, propriedades.urlFrontend() + "#token=" + token,
+              salvo.getExpiraEm());
         }
       });
       return salvo;
@@ -468,11 +469,12 @@ public class EquipeEscritorioService {
         .orElseThrow(ConviteEquipeInvalidoException::new);
   }
 
-  private void enviarEmSegundoPlano(String email, String escritorio, String link) {
+  private void enviarEmSegundoPlano(String email, String escritorio, String link,
+      OffsetDateTime expiraEm) {
     try {
       executor.execute(() -> {
         try {
-          envio.enviarConvite(email, escritorio, link, propriedades.validade());
+          envio.enviarConvite(email, escritorio, link, expiraEm);
         } catch (RuntimeException e) {
           log.warn("Falha ao enviar o e-mail do convite de equipe: {}",
               EnvioEmailFalhouException.paraLog(e));

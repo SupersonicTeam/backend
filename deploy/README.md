@@ -79,6 +79,12 @@ seguidos por conta, e depois um a cada 4,8 horas. Nos três casos a resposta con
 respostas vão para `contato@gwnext.com.br` (`Reply-To`). O teto fica em memória: reiniciar o
 backend zera a contagem. Nenhum log traz o endereço do destinatário.
 
+**Formato (#485):** os três e-mails saem em `multipart/alternative` (texto puro e HTML, em UTF-8),
+de um modelo só (`service/ModeloEmail`, textos em `service/MensagensEmail`). O logo é o
+`/apple-touch-icon.png` do frontend, no host do link do e-mail; sem pixel nem link de rastreamento.
+Para ver como ficam, `./mvnw test -Dtest=PreviaEmailsManual -Dprevia.saida=<pasta>` gera o HTML, o
+texto e o `.eml` de cada um com dados de exemplo.
+
 ### Resend: conta, DNS e chave
 
 Valores conferidos em 2026-11-09. Em qualquer divergência, vale o que o painel da Resend mostrar.

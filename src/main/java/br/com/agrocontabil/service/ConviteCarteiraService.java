@@ -188,7 +188,7 @@ public class ConviteCarteiraService {
       TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
         @Override
         public void afterCommit() {
-          enviarEmSegundoPlano(normalizado, nomeEscritorio);
+          enviarEmSegundoPlano(normalizado, nomeEscritorio, salvo.getExpiraEm());
         }
       });
       return salvo;
@@ -295,12 +295,11 @@ public class ConviteCarteiraService {
         .orElse(null);
   }
 
-  private void enviarEmSegundoPlano(String email, String escritorio) {
+  private void enviarEmSegundoPlano(String email, String escritorio, OffsetDateTime expiraEm) {
     try {
       executor.execute(() -> {
         try {
-          envio.enviarConvite(email, escritorio, propriedades.urlFrontend(),
-              propriedades.validade());
+          envio.enviarConvite(email, escritorio, propriedades.urlFrontend(), expiraEm);
         } catch (RuntimeException e) {
           // Sem o e-mail no log (LGPD); o convite ja existe e aparece para o produtor no login.
           log.warn("Falha ao enviar o e-mail do convite da carteira: {}",
