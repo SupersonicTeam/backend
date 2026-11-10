@@ -77,8 +77,9 @@ Java 21 · Spring Boot 3.5.14 · Spring Web · Spring Data JPA · PostgreSQL 16 
 > Spring AI **fixado na linha 1.1.x** (a 2.x exige Boot 4). Detalhes da Ceres em `docs/ceres-assistente.md`.
 >
 > Provedor do chat da Ceres por `AI_CHAT_PROVIDER`: `ollama` (padrão do código), API compatível com a da OpenAI
-> ou `anthropic`. Desde 2026-11-10 a Ceres usa o `claude-haiku-5-5` pela API da Anthropic; o Ollama segue
-> só para o embedding (`bge-m3`). Ver "Modelo da Ceres" abaixo.
+> ou `anthropic`. Pela decisão de 2026-11-10 a Ceres usa o `claude-haiku-5-5` pela API da Anthropic (a troca na
+> VPS é passo manual: confirme o `.env` de lá antes de assumir o modelo); o Ollama segue só para o embedding
+> (`bge-m3`). Ver "Modelo da Ceres" abaixo.
 
 > Versão do Spring Boot **fixada em 3.5.14** (não usar SNAPSHOT). Linha 3.5 com EOL OSS em 30/06/2026 — aceitável para o escopo do TCC. Migração para 4.x exigiria revisar springdoc e Spring Cloud; só fazer com decisão explícita do Murillo.
 
@@ -114,8 +115,9 @@ abaixo): o `qwen3:4b-instruct` seguiria como modelo padrão até a banca. O trab
 perguntas do roteiro da banca) e, na busca, na #436 (rebaixar capítulos de caso especial, medido
 em conjunto novo, por outra sessão que nunca leu o gabarito).
 
-**Modelo da Ceres (decisão do Murillo, 2026-11-10; #483):** a Ceres passou a usar o
-`claude-haiku-5-5` pela API da Anthropic. É só configuração: `AI_CHAT_PROVIDER=anthropic` e
+**Modelo da Ceres (decisão do Murillo, 2026-11-10; #483):** a Ceres passa a usar o
+`claude-haiku-5-5` pela API da Anthropic (o código do #483 está na `main`; ligar na VPS é passo
+manual, ainda a confirmar). É só configuração: `AI_CHAT_PROVIDER=anthropic` e
 `ANTHROPIC_API_KEY` no `.env` da VPS (chave ligada a um workspace; sem ela a aplicação não sobe,
 `config/AnthropicApiKeyConfig`). O **padrão do código continua `ollama`**: sem as variáveis, nada
 muda em nenhum ambiente. O Ollama segue no ar para o embedding (`bge-m3`). Temperatura 1.0 (o
@@ -131,7 +133,7 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
   1,4 s e p95 de 26,8 s para 4,2 s.
 - **Ressalva (sem investigação):** a recusa correta caiu de 100% para 92,9% e a rota nos casos
   adversários de 76,2% para 66,7%. As duas rodadas não são do mesmo commit (o qwen3 não foi
-  rodado de novo na `main` de hoje).
+  rodado de novo na `main` de 2026-11-10).
 - **Pendência de LGPD, do próprio #483:** com o provedor por API, a pergunta sanitizada e dados
   de negócio do produtor (valores, datas, números de nota, categorias de produto e NCM) saem do
   servidor; nome, documento, contato, endereço e o XML das notas não saem (`docs/lgpd.md`,
@@ -141,7 +143,7 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
-`4b-instruct`), 3 repetições, com o gabarito da `main` nas duas (cópia adaptada para a Ceres 1),
+`4b-instruct`; o `claude-haiku-5-5` entra como célula da Ceres 2.0 pela decisão de 2026-11-10, ver "Modelo da Ceres"), 3 repetições, com o gabarito da `main` nas duas (cópia adaptada para a Ceres 1),
 banco próprio por arquitetura e prova do pensamento desligado; o gerador (Python, só stdlib,
 testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia em
 `docs/avaliacao/benchmark/README.md`. **Rodada real pendente** (precisa de Ollama e da base de lei);
