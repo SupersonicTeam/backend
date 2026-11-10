@@ -160,22 +160,40 @@ list se houver regra restritiva.
 
 ## Modelo da Ceres pela API da Anthropic (#483)
 
-O padrão da VPS é o `qwen3:4b-instruct` no Ollama local. Para a Ceres usar o Claude:
+**Estado da VPS: desde 2026-11-10 a Ceres responde pelo `claude-haiku-5-5`** (decisão do Murillo).
+O padrão do `compose.yaml` continua sendo o `qwen3:4b-instruct` no Ollama local; quem liga o
+Claude é o `.env`. Para refazer a troca noutro ambiente:
 
 1. A imagem do backend precisa ser a do PR #483 ou posterior (o CD cuida disso no merge).
-2. Copie o `deploy/compose.yaml` do repositório para `/opt/agrocontabil` (o antigo fixa
-   `AI_CHAT_PROVIDER: ollama` e ignora o `.env`). Guarde o anterior: `cp compose.yaml compose.yaml.anterior`.
-3. No `.env` (600), acrescente `AI_CHAT_PROVIDER=anthropic` e `ANTHROPIC_API_KEY=<chave>`. A chave
-   é criada no Claude Console **ligada a um workspace**, própria da VPS, e não passa por chat,
-   issue nem repositório. O `AI_CHAT_MODEL` não muda; o modelo da Anthropic é o
-   `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`).
-4. `docker compose up -d backend` e confira uma pergunta: a resposta vem com `modoFallback: false`.
+2. O `compose.yaml` de `/opt/agrocontabil` precisa repassar o provedor e a chave ao backend (o
+   antigo fixa `AI_CHAT_PROVIDER: ollama` e ignora o `.env`). **Não copie o `deploy/compose.yaml`
+   inteiro enquanto o `.env` não tiver `SITE_DOMINIO` e `TLS_ASK_CHAVE`** (seção "Endereço próprio
+   do escritório"): ele os exige e o `docker compose` recusa qualquer comando sem eles. Nesse caso,
+   leve ao compose em uso só os dois trechos do provedor: no `ollama-init`, o `AI_CHAT_PROVIDER` e
+   o `entrypoint` que só baixa o modelo de chat quando ele é local; no `backend`,
+   `AI_CHAT_PROVIDER`, `ANTHROPIC_API_KEY`, `AI_ANTHROPIC_MODEL` e `AI_ANTHROPIC_THINKING`. Foi o
+   que se fez na VPS em 2026-11-10 (anterior em `compose.yaml.bak-20261110-1823`).
+3. Valide antes de trocar: grave o arquivo novo ao lado e rode
+   `docker compose -f <arquivo novo> config -q`. Troque com o lock do deploy
+   (`flock .deploy.lock`) e guarde o anterior.
+4. No `.env` (600), acrescente `AI_CHAT_PROVIDER=anthropic` e `ANTHROPIC_API_KEY=<chave>`. A chave
+   é criada no Claude Console **ligada a um workspace** (sem isso a API recusa toda chamada com
+   400), própria da VPS, e não passa por chat, issue nem repositório. O `AI_CHAT_MODEL` não muda;
+   o modelo da Anthropic é o `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`).
+5. `docker compose up -d --no-deps backend` e espere o container ficar `healthy`; se não ficar,
+   volte ao compose anterior.
+6. Faça uma pergunta à Ceres pelo site e confira a auditoria: a coluna `modelo` de
+   `assistente_interacao` traz `anthropic/claude-haiku-5-5` e o `desfecho` não é `MODO_FALLBACK`.
 
 Sem a chave o backend **não sobe** (`AnthropicApiKeyConfig`). O Ollama segue no ar: o embedding
 (`bge-m3`) é sempre local. Com o provedor por API, a pergunta e os dados de negócio do produtor,
 já mascarados, saem do servidor (`docs/lgpd.md`, "Provedor externo do modelo da Ceres").
 
-**Reverter:** tire as duas linhas do `.env` e rode `docker compose up -d backend`.
+Medido na VPS em 2026-11-10, nas primeiras perguntas: cerca de 1 s por pergunta e cerca de 6.000
+tokens de entrada por pergunta de dados (instrução de sistema e definições das funções).
+
+**Reverter:** comente `AI_CHAT_PROVIDER` no `.env` e rode `docker compose up -d --no-deps backend`.
+O backend volta ao `qwen3:4b-instruct` do Ollama, que segue baixado.
 
 ## Endereço próprio do escritório (#464)
 

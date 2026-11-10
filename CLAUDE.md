@@ -105,7 +105,14 @@ sentido, lei ausente e validador), mede o recall por `k` e compara o `qwen3:30b-
 `qwen3:4b-instruct` na VPS. As ferramentas manuais
 `DiagnosticoRecallLeiManual` e `DiagnosticoCitacoesLeiManual` (`src/test/.../assistente/`) **não
 rodam no `./mvnw test`** (`-Dtest=<classe> -Ddiagnostico.saida=<arquivo>` no profile `dev`, com o banco da base de lei e o Ollama locais; a de recall mede só a busca e não usa o modelo de chat). **Decisão do Murillo, 2026-11-07: o
-`qwen3:4b-instruct` segue como modelo padrão até a banca.** O trabalho seguiu nas issues
+`qwen3:4b-instruct` segue como modelo padrão até a banca.** Essa decisão vale para o padrão do
+código e para o que o benchmark da banca mede. **Na VPS ela foi revista em 2026-11-10: a Ceres
+publicada responde pelo `claude-haiku-5-5`, pela API da Anthropic** (#483; `AI_CHAT_PROVIDER=anthropic`
+no `.env` de lá, procedimento e reversão em `deploy/README.md`). Medição local no gabarito
+(87 × 3, `main` em `3fe8a957`): rota 82,9%, função 93,3%, número 92,5%, citação 73,0%, recusa
+92,9%, casos adversários de rota 66,7%, p50 1,4 s e p95 4,2 s; os relatórios não foram
+versionados. O benchmark da banca mede os modelos qwen3 e não descreve o que está publicado. O
+trabalho seguiu nas issues
 #433 (régua de citação do MISTO), #434 (executor do benchmark) e #435 (conferência local das
 perguntas do roteiro da banca) e, na busca, na #436 (rebaixar capítulos de caso especial, medido
 em conjunto novo, por outra sessão que nunca leu o gabarito).
