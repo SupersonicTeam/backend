@@ -25,8 +25,9 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -46,8 +47,43 @@ _UNIDADES = {"b": 1, "kib": 1024, "mib": 1024**2, "gib": 1024**3, "tib": 1024**4
              "kb": 1000, "mb": 1000**2, "gb": 1000**3, "tb": 1000**4}
 
 
+#: Valores que nunca podem aparecer em log, relatorio, JSON nem mensagem de erro: a chave da API da
+#: Anthropic (``ANTHROPIC_API_KEY``), que so existe no ambiente de quem roda.
+_SEGREDOS: set[str] = set()
+OCULTO = "[REDIGIDO]"
+
+
+def registrar_segredo(valor: str | None) -> None:
+    """Passa a ocultar ``valor`` em tudo que o executor escreve. Valor curto demais nao e chave."""
+    if valor and len(valor) >= 8:
+        _SEGREDOS.add(valor)
+
+
+def ocultar(texto: str) -> str:
+    for segredo in _SEGREDOS:
+        texto = texto.replace(segredo, OCULTO)
+    return texto
+
+
+def ocultar_em_arquivos(pasta: Path) -> list[str]:
+    """Tira os segredos registrados dos arquivos da pasta (o log da JVM, os relatorios do comando) e
+    devolve os nomes que o continham. Defesa em profundidade: nada no fluxo grava a chave."""
+    achados = []
+    if not _SEGREDOS:
+        return achados
+    for arquivo in sorted(p for p in pasta.rglob("*") if p.is_file()):
+        dados = arquivo.read_bytes()
+        novos = dados
+        for segredo in _SEGREDOS:
+            novos = novos.replace(segredo.encode(), OCULTO.encode())
+        if novos != dados:
+            arquivo.write_bytes(novos)
+            achados.append(str(arquivo.relative_to(pasta)))
+    return achados
+
+
 def log(mensagem: str) -> None:
-    print(f"[{datetime.now(ZONA):%H:%M:%S}] {mensagem}", flush=True)
+    print(f"[{datetime.now(ZONA):%H:%M:%S}] {ocultar(mensagem)}", flush=True)
 
 
 def nome_celula(arquitetura: str, modelo: str) -> str:
@@ -70,6 +106,36 @@ PRAZO_PERGUNTA_S = 305
 LIMITE_PRODUCAO_MS = 120_000
 #: As provas do pensamento mantem o modelo na memoria ate a celula comecar (e entre uma e outra).
 KEEP_ALIVE_PROVA = "30m"
+#: API da Anthropic: endereco padrao e versao do protocolo da prova do raciocinio. ``BENCH_ANTHROPIC_URL``
+#: troca o endereco (so https, ou http local para um servidor de teste): a chave vai nele.
+URL_ANTHROPIC = "https://api.anthropic.com"
+VERSAO_API_ANTHROPIC = "2023-06-01"
+
+
+def validar_url_anthropic(url: str) -> str:
+    """O endereco para onde a chave vai: ``https``, ou ``http`` so em localhost/127.0.0.1/[::1] (servidor
+    de teste), e nunca com usuario ou senha na URL (``http://localhost@outro-host`` tem outro host).
+
+    :raises RuntimeError: endereco que poderia mandar a chave a um destino nao confiavel
+    """
+    partes = urllib.parse.urlsplit(url)
+    try:
+        partes.port  # noqa: B018 (porta invalida levanta ValueError)
+    except ValueError:
+        raise RuntimeError(f"BENCH_ANTHROPIC_URL com porta invalida: {url!r}") from None
+    local = partes.hostname in ("localhost", "127.0.0.1", "::1")
+    if (partes.scheme != "https" and not (partes.scheme == "http" and local)) \
+            or not partes.hostname or partes.username is not None or partes.password is not None:
+        raise RuntimeError("BENCH_ANTHROPIC_URL precisa ser https (ou http em localhost, de teste) "
+                           "e sem usuario na URL: a chave da API vai nesse endereco")
+    return url.rstrip("/")
+
+
+class _SemRedirecionamento(urllib.request.HTTPRedirectHandler):
+    """A chave nao acompanha um redirecionamento: o urllib copiaria os cabecalhos para o novo host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def segundos_de_duracao(texto: str) -> float:
@@ -114,6 +180,12 @@ def resumo_pensamento(prova: dict) -> str:
     """Frase do relatorio a partir da prova de pensamento."""
     if prova.get("erro"):
         return f"prova falhou: {prova['erro']}"
+    if prova.get("provedor") == "anthropic":
+        if prova.get("raciocinou"):
+            return (f"ATIVO apesar de thinking={prova.get('thinking')} "
+                    f"({prova.get('caracteresPensamento', 0)} caracteres de raciocínio na prova): "
+                    "os tetos por chamada seriam consumidos")
+        return f"desligado (thinking={prova.get('thinking')}; nenhum bloco de raciocínio na prova)"
     if prova.get("raciocinou"):
         return (f"ATIVO apesar de think=false ({prova.get('caracteresPensamento', 0)} caracteres de "
                 "raciocínio na prova): latência e num_predict afetados")
@@ -146,18 +218,38 @@ def avaliar_prova(resposta: dict, num_ctx: int | None = None) -> dict:
     }
 
 
+def avaliar_prova_api(resposta: dict, thinking: str, duracao_ms: int) -> dict:
+    """Le a resposta do ``/v1/messages`` da prova: raciocinio = bloco ``thinking`` ou
+    ``redacted_thinking`` no ``content``. ``thinking`` e o que foi enviado (``disabled``)."""
+    blocos = resposta.get("content") or []
+    raciocinio = [b for b in blocos if isinstance(b, dict)
+                  and b.get("type") in ("thinking", "redacted_thinking")]
+    texto = "".join(b.get("text") or "" for b in blocos
+                    if isinstance(b, dict) and b.get("type") == "text")
+    return {
+        "provedor": "anthropic",
+        "thinking": thinking,
+        "raciocinou": bool(raciocinio),
+        "caracteresPensamento": sum(len(b.get("thinking") or b.get("data") or "") for b in raciocinio),
+        "tokensGerados": (resposta.get("usage") or {}).get("output_tokens"),
+        "duracaoMs": duracao_ms,
+        "modeloRetornado": resposta.get("model"),
+        "paradaPor": resposta.get("stop_reason"),
+        "resposta": texto[:200],
+    }
+
+
 def sha256_arquivo(caminho: Path) -> str:
     return hashlib.sha256(caminho.read_bytes()).hexdigest()
 
 
-def opcoes_chat_ollama(application_yml: str) -> dict[str, str]:
-    """Opcoes do chat do Ollama no ``application.yml`` de um commit (o bloco
-    ``spring.ai.ollama.chat.options``), como texto: ``temperature``, ``num-ctx``,
-    ``num-predict``, ``think-option``. So as que mudam a resposta; o modelo vem do executor."""
-    linhas = application_yml.splitlines()
+def _opcoes_do_yml(application_yml: str, regras: dict[tuple[str, ...], dict[str, str]]) -> dict[str, str]:
+    """Le chaves do ``application.yml`` pelo caminho dos nomes pais. ``regras`` mapeia o caminho (os
+    ultimos nomes antes da chave) para ``{chave no yml: nome na saida}``; o valor sai como texto,
+    sem o comentario do fim da linha."""
     caminho: list[tuple[int, str]] = []
     opcoes: dict[str, str] = {}
-    for linha in linhas:
+    for linha in application_yml.splitlines():
         if not linha.strip() or linha.lstrip().startswith("#"):
             continue
         recuo = len(linha) - len(linha.lstrip())
@@ -165,11 +257,28 @@ def opcoes_chat_ollama(application_yml: str) -> dict[str, str]:
         while caminho and caminho[-1][0] >= recuo:
             caminho.pop()
         nomes = [c[1] for c in caminho]
-        if nomes[-3:] == ["ollama", "chat", "options"] and chave in (
-                "temperature", "num-ctx", "num-predict", "think-option"):
-            opcoes[chave] = valor.split(" #")[0].strip()
+        for pais, aceitas in regras.items():
+            if tuple(nomes[-len(pais):]) == pais and chave in aceitas:
+                opcoes[aceitas[chave]] = valor.split(" #")[0].strip()
         caminho.append((recuo, chave))
     return opcoes
+
+
+def opcoes_chat_ollama(application_yml: str) -> dict[str, str]:
+    """Opcoes do chat do Ollama no ``application.yml`` de um commit (o bloco
+    ``spring.ai.ollama.chat.options``), como texto: ``temperature``, ``num-ctx``,
+    ``num-predict``, ``think-option``. So as que mudam a resposta; o modelo vem do executor."""
+    return _opcoes_do_yml(application_yml, {("ollama", "chat", "options"): {
+        k: k for k in ("temperature", "num-ctx", "num-predict", "think-option")}})
+
+
+def opcoes_chat_anthropic(application_yml: str) -> dict[str, str]:
+    """Opcoes do chat da Anthropic no ``application.yml`` de um commit (bloco
+    ``spring.ai.anthropic.chat.options``): ``temperature``, ``max-tokens`` e ``thinking.type``
+    (como ``thinking``). Vazio se o commit nao tem o provedor (antes do #483)."""
+    return _opcoes_do_yml(application_yml, {
+        ("anthropic", "chat", "options"): {"temperature": "temperature", "max-tokens": "max-tokens"},
+        ("anthropic", "chat", "options", "thinking"): {"type": "thinking"}})
 
 
 def resolver_placeholder(valor: str, env: dict) -> str:
@@ -242,7 +351,8 @@ def avisos_da_amostra(memoria: dict) -> list[str]:
 #: (o da celula) e estrategia de pull (o executor baixa). O resto vale como publicado no commit.
 FORA_DA_CONFIGURACAO = {"AI_API_KEY", "AI_API_BASE_URL", "AI_API_COMPLETIONS_PATH",
                         "AI_OLLAMA_BASE_URL", "AI_OLLAMA_PORT", "AI_CHAT_MODEL",
-                        "AI_CHAT_PROVIDER", "AI_OLLAMA_PULL_STRATEGY"}
+                        "AI_CHAT_PROVIDER", "AI_OLLAMA_PULL_STRATEGY",
+                        "AI_ANTHROPIC_MODEL", "AI_ANTHROPIC_THINKING"}
 
 
 def configuracao_publicada(env_example: str) -> dict[str, str]:
@@ -294,6 +404,20 @@ class Config:
     ensaio: bool = False
     #: Checkout do repositorio cego (SupersonicTeam/ceres-benchmark-cego): o texto das ineditas.
     cego: Path | None = None
+    #: Modelos por API pedidos (``modelosApi`` da matriz): celulas sem Ollama, so nas arquiteturas
+    #: que a matriz lista (a Ceres 1 nao tem o provedor da Anthropic).
+    modelos_api: list = field(default_factory=list)
+
+    def celulas_da(self, arquitetura: dict) -> list[tuple[str, dict | None]]:
+        """(modelo, api) das celulas da arquitetura: os locais (``api`` ``None``), depois os por API."""
+        return ([(m, None) for m in self.modelos]
+                + [(m["modelo"], m) for m in self.modelos_api
+                   if arquitetura["nome"] in m.get("arquiteturas", [])])
+
+    def celulas_api(self) -> list[tuple[dict, dict]]:
+        """(arquitetura, api) das celulas por API que esta execucao vai rodar."""
+        return [(a, m) for a in self.arquiteturas for m in self.modelos_api
+                if a["nome"] in m.get("arquiteturas", [])]
 
     @property
     def tipo(self) -> str:
@@ -376,6 +500,8 @@ class Executor:
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        # A chave nunca sai: se ela estiver no ambiente, tudo que o executor loga ou grava a oculta.
+        registrar_segredo(os.environ.get("ANTHROPIC_API_KEY"))
         self.config_rodada: dict | None = None
         self.perguntas_info: dict = {}
         self.opcoes: dict = {}
@@ -412,6 +538,21 @@ class Executor:
         with urllib.request.urlopen(requisicao, timeout=timeout) as resposta:
             return json.loads(resposta.read().decode() or "{}")
 
+    def anthropic(self, corpo: dict, timeout: float = 120) -> dict:
+        """``POST /v1/messages`` com a chave do ambiente (``ANTHROPIC_API_KEY``). So a prova do
+        raciocinio usa: as perguntas da celula vao pela JVM. Nenhum teste chama este metodo de verdade."""
+        requisicao = urllib.request.Request(
+            self.url_anthropic() + "/v1/messages", data=json.dumps(corpo).encode(), method="POST",
+            headers={"content-type": "application/json", "anthropic-version": VERSAO_API_ANTHROPIC,
+                     "x-api-key": os.environ.get("ANTHROPIC_API_KEY", "")})
+        with urllib.request.build_opener(_SemRedirecionamento).open(requisicao, timeout=timeout) as resposta:
+            return json.loads(resposta.read().decode() or "{}")
+
+    @staticmethod
+    def url_anthropic() -> str:
+        """Endereco da API (``BENCH_ANTHROPIC_URL`` ou o padrao), ja validado."""
+        return validar_url_anthropic(os.environ.get("BENCH_ANTHROPIC_URL", URL_ANTHROPIC))
+
     # ------------------------------------------------------------------ passos
 
     def conferir_pre_requisitos(self) -> dict:
@@ -421,7 +562,9 @@ class Executor:
         if not os.environ.get("DB_PASSWORD"):
             raise RuntimeError("DB_PASSWORD ausente: exporte a senha do Postgres (a do .env)")
         validar_read_timeout(self.cfg.read_timeout_celula)
+        self.conferir_celulas_api()
         versao = self.ollama("/api/version").get("version", "?")
+        self.provar_celulas_api()
         trechos = int(self.psql(self.cfg.db_origem, "select count(*) from legislacao_trecho") or 0)
         esperado = self.cfg.matriz.get("trechosLegislacao")
         if trechos == 0:
@@ -431,6 +574,50 @@ class Executor:
             log(f"AVISO: {trechos} trechos de lei em {self.cfg.db_origem}, esperado {esperado}; "
                 "o numero vai no relatorio")
         return {"ollama": versao, "trechosLegislacao": trechos}
+
+    def conferir_celulas_api(self) -> None:
+        """Celula por API: provedor suportado, raciocinio desligado e a chave no ambiente.
+
+        :raises RuntimeError: antes de qualquer trabalho de horas; sem a chave a celula nao roda
+        """
+        pedidas = self.cfg.celulas_api()
+        if not pedidas:
+            return
+        for _, api in pedidas:
+            if api.get("provedor") != "anthropic":
+                raise RuntimeError(f"provedor {api.get('provedor')!r} de {api.get('modelo')} nao e "
+                                   "suportado pelo executor (so anthropic)")
+            if api.get("raciocinio") != "disabled":
+                raise RuntimeError(f"{api.get('modelo')}: o raciocinio tem de ficar desligado "
+                                   "(raciocinio=disabled na matriz): ele gastaria os tetos por chamada")
+        self.url_anthropic()  # endereco invalido para aqui, nao na ultima celula
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY ausente: a celula " + ", ".join(sorted({a["modelo"] for _, a in pedidas}))
+                + " chama a API da Anthropic com a chave do ambiente de quem roda (nunca de arquivo). "
+                "Exporte a variavel, ou rode so os modelos locais com --modelos")
+
+    def provar_celulas_api(self) -> None:
+        """Uma prova do raciocinio por modelo por API **antes** da rodada: a celula por API e a
+        ultima de cada arquitetura, e chave errada, sem saldo ou sem acesso ao modelo so apareceria
+        depois das celulas locais (horas). Custa uma pergunta curta por modelo.
+
+        :raises RuntimeError: a API nao respondeu, ou o raciocinio veio ligado
+        """
+        vistos = set()
+        for _, api in self.cfg.celulas_api():
+            if api["modelo"] in vistos:
+                continue
+            vistos.add(api["modelo"])
+            prova = self.provar_pensamento_api(api["modelo"], api)
+            if prova.get("erro"):
+                raise RuntimeError(f"a API da Anthropic nao respondeu a prova de {api['modelo']} "
+                                   f"({prova['erro']}): confira a chave, o saldo e o acesso ao modelo "
+                                   "antes de comecar a rodada")
+            if prova.get("raciocinou"):
+                raise RuntimeError(f"{api['modelo']} raciocinou apesar de thinking={api['raciocinio']}: "
+                                   "a celula seria invalida; nao vale comecar a rodada")
+            log(f"{api['modelo']} (API): pensamento {prova['resumo']}")
 
     def resolver_sha(self, ref: str) -> str:
         return self.capturar(["git", "rev-parse", "--verify", ref + "^{commit}"], self.cfg.repo)
@@ -460,36 +647,65 @@ class Executor:
             raise RuntimeError(f"JAR nao gerado em {worktree}/target")
         return jars[0]
 
-    def ambiente_java(self, banco: str, modelo: str, arquitetura: dict | None = None) -> dict:
+    def read_timeout(self, api: dict | None = None) -> str | None:
+        """Read-timeout da celula. A celula por API usa o publicado: a carga a frio e a fila da
+        maquina local, que justificam o ajuste, nao existem nela, e um aumento esconderia chamada
+        que a producao (120 s) cortaria."""
+        return None if api else self.cfg.read_timeout_celula
+
+    def ambiente_java(self, banco: str, modelo: str, arquitetura: dict | None = None,
+                      api: dict | None = None) -> dict:
         """Ambiente da JVM: sem nenhum ``AI_*`` herdado do shell (um ``export AI_MAX_TOKENS``
         esquecido mediria outra configuracao), com a configuracao publicada do commit e o
-        read-timeout da celula (``readTimeoutCelula``)."""
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AI_")}
+        read-timeout da celula (``readTimeoutCelula``).
+
+        Celula por API (``api``): provedor ``anthropic``, modelo e raciocinio da matriz e a chave
+        ``ANTHROPIC_API_KEY`` do ambiente. So essa celula leva a chave: as locais nunca a veem.
+        """
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith("AI_") and k != "ANTHROPIC_API_KEY"}
         if arquitetura is not None:
             env.update(arquitetura.get("configuracaoPublicada") or {})
         # Depois da publicada, a unica excecao a ela (``matriz.json``): ver Config.read_timeout_celula.
         validar_read_timeout(self.cfg.read_timeout_celula)
-        if self.cfg.read_timeout_celula:
-            env["AI_READ_TIMEOUT"] = self.cfg.read_timeout_celula
+        leitura = self.read_timeout(api)
+        if leitura:
+            env["AI_READ_TIMEOUT"] = leitura
         env.update({
             "SPRING_PROFILES_ACTIVE": "dev,avaliacao",
             "DB_NAME": banco,
-            "AI_CHAT_PROVIDER": "ollama",
-            "AI_CHAT_MODEL": modelo,
-            # O pensamento e desligado pela mesma propriedade que a producao usa; a prova confere.
-            "AI_OLLAMA_THINK": "false",
             "AI_OLLAMA_BASE_URL": self.cfg.ollama_url,
             "AI_OLLAMA_PULL_STRATEGY": "never",
         })
+        if api is None:
+            env.update({
+                "AI_CHAT_PROVIDER": "ollama",
+                "AI_CHAT_MODEL": modelo,
+                # O pensamento e desligado pela mesma propriedade que a producao usa; a prova confere.
+                "AI_OLLAMA_THINK": "false",
+            })
+        else:
+            # O embedding segue no Ollama local (bge-m3); so o chat vai pela API.
+            env.update({
+                "AI_CHAT_PROVIDER": api["provedor"],
+                "AI_ANTHROPIC_MODEL": modelo,
+                "AI_ANTHROPIC_THINKING": api["raciocinio"],
+                "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY", ""),
+            })
         return env
 
-    def argumentos_avaliacao(self, gabarito: Path, saida: Path) -> list[str]:
+    def argumentos_avaliacao(self, gabarito: Path, saida: Path, api: dict | None = None) -> list[str]:
+        # O relatorio do comando diz onde o modelo rodou: na celula por API, a inferencia nao e da
+        # maquina e a latencia inclui a rede.
+        hardware = (self.cfg.hardware if api is None else
+                    f"{self.cfg.hardware} (JVM, banco e embedding); chat pela API da Anthropic, "
+                    "latência de rede, não de inferência local")
         return [
             "--spring.docker.compose.enabled=false",
             f"--avaliacao.gabarito={gabarito}",
             f"--avaliacao.saida={saida}",
             f"--avaliacao.repeticoes={self.cfg.repeticoes}",
-            f"--avaliacao.hardware={self.cfg.hardware}",
+            f"--avaliacao.hardware={hardware}",
         ] + ([f"--spring.ai.ollama.embedding.options.model={self.cfg.embedding}"]
              if self.cfg.embedding_cpu else [])
 
@@ -642,6 +858,23 @@ class Executor:
         prova["resumo"] = resumo_pensamento(prova)
         return prova
 
+    def provar_pensamento_api(self, modelo: str, api: dict) -> dict:
+        """Prova do raciocinio desligado na API: uma pergunta curta com ``thinking`` igual ao que a
+        JVM manda (``disabled``) e a conferencia de que nenhum bloco de raciocinio voltou. Sem
+        keep_alive, num_ctx nem memoria: nada disso existe na API."""
+        corpo = {"model": modelo, "max_tokens": 256, "thinking": {"type": api["raciocinio"]},
+                 "messages": [{"role": "user", "content": PERGUNTA_PROVA}]}
+        inicio = time.monotonic()
+        try:
+            prova = avaliar_prova_api(self.anthropic(corpo), api["raciocinio"],
+                                      round((time.monotonic() - inicio) * 1000))
+        except ERROS_HTTP as e:
+            # A mensagem do erro passa por ocultar: nenhum texto da chave sai em JSON nem em log.
+            prova = {"provedor": "anthropic", "erro": ocultar(f"{type(e).__name__}: {e}")}
+        prova["capacidades"] = None
+        prova["resumo"] = resumo_pensamento(prova)
+        return prova
+
     def memoria_processo(self) -> int | None:
         """RSS do Ollama: ``docker stats`` do container ou soma dos processos ``ollama``."""
         try:
@@ -697,7 +930,10 @@ class Executor:
                                        if self.cfg.ollama_container else "ps (processos ollama)")
 
     def rodar_celula(self, rodada_dir: Path, arquitetura: dict, worktree: Path, jar: Path,
-                     banco: str, gabarito: Path, modelo: str) -> dict:
+                     banco: str, gabarito: Path, modelo: str, api: dict | None = None) -> dict:
+        """Uma celula. ``api`` (um item de ``modelosApi``) = chat pela API: sem ``pull``, sem
+        descarga de modelos, sem amostra de memoria e sem ``onde rodou`` (nada disso existe nela); a
+        prova do pensamento vira a conferencia de ``thinking=disabled`` na API."""
         nome = nome_celula(arquitetura["nome"], modelo)
         destino = rodada_dir / nome
         manifesto_arquivo = destino / "celula.json"
@@ -709,7 +945,7 @@ class Executor:
                      anterior.get("embedding", self.cfg.embedding),
                      anterior.get("readTimeoutCelula")) == (
                 arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding,
-                self.cfg.read_timeout_celula)
+                self.read_timeout(api))
             decisao = decidir_retomada(anterior, mesma)
             if decisao == "pular":
                 log(f"{nome}: ja medida nesta rodada, pulando")
@@ -726,31 +962,41 @@ class Executor:
         temporario.mkdir()
 
         self.config_rodada = self.conferir_configuracao(self.config_rodada)
-        self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
-        num_ctx = self.num_ctx(arquitetura)
-        pensamento = self.provar_pensamento(modelo, num_ctx)
+        if api is None:
+            self.descarregar_outros({self.cfg.embedding, self.cfg.embedding + ":latest"})
+        num_ctx = None if api else self.num_ctx(arquitetura)
+
+        def provar() -> dict:
+            return (self.provar_pensamento_api(modelo, api) if api
+                    else self.provar_pensamento(modelo, num_ctx))
+
+        pensamento = provar()
         pensamento["raciocinouInicio"] = bool(pensamento.get("raciocinou"))
         log(f"{nome}: pensamento {pensamento['resumo']}")
 
         lido = {"arquivoLido": gabarito.name, "sha256Lido": sha256_arquivo(gabarito)}
         memoria: dict = {}
         parar = threading.Event()
-        amostrador = threading.Thread(target=self.amostrar_memoria, args=(modelo, parar, memoria),
-                                      daemon=True)
-        amostrador.start()
+        # Na celula por API nao ha modelo na memoria local para amostrar.
+        amostrador = (None if api else
+                      threading.Thread(target=self.amostrar_memoria, args=(modelo, parar, memoria),
+                                       daemon=True))
+        if amostrador:
+            amostrador.start()
+        env = self.ambiente_java(banco, modelo, arquitetura, api)
         inicio = time.monotonic()
         try:
             codigo = self.rodar(["java", "-jar", str(jar)]
-                                + self.argumentos_avaliacao(gabarito, temporario),
-                                worktree, env=self.ambiente_java(banco, modelo, arquitetura),
-                                saida=destino / "comando.log", checar=False)
+                                + self.argumentos_avaliacao(gabarito, temporario, api),
+                                worktree, env=env, saida=destino / "comando.log", checar=False)
         finally:
             parar.set()
-            amostrador.join(timeout=30)
+            if amostrador:
+                amostrador.join(timeout=30)
         duracao = round(time.monotonic() - inicio)
         # A prova vale para a celula inteira: repetida no fim (o Ollama pode ter recarregado o
         # modelo com outro template no meio). Raciocinou em qualquer uma = celula invalida.
-        final = self.provar_pensamento(modelo, num_ctx)
+        final = provar()
         pensamento = {**pensamento, "final": final,
                       "raciocinou": bool(pensamento.get("raciocinou") or final.get("raciocinou"))}
         if final.get("raciocinou") and not pensamento.get("raciocinouInicio"):
@@ -765,6 +1011,14 @@ class Executor:
         for aviso in self._avisos_de_falha_tecnica(destino / f"{nome}.json"):
             avisos.append(aviso)
             log(f"AVISO: {nome}: {aviso}")
+        if api:
+            avisos.append("o chat desta célula foi pela API da Anthropic: a latência é de API pela "
+                          "rede (com a fila do provedor), não de inferência local; não a compare "
+                          "com a das células do qwen3")
+            for achado in ocultar_em_arquivos(destino):
+                aviso = f"a chave da API apareceu em {achado} e foi redigida; confira antes de publicar"
+                avisos.append(aviso)
+                log(f"AVISO: {nome}: {aviso}")
         manifesto = {
             "celula": nome,
             "arquitetura": arquitetura["nome"],
@@ -773,7 +1027,10 @@ class Executor:
             "modelo": modelo,
             "embedding": self.cfg.embedding,
             "repeticoes": self.cfg.repeticoes,
-            "readTimeoutCelula": self.cfg.read_timeout_celula,
+            "readTimeoutCelula": self.read_timeout(api),
+            "readTimeoutEfetivo": env.get("AI_READ_TIMEOUT"),
+            "provedor": api["provedor"] if api else "ollama",
+            "inferenciaEm": "API da Anthropic (rede)" if api else "local (Ollama)",
             "numCtx": num_ctx,
             "tipo": self.cfg.tipo,
             "perguntas": {**self.perguntas_info, **lido},
@@ -856,9 +1113,9 @@ class Executor:
             worktree = self.worktree(arquitetura)
             jar = self.construir(worktree)
             banco = self.preparar_banco(arquitetura, worktree, jar, logs)
-            for modelo in cfg.modelos:
+            for modelo, api in cfg.celulas_da(arquitetura):
                 self.rodar_celula(rodada_dir, arquitetura, worktree, jar, banco,
-                                  arquitetura["gabarito"], modelo)
+                                  arquitetura["gabarito"], modelo, api)
         return rodada_dir
 
     def preparar_gabaritos(self, rodada_dir: Path) -> None:
@@ -1049,6 +1306,9 @@ class Executor:
             yml = self.capturar(["git", "show", f"{arquitetura['sha']}:src/main/resources/application.yml"],
                                 self.cfg.repo)
             por_arq[arquitetura["nome"]] = {
+                # Opcoes do chat da Anthropic no yml do commit (vazio antes do #483): a celula por
+                # API as usa; o relatorio as mostra ao lado das do Ollama.
+                "anthropic": opcoes_chat_anthropic(yml),
                 "publicada": arquitetura["configuracaoPublicada"],
                 # O que a celula muda sobre a publicada (hoje so o read-timeout, ``matriz.json``).
                 "ajustes": ({"AI_READ_TIMEOUT": env["AI_READ_TIMEOUT"]}
@@ -1129,7 +1389,7 @@ class Executor:
         nomes = {c["nome"] for c in celulas}
         modelos = list((anterior or {}).get("modelos", []))
         for arquitetura in cfg.arquiteturas:
-            for modelo in cfg.modelos:
+            for modelo, _ in cfg.celulas_da(arquitetura):
                 nome = nome_celula(arquitetura["nome"], modelo)
                 if nome not in nomes:
                     nomes.add(nome)
@@ -1137,6 +1397,17 @@ class Executor:
                                     "rotuloArquitetura": arquitetura["rotulo"], "modelo": modelo})
                 if modelo not in modelos:
                     modelos.append(modelo)
+        # Modelos por API: a uniao com os da rodada anterior, com as opcoes do chat do commit.
+        por_api = {m["modelo"]: m for m in (anterior or {}).get("modelosApi", [])}
+        for arquitetura, api in cfg.celulas_api():
+            antigo = por_api.get(api["modelo"])
+            opcoes = (self.opcoes.get(arquitetura["nome"]) or {}).get("anthropic") or {}
+            por_api[api["modelo"]] = {
+                "modelo": api["modelo"], "provedor": api["provedor"],
+                "raciocinio": api["raciocinio"], "nota": api.get("nota"),
+                "arquiteturas": sorted({*(antigo or {}).get("arquiteturas", []), arquitetura["nome"]}),
+                "opcoes": opcoes or (antigo or {}).get("opcoes") or {},
+            }
         ordem_arq = [a["nome"] for a in cfg.todas_arquiteturas]
         celulas.sort(key=lambda c: (ordem_arq.index(c["arquitetura"]), modelos.index(c["modelo"])))
         return {
@@ -1163,6 +1434,7 @@ class Executor:
                  "descricao": a.get("descricao", ""), "adaptacao": a.get("adaptacao")}
                 for a in cfg.todas_arquiteturas],
             "modelos": modelos,
+            "modelosApi": list(por_api.values()),
             "celulas": celulas,
         }
 
@@ -1214,7 +1486,12 @@ def montar_config(argumentos, repo: Path) -> Config:
         arquiteturas = [a for a in todas if a["nome"] in pedidas]
         if len(arquiteturas) != len(pedidas):
             raise SystemExit(f"arquitetura desconhecida em {pedidas}")
-    modelos = argumentos.modelos.split(",") if argumentos.modelos else list(matriz["modelos"])
+    # Modelos por API (``modelosApi``): nao passam pelo Ollama. ``--modelos`` aceita os dois tipos;
+    # sem ele valem todos os da matriz.
+    por_api = {m["modelo"]: m for m in matriz.get("modelosApi", [])}
+    pedidos = argumentos.modelos.split(",") if argumentos.modelos else None
+    modelos = ([m for m in pedidos if m not in por_api] if pedidos else list(matriz["modelos"]))
+    modelos_api = ([por_api[m] for m in pedidos if m in por_api] if pedidos else list(por_api.values()))
     return Config(
         repo=repo,
         matriz=matriz,
@@ -1240,6 +1517,7 @@ def montar_config(argumentos, repo: Path) -> Config:
         embedding_cpu=bool(getattr(argumentos, "embedding_cpu", False)),
         ensaio=bool(getattr(argumentos, "ensaio", False)),
         cego=caminho_cego(getattr(argumentos, "cego", None), repo),
+        modelos_api=modelos_api,
     )
 
 

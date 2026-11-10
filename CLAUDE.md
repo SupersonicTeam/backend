@@ -143,11 +143,18 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
-`4b-instruct`; o `claude-haiku-5-5` entra como célula da Ceres 2.0 pela decisão de 2026-11-10, ver "Modelo da Ceres"), 3 repetições, com o gabarito da `main` nas duas (cópia adaptada para a Ceres 1),
+`4b-instruct`) e, desde a decisão de 2026-11-10, **uma célula por API só na Ceres 2.0**
+(`claude-haiku-5-5`, `modelosApi` do `matriz.json`), 3 repetições, com o gabarito da `main` nas duas
+(cópia adaptada para a Ceres 1),
 banco próprio por arquitetura e prova do pensamento desligado; o gerador (Python, só stdlib,
 testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia em
 `docs/avaliacao/benchmark/README.md`. **Rodada real pendente** (precisa de Ollama e da base de lei);
-o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. Desde a #352 as 6
+o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. **A célula por API**
+não usa Ollama para o chat, desliga o raciocínio e o prova na API, e lê `ANTHROPIC_API_KEY` só do
+ambiente (nunca em arquivo; oculta em log, erro e relatório; o executor recusa a rodada sem ela e
+faz uma prova antes de começar). A latência dela é de API pela rede: sai marcada **(API)** e fora da
+viabilidade dos modelos locais. As perguntas, inclusive as inéditas do cego, saem para a API
+("Célula do modelo por API" no README do benchmark). Desde a #352 as
 células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-benchmark.json` (100
 perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
 pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo

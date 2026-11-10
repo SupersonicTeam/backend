@@ -28,6 +28,8 @@ PERFIL = {
     ("ceres-1", "qwen3:0.6b"): (0.50, 3.5, 0.6), ("ceres-1", "qwen3:1.7b"): (0.66, 8.0, 1.5),
     ("ceres-1", "qwen3:4b-instruct"): (0.84, 19.0, 3.3), ("ceres-2", "qwen3:0.6b"): (0.74, 2.4, 0.6),
     ("ceres-2", "qwen3:1.7b"): (0.86, 4.0, 1.5), ("ceres-2", "qwen3:4b-instruct"): (0.92, 7.0, 3.3),
+    # Modelo por API: latencia de rede (a memoria, 0, nao existe na celula).
+    ("ceres-2", "claude-haiku-5-5"): (0.95, 1.4, 0.0),
 }
 ESQUEMA_ANTIGO = "ceres-1"
 
@@ -117,6 +119,7 @@ def gerar(pasta: Path) -> Path:
     ex.fixar_shas(None)
     ex.preparar_gabaritos(pasta)
     ex.gravar_similaridade(pasta)
+    por_api = {m["modelo"] for m in cfg.modelos_api}
     ex.config_rodada = {"versao": "FICTÍCIO", "modelos": {
         m: {"quantizacao": "FICTÍCIO", "parametros": "?", "digest": "0" * 12} for m in cfg.modelos}}
     ex.opcoes = {"temperature": "0.2", "num-ctx": "8192", "num-predict": "1024", "think-option": "false"}
@@ -135,7 +138,8 @@ def gerar(pasta: Path) -> Path:
             _resultado(rng, p, q, arq, adaptacoes[arq].get(p["id"]), latencia)
             for p in canonico["perguntas"]]} for _ in range(cfg.repeticoes)]
         avaliacao = {
-            "ambiente": {"modelo": "ollama/" + modelo, "versaoGabarito": canonico["versao"]},
+            "ambiente": {"modelo": ("anthropic/" if modelo in por_api else "ollama/") + modelo,
+                         "versaoGabarito": canonico["versao"]},
             "repeticoes": cfg.repeticoes,
             "perguntas": {p["id"]: p["pergunta"] for p in canonico["perguntas"]},
             "porRotaAgregado": {"DADOS": {"respostasMedidas": 60, "palavrasPorFrase": 14 + 10 * (1 - q),
@@ -155,6 +159,15 @@ def gerar(pasta: Path) -> Path:
                         "processoPicoBytes": int((gb + 1.4) * 1_073_741_824),
                         "ondeRodou": {modelo: ["GPU"], "bge-m3": ["CPU"]}},
         }
+        if modelo in por_api:
+            # Celula por API: sem Ollama para o chat, logo sem memoria nem "onde rodou".
+            manifesto.update({
+                "provedor": "anthropic", "inferenciaEm": "API da Anthropic (rede)", "memoria": {},
+                "pensamento": {"resumo": "FICTÍCIO: desligado (thinking=disabled; nenhum bloco de "
+                                         "raciocínio na prova)"},
+                "avisos": ["o chat desta célula foi pela API da Anthropic: a latência é de API pela rede "
+                           "(com a fila do provedor), não de inferência local; não a compare com a das "
+                           "células do qwen3"]})
         (destino / "celula.json").write_text(json.dumps(manifesto, ensure_ascii=False, indent=2),
                                              encoding="utf-8")
     (pasta / "rodada.json").write_text(json.dumps(rodada, ensure_ascii=False, indent=2), encoding="utf-8")

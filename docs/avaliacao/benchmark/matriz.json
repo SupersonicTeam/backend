@@ -36,6 +36,17 @@
     "qwen3:1.7b",
     "qwen3:4b-instruct"
   ],
+  "modelosApi": [
+    {
+      "modelo": "claude-haiku-5-5",
+      "provedor": "anthropic",
+      "arquiteturas": [
+        "ceres-2"
+      ],
+      "raciocinio": "disabled",
+      "nota": "Modelo por API (#483, decisao do Murillo de 2026-11-10): so na Ceres 2.0, porque a Ceres 1 (2463c27) nao tem o provedor da Anthropic. Sem Ollama para o chat (o embedding segue local); raciocinio desligado como na producao; chave so do ambiente (ANTHROPIC_API_KEY)."
+    }
+  ],
   "modeloReferencia": "qwen3:4b-instruct",
   "embedding": "bge-m3",
   "repeticoes": 3,
