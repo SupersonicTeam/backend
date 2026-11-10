@@ -158,6 +158,25 @@ deploy de código.
 A Oracle bloqueia a porta 25 de saída; a 587 e a 465 são liberadas, mas confira a egress da security
 list se houver regra restritiva.
 
+## Modelo da Ceres pela API da Anthropic (#483)
+
+O padrão da VPS é o `qwen3:4b-instruct` no Ollama local. Para a Ceres usar o Claude:
+
+1. A imagem do backend precisa ser a do PR #483 ou posterior (o CD cuida disso no merge).
+2. Copie o `deploy/compose.yaml` do repositório para `/opt/agrocontabil` (o antigo fixa
+   `AI_CHAT_PROVIDER: ollama` e ignora o `.env`). Guarde o anterior: `cp compose.yaml compose.yaml.anterior`.
+3. No `.env` (600), acrescente `AI_CHAT_PROVIDER=anthropic` e `ANTHROPIC_API_KEY=<chave>`. A chave
+   é criada no Claude Console **ligada a um workspace**, própria da VPS, e não passa por chat,
+   issue nem repositório. O `AI_CHAT_MODEL` não muda; o modelo da Anthropic é o
+   `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`).
+4. `docker compose up -d backend` e confira uma pergunta: a resposta vem com `modoFallback: false`.
+
+Sem a chave o backend **não sobe** (`AnthropicApiKeyConfig`). O Ollama segue no ar: o embedding
+(`bge-m3`) é sempre local. Com o provedor por API, a pergunta e os dados de negócio do produtor,
+já mascarados, saem do servidor (`docs/lgpd.md`, "Provedor externo do modelo da Ceres").
+
+**Reverter:** tire as duas linhas do `.env` e rode `docker compose up -d backend`.
+
 ## Endereço próprio do escritório (#464)
 
 Cada escritório pode ter o próprio endereço, `{slug}.agroconia.com.br`. O produtor continua em

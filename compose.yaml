@@ -127,6 +127,8 @@ services:
       AI_CHAT_MODEL: ${AI_CHAT_MODEL:-qwen3:4b-instruct}
       AI_API_KEY: ${AI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_ANTHROPIC_MODEL: ${AI_ANTHROPIC_MODEL:-claude-haiku-5-5}
+      AI_ANTHROPIC_THINKING: ${AI_ANTHROPIC_THINKING-disabled}
       AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.openai.com}
       AI_API_COMPLETIONS_PATH: ${AI_API_COMPLETIONS_PATH:-/v1/chat/completions}
       # Contexto, teto geral e tetos por tipo de chamada (#270); padroes = os do yml.
