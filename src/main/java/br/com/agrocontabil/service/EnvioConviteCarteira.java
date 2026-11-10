@@ -1,6 +1,6 @@
 package br.com.agrocontabil.service;
 
-import java.time.Duration;
+import java.time.OffsetDateTime;
 
 /**
  * Porta de e-mail do convite da carteira (issue #177), irmã da {@link EnvioEmail} da redefinição
@@ -18,7 +18,8 @@ public interface EnvioConviteCarteira {
    * @param destinatario e-mail convidado
    * @param escritorio   nome do escritório que convidou
    * @param link         página onde o produtor responde os convites
-   * @param validade     por quanto tempo o convite vale (vai no texto)
+   * @param expiraEm     fim da validade do convite (vai no texto como data e hora de Brasília)
    */
-  void enviarConvite(String destinatario, String escritorio, String link, Duration validade);
+  void enviarConvite(String destinatario, String escritorio, String link,
+      OffsetDateTime expiraEm);
 }

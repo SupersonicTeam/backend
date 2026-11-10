@@ -1,6 +1,6 @@
 package br.com.agrocontabil.service;
 
-import java.time.Duration;
+import java.time.OffsetDateTime;
 
 /**
  * Porta de e-mail do convite de equipe (issue #228), no mesmo modo de envio da recuperação de
@@ -16,7 +16,8 @@ public interface EnvioConviteEquipe {
    * @param destinatario e-mail convidado
    * @param escritorio   nome do escritório
    * @param link         link com o token no fragmento
-   * @param validade     por quanto tempo o convite vale (vai no texto)
+   * @param expiraEm     fim da validade do convite (vai no texto como data e hora de Brasília)
    */
-  void enviarConvite(String destinatario, String escritorio, String link, Duration validade);
+  void enviarConvite(String destinatario, String escritorio, String link,
+      OffsetDateTime expiraEm);
 }
