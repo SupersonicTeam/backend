@@ -183,6 +183,72 @@ já mascarados, saem do servidor (`docs/lgpd.md`, "Provedor externo do modelo da
 
 **Reverter:** tire as duas linhas do `.env` e rode `docker compose up -d backend`.
 
+## Acessos da página inicial (#484)
+
+O QR do cartão de visita leva a `https://www.agroconia.com.br/?utm_source=cartao`. Para contar as
+escaneadas, o Caddy registra os acessos à página inicial do `www`, num arquivo do volume
+`caddy_data`, que sobrevive aos deploys. Conta acessos, não pessoas: a mesma pessoa que escaneia
+duas vezes conta duas.
+
+**O que entra (minimizado, sem dado pessoal):**
+- **Só a raiz `/` do `www`.** Ficam fora:
+  - `/api`, que leva CPF/CNPJ na busca;
+  - o `/healthz` do monitor;
+  - as rotas e os arquivos do SPA, porque a query de uma rota recarregada vem da tela;
+  - os endereços dos escritórios.
+- **Campos de cada linha:** data, método, host, URI (com a query, onde fica o `utm_source`),
+  status, tamanho, duração e o user agent. O user agent separa robô de pessoa.
+- **Fora de cada linha:** IP (`remote_ip` e `client_ip`), porta, todos os cabeçalhos da requisição
+  (cookies inclusive) e os da resposta.
+
+Conferido no `caddy:2.10-alpine`. Com `/?utm_source=cartao`, `/api/notas?busca=<CPF>`, `/healthz`,
+`/notas?busca=<CPF>` e um asset, todos com cookie, só a primeira requisição foi registrada, sem IP
+nem cookie.
+
+**Retenção curta:**
+- **Arquivo ativo:** `/data/acessos/www.log`, até 1 MiB. Com ~300 a 350 bytes por linha, cabem
+  ~3.000 acessos à página inicial: ~60 dias a 50 acessos por dia, ~15 dias a 200 por dia.
+- **Antigos:** passando de 1 MiB, o ativo vira um antigo compactado (`www-<data>.log.gz`). Ficam no
+  máximo 3, apagados 30 dias depois. O que importar para o relatório, conte e anote antes.
+
+### Contar
+
+Total de escaneadas do cartão, no ativo e nos antigos:
+
+```bash
+docker compose exec -T caddy sh -c "{ cat /data/acessos/www.log; zcat /data/acessos/www-*.log.gz 2>/dev/null; } | grep -c 'utm_source=cartao'"
+```
+
+Por dia, em Brasília:
+
+```bash
+docker compose exec -T caddy sh -c "{ cat /data/acessos/www.log; zcat /data/acessos/www-*.log.gz 2>/dev/null; } | grep 'utm_source=cartao' | sed 's/.*\"ts\":\([0-9]*\).*/\1/' | TZ=UTC+3 awk '{ print strftime(\"%Y-%m-%d\", \$1) }' | sort | uniq -c"
+```
+
+Trocar `utm_source=cartao` por outra origem conta outra campanha. Sem filtro, o primeiro comando
+conta os acessos à página inicial.
+
+### Aplicar na VPS
+
+O Caddyfile da VPS pode estar atrás deste (o do endereço dos escritórios, #464, ainda não foi
+ligado lá). Nesse caso, entram só as linhas do `log` no bloco `{$SITE_HOST}`: o bloco `log { ... }`,
+o `@foraDaContagem`, o `log_skip` e o `log_append`.
+
+```bash
+cd /opt/agrocontabil && cp Caddyfile Caddyfile.anterior
+# editar o Caddyfile (bloco {$SITE_HOST})
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+- **Sem queda:** o `reload` troca a configuração sem reiniciar o Caddy. Com o arquivo inválido, ele
+  recusa e segue com a anterior.
+- **Conferir:**
+  1. abrir `https://www.agroconia.com.br/?utm_source=cartao`;
+  2. rodar o primeiro comando de contagem;
+  3. ver com `docker compose exec caddy cat /data/acessos/www.log` que a linha não tem IP.
+- **Reverter:** `cp Caddyfile.anterior Caddyfile` e o mesmo `reload`.
+
 ## Endereço próprio do escritório (#464)
 
 Cada escritório pode ter o próprio endereço, `{slug}.agroconia.com.br`. O produtor continua em
