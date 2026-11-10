@@ -116,16 +116,18 @@ perguntas do roteiro da banca) e, na busca, na #436 (rebaixar capítulos de caso
 em conjunto novo, por outra sessão que nunca leu o gabarito).
 
 **Modelo da Ceres (decisão do Murillo, 2026-11-10; #483):** a Ceres passa a usar o
-`claude-haiku-5-5` pela API da Anthropic (o código do #483 está na `main`; ligar na VPS é passo
-manual, ainda a confirmar). É só configuração: `AI_CHAT_PROVIDER=anthropic` e
+`claude-haiku-5-5` pela API da Anthropic (o código do #483 está na `main`). **Na VPS a troca foi
+feita em 2026-11-10 e conferida pela auditoria:** as interações saem como
+`anthropic/claude-haiku-5-5`, sem fallback (quatro chamadas ao modelo, de 1,0 a 1,4 s; lei e misto não foram medidos lá). É só configuração: `AI_CHAT_PROVIDER=anthropic` e
 `ANTHROPIC_API_KEY` no `.env` da VPS (chave ligada a um workspace; sem ela a aplicação não sobe,
 `config/AnthropicApiKeyConfig`). O **padrão do código continua `ollama`**: sem as variáveis, nada
 muda em nenhum ambiente. O Ollama segue no ar para o embedding (`bge-m3`). Temperatura 1.0 (o
 padrão da API: os modelos atuais recusam outro valor) e raciocínio desligado
 (`AI_ANTHROPIC_THINKING=disabled`), para não gastar os tetos por chamada (#270). O modelo da API é
 o `AI_ANTHROPIC_MODEL`, não o `AI_CHAT_MODEL`. Isso **substitui** a decisão de 2026-11-07 ("o
-`qwen3:4b-instruct` segue como padrão até a banca"); trocar o modelo na VPS é passo manual (copiar
-o `deploy/compose.yaml` e pôr as variáveis no `.env` de lá). O Haiku 5.5 **entra** na matriz do
+`qwen3:4b-instruct` segue como padrão até a banca"); trocar o modelo na VPS é passo manual (variáveis no `.env` de lá e os trechos do provedor no
+compose em uso; **não copie o `deploy/compose.yaml` inteiro** enquanto o `.env` da VPS não tiver
+`SITE_DOMINIO` e `TLS_ASK_CHAVE`, #464 — passo a passo e reversão em `deploy/README.md`). O Haiku 5.5 **entra** na matriz do
 benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o provedor Anthropic.
 - **Medição do #483** (gabarito 2026-11-05.3, 87 perguntas × 3 repetições; qwen3 de 06/11 em
   `fcbb5b3` na VPS, Haiku em `3fe8a957` pela API): função 82,2% → 93,3%, parâmetros 76,3% →

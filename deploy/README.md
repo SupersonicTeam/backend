@@ -1,6 +1,6 @@
 # Deploy — VPS Oracle Cloud (Always Free)
 
-Ambiente de demonstração do AgroContábil: backend, frontend, Postgres + pgvector, Ollama (Ceres),
+Ambiente de demonstração do AgroContábil: backend, frontend, Postgres + pgvector, Ollama (embedding e modelo local da Ceres; desde 2026-11-10 o chat vai pela API da Anthropic),
 ClamAV e Caddy (HTTPS automático) numa VM só.
 
 | Item | Valor |
@@ -166,22 +166,63 @@ list se houver regra restritiva.
 
 ## Modelo da Ceres pela API da Anthropic (#483)
 
-O padrão da VPS é o `qwen3:4b-instruct` no Ollama local. Para a Ceres usar o Claude:
+**Estado da VPS: desde 2026-11-10 a Ceres responde pelo `claude-haiku-5-5`** (decisão do Murillo).
+O padrão do `compose.yaml` continua sendo o `qwen3:4b-instruct` no Ollama local; quem liga o
+Claude é o `.env`. A VPS é ambiente de demonstração, com dados semeados: **para produtores reais,
+a política de dados e a transferência internacional (LGPD, art. 33) precisam estar resolvidas
+antes** (pendência no `CLAUDE.md`, "Modelo da Ceres", e em `docs/lgpd.md`).
+
+Para refazer a troca noutro ambiente:
 
 1. A imagem do backend precisa ser a do PR #483 ou posterior (o CD cuida disso no merge).
-2. Copie o `deploy/compose.yaml` do repositório para `/opt/agrocontabil` (o antigo fixa
-   `AI_CHAT_PROVIDER: ollama` e ignora o `.env`). Guarde o anterior: `cp compose.yaml compose.yaml.anterior`.
+2. **Tome o lock do deploy e faça os passos 3 a 6 dentro dele**, para não cruzar com um deploy do
+   CD (o `deploy.sh` regrava o `.env` e recria o backend): `cd /opt/agrocontabil && flock -w 900
+   .deploy.lock bash` abre um shell com o lock; `exit` ao terminar. Um deploy que chegue nesse
+   intervalo espera até 15 minutos, então combine a janela sem merges.
 3. No `.env` (600), acrescente `AI_CHAT_PROVIDER=anthropic` e `ANTHROPIC_API_KEY=<chave>`. A chave
-   é criada no Claude Console **ligada a um workspace**, própria da VPS, e não passa por chat,
-   issue nem repositório. O `AI_CHAT_MODEL` não muda; o modelo da Anthropic é o
-   `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`).
-4. `docker compose up -d backend` e confira uma pergunta: a resposta vem com `modoFallback: false`.
+   é criada no Claude Console **ligada a um workspace** (sem isso a API recusa toda chamada com
+   400), própria do ambiente, e não passa por chat, issue nem repositório. O `AI_CHAT_MODEL` não
+   muda; o modelo da Anthropic é o `AI_ANTHROPIC_MODEL` (padrão `claude-haiku-5-5`). Com o
+   compose antigo essas linhas ainda não têm efeito.
+4. O `compose.yaml` precisa repassar o provedor e a chave ao backend (o antigo fixa
+   `AI_CHAT_PROVIDER: ollama` e ignora o `.env`). **Não copie o `deploy/compose.yaml` inteiro
+   enquanto o `.env` não tiver `SITE_DOMINIO` e `TLS_ASK_CHAVE`** (seção "Endereço próprio do
+   escritório"): ele os exige e o `docker compose` recusa qualquer comando sem eles. Nesse caso,
+   leve ao compose em uso só os dois trechos do provedor: no `ollama-init`, o `AI_CHAT_PROVIDER` e
+   o `entrypoint` que só baixa o modelo de chat quando ele é local; no `backend`,
+   `AI_CHAT_PROVIDER`, `ANTHROPIC_API_KEY`, `AI_ANTHROPIC_MODEL` e `AI_ANTHROPIC_THINKING`. Na VPS,
+   em 2026-11-10, o compose em uso era o `deploy/compose.yaml` do commit `59a8262` (#471) e passou
+   a ser esse arquivo mais os dois trechos (anterior em `compose.yaml.bak-20261110-1823`). Enquanto
+   o `.env` de lá não tiver as variáveis do #464, toda mudança de deploy entra assim, à mão.
+5. Grave o arquivo novo ao lado e valide com o `.env` real:
+   `docker compose -f <arquivo novo> config -q`. Guarde o anterior (`cp -p compose.yaml
+   compose.yaml.bak-<data>`) e só então troque.
+6. `docker compose up -d --no-deps backend` e espere o container ficar `healthy`. Se não ficar,
+   volte ao compose anterior e rode o mesmo comando.
+7. Fora do lock, confira com uma pergunta **digitada** à Ceres pelo site (não um dos três atalhos
+   da tela, que não chamam o modelo) e leia a auditoria:
+
+   ```bash
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select criado_em, modelo, rota, desfecho, camada_classificacao, tokens_entrada, latencia_ms from assistente_interacao order by criado_em desc limit 5"'
+   ```
+
+   Vale como prova a linha com `modelo` `anthropic/claude-haiku-5-5`, `desfecho` diferente de
+   `MODO_FALLBACK` **e `tokens_entrada` preenchido**. Linha sem tokens não chamou o modelo (atalho
+   fixo, por exemplo) e sai com o mesmo `modelo` mesmo com a chave inválida.
 
 Sem a chave o backend **não sobe** (`AnthropicApiKeyConfig`). O Ollama segue no ar: o embedding
 (`bge-m3`) é sempre local. Com o provedor por API, a pergunta e os dados de negócio do produtor,
 já mascarados, saem do servidor (`docs/lgpd.md`, "Provedor externo do modelo da Ceres").
 
-**Reverter:** tire as duas linhas do `.env` e rode `docker compose up -d backend`.
+Medido na VPS em 2026-11-10: nas quatro primeiras chamadas ao modelo (duas perguntas fora de
+escopo e duas de dados), de 1,0 a 1,4 s cada, e cerca de 6.000 tokens de entrada por pergunta de
+dados. Lei e misto não foram medidos na VPS; na medição local com o gabarito (87 × 3), p50 de
+1,4 s e p95 de 4,2 s no geral, com o misto em 4,2 s de p50.
+
+**Reverter:** comente `AI_CHAT_PROVIDER` no `.env` e rode `docker compose up -d --no-deps backend`.
+O backend volta ao `qwen3:4b-instruct` do Ollama, que segue baixado. Se ele ficou mais de 24 horas
+sem uso (`OLLAMA_KEEP_ALIVE`), a primeira pergunta depois da reversão demora mais: o modelo volta
+a ser carregado na memória.
 
 ## Acessos da página inicial (#484)
 
@@ -465,3 +506,7 @@ A máquina conferida em 2026-11-06 (8 OCPU, 47 GiB) está acima do limite do Alw
 (4 OCPU/24 GB). A conta é Pay As You Go: aumentar OCPU/RAM além desse limite ou criar outra VM A1
 é cobrado. O que isso significa em custo para esta VM o Murillo ainda vai confirmar. O restante
 (até 200 GB de disco, IP público efêmero) segue o Always Free.
+
+Desde 2026-11-10 há também o uso da API da Anthropic pela Ceres, cobrado por token na conta do
+Claude Console (Haiku 5.5, cerca de 6.000 tokens de entrada por pergunta de dados). O gasto
+aparece no painel de uso do Console e não foi estimado aqui.
