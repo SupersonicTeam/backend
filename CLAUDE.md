@@ -118,7 +118,7 @@ em conjunto novo, por outra sessão que nunca leu o gabarito).
 **Modelo da Ceres (decisão do Murillo, 2026-11-10; #483):** a Ceres passa a usar o
 `claude-haiku-5-5` pela API da Anthropic (o código do #483 está na `main`). **Na VPS a troca foi
 feita em 2026-11-10 e conferida pela auditoria:** as interações saem como
-`anthropic/claude-haiku-5-5`, sem fallback, em cerca de 1 s. É só configuração: `AI_CHAT_PROVIDER=anthropic` e
+`anthropic/claude-haiku-5-5`, sem fallback (quatro chamadas ao modelo, de 1,0 a 1,4 s; lei e misto não foram medidos lá). É só configuração: `AI_CHAT_PROVIDER=anthropic` e
 `ANTHROPIC_API_KEY` no `.env` da VPS (chave ligada a um workspace; sem ela a aplicação não sobe,
 `config/AnthropicApiKeyConfig`). O **padrão do código continua `ollama`**: sem as variáveis, nada
 muda em nenhum ambiente. O Ollama segue no ar para o embedding (`bge-m3`). Temperatura 1.0 (o
