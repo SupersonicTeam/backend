@@ -59,6 +59,20 @@
 				request>tls delete
 				resp_headers delete
 				user_id delete
+				# Identificadores de clique que redes e anuncios acrescentam ao link: ligam o
+				# acesso a um perfil. O utm_source fica (e o que se conta).
+				request>uri query {
+					delete fbclid
+					delete gclid
+					delete gbraid
+					delete wbraid
+					delete msclkid
+					delete ttclid
+					delete twclid
+					delete li_fat_id
+					delete igshid
+					delete mc_eid
+				}
 			}
 		}
 	}

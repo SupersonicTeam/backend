@@ -198,8 +198,11 @@ duas vezes conta duas.
   - os endereços dos escritórios.
 - **Campos de cada linha:** data, método, host, URI (com a query, onde fica o `utm_source`),
   status, tamanho, duração e o user agent. O user agent separa robô de pessoa.
-- **Fora de cada linha:** IP (`remote_ip` e `client_ip`), porta, todos os cabeçalhos da requisição
-  (cookies inclusive) e os da resposta.
+- **Fora de cada linha:**
+  - IP (`remote_ip` e `client_ip`) e porta;
+  - todos os cabeçalhos da requisição (cookies inclusive) e os da resposta;
+  - os identificadores de clique que redes e anúncios acrescentam ao link (`fbclid`, `gclid`,
+    `msclkid` e afins), que ligam o acesso a um perfil. Saem da URI; o `utm_source` fica.
 
 Conferido no `caddy:2.10-alpine`. Com `/?utm_source=cartao`, `/api/notas?busca=<CPF>`, `/healthz`,
 `/notas?busca=<CPF>` e um asset, todos com cookie, só a primeira requisição foi registrada, sem IP
