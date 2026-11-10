@@ -1,0 +1,24 @@
+# v2-g4-06 na v2f: auditoria da Ceres e logs das aplicações
+#
+# Auditoria: tabela assistente_interacao dos bancos agroconia_452_base e
+# agroconia_452_correcao, lida em 2026-11-10, antes de a próxima rodada recriar os bancos.
+# Uma linha por execução da pergunta no JSONL (fora o aquecimento), casada pelo horário:
+# gravada perto do fim da chamada, com a latência mais perto dos segundos do JSONL (até 1 s).
+# Sem produtor_id. A coluna funcoes traz as consultas executadas.
+# Colunas: braço | rep | tent | início (JSONL) | gravada | rota | desfecho | chamadas_funcao
+#          | latencia_ms | tokens_entrada | tokens_saida | funcoes
+
+base | 1 | 1 | 09:59:54 | 10:00:13 | MISTO | RESPONDIDA | 1 | 18456 | 4121 | 71 | [{"funcao":"consultarRetencoes","parametros":{"dataInicio":"2026-07-01","dataFim":"2026-07-31"}}]
+base | 2 | 1 | 10:29:24 | 10:29:42 | MISTO | RESPONDIDA | 1 | 18083 | 4121 | 71 | [{"funcao":"consultarRetencoes","parametros":{"dataInicio":"2026-07-01","dataFim":"2026-07-31"}}]
+base | 3 | 1 | 10:38:46 | 10:39:05 | MISTO | RESPONDIDA | 1 | 18189 | 4121 | 71 | [{"funcao":"consultarRetencoes","parametros":{"dataInicio":"2026-07-01","dataFim":"2026-07-31"}}]
+correcao | 1 | 1 | 10:10:49 | 10:11:07 | MISTO | RESPONDIDA | 1 | 18349 | 4121 | 71 | [{"funcao":"consultarRetencoes","parametros":{"dataInicio":"2024-08-01","dataFim":"2026-07-31"}}]
+correcao | 2 | 1 | 10:20:03 | 10:20:21 | MISTO | RESPONDIDA | 1 | 18188 | 4121 | 71 | [{"funcao":"consultarRetencoes","parametros":{"dataInicio":"2024-08-01","dataFim":"2026-07-31"}}]
+correcao | 3 | 1 | 10:48:29 | 10:48:47 | MISTO | RESPONDIDA | 1 | 18321 | 4121 | 71 | [{"funcao":"consultarRetencoes","parametros":{"dataInicio":"2024-08-01","dataFim":"2026-07-31"}}]
+
+# Logs das aplicações (base-app.log e correcao-app.log, fora da pasta porque trazem o id do
+# usuário no login): as linhas entre o início (mais 1 s, porque o horário do JSONL é truncado)
+# e o fim de cada execução, sem as de login.
+
+correcao: 2026-11-10T10:11:07.192-03:00 INFO 12008 --- [agrocontabil-backend] [ agro-ceres-2] b.com.agrocontabil.assistente.RotaDados : Ceres: periodo da pergunta aplicado em 1 chamada(s) de funcao
+correcao: 2026-11-10T10:20:21.430-03:00 INFO 12008 --- [agrocontabil-backend] [ agro-ceres-2] b.com.agrocontabil.assistente.RotaDados : Ceres: periodo da pergunta aplicado em 1 chamada(s) de funcao
+correcao: 2026-11-10T10:48:47.625-03:00 INFO 12008 --- [agrocontabil-backend] [ agro-ceres-2] b.com.agrocontabil.assistente.RotaDados : Ceres: periodo da pergunta aplicado em 1 chamada(s) de funcao
