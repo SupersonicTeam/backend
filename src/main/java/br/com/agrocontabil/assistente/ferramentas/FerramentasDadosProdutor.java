@@ -77,7 +77,7 @@ import org.springframework.stereotype.Component;
 public class FerramentasDadosProdutor {
 
   /** Janela máxima de uma consulta por período (as demais telas usam no máximo 36 meses). */
-  static final int MAXIMO_DIAS_PERIODO = 731;
+  public static final int MAXIMO_DIAS_PERIODO = 731;
 
   /** Janela máxima de {@code proximosVencimentos}. */
   static final int MAXIMO_DIAS_VENCIMENTO = 90;
@@ -159,7 +159,8 @@ public class FerramentasDadosProdutor {
       "Produtor pessoa jurídica ou sem tipo cadastrado: não há retenção do Funrural pelo"
           + " comprador.",
       AVISO_SPLIT_PAYMENT);
-  private static final int DIAS_VENCIMENTO_PADRAO = 30;
+  /** Janela de {@code proximosVencimentos} sem o parâmetro {@code dias}. */
+  public static final int DIAS_VENCIMENTO_PADRAO = 30;
   /**
    * "Sem limite de data" para trás na busca de guias em atraso (decisões da #274): o primeiro dia
    * que o Postgres e o H2 aceitam sem cair em data antes de Cristo. A guia não tem limite inferior

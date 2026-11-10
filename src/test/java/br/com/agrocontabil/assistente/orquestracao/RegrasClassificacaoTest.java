@@ -63,6 +63,21 @@ class RegrasClassificacaoTest {
       "Qual a aliquota do imposto de renda?                       | NADA",
       "Qual a aliquota do ICMS em MT?                             | NADA",
       "Ha isencao de IPVA para trator?                            | NADA",
+      // caso hipotetico de regra, com periodo citado (#452, rodada 2)
+      "Se eu vender milho a cooperativa, o Funrural vence no mes seguinte? | LEGISLACAO",
+      "Suponha que eu emita a nota hoje: o imposto vence quando?  | LEGISLACAO",
+      "Caso o produtor exporte gado, tem credito no mes que vem?  | LEGISLACAO",
+      "Se eu vender arroz, a aliquota e zero?                     | NADA",
+      "Se eu paguei a guia do mes passado, ela ainda aparece?     | NADA",
+      "Veja se pago alguma guia este mes                          | NADA",
+      "Se eu vendesse soja hoje, o imposto venceria quando?       | LEGISLACAO",
+      // guia do produtor a pagar num periodo proximo, com o tributo no nome (#452, rodada 2)
+      "Tem guia de Funrural pra pagar no mes que vem?             | DADOS",
+      "Tenho algum DARF para pagar nesta semana?                  | DADOS",
+      "Ha boleto de ICMS vencendo hoje?                           | DADOS",
+      "O Funrural tem guia para pagar todo mes?                   | LEGISLACAO",
+      "Tem guia de Funrural pra pagar no mes seguinte a venda?    | LEGISLACAO",
+      "Tenho guia de IBS pra pagar este mes, posso parcelar?      | NADA",
       "                                                           | NADA"
   })
   @DisplayName("so decide com sinal de um lado so")
