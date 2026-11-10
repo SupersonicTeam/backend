@@ -84,9 +84,9 @@ Mediana em segundos, só das execuções válidas. A latência fica fora da deci
 - **Base:** nenhuma, com 120 execuções válidas de 120.
 - **Correção:** 14 tentativas técnicas, em duas cascatas iguais.
   - A v2-g4-06 estourou o tempo na r1 (02h09) e na r3 (02h49), com 123,5 s cada.
-  - O log da aplicação da correção, que ficou fora desta pasta, registra às 02:11:11 e às 02:51:54 a
-    falha na chamada ao modelo (`ResourceAccessException`) e o modo fallback na etapa de dados da rota
-    MISTO. No JSONL, as duas execuções aparecem com `modoFallback` e 123,5 s.
+  - O log da aplicação da correção registra às 02:11:11 e às 02:51:54 a falha na chamada ao modelo
+    (`ResourceAccessException`) e o modo fallback na etapa de dados da rota MISTO; as linhas estão em
+    `auditoria-v2-g4-06.txt`. No JSONL, as duas execuções aparecem com `modoFallback` e 123,5 s.
   - Depois de cada estouro, as tentativas seguintes caíram no disjuntor do modelo ainda aberto, com
     fallback em 0,1 a 0,2 s. A v2-g4-06 e a v2-g4-07 gastaram as três tentativas, e a v2-g4-08 perdeu a
     primeira e respondeu na segunda.
@@ -105,9 +105,11 @@ A pergunta é "Do mês de julho pra trás, quanto foi retido de Funrural nas ven
 | v2e | correção | estouro na r1 e na r3 (123,5 s). A r2 levou 92,7 s e errou: pediu 7 chamadas de `consultarRetencoes`, uma por mês. Seis valeram (julho, junho, maio, abril, março e janeiro de 2026) e uma foi recusada por parâmetro inválido; fevereiro ficou de fora |
 | v2d e v2e | base | 18 a 21 s (50 s sob carga), uma chamada só (`2026-07-01` a `2026-07-31`), errada porque julho sozinho não vale |
 
-As 7 chamadas da r2 estão no `correcao.jsonl` (linha 71, as 6 válidas em `fontesDados`) e na
-auditoria da Ceres (`assistente_interacao.chamadas_funcao` = 7). A recusa está no log da aplicação
-da correção, às 02:21:52 ("Funcao consultarRetencoes chamada com parametro invalido").
+As 6 chamadas válidas da r2 estão no `correcao.jsonl` (linha 71, em `fontesDados`). As 7 pedidas
+estão na auditoria da Ceres (`chamadas_funcao` = 7), e a recusa está no log da aplicação da
+correção, às 02:21:52 ("Funcao consultarRetencoes chamada com parametro invalido"). As duas fontes
+estão em `auditoria-v2-g4-06.txt`: o banco de cada braço é recriado na rodada seguinte, e o log
+inteiro fica fora desta pasta.
 
 - Somando a v2d e a v2e, a correção estourou o tempo em 4 de 5 execuções dessa pergunta. Para o
   produtor, isso é cerca de 2 minutos de espera e uma resposta em modo fallback.
@@ -116,24 +118,29 @@ da correção, às 02:21:52 ("Funcao consultarRetencoes chamada com parametro in
 
 ### Por que a correção demora nessa pergunta
 
+Os números desta seção vêm de `auditoria-v2-g4-06.txt` e do JSONL.
+
 - **O Ollama da medição roda em CPU.** O container `agrocontabil-ollama` não tem GPU (o
-  `docker inspect` não traz `DeviceRequests`), e nesta máquina o modelo gera cerca de 4 a 5 tokens
-  por segundo.
-- **O modelo enumera os meses na escolha de funções.** Na correção, ele pede uma chamada por mês, e
-  todas saem de uma única chamada ao modelo, a de escolha de funções. Na r2, essa chamada gerou
-  350 tokens: a auditoria registra 371 tokens de saída, e 21 deles são da classificação. A 4 ou 5
-  tokens por segundo, isso leva de 70 a 90 s, quase todo o tempo da r2.
+  `docker inspect` não traz `DeviceRequests`). Na r2 da correção, a Ceres gerou 371 tokens em
+  92,6 s, cerca de 4 tokens por segundo, contando também a leitura do prompt.
+- **O modelo enumera os meses na escolha de funções.** Na correção, ele pede uma chamada de função
+  por mês, e todas saem de uma única chamada ao modelo, a de escolha de funções. Dos 371 tokens da
+  r2, cerca de 350 são dessa chamada. Os outros 21 são da classificação: a auditoria só guarda o
+  total, mas as execuções cortadas da mesma pergunta, em que só a classificação terminou,
+  registram 21. A uns 4 tokens por segundo, os 350 tokens levam perto de 90 s, quase todo o tempo
+  da r2.
 - **Na base, a geração é curta.** A mesma pergunta gera 71 tokens de saída no total
   (classificação e uma chamada de função) e responde em 18 a 21 s.
 - **Nas execuções cortadas, o tempo acaba antes do teto.** A geração ainda corria quando venceu o
-  read-timeout de 120 s (`spring.http.client.read-timeout`), antes de chegar ao teto de 512 tokens
-  da escolha de funções (`app.assistente.tetos.funcoes`). Na taxa da r2, isso dá perto de 450 a 480
+  read-timeout de 120 s (`spring.http.client.read-timeout`): o log registra
+  `ResourceAccessException` na etapa de dados, e não a resposta cortada pelo teto de 512 tokens da
+  escolha de funções (`app.assistente.tetos.funcoes`). Na taxa da r2, são perto de 450 a 480
   tokens até o corte. O número exato não ficou registrado: a auditoria só guarda os 21 tokens da
   classificação, porque a chamada cortada não volta, e o log do Ollama desta rodada não foi
   guardado.
 - **Depois da falha, o modelo fica 30 s fora.** O disjuntor do modelo abre por 30 s
-  (`app.assistente.fallback.pausa-apos-falha`). Por isso as tentativas seguintes, 4 a 5 s depois,
-  caem no fallback em 0,1 a 0,2 s.
+  (`app.assistente.fallback.pausa-apos-falha`). As tentativas seguintes começam 4,5 a 5,5 s depois
+  do estouro e por isso caem no fallback em 0,1 a 0,2 s.
 
 ## Arquivos
 
@@ -145,8 +152,10 @@ da correção, às 02:21:52 ("Funcao consultarRetencoes chamada com parametro in
 | `executor.log` | saída do `executar.py` |
 | `paridade-*.txt` | paridade do produtor e geral de cada braço |
 | `carga.log` | memória livre, CPU e processos Java ou Maven de fora, a cada 2 minutos |
+| `auditoria-v2-g4-06.txt` | auditoria da Ceres das execuções da `v2-g4-06` nos dois braços e as linhas do log da correção nas janelas dela, sem dado pessoal |
 
-Os logs das aplicações ficaram fora, porque trazem o id do usuário no login.
+Os logs inteiros das aplicações ficaram fora, porque trazem o id do usuário no login. Só as linhas
+das janelas da `v2-g4-06`, sem as de login, estão em `auditoria-v2-g4-06.txt`.
 
 Para reproduzir a pontuação, rode da raiz do repositório, com a saída numa pasta temporária fora dele:
 
