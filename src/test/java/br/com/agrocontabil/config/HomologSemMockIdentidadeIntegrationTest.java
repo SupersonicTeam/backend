@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.sefaz.MockSefazTransport;
+import br.com.agrocontabil.sefaz.SefazTransport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +71,12 @@ class HomologSemMockIdentidadeIntegrationTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private ApplicationContext contexto;
   @Autowired private ProdutorRepository produtorRepository;
+
+  @Test
+  @DisplayName("homolog (a VPS da demonstracao) segue com o mock da SEFAZ sem configuracao (#263)")
+  void mockDaSefazSegueEmHomolog() {
+    assertThat(contexto.getBean(SefazTransport.class)).isInstanceOf(MockSefazTransport.class);
+  }
 
   @Test
   @DisplayName("o MockIdentidadeFilter nao existe no contexto de homolog")

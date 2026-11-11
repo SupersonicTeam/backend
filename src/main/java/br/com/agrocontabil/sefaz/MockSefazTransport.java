@@ -3,6 +3,8 @@ package br.com.agrocontabil.sefaz;
 import br.com.agrocontabil.config.SefazProperties;
 import br.com.agrocontabil.nfe.DigestAssinatura;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,6 +20,15 @@ import org.springframework.stereotype.Component;
  *
  * <p>Ativo quando {@code app.nfe.sefaz.mock.enabled=true} (padrão). Simula os retornos da SEFAZ
  * sem qualquer conexão real.
+ *
+ * <p><strong>Nunca em produção (issue #263).</strong> O mock dá como autorizada toda NF-e que
+ * transmite, sem passar pelo fisco: a nota entraria no débito da apuração e ganharia DANFE sem
+ * existir na SEFAZ. Por isso o bean recusa a subida no profile {@code prod}, mesmo junto de outro,
+ * e fora de {@link #PERFIS_PERMITIDOS} ({@code dev}, {@code homolog} — a VPS da demonstração — e
+ * {@code test}), no desenho do {@code SeedDemonstracao}. Em produção:
+ * {@code NFE_SEFAZ_MOCK_ENABLED=false} e o transporte real configurado
+ * ({@code docs/sefaz-transporte-soap.md}). O padrão {@code true} fica até a etapa 2 da #263,
+ * depois da banca.
  *
  * <p><strong>Atenção:</strong> este componente não realiza comunicação SOAP/HTTPS.
  * O transporte real (SOAP+mTLS com certificado ICP-Brasil) será uma nova classe que implemente
@@ -36,8 +48,8 @@ import org.springframework.stereotype.Component;
  * </ul>
  *
  * <p>Estado só em memória do processo (o transporte real consulta o fisco): ao reiniciar a
- * aplicação, as chaves transmitidas e canceladas antes do restart são esquecidas. Aceitável em dev
- * e teste, que é o único escopo deste componente.
+ * aplicação, as chaves transmitidas e canceladas antes do restart são esquecidas. Aceitável em dev,
+ * teste e na demonstração, que são o único escopo deste componente.
  */
 @Component
 @ConditionalOnProperty(name = "app.nfe.sefaz.mock.enabled", havingValue = "true",
@@ -45,6 +57,9 @@ import org.springframework.stereotype.Component;
 public class MockSefazTransport implements SefazTransport {
 
   private static final Logger log = LoggerFactory.getLogger(MockSefazTransport.class);
+
+  /** Profiles em que o mock pode subir; {@code prod} nunca, nem junto de um destes (#263). */
+  static final List<String> PERFIS_PERMITIDOS = List.of("dev", "homolog", "test");
 
   private static final String CSTAT_AUTORIZADO = "100";
   private static final String XMOTIVO_AUTORIZADO = "Autorizado o uso da NF-e";
@@ -82,7 +97,7 @@ public class MockSefazTransport implements SefazTransport {
    */
   private final Map<String, String> digestPorChave = new ConcurrentHashMap<>();
 
-  /** Consulta de chave desconhecida volta AUTORIZADA (só dev, #223). */
+  /** Consulta de chave desconhecida volta AUTORIZADA (dev e demonstração, #223). */
   private final boolean autorizarTerceiros;
 
   /** Mock fiel: chave que ele não transmitiu é 217 na consulta. */
@@ -91,17 +106,44 @@ public class MockSefazTransport implements SefazTransport {
   }
 
   /**
-   * Mock do contexto Spring.
+   * Mock do contexto Spring: recusa a subida fora dos {@link #PERFIS_PERMITIDOS} e em
+   * {@code prod} (#263).
    *
    * @param propriedades {@code app.nfe.sefaz.mock.autorizar-terceiros}
+   * @param ambiente     profiles ativos
+   * @throws IllegalStateException no profile {@code prod} ou fora dos permitidos
    */
   @Autowired
-  public MockSefazTransport(SefazProperties propriedades) {
-    this(propriedades.getMock().isAutorizarTerceiros());
+  public MockSefazTransport(SefazProperties propriedades, Environment ambiente) {
+    this(exigirPerfilPermitido(ambiente) && propriedades.getMock().isAutorizarTerceiros());
+  }
+
+  /**
+   * Recusa o mock no profile {@code prod}, mesmo junto de outro, e fora dos permitidos (#263).
+   *
+   * @param ambiente profiles ativos
+   * @return sempre {@code true}, para encadear no construtor
+   * @throws IllegalStateException no profile {@code prod} ou fora dos permitidos
+   */
+  static boolean exigirPerfilPermitido(Environment ambiente) {
+    List<String> perfis = Arrays.asList(ambiente.getActiveProfiles());
+    if (perfis.contains("prod") || perfis.stream().noneMatch(PERFIS_PERMITIDOS::contains)) {
+      throw new IllegalStateException("app.nfe.sefaz.mock.enabled=true da toda NF-e como "
+          + "autorizada sem passar pela SEFAZ: permitido so nos profiles " + PERFIS_PERMITIDOS
+          + ", ativos " + perfis + ". Em producao defina NFE_SEFAZ_MOCK_ENABLED=false e configure "
+          + "o transporte real (docs/sefaz-transporte-soap.md).");
+    }
+    return true;
   }
 
   /**
    * Mock com a consulta de chave desconhecida escolhida.
+   *
+   * <p>Ligado no {@code application-dev.yml} e na VPS da demonstração (homolog, pelo
+   * {@code APP_NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS} do compose): a importação ao vivo de NF-e de
+   * terceiro depende dele. Ali a conferência da importação na SEFAZ é <strong>simulada</strong>: a
+   * chave desconhecida é dada como autorizada e, sem o {@code digVal}, o conteúdo do XML não é
+   * conferido. O efeito fica na conta de quem importa (o destinatário tem de ser ele, #223).
    *
    * @param autorizarTerceiros {@code true}: chave desconhecida volta AUTORIZADA, sem digVal
    */
@@ -109,7 +151,7 @@ public class MockSefazTransport implements SefazTransport {
     this.autorizarTerceiros = autorizarTerceiros;
     if (autorizarTerceiros) {
       log.warn("[MOCK SEFAZ] autorizar-terceiros ligado: NF-e de terceiro importada e dada como "
-          + "autorizada sem conferir o conteudo. Uso so em dev.");
+          + "autorizada sem conferir o conteudo. Uso so em dev e na demonstracao.");
     }
   }
 
