@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.assistente.GlossarioProdutor.Termo;
 import br.com.agrocontabil.assistente.ferramentas.TextosDosTemplates;
+import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.TextoReformaTributaria;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
 import br.com.agrocontabil.model.TipoProdutor;
@@ -77,6 +78,20 @@ class TextosFixosSiglasTest {
       }
       List<Termo> soltas = GLOSSARIO.siglasSemExplicacao(
           ComposicaoRespostaDados.explicarSiglas(texto));
+      if (!soltas.isEmpty()) {
+        pendentes.put(nome, soltas.stream().map(Termo::termo).toList());
+      }
+    });
+    assertThat(pendentes).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#493: a conversa leve não usa sigla sem explicação")
+  void conversaLeveSemSiglaSolta() {
+    Map<String, List<String>> pendentes = new java.util.TreeMap<>();
+    ConversaLeve.textos().forEach((nome, texto) -> {
+      // siglasSemExplicacao, e nao semExplicacao: "guia" e termo comum do glossario.
+      List<Termo> soltas = GLOSSARIO.siglasSemExplicacao(texto);
       if (!soltas.isEmpty()) {
         pendentes.put(nome, soltas.stream().map(Termo::termo).toList());
       }

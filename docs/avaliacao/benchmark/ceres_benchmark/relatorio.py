@@ -1126,7 +1126,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md.append("")
 
     md.append("## Quem decidiu a rota (Ceres 2.0, #265)\n")
-    conhecidas = ["ATALHO_FIXO", "FILTRO_INJECAO", "REGRA", "EMBEDDING", "LLM", "PALAVRAS_CHAVE"]
+    conhecidas = ["ATALHO_FIXO", "CONVERSA_LEVE", "FILTRO_INJECAO", "REGRA", "EMBEDDING", "LLM", "PALAVRAS_CHAVE"]
     todas_camadas = {k for c in celulas for k in camadas(c)}
     colunas_camada = [k for k in conhecidas if k in todas_camadas or k != "PALAVRAS_CHAVE"] + sorted(
         todas_camadas - set(conhecidas))

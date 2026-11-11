@@ -10,7 +10,8 @@ import java.util.Map;
  *
  * @param resposta     texto da resposta
  * @param rota         camada acionada: {@code DADOS}, {@code LEGISLACAO}, {@code MISTO} ou
- *                     {@code FORA_DE_ESCOPO}
+ *                     {@code FORA_DE_ESCOPO} (fora de escopo e, desde a #493, a conversa leve:
+ *                     saudação, agradecimento, despedida, respondida sem modelo)
  * @param citacoes     trechos de lei que fundamentam a resposta (rota de legislação, #156)
  * @param fontesDados  funções consultadas — "calculado a partir das suas notas"
  * @param modoFallback {@code true} quando o modelo estava indisponível e a resposta foi montada sem

@@ -48,6 +48,11 @@ public enum DesfechoInteracao {
   REGIME_ESPECIFICO_SEM_SETOR,
   /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
   FORA_DE_ESCOPO,
+  /**
+   * Conversa leve (#493): saudação, agradecimento, despedida... respondida pelo backend, sem
+   * modelo e sem crédito. Não é recusa: a avaliação conta a recusa pela rota.
+   */
+  CONVERSA_LEVE,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */
   MODELO_INDISPONIVEL,
   /**

@@ -307,6 +307,10 @@ br.com.agrocontabil
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
 │                  #   personalizado por DadosProdutorPorta.perfilDoAtalho, 33 citações fixas;
 │                  #   revisar o texto com a equipe);
+│                  # orquestracao/ConversaLeve (#493: saudação, agradecimento, despedida, "ok", "quem é
+│                  #   você?" e "tem certeza?" pela lista fechada, depois dos atalhos e antes do
+│                  #   FiltroInjecao; texto montado pelo backend, sem modelo e fora da cota; rota
+│                  #   FORA_DE_ESCOPO, camada e desfecho CONVERSA_LEVE; fora de DESFECHOS_DE_RECUSA);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;
