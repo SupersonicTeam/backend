@@ -36,6 +36,10 @@ jobs:
       - name: Medicao da #452 (testes do executor e da pontuacao)
         run: python3 -m unittest discover -s docs/avaliacao/ceres-452 -p "test_*.py"
 
+      # Linha de base da rota e da recusa com o Haiku (#497): executor e leitura, so biblioteca padrao.
+      - name: Medicao da #497 (testes do executor e da leitura)
+        run: python3 -m unittest discover -s docs/avaliacao/ceres-497 -p "test_*.py"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()

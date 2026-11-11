@@ -23,4 +23,6 @@ memória, não acerto.
 
 `perguntas-ceres-452-v2.json` é o conjunto v2 da mesma medição, escrito sem ver o v1 nem a correção, com a regra em `../ceres-452/regra-de-decisao-v2.md`. Vale o mesmo: uso único, nunca ajuste.
 
+`perguntas-ceres-497.json` é de medição de uso único da rota e da recusa com o Claude Haiku (#497), com a regra de leitura e os scripts em `../ceres-497/`. Não serve para ajustar a Ceres (classificador, treino da classificação, regras, filtro, recusa): usado num ajuste, deixa de medir.
+
 Este README não tem pergunta do gabarito; mantenha assim.
