@@ -1555,10 +1555,18 @@
           },
           "edicoes": [
             {
-              "regex": "(a )?empresa adquirente",
+              "regex": "\bA empresa adquirente",
+              "para": "O próprio produtor",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            },
+            {
+              "regex": "\b(a )?empresa adquirente",
               "para": "o próprio produtor",
               "em": "lei.r",
-              "todas": true
+              "todas": true,
+              "opcional": true
             }
           ]
         },

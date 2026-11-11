@@ -57,9 +57,9 @@ depois de ver um resultado invalida a medição. Os limiares são os propostos n
 - **Falha técnica** (HTTP diferente de 200, `modoFallback`, 503 e 429 de ocupado ou de taxa):
   espera o `Retry-After` quando houver e repete a mesma chamada, com o mesmo corpo, até 3
   tentativas. Na terceira, a execução fica `sem_medicao`.
-- **Preparo inválido:** um par real cujo `exigir` não casa, ou cuja edição obrigatória não acha o
-  trecho, pede a pergunta de base de novo, até 3 vezes. Sem sucesso, a execução fica
-  `preparo_invalido`.
+- **Preparo inválido:** um par real cujo `exigir` não casa, cuja edição obrigatória não acha o
+  trecho ou cujas edições, somadas, não mudam o texto pede a pergunta de base de novo, até 3 vezes.
+  Sem sucesso, a execução fica `preparo_invalido`.
 - **Anterior fora:** os turnos seguintes da execução saem das métricas e ficam contados como
   `anterior_fora` quando:
   - uma pergunta ao vivo com `rotas`, `alternativas` ou `sem_turno` não casa o próprio `esperado`;
@@ -126,7 +126,10 @@ Cada métrica olha só a sua parte do `esperado`. Uma execução conta uma vez p
      orientador, sem contador, exigida pela #499);
    - mais de 10% das execuções do teste no braço ligado ficam fora (`sem_medicao`,
      `preparo_invalido` ou `anterior_fora`);
-   - alguma métrica com limiar ficou sem nenhum turno válido.
+   - alguma métrica com limiar ficou sem nenhum turno válido. Na latência da reconferência, cada
+     abertura conta à parte: sem nenhuma resposta `LEI_CONFIRMA` (ou `LEI_CORRIJO`), o limiar dela
+     não se aplica e não torna a rodada inconclusiva. A falta de correção já pesa no
+     `M_lei_correcao`.
 
    Rodada inconclusiva se refaz inteira, nos dois braços, no mesmo dia, em pasta nova.
 2. **ENTRA** se todas as métricas da tabela cumprem o limiar.

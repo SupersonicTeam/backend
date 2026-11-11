@@ -62,8 +62,10 @@ O dev tem uma conversa de cada uma destas categorias:
   2. confere o `exigir` (`rotas`, `alternativas`, `fatos`, `lei_d`), decodificando a carga da
      assinatura para o `lei_d`;
   3. aplica as `edicoes` em ordem (`regex` → `para`, só dentro de `lei.r` ou na `resposta`
-     inteira, a primeira ocorrência ou `todas`; sem `opcional`, a edição que não acha nada torna o
-     preparo inválido);
+     inteira, a primeira ocorrência ou `todas`). Elas correm no texto **original**, como a Ceres o
+     entregou, com acento e maiúscula, e a regex distingue maiúscula de minúscula; o texto
+     normalizado é só das conferências. Sem `opcional`, a edição que não acha nada torna o preparo
+     inválido; e, se nenhuma edição do par mudar o texto, o preparo também é inválido;
   4. ajusta as posições da carga ao novo tamanho do texto (`lei.r` e os `t` depois da edição;
      edição dentro de um `t` torna o preparo inválido);
   5. assina de novo, com `pergunta` como pergunta do par (padrão: a real).
