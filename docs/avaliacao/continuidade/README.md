@@ -25,6 +25,18 @@ os testes do PR da continuidade. A sessão só seguiu o contrato da issue. Fica 
 
 ## Versões
 
+### Regra v3 (2026-11-11), com o conjunto na v2
+
+A regra mudou antes de qualquer rodada oficial, por mudança de contrato e não por resultado. A
+#511 (decisão do Murillo de 2026-11-11) passou a cobrar toda pergunta, inclusive a reexecução e
+os textos fixos da continuidade. Por isso:
+
+- o `credito_zero` passa a conferir que não houve chamada ao modelo, pela auditoria;
+- o crédito desses turnos fica só relatado, comparado com a leitura da #511 (⌈caracteres ÷ 4⌉);
+- o conjunto e o sha256 dele não mudaram, e a revisão de lei da v2 continua valendo.
+
+Os detalhes estão na `regra-de-decisao.md`.
+
 ### v2 (2026-11-11)
 
 A v2 saiu de um **ensaio rotulado como não oficial**, feito em 2026-11-11 contra o head `1ed747c`
@@ -181,7 +193,7 @@ As conferências e as métricas estão em `regra-de-decisao.md`.
 | `correcao_contem` | regex que casam depois da abertura `LEI_CORRIJO` |
 | `citacao_contem` | dispositivo em alguma citação |
 | `interpretada` | `ausente_ou_igual` (controle) |
-| `credito_zero` | o turno não gasta crédito |
+| `credito_zero` | o turno não chama o modelo (pela auditoria, regra v3); o crédito dele só é relatado |
 | `sem_turno` | a resposta não traz `turno` (recusa, conversa leve) |
 | `fatos` | `certo_todos` e `errado_algum`, regex que classificam uma resposta de lei como certa, errada ou indefinida |
 | `se_anterior` | `certa` / `errada`: o critério de cada caso, pela classificação do turno mais recente com `fatos` |
