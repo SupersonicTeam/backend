@@ -17,10 +17,16 @@ import java.util.regex.Pattern;
  */
 public final class SinalRecusaFirme {
 
-  /** Dado de outra pessoa ou de outra conta. */
+  /**
+   * Dado de outra pessoa ou de outra conta. Ficam de fora as formas que, na rota de dados, falam
+   * do próprio produtor: "do produtor rural" (a regra geral), "terceiro trimestre" (um período) e
+   * "outras contas a pagar" (boletos dele).
+   */
   private static final Pattern OUTRA_PESSOA = Pattern.compile("\\b(outr[oa]s? (produtor\\w*"
-      + "|pessoas?|usuari[oa]s?|clientes?|contas?|fazendas?|empresas?)|vizinh[oa]s?|terceir[oa]s?"
-      + "|fulan[oa]|de alguem|d[oa] produtor|meu (pai|irmao|tio|primo|socio)"
+      + "|pessoas?|usuari[oa]s?|clientes?|fazendas?|empresas?)"
+      + "|outr[oa]s? contas?(?! (?:a|para|de) pagar)|vizinh[oa]s?"
+      + "|terceir[oa]s?(?! (?:trimestre|semestre|mes|parcela|quinzena|semana|dia|ano|lugar))"
+      + "|fulan[oa]|de alguem|d[oa] produtor(?! rural)|meu (pai|irmao|tio|primo|socio)"
       + "|minha (mae|irma|tia|prima|socia)|deles?|delas?)\\b");
 
   /** Imperativo dirigido ao sistema, junto do que ele guarda. */

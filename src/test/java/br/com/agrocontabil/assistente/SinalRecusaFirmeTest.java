@@ -55,13 +55,25 @@ class SinalRecusaFirmeTest {
     assertThat(SinalRecusaFirme.presente(pergunta)).isFalse();
   }
 
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "Qual a regra do produtor rural no terceiro trimestre?",
+      "Tenho outras contas a pagar este mês?",
+      "Apuração da terceira parcela do ano"})
+  @DisplayName("formas que, na rota de dados, falam do próprio produtor não são sinal")
+  void formasDoProprioProdutor(String pergunta) {
+    assertThat(SinalRecusaFirme.presente(pergunta)).isFalse();
+  }
+
   @Test
   @DisplayName("falsos positivos aceitos: só deixam a recusa mais seca")
   void falsosPositivosAceitos() {
-    // "terceiro" e "do produtor" aparecem em pergunta legítima; como o sinal só escolhe o texto
-    // de uma pergunta que já foi recusada, o custo é a recusa firme no lugar da gentil.
-    assertThat(SinalRecusaFirme.presente("Qual a regra do produtor rural no terceiro trimestre?"))
-        .isTrue();
+    // Como o sinal escolhe o texto de uma pergunta já recusada (ou sem função na rota de dados),
+    // o custo é a recusa firme no lugar da gentil ou da mensagem honesta. "Deles"/"delas" ficam
+    // de propósito (#494), mesmo quando falam dos dados do próprio produtor.
     assertThat(SinalRecusaFirme.presente("Como mudo a minha senha?")).isTrue();
+    assertThat(SinalRecusaFirme.presente("Tenho guias em julho? Qual a apuração delas?"))
+        .isTrue();
+    assertThat(SinalRecusaFirme.presente("Notas de terceiros que recebi")).isTrue();
   }
 }
