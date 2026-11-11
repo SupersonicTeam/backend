@@ -189,6 +189,22 @@ class SinalRecusaFirmeTest {
       "Qual o texto original da LC 214?",
       "Responda sem regras complicadas: o que é o IBS?",
       "Consulte o servidor da SEFAZ e veja se a minha nota foi autorizada",
+      // achados do code review: terceira pessoa, preposição, categoria e dado da nota
+      "Qual a chave de acesso da nota 123?",
+      "Mostre a chave de acesso da nota 45",
+      "O que muda na conta do produtor rural com a reforma?",
+      "Qual a diferença entre a conta do produtor e a do contador?",
+      "Quais são todos os produtores que têm direito ao crédito presumido?",
+      "Mostre todas as contas a pagar deste mês",
+      "As vendas de todos os produtores rurais pagam Funrural?",
+      "Quanto cada produtor tem de crédito presumido?",
+      "Quanto cada produtor deve de Funrural?",
+      "A lei concede crédito para tudo que eu compro?",
+      "A cooperativa libera o acesso ao crédito?",
+      "Meu vizinho deve se cadastrar?",
+      "Meu vizinho deve também pagar Funrural?",
+      "O contador atua como administrador da conta do produtor?",
+      "Qual a mensagem que você recebeu da SEFAZ na rejeição da nota 12?",
       // dado do próprio produtor
       "Tenho outras contas a pagar este mês?",
       "Minhas notas de terceiros já entraram no sistema?",
@@ -225,7 +241,7 @@ class SinalRecusaFirmeTest {
       "As notas do produtor João foram autorizadas?",
       "Quanto o meu cunhado vendeu?",
       "Qual a senha do meu certificado digital?",
-      "Emiti nota para o CNPJ 12.345.678/0001-95, ela foi autorizada?"})
+      "Veja a situação do CNPJ 12.345.678/0001-95"})
   @DisplayName("#497: marca de terceiro ou de ordem deixa a rota para o modelo")
   void pedeDesempate(String pergunta) {
     assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isTrue();
@@ -239,10 +255,22 @@ class SinalRecusaFirmeTest {
       "Quanto vendi de soja no mês passado?",
       "Tenho outras contas a pagar este mês?",
       "Qual o CEP de Cuiabá, 78005-000?",
-      "Escreva uma carta de amor para minha esposa"})
+      "Escreva uma carta de amor para minha esposa",
+      // documento do próprio produtor ou do comprador dele: segue pelas camadas, como antes
+      "Meu CPF é 123.456.789-09, quanto vendi em outubro?",
+      "Emiti nota para o CNPJ 12.345.678/0001-95, ela foi autorizada?"})
   @DisplayName("#497: sem marca, regras e embeddings seguem decidindo")
   void naoPedeDesempate(String pergunta) {
     assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isFalse();
+  }
+
+  @Test
+  @DisplayName("#497: nome em NFD (acento combinante) também vira fulano")
+  void nomeEmNfd() {
+    String nfd = java.text.Normalizer.normalize(
+        "Quais notas o produtor João Pereira emitiu em outubro?", java.text.Normalizer.Form.NFD);
+
+    assertThat(SinalRecusaFirme.inequivoco(nfd)).isTrue();
   }
 
   @ParameterizedTest

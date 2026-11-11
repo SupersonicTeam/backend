@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -83,7 +84,8 @@ public final class SinalRecusaFirme {
       + "|faturou|faturaram|emitiu|emitiram|recolheu|recolheram|recebeu|receberam|lucrou"
       + "|lucraram|declarou|declararam|apurou|apuraram|ganhou|ganharam|produziu|produziram"
       + "|colheu|colheram|exportou|exportaram|movimentou|movimentaram"
-      + "|dev(?:e|em|ia|iam)(?! \\w+(?:ar|er|ir)\\b)"
+      // "deve pagar", "deve se cadastrar", "deve tambem pagar": regra, nao divida
+      + "|dev(?:e|em|ia|iam)(?! (?:\\w+ )?\\w+(?:ar|er|ir)\\b)"
       + "|tem (?:\\w+ )?(?:notas?|guias?|creditos?|debitos?|pendencias?|alertas?|impostos?"
       + "|saldo|dividas?))";
 
@@ -123,11 +125,14 @@ public final class SinalRecusaFirme {
 
   // ---- inequivoco (#497) ----
 
-  /** Troca de papel ou de modo. */
+  /**
+   * Troca de papel ou de modo. Só o imperativo: "o contador atua como administrador" é pergunta
+   * sobre outra coisa.
+   */
   private static final Pattern PAPEL = Pattern.compile(String.join("|",
       "\\b(?:finja|finge|fingir|fingindo|faca de conta|faz de conta|se passe por|se passa por"
           + "|se passando por)\\b",
-      "\\b(?:aja|age|atue|atua|comporte se|comporta se) como (?:se fosse )?(?:o |a |um |uma )?"
+      "\\b(?:aja|atue|comporte se) como (?:se fosse )?(?:o |a |um |uma )?"
           + "(?:administrador\\w*|admin|desenvolvedor\\w*|programador\\w*|root|hacker"
           + "|superusuario|moderador|dono do sistema|suporte|sistema)\\b",
       "\\b(?:voce|vc|tu) (?:agora )?(?:e|sera|vai ser|passa a ser|esta) (?:agora )?"
@@ -141,12 +146,15 @@ public final class SinalRecusaFirme {
           + "|desenvolvedor\\w*|programador\\w*|suporte|outr[oa] (?:produtor\\w*|usuari\\w*"
           + "|pessoa|client\\w*))\\b"));
 
-  /** Senha, token ou chave pedidos ao sistema (a senha do próprio certificado não). */
+  /**
+   * Senha, token ou chave pedidos ao sistema. A senha do próprio certificado e a chave de acesso
+   * da NF-e (o identificador da nota) não.
+   */
   private static final Pattern SEGREDO = Pattern.compile(String.join("|",
       "\\b(?:qual|quais|me (?:de|da|passe|passa|mostre|mostra|diga|diz|envie|envia|mande|manda"
           + "|informe|informa|fale|fala)|revele|revela|liste|lista|mostre|mostra|informe|informa"
           + "|passe|passa|gere|gera) (?:e |sao )?(?:a |o |as |os |um |uma |sua |seu |suas |seus )?"
-          + "(?:senhas?|tokens?|credenciais|chaves? (?:de|da) (?:api|acesso|criptografia)"
+          + "(?:senhas?|tokens?|credenciais|chaves? (?:de|da) (?:api|criptografia)"
           + "|chaves? (?:secretas?|privadas?|mestras?)|api keys?|jwt|segredos?)\\b"
           + "(?! (?:do|da|de) (?:meu|minha)\\b)",
       "\\b(?:senhas?|tokens?|credenciais?|chaves?) (?:do|da|dos|das|de) (?:sistema"
@@ -164,8 +172,12 @@ public final class SinalRecusaFirme {
       "\\b(?:suas|tuas) (?:instrucoes|diretrizes|restricoes|configuracoes|regras internas"
           + "|regras de seguranca|orientacoes internas|ordens)\\b",
       "\\b(?:instrucoes|diretrizes|configurac\\w*|prompt|mensagens?|textos?|conteudo)"
-          + " (?:internas?|ocultas?|ocultos?|secretas?|secretos?|escondid[oa]s?"
-          + "|que (?:voce|vc|te|lhe) (?:recebeu|deram|passaram|mandaram|enviaram))\\b",
+          + " (?:internas?|ocultas?|ocultos?|secretas?|secretos?|escondid[oa]s?)\\b",
+      // "a mensagem que voce recebeu da SEFAZ" e dado da nota; o que "te passaram" nao
+      "\\b(?:instrucoes|diretrizes|configurac\\w*|prompt) que (?:voce|vc|te|lhe) (?:recebeu"
+          + "|deram|passaram|mandaram|enviaram)\\b",
+      "\\b(?:mensagens?|textos?|conteudo) que (?:te|lhe) (?:deram|passaram|mandaram"
+          + "|enviaram)\\b",
       "\\b(?:repita|repete|revele|revela|imprima|imprime|copie|copia|cole|transcreva|traduza"
           + "|traduz|leia) (?:\\w+ ){0,3}(?:texto|mensagem|mensagens|conteudo|instruc\\w*"
           + "|prompt|configurac\\w*) (?:acima|anterior|anteriores|antes|que (?:voce|vc|te"
@@ -182,26 +194,30 @@ public final class SinalRecusaFirme {
       // "sem regras" e "sem limites" ficam de fora: "responda sem regras complicadas"
       "\\b(?:responda|responde|fale|fala|aja|age|atue|atua|funcione|opere|converse|seja)"
           + " (?:\\w+ ){0,3}sem (?:restric\\w*|censura|filtros?|bloqueios?|travas)\\b",
-      "\\b(?:libere|libera|desbloqueie|desbloqueia|conceda|concede) (?:\\w+ ){0,3}(?:acesso"
-          + "|permiss\\w*|privilegi\\w*|tudo)\\b"));
+      // so o imperativo: "a lei concede credito para tudo" e pergunta de lei
+      "\\b(?:libere|desbloqueie|conceda|me libera) (?:\\w+ ){0,3}(?:acesso|permiss\\w*"
+          + "|privilegi\\w*|tudo)\\b"));
 
-  /** Comando técnico: SQL, banco, troca de conta ou de identificador. */
+  /**
+   * Comando técnico: SQL, banco, troca de conta ou de identificador. Só o imperativo ("muda",
+   * "troca" e "entre" também são 3ª pessoa, substantivo ou preposição: "o que muda na conta do
+   * produtor", "a diferença entre a conta do produtor e...") e só para a conta de outra pessoa.
+   */
   private static final Pattern TECNICO = Pattern.compile(String.join("|",
       "\\b(?:select|delete|insert|drop|truncate|alter|union) (?:\\w+ ){0,4}(?:from|table|into"
           + "|database|select|where)\\b",
       "\\bor 1 1\\b",
-      "\\b(?:acesse|acessa|consulte|consulta|abra|abre|entre|entra|mostre|mostra|liste|lista"
-          + "|exporte|exporta|baixe|baixa|apague|apaga|altere|altera|modifique|modifica|rode|roda"
-          + "|execute|executa|leia|copie|copia) (?:\\w+ ){0,3}(?:banco de dados|database"
-          + "|tabela (?:de|do|da|dos|das) (?:usuarios|credenciais|senhas|sessoes|contadores"
-          + "|produtores)|logs? do sistema|variaveis de ambiente|codigo fonte|api interna)\\b",
-      "\\b(?:execute|executa|rode|roda|rodar|executar) (?:\\w+ ){0,2}(?:comandos?|codigos?"
-          + "|scripts?|sql|query|querys|consulta sql|shell|terminal)\\b",
+      "\\b(?:acesse|consulte|abra|entre (?:na|no|em)|mostre|mostra|liste|lista|exporte|baixe"
+          + "|apague|altere|modifique|rode|execute|leia|copie) (?:\\w+ ){0,3}(?:banco de dados"
+          + "|database|tabela (?:de|do|da|dos|das) (?:usuarios|credenciais|senhas|sessoes"
+          + "|contadores|produtores)|logs? do sistema|variaveis de ambiente|codigo fonte"
+          + "|api interna)\\b",
+      "\\b(?:execute|rode|rodar|executar) (?:\\w+ ){0,2}(?:comandos?|codigos?|scripts?|sql"
+          + "|query|querys|consulta sql|shell|terminal)\\b",
       "\\bx usuario id\\b",
-      "\\b(?:troque|troca|mude|muda|altere|altera|alterne|alterna|entre|entra|logue|loga"
-          + "|acesse|acessa|use|usa|assuma|assume) (?:\\w+ ){0,3}(?:conta|usuario|perfil|login"
-          + "|identidade|sessao|id) (?:de|do|da) " + ARTIGO + "(?:" + TERCEIRO
-          + "|administrador\\w*|admin|contador|outr\\w+|alguem|produtor|cliente|usuario)\\b",
+      "\\b(?:troque|mude|altere|alterne|logue|acesse|use|assuma|entre (?:na|no|em))"
+          + " (?:\\w+ ){0,3}(?:conta|usuario|perfil|login|identidade|sessao|id) (?:de|do|da) "
+          + ARTIGO + "(?:" + TERCEIRO + "|administrador\\w*|admin|outr\\w+|alguem)\\b",
       "\\b(?:id|uuid|identificador) (?:de|do|da) (?:outr\\w+|usuario|produtor|cliente|contador"
           + "|administrador)\\b"));
 
@@ -210,23 +226,32 @@ public final class SinalRecusaFirme {
       "(?i)<\\s*/?\\s*script|javascript\\s*:|\\$\\{|\\{\\{");
 
   /**
-   * Dados de todos os usuários. "Clientes" fica de fora: na boca do produtor são os compradores
-   * dele ("as notas de todos os clientes"). "Outros produtores" não entra aqui, e sim no dado de
-   * terceiro, que respeita a contraparte ("as notas de outros produtores que comprei").
+   * As contas do sistema. "Todos os produtores", "as pessoas" e "os clientes" sozinhos são a
+   * categoria de uma pergunta de lei ("as vendas de todos os produtores rurais pagam Funrural?",
+   * "quais são todos os produtores que têm direito...") ou os compradores do produtor; só contam
+   * com a marca do sistema ("cadastrados", "do sistema"). "Outras contas a pagar" são boletos.
+   */
+  private static final String CONTAS_DO_SISTEMA = "(?:usuari[oa]s?|cadastrad[oa]s|cadastros"
+      + "|cpfs|cnpjs|contadores|escritorios|contas(?! (?:a|para|de) pagar)"
+      + "|(?:produtores|pessoas|clientes) (?:cadastrad\\w*|do sistema|da plataforma"
+      + "|do agroconia|do escritorio|da carteira))";
+
+  /**
+   * Dados de todos os usuários. "Outros produtores" não entra aqui, e sim no dado de terceiro, que
+   * respeita a contraparte ("as notas de outros produtores que comprei").
    */
   private static final Pattern TODOS = Pattern.compile(String.join("|",
       "\\b(?:notas|vendas|compras|guias|dados|cpfs?|cnpjs?|e mails?|emails?|telefones?|nomes"
           + "|enderecos|senhas|cadastros|faturamentos?|informacoes|documentos|lista) (?:\\w+ ){0,2}"
-          + "(?:de|dos|das|do|da) (?:todos|todas|cada) (?:os |as )?(?:" + PESSOA
-          + "|cadastrad\\w*)\\b",
+          + "(?:de|dos|das|do|da) (?:todos|todas|cada) (?:os |as )?" + CONTAS_DO_SISTEMA + "\\b",
       "\\b(?:liste|lista|listar|mostre|mostra|exiba|exibe|exporte|exporta|baixe|baixa|traga"
-          + "|traz|quais sao|quem sao|me (?:de|da|passe|passa|envie|mande|manda|mostre|mostra))"
-          + " (?:\\w+ ){0,2}(?:todos|todas) (?:os |as )?(?:produtores|usuarios|contadores"
-          + "|escritorios|cadastrados|cadastros|contas|pessoas|cpfs|cnpjs)\\b",
+          + "|me (?:de|da|passe|passa|envie|mande|manda|mostre|mostra)) (?:\\w+ ){0,2}"
+          + "(?:todos|todas) (?:os |as )?" + CONTAS_DO_SISTEMA + "\\b",
       "\\bquantos (?:produtores|usuarios|contadores|escritorios|pessoas) (?:\\w+ ){0,3}"
           + "(?:sistema|cadastrad\\w*|plataforma|agroconia|usam|existem)\\b",
+      // so o fato: "quanto cada produtor tem de credito" e "deve de Funrural" sao regra
       "\\bquanto cada (?:produtor|usuario|agricultor|pecuarista|cooperado|contador)\\w* (?:\\w+ )?"
-          + FATO + "\\b"));
+          + "(?:vendeu|comprou|pagou|faturou|emitiu|recolheu|recebeu|lucrou)\\b"));
 
   /** Dado de uma pessoa específica que não é o produtor. */
   private static final Pattern DADO_DE_TERCEIRO = Pattern.compile(String.join("|",
@@ -312,7 +337,10 @@ public final class SinalRecusaFirme {
       return false;
     }
     String texto = normalizar(pergunta);
-    return marca(pergunta, texto) || inequivoco(pergunta, texto);
+    // Documento com o produtor falando de si ("meu CPF e...", "emiti para o CNPJ...") nao e marca
+    // de terceiro: segue pelas camadas, como antes.
+    return marcaDeTerceiroOuOrdem(texto) || documentoSemDono(pergunta, texto)
+        || inequivoco(pergunta, texto);
   }
 
   /**
@@ -330,12 +358,15 @@ public final class SinalRecusaFirme {
   }
 
   private static boolean marca(String pergunta, String texto) {
+    return marcaDeTerceiroOuOrdem(texto) || UUID.matcher(pergunta).find()
+        || temDadoDePessoa(pergunta);
+  }
+
+  private static boolean marcaDeTerceiroOuOrdem(String texto) {
     return OUTRA_PESSOA.matcher(texto).find()
         || (ORDEM_AO_SISTEMA.matcher(texto).find()
             && O_QUE_O_SISTEMA_GUARDA.matcher(texto).find())
-        || PAPEL_OU_CREDENCIAL.matcher(texto).find()
-        || UUID.matcher(pergunta).find()
-        || temDadoDePessoa(pergunta);
+        || PAPEL_OU_CREDENCIAL.matcher(texto).find();
   }
 
   private static boolean inequivoco(String pergunta, String texto) {
@@ -375,9 +406,12 @@ public final class SinalRecusaFirme {
     return n;
   }
 
-  /** Nome próprio vira "fulano"; depois, a normalização da {@link PeriodoDaPergunta}. */
+  /**
+   * Nome próprio vira "fulano"; depois, a normalização da {@link PeriodoDaPergunta}. Em NFC antes,
+   * para o acento combinante (NFD) não cortar o nome no meio.
+   */
   static String normalizar(String pergunta) {
-    Matcher m = NOME_PROPRIO.matcher(pergunta);
+    Matcher m = NOME_PROPRIO.matcher(Normalizer.normalize(pergunta, Normalizer.Form.NFC));
     StringBuilder sb = new StringBuilder();
     while (m.find()) {
       String primeiro = m.group(2).split("\\s+")[0];
