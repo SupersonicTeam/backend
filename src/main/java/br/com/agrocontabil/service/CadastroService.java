@@ -116,7 +116,9 @@ public class CadastroService {
 
   /**
    * Cria a conta; o contador entra no escritório que o {@code ingresso} decidir — sem ele, num
-   * escritório unipessoal com o nome do contador, como administrador (issue #228).
+   * escritório unipessoal, como administrador (issue #228), com o nome e o CNPJ do
+   * {@code escritorio} do request ou, sem ele, com o nome do contador (issue #519). Com
+   * {@code ingresso}, o {@code escritorio} do request é ignorado.
    *
    * @param request  dados do cadastro, já validados por Bean Validation
    * @param ingresso como o contador entra num escritório; nulo = unipessoal
@@ -162,14 +164,17 @@ public class CadastroService {
         .cpfCnpj(cpfCnpj);
 
     UUID usuarioId;
+    String telefone = informado(request.telefone());
     if (papel == PapelUsuario.CONTADOR) {
       Contador contador = contadorRepository.saveAndFlush(Contador.builder()
           .nomeCompleto(request.nomeCompleto().strip())
           .cpfCnpj(cpfCnpj)
           .email(email)
+          .crc(informado(request.crc()))
+          .telefone(telefone)
           .build());
       if (ingresso == null) {
-        criarEscritorioUnipessoal(contador);
+        criarEscritorioUnipessoal(contador, request.escritorio());
       } else {
         ingresso.aplicar(contador);
       }
@@ -182,6 +187,7 @@ public class CadastroService {
           .tipoProdutor(cpfCnpj.length() == 11
               ? TipoProdutor.PESSOA_FISICA : TipoProdutor.PESSOA_JURIDICA)
           .email(email)
+          .telefone(telefone)
           .build()).getId();
       credencial.produtorId(usuarioId);
     }
@@ -191,12 +197,31 @@ public class CadastroService {
 
   /**
    * Escritório unipessoal do contador que se cadastra sozinho: ele é o administrador (issue #228).
+   *
+   * <p>Com o escritório informado no cadastro (issue #519), nome e CNPJ são os dele; sem, o nome é
+   * o do contador e não há CNPJ, como antes da #519 (a tela antiga não manda o escritório). O CNPJ
+   * não é único nem tem a titularidade conferida: unicidade sem verificação seria um oráculo e
+   * permitiria tomar o CNPJ de outro escritório (issue #520).
+   *
+   * @param contador  contador recém-gravado
+   * @param doRequest escritório do request; nulo = o nome do contador, sem CNPJ
    */
-  private void criarEscritorioUnipessoal(Contador contador) {
-    Escritorio escritorio = escritorioRepository.save(
-        Escritorio.builder().nome(contador.getNomeCompleto()).build());
-    contador.setEscritorioId(escritorio.getId());
+  private void criarEscritorioUnipessoal(Contador contador,
+      CadastroRequest.EscritorioDoCadastro doRequest) {
+    Escritorio.EscritorioBuilder escritorio = Escritorio.builder();
+    if (doRequest == null) {
+      escritorio.nome(contador.getNomeCompleto());
+    } else {
+      escritorio.nome(doRequest.nome().strip()).cnpj(informado(doRequest.cnpj()));
+    }
+    Escritorio gravado = escritorioRepository.save(escritorio.build());
+    contador.setEscritorioId(gravado.getId());
     contador.setFuncao(FuncaoEscritorio.ADMINISTRADOR);
+  }
+
+  /** Campo opcional do cadastro: sem espaços nas pontas; vazio ou só espaços = não informado. */
+  private static String informado(String valor) {
+    return valor == null || valor.isBlank() ? null : valor.strip();
   }
 
   /**

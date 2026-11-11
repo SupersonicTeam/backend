@@ -110,11 +110,9 @@ class CadastroServiceTest {
     verifyNoInteractions(contadorRepository);
   }
 
-  @Test
-  @DisplayName("contador: grava contador, credencial e o escritorio unipessoal, como administrador")
-  void cadastraContador() {
+  /** Stubs do caminho feliz do contador; devolve o id que o escritório recebe. */
+  private UUID comContadorGravavel(UUID contadorId) {
     comTransacao();
-    UUID contadorId = UUID.randomUUID();
     UUID escritorioId = UUID.randomUUID();
     when(escritorioRepository.save(any(Escritorio.class))).thenAnswer(inv -> {
       Escritorio e = inv.getArgument(0);
@@ -129,17 +127,128 @@ class CadastroServiceTest {
     });
     when(credencialRepository.saveAndFlush(any(CredencialUsuario.class)))
         .thenAnswer(inv -> inv.getArgument(0));
+    return escritorioId;
+  }
 
-    CadastroResponse resposta = service.cadastrar(pedido(PapelUsuario.CONTADOR, "11222333000181"));
+  private CadastroRequest pedidoDeContador(CadastroRequest.EscritorioDoCadastro escritorio,
+      String crc, String telefone) {
+    return new CadastroRequest(PapelUsuario.CONTADOR, " Patricia Moreira ", CPF,
+        "patricia@exemplo.com.br", SENHA, escritorio, crc, telefone);
+  }
+
+  @Test
+  @DisplayName("contador sem escritorio: unipessoal com o nome dele, sem CNPJ, como administrador")
+  void cadastraContador() {
+    UUID contadorId = UUID.randomUUID();
+    UUID escritorioId = comContadorGravavel(contadorId);
+
+    CadastroResponse resposta = service.cadastrar(pedido(PapelUsuario.CONTADOR, CPF));
 
     assertThat(resposta.usuarioId()).isEqualTo(contadorId);
     ArgumentCaptor<Contador> contador = ArgumentCaptor.forClass(Contador.class);
     verify(contadorRepository).saveAndFlush(contador.capture());
     assertThat(contador.getValue().getEscritorioId()).isEqualTo(escritorioId);
     assertThat(contador.getValue().getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
+    assertThat(contador.getValue().getCrc()).isNull();
+    assertThat(contador.getValue().getTelefone()).isNull();
+    ArgumentCaptor<Escritorio> escritorio = ArgumentCaptor.forClass(Escritorio.class);
+    verify(escritorioRepository).save(escritorio.capture());
+    assertThat(escritorio.getValue().getNome()).isEqualTo("Fazenda Boa Vista");
+    assertThat(escritorio.getValue().getCnpj()).isNull();
     assertThat(resposta.papel()).isEqualTo(PapelUsuario.CONTADOR);
-    verify(contadorRepository).existsByCpfCnpjIn(List.of("11222333000181", "11.222.333/0001-81"));
+    verify(contadorRepository).existsByCpfCnpjIn(List.of(CPF, "529.982.247-25"));
     verify(produtorRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  @DisplayName("contador com escritorio (#519): nome e CNPJ no escritorio; CRC e telefone nele")
+  void cadastraContadorComEscritorio() {
+    UUID contadorId = UUID.randomUUID();
+    UUID escritorioId = comContadorGravavel(contadorId);
+
+    service.cadastrar(pedidoDeContador(new CadastroRequest.EscritorioDoCadastro(
+        "  Contabilidade Rural Oeste ", "48315276000195"), " PR-012345/O ", "45999990000"));
+
+    ArgumentCaptor<Escritorio> escritorio = ArgumentCaptor.forClass(Escritorio.class);
+    verify(escritorioRepository).save(escritorio.capture());
+    assertThat(escritorio.getValue().getNome()).isEqualTo("Contabilidade Rural Oeste");
+    assertThat(escritorio.getValue().getCnpj()).isEqualTo("48315276000195");
+    ArgumentCaptor<Contador> contador = ArgumentCaptor.forClass(Contador.class);
+    verify(contadorRepository).saveAndFlush(contador.capture());
+    assertThat(contador.getValue().getNomeCompleto()).isEqualTo("Patricia Moreira");
+    assertThat(contador.getValue().getCpfCnpj()).isEqualTo(CPF);
+    assertThat(contador.getValue().getCrc()).isEqualTo("PR-012345/O");
+    assertThat(contador.getValue().getTelefone()).isEqualTo("45999990000");
+    assertThat(contador.getValue().getEscritorioId()).isEqualTo(escritorioId);
+    assertThat(contador.getValue().getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
+  }
+
+  @Test
+  @DisplayName("contador (#519): CNPJ do escritorio, CRC e telefone vazios = nao informados")
+  void camposVaziosNaoSaoGravados() {
+    comContadorGravavel(UUID.randomUUID());
+
+    service.cadastrar(pedidoDeContador(
+        new CadastroRequest.EscritorioDoCadastro("Patricia Moreira", ""), "   ", ""));
+
+    ArgumentCaptor<Escritorio> escritorio = ArgumentCaptor.forClass(Escritorio.class);
+    verify(escritorioRepository).save(escritorio.capture());
+    assertThat(escritorio.getValue().getNome()).isEqualTo("Patricia Moreira");
+    assertThat(escritorio.getValue().getCnpj()).isNull();
+    ArgumentCaptor<Contador> contador = ArgumentCaptor.forClass(Contador.class);
+    verify(contadorRepository).saveAndFlush(contador.capture());
+    assertThat(contador.getValue().getCrc()).isNull();
+    assertThat(contador.getValue().getTelefone()).isNull();
+  }
+
+  @Test
+  @DisplayName("contador pelo convite (#228): o escritorio do request e ignorado, vale o ingresso")
+  void ingressoIgnoraEscritorioDoRequest() {
+    comTransacao();
+    UUID escritorioDaEquipe = UUID.randomUUID();
+    when(passwordEncoder.encode(SENHA)).thenReturn("{bcrypt}hash");
+    when(contadorRepository.saveAndFlush(any(Contador.class))).thenAnswer(inv -> {
+      Contador c = inv.getArgument(0);
+      c.setId(UUID.randomUUID());
+      return c;
+    });
+    when(credencialRepository.saveAndFlush(any(CredencialUsuario.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    service.cadastrar(pedidoDeContador(
+        new CadastroRequest.EscritorioDoCadastro("Outro", "48315276000195"), null, null),
+        contador -> {
+          contador.setEscritorioId(escritorioDaEquipe);
+          contador.setFuncao(FuncaoEscritorio.ASSISTENTE);
+        });
+
+    verifyNoInteractions(escritorioRepository);
+    ArgumentCaptor<Contador> contador = ArgumentCaptor.forClass(Contador.class);
+    verify(contadorRepository).saveAndFlush(contador.capture());
+    assertThat(contador.getValue().getEscritorioId()).isEqualTo(escritorioDaEquipe);
+    assertThat(contador.getValue().getFuncao()).isEqualTo(FuncaoEscritorio.ASSISTENTE);
+  }
+
+  @Test
+  @DisplayName("produtor (#519): telefone informado vai para o produtor")
+  void produtorComTelefone() {
+    comTransacao();
+    when(passwordEncoder.encode(SENHA)).thenReturn("{bcrypt}hash");
+    when(produtorRepository.saveAndFlush(any(Produtor.class))).thenAnswer(inv -> {
+      Produtor p = inv.getArgument(0);
+      p.setId(UUID.randomUUID());
+      return p;
+    });
+    when(credencialRepository.saveAndFlush(any(CredencialUsuario.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    service.cadastrar(new CadastroRequest(PapelUsuario.PRODUTOR, "Fazenda", CPF,
+        "joaquim@fazenda.com.br", SENHA, null, null, "6533330001"));
+
+    ArgumentCaptor<Produtor> produtor = ArgumentCaptor.forClass(Produtor.class);
+    verify(produtorRepository).saveAndFlush(produtor.capture());
+    assertThat(produtor.getValue().getTelefone()).isEqualTo("6533330001");
+    verifyNoInteractions(contadorRepository, escritorioRepository);
   }
 
   @Test
@@ -233,9 +342,17 @@ class CadastroServiceTest {
   }
 
   @Test
-  @DisplayName("toString do request nao carrega a senha")
+  @DisplayName("toString do request sem senha, e-mail, documento, CNPJ, CRC nem telefone (#519)")
   void toStringSemSenha() {
     assertThat(pedido(PapelUsuario.PRODUTOR, CPF).toString())
         .doesNotContain(SENHA, CPF, "Joaquim", "joaquim");
+
+    CadastroRequest.EscritorioDoCadastro escritorio =
+        new CadastroRequest.EscritorioDoCadastro("Contabilidade Rural Oeste", "48315276000195");
+    String contador = pedidoDeContador(escritorio, "PR-012345/O", "45999990000").toString();
+    assertThat(contador).isEqualTo("CadastroRequest[papel=CONTADOR]")
+        .doesNotContain(CPF, "48315276000195", "PR-012345", "45999990000", "Rural Oeste",
+            "Patricia", "patricia");
+    assertThat(escritorio.toString()).doesNotContain("48315276000195", "Rural Oeste");
   }
 }

@@ -9,10 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.exception.CadastroConflitoException;
+import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
@@ -35,6 +39,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -66,6 +71,8 @@ class CadastroIntegrationTest {
   @Autowired private CredencialUsuarioRepository credencialRepository;
   @Autowired private ProdutorRepository produtorRepository;
   @Autowired private ContadorRepository contadorRepository;
+  @Autowired private EscritorioRepository escritorioRepository;
+  @Autowired private JdbcTemplate jdbc;
   @Autowired private PasswordEncoder passwordEncoder;
   @Autowired private CadastroService cadastroService;
   @Autowired private TestDatabaseCleaner cleaner;
@@ -115,18 +122,184 @@ class CadastroIntegrationTest {
   }
 
   @Test
-  @DisplayName("contador: 201 e contador criado, sem carteira")
+  @DisplayName("contador sem os campos da #519 (tela antiga): escritorio com o nome dele, sem CNPJ")
   void cadastraContador() throws Exception {
     mockMvc
         .perform(post(URL).contentType(MediaType.APPLICATION_JSON)
-            .content(corpo("CONTADOR", CNPJ, "escritorio@campocerto.com.br", SENHA)))
+            .content(corpo("CONTADOR", CPF, "escritorio@campocerto.com.br", SENHA)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.papel").value("CONTADOR"));
 
     CredencialUsuario credencial =
         credencialRepository.findByEmail("escritorio@campocerto.com.br").orElseThrow();
-    assertThat(contadorRepository.findById(credencial.getContadorId())).isPresent();
+    Contador contador = contadorRepository.findById(credencial.getContadorId()).orElseThrow();
     assertThat(credencial.getProdutorId()).isNull();
+    assertThat(contador.getCrc()).isNull();
+    assertThat(contador.getTelefone()).isNull();
+    Escritorio escritorio = escritorioRepository.findById(contador.getEscritorioId()).orElseThrow();
+    assertThat(escritorio.getNome()).isEqualTo("Fazenda Boa Vista");
+    assertThat(escritorio.getCnpj()).isNull();
+    assertThat(contador.getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
+  }
+
+  /** Cadastro de contador da tela nova (#519), com os campos opcionais como vierem. */
+  private static String corpoContador(String documento, String email, String escritorio,
+      String extras) {
+    return """
+        {"papel":"CONTADOR","nomeCompleto":"Patrícia Moreira","cpfCnpj":"%s","email":"%s",\
+        "senha":"%s"%s%s}
+        """.formatted(documento, email, SENHA,
+        escritorio == null ? "" : ",\"escritorio\":" + escritorio, extras);
+  }
+
+  @Test
+  @DisplayName("contador com escritorio, CRC e telefone (#519): tudo gravado; telefone cifrado")
+  void cadastraContadorComEscritorio() throws Exception {
+    MvcResult resultado = cadastrar(corpoContador(CPF, "patricia@exemplo.com.br",
+        "{\"nome\":\" Contabilidade Rural Oeste \",\"cnpj\":\"48315276000195\"}",
+        ",\"crc\":\"PR-012345/O\",\"telefone\":\"45999990000\""));
+    assertThat(resultado.getResponse().getStatus()).isEqualTo(201);
+    assertThat(resultado.getResponse().getContentAsString())
+        .doesNotContain("48315276000195", "PR-012345", "45999990000", CPF);
+
+    CredencialUsuario credencial =
+        credencialRepository.findByEmail("patricia@exemplo.com.br").orElseThrow();
+    Contador contador = contadorRepository.findById(credencial.getContadorId()).orElseThrow();
+    assertThat(contador.getNomeCompleto()).isEqualTo("Patrícia Moreira");
+    assertThat(contador.getCpfCnpj()).isEqualTo(CPF);
+    assertThat(contador.getCrc()).isEqualTo("PR-012345/O");
+    assertThat(contador.getTelefone()).isEqualTo("45999990000");
+    assertThat(contador.getFuncao()).isEqualTo(FuncaoEscritorio.ADMINISTRADOR);
+    Escritorio escritorio = escritorioRepository.findById(contador.getEscritorioId()).orElseThrow();
+    assertThat(escritorio.getNome()).isEqualTo("Contabilidade Rural Oeste");
+    assertThat(escritorio.getCnpj()).isEqualTo("48315276000195");
+    // O telefone ja era cifrado em repouso (#147): o cadastro nao abriu excecao.
+    assertThat(jdbc.queryForObject("SELECT telefone FROM contadores WHERE id = ?", String.class,
+        contador.getId())).startsWith("v1:");
+  }
+
+  @Test
+  @DisplayName("contador (#519): CNPJ do escritorio, CRC e telefone vazios = nao informados")
+  void contadorComCamposVazios() throws Exception {
+    MvcResult resultado = cadastrar(corpoContador(CPF, "autonoma@exemplo.com.br",
+        "{\"nome\":\"Patrícia Moreira\",\"cnpj\":\"\"}", ",\"crc\":\"\",\"telefone\":\"\""));
+    assertThat(resultado.getResponse().getStatus()).isEqualTo(201);
+
+    Contador contador = contadorRepository.findById(credencialRepository
+        .findByEmail("autonoma@exemplo.com.br").orElseThrow().getContadorId()).orElseThrow();
+    assertThat(contador.getCrc()).isNull();
+    assertThat(contador.getTelefone()).isNull();
+    assertThat(escritorioRepository.findById(contador.getEscritorioId()).orElseThrow().getCnpj())
+        .isNull();
+  }
+
+  @Test
+  @DisplayName("contador com CNPJ no proprio documento (#519): 400 no cpfCnpj, nada gravado")
+  void contadorComCnpjNoDocumento() throws Exception {
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpoContador(CNPJ, "cnpj@exemplo.com.br",
+                "{\"nome\":\"Contabilidade Rural Oeste\"}", "")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("cpfCnpj"))
+        .andExpect(jsonPath("$.errors[0].message").value(
+            Matchers.containsString("'escritorio.cnpj'")));
+    // O mesmo CNPJ no produtor continua valendo.
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpo("PRODUTOR", CNPJ, "empresa@fazenda.com.br", SENHA)))
+        .andExpect(status().isCreated());
+
+    assertThat(contadorRepository.count()).isZero();
+    assertThat(escritorioRepository.count()).isZero();
+  }
+
+  @Test
+  @DisplayName("CNPJ do escritorio com DV errado ou fora de 14 digitos e nome vazio (#519): 400")
+  void escritorioInvalido() throws Exception {
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpoContador(CPF, "dv@exemplo.com.br",
+                "{\"nome\":\"Escritório\",\"cnpj\":\"48315276000194\"}", "")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("escritorio.cnpj"));
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpoContador(CPF, "curto@exemplo.com.br",
+                "{\"nome\":\"Escritório\",\"cnpj\":\"48.315.276/0001-95\"}", "")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[*].field", Matchers.everyItem(
+            Matchers.is("escritorio.cnpj"))));
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpoContador(CPF, "semnome@exemplo.com.br", "{\"nome\":\" \"}", "")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("escritorio.nome"))
+        .andExpect(jsonPath("$.errors[0].message").value("Informe o nome do escritório."));
+
+    assertThat(contadorRepository.count()).isZero();
+    assertThat(escritorioRepository.count()).isZero();
+  }
+
+  @Test
+  @DisplayName("produtor com escritorio ou CRC (#519): 400 no campo, nada gravado")
+  void produtorComCamposDoContador() throws Exception {
+    String base = corpo("PRODUTOR", CPF, "produtor@fazenda.com.br", SENHA).strip();
+    String comEscritorio = base.substring(0, base.length() - 1)
+        + ",\"escritorio\":{\"nome\":\"Contabilidade\",\"cnpj\":\"48315276000195\"}}";
+    String comCrc = base.substring(0, base.length() - 1) + ",\"crc\":\"PR-012345/O\"}";
+
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(comEscritorio))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("escritorio"))
+        .andExpect(jsonPath("$.errors[0].rejectedValue").doesNotExist());
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(comCrc))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("crc"));
+
+    assertThat(produtorRepository.count()).isZero();
+    assertThat(escritorioRepository.count()).isZero();
+  }
+
+  @Test
+  @DisplayName("telefone (#519): invalido e 400 nos dois papeis; valido vai para o produtor")
+  void telefone() throws Exception {
+    String base = corpo("PRODUTOR", CPF, "fone@fazenda.com.br", SENHA).strip();
+    String semFecho = base.substring(0, base.length() - 1);
+
+    for (String invalido : List.of("999990000", "(45) 99999-0000", "459999900001")) {
+      mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+              .content(semFecho + ",\"telefone\":\"" + invalido + "\"}"))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+          .andExpect(jsonPath("$.errors[0].field").value("telefone"));
+    }
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpoContador(CPF, "fone@exemplo.com.br", null, ",\"telefone\":\"4599\"")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("telefone"));
+    assertThat(credencialRepository.count()).isZero();
+
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(semFecho + ",\"telefone\":\"6533330001\"}"))
+        .andExpect(status().isCreated());
+    Produtor produtor = produtorRepository.findById(credencialRepository
+        .findByEmail("fone@fazenda.com.br").orElseThrow().getProdutorId()).orElseThrow();
+    assertThat(produtor.getTelefone()).isEqualTo("6533330001");
+  }
+
+  @Test
+  @DisplayName("CRC acima de 20 caracteres (#519): 400 no crc")
+  void crcLongo() throws Exception {
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+            .content(corpoContador(CPF, "crc@exemplo.com.br", null,
+                ",\"crc\":\"PR-0123456789/O-123456\"")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("crc"));
+    assertThat(contadorRepository.count()).isZero();
   }
 
   @Test
