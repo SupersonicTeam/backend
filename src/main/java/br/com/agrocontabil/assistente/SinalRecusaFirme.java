@@ -18,16 +18,18 @@ import java.util.regex.Pattern;
  *   <li>{@link #pedeDesempate}: marca de terceiro ou de ordem ao sistema. As regras e as
  *       embeddings não decidem a rota dessa pergunta: quem decide é o modelo, que separa "as notas
  *       do meu vizinho" de "vendi para o meu vizinho" (#497). O custo de um falso positivo é uma
- *       chamada ao classificador por modelo. Fica de fora o "do produtor" genérico, que é comum
- *       em pergunta de lei ("o Funrural do produtor pessoa física").</li>
+ *       chamada ao classificador por modelo. Ficam de fora o "do produtor" genérico, que é comum
+ *       em pergunta de lei ("o Funrural do produtor pessoa física"), e o "mostre as regras" ou
+ *       "mostra o texto da lei", que não são ordem ao sistema.</li>
  *   <li>{@link #inequivoco}: o pedido não tem leitura legítima e vira fora de escopo antes do
  *       classificador, sem modelo (#497): troca de papel, segredo ou instrução do sistema, burla
- *       da proteção, comando técnico, dados de todos os usuários, dado de uma pessoa específica que
- *       não é o produtor e documento sem dono. Outra pessoa como contraparte da operação do
- *       produtor ("vendi para o meu vizinho", "comprei do meu irmão", "meu pai me vendeu") ou com
- *       o produtor como sujeito da pergunta ("meu vizinho pagou, eu também tenho que pagar?")
- *       nunca decide aqui. Um falso positivo é recusa indevida: na dúvida, o padrão fica de fora
- *       e a pergunta segue para o desempate.</li>
+ *       da proteção, comando técnico, dados de todos os usuários, dado de outra pessoa pedido como
+ *       dado e documento sem dono. Outra pessoa como contraparte da operação do produtor ("vendi
+ *       para o meu vizinho", "comprei do meu irmão", "meu pai me vendeu"), com o produtor como
+ *       sujeito da pergunta ("meu vizinho pagou, eu também tenho que pagar?") ou como o caso de
+ *       que a norma trata ("os demais contribuintes têm direito a crédito?", "o IBS de outros
+ *       contribuintes gera crédito?") nunca decide aqui. Um falso positivo é recusa indevida: na
+ *       dúvida, o padrão fica de fora e a pergunta segue para o desempate.</li>
  * </ul>
  *
  * <p>Fica no pacote {@code assistente}, e não em {@code orquestracao}, para a {@link RotaDados}
@@ -61,12 +63,24 @@ public final class SinalRecusaFirme {
   /** Nome no lugar de uma pessoa ("produtor João", "seu Zé"): vira "fulano" na normalização. */
   private static final String NOME = "fulan[oa]s?|beltran[oa]|ciclan[oa]|sicran[oa]";
 
-  /** Outra pessoa específica: o sujeito ou o dono do dado pedido. */
-  private static final String TERCEIRO = "(?:(?:" + POSSE + " )?vizinh[oa]s?|" + POSSE + " "
-      + PARENTE_LARGO + "|(?:(?:produtor|produtora|seu|dona|senhor|senhora|sr|sra) )?(?:"
-      + NOME + ")|(?:outr[oa]s?|demais) " + PESSOA
-      + "|produtor(?:a|es|as)? (?:do lado|vizinh[oa]s?|ao lado|da frente)"
+  /**
+   * Outra pessoa determinada, pelo possessivo, pelo nome ou pelo lugar ("meu vizinho", "seu Zé",
+   * "o produtor do lado").
+   */
+  private static final String TERCEIRO_ESPECIFICO = "(?:(?:" + POSSE + " )?vizinh[oa]s?|" + POSSE
+      + " " + PARENTE_LARGO + "|(?:(?:produtor|produtora|seu|dona|senhor|senhora|sr|sra) )?(?:"
+      + NOME + ")|produtor(?:a|es|as)? (?:do lado|vizinh[oa]s?|ao lado|da frente)"
       + "|(?:fazenda|propriedade|sitio|chacara|empresa)s? (?:do|da|ao) (?:lado|frente))";
+
+  /**
+   * Outra pessoa como categoria ("outros produtores", "demais contribuintes", "outra pessoa"):
+   * na pergunta de lei, é o sujeito da norma, não o dono de um dado.
+   */
+  private static final String TERCEIRO_GENERICO = "(?:outr[oa]s?|demais) " + PESSOA;
+
+  /** Outra pessoa: o sujeito ou o dono do dado pedido. */
+  private static final String TERCEIRO = "(?:" + TERCEIRO_ESPECIFICO + "|" + TERCEIRO_GENERICO
+      + ")";
 
   private static final String ARTIGO = "(?:(?:o|a|os|as|um|uma|esse|essa|esses|essas|aquele"
       + "|aquela|este|esta) )?";
@@ -79,11 +93,14 @@ public final class SinalRecusaFirme {
       + "|declarac\\w*|movimentac\\w*|historico|informacoes|documentos?|patrimonio|producao"
       + "|safra|extrato|situacao|regime)";
 
-  /** Verbo de um fato nos dados (passado ou quantia devida); "deve pagar" é regra, não dado. */
-  private static final String FATO = "(?:vendeu|venderam|comprou|compraram|pagou|pagaram"
+  /** Verbo de um fato já acontecido nos dados. */
+  private static final String FATO_PASSADO = "(?:vendeu|venderam|comprou|compraram|pagou|pagaram"
       + "|faturou|faturaram|emitiu|emitiram|recolheu|recolheram|recebeu|receberam|lucrou"
       + "|lucraram|declarou|declararam|apurou|apuraram|ganhou|ganharam|produziu|produziram"
-      + "|colheu|colheram|exportou|exportaram|movimentou|movimentaram"
+      + "|colheu|colheram|exportou|exportaram|movimentou|movimentaram)";
+
+  /** Verbo de um fato nos dados (passado ou quantia devida); "deve pagar" é regra, não dado. */
+  private static final String FATO = "(?:" + FATO_PASSADO
       // "deve pagar", "deve se cadastrar", "deve tambem pagar": regra, nao divida
       + "|dev(?:e|em|ia|iam)(?! (?:\\w+ )?\\w+(?:ar|er|ir)\\b)"
       + "|tem (?:\\w+ )?(?:notas?|guias?|creditos?|debitos?|pendencias?|alertas?|impostos?"
@@ -110,6 +127,21 @@ public final class SinalRecusaFirme {
       + "|revela|mostre|mostra|imprima)\\b");
   private static final Pattern O_QUE_O_SISTEMA_GUARDA = Pattern.compile("\\b(texto|regras"
       + "|instrucoes|prompt|configuracao|mensagem anterior)\\b");
+
+  /**
+   * A ordem ao sistema que deixa a rota para o modelo (#497). "Mostre as regras do split payment" e
+   * "mostra o texto da LC 214" são pedidos de lei comuns e seguem pelas camadas; o verbo de revelar
+   * ("repita", "revele") ou o que só o sistema guarda ("suas regras", "o prompt", "o texto acima")
+   * não.
+   */
+  private static final Pattern REVELAR = Pattern.compile("\\b(repita|repete|revele|revela"
+      + "|imprima|imprime)\\b");
+  private static final Pattern MOSTRE_O_INTERNO = Pattern.compile("\\b(?:mostre|mostra)"
+      + " (?:\\w+ ){0,3}(?:(?:suas|tuas|sua|tua|seu|teu|seus|teus) (?:regras|textos?|instrucoes"
+      + "|configurac\\w*|prompt|mensagens?)|prompt|configurac\\w*|mensagem anterior"
+      + "|(?:regras|textos?|instrucoes|configurac\\w*) que (?:voce|vc|te|lhe)"
+      + "|textos? (?:acima|anterior|inicial|oculto)"
+      + "|instrucoes (?:do sistema|internas|ocultas|iniciais))\\b");
 
   /** Troca de papel ou credencial: ataque que o filtro de injeção não pega. */
   private static final Pattern PAPEL_OU_CREDENCIAL = Pattern.compile("\\b(finja|aja como"
@@ -139,7 +171,11 @@ public final class SinalRecusaFirme {
           + "(?:em modo |o |a |um |uma )?(?:administrador\\w*|admin|desenvolvedor\\w*"
           + "|programador\\w*|root|superusuario|hacker|livre|liberad[oa]|desbloquead[oa]"
           + "|sem restric\\w*|sem filtros?|sem limites?)\\b",
-      "\\ba partir de agora (?:voce|vc|tu)\\b",
+      // so com a ordem: "a partir de agora voce precisa emitir NF-e" e regra
+      "\\ba partir de agora (?:voce|vc|tu) (?:vai |deve |devera |passa a )?(?:age|agir|atua"
+          + "|atuar|ignora|ignorar|obedece|obedecer|esquece|esquecer|finge|fingir|responde"
+          + "|responder|nao (?:tem|segue|obedece) (?:mais )?(?:regras|restric\\w*|limites?"
+          + "|filtros?))\\b(?! pel)",
       "\\bmodo (?:administrador|admin|desenvolvedor|dev|debug|depuracao|manutencao|deus|god"
           + "|root|irrestrito|livre|sem restric\\w*|sem filtros?|sem censura|jailbreak)\\b",
       "\\bcomo se eu fosse (?:o |a |um |uma )?(?:administrador\\w*|admin|dono do sistema"
@@ -156,7 +192,10 @@ public final class SinalRecusaFirme {
           + "|passe|passa|gere|gera) (?:e |sao )?(?:a |o |as |os |um |uma |sua |seu |suas |seus )?"
           + "(?:senhas?|tokens?|credenciais|chaves? (?:de|da) (?:api|criptografia)"
           + "|chaves? (?:secretas?|privadas?|mestras?)|api keys?|jwt|segredos?)\\b"
-          + "(?! (?:do|da|de) (?:meu|minha)\\b)",
+          // a do proprio produtor ou a que ele usa na emissao: "quais credenciais preciso para
+          // emitir NF-e?", "qual a senha do meu certificado?"
+          + "(?! (?:(?:do|da|de|no|na|para) (?:meu|minha|certificado|sefaz|portal|nf e|nota"
+          + "|emitir|emissao)|(?:que )?(?:eu )?(?:preciso|devo|tenho|uso))\\b)",
       "\\b(?:senhas?|tokens?|credenciais?|chaves?) (?:do|da|dos|das|de) (?:sistema"
           + "|administrador\\w*|admin|banco|servidor|api|aplicacao|plataforma|agroconia|ceres"
           + "|usuarios?|todos|" + TERCEIRO + ")\\b"));
@@ -178,10 +217,12 @@ public final class SinalRecusaFirme {
           + "|deram|passaram|mandaram|enviaram)\\b",
       "\\b(?:mensagens?|textos?|conteudo) que (?:te|lhe) (?:deram|passaram|mandaram"
           + "|enviaram)\\b",
+      // "o texto anterior da LC 214" e a redacao antiga da lei
       "\\b(?:repita|repete|revele|revela|imprima|imprime|copie|copia|cole|transcreva|traduza"
           + "|traduz|leia) (?:\\w+ ){0,3}(?:texto|mensagem|mensagens|conteudo|instruc\\w*"
           + "|prompt|configurac\\w*) (?:acima|anterior|anteriores|antes|que (?:voce|vc|te"
-          + "|lhe))\\b"));
+          + "|lhe))\\b(?! (?:\\w+ )?(?:lei|leis|lc|ec|emenda|artigos?|art|anexos?|normas?"
+          + "|redacao|reforma|constituicao)\\b)"));
 
   /** Burla da proteção: desligar, ignorar ou responder sem as regras. */
   private static final Pattern BURLA = Pattern.compile(String.join("|",
@@ -190,10 +231,17 @@ public final class SinalRecusaFirme {
           + "|suspende|desabilite|desabilita) (?:\\w+ ){0,2}(?:restricoes|instrucoes|orientacoes"
           + "|diretrizes|travas|protecoes|censura|limitacoes|bloqueios?|verificac\\w*"
           + "|autenticac\\w*|seguranca|permissoes|controles? de acesso|filtros? de seguranca"
-          + "|(?:suas|tuas|seus|teus) regras)\\b",
-      // "sem regras" e "sem limites" ficam de fora: "responda sem regras complicadas"
-      "\\b(?:responda|responde|fale|fala|aja|age|atue|atua|funcione|opere|converse|seja)"
-          + " (?:\\w+ ){0,3}sem (?:restric\\w*|censura|filtros?|bloqueios?|travas)\\b",
+          + "|(?:suas|tuas|seus|teus) regras)\\b"
+          // a norma antiga ou de outro orgao: "esqueca as instrucoes normativas antigas"
+          + "(?! (?:normativ\\w*|antig\\w*|anteriores|legais|fiscais|tributari\\w*"
+          + "|da (?:lei|receita|sefaz|rfb|norma|reforma)|do (?:fisco|governo|comite))\\b)",
+      // "sem regras" e "sem limites" ficam de fora: "responda sem regras complicadas"; "sem
+      // restricao" so no imperativo: "o credito seja usado sem restricao", "o adquirente responde
+      // sem restricao" sao regra
+      "\\b(?:responda|fale|aja|atue|converse) (?:\\w+ ){0,3}sem (?:restric\\w*|censura|filtros?"
+          + "|bloqueios?|travas)\\b",
+      "\\b(?:responde|fala|age|atua|funcione|opere|seja) (?:\\w+ ){0,3}sem (?:censura|filtros?"
+          + "|travas)\\b",
       // so o imperativo: "a lei concede credito para tudo" e pergunta de lei
       "\\b(?:libere|desbloqueie|conceda|me libera) (?:\\w+ ){0,3}(?:acesso|permiss\\w*"
           + "|privilegi\\w*|tudo)\\b"));
@@ -218,8 +266,10 @@ public final class SinalRecusaFirme {
       "\\b(?:troque|mude|altere|alterne|logue|acesse|use|assuma|entre (?:na|no|em))"
           + " (?:\\w+ ){0,3}(?:conta|usuario|perfil|login|identidade|sessao|id) (?:de|do|da) "
           + ARTIGO + "(?:" + TERCEIRO + "|administrador\\w*|admin|outr\\w+|alguem)\\b",
-      "\\b(?:id|uuid|identificador) (?:de|do|da) (?:outr\\w+|usuario|produtor|cliente|contador"
-          + "|administrador)\\b"));
+      "\\b(?:id|uuid) (?:de|do|da) (?:outr\\w+|usuari\\w+|produtor\\w*|cliente|contador"
+          + "|administrador\\w*)\\b",
+      // "o identificador do produtor na NF-e" e o CPF do proprio produtor no leiaute
+      "\\bidentificador (?:de|do|da) (?:outr\\w+|usuari\\w+|administrador\\w*)\\b"));
 
   /** Marcação de código no texto cru (script, template). */
   private static final Pattern MARCACAO = Pattern.compile(
@@ -247,22 +297,54 @@ public final class SinalRecusaFirme {
       "\\b(?:liste|lista|listar|mostre|mostra|exiba|exibe|exporte|exporta|baixe|baixa|traga"
           + "|me (?:de|da|passe|passa|envie|mande|manda|mostre|mostra)) (?:\\w+ ){0,2}"
           + "(?:todos|todas) (?:os |as )?" + CONTAS_DO_SISTEMA + "\\b",
-      "\\bquantos (?:produtores|usuarios|contadores|escritorios|pessoas) (?:\\w+ ){0,3}"
+      "\\bquantos (?:usuarios|contadores|escritorios) (?:\\w+ ){0,3}"
           + "(?:sistema|cadastrad\\w*|plataforma|agroconia|usam|existem)\\b",
+      // "quantos produtores usam o credito presumido?" e estatistica, nao conta do sistema
+      "\\bquantos (?:produtores|pessoas) (?:\\w+ ){0,3}"
+          + "(?:sistema|cadastrad\\w*|plataforma|agroconia)\\b",
       // so o fato: "quanto cada produtor tem de credito" e "deve de Funrural" sao regra
       "\\bquanto cada (?:produtor|usuario|agricultor|pecuarista|cooperado|contador)\\w* (?:\\w+ )?"
           + "(?:vendeu|comprou|pagou|faturou|emitiu|recolheu|recebeu|lucrou)\\b"));
 
-  /** Dado de uma pessoa específica que não é o produtor. */
-  private static final Pattern DADO_DE_TERCEIRO = Pattern.compile(String.join("|",
-      // "as notas do meu vizinho", "o faturamento da fazenda do meu irmao"
-      "\\b" + DADO + " (?:\\w+ ){0,3}(?:do|da|dos|das|de) " + ARTIGO + TERCEIRO + "\\b",
-      // "o meu sogro pagou", "o vizinho tem guia atrasada"
-      "\\b" + TERCEIRO + " (?:\\w+ ){0,2}" + FATO + "\\b",
-      // "quanto vendeu o vizinho"
-      "\\b" + FATO + " " + ARTIGO + TERCEIRO + "\\b",
-      // "quanto o meu vizinho paga", "quanto de soja o vizinho"
-      "\\bquanto (?:de \\w+ )?" + ARTIGO + TERCEIRO + "\\b"));
+  /** Dado de uma pessoa determinada que não é o produtor ("as notas do meu vizinho"). */
+  private static final Pattern DADO_DE_TERCEIRO_ESPECIFICO = dadoDe(TERCEIRO_ESPECIFICO);
+
+  /** Dado de uma categoria de pessoas ("as notas de outro produtor"). */
+  private static final Pattern DADO_DE_TERCEIRO_GENERICO = dadoDe(TERCEIRO_GENERICO);
+
+  /**
+   * Forma de pergunta sobre a regra legal (#497: na medição, uma pergunta de lei legítima com
+   * outra pessoa no sentido da norma foi recusada). Com ela, o terceiro é o caso de que a norma
+   * trata ("outros contribuintes têm direito a crédito?", "pela lei, o vizinho que vendeu gado
+   * precisa recolher?") e o dado de terceiro não decide: a pergunta segue para o desempate. O
+   * nome do tributo sozinho não conta aqui: "o Funrural do meu vizinho" é dado dele.
+   */
+  private static final Pattern REGRA_LEGAL = Pattern.compile("\\b(?:lei|leis|legislacao"
+      + "|artigos?|art|normas?|regras?|lc \\d+|lei complementar|ec \\d+|emenda constitucional"
+      + "|constituicao|reforma tributaria|regime regular|credito presumido|split payment"
+      + "|nao contribuintes?|aliquotas?|reducao|reduzid\\w*|isencao|isent\\w*|imunidade|imunes?"
+      + "|fato gerador|incide|incidem|incidencia|diferimento|substitut\\w*|responsavel"
+      + "|responsaveis|responsabilidade|solidari\\w*|direito (?:a|ao|de)|tem direito|da direito"
+      + "|gera credito|geram credito|obrigad\\w*|obrigatori\\w*|tem que|tem de|precisa|precisam"
+      + "|devem? \\w+(?:ar|er|ir)"
+      // "pode me mostrar as notas do vizinho?" e pedido, nao regra
+      + "|pode(?:m|ria)?(?! (?:me|mostrar|ver|listar|passar|dizer|informar|enviar|mandar"
+      + "|buscar|consultar|abrir|exibir|acessar|trazer|conferir|checar|olhar)\\b)"
+      + "|permite|permitid\\w*|vedad\\w*|proibid\\w*|quem (?:recolhe|paga|retem|deve|e o"
+      + " contribuinte|e responsavel)|como funciona|o que diz|pela lei|segundo a)\\b");
+
+  /**
+   * Tributo da base da Ceres. Com a categoria ("outros contribuintes devem IBS na revenda?"), basta
+   * ele para a pergunta ser de regra, salvo quando ela pede o dado ({@link #PEDIDO_DE_DADO}).
+   */
+  private static final Pattern TRIBUTO = Pattern.compile("\\b(?:ibs|cbs|funrural|senar"
+      + "|tributos?|impostos?|contribuic\\w*)\\b");
+
+  /** O pedido do dado em si: a quantia já acontecida ou a ordem de mostrar. */
+  private static final Pattern PEDIDO_DE_DADO = Pattern.compile("\\bquant[oa]s? (?:\\w+ ){0,5}"
+      + FATO_PASSADO + "\\b|\\b(?:mostre|mostra|liste|lista|listar|exiba|exibe|exporte|exporta"
+      + "|baixe|baixa|traga|traz|abra|abre|consulte|consulta|compare|compara"
+      + "|me (?:de|da|passe|passa|envie|envia|mande|manda))\\b");
 
   /**
    * Outra pessoa como contraparte da operação do produtor: "vendi para o vizinho", "comprei do
@@ -302,10 +384,15 @@ public final class SinalRecusaFirme {
       "\\b((?:[Pp]rodutora?|[Ss]eu|[Dd]ona|[Ss]enhora?|[Ss]ra?\\.?)\\s+)"
           + "(\\p{Lu}\\p{Ll}+(?:\\s+(?:d[aeo]s?\\s+)?\\p{Lu}\\p{Ll}+)*)");
 
-  /** Palavras com maiúscula depois de "produtor" que não são nome ("Produtor Rural"). */
+  /**
+   * Palavras com maiúscula depois de "produtor" ou de tratamento que não são nome ("Produtor
+   * Rural", "Produtor Não Contribuinte", "Senhor Contador").
+   */
   private static final Set<String> NAO_NOME = Set.of("rural", "pessoa", "integrado", "integrada",
       "optante", "familiar", "individual", "agropecuario", "agropecuaria", "funrural", "senar",
-      "pix");
+      "pix", "nao", "contribuinte", "regular", "fisica", "juridica", "pequeno", "medio", "grande",
+      "simples", "adquirente", "comprador", "vendedor", "fornecedor", "cooperado", "cooperativa",
+      "credito", "imposto", "contador", "contadora");
 
   private SinalRecusaFirme() {}
 
@@ -339,8 +426,11 @@ public final class SinalRecusaFirme {
     String texto = normalizar(pergunta);
     // Documento com o produtor falando de si ("meu CPF e...", "emiti para o CNPJ...") nao e marca
     // de terceiro: segue pelas camadas, como antes.
-    return marcaDeTerceiroOuOrdem(texto) || documentoSemDono(pergunta, texto)
-        || inequivoco(pergunta, texto);
+    return OUTRA_PESSOA.matcher(texto).find()
+        || (REVELAR.matcher(texto).find() && O_QUE_O_SISTEMA_GUARDA.matcher(texto).find())
+        || MOSTRE_O_INTERNO.matcher(texto).find()
+        || PAPEL_OU_CREDENCIAL.matcher(texto).find()
+        || documentoSemDono(pergunta, texto) || inequivoco(pergunta, texto);
   }
 
   /**
@@ -358,15 +448,11 @@ public final class SinalRecusaFirme {
   }
 
   private static boolean marca(String pergunta, String texto) {
-    return marcaDeTerceiroOuOrdem(texto) || UUID.matcher(pergunta).find()
-        || temDadoDePessoa(pergunta);
-  }
-
-  private static boolean marcaDeTerceiroOuOrdem(String texto) {
     return OUTRA_PESSOA.matcher(texto).find()
         || (ORDEM_AO_SISTEMA.matcher(texto).find()
             && O_QUE_O_SISTEMA_GUARDA.matcher(texto).find())
-        || PAPEL_OU_CREDENCIAL.matcher(texto).find();
+        || PAPEL_OU_CREDENCIAL.matcher(texto).find()
+        || UUID.matcher(pergunta).find() || temDadoDePessoa(pergunta);
   }
 
   private static boolean inequivoco(String pergunta, String texto) {
@@ -379,7 +465,37 @@ public final class SinalRecusaFirme {
     if (CONTRAPARTE.matcher(texto).find() || PRODUTOR_FALA_DE_SI.matcher(texto).find()) {
       return false;
     }
-    return DADO_DE_TERCEIRO.matcher(texto).find() || documentoSemDono(pergunta, texto);
+    return dadoDeTerceiro(texto) || documentoSemDono(pergunta, texto);
+  }
+
+  /**
+   * Dado de outra pessoa pedido como dado, não como regra. Com a forma de regra, o terceiro é o
+   * caso de que a norma trata; com a categoria ("outros contribuintes"), também basta o tributo,
+   * salvo quando a pergunta pede o dado ("quanto ... pagaram", "mostre ..."). Nos dois casos a
+   * pergunta segue para o desempate.
+   */
+  private static boolean dadoDeTerceiro(String texto) {
+    if (REGRA_LEGAL.matcher(texto).find()) {
+      return false;
+    }
+    if (DADO_DE_TERCEIRO_ESPECIFICO.matcher(texto).find()) {
+      return true;
+    }
+    return DADO_DE_TERCEIRO_GENERICO.matcher(texto).find()
+        && (!TRIBUTO.matcher(texto).find() || PEDIDO_DE_DADO.matcher(texto).find());
+  }
+
+  /** Os quatro jeitos de pedir o dado de uma pessoa ou categoria. */
+  private static Pattern dadoDe(String terceiro) {
+    return Pattern.compile(String.join("|",
+        // "as notas do meu vizinho", "o faturamento da fazenda do meu irmao"
+        "\\b" + DADO + " (?:\\w+ ){0,3}(?:do|da|dos|das|de) " + ARTIGO + terceiro + "\\b",
+        // "o meu sogro pagou", "o vizinho tem guia atrasada"
+        "\\b" + terceiro + " (?:\\w+ ){0,2}" + FATO + "\\b",
+        // "quanto vendeu o vizinho"
+        "\\b" + FATO + " " + ARTIGO + terceiro + "\\b",
+        // "quanto o meu vizinho paga", "quanto de soja o vizinho"
+        "\\bquanto (?:de \\w+ )?" + ARTIGO + terceiro + "\\b"));
   }
 
   /** CPF, CNPJ, e-mail, telefone ou UUID sem o produtor falando de si nem um destinatário. */
