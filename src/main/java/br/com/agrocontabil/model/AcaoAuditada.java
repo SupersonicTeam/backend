@@ -36,6 +36,8 @@ public enum AcaoAuditada {
   ESCRITORIO_ALTERADO,
   // Endereco proprio do escritorio (issue #464): definir, trocar ou remover o slug
   ESCRITORIO_ENDERECO_ALTERADO,
+  // Conta pessoal que vira empresarial (issue #519)
+  ESCRITORIO_TORNADO_EMPRESARIAL,
   // Revisao da nota pelo contador (issue #178)
   NOTA_ENVIADA_REVISAO,
   NOTA_RETIRADA_REVISAO,
