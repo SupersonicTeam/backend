@@ -19,6 +19,7 @@ import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.EtiquetaCarteira;
 import br.com.agrocontabil.model.GuiaFiscal;
+import br.com.agrocontabil.model.ModeloPedido;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.NotaFiscalItem;
 import br.com.agrocontabil.model.NotaFiscalRevisao;
@@ -49,6 +50,7 @@ import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.ModeloPedidoRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -79,6 +81,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
@@ -170,6 +173,7 @@ public class SeedDemonstracao implements CommandLineRunner {
   private final GuiaFiscalRepository guiaRepository;
   private final PendenciaRepository pendenciaRepository;
   private final PendenciaAnexoRepository anexoRepository;
+  private final ModeloPedidoRepository modeloPedidoRepository;
   private final TributacaoService tributacaoService;
   private final CreditoTributarioService creditoService;
   private final GeracaoNotaFiscalService geracaoService;
@@ -196,6 +200,7 @@ public class SeedDemonstracao implements CommandLineRunner {
       NotaFiscalRevisaoRepository revisaoRepository,
       NotaFiscalValidacaoRepository validacaoRepository, GuiaFiscalRepository guiaRepository,
       PendenciaRepository pendenciaRepository, PendenciaAnexoRepository anexoRepository,
+      ModeloPedidoRepository modeloPedidoRepository,
       TributacaoService tributacaoService, CreditoTributarioService creditoService,
       GeracaoNotaFiscalService geracaoService, NotaFiscalNfeMapper nfeMapper,
       XmlGenerator xmlGenerator, NfeAssinador assinador, NfeToNotaFiscalMapper importacaoMapper,
@@ -216,6 +221,7 @@ public class SeedDemonstracao implements CommandLineRunner {
     this.guiaRepository = guiaRepository;
     this.pendenciaRepository = pendenciaRepository;
     this.anexoRepository = anexoRepository;
+    this.modeloPedidoRepository = modeloPedidoRepository;
     this.tributacaoService = tributacaoService;
     this.creditoService = creditoService;
     this.geracaoService = geracaoService;
@@ -254,7 +260,8 @@ public class SeedDemonstracao implements CommandLineRunner {
   @Override
   public void run(String... args) {
     try {
-      if (jaSemeado()) {
+      boolean semeado = jaSemeado();
+      if (semeado) {
         completarCredenciais();
         log.info("Demonstracao da banca ja semeada: nada recriado.");
       } else {
@@ -265,8 +272,23 @@ public class SeedDemonstracao implements CommandLineRunner {
             resumo.notasRecusadas(), resumo.guias(), resumo.pendencias(), resumo.mesesFechados());
       }
       cotaCeres.prepararSemana();
+      if (semeado) {
+        // Depois da cota e com falha propria: os modelos (#517) nao podem custar a cota da banca.
+        completarModelosPedidoSemFalhar();
+      }
     } catch (RuntimeException e) {
       log.error("Demonstracao da banca nao semeada; a aplicacao segue sem ela.", e);
+    }
+  }
+
+  private void completarModelosPedidoSemFalhar() {
+    try {
+      int criados = completarModelosPedido();
+      if (criados > 0) {
+        log.info("Demonstracao da banca: {} modelos de pedido criados no escritorio.", criados);
+      }
+    } catch (RuntimeException e) {
+      log.error("Modelos de pedido da demonstracao nao criados; o resto segue.", e);
     }
   }
 
@@ -285,6 +307,25 @@ public class SeedDemonstracao implements CommandLineRunner {
       produtorRepository.findByCpfCnpj(cliente.documento()).ifPresent(produtor -> credencial(ex,
           cliente.email(), PapelUsuario.PRODUTOR, cliente.documento(), produtor.getId(), null));
     }
+  }
+
+  /**
+   * Dá ao escritório da demonstração os modelos de pedido (#517) quando ele não tem nenhum: o banco
+   * semeado antes deles (a VPS) os ganha na subida, sem reset. Um ensaio que apague todos os vê
+   * voltar na subida seguinte; um que só edite ou apague alguns fica como está.
+   *
+   * @return quantos modelos foram criados
+   */
+  int completarModelosPedido() {
+    Integer criados = transactionTemplate.execute(status -> contadorRepository
+        .findByCpfCnpj(CenarioDemonstracao.EQUIPE.get(0).cpf())
+        .map(Contador::getEscritorioId)
+        .flatMap(escritorioRepository::findById)
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_CNPJ.equals(e.getCnpj()))
+        .filter(e -> modeloPedidoRepository.countByEscritorioId(e.getId()) == 0)
+        .map(e -> modelosPedido(e.getId()))
+        .orElse(0));
+    return criados == null ? 0 : criados;
   }
 
   /** O que a última semeadura desta instância gravou ({@code null} se nada foi semeado). */
@@ -343,6 +384,7 @@ public class SeedDemonstracao implements CommandLineRunner {
       credencial(ex, membro.email(), PapelUsuario.CONTADOR, membro.cpf(), null, contador.getId());
       equipe.add(contador);
     }
+    modelosPedido(escritorio.getId());
 
     Map<String, EtiquetaCarteira> etiquetas = new HashMap<>();
     for (Cliente cliente : CenarioDemonstracao.CARTEIRA) {
@@ -865,6 +907,21 @@ public class SeedDemonstracao implements CommandLineRunner {
         // Sem pedido em aberto.
       }
     }
+  }
+
+  /** Os modelos de pedido do escritório (#517), sem referência aos pedidos semeados. */
+  private int modelosPedido(UUID escritorioId) {
+    for (CenarioDemonstracao.ModeloDePedido modelo : CenarioDemonstracao.MODELOS_PEDIDO) {
+      modeloPedidoRepository.save(ModeloPedido.builder()
+          .escritorioId(escritorioId)
+          .titulo(modelo.titulo())
+          .descricao(modelo.descricao())
+          .tiposDocumento(EnumSet.copyOf(modelo.tipos()))
+          .prazoEmDias(modelo.prazoEmDias())
+          .observacoes(modelo.observacoes())
+          .build());
+    }
+    return CenarioDemonstracao.MODELOS_PEDIDO.size();
   }
 
   private Pendencia pendencia(Execucao ex, Escritorio escritorio, Produtor produtor,

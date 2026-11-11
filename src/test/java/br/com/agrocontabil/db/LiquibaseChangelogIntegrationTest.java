@@ -882,6 +882,49 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0061: modelo_pedido unico pelo titulo normalizado, prazo de 1 a 365 e CASCADE do escritorio (#517)")
+  void changeSet0061ModeloPedido() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'modelo_pedido' ORDER BY column_name", String.class))
+        .containsExactly("created_at", "descricao", "escritorio_id", "id", "observacoes",
+            "prazo_em_dias", "tipos_documento", "titulo", "titulo_normalizado", "updated_at");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'modelo_pedido' AND is_nullable = 'NO' ORDER BY column_name",
+        String.class))
+        .containsExactly("escritorio_id", "id", "tipos_documento", "titulo",
+            "titulo_normalizado");
+
+    String escritorioA = UUID.randomUUID().toString();
+    String escritorioB = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio A 0061')",
+        escritorioA);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio B 0061')",
+        escritorioB);
+    String insert = "INSERT INTO modelo_pedido (id, escritorio_id, titulo, titulo_normalizado,"
+        + " tipos_documento, prazo_em_dias)"
+        + " VALUES (gen_random_uuid(), ?::uuid, ?, ?, 'EXTRATO', ?)";
+    jdbc.update(insert, escritorioA, "Extrato bancário", "extrato bancario", 10);
+    // Mesmo titulo em outro escritorio: a unicidade e por escritorio.
+    jdbc.update(insert, escritorioB, "Extrato bancário", "extrato bancario", null);
+
+    assertThatThrownBy(() -> jdbc.update(insert, escritorioA, "EXTRATO BANCARIO",
+        "extrato bancario", 5)).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(insert, escritorioA, "Outro", "outro", 0))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(insert, escritorioA, "Outro", "outro", 366))
+        .isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioA);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM modelo_pedido"
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioA)).isZero();
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM modelo_pedido"
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioB)).isOne();
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioB);
+  }
+
+  @Test
   @DisplayName("changeSet 0047: IBS de 2026 todo estadual; 0,05% + 0,05% em 2027-2028 (#277)")
   void changeSet0047IbsPorEsfera() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

@@ -202,6 +202,13 @@ public enum ErrorCode {
    * vencida (issue #464). A mesma resposta para todos os casos. HTTP 404.
    */
   ENDERECO_NAO_ENCONTRADO,
+  /**
+   * Já existe modelo de pedido com o mesmo título no escritório, comparado sem acento nem caixa
+   * (issue #517). HTTP 409, {@code field} = {@code titulo}, sem ecoar o título.
+   */
+  MODELO_PEDIDO_DUPLICADO,
+  /** O escritório já tem o máximo de modelos de pedido (50) — issue #517. HTTP 409. */
+  LIMITE_MODELOS_PEDIDO,
   // Persistência / integridade de dados
   /**
    * Violação de restrição de integridade no banco (unique, chave estrangeira, not-null) — ex.:

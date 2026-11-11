@@ -11,6 +11,7 @@ import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.ModeloPedidoRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -61,6 +62,7 @@ public class TestDatabaseCleaner {
   private final EscritorioRepository escritorioRepository;
   private final EscritorioSlugAnteriorRepository escritorioSlugAnteriorRepository;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
+  private final ModeloPedidoRepository modeloPedidoRepository;
   private final NotaFiscalRevisaoRepository revisaoRepository;
   private final PendenciaAnexoRepository pendenciaAnexoRepository;
   private final PendenciaRepository pendenciaRepository;
@@ -87,6 +89,7 @@ public class TestDatabaseCleaner {
       EscritorioRepository escritorioRepository,
       EscritorioSlugAnteriorRepository escritorioSlugAnteriorRepository,
       ObrigacaoFiscalRepository obrigacaoRepository,
+      ModeloPedidoRepository modeloPedidoRepository,
       NotaFiscalRevisaoRepository revisaoRepository,
       PendenciaAnexoRepository pendenciaAnexoRepository,
       PendenciaRepository pendenciaRepository,
@@ -110,6 +113,7 @@ public class TestDatabaseCleaner {
     this.escritorioRepository = escritorioRepository;
     this.escritorioSlugAnteriorRepository = escritorioSlugAnteriorRepository;
     this.obrigacaoRepository = obrigacaoRepository;
+    this.modeloPedidoRepository = modeloPedidoRepository;
     this.revisaoRepository = revisaoRepository;
     this.pendenciaAnexoRepository = pendenciaAnexoRepository;
     this.pendenciaRepository = pendenciaRepository;
@@ -155,6 +159,8 @@ public class TestDatabaseCleaner {
     contadorRepository.deleteAll();
     // Obrigacoes dos escritorios (#181); os modelos do sistema ficam (vem do script, nao do teste).
     obrigacaoRepository.apagarDosEscritorios();
+    // Modelos de pedido (#517): CASCADE no banco, mas nem todo contexto de teste roda o script.
+    modeloPedidoRepository.deleteAllInBatch();
     // Carencia dos slugs (#464): sem ela, um slug de um teste ficaria bloqueado no seguinte.
     escritorioSlugAnteriorRepository.deleteAllInBatch();
     // Escritorio (#228) depois dos contadores, que o referenciam.
