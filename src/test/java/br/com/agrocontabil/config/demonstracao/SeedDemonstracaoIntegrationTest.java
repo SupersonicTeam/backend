@@ -217,13 +217,21 @@ class SeedDemonstracaoIntegrationTest {
   }
 
   @Test
-  @DisplayName("cota da Ceres: a primeira pergunta passa, a segunda recebe 429")
+  @DisplayName("cota da Ceres: saudações e atalhos pagam a leitura, a primeira pergunta de modelo "
+      + "passa, a segunda recebe 429 (#511)")
   void cotaDaCeresNoLimite() {
     Produtor noFim = produtor(CenarioDemonstracao.CHAVE_COTA_NO_FIM);
     long teto = cotaService.tetoDaPergunta(null);
 
-    assertThat(cotaCeres.prepararSemana()).hasValue(teto + 1);
+    assertThat(cotaCeres.prepararSemana())
+        .hasValue(teto + CotaDemonstracaoCeres.FOLGA_LEITURAS);
 
+    // Um "olá" e um atalho da tela antes da pergunta (1 crédito por token): cabem na folga.
+    for (long tokens : new long[] {1, 10}) {
+      CotaUsoAssistenteService.Reserva leitura =
+          cotaService.reservarLeitura(TipoTitularCota.PRODUTOR, noFim.getId(), null, tokens);
+      cotaService.acertar(leitura, tokens, 0, null);
+    }
     CotaUsoAssistenteService.Reserva reserva =
         cotaService.reservar(TipoTitularCota.PRODUTOR, noFim.getId(), null);
     cotaService.acertar(reserva, 3_000, 400, null);

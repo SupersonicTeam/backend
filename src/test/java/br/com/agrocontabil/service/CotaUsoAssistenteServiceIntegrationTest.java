@@ -59,7 +59,7 @@ class CotaUsoAssistenteServiceIntegrationTest {
     repository.deleteAll();
     propriedades = new AssistenteProperties();
     propriedades.getCota().setHabilitada(true);
-    propriedades.getCota().setCreditosPorSemanaProdutor(300);
+    propriedades.getCota().setCreditosPorSemanaProdutor(300_000);
     produtor = UUID.randomUUID();
   }
 
@@ -69,19 +69,20 @@ class CotaUsoAssistenteServiceIntegrationTest {
     propriedades.getCota().getFatorPorModelo().put("openai/gpt-4o", 3.0);
     CotaUsoAssistenteService service = service(QUARTA);
 
-    // Pergunta simples: 1.000 de entrada + 100 de saida = 1.400 ponderados = 2 creditos.
-    assertThat(service.creditos(1000, 100, "ollama/qwen3")).isEqualTo(2);
-    // Pergunta complexa (rodadas de funcao, trechos de lei): 12.000 + 800 = 15.200 -> 16.
-    assertThat(service.creditos(12_000, 800, "ollama/qwen3")).isEqualTo(16);
+    // 1 credito por token ponderado (#511).
+    // Pergunta simples: 1.000 de entrada + 100 de saida = 1.400 ponderados = 1.400 creditos.
+    assertThat(service.creditos(1000, 100, "ollama/qwen3")).isEqualTo(1400);
+    // Pergunta complexa (rodadas de funcao, trechos de lei): 12.000 + 800 x 4 = 15.200.
+    assertThat(service.creditos(12_000, 800, "ollama/qwen3")).isEqualTo(15_200);
     // Modelo maior: mesmo consumo, fator 3.
-    assertThat(service.creditos(1000, 100, "openai/gpt-4o")).isEqualTo(5);
-    // Fallback: sem modelo, sem custo.
+    assertThat(service.creditos(1000, 100, "openai/gpt-4o")).isEqualTo(4200);
+    // Leitura de um "ola" (1 token, sem saida): 1 credito, nunca zero.
+    assertThat(service.creditos(1, 0, "ollama/qwen3")).isEqualTo(1);
     assertThat(service.creditos(0, 0, "ollama/qwen3")).isZero();
-    // Teto (#270): 3 chamadas x 8.192 de entrada + (256 + 512 + 1.024) de saida x 4 = 31.744
-    // ponderados -> 32. Com a formula antiga (6 chamadas x 1.024 de saida) eram 73.
-    assertThat(service.tetoDaPergunta("ollama/qwen3")).isEqualTo(32);
-    // Mesmo teto com fator 3: 95,2 -> 96.
-    assertThat(service.tetoDaPergunta("openai/gpt-4o")).isEqualTo(96);
+    // Teto (#270): 3 chamadas x 8.192 de entrada + (256 + 512 + 1.024) de saida x 4 = 31.744.
+    assertThat(service.tetoDaPergunta("ollama/qwen3")).isEqualTo(31_744);
+    // Mesmo teto com fator 3.
+    assertThat(service.tetoDaPergunta("openai/gpt-4o")).isEqualTo(95_232);
   }
 
   @Test
@@ -91,10 +92,10 @@ class CotaUsoAssistenteServiceIntegrationTest {
 
     CotaUsoAssistenteService.Reserva primeira =
         service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
-    assertThat(uso().getCreditosReservados()).isEqualTo(32);
-    assertThat(service.acertar(primeira, 1000, 100, "ollama/qwen3")).isEqualTo(2);
+    assertThat(uso().getCreditosReservados()).isEqualTo(31_744);
+    assertThat(service.acertar(primeira, 1000, 100, "ollama/qwen3")).isEqualTo(1400);
     assertThat(uso().getCreditosReservados()).isZero();
-    assertThat(uso().getCreditosConsumidos()).isEqualTo(2);
+    assertThat(uso().getCreditosConsumidos()).isEqualTo(1400);
     assertThat(uso().getTokensEntrada()).isEqualTo(1000);
     assertThat(uso().getPerguntas()).isEqualTo(1);
 
@@ -104,11 +105,11 @@ class CotaUsoAssistenteServiceIntegrationTest {
     // Estorno repetido nao vira credito de graca: a reserva ja nao esta la.
     service.estornar(segunda);
     assertThat(uso().getCreditosReservados()).isZero();
-    assertThat(uso().getCreditosConsumidos()).isEqualTo(2);
+    assertThat(uso().getCreditosConsumidos()).isEqualTo(1400);
 
     CotaUsoAssistenteService.Uso consulta = service.consultar(TipoTitularCota.PRODUTOR, produtor);
-    assertThat(consulta.consumidos()).isEqualTo(2);
-    assertThat(consulta.restantes()).isEqualTo(298);
+    assertThat(consulta.consumidos()).isEqualTo(1400);
+    assertThat(consulta.restantes()).isEqualTo(298_600);
     assertThat(consulta.renovaEm().toLocalDate()).isEqualTo(LocalDate.of(2026, 10, 19));
   }
 
@@ -118,12 +119,12 @@ class CotaUsoAssistenteServiceIntegrationTest {
     repository.save(UsoSemanalAssistente.builder()
         .id(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
             LocalDate.of(2026, 10, 12)))
-        .creditosConsumidos(270)
+        .creditosConsumidos(270_000)
         .atualizadoEm(QUARTA.atZone(ZONE).toOffsetDateTime())
         .build());
     CotaUsoAssistenteService service = service(QUARTA);
 
-    // 270 consumidos + 32 de teto > 300.
+    // 270.000 consumidos + 31.744 de teto > 300.000.
     assertThatThrownBy(() -> service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3"))
         .isInstanceOfSatisfying(LimiteUsoAssistenteException.class, e ->
             // Quarta 10h ate segunda 00h: 4 dias e 14 horas.
@@ -147,7 +148,7 @@ class CotaUsoAssistenteServiceIntegrationTest {
         .isEqualTo(LocalDate.of(2026, 10, 19));
     assertThat(segunda.consultar(TipoTitularCota.PRODUTOR, produtor).consumidos()).isZero();
     assertThat(repository.findById(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
-        LocalDate.of(2026, 10, 12))).orElseThrow().getCreditosConsumidos()).isEqualTo(2);
+        LocalDate.of(2026, 10, 12))).orElseThrow().getCreditosConsumidos()).isEqualTo(1400);
   }
 
   @Test
@@ -177,9 +178,10 @@ class CotaUsoAssistenteServiceIntegrationTest {
         aceitas += resultado.get(30, TimeUnit.SECONDS) ? 1 : 0;
       }
 
-      // 300 / 32 = 9 reservas cabem; as outras 3 recebem 429.
+      // 300.000 / 31.744 = 9 reservas cabem; as outras 3 recebem 429.
       assertThat(aceitas).isEqualTo(9);
-      assertThat(uso().getCreditosReservados()).isEqualTo(9 * 32).isLessThanOrEqualTo(300);
+      assertThat(uso().getCreditosReservados()).isEqualTo(9 * 31_744L)
+          .isLessThanOrEqualTo(300_000);
     } finally {
       pool.shutdownNow();
     }
@@ -193,43 +195,123 @@ class CotaUsoAssistenteServiceIntegrationTest {
         service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
 
     // Muito acima dos tetos por chamada (prompt enorme): cobra o teto, nao passa do limite.
-    assertThat(service.acertar(r, 1_000_000, 50_000, "ollama/qwen3")).isEqualTo(32);
-    assertThat(uso().getCreditosConsumidos()).isEqualTo(32);
+    assertThat(service.acertar(r, 1_000_000, 50_000, "ollama/qwen3")).isEqualTo(31_744);
+    assertThat(uso().getCreditosConsumidos()).isEqualTo(31_744);
   }
 
   @Test
   @DisplayName("Review: reserva presa (processo morto) volta ao saldo na proxima reserva")
   void reservaPresaLiberada() {
-    propriedades.getCota().setCreditosPorSemanaProdutor(150);
+    propriedades.getCota().setCreditosPorSemanaProdutor(150_000);
     // Duas reservas que nunca acertaram, numa linha parada ha 1 hora (timeout padrao: 5 min).
     repository.save(UsoSemanalAssistente.builder()
         .id(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
             LocalDate.of(2026, 10, 12)))
-        .creditosReservados(146)
+        .creditosReservados(146_000)
         .atualizadoEm(QUARTA.minusHours(1).atZone(ZONE).toOffsetDateTime())
         .build());
     CotaUsoAssistenteService service = service(QUARTA);
 
-    assertThat(service.consultar(TipoTitularCota.PRODUTOR, produtor).restantes()).isEqualTo(150);
+    assertThat(service.consultar(TipoTitularCota.PRODUTOR, produtor).restantes())
+        .isEqualTo(150_000);
     service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
-    assertThat(uso().getCreditosReservados()).isEqualTo(32);
+    assertThat(uso().getCreditosReservados()).isEqualTo(31_744);
   }
 
   @Test
   @DisplayName("Reserva recente nao e liberada: outra pergunta pode estar em andamento")
   void reservaRecenteMantida() {
-    propriedades.getCota().setCreditosPorSemanaProdutor(150);
+    propriedades.getCota().setCreditosPorSemanaProdutor(150_000);
     repository.save(UsoSemanalAssistente.builder()
         .id(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
             LocalDate.of(2026, 10, 12)))
-        .creditosReservados(146)
+        .creditosReservados(146_000)
         .atualizadoEm(QUARTA.minusMinutes(2).atZone(ZONE).toOffsetDateTime())
         .build());
     CotaUsoAssistenteService service = service(QUARTA);
 
     assertThatThrownBy(() -> service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3"))
         .isInstanceOf(LimiteUsoAssistenteException.class);
-    assertThat(uso().getCreditosReservados()).isEqualTo(146);
+    assertThat(uso().getCreditosReservados()).isEqualTo(146_000);
+  }
+
+  @Test
+  @DisplayName("#511: a leitura reserva so o custo da mensagem, e o acerto debita esse custo")
+  void reservaDaLeitura() {
+    propriedades.getCota().getFatorPorModelo().put("openai/gpt-4o", 3.0);
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    CotaUsoAssistenteService.Reserva ola =
+        service.reservarLeitura(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3", 1);
+    assertThat(ola.ativa()).isTrue();
+    assertThat(uso().getCreditosReservados()).isEqualTo(1);
+    assertThat(service.acertar(ola, 1, 0, "ollama/qwen3")).isEqualTo(1);
+
+    // Fator do modelo vale também na leitura: 5 tokens x 3.
+    CotaUsoAssistenteService.Reserva pergunta =
+        service.reservarLeitura(TipoTitularCota.PRODUTOR, produtor, "openai/gpt-4o", 5);
+    assertThat(uso().getCreditosReservados()).isEqualTo(15);
+    assertThat(service.acertar(pergunta, 5, 0, "openai/gpt-4o")).isEqualTo(15);
+
+    assertThat(uso().getCreditosReservados()).isZero();
+    assertThat(uso().getCreditosConsumidos()).isEqualTo(16);
+    assertThat(uso().getPerguntas()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("#511: sem saldo para a leitura, 429 também; com saldo só para ela, passa")
+  void leituraSemSaldo() {
+    repository.save(UsoSemanalAssistente.builder()
+        .id(new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor,
+            LocalDate.of(2026, 10, 12)))
+        .creditosConsumidos(299_995)
+        .atualizadoEm(QUARTA.atZone(ZONE).toOffsetDateTime())
+        .build());
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    // 5 restantes: o teto de uma pergunta de modelo não cabe, a leitura de 5 tokens cabe.
+    assertThatThrownBy(() -> service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3"))
+        .isInstanceOf(LimiteUsoAssistenteException.class);
+    service.reservarLeitura(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3", 5);
+    assertThatThrownBy(() -> service.reservarLeitura(TipoTitularCota.PRODUTOR, produtor,
+        "ollama/qwen3", 1)).isInstanceOf(LimiteUsoAssistenteException.class);
+    assertThat(uso().getCreditosReservados()).isEqualTo(5);
+  }
+
+  @Test
+  @DisplayName("#511: percentual usado nos limites: 0 so sem uso, 1 com qualquer uso, 99 com saldo, "
+      + "100 so sem saldo")
+  void percentualUsadoNosLimites() {
+    // Sem uso nenhum.
+    assertThat(CotaUsoAssistenteService.percentualUsado(0, 1_000_000, 1_000_000)).isZero();
+    // Qualquer uso aparece: 1 crédito de 1.000.000 (um "olá") = 1%.
+    assertThat(CotaUsoAssistenteService.percentualUsado(1, 1_000_000, 999_999)).isEqualTo(1);
+    // Arredonda para cima: 120.001 de 1.000.000 = 12,0001% -> 13%.
+    assertThat(CotaUsoAssistenteService.percentualUsado(120_000, 1_000_000, 880_000))
+        .isEqualTo(12);
+    assertThat(CotaUsoAssistenteService.percentualUsado(120_001, 1_000_000, 879_999))
+        .isEqualTo(13);
+    // Com saldo, nunca 100: falta 1 crédito -> 99%.
+    assertThat(CotaUsoAssistenteService.percentualUsado(999_999, 1_000_000, 1)).isEqualTo(99);
+    assertThat(CotaUsoAssistenteService.percentualUsado(990_001, 1_000_000, 9_999)).isEqualTo(99);
+    // 100 só sem saldo: inteiro gasto, ou o resto preso em perguntas em andamento.
+    assertThat(CotaUsoAssistenteService.percentualUsado(1_000_000, 1_000_000, 0)).isEqualTo(100);
+    assertThat(CotaUsoAssistenteService.percentualUsado(990_000, 1_000_000, 0)).isEqualTo(100);
+  }
+
+  @Test
+  @DisplayName("#511: a consulta devolve o percentual usado da semana")
+  void consultaComPercentual() {
+    CotaUsoAssistenteService service = service(QUARTA);
+    assertThat(service.consultar(TipoTitularCota.PRODUTOR, produtor).percentualUsado()).isZero();
+
+    CotaUsoAssistenteService.Reserva leitura =
+        service.reservarLeitura(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3", 1);
+    service.acertar(leitura, 1, 0, "ollama/qwen3");
+
+    CotaUsoAssistenteService.Uso uso = service.consultar(TipoTitularCota.PRODUTOR, produtor);
+    assertThat(uso.consumidos()).isEqualTo(1);
+    assertThat(uso.percentualUsado()).isEqualTo(1);
   }
 
   @Test
@@ -241,8 +323,12 @@ class CotaUsoAssistenteServiceIntegrationTest {
     CotaUsoAssistenteService.Reserva r =
         service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
     service.acertar(r, 1000, 100, "ollama/qwen3");
+    CotaUsoAssistenteService.Reserva leitura =
+        service.reservarLeitura(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3", 5);
+    service.acertar(leitura, 5, 0, "ollama/qwen3");
 
     assertThat(r.ativa()).isFalse();
+    assertThat(leitura.ativa()).isFalse();
     assertThat(repository.count()).isZero();
     assertThat(service.consultar(TipoTitularCota.PRODUTOR, produtor).habilitada()).isFalse();
   }

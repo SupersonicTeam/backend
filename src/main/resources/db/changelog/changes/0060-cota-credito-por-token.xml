@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+      #511 (decisao do Murillo, 2026-11-11): a cota da Ceres passa a 1 credito por token
+      (tokens-por-credito 1000 -> 1) e os planos sobem na mesma proporcao (1.000 -> 1.000.000 do
+      produtor, 5.000 -> 5.000.000 do escritorio). O uso ja gravado vai para a unidade nova
+      (x 1000), para ninguem ganhar nem perder saldo na virada. Todas as semanas, nao so a
+      corrente: o historico fica na mesma unidade. Os tokens nao mudam.
+    -->
+    <changeSet id="0060-cota-credito-por-token" author="supersonic-team">
+        <update tableName="assistente_uso_semanal">
+            <column name="creditos_consumidos" valueComputed="creditos_consumidos * 1000"/>
+            <column name="creditos_reservados" valueComputed="creditos_reservados * 1000"/>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>
