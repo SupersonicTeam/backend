@@ -89,12 +89,11 @@ public class ModeloLinguagem {
       if (abreDisjuntor(e)) {
         disponibilidade.registrarFalha();
       }
-      // So o tipo da falha em WARN: a mensagem de erro de um provedor por API pode ecoar a
-      // requisicao, que carrega dados do produtor. O stack trace fica em DEBUG — com o Ollama fora
-      // do ar isto acontece a cada pergunta, e em ERROR inundaria o log.
+      // So o tipo da falha: a mensagem e o stack trace de um provedor por API podem ecoar a
+      // requisicao, que carrega dados do produtor e, com a continuidade (#499), as trocas
+      // anteriores inteiras. Nem em DEBUG.
       log.warn("Falha ao chamar o modelo de linguagem: provedor={} falha={}",
           provedor, e.getClass().getName());
-      log.debug("Detalhe da falha do modelo de linguagem", e);
       throw new AssistenteIndisponivelException(
           "Falha ao chamar o modelo " + provedor + ": " + e.getClass().getSimpleName(), e);
     }

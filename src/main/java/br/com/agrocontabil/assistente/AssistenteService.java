@@ -1,9 +1,9 @@
 package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
+import br.com.agrocontabil.assistente.continuidade.ContinuidadeConversa;
+import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade.Decisao;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
-import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos;
-import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
@@ -11,9 +11,11 @@ import br.com.agrocontabil.assistente.porta.CotaUsoPorta;
 import br.com.agrocontabil.assistente.porta.IdentidadePorta;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
 import br.com.agrocontabil.dto.AssistenteUsoResponse;
+import br.com.agrocontabil.dto.TurnoConversa;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.exception.AssistenteOcupadoException;
 import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -46,6 +49,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -510,7 +514,7 @@ public class AssistenteService implements DisposableBean {
       resultado = orquestrador.responder(pergunta, contexto, decidida -> {
         rota.set(decidida);
         aoDecidirRota.accept(decidida);
-      });
+      }, execucao.decisao, continuidade.habilitada());
     } catch (RuntimeException e) {
       falha = e;
     } finally {
@@ -556,9 +560,28 @@ public class AssistenteService implements DisposableBean {
         .map(c -> new AssistenteChatResponse.Citacao(
             c.norma(), c.dispositivo(), c.url(), c.trecho()))
         .toList();
+    // Continuidade (#499): o turno assinado e a pergunta considerada, so com a flag ligada.
+    String considerada = resultado.perguntaConsiderada() == null
+        ? pergunta : resultado.perguntaConsiderada();
+    TurnoConversa turno = emiteTurno(resultado)
+        ? continuidade.emitir(contexto.produtorId(), considerada, resultado.texto(),
+            resultado.rota(), contexto.registroTurno(), execucao.agora).orElse(null)
+        : null;
+    String interpretada = continuidade.habilitada() && !considerada.equals(pergunta)
+        ? considerada : null;
     return new AssistenteChatResponse(
         resultado.texto(), resultado.rota().name(), citacoes, fontes, resultado.modoFallback(),
-        resultado.atalhos().stream().map(Enum::name).toList());
+        resultado.atalhos().stream().map(Enum::name).toList(), interpretada, turno);
+  }
+
+  /**
+   * Há {@code turno} (#499) com a rota de dados, de lei ou mista, fora do modo fallback e fora da
+   * recusa firme da rota de dados. Conversa leve, recusa e fora de escopo não têm.
+   */
+  private static boolean emiteTurno(ResultadoOrquestracao resultado) {
+    Intencao rota = resultado.rota();
+    return (rota == Intencao.DADOS || rota == Intencao.LEGISLACAO || rota == Intencao.MISTO)
+        && !resultado.modoFallback() && !PromptsCeres.RECUSA_FIRME.equals(resultado.texto());
   }
 
   private ContextoAssistente novoContexto(UUID produtorId) {
@@ -685,6 +708,10 @@ public class AssistenteService implements DisposableBean {
 
     private final ContextoAssistente contexto;
     private final String pergunta;
+    /** Decisão da continuidade (#499), tomada antes da reserva. */
+    private final Decisao decisao;
+    /** Instante único da requisição (conferência do histórico e validade do turno). */
+    private final Instant agora;
     private final CotaUsoPorta.ReservaCota reserva;
     /** A reserva da cota é encerrada (acerto ou estorno) uma vez só, pelo primeiro que chegar. */
     private final AtomicBoolean cotaEncerrada = new AtomicBoolean();
@@ -694,11 +721,13 @@ public class AssistenteService implements DisposableBean {
     private volatile boolean auditada;
     private Thread trabalhador;
 
-    private Execucao(
-        ContextoAssistente contexto, String pergunta, CotaUsoPorta.ReservaCota reserva) {
+    private Execucao(ContextoAssistente contexto, String pergunta,
+        CotaUsoPorta.ReservaCota reserva, Decisao decisao, Instant agora) {
       this.contexto = contexto;
       this.pergunta = pergunta;
       this.reserva = reserva;
+      this.decisao = decisao;
+      this.agora = agora;
     }
 
     private void cobrarGasto() {
