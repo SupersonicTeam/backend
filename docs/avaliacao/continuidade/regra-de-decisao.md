@@ -106,7 +106,7 @@ Os textos vão normalizados: sem acento, minúsculas e espaços reduzidos.
 | `correcao_contem` | todas as regex casam no texto depois da abertura `LEI_CORRIJO` |
 | `citacao_contem` | alguma citação contém um dos dispositivos |
 | `interpretada` | `ausente_ou_igual`: sem `perguntaInterpretada`, ou igual à mensagem |
-| `credito_zero` | não houve chamada ao modelo: a chamada gravou auditoria (`assistente_interacao`) e nenhuma das linhas novas tem tokens de entrada ou de saída. O campo `modelo` vem preenchido mesmo sem chamada e não conta. Até a v2: o `consumidos` não mudou |
+| `credito_zero` | não houve chamada ao modelo: a chamada gravou auditoria (`assistente_interacao`) e nenhuma das linhas novas tem tokens de entrada ou de saída. O campo `modelo` vem preenchido mesmo sem chamada e não conta. Sem linha de auditoria, o turno não passa, porque não há como conferir. Até a v2: o `consumidos` não mudou |
 
 ## Métricas (braço ligado, teste)
 
@@ -167,7 +167,8 @@ Cada métrica olha só a sua parte do `esperado`. Uma execução conta uma vez p
   - o crédito médio por caminho;
   - o crédito de cada turno com `credito_zero` (v3, não decide): o delta do `consumidos` e se ele
     bate com a leitura da #511, ⌈caracteres da pergunta enviada ÷ 4⌉, contados em unidades UTF-16
-    como no Java;
+    como no Java. Vai à parte o turno que passou como sem modelo e gastou mais que a leitura: pode
+    ser chamada ao modelo que a auditoria gravou sem tokens, e é conferido à mão;
   - as reconferências que caem no apoio;
   - as respostas acima de 6000 caracteres (cortadas com `[…]`);
   - o p95 de tokens de entrada, pela auditoria (`assistente_interacao`) do banco do braço ligado;

@@ -294,6 +294,7 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(resultado["decisao"], "ENTRA")
         relato = resultado["partes"]["teste"]["ligado"]["credito_sem_modelo"]
         self.assertEqual((relato["n"], relato["bate_com_a_leitura"]), (3, 2))
+        self.assertEqual(relato["sem_modelo_acima_da_leitura"], ["t-lei-01/r3/t2"])
         self.assertEqual(relato["turnos"][2], {"id": "t-lei-01/r3/t2", "sem_modelo": True,
                                                "credito": 7, "leitura": 3, "bate": False})
 

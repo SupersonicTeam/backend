@@ -341,6 +341,11 @@ def medir(conjunto: dict, grupos: dict, notas: dict, braco: str, linhas: list[di
             "credito_sem_modelo": {
                 "n": len(sem_modelo_relato),
                 "bate_com_a_leitura": sum(1 for t in sem_modelo_relato if t["bate"]),
+                # Passou como sem modelo mas gastou mais que a leitura: pode ser chamada ao modelo
+                # que a auditoria gravou sem tokens. Só sinal, para conferir à mão.
+                "sem_modelo_acima_da_leitura": [
+                    t["id"] for t in sem_modelo_relato if t["sem_modelo"]
+                    and t["credito"] is not None and t["credito"] > t["leitura"]],
                 "turnos": sem_modelo_relato},
             "latencia_reescrita": latencia_reescrita(linhas, conjunto["parte"], braco),
             "primeiros_turnos": primeiros_turnos(conjunto, grupos, notas, braco),
@@ -492,7 +497,8 @@ def main(argv=None) -> int:
               f"({criterio['limiar']}) cumpre={criterio['cumpre']}")
     relato = resultado["partes"]["teste"]["ligado"]["credito_sem_modelo"]
     print(f"  credito_sem_modelo (só relatado): {relato['bate_com_a_leitura']} de {relato['n']} "
-          f"turnos com o crédito igual à leitura")
+          f"turnos com o crédito igual à leitura; sem modelo e acima da leitura: "
+          f"{relato['sem_modelo_acima_da_leitura']}")
     for problema in resultado["problemas"]:
         print(f"  problema: {problema}")
     return {"ENTRA": 0, "NAO_ENTRA": 1}.get(resultado["decisao"], 2)
