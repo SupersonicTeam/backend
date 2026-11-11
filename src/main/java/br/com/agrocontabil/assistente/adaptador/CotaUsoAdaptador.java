@@ -27,6 +27,13 @@ public class CotaUsoAdaptador implements CotaUsoPorta {
   }
 
   @Override
+  public ReservaCota reservarLeitura(UUID produtorId, String modelo, long tokensLeitura) {
+    CotaUsoAssistenteService.Reserva r = service.reservarLeitura(
+        TipoTitularCota.PRODUTOR, produtorId, modelo, tokensLeitura);
+    return new ReservaCota(r.titularId(), r.semana(), r.creditos(), r.ativa());
+  }
+
+  @Override
   public long acertar(ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo) {
     return service.acertar(paraService(reserva), tokensEntrada, tokensSaida, modelo);
   }
@@ -40,7 +47,7 @@ public class CotaUsoAdaptador implements CotaUsoPorta {
   public UsoCota consultar(UUID produtorId) {
     CotaUsoAssistenteService.Uso u = service.consultar(TipoTitularCota.PRODUTOR, produtorId);
     return new UsoCota(u.plano(), u.habilitada(), u.creditosSemana(), u.consumidos(),
-        u.restantes(), u.renovaEm());
+        u.restantes(), u.renovaEm(), u.percentualUsado());
   }
 
   private static CotaUsoAssistenteService.Reserva paraService(ReservaCota r) {

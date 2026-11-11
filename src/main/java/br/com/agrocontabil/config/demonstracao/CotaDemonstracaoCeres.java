@@ -27,9 +27,11 @@ import org.springframework.stereotype.Component;
  * <strong>uma</strong> pergunta só (issue #315): a primeira responde, a segunda recebe 429
  * {@code LIMITE_USO_ASSISTENTE} com o {@code Retry-After} da virada da semana.
  *
- * <p>O saldo fica em {@code teto da pergunta + 1}: a reserva do teto passa, e qualquer consumo real
- * maior que zero deixa menos que um teto. No modo fallback (modelo fora) a pergunta custa zero e o
- * limite não aparece, como no uso real.
+ * <p>O saldo fica em {@code teto da pergunta + FOLGA_LEITURAS} (#511, 1 crédito por token): a
+ * reserva do teto passa mesmo depois de algumas saudações ou atalhos (que pagam só a leitura), e o
+ * consumo real de uma pergunta de modelo, de milhares de créditos, deixa menos que um teto. No
+ * modo fallback (modelo fora) a pergunta paga só a leitura e o limite não aparece, como no uso
+ * real.
  *
  * <p>A cota zera toda segunda-feira (Brasília), então o cenário é reposto pelo job a cada semana e
  * pelo seed na subida. Só sobe o consumo (nunca o baixa), para não devolver crédito gasto de verdade
@@ -38,6 +40,14 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(name = "app.demonstracao.habilitada", havingValue = "true")
 public class CotaDemonstracaoCeres {
+
+  /**
+   * Folga sobre o teto de uma pergunta de modelo (#511): toda pergunta tem custo, e a leitura de
+   * um "olá" ou de um atalho da tela (1 crédito por token, poucos tokens) não pode tirar a
+   * primeira pergunta de modelo do Rogério. Uma pergunta de modelo consome milhares de créditos,
+   * então a segunda continua recebendo 429.
+   */
+  static final long FOLGA_LEITURAS = 1000;
 
   /** Nome do lock distribuído (ShedLock, #87). */
   public static final String LOCK = "demonstracao-cota-ceres";
@@ -88,7 +98,7 @@ public class CotaDemonstracaoCeres {
     long limite = planoProvider.planoDe(TipoTitularCota.PRODUTOR, produtor.get().getId())
         .creditosPorSemana();
     long teto = cotaService.tetoDaPergunta(modelo.identificacao());
-    long alvo = Math.max(0, limite - teto - 1);
+    long alvo = Math.max(0, limite - teto - FOLGA_LEITURAS);
 
     UsoSemanalAssistenteId id =
         new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor.get().getId(), semana);
@@ -98,8 +108,9 @@ public class CotaDemonstracaoCeres {
       uso.setCreditosConsumidos(alvo);
       // Perguntas e tokens de uma semana movimentada: a tela de uso mostra o histórico coerente.
       uso.setPerguntas(Math.max(uso.getPerguntas(), 27));
-      uso.setTokensEntrada(Math.max(uso.getTokensEntrada(), alvo * 650));
-      uso.setTokensSaida(Math.max(uso.getTokensSaida(), alvo * 90));
+      // 1 credito por token ponderado (#511): entrada + 4 x saida = os creditos consumidos.
+      uso.setTokensEntrada(Math.max(uso.getTokensEntrada(), alvo * 65 / 100));
+      uso.setTokensSaida(Math.max(uso.getTokensSaida(), alvo * 35 / 400));
       uso.setAtualizadoEm(agora);
       usoRepository.save(uso);
     }
