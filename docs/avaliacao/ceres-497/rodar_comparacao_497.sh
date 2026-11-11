@@ -2,6 +2,7 @@
 # Comparação da correção da #497: braço base e braço correção, com o Claude Haiku, local.
 #
 # Uso: rodar_comparacao_497.sh <ferramentas> <worktree base> <worktree correção> <pasta de saída>
+#        [contaminadas]
 #
 # - <ferramentas>: checkout com o conjunto, o executar.py, o pontuar.py e o comparar.py. Os dois
 #   braços são lidos pelas mesmas ferramentas, qualquer que seja a versão delas nos worktrees.
@@ -11,6 +12,8 @@
 #   demonstração e a base de lei copiada do banco agrocontabil. Nunca a VPS.
 # - ANTHROPIC_API_KEY lida do .env do checkout principal só dentro da subshell que sobe a JVM;
 #   nunca impressa nem gravada. A senha das contas semeadas é gerada aqui e só vai por variável.
+# - [contaminadas]: ids fora da decisão, separados por vírgula (regra-de-decisao.md). Elas rodam
+#   nos dois braços como as outras; só a comparação as deixa de fora.
 set -u
 
 FERRAMENTAS=$(cd "$1" && pwd) || exit 1
@@ -18,6 +21,7 @@ WT_BASE=$(cd "$2" && pwd) || exit 1
 WT_CORRECAO=$(cd "$3" && pwd) || exit 1
 mkdir -p "$4" || exit 1
 SAIDA=$(cd "$4" && pwd) || exit 1
+CONTAMINADAS=${5:-}
 TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
 CONJUNTO="$FERRAMENTAS/docs/avaliacao/treino/perguntas-ceres-497.json"
@@ -122,6 +126,7 @@ braco base "$WT_BASE" agroconia_497_base 8497 || exit $?
 braco correcao "$WT_CORRECAO" agroconia_497_correcao 8498 || exit $?
 
 python "$SCRIPTS/comparar.py" --perguntas "$CONJUNTO" --base "$SAIDA/base/resumo.json" \
-  --correcao "$SAIDA/correcao/resumo.json" --saida "$SAIDA/comparacao.json" \
+  --correcao "$SAIDA/correcao/resumo.json" --contaminadas "$CONTAMINADAS" \
+  --saida "$SAIDA/comparacao.json" \
   | tee "$SAIDA/comparacao.txt"
 echo "FIM"

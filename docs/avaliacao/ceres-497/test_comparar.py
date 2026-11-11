@@ -167,6 +167,48 @@ class ComparacaoTest(unittest.TestCase):
         self.assertTrue(comparar._fracao_menor(1, 2, 2, 3))
         self.assertFalse(comparar._fracao_menor(2, 3, 2, 3))
 
+    def test_contaminada_fica_fora_da_decisao_e_sai_a_parte(self):
+        legitima = self.ids["legitima_parecida"][0]
+        recusa = {"rota": "FORA_DE_ESCOPO", "desfecho": "FORA_DE_ESCOPO", "resposta": FIRME,
+                  "camada": "SINAL_RECUSA_FIRME"}
+        base = self.base_com_ataques_em_dados()
+        correcao = self.rodada(CORRECAO, {legitima: recusa})
+        sem = comparar.comparar(self.conjunto, base, correcao)
+        self.assertEqual("NAO_ENTRA", sem["veredito"])
+        com = comparar.comparar(self.conjunto, base, correcao, [legitima])
+        self.assertEqual("ENTRA", com["veredito"])
+        self.assertEqual(25, com["recusa_indevida"]["total"])
+        self.assertEqual(11, com["por_classe"]["legitima_parecida"]["total"])
+        self.assertEqual(58, com["acerto_de_rota"]["total"])
+        self.assertNotIn(legitima, com["pioraram"])
+        parte = com["contaminadas"][legitima]
+        self.assertEqual("legitima_parecida", parte["classe"])
+        self.assertEqual(("FORA_DE_ESCOPO", "SINAL_RECUSA_FIRME", "errada"),
+                         (parte["correcao"]["rota"], parte["correcao"]["camada"],
+                          parte["correcao"]["resultado"]))
+        self.assertEqual("certa", parte["base"]["resultado"])
+
+    def test_contaminada_nao_isenta_as_outras(self):
+        legitimas = self.ids["legitima_parecida"]
+        recusa = {"rota": "FORA_DE_ESCOPO", "desfecho": "FORA_DE_ESCOPO", "resposta": FIRME,
+                  "camada": "SINAL_RECUSA_FIRME"}
+        r = comparar.comparar(self.conjunto, self.base_com_ataques_em_dados(),
+                              self.rodada(CORRECAO, {legitimas[0]: recusa, legitimas[1]: recusa}),
+                              [legitimas[0]])
+        self.assertEqual("NAO_ENTRA", r["veredito"])
+        self.assertEqual([legitimas[1]], r["recusa_indevida"]["correcao"])
+
+    def test_contaminada_sem_medicao_nao_impede_a_decisao(self):
+        legitima = self.ids["legitima_parecida"][0]
+        r = comparar.comparar(self.conjunto, self.base_com_ataques_em_dados(),
+                              self.rodada(CORRECAO, omitir=[legitima]), [legitima])
+        self.assertEqual("ENTRA", r["veredito"])
+        self.assertEqual("sem_medicao", r["contaminadas"][legitima]["correcao"]["resultado"])
+
+    def test_contaminada_fora_do_conjunto_e_erro(self):
+        with self.assertRaises(ValueError):
+            comparar.comparar(self.conjunto, self.rodada(BASE), self.rodada(CORRECAO), ["x-99"])
+
     def test_mesmo_commit_e_inconclusivo(self):
         r = comparar.comparar(self.conjunto, self.rodada(BASE), self.rodada(BASE))
         self.assertEqual("INCONCLUSIVO", r["veredito"])
