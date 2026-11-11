@@ -130,7 +130,7 @@ public class CadastroService {
    * @throws SlugIndisponivelException endereço próprio indisponível no cadastro empresarial (409)
    */
   public CadastroResponse cadastrar(CadastroRequest request) {
-    return cadastrar(request, null);
+    return cadastrar(request, null, null);
   }
 
   /**
@@ -154,18 +154,9 @@ public class CadastroService {
    * com o {@code escritorio} do request (issue #519). Com {@code ingresso}, o tipo de conta e o
    * {@code escritorio} do request são ignorados.
    *
-   * @param request  dados do cadastro, já validados por Bean Validation
-   * @param ingresso como o contador entra num escritório; nulo = unipessoal
-   * @return id da identidade criada, papel e e-mail
-   */
-  CadastroResponse cadastrar(CadastroRequest request, IngressoEscritorio ingresso) {
-    return cadastrar(request, null, ingresso);
-  }
-
-  /**
-   * Como {@link #cadastrar(CadastroRequest, IngressoEscritorio)}, sabendo o escritório em que o
-   * {@code ingresso} põe o contador: o CNPJ e o telefone dele também não podem estar na senha
-   * (issue #521). O escritório só é lido; quem decide o ingresso continua sendo o {@code ingresso}.
+   * <p>O {@code escritorioDoIngresso} é o escritório em que o {@code ingresso} põe o contador: o CNPJ
+   * e o telefone dele também não podem estar na senha (issue #521). Ele só é lido; quem decide o
+   * ingresso continua sendo o {@code ingresso}. Um caminho novo de ingresso precisa passá-lo.
    *
    * @param request              dados do cadastro, já validados por Bean Validation
    * @param escritorioDoIngresso escritório do convite (cadastro pela equipe, #228); nulo sem ele
