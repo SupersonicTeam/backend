@@ -1,5 +1,7 @@
 package br.com.agrocontabil.common;
 
+import java.util.regex.Pattern;
+
 /**
  * Validacao de digito verificador (modulo 11) de CPF e CNPJ (issue #18).
  *
@@ -22,6 +24,12 @@ package br.com.agrocontabil.common;
  * por mascarar CPF/CNPJ em logs e em mensagens de erro expostas ao cliente.
  */
 public final class DocumentoFiscalValidator {
+
+  /**
+   * Formato do CNPJ alfanumerico: compilado uma vez, porque a mascara de log o confere em toda
+   * linha que tiver um candidato (#313).
+   */
+  private static final Pattern CNPJ_ALFANUMERICO = Pattern.compile("[0-9A-Z]{12}\\d{2}");
 
   private DocumentoFiscalValidator() {}
 
@@ -89,7 +97,7 @@ public final class DocumentoFiscalValidator {
    * @return {@code true} se o formato e os dois digitos verificadores conferirem
    */
   public static boolean isCnpjAlfanumericoValido(String cnpj) {
-    if (cnpj == null || !cnpj.matches("[0-9A-Z]{12}\\d{2}") || todosDigitosIguais(cnpj)) {
+    if (cnpj == null || !CNPJ_ALFANUMERICO.matcher(cnpj).matches() || todosDigitosIguais(cnpj)) {
       return false;
     }
     int dv1 = digitoVerificadorCnpj(cnpj, 12);
