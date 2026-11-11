@@ -152,6 +152,58 @@ class RegrasContinuidadeTest {
     assertThat(ConferenciaConsulta.diaDoPar(exp)).isEqualTo(LocalDate.of(2026, 11, 10));
   }
 
+  @Test
+  @DisplayName("Regra 5 com mês nomeado: consulta de outro mês não bate")
+  void regraMesNomeado() {
+    LocalDate dia = LocalDate.of(2026, 11, 10);
+    List<ChamadaAssinada> outubro = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"soja\",\"dataInicio\":\"2026-10-01\",\"dataFim\":\"2026-10-31\"}"));
+    List<ChamadaAssinada> setembro = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"soja\",\"dataInicio\":\"2026-09-01\",\"dataFim\":\"2026-09-30\"}"));
+    assertThat(ConferenciaConsulta.bate("quanto vendi de soja em setembro?", outubro, dia))
+        .isFalse();
+    assertThat(ConferenciaConsulta.bate("quanto vendi de soja em setembro?", setembro, dia))
+        .isTrue();
+    assertThat(ConferenciaConsulta.bate("vendas de soja de setembro de 2025", setembro, dia))
+        .isFalse();
+    assertThat(ConferenciaConsulta.bate("quanto vendi de soja em agosto e setembro?",
+        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"soja\","
+            + "\"dataInicio\":\"2026-08-01\",\"dataFim\":\"2026-09-30\"}")), dia)).isTrue();
+    assertThat(ConferenciaConsulta.bate("qual a apuração de março?",
+        List.of(chamada("consultarApuracao", "{\"mes\":\"2026-03\"}")), dia)).isTrue();
+    assertThat(ConferenciaConsulta.bate("qual a apuração de março?",
+        List.of(chamada("consultarApuracao", "{\"mes\":\"2026-04\"}")), dia)).isFalse();
+    assertThat(ConferenciaConsulta.bate("quanto vendi de soja em setembro?",
+        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"soja\"}")), dia))
+        .isFalse();
+  }
+
+  @Test
+  @DisplayName("Par de mês nomeado com consulta de outro mês: o modelo escolhe de novo (32)")
+  void decisaoMesNomeado() {
+    ParConferido par = new ParConferido("quanto vendi de milho em setembro?", "Resposta.",
+        "v1.a.b", new CargaTurno(EXP, Intencao.DADOS, false,
+            List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"milho\","
+                + "\"dataInicio\":\"2026-10-01\",\"dataFim\":\"2026-10-31\"}")),
+            HashDados.de("x"), null, false, null), 0, false);
+
+    assertThat(DecisaoContinuidade.decidir("tem certeza?", historico(par), false).custo())
+        .isEqualTo(CaminhoCota.NORMAL);
+  }
+
+  @Test
+  @DisplayName("Atalho de dados da tela: 'tem certeza?' reexecuta a função fixa, custo zero")
+  void decisaoDepoisDeAtalho() {
+    ParConferido par = new ParConferido("Quanto eu tenho que pagar este mês?", "Resposta.",
+        "v1.a.b", new CargaTurno(EXP, Intencao.DADOS, false,
+            List.of(chamada("vencimentosDoMes", "{}")), HashDados.de("x"), null, false, null), 0,
+        false);
+
+    assertThat(DecisaoContinuidade.consultaBate(par)).isTrue();
+    assertThat(DecisaoContinuidade.decidir("tem certeza?", historico(par), false).custo())
+        .isEqualTo(CaminhoCota.SEM_MODELO);
+  }
+
   // --- decisao ---
 
   @Test

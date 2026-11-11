@@ -54,6 +54,13 @@ public final class ConferenciaConsulta {
 
   private static final Pattern NOTA_N = Pattern.compile("\\bnota (?:n |no |numero )?(\\d+)\\b");
 
+  /** Mês nomeado na pergunta normalizada, com o ano opcional ("setembro de 2026"). */
+  private static final Pattern MES_NOMEADO = Pattern.compile("\\b(janeiro|fevereiro|marco|abril"
+      + "|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?: de (\\d{4}))?\\b");
+
+  private static final List<String> MESES = List.of("janeiro", "fevereiro", "marco", "abril",
+      "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro");
+
   private ConferenciaConsulta() {
   }
 
@@ -199,8 +206,64 @@ public final class ConferenciaConsulta {
   static boolean periodo(String pergunta, List<ChamadaAssinada> consulta, LocalDate diaDoPar) {
     Optional<PeriodoDaPergunta.Periodo> periodo = PeriodoDaPergunta.resolver(pergunta, diaDoPar);
     if (periodo.isEmpty()) {
+      // O PeriodoDaPergunta so resolve periodo relativo; o mes nomeado ("em setembro") fica com
+      // o modelo. Sem esta conferencia, a consulta de outro mes "batia" e a confirmacao a
+      // reexecutava dizendo que o resultado e o mesmo.
+      return mesesNomeados(pergunta, consulta);
+    }
+    return comoPeriodoAplicado(consulta, periodo.get());
+  }
+
+  /**
+   * Regra 5 com mês nomeado (#499): com "setembro" (ou "setembro de 2026") na pergunta, toda
+   * chamada de período cai num dos meses nomeados, no ano dito quando há ano: as datas de
+   * {@code dataInicio} e {@code dataFim} e o {@code mes} das funções de mês. Chamada de período
+   * sem a data ou o mês não cabe num mês nomeado, então não bate. Sem mês nomeado, passa.
+   */
+  static boolean mesesNomeados(String pergunta, List<ChamadaAssinada> consulta) {
+    Matcher m = MES_NOMEADO.matcher(TextoContinuidade.normalizar(pergunta));
+    List<int[]> nomeados = new ArrayList<>();
+    while (m.find()) {
+      int mes = MESES.indexOf(m.group(1)) + 1;
+      int ano = m.group(2) == null ? 0 : Integer.parseInt(m.group(2));
+      nomeados.add(new int[] {mes, ano});
+    }
+    if (nomeados.isEmpty()) {
       return true;
     }
+    for (ChamadaAssinada c : consulta) {
+      if (PeriodoDaPergunta.FUNCOES_DE_DATAS.contains(c.funcao())) {
+        if (!dataNumMesNomeado(c.argumento("dataInicio"), nomeados)
+            || !dataNumMesNomeado(c.argumento("dataFim"), nomeados)) {
+          return false;
+        }
+      } else if (PeriodoDaPergunta.FUNCAO_APURACAO.equals(c.funcao())
+          || PeriodoDaPergunta.FUNCAO_VENCIMENTOS_DO_MES.equals(c.funcao())) {
+        String mes = c.argumento("mes");
+        if (mes == null || !dataNumMesNomeado(mes.strip() + "-01", nomeados)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static boolean dataNumMesNomeado(String iso, List<int[]> nomeados) {
+    if (iso == null) {
+      return false;
+    }
+    LocalDate data;
+    try {
+      data = LocalDate.parse(iso.strip());
+    } catch (java.time.format.DateTimeParseException e) {
+      return false;
+    }
+    return nomeados.stream().anyMatch(n -> n[0] == data.getMonthValue()
+        && (n[1] == 0 || n[1] == data.getYear()));
+  }
+
+  private static boolean comoPeriodoAplicado(List<ChamadaAssinada> consulta,
+      PeriodoDaPergunta.Periodo periodo) {
     List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
     for (int i = 0; i < consulta.size(); i++) {
       ChamadaAssinada c = consulta.get(i);
@@ -209,7 +272,7 @@ public final class ConferenciaConsulta {
     }
     ChatResponse original = new ChatResponse(List.of(new Generation(
         AssistantMessage.builder().content("").toolCalls(chamadas).build())));
-    ChatResponse ajustada = RotaDados.comPeriodo(original, periodo.get());
+    ChatResponse ajustada = RotaDados.comPeriodo(original, periodo);
     List<ChamadaAssinada> depois = ajustada.getResults().stream()
         .flatMap(g -> g.getOutput().getToolCalls().stream())
         .map(t -> ChamadaAssinada.de(t.name(), t.arguments()).orElse(null))

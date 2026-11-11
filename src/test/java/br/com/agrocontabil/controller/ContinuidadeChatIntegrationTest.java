@@ -116,6 +116,20 @@ class ContinuidadeChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("Atalho de dados e 'tem certeza?': reexecuta a função fixa sem o modelo")
+  void confirmacaoDepoisDeAtalho() throws Exception {
+    JsonNode atalho = perguntar("Quanto eu tenho que pagar este mês?", List.of(), false);
+    assertThat(atalho.get("turno")).isNotNull();
+    int chamadas = modelo.promptsRecebidos().size();
+
+    JsonNode segunda = perguntar("tem certeza?", List.of(atalho.get("turno")), false);
+
+    assertThat(segunda.get("resposta").asText())
+        .startsWith(Autocorrecao.REPETI_IGUAL.formatted("os vencimentos do mês atual"));
+    assertThat(modelo.promptsRecebidos()).hasSize(chamadas);
+  }
+
+  @Test
   @DisplayName("Sem histórico, ou com a última resposta sem turno: o SEGUIMENTO novo")
   void seguimentoNovo() throws Exception {
     JsonNode primeira = perguntar(PERGUNTA, List.of(), false);

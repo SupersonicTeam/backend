@@ -126,7 +126,16 @@ public final class DecisaoContinuidade {
   /** A consulta assinada do par bate com a pergunta dele (no dia do par). */
   public static boolean consultaBate(ParConferido par) {
     CargaTurno carga = par.carga();
-    return carga.consulta() != null && ConferenciaConsulta.bate(par.pergunta(), carga.consulta(),
+    if (carga.consulta() == null) {
+      return false;
+    }
+    if (carga.rota() == Intencao.DADOS && AtalhosFixos.ehAtalho(par.pergunta())) {
+      // Atalho de dados da tela: a funcao e fixa ({@code {}}, com o padrao dela) e coerente por
+      // construcao. As regras de periodo mudariam os argumentos ("este mes" vira o mes) e
+      // mandariam ao modelo uma pergunta que se refaz sem ele.
+      return true;
+    }
+    return ConferenciaConsulta.bate(par.pergunta(), carga.consulta(),
         ConferenciaConsulta.diaDoPar(carga.exp()));
   }
 
