@@ -283,6 +283,22 @@ class OrquestradorServiceTest {
   }
 
   @Test
+  @DisplayName("#497: pergunta de lei com outra pessoa no sentido da norma segue para o"
+      + " classificador")
+  void leiComOutraPessoaSegueParaOClassificador() {
+    classificarComo(Intencao.LEGISLACAO, 0.9);
+    when(rotaLegislacao.responder(anyString(), any()))
+        .thenReturn(ResultadoRota.aceita("Regra (LC 214/2025, art. 138).", List.of(CITACAO)));
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Os demais contribuintes da cadeia têm crédito de IBS na compra do produtor rural?",
+        contexto, rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.LEGISLACAO);
+    verify(classificador).classificar(anyString(), any());
+  }
+
+  @Test
   @DisplayName("LEGISLACAO vai so para o RAG e traz as citacoes")
   void legislacao() {
     classificarComo(Intencao.LEGISLACAO, 0.8);
