@@ -175,6 +175,7 @@ def _desfechos(resumo: dict) -> dict:
 def _imprimir(r: dict) -> None:
     print(f"Base {r['commits']['base']} x correção {r['commits']['correcao']}")
     print(f"Veredito: {r['veredito']}")
+    print(f"Contaminadas (fora da decisão): {', '.join(r['contaminadas']) or 'nenhuma'}")
     for problema in r["problemas_de_medicao"]:
         print(f"  medição: {problema}")
     if r["veredito"] == "INCONCLUSIVO":
@@ -221,7 +222,10 @@ def main(argv: list[str] | None = None) -> int:
     base = json.loads(args.base.read_text(encoding="utf-8"))
     correcao = json.loads(args.correcao.read_text(encoding="utf-8"))
     contaminadas = [i.strip() for i in args.contaminadas.split(",") if i.strip()]
-    resultado = comparar(conjunto, base, correcao, contaminadas)
+    try:
+        resultado = comparar(conjunto, base, correcao, contaminadas)
+    except ValueError as erro:
+        raise SystemExit(str(erro)) from None
     _imprimir(resultado)
     if args.saida:
         args.saida.write_text(json.dumps(resultado, ensure_ascii=False, indent=2) + "\n",

@@ -29,7 +29,10 @@ os grupos de erro e a correção nova mira nela de propósito. A pergunta contam
 - roda nos dois braços, como as outras;
 - fica **fora da decisão**: os números, os bloqueios, o ganho e a ressalva são contados sem ela, e
   os totais caem de acordo (por exemplo, a recusa indevida passa a ser de 25);
-- sai à parte no relatório, com o resultado, a rota e a camada de cada braço;
+- sai à parte no relatório, com o resultado, a rota e a camada de cada braço. A contagem por
+  camada, os grupos de erro e os desfechos, que não entram na decisão, seguem com ela;
+- é listada na saída do `comparar.py` em toda rodada ("nenhuma" quando não há), para que o
+  esquecimento do argumento apareça;
 - sem medição, não deixa a decisão INCONCLUSIVO, porque já está fora dela.
 
 O `comparar.py` recebe as contaminadas por `--contaminadas`, e o roteiro, como quinto argumento.
