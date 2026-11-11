@@ -21,7 +21,8 @@ então o backend rodava em `dev`, onde qualquer requisição declarava qualquer 
 auth era a única barreira.
 
 Continua sendo **demonstração com dados fictícios**: o certificado da NF-e é o de teste (público),
-a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro) e o envio
+a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro: a
+conferência dela na SEFAZ é simulada; o profile `prod` recusa o mock, #263) e o envio
 de e-mail está desligado (`EMAIL_MODO` = `DESLIGADO`: "esqueci minha senha" e os convites respondem
 normalmente e nada é enviado) até a seção [E-mail](#e-mail-460) ser cumprida. As contas
 semeadas entram pelo login com a `SEED_SENHA`, inclusive as da **demonstração da banca**

@@ -419,13 +419,15 @@ public class SefazProperties implements InitializingBean {
    * Configurações do mock de transporte.
    *
    * <p>Quando {@code enabled=true} (padrão), o {@link br.com.agrocontabil.sefaz.MockSefazTransport}
-   * é ativado. Em produção (Sprint 7), definir como {@code false} para usar o transporte SOAP real.
+   * é ativado, e ele recusa a subida no profile {@code prod} (issue #263): em produção,
+   * {@code false} e o transporte SOAP real (#128).
    */
   public static class Mock {
 
     /**
-     * Habilita o mock de transporte SEFAZ. Padrão: {@code true}.
-     * Definir {@code false} em produção após implementação do transporte SOAP real (Sprint 7).
+     * Habilita o mock de transporte SEFAZ. Padrão: {@code true} (dev, test e a demonstração em
+     * homolog); o profile {@code prod} recusa o mock (#263). O padrão {@code false} é a etapa 2 da
+     * #263, depois da banca.
      */
     private boolean enabled = true;
 
@@ -434,11 +436,13 @@ public class SefazProperties implements InitializingBean {
      * Padrão: {@code false}.
      *
      * <p>A importação de NF-e de terceiro confirma a autorização na SEFAZ pela chave; o mock só
-     * conhece as chaves que ele mesmo transmitiu, então no dev nenhuma NF-e de terceiro seria
-     * confirmada. Ligado só no {@code application-dev.yml}, para a demonstração; sem o
-     * {@code digVal}, o conteúdo do XML não é conferido. Vale para qualquer chave desconhecida —
-     * inclusive a de nota própria pendente que nunca chegou ao mock, que a sincronização daria como
-     * autorizada (a guarda da #96 fica desligada em dev). Nunca fora de dev.
+     * conhece as chaves que ele mesmo transmitiu, então sem isto nenhuma NF-e de terceiro seria
+     * confirmada. Ligado no {@code application-dev.yml} e na VPS da demonstração (homolog, pelo
+     * {@code APP_NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS} do compose): ali a conferência da importação
+     * na SEFAZ é <strong>simulada</strong>, e sem o {@code digVal} o conteúdo do XML não é
+     * conferido. Vale para qualquer chave desconhecida — inclusive a de nota própria pendente que
+     * nunca chegou ao mock, que a sincronização daria como autorizada (a guarda da #96 fica
+     * desligada onde ele está ligado). Só existe com o mock, que nunca sobe em {@code prod} (#263).
      */
     private boolean autorizarTerceiros = false;
 

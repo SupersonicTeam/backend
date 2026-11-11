@@ -483,9 +483,10 @@ app:
       path: ${NFE_CERT_PATH:}
       password: ${NFE_CERT_PASSWORD:}
       alias: ${NFE_CERT_ALIAS:}
-    # Integracao SEFAZ (issue #15). Sprint 3 usa transporte mock (sandbox).
-    # O envio SOAP+mTLS real com certificado ICP-Brasil e debito da Sprint 7:
-    # basta definir mock.enabled=false e plugar a implementacao real de SefazTransport.
+    # Integracao SEFAZ (issue #15). Mock por padrao (dev, test e a demonstracao em homolog); o
+    # profile prod recusa o mock e nao sobe com ele (#263). Em producao: mock.enabled=false e o
+    # transporte real SOAP+mTLS (#128, docs/sefaz-transporte-soap.md). O padrao false e a etapa 2
+    # da #263, depois da banca.
     sefaz:
       ambiente: ${NFE_SEFAZ_AMBIENTE:HOMOLOGACAO}   # HOMOLOGACAO | PRODUCAO
       mock:
