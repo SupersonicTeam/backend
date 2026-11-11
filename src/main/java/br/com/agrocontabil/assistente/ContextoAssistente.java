@@ -268,9 +268,10 @@ public final class ContextoAssistente {
   }
 
   /**
-   * A pergunta não reservou cota para o modelo (#499): atalho fixo da tela (#343) e conversa leve
-   * (#493), que custam zero crédito. {@link #chamar} recusa a chamada: chamar o modelo sem a
-   * reserva gastaria fora da cota.
+   * A pergunta não reservou cota para o modelo (#499): atalho fixo da tela (#343), conversa leve
+   * (#493) e recusa pelo filtro ou antes do classificador (#497), que reservam só a leitura da
+   * mensagem (#511). {@link #chamar} recusa a chamada: chamar o modelo sem a reserva gastaria
+   * fora da cota.
    */
   public void semReservaParaOModelo() {
     this.semReservaParaOModelo = true;

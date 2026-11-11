@@ -5,6 +5,7 @@ import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.SinalRecusaFirme;
 import br.com.agrocontabil.assistente.VerificadorNegativaDados;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.fallback.TelaAtalho;
@@ -99,6 +100,20 @@ public class OrquestradorService {
   }
 
   /**
+   * A pergunta é respondida sem nenhuma chamada ao modelo (#511, #497): atalho da tela, conversa
+   * leve, recusa pelo filtro de injeção ou recusa firme antes do classificador. São os mesmos
+   * testes, sobre o mesmo texto, que {@link #responder} faz antes de classificar; a cota reserva
+   * só a leitura da mensagem para elas, em vez do teto de uma pergunta de modelo.
+   *
+   * @param pergunta pergunta do usuário
+   * @return se nenhuma rota que chama o modelo pode ser escolhida
+   */
+  public static boolean respondeSemModelo(String pergunta) {
+    return AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)
+        || FiltroInjecao.pareceInjecao(pergunta) || SinalRecusaFirme.inequivoco(pergunta);
+  }
+
+  /**
    * Classifica e responde.
    *
    * @param pergunta      pergunta do usuário
@@ -187,18 +202,29 @@ public class OrquestradorService {
 
   private ClassificacaoIntencao classificarSemRegistro(
       String pergunta, ContextoAssistente contexto) {
+    // Camada nova sem modelo antes do classificador entra tambem em respondeSemModelo: a cota
+    // reserva so a leitura para ela, e o contexto recusa a chamada ao modelo (#511, #497).
     if (FiltroInjecao.pareceInjecao(pergunta)) {
       log.info("Ceres: pergunta com forma de prompt injection tratada como fora de escopo");
       return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1, null,
           CamadaClassificacao.FILTRO_INJECAO);
     }
+    // Ataque ou dado de outra pessoa sem leitura legitima (#497): recusa firme sem classificador,
+    // tambem com o modelo fora. O que tem leitura legitima segue e, com marca de terceiro, vai ao
+    // desempate pelo modelo (ClassificadorEmCamadas).
+    if (SinalRecusaFirme.inequivoco(pergunta)) {
+      log.info("Ceres: pedido de outra conta ou ao sistema tratado como fora de escopo");
+      return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1, null,
+          CamadaClassificacao.SINAL_RECUSA_FIRME);
+    }
     try {
       // Regras e embeddings decidem mesmo com o modelo em pausa; o desempate pelo modelo, nao
       // (ClassificadorEmCamadas lanca AssistenteIndisponivelException).
       ClassificacaoIntencao classificacao = classificador.classificar(pergunta, contexto);
+      // A marca de recusa firme (#497) so existe no fora de escopo do modelo: segue com ele.
       return classificacao.confianca() < confiancaMinima
           ? new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, classificacao.confianca(), null,
-              classificacao.camada())
+              classificacao.camada(), classificacao.recusaFirme())
           : classificacao;
     } catch (AssistenteIndisponivelException e) {
       semModelo(contexto, "classificacao");

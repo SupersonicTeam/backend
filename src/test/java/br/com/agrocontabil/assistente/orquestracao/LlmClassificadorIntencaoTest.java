@@ -84,6 +84,25 @@ class LlmClassificadorIntencaoTest {
   }
 
   @Test
+  @DisplayName("#497: recusa firme so no fora de escopo, so com true, ausente = gentil")
+  void recusaFirme() {
+    assertThat(classificador.interpretar("{\"intencao\": \"FORA_DE_ESCOPO\", \"confianca\": 0.9,"
+        + " \"recusaFirme\": true}").recusaFirme()).isTrue();
+    assertThat(classificador.interpretar("{\"intencao\": \"FORA_DE_ESCOPO\", \"confianca\": 0.9}")
+        .recusaFirme()).isFalse();
+    assertThat(classificador.interpretar("{\"intencao\": \"FORA_DE_ESCOPO\", \"confianca\": 0.9,"
+        + " \"recusaFirme\": false}").recusaFirme()).isFalse();
+    assertThat(classificador.interpretar("{\"intencao\": \"FORA_DE_ESCOPO\", \"confianca\": 0.9,"
+        + " \"recusaFirme\": \"true\"}").recusaFirme()).isTrue();
+    assertThat(classificador.interpretar("{\"intencao\": \"FORA_DE_ESCOPO\", \"confianca\": 0.9,"
+        + " \"recusaFirme\": \"sim\"}").recusaFirme()).isFalse();
+    // Em outra rota a marca nao vale: a pergunta nao e recusada.
+    assertThat(classificador.interpretar("{\"intencao\": \"DADOS\", \"confianca\": 0.9,"
+        + " \"recusaFirme\": true}").recusaFirme()).isFalse();
+    assertThat(ClassificacaoIntencao.indeterminada().recusaFirme()).isFalse();
+  }
+
+  @Test
   @DisplayName("Resposta ilegivel ou intencao desconhecida: indeterminada (fora de escopo, 0)")
   void ilegivel() {
     for (String texto : new String[] {

@@ -2,8 +2,6 @@ package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
-import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos;
-import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
@@ -425,16 +423,17 @@ public class AssistenteService implements DisposableBean {
   }
 
   /**
-   * Reserva da cota (#166) e contexto da pergunta. Atalho fixo da tela (#343) e conversa leve
-   * (#493) não chamam o modelo e custam zero crédito: não reservam o teto nem recebem 429
-   * {@code LIMITE_USO_ASSISTENTE} com a semana esgotada, e o contexto recusa qualquer chamada ao
-   * modelo (#499). A reserva inativa faz o acerto e o estorno não mexerem na cota. O orquestrador
-   * e a reserva usam a mesma função estática sobre o mesmo texto.
+   * Reserva da cota (#166) e contexto da pergunta. Atalho fixo da tela (#343), conversa leve
+   * (#493), recusa pelo filtro de injeção e recusa firme antes do classificador (#497) não chamam
+   * o modelo: reservam só a leitura da mensagem (#511), recebem 429
+   * {@code LIMITE_USO_ASSISTENTE} só sem saldo para ela, e o contexto recusa qualquer chamada ao
+   * modelo (#499). O orquestrador e a reserva usam os mesmos testes sobre o mesmo texto
+   * ({@link OrquestradorService#respondeSemModelo}).
    */
   private Execucao preparar(UUID produtorId, String pergunta) {
     ContextoAssistente contexto = novoContexto(produtorId);
     CotaUsoPorta.ReservaCota reserva;
-    if (AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)) {
+    if (OrquestradorService.respondeSemModelo(pergunta)) {
       // Sem modelo, mas com custo (#511): a reserva e so a leitura da mensagem, e sem saldo
       // para ela o 429 vale como nas outras.
       contexto.semReservaParaOModelo();

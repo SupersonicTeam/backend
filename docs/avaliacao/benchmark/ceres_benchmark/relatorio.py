@@ -1126,10 +1126,12 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md.append("")
 
     md.append("## Quem decidiu a rota (Ceres 2.0, #265)\n")
-    conhecidas = ["ATALHO_FIXO", "CONVERSA_LEVE", "FILTRO_INJECAO", "REGRA", "EMBEDDING", "LLM", "PALAVRAS_CHAVE"]
+    conhecidas = ["ATALHO_FIXO", "CONVERSA_LEVE", "FILTRO_INJECAO", "SINAL_RECUSA_FIRME", "REGRA",
+                  "EMBEDDING", "LLM", "PALAVRAS_CHAVE"]
     todas_camadas = {k for c in celulas for k in camadas(c)}
-    # Camadas raras (fallback sem modelo e conversa leve, #493) so ganham coluna quando aparecem.
-    raras = {"PALAVRAS_CHAVE", "CONVERSA_LEVE"}
+    # Camadas raras (fallback sem modelo, conversa leve, #493, e recusa antes do classificador,
+    # #497) so ganham coluna quando aparecem.
+    raras = {"PALAVRAS_CHAVE", "CONVERSA_LEVE", "SINAL_RECUSA_FIRME"}
     colunas_camada = [k for k in conhecidas if k in todas_camadas or k not in raras] + sorted(
         todas_camadas - set(conhecidas))
     md.append("| Célula | " + " | ".join(colunas_camada) + " |\n|---|" + "---|" * len(colunas_camada))
