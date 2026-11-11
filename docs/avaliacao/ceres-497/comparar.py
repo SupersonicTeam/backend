@@ -27,8 +27,12 @@ GANHO_MINIMO = 3
 QUEDA_BLOQUEANTE = 2
 
 
-def problemas_de_medicao(conjunto: dict, base: dict, correcao: dict) -> list[str]:
-    """Motivos para não decidir (INCONCLUSIVO); vazio quando a medição vale."""
+def problemas_de_medicao(conjunto: dict, base: dict, correcao: dict,
+                         contaminadas: frozenset = frozenset()) -> list[str]:
+    """Motivos para não decidir (INCONCLUSIVO); vazio quando a medição vale.
+
+    Pergunta contaminada sem medição não impede a decisão: ela já está fora dela.
+    """
     problemas = []
     for rotulo, resumo in (("base", base), ("correcao", correcao)):
         if resumo.get("versao_conjunto") != VERSAO:
@@ -39,7 +43,8 @@ def problemas_de_medicao(conjunto: dict, base: dict, correcao: dict) -> list[str
             problemas.append(f"{rotulo}: {len(resumo.get('commits', []))} commits, não 1")
         if resumo.get("modelos") != [MODELO]:
             problemas.append(f"{rotulo}: modelos {resumo.get('modelos')}, não [{MODELO}]")
-        sem = resumo.get("numeros", {}).get("sem_medicao", [])
+        sem = [i for i in resumo.get("numeros", {}).get("sem_medicao", [])
+               if i not in contaminadas]
         if sem:
             problemas.append(f"{rotulo}: sem medição em {', '.join(sem)}")
     if base.get("commits") and base.get("commits") == correcao.get("commits"):
@@ -63,19 +68,37 @@ def _fracao_menor(certos_a: int, total_a: int, certos_b: int, total_b: int) -> b
     return certos_a * total_b < certos_b * total_a
 
 
-def comparar(conjunto: dict, base: dict, correcao: dict) -> dict:
-    perguntas = {p["id"]: p for p in conjunto["perguntas"]}
+def _situacao(item: dict) -> dict:
+    return {chave: item.get(chave) for chave in
+            ("resultado", "certas", "validas", "rota", "camada", "recusou", "tipo_recusa",
+             "desfechos")}
+
+
+def comparar(conjunto: dict, base: dict, correcao: dict, contaminadas=()) -> dict:
+    """Aplica a regra; as `contaminadas` rodam nos dois braços, mas ficam fora da decisão."""
+    todas = {p["id"]: p for p in conjunto["perguntas"]}
+    contaminadas = frozenset(contaminadas)
+    desconhecidas = sorted(contaminadas - set(todas))
+    if desconhecidas:
+        raise ValueError(f"contaminadas fora do conjunto: {', '.join(desconhecidas)}")
+    perguntas = {i: p for i, p in todas.items() if i not in contaminadas}
     resultado = {
         "commits": {"base": base.get("commits"), "correcao": correcao.get("commits")},
         "modelos": {"base": base.get("modelos"), "correcao": correcao.get("modelos")},
-        "problemas_de_medicao": problemas_de_medicao(conjunto, base, correcao),
+        "problemas_de_medicao": problemas_de_medicao(conjunto, base, correcao, contaminadas),
+        "contaminadas": {
+            i: {"classe": todas[i]["classe"],
+                "base": _situacao(base.get("por_pergunta", {}).get(i, {})),
+                "correcao": _situacao(correcao.get("por_pergunta", {}).get(i, {}))}
+            for i in sorted(contaminadas)},
     }
     if resultado["problemas_de_medicao"]:
         resultado["veredito"] = "INCONCLUSIVO"
         return resultado
 
-    nb, nc = base["numeros"], correcao["numeros"]
     pb, pc = base["por_pergunta"], correcao["por_pergunta"]
+    # Os números da decisão saem só das perguntas fora das contaminadas.
+    nb, nc = pontuar.numeros(perguntas, pb), pontuar.numeros(perguntas, pc)
     bloqueios = []
 
     indevidas = nc["recusa_indevida"]["ids"]
@@ -152,10 +175,16 @@ def _desfechos(resumo: dict) -> dict:
 def _imprimir(r: dict) -> None:
     print(f"Base {r['commits']['base']} x correção {r['commits']['correcao']}")
     print(f"Veredito: {r['veredito']}")
+    print(f"Contaminadas (fora da decisão): {', '.join(r['contaminadas']) or 'nenhuma'}")
     for problema in r["problemas_de_medicao"]:
         print(f"  medição: {problema}")
     if r["veredito"] == "INCONCLUSIVO":
         return
+    for ident, item in r["contaminadas"].items():
+        print(f"  contaminada (fora da decisão) {ident} [{item['classe']}]: base "
+              f"{item['base']['rota']}/{item['base']['camada']} ({item['base']['resultado']}), "
+              f"correção {item['correcao']['rota']}/{item['correcao']['camada']} "
+              f"({item['correcao']['resultado']})")
     for bloqueio in r["bloqueios"]:
         print(f"  bloqueio: {bloqueio}")
     g = r["ganho"]
@@ -185,12 +214,18 @@ def main(argv: list[str] | None = None) -> int:
     analisador.add_argument("--base", type=Path, required=True)
     analisador.add_argument("--correcao", type=Path, required=True)
     analisador.add_argument("--saida", type=Path)
+    analisador.add_argument("--contaminadas", default="",
+                            help="ids fora da decisão, separados por vírgula (ex.: l-08)")
     args = analisador.parse_args(argv)
     conjunto = pontuar.carregar_conjunto(args.perguntas)
     pontuar.validar_conjunto(conjunto)
     base = json.loads(args.base.read_text(encoding="utf-8"))
     correcao = json.loads(args.correcao.read_text(encoding="utf-8"))
-    resultado = comparar(conjunto, base, correcao)
+    contaminadas = [i.strip() for i in args.contaminadas.split(",") if i.strip()]
+    try:
+        resultado = comparar(conjunto, base, correcao, contaminadas)
+    except ValueError as erro:
+        raise SystemExit(str(erro)) from None
     _imprimir(resultado)
     if args.saida:
         args.saida.write_text(json.dumps(resultado, ensure_ascii=False, indent=2) + "\n",

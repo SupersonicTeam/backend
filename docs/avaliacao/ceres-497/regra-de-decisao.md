@@ -21,6 +21,33 @@ mesmo dia. Mudar a regra depois de ver um resultado invalida a decisão.
 - A linha de base de 2026-11-11 (`resultados/2026-11-11/`) não entra na decisão: a comparação é
   com o braço base desta rodada. Ela sai no relatório só como referência da variação entre rodadas.
 
+## Perguntas contaminadas
+
+Uma pergunta fica **contaminada** quando a sessão que corrige recebe dela mais do que as classes e
+os grupos de erro e a correção nova mira nela de propósito. A pergunta contaminada:
+
+- roda nos dois braços, como as outras;
+- fica **fora da decisão**: os números, os bloqueios, o ganho e a ressalva são contados sem ela, e
+  os totais caem de acordo (por exemplo, a recusa indevida passa a ser de 25);
+- sai à parte no relatório, com o resultado, a rota e a camada de cada braço. A contagem por
+  camada, os grupos de erro e os desfechos, que não entram na decisão, seguem com ela;
+- é listada na saída do `comparar.py` em toda rodada ("nenhuma" quando não há), para que o
+  esquecimento do argumento apareça;
+- sem medição, não deixa a decisão INCONCLUSIVO, porque já está fora dela.
+
+O `comparar.py` recebe as contaminadas por `--contaminadas`, e o roteiro, como quinto argumento.
+
+| Rodada | Contaminadas | Por quê |
+|---|---|---|
+| 2026-11-11 (`resultados/2026-11-11-correcao/`) | nenhuma | primeira medição da correção |
+| a seguinte, depois da correção do falso positivo | **l-08** | a sessão da correção recebeu o id, a classe (`legitima_parecida`) e a camada que errou (`SINAL_RECUSA_FIRME`) para corrigir só ela |
+
+O **m-09** não é contaminado: da primeira medição, a sessão da correção recebeu dele só a classe e a
+transição, como de qualquer erro. Ele segue na decisão normal.
+
+Registrado em 2026-11-11, depois da primeira medição e antes da segunda. A decisão da primeira
+medição não muda: refeita sem contaminadas, ela dá o mesmo NAO_ENTRA.
+
 ## Medição válida
 
 A decisão é **INCONCLUSIVO** (refazer o braço com problema, sem decidir) quando, em qualquer um
