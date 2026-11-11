@@ -39,6 +39,20 @@ public final class GatilhoReescrita {
   private GatilhoReescrita() {
   }
 
+  /** Qual critério disparou (a âncora da reescrita depende dele). */
+  public enum Criterio {
+    /** (a) conectivo no começo. */
+    CONECTIVO,
+    /** (b) anáfora ou demonstrativo. */
+    REFERENCIA,
+    /** (c) ordinal. */
+    ORDINAL,
+    /** (d) SEGUIMENTO que não é confirmação. */
+    SEGUIMENTO,
+    /** (e) contestação com conteúdo novo. */
+    CONTESTACAO
+  }
+
   /**
    * {@code true} se a mensagem vai à reescrita.
    *
@@ -47,32 +61,49 @@ public final class GatilhoReescrita {
    * @return se o gatilho dispara
    */
   public static boolean dispara(String mensagem, MensagemContinuidade.Tipo tipo) {
+    return criterio(mensagem, tipo).isPresent();
+  }
+
+  /**
+   * O critério que dispara, se algum.
+   *
+   * @param mensagem mensagem nova
+   * @param tipo     o que ela faz com a resposta anterior
+   * @return o critério, na ordem (e), (d), (c), (b), (a)
+   */
+  public static java.util.Optional<Criterio> criterio(String mensagem,
+      MensagemContinuidade.Tipo tipo) {
     if (tipo == MensagemContinuidade.Tipo.CONTESTACAO_CONTEUDO) {
-      return true;
+      return java.util.Optional.of(Criterio.CONTESTACAO);
     }
     if (tipo.caminhoDaConfirmacao()) {
-      return false;
+      return java.util.Optional.empty();
     }
     String normal = TextoContinuidade.normalizar(mensagem);
     if (normal.isEmpty()) {
-      return false;
+      return java.util.Optional.empty();
+    }
+    // Ordem pela ancora da reescrita: o SEGUIMENTO ("e entao?") e o ordinal ("e a segunda?")
+    // tambem comecam por conectivo, e a ancora deles e mais estrita.
+    if (SEGUIMENTOS.contains(normal)) {
+      return java.util.Optional.of(Criterio.SEGUIMENTO);
     }
     List<String> palavras = TextoContinuidade.palavras(normal);
-    if (TextoContinuidade.CONECTIVOS.contains(palavras.get(0)) && palavras.size() <= 6) {
-      return true;
-    }
-    if (REFERENCIA.matcher(normal).find()) {
-      return true;
-    }
     var ordinal = ORDINAL.matcher(normal);
     if (ordinal.find()) {
       String depois = normal.substring(ordinal.end());
       boolean semConteudoDepois = TextoContinuidade.palavras(depois.strip()).stream()
           .noneMatch(TextoContinuidade::conteudo);
       if (semConteudoDepois || palavras.size() <= 4) {
-        return true;
+        return java.util.Optional.of(Criterio.ORDINAL);
       }
     }
-    return SEGUIMENTOS.contains(normal);
+    if (REFERENCIA.matcher(normal).find()) {
+      return java.util.Optional.of(Criterio.REFERENCIA);
+    }
+    if (TextoContinuidade.CONECTIVOS.contains(palavras.get(0)) && palavras.size() <= 6) {
+      return java.util.Optional.of(Criterio.CONECTIVO);
+    }
+    return java.util.Optional.empty();
   }
 }

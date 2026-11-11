@@ -24,5 +24,12 @@ public enum CamadaClassificacao {
   /** {@link LlmClassificadorIntencao}: desempate pelo modelo de linguagem. */
   LLM,
   /** Modelo fora do ar: palavras-chave do modo fallback (#146). */
-  PALAVRAS_CHAVE
+  PALAVRAS_CHAVE,
+  /**
+   * Continuidade (#499): confirmação ou contestação sem conteúdo novo de um par de dados, que
+   * segue a rota do par sem classificar. Cabe no {@code VARCHAR(20)}, sem changeSet.
+   */
+  CONFIRMACAO,
+  /** Continuidade (#499): reconferência de um par de lei, sem classificar. */
+  RECONFERENCIA_LEI
 }

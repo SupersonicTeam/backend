@@ -68,5 +68,11 @@ public enum DesfechoInteracao {
    */
   TEMPO_ESGOTADO,
   /** Falha inesperada do backend. */
-  ERRO
+  ERRO,
+  /**
+   * Reconferência de lei da continuidade (#499) que não pôde confirmar nem corrigir: o texto de
+   * apoio, que aponta os dispositivos sem recuar. Cabe no {@code VARCHAR(40)} (changeSet 0025, sem
+   * {@code CHECK}), sem changeSet novo.
+   */
+  RECONFERENCIA_DESCARTADA
 }
