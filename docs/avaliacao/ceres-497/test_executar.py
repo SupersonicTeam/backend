@@ -95,7 +95,7 @@ class Rodada(unittest.TestCase):
                 mock.patch.object(executar, "resolver_commit", return_value="c" * 40), \
                 mock.patch.object(executar, "Auditoria",
                                   lambda c, b, u: auditoria_real(c, b, u, executar=self.banco)), \
-                mock.patch.object(executar.time, "sleep"), \
+                mock.patch.object(executar.time, "sleep"),                 mock.patch.object(executar, "aquecer_embedding"), \
                 redirect_stdout(io.StringIO()) as saida:
             executar.main(argv)
         return saida.getvalue()
@@ -125,6 +125,7 @@ class Rodada(unittest.TestCase):
         primeira = self.linhas()[0]
         self.assertTrue(primeira["auditoria_ausente"])
         self.assertEqual(primeira["auditoria"], {})
+        self.assertTrue(primeira["falha_tecnica"])
 
     def test_falha_tecnica_repetida(self):
         self.rodar(servidor(self.banco, falhas=3), "--ids", "l-01", "--repeticoes", "1")
@@ -151,6 +152,15 @@ class Funcoes(unittest.TestCase):
         with mock.patch.object(executar.subprocess, "run", side_effect=erro):
             with self.assertRaises(SystemExit):
                 executar.resolver_commit(".")
+
+    def test_ritmo_espera_o_intervalo(self):
+        relogio = iter([0.0, 1.0, 1.0, 10.0, 10.0])
+        dormiu = []
+        ritmo = executar.Ritmo(3.5, relogio=lambda: next(relogio), dormir=dormiu.append)
+        ritmo.esperar()
+        ritmo.esperar()
+        ritmo.esperar()
+        self.assertEqual(dormiu, [2.5])
 
     def test_auditoria_vazia(self):
         auditoria = executar.Auditoria("c", "b", "u",

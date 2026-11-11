@@ -62,8 +62,10 @@ def falha_tecnica(registro: dict) -> bool:
     codigos = {e.get("code") for e in corpo.get("errors") or [] if isinstance(e, dict)}
     if codigos & CODIGOS_FALHA_TECNICA:
         return True
-    auditoria = registro.get("auditoria") or {}
-    return auditoria.get("desfecho") in DESFECHOS_TECNICOS
+    # Sem a linha da auditoria não há camada nem desfecho para ler (regra-de-leitura.md).
+    if registro.get("auditoria_ausente") or not registro.get("auditoria"):
+        return True
+    return registro["auditoria"].get("desfecho") in DESFECHOS_TECNICOS
 
 
 def tipo_da_recusa(corpo: dict) -> str:

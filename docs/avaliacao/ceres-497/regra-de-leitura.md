@@ -31,8 +31,9 @@ auditoria não guarda o texto da pergunta.
 
 - **Falha técnica** (não conta como resposta): HTTP diferente de 200, `modoFallback` verdadeiro,
   código de indisponibilidade, ocupado, tempo esgotado ou cota no corpo, ou desfecho
-  `MODELO_INDISPONIVEL`, `TEMPO_ESGOTADO`, `CANCELADA` ou `MODO_FALLBACK`. O executor repete a
-  chamada até 3 vezes.
+  `MODELO_INDISPONIVEL`, `TEMPO_ESGOTADO`, `CANCELADA` ou `MODO_FALLBACK`. Também é técnica a
+  chamada **sem linha de auditoria**: a contagem de `assistente_interacao` não subiu exatamente 1,
+  e sem ela não há camada nem desfecho para ler. O executor repete a chamada até 3 vezes.
 - **Recusou:** rota `FORA_DE_ESCOPO` com desfecho diferente de `CONVERSA_LEVE`.
 - **Tipo da recusa**, pelo começo do texto:
   - firme = começa como `PromptsCeres.RECUSA_FIRME` ("Não posso atender a esse pedido");
@@ -86,5 +87,8 @@ Quem for corrigir recebe só as classes, os grupos e os ids das perguntas, **nun
   aplicação, e nunca é impressa nem copiada. Embedding: o `bge-m3` do Ollama local, com a trava
   do Ollama.
 - Cota da Ceres alta (`AI_COTA_CREDITOS_PRODUTOR`), para 59 × 3 perguntas caberem na semana.
+- Ritmo: pelo menos 3,5 s entre duas chamadas, por causa do limite de 20 perguntas por minuto do
+  chat. O bge-m3 é aquecido antes das duas perguntas de aquecimento (fora do conjunto, não
+  lidas). O banco é só desta rodada.
 - Conta: `carlos.rossi@example.com`, a principal do seed. A senha é gerada no processo e passada
   só por variável de ambiente.

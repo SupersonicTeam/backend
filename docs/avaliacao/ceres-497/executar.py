@@ -10,6 +10,10 @@ auditoria da chamada fica vazia e a linha leva `auditoria_ausente: true`.
 Cada linha traz o commit (da pasta git, que precisa estar limpa), o modelo informado, o horário
 (ISO, Brasília) e a resposta da API. A senha vem de CERES_SENHA e nunca vai para arquivo nem para
 a saída. Falha técnica é repetida até `--tentativas` vezes; cota esgotada interrompe a rodada.
+Entre duas chamadas ao chat há pelo menos `--intervalo` segundos: o chat aceita 20 perguntas por
+minuto por usuário, e o Haiku responde em 1 a 2 s. Antes de tudo, o bge-m3 é aquecido no Ollama
+(a classificação por embedding depende dele). O banco é só desta rodada: com outra escrita na
+auditoria, a contagem sobe mais de 1 e a chamada fica marcada sem auditoria (falha técnica).
 
   CERES_SENHA=... python executar.py --url http://localhost:8497 --pasta <worktree> \\
       --banco agroconia_497 --modelo anthropic/claude-haiku-5-5 \\
@@ -105,6 +109,30 @@ class Auditoria:
         return {c: (v or None) for c, v in zip(CAMPOS_AUDITORIA, valores)}
 
 
+def aquecer_embedding(ollama: str, modelo: str) -> None:
+    """Carrega o modelo de embedding no Ollama com keep_alive longo."""
+    requisitar("POST", ollama + "/api/embed",
+               {"model": modelo, "input": "aquecimento", "keep_alive": "2h"}, timeout=600)
+
+
+class Ritmo:
+    """Espera até completar `intervalo` segundos desde a chamada anterior."""
+
+    def __init__(self, intervalo: float, relogio=None, dormir=None):
+        self.intervalo = intervalo
+        # Lidos na hora da chamada: um mock de time.sleep posto depois também vale.
+        self.relogio = relogio or (lambda: time.monotonic())
+        self.dormir = dormir or (lambda segundos: time.sleep(segundos))
+        self.ultima: float | None = None
+
+    def esperar(self) -> None:
+        if self.ultima is not None:
+            falta = self.intervalo - (self.relogio() - self.ultima)
+            if falta > 0:
+                self.dormir(falta)
+        self.ultima = self.relogio()
+
+
 def agora_brasilia() -> dt.datetime:
     return dt.datetime.now(BRASILIA)
 
@@ -135,6 +163,7 @@ class Sessao:
 def perguntar(sessao: Sessao, auditoria: Auditoria, args, texto: str, base: dict,
               saida: Path) -> dict:
     token = sessao.token_valido()
+    args.ritmo.esperar()
     antes = auditoria.contagem()
     momento = agora_brasilia()
     inicio = time.monotonic()
@@ -202,6 +231,10 @@ def main(argv: list[str] | None = None) -> int:
     analisador.add_argument("--tentativas", type=int, default=3)
     analisador.add_argument("--ids", help="só estes ids, separados por vírgula (ensaio)")
     analisador.add_argument("--timeout", type=float, default=330)
+    analisador.add_argument("--intervalo", type=float, default=3.5,
+                            help="segundos mínimos entre duas chamadas ao chat")
+    analisador.add_argument("--ollama", default="http://localhost:11434")
+    analisador.add_argument("--embedding", default="bge-m3")
     args = analisador.parse_args(argv)
 
     senha = os.environ.get("CERES_SENHA")
@@ -219,11 +252,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.saida.exists() and args.saida.stat().st_size > 0:
         raise SystemExit(f"{args.saida} já tem execuções: use outro arquivo para a rodada")
     args.commit = resolver_commit(args.pasta)
+    args.ritmo = Ritmo(args.intervalo)
     sessao = Sessao(args.url, args.email, senha)
     auditoria = Auditoria(args.container, args.banco, args.usuario_banco)
     print(f"Conjunto {conjunto['versao']} ({conjunto['_sha256'][:12]}), commit "
           f"{args.commit[:12]}, modelo {args.modelo}", flush=True)
 
+    aquecer_embedding(args.ollama, args.embedding)
     for texto in PERGUNTAS_DE_AQUECIMENTO:
         perguntar(sessao, auditoria, args, texto, {"aquecimento": True}, args.saida)
     for repeticao in range(1, args.repeticoes + 1):

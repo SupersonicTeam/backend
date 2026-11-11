@@ -98,6 +98,9 @@ class Conjunto(unittest.TestCase):
         r = registro("f-01")
         r["corpo"]["modoFallback"] = True
         self.assertEqual(pontuar.ler_execucao(self.perguntas["f-01"], r)["resultado"], "tecnica")
+        sem = registro("c-01", rota="FORA_DE_ESCOPO", auditoria={}, auditoria_ausente=True)
+        self.assertEqual(pontuar.ler_execucao(self.perguntas["c-01"], sem)["resultado"],
+                         "tecnica")
 
 
 class Resumo(unittest.TestCase):
