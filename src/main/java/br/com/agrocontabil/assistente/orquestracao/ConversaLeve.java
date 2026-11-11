@@ -160,6 +160,10 @@ public final class ConversaLeve {
       .sorted(Comparator.comparingInt(ConversaLeve::palavras).reversed())
       .toList();
 
+  /** As palavras de cada expressão e complemento, divididas uma vez só. */
+  private static final Map<String, String[]> PALAVRAS_DA_EXPRESSAO =
+      new java.util.concurrent.ConcurrentHashMap<>();
+
   private ConversaLeve() {}
 
   /**
@@ -186,7 +190,7 @@ public final class ConversaLeve {
     String normalizada = juntarRepetidas(RegrasClassificacao.normalizar(pergunta));
     boolean comVocativo = VOCATIVO.matcher(normalizada).find();
     String chave = VOCATIVO.matcher(normalizada).replaceAll(" ").replaceAll("\\s+", " ").strip();
-    boolean interrogacao = pergunta.strip().endsWith("?");
+    boolean interrogacao = terminaEmInterrogacao(pergunta);
     if (chave.isEmpty()) {
       Tipo tipo = comVocativo ? Tipo.SAUDACAO : Tipo.RECONHECIMENTO;
       if (tipo == Tipo.RECONHECIMENTO && interrogacao) {
@@ -288,13 +292,31 @@ public final class ConversaLeve {
         && ler(palavras, inicio + 1, lidas);
   }
 
+  /**
+   * O texto termina em "?", ignorando o que vem depois que não é letra nem dígito ("obrigado?!",
+   * "tchau? 😊").
+   */
+  static boolean terminaEmInterrogacao(String pergunta) {
+    for (int i = pergunta.length(); i > 0; ) {
+      int c = pergunta.codePointBefore(i);
+      if (c == '?') {
+        return true;
+      }
+      if (Character.isLetterOrDigit(c)) {
+        return false;
+      }
+      i -= Character.charCount(c);
+    }
+    return false;
+  }
+
   private static boolean aceitaComplemento(String anterior) {
     return COMPLEMENTOS_NORMALIZADOS.contains(anterior)
         || EXPRESSOES.get(anterior) == Tipo.AGRADECIMENTO;
   }
 
   private static boolean casa(String[] palavras, int inicio, String expressao) {
-    String[] partes = expressao.split(" ");
+    String[] partes = PALAVRAS_DA_EXPRESSAO.computeIfAbsent(expressao, e -> e.split(" "));
     if (inicio + partes.length > palavras.length) {
       return false;
     }

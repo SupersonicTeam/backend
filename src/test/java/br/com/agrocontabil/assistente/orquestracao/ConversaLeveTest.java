@@ -65,6 +65,8 @@ class ConversaLeveTest {
       "bom dia, tem algo me esperando?",
       "obrigado, e as guias?",
       "obrigado?",
+      "Obrigado?!",
+      "tchau? 😊",
       "ok?",
       "tchau?",
       "tudo certo?",
