@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config.demonstracao;
 
+import br.com.agrocontabil.model.EnderecoPostal;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.RegimeTributario;
@@ -87,6 +88,27 @@ final class CenarioDemonstracao {
    * chega pelo reset dos dados da demonstração: o seed não toca num escritório já gravado.
    */
   static final String ESCRITORIO_SLUG = "ruraloeste";
+
+  /**
+   * Telefone e endereço postal do escritório, que é empresarial (issue #519). Como o slug, na VPS
+   * só chegam pelo reset dos dados da demonstração: o escritório já gravado lá vira EMPRESARIAL pelo
+   * changeSet 0062 (tem CNPJ), mas fica sem telefone e endereço até o reset.
+   */
+  static final String ESCRITORIO_TELEFONE = "4532264100";
+
+  /** Endereço postal do escritório; um objeto novo por chamada (a entidade é mutável). */
+  static EnderecoPostal escritorioEndereco() {
+    return EnderecoPostal.builder()
+        .cep("85810000")
+        .logradouro("Rua Parana")
+        .numero("1200")
+        .complemento("Sala 3")
+        .bairro("Centro")
+        .codigoMunicipioIbge("4104808")
+        .municipio("Cascavel")
+        .uf("PR")
+        .build();
+  }
 
   /** Administradora, contador e assistente: as três funções da #228. */
   static final List<Membro> EQUIPE = List.of(

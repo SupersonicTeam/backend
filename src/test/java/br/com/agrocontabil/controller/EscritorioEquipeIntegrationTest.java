@@ -208,6 +208,32 @@ class EscritorioEquipeIntegrationTest {
   }
 
   @Test
+  @DisplayName("convite com CRC, telefone e aceite dos termos (#519): gravados; aceite false e 400")
+  void cadastroPorConviteComCamposNovos() throws Exception {
+    String tokenConvite = conviteDeEquipe(EMAIL_NOVO, "CONTADOR");
+    String corpo = "{\"token\":\"%s\",\"nomeCompleto\":\"Ana Assistente\","
+        + "\"cpfCnpj\":\"39053344705\",\"senha\":\"%s\",\"crc\":\"PR-099/O\","
+        + "\"telefone\":\"45988887777\",\"aceiteTermos\":%s}";
+
+    mockMvc.perform(post("/api/auth/cadastro/equipe").contentType(MediaType.APPLICATION_JSON)
+            .content(corpo.formatted(tokenConvite, SENHA, "false")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("aceiteTermos"));
+    mockMvc.perform(post("/api/auth/cadastro/equipe").contentType(MediaType.APPLICATION_JSON)
+            .content(corpo.formatted(tokenConvite, SENHA, "true")))
+        .andExpect(status().isCreated());
+
+    UUID novo = idDe(EMAIL_NOVO);
+    assertThat(jdbcTemplate.queryForObject("SELECT crc FROM contadores WHERE id = ?",
+        String.class, novo)).isEqualTo("PR-099/O");
+    assertThat(jdbcTemplate.queryForObject("SELECT telefone FROM contadores WHERE id = ?",
+        String.class, novo)).startsWith("v1:");
+    assertThat(jdbcTemplate.queryForObject("SELECT termos_versao FROM credencial_usuario"
+        + " WHERE contador_id = ?", String.class, novo)).isEqualTo("2026-11-11");
+    assertThat(escritorioDe(novo)).isEqualTo(escritorioDe(adminA.usuarioId()));
+  }
+
+  @Test
   @DisplayName("token usado, vencido ou inventado: 400 CONVITE_EQUIPE_INVALIDO")
   void tokenInvalido() throws Exception {
     String tokenConvite = conviteDeEquipe(EMAIL_NOVO, "CONTADOR");

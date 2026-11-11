@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0062-escritorio-tipo-e-termos.xml
+         Issue #519 (conta pessoal ou empresarial do contador, dados do
+         escritorio e aceite dos termos).
+
+         escritorio.tipo: PESSOAL (um usuario so, sem equipe e sem endereco
+         proprio) ou EMPRESARIAL (com CNPJ, pode ter equipe e endereco).
+         Gravado, nunca derivado do CNPJ. Os escritorios que ja existem
+         recebem EMPRESARIAL quando tem CNPJ ou mais de um membro, e PESSOAL
+         nos outros. Um empresarial antigo sem CNPJ continua valendo: a regra
+         "empresarial exige CNPJ" so vale quando o tipo ou o CNPJ muda. O
+         default PESSOAL cobre o INSERT que nao diz o tipo (o mesmo que o
+         cadastro faz sem tipoConta).
+
+         escritorio.telefone: contato do escritorio, cifrado como os outros
+         telefones (#147; v1: + Base64url, dai os 100 caracteres).
+         escritorio.endereco_*: endereco postal do escritorio, no formato do
+         endereco do produtor (#88), com a UF junto. Opcionais no banco: o
+         cadastro empresarial os exige pela validacao do request.
+
+         credencial_usuario.termos_aceitos_em / termos_versao: aceite dos
+         termos de uso no cadastro, com a versao aceita (app.termos.versao).
+         Nulos = aceite nao registrado (contas antigas e cadastro sem o
+         campo enquanto app.cadastro.exigir-aceite-termos for false).
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0062-escritorio-tipo-telefone-endereco" author="supersonic-team">
+        <comment>Tipo (PESSOAL/EMPRESARIAL), telefone e endereco postal do escritorio.</comment>
+
+        <addColumn tableName="escritorio">
+            <column name="tipo" type="VARCHAR(20)" defaultValue="PESSOAL"
+                    remarks="PESSOAL ou EMPRESARIAL (#519); gravado, nunca derivado do CNPJ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="telefone" type="VARCHAR(100)"
+                    remarks="Telefone do escritorio, cifrado (v1: + Base64url, #147)"/>
+            <column name="endereco_cep" type="VARCHAR(8)"/>
+            <column name="endereco_logradouro" type="VARCHAR(60)"/>
+            <column name="endereco_numero" type="VARCHAR(60)"/>
+            <column name="endereco_complemento" type="VARCHAR(60)"/>
+            <column name="endereco_bairro" type="VARCHAR(60)"/>
+            <column name="endereco_codigo_municipio_ibge" type="VARCHAR(7)"/>
+            <column name="endereco_municipio" type="VARCHAR(60)"/>
+            <column name="endereco_uf" type="VARCHAR(2)"/>
+        </addColumn>
+
+        <!-- Dados que ja existem: CNPJ ou equipe = empresarial; o resto fica no default. -->
+        <sql>
+            UPDATE escritorio SET tipo = 'EMPRESARIAL'
+             WHERE cnpj IS NOT NULL
+                OR (SELECT COUNT(*) FROM contadores c WHERE c.escritorio_id = escritorio.id) > 1
+        </sql>
+
+        <sql>
+            ALTER TABLE escritorio ADD CONSTRAINT ck_escritorio_tipo
+                CHECK (tipo IN ('PESSOAL', 'EMPRESARIAL'))
+        </sql>
+    </changeSet>
+
+    <changeSet id="0062-credencial-aceite-termos" author="supersonic-team">
+        <comment>Aceite dos termos de uso na credencial: quando e qual versao.</comment>
+
+        <addColumn tableName="credencial_usuario">
+            <column name="termos_aceitos_em" type="TIMESTAMP WITH TIME ZONE"
+                    remarks="Quando aceitou os termos no cadastro (#519); nulo = nao registrado"/>
+            <column name="termos_versao" type="VARCHAR(40)"
+                    remarks="Versao dos termos aceita (app.termos.versao); nula = nao registrado"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

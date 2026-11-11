@@ -139,6 +139,10 @@ services:
       # Ja vem desligado na imagem da #460; repetido aqui para a imagem anterior nao cair em DOWN com
       # o SPRING_MAIL_HOST vazio, se este compose chegar antes dela.
       MANAGEMENT_HEALTH_MAIL_ENABLED: 'false'
+      # Aceite dos termos no cadastro (#519): ligue o exigir quando a tela nova mandar o campo;
+      # mude a versao quando o texto dos termos mudar (#498).
+      CADASTRO_EXIGIR_ACEITE_TERMOS: ${CADASTRO_EXIGIR_ACEITE_TERMOS:-false}
+      TERMOS_VERSAO: ${TERMOS_VERSAO:-2026-11-11}
       SEED_SENHA: ${SEED_SENHA:-}
       # Escritorio, carteira e notas da banca (#315), com as contas na SEED_SENHA. Idempotente.
       DEMONSTRACAO_HABILITADA: 'true'

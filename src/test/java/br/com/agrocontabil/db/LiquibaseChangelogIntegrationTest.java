@@ -557,9 +557,10 @@ class LiquibaseChangelogIntegrationTest {
 
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'credencial_usuario' ORDER BY column_name", String.class))
+        // termos_* chegaram no 0062 (#519).
         .containsExactly("ativo", "bloqueada_ate", "contador_id", "cpf_cnpj", "created_at", "email",
-            "falhas_login", "id", "papel", "produtor_id", "senha_hash", "updated_at",
-            "versao_sessao");
+            "falhas_login", "id", "papel", "produtor_id", "senha_hash", "termos_aceitos_em",
+            "termos_versao", "updated_at", "versao_sessao");
 
     String produtorId = UUID.randomUUID().toString();
     String contadorId = UUID.randomUUID().toString();
@@ -922,6 +923,62 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM modelo_pedido"
         + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioB)).isOne();
     jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioB);
+  }
+
+  @Test
+  @DisplayName("changeSet 0062: tipo do escritorio pela regra dos dados antigos, telefone, endereco e aceite dos termos (#519)")
+  void changeSet0062TipoDoEscritorioETermos() throws Exception {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name || ':' || is_nullable FROM"
+        + " information_schema.columns WHERE table_name = 'escritorio' AND (column_name = 'tipo'"
+        + " OR column_name = 'telefone' OR column_name LIKE 'endereco%') ORDER BY column_name",
+        String.class))
+        .containsExactly("endereco_bairro:YES", "endereco_cep:YES",
+            "endereco_codigo_municipio_ibge:YES", "endereco_complemento:YES",
+            "endereco_logradouro:YES", "endereco_municipio:YES", "endereco_numero:YES",
+            "endereco_uf:YES", "telefone:YES", "tipo:NO");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'credencial_usuario' AND column_name LIKE 'termos%'"
+        + " ORDER BY column_name", String.class))
+        .containsExactly("termos_aceitos_em", "termos_versao");
+
+    // A regra dos dados antigos, com o UPDATE do proprio changeSet: CNPJ ou equipe = empresarial.
+    String sozinho = UUID.randomUUID().toString();
+    String comCnpj = UUID.randomUUID().toString();
+    String comEquipe = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Sozinho 0062')", sozinho);
+    jdbc.update("INSERT INTO escritorio (id, nome, cnpj) VALUES (?::uuid, 'Com CNPJ 0062',"
+        + " '11444777000161')", comCnpj);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Com equipe 0062')",
+        comEquipe);
+    String membro = "INSERT INTO contadores (id, nome_completo, escritorio_id, funcao_escritorio)"
+        + " VALUES (gen_random_uuid(), 'Membro 0062', ?::uuid, 'CONTADOR')";
+    jdbc.update(membro, sozinho);
+    jdbc.update(membro, comEquipe);
+    jdbc.update(membro, comEquipe);
+    assertThat(jdbc.queryForObject("SELECT tipo FROM escritorio WHERE id = ?::uuid", String.class,
+        sozinho)).isEqualTo("PESSOAL");
+
+    String changeSet;
+    try (var arquivo = getClass().getResourceAsStream(
+        "/db/changelog/changes/0062-escritorio-tipo-e-termos.xml")) {
+      changeSet = new String(arquivo.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+    var regra = java.util.regex.Pattern.compile("<sql>\\s*(UPDATE escritorio[\\s\\S]*?)</sql>")
+        .matcher(changeSet);
+    assertThat(regra.find()).isTrue();
+    jdbc.update(regra.group(1));
+
+    assertThat(jdbc.queryForList("SELECT nome || ':' || tipo FROM escritorio"
+        + " WHERE nome LIKE '%0062' ORDER BY nome", String.class))
+        .containsExactly("Com CNPJ 0062:EMPRESARIAL", "Com equipe 0062:EMPRESARIAL",
+            "Sozinho 0062:PESSOAL");
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET tipo = 'OUTRO'"
+        + " WHERE id = ?::uuid", sozinho)).isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM contadores WHERE nome_completo = 'Membro 0062'");
+    jdbc.update("DELETE FROM escritorio WHERE nome LIKE '%0062'");
   }
 
   @Test

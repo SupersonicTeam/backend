@@ -36,6 +36,7 @@ import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.model.StatusPendencia;
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.model.TipoDocumentoPendencia;
+import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.VinculoCarteira;
@@ -364,9 +365,13 @@ public class SeedDemonstracao implements CommandLineRunner {
   // ===============================================================================================
 
   private void gravar(Execucao ex) {
+    // Empresarial, com equipe, telefone, endereco postal e endereco proprio (#519).
     Escritorio escritorio = escritorioRepository.save(Escritorio.builder()
+        .tipo(TipoEscritorio.EMPRESARIAL)
         .nome(CenarioDemonstracao.ESCRITORIO_NOME)
         .cnpj(CenarioDemonstracao.ESCRITORIO_CNPJ)
+        .telefone(CenarioDemonstracao.ESCRITORIO_TELEFONE)
+        .endereco(CenarioDemonstracao.escritorioEndereco())
         .slug(CenarioDemonstracao.ESCRITORIO_SLUG)
         .build());
 

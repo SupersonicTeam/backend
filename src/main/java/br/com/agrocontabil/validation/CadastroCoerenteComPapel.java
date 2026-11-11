@@ -11,11 +11,12 @@ import java.lang.annotation.Target;
 /**
  * Os campos do cadastro batem com o papel (issue #519).
  *
- * <p>Anotação de <strong>classe</strong>: a regra cruza o papel com os outros campos. No
- * {@code PRODUTOR}, {@code escritorio} e {@code crc} são recusados; no {@code CONTADOR}, o
- * documento da pessoa é só CPF ({@link DocumentoDoContador}). Cada violação vai no campo que o
- * cliente precisa corrigir, para o {@code GlobalExceptionHandler} devolvê-la como
- * {@code VALIDATION_ERROR} com {@code field}.
+ * <p>Anotação de <strong>classe</strong>: a regra cruza o papel e o tipo de conta com os outros
+ * campos. No {@code PRODUTOR}, {@code escritorio}, {@code crc} e {@code tipoConta} são recusados.
+ * No {@code CONTADOR}, o documento da pessoa é só CPF ({@link DocumentoDoContador}), o
+ * {@code EMPRESARIAL} exige o {@code escritorio} e o {@code PESSOAL} (ou sem {@code tipoConta}) o
+ * recusa. Cada violação vai no campo que o cliente precisa corrigir, para o
+ * {@code GlobalExceptionHandler} devolvê-la como {@code VALIDATION_ERROR} com {@code field}.
  */
 @Documented
 @Constraint(validatedBy = CadastroCoerenteComPapelValidator.class)
