@@ -500,6 +500,46 @@ class CadastroIntegrationTest {
   }
 
   @Test
+  @DisplayName("senha com o proprio telefone (#521): 400 SENHA_FRACA sem ecoar o numero")
+  void senhaComTelefone() throws Exception {
+    String json = """
+        {"papel":"PRODUTOR","nomeCompleto":"Fazenda Boa Vista","cpfCnpj":"%s",\
+        "email":"fone@fazenda.com.br","senha":"lavoura (45) 99999-0000 boa",\
+        "telefone":"45999990000"}""".formatted(CPF);
+    String resposta = mockMvc
+        .perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(json))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("SENHA_FRACA"))
+        .andExpect(jsonPath("$.errors[0].field").value("senha"))
+        .andExpect(jsonPath("$.errors[0].rejectedValue").doesNotExist())
+        .andReturn().getResponse().getContentAsString();
+
+    assertThat(resposta).doesNotContain("99999", "45999990000");
+    assertThat(produtorRepository.count()).isZero();
+    assertThat(credencialRepository.count()).isZero();
+  }
+
+  @Test
+  @DisplayName("contador empresarial com o CNPJ do escritorio na senha (#521): 400, nada gravado"
+      + " e o endereco proprio continua livre")
+  void senhaComCnpjDoEscritorio() throws Exception {
+    String json = corpoContador(CPF, "cnpjsenha@exemplo.com.br",
+        escritorioEmpresarial("11444777000161", "campoverde"), EMPRESARIAL)
+        .replace(SENHA, "escritorio 11.444.777/0001-61 campo");
+    mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(json))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].code").value("SENHA_FRACA"))
+        .andExpect(jsonPath("$.errors[0].field").value("senha"));
+
+    assertThat(contadorRepository.count()).isZero();
+    assertThat(escritorioRepository.count()).isZero();
+    // O mesmo slug segue disponivel com uma senha valida.
+    assertThat(cadastrar(corpoContador(CPF, "cnpjsenha@exemplo.com.br",
+        escritorioEmpresarial("11444777000161", "campoverde"), EMPRESARIAL))
+        .getResponse().getStatus()).isEqualTo(201);
+  }
+
+  @Test
   @DisplayName("CPF com digito verificador invalido: 400")
   void cpfInvalido() throws Exception {
     mockMvc

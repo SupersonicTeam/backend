@@ -461,6 +461,68 @@ class CadastroServiceTest {
   }
 
   @Test
+  @DisplayName("produtor com o proprio telefone na senha: recusado antes do hash e do banco (#521)")
+  void senhaComTelefoneDoProdutor() {
+    CadastroRequest comTelefone = new CadastroRequest(PapelUsuario.PRODUTOR, "Fazenda", CPF,
+        "joaquim@fazenda.com.br", "lavoura (65) 3333-0001 boa", null, null, "6533330001", null,
+        null);
+
+    assertThatThrownBy(() -> service.cadastrar(comTelefone))
+        .isInstanceOfSatisfying(SenhaFracaException.class, e -> assertThat(e.getErrors())
+            .singleElement()
+            .satisfies(erro -> {
+              assertThat(erro.field()).isEqualTo("senha");
+              assertThat(erro.message()).isEqualTo(PoliticaSenha.MENSAGEM_DADO_DO_TITULAR);
+            }));
+    verify(passwordEncoder, never()).encode(anyString());
+    verifyNoInteractions(transactionManager, credencialRepository, produtorRepository);
+  }
+
+  @Test
+  @DisplayName("contador empresarial com o CNPJ ou o telefone do escritorio na senha: recusado,"
+      + " nada gravado e o endereco proprio nao e reservado (#521)")
+  void senhaComDadosDoEscritorio() {
+    for (String senha : List.of("escritorio 11.444.777/0001-61 rural", "lavoura 3333-0000 boa",
+        "contato 45 3333-0000")) {
+      CadastroRequest pedido = new CadastroRequest(PapelUsuario.CONTADOR, "Patricia Moreira", CPF,
+          "patricia@exemplo.com.br", senha, escritorioCompleto(), null, null,
+          TipoEscritorio.EMPRESARIAL, true);
+
+      assertThatThrownBy(() -> service.cadastrar(pedido))
+          .as(senha)
+          .isInstanceOf(SenhaFracaException.class);
+    }
+    verify(passwordEncoder, never()).encode(anyString());
+    verifyNoInteractions(transactionManager, credencialRepository, contadorRepository,
+        escritorioRepository, enderecoService);
+  }
+
+  @Test
+  @DisplayName("cadastro pelo convite (#228) com o telefone da pessoa na senha: recusado antes do"
+      + " ingresso (#521)")
+  void ingressoComTelefoneNaSenha() {
+    CadastroRequest pedido = new CadastroRequest(PapelUsuario.CONTADOR, "Patricia Moreira", CPF,
+        "patricia@exemplo.com.br", "equipe 45999990000 campo", null, null, "45999990000", null,
+        null);
+
+    assertThatThrownBy(() -> service.cadastrar(pedido, contador -> {
+      throw new AssertionError("o ingresso nao pode rodar com a senha recusada");
+    })).isInstanceOf(SenhaFracaException.class);
+    verify(passwordEncoder, never()).encode(anyString());
+    verifyNoInteractions(transactionManager, contadorRepository, credencialRepository);
+  }
+
+  @Test
+  @DisplayName("contador pessoal sem telefone nem escritorio no request: a politica nao quebra")
+  void contadorPessoalSemTelefone() {
+    UUID contadorId = UUID.randomUUID();
+    comContadorGravavel(contadorId);
+
+    assertThat(service.cadastrar(pedidoDeContador(TipoEscritorio.PESSOAL, null, null, null, true))
+        .usuarioId()).isEqualTo(contadorId);
+  }
+
+  @Test
   @DisplayName("mascara do documento segue a grafia do seed")
   void mascara() {
     assertThat(CadastroService.comMascara("12345678900")).isEqualTo("123.456.789-00");

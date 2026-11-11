@@ -12,10 +12,13 @@ import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -34,7 +37,11 @@ import org.springframework.stereotype.Component;
  *       que ignora em silêncio o que passa disso. Sem este teto, duas senhas longas com o mesmo
  *       começo seriam a mesma senha — e o usuário nunca saberia;
  *   <li>não pode ser um único caractere repetido;
- *   <li>não pode conter o e-mail (nem a parte antes da arroba) nem o CPF/CNPJ do titular;
+ *   <li>não pode conter o e-mail (nem a parte antes da arroba) nem os outros dados de contexto do
+ *       titular ({@link DadosDoTitular}): o CPF/CNPJ, o telefone (com e sem DDD) e, no contador, o
+ *       CNPJ e o telefone do escritório (#521). Documentos e telefones são comparados sem pontuação
+ *       nem espaço, dos dois lados: "529.982.247-25" e "(45) 99999-0000" dentro da senha contam
+ *       como o CPF e o telefone;
  *   <li>não pode conter uma sequência de {@value #MINIMO_SEQUENCIA} ou mais caracteres seguidos
  *       crescente ou decrescente de dígitos ou de letras ("12345678901", "abcdefghij"), uma fileira
  *       do teclado ("qwerty", "asdfgh", "1q2w3e") nem ser um mesmo trecho repetido ("asdfasdfasdf")
@@ -56,6 +63,29 @@ public class PoliticaSenha {
 
   /** Abaixo disto a parte local do e-mail é curta demais para a regra "contém o e-mail" valer. */
   private static final int MINIMO_PARTE_LOCAL_EMAIL = 4;
+
+  /**
+   * Documento ou telefone com menos caracteres que isto (sem pontuação) não entra na regra "contém
+   * o dado do titular": o número local sem DDD tem 8 dígitos, e um valor mais curto daria falso
+   * positivo em senha legítima (#521).
+   */
+  static final int MINIMO_CARACTERES_DADO = 8;
+
+  /** Tamanho do DDD, tirado do telefone para recusar também o número local (#521). */
+  private static final int TAMANHO_DDD = 2;
+
+  /** Código do Brasil, tirado do telefone gravado com ele (12 ou 13 dígitos). */
+  private static final String CODIGO_PAIS = "55";
+
+  /** Tudo o que não é letra nem dígito: a máscara de CPF/CNPJ e de telefone (#521). */
+  private static final Pattern SEPARADORES = Pattern.compile("[^\\p{L}\\p{N}]");
+
+  /** Tudo o que não é dígito ASCII. */
+  private static final Pattern NAO_DIGITO = Pattern.compile("\\D");
+
+  /** Mensagem da regra dos dados do titular: nunca diz qual dado nem o repete. */
+  static final String MENSAGEM_DADO_DO_TITULAR = "A senha não pode conter seus dados de cadastro:"
+      + " e-mail, CPF/CNPJ, telefone nem o CNPJ ou o telefone do escritório.";
 
   /** Tamanho da menor sequência (ou fileira de teclado) recusada. */
   public static final int MINIMO_SEQUENCIA = 6;
@@ -91,15 +121,61 @@ public class PoliticaSenha {
   }
 
   /**
-   * Valida a senha contra a política.
+   * Dados de contexto do titular que a senha não pode conter (NIST SP 800-63B §5.1.1.2,
+   * "context-specific words"; #521).
+   *
+   * <p>Valores nulos ou em branco nas listas são ignorados: o contador pessoal não tem CNPJ de
+   * escritório, e o telefone é opcional. O {@code toString} não mostra nenhum dado (LGPD).
+   *
+   * @param email      e-mail do titular, já normalizado; pode ser nulo
+   * @param documentos CPF/CNPJ do titular e, no contador, o CNPJ do escritório; com ou sem máscara
+   * @param telefones  telefone do titular e, no contador, o do escritório; com ou sem máscara
+   */
+  public record DadosDoTitular(String email, List<String> documentos, List<String> telefones) {
+
+    /** Copia as listas sem os valores nulos ou em branco. */
+    public DadosDoTitular {
+      documentos = informados(documentos);
+      telefones = informados(telefones);
+    }
+
+    private static List<String> informados(List<String> valores) {
+      return valores == null ? List.of() : valores.stream()
+          .filter(v -> v != null && !v.isBlank())
+          .toList();
+    }
+
+    @Override
+    public String toString() {
+      return "DadosDoTitular[documentos=" + documentos.size() + ", telefones=" + telefones.size()
+          + "]";
+    }
+  }
+
+  /**
+   * Valida a senha só com o e-mail e o documento do titular — o seed de dev e o da demonstração,
+   * que não têm telefone nem escritório a conferir.
    *
    * @param senha   senha já {@linkplain #normalizar normalizada}
    * @param email   e-mail do titular, já normalizado
-   * @param cpfCnpj documento do titular, só dígitos
+   * @param cpfCnpj documento do titular, com ou sem máscara
    * @param campo   nome do campo no request, para o {@code field} do erro
    * @throws SenhaFracaException com uma entrada por regra violada
    */
   public void validar(String senha, String email, String cpfCnpj, String campo) {
+    validar(senha, new DadosDoTitular(email, Collections.singletonList(cpfCnpj), null), campo);
+  }
+
+  /**
+   * Valida a senha contra a política.
+   *
+   * @param senha   senha já {@linkplain #normalizar normalizada}
+   * @param titular dados de contexto do titular que a senha não pode conter
+   * @param campo   nome do campo no request, para o {@code field} do erro
+   * @throws SenhaFracaException com uma entrada por regra violada
+   */
+  public void validar(String senha, DadosDoTitular titular, String campo) {
+    Objects.requireNonNull(titular, "titular");
     List<ErrorDetail> violacoes = new ArrayList<>();
     if (senha == null || senha.isEmpty()) {
       violacoes.add(violacao(campo, "Informe a senha."));
@@ -120,8 +196,8 @@ public class PoliticaSenha {
     }
 
     String minuscula = senha.toLowerCase(Locale.ROOT);
-    if (contemDadoDoTitular(minuscula, email, cpfCnpj)) {
-      violacoes.add(violacao(campo, "A senha não pode conter seu e-mail nem seu CPF/CNPJ."));
+    if (contemDadoDoTitular(minuscula, titular)) {
+      violacoes.add(violacao(campo, MENSAGEM_DADO_DO_TITULAR));
     }
     if (temSequenciaOuPadrao(minuscula)) {
       violacoes.add(violacao(campo,
@@ -199,7 +275,8 @@ public class PoliticaSenha {
     return false;
   }
 
-  private static boolean contemDadoDoTitular(String senhaMinuscula, String email, String cpfCnpj) {
+  private static boolean contemDadoDoTitular(String senhaMinuscula, DadosDoTitular titular) {
+    String email = titular.email();
     if (email != null && !email.isBlank()) {
       if (senhaMinuscula.contains(email)) {
         return true;
@@ -210,7 +287,38 @@ public class PoliticaSenha {
         return true;
       }
     }
-    return cpfCnpj != null && !cpfCnpj.isBlank() && senhaMinuscula.contains(cpfCnpj);
+    // A senha sem pontuacao e sem espacos: "529.982.247-25" e "(45) 99999-0000" dentro dela viram
+    // os digitos gravados.
+    String senhaSemSeparadores = semSeparadores(senhaMinuscula);
+    return titular.documentos().stream()
+        .map(documento -> semSeparadores(documento.toLowerCase(Locale.ROOT)))
+        .anyMatch(documento -> contemDado(senhaSemSeparadores, documento))
+        || titular.telefones().stream()
+            .flatMap(telefone -> formasDoTelefone(telefone).stream())
+            .anyMatch(telefone -> contemDado(senhaSemSeparadores, telefone));
+  }
+
+  private static boolean contemDado(String senhaSemSeparadores, String dado) {
+    return dado.length() >= MINIMO_CARACTERES_DADO && senhaSemSeparadores.contains(dado);
+  }
+
+  /**
+   * O telefone só com dígitos, sem o código do país, e o número local sem o DDD: "45999990000" dá
+   * "45999990000" e "999990000"; "(65) 3333-0001" dá "6533330001" e "33330001".
+   */
+  static List<String> formasDoTelefone(String telefone) {
+    String digitos = NAO_DIGITO.matcher(telefone).replaceAll("");
+    if ((digitos.length() == 12 || digitos.length() == 13) && digitos.startsWith(CODIGO_PAIS)) {
+      digitos = digitos.substring(CODIGO_PAIS.length());
+    }
+    if (digitos.length() == 10 || digitos.length() == 11) {
+      return List.of(digitos, digitos.substring(TAMANHO_DDD));
+    }
+    return List.of(digitos);
+  }
+
+  private static String semSeparadores(String texto) {
+    return SEPARADORES.matcher(texto).replaceAll("");
   }
 
   private static ErrorDetail violacao(String campo, String mensagem) {
