@@ -11,6 +11,9 @@ import org.springframework.web.util.UrlPathHelper;
  *
  * <p>Duas listas iguais em dois arquivos se separam no primeiro endpoint novo; uma rota pública
  * que o filtro não conhecesse responderia 401 a quem mandasse um token expirado junto.
+ *
+ * <p>Também é a fonte do caminho decodificado ({@link #caminho}) e do que é API
+ * ({@link #ehApi}, {@link #PREFIXO_API}), que os filtros e o escritor da CSP usam (#208, #345).
  */
 public final class RotasAutenticacao {
 
@@ -34,6 +37,9 @@ public final class RotasAutenticacao {
 
   /** Redefinição de senha com o token do e-mail (#209). */
   public static final String SENHA_REDEFINIR = "/api/auth/senha/redefinir";
+
+  /** Prefixo das rotas da API, com a barra: {@code /apix} não é API (#150, #345). */
+  public static final String PREFIXO_API = "/api/";
 
   /** Todas as rotas públicas de autenticação, só com {@code POST}. */
   public static final Set<String> PUBLICAS_POST =
@@ -59,6 +65,26 @@ public final class RotasAutenticacao {
    */
   public static String caminho(HttpServletRequest request) {
     return CAMINHOS.getPathWithinApplication(request);
+  }
+
+  /**
+   * A requisição é para a API ({@code /api} ou {@code /api/...}), pelo caminho decodificado?
+   *
+   * <p><strong>Sem estado (issue #345).</strong> Lê só a URI e o context path, pelo
+   * {@link #caminho}, nunca o caminho analisado que o {@code DispatcherServlet} guarda num atributo
+   * da requisição ({@code ServletRequestPathUtils.PATH_ATTRIBUTE}). É o que permite usá-lo no
+   * escritor de cabeçalho da CSP: o {@code HeaderWriterFilter} o roda na thread que faz o commit
+   * da resposta, que no streaming pode ser de um pool fora do container; o {@code finally} do
+   * {@code DispatcherServlet} remove aquele atributo ao mesmo tempo, e o matcher que o lia em
+   * dois passos falhava no meio do envio (#335). Decodificado como o roteamento, então
+   * {@code /%61pi/...} também é API.
+   *
+   * @param request requisição
+   * @return {@code true} para {@code /api} e tudo abaixo de {@code /api/}
+   */
+  public static boolean ehApi(HttpServletRequest request) {
+    String caminho = caminho(request);
+    return caminho.startsWith(PREFIXO_API) || caminho.equals("/api");
   }
 
   /**
