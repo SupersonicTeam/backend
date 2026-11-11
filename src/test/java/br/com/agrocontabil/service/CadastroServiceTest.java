@@ -302,7 +302,7 @@ class CadastroServiceTest {
         .thenAnswer(inv -> inv.getArgument(0));
 
     service.cadastrar(pedidoDeContador(TipoEscritorio.EMPRESARIAL, escritorioCompleto(), null,
-        null, null), contador -> {
+        null, null), null, contador -> {
           contador.setEscritorioId(escritorioDaEquipe);
           contador.setFuncao(FuncaoEscritorio.ASSISTENTE);
         });
@@ -505,11 +505,30 @@ class CadastroServiceTest {
         "patricia@exemplo.com.br", "equipe 45999990000 campo", null, null, "45999990000", null,
         null);
 
-    assertThatThrownBy(() -> service.cadastrar(pedido, contador -> {
+    assertThatThrownBy(() -> service.cadastrar(pedido, null, contador -> {
       throw new AssertionError("o ingresso nao pode rodar com a senha recusada");
     })).isInstanceOf(SenhaFracaException.class);
     verify(passwordEncoder, never()).encode(anyString());
     verifyNoInteractions(transactionManager, contadorRepository, credencialRepository);
+  }
+
+  @Test
+  @DisplayName("cadastro pelo convite com o CNPJ ou o telefone do escritorio do convite na senha:"
+      + " recusado antes do ingresso (#521)")
+  void ingressoComDadosDoEscritorioNaSenha() {
+    Escritorio doConvite = Escritorio.builder().id(UUID.randomUUID()).nome("Campo Verde")
+        .tipo(TipoEscritorio.EMPRESARIAL).cnpj("11444777000161").telefone("4533330000").build();
+    for (String senha : List.of("equipe 11.444.777/0001-61 campo", "fixo 3333-0000 campo")) {
+      CadastroRequest pedido = new CadastroRequest(PapelUsuario.CONTADOR, "Patricia Moreira", CPF,
+          "patricia@exemplo.com.br", senha, null, null, null, null, null);
+
+      assertThatThrownBy(() -> service.cadastrar(pedido, doConvite, contador -> {
+        throw new AssertionError("o ingresso nao pode rodar com a senha recusada");
+      })).as(senha).isInstanceOf(SenhaFracaException.class);
+    }
+    verify(passwordEncoder, never()).encode(anyString());
+    verifyNoInteractions(transactionManager, contadorRepository, credencialRepository,
+        escritorioRepository);
   }
 
   @Test

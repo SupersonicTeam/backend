@@ -17,6 +17,7 @@ import br.com.agrocontabil.service.EnvioConviteEquipe;
 import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -191,6 +192,35 @@ class EscritorioEquipeIntegrationTest {
     // O cadastro pelo convite nao criou escritorio unipessoal.
     assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM escritorio", Integer.class))
         .isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("cadastro pelo convite com o CNPJ, o telefone do escritorio ou o proprio telefone"
+      + " na senha (#521): 400 SENHA_FRACA e o convite segue valendo")
+  void senhaComDadosDoEscritorioDoConvite() throws Exception {
+    jdbcTemplate.update("UPDATE escritorio SET cnpj = '12345678000195', telefone = '4533330000'"
+        + " WHERE id = ?", escritorioDe(adminA.usuarioId()));
+    String tokenConvite = conviteDeEquipe(EMAIL_NOVO, "CONTADOR");
+    String corpo = """
+        {"token":"%s","nomeCompleto":"Ana Assistente","cpfCnpj":"39053344705",\
+        "telefone":"45999990000","senha":"%s"}""";
+
+    for (String senha : List.of("campo 12.345.678/0001-95 verde", "fixo 3333-0000 campo",
+        "celular 45 99999-0000 roca")) {
+      String resposta = mockMvc.perform(post("/api/auth/cadastro/equipe")
+              .contentType(MediaType.APPLICATION_JSON).content(corpo.formatted(tokenConvite, senha)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.errors[0].code").value("SENHA_FRACA"))
+          .andExpect(jsonPath("$.errors[0].field").value("senha"))
+          .andReturn().getResponse().getContentAsString();
+      assertThat(resposta).as(senha).doesNotContain("12345678000195", "33330000", "99999");
+    }
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM contadores"
+        + " WHERE nome_completo = 'Ana Assistente'", Integer.class)).isZero();
+
+    mockMvc.perform(post("/api/auth/cadastro/equipe").contentType(MediaType.APPLICATION_JSON)
+            .content(corpo.formatted(tokenConvite, SENHA)))
+        .andExpect(status().isCreated());
   }
 
   @Test
