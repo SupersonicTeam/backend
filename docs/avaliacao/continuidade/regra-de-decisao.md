@@ -5,11 +5,16 @@ os testes do PR da continuidade, o gabarito (#158) nem o conjunto do benchmark. 
 depois de ver um resultado invalida a medição. Os limiares são os propostos na seção "Medição" da
 #499; o Murillo pode ajustá-los, **antes** da rodada, com uma versão nova desta regra.
 
+**v2 (2026-11-11), ainda antes de qualquer rodada oficial:** depois de um ensaio rotulado como
+não oficial, o conjunto passou à v2 e a pontuação passou a contar no limite dos 10% a execução
+que perde só os turnos finais, como a seção "Decisão" já dizia. Métricas e limiares não mudaram.
+O que mudou e por quê está no `README.md`, seção "Versões".
+
 ## O que se mede
 
-- **Decide só o teste:** `conversas-continuidade-teste.json` (versão `continuidade-v1-teste`,
+- **Decide só o teste:** `conversas-continuidade-teste.json` (versão `continuidade-v2-teste`,
   sha256 no `.sha256` ao lado), 42 conversas de 2 ou 3 turnos.
-- **O dev não decide:** `conversas-continuidade-dev.json` (`continuidade-v1-dev`, 8 conversas) é de
+- **O dev não decide:** `conversas-continuidade-dev.json` (`continuidade-v2-dev`, 8 conversas) é de
   desenvolvimento, roda junto e aparece à parte no relatório.
 - **Unidades:**
   - **execução:** uma conversa inteira, do primeiro ao último turno, num braço e numa repetição;
