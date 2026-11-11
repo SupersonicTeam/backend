@@ -202,6 +202,87 @@ class ReconferenciaLeiTest {
   }
 
   @Test
+  @DisplayName("Já reconferida e só trechos: textos fixos com as referências")
+  void jaReconferidaESoTrechos() {
+    String fatia = "A soja tem redução de 60% (" + REFERENCIA + ").";
+    ParConferido reconferida = new ParConferido("p", fatia, "v1.a.b",
+        new CargaTurno(1L, Intencao.LEGISLACAO, false, null, null, null, false,
+            new LeiAssinada(LeiAssinada.Classe.CONFIRMADA, new Faixa(0, fatia.length()), null,
+                null, false, true, null)), 0, false);
+    ParConferido soTrechos = new ParConferido("p", "A regra está nos trechos.", "v1.a.b",
+        new CargaTurno(1L, Intencao.LEGISLACAO, false, null, null, null, false,
+            new LeiAssinada(LeiAssinada.Classe.CONFIRMADA, null,
+                List.of("LC 214/2025|art. 137, § 1º"), null, false, false, null)), 0, false);
+
+    assertThat(reconferencia.reconferir(reconferida, contexto).rota().texto())
+        .startsWith("Essa resposta já passou por uma nova conferência").contains(REFERENCIA);
+    assertThat(reconferencia.reconferir(soTrechos, contexto).rota().texto())
+        .startsWith(ReconferenciaLei.SO_TRECHOS);
+    verify(modelo, never()).chamar(any());
+  }
+
+  @Test
+  @DisplayName("MISTO sem pergunta legal que coube: apoio sem citação não diz 'abaixo'")
+  void mistoSemPergunta() {
+    when(buscaTextual.buscarDispositivos(anyList(), eq(HOJE))).thenReturn(List.of());
+    String fatia = "A soja tem redução (" + REFERENCIA + ").";
+    ParConferido misto = new ParConferido("p", "Dados.\n\n" + fatia, "v1.a.b",
+        new CargaTurno(1L, Intencao.MISTO, false, null, null, null, false,
+            new LeiAssinada(LeiAssinada.Classe.CONFIRMADA, new Faixa(8, 8 + fatia.length()), null,
+                null, true, false, null)), 0, false);
+
+    ReconferenciaLei.Resultado r = reconferencia.reconferir(misto, contexto);
+
+    assertThat(r.rota().texto()).startsWith(ReconferenciaLei.APOIO_SEM_DISPOSITIVO)
+        .doesNotContain("abaixo");
+    assertThat(contexto.registroTurno().reconferida()).isTrue();
+  }
+
+  @Test
+  @DisplayName("Formatos inválidos e marca de trecho não citado: apoio")
+  void formatosInvalidos() {
+    when(busca.buscar(any(), eq(HOJE))).thenReturn(List.of(TRECHO, new TrechoRecuperado(null,
+        "t138", "LC 214/2025", "art. 138", "u", "Outro trecho de lei sobre insumos e prazos.",
+        0.5)));
+    when(modelo.chamar(any())).thenReturn(
+        resposta("{\"veredito\": \"CONFIRMO\", \"fundamentos\": []}"),
+        resposta("{\"veredito\": \"CONFIRMO\", \"fundamentos\": [{\"marca\": \"T2\", "
+            + "\"citacao\": \"Outro trecho de lei sobre insumos e prazos\"}]}"),
+        resposta("{\"veredito\": \"CORRIJO\", \"correcoes\": [{\"fraseAnterior\": \"x\"}]}"),
+        resposta("{\"veredito\": \"CORRIJO\", \"correcoes\": [{\"fraseAnterior\": \"isso nao "
+            + "esta na resposta anterior de jeito nenhum\", \"fraseCorrigida\": \"A soja tem "
+            + "redução de 60% [T1]\", \"fundamento\": {\"marca\": \"T1\", \"citacao\": \""
+            + CITACAO + "\"}}]}"),
+        resposta("{\"veredito\": \"OUTRO\"}"));
+
+    List<DesfechoContinuidade> desfechos = new java.util.ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      desfechos.add(reconferencia.reconferir(
+          parDeLei("A soja tem redução de 40% da alíquota"), contexto).desfecho());
+    }
+
+    assertThat(desfechos).containsExactly(
+        DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+        DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+        DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+        DesfechoContinuidade.RECONFERENCIA_DESCARTADA_ANCORA,
+        DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO);
+  }
+
+  @Test
+  @DisplayName("Frases: marca solta no começo volta à frase anterior; grupo sem resolver fica")
+  void frasesEMarcas() {
+    assertThat(ReconferenciaLei.frases("A soja tem 60%. [T1] A outra regra vale [T2]."))
+        .containsExactly("A soja tem 60%. [T1]", "A outra regra vale [T2].");
+    assertThat(ReconferenciaLei.marcas("x [T1, T3] y [T2]")).containsExactly("T1", "T3", "T2");
+    assertThat(ReconferenciaLei.comMarcas("Vale (Lei 1.234/2026, art. 9).", List.of()))
+        .isEqualTo("Vale (Lei 1.234/2026, art. 9).");
+    assertThat(ReconferenciaLei.pedacoLiteral("curta demais", TEXTO_TRECHO)).isEmpty();
+    assertThat(ReconferenciaLei.polaridade(null)).isNull();
+    assertThat(ReconferenciaLei.polaridade("A soja tem redução")).isNull();
+  }
+
+  @Test
   @DisplayName("Utilitários: grupos de referência, marcas e âncora")
   void utilitarios() {
     assertThat(ReconferenciaLei.referenciasDoGrupo("LC 214/2025, art. 137; EC 132/2023, art. 1"))
