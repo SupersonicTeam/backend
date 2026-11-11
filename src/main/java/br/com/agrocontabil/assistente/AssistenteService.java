@@ -448,11 +448,13 @@ public class AssistenteService implements DisposableBean {
 
   /**
    * Reserva da cota (#166) e contexto da pergunta. Os caminhos sem modelo
-   * ({@link CaminhoCota#SEM_MODELO}: atalho fixo da tela, #343; conversa leve, #493; e, na
-   * continuidade, #499, a reexecução sem modelo e os textos fixos) não chamam o modelo e pagam só
-   * a leitura da mensagem (#511): reservam esse custo, não o teto, recebem 429
-   * {@code LIMITE_USO_ASSISTENTE} só sem saldo para ele, e o contexto recusa qualquer chamada ao
-   * modelo. A decisão da continuidade sai antes da reserva, e o mesmo objeto vai ao orquestrador.
+   * ({@link CaminhoCota#SEM_MODELO}: atalho fixo da tela, #343; conversa leve, #493; recusa pelo
+   * filtro de injeção e recusa firme antes do classificador, #497; e, na continuidade, #499, a
+   * reexecução sem modelo e os textos fixos) não chamam o modelo e pagam só a leitura da mensagem
+   * (#511): reservam esse custo, não o teto, recebem 429 {@code LIMITE_USO_ASSISTENTE} só sem
+   * saldo para ele, e o contexto recusa qualquer chamada ao modelo. A decisão da continuidade sai
+   * antes da reserva, e o mesmo objeto vai ao orquestrador; sem histórico, ela é sem modelo
+   * exatamente quando {@link OrquestradorService#respondeSemModelo} é verdadeiro.
    */
   private Execucao preparar(UUID produtorId, AssistenteChatRequest request) {
     String pergunta = request.pergunta();

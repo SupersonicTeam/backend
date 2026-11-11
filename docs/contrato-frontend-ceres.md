@@ -368,9 +368,10 @@ envelope.
   mesmos campos, sem quebra de contrato): um "olá" custa poucos créditos, uma pergunta que consulta
   funções e trechos de lei custa milhares. Mensagens ao usuário, como a do 429, não citam número de
   créditos.
-- **Toda pergunta tem custo (#511):** os atalhos da tela, a conversa leve, a recusa pelo filtro e o
-  modo fallback pagam a leitura da mensagem; sem saldo para ela, também recebem **429
-  `LIMITE_USO_ASSISTENTE`**.
+- **Toda pergunta tem custo (#511):** os atalhos da tela, a conversa leve, a recusa pelo filtro, a
+  recusa firme de pedido sobre outra pessoa ou ataque (#497) e o modo fallback pagam a leitura da
+  mensagem; sem saldo para ela, também recebem **429 `LIMITE_USO_ASSISTENTE`**. Os quatro
+  primeiros não precisam de saldo para o teto de uma pergunta de modelo.
 - `restantes` já desconta as perguntas em andamento. Uma pergunta de modelo só começa se houver
   saldo para o teto dela (hoje 31.744 créditos com os padrões); o que sobra do teto volta no fim.
   Uma pergunta que falha por erro do servidor não custa nada.

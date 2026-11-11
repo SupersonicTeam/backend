@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.SinalRecusaFirme;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
@@ -17,7 +18,10 @@ import org.springframework.stereotype.Component;
  *   <li>{@link LlmClassificadorIntencao}: desempate, só quando as anteriores não decidiram. Assim a
  *       qualidade nunca fica abaixo da Fase 1.</li>
  * </ol>
- * O {@link FiltroInjecao} continua antes de tudo, no orquestrador.
+ * O {@link FiltroInjecao} e o pedido inequívoco de outra conta ou ao sistema
+ * ({@link SinalRecusaFirme#inequivoco}) continuam antes de tudo, no orquestrador. Com marca de
+ * outra pessoa ou de ordem ao sistema ({@link SinalRecusaFirme#pedeDesempate}, #497), as camadas 1
+ * e 2 não decidem: o modelo desempata, se estiver no ar.
  *
  * <p><strong>MISTO:</strong> as camadas 1 e 2 decidem só a rota; a separação da pergunta de lei
  * ({@code perguntaLei}) continua com o modelo, que passa a ser chamado só aí. Se ele não separar
@@ -49,7 +53,7 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
 
   @Override
   public ClassificacaoIntencao classificar(String pergunta, ContextoAssistente contexto) {
-    if (propriedades.isCamadas()) {
+    if (propriedades.isCamadas() && !desempateDireto(pergunta)) {
       Optional<Intencao> regra = RegrasClassificacao.decidir(pergunta);
       if (regra.isPresent()) {
         return new ClassificacaoIntencao(regra.get(), 1, null, CamadaClassificacao.REGRA);
@@ -64,6 +68,17 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
       }
     }
     return desempate(pergunta, contexto);
+  }
+
+  /**
+   * Marca de outra pessoa ou de ordem ao sistema (#497): com o modelo no ar, ele decide. A regra
+   * lia "meu vizinho paga Funrural?" como lei e as embeddings punham "as notas do meu vizinho"
+   * perto de "as minhas notas"; o modelo separa o dado do terceiro da operação do produtor com
+   * ele ("vendi para o meu vizinho"). Com o modelo em pausa, as camadas seguem decidindo, como
+   * antes.
+   */
+  private boolean desempateDireto(String pergunta) {
+    return SinalRecusaFirme.pedeDesempate(pergunta) && disponibilidade.disponivel();
   }
 
   /** MISTO decidido pelas embeddings: só a pergunta de lei vem do modelo, se ele estiver no ar. */

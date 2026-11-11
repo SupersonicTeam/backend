@@ -271,8 +271,9 @@ public final class ContextoAssistente {
 
   /**
    * A pergunta não reservou cota para o modelo (#499): caminho sem modelo (atalho fixo da tela,
-   * #343; conversa leve, #493; reexecução e textos fixos da continuidade), que reserva só a leitura
-   * da mensagem (#511). {@link #chamar} recusa a chamada: chamar o modelo sem a reserva gastaria
+   * #343; conversa leve, #493; recusa pelo filtro ou antes do classificador, #497; reexecução e
+   * textos fixos da continuidade), que reserva só a leitura da mensagem (#511). {@link #chamar}
+   * recusa a chamada: chamar o modelo sem a reserva gastaria
    * fora da cota.
    */
   public void semReservaParaOModelo() {

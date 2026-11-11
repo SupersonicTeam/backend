@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente.continuidade;
 
+import br.com.agrocontabil.assistente.SinalRecusaFirme;
 import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos;
 import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.FiltroInjecao;
@@ -16,7 +17,8 @@ import java.util.Optional;
  *   <li>atalho da tela, sempre primeiro;</li>
  *   <li>conversa leve: agradecimento, despedida, reconhecimento e apresentação sempre; SEGUIMENTO
  *       e saudação ambígua só sem histórico válido (ou com a última resposta sem {@code turno});</li>
- *   <li>sem histórico, ou mensagem com cara de injeção: a pergunta de sempre;</li>
+ *   <li>sem histórico, mensagem com cara de injeção ou recusa firme inequívoca (#497): a pergunta
+ *       de sempre; nos dois últimos, sem modelo, pagando só a leitura (#511);</li>
  *   <li>confirmação, contestação pura ou reafirmação: o caminho da confirmação, com o custo pela
  *       rota do último par;</li>
  *   <li>gatilho da reescrita verdadeiro: com reescrita; falso: a pergunta de sempre.</li>
@@ -87,9 +89,16 @@ public final class DecisaoContinuidade {
       return new Decisao(Caminho.CONVERSA_LEVE, CaminhoCota.SEM_MODELO, historico,
           Optional.empty(), MensagemContinuidade.Tipo.NENHUMA, null);
     }
-    if (semHistorico || FiltroInjecao.pareceInjecao(mensagem)) {
-      return new Decisao(Caminho.NORMAL, CaminhoCota.NORMAL, historico, Optional.empty(),
-          MensagemContinuidade.Tipo.NENHUMA, null);
+    // Filtro de injecao e recusa firme (#497) olham a MENSAGEM antes da confirmacao e da
+    // reescrita: ataque ou pedido sobre outra pessoa nunca vai ao prompt da reescrita nem a
+    // reconferencia. Vai a pergunta de sempre, que recusa sem o modelo (OrquestradorService
+    // .respondeSemModelo), e a cota reserva so a leitura (#511).
+    boolean recusaSemModelo =
+        FiltroInjecao.pareceInjecao(mensagem) || SinalRecusaFirme.inequivoco(mensagem);
+    if (semHistorico || recusaSemModelo) {
+      return new Decisao(Caminho.NORMAL,
+          recusaSemModelo ? CaminhoCota.SEM_MODELO : CaminhoCota.NORMAL, historico,
+          Optional.empty(), MensagemContinuidade.Tipo.NENHUMA, null);
     }
     ParConferido par = historico.ultimo().orElseThrow();
     MensagemContinuidade.Tipo tipo = MensagemContinuidade.ler(mensagem, par);

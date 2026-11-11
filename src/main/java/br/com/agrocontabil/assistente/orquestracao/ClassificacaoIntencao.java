@@ -11,16 +11,29 @@ import java.util.Objects;
  *                    produtor; nula se o classificador não a separou. É texto gerado pelo modelo:
  *                    o orquestrador confere antes de usar ({@link PerguntaLei})
  * @param camada      quem decidiu (#265); o classificador por modelo de linguagem é {@code LLM}
+ * @param recusaFirme fora de escopo por pedido sobre outra pessoa ou ordem ao sistema, segundo o
+ *                    classificador por modelo (#497): a recusa sai firme mesmo sem o sinal do
+ *                    texto. Só vale com {@link Intencao#FORA_DE_ESCOPO}
  */
 public record ClassificacaoIntencao(Intencao intencao, double confianca, String perguntaLei,
-    CamadaClassificacao camada) {
+    CamadaClassificacao camada, boolean recusaFirme) {
 
-  /** Normaliza a confiança para [0, 1] e a pergunta de lei em branco para nula. */
+  /**
+   * Normaliza a confiança para [0, 1] e a pergunta de lei em branco para nula; a recusa firme só
+   * fica com fora de escopo.
+   */
   public ClassificacaoIntencao {
     Objects.requireNonNull(intencao, "intencao");
     Objects.requireNonNull(camada, "camada");
     confianca = Double.isNaN(confianca) ? 0 : Math.max(0, Math.min(1, confianca));
     perguntaLei = perguntaLei == null || perguntaLei.isBlank() ? null : perguntaLei.strip();
+    recusaFirme = recusaFirme && intencao == Intencao.FORA_DE_ESCOPO;
+  }
+
+  /** Classificação sem a marca de recusa firme. */
+  public ClassificacaoIntencao(Intencao intencao, double confianca, String perguntaLei,
+      CamadaClassificacao camada) {
+    this(intencao, confianca, perguntaLei, camada, false);
   }
 
   /** Classificação do modelo de linguagem, com a pergunta de lei. */
@@ -35,7 +48,7 @@ public record ClassificacaoIntencao(Intencao intencao, double confianca, String 
 
   /** A mesma classificação, atribuída a outra camada. */
   public ClassificacaoIntencao comCamada(CamadaClassificacao outra) {
-    return new ClassificacaoIntencao(intencao, confianca, perguntaLei, outra);
+    return new ClassificacaoIntencao(intencao, confianca, perguntaLei, outra, recusaFirme);
   }
 
   /** Classificação que não foi possível fazer: fora de escopo, confiança zero. */

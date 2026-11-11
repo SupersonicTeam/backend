@@ -113,11 +113,28 @@ def conferir(chave: str, esperado: dict, linha: dict, ctx: Contexto) -> bool:
         return not interpretada or ct.normalizar(interpretada) == ct.normalizar(
             linha.get("pergunta_enviada", ""))
     if chave == "credito_zero":
-        antes, depois = linha.get("credito_antes"), linha.get("credito_depois")
-        return antes is not None and depois is not None and antes == depois
+        # Regra v3 (#511): toda pergunta tem custo; a chave do conjunto confere que não houve
+        # chamada ao modelo. O crédito do turno só vai ao relatório (credito_sem_modelo).
+        return sem_modelo(linha)
     if chave == "sem_turno":
         return not corpo.get("turno")
     raise ValueError(f"conferência desconhecida: {chave}")
+
+
+def sem_modelo(linha: dict) -> bool:
+    """A chamada gravou auditoria e nenhuma das linhas dela tem tokens do modelo.
+
+    O campo `modelo` da auditoria vem preenchido mesmo sem chamada; os tokens não.
+    """
+    auditoria = linha.get("auditoria") or {}
+    if not auditoria.get("linhas"):
+        return False
+    return not auditoria.get("tokens_entrada") and not auditoria.get("tokens_saida")
+
+
+def leitura(texto: str) -> int:
+    """O custo da leitura pela #511: ⌈caracteres ÷ 4⌉, em unidades UTF-16 (como o Java conta)."""
+    return math.ceil(ct.u16(texto or "") / 4)
 
 
 def passa(metrica: str, esperado: dict, linha: dict, ctx: Contexto) -> bool:
@@ -279,6 +296,8 @@ def metricas_do(conjunto: dict) -> set[str]:
 def medir(conjunto: dict, grupos: dict, notas: dict, braco: str, linhas: list[dict]) -> dict:
     metricas: dict = defaultdict(lambda: {"n": 0, "falhas": 0, "falharam": [], "turnos": []})
     fora = defaultdict(int)
+    sem_modelo_relato: list[dict] = []
+    vistos_sem_modelo: set[str] = set()
     execucoes = 0
     for conversa in conjunto["conversas"]:
         for repeticao in sorted({k[3] for k in grupos if k[1] == conversa["id"]
@@ -295,23 +314,39 @@ def medir(conjunto: dict, grupos: dict, notas: dict, braco: str, linhas: list[di
                 m["n"] += 1
                 linha = item["linha"]
                 corpo = linha.get("corpo") or {}
+                ident = f"{conversa['id']}/r{repeticao}/t{item['turno']}"
+                credito = None if linha.get("credito_antes") is None \
+                    or linha.get("credito_depois") is None \
+                    else linha["credito_depois"] - linha["credito_antes"]
                 m["turnos"].append({
-                    "id": f"{conversa['id']}/r{repeticao}/t{item['turno']}",
-                    "passou": item["passou"], "t_rota": linha.get("t_rota"),
-                    "t_resposta": linha.get("t_resposta"),
-                    "credito": None if linha.get("credito_antes") is None
-                    or linha.get("credito_depois") is None
-                    else linha["credito_depois"] - linha["credito_antes"],
+                    "id": ident, "passou": item["passou"], "t_rota": linha.get("t_rota"),
+                    "t_resposta": linha.get("t_resposta"), "credito": credito,
                     "abertura": categorias_no_inicio(corpo.get("resposta") or ""),
                     "camada": (linha.get("auditoria") or {}).get("camada_classificacao")})
                 if not item["passou"]:
                     m["falhas"] += 1
-                    m["falharam"].append(f"{conversa['id']}/r{repeticao}/t{item['turno']}")
+                    m["falharam"].append(ident)
+                # Crédito dos turnos sem modelo: só relatado (regra v3), uma vez por turno.
+                if "credito_zero" in item["esperado"] and ident not in vistos_sem_modelo:
+                    vistos_sem_modelo.add(ident)
+                    custo = leitura(linha.get("pergunta_enviada", ""))
+                    sem_modelo_relato.append({
+                        "id": ident, "sem_modelo": sem_modelo(linha), "credito": credito,
+                        "leitura": custo, "bate": credito == custo})
     # A execução que perdeu só os turnos finais (`anterior_fora` parcial) também conta como fora
     # no limite dos 10% (v2: a v1 contava só as que saíam inteiras).
     excluidas = sum(fora.values())
     return {"execucoes": execucoes, "fora": excluidas, "fora_por_motivo": dict(fora),
             "metricas": {k: dict(v) for k, v in metricas.items()},
+            "credito_sem_modelo": {
+                "n": len(sem_modelo_relato),
+                "bate_com_a_leitura": sum(1 for t in sem_modelo_relato if t["bate"]),
+                # Passou como sem modelo mas gastou mais que a leitura: pode ser chamada ao modelo
+                # que a auditoria gravou sem tokens. Só sinal, para conferir à mão.
+                "sem_modelo_acima_da_leitura": [
+                    t["id"] for t in sem_modelo_relato if t["sem_modelo"]
+                    and t["credito"] is not None and t["credito"] > t["leitura"]],
+                "turnos": sem_modelo_relato},
             "latencia_reescrita": latencia_reescrita(linhas, conjunto["parte"], braco),
             "primeiros_turnos": primeiros_turnos(conjunto, grupos, notas, braco),
             "caminhos": caminhos(linhas, conjunto["parte"], braco)}
@@ -460,6 +495,10 @@ def main(argv=None) -> int:
         print(f"  {nome}: {criterio}" if nome == "regressao_sem_historico" else
               f"  {nome}: n={criterio['n']} {criterio.get('falhas', criterio.get('p95'))} "
               f"({criterio['limiar']}) cumpre={criterio['cumpre']}")
+    relato = resultado["partes"]["teste"]["ligado"]["credito_sem_modelo"]
+    print(f"  credito_sem_modelo (só relatado): {relato['bate_com_a_leitura']} de {relato['n']} "
+          f"turnos com o crédito igual à leitura; sem modelo e acima da leitura: "
+          f"{relato['sem_modelo_acima_da_leitura']}")
     for problema in resultado["problemas"]:
         print(f"  problema: {problema}")
     return {"ENTRA": 0, "NAO_ENTRA": 1}.get(resultado["decisao"], 2)

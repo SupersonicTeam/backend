@@ -265,6 +265,39 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
         self.assertTrue(any("execuções do teste fora" in p for p in resultado["problemas"]))
 
+    def test_credito_zero_confere_que_nao_houve_chamada_ao_modelo(self):
+        # Regra v3 (#511): o turno sem modelo paga a leitura e mesmo assim passa.
+        sem_tokens = {"linhas": 1, "modelo": "m", "tokens_entrada": None, "tokens_saida": None}
+        com_tokens = {"linhas": 1, "modelo": "m", "tokens_entrada": 1200, "tokens_saida": 80}
+        casos = [(sem_tokens, 0, 3, True), (dict(sem_tokens, tokens_entrada=0), 0, 0, True),
+                 (com_tokens, 0, 0, False), ({}, 0, 0, False), (None, 0, 0, False)]
+        for auditoria, antes, depois, esperado in casos:
+            com = linha(2, self.CONFIRMA, auditoria=auditoria, credito_antes=antes,
+                        credito_depois=depois)
+            self.assertEqual(pc.conferir("credito_zero", {"credito_zero": True}, com, None),
+                             esperado, auditoria)
+
+    def test_credito_dos_turnos_sem_modelo_so_relatado(self):
+        conjunto = conjunto_mini()
+        ramo = conjunto["conversas"][0]["turnos"][1]["esperado"]["se_anterior"]["certa"]
+        ramo.update(credito_zero=True, metricas=["M_lei_corrijo_indevido", "M_caminho_fixo"])
+        sem_tokens = {"linhas": 1, "tokens_entrada": None, "tokens_saida": None}
+        linhas = []
+        for braco in ("ligado", "desligado"):
+            for r in (1, 2, 3):
+                linhas += [linha(1, "Sim, 60%.", braco=braco, repeticao=r),
+                           linha(2, self.CONFIRMA, braco=braco, repeticao=r,
+                                 pergunta_enviada="tem certeza?", auditoria=sem_tokens,
+                                 credito_antes=10, credito_depois=10 + (3 if r < 3 else 7))]
+        resultado = pc.pontuar(linhas, [conjunto], {"teste": "abc"})
+        self.assertEqual(resultado["criterios"]["M_caminho_fixo"]["falhas"], 0)
+        self.assertEqual(resultado["decisao"], "ENTRA")
+        relato = resultado["partes"]["teste"]["ligado"]["credito_sem_modelo"]
+        self.assertEqual((relato["n"], relato["bate_com_a_leitura"]), (3, 2))
+        self.assertEqual(relato["sem_modelo_acima_da_leitura"], ["t-lei-01/r3/t2"])
+        self.assertEqual(relato["turnos"][2], {"id": "t-lei-01/r3/t2", "sem_modelo": True,
+                                               "credito": 7, "leitura": 3, "bate": False})
+
     def test_latencia_sem_amostra_nao_se_aplica(self):
         resultado = self.rodada(self.CONFIRMA)
         self.assertIsNone(resultado["criterios"]["latencia_LEI_CORRIJO"]["cumpre"])
