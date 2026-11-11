@@ -73,6 +73,30 @@ public final class DocumentoFiscalValidator {
     return dv1 == charDigito(cnpj, 12) && dv2 == charDigito(cnpj, 13);
   }
 
+  /**
+   * Valida o digito verificador de um CNPJ alfanumerico da RFB (IN RFB 2.229/2024, issue #313): 12
+   * posicoes com digito ou letra maiuscula e 2 digitos verificadores, modulo 11 sobre o valor de
+   * cada posicao = codigo ASCII - 48 ('0' vale 0, 'A' vale 17). O CNPJ so de digitos tambem passa.
+   *
+   * <p><strong>Nao e porta de entrada.</strong> O cadastro, a NF-e e o XSD em uso so aceitam o CNPJ
+   * numerico ({@link #isCnpjValido}); aceitar o formato novo no sistema e outra decisao. Este metodo
+   * serve a quem precisa <em>reconhecer</em> o documento num texto, como a mascara de log
+   * ({@code MascaraDadosPessoais}): sem conferir o DV, qualquer token de 14 caracteres terminado em
+   * 2 digitos (hash, base64) seria tomado por CNPJ.
+   *
+   * @param cnpj 14 caracteres, so digitos e letras maiusculas, sem pontuacao; pode ser
+   *             {@code null}. Minuscula e recusada: quem aceita minuscula converte antes
+   * @return {@code true} se o formato e os dois digitos verificadores conferirem
+   */
+  public static boolean isCnpjAlfanumericoValido(String cnpj) {
+    if (cnpj == null || !cnpj.matches("[0-9A-Z]{12}\\d{2}") || todosDigitosIguais(cnpj)) {
+      return false;
+    }
+    int dv1 = digitoVerificadorCnpj(cnpj, 12);
+    int dv2 = digitoVerificadorCnpj(cnpj, 13);
+    return dv1 == charDigito(cnpj, 12) && dv2 == charDigito(cnpj, 13);
+  }
+
   // -------------------------------------------------------------------------
   // Algoritmo CPF: pesos decrescentes (10..2 no 1o DV, 11..2 no 2o DV).
   // -------------------------------------------------------------------------
@@ -101,8 +125,11 @@ public final class DocumentoFiscalValidator {
   /**
    * Calcula um digito verificador de CNPJ por modulo 11 com pesos ciclicos 2..9.
    *
-   * @param cnpj        documento (somente digitos)
-   * @param tamanhoBase quantidade de digitos considerados (12 para o 1o DV, 13 para o 2o)
+   * <p>Vale tambem para o CNPJ alfanumerico: o {@link #charDigito} da o valor ASCII - 48 de cada
+   * posicao, que e a regra da RFB (#313).
+   *
+   * @param cnpj        documento (digitos, ou digitos e letras maiusculas no alfanumerico)
+   * @param tamanhoBase quantidade de posicoes consideradas (12 para o 1o DV, 13 para o 2o)
    * @return digito verificador esperado (0..9)
    */
   private static int digitoVerificadorCnpj(String cnpj, int tamanhoBase) {

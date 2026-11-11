@@ -43,6 +43,11 @@ A versão para o titular é servida em `GET /api/politica-dados`.
   colado (desde o PR #310): sem isso, UUID, hash e `jti` com 11 dígitos seguidos de letra viravam
   `[CPF]`. Limite aceito: CPF grudado em letra sem separador (`cpf52998224725`) passa; qualquer
   separador (`_`, `:`, `=`, parêntese, aspas, hífen, espaço) basta para mascarar.
+- **CNPJ alfanumérico da RFB (#313):** `12.ABC.345/01DE-35`, com e sem pontuação, vira `[CNPJ]` no
+  log e no stack trace, mas só quando os dígitos verificadores conferem (sem isso, todo hash ou
+  base64 de 14 caracteres terminado em 2 dígitos viraria `[CNPJ]`) e só em maiúsculas, o formato
+  da RFB e do XML: o log carrega hash em hex minúsculo. Caminho típico: a mensagem do validador do
+  XSD sobre um XML importado com o CNPJ novo, que o leiaute em uso ainda não aceita.
 - **Acessos da página inicial no Caddy (#484)**, para contar o QR do cartão de visita:
   - **o que entra:** só a raiz `/` do `www`, sem IP, porta, cabeçalhos (cookies inclusive) e sem
     `/api` (que leva CPF/CNPJ na busca), `/healthz` ou as rotas do SPA. Ficam data, URI, status e o
@@ -86,9 +91,14 @@ conferir os termos da conta antes de ligar para produtores reais.
   e a reativação, hoje, é manual (pelo encarregado).
 - **Alertas recriados:** o job diário de alertas (RN010) volta a gerar alertas a partir das guias e
   notas guardadas do produtor anonimizado. Não carregam dado pessoal, mas ninguém os lê.
-- **Máscara de log:** cobre CPF/CNPJ numéricos (com ou sem pontuação), e-mail e telefone brasileiro
-  (com DDD entre parênteses, ou sem parênteses com o hífen). O CNPJ alfanumérico da RFB ainda não
-  é reconhecido.
+- **Máscara de log:** cobre CPF/CNPJ numéricos (com ou sem pontuação), o CNPJ alfanumérico da RFB
+  com DV válido e em maiúsculas (#313), e-mail e telefone brasileiro (com DDD entre parênteses, ou
+  sem parênteses com o hífen). O alfanumérico em minúsculas passa no log (decisão de 2026-11-11,
+  pelo falso positivo com hash em hex).
+- **Ceres (`DataSanitizer`):** ainda não reconhece o CNPJ alfanumérico; uma pergunta com ele vai
+  ao modelo com o número. A regra, em qualquer caixa, entra depois da rodada real do benchmark e
+  antes de 26/11, porque muda a entrada do modelo e a recusa firme, que a banca mede; se a rodada
+  atrasar, fica para depois da banca (#313).
 
 ## Criptografia em repouso (#147)
 
