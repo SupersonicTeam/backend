@@ -185,7 +185,7 @@ class Executor(unittest.TestCase):
 
 
 def conjunto_mini(revisao: str = "revisado") -> dict:
-    return {"versao": "continuidade-v1-teste", "parte": "teste",
+    return {"versao": "continuidade-v2-teste", "parte": "teste",
             "revisao_lei": {"status": revisao, "por": "equipe" if revisao == "revisado" else None},
             "conversas": [
                 {"id": "t-lei-01", "categoria": "lei_anterior_certa", "turnos": [
@@ -244,6 +244,26 @@ class Pontuacao(unittest.TestCase):
         ligado = resultado["partes"]["teste"]["ligado"]
         self.assertEqual(ligado["metricas"]["M_lei_corrijo_indevido"]["n"], 0)
         self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
+
+    def test_execucao_com_turno_pulado_conta_no_limite_dos_10(self):
+        conjunto = conjunto_mini()
+        turnos = conjunto["conversas"][0]["turnos"]
+        turnos[1]["esperado"]["se_anterior"]["certa"]["rotas"] = ["LEGISLACAO"]
+        turnos.append({"tipo": "pergunta", "texto": "tem certeza?", "esperado": {"se_anterior": {
+            "certa": {"metricas": ["M_lei_corrijo_indevido"]}}}})
+        linhas = []
+        for braco in ("ligado", "desligado"):
+            for r in (1, 2, 3):
+                linhas += [linha(1, "Sim, 60%.", braco=braco, repeticao=r),
+                           linha(2, self.CONFIRMA, rota="DADOS", braco=braco, repeticao=r),
+                           linha(3, self.CONFIRMA, braco=braco, repeticao=r)]
+        resultado = pc.pontuar(linhas, [conjunto], {"teste": "abc"})
+        ligado = resultado["partes"]["teste"]["ligado"]
+        self.assertEqual(ligado["fora_por_motivo"], {"anterior_fora_parcial": 3})
+        self.assertEqual(ligado["fora"], 3)
+        self.assertEqual(ligado["metricas"]["M_lei_corrijo_indevido"]["n"], 3)
+        self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
+        self.assertTrue(any("execuções do teste fora" in p for p in resultado["problemas"]))
 
     def test_latencia_sem_amostra_nao_se_aplica(self):
         resultado = self.rodada(self.CONFIRMA)

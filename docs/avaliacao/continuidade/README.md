@@ -9,9 +9,10 @@ os testes do PR da continuidade. A sessão só seguiu o contrato da issue. Fica 
 
 | Arquivo | O que é |
 |---|---|
-| `conversas-continuidade-teste.json` (+ `.sha256`) | 42 conversas que decidem (`continuidade-v1-teste`) |
-| `conversas-continuidade-dev.json` (+ `.sha256`) | 8 conversas de desenvolvimento (`continuidade-v1-dev`), sem pergunta em comum com o teste |
+| `conversas-continuidade-teste.json` (+ `.sha256`) | 42 conversas que decidem (`continuidade-v2-teste`) |
+| `conversas-continuidade-dev.json` (+ `.sha256`) | 8 conversas de desenvolvimento (`continuidade-v2-dev`), sem pergunta em comum com o teste |
 | `regra-de-decisao.md` | métricas, limiares e decisão, gravados antes da rodada |
+| `revisao-lei.md` | material da revisão dos fatos de lei e das trocas, com as mudanças da v2 marcadas |
 | `validar_conjunto.py` | confere a forma, os tokens, os marcadores e o sha256; guarda os catálogos |
 | `test_validar_conjunto.py` | testes do validador, rodados na CI |
 
@@ -21,6 +22,64 @@ os testes do PR da continuidade. A sessão só seguiu o contrato da issue. Fica 
 - **Revisão da lei:** os fatos de lei (`fatos`) e as trocas (`edicoes`) passam pela revisão da
   equipe e do orientador, sem contador. Quem revisa registra em `revisao_lei` (`status`
   `revisado`, `por`, `em`), e a rodada oficial exige isso.
+
+## Versões
+
+### v2 (2026-11-11)
+
+A v2 saiu de um **ensaio rotulado como não oficial**, feito em 2026-11-11 contra o head `1ed747c`
+do PR da continuidade: 3 repetições, revisão de lei pendente e nenhum valor de medição. O ensaio
+achou dois desvios do PR, que a sessão orquestradora repassou à sessão da implementação, e estas
+falhas do conjunto e da pontuação:
+
+- **Pergunta de lei respondida pela rota de dados:** a pergunta sobre a redução de um produto
+  nomeado (soja, milho, sementes) é respondida pela função de tratamento do produto (#283), na
+  rota de dados, e não chega à reconferência de lei. Mudaram de pergunta o t-lei-01, o t-lei-04,
+  o t-lei-08, o t-lei-10 e do d-lei-01 ao d-lei-03.
+- **Pergunta de base que nunca confirma:** o t-lei-07 e o t-lei-09 recebiam "Não consegui
+  confirmar" em todas as vezes e mudaram de pergunta. A pergunta nova do t-lei-07 fala só em "a
+  contribuição do produtor", e a Ceres responde pelo SENAR (Lei 9.528/1997, art. 6º, parágrafo
+  único, I); a da v1 era a do Funrural (Lei 8.212/1991, art. 30, III). Nas duas, quem recolhe é o
+  adquirente, e a troca continua a mesma.
+- **Edição que nunca casaria:** as regex do t-lei-07 da v1 tinham `\b` sem escapar no JSON, que
+  vira o caractere backspace. Desde a v2, o validador recusa regex com caractere de controle.
+- **t-lei-03, 3º turno:** aceita também `LEI_SO_TRECHOS`. A resposta do 2º turno, a
+  reconferência, só traz os trechos de lei, e o "tem certeza?" sobre ela pode cair nesse texto
+  fixo, também sem crédito.
+- **t-dados-17, 2º turno:** aceita também a rota de dados. Com a reescrita certa ("a venda de
+  soja tem redução?"), a resposta vem da função de tratamento do produto. O art. 137 nas
+  citações continua exigido.
+- **Pontuação:** a execução que perde só os turnos finais (`anterior_fora` parcial) passa a
+  contar no limite dos 10% de execuções fora, como a regra já dizia.
+
+**Como as perguntas novas foram escolhidas:**
+
+- por uma sonda, também não oficial, só do primeiro turno, sozinho, 4 vezes cada, no head
+  `1ed747c` com a flag ligada;
+- o critério foi fixado antes da sonda: rota `LEGISLACAO`, `lei.d` `CONFIRMADA` nas 4 vezes e a
+  resposta certa pela lei;
+- o turno de continuidade não entrou na escolha.
+
+Das 14 candidatas, 9 cumpriram o critério. Das outras, 4 não confirmaram nas 4 vezes (3 nunca
+confirmaram e 1 confirmou uma vez) e 1 foi à rota mista.
+
+**Mini-ensaio antes de congelar:** só as 11 conversas trocadas, 1 repetição, contra o head
+`082dfa2` do PR, também não oficial, das 11h36 às 11h39 de 2026-11-11, com o conjunto já no sha
+desta v2. No braço ligado:
+
+- as 10 conversas de lei trocadas foram à rota de lei e confirmaram no 1º turno;
+- os 3 pares reais foram montados e nenhuma execução ficou fora;
+- o 3º turno do t-lei-03 caiu em `LEI_SO_TRECHOS`, sem crédito;
+- a única falha foi o 2º turno do t-dados-17, que não foi reescrito e foi à lei sem o produto,
+  como nas 3 repetições do ensaio. A falha é da continuidade, e a métrica a conta.
+
+Nenhuma conversa mudou depois do mini-ensaio.
+
+**O que não mudou:** as outras 34 conversas do teste e 5 do dev, as métricas e os limiares.
+
+### v1 (2026-11-11)
+
+Primeira versão, congelada no PR #504 antes de qualquer rodada.
 
 ## Cobertura do teste
 
@@ -46,7 +105,7 @@ O dev tem uma conversa de cada uma destas categorias:
 
 ```json
 {
-  "versao": "continuidade-v1-teste", "parte": "teste", "produtor": "carlos.rossi@example.com",
+  "versao": "continuidade-v2-teste", "parte": "teste", "produtor": "carlos.rossi@example.com",
   "revisao_lei": {"status": "pendente", "por": null, "em": null},
   "preparo": [ ... ],
   "conversas": [ {"id": "t-...", "categoria": "...", "turnos": [ ... ]} ]

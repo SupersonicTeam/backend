@@ -307,7 +307,9 @@ def medir(conjunto: dict, grupos: dict, notas: dict, braco: str, linhas: list[di
                 if not item["passou"]:
                     m["falhas"] += 1
                     m["falharam"].append(f"{conversa['id']}/r{repeticao}/t{item['turno']}")
-    excluidas = sum(v for k, v in fora.items() if not k.endswith("_parcial"))
+    # A execução que perdeu só os turnos finais (`anterior_fora` parcial) também conta como fora
+    # no limite dos 10% (v2: a v1 contava só as que saíam inteiras).
+    excluidas = sum(fora.values())
     return {"execucoes": execucoes, "fora": excluidas, "fora_por_motivo": dict(fora),
             "metricas": {k: dict(v) for k, v in metricas.items()},
             "latencia_reescrita": latencia_reescrita(linhas, conjunto["parte"], braco),
