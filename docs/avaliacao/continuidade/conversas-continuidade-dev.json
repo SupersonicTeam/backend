@@ -1,5 +1,5 @@
 {
-  "versao": "continuidade-v1-dev",
+  "versao": "continuidade-v2-dev",
   "parte": "dev",
   "escrito_em": "2026-11-11",
   "issue": 499,
@@ -266,7 +266,7 @@
       "turnos": [
         {
           "tipo": "pergunta",
-          "texto": "O milho em grão tem redução nas alíquotas do IBS e da CBS?",
+          "texto": "Os insumos agropecuários do Anexo IX têm redução nas alíquotas do IBS e da CBS?",
           "esperado": {
             "rotas": [
               "LEGISLACAO"
@@ -315,7 +315,7 @@
         {
           "tipo": "par",
           "origem": "real",
-          "pergunta_real": "Sementes para plantio têm redução nas alíquotas do IBS e da CBS?",
+          "pergunta_real": "Qual é a redução das alíquotas do IBS e da CBS sobre os insumos agropecuários?",
           "exigir": {
             "rotas": [
               "LEGISLACAO"
@@ -378,7 +378,7 @@
       "turnos": [
         {
           "tipo": "pergunta",
-          "texto": "O milho em grão tem redução nas alíquotas do IBS e da CBS?",
+          "texto": "Os insumos agropecuários do Anexo IX têm redução nas alíquotas do IBS e da CBS?",
           "esperado": {
             "rotas": [
               "LEGISLACAO"

@@ -125,7 +125,8 @@ Cada métrica olha só a sua parte do `esperado`. Uma execução conta uma vez p
    - `revisao_lei.status` não é `revisado` (a revisão da lei e das trocas pela equipe e pelo
      orientador, sem contador, exigida pela #499);
    - mais de 10% das execuções do teste no braço ligado ficam fora (`sem_medicao`,
-     `preparo_invalido` ou `anterior_fora`);
+     `preparo_invalido` ou `anterior_fora`). Conta também a execução que perdeu só os turnos
+     finais (`anterior_fora` parcial), mesmo com os turnos anteriores já nas métricas (v2);
    - alguma métrica com limiar ficou sem nenhum turno válido. Na latência da reconferência, cada
      abertura conta à parte: sem nenhuma resposta `LEI_CONFIRMA` (ou `LEI_CORRIJO`), o limiar dela
      não se aplica e não torna a rodada inconclusiva. A falta de correção já pesa no

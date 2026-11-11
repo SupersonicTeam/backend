@@ -1,5 +1,5 @@
 {
-  "versao": "continuidade-v1-teste",
+  "versao": "continuidade-v2-teste",
   "parte": "teste",
   "escrito_em": "2026-11-11",
   "issue": 499,
@@ -1054,6 +1054,7 @@
           "texto": "e essa venda tem redução de IBS e CBS?",
           "esperado": {
             "rotas": [
+              "DADOS",
               "LEGISLACAO",
               "MISTO"
             ],
@@ -1201,7 +1202,7 @@
       "turnos": [
         {
           "tipo": "pergunta",
-          "texto": "A soja em grão tem redução nas alíquotas do IBS e da CBS?",
+          "texto": "Os produtos agropecuários in natura têm redução nas alíquotas do IBS e da CBS?",
           "esperado": {
             "rotas": [
               "LEGISLACAO"
@@ -1341,7 +1342,8 @@
             "se_anterior": {
               "certa": {
                 "abertura": [
-                  "LEI_JA"
+                  "LEI_JA",
+                  "LEI_SO_TRECHOS"
                 ],
                 "credito_zero": true,
                 "proibidas_texto": [
@@ -1366,7 +1368,7 @@
         {
           "tipo": "par",
           "origem": "real",
-          "pergunta_real": "A soja em grão tem redução nas alíquotas do IBS e da CBS?",
+          "pergunta_real": "Qual é a redução das alíquotas do IBS e da CBS para os produtos agropecuários in natura?",
           "exigir": {
             "rotas": [
               "LEGISLACAO"
@@ -1539,7 +1541,7 @@
         {
           "tipo": "par",
           "origem": "real",
-          "pergunta_real": "Na venda da produção do produtor rural pessoa física para uma empresa, quem fica obrigado a recolher a contribuição previdenciária sobre a venda?",
+          "pergunta_real": "Na venda da produção do produtor rural pessoa física a uma empresa, a empresa adquirente fica obrigada a recolher a contribuição do produtor?",
           "exigir": {
             "rotas": [
               "LEGISLACAO",
@@ -1548,6 +1550,7 @@
             "lei_d": "CONFIRMADA",
             "fatos": {
               "certo_todos": [
+                "^sim\\b",
                 "adquirente"
               ],
               "errado_algum": []
@@ -1555,15 +1558,29 @@
           },
           "edicoes": [
             {
-              "regex": "\bA empresa adquirente",
+              "regex": "adquirente, consignatário ou (a )?cooperativa",
+              "para": "próprio produtor",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            },
+            {
+              "regex": "\\bA empresa adquirente",
               "para": "O próprio produtor",
               "em": "lei.r",
               "todas": true,
               "opcional": true
             },
             {
-              "regex": "\b(a )?empresa adquirente",
+              "regex": "\\b(a )?empresa adquirente",
               "para": "o próprio produtor",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            },
+            {
+              "regex": "\\b(o|O|pelo|Pelo|do|Do|ao|Ao) adquirente\\b",
+              "para": "\\1 próprio produtor",
               "em": "lei.r",
               "todas": true,
               "opcional": true
@@ -1600,7 +1617,7 @@
       "turnos": [
         {
           "tipo": "pergunta",
-          "texto": "A soja em grão tem redução de 40% nas alíquotas do IBS e da CBS?",
+          "texto": "Os produtos agropecuários in natura têm redução de 40% nas alíquotas do IBS e da CBS?",
           "esperado": {
             "rotas": [
               "LEGISLACAO"
@@ -1653,7 +1670,7 @@
       "turnos": [
         {
           "tipo": "pergunta",
-          "texto": "Fertilizante para a lavoura é isento de IBS e CBS?",
+          "texto": "Os produtos agropecuários in natura são isentos de IBS e CBS?",
           "esperado": {
             "rotas": [
               "LEGISLACAO"
@@ -1663,8 +1680,7 @@
                 "60 ?%|sessenta por cento"
               ],
               "errado_algum": [
-                "^sim\\b",
-                "(?<!nao )\\b(e|sao|ficam?) isent"
+                "^sim\\b"
               ]
             }
           }
@@ -1707,7 +1723,7 @@
       "turnos": [
         {
           "tipo": "pergunta",
-          "texto": "A soja em grão tem redução nas alíquotas do IBS e da CBS?",
+          "texto": "Qual é a redução das alíquotas do IBS e da CBS para os produtos agropecuários in natura?",
           "esperado": {
             "rotas": [
               "LEGISLACAO"
