@@ -315,6 +315,11 @@ br.com.agrocontabil
 │                  #   com exemplos e sem convite a reformular, ou RECUSA_FIRME para FILTRO_INJECAO e para
 │                  #   outra pessoa, CPF/CNPJ/e-mail/telefone/UUID ou ordem ao sistema; na RotaDados, modelo
 │                  #   sem função + sinal = recusa firme, sem a apuração forçada);
+│                  # SinalRecusaFirme.inequivoco (#497: ataque, dado de outra pessoa sem contraparte e
+│                  #   documento sem dono saem FORA_DE_ESCOPO antes do classificador, camada
+│                  #   SINAL_RECUSA_FIRME) e .pedeDesempate (marca de terceiro ou de ordem: regra e
+│                  #   embeddings não decidem, o modelo desempata; prompt do classificador com a linha
+│                  #   de outra pessoa e ordem ao sistema — mudança medida antes do merge);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;

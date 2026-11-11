@@ -329,7 +329,28 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
 
 0. **`AtalhosFixos`** e **`ConversaLeve`** (no orquestrador, antes de tudo; ver abaixo): sem
    classificador e sem modelo.
-1. **`FiltroInjecao`** (no orquestrador): injeção → `FORA_DE_ESCOPO`.
+1. **`FiltroInjecao`** (no orquestrador): injeção → `FORA_DE_ESCOPO`. Logo depois, o
+   **`SinalRecusaFirme.inequivoco`** (#497, camada `SINAL_RECUSA_FIRME`): pedido sem leitura
+   legítima → `FORA_DE_ESCOPO` com a recusa firme, sem classificador e também com o modelo fora.
+   São a troca de papel ("finja que é o administrador"), o segredo ou a instrução do sistema, a
+   burla ("desative a verificação"), o comando técnico (SQL, banco, `X-Usuario-Id`, troca de
+   conta), os dados de todos os usuários, o dado de uma pessoa específica que não é o produtor
+   ("as notas do meu vizinho", "quanto o meu sogro pagou", "produtor João" vira "fulano" antes da
+   normalização) e o documento sem dono (CPF, CNPJ, e-mail, telefone ou UUID sem o produtor
+   falando de si nem um destinatário). Outra pessoa como **contraparte** da operação do produtor
+   ("vendi para o meu vizinho", "comprei do meu irmão", "meu pai me vendeu") nunca decide aqui. O
+   `SinalRecusaFirmeConjuntosTest` exige que nenhuma pergunta de dados, lei ou mista do gabarito e
+   do benchmark seja recusada (só ids na falha).
+
+   **Com marca de outra pessoa ou de ordem ao sistema** (`SinalRecusaFirme.pedeDesempate`: os
+   sinais da recusa firme da #494 menos o "do produtor" genérico, comum em pergunta de lei), as
+   camadas 2 e 3 não decidem e o **modelo desempata**, se estiver no ar. Na linha de base do #497
+   (`ceres-497-v1`, Haiku) as embeddings mandavam ataque e pedido sobre terceiro para `DADOS` ("as
+   notas do meu vizinho" fica perto de "as minhas notas") e a regra lia o pedido sobre o vizinho
+   com termo de lei como `LEGISLACAO`. O prompt do classificador ganhou a linha de
+   `FORA_DE_ESCOPO` sobre outra pessoa e ordem ao sistema, com a ressalva da contraparte e de quem
+   contou a regra ("meu vizinho disse que..."). Com o modelo em pausa, as camadas decidem como
+   antes.
 2. **`RegrasClassificacao`**: só decide com **sinal de um lado só**, e só com âncora do domínio.
    Termo de lei **da reforma ou do Funrural** (IBS, CBS, split payment, Funrural, crédito presumido,
    Anexo, LC 214, regime regular...) sem marcador de dados, sem produto específico e sem quantia ou
@@ -372,7 +393,7 @@ O `OrquestradorService` decide:
 | `DADOS` | modelo + **só** as funções de dados |
 | `LEGISLACAO` | RAG + `ValidadorCitacao` |
 | `MISTO` | as duas, geradas e validadas **separadamente** e depois juntadas |
-| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo: `PromptsCeres.RECUSA_GENTIL` (o que a Ceres faz e exemplos, sem convite para reformular) ou `RECUSA_FIRME` para injeção pega pelo `FiltroInjecao` e para o `SinalRecusaFirme` (outra pessoa, CPF/CNPJ/e-mail/telefone/UUID, ordem ao sistema), escolhida pela `RecusaForaDeEscopo` (#494). Na rota de dados, modelo sem função + `SinalRecusaFirme` também dá a recusa firme, sem a apuração forçada nem atalhos |
+| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo: `PromptsCeres.RECUSA_GENTIL` (o que a Ceres faz e exemplos, sem convite para reformular) ou `RECUSA_FIRME` para injeção pega pelo `FiltroInjecao`, para o pedido recusado antes do classificador (`SINAL_RECUSA_FIRME`, #497) e para o `SinalRecusaFirme` (outra pessoa, CPF/CNPJ/e-mail/telefone/UUID, ordem ao sistema), escolhida pela `RecusaForaDeEscopo` (#494). Na rota de dados, modelo sem função + `SinalRecusaFirme` também dá a recusa firme, sem a apuração forçada nem atalhos |
 | conversa leve (#493, antes do classificador) | `FORA_DE_ESCOPO` com o texto montado pela `ConversaLeve`, sem modelo |
 
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com

@@ -5,6 +5,7 @@ import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.SinalRecusaFirme;
 import br.com.agrocontabil.assistente.VerificadorNegativaDados;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.fallback.TelaAtalho;
@@ -191,6 +192,14 @@ public class OrquestradorService {
       log.info("Ceres: pergunta com forma de prompt injection tratada como fora de escopo");
       return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1, null,
           CamadaClassificacao.FILTRO_INJECAO);
+    }
+    // Ataque ou dado de outra pessoa sem leitura legitima (#497): recusa firme sem classificador,
+    // tambem com o modelo fora. O que tem leitura legitima segue e, com marca de terceiro, vai ao
+    // desempate pelo modelo (ClassificadorEmCamadas).
+    if (SinalRecusaFirme.inequivoco(pergunta)) {
+      log.info("Ceres: pedido de outra conta ou ao sistema tratado como fora de escopo");
+      return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1, null,
+          CamadaClassificacao.SINAL_RECUSA_FIRME);
     }
     try {
       // Regras e embeddings decidem mesmo com o modelo em pausa; o desempate pelo modelo, nao

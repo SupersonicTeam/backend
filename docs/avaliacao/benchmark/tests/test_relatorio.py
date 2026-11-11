@@ -315,6 +315,19 @@ class RevisaoTest(Base):
         texto = rel.gerar(self.pasta)
         self.assertIn("| ATALHO_FIXO | CONVERSA_LEVE | FILTRO_INJECAO |", texto)
 
+    def test_camada_da_recusa_antes_do_classificador_ganha_coluna(self):
+        arquivo = self.pasta / "ceres-2--m-ref" / "ceres-2--m-ref.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados["rodadas"][0]["resultados"][0]["execucao"]["camadaClassificacao"] = (
+            "SINAL_RECUSA_FIRME")
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| FILTRO_INJECAO | SINAL_RECUSA_FIRME | REGRA |", texto)
+
+    def test_camada_da_recusa_sem_ocorrencia_nao_ganha_coluna(self):
+        texto = rel.gerar(self.pasta)
+        self.assertNotIn("SINAL_RECUSA_FIRME", texto)
+
 
 class TemasTest(Base):
     def test_acerto_por_tema_no_recorte_e_no_conjunto(self):

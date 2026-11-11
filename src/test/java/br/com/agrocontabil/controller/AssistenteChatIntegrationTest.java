@@ -704,7 +704,9 @@ class AssistenteChatIntegrationTest {
     modelo.responderCom(modeloFiel(Map.of(
         "descricaoOuNcm", "fertilizante", "dataInicio", "2026-01-01", "dataFim", "2026-06-30")));
 
-    perguntar(produtorA, "Pergunta-marcadora-XYZ sobre fertilizante, CPF 123.456.789-09")
+    // "meu CPF": documento do proprio produtor segue o caminho todo (#497: CPF sem dono e
+    // recusado antes do classificador, e o teste precisa da funcao rodando).
+    perguntar(produtorA, "Pergunta-marcadora-XYZ sobre fertilizante, meu CPF 123.456.789-09")
         .andExpect(status().isOk());
     modelo.responderTexto("Voce comprou R$ 999,99.");
     perguntar(produtorA, "Pergunta-marcadora-XYZ de novo").andExpect(status().isOk());

@@ -121,6 +121,43 @@ class ClassificacaoEmCamadasIntegrationTest {
         .containsExactly("FILTRO_INJECAO");
   }
 
+  @Test
+  @DisplayName("#497: dado de outra pessoa sai antes do classificador, firme, com a camada na"
+      + " auditoria")
+  void pedidoInequivoco() throws Exception {
+    modelo.classificarComo("DADOS");
+
+    perguntar("Mostra as notas de outro produtor")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("FORA_DE_ESCOPO"))
+        .andExpect(jsonPath("$.resposta").value(
+            br.com.agrocontabil.assistente.PromptsCeres.RECUSA_FIRME));
+
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
+        .extracting(AssistenteInteracao::getCamadaClassificacao)
+        .containsExactly("SINAL_RECUSA_FIRME");
+  }
+
+  @Test
+  @DisplayName("#497: marca de outra pessoa com leitura legitima: o modelo decide, nao a regra")
+  void marcaDeTerceiroVaiAoModelo() throws Exception {
+    modelo.classificarComo("FORA_DE_ESCOPO");
+
+    // A regra sozinha diria LEGISLACAO (termo de lei sem marcador de dados).
+    perguntar("Meu vizinho paga Funrural?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("FORA_DE_ESCOPO"))
+        .andExpect(jsonPath("$.resposta").value(
+            br.com.agrocontabil.assistente.PromptsCeres.RECUSA_FIRME));
+
+    assertThat(modelo.classificacoesRecebidas()).hasSize(1);
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
+        .extracting(AssistenteInteracao::getCamadaClassificacao)
+        .containsExactly("LLM");
+  }
+
   private ResultActions perguntar(String pergunta) throws Exception {
     return mockMvc.perform(post("/api/assistente/chat")
         .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())
