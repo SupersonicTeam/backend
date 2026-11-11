@@ -1,6 +1,7 @@
 package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.common.Sensivel;
+import br.com.agrocontabil.validation.CpfDoContador;
 import br.com.agrocontabil.validation.ValidCpfCnpj;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -14,7 +15,8 @@ import jakarta.validation.constraints.Size;
  *
  * @param token        token do fragmento do link
  * @param nomeCompleto nome
- * @param cpfCnpj      CPF ou CNPJ, só dígitos
+ * @param cpfCnpj      CPF da pessoa, só dígitos (desde a #519, CNPJ é recusado: o do escritório
+ *                     fica nos dados do escritório)
  * @param senha        senha (mesma política do cadastro)
  */
 @Schema(description = "Cadastro de contador pelo link do convite de equipe; o e-mail é o do convite")
@@ -24,6 +26,8 @@ public record CadastroEquipeRequest(
     @NotBlank
     @Pattern(regexp = "\\d{11}|\\d{14}", message = "Informe o CPF (11) ou CNPJ (14) só com dígitos")
     @ValidCpfCnpj
+    @CpfDoContador
+    @Schema(description = "CPF da pessoa, só dígitos", example = "52998224725")
     String cpfCnpj,
     @NotNull @Sensivel
     @Schema(format = "password", accessMode = Schema.AccessMode.WRITE_ONLY)

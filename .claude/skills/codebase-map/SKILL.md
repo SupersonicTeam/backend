@@ -87,7 +87,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `TratamentoProdutoService` | Tratamento de um **produto** para a Ceres (#283): NCM ou nome (descrição da referência de NCM; sem nenhum, itens dos anexos, com os NCMs do item agrupados por tratamento) → até 3 `TratamentoProduto` (cClassTrib, %, artigo e anexo da descrição oficial, condição que o dado não decide). Só lê o `ClassificacaoTributariaService`: coerente com o `ReducaoNcmResolver` por construção (teste NCM a NCM). Leite do Anexo I que não é UHT: `alternativa` = a alíquota zero com o 200003 informado (#284); UHT = zero pela regra, condição lembra o leite cru (#380). A busca por nome ignora o trecho negado das descrições (`semTrechoNegado`, #369: exceto, excetuados, excluídos, ressalvados, salvo vão até a vírgula, o ponto e vírgula, o ponto final ou o `)`; não/nem só cortam a palavra seguinte; `sem`, como em "sem adição de açúcar", não é negação). A `condicao` leva também o trecho negado da descrição do **item de anexo** escolhido (`trechosNegados`, #396: exceto/excetuados/excluídos/ressalvados/salvo no texto original, sem número, sem repetir o que já foi dito; só quando o tratamento é o do item, nunca a referência de NCM) |
 | `ChaveAcessoGenerator` | Chave 44 dígitos + DV módulo 11 |
 | `AuthenticatedProdutorProvider` | Extrai produtor do `SecurityContext`; sem identidade lança `NaoAutenticadoException` (401) |
-| `CadastroService` | Cadastro de conta (#205): política + hash **fora** de transação, checagem e gravação (identidade + credencial) num `TransactionTemplate` curto; CPF/CNPJ já existente (qualquer grafia) → 409, nunca reivindica identidade; `normalizarEmail` |
+| `CadastroService` | Cadastro de conta (#205): política + hash **fora** de transação, checagem e gravação (identidade + credencial) num `TransactionTemplate` curto; CPF/CNPJ já existente (qualquer grafia) → 409, nunca reivindica identidade; `normalizarEmail`. Desde a #519: `criarEscritorioUnipessoal` grava o nome e o CNPJ do `escritorio` do request (sem ele, o nome do contador e nenhum CNPJ); `crc`/`telefone` no `Contador`, `telefone` no `Produtor`; vazio = não informado |
 | `LoginService` | Login (#206): e-mail normalizado + senha NFKC; e-mail sem conta confere contra hash fictício (tempo igual); falha de qualquer tipo = `CredenciaisInvalidasException` (401); rehash por `UPDATE` só da coluna; `usuarioLogado()` p/ `/me`. Só web |
 | `SessaoService` | Par access+refresh (#207): abre família no login, `renovar` (rotação, reuso → revoga família, lock pessimista, vida máxima, desfecho gravado antes de recusar), `encerrar`, `encerrarTodas`/`revogarTodas` (ponto único de revogação em massa). Só web |
 | `SessaoRefreshLimpezaJob` | Diário 3h + ShedLock (#207): apaga sessões vencidas há mais que `retencao` |
@@ -262,7 +262,7 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 | `EnderecoProdutor` | `@Embeddable` com o endereço completo do emitente (issue #88) — alimenta `<enderEmit>` e o `cMunFG`; a UF fica em `Produtor.estado` |
 | `GuiaFiscal` | Guia fiscal (ICMS/FUNRURAL/DARF/GPS/OUTRO) anexada pelo Contador a um produtor (issue #74) |
 | `AlertaTributario` | Alerta RN010 (issue #140): tipo (`TipoAlertaTributario`), referência (guia/nota/apuração do produtor), data-limite, descrição sem PII, status (`StatusAlertaTributario`). Tabela `alerta_tributario` (0028), única por `(tipo, referencia_id, data_limite)` |
-| `Contador` | Escritório de contabilidade — 2ª identidade do sistema (issue #93); a carteira é `VinculoCarteira` desde a #177 |
+| `Contador` | O contador (a pessoa), membro de um `Escritorio` — 2ª identidade do sistema (issue #93); a carteira é `VinculoCarteira` desde a #177. `cpfCnpj` = documento da pessoa (só CPF no cadastro desde a #519; contas antigas podem ter CNPJ); `crc` e `telefone` (cifrado) informados no cadastro (#519) |
 | `Escritorio` / `FuncaoEscritorio` | Escritório (#228, `escritorio`, 0039): dono da carteira, catálogos e convites; o `Contador` é membro (`escritorioId` + `funcao` ADMINISTRADOR/CONTADOR/ASSISTENTE). Cadastro de contador cria o unipessoal; a 0039 migra cada contador para um com o **mesmo id**. `slug` (único, `uq_escritorio_slug`) e `slugAlteradoEm` = endereço próprio (#464, 0059), fora do `toString` |
 | `EscritorioSlugAnterior` | Slug em carência depois de sair de um escritório (#464, 0059): chave = slug, `escritorioId` nulo = escritório apagado (bloqueado, nunca servido; FK `ON DELETE SET NULL`), `liberadoEm`. Repositório `EscritorioSlugAnteriorRepository` (`apagarPorSlug`, `desvincularDoEscritorio`, `apagarDoEscritorio`) |
 | `ObrigacaoFiscal` | Obrigação do calendário (#181, `obrigacao_fiscal`, 0040): modelo (sem escritório, 11 semeados com ids fixos `00000000-0000-4000-8181-0000000000NN`), versão do escritório (`modeloId`) ou própria; `Periodicidade`, `AjusteFimDeSemana`, `tipoProdutor`, `regimes` (`RegimesTributariosConverter`: lista na coluna), `aplicaA(tipo, regime)` (pessoa física em `SIMPLES`/`MEI` conta como regime desconhecido: nunca recebe obrigação só do Simples/MEI, #298) |
@@ -285,7 +285,8 @@ Testes: `support/ModelosSimuladosConfig` registra `ChatModelSimulado` (programá
 - `SefazEnvioResponse` / `SefazStatusResponse` — retornos SEFAZ
 - `GuiaFiscalRequest/Response` — guia fiscal do Contador (issue #74)
 - `VencimentoFiscalResponse` — item do calendário fiscal do produtor (issue #74)
-- `CadastroRequest/Response` — cadastro de conta (#205); `toString` do request sem a senha
+- `CadastroRequest/Response` — cadastro de conta (#205); campos opcionais da #519 (`escritorio` = record aninhado `EscritorioDoCadastro`, `crc`, `telefone`) e construtor de 5 argumentos sem eles; `toString` só com o papel (nem senha, documento, CNPJ, CRC ou telefone)
+- `CadastroEquipeRequest` — cadastro pelo convite da equipe (#228); `cpfCnpj` só CPF (`@CpfDoContador`, #519)
 
 ### `mapper/`
 - `NotaFiscalMapper` — entidade ↔ DTO (request/response)
@@ -300,6 +301,8 @@ Bean Validation customizada (anotação + validator):
 | `@ValidNcm` | `NcmValidator` | NCM contra tabela de referência (issue #20) |
 | `@ValidCfop` | `CfopValidator` | CFOP contra tabela de referência (issue #20) |
 | `@CodigoIbgeCoerenteComUf` | `CodigoIbgeCoerenteComUfValidator` | Constraint de **classe** no endereço do destinatário: prefixo do código IBGE = cUF da UF (issue #88) |
+| `@CadastroCoerenteComPapel` | `CadastroCoerenteComPapelValidator` | Constraint de **classe** no `CadastroRequest` (#519): `escritorio`/`crc` só no `CONTADOR` (no `PRODUTOR`, violação no campo); no `CONTADOR`, CNPJ no `cpfCnpj` recusado |
+| `@CpfDoContador` | `CpfDoContadorValidator` | `cpfCnpj` do `CadastroEquipeRequest` só CPF (#519). A regra das duas rotas é uma só: `DocumentoDoContador.recusado` (para reverter a "só CPF", ela devolve `false`) |
 
 ### `exception/`
 | Classe | HTTP | Quando |

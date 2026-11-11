@@ -190,6 +190,24 @@ class EscritorioEquipeIntegrationTest {
   }
 
   @Test
+  @DisplayName("convite com CNPJ no documento (#519): 400 no cpfCnpj, convite segue valendo")
+  void cadastroPorConviteSoComCpf() throws Exception {
+    String tokenConvite = conviteDeEquipe(EMAIL_NOVO, "CONTADOR");
+
+    cadastrarPorConvite(tokenConvite, "48315276000195")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("cpfCnpj"))
+        .andExpect(jsonPath("$.errors[0].message").value(
+            org.hamcrest.Matchers.containsString("aba Equipe")));
+    assertThat(jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM convite_membro WHERE usado_em IS NULL", Integer.class)).isEqualTo(1);
+
+    cadastrarPorConvite(tokenConvite, "39053344705").andExpect(status().isCreated());
+  }
+
+  @Test
   @DisplayName("token usado, vencido ou inventado: 400 CONVITE_EQUIPE_INVALIDO")
   void tokenInvalido() throws Exception {
     String tokenConvite = conviteDeEquipe(EMAIL_NOVO, "CONTADOR");
