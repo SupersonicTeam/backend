@@ -98,13 +98,18 @@ existindo, num escritório à parte.
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.
    **Conferência local (#435):** as perguntas dos passos 4 e 7 foram rodadas com o
-   `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`; o resultado, com as divergências, está em
-   [`docs/demonstracao/conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md).
-   A conferência **se refaz no SHA congelado** se mudar, depois do SHA `4a0b3a8`, qualquer um destes:
+   `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`
+   ([`conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md)), e de novo com o
+   **Claude Haiku 5.5 pela API da Anthropic** em 2026-11-10, no SHA `21bc2de`, com a conversa leve e a
+   recusa da Ceres e as frases de fora do roteiro
+   ([`conferencia-ceres-2026-11-10.md`](demonstracao/conferencia-ceres-2026-11-10.md)): o roteiro passou,
+   salvo a pergunta geral de ICMS, que segue fora (o passo 4 usa a pergunta com o número da nota).
+   A conferência **se refaz no SHA congelado** se mudar, depois do SHA `21bc2de`, qualquer um destes:
    `assistente/**` (inclusive os adaptadores e os services e recursos que eles usam, como
    `SinaisNotaConferirService` e `src/main/resources/sinais-nota/`), o treino do classificador
    (`src/main/resources/ceres/treino/`), o seed da demonstração, o `application.yml`, a base de lei
-   (os 8.304 trechos) e o modelo ou a versão do Ollama.
+   (os 8.304 trechos), o provedor ou o modelo do chat (`AI_CHAT_PROVIDER`, `AI_ANTHROPIC_MODEL`) e a versão do
+   Ollama (embedding).
 8. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
    **urgente**; na Helena, a GPS de daqui a 3 dias sai como **próximo**.
 
