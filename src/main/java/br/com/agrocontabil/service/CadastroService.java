@@ -24,6 +24,7 @@ import br.com.agrocontabil.security.PapelUsuario;
 import java.text.Normalizer;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -167,7 +168,7 @@ public class CadastroService {
     String cpfCnpj = request.cpfCnpj();
     String senha = PoliticaSenha.normalizar(request.senha());
 
-    politicaSenha.validar(senha, email, cpfCnpj, CAMPO_SENHA);
+    politicaSenha.validar(senha, dadosDoTitular(request, email), CAMPO_SENHA);
     String senhaHash = passwordEncoder.encode(senha);
 
     CredencialUsuario credencial;
@@ -192,6 +193,21 @@ public class CadastroService {
 
     log.info("Conta criada: papel={}, usuarioId={}", credencial.getPapel(), credencial.usuarioId());
     return credencialMapper.toCadastroResponse(credencial);
+  }
+
+  /**
+   * O que a senha não pode conter (issue #521): o e-mail, o CPF/CNPJ e o telefone da pessoa e, no
+   * cadastro empresarial, o CNPJ e o telefone do escritório, todos do próprio request.
+   *
+   * <p>No cadastro pela equipe (issue #228) o request não traz o escritório, e o CNPJ dele fica de
+   * fora daqui; ele entra na próxima troca de senha, pelo {@link DadosDoTitularSenha}.
+   */
+  private static PoliticaSenha.DadosDoTitular dadosDoTitular(CadastroRequest request,
+      String email) {
+    CadastroRequest.EscritorioDoCadastro escritorio = request.escritorio();
+    return new PoliticaSenha.DadosDoTitular(email,
+        Arrays.asList(request.cpfCnpj(), escritorio == null ? null : escritorio.cnpj()),
+        Arrays.asList(request.telefone(), escritorio == null ? null : escritorio.telefone()));
   }
 
   private CredencialUsuario gravar(CadastroRequest request, String email, String cpfCnpj,
