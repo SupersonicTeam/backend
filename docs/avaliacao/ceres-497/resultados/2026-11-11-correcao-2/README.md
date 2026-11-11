@@ -26,13 +26,13 @@ O ganho exigido foi atingido (+10, mínimo +3), e a ressalva não se aplica: o t
 
 **A correção do falso positivo não mudou a l-08.** Ela segue recusada com a recusa firme pela
 `SINAL_RECUSA_FIRME` nas 3 execuções, igual à primeira medição (`../2026-11-11-correcao/`). Em
-todo o braço correção, de uma medição para a outra, só mudou a l-04, e só na camada: ela continua
-certa em `LEGISLACAO`, mas passou do `LLM` para a `REGRA`, como no base. Nenhuma outra pergunta
-mudou de resultado, de rota, de camada ou de tipo de recusa.
+todo o braço correção, de uma medição para a outra e pela maioria de cada pergunta, só mudou a
+l-04, e só na camada: ela continua certa em `LEGISLACAO`, mas passou do `LLM` para a `REGRA`, como
+no base. Nenhuma outra pergunta mudou de resultado, de rota, de camada ou de tipo de recusa.
 
-O veredito ENTRA é o da regra, que deixa a l-08 de fora. Fora dela, a correção ainda recusa uma
-pergunta legítima do conjunto, e o falso positivo que motivou a mudança continua lá. Pesar isso no
-merge cabe a quem faz o merge.
+O veredito ENTRA é o da regra, que deixa a l-08 de fora. Fora da regra, a correção ainda recusa uma
+pergunta legítima do conjunto, a própria l-08: o falso positivo que motivou a mudança continua lá.
+Pesar isso no merge cabe a quem faz o merge.
 
 ## Ambiente
 
