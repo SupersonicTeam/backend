@@ -103,8 +103,10 @@ public final class Autocorrecao {
       case "totalComprasPorInsumo" -> "compras de " + valor(c, "descricaoOuNcm");
       case "listarNotas" -> notas(c);
       case "consultarNota" -> "a nota " + valor(c, "numero");
-      case "consultarApuracao" -> "a apuração de " + mes(c.argumento("mes"));
-      case "vencimentosDoMes" -> "os vencimentos de " + mes(c.argumento("mes"));
+      case "consultarApuracao" -> c.argumento("mes") == null ? "a apuração do mês atual"
+          : "a apuração de " + mes(c.argumento("mes"));
+      case "vencimentosDoMes" -> c.argumento("mes") == null ? "os vencimentos do mês atual"
+          : "os vencimentos de " + mes(c.argumento("mes"));
       case "consultarCreditos" -> "seus créditos";
       case "consultarRetencoes" -> "suas retenções";
       case "proximosVencimentos" -> "os vencimentos dos próximos "

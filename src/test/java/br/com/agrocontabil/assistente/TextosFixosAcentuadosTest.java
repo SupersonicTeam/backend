@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.SecaoResposta.Assunto;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.ferramentas.TextosDosTemplates;
+import br.com.agrocontabil.assistente.continuidade.Autocorrecao;
+import br.com.agrocontabil.assistente.continuidade.ChamadaAssinada;
+import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.FundamentoRetencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
@@ -117,6 +120,24 @@ public class TextosFixosAcentuadosTest {
     // Conversa leve (#493): cada variante e cada parte fixa da resposta.
     ConversaLeve.textos().forEach((nome, texto) -> textos.put("ConversaLeve " + nome, texto));
     textos.put("ValidadorCitacao.SEM_FUNDAMENTO", ValidadorCitacao.SEM_FUNDAMENTO);
+    // Continuidade (#499): aberturas da autocorrecao, reconferencia de lei e SEGUIMENTO novo.
+    textos.put("ConversaLeve.SEGUIMENTO_CONTINUIDADE", ConversaLeve.SEGUIMENTO_CONTINUIDADE);
+    for (String texto : List.of(Autocorrecao.REPETI_IGUAL, Autocorrecao.REPETI_MUDOU,
+        Autocorrecao.CORRIJO, Autocorrecao.CONFERI_IGUAL, Autocorrecao.REFIZ,
+        Autocorrecao.CONFERI, Autocorrecao.REFIZ_COM_O_QUE_DISSE,
+        Autocorrecao.DICA_CONTESTACAO, Autocorrecao.FALHA_REEXECUCAO,
+        ReconferenciaLei.CONFIRMA, ReconferenciaLei.O_QUE_DIZ, ReconferenciaLei.CORRIJO_UM,
+        ReconferenciaLei.CORRIJO_DOIS, ReconferenciaLei.CORRECAO, ReconferenciaLei.ENQUADRAMENTO,
+        ReconferenciaLei.APOIO, ReconferenciaLei.APOIO_SEM_DISPOSITIVO,
+        ReconferenciaLei.JA_RECONFERIDA, ReconferenciaLei.ATALHO, ReconferenciaLei.SO_TRECHOS,
+        ReconferenciaLei.SEM_CONFIRMACAO, ReconferenciaLei.SEM_FUNDAMENTO)) {
+      textos.put("continuidade " + textos.size(), texto);
+    }
+    for (Object rotulo : List.of("consultarCreditos", "consultarRetencoes", "guiasEmAtraso",
+        "listarAlertas", "resumoDoProdutor")) {
+      textos.put("continuidade D " + rotulo, Autocorrecao.descrever(List.of(
+          new ChamadaAssinada(rotulo.toString(), "{}"))));
+    }
     // Textos de erro que o produtor lê (ErrorDetail.message dos erros da Ceres).
     for (DomainException erro : List.<DomainException>of(
         new AssistenteIndisponivelException("falha tecnica", null),
