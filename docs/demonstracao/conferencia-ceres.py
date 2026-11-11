@@ -18,7 +18,7 @@ do Rogerio gasta a cota da demonstracao.
     SEED_SENHA=... python3 conferencia-ceres.py rogerio
     SEED_SENHA=... python3 conferencia-ceres.py apuracao --periodo <mes passado, AAAA-MM>
     SEED_SENHA=... python3 conferencia-ceres.py extras        (frases de fora do roteiro, #495 e #496)
-    SEED_SENHA=... python3 conferencia-ceres.py uso carlos    (cota da semana: antes e depois de cada bloco)
+    SEED_SENHA=... python3 conferencia-ceres.py uso carlos inicio   (cota da semana, com o nome do bloco)
 
 A chave da API da Anthropic nunca passa por aqui: vai so no ambiente da aplicacao (``ANTHROPIC_API_KEY``).
 """

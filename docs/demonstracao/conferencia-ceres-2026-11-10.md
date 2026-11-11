@@ -117,7 +117,7 @@ no roteiro piorou. Fora do roteiro, as oito frases se comportaram como o esperad
 1. **ICMS, pergunta geral ("Tem alguma nota minha com o ICMS sem definir?") — persiste.** 3 de 3 foram
    para `listarNotas` com `situacao=COM_INCONSISTENCIAS` (nas repetições 2 e 3 também `DEVOLVIDA` e
    `RASCUNHO`) e a resposta começa com "Não encontrei notas com inconsistências entre 10/11/2024 e
-   10/11/2026", **sem o sinal de ICMS**, embora o Carlos tenha rascunhos sem CST do ICMS (como o 3191). É a mesma
+   10/11/2026", **sem o sinal de ICMS**, embora o Carlos tenha pelo menos um rascunho sem CST do ICMS (o 3191, visto na pergunta numerada). É a mesma
    divergência de 2026-11-07 (então a função era `listarNotas` com `PENDENTE_SEFAZ`); o roteiro já usa a pergunta
    com o número da nota, que passa. É a única pergunta em que as 3 repetições deram **textos diferentes**
    (temperatura 1.0): uma só diz que não há nota, duas listam também a nota devolvida e os rascunhos.
@@ -185,13 +185,13 @@ Conferidos em 2026-11-10, contra a API e o banco desta semeadura, só leitura:
 
 | O que a Ceres disse | Conferido em | Resultado |
 |---|---|---|
-| Fertilizante: R$ 438.992,40, 2 notas, 114.024 KG | `SELECT` nos itens de compra do Carlos com `descricao ilike '%fertilizante%'`: notas 42539 (R$ 231.069,30, 60.018 KG) e 42540 (R$ 207.923,10, 54.006 KG) | confere |
+| Fertilizante: R$ 438.992,40, 2 notas, 114.024 KG | `SELECT` nos itens de compra (`descricao ilike '%fertilizante%'`, sem filtro de produtor): 4 notas no banco; as duas do Carlos, as mesmas da conferência anterior, são 42539 (R$ 231.069,30, 60.018 KG) e 42540 (R$ 207.923,10, 54.006 KG), que somam o valor da Ceres; as outras duas (40529 e 40532) são de outro produtor | confere |
 | Apuração de outubro: saldo IBS 67,92 (débito 192,25, crédito 124,33), saldo CBS 611,35 (débito 1.730,32, crédito 1.118,97), 9 notas, ABERTO | `GET /api/apuracao?periodo=2026-10` com a conta do Carlos | confere (os seis valores e o status) |
 | Atalho "pagar este mês" do Carlos: 2 guias, R$ 4.442,67; atraso R$ 2.300,67 (20/10) e a vencer R$ 2.142,00 (20/11) | `GET /api/contador/guias?produtorId=<Carlos>` com a conta do Carlos | confere (FUNRURAL 20/11 2.142,00 pendente; 20/10 2.300,67 vencida) |
 | Atalho "próxima guia" do Carlos: R$ 2.142,00 em 20/11 | mesma consulta | confere |
 | Atalho do Rogério: 1 guia, R$ 913,50 em 20/11 | `GET /api/contador/guias?produtorId=<Rogério>` com a conta do Rogério | confere |
-| Nota 3191: rascunho, emissão 05/06/2026, valor R$ 40.952,64, IBS R$ 16,38, CBS R$ 147,43, item de milho sem CST do ICMS | `GET /api/notas?status=RASCUNHO` (3191 está na lista) e o valor, o mesmo da conferência de 2026-11-07 | confere (a nota é a mesma; os valores do seed são determinísticos no dia) |
-| Lista do Rogério: nota 664 (04/11, R$ 38.125,89), 1 nota no mês | `GET /api/notas` com a conta do Rogério (a 664 é a única de novembro; a 663 é de 15/10) | confere; a janela agora é "este mês" |
+| Nota 3191: rascunho, emissão 05/06/2026, valor R$ 40.952,64, IBS R$ 16,38, CBS R$ 147,43, item de milho sem CST do ICMS | `GET /api/notas?status=RASCUNHO`: a 3191 está na lista, em rascunho, de 2026-06-05, para o Antônio Carlos Pereira | **parcial:** existência, status, data e destinatário conferidos; o valor, o IBS, a CBS e o item sem CST **não foram reconsultados nesta rodada** (a lista não traz o valor); são os mesmos da conferência de 2026-11-07, quando o detalhe foi conferido |
+| Lista do Rogério: nota 664 (04/11, R$ 38.125,89), 1 nota no mês | **não reconsultada nesta rodada** (a leitura de `GET /api/notas` parou na nota 662); a nota 664 e o valor são os da conferência de 2026-11-07, e a 663 (15/10) ficou fora da janela de novembro, como lá | a janela "este mês" (01/11 a 10/11) é o que a resposta mostra; os valores da nota seguem da conferência anterior |
 
 Latência do cliente na tabela; auditoria = `desfecho` · `camada_classificacao` · `latencia_ms` · tokens de
 entrada/saída. `desfecho_dados` e `desfecho_legislacao` ficam vazios (só o MISTO os grava; nenhuma pergunta
