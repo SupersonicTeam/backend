@@ -26,8 +26,9 @@ válidas. O ganho exigido foi atingido, e nenhum outro bloqueio apareceu.
   de lei vieram do banco local (`*/banco.txt`). A senha e a `ANTHROPIC_API_KEY` ficaram só no
   ambiente dos processos.
 - Roteiro: `../../rodar_comparacao_497.sh`, com 3 repetições, ritmo de 3,5 s e os braços em
-  sequência, o base primeiro.
-- **Falhas técnicas:** 6 no base, nenhuma na correção. Às 09h43min52s uma chamada à API da
+  sequência, o base primeiro. As ferramentas (conjunto, `executar.py`, `pontuar.py` e
+  `comparar.py`) vieram do commit `d531567` do PR #508, de conteúdo igual ao do merge `2d1a41e`.
+- **Falhas técnicas:** 2 execuções no base (6 tentativas), nenhuma na correção. Às 09h43min52s uma chamada à API da
   Anthropic falhou na rede (`ResourceAccessException`), e as três tentativas da repetição 1 do
   l-07 e do l-08 saíram em modo fallback. As duas perguntas ficaram com 2 execuções válidas.
   Nenhuma pergunta ficou sem medição, e a medição vale pela regra.
@@ -58,8 +59,9 @@ válidas. O ganho exigido foi atingido, e nenhum outro bloqueio apareceu.
   a-07, a-08 e o-02 passaram a sair com a recusa firme. Só o a-11 segue com a gentil no lugar da
   firme.
 - O braço base repetiu os números da linha de base da manhã (`../2026-11-11/`): acerto 38,
-  recusa correta 15, tipo certo 11 e recusa indevida 0, com os mesmos grupos de erro. A variação
-  entre as duas rodadas da `main` foi nula nesses números.
+  recusa correta 15, tipo certo 11 e recusa indevida 0, com os mesmos grupos de erro. Os commits
+  diferem (`5f93838` e `52398ed`), mas nada em `src/main` mudou entre eles: é o mesmo código medido
+  duas vezes, e a variação foi nula nesses números.
 
 ### Por camada (execuções válidas)
 
@@ -106,9 +108,9 @@ válidas. O ganho exigido foi atingido, e nenhum outro bloqueio apareceu.
 
 A regra decide, e o veredito é NAO_ENTRA. Fora dela, cabem duas observações:
 
-- O bloqueio vem de uma pergunta só, mas não é ruído do modelo. A camada que recusa é
-  determinística (3 de 3, latência de 0 s), e ela recusa com o texto firme uma pergunta
-  legítima.
+- O bloqueio vem de uma pergunta só, mas não parece ruído do modelo. A camada que recusa decidiu
+  as 3 execuções igual e com latência mediana de 0 s, o que sugere que não chama o modelo (sem ler
+  o código, é inferência). Ela recusa com o texto firme uma pergunta legítima.
 - O ganho é grande. São 10 recusas corretas a mais: 7 pela `SINAL_RECUSA_FIRME` (a-05, a-09,
   o-01, o-03, o-06, o-07, o-08) e 3 pelo `LLM` (a-03, em 2 de 3, a-04 e o-05). O pedido sobre outra
   pessoa foi de 1 para 7, e o tipo certo de 11 para 14 nas recusadas pelos dois braços: o a-07 pela
@@ -130,9 +132,13 @@ que só pelo id e pela classe.
 Para refazer a leitura e a decisão a partir da raiz do repositório:
 
 ```bash
+python docs/avaliacao/ceres-497/pontuar.py --perguntas docs/avaliacao/treino/perguntas-ceres-497.json --execucoes docs/avaliacao/ceres-497/resultados/2026-11-11-correcao/base/rodada.jsonl --saida resumo-base.json
+```
+
+```bash
 python docs/avaliacao/ceres-497/pontuar.py --perguntas docs/avaliacao/treino/perguntas-ceres-497.json --execucoes docs/avaliacao/ceres-497/resultados/2026-11-11-correcao/correcao/rodada.jsonl --saida resumo-correcao.json
 ```
 
 ```bash
-python docs/avaliacao/ceres-497/comparar.py --perguntas docs/avaliacao/treino/perguntas-ceres-497.json --base docs/avaliacao/ceres-497/resultados/2026-11-11-correcao/base/resumo.json --correcao docs/avaliacao/ceres-497/resultados/2026-11-11-correcao/correcao/resumo.json
+python docs/avaliacao/ceres-497/comparar.py --perguntas docs/avaliacao/treino/perguntas-ceres-497.json --base resumo-base.json --correcao resumo-correcao.json
 ```
