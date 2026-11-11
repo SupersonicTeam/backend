@@ -17,7 +17,10 @@ Esta medição é só a linha de base: não há correção a comparar.
   `ANTHROPIC_API_KEY` foi lida só no ambiente da JVM. Nenhuma das duas está em arquivo.
 - Ritmo de 3,5 s entre as chamadas e cota da Ceres alta. Roteiro da rodada:
   `../../rodar_linha_de_base_497.sh` (os caminhos da trava e do `.env` são os da máquina em que a
-  medição rodou).
+  medição rodou). Depois da rodada, o review do PR mudou três coisas no roteiro: a trava só vale
+  se foi criada pelo próprio `mkdir`, o `provedor.txt` saiu e o `AI_ANTHROPIC_MODEL` passou a ser
+  fixado. Nenhuma delas afeta esta rodada: a trava estava livre, o `provedor.txt` não entra no PR
+  e a auditoria confirma o modelo.
 - 3 repetições. **0 falhas técnicas** e nenhuma chamada sem linha de auditoria (177 execuções
   pontuadas, mais 2 de aquecimento).
 
@@ -92,6 +95,10 @@ Nas 177 execuções a auditoria registrou estes desfechos:
 | `SEM_FUNDAMENTO_LEGAL` | 3 |
 | `CONVERSA_LEVE` | 3 |
 | `AFIRMACAO_SOBRE_DADOS` | 1 |
+
+As 25 de `SEM_RESPOSTA` são da rota de dados ("Não consegui identificar qual dado consultar"), em
+perguntas que esperavam recusa ou conversa leve: a-03, a-04, a-05, a-06, a-09, o-01, o-05 e o-08
+(2 de 3 cada), e c-01, f-07 e o-07 (3 de 3).
 
 A latência mediana por camada fica em `resumo.json`. É latência de API pela rede e não entra na
 leitura.

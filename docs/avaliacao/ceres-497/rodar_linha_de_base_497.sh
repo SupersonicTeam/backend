@@ -26,12 +26,14 @@ ATUAL=$(sha256sum "$CONJUNTO" | cut -d' ' -f1)
 [ "$ESPERADO" = "$ATUAL" ] || { echo "CONJUNTO DIFERENTE DO .sha256"; exit 13; }
 grep -qE '^ANTHROPIC_API_KEY=.+' "$ENV_FILE" || { echo "ANTHROPIC_API_KEY ausente no .env"; exit 12; }
 
+OBTIDA=0
 for _ in $(seq 1 240); do
-  mkdir "$TRAVA" 2>/dev/null && break
+  if mkdir "$TRAVA" 2>/dev/null; then OBTIDA=1; break; fi
   echo "trava ocupada: $(cat "$TRAVA/dono.txt" 2>/dev/null); esperando"
   sleep 30
 done
-[ -d "$TRAVA" ] && [ ! -f "$TRAVA/dono.txt" ] || { echo "TRAVA NAO OBTIDA"; exit 10; }
+# Só a trava criada pelo nosso mkdir é nossa: uma trava alheia sem dono.txt não conta.
+[ "$OBTIDA" = 1 ] || { echo "TRAVA NAO OBTIDA"; exit 10; }
 echo "sessao conjunto-452 (linha de base #497, Haiku) $(date '+%Y-%m-%dT%H:%M:%S%z')" > "$TRAVA/dono.txt"
 encerrar() {
   powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='java.exe'\" | Where-Object { \$_.CommandLine -match 'server.port=$PORTA' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }" 2>/dev/null
@@ -59,7 +61,7 @@ JAR=$(ls "$WT"/target/*.jar | grep -v plain | head -1)
   ANTHROPIC_API_KEY=$(grep -E '^ANTHROPIC_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\r')
   export ANTHROPIC_API_KEY
   SPRING_PROFILES_ACTIVE=dev DB_NAME=$BANCO DEMONSTRACAO_HABILITADA=true \
-    AI_COTA_CREDITOS_PRODUTOR=100000000 AI_CHAT_PROVIDER=anthropic \
+    AI_COTA_CREDITOS_PRODUTOR=100000000 AI_CHAT_PROVIDER=anthropic     AI_ANTHROPIC_MODEL=claude-haiku-5-5 \
     exec java -jar "$JAR" --server.port=$PORTA --spring.docker.compose.enabled=false \
     --spring.jpa.show-sql=false --logging.level.org.hibernate.SQL=WARN \
     --logging.level.br.com.agrocontabil=INFO > "$SAIDA/app.log" 2>&1
@@ -83,7 +85,6 @@ docker exec agrocontabil-postgres sh -c \
 psql_ -d $BANCO -Atc "select 'trechos', count(*) from legislacao_trecho
   union all select 'notas', count(*) from nota_fiscal
   union all select 'guias', count(*) from guias_fiscais" > "$SAIDA/banco.txt"
-grep -i "anthropic\|claude" "$SAIDA/app.log" | grep -iv "key" | head -5 > "$SAIDA/provedor.txt"
 
 python "$WT/docs/avaliacao/ceres-497/executar.py" --url "http://localhost:$PORTA" --pasta "$WT" \
   --banco $BANCO --modelo anthropic/claude-haiku-5-5 --email "$EMAIL" \
