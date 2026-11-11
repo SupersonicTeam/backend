@@ -9,7 +9,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -31,6 +33,10 @@ import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
 import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.security.PapelUsuario;
+import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -43,6 +49,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
@@ -51,6 +58,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * Testes do {@link AssistenteService} (issues #142, #144 e #157): identidade primeiro, bulkhead
@@ -433,6 +444,261 @@ class AssistenteServiceTest {
     solta.countDown();
     primeira.get(5, TimeUnit.SECONDS);
     assertThat(cota.acertos).isEqualTo(1);
+  }
+
+  // --- cancelamento pelo cliente (#499) ---
+
+  /** 400 caracteres: 100 tokens estimados. */
+  private static final Prompt PROMPT = new Prompt(new UserMessage("x".repeat(400)));
+
+  @Test
+  @DisplayName("#499: cliente sai entre duas chamadas: paga a primeira e a segunda nao acontece")
+  void saiEntreDuasChamadas() throws Exception {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(modeloLinguagem.identificacao()).thenReturn("anthropic/claude-haiku-5-5");
+    AtomicReference<ConexaoFalsa> conexao = new AtomicReference<>();
+    AtomicInteger escritasAntesDoModelo = new AtomicInteger();
+    when(modeloLinguagem.chamar(any())).thenAnswer(inv -> {
+      escritasAntesDoModelo.set(conexao.get().escritas.get());
+      return ContextoAssistenteChamadaTest.respostaComUso(1200, 80);
+    });
+    CountDownLatch ligado = new CountDownLatch(1);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      ligado.await(5, TimeUnit.SECONDS);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      conexao.get().saiu.set(true);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    SseEmitter emissor = service.conversarEmStream(new AssistenteChatRequest("pergunta"), "/x");
+    conexao.set(ConexaoFalsa.ligar(emissor));
+    ligado.countDown();
+    esperarCotaEncerrada();
+
+    verify(modeloLinguagem, times(1)).chamar(any());
+    // O :ceres da abertura e o comentario antes da chamada.
+    assertThat(escritasAntesDoModelo).hasValue(2);
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.estornos).isZero();
+    assertThat(cota.ultimaEntrada).isEqualTo(1200);
+    assertThat(cota.ultimaSaida).isEqualTo(80);
+    verify(auditoria).registrar(any(), any(), eq(DesfechoInteracao.CANCELADA), any(), anyLong(),
+        anyInt());
+  }
+
+  @Test
+  @DisplayName("#499: cliente sai antes de qualquer chamada: nada e cobrado")
+  void saiAntesDeChamar() throws Exception {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    CountDownLatch ligado = new CountDownLatch(1);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      ligado.await(5, TimeUnit.SECONDS);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    SseEmitter emissor = service.conversarEmStream(new AssistenteChatRequest("pergunta"), "/x");
+    ConexaoFalsa conexao = ConexaoFalsa.ligar(emissor);
+    conexao.saiu.set(true);
+    ligado.countDown();
+    esperarCotaEncerrada();
+
+    verify(modeloLinguagem, never()).chamar(any());
+    assertThat(cota.estornos).isEqualTo(1);
+    assertThat(cota.acertos).isZero();
+  }
+
+  @Test
+  @DisplayName("#499: cliente sai no meio da chamada: paga a entrada estimada, sem saida")
+  void saiNoMeioDaChamada() throws Exception {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(modeloLinguagem.identificacao()).thenReturn("anthropic/claude-haiku-5-5");
+    CountDownLatch noModelo = new CountDownLatch(1);
+    when(modeloLinguagem.chamar(any())).thenAnswer(inv -> {
+      noModelo.countDown();
+      try {
+        new CountDownLatch(1).await(10, TimeUnit.SECONDS);
+        return ContextoAssistenteChamadaTest.respostaComUso(1200, 80);
+      } catch (InterruptedException e) {
+        // Como o cliente HTTP do modelo reage a interrupcao.
+        throw new AssistenteIndisponivelException("interrompida", e);
+      }
+    });
+    CountDownLatch ligado = new CountDownLatch(1);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      ligado.await(5, TimeUnit.SECONDS);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    SseEmitter emissor = service.conversarEmStream(new AssistenteChatRequest("pergunta"), "/x");
+    ConexaoFalsa conexao = ConexaoFalsa.ligar(emissor);
+    ligado.countDown();
+    assertThat(noModelo.await(5, TimeUnit.SECONDS)).isTrue();
+    // O container avisa a queda da conexao (ClientAbortException e uma IOException).
+    conexao.aoFalhar.get().accept(new IOException("Broken pipe"));
+    esperarCotaEncerrada();
+
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.estornos).isZero();
+    assertThat(cota.ultimaEntrada).isEqualTo(100);
+    assertThat(cota.ultimaSaida).isZero();
+  }
+
+  @Test
+  @DisplayName("#499: falha do servidor no meio da chamada estorna, mesmo com gasto")
+  void falhaDoServidorNoMeioEstorna() throws Exception {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    CountDownLatch noModelo = new CountDownLatch(1);
+    when(modeloLinguagem.chamar(any())).thenAnswer(inv -> {
+      noModelo.countDown();
+      try {
+        new CountDownLatch(1).await(10, TimeUnit.SECONDS);
+        return ContextoAssistenteChamadaTest.respostaComUso(1200, 80);
+      } catch (InterruptedException e) {
+        throw new AssistenteIndisponivelException("interrompida", e);
+      }
+    });
+    CountDownLatch ligado = new CountDownLatch(1);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      ligado.await(5, TimeUnit.SECONDS);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    SseEmitter emissor = service.conversarEmStream(new AssistenteChatRequest("pergunta"), "/x");
+    ConexaoFalsa conexao = ConexaoFalsa.ligar(emissor);
+    ligado.countDown();
+    assertThat(noModelo.await(5, TimeUnit.SECONDS)).isTrue();
+    // Falha que nao e a conexao do cliente caindo: o servidor nao cobra.
+    conexao.aoFalhar.get().accept(new IllegalStateException("falha do container"));
+    esperarCotaEncerrada();
+
+    assertThat(cota.estornos).isEqualTo(1);
+    assertThat(cota.acertos).isZero();
+  }
+
+  @Test
+  @DisplayName("#499: /chat interrompido estorna, mesmo depois de uma chamada concluida")
+  void chatInterrompidoEstorna() throws Exception {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(modeloLinguagem.chamar(any()))
+        .thenReturn(ContextoAssistenteChamadaTest.respostaComUso(1200, 80));
+    CountDownLatch gastou = new CountDownLatch(1);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      gastou.countDown();
+      try {
+        new CountDownLatch(1).await(10, TimeUnit.SECONDS);
+        return ok();
+      } catch (InterruptedException e) {
+        throw new AssistenteIndisponivelException("interrompida", e);
+      }
+    });
+    AtomicReference<Throwable> falha = new AtomicReference<>();
+    Thread requisicao = new Thread(() -> {
+      try {
+        service.conversar(new AssistenteChatRequest("pergunta"));
+      } catch (Throwable t) {
+        falha.set(t);
+      }
+    });
+    requisicao.start();
+    assertThat(gastou.await(5, TimeUnit.SECONDS)).isTrue();
+
+    requisicao.interrupt();
+    requisicao.join(5000);
+    esperarCotaEncerrada();
+
+    assertThat(falha.get()).isInstanceOf(AssistenteIndisponivelException.class);
+    assertThat(cota.estornos).isEqualTo(1);
+    assertThat(cota.acertos).isZero();
+  }
+
+  @Test
+  @DisplayName("#499: conversa leve nao reserva cota, e o contexto recusa chamar o modelo")
+  void conversaLeveRecusaOModelo() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(any(), any(), any())).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("obrigado")))
+        .isInstanceOf(IllegalStateException.class);
+
+    verify(modeloLinguagem, never()).chamar(any());
+    assertThat(cota.reservas).isZero();
+  }
+
+  @Test
+  @DisplayName("#499: so a IOException na cadeia e desconexao do cliente")
+  void desconexaoPelaCadeia() {
+    assertThat(AssistenteService.desconexao(new IOException("Broken pipe"))).isTrue();
+    assertThat(AssistenteService.desconexao(
+        new IllegalStateException("embrulho", new IOException("reset")))).isTrue();
+    assertThat(AssistenteService.desconexao(new IllegalStateException("outra"))).isFalse();
+    assertThat(AssistenteService.desconexao(null)).isFalse();
+  }
+
+  /** O acerto ou o estorno roda no fim da thread da Ceres: espera esse instante. */
+  private void esperarCotaEncerrada() throws InterruptedException {
+    long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+    while (cota.acertos + cota.estornos == 0 && System.nanoTime() < limite) {
+      Thread.sleep(10);
+    }
+  }
+
+  /**
+   * Conexão no lugar do Spring MVC: o handler do emissor, ligado por reflexão (o
+   * {@code initialize} é do pacote do Spring), aceita as escritas até o cliente "sair" e guarda o
+   * aviso de falha que o container daria.
+   */
+  private static final class ConexaoFalsa implements InvocationHandler {
+
+    final AtomicBoolean saiu = new AtomicBoolean();
+    final AtomicInteger escritas = new AtomicInteger();
+    final AtomicReference<Consumer<Throwable>> aoFalhar = new AtomicReference<>();
+
+    static ConexaoFalsa ligar(SseEmitter emissor) throws Exception {
+      Class<?> tipo = Class.forName(ResponseBodyEmitter.class.getName() + "$Handler");
+      ConexaoFalsa conexao = new ConexaoFalsa();
+      Object handler = Proxy.newProxyInstance(tipo.getClassLoader(), new Class<?>[] {tipo},
+          conexao);
+      Method initialize = ResponseBodyEmitter.class.getDeclaredMethod("initialize", tipo);
+      initialize.setAccessible(true);
+      initialize.invoke(emissor, handler);
+      return conexao;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Object invoke(Object proxy, Method metodo, Object[] argumentos) throws Throwable {
+      switch (metodo.getName()) {
+        case "send" -> {
+          if (saiu.get()) {
+            throw new IOException("Broken pipe");
+          }
+          escritas.incrementAndGet();
+        }
+        case "onError" -> aoFalhar.set((Consumer<Throwable>) argumentos[0]);
+        default -> { }
+      }
+      return null;
+    }
   }
 
   /** Porta da cota em memória: conta as chamadas (estornar e acertar nunca ambos por pergunta). */

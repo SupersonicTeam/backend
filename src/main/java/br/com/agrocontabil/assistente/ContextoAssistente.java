@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.LocalDate;
@@ -42,6 +43,11 @@ import org.springframework.ai.tool.definition.ToolDefinition;
  * <p>Carrega ainda o sinal de <strong>interrupção</strong> (issue #157): quando a pergunta estoura
  * o tempo total ou o cliente do streaming desconecta, quem espera marca o contexto e as rotas param
  * antes da próxima chamada ao modelo ou às funções ({@link #verificarAtiva()}).
+ *
+ * <p>E é o <strong>ponto único das chamadas ao modelo</strong> ({@link #chamar}, #499): confere a
+ * reserva da cota, avisa quem transmite (o comentário SSE que percebe o cliente que saiu antes de
+ * gastar), guarda a estimativa da entrada da chamada em curso e registra o uso. O
+ * {@code TetoDaCotaCobreChamadasTest} trava que só ele chama {@link ModeloLinguagem#chamar}.
  */
 public final class ContextoAssistente {
 
@@ -72,6 +78,10 @@ public final class ContextoAssistente {
   private final List<TextoDoBackend> textosDoBackend =
       Collections.synchronizedList(new ArrayList<>());
   private final List<SecaoResposta> secoes = Collections.synchronizedList(new ArrayList<>());
+  /** Tokens de entrada estimados da chamada ao modelo em curso; zero entre as chamadas (#499). */
+  private final AtomicInteger entradaEmCurso = new AtomicInteger();
+  private volatile AvisoAntesDaChamada aviso = () -> { };
+  private volatile boolean semReservaParaOModelo;
 
   /**
    * Cria o contexto de uma pergunta.
@@ -234,6 +244,86 @@ public final class ContextoAssistente {
     tokensEntrada.addAndGet(entrada);
     tokensSaida.addAndGet(saida);
     usoInformado.set(true);
+  }
+
+  /**
+   * Avisado antes de cada chamada ao modelo (#499). No streaming, manda um comentário SSE: é a
+   * única escrita que percebe o cliente que saiu antes de a chamada gastar. Quem avisa pode
+   * interromper a pergunta lançando {@link PerguntaInterrompidaException}.
+   */
+  @FunctionalInterface
+  public interface AvisoAntesDaChamada {
+
+    /** Roda antes de cada chamada ao modelo, na thread da pergunta. */
+    void antesDaChamada();
+  }
+
+  /**
+   * Define o aviso antes de cada chamada ao modelo (#499).
+   *
+   * @param aviso o que fazer antes de cada chamada
+   */
+  public void aoChamarOModelo(AvisoAntesDaChamada aviso) {
+    this.aviso = Objects.requireNonNull(aviso, "aviso");
+  }
+
+  /**
+   * A pergunta não reservou cota para o modelo (#499): atalho fixo da tela (#343) e conversa leve
+   * (#493), que custam zero crédito. {@link #chamar} recusa a chamada: chamar o modelo sem a
+   * reserva gastaria fora da cota.
+   */
+  public void semReservaParaOModelo() {
+    this.semReservaParaOModelo = true;
+  }
+
+  /**
+   * Chama o modelo pela porta única (#499): confere a reserva, avisa ({@link #aoChamarOModelo}),
+   * guarda a estimativa da entrada (cobrada se o cliente sair no meio da chamada), chama e
+   * registra o uso.
+   *
+   * @param modelo porta do modelo
+   * @param prompt prompt completo
+   * @return resposta do modelo
+   * @throws IllegalStateException se a pergunta não reservou cota para o modelo
+   * @throws PerguntaInterrompidaException se a pergunta foi interrompida antes da chamada
+   */
+  public ChatResponse chamar(ModeloLinguagem modelo, Prompt prompt) {
+    if (semReservaParaOModelo) {
+      throw new IllegalStateException("Chamada ao modelo sem reserva da cota");
+    }
+    verificarAtiva();
+    aviso.antesDaChamada();
+    verificarAtiva();
+    entradaEmCurso.set(estimarTokens(caracteresDoPrompt(prompt)));
+    // Se a chamada falhar (inclusive pela interrupcao do cliente que saiu), a estimativa fica:
+    // so o cancelamento pelo cliente a cobra; qualquer outra falha estorna a reserva inteira.
+    ChatResponse resposta = modelo.chamar(prompt);
+    registrarUso(prompt, resposta);
+    entradaEmCurso.set(0);
+    return resposta;
+  }
+
+  /**
+   * O que a pergunta gastou até agora (#499), para cobrar o cancelamento pelo cliente: os tokens
+   * das chamadas concluídas (informados ou estimados) e, de uma chamada interrompida no meio, a
+   * entrada estimada, sem saída.
+   */
+  public Gasto gasto() {
+    return new Gasto(tokensEntrada.get() + entradaEmCurso.get(), tokensSaida.get());
+  }
+
+  /**
+   * Tokens gastos por uma pergunta (#499).
+   *
+   * @param entrada tokens de entrada
+   * @param saida   tokens de saída
+   */
+  public record Gasto(int entrada, int saida) {
+
+    /** {@code true} se nenhuma chamada ao modelo gastou. */
+    public boolean nada() {
+      return entrada == 0 && saida == 0;
+    }
   }
 
   /** {@code true} se algum token desta pergunta foi estimado, não informado pelo provedor. */

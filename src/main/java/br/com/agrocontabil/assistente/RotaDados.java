@@ -162,9 +162,7 @@ public class RotaDados {
         opcoes);
 
     // Uma chamada so (#266): o modelo escolhe as funcoes; o texto e do template do backend.
-    contexto.verificarAtiva();
-    ChatResponse doModelo = modelo.chamar(prompt);
-    contexto.registrarUso(prompt, doModelo);
+    ChatResponse doModelo = contexto.chamar(modelo, prompt);
     if (ModeloLinguagem.cortadaPeloTeto(doModelo, tetoSaida)) {
       // Cortada no teto (#270): a ultima chamada pode ter se perdido e as outras sairiam como a
       // resposta inteira. Nada e executado.

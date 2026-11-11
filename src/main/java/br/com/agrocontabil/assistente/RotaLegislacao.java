@@ -180,9 +180,7 @@ public class RotaLegislacao {
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(sistema), new UserMessage(perguntaAoModelo)),
         ModeloLinguagem.comTeto(tetoSaida));
-    contexto.verificarAtiva();
-    ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(prompt, resposta);
+    ChatResponse resposta = contexto.chamar(modelo, prompt);
     if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
       // Cortada no teto (#270): a frase pela metade passaria no ValidadorCitacao se a marca veio
       // antes do corte. O texto sai; os trechos mais proximos ficam, sem afirmar que respondem.
