@@ -30,10 +30,10 @@ import org.springframework.stereotype.Component;
  * ({@code docs/sefaz-transporte-soap.md}). O padrão {@code true} fica até a etapa 2 da #263,
  * depois da banca.
  *
- * <p><strong>Atenção:</strong> este componente não realiza comunicação SOAP/HTTPS.
- * O transporte real (SOAP+mTLS com certificado ICP-Brasil) será uma nova classe que implemente
- * {@link SefazTransport}, ativada por {@code app.nfe.sefaz.mock.enabled=false}. Nenhum serviço
- * precisa ser alterado para fazer o switch.
+ * <p><strong>Atenção:</strong> este componente não realiza comunicação SOAP/HTTPS. O transporte
+ * real (SOAP+mTLS com certificado ICP-Brasil) é o {@link SoapSefazTransport} (#128), ativado por
+ * {@code app.nfe.sefaz.mock.enabled=false}. Nenhum serviço precisa ser alterado para fazer o
+ * switch.
  *
  * <p>Retornos simulados (issue #83: fiéis à SEFAZ nos casos de que a reconciliação depende):
  * <ul>
@@ -115,17 +115,18 @@ public class MockSefazTransport implements SefazTransport {
    */
   @Autowired
   public MockSefazTransport(SefazProperties propriedades, Environment ambiente) {
-    this(exigirPerfilPermitido(ambiente) && propriedades.getMock().isAutorizarTerceiros());
+    exigirPerfilPermitido(ambiente);
+    this.autorizarTerceiros = propriedades.getMock().isAutorizarTerceiros();
+    avisarSeAutorizaTerceiros();
   }
 
   /**
    * Recusa o mock no profile {@code prod}, mesmo junto de outro, e fora dos permitidos (#263).
    *
    * @param ambiente profiles ativos
-   * @return sempre {@code true}, para encadear no construtor
    * @throws IllegalStateException no profile {@code prod} ou fora dos permitidos
    */
-  static boolean exigirPerfilPermitido(Environment ambiente) {
+  static void exigirPerfilPermitido(Environment ambiente) {
     List<String> perfis = Arrays.asList(ambiente.getActiveProfiles());
     if (perfis.contains("prod") || perfis.stream().noneMatch(PERFIS_PERMITIDOS::contains)) {
       throw new IllegalStateException("app.nfe.sefaz.mock.enabled=true da toda NF-e como "
@@ -133,7 +134,6 @@ public class MockSefazTransport implements SefazTransport {
           + ", ativos " + perfis + ". Em producao defina NFE_SEFAZ_MOCK_ENABLED=false e configure "
           + "o transporte real (docs/sefaz-transporte-soap.md).");
     }
-    return true;
   }
 
   /**
@@ -149,6 +149,10 @@ public class MockSefazTransport implements SefazTransport {
    */
   public MockSefazTransport(boolean autorizarTerceiros) {
     this.autorizarTerceiros = autorizarTerceiros;
+    avisarSeAutorizaTerceiros();
+  }
+
+  private void avisarSeAutorizaTerceiros() {
     if (autorizarTerceiros) {
       log.warn("[MOCK SEFAZ] autorizar-terceiros ligado: NF-e de terceiro importada e dada como "
           + "autorizada sem conferir o conteudo. Uso so em dev e na demonstracao.");
