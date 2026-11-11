@@ -254,9 +254,13 @@ def fontes(corpo: dict | None) -> list[dict]:
 
 
 def consulta(corpo: dict | None) -> list[str]:
-    """Multiconjunto (função, parâmetros em JSON canônico), ordenado."""
-    return sorted(json.dumps([f.get("funcao"), pontuar.parametros(f)], sort_keys=True,
-                             ensure_ascii=False) for f in fontes(corpo))
+    """Multiconjunto (função, parâmetros em JSON canônico), ordenado.
+
+    Os valores entram como texto: 3290 e "3290" são o mesmo argumento.
+    """
+    return sorted(json.dumps([f.get("funcao"), {k: str(v) for k, v in
+                                                 pontuar.parametros(f).items()}],
+                             sort_keys=True, ensure_ascii=False) for f in fontes(corpo))
 
 
 # ---------------------------------------------------------------------------------------------

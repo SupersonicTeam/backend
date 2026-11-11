@@ -39,8 +39,8 @@ unset CRIPTO_CHAVE
 grep -qE '^ANTHROPIC_API_KEY=.+' "$ENV_FILE" || { echo "ANTHROPIC_API_KEY ausente no .env"; exit 12; }
 [ -z "$(git -C "$WT" status --porcelain)" ] || { echo "WORKTREE COM MUDANCA FORA DE COMMIT"; exit 13; }
 
-alheios() {  # java ou mvn que não são desta medição
-  powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { \$_.Name -match '^(java|javaw|mvn)' -and \$_.CommandLine -notmatch 'server.port=850[12]' -and \$_.CommandLine -notmatch [regex]::Escape('$(cygpath -w "$WT" 2>/dev/null || echo "$WT")') } | ForEach-Object { \$_.ProcessId }" 2>/dev/null | tr -d '\r'
+alheios() {  # Maven, testes ou aplicação de outra sessão (não um Java qualquer, como o de um editor)
+  powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { \$_.Name -match '^(java|javaw|mvn)' -and \$_.CommandLine -match 'maven|mvnw|plexus-classworlds|surefire|spring-boot|AgroContabil|backend-tcc' -and \$_.CommandLine -notmatch 'server.port=850[12]' -and \$_.CommandLine -notmatch [regex]::Escape('$(cygpath -w "$WT" 2>/dev/null || echo "$WT")') } | ForEach-Object { \$_.ProcessId }" 2>/dev/null | tr -d '\r'
 }
 OBTIDA=0
 for _ in $(seq 1 240); do

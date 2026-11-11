@@ -152,6 +152,32 @@ class Executor(unittest.TestCase):
         self.assertEqual(ex.adulterar("R$ 19,00"), "R$ 29,00")
         self.assertEqual(ex.adulterar("abc"), "xbc")
 
+    def test_exigir_casa(self):
+        chave = ct.chave_historico()
+        carga = {"rota": "LEGISLACAO", "lei": {"d": "CONFIRMADA", "r": [0, 9]}}
+        corpo = {"rota": "LEGISLACAO", "resposta": "Sim, 60%.", "turno": {
+            "pergunta": "p", "resposta": "Sim, 60%.",
+            "assinatura": ct.assinar(chave, PRODUTOR, carga, "p", "Sim, 60%.")}}
+        exigir = {"rotas": ["LEGISLACAO"], "lei_d": "CONFIRMADA",
+                  "fatos": {"certo_todos": ["60 ?%"], "errado_algum": ["^nao\\b"]}}
+        self.assertEqual(ex.exigir_casa(exigir, corpo, HOJE, {}, {}), "")
+        self.assertIn("lei.d", ex.exigir_casa(dict(exigir, lei_d="SEM_FUNDAMENTO"), corpo,
+                                              HOJE, {}, {}))
+        self.assertEqual(ex.exigir_casa(exigir, dict(corpo, resposta="Não."), HOJE, {}, {}),
+                         "fatos")
+        self.assertEqual(ex.exigir_casa(exigir, dict(corpo, turno=None), HOJE, {}, {}),
+                         "sem turno")
+        dados = {"rota": "DADOS", "resposta": "x", "turno": corpo["turno"], "fontesDados": [
+            {"funcao": "totalVendasPorProduto", "parametros": {
+                "descricaoOuNcm": "milho", "dataInicio": "2026-09-01", "dataFim": "2026-09-30"}}]}
+        condicao = {"alternativas": [[{"funcoes": ["totalVendasPorProduto"], "produto": ["soja"]}]]}
+        self.assertEqual(ex.exigir_casa(condicao, dados, HOJE, {}, {}), "alternativas")
+
+    def test_consulta_com_numero_como_texto(self):
+        a = {"fontesDados": [{"funcao": "consultarNota", "parametros": {"numero": 3290}}]}
+        b = {"fontesDados": [{"funcao": "consultarNota", "parametros": {"numero": "3290"}}]}
+        self.assertEqual(ct.consulta(a), ct.consulta(b))
+
     def test_falha_tecnica(self):
         self.assertTrue(ex.falha_tecnica({"http_status": 0, "corpo": None}))
         self.assertTrue(ex.falha_tecnica({"http_status": 200, "corpo": {"modoFallback": True}}))

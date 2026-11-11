@@ -200,13 +200,29 @@ class Banco:
     def contagem_auditoria(self) -> int:
         return int(self.consulta("select count(*) from assistente_interacao")[0][0])
 
-    def ultima_auditoria(self) -> dict:
-        colunas = ", ".join(f"coalesce({c}::text, '')" for c in CAMPOS_AUDITORIA)
-        linhas = self.consulta(
-            f"select {colunas} from assistente_interacao order by criado_em desc limit 1")
-        if not linhas or len(linhas[0]) != len(CAMPOS_AUDITORIA):
+    def auditoria_nova(self, contagem_antes: int) -> dict:
+        """As linhas que a chamada gravou: a mais recente e a soma dos tokens de todas.
+
+        Uma pergunta pode gravar mais de uma linha (a reescrita e a resposta, por exemplo). O
+        banco é só desta rodada e os braços rodam um de cada vez, então as linhas novas são dela.
+        """
+        novas = self.contagem_auditoria() - contagem_antes
+        if novas < 1:
             return {}
-        return {c: (v or None) for c, v in zip(CAMPOS_AUDITORIA, linhas[0])}
+        colunas = ", ".join(f"coalesce({c}::text, '')" for c in CAMPOS_AUDITORIA)
+        linhas = [dict(zip(CAMPOS_AUDITORIA, valores)) for valores in self.consulta(
+            f"select {colunas} from assistente_interacao order by criado_em desc limit {novas}")
+            if len(valores) == len(CAMPOS_AUDITORIA)]
+        if not linhas:
+            return {}
+
+        def soma(campo: str) -> int | None:
+            numeros = [int(l[campo]) for l in linhas if l[campo].isdigit()]
+            return sum(numeros) if numeros else None
+        ultima = {c: (v or None) for c, v in linhas[0].items()}
+        ultima.update(tokens_entrada=soma("tokens_entrada"), tokens_saida=soma("tokens_saida"),
+                      linhas=novas, camadas=[l["camada_classificacao"] or None for l in linhas])
+        return ultima
 
 
 # ---------------------------------------------------------------------------------------------
@@ -263,8 +279,7 @@ class Braco:
                 self.renovar()
                 chamada = perguntar_stream(self.url, self.token, corpo)
             depois = self.consumidos()
-            auditoria = self.banco.ultima_auditoria() \
-                if self.banco.contagem_auditoria() == contagem + 1 else {}
+            auditoria = self.banco.auditoria_nova(contagem)
             linha = dict(chamada, tentativa=tentativa, horario=horario.isoformat(),
                          data_referencia=horario.date().isoformat(), credito_antes=antes,
                          credito_depois=depois, auditoria=auditoria,
