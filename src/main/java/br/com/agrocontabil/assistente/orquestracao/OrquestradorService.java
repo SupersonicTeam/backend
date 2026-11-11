@@ -282,7 +282,7 @@ public class OrquestradorService {
     List<ChamadaAssinada> anterior = par.carga().consulta();
     String hashAnterior = par.carga().dados();
     if (anterior != null && DecisaoContinuidade.consultaBate(par)) {
-      // Reexecucao, custo zero: a mesma consulta, sem modelo.
+      // Reexecucao sem modelo: a mesma consulta, pagando so a leitura da mensagem (#511).
       ResultadoRota refeita = rotaDados.reexecutar(anterior, par.pergunta(), contexto);
       if (Autocorrecao.FALHA_REEXECUCAO.equals(refeita.texto())) {
         log.info("Ceres: {}", DesfechoContinuidade.REEXECUCAO_FALHOU);

@@ -93,7 +93,8 @@ existindo, num escritório à parte.
    fertilizante, semente e defensivo, porque o sistema não modela o diferimento (premissas, seção
    1). Não apontar esses créditos junto com o atalho; se a banca perguntar, é essa a resposta. Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
    IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**, digitando perguntas que não sejam as três da tela (o
-   texto exato de um atalho, clicado ou digitado, fica fora da cota e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
+   texto exato de um atalho, clicado ou digitado, paga só a leitura da mensagem, coberta pela folga
+   de 1.000 créditos, e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.

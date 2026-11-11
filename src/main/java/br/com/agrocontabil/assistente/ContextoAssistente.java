@@ -270,9 +270,10 @@ public final class ContextoAssistente {
   }
 
   /**
-   * A pergunta não reservou cota para o modelo (#499): atalho fixo da tela (#343) e conversa leve
-   * (#493), que custam zero crédito. {@link #chamar} recusa a chamada: chamar o modelo sem a
-   * reserva gastaria fora da cota.
+   * A pergunta não reservou cota para o modelo (#499): caminho sem modelo (atalho fixo da tela,
+   * #343; conversa leve, #493; reexecução e textos fixos da continuidade), que reserva só a leitura
+   * da mensagem (#511). {@link #chamar} recusa a chamada: chamar o modelo sem a reserva gastaria
+   * fora da cota.
    */
   public void semReservaParaOModelo() {
     this.semReservaParaOModelo = true;
@@ -339,6 +340,19 @@ public final class ContextoAssistente {
   /** {@code true} se algum token desta pergunta foi estimado, não informado pelo provedor. */
   public boolean tokensEstimados() {
     return tokensEstimados.get();
+  }
+
+  /**
+   * Tokens da leitura de uma mensagem (#511), para a pergunta que não chama o modelo: a mesma
+   * estimativa local e determinística do uso não informado ({@value #CARACTERES_POR_TOKEN}
+   * caracteres por token, no mínimo 1), sem chamar o provedor. "Olá" é 1 token; "quanto imposto
+   * devo?" são 5.
+   *
+   * @param mensagem mensagem do usuário
+   * @return tokens estimados
+   */
+  public static int tokensDaLeitura(String mensagem) {
+    return estimarTokens(mensagem == null ? 0 : mensagem.length());
   }
 
   /** Tokens para uma quantidade de caracteres, arredondando para cima (no mínimo 1). */

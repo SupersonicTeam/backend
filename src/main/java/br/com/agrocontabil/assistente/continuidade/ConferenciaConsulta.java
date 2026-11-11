@@ -19,7 +19,8 @@ import org.springframework.ai.chat.model.Generation;
 
 /**
  * Confere, sem modelo, se a consulta assinada de um par bate com a pergunta dele (#499). Bate, a
- * confirmação reexecuta a mesma consulta (custo zero); não bate, o modelo escolhe de novo.
+ * confirmação reexecuta a mesma consulta, sem modelo (paga só a leitura, #511); não bate, o modelo
+ * escolhe de novo.
  *
  * <ol>
  *   <li>todo produto ou insumo com letras aparece na pergunta (prefixo de 5 letras); com dígitos,

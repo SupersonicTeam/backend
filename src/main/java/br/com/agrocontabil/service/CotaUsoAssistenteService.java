@@ -90,22 +90,46 @@ public class CotaUsoAssistenteService {
 
   /**
    * Reserva o teto do caminho da pergunta (#499): a continuidade tem caminhos mais baratos
-   * (reconferência) e um mais caro (reescrita) que a pergunta comum.
+   * (reconferência) e um mais caro (reescrita) que a pergunta comum. O caminho sem modelo não
+   * passa por aqui: paga a leitura ({@link #reservarLeitura}, #511).
    *
    * @param tipo      produtor ou escritório
    * @param titularId titular já autorizado por quem chama
    * @param modelo    identificação do modelo (fator)
    * @param caminho   caminho da pergunta
    * @return a reserva
+   * @throws IllegalArgumentException com {@link CaminhoCota#SEM_MODELO}
    */
   public Reserva reservar(TipoTitularCota tipo, UUID titularId, String modelo,
       CaminhoCota caminho) {
+    if (caminho == CaminhoCota.SEM_MODELO) {
+      throw new IllegalArgumentException("Caminho sem modelo reserva a leitura (#511)");
+    }
+    return reservarTeto(tipo, titularId, tetoDaPergunta(modelo, caminho));
+  }
+
+  /**
+   * Reserva o custo de leitura de uma pergunta que não chama o modelo (#511): atalho da tela,
+   * conversa leve. Toda pergunta tem custo; sem saldo para ele, 429 como as outras.
+   *
+   * @param tipo          titular
+   * @param titularId     titular já autorizado por quem chama
+   * @param modelo        identificação do modelo (fator)
+   * @param tokensLeitura tokens estimados da mensagem
+   * @return a reserva, a ser acertada pelo mesmo custo
+   * @throws LimiteUsoAssistenteException sem saldo (429)
+   */
+  public Reserva reservarLeitura(TipoTitularCota tipo, UUID titularId, String modelo,
+      long tokensLeitura) {
+    return reservarTeto(tipo, titularId, creditos(tokensLeitura, 0, modelo));
+  }
+
+  private Reserva reservarTeto(TipoTitularCota tipo, UUID titularId, long teto) {
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
     LocalDate semana = semanaDe(agora);
     if (!cota.isHabilitada()) {
       return new Reserva(tipo, titularId, semana, 0, false);
     }
-    long teto = tetoDaPergunta(modelo, caminho);
     long limite = planoProvider.planoDe(tipo, titularId).creditosPorSemana();
     garantirLinha(tipo, titularId, semana, agora);
     Integer reservou = transacao.execute(status -> {
@@ -187,7 +211,29 @@ public class CotaUsoAssistenteService {
     long reservados = uso == null || parada ? 0 : uso.getCreditosReservados();
     long restantes = Math.max(0, plano.creditosPorSemana() - consumidos - reservados);
     return new Uso(plano.nome(), cota.isHabilitada(), plano.creditosPorSemana(), consumidos,
-        restantes, renovaEm);
+        restantes, renovaEm, percentualUsado(consumidos, plano.creditosPorSemana(), restantes));
+  }
+
+  /**
+   * Percentual da semana já usado, a única forma de uso que a tela mostra (#511, decisão do
+   * Murillo de 2026-11-11: sempre arredondado, nunca em créditos, como o Claude e outras IAs).
+   * {@code ⌈consumidos ÷ creditosSemana × 100⌉}, para qualquer uso aparecer como pelo menos 1%;
+   * teto de 99 enquanto houver saldo; 100 só com {@code restantes} = 0; 0 só sem uso nenhum.
+   *
+   * @param consumidos     créditos gastos na semana
+   * @param creditosSemana limite da semana
+   * @param restantes      créditos ainda disponíveis
+   * @return inteiro de 0 a 100
+   */
+  static int percentualUsado(long consumidos, long creditosSemana, long restantes) {
+    if (restantes <= 0) {
+      return 100;
+    }
+    if (consumidos <= 0 || creditosSemana <= 0) {
+      return 0;
+    }
+    long percentual = (consumidos * 100 + creditosSemana - 1) / creditosSemana;
+    return (int) Math.max(1, Math.min(99, percentual));
   }
 
   /**
@@ -277,7 +323,8 @@ public class CotaUsoAssistenteService {
    * @param consumidos     créditos já gastos
    * @param restantes      o que ainda cabe (descontadas as perguntas em andamento)
    * @param renovaEm       próxima segunda 00:00 em Brasília
+   * @param percentualUsado percentual da semana usado, de 0 a 100 (o que a tela mostra, #511)
    */
   public record Uso(String plano, boolean habilitada, long creditosSemana, long consumidos,
-      long restantes, OffsetDateTime renovaEm) {}
+      long restantes, OffsetDateTime renovaEm, int percentualUsado) {}
 }

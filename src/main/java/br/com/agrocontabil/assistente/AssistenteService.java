@@ -316,8 +316,8 @@ public class AssistenteService implements DisposableBean {
   }
 
   /**
-   * Uso da Ceres na semana do produtor autenticado (issue #166), para a barra de uso do chat. Só
-   * créditos: o usuário nunca vê tokens.
+   * Uso da Ceres na semana do produtor autenticado (issue #166), para a barra de uso do chat. A
+   * tela mostra só o percentual (#511); os créditos seguem no JSON, nunca os tokens.
    *
    * @throws br.com.agrocontabil.exception.NaoAutenticadoException sem identidade (401)
    * @throws br.com.agrocontabil.exception.PapelNaoAutorizadoException contador (403)
@@ -325,7 +325,7 @@ public class AssistenteService implements DisposableBean {
   public AssistenteUsoResponse uso() {
     CotaUsoPorta.UsoCota uso = cota.consultar(identidade.produtorAutenticado());
     return new AssistenteUsoResponse(uso.plano(), uso.habilitada(), uso.creditosSemana(),
-        uso.consumidos(), uso.restantes(), uso.renovaEm(),
+        uso.consumidos(), uso.restantes(), uso.renovaEm(), uso.percentualUsado(),
         continuidade.conversaVaiAoProvedor());
   }
 
@@ -447,11 +447,12 @@ public class AssistenteService implements DisposableBean {
   }
 
   /**
-   * Reserva da cota (#166) e contexto da pergunta. Atalho fixo da tela (#343) e conversa leve
-   * (#493) não chamam o modelo e custam zero crédito: não reservam o teto nem recebem 429
-   * {@code LIMITE_USO_ASSISTENTE} com a semana esgotada, e o contexto recusa qualquer chamada ao
-   * modelo (#499). A reserva inativa faz o acerto e o estorno não mexerem na cota. O orquestrador
-   * e a reserva usam a mesma função estática sobre o mesmo texto.
+   * Reserva da cota (#166) e contexto da pergunta. Os caminhos sem modelo
+   * ({@link CaminhoCota#SEM_MODELO}: atalho fixo da tela, #343; conversa leve, #493; e, na
+   * continuidade, #499, a reexecução sem modelo e os textos fixos) não chamam o modelo e pagam só
+   * a leitura da mensagem (#511): reservam esse custo, não o teto, recebem 429
+   * {@code LIMITE_USO_ASSISTENTE} só sem saldo para ele, e o contexto recusa qualquer chamada ao
+   * modelo. A decisão da continuidade sai antes da reserva, e o mesmo objeto vai ao orquestrador.
    */
   private Execucao preparar(UUID produtorId, AssistenteChatRequest request) {
     String pergunta = request.pergunta();
@@ -461,8 +462,11 @@ public class AssistenteService implements DisposableBean {
     Decisao decisao = continuidade.decidir(produtorId, request, agora);
     CotaUsoPorta.ReservaCota reserva;
     if (decisao.custo() == CaminhoCota.SEM_MODELO) {
+      // Sem modelo, mas com custo (#511): a reserva e so a leitura da mensagem, e sem saldo
+      // para ela o 429 vale como nas outras.
       contexto.semReservaParaOModelo();
-      reserva = new CotaUsoPorta.ReservaCota(produtorId, null, 0, false);
+      reserva = cota.reservarLeitura(produtorId, modeloLinguagem.identificacao(),
+          ContextoAssistente.tokensDaLeitura(pergunta));
     } else {
       reserva = cota.reservar(produtorId, modeloLinguagem.identificacao(), decisao.custo());
     }
@@ -472,6 +476,11 @@ public class AssistenteService implements DisposableBean {
   /**
    * Acerto ou estorno da reserva, uma vez só por pergunta. Falha aqui não muda a resposta já
    * auditada: vai ao log, e a reserva presa fica limitada à semana (a linha da próxima é outra).
+   *
+   * <p>Toda pergunta concluída tem custo (#511): sem nenhuma chamada ao modelo (atalho, conversa
+   * leve, recusa pelo filtro, modo fallback), o acerto é a leitura da mensagem,
+   * {@link ContextoAssistente#tokensDaLeitura}; com chamadas, o consumo real delas, que já inclui
+   * a mensagem.
    *
    * <p>Concluída e não interrompida, acerta pelo consumo. Cancelada pelo cliente e auditada
    * (#499), acerta pelo gasto: as chamadas concluídas e a entrada estimada da interrompida; sem
@@ -487,7 +496,9 @@ public class AssistenteService implements DisposableBean {
       if (concluida && contexto.interrupcao().isEmpty()) {
         Integer entrada = contexto.tokensEntrada();
         Integer saida = contexto.tokensSaida();
-        cota.acertar(execucao.reserva, entrada == null ? 0 : entrada, saida == null ? 0 : saida,
+        long cobradaEntrada = entrada == null
+            ? ContextoAssistente.tokensDaLeitura(execucao.pergunta) : entrada;
+        cota.acertar(execucao.reserva, cobradaEntrada, saida == null ? 0 : saida,
             modeloLinguagem.identificacao());
       } else if (execucao.canceladaPeloCliente() && !gasto.nada()) {
         log.info("Cota da Ceres: pergunta cancelada pelo cliente, cobrado o gasto");

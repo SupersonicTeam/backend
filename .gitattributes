@@ -13,3 +13,6 @@ docs/avaliacao/treino/perguntas-ceres-452-v2.json -text
 docs/avaliacao/ceres-452/resultados/** -text
 docs/avaliacao/treino/perguntas-ceres-497.json -text
 docs/avaliacao/ceres-497/resultados/** -text
+# Conjunto da continuidade (#499): o hash .sha256 e dos bytes, CRLF o quebraria.
+docs/avaliacao/continuidade/conversas-continuidade-teste.json -text
+docs/avaliacao/continuidade/conversas-continuidade-dev.json -text

@@ -5,15 +5,17 @@ package br.com.agrocontabil.config;
  * caminho diz quantas chamadas ao modelo a pergunta pode fazer e quais tetos de saída
  * ({@code app.assistente.tetos}) elas usam; a reserva é o custo máximo dele.
  *
- * <p>Com os padrões (8192 de entrada por chamada, peso de saída 4, 1000 tokens por crédito, fator
- * 1): {@link #SEM_MODELO} 0, {@link #NORMAL} 32, {@link #RECONFERENCIA} 25,
- * {@link #RECONFERENCIA_MISTO} 35 e {@link #REESCRITA} 44.
+ * <p>Com os padrões (8192 de entrada por chamada, peso de saída 4, 1 token por crédito desde a
+ * #511, fator 1): {@link #NORMAL} 31.744, {@link #RECONFERENCIA} 24.576,
+ * {@link #RECONFERENCIA_MISTO} 34.816 e {@link #REESCRITA} 43.776. {@link #SEM_MODELO} não reserva
+ * teto: paga a leitura da mensagem ({@code CotaUsoAssistenteService.reservarLeitura}).
  */
 public enum CaminhoCota {
 
   /**
    * Nenhuma chamada: atalho da tela, conversa leve, confirmação de dados cuja consulta assinada
-   * bate (reexecução sem modelo) e os textos fixos de lei da reconferência.
+   * bate (reexecução sem modelo) e os textos fixos de lei da reconferência. Paga só a leitura da
+   * mensagem (#511).
    */
   SEM_MODELO,
 

@@ -40,6 +40,10 @@ jobs:
       - name: Medicao da #497 (testes do executor e da leitura)
         run: python3 -m unittest discover -s docs/avaliacao/ceres-497 -p "test_*.py"
 
+      # Conjunto de conversas da continuidade da Ceres (#499): forma, tokens e sha256.
+      - name: Continuidade da #499 (testes do conjunto)
+        run: python3 -m unittest discover -s docs/avaliacao/continuidade -p "test_*.py"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()

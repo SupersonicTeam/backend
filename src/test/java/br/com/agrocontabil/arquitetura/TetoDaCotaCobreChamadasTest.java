@@ -75,17 +75,23 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#499: reservas por caminho com os padroes: 0, 32, 25, 35 e 44 creditos")
+  @DisplayName("#499/#511: reservas por caminho com os padroes, 1 credito por token: 31.744, "
+      + "24.576, 34.816 e 43.776; o caminho sem modelo nao tem teto (paga a leitura)")
   void reservasPorCaminho() {
     AssistenteProperties propriedades = new AssistenteProperties();
     AssistenteProperties.Cota cota = propriedades.getCota();
     AssistenteProperties.Tetos tetos = propriedades.getTetos();
     assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.SEM_MODELO)).isZero();
-    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.NORMAL)).isEqualTo(32);
-    assertThat(cota.tetoDaPergunta(tetos, 1.0)).isEqualTo(32);
-    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA)).isEqualTo(25);
-    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA_MISTO)).isEqualTo(35);
-    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(44);
+    // 3 x 8.192 + (256 + 512 + 1.024) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.NORMAL)).isEqualTo(31_744);
+    assertThat(cota.tetoDaPergunta(tetos, 1.0)).isEqualTo(31_744);
+    // 2 x 8.192 + (1.024 + 1.024) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA)).isEqualTo(24_576);
+    // 3 x 8.192 + (512 + 1.024 + 1.024) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(34_816);
+    // 4 x 8.192 + (192 + 2.560) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(43_776);
   }
 
   @Test

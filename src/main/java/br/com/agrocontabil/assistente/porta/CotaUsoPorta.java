@@ -26,7 +26,8 @@ public interface CotaUsoPorta {
   ReservaCota reservar(UUID produtorId, String modelo);
 
   /**
-   * Reserva o teto do caminho da pergunta (#499). O padrão reserva o da pergunta comum.
+   * Reserva o teto do caminho da pergunta (#499). O padrão reserva o da pergunta comum. O
+   * caminho sem modelo não passa por aqui: ele reserva a leitura ({@link #reservarLeitura}).
    *
    * @param produtorId produtor autenticado
    * @param modelo     identificação do modelo em uso
@@ -36,6 +37,18 @@ public interface CotaUsoPorta {
   default ReservaCota reservar(UUID produtorId, String modelo, CaminhoCota caminho) {
     return reservar(produtorId, modelo);
   }
+
+  /**
+   * Reserva o custo de leitura de uma pergunta que não chama o modelo (#511): toda pergunta tem
+   * custo, e sem saldo para a leitura o 429 vale como nas outras. Sem implementação padrão de
+   * propósito: uma porta que esquecesse a leitura deixaria a pergunta de graça em silêncio.
+   *
+   * @param produtorId    produtor autenticado
+   * @param modelo        identificação do modelo em uso (fator)
+   * @param tokensLeitura tokens estimados da mensagem
+   * @return a reserva
+   */
+  ReservaCota reservarLeitura(UUID produtorId, String modelo, long tokensLeitura);
 
   /**
    * Acerta pelo consumo real (tokens informados pelo provedor ou estimados).
@@ -71,7 +84,8 @@ public interface CotaUsoPorta {
    * @param consumidos     gastos
    * @param restantes      ainda disponíveis
    * @param renovaEm       próxima segunda 00:00 (Brasília)
+   * @param percentualUsado percentual da semana usado, de 0 a 100 (#511)
    */
   record UsoCota(String plano, boolean habilitada, long creditosSemana, long consumidos,
-      long restantes, OffsetDateTime renovaEm) {}
+      long restantes, OffsetDateTime renovaEm, int percentualUsado) {}
 }

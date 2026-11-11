@@ -77,13 +77,14 @@ public class AssistenteController {
   /**
    * Uso da Ceres na semana, para a barra de uso do chat (issue #166).
    *
-   * @return plano, créditos da semana, consumidos, restantes e quando renova
+   * @return plano, créditos da semana, consumidos, restantes, quando renova e o percentual usado
    */
   @GetMapping("/uso")
   @Operation(summary = "Uso semanal da Ceres",
       description = "Creditos da semana (segunda 00:00 a domingo 23:59, horario de Brasilia) do "
-          + "produtor autenticado: limite do plano, consumidos, restantes e quando renova. Em "
-          + "creditos, nunca tokens. So o produtor (contador 403).")
+          + "produtor autenticado: limite do plano, consumidos, restantes, quando renova e o "
+          + "percentualUsado (0 a 100), o unico numero que a tela mostra. Nunca tokens. So o "
+          + "produtor (contador 403).")
   public ResponseEntity<AssistenteUsoResponse> uso() {
     return ResponseEntity.ok(assistenteService.uso());
   }

@@ -556,18 +556,21 @@ app:
     continuidade:
       habilitada: ${AI_CONTINUIDADE_HABILITADA:false}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
-    # peso-saida) x fator do modelo / tokens-por-credito). Semana de segunda a domingo (Brasilia),
-    # sem acumulo. Antes de cada pergunta reserva-se o teto dela; no fim, o consumo real. Teto = 3
-    # chamadas (classificacao, funcoes, lei; o pior caso e o MISTO com desempate), cada uma com o
-    # teto de entrada abaixo e o proprio teto de saida de app.assistente.tetos (#270).
+    # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
+    # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de
+    # segunda a domingo (Brasilia), sem acumulo. Antes de cada pergunta reserva-se o teto dela; no
+    # fim, o consumo real. Teto = 3 chamadas (classificacao, funcoes, lei; o pior caso e o MISTO com
+    # desempate), cada uma com o teto de entrada abaixo e o proprio teto de saida de
+    # app.assistente.tetos (#270). Toda pergunta tem custo (#511): a que nao chama o modelo (atalho,
+    # conversa leve, recusa pelo filtro, fallback) paga a leitura da mensagem.
     cota:
       habilitada: ${AI_COTA_HABILITADA:true}
       plano: ${AI_COTA_PLANO:padrao}
-      creditos-por-semana-produtor: ${AI_COTA_CREDITOS_PRODUTOR:1000}
-      creditos-por-semana-escritorio: ${AI_COTA_CREDITOS_ESCRITORIO:5000}
+      creditos-por-semana-produtor: ${AI_COTA_CREDITOS_PRODUTOR:1000000}
+      creditos-por-semana-escritorio: ${AI_COTA_CREDITOS_ESCRITORIO:5000000}
       peso-entrada: ${AI_COTA_PESO_ENTRADA:1.0}
       peso-saida: ${AI_COTA_PESO_SAIDA:4.0}
-      tokens-por-credito: ${AI_COTA_TOKENS_POR_CREDITO:1000}
+      tokens-por-credito: ${AI_COTA_TOKENS_POR_CREDITO:1}
       fator-padrao: ${AI_COTA_FATOR_PADRAO:1.0}
       # Padrao = a janela do Ollama (o maior prompt que ele aceita); abaixo dela nao sobe.
       teto-tokens-entrada-por-chamada: ${AI_COTA_TETO_ENTRADA:${spring.ai.ollama.chat.options.num-ctx:8192}}
