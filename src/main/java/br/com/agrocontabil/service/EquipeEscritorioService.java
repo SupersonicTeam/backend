@@ -459,16 +459,19 @@ public class EquipeEscritorioService {
     // O convite e conferido antes do cadastro: um link usado ou vencido e 400, nunca o 409 de
     // e-mail ja cadastrado (que confirmaria a conta a quem tem o link).
     OffsetDateTime agora = OffsetDateTime.now(clock);
-    String email = conviteRepository.findByTokenHash(TokenOpaco.hash(request.token()))
+    ConviteMembro conviteLido = conviteRepository.findByTokenHash(TokenOpaco.hash(request.token()))
         .filter(c -> c.getUsadoEm() == null && c.getExpiraEm().isAfter(agora))
         .filter(this::deEscritorioEmpresarial)
-        .map(ConviteMembro::getEmail)
         .orElseThrow(ConviteEquipeInvalidoException::new);
+    String email = conviteLido.getEmail();
+    // O CNPJ e o telefone do escritorio do convite tambem nao podem estar na senha (#521).
+    Escritorio escritorioDoConvite =
+        escritorioRepository.findById(conviteLido.getEscritorioId()).orElse(null);
     // Sem escritorio nem tipo de conta: quem entra pelo convite vai para o escritorio dele (#519).
     CadastroRequest cadastro = new CadastroRequest(PapelUsuario.CONTADOR,
         request.nomeCompleto(), request.cpfCnpj(), email, request.senha(), null, request.crc(),
         request.telefone(), null, request.aceiteTermos());
-    return cadastroService.cadastrar(cadastro, contador -> {
+    return cadastroService.cadastrar(cadastro, escritorioDoConvite, contador -> {
       ConviteMembro convite = conviteValido(request.token(), email);
       contador.setEscritorioId(convite.getEscritorioId());
       contador.setFuncao(convite.getFuncao());

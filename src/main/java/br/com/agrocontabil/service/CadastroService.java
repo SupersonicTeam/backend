@@ -159,6 +159,21 @@ public class CadastroService {
    * @return id da identidade criada, papel e e-mail
    */
   CadastroResponse cadastrar(CadastroRequest request, IngressoEscritorio ingresso) {
+    return cadastrar(request, null, ingresso);
+  }
+
+  /**
+   * Como {@link #cadastrar(CadastroRequest, IngressoEscritorio)}, sabendo o escritório em que o
+   * {@code ingresso} põe o contador: o CNPJ e o telefone dele também não podem estar na senha
+   * (issue #521). O escritório só é lido; quem decide o ingresso continua sendo o {@code ingresso}.
+   *
+   * @param request              dados do cadastro, já validados por Bean Validation
+   * @param escritorioDoIngresso escritório do convite (cadastro pela equipe, #228); nulo sem ele
+   * @param ingresso             como o contador entra num escritório; nulo = unipessoal
+   * @return id da identidade criada, papel e e-mail
+   */
+  CadastroResponse cadastrar(CadastroRequest request, Escritorio escritorioDoIngresso,
+      IngressoEscritorio ingresso) {
     // O false ja e 400 pelo @AssertTrue do DTO; repetido aqui para quem chama o service direto.
     if (Boolean.FALSE.equals(request.aceiteTermos())
         || (request.aceiteTermos() == null && propriedades.exigirAceiteTermos())) {
@@ -168,7 +183,8 @@ public class CadastroService {
     String cpfCnpj = request.cpfCnpj();
     String senha = PoliticaSenha.normalizar(request.senha());
 
-    politicaSenha.validar(senha, dadosDoTitular(request, email), CAMPO_SENHA);
+    politicaSenha.validar(senha, dadosDoTitular(request, email, escritorioDoIngresso),
+        CAMPO_SENHA);
     String senhaHash = passwordEncoder.encode(senha);
 
     CredencialUsuario credencial;
@@ -196,18 +212,18 @@ public class CadastroService {
   }
 
   /**
-   * O que a senha não pode conter (issue #521): o e-mail, o CPF/CNPJ e o telefone da pessoa e, no
-   * cadastro empresarial, o CNPJ e o telefone do escritório, todos do próprio request.
-   *
-   * <p>No cadastro pela equipe (issue #228) o request não traz o escritório, e o CNPJ dele fica de
-   * fora daqui; ele entra na próxima troca de senha, pelo {@link DadosDoTitularSenha}.
+   * O que a senha não pode conter (issue #521): o e-mail, o CPF/CNPJ e o telefone da pessoa e o CNPJ
+   * e o telefone do escritório — o do request, no cadastro empresarial, ou o do convite, no
+   * cadastro pela equipe (#228).
    */
   private static PoliticaSenha.DadosDoTitular dadosDoTitular(CadastroRequest request,
-      String email) {
+      String email, Escritorio escritorioDoIngresso) {
     CadastroRequest.EscritorioDoCadastro escritorio = request.escritorio();
     return new PoliticaSenha.DadosDoTitular(email,
-        Arrays.asList(request.cpfCnpj(), escritorio == null ? null : escritorio.cnpj()),
-        Arrays.asList(request.telefone(), escritorio == null ? null : escritorio.telefone()));
+        Arrays.asList(request.cpfCnpj(), escritorio == null ? null : escritorio.cnpj(),
+            escritorioDoIngresso == null ? null : escritorioDoIngresso.getCnpj()),
+        Arrays.asList(request.telefone(), escritorio == null ? null : escritorio.telefone(),
+            escritorioDoIngresso == null ? null : escritorioDoIngresso.getTelefone()));
   }
 
   private CredencialUsuario gravar(CadastroRequest request, String email, String cpfCnpj,

@@ -513,6 +513,25 @@ class CadastroServiceTest {
   }
 
   @Test
+  @DisplayName("cadastro pelo convite com o CNPJ ou o telefone do escritorio do convite na senha:"
+      + " recusado antes do ingresso (#521)")
+  void ingressoComDadosDoEscritorioNaSenha() {
+    Escritorio doConvite = Escritorio.builder().id(UUID.randomUUID()).nome("Campo Verde")
+        .tipo(TipoEscritorio.EMPRESARIAL).cnpj("11444777000161").telefone("4533330000").build();
+    for (String senha : List.of("equipe 11.444.777/0001-61 campo", "fixo 3333-0000 campo")) {
+      CadastroRequest pedido = new CadastroRequest(PapelUsuario.CONTADOR, "Patricia Moreira", CPF,
+          "patricia@exemplo.com.br", senha, null, null, null, null, null);
+
+      assertThatThrownBy(() -> service.cadastrar(pedido, doConvite, contador -> {
+        throw new AssertionError("o ingresso nao pode rodar com a senha recusada");
+      })).as(senha).isInstanceOf(SenhaFracaException.class);
+    }
+    verify(passwordEncoder, never()).encode(anyString());
+    verifyNoInteractions(transactionManager, contadorRepository, credencialRepository,
+        escritorioRepository);
+  }
+
+  @Test
   @DisplayName("contador pessoal sem telefone nem escritorio no request: a politica nao quebra")
   void contadorPessoalSemTelefone() {
     UUID contadorId = UUID.randomUUID();
