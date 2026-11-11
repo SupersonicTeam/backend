@@ -1,5 +1,6 @@
-package br.com.agrocontabil.dto;
+package br.com.agrocontabil.common;
 
+import br.com.agrocontabil.dto.TurnoConversa;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;

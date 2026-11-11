@@ -61,6 +61,11 @@ public class EmissaoTurno {
     if (rota != Intencao.DADOS && rota != Intencao.LEGISLACAO && rota != Intencao.MISTO) {
       return Optional.empty();
     }
+    if (rota != Intencao.DADOS && registro.classeLei() == null) {
+      // Lei ou MISTO sem a parte de lei registrada: a conferencia recusaria a carga e ignoraria o
+      // historico inteiro na proxima pergunta. Melhor nenhum turno.
+      return Optional.empty();
+    }
     String perguntaTurno = semControle(pergunta);
     String respostaTurno = cortar(semControle(resposta), rota, registro.parteLei());
     if (perguntaTurno.isBlank() || perguntaTurno.length() > TurnoConversa.TAMANHO_PERGUNTA
