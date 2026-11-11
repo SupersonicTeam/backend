@@ -64,7 +64,16 @@ Das 14 candidatas, 9 cumpriram o critério. Das outras, 4 não confirmaram nas 4
 confirmaram e 1 confirmou uma vez) e 1 foi à rota mista.
 
 **Mini-ensaio antes de congelar:** só as 11 conversas trocadas, 1 repetição, contra o head
-`082dfa2` do PR, também não oficial. RESULTADO_MINI
+`082dfa2` do PR, também não oficial, das 11h36 às 11h39 de 2026-11-11, com o conjunto já no sha
+desta v2. No braço ligado:
+
+- as 10 conversas de lei trocadas foram à rota de lei e confirmaram no 1º turno;
+- os 3 pares reais foram montados e nenhuma execução ficou fora;
+- o 3º turno do t-lei-03 caiu em `LEI_SO_TRECHOS`, sem crédito;
+- a única falha foi o 2º turno do t-dados-17, que não foi reescrito e foi à lei sem o produto,
+  como nas 3 repetições do ensaio. A falha é da continuidade, e a métrica a conta.
+
+Nenhuma conversa mudou depois do mini-ensaio.
 
 **O que não mudou:** as outras 34 conversas do teste e 5 do dev, as métricas e os limiares.
 
