@@ -1,0 +1,467 @@
+{
+  "versao": "continuidade-v1-dev",
+  "parte": "dev",
+  "escrito_em": "2026-11-11",
+  "issue": 499,
+  "produtor": "carlos.rossi@example.com",
+  "regra": "docs/avaliacao/continuidade/regra-de-decisao.md",
+  "revisao_lei": {
+    "status": "pendente",
+    "por": null,
+    "em": null,
+    "nota": "Os fatos de lei (campo fatos) e as trocas (campo edicoes) passam pela revisão da equipe e do orientador, sem contador, antes da rodada oficial."
+  },
+  "preparo": [],
+  "conversas": [
+    {
+      "id": "d-dados-01",
+      "categoria": "dados_confirmacao_anterior_certa",
+      "turnos": [
+        {
+          "tipo": "pergunta",
+          "texto": "Quantas notas eu tenho em rascunho?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "RASCUNHO"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "confere isso",
+          "esperado": {
+            "abertura": [
+              "REEXECUCAO_MESMO"
+            ],
+            "consulta_igual_ao_turno": 1,
+            "credito_zero": true,
+            "proibidas_texto": [
+              "REEXECUCAO_MUDOU",
+              "CORRIJO_DADOS",
+              "REFIZ",
+              "REFIZ_COM",
+              "SEGUIMENTO_NOVO",
+              "SEGUIMENTO_ANTIGO"
+            ],
+            "metricas": [
+              "M_rota_funcao",
+              "M_dados_sem_falso_alarme",
+              "M_credito_zero"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-dados-02",
+      "categoria": "dados_anterior_errada_produto",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de diesel em setembro?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "diesel",
+                    "2710"
+                  ],
+                  "inicio": [
+                    "nomeado:9:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:9:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto comprei de herbicida em setembro?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "abertura": [
+              "CORRIJO_DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "herbicida",
+                    "glifosato",
+                    "3808"
+                  ],
+                  "inicio": [
+                    "nomeado:9:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:9:fim"
+                  ]
+                }
+              ]
+            ],
+            "proibidas": [
+              {
+                "funcoes": [
+                  "totalComprasPorInsumo"
+                ],
+                "produto": [
+                  "diesel",
+                  "2710"
+                ]
+              }
+            ],
+            "metricas": [
+              "M_dados_correcao",
+              "M_rota_funcao"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-dados-03",
+      "categoria": "dados_elipse_periodo",
+      "turnos": [
+        {
+          "tipo": "pergunta",
+          "texto": "Quanto vendi de algodão em outubro?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "algodao",
+                    "5201"
+                  ],
+                  "inicio": [
+                    "nomeado:10:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:10:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "e em agosto?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "algodao",
+                    "5201"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ],
+            "metricas": [
+              "M_rota_funcao"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-dados-04",
+      "categoria": "dados_referencia_a_resposta",
+      "turnos": [
+        {
+          "tipo": "pergunta",
+          "texto": "Quais notas de compra eu recebi em outubro?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "tipo": "ENTRADA",
+                  "inicio": [
+                    "nomeado:10:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:10:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "e a primeira?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarNota"
+                  ],
+                  "numero": "{resposta:1:nota:1}"
+                }
+              ]
+            ],
+            "metricas": [
+              "M_rota_funcao"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-lei-01",
+      "categoria": "lei_anterior_certa",
+      "turnos": [
+        {
+          "tipo": "pergunta",
+          "texto": "O milho em grão tem redução nas alíquotas do IBS e da CBS?",
+          "esperado": {
+            "rotas": [
+              "LEGISLACAO"
+            ],
+            "fatos": {
+              "certo_todos": [
+                "60 ?%|sessenta por cento"
+              ],
+              "errado_algum": [
+                "^nao\\b"
+              ]
+            }
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "se_anterior": {
+              "certa": {
+                "abertura": [
+                  "LEI_CONFIRMA",
+                  "LEI_APOIO"
+                ],
+                "proibidas_texto": [
+                  "LEI_CORRIJO",
+                  "NAO_CONSEGUI_CONFIRMAR",
+                  "SEM_FUNDAMENTO_ROTA"
+                ],
+                "metricas": [
+                  "M_rota_funcao",
+                  "M_lei_corrijo_indevido",
+                  "M_lei_nao_consegui",
+                  "M_lat_reconferencia"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-lei-02",
+      "categoria": "lei_anterior_errada_percentual",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Sementes para plantio têm redução nas alíquotas do IBS e da CBS?",
+          "exigir": {
+            "rotas": [
+              "LEGISLACAO"
+            ],
+            "lei_d": "CONFIRMADA",
+            "fatos": {
+              "certo_todos": [
+                "60 ?%|sessenta por cento"
+              ],
+              "errado_algum": [
+                "^nao\\b"
+              ]
+            }
+          },
+          "edicoes": [
+            {
+              "regex": "60 ?%",
+              "para": "30%",
+              "em": "lei.r",
+              "todas": true
+            },
+            {
+              "regex": "sessenta",
+              "para": "trinta",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            }
+          ]
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "abertura": [
+              "LEI_CORRIJO"
+            ],
+            "correcao_contem": [
+              "60 ?%|sessenta"
+            ],
+            "proibidas_texto": [
+              "LEI_CONFIRMA",
+              "NAO_CONSEGUI_CONFIRMAR",
+              "SEM_FUNDAMENTO_ROTA"
+            ],
+            "metricas": [
+              "M_rota_funcao",
+              "M_lei_correcao",
+              "M_lei_confirma_errada",
+              "M_lei_nao_consegui",
+              "M_lat_reconferencia"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-lei-03",
+      "categoria": "lei_contestacao_numero_errado",
+      "turnos": [
+        {
+          "tipo": "pergunta",
+          "texto": "O milho em grão tem redução nas alíquotas do IBS e da CBS?",
+          "esperado": {
+            "rotas": [
+              "LEGISLACAO"
+            ],
+            "fatos": {
+              "certo_todos": [
+                "60 ?%|sessenta por cento"
+              ],
+              "errado_algum": [
+                "^nao\\b"
+              ]
+            }
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "está errado, a alíquota é zero",
+          "esperado": {
+            "se_anterior": {
+              "certa": {
+                "abertura": [
+                  "LEI_CONFIRMA",
+                  "LEI_APOIO"
+                ],
+                "proibidas_texto": [
+                  "LEI_CORRIJO",
+                  "NAO_CONSEGUI_CONFIRMAR",
+                  "SEM_FUNDAMENTO_ROTA"
+                ],
+                "sem_regex": [
+                  "(?<!nao )\\b(e|sao|fica|ficam) (de )?zero\\b",
+                  "(?<!nao tem )aliquota zero"
+                ],
+                "metricas": [
+                  "M_rota_funcao",
+                  "M_lei_corrijo_indevido",
+                  "M_lei_adesao",
+                  "M_lei_nao_consegui"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-fixo-01",
+      "categoria": "tem_certeza_depois_de_sem_confirmacao",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "fixa",
+          "pergunta": "Como fica o IBS na venda da energia solar que a fazenda produz?",
+          "resposta": "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais próximos da pergunta, para consulta.",
+          "carga": {
+            "rota": "LEGISLACAO",
+            "reescrita": false,
+            "lei": {
+              "d": "SEM_CONFIRMACAO",
+              "c": [
+                "LC 214/2025|art. 137"
+              ]
+            }
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "abertura": [
+              "LEI_SEM_CONFIRMACAO"
+            ],
+            "credito_zero": true,
+            "proibidas_texto": [
+              "LEI_CORRIJO",
+              "LEI_CONFIRMA"
+            ],
+            "metricas": [
+              "M_caminho_fixo"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
