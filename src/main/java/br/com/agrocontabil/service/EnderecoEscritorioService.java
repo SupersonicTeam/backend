@@ -56,6 +56,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * dias), mas remover é sempre permitido; o slug que sai fica em carência (90 dias) e ninguém mais o
  * registra; reservado, em uso e em carência recebem a mesma resposta.
  *
+ * <p><strong>Reservado não é servido (#520).</strong> O slug gravado (no {@code PUT} ou no cadastro
+ * empresarial) fica reservado para o escritório, mas o ask do Caddy, a página pública e o login
+ * pelo subdomínio só valem depois que o CNPJ é verificado ({@link VerificacaoCnpjService}). Sem
+ * isso, cadastros com CNPJ de dígito válido esgotavam a cota de certificados do Let's Encrypt. O
+ * que não é servido recebe a mesma resposta do slug inexistente.
+ *
  * <p><strong>Dado pessoal.</strong> O slug pode carregar o nome de uma pessoa: nunca vai a log nem
  * à auditoria, que registra só {@code COM_ENDERECO}/{@code SEM_ENDERECO}.
  */
@@ -175,7 +181,8 @@ public class EnderecoEscritorioService {
    * carência de outro escritório, com a mesma resposta. A forma e a ciência da exposição pública
    * já foram conferidas no request. A diferença: o {@code slugAlteradoEm} fica nulo, e o slug do
    * cadastro não conta para o intervalo entre trocas (um erro de digitação logo no início se
-   * corrige na hora).
+   * corrige na hora). O slug fica reservado, mas só é servido depois da verificação do CNPJ
+   * (#520): o cadastro é público, e o CNPJ dele só tem o dígito conferido.
    *
    * @param escritorio  escritório recém-gravado, com CNPJ
    * @param informado   slug como veio no request
@@ -237,7 +244,8 @@ public class EnderecoEscritorioService {
 
   /**
    * O Caddy pode emitir certificado para este domínio? É o "ask" do On-Demand TLS (#464): só com
-   * a chave certa e um endereço servido (ativo, ou em carência com redirecionamento).
+   * a chave certa e um endereço servido (ativo, ou em carência com redirecionamento) de escritório
+   * com o CNPJ verificado (#520). Cada certificado gasta a cota semanal do Let's Encrypt.
    *
    * @param chave   segredo compartilhado com o Caddy
    * @param dominio domínio pedido no TLS, como o Caddy o mandou
@@ -256,8 +264,8 @@ public class EnderecoEscritorioService {
   }
 
   /**
-   * A credencial é de um contador membro do escritório que tem este endereço ativo (com CNPJ)?
-   * Regra única do login e do refresh pelo subdomínio (#464).
+   * A credencial é de um contador membro do escritório que tem este endereço ativo (com o CNPJ
+   * verificado, #520)? Regra única do login e do refresh pelo subdomínio (#464).
    *
    * @param credencial credencial que provou a senha, ou a do refresh
    * @param rotulo     rótulo do host

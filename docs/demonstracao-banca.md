@@ -192,6 +192,13 @@ entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de refe
 changeSet 0059). Rode-os **depois** do deploy da versão que traz esse changeSet; antes dele, o
 passo 1 falha com "relation does not exist" e nada é apagado.
 
+**Endereço da banca e a verificação do CNPJ (#520):** o `ruraloeste.agroconia.com.br` só é servido
+com o CNPJ do escritório verificado. O seed cria a Rural Oeste já verificada (método
+`DEMONSTRACAO`) e, no banco já semeado, a marca na subida do backend; o reset não muda isso. Sem o
+seed ligado (`DEMONSTRACAO_HABILITADA`), use o comando de verificação do `deploy/README.md`. O CNPJ
+não é único: um cadastro de teste com o nome **e** o CNPJ do seed também entraria no reset. Por
+isso a linha `escritorio` do passo 1 tem de dar **1** antes do passo 2.
+
 Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
 `ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro
 removido e contador convidado → reset → seed, com as contagens batendo e o que é de fora do seed

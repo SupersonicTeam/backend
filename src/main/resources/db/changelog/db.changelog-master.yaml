@@ -130,3 +130,5 @@ databaseChangeLog:
       file: db/changelog/changes/0061-modelo-pedido.xml
   - include:
       file: db/changelog/changes/0062-escritorio-tipo-e-termos.xml
+  - include:
+      file: db/changelog/changes/0063-escritorio-cnpj-verificado.xml

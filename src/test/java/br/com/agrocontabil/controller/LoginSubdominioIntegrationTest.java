@@ -71,7 +71,8 @@ class LoginSubdominioIntegrationTest {
         PapelUsuario.CONTADOR, "Campo Verde", "39053344705", EMAIL_OUTRO, SENHA));
     cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.PRODUTOR, "Joaquim", "86288366757", EMAIL_PRODUTOR, SENHA));
-    jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181'"
+    jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181',"
+        + " cnpj_verificado_em = CURRENT_TIMESTAMP, cnpj_verificacao_metodo = 'MANUAL'"
         + " WHERE id = (SELECT escritorio_id FROM contadores WHERE id = ?)", admin.usuarioId());
   }
 
@@ -145,8 +146,32 @@ class LoginSubdominioIntegrationTest {
   @Test
   @DisplayName("subdominio: escritorio sem CNPJ nao e servido, nem ao membro")
   void semCnpjNaoServe() throws Exception {
-    jdbcTemplate.update("UPDATE escritorio SET cnpj = NULL WHERE slug = 'ruraloeste'");
+    jdbcTemplate.update("UPDATE escritorio SET cnpj = NULL, cnpj_verificado_em = NULL,"
+        + " cnpj_verificacao_metodo = NULL WHERE slug = 'ruraloeste'");
     login(HOST_ESCRITORIO, EMAIL_ADMIN, SENHA, "ruraloeste").andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @DisplayName("subdominio: CNPJ nao verificado nao e servido, nem ao membro; o www segue (#520)")
+  void naoVerificadoNaoServe() throws Exception {
+    jdbcTemplate.update("UPDATE escritorio SET cnpj_verificado_em = NULL,"
+        + " cnpj_verificacao_metodo = NULL WHERE slug = 'ruraloeste'");
+    login(HOST_ESCRITORIO, EMAIL_ADMIN, SENHA, "ruraloeste").andExpect(status().isUnauthorized());
+    login(HOST_ESCRITORIO, EMAIL_ADMIN, SENHA, null).andExpect(status().isUnauthorized());
+    login(HOST_WWW, EMAIL_ADMIN, SENHA, null).andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("refresh no subdominio: a verificacao revogada derruba a familia (401) (#520)")
+  void refreshSemVerificacao() throws Exception {
+    MvcResult entrada = login(HOST_ESCRITORIO, EMAIL_ADMIN, SENHA, "ruraloeste")
+        .andExpect(status().isOk()).andReturn();
+    jdbcTemplate.update("UPDATE escritorio SET cnpj_verificado_em = NULL,"
+        + " cnpj_verificacao_metodo = NULL WHERE slug = 'ruraloeste'");
+    mockMvc.perform(post("/api/auth/refresh").header(HttpHeaders.HOST, HOST_ESCRITORIO)
+            .cookie(new Cookie("agro_refresh", refreshDe(entrada))))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.errors[0].code").value("SESSAO_INVALIDA"));
   }
 
   @Test

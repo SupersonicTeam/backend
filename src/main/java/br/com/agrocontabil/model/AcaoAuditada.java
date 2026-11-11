@@ -38,6 +38,9 @@ public enum AcaoAuditada {
   ESCRITORIO_ENDERECO_ALTERADO,
   // Conta pessoal que vira empresarial (issue #519)
   ESCRITORIO_TORNADO_EMPRESARIAL,
+  // Verificacao do CNPJ do escritorio (issue #520), pelo comando manual ou pelo seed da banca
+  ESCRITORIO_CNPJ_VERIFICADO,
+  ESCRITORIO_CNPJ_VERIFICACAO_REVOGADA,
   // Revisao da nota pelo contador (issue #178)
   NOTA_ENVIADA_REVISAO,
   NOTA_RETIRADA_REVISAO,

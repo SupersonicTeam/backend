@@ -246,6 +246,16 @@ ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_uf VARCHAR(2);
 ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS ck_escritorio_tipo
     CHECK (tipo IN ('PESSOAL', 'EMPRESARIAL'));
 
+-- Verificacao do CNPJ do escritorio (migration 0063, issue #520). Manter sincronizado com
+-- 0063-escritorio-cnpj-verificado.xml. O indice unico parcial do CNPJ verificado e so do
+-- PostgreSQL (o H2 nao tem indice parcial): aqui a regra fica no servico.
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS cnpj_verificado_em TIMESTAMP WITH TIME ZONE;
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS cnpj_verificacao_metodo VARCHAR(20);
+ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS ck_escritorio_cnpj_verificacao
+    CHECK ((cnpj_verificado_em IS NULL AND cnpj_verificacao_metodo IS NULL)
+        OR (cnpj_verificado_em IS NOT NULL AND cnpj IS NOT NULL
+            AND cnpj_verificacao_metodo IN ('MANUAL', 'DEMONSTRACAO')));
+
 CREATE TABLE IF NOT EXISTS escritorio_slug_anterior (
     slug           VARCHAR(32)               NOT NULL,
     escritorio_id  UUID,

@@ -51,7 +51,8 @@ class HostEncaminhadoIntegrationTest {
       cleaner.limparTudo();
       CadastroResponse admin = cadastroService.cadastrar(new CadastroRequest(
           PapelUsuario.CONTADOR, "Rural Oeste", "52998224725", EMAIL, SENHA));
-      jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181'"
+      jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181',"
+          + " cnpj_verificado_em = CURRENT_TIMESTAMP, cnpj_verificacao_metodo = 'MANUAL'"
           + " WHERE id = (SELECT escritorio_id FROM contadores WHERE id = ?)",
           admin.usuarioId());
     }

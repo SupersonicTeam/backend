@@ -10,8 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
+import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.service.VerificacaoCnpjService;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +39,8 @@ import org.springframework.test.web.servlet.ResultActions;
 /**
  * Lado público do endereço do escritório pela cadeia real (issue #464): o
  * {@code GET /api/publico/escritorios/{slug}} da tela de login e o "ask" do Caddy em
- * {@code /interno/tls/permitido}. Ambos sem token; o mesmo 404 para tudo que não é servido.
+ * {@code /interno/tls/permitido}. Ambos sem token; o mesmo 404 para tudo que não é servido,
+ * inclusive o escritório com o CNPJ não verificado (#520).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -56,6 +60,8 @@ class EnderecoPublicoIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private TestDatabaseCleaner cleaner;
+  @Autowired private VerificacaoCnpjService verificacaoCnpj;
+  @Autowired private EscritorioRepository escritorioRepository;
 
   private UUID escritorioA;
   private UUID escritorioB;
@@ -68,7 +74,8 @@ class EnderecoPublicoIntegrationTest {
         "admin@rural-oeste.com.br", SENHA)));
     escritorioB = escritorioDe(cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.CONTADOR, "Joao da Silva", "39053344705", "joao@contador.com.br", SENHA)));
-    jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181'"
+    jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181',"
+        + " cnpj_verificado_em = CURRENT_TIMESTAMP, cnpj_verificacao_metodo = 'MANUAL'"
         + " WHERE id = ?", escritorioA);
   }
 
@@ -158,6 +165,41 @@ class EnderecoPublicoIntegrationTest {
     jdbcTemplate.update("UPDATE escritorio SET slug = 'semcnpj' WHERE id = ?", escritorioB);
     assertThat(semInstante(publico("semcnpj").andExpect(status().isNotFound())))
         .isEqualTo(inexistente);
+    // Com CNPJ e sem a verificacao (#520): reservado, nunca servido, e a mesma resposta.
+    jdbcTemplate.update("UPDATE escritorio SET cnpj = '11444777000161' WHERE id = ?", escritorioB);
+    assertThat(semInstante(publico("semcnpj").andExpect(status().isNotFound())))
+        .isEqualTo(inexistente);
+  }
+
+  @Test
+  @DisplayName("CNPJ nao verificado: 404 no publico, no ask e na carencia ate a verificacao; trocar o CNPJ derruba de novo (#520)")
+  void soVerificadoEServido() throws Exception {
+    jdbcTemplate.update("UPDATE escritorio SET slug = 'campoverde', cnpj = '11444777000161'"
+        + " WHERE id = ?", escritorioB);
+    emCarencia("campo-verde", escritorioB);
+    publico("campoverde").andExpect(status().isNotFound());
+    publico("campo-verde").andExpect(status().isNotFound());
+    ask("campoverde.agroconia.com.br", CHAVE).andExpect(status().isNotFound());
+    ask("campo-verde.agroconia.com.br", CHAVE).andExpect(status().isNotFound());
+
+    verificacaoCnpj.verificar(escritorioB, "11.444.777/0001-61", MetodoVerificacaoCnpj.MANUAL);
+    publico("campoverde").andExpect(status().isOk())
+        .andExpect(jsonPath("$.nome").value("Joao da Silva"));
+    publico("campo-verde").andExpect(status().isOk())
+        .andExpect(jsonPath("$.slugAtual").value("campoverde"));
+    ask("campoverde.agroconia.com.br", CHAVE).andExpect(status().isOk());
+    ask("campo-verde.agroconia.com.br", CHAVE).andExpect(status().isOk());
+
+    // Trocar o nome mantem a verificacao; trocar o CNPJ a derruba na hora.
+    var escritorio = escritorioRepository.findById(escritorioB).orElseThrow();
+    escritorio.setNome("Campo Verde Contabilidade");
+    escritorioRepository.saveAndFlush(escritorio);
+    ask("campoverde.agroconia.com.br", CHAVE).andExpect(status().isOk());
+    escritorio = escritorioRepository.findById(escritorioB).orElseThrow();
+    escritorio.setCnpj("11222333000181");
+    escritorioRepository.saveAndFlush(escritorio);
+    ask("campoverde.agroconia.com.br", CHAVE).andExpect(status().isNotFound());
+    publico("campoverde").andExpect(status().isNotFound());
   }
 
   @Test
