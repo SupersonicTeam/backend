@@ -156,6 +156,38 @@ class OrquestradorServiceTest {
   }
 
   @Test
+  @DisplayName("#493: conversa leve responde sem classificador nem rota, com o modelo fora do ar")
+  void conversaLeveSemModelo() {
+    disponibilidade.registrarFalha();
+
+    ResultadoOrquestracao r = orquestrador.responder("ola ceres", contexto, rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.CONVERSA_LEVE);
+    assertThat(r.texto()).startsWith("Olá!");
+    assertThat(r.citacoes()).isEmpty();
+    assertThat(r.atalhos()).isEmpty();
+    assertThat(r.exibirFontes()).isFalse();
+    assertThat(r.modoFallback()).isFalse();
+    assertThat(rotasAvisadas).containsExactly(Intencao.FORA_DE_ESCOPO);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("CONVERSA_LEVE");
+    verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#493: saudação com assunto segue o fluxo normal e passa pelo classificador")
+  void saudacaoComAssuntoSegueOFluxo() {
+    classificarComo(Intencao.DADOS, 0.9);
+    when(rotaDados.responder(anyString(), any())).thenReturn(ResultadoRota.aceita("R$ 10,00"));
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "oi, quanto vendi de soja?", contexto, rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.DADOS);
+    verify(classificador).classificar(anyString(), any());
+  }
+
+  @Test
   @DisplayName("#270: classificacao cortada pelo teto sai como fora de escopo, auditada como cortada")
   void classificacaoCortadaAuditadaComoCortada() {
     when(classificador.classificar(anyString(), any())).thenAnswer(chamada -> {

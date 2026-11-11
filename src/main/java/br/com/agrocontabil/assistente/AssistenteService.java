@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente;
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos;
+import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.ResultadoOrquestracao;
@@ -413,12 +414,13 @@ public class AssistenteService implements DisposableBean {
   }
 
   /**
-   * Reserva da cota (#166). Atalho fixo da tela (#343) não chama o modelo e custa zero crédito:
-   * não reserva o teto nem recebe 429 {@code LIMITE_USO_ASSISTENTE} com a semana esgotada. A
-   * reserva inativa faz o acerto e o estorno não mexerem na cota.
+   * Reserva da cota (#166). Atalho fixo da tela (#343) e conversa leve (#493) não chamam o modelo
+   * e custam zero crédito: não reservam o teto nem recebem 429 {@code LIMITE_USO_ASSISTENTE} com a
+   * semana esgotada. A reserva inativa faz o acerto e o estorno não mexerem na cota. O
+   * orquestrador e a reserva usam a mesma função estática sobre o mesmo texto.
    */
   private CotaUsoPorta.ReservaCota reservar(UUID produtorId, String pergunta) {
-    if (AtalhosFixos.ehAtalho(pergunta)) {
+    if (AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)) {
       return new CotaUsoPorta.ReservaCota(produtorId, null, 0, false);
     }
     return cota.reservar(produtorId, modeloLinguagem.identificacao());

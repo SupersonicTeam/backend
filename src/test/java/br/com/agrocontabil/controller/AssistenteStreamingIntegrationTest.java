@@ -172,6 +172,23 @@ class AssistenteStreamingIntegrationTest {
   }
 
   @Test
+  @DisplayName("#493: despedida no SSE: rota, resposta e fim, sem o modelo")
+  void despedidaNoStreaming() throws Exception {
+    List<Evento> eventos = eventos(stream(produtorA, "tchau").body());
+
+    assertThat(eventos).extracting(Evento::nome).containsExactly("rota", "resposta", "fim");
+    assertThat(eventos.get(0).dados().path("rota").asText()).isEqualTo("FORA_DE_ESCOPO");
+    assertThat(eventos.get(1).dados().path("resposta").asText()).isNotBlank()
+        .doesNotContain("�");
+    assertThat(eventos.get(1).dados().path("atalhos")).isEmpty();
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.CONVERSA_LEVE));
+  }
+
+  @Test
   @DisplayName("#357: os acentos do atalho chegam corretos pelo SSE (UTF-8 no fio)")
   void atalhoComAcentoNoStreaming() throws Exception {
     HttpResponse<String> resposta = stream(produtorA, "O que muda para mim com o IBS e o CBS?");

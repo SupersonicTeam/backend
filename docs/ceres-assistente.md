@@ -327,7 +327,9 @@ dar zero.
 O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada decidiu**. Desde a #265
 (Fase 2) a implementação é o `ClassificadorEmCamadas`, da camada mais barata para a mais cara:
 
-1. **`FiltroInjecao`** (no orquestrador, antes de tudo): injeção → `FORA_DE_ESCOPO`.
+0. **`AtalhosFixos`** e **`ConversaLeve`** (no orquestrador, antes de tudo; ver abaixo): sem
+   classificador e sem modelo.
+1. **`FiltroInjecao`** (no orquestrador): injeção → `FORA_DE_ESCOPO`.
 2. **`RegrasClassificacao`**: só decide com **sinal de um lado só**, e só com âncora do domínio.
    Termo de lei **da reforma ou do Funrural** (IBS, CBS, split payment, Funrural, crédito presumido,
    Anexo, LC 214, regime regular...) sem marcador de dados, sem produto específico e sem quantia ou
@@ -371,6 +373,7 @@ O `OrquestradorService` decide:
 | `LEGISLACAO` | RAG + `ValidadorCitacao` |
 | `MISTO` | as duas, geradas e validadas **separadamente** e depois juntadas |
 | `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo |
+| conversa leve (#493, antes do classificador) | `FORA_DE_ESCOPO` com o texto montado pela `ConversaLeve`, sem modelo |
 
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com
 números da lei, e nenhum validador saberia de onde cada um veio.
@@ -389,6 +392,20 @@ valendo). Camada `ATALHO_FIXO` na auditoria; nos dois de dados, a função conta
 por similaridade, saía "não encontrei fundamento legal" (`CITACAO_INVALIDA`, 19 e 42 s). Pergunta
 parecida, mas não igual, segue o fluxo normal. As frases dos atalhos ficam fora do prompt do
 classificador e das descrições das funções (o gabarito as mede: T01–T03).
+
+**Conversa leve, logo depois dos atalhos (#493).** Saudação ("ola ceres", "como vc esta?"),
+agradecimento, despedida, reconhecimento ("ok"), pedido de apresentação ("quem é você?",
+"tenho uma dúvida") e pedido de seguimento ("tem certeza?") são reconhecidos pela
+`ConversaLeve`: lista fechada, mensagem inteira, normalizada como os atalhos, com as letras
+repetidas juntadas e sem o vocativo "ceres", até 12 palavras. Qualquer palavra fora da lista
+("oi, quanto vendi de soja?") segue o fluxo normal. A resposta é montada pelo backend: cumprimento
+do período ou "Olá!", "Tudo certo por aqui, obrigada." quando perguntam como ela está, a abertura
+do tipo e uma das variantes do corpo, escolhida pelo `hashCode` da mensagem normalizada
+(determinística). O seguimento diz que a Ceres ainda não lê as mensagens anteriores. Rota
+`FORA_DE_ESCOPO`, sem modelo, sem disjuntor e fora da cota, como os atalhos; camada e desfecho
+`CONVERSA_LEVE` na auditoria. Roda antes do `FiltroInjecao`: a lista é fechada e nenhuma
+expressão dela tem forma de injeção (testado). A avaliação conta a recusa pela rota, e o
+`CONVERSA_LEVE` não entra entre os desfechos de recusa.
 
 **O atalho de legislação explicado (#347).** O texto curado da #343 (quatro itens) ficou
 engessado para o produtor. O `AtalhoReformaTributaria` responde agora com o texto explicado do

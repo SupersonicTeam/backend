@@ -191,6 +191,48 @@ class AssistenteCotaIntegrationTest {
   }
 
   @Test
+  @DisplayName("#493: conversa leve sem saldo responde: sem modelo, não reserva nem gasta crédito")
+  void conversaLeveSemSaldoResponde() throws Exception {
+    gastar(70);
+
+    perguntar("/api/assistente/chat", "Obrigado, Ceres!")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("FORA_DE_ESCOPO"))
+        .andExpect(jsonPath("$.modoFallback").value(false))
+        .andExpect(jsonPath("$.atalhos").isEmpty());
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    UsoSemanalAssistente uso = uso();
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(70);
+    assertThat(uso.getCreditosReservados()).isZero();
+  }
+
+  @Test
+  @DisplayName("#493: conversa leve sem saldo no streaming: o stream abre e responde, sem 429")
+  void conversaLeveSemSaldoNoStream() throws Exception {
+    gastar(70);
+
+    org.springframework.test.web.servlet.MvcResult inicio = mockMvc.perform(
+            post("/api/assistente/chat/stream")
+                .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .content("{\"pergunta\":\"Obrigado, Ceres!\"}"))
+        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request()
+            .asyncStarted())
+        .andReturn();
+    inicio.getAsyncResult(10_000);
+
+    assertThat(inicio.getResponse().getContentAsString())
+        .contains("event:rota").contains("FORA_DE_ESCOPO").contains("event:resposta")
+        .contains("event:fim").doesNotContain("LIMITE_USO_ASSISTENTE");
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    UsoSemanalAssistente uso = uso();
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(70);
+    assertThat(uso.getCreditosReservados()).isZero();
+  }
+
+  @Test
   @DisplayName("Sem saldo no streaming: 429 JSON antes de o stream abrir")
   void semSaldoAntesDoStream() throws Exception {
     gastar(70);

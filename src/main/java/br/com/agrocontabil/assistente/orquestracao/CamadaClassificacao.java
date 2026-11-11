@@ -10,6 +10,11 @@ public enum CamadaClassificacao {
    * {@code VARCHAR(20)} da coluna (changeSet 0050), sem changeSet novo.
    */
   ATALHO_FIXO,
+  /**
+   * {@link ConversaLeve}: saudação, agradecimento, despedida, reconhecimento, apresentação ou
+   * seguimento, pela lista fechada (#493). Cabe no {@code VARCHAR(20)}, sem changeSet.
+   */
+  CONVERSA_LEVE,
   /** {@link FiltroInjecao}: forma de prompt injection → fora de escopo. */
   FILTRO_INJECAO,
   /** {@link RegrasClassificacao}: termo inequívoco de um lado só. */

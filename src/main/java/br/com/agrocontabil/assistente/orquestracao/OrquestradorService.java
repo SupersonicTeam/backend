@@ -115,6 +115,12 @@ public class OrquestradorService {
     if (atalho.isPresent()) {
       return responderAtalho(atalho.get(), pergunta, contexto, aoDecidirRota);
     }
+    // Conversa leve (#493): saudacao, agradecimento, despedida... sem modelo e sem credito. Lista
+    // fechada sem forma de injecao: roda antes do FiltroInjecao, como o atalho.
+    Optional<ConversaLeve.Resposta> conversa = ConversaLeve.reconhecer(pergunta);
+    if (conversa.isPresent()) {
+      return responderConversaLeve(conversa.get(), contexto, aoDecidirRota);
+    }
     ClassificacaoIntencao classificacao = classificar(pergunta, contexto);
     Intencao rota = classificacao.intencao();
     aoDecidirRota.accept(rota);
@@ -152,6 +158,20 @@ public class OrquestradorService {
         : deRota(Intencao.DADOS, rotaDados.responderAtalho(atalho.funcao(), pergunta, contexto));
     resultado = textosDoBackend.aplicar(resultado, contexto);
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
+  }
+
+  /**
+   * Conversa leve (#493): texto fixo do backend, sem modelo, sem o disjuntor e sem as camadas de
+   * texto do backend (não há dado nem citação). Rota {@code FORA_DE_ESCOPO}, como o contrato já
+   * define para o texto fixo de apresentação; camada e desfecho {@code CONVERSA_LEVE} na auditoria.
+   */
+  private static ResultadoOrquestracao responderConversaLeve(ConversaLeve.Resposta resposta,
+      ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota) {
+    contexto.registrarCamadaClassificacao(CamadaClassificacao.CONVERSA_LEVE.name());
+    aoDecidirRota.accept(Intencao.FORA_DE_ESCOPO);
+    contexto.verificarAtiva();
+    return new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO, resposta.texto(),
+        DesfechoInteracao.CONVERSA_LEVE, List.of(), false);
   }
 
   /**

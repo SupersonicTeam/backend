@@ -307,6 +307,14 @@ class RevisaoTest(Base):
         self.assertIn("| EMBEDDING | LLM | PALAVRAS_CHAVE |", texto)
         self.assertIn("| Ceres 2.0 · `m-ref` | 0% | 0% | 90% | 0% | 0% | 10% |", texto)
 
+    def test_camada_de_conversa_leve_ganha_coluna(self):
+        arquivo = self.pasta / "ceres-2--m-ref" / "ceres-2--m-ref.json"
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados["rodadas"][0]["resultados"][0]["execucao"]["camadaClassificacao"] = "CONVERSA_LEVE"
+        arquivo.write_text(json.dumps(dados), encoding="utf-8")
+        texto = rel.gerar(self.pasta)
+        self.assertIn("| ATALHO_FIXO | CONVERSA_LEVE | FILTRO_INJECAO |", texto)
+
 
 class TemasTest(Base):
     def test_acerto_por_tema_no_recorte_e_no_conjunto(self):

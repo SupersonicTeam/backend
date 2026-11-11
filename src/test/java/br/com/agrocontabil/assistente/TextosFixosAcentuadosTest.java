@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.SecaoResposta.Assunto;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.ferramentas.TextosDosTemplates;
+import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.FundamentoRetencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
 import br.com.agrocontabil.assistente.orquestracao.TextoReformaTributaria;
@@ -112,6 +113,8 @@ public class TextosFixosAcentuadosTest {
     textos.put("OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL",
         OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
     textos.put("PromptsCeres.FORA_DE_ESCOPO", PromptsCeres.FORA_DE_ESCOPO);
+    // Conversa leve (#493): cada variante e cada parte fixa da resposta.
+    ConversaLeve.textos().forEach((nome, texto) -> textos.put("ConversaLeve " + nome, texto));
     textos.put("ValidadorCitacao.SEM_FUNDAMENTO", ValidadorCitacao.SEM_FUNDAMENTO);
     // Textos de erro que o produtor lê (ErrorDetail.message dos erros da Ceres).
     for (DomainException erro : List.<DomainException>of(
@@ -197,7 +200,8 @@ public class TextosFixosAcentuadosTest {
         .anyMatch(n -> n.startsWith("resumo"))
         .anyMatch(n -> n.startsWith("erro ASSISTENTE_OCUPADO"))
         .contains("RotaDados.MENSAGEM_SEM_FUNCAO", "siglas explicadas",
-            "ModoFallback.SEM_MODELO_LEI", "PromptsCeres.FORA_DE_ESCOPO");
+            "ModoFallback.SEM_MODELO_LEI", "PromptsCeres.FORA_DE_ESCOPO")
+        .anyMatch(n -> n.startsWith("ConversaLeve SAUDACAO"));
     assertThat(textos.size()).isGreaterThan(150);
     // Os textos não são vazios: um template que devolve vazio não prova nada.
     textos.forEach((nome, texto) -> assertThat(texto).as(nome).isNotBlank());

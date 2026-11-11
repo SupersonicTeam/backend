@@ -267,6 +267,26 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("#493: conversa leve sem o modelo: campos vazios e CONVERSA_LEVE na auditoria")
+  void conversaLeve() throws Exception {
+    perguntar(produtorA, "Olá, Ceres!")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("FORA_DE_ESCOPO"))
+        .andExpect(jsonPath("$.resposta").value(org.hamcrest.Matchers.startsWith("Olá!")))
+        .andExpect(jsonPath("$.citacoes").isEmpty())
+        .andExpect(jsonPath("$.fontesDados").isEmpty())
+        .andExpect(jsonPath("$.atalhos").isEmpty())
+        .andExpect(jsonPath("$.modoFallback").value(false));
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement().satisfies(i -> {
+          assertThat(i.getCamadaClassificacao()).isEqualTo("CONVERSA_LEVE");
+          assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.CONVERSA_LEVE);
+        });
+  }
+
+  @Test
   @DisplayName("#257/#343: atalho 'este mes' = atraso + a vencer ate o fim do mes, com os "
       + "subtotais da funcao, pelo template e sem o modelo (ele esta fora do ar)")
   void esteMesComAtrasadas() throws Exception {
