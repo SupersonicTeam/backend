@@ -15,6 +15,7 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(AQUI))
+import continuidade as ct  # noqa: E402
 import validar_conjunto as vc  # noqa: E402
 
 TESTE, DEV = AQUI / "conversas-continuidade-teste.json", AQUI / "conversas-continuidade-dev.json"
@@ -49,8 +50,8 @@ class ConjuntoGravado(unittest.TestCase):
         self.assertIn("50 conversas, 0 problema(s)", saida.getvalue())
 
     def test_versoes_e_partes(self):
-        self.assertEqual(carregar(TESTE)["versao"], "continuidade-v1-teste")
-        self.assertEqual(carregar(DEV)["versao"], "continuidade-v1-dev")
+        self.assertEqual(carregar(TESTE)["versao"], "continuidade-v2-teste")
+        self.assertEqual(carregar(DEV)["versao"], "continuidade-v2-dev")
 
     def test_teste_cobre_toda_categoria_obrigatoria(self):
         categorias = {c["categoria"] for c in carregar(TESTE)["conversas"]}
@@ -110,6 +111,13 @@ class Invalidos(unittest.TestCase):
         conjunto = copy.deepcopy(self.base)
         conjunto["conversas"].append(copy.deepcopy(conjunto["conversas"][0]))
         self.assertTrue(any("id repetido" in e for e in self.erros(conjunto)))
+
+    def test_regex_com_backspace(self):
+        # Na v1, "\b" sem escapar no JSON virou backspace e a edição do t-lei-07 nunca casaria.
+        def estraga(c):
+            c["turnos"][0]["edicoes"][0]["regex"] = "\bA empresa adquirente"
+        erros = self.mudar("t-lei-07", estraga)
+        self.assertTrue(any("caractere de controle" in e for e in erros), erros)
 
     def test_par_real_sem_exigir(self):
         erros = self.mudar("t-dados-03", lambda c: c["turnos"][0].pop("exigir"))
@@ -225,19 +233,51 @@ class FatosEAdesao(unittest.TestCase):
 
     def test_premissa_falsa_de_numero(self):
         fatos = esperado_de(self.teste, "t-lei-08", 1)["fatos"]
-        self.assertEqual(self.classificar(fatos, "Sim, a soja tem redução de 40%."), "errada")
+        self.assertEqual(self.classificar(fatos, "Sim, esses produtos têm redução de 40%."),
+                         "errada")
         self.assertEqual(self.classificar(
             fatos, "Não. A redução é de 60% (sessenta por cento) (LC 214/2025, art. 137)."),
             "certa")
         self.assertEqual(self.classificar(
-            fatos, "Sim, a soja tem redução, mas de 60%, não de 40%."), "certa")
+            fatos, "Sim, esses produtos têm redução, mas de 60%, não de 40%."), "certa")
 
     def test_premissa_falsa_de_polaridade(self):
         fatos = esperado_de(self.teste, "t-lei-09", 1)["fatos"]
-        self.assertEqual(self.classificar(fatos, "Sim, fertilizantes são isentos."), "errada")
+        self.assertEqual(self.classificar(fatos, "Sim, os produtos in natura são isentos."),
+                         "errada")
         self.assertEqual(self.classificar(
-            fatos, "Não. Fertilizantes não são isentos: têm redução de 60% (art. 138)."),
+            fatos, "Não. Os produtos in natura não são isentos: a redução é de 60% (art. 137)."),
             "certa")
+        # Na v2, negar a isenção com outras palavras também é certo (por isso só "^sim").
+        self.assertEqual(self.classificar(
+            fatos, "Não. Os trechos de lei não dizem que esses produtos são isentos. Eles dizem "
+                   "que as alíquotas ficam reduzidas em 60%."), "certa")
+
+    def test_troca_de_quem_recolhe(self):
+        par = next(c for c in self.teste["conversas"] if c["id"] == "t-lei-07")["turnos"][0]
+        resposta = ("Sim. A contribuição do produtor rural pessoa física é recolhida pelo "
+                    "adquirente, consignatário ou cooperativa, que ficam sub-rogados nas "
+                    "obrigações do produtor (Lei 9.528/1997, art. 6º, parágrafo único, inciso I).")
+        self.assertEqual(self.classificar(par["exigir"]["fatos"], resposta), "certa")
+        carga = {"rota": "LEGISLACAO", "lei": {"d": "CONFIRMADA", "r": [0, len(resposta)]}}
+        nova, _, motivo = ct.aplicar_edicoes(resposta, carga, par["edicoes"])
+        self.assertEqual(motivo, "")
+        self.assertIn("recolhida pelo próprio produtor, que ficam", nova)
+        self.assertNotIn("adquirente", nova)
+        outra = "Sim. O adquirente recolhe a contribuição, como a empresa adquirente deve fazer."
+        nova, _, motivo = ct.aplicar_edicoes(
+            outra, {"lei": {"d": "CONFIRMADA", "r": [0, len(outra)]}}, par["edicoes"])
+        self.assertEqual((motivo, nova), (
+            "", "Sim. O próprio produtor recolhe a contribuição, como o próprio produtor deve "
+                "fazer."))
+        # Formas contraídas e a exceção do inciso II (venda ao adquirente no exterior).
+        outra = ("Sim. É recolhida pela empresa adquirente, em nome da empresa adquirente. Na venda "
+                 "ao adquirente no exterior, o próprio produtor recolhe.")
+        nova, _, motivo = ct.aplicar_edicoes(
+            outra, {"lei": {"d": "CONFIRMADA", "r": [0, len(outra)]}}, par["edicoes"])
+        self.assertEqual((motivo, nova), (
+            "", "Sim. É recolhida pelo próprio produtor, em nome do próprio produtor. Na venda "
+                "ao adquirente no exterior, o próprio produtor recolhe."))
 
     def test_adesao_ao_numero_do_produtor(self):
         sem_regex = esperado_de(self.teste, "t-lei-10", 2, "certa")["sem_regex"]

@@ -1263,6 +1263,25 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0060 converte o uso da Ceres para 1 credito por token (issue #511)")
+  void changeSet0060ConverteCreditosDaCeres() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    Integer aplicado = jdbc.queryForObject("""
+        SELECT count(*) FROM databasechangelog WHERE id = '0060-cota-credito-por-token'
+        """, Integer.class);
+    // A conversao multiplica por 1000 colunas BIGINT: sem estouro com qualquer plano realista.
+    List<String> tipos = jdbc.queryForList("""
+        SELECT data_type FROM information_schema.columns
+         WHERE table_name = 'assistente_uso_semanal'
+           AND column_name IN ('creditos_consumidos', 'creditos_reservados')
+        """, String.class);
+
+    assertThat(aplicado).isEqualTo(1);
+    assertThat(tipos).containsOnly("bigint").hasSize(2);
+  }
+
+  @Test
   @DisplayName("changeSet 0023 cria a tabela shedlock com o contrato do ShedLock (issue #87)")
   void changeSet0023CriaTabelaShedlock() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);

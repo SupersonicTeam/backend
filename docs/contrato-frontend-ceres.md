@@ -20,7 +20,7 @@ A cada pergunta o backend classifica a intenção e escolhe uma **rota**:
 | `DADOS` | Pergunta sobre os dados do produtor no sistema (compras, notas, apuração de IBS/CBS, créditos, guias e vencimentos) | Texto + `fontesDados` (as consultas feitas) |
 | `LEGISLACAO` | Pergunta sobre a lei (EC 132/2023, LC 214/2025, LC 227/2026) | Texto + `citacoes` (dispositivo, link oficial e trecho) |
 | `MISTO` | Precisa dos dados **e** da regra ("tenho direito à redução nessas compras?") | As duas coisas |
-| `FORA_DE_ESCOPO` | Qualquer outro assunto, ou intenção incerta; e, desde a #493, a conversa leve (saudação, agradecimento, despedida, "ok", "quem é você?", "tem certeza?"), respondida pelo backend sem modelo e sem crédito | Texto fixo de recusa (desde a #494: a gentil, que diz o que a Ceres faz e dá exemplos, ou a firme, sem exemplo, para tentativa de injeção e pedido sobre outra pessoa), ou a resposta da conversa leve (com `atalhos`, `citacoes` e `fontesDados` vazios e `modoFallback: false`) |
+| `FORA_DE_ESCOPO` | Qualquer outro assunto, ou intenção incerta; e, desde a #493, a conversa leve (saudação, agradecimento, despedida, "ok", "quem é você?", "tem certeza?"), respondida pelo backend sem modelo, pagando só a leitura da mensagem (#511) | Texto fixo de recusa (desde a #494: a gentil, que diz o que a Ceres faz e dá exemplos, ou a firme, sem exemplo, para tentativa de injeção e pedido sobre outra pessoa), ou a resposta da conversa leve (com `atalhos`, `citacoes` e `fontesDados` vazios e `modoFallback: false`) |
 
 Garantias do backend que a tela deve **mostrar**, não esconder:
 
@@ -309,17 +309,27 @@ envelope.
 ### Barra de uso: `GET /api/assistente/uso` (#166)
 
 ```json
-{ "plano": "padrao", "habilitada": true, "creditosSemana": 1000, "consumidos": 120,
-  "restantes": 880, "renovaEm": "2026-10-19T00:00:00-03:00" }
+{ "plano": "padrao", "habilitada": true, "creditosSemana": 1000000, "consumidos": 120000,
+  "restantes": 880000, "renovaEm": "2026-10-19T00:00:00-03:00", "percentualUsado": 12 }
 ```
 
+- **Mostre só o `percentualUsado` (#511)**, um inteiro de 0 a 100, como o Claude e outras IAs
+  mostram o uso: nunca créditos nem tokens. A regra é do backend: ⌈consumidos ÷ creditosSemana ×
+  100⌉, então qualquer uso aparece como pelo menos 1%; no máximo **99** enquanto houver saldo;
+  **100** só sem saldo (`restantes` = 0); **0** só sem uso nenhum. Os campos em créditos seguem no
+  JSON para compatibilidade e suporte.
+
 - A semana vai de **segunda 00:00 a domingo 23:59** (Brasília) e a sobra **não acumula**.
-- Mostre **créditos**, nunca tokens. Uma pergunta simples custa poucos créditos; uma que consulta
-  várias funções e trechos de lei custa mais.
-- `restantes` já desconta as perguntas em andamento. Uma pergunta só começa se houver saldo para
-  o teto dela (hoje 32 créditos com os padrões; eram 73 até a revisão da #166 depois da #270); o
-  que sobra do teto volta no fim. Uma pergunta que
-  falha não custa nada, e no modo fallback (sem modelo) também não.
+- Desde a #511 a unidade dos créditos é **1 crédito por token** (números inteiros maiores,
+  mesmos campos, sem quebra de contrato): um "olá" custa poucos créditos, uma pergunta que consulta
+  funções e trechos de lei custa milhares. Mensagens ao usuário, como a do 429, não citam número de
+  créditos.
+- **Toda pergunta tem custo (#511):** os atalhos da tela, a conversa leve, a recusa pelo filtro e o
+  modo fallback pagam a leitura da mensagem; sem saldo para ela, também recebem **429
+  `LIMITE_USO_ASSISTENTE`**.
+- `restantes` já desconta as perguntas em andamento. Uma pergunta de modelo só começa se houver
+  saldo para o teto dela (hoje 31.744 créditos com os padrões); o que sobra do teto volta no fim.
+  Uma pergunta que falha por erro do servidor não custa nada.
 - `habilitada: false`: a cota está desligada (demonstração) e nada é bloqueado.
 
 ---

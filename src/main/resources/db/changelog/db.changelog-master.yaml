@@ -124,3 +124,5 @@ databaseChangeLog:
       file: db/changelog/changes/0058-carteira-vinculo-encerramento.xml
   - include:
       file: db/changelog/changes/0059-escritorio-slug.xml
+  - include:
+      file: db/changelog/changes/0060-cota-credito-por-token.xml

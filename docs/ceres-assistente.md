@@ -418,9 +418,10 @@ números da lei, e nenhum validador saberia de onde cada um veio.
 "Quanto eu tenho que pagar este mês?", "Quando vence a minha próxima guia?" e "O que muda para mim
 com o IBS e o CBS?" — são reconhecidas pelo **texto normalizado exato** (`AtalhosFixos`, com a
 normalização das `RegrasClassificacao`: sem acento, caixa nem pontuação) e respondem **sem nenhuma
-chamada ao modelo**, inclusive com ele fora do ar, e ficam fora da cota (#166): o
-`AssistenteService` não reserva o teto para eles, então nem gastam crédito nem recebem 429
-`LIMITE_USO_ASSISTENTE` com a semana esgotada (o rate limit do chat e a vaga do bulkhead continuam
+chamada ao modelo**, inclusive com ele fora do ar. Desde a #511 pagam só a **leitura da
+mensagem** (veja "Crédito por token e custo de leitura"): o `AssistenteService` reserva esse
+custo, não o teto de uma pergunta de modelo, e sem saldo para ele o 429
+`LIMITE_USO_ASSISTENTE` vale como nas outras (o rate limit do chat e a vaga do bulkhead continuam
 valendo). Camada `ATALHO_FIXO` na auditoria; nos dois de dados, a função conta em
 `chamadas_funcao`. As de dados chamam a função direto (`vencimentosDoMes`,
 `proximosVencimentos`) por `RotaDados.responderAtalho`, sem tool calling, e saem pelo template da
@@ -438,7 +439,7 @@ repetidas juntadas e sem o vocativo "ceres", até 12 palavras. Qualquer palavra 
 do período ou "Olá!", "Tudo certo por aqui, obrigada." quando perguntam como ela está, a abertura
 do tipo e uma das variantes do corpo, escolhida pelo `hashCode` da mensagem normalizada
 (determinística). O seguimento diz que a Ceres ainda não lê as mensagens anteriores. Rota
-`FORA_DE_ESCOPO`, sem modelo, sem disjuntor e fora da cota, como os atalhos; camada e desfecho
+`FORA_DE_ESCOPO`, sem modelo e sem disjuntor, pagando só a leitura, como os atalhos; camada e desfecho
 `CONVERSA_LEVE` na auditoria. Roda antes do `FiltroInjecao`: a lista é fechada e nenhuma
 expressão dela tem forma de injeção (testado). A avaliação conta a recusa pela rota, e o
 `CONVERSA_LEVE` não entra entre os desfechos de recusa.
@@ -463,7 +464,8 @@ Funrural, mais as dos produtos), conferidas na base em 2026-11-05 (os §§ 1º, 
 a, 5º, 6º e 7º do art. 138, sobre o registro e o diferimento dos insumos do Anexo IX, pela consulta
 à base da VPS); o `TextoReformaTributariaTest`
 confere texto × citações contra o fixture `ceres/atalho-reforma-trechos.json`, copiado da base.
-Parte do perfil que falha sai do texto, e o resto segue. Continua sem modelo e fora da cota.
+Parte do perfil que falha sai do texto, e o resto segue. Continua sem modelo, pagando só a
+leitura da mensagem (#511).
 
 **Glossário do produtor (#267, recorte determinístico).** `assistente/glossario-produtor.yml` é a
 fonte única das siglas e termos que o produtor não precisa conhecer (IBS, CBS, PIS, Cofins, ICMS,
@@ -826,7 +828,8 @@ teto = ⌈(3 × teto-tokens-entrada-por-chamada × peso-entrada
         × maior fator ÷ tokens-por-credito⌉
 ```
 
-Com os padrões: 3 × 8.192 + (256 + 512 + 1.024) × 4 = 31.744 → **32 créditos** (eram 73). O ganho é
+Com os padrões: 3 × 8.192 + (256 + 512 + 1.024) × 4 = 31.744 → **31.744 créditos** desde a #511
+(eram 32 com 1.000 tokens por crédito, e 73 antes da revisão). O ganho é
 ~2,3×, não 3–4×: a entrada (24.576 dos 31.744 ponderados) passou a dominar a reserva. Reduzi-la exige
 tetos de entrada por tipo de chamada, que dependem do maior `prompt_eval_count` medido na VPS (a
 classificação tem ~700 tokens, a lei não tem teto de tamanho para os trechos); sem medição, nada
@@ -850,6 +853,32 @@ mudou ali.
   um laço em volta de um deles passaria (revisão de código).
 - **Subida:** com a cota ligada, o teto (com o maior fator) acima do menor plano impede a subida — a
   mesma fórmula do `reservar`, então "sobe" quer dizer "toda pergunta cabe num plano vazio".
+
+### Crédito por token e custo de leitura (#511)
+
+Decisão do Murillo (2026-11-11): "toda pergunta deve ter um custo ao cliente", "um olá vai custar
+menos que um 'quanto imposto devo'" e "1 crédito por token, tudo em números inteiros".
+
+- **Unidade:** `tokens-por-credito` = 1. A fórmula é a mesma, `⌈(entrada × peso-entrada + saída ×
+  peso-saida) × fator⌉`, arredondada para cima só no total da pergunta. As cotas subiram na mesma
+  proporção: produtor 1.000.000 e escritório 5.000.000 por semana (`PlanoUsoPorConfiguracao` lê as
+  mesmas propriedades). O changeSet **0060** converteu o uso gravado (consumido e reservado, todas
+  as semanas) × 1000, sem ganho nem perda de saldo.
+- **Leitura:** a pergunta que não chama o modelo (atalho da tela, conversa leve, recusa pelo
+  filtro de injeção, modo fallback) paga a leitura da mensagem, `⌈tokens × peso-entrada × fator⌉`.
+  Os tokens são uma estimativa local e determinística, sem chamar o provedor:
+  `ContextoAssistente.tokensDaLeitura` = ⌈caracteres ÷ 4⌉, no mínimo 1 ("olá" = 1, "quanto
+  imposto devo?" = 5). Atalho e conversa leve reservam só esse custo
+  (`CotaUsoPorta.reservarLeitura`) e recebem 429 sem saldo para ele; as outras reservam o teto, e
+  o acerto, sem nenhuma chamada ao modelo, cobra a leitura.
+- **Com o modelo:** o consumo real das chamadas, que já inclui a mensagem, sem taxa extra.
+- **Na tela, só porcentagem:** o `GET /api/assistente/uso` traz `percentualUsado` (0 a 100,
+  `CotaUsoAssistenteService.percentualUsado`): ⌈consumidos ÷ creditosSemana × 100⌉, no máximo 99
+  com saldo, 100 só com `restantes` = 0 e 0 só sem uso. A tela não mostra créditos, e nenhuma
+  mensagem ao usuário, como a do 429, cita número de créditos.
+- **Demonstração:** o `CotaDemonstracaoCeres` deixa o Rogério com o teto de uma pergunta de modelo
+  mais 1.000 créditos de folga (`FOLGA_LEITURAS`), para saudações e atalhos não tirarem a primeira
+  pergunta; a segunda continua recebendo 429.
 
 ### Cancelamento pelo cliente cobra o que foi gasto (#499)
 

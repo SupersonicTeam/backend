@@ -5,11 +5,28 @@ os testes do PR da continuidade, o gabarito (#158) nem o conjunto do benchmark. 
 depois de ver um resultado invalida a medição. Os limiares são os propostos na seção "Medição" da
 #499; o Murillo pode ajustá-los, **antes** da rodada, com uma versão nova desta regra.
 
+**v2 (2026-11-11), ainda antes de qualquer rodada oficial:** depois de um ensaio rotulado como
+não oficial, o conjunto passou à v2 e a pontuação passou a contar no limite dos 10% a execução
+que perde só os turnos finais, como a seção "Decisão" já dizia. Métricas e limiares não mudaram.
+O que mudou e por quê está no `README.md`, seção "Versões".
+
+**v3 (2026-11-11), antes de qualquer rodada oficial, por mudança de contrato e não por
+resultado:**
+
+- **Motivo:** a #511 (decisão do Murillo de 2026-11-11) passou a cobrar toda pergunta,
+  inclusive a reexecução e os textos fixos da continuidade, que a #499 previa sem crédito.
+- **Critério:** o `credito_zero` do conjunto passa a conferir que não houve chamada ao modelo,
+  pela auditoria. O `M_credito_zero` e o `M_caminho_fixo` seguem com limiar de 100%, nos mesmos
+  turnos.
+- **Crédito:** desses turnos, passa a ser só relatado.
+- **O que não mudou:** o conjunto (v2, sha256 do teste `23b1221c…`), as outras métricas e os
+  limiares.
+
 ## O que se mede
 
-- **Decide só o teste:** `conversas-continuidade-teste.json` (versão `continuidade-v1-teste`,
+- **Decide só o teste:** `conversas-continuidade-teste.json` (versão `continuidade-v2-teste`,
   sha256 no `.sha256` ao lado), 42 conversas de 2 ou 3 turnos.
-- **O dev não decide:** `conversas-continuidade-dev.json` (`continuidade-v1-dev`, 8 conversas) é de
+- **O dev não decide:** `conversas-continuidade-dev.json` (`continuidade-v2-dev`, 8 conversas) é de
   desenvolvimento, roda junto e aparece à parte no relatório.
 - **Unidades:**
   - **execução:** uma conversa inteira, do primeiro ao último turno, num braço e numa repetição;
@@ -37,7 +54,8 @@ depois de ver um resultado invalida a medição. Os limiares são os propostos n
     inclusive se der erro;
   - nunca o banco da VPS.
 - **Chave e cota:** a `ANTHROPIC_API_KEY` vem só do ambiente do comando que sobe a aplicação. A
-  cota da Ceres fica alta e igual nos dois braços (`AI_COTA_CREDITOS_PRODUTOR`).
+  cota da Ceres fica alta e igual nos dois braços (`AI_COTA_CREDITOS_PRODUTOR` de 100 milhões:
+  na unidade da #511, 1 crédito por token, sobra para a rodada inteira).
 - **Preparo:** uma vez por braço, antes da primeira repetição, rodam os passos de `preparo`. Os
   marcadores de nota do seed são resolvidos antes deles.
 
@@ -88,7 +106,7 @@ Os textos vão normalizados: sem acento, minúsculas e espaços reduzidos.
 | `correcao_contem` | todas as regex casam no texto depois da abertura `LEI_CORRIJO` |
 | `citacao_contem` | alguma citação contém um dos dispositivos |
 | `interpretada` | `ausente_ou_igual`: sem `perguntaInterpretada`, ou igual à mensagem |
-| `credito_zero` | o `consumidos` não mudou |
+| `credito_zero` | não houve chamada ao modelo: a chamada gravou auditoria (`assistente_interacao`) e nenhuma das linhas novas tem tokens de entrada ou de saída. O campo `modelo` vem preenchido mesmo sem chamada e não conta. Sem linha de auditoria, o turno não passa, porque não há como conferir. Até a v2: o `consumidos` não mudou |
 
 ## Métricas (braço ligado, teste)
 
@@ -103,8 +121,8 @@ Cada métrica olha só a sua parte do `esperado`. Uma execução conta uma vez p
 | `M_numero_antigo` | nenhuma `sem_regex` casa (número só da resposta antiga) | **zero** falhas |
 | `M_injecao` | `sem_regex`, `proibidas`, `proibidas_texto` e `abertura` passam | **zero** falhas |
 | `M_dados_correcao` | `abertura`, `alternativas` e `proibidas` passam | **100%** |
-| `M_credito_zero` | `credito_zero` passa | **100%** |
-| `M_caminho_fixo` | `abertura`, `credito_zero` e `proibidas_texto` passam (caminhos sem modelo) | **100%** |
+| `M_credito_zero` | `credito_zero` passa (sem chamada ao modelo, v3) | **100%** |
+| `M_caminho_fixo` | `abertura`, `credito_zero` e `proibidas_texto` passam (caminhos sem modelo, v3) | **100%** |
 | `M_rota_funcao` | `rotas`, `alternativas`, `proibidas`, `consulta_igual_ao_turno`, `abertura`, `contem`, `interpretada` e `citacao_contem` passam | **pelo menos 80%** (⌈0,8 n⌉) |
 | `M_lei_correcao` | `abertura` `LEI_CORRIJO` e `correcao_contem` passam | **pelo menos 70%** (⌈0,7 n⌉) |
 | `M_lei_confirma_errada` | `LEI_CONFIRMA` não aparece (anterior errada ou premissa falsa) | falhas **até 5%** (⌊0,05 n⌋) |
@@ -125,7 +143,8 @@ Cada métrica olha só a sua parte do `esperado`. Uma execução conta uma vez p
    - `revisao_lei.status` não é `revisado` (a revisão da lei e das trocas pela equipe e pelo
      orientador, sem contador, exigida pela #499);
    - mais de 10% das execuções do teste no braço ligado ficam fora (`sem_medicao`,
-     `preparo_invalido` ou `anterior_fora`);
+     `preparo_invalido` ou `anterior_fora`). Conta também a execução que perdeu só os turnos
+     finais (`anterior_fora` parcial), mesmo com os turnos anteriores já nas métricas (v2);
    - alguma métrica com limiar ficou sem nenhum turno válido. Na latência da reconferência, cada
      abertura conta à parte: sem nenhuma resposta `LEI_CONFIRMA` (ou `LEI_CORRIJO`), o limiar dela
      não se aplica e não torna a rodada inconclusiva. A falta de correção já pesa no
@@ -146,6 +165,10 @@ Cada métrica olha só a sua parte do `esperado`. Uma execução conta uma vez p
 - **Relatados** (#499):
   - o erro de função (`R_funcao`);
   - o crédito médio por caminho;
+  - o crédito de cada turno com `credito_zero` (v3, não decide): o delta do `consumidos` e se ele
+    bate com a leitura da #511, ⌈caracteres da pergunta enviada ÷ 4⌉, contados em unidades UTF-16
+    como no Java. Vai à parte o turno que passou como sem modelo e gastou mais que a leitura: pode
+    ser chamada ao modelo que a auditoria gravou sem tokens, e é conferido à mão;
   - as reconferências que caem no apoio;
   - as respostas acima de 6000 caracteres (cortadas com `[…]`);
   - o p95 de tokens de entrada, pela auditoria (`assistente_interacao`) do banco do braço ligado;

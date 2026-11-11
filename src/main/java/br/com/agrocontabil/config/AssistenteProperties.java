@@ -447,11 +447,11 @@ public class AssistenteProperties implements InitializingBean {
     /** Nome do plano padrão mostrado ao usuário até as assinaturas existirem. */
     private String plano = "padrao";
 
-    /** Créditos por semana do produtor no plano padrão. */
-    private long creditosPorSemanaProdutor = 1000;
+    /** Créditos por semana do produtor no plano padrão (1 crédito por token desde a #511). */
+    private long creditosPorSemanaProdutor = 1_000_000;
 
     /** Créditos por semana do escritório de contabilidade (quando o contador puder perguntar). */
-    private long creditosPorSemanaEscritorio = 5000;
+    private long creditosPorSemanaEscritorio = 5_000_000;
 
     /** Peso do token de entrada. */
     private double pesoEntrada = 1.0;
@@ -459,8 +459,12 @@ public class AssistenteProperties implements InitializingBean {
     /** Peso do token de saída: custa mais nas APIs e é a parte lenta rodando local. */
     private double pesoSaida = 4.0;
 
-    /** Tokens ponderados que valem um crédito. */
-    private long tokensPorCredito = 1000;
+    /**
+     * Tokens ponderados que valem um crédito: 1 desde a #511 (decisão do Murillo, 2026-11-11, "1
+     * crédito por token, tudo em números inteiros"); o arredondamento para cima fica só no total
+     * da pergunta, então um "olá" custa menos que um "quanto imposto devo".
+     */
+    private long tokensPorCredito = 1;
 
     /** Fator do modelo quando ele não está em {@link #fatorPorModelo}. */
     private double fatorPadrao = 1.0;

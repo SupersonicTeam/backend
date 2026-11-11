@@ -331,6 +331,19 @@ public final class ContextoAssistente {
     return tokensEstimados.get();
   }
 
+  /**
+   * Tokens da leitura de uma mensagem (#511), para a pergunta que não chama o modelo: a mesma
+   * estimativa local e determinística do uso não informado ({@value #CARACTERES_POR_TOKEN}
+   * caracteres por token, no mínimo 1), sem chamar o provedor. "Olá" é 1 token; "quanto imposto
+   * devo?" são 5.
+   *
+   * @param mensagem mensagem do usuário
+   * @return tokens estimados
+   */
+  public static int tokensDaLeitura(String mensagem) {
+    return estimarTokens(mensagem == null ? 0 : mensagem.length());
+  }
+
   /** Tokens para uma quantidade de caracteres, arredondando para cima (no mínimo 1). */
   static int estimarTokens(long caracteres) {
     return (int) Math.max(1, (caracteres + CARACTERES_POR_TOKEN - 1) / CARACTERES_POR_TOKEN);

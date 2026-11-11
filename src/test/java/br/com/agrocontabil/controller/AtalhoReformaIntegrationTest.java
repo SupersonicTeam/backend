@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.Produto;
 import br.com.agrocontabil.assistente.porta.TratamentoProdutoPorta.TratamentoConsultado;
@@ -65,14 +66,15 @@ import org.springframework.web.context.WebApplicationContext;
  * Atalho "O que muda para mim com o IBS e o CBS?" pela API (#347): com a base de legislação
  * simulada pelo texto real dos dispositivos (o H2 não tem a base) e a tabela oficial simulada, o
  * produtor pessoa física que vendeu soja recebe o texto explicado com o produto dele, o Funrural
- * e as citações — sem chamar o modelo e com a cota da semana esgotada.
+ * e as citações — sem chamar o modelo e sem saldo para o teto de uma pergunta de modelo: paga só
+ * a leitura da mensagem (#511).
  */
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "app.assistente.cota.habilitada=true",
-    "app.assistente.cota.creditos-por-semana-produtor=100"})
+    "app.assistente.cota.creditos-por-semana-produtor=100000"})
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
 class AtalhoReformaIntegrationTest {
@@ -140,11 +142,11 @@ class AtalhoReformaIntegrationTest {
   }
 
   @Test
-  @DisplayName("Produtor pessoa fisica com venda de soja e a cota esgotada: 200 com o texto "
-      + "explicado, o produto dele, o Funrural e as citacoes, sem chamar o modelo")
+  @DisplayName("Produtor pessoa fisica com venda de soja e sem saldo para o teto: 200 com o "
+      + "texto explicado, o produto dele, o Funrural e as citacoes, sem modelo, pagando a leitura")
   void textoPersonalizadoSemModelo() throws Exception {
     usoRepository.save(UsoSemanalAssistente.builder()
-        .id(idDaSemana()).creditosConsumidos(50).atualizadoEm(OffsetDateTime.now(ZONE)).build());
+        .id(idDaSemana()).creditosConsumidos(70_000).atualizadoEm(OffsetDateTime.now(ZONE)).build());
 
     mockMvc.perform(post("/api/assistente/chat")
             .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())
@@ -171,7 +173,9 @@ class AtalhoReformaIntegrationTest {
     assertThat(modelo.promptsRecebidos()).isEmpty();
     assertThat(modelo.classificacoesRecebidas()).isEmpty();
     UsoSemanalAssistente uso = usoRepository.findById(idDaSemana()).orElseThrow();
-    assertThat(uso.getCreditosConsumidos()).isEqualTo(50);
+    // 70.000 + 31.744 de teto > 100.000: só a leitura da mensagem (1 crédito por token, #511).
+    assertThat(uso.getCreditosConsumidos()).isEqualTo(70_000
+        + ContextoAssistente.tokensDaLeitura("O que muda para mim com o IBS e o CBS?"));
     assertThat(uso.getCreditosReservados()).isZero();
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
         .singleElement().satisfies(i -> {

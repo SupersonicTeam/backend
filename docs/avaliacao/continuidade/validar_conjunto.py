@@ -25,7 +25,7 @@ sys.path.insert(0, str(AQUI.parent / "ceres-452"))
 import pontuar  # noqa: E402  (tokens de data, a mesma gramática da #452)
 
 ARQUIVOS = (AQUI / "conversas-continuidade-dev.json", AQUI / "conversas-continuidade-teste.json")
-VERSAO_BASE = "continuidade-v1"
+VERSAO_BASE = "continuidade-v2"
 
 # Categorias de conversa, pela seção "Medição" da #499.
 CATEGORIAS = {
@@ -163,6 +163,10 @@ class Erros:
 def _regex(erro: Erros, onde: str, padrao: object) -> None:
     if not isinstance(padrao, str) or not padrao:
         erro(onde, f"regex vazia ou não é texto: {padrao!r}")
+        return
+    if any(ord(c) < 32 for c in padrao):
+        # "\b" sem escapar no JSON vira backspace, não fronteira de palavra (achado da v1).
+        erro(onde, f"regex com caractere de controle (\\b no JSON precisa ser \\\\b): {padrao!r}")
         return
     try:
         re.compile(padrao)
