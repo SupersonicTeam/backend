@@ -230,6 +230,22 @@ ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS slug VARCHAR(32);
 ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS slug_alterado_em TIMESTAMP WITH TIME ZONE;
 ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS uq_escritorio_slug UNIQUE (slug);
 
+-- Tipo, telefone e endereco postal do escritorio (migration 0062, issue #519). Manter sincronizado
+-- com 0062-escritorio-tipo-e-termos.xml. Os ALTER cobrem o contexto em que o Hibernate ja criou a
+-- tabela sem eles (o default so vale no CREATE daqui; o codigo sempre grava o tipo).
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'PESSOAL' NOT NULL;
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS telefone VARCHAR(100);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_cep VARCHAR(8);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_logradouro VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_numero VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_complemento VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_bairro VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_codigo_municipio_ibge VARCHAR(7);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_municipio VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_uf VARCHAR(2);
+ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS ck_escritorio_tipo
+    CHECK (tipo IN ('PESSOAL', 'EMPRESARIAL'));
+
 CREATE TABLE IF NOT EXISTS escritorio_slug_anterior (
     slug           VARCHAR(32)               NOT NULL,
     escritorio_id  UUID,
@@ -528,6 +544,10 @@ CREATE TABLE IF NOT EXISTS credencial_usuario (
     updated_at             TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
 );
+
+-- Aceite dos termos (migration 0062, issue #519): nulos = aceite nao registrado.
+ALTER TABLE credencial_usuario ADD COLUMN IF NOT EXISTS termos_aceitos_em TIMESTAMP WITH TIME ZONE;
+ALTER TABLE credencial_usuario ADD COLUMN IF NOT EXISTS termos_versao VARCHAR(40);
 
 ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS uk_credencial_email UNIQUE (email);
 

@@ -36,9 +36,11 @@ public class PoliticaDadosService {
                 + "registro no CRC, informados no cadastro.",
             "Contato e acesso: e-mail (login) e telefone, que pode ser informado no cadastro; a "
                 + "senha e guardada so como hash.",
-            "Escritorio de contabilidade: nome e CNPJ, informados no cadastro do contador ou "
-                + "depois, pelo administrador. O nome do escritorio pode ser o do proprio "
-                + "contador.",
+            "Escritorio de contabilidade: o nome e, na conta empresarial, CNPJ, telefone e "
+                + "endereco, informados no cadastro do contador ou depois, pelo administrador. Na "
+                + "conta pessoal, o nome do escritorio e o do proprio contador.",
+            "Aceite dos termos de uso: quando foi dado e a versao aceita, registrados no "
+                + "cadastro.",
             "CPF/CNPJ, e-mail e telefone ficam cifrados no banco (AES-256).",
             "Endereco do produtor (emitente das notas fiscais).",
             "Dados fiscais: notas fiscais emitidas e importadas, guias, apuracoes de IBS/CBS.",

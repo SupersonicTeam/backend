@@ -45,6 +45,10 @@ um escritório que já existe. O subdomínio só abre depois do registro `A *` e
 (`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
 existindo, num escritório à parte.
 
+O escritório é **empresarial** (#519): tem equipe, CNPJ, telefone e endereço postal (Rua Parana,
+1200, Sala 3, Centro, Cascavel/PR). Na VPS já semeada, o changeSet 0062 o marca como empresarial
+(tem CNPJ), mas o telefone e o endereço postal só chegam com o reset, como o endereço próprio.
+
 O escritório tem três **modelos de pedido de documento** (#517): extrato bancário do mês,
 comprovante de pagamento do Funrural e contrato de arrendamento. Ao contrário do resto do seed, eles
 chegam à VPS na subida, sem reset: o seed cria os três quando o escritório da demonstração não tem

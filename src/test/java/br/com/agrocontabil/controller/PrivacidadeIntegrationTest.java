@@ -94,11 +94,12 @@ class PrivacidadeIntegrationTest {
         .andExpect(jsonPath("$.controlador").value("GWNext"))
         .andExpect(jsonPath("$.contatoEncarregado").value("contato@gwnext.com.br"))
         .andExpect(jsonPath("$.versao").value("2026-11-11"))
-        // CRC, telefone e o escritorio passaram a ser coletados no cadastro (#519).
+        // CRC, telefones, dados do escritorio e o aceite dos termos vem do cadastro (#519).
         .andExpect(jsonPath("$.dadosColetados").value(org.hamcrest.Matchers.hasItems(
             org.hamcrest.Matchers.containsString("registro no CRC"),
             org.hamcrest.Matchers.containsString("telefone, que pode ser informado no cadastro"),
-            org.hamcrest.Matchers.containsString("Escritorio de contabilidade: nome e CNPJ"))))
+            org.hamcrest.Matchers.containsString("na conta empresarial, CNPJ, telefone e endereco"),
+            org.hamcrest.Matchers.containsString("Aceite dos termos de uso"))))
         .andExpect(jsonPath("$.basesLegais.length()").value(3))
         .andExpect(jsonPath("$.retencao[0]").value(org.hamcrest.Matchers.containsString("5 anos")))
         .andExpect(jsonPath("$.comoExercer").value(

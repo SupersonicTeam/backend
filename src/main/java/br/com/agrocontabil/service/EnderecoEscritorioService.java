@@ -158,6 +158,36 @@ public class EnderecoEscritorioService {
   }
 
   /**
+   * Grava o endereço do escritório empresarial criado no cadastro do contador (issue #519). Roda na
+   * transação do cadastro, com o escritório já gravado: slug indisponível desfaz o cadastro
+   * inteiro.
+   *
+   * <p>Mesma regra do {@link #definir}: o slug é normalizado e recusado se reservado, em uso ou em
+   * carência de outro escritório, com a mesma resposta. A forma e a ciência da exposição pública
+   * já foram conferidas no request. A diferença: o {@code slugAlteradoEm} fica nulo, e o slug do
+   * cadastro não conta para o intervalo entre trocas (um erro de digitação logo no início se
+   * corrige na hora).
+   *
+   * @param escritorio  escritório recém-gravado, com CNPJ
+   * @param informado   slug como veio no request
+   * @param campo       campo do request, para o erro
+   * @throws SlugIndisponivelException reservado, em uso ou em carência de outro escritório (409)
+   */
+  void gravarNoCadastro(Escritorio escritorio, String informado, String campo) {
+    String slug = FormatoSlug.normalizar(informado);
+    OffsetDateTime agora = OffsetDateTime.now(clock);
+    if (reservados.reservado(slug)
+        || escritorioRepository.slugIndisponivel(slug, escritorio.getId(), agora)) {
+      throw new SlugIndisponivelException(campo);
+    }
+    // A linha que sobrar do slug (carencia vencida) sai antes, como no definir.
+    anteriorRepository.apagarPorSlug(slug);
+    escritorio.setSlug(slug);
+    escritorioRepository.saveAndFlush(escritorio);
+    log.info("Endereco do escritorio gravado no cadastro: escritorio={}", escritorio.getId());
+  }
+
+  /**
    * Remove o endereço do escritório (só administrador). Sempre permitido, mesmo dentro do
    * intervalo entre trocas: o administrador precisa poder tirar do ar um nome que não devia estar
    * lá. O slug vai para a carência e a remoção conta como alteração. Sem endereço, nada muda.

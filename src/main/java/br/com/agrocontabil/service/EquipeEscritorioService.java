@@ -386,8 +386,10 @@ public class EquipeEscritorioService {
         .filter(c -> c.getUsadoEm() == null && c.getExpiraEm().isAfter(agora))
         .map(ConviteMembro::getEmail)
         .orElseThrow(ConviteEquipeInvalidoException::new);
+    // Sem escritorio nem tipo de conta: quem entra pelo convite vai para o escritorio dele (#519).
     CadastroRequest cadastro = new CadastroRequest(PapelUsuario.CONTADOR,
-        request.nomeCompleto(), request.cpfCnpj(), email, request.senha());
+        request.nomeCompleto(), request.cpfCnpj(), email, request.senha(), null, request.crc(),
+        request.telefone(), null, request.aceiteTermos());
     return cadastroService.cadastrar(cadastro, contador -> {
       ConviteMembro convite = conviteValido(request.token(), email);
       contador.setEscritorioId(convite.getEscritorioId());

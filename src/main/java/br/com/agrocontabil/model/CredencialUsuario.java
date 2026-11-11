@@ -122,6 +122,17 @@ public class CredencialUsuario {
   @Column(name = "bloqueada_ate")
   private OffsetDateTime bloqueadaAte;
 
+  /**
+   * Quando o titular aceitou os termos de uso no cadastro (issue #519); nulo = aceite não
+   * registrado (conta anterior, ou cadastro sem o campo enquanto o aceite não é exigido).
+   */
+  @Column(name = "termos_aceitos_em")
+  private OffsetDateTime termosAceitosEm;
+
+  /** Versão dos termos aceita ({@code app.termos.versao}); nula junto com {@link #termosAceitosEm}. */
+  @Column(name = "termos_versao", length = 40)
+  private String termosVersao;
+
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
 

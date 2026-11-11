@@ -1,7 +1,11 @@
 package br.com.agrocontabil.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -23,8 +27,10 @@ import lombok.ToString;
  * convites. Os contadores são membros dele, cada um com uma {@link FuncaoEscritorio}; na v1 um
  * contador pertence a um escritório só.
  *
- * <p>Todo contador cadastrado ganha um escritório unipessoal, do qual é administrador; pode
- * trocá-lo pelo de uma equipe aceitando um convite enquanto o unipessoal estiver vazio.
+ * <p>Todo contador que se cadastra sozinho ganha um escritório, do qual é administrador: pessoal
+ * (com o nome dele) ou empresarial (com nome, CNPJ, telefone, endereço postal e endereço próprio),
+ * conforme o {@link #tipo} escolhido (issue #519). Pode trocá-lo pelo de uma equipe aceitando um
+ * convite enquanto o dele estiver vazio.
  *
  * <p>O {@link #slug} é o endereço próprio do escritório, {@code {slug}.agroconia.com.br} (issue
  * #464): marca e porta de entrada, nunca fronteira de autorização. Pode ser dado pessoal (o nome do
@@ -52,6 +58,26 @@ public class Escritorio {
   /** CNPJ do escritório, só dígitos; opcional (contador autônomo não tem). */
   @Column(name = "cnpj", length = 14)
   private String cnpj;
+
+  /**
+   * Pessoal (um usuário só) ou empresarial (pode ter equipe e endereço próprio), escolhido no
+   * cadastro do contador (issue #519). Gravado, nunca derivado do CNPJ; sem escolha, pessoal.
+   */
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(name = "tipo", nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
+  private TipoEscritorio tipo = TipoEscritorio.PESSOAL;
+
+  /** Telefone do escritório, só dígitos (issue #519); cifrado em repouso como os outros. */
+  @ToString.Exclude
+  @Convert(converter = DadoPessoalCifradoConverter.class)
+  @Column(name = "telefone", length = 100)
+  private String telefone;
+
+  /** Endereço postal (issue #519); nulo nos escritórios sem ele. */
+  @ToString.Exclude
+  @Embedded
+  private EnderecoPostal endereco;
 
   /** Rótulo do subdomínio, normalizado; nulo = o escritório usa o {@code www} (issue #464). */
   @ToString.Exclude
