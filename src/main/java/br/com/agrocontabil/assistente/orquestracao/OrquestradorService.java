@@ -202,6 +202,8 @@ public class OrquestradorService {
 
   private ClassificacaoIntencao classificarSemRegistro(
       String pergunta, ContextoAssistente contexto) {
+    // Camada nova sem modelo antes do classificador entra tambem em respondeSemModelo: a cota
+    // reserva so a leitura para ela, e o contexto recusa a chamada ao modelo (#511, #497).
     if (FiltroInjecao.pareceInjecao(pergunta)) {
       log.info("Ceres: pergunta com forma de prompt injection tratada como fora de escopo");
       return new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 1, null,

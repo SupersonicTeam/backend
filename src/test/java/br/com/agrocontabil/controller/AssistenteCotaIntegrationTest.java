@@ -292,6 +292,16 @@ class AssistenteCotaIntegrationTest {
   @Test
   @DisplayName("#497/#511: recusa firme sem saldo para o teto no stream: responde e paga a leitura")
   void recusaFirmeSemSaldoNoStream() throws Exception {
+    recusaSemSaldoParaOTetoNoStream(RECUSA_FIRME);
+  }
+
+  @Test
+  @DisplayName("#511: recusa pelo filtro sem saldo para o teto no stream: responde e paga a leitura")
+  void recusaPeloFiltroSemSaldoNoStream() throws Exception {
+    recusaSemSaldoParaOTetoNoStream(INJECAO);
+  }
+
+  private void recusaSemSaldoParaOTetoNoStream(String pergunta) throws Exception {
     gastar(SEM_SALDO_PARA_O_TETO);
 
     org.springframework.test.web.servlet.MvcResult inicio = mockMvc.perform(
@@ -299,7 +309,7 @@ class AssistenteCotaIntegrationTest {
                 .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.TEXT_EVENT_STREAM)
-                .content("{\"pergunta\":\"" + RECUSA_FIRME + "\"}"))
+                .content("{\"pergunta\":\"" + pergunta + "\"}"))
         .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request()
             .asyncStarted())
         .andReturn();
@@ -308,8 +318,9 @@ class AssistenteCotaIntegrationTest {
     assertThat(inicio.getResponse().getContentAsString())
         .contains("event:rota").contains("FORA_DE_ESCOPO").contains("event:resposta")
         .contains("event:fim").doesNotContain("LIMITE_USO_ASSISTENTE");
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
     assertThat(modelo.promptsRecebidos()).isEmpty();
-    assertConsumoDaLeitura(RECUSA_FIRME);
+    assertConsumoDaLeitura(pergunta);
   }
 
   @Test
