@@ -1,9 +1,13 @@
 package br.com.agrocontabil.model;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.exception.EmpresarialExigeCnpjException;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.PostUpdate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +43,27 @@ class EscritorioTest {
 
     legado.setCnpj("11444777000161");
     assertThatCode(legado::onUpdate).doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("segundo flush na mesma transacao compara com o ultimo estado gravado, nao com o lido")
+  void segundoFlushComparaComOGravado() throws Exception {
+    // O JPA chama a mesma renovacao depois de ler, de inserir e de atualizar.
+    var renovacao = Escritorio.class.getDeclaredMethod("onLoad");
+    assertThat(renovacao.isAnnotationPresent(PostLoad.class)
+        && renovacao.isAnnotationPresent(PostPersist.class)
+        && renovacao.isAnnotationPresent(PostUpdate.class)).isTrue();
+
+    Escritorio legado = Escritorio.builder().nome("Equipe antiga")
+        .tipo(TipoEscritorio.EMPRESARIAL).build();
+    legado.onLoad();
+    legado.setCnpj("11444777000161");
+    legado.onUpdate();
+    // @PostUpdate: o CNPJ gravado passa a ser a base.
+    legado.onLoad();
+
+    legado.setCnpj(null);
+    assertThatThrownBy(legado::onUpdate).isInstanceOf(EmpresarialExigeCnpjException.class);
   }
 
   @Test

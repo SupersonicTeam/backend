@@ -174,13 +174,14 @@ public class EquipeEscritorioService {
   }
 
   /**
-   * Edita o escritório (só administrador): nome, CNPJ e, desde a #519, telefone e endereço postal.
-   * O que não vem fica como está; telefone e endereço não se apagam por aqui. O nome aparece nos
-   * e-mails de convite. Com endereço próprio (#464), o CNPJ não sai: o endereço exige CNPJ; e o
-   * empresarial também não fica sem CNPJ (#519).
+   * Edita o escritório (só administrador): nome (obrigatório), CNPJ e, desde a #519, telefone e
+   * endereço postal do empresarial. Fora o nome, o que não vem fica como está; telefone e endereço
+   * não se apagam por aqui. O nome aparece nos e-mails de convite. Com endereço próprio (#464), o
+   * CNPJ não sai: o endereço exige CNPJ; e o empresarial também não fica sem CNPJ (#519).
    *
    * @param request dados novos
    * @return o escritório
+   * @throws EscritorioPessoalException telefone ou endereço num escritório pessoal (409, #519)
    * @throws EmpresarialExigeCnpjException apagar o CNPJ de um escritório empresarial (422)
    * @throws EnderecoExigeCnpjException apagar o CNPJ de um escritório com endereço (422)
    */
@@ -191,6 +192,13 @@ public class EquipeEscritorioService {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(membro.getEscritorioId())
           .orElseThrow(() -> new ResourceNotFoundException("Escritório",
               membro.getEscritorioId()));
+      boolean telefoneInformado = request.telefone() != null && !request.telefone().isBlank();
+      if (escritorio.getTipo() == TipoEscritorio.PESSOAL
+          && (telefoneInformado || request.endereco() != null)) {
+        // Telefone e endereco postal sao da conta empresarial (#519): o pessoal edita nome e CNPJ.
+        throw new EscritorioPessoalException("O escritório pessoal não tem telefone nem endereço"
+            + " próprios: são dados da conta empresarial.");
+      }
       escritorio.setNome(request.nome().strip());
       // PATCH: CNPJ ausente fica como esta; vazio apaga.
       if (request.cnpj() != null) {
@@ -207,7 +215,7 @@ public class EquipeEscritorioService {
         escritorio.setCnpj(cnpj);
       }
       // Ausente ou vazio = nao informado, como no cadastro: o telefone fica.
-      if (request.telefone() != null && !request.telefone().isBlank()) {
+      if (telefoneInformado) {
         escritorio.setTelefone(request.telefone());
       }
       if (request.endereco() != null) {
@@ -381,13 +389,17 @@ public class EquipeEscritorioService {
   }
 
   /**
-   * Convites de equipe pendentes (só administrador).
+   * Convites de equipe pendentes (só administrador). O escritório pessoal não tem equipe (#519):
+   * a lista sai vazia, porque o aceite recusaria os convites que sobraram de antes do tipo.
    *
    * @return convites válidos, do mais recente ao mais antigo
    */
   public List<ConviteMembroResponse> convitesPendentes() {
     UUID escritorioId = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR)
         .getEscritorioId();
+    if (!escritorioRepository.existsByIdAndTipo(escritorioId, TipoEscritorio.EMPRESARIAL)) {
+      return List.of();
+    }
     return conviteRepository
         .findByEscritorioIdAndUsadoEmIsNullAndExpiraEmAfterOrderByCriadoEmDesc(
             escritorioId, OffsetDateTime.now(clock)).stream()
@@ -550,9 +562,8 @@ public class EquipeEscritorioService {
    * de antes do tipo, ou de um escritório que voltou a ser pessoal, não vale mais.
    */
   private boolean deEscritorioEmpresarial(ConviteMembro convite) {
-    return escritorioRepository.findById(convite.getEscritorioId())
-        .map(e -> e.getTipo() == TipoEscritorio.EMPRESARIAL)
-        .orElse(false);
+    return escritorioRepository.existsByIdAndTipo(convite.getEscritorioId(),
+        TipoEscritorio.EMPRESARIAL);
   }
 
   private void enviarEmSegundoPlano(String email, String escritorio, String link,

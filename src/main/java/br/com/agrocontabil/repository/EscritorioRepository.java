@@ -1,6 +1,7 @@
 package br.com.agrocontabil.repository;
 
 import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.TipoEscritorio;
 import jakarta.persistence.LockModeType;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -23,6 +24,16 @@ public interface EscritorioRepository extends JpaRepository<Escritorio, UUID> {
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT e FROM Escritorio e WHERE e.id = :id")
   Optional<Escritorio> findByIdForUpdate(@Param("id") UUID id);
+
+  /**
+   * O escritório existe e é deste tipo (#519)? Só o tipo, sem carregar a entidade: o convite de
+   * equipe confere se o escritório é empresarial.
+   *
+   * @param id   escritório
+   * @param tipo tipo esperado
+   * @return {@code true} se existe com esse tipo
+   */
+  boolean existsByIdAndTipo(UUID id, TipoEscritorio tipo);
 
   /**
    * O slug está em uso por outro escritório, ou em carência de outro escritório (ou de um

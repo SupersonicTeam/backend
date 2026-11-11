@@ -8,9 +8,11 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Edição do escritório pelo administrador (issues #228 e #519). O que não vem fica como está.
+ * Edição do escritório pelo administrador (issues #228 e #519). O nome é obrigatório; o resto,
+ * o que não vem fica como está. Telefone e endereço são do escritório empresarial: no pessoal,
+ * 409 {@code ESCRITORIO_PESSOAL}.
  *
- * @param nome     nome do escritório
+ * @param nome     nome do escritório, obrigatório
  * @param cnpj     CNPJ só com dígitos; ausente mantém o atual, vazio apaga (contador autônomo). O
  *                 empresarial não fica sem CNPJ (422)
  * @param telefone telefone do escritório, só dígitos (10 ou 11); ausente ou vazio mantém o atual
@@ -18,7 +20,8 @@ import jakarta.validation.constraints.Size;
  * @param endereco endereço postal completo; ausente mantém o atual. Substitui o endereço inteiro e
  *                 não se apaga pelo PATCH (#519)
  */
-@Schema(description = "Edição do escritório pelo administrador; o que não vem fica como está")
+@Schema(description = "Edição do escritório pelo administrador: nome obrigatório; o resto, o que"
+    + " não vem fica como está. Telefone e endereço só no escritório empresarial")
 public record EscritorioRequest(
     @Schema(description = "Nome do escritório", example = "Escritório Campo Verde")
     @NotBlank @Size(max = 255) String nome,
@@ -27,11 +30,13 @@ public record EscritorioRequest(
     @Pattern(regexp = "\\d{14}|", message = "Informe o CNPJ com 14 dígitos (vazio apaga)") @ValidCpfCnpj
     String cnpj,
     @Schema(description = "Telefone do escritório, só dígitos (10 ou 11); ausente ou vazio mantém"
-        + " o atual", example = "4533330000", nullable = true)
+        + " o atual. Só no escritório empresarial (no pessoal, 409 ESCRITORIO_PESSOAL)",
+        example = "4533330000", nullable = true)
     @Pattern(regexp = "\\d{10,11}|",
         message = "Informe o telefone do escritório só com dígitos: DDD e número (10 ou 11).")
     String telefone,
-    @Schema(description = "Endereço postal completo; ausente mantém o atual", nullable = true)
+    @Schema(description = "Endereço postal completo; ausente mantém o atual. Só no escritório"
+        + " empresarial (no pessoal, 409 ESCRITORIO_PESSOAL)", nullable = true)
     @Valid
     EnderecoPostalRequest endereco) {
 
@@ -43,5 +48,11 @@ public record EscritorioRequest(
    */
   public EscritorioRequest(String nome, String cnpj) {
     this(nome, cnpj, null, null);
+  }
+
+  /** Sem os dados do escritório: o nome e o endereço podem identificar uma pessoa (LGPD). */
+  @Override
+  public String toString() {
+    return "EscritorioRequest[***]";
   }
 }

@@ -342,10 +342,16 @@ class EnderecoEscritorioIntegrationTest {
   }
 
   @Test
-  @DisplayName("unipessoal com endereco entra noutra equipe: slug em carencia sem escritorio, 409 a quem pedir")
+  @DisplayName("empresarial de um membro com endereco aceita convite: o escritorio sai e o slug fica em carencia")
   void aceiteDeEquipeGuardaACarencia() throws Exception {
     definir(tokenA, "ruraloeste").andExpect(status().isOk());
     UUID escritorioA = escritorioDe(adminA.usuarioId());
+    // Comportamento fixado (#519): o escritorio atual, mesmo empresarial e com endereco proprio,
+    // telefone e endereco postal, deixa de existir no aceite; o slug entra em carencia.
+    jdbcTemplate.update("UPDATE escritorio SET telefone = '4533330000', endereco_cep = '85810000',"
+        + " endereco_municipio = 'Cascavel', endereco_uf = 'PR' WHERE id = ?", escritorioA);
+    assertThat(jdbcTemplate.queryForObject("SELECT tipo FROM escritorio WHERE id = ?",
+        String.class, escritorioA)).isEqualTo("EMPRESARIAL");
 
     mockMvc.perform(post("/api/escritorio/membros/convites")
             .header(HttpHeaders.AUTHORIZATION, tokenB).contentType(MediaType.APPLICATION_JSON)

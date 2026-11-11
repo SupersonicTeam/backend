@@ -11,6 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.PostUpdate;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -104,12 +106,15 @@ public class Escritorio {
   @Column(name = "updated_at")
   private OffsetDateTime updatedAt;
 
-  /** Tipo lido do banco: o {@code @PreUpdate} só confere o CNPJ quando o tipo muda. */
+  /**
+   * Tipo do último estado gravado (lido ou escrito): o {@code @PreUpdate} só confere o CNPJ quando
+   * o tipo muda em relação a ele.
+   */
   @Transient
   @ToString.Exclude
   private TipoEscritorio tipoCarregado;
 
-  /** CNPJ lido do banco: o {@code @PreUpdate} só confere quando ele muda. */
+  /** CNPJ do último estado gravado: o {@code @PreUpdate} só confere quando ele muda. */
   @Transient
   @ToString.Exclude
   private String cnpjCarregado;
@@ -125,7 +130,14 @@ public class Escritorio {
     return tipo == TipoEscritorio.EMPRESARIAL && (cnpj == null || cnpj.isBlank());
   }
 
+  /**
+   * Guarda o estado gravado: ao ler e depois de cada gravação. Sem a renovação depois do flush, um
+   * segundo flush na mesma transação compararia com o estado lido, não com o último gravado (gravar
+   * o CNPJ num empresarial antigo e apagá-lo de novo passaria sem conferência).
+   */
   @PostLoad
+  @PostPersist
+  @PostUpdate
   protected void onLoad() {
     tipoCarregado = tipo;
     cnpjCarregado = cnpj;

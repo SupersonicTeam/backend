@@ -671,6 +671,56 @@ class EscritorioEquipeIntegrationTest {
   }
 
   @Test
+  @DisplayName("PATCH no pessoal (#519): telefone ou endereco e 409; nome, CNPJ e telefone vazio passam")
+  void patchNoPessoal() throws Exception {
+    String tokenPessoal = administradorPessoal("pessoal@contador.com.br", "86288366757");
+
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenPessoal)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Pessoal\",\"telefone\":\"4533330000\"}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_PESSOAL"))
+        .andExpect(jsonPath("$.errors[0].suggestion").value(
+            org.hamcrest.Matchers.containsString("tornar-empresarial")));
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenPessoal)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Pessoal\",\"endereco\":%s}".formatted(ENDERECO)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_PESSOAL"));
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenPessoal)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Pessoal Renomeado\",\"cnpj\":\"48315276000195\","
+                + "\"telefone\":\"\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.nome").value("Pessoal Renomeado"))
+        .andExpect(jsonPath("$.cnpj").value("48315276000195"))
+        .andExpect(jsonPath("$.tipo").value("PESSOAL"))
+        .andExpect(jsonPath("$.telefone").doesNotExist())
+        .andExpect(jsonPath("$.endereco").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("convites pendentes do pessoal (#519): lista vazia; tornado empresarial, eles voltam")
+  void convitesPendentesDoPessoal() throws Exception {
+    conviteDeEquipe(EMAIL_NOVO, "ASSISTENTE");
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+
+    mockMvc.perform(get("/api/escritorio/membros/convites")
+            .header(HttpHeaders.AUTHORIZATION, tokenAdminA))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "0"))
+        .andExpect(jsonPath("$.length()").value(0));
+
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'EMPRESARIAL' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+    mockMvc.perform(get("/api/escritorio/membros/convites")
+            .header(HttpHeaders.AUTHORIZATION, tokenAdminA))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Total-Count", "1"));
+  }
+
+  @Test
   @DisplayName("auditoria guarda o escritorio de quem agiu")
   void auditoriaComEscritorio() throws Exception {
     assistenteDeA();
