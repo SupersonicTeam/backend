@@ -100,6 +100,20 @@ public class OrquestradorService {
   }
 
   /**
+   * A pergunta é respondida sem nenhuma chamada ao modelo (#511, #497): atalho da tela, conversa
+   * leve, recusa pelo filtro de injeção ou recusa firme antes do classificador. São os mesmos
+   * testes, sobre o mesmo texto, que {@link #responder} faz antes de classificar; a cota reserva
+   * só a leitura da mensagem para elas, em vez do teto de uma pergunta de modelo.
+   *
+   * @param pergunta pergunta do usuário
+   * @return se nenhuma rota que chama o modelo pode ser escolhida
+   */
+  public static boolean respondeSemModelo(String pergunta) {
+    return AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)
+        || FiltroInjecao.pareceInjecao(pergunta) || SinalRecusaFirme.inequivoco(pergunta);
+  }
+
+  /**
    * Classifica e responde.
    *
    * @param pergunta      pergunta do usuário

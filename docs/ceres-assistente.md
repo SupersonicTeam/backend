@@ -865,12 +865,14 @@ menos que um 'quanto imposto devo'" e "1 crédito por token, tudo em números in
   mesmas propriedades). O changeSet **0060** converteu o uso gravado (consumido e reservado, todas
   as semanas) × 1000, sem ganho nem perda de saldo.
 - **Leitura:** a pergunta que não chama o modelo (atalho da tela, conversa leve, recusa pelo
-  filtro de injeção, modo fallback) paga a leitura da mensagem, `⌈tokens × peso-entrada × fator⌉`.
-  Os tokens são uma estimativa local e determinística, sem chamar o provedor:
-  `ContextoAssistente.tokensDaLeitura` = ⌈caracteres ÷ 4⌉, no mínimo 1 ("olá" = 1, "quanto
-  imposto devo?" = 5). Atalho e conversa leve reservam só esse custo
-  (`CotaUsoPorta.reservarLeitura`) e recebem 429 sem saldo para ele; as outras reservam o teto, e
-  o acerto, sem nenhuma chamada ao modelo, cobra a leitura.
+  filtro de injeção, recusa firme antes do classificador, modo fallback) paga a leitura da
+  mensagem, `⌈tokens × peso-entrada × fator⌉`. Os tokens são uma estimativa local e
+  determinística, sem chamar o provedor: `ContextoAssistente.tokensDaLeitura` = ⌈caracteres ÷ 4⌉,
+  no mínimo 1 ("olá" = 1, "quanto imposto devo?" = 5). Atalho, conversa leve, recusa pelo filtro e
+  recusa firme (#497) se sabem antes da pergunta (`OrquestradorService.respondeSemModelo`, os
+  mesmos testes que o orquestrador faz antes de classificar): reservam só esse custo
+  (`CotaUsoPorta.reservarLeitura`) e recebem 429 só sem saldo para ele. O modo fallback só se sabe
+  no meio da pergunta: reserva o teto, e o acerto, sem nenhuma chamada ao modelo, cobra a leitura.
 - **Com o modelo:** o consumo real das chamadas, que já inclui a mensagem, sem taxa extra.
 - **Na tela, só porcentagem:** o `GET /api/assistente/uso` traz `percentualUsado` (0 a 100,
   `CotaUsoAssistenteService.percentualUsado`): ⌈consumidos ÷ creditosSemana × 100⌉, no máximo 99
