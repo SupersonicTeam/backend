@@ -112,7 +112,8 @@ public class TextosFixosAcentuadosTest {
     textos.put("OrquestradorService.SEM_DADOS", OrquestradorService.SEM_DADOS);
     textos.put("OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL",
         OrquestradorService.SEM_FUNDAMENTO_PARTE_LEGAL);
-    textos.put("PromptsCeres.FORA_DE_ESCOPO", PromptsCeres.FORA_DE_ESCOPO);
+    textos.put("PromptsCeres.RECUSA_GENTIL", PromptsCeres.RECUSA_GENTIL);
+    textos.put("PromptsCeres.RECUSA_FIRME", PromptsCeres.RECUSA_FIRME);
     // Conversa leve (#493): cada variante e cada parte fixa da resposta.
     ConversaLeve.textos().forEach((nome, texto) -> textos.put("ConversaLeve " + nome, texto));
     textos.put("ValidadorCitacao.SEM_FUNDAMENTO", ValidadorCitacao.SEM_FUNDAMENTO);
@@ -200,7 +201,8 @@ public class TextosFixosAcentuadosTest {
         .anyMatch(n -> n.startsWith("resumo"))
         .anyMatch(n -> n.startsWith("erro ASSISTENTE_OCUPADO"))
         .contains("RotaDados.MENSAGEM_SEM_FUNCAO", "siglas explicadas",
-            "ModoFallback.SEM_MODELO_LEI", "PromptsCeres.FORA_DE_ESCOPO")
+            "ModoFallback.SEM_MODELO_LEI", "PromptsCeres.RECUSA_GENTIL",
+            "PromptsCeres.RECUSA_FIRME")
         .anyMatch(n -> n.startsWith("ConversaLeve SAUDACAO"));
     assertThat(textos.size()).isGreaterThan(150);
     // Os textos não são vazios: um template que devolve vazio não prova nada.

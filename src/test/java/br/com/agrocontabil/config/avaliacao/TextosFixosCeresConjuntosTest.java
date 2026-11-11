@@ -2,6 +2,7 @@ package br.com.agrocontabil.config.avaliacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,12 +16,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * A conversa leve (#493) contra os conjuntos de avaliação, lidos só em tempo de execução (teste
- * cego): nenhuma pergunta fora da categoria {@code FORA_DE_ESCOPO} cai nela, nenhum texto ou valor
- * proibido aparece nos textos novos, e os exemplos dos textos estão no prompt. A mensagem de falha
- * mostra só o id da pergunta.
+ * Os textos fixos da conversa leve (#493) e das recusas (#494) contra os conjuntos de avaliação,
+ * lidos só em tempo de execução (teste cego): nenhuma pergunta fora da categoria
+ * {@code FORA_DE_ESCOPO} cai na conversa leve, nenhum texto ou valor proibido aparece nos textos,
+ * e os exemplos dos textos estão no prompt. A mensagem de falha mostra só o id da pergunta.
  */
-class ConversaLeveConjuntosTest {
+class TextosFixosCeresConjuntosTest {
 
   private static final ObjectMapper MAPPER = new ObjectMapper()
       .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -47,7 +48,7 @@ class ConversaLeveConjuntosTest {
         + " ";
     Pattern linha = Pattern.compile("^- (.+)$", Pattern.MULTILINE);
     List<String> exemplos = new ArrayList<>();
-    ConversaLeve.textos().values().forEach(texto -> {
+    textosFixos().forEach(texto -> {
       Matcher m = linha.matcher(texto);
       while (m.find()) {
         exemplos.add(m.group(1));
@@ -58,8 +59,16 @@ class ConversaLeveConjuntosTest {
         .as(exemplo).contains(" " + SeparacaoTreinoTeste.normalizar(exemplo) + " "));
   }
 
+  /** A conversa leve (#493) e as duas recusas (#494). */
+  private static List<String> textosFixos() {
+    List<String> textos = new ArrayList<>(ConversaLeve.textos().values());
+    textos.add(PromptsCeres.RECUSA_GENTIL);
+    textos.add(PromptsCeres.RECUSA_FIRME);
+    return textos;
+  }
+
   private static void conferir(Gabarito conjunto) {
-    List<String> textos = ConversaLeve.textos().values().stream()
+    List<String> textos = textosFixos().stream()
         .map(t -> " " + SeparacaoTreinoTeste.normalizar(t) + " ").toList();
     List<String> reconhecidas = new ArrayList<>();
     List<String> proibidosNosTextos = new ArrayList<>();

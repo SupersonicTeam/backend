@@ -92,11 +92,23 @@ public final class PromptsCeres {
       legal, sem os dados dele (ex.: "insumo agropecuario da direito a credito de IBS e CBS?").
       """;
 
-  /** Resposta fixa para pergunta fora de escopo ou de intenção incerta (sem chamar o modelo). */
-  public static final String FORA_DE_ESCOPO =
-      "Sou a Ceres, assistente fiscal do AgroConIA. Respondo sobre as suas notas, a apuração "
-          + "de IBS e CBS, créditos, vencimentos e a legislação da reforma tributária do "
-          + "agronegócio. Essa pergunta está fora do que consigo responder.";
+  /**
+   * Recusa de pergunta fora de escopo ou de intenção incerta, sem chamar o modelo (#494): diz o que
+   * a Ceres faz e dá exemplos, sem convite para reformular. Os exemplos são cópias literais das
+   * descrições das funções que a regra decide como dados.
+   */
+  public static final String RECUSA_GENTIL = "Desculpe, não consigo ajudar com isso. Eu cuido só"
+      + " das suas notas, guias e prazos no AgroConIA e das regras da reforma tributária do"
+      + " agronegócio.\n\nVocê pode perguntar, por exemplo:\n- Tenho nota rejeitada?\n"
+      + "- Tenho imposto para pagar na semana que vem?\n- Como estão as minhas pendências?";
+
+  /**
+   * Recusa firme (#494): injeção, pedido sobre outra pessoa, documento ou identificador. Sem
+   * exemplo, convite nem sigla.
+   */
+  public static final String RECUSA_FIRME = "Não posso atender a esse pedido. Consulto só as"
+      + " notas, guias e prazos da sua própria conta no AgroConIA e as regras da reforma"
+      + " tributária do agronegócio.";
 
   /** Resposta fixa que o modelo deve dar quando os trechos não respondem a pergunta. */
   public static final String NAO_ENCONTREI = "NAO_ENCONTREI";

@@ -99,6 +99,14 @@ class TextosFixosSiglasTest {
     assertThat(pendentes).isEmpty();
   }
 
+  @Test
+  @DisplayName("#494: as recusas não usam sigla sem explicação")
+  void recusasSemSiglaSolta() {
+    for (String recusa : List.of(PromptsCeres.RECUSA_GENTIL, PromptsCeres.RECUSA_FIRME)) {
+      assertThat(GLOSSARIO.siglasSemExplicacao(recusa)).as(recusa).isEmpty();
+    }
+  }
+
   private static List<TipoProdutor> tiposEDesconhecido() {
     List<TipoProdutor> tipos = new ArrayList<>(List.of(TipoProdutor.values()));
     tipos.add(null);

@@ -20,7 +20,7 @@ A cada pergunta o backend classifica a intenção e escolhe uma **rota**:
 | `DADOS` | Pergunta sobre os dados do produtor no sistema (compras, notas, apuração de IBS/CBS, créditos, guias e vencimentos) | Texto + `fontesDados` (as consultas feitas) |
 | `LEGISLACAO` | Pergunta sobre a lei (EC 132/2023, LC 214/2025, LC 227/2026) | Texto + `citacoes` (dispositivo, link oficial e trecho) |
 | `MISTO` | Precisa dos dados **e** da regra ("tenho direito à redução nessas compras?") | As duas coisas |
-| `FORA_DE_ESCOPO` | Qualquer outro assunto, ou intenção incerta; e, desde a #493, a conversa leve (saudação, agradecimento, despedida, "ok", "quem é você?", "tem certeza?"), respondida pelo backend sem modelo e sem crédito | Texto fixo de apresentação da Ceres, ou a resposta da conversa leve (com `atalhos`, `citacoes` e `fontesDados` vazios e `modoFallback: false`) |
+| `FORA_DE_ESCOPO` | Qualquer outro assunto, ou intenção incerta; e, desde a #493, a conversa leve (saudação, agradecimento, despedida, "ok", "quem é você?", "tem certeza?"), respondida pelo backend sem modelo e sem crédito | Texto fixo de recusa (desde a #494: a gentil, que diz o que a Ceres faz e dá exemplos, ou a firme, sem exemplo, para tentativa de injeção e pedido sobre outra pessoa), ou a resposta da conversa leve (com `atalhos`, `citacoes` e `fontesDados` vazios e `modoFallback: false`) |
 
 Garantias do backend que a tela deve **mostrar**, não esconder:
 

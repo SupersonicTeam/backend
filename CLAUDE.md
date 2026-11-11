@@ -311,6 +311,10 @@ br.com.agrocontabil
 │                  #   você?" e "tem certeza?" pela lista fechada, depois dos atalhos e antes do
 │                  #   FiltroInjecao; texto montado pelo backend, sem modelo e fora da cota; rota
 │                  #   FORA_DE_ESCOPO, camada e desfecho CONVERSA_LEVE; fora de DESFECHOS_DE_RECUSA);
+│                  # orquestracao/RecusaForaDeEscopo + SinalRecusaFirme (#494: PromptsCeres.RECUSA_GENTIL,
+│                  #   com exemplos e sem convite a reformular, ou RECUSA_FIRME para FILTRO_INJECAO e para
+│                  #   outra pessoa, CPF/CNPJ/e-mail/telefone/UUID ou ordem ao sistema; na RotaDados, modelo
+│                  #   sem função + sinal = recusa firme, sem a apuração forçada);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;
