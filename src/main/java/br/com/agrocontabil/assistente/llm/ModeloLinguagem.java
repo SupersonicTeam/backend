@@ -186,6 +186,17 @@ public class ModeloLinguagem {
   }
 
   /**
+   * {@code true} com o modelo por API ({@code spring.ai.model.chat} {@code anthropic} ou
+   * {@code openai}): o que vai ao modelo sai do servidor e do país (#499, aviso da continuidade).
+   *
+   * @return se o provedor é por API
+   */
+  public boolean porApi() {
+    String nome = provedor == null ? "" : provedor.strip().toLowerCase(Locale.ROOT);
+    return nome.equals("anthropic") || nome.equals("openai");
+  }
+
+  /**
    * Identificação do modelo em uso, para auditoria ({@code provedor/modelo}, ex.:
    * {@code ollama/qwen3:4b}). Nunca inclui chave nem URL.
    *

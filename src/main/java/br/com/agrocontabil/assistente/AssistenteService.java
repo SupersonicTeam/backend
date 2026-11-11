@@ -129,8 +129,9 @@ public class AssistenteService implements DisposableBean {
   private final Set<UUID> produtoresComPergunta = ConcurrentHashMap.newKeySet();
   private final ThreadPoolTaskExecutor executor;
   private final ScheduledThreadPoolExecutor prazos;
+  private final ContinuidadeConversa continuidade;
 
-  /** Constrói o serviço e o pool de threads da Ceres. */
+  /** Constrói o serviço sem a continuidade da conversa (testes de turno único). */
   public AssistenteService(
       IdentidadePorta identidade,
       CotaUsoPorta cota,
@@ -139,6 +140,22 @@ public class AssistenteService implements DisposableBean {
       ModeloLinguagem modeloLinguagem,
       Clock clock,
       AssistenteProperties propriedades) {
+    this(identidade, cota, orquestrador, auditoria, modeloLinguagem, clock, propriedades,
+        ContinuidadeConversa.desligada());
+  }
+
+  /** Constrói o serviço e o pool de threads da Ceres. */
+  @Autowired
+  public AssistenteService(
+      IdentidadePorta identidade,
+      CotaUsoPorta cota,
+      OrquestradorService orquestrador,
+      AuditoriaAssistente auditoria,
+      ModeloLinguagem modeloLinguagem,
+      Clock clock,
+      AssistenteProperties propriedades,
+      ContinuidadeConversa continuidade) {
+    this.continuidade = continuidade;
     this.identidade = identidade;
     this.cota = cota;
     this.orquestrador = orquestrador;
@@ -187,7 +204,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    Execucao execucao = preparar(produtorId, request.pergunta());
+    Execucao execucao = preparar(produtorId, request);
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
     AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
     AtomicReference<Throwable> falha = new AtomicReference<>();
@@ -245,7 +262,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    Execucao execucao = preparar(produtorId, request.pergunta());
+    Execucao execucao = preparar(produtorId, request);
     SseEmitter emissor = new SseEmitter(timeoutPergunta.plus(FOLGA_TIMEOUT_SSE).toMillis());
     abrirNaThreadDaRequisicao(emissor);
     execucao.contexto.aoChamarOModelo(() -> avisarAntesDaChamada(emissor, execucao));
@@ -304,7 +321,8 @@ public class AssistenteService implements DisposableBean {
   public AssistenteUsoResponse uso() {
     CotaUsoPorta.UsoCota uso = cota.consultar(identidade.produtorAutenticado());
     return new AssistenteUsoResponse(uso.plano(), uso.habilitada(), uso.creditosSemana(),
-        uso.consumidos(), uso.restantes(), uso.renovaEm(), false);
+        uso.consumidos(), uso.restantes(), uso.renovaEm(),
+        continuidade.conversaVaiAoProvedor());
   }
 
   /**
@@ -431,16 +449,20 @@ public class AssistenteService implements DisposableBean {
    * modelo (#499). A reserva inativa faz o acerto e o estorno não mexerem na cota. O orquestrador
    * e a reserva usam a mesma função estática sobre o mesmo texto.
    */
-  private Execucao preparar(UUID produtorId, String pergunta) {
+  private Execucao preparar(UUID produtorId, AssistenteChatRequest request) {
+    String pergunta = request.pergunta();
     ContextoAssistente contexto = novoContexto(produtorId);
+    // Continuidade (#499): a decisao sai antes da reserva; o mesmo objeto vai ao orquestrador.
+    Instant agora = clock.instant();
+    Decisao decisao = continuidade.decidir(produtorId, request, agora);
     CotaUsoPorta.ReservaCota reserva;
-    if (AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)) {
+    if (decisao.custo() == CaminhoCota.SEM_MODELO) {
       contexto.semReservaParaOModelo();
       reserva = new CotaUsoPorta.ReservaCota(produtorId, null, 0, false);
     } else {
-      reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
+      reserva = cota.reservar(produtorId, modeloLinguagem.identificacao(), decisao.custo());
     }
-    return new Execucao(contexto, pergunta, reserva);
+    return new Execucao(contexto, pergunta, reserva, decisao, agora);
   }
 
   /**

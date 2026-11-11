@@ -119,8 +119,14 @@ public final class RegistroTurno {
     this.semTurno = true;
   }
 
-  synchronized List<ChamadaAssinada> consulta() {
+  /** A consulta executada nesta pergunta (parte de dados aceita), ou nula. */
+  public synchronized List<ChamadaAssinada> consulta() {
     return consulta;
+  }
+
+  /** O hash do texto de dados desta pergunta, ou nulo sem parte de dados aceita. */
+  public synchronized String hashDados() {
+    return textoDados == null ? null : HashDados.de(textoDados);
   }
 
   synchronized String textoDados() {
