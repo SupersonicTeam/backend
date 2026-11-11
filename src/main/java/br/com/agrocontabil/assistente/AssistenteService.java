@@ -511,10 +511,14 @@ public class AssistenteService implements DisposableBean {
     RuntimeException falha = null;
     execucao.entrar();
     try {
-      resultado = orquestrador.responder(pergunta, contexto, decidida -> {
+      Consumer<Intencao> avisar = decidida -> {
         rota.set(decidida);
         aoDecidirRota.accept(decidida);
-      }, execucao.decisao, continuidade.habilitada());
+      };
+      // Flag desligada: a chamada de antes, byte a byte; ligada, com a decisao da continuidade.
+      resultado = continuidade.habilitada()
+          ? orquestrador.responder(pergunta, contexto, avisar, execucao.decisao, true)
+          : orquestrador.responder(pergunta, contexto, avisar);
     } catch (RuntimeException e) {
       falha = e;
     } finally {

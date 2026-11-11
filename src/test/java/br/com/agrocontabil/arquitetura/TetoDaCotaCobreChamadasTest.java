@@ -5,9 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
+import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.LlmClassificadorIntencao;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -46,8 +49,8 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270/#499: exatamente as 3 chamadas da formula, uma por classe")
-  void soAsTresChamadasDaFormula() {
+  @DisplayName("#166/#270/#499: os 5 pontos de chamada, um por classe, cobertos pelos caminhos")
+  void soOsPontosDosCaminhos() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
         .filter(c -> c.getTargetOwner().isEquivalentTo(ContextoAssistente.class)
@@ -57,11 +60,32 @@ class TetoDaCotaCobreChamadasTest {
     Map<String, Long> porClasse = chamadas.stream().collect(Collectors.groupingBy(
         c -> c.getOriginOwner().getName(), Collectors.counting()));
 
+    // As 3 da pergunta comum (CHAMADAS_POR_PERGUNTA) e as 2 da continuidade (#499): a reescrita
+    // e a reconferencia de lei. Cada caminho do CaminhoCota soma as que pode fazer; o com
+    // reescrita e o mais caro e e o que a subida confere.
     assertThat(porClasse).containsOnly(
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
         Map.entry(RotaDados.class.getName(), 1L),
-        Map.entry(RotaLegislacao.class.getName(), 1L));
-    assertThat(chamadas).hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
+        Map.entry(RotaLegislacao.class.getName(), 1L),
+        Map.entry(ReescritaContinuidade.class.getName(), 1L),
+        Map.entry(ReconferenciaLei.class.getName(), 1L));
+    assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA)
+        .isEqualTo(CaminhoCota.NORMAL.chamadas());
+    assertThat(CaminhoCota.REESCRITA.chamadas()).isEqualTo(4);
+  }
+
+  @Test
+  @DisplayName("#499: reservas por caminho com os padroes: 0, 32, 25, 35 e 44 creditos")
+  void reservasPorCaminho() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    AssistenteProperties.Cota cota = propriedades.getCota();
+    AssistenteProperties.Tetos tetos = propriedades.getTetos();
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.SEM_MODELO)).isZero();
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.NORMAL)).isEqualTo(32);
+    assertThat(cota.tetoDaPergunta(tetos, 1.0)).isEqualTo(32);
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA)).isEqualTo(25);
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA_MISTO)).isEqualTo(35);
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(44);
   }
 
   @Test

@@ -17,6 +17,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
+import br.com.agrocontabil.assistente.continuidade.ContinuidadeConversa;
+import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade;
+import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade.Decisao;
+import br.com.agrocontabil.assistente.continuidade.HistoricoConferido;
+import br.com.agrocontabil.assistente.continuidade.MensagemContinuidade;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
@@ -25,6 +30,7 @@ import br.com.agrocontabil.assistente.porta.IdentidadePorta;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
@@ -654,6 +660,59 @@ class AssistenteServiceTest {
     assertThat(AssistenteService.desconexao(null)).isFalse();
   }
 
+  // --- continuidade (#499) ---
+
+  @Test
+  @DisplayName("#499: caminho de custo zero da continuidade nao reserva e recusa chamar o modelo")
+  void caminhoSemModeloRecusaOModelo() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(continuidade.habilitada()).thenReturn(true);
+    // Confirmacao de dados cuja consulta bate: reexecucao, custo zero.
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.CONFIRMACAO, CaminhoCota.SEM_MODELO,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(),
+        MensagemContinuidade.Tipo.CONFIRMACAO, null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("tem certeza?")))
+        .isInstanceOf(IllegalStateException.class);
+
+    verify(modeloLinguagem, never()).chamar(any());
+    assertThat(cota.reservas).isZero();
+  }
+
+  @Test
+  @DisplayName("#499: a reserva segue o caminho da decisao")
+  void reservaPeloCaminho() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.REESCRITA, CaminhoCota.REESCRITA,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(), MensagemContinuidade.Tipo.NENHUMA,
+        null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    // Flag desligada: o servico chama o orquestrador como antes, sem a decisao.
+    when(orquestrador.responder(any(), any(), any())).thenReturn(ok());
+
+    service.conversar(new AssistenteChatRequest("e algum credito?"));
+
+    assertThat(cota.ultimoCaminho).isEqualTo(CaminhoCota.REESCRITA);
+  }
+
   /** O acerto ou o estorno roda no fim da thread da Ceres: espera esse instante. */
   private void esperarCotaEncerrada() throws InterruptedException {
     long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
@@ -711,6 +770,7 @@ class AssistenteServiceTest {
     volatile long ultimaEntrada;
     volatile long ultimaSaida;
     volatile String ultimoModelo;
+    volatile CaminhoCota ultimoCaminho;
 
     @Override
     public synchronized ReservaCota reservar(UUID produtorId, String modelo) {
@@ -719,6 +779,13 @@ class AssistenteServiceTest {
       }
       reservas++;
       return new ReservaCota(produtorId, java.time.LocalDate.of(2026, 9, 28), 73, true);
+    }
+
+    @Override
+    public synchronized ReservaCota reservar(UUID produtorId, String modelo,
+        CaminhoCota caminho) {
+      ultimoCaminho = caminho;
+      return reservar(produtorId, modelo);
     }
 
     @Override

@@ -550,7 +550,10 @@ public class OrquestradorService {
     ResultadoRota resultado = null;
     if (disponibilidade.disponivel()) {
       try {
-        resultado = rotaDados.responder(pergunta, contexto, fonte);
+        // Sem continuidade, a chamada de antes (a fonte e a propria pergunta).
+        resultado = fonte == FontePergunta.DA_PERGUNTA
+            ? rotaDados.responder(pergunta, contexto)
+            : rotaDados.responder(pergunta, contexto, fonte);
       } catch (AssistenteIndisponivelException e) {
         semModelo(contexto, "dados");
       }
@@ -566,7 +569,9 @@ public class OrquestradorService {
   private ResultadoRota lei(String pergunta, ContextoAssistente contexto, FontePergunta fonte) {
     if (disponibilidade.disponivel()) {
       try {
-        ResultadoRota resultado = rotaLegislacao.responder(pergunta, contexto, fonte);
+        ResultadoRota resultado = fonte == FontePergunta.DA_PERGUNTA
+            ? rotaLegislacao.responder(pergunta, contexto)
+            : rotaLegislacao.responder(pergunta, contexto, fonte);
         registrarLei(resultado, contexto);
         return resultado;
       } catch (AssistenteIndisponivelException e) {
@@ -586,8 +591,11 @@ public class OrquestradorService {
       FontePergunta fonte) {
     if (disponibilidade.disponivel()) {
       try {
-        ResultadoRota resultado = rotaLegislacao.responderRegraGeral(pergunta.texto(), contexto,
-            trechosDasCompras.buscar(contexto), pergunta.reescrita(), fonte);
+        ResultadoRota resultado = fonte == FontePergunta.DA_PERGUNTA
+            ? rotaLegislacao.responderRegraGeral(pergunta.texto(), contexto,
+                trechosDasCompras.buscar(contexto), pergunta.reescrita())
+            : rotaLegislacao.responderRegraGeral(pergunta.texto(), contexto,
+                trechosDasCompras.buscar(contexto), pergunta.reescrita(), fonte);
         registrarLei(resultado, contexto);
         return resultado;
       } catch (AssistenteIndisponivelException e) {

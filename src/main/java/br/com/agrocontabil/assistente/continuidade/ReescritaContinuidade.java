@@ -69,6 +69,11 @@ public class ReescritaContinuidade {
           + "|semana|semestre|trimestre|safra)\\b"),
       Pattern.compile("\\b(hoje|ontem|amanha)\\b"));
 
+  /** Radicais genéricos da pergunta, que não identificam um item na âncora do ordinal. */
+  private static final List<String> GENERICAS = List.of("nota", "guia", "pedid", "devol",
+      "rejeit", "cancel", "autoriz", "vend", "compr", "apura", "credit", "venc", "pend", "situa",
+      "foram", "tenh", "minha", "meus", "mostr", "lista");
+
   private final ModeloLinguagem modelo;
   private final ValidadorNumeros validadorNumeros;
   private final int teto;
@@ -427,8 +432,12 @@ public class ReescritaContinuidade {
           return true;
         }
       }
+      // Produto: palavra de conteudo da pergunta que nao e generica (nota, guia, devolucao...) ou
+      // um argumento de produto da consulta. Palavra generica casaria qualquer reescrita.
       Set<String> produtos = new HashSet<>();
-      pergunta.stream().filter(TextoContinuidade::conteudo).forEach(produtos::add);
+      pergunta.stream().filter(TextoContinuidade::conteudo)
+          .filter(p -> GENERICAS.stream().noneMatch(p::startsWith))
+          .forEach(produtos::add);
       if (par.carga().consulta() != null) {
         for (ChamadaAssinada c : par.carga().consulta()) {
           for (String nome : List.of("descricaoOuNcm", "produtoOuNcm")) {
