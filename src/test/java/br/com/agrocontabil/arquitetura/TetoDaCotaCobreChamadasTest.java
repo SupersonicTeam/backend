@@ -2,6 +2,7 @@ package br.com.agrocontabil.arquitetura;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
@@ -28,6 +29,10 @@ import org.springframework.ai.chat.model.ChatModel;
  * {@link ModeloLinguagem}: nos dois casos a pergunta passaria a consumir mais do que o reservado.
  * Quem acrescentar uma chamada revê {@link AssistenteProperties.Cota#CHAMADAS_POR_PERGUNTA}, a
  * fórmula e este teste.
+ *
+ * <p>Desde a #499 toda chamada passa por {@link ContextoAssistente#chamar}, o ponto único que
+ * confere a reserva, avisa o streaming (o comentário que percebe o cliente que saiu) e guarda a
+ * estimativa cobrada no cancelamento: as chamadas são contadas nele, e só ele chama a porta.
  */
 class TetoDaCotaCobreChamadasTest {
 
@@ -41,11 +46,11 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270: exatamente as 3 chamadas da formula, uma por classe")
+  @DisplayName("#166/#270/#499: exatamente as 3 chamadas da formula, uma por classe")
   void soAsTresChamadasDaFormula() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
-        .filter(c -> c.getTargetOwner().isEquivalentTo(ModeloLinguagem.class)
+        .filter(c -> c.getTargetOwner().isEquivalentTo(ContextoAssistente.class)
             && c.getName().equals("chamar"))
         .toList();
 
@@ -57,6 +62,21 @@ class TetoDaCotaCobreChamadasTest {
         Map.entry(RotaDados.class.getName(), 1L),
         Map.entry(RotaLegislacao.class.getName(), 1L));
     assertThat(chamadas).hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
+  }
+
+  @Test
+  @DisplayName("#499: so o ContextoAssistente.chamar chama a porta do modelo, uma vez")
+  void portaSoPeloContexto() {
+    List<JavaMethodCall> chamadas = producao.stream()
+        .flatMap(c -> c.getMethodCallsFromSelf().stream())
+        .filter(c -> c.getTargetOwner().isEquivalentTo(ModeloLinguagem.class)
+            && c.getName().equals("chamar"))
+        .toList();
+
+    assertThat(chamadas).singleElement().satisfies(c -> {
+      assertThat(c.getOriginOwner().getName()).isEqualTo(ContextoAssistente.class.getName());
+      assertThat(c.getOrigin().getName()).isEqualTo("chamar");
+    });
   }
 
   @Test

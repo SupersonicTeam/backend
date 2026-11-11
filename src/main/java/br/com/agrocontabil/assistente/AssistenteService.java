@@ -87,7 +87,15 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * a intenção é decidida), {@code resposta} (o contrato final, <em>já validado</em>), {@code fim} e,
  * em caso de falha, {@code erro} (envelope {@code errors[]}). Transmitir tokens entregaria ao
  * usuário números e citações antes de o {@code ValidadorNumeros} e o {@code ValidadorCitacao} os
- * conferirem — exatamente o que a arquitetura existe para impedir.
+ * conferirem — exatamente o que a arquitetura existe para impedir. Antes de cada chamada ao
+ * modelo vai um comentário SSE ({@code :ceres}), que os clientes ignoram: é a escrita que percebe o
+ * cliente que saiu antes de a chamada gastar (#499).
+ *
+ * <p><strong>Cancelamento pelo cliente (#499):</strong> a pergunta cancelada pelo cliente (a
+ * conexão caiu, sem o prazo ter vencido antes) paga o que gastou: as chamadas ao modelo concluídas
+ * e, da interrompida no meio, a entrada estimada, nunca mais que o reservado. Tempo esgotado,
+ * modelo indisponível, erro, auditoria não gravada, sem vaga e desligamento estornam a reserva
+ * inteira.
  */
 @Service
 public class AssistenteService implements DisposableBean {
@@ -179,8 +187,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    CotaUsoPorta.ReservaCota reserva = reservar(produtorId, request.pergunta());
-    Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
+    Execucao execucao = preparar(produtorId, request.pergunta());
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
     AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
     AtomicReference<Throwable> falha = new AtomicReference<>();
@@ -238,10 +245,10 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    CotaUsoPorta.ReservaCota reserva = reservar(produtorId, request.pergunta());
-    Execucao execucao = new Execucao(novoContexto(produtorId), request.pergunta(), reserva);
+    Execucao execucao = preparar(produtorId, request.pergunta());
     SseEmitter emissor = new SseEmitter(timeoutPergunta.plus(FOLGA_TIMEOUT_SSE).toMillis());
     abrirNaThreadDaRequisicao(emissor);
+    execucao.contexto.aoChamarOModelo(() -> avisarAntesDaChamada(emissor, execucao));
     // Rede de seguranca: o prazo proprio abaixo dispara antes.
     emissor.onTimeout(() -> execucao.interromper(DesfechoInteracao.TEMPO_ESGOTADO));
     // Cliente foi embora (o container percebeu): para de gastar modelo e banco com ele.
@@ -249,6 +256,10 @@ public class AssistenteService implements DisposableBean {
       // Sem a classe da falha, um stream que para no meio nao deixa rastro no log (#335).
       log.info("Streaming da Ceres: o container avisou falha na conexao ({})",
           falha == null ? "sem causa" : falha.getClass().getSimpleName());
+      // So marca: a cota e encerrada no finally do responder, quando a thread da Ceres para (#499).
+      if (desconexao(falha)) {
+        execucao.cobrarGasto();
+      }
       execucao.interromper(DesfechoInteracao.CANCELADA);
     });
     ScheduledFuture<?> prazo;
@@ -414,32 +425,47 @@ public class AssistenteService implements DisposableBean {
   }
 
   /**
-   * Reserva da cota (#166). Atalho fixo da tela (#343) e conversa leve (#493) não chamam o modelo
-   * e custam zero crédito: não reservam o teto nem recebem 429 {@code LIMITE_USO_ASSISTENTE} com a
-   * semana esgotada. A reserva inativa faz o acerto e o estorno não mexerem na cota. O
-   * orquestrador e a reserva usam a mesma função estática sobre o mesmo texto.
+   * Reserva da cota (#166) e contexto da pergunta. Atalho fixo da tela (#343) e conversa leve
+   * (#493) não chamam o modelo e custam zero crédito: não reservam o teto nem recebem 429
+   * {@code LIMITE_USO_ASSISTENTE} com a semana esgotada, e o contexto recusa qualquer chamada ao
+   * modelo (#499). A reserva inativa faz o acerto e o estorno não mexerem na cota. O orquestrador
+   * e a reserva usam a mesma função estática sobre o mesmo texto.
    */
-  private CotaUsoPorta.ReservaCota reservar(UUID produtorId, String pergunta) {
+  private Execucao preparar(UUID produtorId, String pergunta) {
+    ContextoAssistente contexto = novoContexto(produtorId);
+    CotaUsoPorta.ReservaCota reserva;
     if (AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)) {
-      return new CotaUsoPorta.ReservaCota(produtorId, null, 0, false);
+      contexto.semReservaParaOModelo();
+      reserva = new CotaUsoPorta.ReservaCota(produtorId, null, 0, false);
+    } else {
+      reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
     }
-    return cota.reservar(produtorId, modeloLinguagem.identificacao());
+    return new Execucao(contexto, pergunta, reserva);
   }
 
   /**
    * Acerto ou estorno da reserva, uma vez só por pergunta. Falha aqui não muda a resposta já
    * auditada: vai ao log, e a reserva presa fica limitada à semana (a linha da próxima é outra).
+   *
+   * <p>Concluída e não interrompida, acerta pelo consumo. Cancelada pelo cliente e auditada
+   * (#499), acerta pelo gasto: as chamadas concluídas e a entrada estimada da interrompida; sem
+   * nenhum gasto, estorna. Todo o resto estorna a reserva inteira.
    */
   private void encerrarCota(Execucao execucao, boolean concluida) {
     if (!execucao.cotaEncerrada.compareAndSet(false, true)) {
       return;
     }
     ContextoAssistente contexto = execucao.contexto;
+    ContextoAssistente.Gasto gasto = contexto.gasto();
     try {
       if (concluida && contexto.interrupcao().isEmpty()) {
         Integer entrada = contexto.tokensEntrada();
         Integer saida = contexto.tokensSaida();
         cota.acertar(execucao.reserva, entrada == null ? 0 : entrada, saida == null ? 0 : saida,
+            modeloLinguagem.identificacao());
+      } else if (execucao.canceladaPeloCliente() && !gasto.nada()) {
+        log.info("Cota da Ceres: pergunta cancelada pelo cliente, cobrado o gasto");
+        cota.acertar(execucao.reserva, gasto.entrada(), gasto.saida(),
             modeloLinguagem.identificacao());
       } else {
         cota.estornar(execucao.reserva);
@@ -475,7 +501,9 @@ public class AssistenteService implements DisposableBean {
           falha instanceof AssistenteIndisponivelException
               ? DesfechoInteracao.MODELO_INDISPONIVEL
               : DesfechoInteracao.ERRO);
-      auditarSemFalhar(contexto, rota.get(), desfecho, inicio, pergunta);
+      if (auditarSemFalhar(contexto, rota.get(), desfecho, inicio, pergunta)) {
+        execucao.auditada = true;
+      }
       throw falha;
     }
 
@@ -485,6 +513,7 @@ public class AssistenteService implements DisposableBean {
       auditoria.registrar(contexto, resultado.rota().name(),
           interrupcao.orElse(resultado.desfecho()), modeloLinguagem.identificacao(),
           decorridoMs(inicio), pergunta.length());
+      execucao.auditada = true;
     } catch (RuntimeException e) {
       // RF020: sem registro de auditoria, a resposta nao e entregue.
       throw new AssistenteIndisponivelException(
@@ -514,15 +543,21 @@ public class AssistenteService implements DisposableBean {
     return new ContextoAssistente(produtorId, LocalDate.now(clock.withZone(ZONE)));
   }
 
-  /** A falha original é a que importa ao cliente; a da auditoria vai só ao log. */
-  private void auditarSemFalhar(ContextoAssistente contexto, Intencao rota,
+  /**
+   * A falha original é a que importa ao cliente; a da auditoria vai só ao log.
+   *
+   * @return {@code true} se a auditoria foi gravada
+   */
+  private boolean auditarSemFalhar(ContextoAssistente contexto, Intencao rota,
       DesfechoInteracao desfecho, long inicio, String pergunta) {
     try {
       auditoria.registrar(contexto, rota == null ? ROTA_INDEFINIDA : rota.name(), desfecho,
           modeloLinguagem.identificacao(), decorridoMs(inicio), pergunta.length());
+      return true;
     } catch (RuntimeException e) {
       log.error("Falha ao registrar a auditoria de uma pergunta que falhou: {}",
           e.getClass().getName());
+      return false;
     }
   }
 
@@ -535,9 +570,52 @@ public class AssistenteService implements DisposableBean {
       log.info("Streaming da Ceres: evento {} nao enviado ({}, causa {})", evento,
           e.getClass().getSimpleName(),
           e.getCause() == null ? "nenhuma" : e.getCause().getClass().getSimpleName());
-      execucao.contexto.interromper(DesfechoInteracao.CANCELADA);
-      throw new PerguntaInterrompidaException();
+      pararPelaEscrita(execucao, e);
     }
+  }
+
+  /**
+   * Comentário SSE antes de cada chamada ao modelo (#499): o cliente que saiu é percebido aqui,
+   * antes de a chamada gastar, e não só na escrita da {@code resposta}, com tudo já gasto.
+   */
+  private static void avisarAntesDaChamada(SseEmitter emissor, Execucao execucao) {
+    try {
+      emissor.send(SseEmitter.event().comment("ceres"));
+    } catch (IOException | IllegalStateException e) {
+      log.info("Streaming da Ceres: comentario antes da chamada ao modelo nao enviado ({}, causa "
+          + "{})", e.getClass().getSimpleName(),
+          e.getCause() == null ? "nenhuma" : e.getCause().getClass().getSimpleName());
+      pararPelaEscrita(execucao, e);
+    }
+  }
+
+  /**
+   * Escrita recusada: a pergunta para. {@link IOException} é o cliente que saiu (paga o gasto,
+   * #499); {@link IllegalStateException} é o emissor já encerrado pelo servidor (prazo vencido),
+   * que não é cancelamento do cliente.
+   */
+  private static void pararPelaEscrita(Execucao execucao, Exception falha) {
+    if (falha instanceof IOException) {
+      execucao.cobrarGasto();
+    }
+    execucao.contexto.interromper(DesfechoInteracao.CANCELADA);
+    throw new PerguntaInterrompidaException();
+  }
+
+  /**
+   * Falha avisada pelo container que é a conexão do cliente caindo (#499): uma
+   * {@link IOException} na cadeia ({@code ClientAbortException} do Tomcat e
+   * {@code AsyncRequestNotUsableException} do Spring são {@code IOException}).
+   */
+  static boolean desconexao(Throwable falha) {
+    Throwable atual = falha;
+    for (int i = 0; atual != null && i < 16; i++) {
+      if (atual instanceof IOException) {
+        return true;
+      }
+      atual = atual.getCause() == atual ? null : atual.getCause();
+    }
+    return false;
   }
 
   private static void enviarErro(SseEmitter emissor, ApiError erro) {
@@ -588,6 +666,10 @@ public class AssistenteService implements DisposableBean {
     private final CotaUsoPorta.ReservaCota reserva;
     /** A reserva da cota é encerrada (acerto ou estorno) uma vez só, pelo primeiro que chegar. */
     private final AtomicBoolean cotaEncerrada = new AtomicBoolean();
+    /** O cliente saiu (desconexão, #499): a pergunta paga o que gastou. */
+    private final AtomicBoolean cobrarGasto = new AtomicBoolean();
+    /** A auditoria da pergunta foi gravada: sem ela, nada é cobrado. */
+    private volatile boolean auditada;
     private Thread trabalhador;
 
     private Execucao(
@@ -595,6 +677,19 @@ public class AssistenteService implements DisposableBean {
       this.contexto = contexto;
       this.pergunta = pergunta;
       this.reserva = reserva;
+    }
+
+    private void cobrarGasto() {
+      cobrarGasto.set(true);
+    }
+
+    /**
+     * Cancelada pelo cliente (#499): a conexão caiu, nenhum prazo venceu antes (o primeiro motivo
+     * da interrupção é o cancelamento) e a auditoria foi gravada.
+     */
+    private boolean canceladaPeloCliente() {
+      return cobrarGasto.get() && auditada
+          && contexto.interrupcao().filter(DesfechoInteracao.CANCELADA::equals).isPresent();
     }
 
     /** Interrompida antes de a thread começar: a primeira checagem das rotas já para. */

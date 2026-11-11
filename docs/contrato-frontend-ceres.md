@@ -177,7 +177,8 @@ próprio: não troque `/chat` por `Accept: text/event-stream`.
 
 Sequência real (a primeira linha é um comentário SSE, `:ceres`, que **não é evento**: ignore
 toda linha que começa com `:`; o exemplo de consumo abaixo já faz isso, porque só trata blocos com
-`event:`):
+`event:`). Desde a #499 o mesmo comentário pode vir **também antes de cada chamada ao modelo**,
+entre os eventos, quantas vezes a pergunta chamar o modelo:
 
 ```text
 :ceres
@@ -207,9 +208,16 @@ HTTP comum, **em JSON**, mesmo com `Accept: text/event-stream`. Confira `respons
 stream.
 
 **Cancelar:** abortar o `fetch` (`AbortController`) fecha a conexão. O backend percebe a saída na
-próxima escrita do stream (ou no limite de 5 min), interrompe a pergunta e libera a vaga (desfecho
-`CANCELADA` na auditoria). Até lá, uma nova pergunta do mesmo usuário pode receber
-`503 ASSISTENTE_OCUPADO`: trate com o `Retry-After`.
+próxima escrita do stream (desde a #499, também no comentário antes de cada chamada ao modelo; ou
+no limite de 5 min), interrompe a pergunta e libera a vaga (desfecho `CANCELADA` na auditoria). Até
+lá, uma nova pergunta do mesmo usuário pode receber `503 ASSISTENTE_OCUPADO`: trate com o
+`Retry-After`.
+
+**Crédito de uma pergunta cancelada (#499):** ela paga o que já gastou (as chamadas ao modelo
+concluídas e a entrada da que estava em curso), nunca mais que o reservado; sem nenhuma chamada,
+não paga nada. Falha do servidor (tempo esgotado, modelo fora, erro) não cobra. O acerto acontece
+quando a Ceres para, depois de o `fetch` ser abortado: **recarregue o `GET /api/assistente/uso` uns
+5 s depois de cancelar**, e não logo em seguida.
 
 ### Exemplo de consumo (Angular / TypeScript)
 

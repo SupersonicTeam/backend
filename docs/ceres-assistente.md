@@ -637,7 +637,9 @@ escrever `event:rota` e `data:` vazio, a pergunta virava `CANCELADA` e o stream 
 `resposta`, `fim` nem `erro` — o chat parado no meio. Provado pelo
 `AssistenteStreamingIntegrationTest.envioDaCeresDuranteASaidaDoDispatcher`, que força essa ordem com travas (falha sem o
 comentário). Regra: **a Ceres nunca faz o commit da resposta**; qualquer mudança no começo do
-stream mantém um primeiro envio no buffer antes do `iniciar`. As falhas de envio e o erro avisado
+stream mantém um primeiro envio no buffer antes do `iniciar`. Desde a #499 o mesmo comentário vai
+também antes de cada chamada ao modelo, para perceber o cliente que saiu antes de gastar (seção
+"Cancelamento pelo cliente cobra o que foi gasto"). As falhas de envio e o erro avisado
 pelo container vão ao log em `INFO`, com a classe da exceção e da causa (nunca a mensagem, que traz
 o dado do evento).
 
@@ -805,12 +807,42 @@ mudou ali.
 - **Acerto:** `acertar` cobra no máximo o reservado e registra WARN quando o real passa — o titular
   nunca ultrapassa o limite da semana, mesmo com uma estimativa errada.
 - **Número de chamadas:** o `TetoDaCotaCobreChamadasTest` (ArchUnit) exige exatamente três pontos
-  que chamam `ModeloLinguagem.chamar` (`LlmClassificadorIntencao`, `RotaDados`, `RotaLegislacao`),
-  um em cada, e nenhum `ChatModel.call` fora da porta. Uma chamada nova quebra o build até alguém
+  que chamam `ContextoAssistente.chamar` (`LlmClassificadorIntencao`, `RotaDados`, `RotaLegislacao`),
+  um em cada, que só o `ContextoAssistente.chamar` chama `ModeloLinguagem.chamar` (#499) e nenhum
+  `ChatModel.call` fora da porta. Uma chamada nova quebra o build até alguém
   rever `CHAMADAS_POR_PERGUNTA` e a fórmula. Limite: o teste conta pontos de chamada, não execuções;
   um laço em volta de um deles passaria (revisão de código).
 - **Subida:** com a cota ligada, o teto (com o maior fator) acima do menor plano impede a subida — a
   mesma fórmula do `reservar`, então "sobe" quer dizer "toda pergunta cabe num plano vazio".
+
+### Cancelamento pelo cliente cobra o que foi gasto (#499)
+
+Decisão do Murillo (2026-11-10): "deve cobrar o que foi gasto", em toda pergunta. Antes, o SSE só
+percebia a saída do cliente na escrita seguinte, que depois da `rota` é a `resposta`, com a cota já
+acertada: quem cancelava depois da `rota` pagava tudo, e a Ceres seguia gerando com a vaga presa.
+Quando o container avisava a queda antes, o estorno era integral, mesmo com chamadas já pagas ao
+provedor.
+
+- **Ponto único:** `ContextoAssistente.chamar(modelo, prompt)` confere a reserva (atalho e conversa
+  leve não reservam, e a chamada é recusada), avisa quem transmite, guarda a entrada estimada da
+  chamada em curso (⌈caracteres ÷ 4⌉), chama e registra o uso.
+- **Comentário SSE antes de cada chamada ao modelo** (`:ceres`, como o da abertura; os clientes
+  ignoram): a escrita que percebe o cliente que saiu antes de a chamada gastar. O `/chat` síncrono
+  não manda nada.
+- **Cancelada pelo cliente** = desconexão: `IOException` na escrita (`ClientAbortException`,
+  `AsyncRequestNotUsableException`) ou o erro do container com uma `IOException` na cadeia, sem o
+  prazo ter vencido antes (o primeiro motivo da interrupção vale). O emissor encerrado pelo servidor
+  (`IllegalStateException`) não conta. A auditoria segue com `CANCELADA`.
+- **Acerto:** no `finally` do `responder`, nunca no `onError`, pelas chamadas concluídas (os
+  contadores, mesmo quando o acerto normal os leria como nulos) e, da interrompida no meio, a
+  entrada estimada, sem saída; o `acertar` nunca passa do reservado. Sem nenhum gasto, estorno.
+- **Estorno integral:** tempo esgotado, modelo indisponível, erro, auditoria não gravada, sem vaga,
+  desligamento e o `/chat` interrompido.
+- O frontend recarrega o `/uso` uns 5 s depois de cancelar.
+
+Testes: `ContextoAssistenteChamadaTest` e os de cancelamento do `AssistenteServiceTest` (cliente
+que sai entre duas chamadas paga a primeira e a segunda não acontece; antes de qualquer chamada,
+nada; no meio, a entrada estimada; falha que não é desconexão e `/chat` interrompido estornam).
 
 Retry do Spring AI (`AI_RETRY_MAX_ATTEMPTS`) não muda a conta: uma tentativa que falha não devolve
 uso, e só a resposta final é somada.

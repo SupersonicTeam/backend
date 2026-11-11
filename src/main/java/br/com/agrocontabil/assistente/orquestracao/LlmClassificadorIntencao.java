@@ -61,9 +61,7 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.CLASSIFICACAO),
         new UserMessage(DataSanitizer.mascarar(pergunta))), ModeloLinguagem.comTeto(tetoSaida));
-    contexto.verificarAtiva();
-    ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(prompt, resposta);
+    ChatResponse resposta = contexto.chamar(modelo, prompt);
     ClassificacaoIntencao classificacao = interpretar(resposta.getResult().getOutput().getText());
     if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
       // Cortada no teto (#270). Se o JSON fechou antes do corte (o modelo seguiu escrevendo depois
