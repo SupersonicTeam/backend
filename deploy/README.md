@@ -361,7 +361,10 @@ docker compose logs backend | grep -iE "CNPJ do escritorio" | tail -3
 docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
 ```
 
-Sem o 200, verifique pelo comando abaixo, com o id e o CNPJ do escritório da demonstração.
+O seed roda logo depois de o backend aceitar conexões: nos primeiros segundos da subida, o ask do
+`ruraloeste` ainda responde 404. Com o certificado já emitido e guardado pelo Caddy, nada muda para
+quem acessa. Sem o 200 depois disso, verifique pelo comando abaixo, com o id e o CNPJ do escritório
+da demonstração.
 
 **Verificar um escritório** (o backend continua no ar; o comando sobe outro container, sem web nem
 jobs, e encerra):
@@ -379,7 +382,9 @@ echo $?   # 0 = verificado (ou ja estava); 1 = recusado, motivo no log
   contestação, revogue o errado antes de verificar o outro.
 - **Revogar:** `--verificacao.escritorio=<id> --verificacao.revogar=true`. O endereço sai do ar na
   hora. O certificado já emitido continua no cache do Caddy até vencer, mas o login pelo
-  subdomínio e a página pública param.
+  subdomínio e a página pública param. **No escritório da demonstração a revogação não dura:** a
+  próxima subida do backend o verifica de novo pelo seed. Para tirá-lo do ar, remova o endereço
+  (`DELETE /api/escritorio/endereco`, com a administradora) ou desligue o seed.
 - Local: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,verificacao-cnpj
   -Dspring-boot.run.arguments="--verificacao.escritorio=<id> --verificacao.cnpj=<cnpj>"`.
 

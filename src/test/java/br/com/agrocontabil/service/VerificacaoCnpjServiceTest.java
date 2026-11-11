@@ -138,11 +138,33 @@ class VerificacaoCnpjServiceTest {
 
     // Corrida: a consulta nao viu, o indice unico parcial do PostgreSQL barra.
     when(escritorioRepository.existsByCnpjAndCnpjVerificadoEmIsNotNullAndIdNot(CNPJ,
-        escritorio.getId())).thenReturn(false);
+        escritorio.getId())).thenReturn(false, true);
     when(escritorioRepository.saveAndFlush(escritorio))
         .thenThrow(new DataIntegrityViolationException("uq_escritorio_cnpj_verificado"));
     assertThat(motivo(() -> service.verificar(escritorio.getId(), CNPJ,
         MetodoVerificacaoCnpj.MANUAL))).isEqualTo(Motivo.CNPJ_VERIFICADO_EM_OUTRO_ESCRITORIO);
+  }
+
+  @Test
+  @DisplayName("outra violacao de integridade (o CHECK) nao vira contestacao: sobe como esta")
+  void outraViolacaoSobe() {
+    escritorioSobLock();
+    DataIntegrityViolationException check =
+        new DataIntegrityViolationException("ck_escritorio_cnpj_verificacao");
+    when(escritorioRepository.saveAndFlush(escritorio)).thenThrow(check);
+
+    assertThatThrownBy(() -> service.verificar(escritorio.getId(), CNPJ,
+        MetodoVerificacaoCnpj.MANUAL)).isSameAs(check);
+  }
+
+  @Test
+  @DisplayName("o CNPJ conferido perde so a pontuacao: letras ficam, em maiuscula (CNPJ alfanumerico)")
+  void cnpjAlfanumerico() {
+    escritorio.setCnpj("12ABC34501DE35");
+    escritorioSobLock();
+
+    assertThat(service.verificar(escritorio.getId(), "12.abc.345/01de-35",
+        MetodoVerificacaoCnpj.MANUAL).mudou()).isTrue();
   }
 
   @Test

@@ -9,6 +9,7 @@ import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.service.auditoria.Auditado;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -72,7 +73,9 @@ public class VerificacaoCnpjService {
   public ResultadoVerificacao verificar(UUID escritorioId, String cnpjConferido,
       MetodoVerificacaoCnpj metodo) {
     Objects.requireNonNull(metodo, "metodo");
-    String conferido = cnpjConferido == null ? "" : cnpjConferido.replaceAll("\\D", "");
+    // Sem a pontuacao da mascara; letras ficam (o CNPJ alfanumerico de 2026 as tem, #313).
+    String conferido = cnpjConferido == null ? ""
+        : cnpjConferido.replaceAll("[^0-9A-Za-z]", "").toUpperCase(Locale.ROOT);
     try {
       return transacao.execute(status -> {
         Escritorio escritorio = travado(escritorioId);
@@ -98,7 +101,12 @@ public class VerificacaoCnpjService {
       });
     } catch (DataIntegrityViolationException e) {
       // Duas marcas do mesmo CNPJ ao mesmo tempo: o indice unico parcial (PostgreSQL) decide.
-      throw new VerificacaoRecusadaException(Motivo.CNPJ_VERIFICADO_EM_OUTRO_ESCRITORIO);
+      // Outra violacao (o CHECK, por exemplo) nao e contestacao: sobe como esta.
+      if (escritorioRepository.existsByCnpjAndCnpjVerificadoEmIsNotNullAndIdNot(conferido,
+          escritorioId)) {
+        throw new VerificacaoRecusadaException(Motivo.CNPJ_VERIFICADO_EM_OUTRO_ESCRITORIO);
+      }
+      throw e;
     }
   }
 

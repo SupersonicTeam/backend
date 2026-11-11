@@ -333,7 +333,8 @@ public class SeedDemonstracao implements CommandLineRunner {
    * banco semeado antes da verificação (a VPS) mantém o endereço da banca no ar depois do deploy,
    * sem passo manual. Pelo {@link VerificacaoCnpjService}, como o comando manual, e auditado. Só o
    * escritório da administradora com o CNPJ do seed: se um ensaio trocou o CNPJ, a verificação
-   * caiu e fica caída (o CNPJ novo não foi conferido).
+   * caiu e fica caída (o CNPJ novo não foi conferido). Uma revogação pelo comando manual não dura
+   * neste escritório (a subida seguinte o verifica de novo): para tirá-lo do ar, remova o endereço.
    *
    * @return {@code true} se marcou agora
    */
