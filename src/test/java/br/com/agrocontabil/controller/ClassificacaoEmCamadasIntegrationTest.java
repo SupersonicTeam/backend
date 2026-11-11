@@ -158,6 +158,28 @@ class ClassificacaoEmCamadasIntegrationTest {
         .containsExactly("LLM");
   }
 
+  @Test
+  @DisplayName("#497: o modelo marca recusa firme sem sinal no texto; sem a marca, gentil")
+  void recusaFirmeMarcadaPeloModelo() throws Exception {
+    // Nada parecido no treino nem sinal no texto: quem decide e o modelo.
+    modelo.classificarComo("FORA_DE_ESCOPO", true);
+    perguntar("zxqv wpl mmrt?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rota").value("FORA_DE_ESCOPO"))
+        .andExpect(jsonPath("$.resposta").value(
+            br.com.agrocontabil.assistente.PromptsCeres.RECUSA_FIRME));
+
+    modelo.classificarComo("FORA_DE_ESCOPO");
+    perguntar("zxqv wpl mmrt?")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.resposta").value(
+            br.com.agrocontabil.assistente.PromptsCeres.RECUSA_GENTIL));
+
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
+        .extracting(AssistenteInteracao::getCamadaClassificacao)
+        .containsOnly("LLM");
+  }
+
   private ResultActions perguntar(String pergunta) throws Exception {
     return mockMvc.perform(post("/api/assistente/chat")
         .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId())

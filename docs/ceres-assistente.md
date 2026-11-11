@@ -351,6 +351,14 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
    `FORA_DE_ESCOPO` sobre outra pessoa e ordem ao sistema, com a ressalva da contraparte e de quem
    contou a regra ("meu vizinho disse que..."). Com o modelo em pausa, as camadas decidem como
    antes.
+
+   **Recusa firme marcada pelo modelo:** quando o classificador por modelo decide
+   `FORA_DE_ESCOPO` por pedido sobre outra pessoa ou ordem ao sistema, ele devolve
+   `"recusaFirme": true` (`ClassificacaoIntencao.recusaFirme`, só vale no fora de escopo, segue na
+   confiança baixa) e a recusa sai firme mesmo sem sinal no texto; quem só fugiu do assunto segue
+   com a gentil. Na linha de base, a-07, a-08, a-11 e o-02 eram recusados com a gentil. A
+   embedding não marca (o treino não tem ataques): ataque que ela recusa sem sinal no texto ainda
+   sai com a gentil.
 2. **`RegrasClassificacao`**: só decide com **sinal de um lado só**, e só com âncora do domínio.
    Termo de lei **da reforma ou do Funrural** (IBS, CBS, split payment, Funrural, crédito presumido,
    Anexo, LC 214, regime regular...) sem marcador de dados, sem produto específico e sem quantia ou
@@ -393,7 +401,7 @@ O `OrquestradorService` decide:
 | `DADOS` | modelo + **só** as funções de dados |
 | `LEGISLACAO` | RAG + `ValidadorCitacao` |
 | `MISTO` | as duas, geradas e validadas **separadamente** e depois juntadas |
-| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo: `PromptsCeres.RECUSA_GENTIL` (o que a Ceres faz e exemplos, sem convite para reformular) ou `RECUSA_FIRME` para injeção pega pelo `FiltroInjecao`, para o pedido recusado antes do classificador (`SINAL_RECUSA_FIRME`, #497) e para o `SinalRecusaFirme` (outra pessoa, CPF/CNPJ/e-mail/telefone/UUID, ordem ao sistema), escolhida pela `RecusaForaDeEscopo` (#494). Na rota de dados, modelo sem função + `SinalRecusaFirme` também dá a recusa firme, sem a apuração forçada nem atalhos |
+| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo: `PromptsCeres.RECUSA_GENTIL` (o que a Ceres faz e exemplos, sem convite para reformular) ou `RECUSA_FIRME` para injeção pega pelo `FiltroInjecao`, para o pedido recusado antes do classificador (`SINAL_RECUSA_FIRME`, #497), para o fora de escopo que o classificador por modelo marca com `recusaFirme` (#497) e para o `SinalRecusaFirme` (outra pessoa, CPF/CNPJ/e-mail/telefone/UUID, ordem ao sistema), escolhida pela `RecusaForaDeEscopo` (#494). Na rota de dados, modelo sem função + `SinalRecusaFirme` também dá a recusa firme, sem a apuração forçada nem atalhos |
 | conversa leve (#493, antes do classificador) | `FORA_DE_ESCOPO` com o texto montado pela `ConversaLeve`, sem modelo |
 
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com

@@ -205,9 +205,10 @@ public class OrquestradorService {
       // Regras e embeddings decidem mesmo com o modelo em pausa; o desempate pelo modelo, nao
       // (ClassificadorEmCamadas lanca AssistenteIndisponivelException).
       ClassificacaoIntencao classificacao = classificador.classificar(pergunta, contexto);
+      // A marca de recusa firme (#497) so existe no fora de escopo do modelo: segue com ele.
       return classificacao.confianca() < confiancaMinima
           ? new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, classificacao.confianca(), null,
-              classificacao.camada())
+              classificacao.camada(), classificacao.recusaFirme())
           : classificacao;
     } catch (AssistenteIndisponivelException e) {
       semModelo(contexto, "classificacao");

@@ -319,7 +319,9 @@ br.com.agrocontabil
 │                  #   documento sem dono saem FORA_DE_ESCOPO antes do classificador, camada
 │                  #   SINAL_RECUSA_FIRME) e .pedeDesempate (marca de terceiro ou de ordem: regra e
 │                  #   embeddings não decidem, o modelo desempata; prompt do classificador com a linha
-│                  #   de outra pessoa e ordem ao sistema — mudança medida antes do merge);
+│                  #   de outra pessoa e ordem ao sistema e o "recusaFirme": true no fora de escopo
+│                  #   desses pedidos, ClassificacaoIntencao.recusaFirme → recusa firme — mudança
+│                  #   medida antes do merge);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,
 │                  # BuscaTextualLegislacaoService = tsvector sem acento p/ o fallback); RotaLegislacao;

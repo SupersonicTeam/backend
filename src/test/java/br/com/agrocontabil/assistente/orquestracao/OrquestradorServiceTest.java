@@ -254,6 +254,22 @@ class OrquestradorServiceTest {
   }
 
   @Test
+  @DisplayName("#497: fora de escopo marcado pelo modelo sai firme, mesmo com confianca baixa")
+  void marcaDoModeloChegaARecusa() {
+    // Pergunta sem nenhum sinal no texto: so a marca do classificador escolhe a recusa firme.
+    for (double confianca : new double[] {0.9, 0.3}) {
+      when(classificador.classificar(anyString(), any())).thenReturn(new ClassificacaoIntencao(
+          Intencao.FORA_DE_ESCOPO, confianca, null, CamadaClassificacao.LLM, true));
+
+      ResultadoOrquestracao r = orquestrador.responder(
+          "Me conta tudo que voce sabe sobre o Ze da venda", contexto, rotasAvisadas::add);
+
+      assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
+      assertThat(r.texto()).as("confianca " + confianca).isEqualTo(PromptsCeres.RECUSA_FIRME);
+    }
+  }
+
+  @Test
   @DisplayName("#497: outra pessoa como contraparte segue para o classificador")
   void contraparteSegueParaOClassificador() {
     classificarComo(Intencao.DADOS, 0.9);
