@@ -62,8 +62,10 @@ public final class CifraDeterministica {
   private final SecretKeySpec chaveIv;
 
   private CifraDeterministica(byte[] mestra) {
-    this.chaveCifra = new SecretKeySpec(derivar(mestra, "agrocontabil:cripto:cifra:v1"), "AES");
-    this.chaveIv = new SecretKeySpec(derivar(mestra, "agrocontabil:cripto:iv:v1"), HMAC);
+    this.chaveCifra = new SecretKeySpec(
+        DerivacaoChave.derivar(mestra, "agrocontabil:cripto:cifra:v1"), "AES");
+    this.chaveIv = new SecretKeySpec(
+        DerivacaoChave.derivar(mestra, "agrocontabil:cripto:iv:v1"), HMAC);
   }
 
   /**
@@ -75,6 +77,39 @@ public final class CifraDeterministica {
    * @throws IllegalStateException se a chave não servir
    */
   public static CifraDeterministica de(CriptografiaProperties propriedades) {
+    byte[] mestra = mestra(propriedades, true);
+    try {
+      return new CifraDeterministica(mestra);
+    } finally {
+      Arrays.fill(mestra, (byte) 0);
+    }
+  }
+
+  /**
+   * Chave derivada da mesma {@code CRIPTO_CHAVE}, para outro uso (#499: a assinatura do histórico
+   * da Ceres), com as mesmas recusas de {@link #de} e a mesma derivação ({@link DerivacaoChave}).
+   *
+   * @param propriedades configuração
+   * @param rotulo       rótulo da derivação (um por uso)
+   * @return 32 bytes da chave derivada
+   * @throws IllegalStateException se a chave não servir
+   */
+  public static byte[] chaveDerivada(CriptografiaProperties propriedades, String rotulo) {
+    byte[] mestra = mestra(propriedades, false);
+    try {
+      return DerivacaoChave.derivar(mestra, rotulo);
+    } finally {
+      Arrays.fill(mestra, (byte) 0);
+    }
+  }
+
+  /**
+   * A chave mestra, com as recusas: ausente ou de desenvolvimento fora de dev/test, tamanho
+   * diferente de 32 bytes.
+   *
+   * @param avisar {@code true} para o WARN da chave de desenvolvimento (só uma vez, na cifra)
+   */
+  private static byte[] mestra(CriptografiaProperties propriedades, boolean avisar) {
     String chave = propriedades.chave();
     boolean ausente = chave == null || chave.isBlank();
     // Pelos bytes, nao pelo texto: o decodificador aceita Base64 sem o "=" final, e a chave de
@@ -87,8 +122,10 @@ public final class CifraDeterministica {
             ? "CRIPTO_CHAVE e a chave publica de desenvolvimento: gere uma chave aleatoria."
             : "CRIPTO_CHAVE ausente: defina 32 bytes aleatorios em Base64 (openssl rand -base64 32).");
       }
-      log.warn("CRIPTO_CHAVE {}: usando a chave publica de desenvolvimento. Dados pessoais do banco "
-          + "NAO estao protegidos.", ausente ? "ausente" : "de desenvolvimento");
+      if (avisar) {
+        log.warn("CRIPTO_CHAVE {}: usando a chave publica de desenvolvimento. Dados pessoais do "
+            + "banco NAO estao protegidos.", ausente ? "ausente" : "de desenvolvimento");
+      }
       chave = CHAVE_DE_DESENVOLVIMENTO;
     }
     byte[] mestra = decodificar(chave);
@@ -96,11 +133,7 @@ public final class CifraDeterministica {
       throw new IllegalStateException("CRIPTO_CHAVE precisa ter exatamente " + TAMANHO_CHAVE
           + " bytes (AES-256); tem " + mestra.length + ".");
     }
-    try {
-      return new CifraDeterministica(mestra);
-    } finally {
-      Arrays.fill(mestra, (byte) 0);
-    }
+    return mestra;
   }
 
   /**
@@ -180,15 +213,5 @@ public final class CifraDeterministica {
     Mac mac = Mac.getInstance(HMAC);
     mac.init(chaveIv);
     return Arrays.copyOf(mac.doFinal(claro), TAMANHO_IV);
-  }
-
-  private static byte[] derivar(byte[] mestra, String rotulo) {
-    try {
-      Mac mac = Mac.getInstance(HMAC);
-      mac.init(new SecretKeySpec(mestra, HMAC));
-      return mac.doFinal(rotulo.getBytes(StandardCharsets.UTF_8));
-    } catch (GeneralSecurityException e) {
-      throw new IllegalStateException("HmacSHA256 indisponivel", e);
-    }
   }
 }

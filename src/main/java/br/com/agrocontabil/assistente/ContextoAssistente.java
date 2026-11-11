@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.continuidade.RegistroTurno;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.model.DesfechoInteracao;
@@ -82,6 +83,7 @@ public final class ContextoAssistente {
   private final AtomicInteger entradaEmCurso = new AtomicInteger();
   private volatile AvisoAntesDaChamada aviso = () -> { };
   private volatile boolean semReservaParaOModelo;
+  private final RegistroTurno registroTurno = new RegistroTurno();
 
   /**
    * Cria o contexto de uma pergunta.
@@ -324,6 +326,14 @@ public final class ContextoAssistente {
     public boolean nada() {
       return entrada == 0 && saida == 0;
     }
+  }
+
+  /**
+   * O que esta pergunta deixa para a carga do {@code turno} da continuidade (#499): consulta
+   * executada, texto de dados aceito, textos livres e a parte de lei.
+   */
+  public RegistroTurno registroTurno() {
+    return registroTurno;
   }
 
   /** {@code true} se algum token desta pergunta foi estimado, não informado pelo provedor. */

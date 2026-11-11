@@ -12,6 +12,8 @@ import java.time.OffsetDateTime;
  * @param consumidos     créditos gastos na semana
  * @param restantes      créditos ainda disponíveis (descontadas as perguntas em andamento)
  * @param renovaEm       próxima segunda-feira 00:00, horário de Brasília
+ * @param conversaVaiAoProvedor {@code true} com a continuidade ligada e o modelo por API (#499):
+ *                       as trocas anteriores vão inteiras ao provedor, e a tela mostra o aviso
  */
 @Schema(description = "Uso semanal da Ceres, em creditos")
 public record AssistenteUsoResponse(
@@ -20,4 +22,6 @@ public record AssistenteUsoResponse(
     @Schema(example = "1000") long creditosSemana,
     @Schema(example = "120") long consumidos,
     @Schema(example = "880") long restantes,
-    OffsetDateTime renovaEm) {}
+    OffsetDateTime renovaEm,
+    @Schema(description = "As trocas anteriores vao ao provedor do modelo, fora do Brasil")
+    boolean conversaVaiAoProvedor) {}

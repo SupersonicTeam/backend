@@ -304,7 +304,7 @@ public class AssistenteService implements DisposableBean {
   public AssistenteUsoResponse uso() {
     CotaUsoPorta.UsoCota uso = cota.consultar(identidade.produtorAutenticado());
     return new AssistenteUsoResponse(uso.plano(), uso.habilitada(), uso.creditosSemana(),
-        uso.consumidos(), uso.restantes(), uso.renovaEm());
+        uso.consumidos(), uso.restantes(), uso.renovaEm(), false);
   }
 
   /**

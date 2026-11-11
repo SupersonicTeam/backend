@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.adaptador;
 
 import br.com.agrocontabil.assistente.porta.CotaUsoPorta;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.service.CotaUsoAssistenteService;
 import java.util.UUID;
@@ -23,6 +24,13 @@ public class CotaUsoAdaptador implements CotaUsoPorta {
   public ReservaCota reservar(UUID produtorId, String modelo) {
     CotaUsoAssistenteService.Reserva r =
         service.reservar(TipoTitularCota.PRODUTOR, produtorId, modelo);
+    return new ReservaCota(r.titularId(), r.semana(), r.creditos(), r.ativa());
+  }
+
+  @Override
+  public ReservaCota reservar(UUID produtorId, String modelo, CaminhoCota caminho) {
+    CotaUsoAssistenteService.Reserva r =
+        service.reservar(TipoTitularCota.PRODUTOR, produtorId, modelo, caminho);
     return new ReservaCota(r.titularId(), r.semana(), r.creditos(), r.ativa());
   }
 

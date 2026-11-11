@@ -191,7 +191,7 @@ public final class RegrasClassificacao {
   }
 
   /** Sem acento, minúsculas, pontuação vira espaço (exceto ponto entre dígitos). */
-  static String normalizar(String pergunta) {
+  public static String normalizar(String pergunta) {
     if (pergunta == null) {
       return "";
     }

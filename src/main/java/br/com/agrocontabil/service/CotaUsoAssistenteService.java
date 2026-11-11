@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.model.UsoSemanalAssistente;
@@ -84,12 +85,27 @@ public class CotaUsoAssistenteService {
    * @throws LimiteUsoAssistenteException sem saldo para o teto (429)
    */
   public Reserva reservar(TipoTitularCota tipo, UUID titularId, String modelo) {
+    return reservar(tipo, titularId, modelo, CaminhoCota.NORMAL);
+  }
+
+  /**
+   * Reserva o teto do caminho da pergunta (#499): a continuidade tem caminhos mais baratos
+   * (reconferência) e um mais caro (reescrita) que a pergunta comum.
+   *
+   * @param tipo      produtor ou escritório
+   * @param titularId titular já autorizado por quem chama
+   * @param modelo    identificação do modelo (fator)
+   * @param caminho   caminho da pergunta
+   * @return a reserva
+   */
+  public Reserva reservar(TipoTitularCota tipo, UUID titularId, String modelo,
+      CaminhoCota caminho) {
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
     LocalDate semana = semanaDe(agora);
     if (!cota.isHabilitada()) {
       return new Reserva(tipo, titularId, semana, 0, false);
     }
-    long teto = tetoDaPergunta(modelo);
+    long teto = tetoDaPergunta(modelo, caminho);
     long limite = planoProvider.planoDe(tipo, titularId).creditosPorSemana();
     garantirLinha(tipo, titularId, semana, agora);
     Integer reservou = transacao.execute(status -> {
@@ -191,6 +207,17 @@ public class CotaUsoAssistenteService {
    */
   public long tetoDaPergunta(String modelo) {
     return cota.tetoDaPergunta(tetos, fator(modelo));
+  }
+
+  /**
+   * Teto de uma pergunta pelo caminho dela (#499).
+   *
+   * @param modelo  identificação do modelo
+   * @param caminho caminho da pergunta
+   * @return créditos
+   */
+  public long tetoDaPergunta(String modelo, CaminhoCota caminho) {
+    return cota.tetoDaPergunta(tetos, fator(modelo), caminho);
   }
 
   private double fator(String modelo) {

@@ -36,10 +36,10 @@ import java.util.stream.Collectors;
 public final class ConversaLeve {
 
   /** O que a mensagem pede, na ordem de precedência quando ela mistura tipos (o primeiro vence). */
-  enum Tipo { DESPEDIDA, AGRADECIMENTO, SEGUIMENTO, APRESENTACAO, SAUDACAO, RECONHECIMENTO }
+  public enum Tipo { DESPEDIDA, AGRADECIMENTO, SEGUIMENTO, APRESENTACAO, SAUDACAO, RECONHECIMENTO }
 
   /** Uma mensagem reconhecida: o tipo que vence e o texto da resposta. */
-  record Resposta(Tipo tipo, String texto) {}
+  public record Resposta(Tipo tipo, String texto) {}
 
   static final int MAXIMO_PALAVRAS = 12;
 
@@ -183,7 +183,7 @@ public final class ConversaLeve {
    * @param pergunta mensagem do usuário
    * @return o tipo e o texto, ou vazio (a mensagem segue o fluxo normal)
    */
-  static Optional<Resposta> reconhecer(String pergunta) {
+  public static Optional<Resposta> reconhecer(String pergunta) {
     if (pergunta == null || pergunta.isBlank()) {
       return Optional.empty();
     }

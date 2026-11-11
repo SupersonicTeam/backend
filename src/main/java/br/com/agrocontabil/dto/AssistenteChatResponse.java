@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,11 @@ import java.util.Map;
  *                     ele: trechos de lei verbatim e/ou atalhos para as telas (#146)
  * @param atalhos      telas sugeridas no modo fallback ({@code NOTAS}, {@code APURACAO},
  *                     {@code CREDITOS}, {@code CALENDARIO}); vazia fora dele (#146)
+ * @param perguntaInterpretada a pergunta considerada, quando a continuidade a mudou (#499); fora do
+ *                     JSON quando nula
+ * @param turno        a troca assinada para devolver no {@code historico} da próxima pergunta
+ *                     (#499); fora do JSON quando nula (continuidade desligada, conversa leve,
+ *                     recusa, fallback)
  */
 @Schema(description = "Resposta da Ceres, a assistente fiscal")
 public record AssistenteChatResponse(
@@ -28,7 +34,28 @@ public record AssistenteChatResponse(
     @Schema(description = "Resposta montada sem o modelo (trechos de lei e atalhos)")
     boolean modoFallback,
     @Schema(description = "Telas sugeridas no modo fallback", example = "[\"CALENDARIO\"]")
-    List<String> atalhos) {
+    List<String> atalhos,
+    @Schema(description = "Pergunta considerada, quando a continuidade a mudou")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String perguntaInterpretada,
+    @Schema(description = "Troca assinada para devolver no historico da proxima pergunta")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    TurnoConversa turno) {
+
+  /**
+   * Resposta sem continuidade, como antes da #499.
+   *
+   * @param resposta     texto da resposta
+   * @param rota         camada acionada
+   * @param citacoes     trechos de lei citados
+   * @param fontesDados  funções consultadas
+   * @param modoFallback resposta montada sem o modelo
+   * @param atalhos      telas sugeridas no modo fallback
+   */
+  public AssistenteChatResponse(String resposta, String rota, List<Citacao> citacoes,
+      List<FonteDado> fontesDados, boolean modoFallback, List<String> atalhos) {
+    this(resposta, rota, citacoes, fontesDados, modoFallback, atalhos, null, null);
+  }
 
   /**
    * Trecho de lei citado (issue #156). A referência é montada pelo backend a partir dos metadados

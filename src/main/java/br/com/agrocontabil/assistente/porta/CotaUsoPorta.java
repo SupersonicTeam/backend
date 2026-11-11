@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente.porta;
 
+import br.com.agrocontabil.config.CaminhoCota;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -23,6 +24,18 @@ public interface CotaUsoPorta {
    * @throws br.com.agrocontabil.exception.LimiteUsoAssistenteException sem saldo (429)
    */
   ReservaCota reservar(UUID produtorId, String modelo);
+
+  /**
+   * Reserva o teto do caminho da pergunta (#499). O padrão reserva o da pergunta comum.
+   *
+   * @param produtorId produtor autenticado
+   * @param modelo     identificação do modelo em uso
+   * @param caminho    caminho da pergunta (reconferência, reescrita...)
+   * @return a reserva
+   */
+  default ReservaCota reservar(UUID produtorId, String modelo, CaminhoCota caminho) {
+    return reservar(produtorId, modelo);
+  }
 
   /**
    * Acerta pelo consumo real (tokens informados pelo provedor ou estimados).
