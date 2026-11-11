@@ -55,8 +55,13 @@ public class PoliticaDadosService {
         List.of(
             "SEFAZ: notas fiscais, por obrigacao legal.",
             "Escritorio de contabilidade vinculado pelo produtor.",
-            "Provedor do modelo da Ceres, quando configurado por API: so dados ja mascarados "
-                + "(sem CPF, CNPJ, e-mail ou telefone).",
+            "Provedor do modelo da Ceres, quando configurado por API, fora do Brasil: a pergunta "
+                + "com CPF, CNPJ, e-mail, telefone e CEP mascarados e os dados de negocio que ela "
+                + "consulta. Com a continuidade da conversa ligada, tambem as ate 3 trocas "
+                + "anteriores inteiras: valores, datas, numeros de nota e os textos que os "
+                + "membros do escritorio escrevem ao produtor (titulo de um pedido, motivo de uma "
+                + "devolucao). A exclusao da conta nao alcanca o que ja foi enviado; o prazo de "
+                + "retencao no provedor segue o contrato com ele.",
             "Autoridade certificadora (Let's Encrypt) e registros publicos de certificados: o "
                 + "endereco proprio do escritorio, para emitir o certificado HTTPS."),
         List.of(

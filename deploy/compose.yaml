@@ -171,6 +171,11 @@ services:
       AI_TETO_FUNCOES: ${AI_TETO_FUNCOES:-512}
       AI_TETO_CLASSIFICACAO: ${AI_TETO_CLASSIFICACAO:-256}
       AI_TETO_LEGISLACAO: ${AI_TETO_LEGISLACAO:-1024}
+      # Continuidade da conversa da Ceres (#499), desligada por padrao. Ligada com o provedor por
+      # API, as trocas anteriores de qualquer conta vao inteiras a Anthropic: ver deploy/README.md.
+      AI_CONTINUIDADE_HABILITADA: ${AI_CONTINUIDADE_HABILITADA:-false}
+      AI_TETO_REESCRITA: ${AI_TETO_REESCRITA:-192}
+      AI_TETO_RECONFERENCIA: ${AI_TETO_RECONFERENCIA:-1024}
       ANTIVIRUS_MODO: CLAMAV
       ANTIVIRUS_HOST: clamav
       # Atras do Caddy: sem isto o backend ve todo cliente com o IP do Caddy e o limite por IP de

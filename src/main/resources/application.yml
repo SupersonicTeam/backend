@@ -407,7 +407,7 @@ app:
   lgpd:
     controlador: ${LGPD_CONTROLADOR:GWNext}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:contato@gwnext.com.br}
-    versao-politica: 2026-11-09
+    versao-politica: 2026-11-11
   # Autenticacao (Sprint 8).
   seguranca:
     senha:
