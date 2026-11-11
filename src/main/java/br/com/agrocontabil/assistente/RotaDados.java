@@ -303,7 +303,8 @@ public class RotaDados {
    * chamada só, com o período inteiro: o total sai certo e nenhuma fatia se perde. Com outros
    * parâmetros diferentes ("soja e milho"), as chamadas ficam como o modelo escolheu.
    */
-  static ChatResponse comPeriodo(ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
+  public static ChatResponse comPeriodo(
+      ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
     Map<String, Long> vezes = resposta.getResults().stream()
         .flatMap(g -> g.getOutput().getToolCalls().stream())
         .collect(Collectors.groupingBy(AssistantMessage.ToolCall::name, Collectors.counting()));

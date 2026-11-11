@@ -124,6 +124,9 @@ public class ConferenciaHistorico {
     if (carga.rota() == Intencao.DADOS && lei != null) {
       return false;
     }
+    if (carga.rota() == Intencao.MISTO && lei == null) {
+      return false;
+    }
     if (carga.rota() == Intencao.LEGISLACAO
         && (carga.consulta() != null || carga.dados() != null)) {
       return false;
