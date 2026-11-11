@@ -61,7 +61,8 @@ JAR=$(ls "$WT"/target/*.jar | grep -v plain | head -1)
   ANTHROPIC_API_KEY=$(grep -E '^ANTHROPIC_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\r')
   export ANTHROPIC_API_KEY
   SPRING_PROFILES_ACTIVE=dev DB_NAME=$BANCO DEMONSTRACAO_HABILITADA=true \
-    AI_COTA_CREDITOS_PRODUTOR=100000000 AI_CHAT_PROVIDER=anthropic     AI_ANTHROPIC_MODEL=claude-haiku-5-5 \
+    AI_COTA_CREDITOS_PRODUTOR=100000000 AI_CHAT_PROVIDER=anthropic \
+    AI_ANTHROPIC_MODEL=claude-haiku-5-5 \
     exec java -jar "$JAR" --server.port=$PORTA --spring.docker.compose.enabled=false \
     --spring.jpa.show-sql=false --logging.level.org.hibernate.SQL=WARN \
     --logging.level.br.com.agrocontabil=INFO > "$SAIDA/app.log" 2>&1
