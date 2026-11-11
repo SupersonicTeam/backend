@@ -11,6 +11,9 @@ import org.springframework.web.util.UrlPathHelper;
  *
  * <p>Duas listas iguais em dois arquivos se separam no primeiro endpoint novo; uma rota pública
  * que o filtro não conhecesse responderia 401 a quem mandasse um token expirado junto.
+ *
+ * <p>Também é a fonte do caminho decodificado ({@link #caminho}) e do que é API
+ * ({@link #ehApi}, {@link #PREFIXO_API}), que os filtros e o escritor da CSP usam (#208, #345).
  */
 public final class RotasAutenticacao {
 
