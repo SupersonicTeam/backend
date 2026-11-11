@@ -260,11 +260,10 @@ public class SeedDemonstracao implements CommandLineRunner {
   @Override
   public void run(String... args) {
     try {
-      if (jaSemeado()) {
+      boolean semeado = jaSemeado();
+      if (semeado) {
         completarCredenciais();
-        int modelos = completarModelosPedido();
-        log.info("Demonstracao da banca ja semeada: nada recriado ({} modelos de pedido novos).",
-            modelos);
+        log.info("Demonstracao da banca ja semeada: nada recriado.");
       } else {
         Resumo resumo = semear();
         ultimoResumo = resumo;
@@ -273,8 +272,23 @@ public class SeedDemonstracao implements CommandLineRunner {
             resumo.notasRecusadas(), resumo.guias(), resumo.pendencias(), resumo.mesesFechados());
       }
       cotaCeres.prepararSemana();
+      if (semeado) {
+        // Depois da cota e com falha propria: os modelos (#517) nao podem custar a cota da banca.
+        completarModelosPedidoSemFalhar();
+      }
     } catch (RuntimeException e) {
       log.error("Demonstracao da banca nao semeada; a aplicacao segue sem ela.", e);
+    }
+  }
+
+  private void completarModelosPedidoSemFalhar() {
+    try {
+      int criados = completarModelosPedido();
+      if (criados > 0) {
+        log.info("Demonstracao da banca: {} modelos de pedido criados no escritorio.", criados);
+      }
+    } catch (RuntimeException e) {
+      log.error("Modelos de pedido da demonstracao nao criados; o resto segue.", e);
     }
   }
 
@@ -901,7 +915,6 @@ public class SeedDemonstracao implements CommandLineRunner {
       modeloPedidoRepository.save(ModeloPedido.builder()
           .escritorioId(escritorioId)
           .titulo(modelo.titulo())
-          .tituloNormalizado(ModeloPedido.normalizarTitulo(modelo.titulo()))
           .descricao(modelo.descricao())
           .tiposDocumento(EnumSet.copyOf(modelo.tipos()))
           .prazoEmDias(modelo.prazoEmDias())

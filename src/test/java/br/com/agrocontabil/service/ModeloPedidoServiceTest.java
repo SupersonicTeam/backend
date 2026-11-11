@@ -109,8 +109,8 @@ class ModeloPedidoServiceTest {
     ArgumentCaptor<ModeloPedido> gravado = ArgumentCaptor.forClass(ModeloPedido.class);
     verify(modeloRepository).save(gravado.capture());
     assertThat(gravado.getValue().getEscritorioId()).isEqualTo(ESCRITORIO);
+    // O titulo normalizado (consultado acima no repetido) a entidade calcula ao gravar.
     assertThat(gravado.getValue().getTitulo()).isEqualTo("Extrato  Bancário do Mês");
-    assertThat(gravado.getValue().getTituloNormalizado()).isEqualTo("extrato bancario do mes");
     assertThat(resposta.id()).isEqualTo(id);
     assertThat(resposta.recursoAuditado()).isEqualTo(id);
     assertThat(resposta.status()).isNull();

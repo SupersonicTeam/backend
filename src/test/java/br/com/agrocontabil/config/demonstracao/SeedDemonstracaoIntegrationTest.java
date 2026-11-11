@@ -139,18 +139,29 @@ class SeedDemonstracaoIntegrationTest {
     });
     assertThat(modelos).extracting(ModeloPedido::getTitulo).contains("Extrato bancário do mês");
 
-    // Ja tem modelos (mesmo que o ensaio tenha apagado alguns): nada muda.
-    modeloPedidoRepository.delete(modelos.get(0));
-    assertThat(seed.completarModelosPedido()).isZero();
-    assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
-        .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size() - 1L);
+    try {
+      // Ja tem modelos (mesmo que o ensaio tenha apagado alguns): nada muda.
+      modeloPedidoRepository.delete(modelos.get(0));
+      assertThat(seed.completarModelosPedido()).isZero();
+      assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
+          .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size() - 1L);
 
-    // Sem nenhum (o banco da VPS, semeado antes da #517): a subida os cria.
+      // Sem nenhum (o banco da VPS, semeado antes da #517): a subida os cria.
+      apagarModelos(escritorio);
+      assertThat(seed.completarModelosPedido())
+          .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
+      assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
+          .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
+    } finally {
+      // O banco e da classe inteira: volta aos modelos do cenario mesmo se uma assercao falhar.
+      apagarModelos(escritorio);
+      seed.completarModelosPedido();
+    }
+  }
+
+  private void apagarModelos(Escritorio escritorio) {
     modeloPedidoRepository.deleteAll(
         modeloPedidoRepository.findByEscritorioIdOrderByTituloNormalizadoAsc(escritorio.getId()));
-    assertThat(seed.completarModelosPedido()).isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
-    assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
-        .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
   }
 
   @Test

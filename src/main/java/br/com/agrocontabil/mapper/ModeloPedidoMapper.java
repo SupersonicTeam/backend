@@ -18,14 +18,14 @@ public final class ModeloPedidoMapper {
 
   /**
    * Copia o pedido para o modelo (criação ou edição). O título vai sem os espaços das pontas, e
-   * texto em branco vira nulo; o título normalizado é calculado pela entidade ao gravar.
+   * texto em branco vira nulo; o título normalizado é calculado pela entidade ao gravar
+   * ({@code @PrePersist}/{@code @PreUpdate}), único ponto da regra.
    *
    * @param modelo  modelo a preencher
    * @param request dados validados
    */
   public static void aplicar(ModeloPedido modelo, ModeloPedidoRequest request) {
     modelo.setTitulo(request.titulo().strip());
-    modelo.setTituloNormalizado(ModeloPedido.normalizarTitulo(request.titulo()));
     modelo.setDescricao(textoOuNulo(request.descricao()));
     modelo.setTiposDocumento(EnumSet.copyOf(request.tiposDocumento()));
     modelo.setPrazoEmDias(request.prazoEmDias());
