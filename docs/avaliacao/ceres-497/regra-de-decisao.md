@@ -12,9 +12,12 @@ mesmo dia. Mudar a regra depois de ver um resultado invalida a decisão.
 - O mesmo conjunto congelado (`docs/avaliacao/treino/perguntas-ceres-497.json`, `ceres-497-v1`),
   lido pela mesma regra (`regra-de-leitura.md`), com o mesmo executor (`executar.py`) e a mesma
   leitura (`pontuar.py`). A sessão que corrigiu recebeu só as classes e os ids, nunca o texto.
-- Os dois braços rodam na mesma janela, com o `claude-haiku-5-5` de verdade, 3 repetições, banco
-  próprio para cada braço (`agroconia_497_base` e `agroconia_497_correcao`), a mesma trava do
-  Ollama e a chave só no ambiente do processo. Roteiro: `rodar_comparacao_497.sh`.
+- Os dois braços rodam em sequência, o base primeiro, na mesma sessão e sob a mesma trava do
+  Ollama, com o `claude-haiku-5-5` de verdade, 3 repetições, banco próprio para cada braço
+  (`agroconia_497_base` e `agroconia_497_correcao`) e a chave só no ambiente do processo. Roteiro:
+  `rodar_comparacao_497.sh`. Os braços não se alternam: uma mudança do modelo ou da rede entre os
+  dois cai num lado só. A tolerância de uma pergunta e a linha de base de 2026-11-11, como
+  referência de variação, são a proteção contra isso.
 - A linha de base de 2026-11-11 (`resultados/2026-11-11/`) não entra na decisão: a comparação é
   com o braço base desta rodada. Ela sai no relatório só como referência da variação entre rodadas.
 

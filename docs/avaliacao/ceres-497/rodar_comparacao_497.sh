@@ -73,7 +73,8 @@ braco() {
   ( cd "$WT" && ./mvnw -q -DskipTests -Djacoco.skip=true -Dcheckstyle.skip=true package \
       > "$DIR/build.log" 2>&1 ) || { echo "BUILD FALHOU ($ROTULO)"; return 14; }
   local JAR
-  JAR=$(ls "$WT"/target/*.jar | grep -v plain | head -1)
+  JAR=$(ls "$WT"/target/*.jar 2>/dev/null | grep -v plain | head -1)
+  [ -n "$JAR" ] || { echo "JAR AUSENTE ($ROTULO)"; return 14; }
   (
     cd "$WT" || exit 1
     ANTHROPIC_API_KEY=$(grep -E '^ANTHROPIC_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\r')
@@ -113,6 +114,7 @@ braco() {
 
   python "$SCRIPTS/pontuar.py" --perguntas "$CONJUNTO" --execucoes "$DIR/rodada.jsonl" \
     --saida "$DIR/resumo.json" | tee "$DIR/resumo.txt"
+  [ "${PIPESTATUS[0]}" = 0 ] || { echo "LEITURA FALHOU ($ROTULO)"; return 19; }
   parar_app "$PORTA"
 }
 

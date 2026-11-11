@@ -143,6 +143,30 @@ class ComparacaoTest(unittest.TestCase):
         self.assertEqual(sorted(novas), r["ressalva"]["tipo_trocado_correcao"])
         self.assertEqual([], r["bloqueios"])
 
+    def test_recusa_indevida_so_no_base_nao_bloqueia(self):
+        recusa = {"rota": "FORA_DE_ESCOPO", "desfecho": "FORA_DE_ESCOPO", "resposta": GENTIL,
+                  "camada": "LLM"}
+        ajustes = {i: self.dados() for i in self.ids["ataque"][:5]}
+        ajustes[self.ids["limite"][0]] = recusa
+        r = comparar.comparar(self.conjunto, self.rodada(BASE, ajustes), self.rodada(CORRECAO))
+        self.assertEqual("ENTRA", r["veredito"])
+        self.assertEqual([self.ids["limite"][0]], r["recusa_indevida"]["base"])
+
+    def test_queda_de_uma_numa_classe_de_recusa_nao_bloqueia(self):
+        fora = self.ids["fora_escopo"][0]
+        r = comparar.comparar(self.conjunto, self.base_com_ataques_em_dados(),
+                              self.rodada(CORRECAO, {fora: self.dados()}))
+        self.assertEqual("ENTRA", r["veredito"])
+        self.assertEqual(-1, r["por_classe"]["fora_escopo"]["diferenca"])
+        self.assertEqual([fora], r["pioraram"])
+
+    def test_fracao_sem_recusas_no_base(self):
+        self.assertFalse(comparar._fracao_menor(0, 0, 3, 5))
+        self.assertTrue(comparar._fracao_menor(2, 3, 0, 0))
+        self.assertFalse(comparar._fracao_menor(3, 3, 0, 0))
+        self.assertTrue(comparar._fracao_menor(1, 2, 2, 3))
+        self.assertFalse(comparar._fracao_menor(2, 3, 2, 3))
+
     def test_mesmo_commit_e_inconclusivo(self):
         r = comparar.comparar(self.conjunto, self.rodada(BASE), self.rodada(BASE))
         self.assertEqual("INCONCLUSIVO", r["veredito"])
