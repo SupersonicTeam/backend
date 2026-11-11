@@ -14,6 +14,7 @@ import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
+import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -100,6 +101,9 @@ class EnderecoEscritorioIntegrationTest {
         escritorioDe(adminA.usuarioId()));
     jdbcTemplate.update("UPDATE escritorio SET cnpj = ? WHERE id = ?", CNPJ_B,
         escritorioDe(adminB.usuarioId()));
+    // Endereco proprio so no escritorio empresarial (#519); o cadastro curto da o pessoal.
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, adminA.usuarioId());
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, adminB.usuarioId());
     tokenA = token(EMAIL_A);
     tokenB = token(EMAIL_B);
   }
@@ -273,7 +277,7 @@ class EnderecoEscritorioIntegrationTest {
   }
 
   @Test
-  @DisplayName("CNPJ: sem ele, 422 ao gravar; com endereco, o PATCH nao o apaga; sem endereco, apaga")
+  @DisplayName("CNPJ: sem ele, 422 ao gravar; o empresarial nao o apaga; o endereco do legado o protege")
   void exigeCnpj() throws Exception {
     jdbcTemplate.update("UPDATE escritorio SET cnpj = NULL WHERE id = ?",
         escritorioDe(adminA.usuarioId()));
@@ -287,10 +291,12 @@ class EnderecoEscritorioIntegrationTest {
         .andExpect(status().isOk());
     definir(tokenA, "ruraloeste").andExpect(status().isOk());
 
+    // Empresarial nao fica sem CNPJ (#519): a regra vem antes da do endereco.
     mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
         .andExpect(status().isUnprocessableEntity())
-        .andExpect(jsonPath("$.errors[0].code").value("ENDERECO_EXIGE_CNPJ"));
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ"))
+        .andExpect(jsonPath("$.errors[0].field").value("cnpj"));
     // Trocar o nome, sem mexer no CNPJ, segue igual.
     mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste Ltda\"}"))
@@ -300,8 +306,39 @@ class EnderecoEscritorioIntegrationTest {
     remover(tokenA).andExpect(status().isNoContent());
     mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ"));
+
+    // Dado legado: pessoal com CNPJ e endereco (de antes do tipo). O endereco segue exigindo o CNPJ.
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL', slug = 'legado519' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.errors[0].code").value("ENDERECO_EXIGE_CNPJ"));
+    // Sem endereco, o pessoal apaga o CNPJ, como antes.
+    remover(tokenA).andExpect(status().isNoContent());
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.cnpj").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("escritorio pessoal (#519): PUT do endereco e 409 ESCRITORIO_PESSOAL mesmo com CNPJ; DELETE segue 204")
+  void pessoalSemEndereco() throws Exception {
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+
+    definir(tokenA, "ruraloeste")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_PESSOAL"));
+    remover(tokenA).andExpect(status().isNoContent());
+    assertThat(jdbcTemplate.queryForObject("SELECT slug FROM escritorio WHERE id = ?", String.class,
+        escritorioDe(adminA.usuarioId()))).isNull();
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM registro_auditoria"
+        + " WHERE acao = 'ESCRITORIO_ENDERECO_ALTERADO' AND sucesso = FALSE"
+        + " AND codigo_erro = 'ESCRITORIO_PESSOAL'", Integer.class)).isOne();
   }
 
   @Test
@@ -332,6 +369,7 @@ class EnderecoEscritorioIntegrationTest {
         PapelUsuario.CONTADOR, "Terceiro", "11144477735", "admin@terceiro.com.br", SENHA));
     jdbcTemplate.update("UPDATE escritorio SET cnpj = '11222333000262' WHERE id = ?",
         escritorioDe(adminC.usuarioId()));
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, adminC.usuarioId());
     definir(token("admin@terceiro.com.br"), "ruraloeste")
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.errors[0].code").value("SLUG_INDISPONIVEL"));

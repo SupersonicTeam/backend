@@ -8,12 +8,18 @@ import br.com.agrocontabil.dto.ConviteMembroResponse;
 import br.com.agrocontabil.dto.EscritorioRequest;
 import br.com.agrocontabil.dto.EscritorioResponse;
 import br.com.agrocontabil.dto.MembroResponse;
+import br.com.agrocontabil.dto.ResultadoAuditavel;
+import br.com.agrocontabil.dto.TornarEmpresarialRequest;
 import br.com.agrocontabil.exception.ConviteEquipeInvalidoException;
+import br.com.agrocontabil.exception.EmpresarialExigeCnpjException;
 import br.com.agrocontabil.exception.EnderecoExigeCnpjException;
 import br.com.agrocontabil.exception.EscritorioAtualEmUsoException;
+import br.com.agrocontabil.exception.EscritorioJaEmpresarialException;
+import br.com.agrocontabil.exception.EscritorioPessoalException;
 import br.com.agrocontabil.exception.LimiteConvitesException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.UltimoAdministradorException;
+import br.com.agrocontabil.mapper.EscritorioMapper;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.ConviteMembro;
@@ -21,6 +27,7 @@ import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.RecursoAuditado;
+import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.ConviteCarteiraRepository;
 import br.com.agrocontabil.repository.ConviteMembroRepository;
@@ -42,6 +49,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +73,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p><strong>Nunca sem administrador:</strong> rebaixar, remover ou excluir os dados do último
  * administrador de uma equipe é 409. As mudanças de equipe rodam sob lock dos membros do
  * escritório, para dois administradores não se rebaixarem ao mesmo tempo.
+ *
+ * <p><strong>Pessoal ou empresarial (#519):</strong> o escritório pessoal é de um usuário só. Não
+ * convida equipe (409 {@code ESCRITORIO_PESSOAL}), e o convite pendente de antes do tipo não vale
+ * mais (400 {@code CONVITE_EQUIPE_INVALIDO}). O administrador o torna empresarial pelo
+ * {@link #tornarEmpresarial}; o empresarial não fica sem CNPJ.
  */
 @Service
 public class EquipeEscritorioService {
@@ -161,11 +174,14 @@ public class EquipeEscritorioService {
   }
 
   /**
-   * Edita nome e CNPJ do escritório (só administrador). O nome aparece nos e-mails de convite.
-   * Com endereço próprio (#464), o CNPJ não sai: o endereço exige CNPJ.
+   * Edita o escritório (só administrador): nome, CNPJ e, desde a #519, telefone e endereço postal.
+   * O que não vem fica como está; telefone e endereço não se apagam por aqui. O nome aparece nos
+   * e-mails de convite. Com endereço próprio (#464), o CNPJ não sai: o endereço exige CNPJ; e o
+   * empresarial também não fica sem CNPJ (#519).
    *
    * @param request dados novos
    * @return o escritório
+   * @throws EmpresarialExigeCnpjException apagar o CNPJ de um escritório empresarial (422)
    * @throws EnderecoExigeCnpjException apagar o CNPJ de um escritório com endereço (422)
    */
   @Auditado(acao = AcaoAuditada.ESCRITORIO_ALTERADO, recurso = RecursoAuditado.ESCRITORIO)
@@ -178,13 +194,59 @@ public class EquipeEscritorioService {
       escritorio.setNome(request.nome().strip());
       // PATCH: CNPJ ausente fica como esta; vazio apaga.
       if (request.cnpj() != null) {
-        if (request.cnpj().isBlank() && escritorio.getSlug() != null) {
+        String cnpj = request.cnpj().isBlank() ? null : request.cnpj();
+        // A regra da entidade, conferida antes: no flush do commit o erro sairia 500 (#519).
+        if (!Objects.equals(cnpj, escritorio.getCnpj())
+            && Escritorio.semCnpjExigido(escritorio.getTipo(), cnpj)) {
+          throw new EmpresarialExigeCnpjException();
+        }
+        if (cnpj == null && escritorio.getSlug() != null) {
           throw new EnderecoExigeCnpjException("Remova o endereço do escritório (DELETE "
               + "/api/escritorio/endereco) antes de apagar o CNPJ.");
         }
-        escritorio.setCnpj(request.cnpj().isBlank() ? null : request.cnpj());
+        escritorio.setCnpj(cnpj);
+      }
+      // Ausente ou vazio = nao informado, como no cadastro: o telefone fica.
+      if (request.telefone() != null && !request.telefone().isBlank()) {
+        escritorio.setTelefone(request.telefone());
+      }
+      if (request.endereco() != null) {
+        escritorio.setEndereco(EscritorioMapper.paraEndereco(request.endereco()));
       }
       return resposta(escritorio, membro);
+    });
+  }
+
+  /**
+   * Torna empresarial o escritório pessoal (só administrador, issue #519), com nome, CNPJ,
+   * telefone e endereço postal, sob lock do escritório. Depois disso ele convida equipe e grava o
+   * endereço próprio, que continua no {@code PUT /api/escritorio/endereco}. Voltar a pessoal fica
+   * fora da #519.
+   *
+   * @param request dados do escritório empresarial
+   * @return o escritório e, para a auditoria, o tipo antes e depois
+   * @throws EscritorioJaEmpresarialException o escritório já é empresarial (409)
+   */
+  @Auditado(acao = AcaoAuditada.ESCRITORIO_TORNADO_EMPRESARIAL,
+      recurso = RecursoAuditado.ESCRITORIO)
+  public TipoAlterado tornarEmpresarial(TornarEmpresarialRequest request) {
+    Contador membro = membroProvider.exigirFuncao(FuncaoEscritorio.ADMINISTRADOR);
+    return transacao.execute(status -> {
+      Escritorio escritorio = escritorioRepository.findByIdForUpdate(membro.getEscritorioId())
+          .orElseThrow(() -> new ResourceNotFoundException("Escritório",
+              membro.getEscritorioId()));
+      if (escritorio.getTipo() == TipoEscritorio.EMPRESARIAL) {
+        throw new EscritorioJaEmpresarialException();
+      }
+      escritorio.setTipo(TipoEscritorio.EMPRESARIAL);
+      escritorio.setNome(request.nome().strip());
+      escritorio.setCnpj(request.cnpj());
+      escritorio.setTelefone(request.telefone());
+      escritorio.setEndereco(EscritorioMapper.paraEndereco(request.endereco()));
+      escritorioRepository.saveAndFlush(escritorio);
+      log.info("Escritorio tornado empresarial: escritorio={}", escritorio.getId());
+      return new TipoAlterado(resposta(escritorio, membro), TipoEscritorio.PESSOAL,
+          TipoEscritorio.EMPRESARIAL);
     });
   }
 
@@ -256,6 +318,7 @@ public class EquipeEscritorioService {
    * @param email  e-mail do convidado
    * @param funcao função oferecida
    * @return o convite (o controller responde 202 sem corpo)
+   * @throws EscritorioPessoalException o escritório é pessoal (409, #519)
    * @throws LimiteConvitesException acima do teto diário (429)
    */
   @Auditado(acao = AcaoAuditada.MEMBRO_CONVIDADO, recurso = RecursoAuditado.MEMBRO_ESCRITORIO)
@@ -268,6 +331,10 @@ public class EquipeEscritorioService {
     ConviteMembro convite = transacao.execute(status -> {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(escritorioId)
           .orElseThrow(() -> new ResourceNotFoundException("Escritório", escritorioId));
+      if (escritorio.getTipo() == TipoEscritorio.PESSOAL) {
+        throw new EscritorioPessoalException(
+            "O escritório pessoal é de um usuário só: não convida membros para a equipe.");
+      }
       var vigente = conviteRepository
           .findFirstByEscritorioIdAndEmailAndUsadoEmIsNullOrderByCriadoEmDesc(
               escritorioId, normalizado)
@@ -384,6 +451,7 @@ public class EquipeEscritorioService {
     OffsetDateTime agora = OffsetDateTime.now(clock);
     String email = conviteRepository.findByTokenHash(TokenOpaco.hash(request.token()))
         .filter(c -> c.getUsadoEm() == null && c.getExpiraEm().isAfter(agora))
+        .filter(this::deEscritorioEmpresarial)
         .map(ConviteMembro::getEmail)
         .orElseThrow(ConviteEquipeInvalidoException::new);
     // Sem escritorio nem tipo de conta: quem entra pelo convite vai para o escritorio dele (#519).
@@ -473,7 +541,18 @@ public class EquipeEscritorioService {
         .filter(c -> c.getUsadoEm() == null)
         .filter(c -> c.getExpiraEm().isAfter(agora))
         .filter(c -> email != null && c.getEmail().equals(email))
+        .filter(this::deEscritorioEmpresarial)
         .orElseThrow(ConviteEquipeInvalidoException::new);
+  }
+
+  /**
+   * O convite é de um escritório empresarial? O pessoal não tem equipe (#519): um convite pendente
+   * de antes do tipo, ou de um escritório que voltou a ser pessoal, não vale mais.
+   */
+  private boolean deEscritorioEmpresarial(ConviteMembro convite) {
+    return escritorioRepository.findById(convite.getEscritorioId())
+        .map(e -> e.getTipo() == TipoEscritorio.EMPRESARIAL)
+        .orElse(false);
   }
 
   private void enviarEmSegundoPlano(String email, String escritorio, String link,
@@ -513,5 +592,32 @@ public class EquipeEscritorioService {
   private static ConviteMembroResponse convite(ConviteMembro convite) {
     return new ConviteMembroResponse(convite.getId(), convite.getEmail(), convite.getFuncao(),
         convite.getCriadoEm(), convite.getExpiraEm());
+  }
+
+  /**
+   * Resultado do {@link #tornarEmpresarial}: a resposta ao cliente e, para a auditoria, o tipo
+   * antes e depois.
+   *
+   * @param escritorio resposta ao cliente
+   * @param antes      tipo antes
+   * @param depois     tipo depois
+   */
+  public record TipoAlterado(EscritorioResponse escritorio, TipoEscritorio antes,
+      TipoEscritorio depois) implements ResultadoAuditavel {
+
+    @Override
+    public Object status() {
+      return depois;
+    }
+
+    @Override
+    public Object statusAnterior() {
+      return antes;
+    }
+
+    @Override
+    public UUID recursoAuditado() {
+      return escritorio.id();
+    }
   }
 }

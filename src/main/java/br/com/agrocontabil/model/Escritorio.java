@@ -1,5 +1,6 @@
 package br.com.agrocontabil.model;
 
+import br.com.agrocontabil.exception.EmpresarialExigeCnpjException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Embedded;
@@ -9,11 +10,14 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,6 +35,12 @@ import lombok.ToString;
  * (com o nome dele) ou empresarial (com nome, CNPJ, telefone, endereço postal e endereço próprio),
  * conforme o {@link #tipo} escolhido (issue #519). Pode trocá-lo pelo de uma equipe aceitando um
  * convite enquanto o dele estiver vazio.
+ *
+ * <p><strong>Invariante (#519):</strong> escritório empresarial tem CNPJ ({@link
+ * #semCnpjExigido}), conferida ao gravar só quando o tipo ou o CNPJ muda, como a do
+ * {@link Produtor} (#298): um empresarial antigo sem CNPJ (com equipe, pelo changeSet 0062)
+ * continua valendo até alguém mexer no tipo ou no CNPJ. Quem grava confere no service antes, porque
+ * no flush do commit o erro sairia 500.
  *
  * <p>O {@link #slug} é o endereço próprio do escritório, {@code {slug}.agroconia.com.br} (issue
  * #464): marca e porta de entrada, nunca fronteira de autorização. Pode ser dado pessoal (o nome do
@@ -94,14 +104,51 @@ public class Escritorio {
   @Column(name = "updated_at")
   private OffsetDateTime updatedAt;
 
+  /** Tipo lido do banco: o {@code @PreUpdate} só confere o CNPJ quando o tipo muda. */
+  @Transient
+  @ToString.Exclude
+  private TipoEscritorio tipoCarregado;
+
+  /** CNPJ lido do banco: o {@code @PreUpdate} só confere quando ele muda. */
+  @Transient
+  @ToString.Exclude
+  private String cnpjCarregado;
+
+  /**
+   * Regra única da invariante (#519): escritório empresarial sem CNPJ.
+   *
+   * @param tipo tipo do escritório
+   * @param cnpj CNPJ, ou nulo
+   * @return {@code true} se é empresarial e não tem CNPJ
+   */
+  public static boolean semCnpjExigido(TipoEscritorio tipo, String cnpj) {
+    return tipo == TipoEscritorio.EMPRESARIAL && (cnpj == null || cnpj.isBlank());
+  }
+
+  @PostLoad
+  protected void onLoad() {
+    tipoCarregado = tipo;
+    cnpjCarregado = cnpj;
+  }
+
   @PrePersist
   protected void onCreate() {
+    conferirCnpj();
     createdAt = OffsetDateTime.now();
     updatedAt = createdAt;
   }
 
   @PreUpdate
   protected void onUpdate() {
+    if (tipo != tipoCarregado || !Objects.equals(cnpj, cnpjCarregado)) {
+      conferirCnpj();
+    }
     updatedAt = OffsetDateTime.now();
+  }
+
+  private void conferirCnpj() {
+    if (semCnpjExigido(tipo, cnpj)) {
+      throw new EmpresarialExigeCnpjException();
+    }
   }
 }

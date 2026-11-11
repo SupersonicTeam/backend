@@ -22,6 +22,7 @@ import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.EscritorioSlugAnterior;
 import br.com.agrocontabil.model.FuncaoEscritorio;
+import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
@@ -76,7 +77,7 @@ class EnderecoEscritorioServiceTest {
         anteriorRepository, contadorRepository, new SlugsReservados(), propriedades, CLOCK,
         transactionManager);
     escritorio = Escritorio.builder().id(UUID.randomUUID()).nome("Contabilidade Rural Oeste")
-        .cnpj("48315276000105").build();
+        .tipo(TipoEscritorio.EMPRESARIAL).cnpj("48315276000105").build();
     admin = Contador.builder().id(UUID.randomUUID()).escritorioId(escritorio.getId())
         .funcao(FuncaoEscritorio.ADMINISTRADOR).build();
   }

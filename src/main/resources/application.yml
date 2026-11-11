@@ -413,7 +413,8 @@ app:
   cadastro:
     exigir-aceite-termos: ${CADASTRO_EXIGIR_ACEITE_TERMOS:false}
   # Termos de uso (#519): versao gravada na credencial com o aceite. Texto e pagina com a GWNext
-  # (#498); mudou o texto, mude a versao.
+  # e o juridico (#498); mudou o texto, mude a versao. 2026-11-11 e PROVISORIA: o texto ainda nao
+  # existe, e os aceites com ela sao anteriores a ele.
   termos:
     versao: ${TERMOS_VERSAO:2026-11-11}
   # Autenticacao (Sprint 8).

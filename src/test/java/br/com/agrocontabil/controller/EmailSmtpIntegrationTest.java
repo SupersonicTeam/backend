@@ -8,6 +8,7 @@ import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.icegreen.greenmail.util.GreenMail;
@@ -117,6 +118,8 @@ class EmailSmtpIntegrationTest {
         PapelUsuario.PRODUTOR, "Joaquim Conceição", "52998224725", EMAIL_PRODUTOR, SENHA));
     contador = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.CONTADOR, "Maria Contadora", "11222333000181", EMAIL_CONTADOR, SENHA));
+    // O convite de equipe so sai do escritorio empresarial (#519).
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, contador.usuarioId());
   }
 
   @Test

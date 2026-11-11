@@ -11,6 +11,7 @@ import br.com.agrocontabil.dto.EnderecoEscritorioRequest;
 import br.com.agrocontabil.dto.EscritorioRequest;
 import br.com.agrocontabil.dto.EscritorioResponse;
 import br.com.agrocontabil.dto.MembroResponse;
+import br.com.agrocontabil.dto.TornarEmpresarialRequest;
 import br.com.agrocontabil.security.RotasAutenticacao;
 import br.com.agrocontabil.service.EnderecoEscritorioService;
 import br.com.agrocontabil.service.EquipeEscritorioService;
@@ -60,29 +61,48 @@ public class EscritorioController {
     return equipeService.escritorio();
   }
 
-  /** Edita nome e CNPJ. */
+  /** Edita nome, CNPJ, telefone e endereço postal. */
   @PatchMapping("/api/escritorio")
-  @Operation(summary = "Edita nome e CNPJ do escritorio (administrador)",
-      description = "Com endereco proprio, apagar o CNPJ responde 422 ENDERECO_EXIGE_CNPJ.")
+  @Operation(summary = "Edita o escritorio: nome, CNPJ, telefone e endereco postal (administrador)",
+      description = "O que nao vem fica como esta; telefone e endereco nao se apagam por aqui."
+          + " Apagar o CNPJ do escritorio empresarial responde 422"
+          + " ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ; com endereco proprio, 422 ENDERECO_EXIGE_CNPJ.")
   @ApiResponses({
-      @ApiResponse(responseCode = "422", description = "ENDERECO_EXIGE_CNPJ",
+      @ApiResponse(responseCode = "422",
+          description = "ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ ou ENDERECO_EXIGE_CNPJ",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public EscritorioResponse atualizar(@Valid @RequestBody EscritorioRequest request) {
     return equipeService.atualizar(request);
   }
 
+  /** Torna empresarial o escritório pessoal (issue #519). */
+  @PostMapping("/api/escritorio/tornar-empresarial")
+  @Operation(summary = "Torna empresarial o escritorio pessoal (administrador)",
+      description = "Exige nome, CNPJ, telefone e endereco postal, com as regras do cadastro"
+          + " empresarial. Depois, o escritorio convida equipe e grava o endereco proprio pelo"
+          + " PUT /api/escritorio/endereco.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "409", description = "ESCRITORIO_JA_EMPRESARIAL",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public EscritorioResponse tornarEmpresarial(
+      @Valid @RequestBody TornarEmpresarialRequest request) {
+    return equipeService.tornarEmpresarial(request).escritorio();
+  }
+
   /** Define ou troca o endereço próprio do escritório (issue #464). */
   @PutMapping("/api/escritorio/endereco")
   @Operation(summary = "Define ou troca o endereco proprio do escritorio (administrador)",
-      description = "Endereco {slug}.agroconia.com.br. Exige CNPJ e a ciencia de que o endereco "
+      description = "Endereco {slug}.agroconia.com.br. Exige escritorio empresarial, CNPJ e a "
+          + "ciencia de que o endereco "
           + "fica publico e permanente. Uma gravacao a cada 30 dias; o slug que sai fica 90 dias "
           + "em carencia. Reenviar o slug atual nao muda nada.")
   @ApiResponses({
       @ApiResponse(responseCode = "400", description = "SLUG_INVALIDO ou VALIDATION_ERROR",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "409",
-          description = "SLUG_INDISPONIVEL ou ENDERECO_TROCA_RECENTE",
+          description = "ESCRITORIO_PESSOAL, SLUG_INDISPONIVEL ou ENDERECO_TROCA_RECENTE",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
       @ApiResponse(responseCode = "422", description = "ENDERECO_EXIGE_CNPJ",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
@@ -136,7 +156,11 @@ public class EscritorioController {
   @PostMapping("/api/escritorio/membros/convites")
   @Operation(summary = "Convida um e-mail para a equipe (administrador)",
       description = "Sempre 202, exista ou nao conta com o e-mail. Link com token de uso unico "
-          + "no fragmento, valido por 7 dias.")
+          + "no fragmento, valido por 7 dias. Escritorio pessoal: 409 ESCRITORIO_PESSOAL.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "409", description = "ESCRITORIO_PESSOAL",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
   public ResponseEntity<Void> convidar(@Valid @RequestBody ConviteMembroRequest request) {
     equipeService.convidar(request.email(), request.funcao());
     return ResponseEntity.accepted().build();
