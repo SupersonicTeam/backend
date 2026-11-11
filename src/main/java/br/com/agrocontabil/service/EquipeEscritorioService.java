@@ -77,7 +77,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p><strong>Pessoal ou empresarial (#519):</strong> o escritório pessoal é de um usuário só. Não
  * convida equipe (409 {@code ESCRITORIO_PESSOAL}), e o convite pendente de antes do tipo não vale
  * mais (400 {@code CONVITE_EQUIPE_INVALIDO}). O administrador o torna empresarial pelo
- * {@link #tornarEmpresarial}; o empresarial não fica sem CNPJ.
+ * {@link #tornarEmpresarial}; o empresarial não fica sem CNPJ, e o administrador dele não entra
+ * em outra equipe pelo convite ({@link Escritorio#administradorNaoTrocaDeEquipe}).
  */
 @Service
 public class EquipeEscritorioService {
@@ -175,13 +176,13 @@ public class EquipeEscritorioService {
 
   /**
    * Edita o escritório (só administrador): nome (obrigatório), CNPJ e, desde a #519, telefone e
-   * endereço postal do empresarial. Fora o nome, o que não vem fica como está; telefone e endereço
-   * não se apagam por aqui. O nome aparece nos e-mails de convite. Com endereço próprio (#464), o
-   * CNPJ não sai: o endereço exige CNPJ; e o empresarial também não fica sem CNPJ (#519).
+   * endereço postal, nos dois tipos (o pessoal grava sem virar empresarial). Fora o nome, o que
+   * não vem fica como está; telefone e endereço não se apagam por aqui. O nome aparece nos e-mails
+   * de convite. Com endereço próprio (#464), o CNPJ não sai: o endereço exige CNPJ; e o
+   * empresarial também não fica sem CNPJ (#519).
    *
    * @param request dados novos
    * @return o escritório
-   * @throws EscritorioPessoalException telefone ou endereço num escritório pessoal (409, #519)
    * @throws EmpresarialExigeCnpjException apagar o CNPJ de um escritório empresarial (422)
    * @throws EnderecoExigeCnpjException apagar o CNPJ de um escritório com endereço (422)
    */
@@ -192,13 +193,6 @@ public class EquipeEscritorioService {
       Escritorio escritorio = escritorioRepository.findByIdForUpdate(membro.getEscritorioId())
           .orElseThrow(() -> new ResourceNotFoundException("Escritório",
               membro.getEscritorioId()));
-      boolean telefoneInformado = request.telefone() != null && !request.telefone().isBlank();
-      if (escritorio.getTipo() == TipoEscritorio.PESSOAL
-          && (telefoneInformado || request.endereco() != null)) {
-        // Telefone e endereco postal sao da conta empresarial (#519): o pessoal edita nome e CNPJ.
-        throw new EscritorioPessoalException("O escritório pessoal não tem telefone nem endereço"
-            + " próprios: são dados da conta empresarial.");
-      }
       escritorio.setNome(request.nome().strip());
       // PATCH: CNPJ ausente fica como esta; vazio apaga.
       if (request.cnpj() != null) {
@@ -214,8 +208,9 @@ public class EquipeEscritorioService {
         }
         escritorio.setCnpj(cnpj);
       }
-      // Ausente ou vazio = nao informado, como no cadastro: o telefone fica.
-      if (telefoneInformado) {
+      // Ausente ou vazio = nao informado, como no cadastro: o telefone fica. Vale para os dois
+      // tipos: o pessoal tambem grava telefone e endereco, usados em outras funcoes (#519).
+      if (request.telefone() != null && !request.telefone().isBlank()) {
         escritorio.setTelefone(request.telefone());
       }
       if (request.endereco() != null) {
@@ -408,13 +403,16 @@ public class EquipeEscritorioService {
   }
 
   /**
-   * O contador autenticado aceita o convite e entra na equipe. Se ele está num escritório
-   * unipessoal vazio (sem clientes abertos), esse escritório sai; com clientes ou equipe, 409.
+   * O contador autenticado aceita o convite e entra na equipe. Se ele está num escritório pessoal
+   * vazio (um membro só, sem clientes abertos), esse escritório sai; com clientes ou equipe, 409.
+   * O administrador de um escritório empresarial não troca de equipe, mesmo sozinho e sem
+   * clientes: 409, e nada é apagado ({@link Escritorio#administradorNaoTrocaDeEquipe}, #519).
    *
    * @param token token do link
    * @return o contador como membro
    * @throws ConviteEquipeInvalidoException token inválido, vencido, usado ou de outro e-mail (400)
-   * @throws EscritorioAtualEmUsoException o escritório atual tem clientes ou equipe (409)
+   * @throws EscritorioAtualEmUsoException o escritório atual tem clientes ou equipe, ou o contador
+   *                                       administra um escritório empresarial (409)
    */
   @Auditado(acao = AcaoAuditada.MEMBRO_ENTROU, recurso = RecursoAuditado.MEMBRO_ESCRITORIO)
   public MembroResponse aceitar(String token) {
@@ -507,6 +505,13 @@ public class EquipeEscritorioService {
 
   private void sairDoAnteriorVazio(Contador contador, UUID anterior) {
     List<Contador> equipe = contadorRepository.findByEscritorioIdForUpdate(anterior);
+    // Sob lock do escritorio, na ordem do aceite (membros, depois escritorio): um
+    // tornar-empresarial ao mesmo tempo espera ou ja vale aqui.
+    TipoEscritorio tipo = escritorioRepository.findByIdForUpdate(anterior)
+        .map(Escritorio::getTipo).orElse(null);
+    if (Escritorio.administradorNaoTrocaDeEquipe(tipo, contador.getFuncao())) {
+      throw EscritorioAtualEmUsoException.administradorDeEmpresarial();
+    }
     if (equipe.size() > 1 || vinculoRepository.contarAbertosDoEscritorio(anterior) > 0) {
       throw new EscritorioAtualEmUsoException();
     }

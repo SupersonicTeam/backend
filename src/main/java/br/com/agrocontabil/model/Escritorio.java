@@ -19,7 +19,10 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -128,6 +131,27 @@ public class Escritorio {
    */
   public static boolean semCnpjExigido(TipoEscritorio tipo, String cnpj) {
     return tipo == TipoEscritorio.EMPRESARIAL && (cnpj == null || cnpj.isBlank());
+  }
+
+  /**
+   * Tipos de escritório cujo administrador não entra em outra equipe pelo convite (#519, decisão
+   * do Murillo de 2026-11-11). Para prender também o do pessoal, acrescente-o aqui.
+   */
+  private static final Set<TipoEscritorio> ADMINISTRADOR_PRESO =
+      Collections.unmodifiableSet(EnumSet.of(TipoEscritorio.EMPRESARIAL));
+
+  /**
+   * Regra única (#519): o administrador deste escritório não entra em outra equipe pelo convite,
+   * mesmo sozinho e sem clientes; o escritório não é apagado.
+   *
+   * @param tipo   tipo do escritório atual
+   * @param funcao função do contador nele
+   * @return {@code true} se ele não pode trocar de equipe por ser o administrador
+   */
+  public static boolean administradorNaoTrocaDeEquipe(TipoEscritorio tipo,
+      FuncaoEscritorio funcao) {
+    return funcao == FuncaoEscritorio.ADMINISTRADOR && tipo != null
+        && ADMINISTRADOR_PRESO.contains(tipo);
   }
 
   /**

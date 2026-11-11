@@ -120,6 +120,17 @@ class EnderecoEscritorioIntegrationTest {
         UUID.class, contadorId);
   }
 
+  /** O administrador de B convida o e-mail para a equipe dele; devolve o token do link. */
+  private String conviteDeBPara(String email) throws Exception {
+    mockMvc.perform(post("/api/escritorio/membros/convites")
+            .header(HttpHeaders.AUTHORIZATION, tokenB).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"%s\",\"funcao\":\"CONTADOR\"}".formatted(email)))
+        .andExpect(status().isAccepted());
+    String link = LINKS.poll(5, TimeUnit.SECONDS);
+    assertThat(link).startsWith(email + "|");
+    return link.substring(link.indexOf("#token=") + "#token=".length());
+  }
+
   private ResultActions definir(String token, String slug) throws Exception {
     return mockMvc.perform(put("/api/escritorio/endereco").header(HttpHeaders.AUTHORIZATION, token)
         .contentType(MediaType.APPLICATION_JSON)
@@ -342,24 +353,41 @@ class EnderecoEscritorioIntegrationTest {
   }
 
   @Test
-  @DisplayName("empresarial de um membro com endereco aceita convite: o escritorio sai e o slug fica em carencia")
+  @DisplayName("administrador do empresarial com endereco nao aceita convite (#519): 409, escritorio e slug intactos")
+  void administradorDoEmpresarialComEnderecoNaoSai() throws Exception {
+    definir(tokenA, "ruraloeste").andExpect(status().isOk());
+    UUID escritorioA = escritorioDe(adminA.usuarioId());
+    String cnpjA = jdbcTemplate.queryForObject("SELECT cnpj FROM escritorio WHERE id = ?",
+        String.class, escritorioA);
+    String convite = conviteDeBPara(EMAIL_A);
+
+    mockMvc.perform(post("/api/escritorio/membros/convites/aceitar")
+            .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"token\":\"%s\"}".formatted(convite)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_ATUAL_EM_USO"));
+
+    assertThat(escritorioDe(adminA.usuarioId())).isEqualTo(escritorioA);
+    assertThat(cnpjA).isNotBlank();
+    assertThat(jdbcTemplate.queryForObject("SELECT tipo || '|' || cnpj || '|' || slug"
+        + " FROM escritorio WHERE id = ?", String.class, escritorioA))
+        .isEqualTo("EMPRESARIAL|" + cnpjA + "|ruraloeste");
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM escritorio_slug_anterior",
+        Integer.class)).isZero();
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM convite_membro"
+        + " WHERE usado_em IS NULL", Integer.class)).isOne();
+  }
+
+  @Test
+  @DisplayName("pessoal antigo com endereco aceita convite: o escritorio sai e o slug fica em carencia")
   void aceiteDeEquipeGuardaACarencia() throws Exception {
     definir(tokenA, "ruraloeste").andExpect(status().isOk());
     UUID escritorioA = escritorioDe(adminA.usuarioId());
-    // Comportamento fixado (#519): o escritorio atual, mesmo empresarial e com endereco proprio,
-    // telefone e endereco postal, deixa de existir no aceite; o slug entra em carencia.
-    jdbcTemplate.update("UPDATE escritorio SET telefone = '4533330000', endereco_cep = '85810000',"
-        + " endereco_municipio = 'Cascavel', endereco_uf = 'PR' WHERE id = ?", escritorioA);
-    assertThat(jdbcTemplate.queryForObject("SELECT tipo FROM escritorio WHERE id = ?",
-        String.class, escritorioA)).isEqualTo("EMPRESARIAL");
+    // Estado que a API nao produz (o pessoal nao grava endereco proprio, e o 0062 tornou
+    // empresarial quem tinha CNPJ), mas a carencia do aceite segue valendo para ele.
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL' WHERE id = ?", escritorioA);
+    String convite = conviteDeBPara(EMAIL_A);
 
-    mockMvc.perform(post("/api/escritorio/membros/convites")
-            .header(HttpHeaders.AUTHORIZATION, tokenB).contentType(MediaType.APPLICATION_JSON)
-            .content("{\"email\":\"%s\",\"funcao\":\"CONTADOR\"}".formatted(EMAIL_A)))
-        .andExpect(status().isAccepted());
-    String link = LINKS.poll(5, TimeUnit.SECONDS);
-    assertThat(link).startsWith(EMAIL_A + "|");
-    String convite = link.substring(link.indexOf("#token=") + "#token=".length());
     mockMvc.perform(post("/api/escritorio/membros/convites/aceitar")
             .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
             .content("{\"token\":\"%s\"}".formatted(convite)))

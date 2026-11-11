@@ -64,7 +64,8 @@ public class EscritorioController {
   /** Edita nome, CNPJ, telefone e endereço postal. */
   @PatchMapping("/api/escritorio")
   @Operation(summary = "Edita o escritorio: nome, CNPJ, telefone e endereco postal (administrador)",
-      description = "O que nao vem fica como esta; telefone e endereco nao se apagam por aqui."
+      description = "Nome obrigatorio; o resto, o que nao vem fica como esta. Telefone e endereco"
+          + " valem para o pessoal e para o empresarial e nao se apagam por aqui."
           + " Apagar o CNPJ do escritorio empresarial responde 422"
           + " ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ; com endereco proprio, 422 ENDERECO_EXIGE_CNPJ.")
   @ApiResponses({
@@ -178,11 +179,15 @@ public class EscritorioController {
 
   /** Aceita o convite com a conta de contador já existente. */
   @PostMapping("/api/escritorio/membros/convites/aceitar")
-  @Operation(summary = "Aceita o convite de equipe com a conta logada (mesmo e-mail)")
+  @Operation(summary = "Aceita o convite de equipe com a conta logada (mesmo e-mail)",
+      description = "O escritorio pessoal de um membro so e sem clientes sai. O administrador de"
+          + " um escritorio empresarial nao entra em outra equipe: 409 ESCRITORIO_ATUAL_EM_USO,"
+          + " e nada e apagado.")
   @ApiResponses({
       @ApiResponse(responseCode = "400", description = "CONVITE_EQUIPE_INVALIDO",
           content = @Content(schema = @Schema(implementation = ApiError.class))),
-      @ApiResponse(responseCode = "409", description = "ESCRITORIO_ATUAL_EM_USO",
+      @ApiResponse(responseCode = "409", description = "ESCRITORIO_ATUAL_EM_USO: o escritorio"
+          + " atual tem clientes ou equipe, ou o contador administra um escritorio empresarial",
           content = @Content(schema = @Schema(implementation = ApiError.class)))
   })
   public MembroResponse aceitar(@Valid @RequestBody AceiteConviteEquipeRequest request) {

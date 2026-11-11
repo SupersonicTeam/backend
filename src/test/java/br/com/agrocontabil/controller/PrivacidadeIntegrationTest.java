@@ -98,7 +98,7 @@ class PrivacidadeIntegrationTest {
         .andExpect(jsonPath("$.dadosColetados").value(org.hamcrest.Matchers.hasItems(
             org.hamcrest.Matchers.containsString("registro no CRC"),
             org.hamcrest.Matchers.containsString("telefone, que pode ser informado no cadastro"),
-            org.hamcrest.Matchers.containsString("na conta empresarial, CNPJ, telefone e endereco"),
+            org.hamcrest.Matchers.containsString("obrigatorios na conta empresarial e opcionais na pessoal"),
             org.hamcrest.Matchers.containsString("Aceite dos termos de uso"))))
         .andExpect(jsonPath("$.basesLegais.length()").value(3))
         .andExpect(jsonPath("$.retencao[0]").value(org.hamcrest.Matchers.containsString("5 anos")))

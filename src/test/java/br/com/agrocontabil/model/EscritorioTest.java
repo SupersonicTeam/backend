@@ -67,6 +67,21 @@ class EscritorioTest {
   }
 
   @Test
+  @DisplayName("so o administrador do empresarial nao troca de equipe pelo convite (#519)")
+  void administradorNaoTrocaDeEquipe() {
+    assertThat(Escritorio.administradorNaoTrocaDeEquipe(TipoEscritorio.EMPRESARIAL,
+        FuncaoEscritorio.ADMINISTRADOR)).isTrue();
+    assertThat(Escritorio.administradorNaoTrocaDeEquipe(TipoEscritorio.PESSOAL,
+        FuncaoEscritorio.ADMINISTRADOR)).isFalse();
+    assertThat(Escritorio.administradorNaoTrocaDeEquipe(TipoEscritorio.EMPRESARIAL,
+        FuncaoEscritorio.CONTADOR)).isFalse();
+    assertThat(Escritorio.administradorNaoTrocaDeEquipe(TipoEscritorio.EMPRESARIAL,
+        FuncaoEscritorio.ASSISTENTE)).isFalse();
+    assertThat(Escritorio.administradorNaoTrocaDeEquipe(null, FuncaoEscritorio.ADMINISTRADOR))
+        .isFalse();
+  }
+
+  @Test
   @DisplayName("ao atualizar: apagar o CNPJ do empresarial ou tornar empresarial sem CNPJ e recusado")
   void aoAtualizar() {
     Escritorio empresarial = Escritorio.builder().nome("X").tipo(TipoEscritorio.EMPRESARIAL)

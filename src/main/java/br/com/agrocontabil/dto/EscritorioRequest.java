@@ -9,8 +9,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Edição do escritório pelo administrador (issues #228 e #519). O nome é obrigatório; o resto,
- * o que não vem fica como está. Telefone e endereço são do escritório empresarial: no pessoal,
- * 409 {@code ESCRITORIO_PESSOAL}.
+ * o que não vem fica como está. Telefone e endereço valem para os dois tipos: o pessoal os grava
+ * sem virar empresarial.
  *
  * @param nome     nome do escritório, obrigatório
  * @param cnpj     CNPJ só com dígitos; ausente mantém o atual, vazio apaga (contador autônomo). O
@@ -21,7 +21,7 @@ import jakarta.validation.constraints.Size;
  *                 não se apaga pelo PATCH (#519)
  */
 @Schema(description = "Edição do escritório pelo administrador: nome obrigatório; o resto, o que"
-    + " não vem fica como está. Telefone e endereço só no escritório empresarial")
+    + " não vem fica como está. Telefone e endereço valem para o pessoal e para o empresarial")
 public record EscritorioRequest(
     @Schema(description = "Nome do escritório", example = "Escritório Campo Verde")
     @NotBlank @Size(max = 255) String nome,
@@ -30,13 +30,13 @@ public record EscritorioRequest(
     @Pattern(regexp = "\\d{14}|", message = "Informe o CNPJ com 14 dígitos (vazio apaga)") @ValidCpfCnpj
     String cnpj,
     @Schema(description = "Telefone do escritório, só dígitos (10 ou 11); ausente ou vazio mantém"
-        + " o atual. Só no escritório empresarial (no pessoal, 409 ESCRITORIO_PESSOAL)",
+        + " o atual. Vale para os dois tipos de escritório",
         example = "4533330000", nullable = true)
     @Pattern(regexp = "\\d{10,11}|",
         message = "Informe o telefone do escritório só com dígitos: DDD e número (10 ou 11).")
     String telefone,
-    @Schema(description = "Endereço postal completo; ausente mantém o atual. Só no escritório"
-        + " empresarial (no pessoal, 409 ESCRITORIO_PESSOAL)", nullable = true)
+    @Schema(description = "Endereço postal completo; ausente mantém o atual. Vale para os dois"
+        + " tipos de escritório", nullable = true)
     @Valid
     EnderecoPostalRequest endereco) {
 
