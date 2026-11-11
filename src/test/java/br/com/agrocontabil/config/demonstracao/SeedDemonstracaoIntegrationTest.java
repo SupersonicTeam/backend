@@ -7,6 +7,7 @@ import br.com.agrocontabil.common.FormatoSlug;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.ModeloPedido;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
@@ -24,6 +25,7 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.ModeloPedidoRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -32,6 +34,7 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.service.CotaUsoAssistenteService;
 import br.com.agrocontabil.service.SlugsReservados;
+import br.com.agrocontabil.support.TextoSemAcento;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
@@ -85,6 +88,7 @@ class SeedDemonstracaoIntegrationTest {
   @Autowired private AssinaturaValidator assinaturaValidator;
   @Autowired private EscritorioRepository escritorioRepository;
   @Autowired private SlugsReservados slugsReservados;
+  @Autowired private ModeloPedidoRepository modeloPedidoRepository;
 
   @Test
   @DisplayName("escritorio com tres funcoes, nove clientes e conta para todos")
@@ -113,6 +117,40 @@ class SeedDemonstracaoIntegrationTest {
     assertThat(escritorio.getCnpj()).isNotBlank();
     assertThat(FormatoSlug.valido(escritorio.getSlug())).isTrue();
     assertThat(slugsReservados.reservado(escritorio.getSlug())).isFalse();
+  }
+
+  @Test
+  @DisplayName("modelos de pedido do escritorio (#517): os do cenario, com acento; a subida "
+      + "recria quando o escritorio nao tem nenhum e nao mexe quando tem")
+  void modelosDePedido() {
+    Escritorio escritorio = escritorioRepository.findAll().stream()
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_NOME.equals(e.getNome()))
+        .findFirst().orElseThrow();
+    List<ModeloPedido> modelos = modeloPedidoRepository
+        .findByEscritorioIdOrderByTituloNormalizadoAsc(escritorio.getId());
+    assertThat(modelos).extracting(ModeloPedido::getTitulo).containsExactlyInAnyOrderElementsOf(
+        CenarioDemonstracao.MODELOS_PEDIDO.stream()
+            .map(CenarioDemonstracao.ModeloDePedido::titulo).toList());
+    assertThat(modelos).allSatisfy(m -> {
+      assertThat(m.getTiposDocumento()).isNotEmpty();
+      for (String texto : new String[] {m.getTitulo(), m.getDescricao(), m.getObservacoes()}) {
+        assertThat(TextoSemAcento.primeiraPalavraSemAcento(texto)).as(texto).isNull();
+      }
+    });
+    assertThat(modelos).extracting(ModeloPedido::getTitulo).contains("Extrato bancário do mês");
+
+    // Ja tem modelos (mesmo que o ensaio tenha apagado alguns): nada muda.
+    modeloPedidoRepository.delete(modelos.get(0));
+    assertThat(seed.completarModelosPedido()).isZero();
+    assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
+        .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size() - 1L);
+
+    // Sem nenhum (o banco da VPS, semeado antes da #517): a subida os cria.
+    modeloPedidoRepository.deleteAll(
+        modeloPedidoRepository.findByEscritorioIdOrderByTituloNormalizadoAsc(escritorio.getId()));
+    assertThat(seed.completarModelosPedido()).isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
+    assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
+        .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
   }
 
   @Test
@@ -278,11 +316,13 @@ class SeedDemonstracaoIntegrationTest {
   void idempotente() throws Exception {
     long notas = notaRepository.count();
     long produtores = produtorRepository.count();
+    long modelos = modeloPedidoRepository.count();
 
     seed.run();
 
     assertThat(notaRepository.count()).isEqualTo(notas);
     assertThat(produtorRepository.count()).isEqualTo(produtores);
+    assertThat(modeloPedidoRepository.count()).isEqualTo(modelos);
   }
 
   private Produtor produtor(String chave) {

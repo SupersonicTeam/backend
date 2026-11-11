@@ -51,5 +51,9 @@ public enum AcaoAuditada {
   // Antivirus dos anexos (issue #227): ameaca achada no envio ou pelo job
   PENDENCIA_ANEXO_INFECTADO,
   // Notificacao por WhatsApp (issue #182): disparo do produtor ou do escritorio
-  NOTIFICACAO_REGISTRADA
+  NOTIFICACAO_REGISTRADA,
+  // Modelos de pedido de documento do escritorio (issue #517): o catalogo, nunca o texto
+  MODELO_PEDIDO_CRIADO,
+  MODELO_PEDIDO_ALTERADO,
+  MODELO_PEDIDO_APAGADO
 }

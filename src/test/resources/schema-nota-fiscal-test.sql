@@ -976,3 +976,28 @@ ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS fk_notificacao_produtor
 
 ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS fk_notificacao_escritorio
     FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+
+-- Modelos de pedido de documento do escritorio — issue #517 (migration 0061). Manter sincronizado
+-- com 0061-modelo-pedido.xml. Os ALTER cobrem o contexto em que o Hibernate ja criou a tabela.
+CREATE TABLE IF NOT EXISTS modelo_pedido (
+    id                  UUID                      NOT NULL,
+    escritorio_id       UUID                      NOT NULL,
+    titulo              VARCHAR(120)              NOT NULL,
+    titulo_normalizado  VARCHAR(120)              NOT NULL,
+    descricao           VARCHAR(1000),
+    tipos_documento     VARCHAR(120)              NOT NULL,
+    prazo_em_dias       INTEGER,
+    observacoes         VARCHAR(1000),
+    created_at          TIMESTAMP WITH TIME ZONE,
+    updated_at          TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE modelo_pedido ADD CONSTRAINT IF NOT EXISTS uk_modelo_pedido_escritorio_titulo
+    UNIQUE (escritorio_id, titulo_normalizado);
+
+ALTER TABLE modelo_pedido ADD CONSTRAINT IF NOT EXISTS ck_modelo_pedido_prazo
+    CHECK (prazo_em_dias IS NULL OR prazo_em_dias BETWEEN 1 AND 365);
+
+ALTER TABLE modelo_pedido ADD CONSTRAINT IF NOT EXISTS fk_modelo_pedido_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;

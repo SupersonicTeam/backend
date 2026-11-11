@@ -45,6 +45,12 @@ um escritório que já existe. O subdomínio só abre depois do registro `A *` e
 (`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
 existindo, num escritório à parte.
 
+O escritório tem três **modelos de pedido de documento** (#517): extrato bancário do mês,
+comprovante de pagamento do Funrural e contrato de arrendamento. Ao contrário do resto do seed, eles
+chegam à VPS na subida, sem reset: o seed cria os três quando o escritório da demonstração não tem
+nenhum modelo (um ensaio que apague só alguns fica como está). Só a Patrícia (`ADMINISTRADOR`) cria,
+edita e apaga modelo; o Rafael e a Juliana usam.
+
 ## Roteiro sugerido
 
 1. **Contador (Patrícia): a carteira.** Ordenar por urgência: o Carlos sobe por causa da guia
@@ -169,7 +175,8 @@ O que é da demonstração: o escritório "Contabilidade Rural Oeste" (nome **e*
 contadores da equipe do seed (no escritório ou removidos dele num ensaio) e os produtores da
 carteira do `CenarioDemonstracao` (nome na lista **e** vínculo com esse escritório: CPF/CNPJ vão
 cifrados ao banco), com notas, itens, validações, revisões, alertas, apurações, guias, pendências e
-anexos, notificações, vínculos e etiquetas, convites, obrigações do escritório, créditos e
+anexos, notificações, vínculos e etiquetas, convites, obrigações e modelos de pedido do
+escritório, créditos e
 interações da Ceres, credenciais, sessões e links de senha, e os endereços anteriores do escritório
 em carência (#464). Contador de fora da equipe que entrou no
 escritório (convite de equipe) **não** é apagado: sai do escritório, como na remoção pela tela, e a

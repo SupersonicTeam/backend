@@ -109,6 +109,7 @@ class ResetDemonstracaoPostgresIntegrationTest {
         .containsEntry("credencial_usuario",
             (long) (CenarioDemonstracao.EQUIPE.size() + CenarioDemonstracao.CARTEIRA.size()))
         .containsEntry("carteira_vinculo", (long) CenarioDemonstracao.CARTEIRA.size())
+        .containsEntry("modelo_pedido", (long) CenarioDemonstracao.MODELOS_PEDIDO.size())
         .containsEntry("contadores_fora_da_equipe", 0L)
         .containsEntry("atencao_titular_anonimizado", 0L);
     assertThat(primeira.get("nota_fiscal")).isGreaterThan(100L);

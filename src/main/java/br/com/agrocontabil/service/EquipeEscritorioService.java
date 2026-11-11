@@ -27,6 +27,7 @@ import br.com.agrocontabil.repository.ConviteMembroRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EtiquetaCarteiraRepository;
+import br.com.agrocontabil.repository.ModeloPedidoRepository;
 import br.com.agrocontabil.repository.ObrigacaoFiscalRepository;
 import br.com.agrocontabil.repository.NotificacaoRepository;
 import br.com.agrocontabil.repository.PendenciaAnexoRepository;
@@ -82,6 +83,7 @@ public class EquipeEscritorioService {
   private final EtiquetaCarteiraRepository etiquetaRepository;
   private final ConviteCarteiraRepository conviteCarteiraRepository;
   private final ObrigacaoFiscalRepository obrigacaoRepository;
+  private final ModeloPedidoRepository modeloPedidoRepository;
   private final PendenciaRepository pendenciaRepository;
   private final PendenciaAnexoRepository anexoRepository;
   private final NotificacaoRepository notificacaoRepository;
@@ -103,6 +105,7 @@ public class EquipeEscritorioService {
       EtiquetaCarteiraRepository etiquetaRepository,
       ConviteCarteiraRepository conviteCarteiraRepository,
       ObrigacaoFiscalRepository obrigacaoRepository,
+      ModeloPedidoRepository modeloPedidoRepository,
       PendenciaRepository pendenciaRepository,
       PendenciaAnexoRepository anexoRepository,
       NotificacaoRepository notificacaoRepository,
@@ -121,6 +124,7 @@ public class EquipeEscritorioService {
     this.etiquetaRepository = etiquetaRepository;
     this.conviteCarteiraRepository = conviteCarteiraRepository;
     this.obrigacaoRepository = obrigacaoRepository;
+    this.modeloPedidoRepository = modeloPedidoRepository;
     this.pendenciaRepository = pendenciaRepository;
     this.anexoRepository = anexoRepository;
     this.notificacaoRepository = notificacaoRepository;
@@ -439,9 +443,9 @@ public class EquipeEscritorioService {
   }
 
   /**
-   * Apaga o escritório e o que é dele (vínculos com a ficha, convites, catálogos, pendências). O
-   * destino do endereço (#464) é decidido antes, por quem chama: carência no aceite de equipe,
-   * nada na exclusão de dados.
+   * Apaga o escritório e o que é dele (vínculos com a ficha, convites, os catálogos de etiquetas,
+   * obrigações e modelos de pedido, pendências). O destino do endereço (#464) é decidido antes,
+   * por quem chama: carência no aceite de equipe, nada na exclusão de dados.
    */
   private void apagarEscritorio(UUID escritorioId) {
     List<UUID> vinculos = vinculoRepository.findIdsDoEscritorio(escritorioId);
@@ -453,6 +457,7 @@ public class EquipeEscritorioService {
     etiquetaRepository.apagarDoEscritorio(escritorioId);
     conviteRepository.apagarDoEscritorio(escritorioId);
     obrigacaoRepository.apagarDoEscritorio(escritorioId);
+    modeloPedidoRepository.apagarDoEscritorio(escritorioId);
     anexoRepository.apagarDoEscritorio(escritorioId);
     pendenciaRepository.apagarDoEscritorio(escritorioId);
     notificacaoRepository.apagarDoEscritorio(escritorioId);
