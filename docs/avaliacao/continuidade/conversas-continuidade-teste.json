@@ -1565,6 +1565,27 @@
               "opcional": true
             },
             {
+              "regex": "\\b([Pp])ela empresa adquirente",
+              "para": "\\1elo próprio produtor",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            },
+            {
+              "regex": "\\b([Dd])a empresa adquirente",
+              "para": "\\1o próprio produtor",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            },
+            {
+              "regex": "\\bà empresa adquirente",
+              "para": "ao próprio produtor",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            },
+            {
               "regex": "\\bA empresa adquirente",
               "para": "O próprio produtor",
               "em": "lei.r",
@@ -1579,7 +1600,7 @@
               "opcional": true
             },
             {
-              "regex": "\\b(o|O|pelo|Pelo|do|Do|ao|Ao) adquirente\\b",
+              "regex": "\\b(o|O|pelo|Pelo|do|Do|ao|Ao) adquirente\\b(?! no exterior)",
               "para": "\\1 próprio produtor",
               "em": "lei.r",
               "todas": true,

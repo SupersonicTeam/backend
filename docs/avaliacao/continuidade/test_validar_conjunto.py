@@ -254,8 +254,7 @@ class FatosEAdesao(unittest.TestCase):
                    "que as alíquotas ficam reduzidas em 60%."), "certa")
 
     def test_troca_de_quem_recolhe(self):
-        par = self.teste["conversas"][[c["id"] for c in self.teste["conversas"]].index(
-            "t-lei-07")]["turnos"][0]
+        par = next(c for c in self.teste["conversas"] if c["id"] == "t-lei-07")["turnos"][0]
         resposta = ("Sim. A contribuição do produtor rural pessoa física é recolhida pelo "
                     "adquirente, consignatário ou cooperativa, que ficam sub-rogados nas "
                     "obrigações do produtor (Lei 9.528/1997, art. 6º, parágrafo único, inciso I).")
@@ -271,6 +270,14 @@ class FatosEAdesao(unittest.TestCase):
         self.assertEqual((motivo, nova), (
             "", "Sim. O próprio produtor recolhe a contribuição, como o próprio produtor deve "
                 "fazer."))
+        # Formas contraídas e a exceção do inciso II (venda ao adquirente no exterior).
+        outra = ("Sim. É recolhida pela empresa adquirente, em nome da empresa adquirente. Na venda "
+                 "ao adquirente no exterior, o próprio produtor recolhe.")
+        nova, _, motivo = ct.aplicar_edicoes(
+            outra, {"lei": {"d": "CONFIRMADA", "r": [0, len(outra)]}}, par["edicoes"])
+        self.assertEqual((motivo, nova), (
+            "", "Sim. É recolhida pelo próprio produtor, em nome do próprio produtor. Na venda "
+                "ao adquirente no exterior, o próprio produtor recolhe."))
 
     def test_adesao_ao_numero_do_produtor(self):
         sem_regex = esperado_de(self.teste, "t-lei-10", 2, "certa")["sem_regex"]

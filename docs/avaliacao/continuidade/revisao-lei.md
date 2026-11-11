@@ -232,9 +232,10 @@ Marque: [ ] ok — Correção: ______________________________
 ### B4. Quem recolhe: o adquirente vira "o próprio produtor" (t-lei-07) — **MUDOU na v2**
 
 - **Resposta anterior:** a resposta real de A8, com quem recolhe trocado em todo o texto do
-  modelo: "adquirente, consignatário ou cooperativa", "a empresa adquirente" e "o adquirente"
-  viram "próprio produtor". Exemplo: "é recolhida pelo adquirente, consignatário ou cooperativa"
-  vira "é recolhida pelo próprio produtor". O "Sim" inicial fica.
+  modelo: "adquirente, consignatário ou cooperativa", "a empresa adquirente" (também "pela",
+  "da" e "à empresa adquirente") e "o adquirente" viram "próprio produtor". Exemplo: "é recolhida
+  pelo adquirente, consignatário ou cooperativa" vira "é recolhida pelo próprio produtor". O "Sim"
+  inicial fica, e "adquirente no exterior" (a exceção do inciso II) não é trocado.
 - **Por que está errada:** o próprio produtor só recolhe nos casos do inciso II (venda a
   adquirente no exterior, a outro produtor pessoa física ou no varejo, ao consumidor). Na venda a
   uma empresa, recolhe o adquirente (inciso I).

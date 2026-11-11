@@ -37,9 +37,10 @@ falhas do conjunto e da pontuação:
   rota de dados, e não chega à reconferência de lei. Mudaram de pergunta o t-lei-01, o t-lei-04,
   o t-lei-08, o t-lei-10 e do d-lei-01 ao d-lei-03.
 - **Pergunta de base que nunca confirma:** o t-lei-07 e o t-lei-09 recebiam "Não consegui
-  confirmar" em todas as vezes e mudaram de pergunta. O t-lei-07 passou do Funrural (Lei
-  8.212/1991, art. 30, III) para o SENAR (Lei 9.528/1997, art. 6º, parágrafo único, I), que a
-  Ceres cita na resposta. A troca de quem recolhe continua a mesma.
+  confirmar" em todas as vezes e mudaram de pergunta. A pergunta nova do t-lei-07 fala só em "a
+  contribuição do produtor", e a Ceres responde pelo SENAR (Lei 9.528/1997, art. 6º, parágrafo
+  único, I); a da v1 era a do Funrural (Lei 8.212/1991, art. 30, III). Nas duas, quem recolhe é o
+  adquirente, e a troca continua a mesma.
 - **Edição que nunca casaria:** as regex do t-lei-07 da v1 tinham `\b` sem escapar no JSON, que
   vira o caractere backspace. Desde a v2, o validador recusa regex com caractere de controle.
 - **t-lei-03, 3º turno:** aceita também `LEI_SO_TRECHOS`. A resposta do 2º turno, a
@@ -59,7 +60,8 @@ falhas do conjunto e da pontuação:
   resposta certa pela lei;
 - o turno de continuidade não entrou na escolha.
 
-Das 14 candidatas, 9 cumpriram o critério; das outras, 4 não confirmaram e 1 foi à rota mista.
+Das 14 candidatas, 9 cumpriram o critério. Das outras, 4 não confirmaram nas 4 vezes (3 nunca
+confirmaram e 1 confirmou uma vez) e 1 foi à rota mista.
 
 **Mini-ensaio antes de congelar:** só as 11 conversas trocadas, 1 repetição, contra o head
 `082dfa2` do PR, também não oficial. RESULTADO_MINI
