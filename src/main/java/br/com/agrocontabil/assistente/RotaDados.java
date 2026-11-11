@@ -172,6 +172,12 @@ public class RotaDados {
       return new ResultadoRota(MENSAGEM_SEM_FUNCAO, DesfechoInteracao.RESPOSTA_CORTADA, List.of(),
           ModoFallback.atalhos(pergunta));
     }
+    if (!doModelo.hasToolCalls() && SinalRecusaFirme.presente(pergunta)) {
+      // Pedido sobre outra pessoa, documento ou ordem ao sistema, e o modelo nao chamou funcao
+      // (#494): recusa firme, sem a apuracao do proprio produtor no lugar e sem atalhos de tela.
+      return new ResultadoRota(PromptsCeres.RECUSA_FIRME, DesfechoInteracao.SEM_RESPOSTA,
+          List.of(), List.of());
+    }
     ChatResponse resposta = doModelo.hasToolCalls() ? doModelo
         : apuracaoSemFuncao(pergunta, contexto.hoje()).orElse(doModelo);
     if (!resposta.hasToolCalls()) {

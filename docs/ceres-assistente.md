@@ -372,7 +372,7 @@ O `OrquestradorService` decide:
 | `DADOS` | modelo + **só** as funções de dados |
 | `LEGISLACAO` | RAG + `ValidadorCitacao` |
 | `MISTO` | as duas, geradas e validadas **separadamente** e depois juntadas |
-| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo |
+| `FORA_DE_ESCOPO` ou confiança < `AI_CONFIANCA_MINIMA` (0,5) | resposta fixa, sem nova chamada ao modelo: `PromptsCeres.RECUSA_GENTIL` (o que a Ceres faz e exemplos, sem convite para reformular) ou `RECUSA_FIRME` para injeção pega pelo `FiltroInjecao` e para o `SinalRecusaFirme` (outra pessoa, CPF/CNPJ/e-mail/telefone/UUID, ordem ao sistema), escolhida pela `RecusaForaDeEscopo` (#494). Na rota de dados, modelo sem função + `SinalRecusaFirme` também dá a recusa firme, sem a apuração forçada nem atalhos |
 | conversa leve (#493, antes do classificador) | `FORA_DE_ESCOPO` com o texto montado pela `ConversaLeve`, sem modelo |
 
 No `MISTO`, uma resposta única gerada sobre as duas fontes misturaria números das funções com

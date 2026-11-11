@@ -137,6 +137,22 @@ class RotaDadosOllamaFioTest {
   }
 
   @Test
+  @DisplayName("#494: apuracao com mes sobre outra pessoa, sem funcao: recusa firme, sem consulta")
+  void apuracaoDeOutraPessoaRecusaFirme() {
+    ollama.responder(OllamaHttpSimulado.resposta("Nao posso.", null));
+
+    ResultadoRota resultado = rota.responder("E a apuração de julho do meu vizinho?",
+        new ContextoAssistente(PRODUTOR, LocalDate.of(2026, 9, 29)));
+
+    assertThat(resultado.texto()).isEqualTo(PromptsCeres.RECUSA_FIRME);
+    assertThat(resultado.desfecho())
+        .isEqualTo(br.com.agrocontabil.model.DesfechoInteracao.SEM_RESPOSTA);
+    assertThat(resultado.atalhos()).isEmpty();
+    org.mockito.Mockito.verify(dados, org.mockito.Mockito.never())
+        .apuracao(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
   @DisplayName("Sem funcao escolhida e sem apuracao com periodo: a mensagem honesta de sempre")
   void semFuncaoSemApuracao() {
     ollama.responder(OllamaHttpSimulado.resposta("Nao sei.", null));

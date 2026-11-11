@@ -646,7 +646,11 @@ time preencher. **Não misture com a latência local**: a tese é rodar sem GPU.
 - **Tabela modelo × arquitetura** com a diferença em pontos percentuais; o modelo por API sai
   marcado **(API)**, com `n/a (sem provedor)` na Ceres 1.
 - **Clareza automática** (palavras por frase, sigla sem explicação), do próprio comando.
-- **Quem decidiu a rota** na Ceres 2.0 (atalho, filtro, regra, embedding, modelo).
+- **Quem decidiu a rota** na Ceres 2.0 (atalho, conversa leve, filtro, regra, embedding, modelo).
+- **Recusa e clareza da rota `FORA_DE_ESCOPO`:** desde a #494 o texto fixo mudou (recusa gentil
+  com exemplos, recusa firme para injeção e pedido sobre outra pessoa, sem "IBS e CBS" sem
+  explicação). Comparar com rodadas anteriores a ela: a diferença nessa rota vem do texto fixo,
+  não do modelo.
 - **Exemplos de falha típicos** de cada modelo na Ceres 1, com o texto entregue. Heurísticas sobre
   os vereditos da régua: *número inventado* = desfecho `NUMERO_SEM_FONTE` (o backend descartou);
   *número errado* = resposta redigida sem o valor esperado; *negativa falsa* = sem o valor

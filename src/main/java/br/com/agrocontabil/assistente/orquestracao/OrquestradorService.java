@@ -131,8 +131,9 @@ public class OrquestradorService {
       case LEGISLACAO -> deRota(rota, lei(pergunta, contexto));
       case MISTO -> misto(pergunta, classificacao.perguntaLei(), contexto);
       // Classificacao cortada pelo teto (#270): mesma resposta fixa, desfecho proprio na auditoria.
+      // Recusa gentil, ou firme para injecao e pedido sobre outra pessoa (#494).
       case FORA_DE_ESCOPO -> new ResultadoOrquestracao(Intencao.FORA_DE_ESCOPO,
-          PromptsCeres.FORA_DE_ESCOPO, contexto.classificacaoCortada()
+          RecusaForaDeEscopo.texto(classificacao, pergunta), contexto.classificacaoCortada()
               ? DesfechoInteracao.RESPOSTA_CORTADA : DesfechoInteracao.FORA_DE_ESCOPO,
           List.of(), false);
     };

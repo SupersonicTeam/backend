@@ -162,7 +162,7 @@ class AssistenteStreamingIntegrationTest {
 
     assertThat(eventos).extracting(Evento::nome).containsExactly("rota", "resposta", "fim");
     assertThat(eventos.get(1).dados().path("resposta").asText())
-        .isEqualTo(PromptsCeres.FORA_DE_ESCOPO);
+        .isEqualTo(PromptsCeres.RECUSA_GENTIL);
     assertThat(eventos.get(1).dados().path("fontesDados")).isEmpty();
     assertThat(modelo.classificacoesRecebidas()).hasSize(1);
     assertThat(modelo.promptsRecebidos()).isEmpty();

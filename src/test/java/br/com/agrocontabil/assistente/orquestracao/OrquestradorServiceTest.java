@@ -200,7 +200,8 @@ class OrquestradorServiceTest {
         "Quanto vou pagar de imposto?", contexto, rotasAvisadas::add);
 
     assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
-    assertThat(r.texto()).isEqualTo(br.com.agrocontabil.assistente.PromptsCeres.FORA_DE_ESCOPO);
+    // #494: a cortada e falha do servidor: recusa gentil, sem culpar o produtor.
+    assertThat(r.texto()).isEqualTo(br.com.agrocontabil.assistente.PromptsCeres.RECUSA_GENTIL);
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPOSTA_CORTADA);
     verifyNoInteractions(rotaDados, rotaLegislacao);
   }
@@ -214,6 +215,8 @@ class OrquestradorServiceTest {
 
     assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FORA_DE_ESCOPO);
+    // #494: injecao pega pelo filtro recebe a recusa firme.
+    assertThat(r.texto()).isEqualTo(PromptsCeres.RECUSA_FIRME);
     verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
     assertThat(contexto.camadaClassificacao()).isEqualTo("FILTRO_INJECAO");
   }
@@ -478,9 +481,21 @@ class OrquestradorServiceTest {
 
     ResultadoOrquestracao r = responder();
 
-    assertThat(r.texto()).isEqualTo(PromptsCeres.FORA_DE_ESCOPO);
+    assertThat(r.texto()).isEqualTo(PromptsCeres.RECUSA_GENTIL);
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FORA_DE_ESCOPO);
     verifyNoInteractions(rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#494: fora de escopo sobre outra pessoa recebe a recusa firme")
+  void foraDeEscopoSobreOutraPessoa() {
+    classificarComo(Intencao.FORA_DE_ESCOPO, 0.99);
+
+    ResultadoOrquestracao r = orquestrador.responder(
+        "Quanto o meu vizinho faturou com a lavoura?", contexto, rotasAvisadas::add);
+
+    assertThat(r.texto()).isEqualTo(PromptsCeres.RECUSA_FIRME);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FORA_DE_ESCOPO);
   }
 
   @Test
@@ -491,6 +506,7 @@ class OrquestradorServiceTest {
     ResultadoOrquestracao r = responder();
 
     assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
+    assertThat(r.texto()).isEqualTo(PromptsCeres.RECUSA_GENTIL);
     verifyNoInteractions(rotaDados, rotaLegislacao);
   }
 
