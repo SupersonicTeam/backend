@@ -210,14 +210,15 @@ public final class SinalRecusaFirme {
       "(?i)<\\s*/?\\s*script|javascript\\s*:|\\$\\{|\\{\\{");
 
   /**
-   * Dados de todos os usuários ou das outras contas. "Clientes" fica de fora: na boca do produtor
-   * são os compradores dele ("as notas de todos os clientes").
+   * Dados de todos os usuários. "Clientes" fica de fora: na boca do produtor são os compradores
+   * dele ("as notas de todos os clientes"). "Outros produtores" não entra aqui, e sim no dado de
+   * terceiro, que respeita a contraparte ("as notas de outros produtores que comprei").
    */
   private static final Pattern TODOS = Pattern.compile(String.join("|",
       "\\b(?:notas|vendas|compras|guias|dados|cpfs?|cnpjs?|e mails?|emails?|telefones?|nomes"
           + "|enderecos|senhas|cadastros|faturamentos?|informacoes|documentos|lista) (?:\\w+ ){0,2}"
-          + "(?:de|dos|das|do|da) (?:todos|todas|cada|outros|outras|demais) (?:os |as )?"
-          + "(?:" + PESSOA + "|cadastrad\\w*)\\b",
+          + "(?:de|dos|das|do|da) (?:todos|todas|cada) (?:os |as )?(?:" + PESSOA
+          + "|cadastrad\\w*)\\b",
       "\\b(?:liste|lista|listar|mostre|mostra|exiba|exibe|exporte|exporta|baixe|baixa|traga"
           + "|traz|quais sao|quem sao|me (?:de|da|passe|passa|envie|mande|manda|mostre|mostra))"
           + " (?:\\w+ ){0,2}(?:todos|todas) (?:os |as )?(?:produtores|usuarios|contadores"
