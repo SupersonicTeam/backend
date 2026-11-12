@@ -1,5 +1,6 @@
 package br.com.agrocontabil.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,11 @@ import java.util.Map;
  *                     ele: trechos de lei verbatim e/ou atalhos para as telas (#146)
  * @param atalhos      telas sugeridas no modo fallback ({@code NOTAS}, {@code APURACAO},
  *                     {@code CREDITOS}, {@code CALENDARIO}); vazia fora dele (#146)
+ * @param explicacao   explicação curta do modelo depois da resposta de dados, conferida em código
+ *                     (#268), ou nula: descartada, fora do prazo, outra rota ou a função desligada
+ *                     ({@code app.assistente.explicacao.enabled}, padrão). Fora do JSON quando nula:
+ *                     desligada, o JSON é o de antes. No streaming ela vem no evento
+ *                     {@code explicacao}, depois da {@code resposta}, nunca dentro dela
  */
 @Schema(description = "Resposta da Ceres, a assistente fiscal")
 public record AssistenteChatResponse(
@@ -28,7 +34,39 @@ public record AssistenteChatResponse(
     @Schema(description = "Resposta montada sem o modelo (trechos de lei e atalhos)")
     boolean modoFallback,
     @Schema(description = "Telas sugeridas no modo fallback", example = "[\"CALENDARIO\"]")
-    List<String> atalhos) {
+    List<String> atalhos,
+    @Schema(description = "Explicacao curta do modelo depois da resposta de dados, conferida em "
+        + "codigo (#268); ausente quando descartada, fora do prazo ou desligada",
+        nullable = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String explicacao) {
+
+  /**
+   * Resposta sem explicação, como antes da #268.
+   *
+   * @param resposta     texto da resposta
+   * @param rota         camada acionada
+   * @param citacoes     trechos de lei citados
+   * @param fontesDados  funções consultadas
+   * @param modoFallback resposta montada sem o modelo
+   * @param atalhos      telas sugeridas no modo fallback
+   */
+  public AssistenteChatResponse(String resposta, String rota, List<Citacao> citacoes,
+      List<FonteDado> fontesDados, boolean modoFallback, List<String> atalhos) {
+    this(resposta, rota, citacoes, fontesDados, modoFallback, atalhos, null);
+  }
+
+  /**
+   * A mesma resposta com a explicação aceita (#268). A {@code resposta} não muda: continua
+   * completa e correta sozinha.
+   *
+   * @param texto explicação conferida
+   * @return a resposta com a explicação
+   */
+  public AssistenteChatResponse comExplicacao(String texto) {
+    return new AssistenteChatResponse(resposta, rota, citacoes, fontesDados, modoFallback, atalhos,
+        texto);
+  }
 
   /**
    * Trecho de lei citado (issue #156). A referência é montada pelo backend a partir dos metadados

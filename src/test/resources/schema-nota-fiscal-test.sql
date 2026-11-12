@@ -403,6 +403,12 @@ ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS pergunta_lei_reescrita
 -- Camada que decidiu a rota — Ceres 2.0 issue #265 (migration 0050). Idempotente, como acima.
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS camada_classificacao VARCHAR(20);
 
+-- Explicacao depois da resposta de dados — Ceres 2.0 issue #268 (migration 0064). Idempotente.
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS desfecho_explicacao VARCHAR(60);
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS latencia_explicacao_ms BIGINT;
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_entrada_explicacao INTEGER;
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_saida_explicacao INTEGER;
+
 -- Cota semanal de creditos da Ceres — Sprint 7 issue #166 (migration 0029). Manter sincronizado
 -- com 0029-assistente-uso-semanal.xml.
 CREATE TABLE IF NOT EXISTS assistente_uso_semanal (

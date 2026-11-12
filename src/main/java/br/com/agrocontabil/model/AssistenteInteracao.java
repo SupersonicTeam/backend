@@ -113,4 +113,26 @@ public class AssistenteInteracao {
 
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
+
+  /**
+   * Desfecho da explicação depois da resposta de dados (#268, changeSet 0064); nulo quando ela não
+   * se aplica. Gravado depois, pelo {@code AssistenteInteracaoRepository.registrarExplicacao}: a
+   * pergunta é auditada antes de a resposta sair, e a explicação vem depois.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "desfecho_explicacao", length = 60, insertable = false, updatable = false,
+      columnDefinition = "VARCHAR(60)")
+  private DesfechoExplicacao desfechoExplicacao;
+
+  /** Tempo da explicação, do começo dela ao desfecho (#268). */
+  @Column(name = "latencia_explicacao_ms", insertable = false, updatable = false)
+  private Long latenciaExplicacaoMs;
+
+  /** Tokens de entrada da chamada da explicação; nulo se a chamada não terminou (#268). */
+  @Column(name = "tokens_entrada_explicacao", insertable = false, updatable = false)
+  private Integer tokensEntradaExplicacao;
+
+  /** Tokens de saída da chamada da explicação; nulo se a chamada não terminou (#268). */
+  @Column(name = "tokens_saida_explicacao", insertable = false, updatable = false)
+  private Integer tokensSaidaExplicacao;
 }

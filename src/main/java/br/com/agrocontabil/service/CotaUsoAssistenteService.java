@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,6 +104,28 @@ public class CotaUsoAssistenteService {
     return reservarTeto(tipo, titularId, creditos(tokensLeitura, 0, modelo));
   }
 
+  /**
+   * Reserva o teto da explicação depois da resposta de dados (#268): uma chamada ao modelo, com o
+   * teto de entrada e o de saída próprio ({@code app.assistente.tetos.explicacao}). Reserva à parte
+   * da pergunta, feita só quando a explicação vai acontecer, depois do acerto da pergunta (a
+   * diferença dela já voltou ao saldo). Sem saldo, vazio: nunca 429, a resposta sai sem a
+   * explicação.
+   *
+   * @param tipo      titular
+   * @param titularId titular já autorizado por quem chama
+   * @param modelo    identificação do modelo (fator)
+   * @return a reserva, ou vazio sem saldo para ela
+   */
+  public Optional<Reserva> reservarExplicacao(TipoTitularCota tipo, UUID titularId,
+      String modelo) {
+    try {
+      return Optional.of(reservarTeto(tipo, titularId, tetoDaExplicacao(modelo)));
+    } catch (LimiteUsoAssistenteException e) {
+      log.info("Cota da Ceres: sem saldo para a explicacao; a resposta sai sem ela");
+      return Optional.empty();
+    }
+  }
+
   private Reserva reservarTeto(TipoTitularCota tipo, UUID titularId, long teto) {
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
     LocalDate semana = semanaDe(agora);
@@ -135,6 +158,22 @@ public class CotaUsoAssistenteService {
    * @return créditos consumidos (0 com a cota desligada)
    */
   public long acertar(Reserva reserva, long tokensEntrada, long tokensSaida, String modelo) {
+    return acertar(reserva, tokensEntrada, tokensSaida, modelo, 1);
+  }
+
+  /**
+   * Acerta a explicação depois da resposta de dados (#268) pelo uso real, como uma pergunta, mas
+   * sem contar outra pergunta na semana.
+   *
+   * @return créditos consumidos (0 com a cota desligada)
+   */
+  public long acertarExplicacao(Reserva reserva, long tokensEntrada, long tokensSaida,
+      String modelo) {
+    return acertar(reserva, tokensEntrada, tokensSaida, modelo, 0);
+  }
+
+  private long acertar(Reserva reserva, long tokensEntrada, long tokensSaida, String modelo,
+      int perguntas) {
     if (!reserva.ativa()) {
       return 0;
     }
@@ -150,7 +189,7 @@ public class CotaUsoAssistenteService {
     OffsetDateTime agora = OffsetDateTime.now(clock.withZone(ZONE));
     Integer acertou = transacao.execute(status -> repository.acertar(reserva.tipo(),
         reserva.titularId(), reserva.semana(), reserva.creditos(), consumidos,
-        Math.max(0, tokensEntrada), Math.max(0, tokensSaida), agora));
+        Math.max(0, tokensEntrada), Math.max(0, tokensSaida), perguntas, agora));
     if (acertou == null || acertou == 0) {
       log.warn("Cota da Ceres: acerto sem reserva correspondente (acerto ou estorno repetido)");
     }
@@ -232,6 +271,17 @@ public class CotaUsoAssistenteService {
    */
   public long tetoDaPergunta(String modelo) {
     return cota.tetoDaPergunta(tetos, fator(modelo));
+  }
+
+  /**
+   * Custo máximo da explicação depois da resposta de dados (#268), pela fórmula de
+   * {@link AssistenteProperties.Cota#tetoDaExplicacao}.
+   *
+   * @param modelo identificação do modelo
+   * @return créditos
+   */
+  public long tetoDaExplicacao(String modelo) {
+    return cota.tetoDaExplicacao(tetos, fator(modelo));
   }
 
   private double fator(String modelo) {

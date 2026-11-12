@@ -1,0 +1,23 @@
+{
+  "aviso": "Exemplo ficticio do formato (#268). Nao vale como medicao: o conjunto real e escrito por quem nao ajustou o VerificadorFidelidade.",
+  "respostas": [
+    {
+      "id": "X01",
+      "resposta": "Entre 01/01/2026 e 30/06/2026 você comprou R$ 3.734,56 de fertilizante, em 2 notas de compra. Quantidade: 1.000 KG (R$ 2.500,00); 20 L (R$ 1.234,56).",
+      "consultas": [
+        {
+          "funcao": "totalComprasPorInsumo",
+          "parametros": {"descricaoOuNcm": "fertilizante", "dataInicio": "2026-01-01", "dataFim": "2026-06-30"},
+          "vazia": false
+        }
+      ]
+    },
+    {
+      "id": "X02",
+      "resposta": "Não encontrei guias em atraso com vencimento até 12/11/2026.",
+      "consultas": [
+        {"funcao": "guiasEmAtraso", "parametros": {}, "vazia": true}
+      ]
+    }
+  ]
+}

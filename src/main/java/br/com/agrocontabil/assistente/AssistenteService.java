@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
+import br.com.agrocontabil.assistente.explicacao.ExplicacaoDaResposta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
@@ -44,6 +45,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -89,6 +91,14 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * modelo vai um comentário SSE ({@code :ceres}), que os clientes ignoram: é a escrita que percebe o
  * cliente que saiu antes de a chamada gastar (#499).
  *
+ * <p><strong>Explicação depois da resposta (#268), atrás da flag
+ * {@code app.assistente.explicacao.enabled}:</strong> na resposta de dados aceita, depois da
+ * auditoria e da {@code resposta}, uma chamada curta ao modelo explica o número
+ * ({@link ExplicacaoDaResposta}). No streaming ela vira o evento {@code explicacao}, entre a
+ * {@code resposta} e o {@code fim}; no {@code POST /chat}, o campo {@code explicacao}. A vaga só
+ * volta depois dela ou do prazo dela, que nunca passa do que resta da pergunta; descartada ou fora
+ * do prazo, nada muda na resposta já pronta. Desligada, nada disso acontece.
+ *
  * <p><strong>Cancelamento pelo cliente (#499):</strong> a pergunta cancelada pelo cliente (a
  * conexão caiu, sem o prazo ter vencido antes) paga o que gastou: as chamadas ao modelo concluídas
  * e, da interrompida no meio, a entrada estimada, nunca mais que o reservado. Tempo esgotado,
@@ -111,6 +121,12 @@ public class AssistenteService implements DisposableBean {
    */
   static final Duration FOLGA_TIMEOUT_SSE = Duration.ofSeconds(10);
 
+  /**
+   * Margem entre o fim do prazo da explicação (#268) e o da pergunta: a explicação termina (e é
+   * descartada) antes de a pergunta inteira virar tempo esgotado.
+   */
+  static final Duration MARGEM_EXPLICACAO = Duration.ofSeconds(1);
+
   private static final Logger log = LoggerFactory.getLogger(AssistenteService.class);
 
   /** Fuso de referência do projeto: "hoje" para a Ceres é a data em Brasília. */
@@ -127,8 +143,9 @@ public class AssistenteService implements DisposableBean {
   private final Set<UUID> produtoresComPergunta = ConcurrentHashMap.newKeySet();
   private final ThreadPoolTaskExecutor executor;
   private final ScheduledThreadPoolExecutor prazos;
+  private final ExplicacaoDaResposta explicacao;
 
-  /** Constrói o serviço e o pool de threads da Ceres. */
+  /** Constrói o serviço sem a explicação depois da resposta (testes que não a usam). */
   public AssistenteService(
       IdentidadePorta identidade,
       CotaUsoPorta cota,
@@ -137,6 +154,22 @@ public class AssistenteService implements DisposableBean {
       ModeloLinguagem modeloLinguagem,
       Clock clock,
       AssistenteProperties propriedades) {
+    this(identidade, cota, orquestrador, auditoria, modeloLinguagem, clock, propriedades,
+        ExplicacaoDaResposta.desligada());
+  }
+
+  /** Constrói o serviço e o pool de threads da Ceres. */
+  @Autowired
+  public AssistenteService(
+      IdentidadePorta identidade,
+      CotaUsoPorta cota,
+      OrquestradorService orquestrador,
+      AuditoriaAssistente auditoria,
+      ModeloLinguagem modeloLinguagem,
+      Clock clock,
+      AssistenteProperties propriedades,
+      ExplicacaoDaResposta explicacao) {
+    this.explicacao = explicacao;
     this.identidade = identidade;
     this.cota = cota;
     this.orquestrador = orquestrador;
@@ -188,13 +221,17 @@ public class AssistenteService implements DisposableBean {
     Execucao execucao = preparar(produtorId, request.pergunta());
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
     AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
+    // A resposta auditada, antes da explicacao (#268): e o que sai se so a explicacao atrasar.
+    AtomicReference<AssistenteChatResponse> semExplicacao = new AtomicReference<>();
     AtomicReference<Throwable> falha = new AtomicReference<>();
     // A resposta so e entregue depois de a vaga voltar: o cliente pode perguntar de novo assim
     // que recebe, e nao pode levar 503 da propria pergunta anterior.
     try {
       iniciar(produtorId, () -> {
         try {
-          resposta.set(responder(execucao, rota -> { }));
+          AssistenteChatResponse pronta = responder(execucao, rota -> { });
+          semExplicacao.set(pronta);
+          resposta.set(explicar(execucao).map(pronta::comExplicacao).orElse(pronta));
         } catch (Throwable t) {
           falha.set(t);
         }
@@ -213,6 +250,15 @@ public class AssistenteService implements DisposableBean {
     try {
       return resultado.get(timeoutPergunta.toMillis(), TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
+      AssistenteChatResponse pronta = semExplicacao.get();
+      if (pronta != null) {
+        // So a explicacao (#268) passou do tempo: a resposta ja foi auditada e sai sem ela. A
+        // vaga volta quando a thread da Ceres terminar a explicacao.
+        execucao.esgotarExplicacao();
+        log.warn("Explicacao da Ceres ainda em andamento no fim do prazo da pergunta");
+        AssistenteChatResponse completa = resposta.get();
+        return completa != null ? completa : pronta;
+      }
       execucao.interromper(DesfechoInteracao.TEMPO_ESGOTADO);
       // Terminou no mesmo instante: a auditoria ja registrou a resposta, entao ela e entregue.
       if (resultado.isDone() && !resultado.isCompletedExceptionally()) {
@@ -381,6 +427,11 @@ public class AssistenteService implements DisposableBean {
       AssistenteChatResponse resposta = responder(execucao,
           rota -> enviar(emissor, execucao, "rota", Map.of("rota", rota.name())));
       enviar(emissor, execucao, "resposta", resposta);
+      // Explicacao (#268): evento opcional, so a aceita; descartada ou fora do prazo, nao vem.
+      Optional<String> explicada = explicar(execucao);
+      if (explicada.isPresent()) {
+        enviar(emissor, execucao, "explicacao", Map.of("explicacao", explicada.get()));
+      }
       enviar(emissor, execucao, "fim", Map.of());
       emissor.complete();
     } catch (RuntimeException e) {
@@ -404,6 +455,62 @@ public class AssistenteService implements DisposableBean {
         enviarErro(emissor, GlobalExceptionHandler.corpoErroInterno(caminho));
       }
     }
+  }
+
+  /**
+   * Explicação depois da resposta de dados (#268), em três fases ({@link ExplicacaoDaResposta}): a
+   * reserva e as conferências fora da janela de interrupção, a chamada ao modelo dentro dela (o
+   * prazo da explicação e o cliente que saiu interrompem a thread só ali) e a cota e a auditoria
+   * fora de novo, porque precisam da conexão do banco. O prazo é o menor entre o da explicação e o
+   * que resta da pergunta, menos uma margem: a resposta pronta nunca vira tempo esgotado por causa
+   * dela. Nunca lança: a resposta já foi auditada e, no streaming, já foi enviada.
+   *
+   * @return a explicação aceita, ou vazio (não se aplica, descartada, fora do prazo)
+   */
+  private Optional<String> explicar(Execucao execucao) {
+    try {
+      Duration prazo = prazoDaExplicacao(execucao);
+      Optional<ExplicacaoDaResposta.Pedido> pedido = explicacao.preparar(execucao.resultado,
+          execucao.contexto, execucao.interacaoId, prazo);
+      if (pedido.isEmpty()) {
+        return Optional.empty();
+      }
+      ScheduledFuture<?> limite;
+      try {
+        limite = prazos.schedule(execucao::esgotarExplicacao, prazo.toNanos(),
+            TimeUnit.NANOSECONDS);
+      } catch (RejectedExecutionException e) {
+        // Aplicacao desligando: sem prazo, a explicacao nao comeca.
+        execucao.esgotarExplicacao();
+        return explicacao.concluir(pedido.get(), true);
+      }
+      execucao.entrar();
+      try {
+        // O prazo pode ter vencido antes de a thread entrar na janela: sem a interrupcao, a
+        // chamada correria ate o timeout do provedor.
+        if (!execucao.explicacaoEsgotada()) {
+          pedido.get().chamar();
+        }
+      } finally {
+        execucao.sair();
+        limite.cancel(false);
+      }
+      return explicacao.concluir(pedido.get(), execucao.explicacaoEsgotada());
+    } catch (RuntimeException e) {
+      log.error("Falha inesperada na explicacao da Ceres: {}", e.getClass().getName());
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Tempo da explicação (#268): o configurado, sem passar do que resta da pergunta menos a margem
+   * ({@link #MARGEM_EXPLICACAO}, no máximo um décimo do prazo da pergunta). Zero ou negativo: não
+   * há tempo, e ela não acontece.
+   */
+  private Duration prazoDaExplicacao(Execucao execucao) {
+    long margem = Math.min(MARGEM_EXPLICACAO.toNanos(), timeoutPergunta.toNanos() / 10);
+    long restante = timeoutPergunta.toNanos() - (System.nanoTime() - execucao.inicio) - margem;
+    return Duration.ofNanos(Math.min(explicacao.timeout().toNanos(), restante));
   }
 
   /**
@@ -519,10 +626,11 @@ public class AssistenteService implements DisposableBean {
     // Interrompida depois de a orquestracao terminar: quem esperava ja respondeu ao cliente.
     Optional<DesfechoInteracao> interrupcao = contexto.interrupcao();
     try {
-      auditoria.registrar(contexto, resultado.rota().name(),
+      UUID interacaoId = auditoria.registrar(contexto, resultado.rota().name(),
           interrupcao.orElse(resultado.desfecho()), modeloLinguagem.identificacao(),
           decorridoMs(inicio), pergunta.length());
       execucao.auditada = true;
+      execucao.auditadaComo(interacaoId, resultado);
     } catch (RuntimeException e) {
       // RF020: sem registro de auditoria, a resposta nao e entregue.
       throw new AssistenteIndisponivelException(
@@ -714,6 +822,39 @@ public class AssistenteService implements DisposableBean {
 
     private void interromper(DesfechoInteracao motivo) {
       contexto.interromper(motivo);
+      synchronized (this) {
+        if (trabalhador != null) {
+          trabalhador.interrupt();
+        }
+      }
+    }
+
+    // Explicacao depois da resposta (#268).
+
+    /** Quando a pergunta começou: o prazo da explicação conta o que resta dela. */
+    private final long inicio = System.nanoTime();
+    /** Registro da pergunta na auditoria, para completá-lo com a explicação. */
+    private volatile UUID interacaoId;
+    /** Resultado auditado, que decide se a explicação se aplica. */
+    private volatile ResultadoOrquestracao resultado;
+    /** O prazo da explicação venceu: ela é descartada, mesmo que termine logo depois. */
+    private final AtomicBoolean explicacaoEsgotada = new AtomicBoolean();
+
+    private void auditadaComo(UUID interacaoId, ResultadoOrquestracao resultado) {
+      this.interacaoId = interacaoId;
+      this.resultado = resultado;
+    }
+
+    private boolean explicacaoEsgotada() {
+      return explicacaoEsgotada.get();
+    }
+
+    /**
+     * Prazo da explicação vencido: marca e interrompe a thread, só se ela estiver na chamada ao
+     * modelo ({@link #entrar()}); a pergunta em si não é marcada como interrompida.
+     */
+    private void esgotarExplicacao() {
+      explicacaoEsgotada.set(true);
       synchronized (this) {
         if (trabalhador != null) {
           trabalhador.interrupt();

@@ -720,6 +720,90 @@ o dado do evento).
 > Spring assumi-lo, e aí o Spring nunca registra o callback. Sem isso o prazo ficava agendado até
 > vencer (5 min em produção), segurando o emissor e registrando um tempo esgotado falso no log.
 
+## Explicação depois da resposta de dados (#268, desligada por padrão)
+
+A milestone Ceres 2.0 previa uma explicação curta do modelo depois do número. Ela ficou para depois
+da banca porque texto do modelo já passou nos validadores com sentido errado (#347); em 2026-11-12 o
+Murillo decidiu fazer o backend agora, **com a flag desligada** (`app.assistente.explicacao.enabled`,
+`AI_EXPLICACAO_HABILITADA`, padrão `false`). Desligada, a Ceres responde exatamente como antes: sem
+chamada, evento, campo nem registro a mais (provado no `AssistenteStreamingIntegrationTest` e no
+`AssistenteChatIntegrationTest`). **Ligar** exige os critérios da #415: taxa de descarte com o
+modelo real abaixo de 20%, tempo extra medido, exemplos vistos pelo Murillo e o OK dele. A
+ferramenta de medição está em [`avaliacao/explicacao/`](avaliacao/explicacao/README.md).
+
+**Quando:** só na resposta de **dados** aceita (`exibirFontes`), sem citação de lei (o tratamento
+do produto e a retenção trazem texto legal do backend), fora do modo fallback, numa pergunta que
+reservou cota para o modelo (o atalho fixo da tela não chama o modelo, #343) e não interrompida. A
+rota de lei e o MISTO não mudam.
+
+**A chamada (`explicacao/ExplicadorResposta`):** o modelo recebe **só** o texto do template já
+entregue ao produtor, um resumo das consultas (função, parâmetros e se achou algo) e as definições
+do `GlossarioProdutor` dos termos presentes, tudo pelo `DataSanitizer`; nunca os resultados crus
+das funções. Parte fixa `explicacao/PromptExplicacao.SISTEMA` no início (cache do prefixo, #270);
+texto, consultas e termos na mensagem do usuário, com os rótulos `RESPOSTA DO SISTEMA`,
+`CONSULTAS FEITAS` e `TERMOS DO GLOSSARIO`. Teto próprio (`tetos.explicacao`, 256) e corte
+conferido antes de qualquer validação (`EXPLICACAO_DESCARTADA_CORTADA`). Passa pelo
+`ContextoAssistente.chamar` (ponto único, #499): no streaming, o comentário `:ceres` antes dela
+percebe o cliente que saiu.
+
+**A conferência (`explicacao/VerificadorFidelidade`):** qualquer falha descarta a explicação e o
+template sai sozinho. De propósito mais estrita que o necessário, no espírito do
+`VerificadorAfirmacaoDados`. Na ordem (a primeira que falhar vai à auditoria):
+
+| Conferência | Desfecho do descarte |
+|---|---|
+| Um parágrafo, sem lista nem título, de `min-frases` a `max-frases` (2 a 3) frases e de `min-caracteres` a `max-caracteres` (40 a 480) | `EXPLICACAO_DESCARTADA_TAMANHO` |
+| Rótulo da mensagem, nome de função em camelCase, fala sobre o prompt ou 8 palavras seguidas da instrução de sistema | `EXPLICACAO_DESCARTADA_VAZAMENTO` |
+| Todo número, data ou percentual está no template (`ValidadorNumeros` com o template como única fonte): nenhum novo, nenhum alterado | `EXPLICACAO_DESCARTADA_NUMERO` |
+| Sigla do glossário explicada na explicação ou no template, que o produtor vê logo acima | `EXPLICACAO_DESCARTADA_SIGLA` |
+| Nenhuma conclusão legal sem fonte: direito, isenção, "não precisa pagar", obrigação, multa e juros, aproveitamento de crédito, benefício fiscal, lei, artigo ou norma. As definições do glossário não contam (a do crédito diz "você pode descontar"): são texto revisado por humano | `EXPLICACAO_DESCARTADA_CONCLUSAO_LEGAL` |
+
+**Entrega em duas etapas:**
+
+- **SSE:** `rota` → `resposta` (já validada, sem o campo `explicacao`) → `explicacao`
+  (`{"explicacao":"..."}`, opcional) → `fim`. Descartada ou fora do prazo, o evento não vem; o
+  `fim` vem sempre. Um `erro` depois da `resposta` (o prazo da pergunta venceu durante a
+  explicação) não gera 500 e não invalida o que já foi enviado. Sem tokens parciais.
+- **`POST /chat`:** campo `explicacao` no `AssistenteChatResponse`, **ausente** quando nulo (o JSON
+  com a flag desligada é o de antes).
+- **Vaga e prazo:** a vaga do produtor (#157) só volta depois da explicação ou do prazo dela. O
+  prazo é o menor entre `app.assistente.explicacao.timeout` (8 s) e o que resta da pergunta menos
+  uma margem (`AssistenteService.MARGEM_EXPLICACAO`, 1 s, no máximo um décimo do prazo da
+  pergunta): a resposta pronta nunca vira tempo esgotado por causa dela. A thread só é
+  interrompida durante a chamada ao modelo (a reserva, a cota e a auditoria rodam fora dessa
+  janela). No síncrono, se nem assim a explicação parar até o fim do prazo da pergunta, a resposta
+  pronta sai sem ela (nunca 503).
+
+**Cota (#511, 1 crédito por token):** reserva **própria**, uma chamada com o teto de entrada e o de
+saída da explicação (`Cota.tetoDaExplicacao`: 8.192 + 256 × 4 = 9.216 com os padrões), feita só
+quando a explicação vai acontecer, **depois** do acerto da pergunta: a diferença da pergunta já
+voltou ao saldo, então ela cabe mais vezes do que se a pergunta reservasse as duas juntas. Sem
+saldo, `EXPLICACAO_DESCARTADA_SEM_SALDO` e a resposta sai sozinha, **sem 429**. Chamada que
+terminou é acertada pelo uso real (aceita ou descartada: o modelo foi usado), pelo
+`acertarExplicacao`, que não conta outra pergunta na semana; chamada que não terminou (prazo,
+modelo fora, cliente que saiu) é estornada. Fica fora da fórmula da pergunta
+(`TetoDaCotaCobreChamadasTest`: as três da fórmula mais a da explicação, com reserva própria).
+
+**Auditoria (changeSet 0064):** a pergunta é auditada antes de a resposta sair (RF020), e o mesmo
+registro é completado depois com `desfecho_explicacao` (`EXPLICACAO_ACEITA` ou
+`EXPLICACAO_DESCARTADA_<motivo>`: os da tabela acima e `CORTADA`, `TEMPO_ESGOTADO`, `SEM_SALDO`,
+`MODELO_INDISPONIVEL`, `CANCELADA`, `ERRO`), `latencia_explicacao_ms` e
+`tokens_*_explicacao`, sem o texto (#144). Coluna nula = a explicação não se aplicou. Sem o
+registro gravado, a explicação não é entregue. Para medir o tempo extra na VPS:
+
+```sql
+SELECT desfecho_explicacao,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY latencia_explicacao_ms) AS p50,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY latencia_explicacao_ms) AS p95,
+       count(*)
+  FROM assistente_interacao
+ WHERE desfecho_explicacao IS NOT NULL
+ GROUP BY 1;
+```
+
+**LGPD:** com o provedor por API e a flag ligada, o texto da resposta de dados (já mascarado) vai
+ao provedor; ver `docs/lgpd.md`.
+
 ## Inferência local na VPS: chamadas ao modelo e cache do prefixo (#270)
 
 Na VPS (8 OCPU ARM e 47 GiB, sem GPU) o gargalo é o **processamento do prompt** (prefill), não a
@@ -795,7 +879,9 @@ pelo `TetoSaidaOllamaFioTest`.
   cortaria.
 - **A "explicação em 2 ou 3 frases" do item 3 da #270 não tem mais onde se aplicar:** desde a #266
   a rota de dados não redige pelo modelo (o texto é do template). As chamadas que sobram são as
-  três acima.
+  três acima. Desde a #268 ela volta como chamada **à parte**, depois da resposta e atrás da flag
+  (`tetos.explicacao`, `AI_TETO_EXPLICACAO`, 256), com reserva própria na cota: seção "Explicação
+  depois da resposta de dados".
 - **Validação na subida:** contexto de pelo menos 6.144 (maior prompt estimado da rota de dados
   mais o teto das funções), cada teto entre 16 e a metade do contexto (`tetos.contexto`, lido da
   mesma propriedade do `num-ctx`). O `AI_MAX_TOKENS` ficou só como padrão do provedor para chamada

@@ -584,6 +584,8 @@ app:
     tetos:
       # Escolha das funcoes de dados: so o JSON das chamadas.
       funcoes: ${AI_TETO_FUNCOES:512}
+      # Explicacao depois da resposta de dados (#268): 2 ou 3 frases. Reserva propria na cota.
+      explicacao: ${AI_TETO_EXPLICACAO:256}
       # JSON da classificacao, inclusive a perguntaLei do MISTO (mesma chamada).
       classificacao: ${AI_TETO_CLASSIFICACAO:256}
       # Resposta de lei. Padrao = o teto unico de antes; 512 e o recomendado a confirmar na VPS.
@@ -596,6 +598,18 @@ app:
       pausa-apos-falha: ${AI_FALLBACK_PAUSA_APOS_FALHA:30s}
       max-trechos: ${AI_FALLBACK_MAX_TRECHOS:3}
       tamanho-maximo-trecho: ${AI_FALLBACK_TAMANHO_MAXIMO_TRECHO:600}
+    # Explicacao do modelo depois da resposta de dados (#268, com a #415): 2 ou 3 frases conferidas
+    # em codigo (VerificadorFidelidade); qualquer falha descarta e o template sai sozinho. Desligada,
+    # a Ceres responde como antes. Ligar exige medicao com o modelo real e o OK do Murillo. Ligada com
+    # o provedor por API, o texto da resposta de dados vai ao provedor (docs/lgpd.md).
+    explicacao:
+      enabled: ${AI_EXPLICACAO_HABILITADA:false}
+      # Prazo da explicacao; nunca passa do que resta da pergunta (timeout-pergunta).
+      timeout: ${AI_EXPLICACAO_TIMEOUT:8s}
+      min-frases: 2
+      max-frases: 3
+      min-caracteres: 40
+      max-caracteres: 480
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}
