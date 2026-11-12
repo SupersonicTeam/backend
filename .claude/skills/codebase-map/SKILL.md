@@ -360,6 +360,7 @@ Bean Validation customizada (anotação + validator):
 | Método | Path | Descrição |
 |--------|------|-----------|
 | GET | `/api/notas` | Lista paginada do produtor autenticado, com filtros `status`/`tipoDocumento`/`emitidaDe`/`emitidaAte`/`busca` (`FiltroNotasRequest` → `NotaFiscalEspecificacoes`, issue #174) |
+| GET | `/api/notas/proximo-numero?serie=` | Próximo número sugerido da nota própria na série (#539): `NotaFiscalService.proximoNumero` + `NotaFiscalRepository.findMaiorNumeroPropria`; DTOs `ProximoNumeroRequest/Response`; `SerieEsgotadaException` (409 `SERIE_ESGOTADA`) |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO) |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; origem=IMPORTADA; destinatário, assinatura e SEFAZ conferidos — #223) |

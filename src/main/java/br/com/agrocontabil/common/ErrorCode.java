@@ -304,7 +304,12 @@ public enum ErrorCode {
    * foi transmitido; a nota voltou a um estado editavel e o XML precisa ser gerado de novo.
    * HTTP 409.
    */
-  XML_REGRA_FISCAL_DESATUALIZADA;
+  XML_REGRA_FISCAL_DESATUALIZADA,
+  /**
+   * A série da nota própria já está no maior número que o layout aceita (999.999.999): não há
+   * próximo número para sugerir (issue #539). HTTP 409.
+   */
+  SERIE_ESGOTADA;
 
   /** Retorna o código estável (igual ao nome da constante). */
   public String code() {
