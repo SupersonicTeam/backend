@@ -18,3 +18,4 @@ docs/avaliacao/continuidade/conversas-continuidade-teste.json -text
 docs/avaliacao/continuidade/conversas-continuidade-dev.json -text
 # Conjunto congelado da medicao de fidelidade da rota de lei (#269): o hash .sha256 e dos bytes.
 docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei.json -text
+docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei-v2.json -text

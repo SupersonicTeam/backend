@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Executor da medição de fidelidade da rota de lei da Ceres (#269).
 
-Roda as 36 perguntas de `perguntas-fidelidade-lei.json` em dois ou mais braços, no MESMO jar (o head
+Roda as 36 perguntas do conjunto escolhido (`--conjunto v1|v2`; padrão `v1`,
+`perguntas-fidelidade-lei.json`; o `v2`, `perguntas-fidelidade-lei-v2.json`, é o da segunda
+medição) em dois ou mais braços, no MESMO jar (o head
 do PR da correção): `desligada` (flag da correção desligada, igual à `main`, o braço de referência) e
 `ligada`, mais os braços extras que a correção tiver (`--braco`). Sobe uma instância por braço em
 portas diferentes, contra um banco novo e só dele (com a base de lei copiada do banco de origem), e
@@ -429,6 +431,13 @@ def executar(args, conjunto: dict, saida: Path) -> int:
     return 0
 
 
+def nome_do_conjunto(arquivo: Path) -> str:
+    """O nome, se o conjunto está na pasta do executor; senão o caminho completo, para a leitura e a
+    decisão acharem o mesmo arquivo."""
+    arquivo = Path(arquivo).resolve()
+    return arquivo.name if arquivo.parent == comum.DIR else str(arquivo)
+
+
 def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, interrompida) -> None:
     ultimas = {}
     for r in registros:  # vale a última tentativa de cada (pergunta, braço, repetição)
@@ -439,7 +448,8 @@ def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, 
     manifesto = {
         "regra": {"versao": comum.VERSAO_REGRA, "parametros": comum.REGRA},
         "conjunto": {"versao": conjunto["versao"],
-                     "sha256": comum.sha256_arquivo(comum.CONJUNTO),
+                     "arquivo": nome_do_conjunto(args.arquivo_conjunto),
+                     "sha256": comum.sha256_arquivo(args.arquivo_conjunto),
                      "perguntas": len({r["id"] for r in registros}) or None},
         "commit": args.commit, "jarSha256": comum.sha256_arquivo(args.jar) if args.jar and args.jar.exists()
         else None,
@@ -467,6 +477,8 @@ def montar_parser() -> argparse.ArgumentParser:
                    help="braço extra, comparado ao desligada (repetível)")
     p.add_argument("--repeticoes", type=int, default=3)
     p.add_argument("--semente", type=int, default=20261112)
+    p.add_argument("--conjunto", default="v1", metavar="v1|v2|ARQUIVO",
+                   help="conjunto de perguntas (padrão: v1; o v2 é o conjunto da segunda medição)")
     p.add_argument("--perguntas", default="", help="ids separados por vírgula (padrão: todos)")
     p.add_argument("--saida", type=Path, default=comum.DIR / "rodadas")
     p.add_argument("--banco", default="fidelidade_lei", help="banco novo da rodada (recriado)")
@@ -490,8 +502,9 @@ def main(argv=None) -> int:
     try:
         args.bracos = montar_bracos(args.env_desligada, args.env_ligada, args.braco)
         validar_banco(args.banco, args.banco_origem)
-        conjunto = comum.carregar_conjunto()
-    except (ValueError, comum.ErroDeConjunto) as erro:
+        args.arquivo_conjunto = comum.resolver_conjunto(args.conjunto)
+        conjunto = comum.carregar_conjunto(args.arquivo_conjunto)
+    except (ValueError, OSError, comum.ErroDeConjunto) as erro:
         sys.exit(str(erro))
     desconhecidas = args.perguntas - set(comum.perguntas_por_id(conjunto))
     if desconhecidas:

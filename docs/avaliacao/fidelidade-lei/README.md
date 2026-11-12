@@ -17,13 +17,14 @@ com o Haiku 5.5 pela API da Anthropic, 3 repetições por braço.
 |---------|---------|
 | `perguntas-fidelidade-lei.json` + `.sha256` | As 36 perguntas, com o gabarito de fidelidade (fatos com o dispositivo certo, armadilhas, permitidos). Congelado pelo sha256 |
 | `regra-de-decisao.md` | A regra de decisão (`ENTRA` / `NAO_ENTRA` / `INCONCLUSIVA`), escrita antes de qualquer rodada |
+| `perguntas-fidelidade-lei-v2.json` + `.sha256` | O **conjunto v2** (36 perguntas, ids `F2-`), da segunda medição, escrito depois do ajuste da correção (regra, seção 9). Mesma forma e mesma regra do v1 |
 | `conferencia-do-gabarito.md` | A conferência independente do gabarito contra o texto da lei, as divergências e como foram resolvidas |
 | `prompts/juiz.md` | O papel dos juízes (os três usam o mesmo texto) |
 | `executar_fidelidade.py` | Sobe uma instância por braço (dois ou mais), roda o conjunto em todos e grava as respostas brutas e a auditoria |
 | `leitura_fidelidade.py` | Cega e embaralha as respostas aceitas em lotes, valida o que os juízes entregaram, monta o lote do J3 |
 | `decidir_fidelidade.py` | Aplica a regra e grava `resultado.json` e `resultado.md` |
 | `fidelidade_comum.py` | Constantes da regra (as margens), classificação das execuções, kappa, percentil |
-| `test_*.py` | Testes (só biblioteca padrão), rodam na CI |
+| `test_*.py` | Testes (só biblioteca padrão), rodam na CI (`test_conjunto_v2.py`: o v2 e a escolha do conjunto) |
 
 ## O conjunto (36 perguntas, 6 por classe)
 
@@ -46,6 +47,24 @@ Mudar uma pergunta, um fato ou o gabarito depois do congelamento **muda o sha256
 (no conjunto e em `VERSAO_REGRA` do `fidelidade_comum.py`, e no `regra-de-decisao.md`), grave o novo
 hash (`sha256sum perguntas-fidelidade-lei.json > perguntas-fidelidade-lei.json.sha256`) e rode de
 novo. O executor e a decisão recusam um conjunto que não bate com o hash.
+
+## Conjunto v2 (segunda medição)
+
+A correção foi ajustada depois da primeira rodada, olhando os números do v1; o v1 deixou de ser teste
+cego para ela. A segunda medição usa o **v2** (`perguntas-fidelidade-lei-v2.json`, versão
+`2026-11-13.v2`), escrito por uma sessão que nunca viu o v1 nem a correção. Mesma regra
+(`2026-11-12.4`), mesmos scripts, mesmas seis classes com 6 perguntas cada; os arquivos e os testes do
+v1 seguem iguais. A escolha do conjunto é por parâmetro:
+
+```bash
+python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --conjunto v2 ...   # padrão: v1
+```
+
+O manifesto da rodada (`execucao.json`) grava `conjunto.arquivo` e `leitura_fidelidade.py` e
+`decidir_fidelidade.py` usam o conjunto do manifesto (manifesto sem o campo = v1). A regra do teste
+cego vale para o v2 do mesmo jeito: quem escreve ou revisa a correção não lê o v2 e recebe só os ids
+(`F2-07`). Os testes do v2 (`test_conjunto_v2.py`) e o `ConjuntoFidelidadeLeiTest` conferem hash, forma e
+a separação do treino e do prompt para os dois conjuntos.
 
 ## Como rodar (depois do merge, com o head do PR da correção e o nome da flag)
 
