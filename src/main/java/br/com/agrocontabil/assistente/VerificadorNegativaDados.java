@@ -58,8 +58,11 @@ public class VerificadorNegativaDados {
       + "vendas?|vendeu|comprou|debitos?|creditos?|impostos?|alertas?|apuracao|pagamentos?|pagar|"
       + "atras\\w*|vencid\\w*|vencimentos?|devolvid\\w*|rejeitad\\w*|registros?)\\b");
 
-  /** Abreviações cujo ponto não termina a frase ("art. 30", "inc. IV"). */
-  private static final Set<String> ABREVIACOES =
+  /**
+   * Abreviações cujo ponto não termina a frase ("art. 30", "inc. IV"). Também a régua da contagem
+   * de frases da explicação (#268, {@code VerificadorFidelidade}).
+   */
+  public static final Set<String> ABREVIACOES =
       Set.of("art", "arts", "inc", "incs", "n", "nº", "par", "p", "sr", "sra", "dr", "dra", "ex");
 
   /**

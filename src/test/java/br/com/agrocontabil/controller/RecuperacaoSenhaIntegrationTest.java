@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.agrocontabil.dto.CadastroRequest;
+import br.com.agrocontabil.dto.EnderecoPostalRequest;
+import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.repository.RedefinicaoSenhaRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
@@ -15,6 +17,7 @@ import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +57,7 @@ class RecuperacaoSenhaIntegrationTest {
   private static final String EMAIL = "recupera@fazenda.com.br";
   private static final String SENHA = "cavalo bateria grampo correto";
   private static final String NOVA = "outra frase bem comprida agora";
+  private static final String TELEFONE = "45999990000";
 
   /** Links enviados, na ordem. */
   static final BlockingQueue<String> LINKS = new LinkedBlockingQueue<>();
@@ -79,8 +83,8 @@ class RecuperacaoSenhaIntegrationTest {
   void setUp() {
     cleaner.limparTudo();
     LINKS.clear();
-    cadastroService.cadastrar(new CadastroRequest(
-        PapelUsuario.PRODUTOR, "Fazenda Recupera", "52998224725", EMAIL, SENHA));
+    cadastroService.cadastrar(new CadastroRequest(PapelUsuario.PRODUTOR, "Fazenda Recupera",
+        "52998224725", EMAIL, SENHA, null, null, TELEFONE, null, null));
   }
 
   private int esqueci(String email) throws Exception {
@@ -160,6 +164,50 @@ class RecuperacaoSenhaIntegrationTest {
     assertThat(fraca.getResponse().getContentAsString()).contains("SENHA_FRACA")
         .doesNotContain("1234567890");
     assertThat(redefinir(token, NOVA).getResponse().getStatus()).isEqualTo(204);
+  }
+
+  @Test
+  @DisplayName("redefinir com o telefone gravado na senha nova (#521): 400 e o link segue valendo")
+  void redefinirRecusaTelefone() throws Exception {
+    esqueci(EMAIL);
+    String token = tokenDoEmail();
+
+    MvcResult comTelefone = redefinir(token, "lavoura 99999-0000 boa");
+    assertThat(comTelefone.getResponse().getStatus()).isEqualTo(400);
+    assertThat(comTelefone.getResponse().getContentAsString()).contains("SENHA_FRACA")
+        .doesNotContain("99999");
+    assertThat(redefinir(token, NOVA).getResponse().getStatus()).isEqualTo(204);
+  }
+
+  @Test
+  @DisplayName("alterar com o CNPJ do escritorio na senha nova (#521): 400 e as sessoes seguem")
+  void alterarContadorRecusaCnpjDoEscritorio() throws Exception {
+    String emailContador = "contador.recupera@exemplo.com.br";
+    cadastroService.cadastrar(new CadastroRequest(PapelUsuario.CONTADOR, "Patricia Moreira",
+        "11144477735", emailContador, SENHA,
+        new CadastroRequest.EscritorioDoCadastro("Contabilidade Campo Verde", "11444777000161",
+            "4533330000", new EnderecoPostalRequest("85810000", "Rua Parana", "1200", null,
+                "Centro", "4104808", "Cascavel", "PR"), "campoverde", true),
+        null, null, TipoEscritorio.EMPRESARIAL, true));
+    String acesso = objectMapper.readTree(mockMvc.perform(post("/api/auth/login")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"%s\",\"senha\":\"%s\"}".formatted(emailContador, SENHA)))
+        .andReturn().getResponse().getContentAsString()).get("accessToken").asText();
+
+    for (String senha : List.of("campo 11.444.777/0001-61 verde", "fixo 3333-0000 campo")) {
+      mockMvc.perform(post("/api/auth/senha/alterar").contentType(MediaType.APPLICATION_JSON)
+              .header(HttpHeaders.AUTHORIZATION, "Bearer " + acesso)
+              .content("{\"senhaAtual\":\"%s\",\"novaSenha\":\"%s\"}".formatted(SENHA, senha)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.errors[0].code").value("SENHA_FRACA"))
+          .andExpect(jsonPath("$.errors[0].field").value("novaSenha"));
+    }
+    mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + acesso))
+        .andExpect(status().isOk());
+    mockMvc.perform(post("/api/auth/senha/alterar").contentType(MediaType.APPLICATION_JSON)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + acesso)
+            .content("{\"senhaAtual\":\"%s\",\"novaSenha\":\"%s\"}".formatted(SENHA, NOVA)))
+        .andExpect(status().isNoContent());
   }
 
   @Test

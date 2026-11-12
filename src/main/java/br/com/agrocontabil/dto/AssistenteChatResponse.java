@@ -24,6 +24,11 @@ import java.util.Map;
  * @param turno        a troca assinada para devolver no {@code historico} da próxima pergunta
  *                     (#499); fora do JSON quando nula (continuidade desligada, conversa leve,
  *                     recusa, fallback)
+ * @param explicacao   explicação curta do modelo depois da resposta de dados, conferida em código
+ *                     (#268), ou nula: descartada, fora do prazo, outra rota ou a função desligada
+ *                     ({@code app.assistente.explicacao.enabled}, padrão). Fora do JSON quando nula:
+ *                     desligada, o JSON é o de antes. No streaming ela vem no evento
+ *                     {@code explicacao}, depois da {@code resposta}, nunca dentro dela
  */
 @Schema(description = "Resposta da Ceres, a assistente fiscal")
 public record AssistenteChatResponse(
@@ -40,10 +45,15 @@ public record AssistenteChatResponse(
     String perguntaInterpretada,
     @Schema(description = "Troca assinada para devolver no historico da proxima pergunta")
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    TurnoConversa turno) {
+    TurnoConversa turno,
+    @Schema(description = "Explicacao curta do modelo depois da resposta de dados, conferida em "
+        + "codigo (#268); ausente quando descartada, fora do prazo ou desligada",
+        nullable = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String explicacao) {
 
   /**
-   * Resposta sem continuidade, como antes da #499.
+   * Resposta sem continuidade (#499) nem explicação (#268), como antes das duas.
    *
    * @param resposta     texto da resposta
    * @param rota         camada acionada
@@ -54,7 +64,38 @@ public record AssistenteChatResponse(
    */
   public AssistenteChatResponse(String resposta, String rota, List<Citacao> citacoes,
       List<FonteDado> fontesDados, boolean modoFallback, List<String> atalhos) {
-    this(resposta, rota, citacoes, fontesDados, modoFallback, atalhos, null, null);
+    this(resposta, rota, citacoes, fontesDados, modoFallback, atalhos, null, null, null);
+  }
+
+  /**
+   * Resposta com a continuidade (#499), sem explicação.
+   *
+   * @param resposta             texto da resposta
+   * @param rota                 camada acionada
+   * @param citacoes             trechos de lei citados
+   * @param fontesDados          funções consultadas
+   * @param modoFallback         resposta montada sem o modelo
+   * @param atalhos              telas sugeridas no modo fallback
+   * @param perguntaInterpretada pergunta considerada, ou nula
+   * @param turno                troca assinada, ou nula
+   */
+  public AssistenteChatResponse(String resposta, String rota, List<Citacao> citacoes,
+      List<FonteDado> fontesDados, boolean modoFallback, List<String> atalhos,
+      String perguntaInterpretada, TurnoConversa turno) {
+    this(resposta, rota, citacoes, fontesDados, modoFallback, atalhos, perguntaInterpretada,
+        turno, null);
+  }
+
+  /**
+   * A mesma resposta com a explicação aceita (#268). A {@code resposta} não muda: continua
+   * completa e correta sozinha.
+   *
+   * @param texto explicação conferida
+   * @return a resposta com a explicação
+   */
+  public AssistenteChatResponse comExplicacao(String texto) {
+    return new AssistenteChatResponse(resposta, rota, citacoes, fontesDados, modoFallback, atalhos,
+        perguntaInterpretada, turno, texto);
   }
 
   /**

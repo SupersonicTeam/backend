@@ -4,6 +4,7 @@ import br.com.agrocontabil.assistente.porta.CotaUsoPorta;
 import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.service.CotaUsoAssistenteService;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -42,8 +43,20 @@ public class CotaUsoAdaptador implements CotaUsoPorta {
   }
 
   @Override
+  public Optional<ReservaCota> reservarExplicacao(UUID produtorId, String modelo) {
+    return service.reservarExplicacao(TipoTitularCota.PRODUTOR, produtorId, modelo)
+        .map(r -> new ReservaCota(r.titularId(), r.semana(), r.creditos(), r.ativa()));
+  }
+
+  @Override
   public long acertar(ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo) {
     return service.acertar(paraService(reserva), tokensEntrada, tokensSaida, modelo);
+  }
+
+  @Override
+  public long acertarExplicacao(ReservaCota reserva, long tokensEntrada, long tokensSaida,
+      String modelo) {
+    return service.acertarExplicacao(paraService(reserva), tokensEntrada, tokensSaida, modelo);
   }
 
   @Override

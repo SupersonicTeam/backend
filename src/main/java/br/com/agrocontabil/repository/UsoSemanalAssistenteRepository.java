@@ -38,7 +38,8 @@ public interface UsoSemanalAssistenteRepository
       @Param("limite") long limite, @Param("agora") OffsetDateTime agora);
 
   /**
-   * Acerto de uma pergunta: devolve a reserva e debita o consumo real.
+   * Acerto de uma pergunta: devolve a reserva e debita o consumo real. {@code perguntas} é 1 no
+   * acerto da pergunta e 0 no da explicação depois dela (#268), que não é pergunta nova.
    *
    * @return 1 se acertou; 0 se a reserva não estava lá (acerto ou estorno repetido)
    */
@@ -49,7 +50,7 @@ public interface UsoSemanalAssistenteRepository
           u.creditosConsumidos = u.creditosConsumidos + :consumidos,
           u.tokensEntrada = u.tokensEntrada + :tokensEntrada,
           u.tokensSaida = u.tokensSaida + :tokensSaida,
-          u.perguntas = u.perguntas + 1,
+          u.perguntas = u.perguntas + :perguntas,
           u.atualizadoEm = :agora
       WHERE u.id.titularTipo = :tipo AND u.id.titularId = :titularId
         AND u.id.semanaInicio = :semana AND u.creditosReservados >= :teto
@@ -58,7 +59,8 @@ public interface UsoSemanalAssistenteRepository
       @Param("titularId") UUID titularId, @Param("semana") LocalDate semana,
       @Param("teto") long teto,
       @Param("consumidos") long consumidos, @Param("tokensEntrada") long tokensEntrada,
-      @Param("tokensSaida") long tokensSaida, @Param("agora") OffsetDateTime agora);
+      @Param("tokensSaida") long tokensSaida, @Param("perguntas") int perguntas,
+      @Param("agora") OffsetDateTime agora);
 
   /**
    * Zera as reservas de uma linha parada desde {@code paradaDesde}: perguntas que reservaram e

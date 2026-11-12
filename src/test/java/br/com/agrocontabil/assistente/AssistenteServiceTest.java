@@ -22,6 +22,9 @@ import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade;
 import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade.Decisao;
 import br.com.agrocontabil.assistente.continuidade.HistoricoConferido;
 import br.com.agrocontabil.assistente.continuidade.MensagemContinuidade;
+import br.com.agrocontabil.assistente.explicacao.ExplicacaoDaResposta;
+import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
+import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
@@ -37,6 +40,7 @@ import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.exception.AssistenteOcupadoException;
 import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
 import br.com.agrocontabil.exception.PapelNaoAutorizadoException;
+import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.security.PapelUsuario;
 import java.io.IOException;
@@ -730,6 +734,243 @@ class AssistenteServiceTest {
     assertThat(cota.ultimaSaida).isZero();
   }
 
+  // --- Explicacao depois da resposta (#268) ----------------------------------------------------
+
+  private static final String EXPLICADA = "Isso quer dizer que a consulta saiu certa. Nada mais"
+      + " a fazer agora.";
+
+  /** O serviço com a explicação ligada, sobre um explicador simulado. */
+  private ExplicadorResposta criarComExplicacao(Duration timeoutPergunta,
+      Duration timeoutExplicacao) {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    propriedades.setTimeoutPergunta(timeoutPergunta);
+    propriedades.getExplicacao().setEnabled(true);
+    propriedades.getExplicacao().setTimeout(timeoutExplicacao);
+    ExplicadorResposta explicador = org.mockito.Mockito.mock(ExplicadorResposta.class);
+    ExplicacaoDaResposta etapa = new ExplicacaoDaResposta(explicador, cota, auditoria,
+        modeloLinguagem, new DisponibilidadeModelo(propriedades), propriedades);
+    Clock clock = Clock.fixed(Instant.parse("2026-09-29T02:00:00Z"), ZoneOffset.UTC);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        clock, propriedades, etapa);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(anyString(), any(), any())).thenReturn(ok());
+    when(auditoria.registrar(any(), any(), any(), any(), anyLong(), anyInt()))
+        .thenReturn(UUID.randomUUID());
+    return explicador;
+  }
+
+  /** O serviço com a continuidade (#499) e a explicação (#268) ligadas ao mesmo tempo. */
+  private ExplicadorResposta criarComAsDuas(ContinuidadeConversa continuidade) {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    propriedades.setTimeoutPergunta(Duration.ofSeconds(10));
+    propriedades.getExplicacao().setEnabled(true);
+    propriedades.getExplicacao().setTimeout(Duration.ofSeconds(5));
+    ExplicadorResposta explicador = org.mockito.Mockito.mock(ExplicadorResposta.class);
+    ExplicacaoDaResposta etapa = new ExplicacaoDaResposta(explicador, cota, auditoria,
+        modeloLinguagem, new DisponibilidadeModelo(propriedades), propriedades);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade, etapa);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(continuidade.habilitada()).thenReturn(true);
+    when(auditoria.registrar(any(), any(), any(), any(), anyLong(), anyInt()))
+        .thenReturn(UUID.randomUUID());
+    return explicador;
+  }
+
+  @Test
+  @DisplayName("#499/#268: as duas ligadas, reescrita de dados: a pergunta reserva o teto do "
+      + "caminho com reescrita e a explicacao, o proprio, depois do acerto")
+  void duasLigadasReescritaReservaAsDuas() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    ExplicadorResposta explicador = criarComAsDuas(continuidade);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.REESCRITA, CaminhoCota.REESCRITA,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(), MensagemContinuidade.Tipo.NENHUMA,
+        null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenReturn(ok());
+    when(explicador.explicar(eq("ok"), any())).thenReturn(new ExplicadorResposta.Explicacao(
+        EXPLICADA, DesfechoExplicacao.EXPLICACAO_ACEITA));
+    br.com.agrocontabil.dto.TurnoConversa turno =
+        new br.com.agrocontabil.dto.TurnoConversa("e algum credito?", "ok", "v1.a.b");
+    when(continuidade.emitir(eq(produtorId), any(), eq("ok"), any(), any(), any()))
+        .thenReturn(java.util.Optional.of(turno));
+
+    AssistenteChatResponse resposta =
+        service.conversar(new AssistenteChatRequest("e algum credito?"));
+
+    assertThat(resposta.explicacao()).isEqualTo(EXPLICADA);
+    // A explicacao entra por cima da resposta com a continuidade: o turno assina so a resposta.
+    assertThat(resposta.turno()).isEqualTo(turno);
+    assertThat(resposta.resposta()).isEqualTo("ok");
+    assertThat(cota.ultimoCaminho).isEqualTo(CaminhoCota.REESCRITA);
+    assertThat(cota.reservas).isEqualTo(1);
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.reservasExplicacao).isEqualTo(1);
+    assertThat(cota.acertosExplicacao).isEqualTo(1);
+    assertThat(cota.leituras).isZero();
+  }
+
+  @Test
+  @DisplayName("#499/#268/#511: as duas ligadas, reexecucao sem modelo: so a leitura, sem "
+      + "explicacao nem chamada ao modelo")
+  void duasLigadasReexecucaoSemExplicacao() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    ExplicadorResposta explicador = criarComAsDuas(continuidade);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.CONFIRMACAO, CaminhoCota.SEM_MODELO,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(),
+        MensagemContinuidade.Tipo.CONFIRMACAO, null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenReturn(ok());
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("tem certeza?"));
+
+    assertThat(resposta.explicacao()).isNull();
+    assertThat(cota.leituras).isEqualTo(1);
+    assertThat(cota.reservas).isZero();
+    assertThat(cota.reservasExplicacao).isZero();
+    verifyNoInteractions(explicador);
+    verify(modeloLinguagem, never()).chamar(any());
+  }
+
+  @Test
+  @DisplayName("#499/#268: as duas desligadas, o fluxo e o da main: orquestrador sem a decisao, "
+      + "resposta sem turno, sem pergunta interpretada e sem explicacao")
+  void duasDesligadasFluxoDaMain() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(any(), any(), any())).thenReturn(ok());
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+
+    assertThat(resposta.turno()).isNull();
+    assertThat(resposta.perguntaInterpretada()).isNull();
+    assertThat(resposta.explicacao()).isNull();
+    verify(orquestrador).responder(eq("quanto?"), any(), any());
+    assertThat(cota.reservas).isEqualTo(1);
+    // O caminho comum: o mesmo teto que a main reserva (TetoDaCotaCobreChamadasTest).
+    assertThat(cota.ultimoCaminho).isEqualTo(CaminhoCota.NORMAL);
+    assertThat(cota.reservasExplicacao).isZero();
+  }
+
+  @Test
+  @DisplayName("#268: sincrono com a explicacao aceita: campo preenchido, reserva propria e "
+      + "acerto sem contar outra pergunta, ACEITA na auditoria")
+  void explicacaoAceitaNoSincrono() {
+    ExplicadorResposta explicador =
+        criarComExplicacao(Duration.ofSeconds(10), Duration.ofSeconds(5));
+    when(explicador.explicar(eq("ok"), any())).thenReturn(new ExplicadorResposta.Explicacao(
+        EXPLICADA, DesfechoExplicacao.EXPLICACAO_ACEITA));
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+
+    assertThat(resposta.resposta()).isEqualTo("ok");
+    assertThat(resposta.explicacao()).isEqualTo(EXPLICADA);
+    assertThat(cota.reservas).isEqualTo(1);
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.reservasExplicacao).isEqualTo(1);
+    assertThat(cota.acertosExplicacao).isEqualTo(1);
+    verify(auditoria).registrarExplicacao(any(), eq(DesfechoExplicacao.EXPLICACAO_ACEITA),
+        anyLong(), any(), any());
+  }
+
+  @Test
+  @DisplayName("#268: sem saldo para a explicacao: a resposta sai sozinha, sem 429")
+  void explicacaoSemSaldo() {
+    ExplicadorResposta explicador =
+        criarComExplicacao(Duration.ofSeconds(10), Duration.ofSeconds(5));
+    cota.recusarExplicacao = true;
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+
+    assertThat(resposta.resposta()).isEqualTo("ok");
+    assertThat(resposta.explicacao()).isNull();
+    verifyNoInteractions(explicador);
+    verify(auditoria).registrarExplicacao(any(),
+        eq(DesfechoExplicacao.EXPLICACAO_DESCARTADA_SEM_SALDO), anyLong(), any(), any());
+  }
+
+  @Test
+  @DisplayName("#268: explicacao alem do prazo dela e interrompida: a resposta sai sem ela, "
+      + "TEMPO_ESGOTADO, reserva estornada")
+  void explicacaoInterrompidaNoPrazo() {
+    ExplicadorResposta explicador =
+        criarComExplicacao(Duration.ofSeconds(10), Duration.ofMillis(300));
+    CountDownLatch nunca = new CountDownLatch(1);
+    when(explicador.explicar(eq("ok"), any())).thenAnswer(inv -> {
+      try {
+        nunca.await(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new AssistenteIndisponivelException("interrompida", e);
+      }
+      return new ExplicadorResposta.Explicacao(EXPLICADA, DesfechoExplicacao.EXPLICACAO_ACEITA);
+    });
+
+    long inicio = System.nanoTime();
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+
+    assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio)).isLessThan(5_000);
+    assertThat(resposta.resposta()).isEqualTo("ok");
+    assertThat(resposta.explicacao()).isNull();
+    assertThat(cota.acertosExplicacao).isZero();
+    assertThat(cota.estornos).isEqualTo(1);
+    verify(auditoria).registrarExplicacao(any(),
+        eq(DesfechoExplicacao.EXPLICACAO_DESCARTADA_TEMPO_ESGOTADO), anyLong(), any(), any());
+  }
+
+  @Test
+  @DisplayName("#268: explicacao que nao para nem no prazo da pergunta: o sincrono devolve a "
+      + "resposta pronta, sem 503")
+  void explicacaoQueNaoParaNaoViraTempoEsgotado() throws Exception {
+    ExplicadorResposta explicador =
+        criarComExplicacao(Duration.ofMillis(1_500), Duration.ofMillis(1_000));
+    CountDownLatch liberar = new CountDownLatch(1);
+    when(explicador.explicar(eq("ok"), any())).thenAnswer(inv -> {
+      // Ignora a interrupcao: um provedor que nao responde a ela.
+      long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+      while (liberar.getCount() > 0 && System.nanoTime() < limite) {
+        try {
+          liberar.await(50, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+          // segue esperando
+        }
+      }
+      return new ExplicadorResposta.Explicacao(EXPLICADA, DesfechoExplicacao.EXPLICACAO_ACEITA);
+    });
+
+    AssistenteChatResponse resposta;
+    try {
+      resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+    } finally {
+      liberar.countDown();
+    }
+
+    assertThat(resposta.resposta()).isEqualTo("ok");
+    assertThat(resposta.explicacao()).isNull();
+    // A pergunta foi auditada como respondida; a explicacao, como fora do prazo.
+    verify(auditoria).registrar(any(), any(), eq(DesfechoInteracao.RESPONDIDA), any(),
+        anyLong(), anyInt());
+    verify(auditoria, timeout(5_000)).registrarExplicacao(any(),
+        eq(DesfechoExplicacao.EXPLICACAO_DESCARTADA_TEMPO_ESGOTADO), anyLong(), any(), any());
+  }
+
+  @Test
+  @DisplayName("#268: flag desligada (padrao): nenhuma reserva, chamada nem registro da explicacao")
+  void explicacaoDesligada() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(anyString(), any(), any())).thenReturn(ok());
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+
+    assertThat(resposta.explicacao()).isNull();
+    assertThat(cota.reservasExplicacao).isZero();
+    verify(auditoria, never()).registrarExplicacao(any(), any(), anyLong(), any(), any());
+  }
+
   @Test
   @DisplayName("#499: so a IOException na cadeia e desconexao do cliente")
   void desconexaoPelaCadeia() {
@@ -877,6 +1118,9 @@ class AssistenteServiceTest {
 
     volatile boolean recusar;
     volatile boolean recusarLeitura;
+    volatile boolean recusarExplicacao;
+    volatile int reservasExplicacao;
+    volatile int acertosExplicacao;
     volatile int reservas;
     volatile int leituras;
     volatile long ultimaLeitura;
@@ -915,12 +1159,30 @@ class AssistenteServiceTest {
     }
 
     @Override
+    public synchronized java.util.Optional<ReservaCota> reservarExplicacao(
+        UUID produtorId, String modelo) {
+      if (recusarExplicacao) {
+        return java.util.Optional.empty();
+      }
+      reservasExplicacao++;
+      return java.util.Optional.of(
+          new ReservaCota(produtorId, java.time.LocalDate.of(2026, 9, 28), 11, true));
+    }
+
+    @Override
     public synchronized long acertar(
         ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo) {
       acertos++;
       ultimaEntrada = tokensEntrada;
       ultimaSaida = tokensSaida;
       ultimoModelo = modelo;
+      return 1;
+    }
+
+    @Override
+    public synchronized long acertarExplicacao(
+        ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo) {
+      acertosExplicacao++;
       return 1;
     }
 

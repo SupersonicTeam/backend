@@ -230,6 +230,32 @@ ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS slug VARCHAR(32);
 ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS slug_alterado_em TIMESTAMP WITH TIME ZONE;
 ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS uq_escritorio_slug UNIQUE (slug);
 
+-- Tipo, telefone e endereco postal do escritorio (migration 0062, issue #519). Manter sincronizado
+-- com 0062-escritorio-tipo-e-termos.xml. Os ALTER cobrem o contexto em que o Hibernate ja criou a
+-- tabela sem eles (o default so vale no CREATE daqui; o codigo sempre grava o tipo).
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'PESSOAL' NOT NULL;
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS telefone VARCHAR(100);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_cep VARCHAR(8);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_logradouro VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_numero VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_complemento VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_bairro VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_codigo_municipio_ibge VARCHAR(7);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_municipio VARCHAR(60);
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS endereco_uf VARCHAR(2);
+ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS ck_escritorio_tipo
+    CHECK (tipo IN ('PESSOAL', 'EMPRESARIAL'));
+
+-- Verificacao do CNPJ do escritorio (migration 0063, issue #520). Manter sincronizado com
+-- 0063-escritorio-cnpj-verificado.xml. O indice unico parcial do CNPJ verificado e so do
+-- PostgreSQL (o H2 nao tem indice parcial): aqui a regra fica no servico.
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS cnpj_verificado_em TIMESTAMP WITH TIME ZONE;
+ALTER TABLE escritorio ADD COLUMN IF NOT EXISTS cnpj_verificacao_metodo VARCHAR(20);
+ALTER TABLE escritorio ADD CONSTRAINT IF NOT EXISTS ck_escritorio_cnpj_verificacao
+    CHECK ((cnpj_verificado_em IS NULL AND cnpj_verificacao_metodo IS NULL)
+        OR (cnpj_verificado_em IS NOT NULL AND cnpj IS NOT NULL
+            AND cnpj_verificacao_metodo IN ('MANUAL', 'DEMONSTRACAO')));
+
 CREATE TABLE IF NOT EXISTS escritorio_slug_anterior (
     slug           VARCHAR(32)               NOT NULL,
     escritorio_id  UUID,
@@ -376,6 +402,12 @@ ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS pergunta_lei_reescrita
 
 -- Camada que decidiu a rota — Ceres 2.0 issue #265 (migration 0050). Idempotente, como acima.
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS camada_classificacao VARCHAR(20);
+
+-- Explicacao depois da resposta de dados — Ceres 2.0 issue #268 (migration 0064). Idempotente.
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS desfecho_explicacao VARCHAR(60);
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS latencia_explicacao_ms BIGINT;
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_entrada_explicacao INTEGER;
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_saida_explicacao INTEGER;
 
 -- Cota semanal de creditos da Ceres — Sprint 7 issue #166 (migration 0029). Manter sincronizado
 -- com 0029-assistente-uso-semanal.xml.
@@ -528,6 +560,10 @@ CREATE TABLE IF NOT EXISTS credencial_usuario (
     updated_at             TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (id)
 );
+
+-- Aceite dos termos (migration 0062, issue #519): nulos = aceite nao registrado.
+ALTER TABLE credencial_usuario ADD COLUMN IF NOT EXISTS termos_aceitos_em TIMESTAMP WITH TIME ZONE;
+ALTER TABLE credencial_usuario ADD COLUMN IF NOT EXISTS termos_versao VARCHAR(40);
 
 ALTER TABLE credencial_usuario ADD CONSTRAINT IF NOT EXISTS uk_credencial_email UNIQUE (email);
 
@@ -975,4 +1011,29 @@ ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS fk_notificacao_produtor
     FOREIGN KEY (produtor_id) REFERENCES produtores (id) ON DELETE CASCADE;
 
 ALTER TABLE notificacao ADD CONSTRAINT IF NOT EXISTS fk_notificacao_escritorio
+    FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;
+
+-- Modelos de pedido de documento do escritorio — issue #517 (migration 0061). Manter sincronizado
+-- com 0061-modelo-pedido.xml. Os ALTER cobrem o contexto em que o Hibernate ja criou a tabela.
+CREATE TABLE IF NOT EXISTS modelo_pedido (
+    id                  UUID                      NOT NULL,
+    escritorio_id       UUID                      NOT NULL,
+    titulo              VARCHAR(120)              NOT NULL,
+    titulo_normalizado  VARCHAR(120)              NOT NULL,
+    descricao           VARCHAR(1000),
+    tipos_documento     VARCHAR(120)              NOT NULL,
+    prazo_em_dias       INTEGER,
+    observacoes         VARCHAR(1000),
+    created_at          TIMESTAMP WITH TIME ZONE,
+    updated_at          TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE modelo_pedido ADD CONSTRAINT IF NOT EXISTS uk_modelo_pedido_escritorio_titulo
+    UNIQUE (escritorio_id, titulo_normalizado);
+
+ALTER TABLE modelo_pedido ADD CONSTRAINT IF NOT EXISTS ck_modelo_pedido_prazo
+    CHECK (prazo_em_dias IS NULL OR prazo_em_dias BETWEEN 1 AND 365);
+
+ALTER TABLE modelo_pedido ADD CONSTRAINT IF NOT EXISTS fk_modelo_pedido_escritorio
     FOREIGN KEY (escritorio_id) REFERENCES escritorio (id) ON DELETE CASCADE;

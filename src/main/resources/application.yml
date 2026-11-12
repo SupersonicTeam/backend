@@ -408,6 +408,15 @@ app:
     controlador: ${LGPD_CONTROLADOR:GWNext}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:contato@gwnext.com.br}
     versao-politica: 2026-11-11
+  # Cadastro de conta (#519). exigir-aceite-termos: sem o campo aceiteTermos, o cadastro e 400.
+  # Desligado ate a tela nova mandar o campo; liga por env, sem mudar codigo.
+  cadastro:
+    exigir-aceite-termos: ${CADASTRO_EXIGIR_ACEITE_TERMOS:false}
+  # Termos de uso (#519): versao gravada na credencial com o aceite. Texto e pagina com a GWNext
+  # e o juridico (#498); mudou o texto, mude a versao. 2026-11-11 e PROVISORIA: o texto ainda nao
+  # existe, e os aceites com ela sao anteriores a ele.
+  termos:
+    versao: ${TERMOS_VERSAO:2026-11-11}
   # Autenticacao (Sprint 8).
   seguranca:
     senha:
@@ -474,9 +483,10 @@ app:
       path: ${NFE_CERT_PATH:}
       password: ${NFE_CERT_PASSWORD:}
       alias: ${NFE_CERT_ALIAS:}
-    # Integracao SEFAZ (issue #15). Sprint 3 usa transporte mock (sandbox).
-    # O envio SOAP+mTLS real com certificado ICP-Brasil e debito da Sprint 7:
-    # basta definir mock.enabled=false e plugar a implementacao real de SefazTransport.
+    # Integracao SEFAZ (issue #15). Mock por padrao (dev, test e a demonstracao em homolog); o
+    # profile prod recusa o mock e nao sobe com ele (#263). Em producao: mock.enabled=false e o
+    # transporte real SOAP+mTLS (#128, docs/sefaz-transporte-soap.md). O padrao false e a etapa 2
+    # da #263, depois da banca.
     sefaz:
       ambiente: ${NFE_SEFAZ_AMBIENTE:HOMOLOGACAO}   # HOMOLOGACAO | PRODUCAO
       mock:
@@ -580,6 +590,8 @@ app:
     tetos:
       # Escolha das funcoes de dados: so o JSON das chamadas.
       funcoes: ${AI_TETO_FUNCOES:512}
+      # Explicacao depois da resposta de dados (#268): 2 ou 3 frases. Reserva propria na cota.
+      explicacao: ${AI_TETO_EXPLICACAO:256}
       # JSON da classificacao, inclusive a perguntaLei do MISTO (mesma chamada).
       classificacao: ${AI_TETO_CLASSIFICACAO:256}
       # Resposta de lei. Padrao = o teto unico de antes; 512 e o recomendado a confirmar na VPS.
@@ -595,6 +607,18 @@ app:
       pausa-apos-falha: ${AI_FALLBACK_PAUSA_APOS_FALHA:30s}
       max-trechos: ${AI_FALLBACK_MAX_TRECHOS:3}
       tamanho-maximo-trecho: ${AI_FALLBACK_TAMANHO_MAXIMO_TRECHO:600}
+    # Explicacao do modelo depois da resposta de dados (#268, com a #415): 2 ou 3 frases conferidas
+    # em codigo (VerificadorFidelidade); qualquer falha descarta e o template sai sozinho. Desligada,
+    # a Ceres responde como antes. Ligar exige medicao com o modelo real e o OK do Murillo. Ligada com
+    # o provedor por API, o texto da resposta de dados vai ao provedor (docs/lgpd.md).
+    explicacao:
+      enabled: ${AI_EXPLICACAO_HABILITADA:false}
+      # Prazo da explicacao; nunca passa do que resta da pergunta (timeout-pergunta).
+      timeout: ${AI_EXPLICACAO_TIMEOUT:8s}
+      min-frases: 2
+      max-frases: 3
+      min-caracteres: 40
+      max-caracteres: 480
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}

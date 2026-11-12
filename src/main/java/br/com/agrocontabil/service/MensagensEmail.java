@@ -1,5 +1,6 @@
 package br.com.agrocontabil.service;
 
+import br.com.agrocontabil.service.ModeloEmail.Bloco;
 import br.com.agrocontabil.service.ModeloEmail.Botao;
 import br.com.agrocontabil.service.ModeloEmail.Destaque;
 import br.com.agrocontabil.service.ModeloEmail.Email;
@@ -11,7 +12,10 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -69,23 +73,26 @@ public final class MensagensEmail {
 
   /**
    * E-mail do convite do escritório ao produtor. Sem token: aceitar exige entrar com o e-mail
-   * convidado, na página Escritório.
+   * convidado, na página Escritório. Escritório verificado: o CNPJ vai ao lado do nome; não
+   * verificado: o aviso para confirmar o convite com o contador antes de aceitar (#520).
    *
-   * @param escritorio nome do escritório, já limpo
+   * @param escritorio nome do escritório, já limpo, e o CNPJ só se verificado
    * @param link       página onde o produtor responde os convites ({@code /escritorio})
    * @param expiraEm   fim da validade do convite
    * @param contato    e-mail de dúvidas do rodapé
    * @return o e-mail
    */
-  public static Mensagem conviteCarteira(String escritorio, String link, OffsetDateTime expiraEm,
-      String contato) {
+  public static Mensagem conviteCarteira(EscritorioDoConvite escritorio, String link,
+      OffsetDateTime expiraEm, String contato) {
     return montar(new Email(
         "Convite de escritório de contabilidade no AgroConIA",
         quemNoPreCabecalho(escritorio) + " quer atender você pelo AgroConIA. O convite vale até " + data(expiraEm) + ".",
         "Você recebeu um convite de escritório",
-        List.of(
+        semNulos(
             new Paragrafo(concatenar(quemConvidou(escritorio),
                 Trecho.de(" para a carteira de clientes dele no AgroConIA."))),
+            avisoNaoVerificado(escritorio, "Antes de aceitar, confirme o convite com o seu "
+                + "contador por um canal que você já conhece, como o telefone do escritório."),
             new Secao("O que muda se você aceitar", List.of(
                 List.of(Trecho.de("O escritório passa a ver as suas notas fiscais, a apuração e "
                     + "os créditos de IBS e CBS, os seus vencimentos e os documentos que você "
@@ -110,23 +117,25 @@ public final class MensagensEmail {
   }
 
   /**
-   * E-mail do convite de equipe do escritório.
+   * E-mail do convite de equipe do escritório, com o selo ou o aviso do convite da carteira (#520).
    *
-   * @param escritorio nome do escritório, já limpo
+   * @param escritorio nome do escritório, já limpo, e o CNPJ só se verificado
    * @param link       link com o token no fragmento ({@code /equipe/convite#token=})
    * @param expiraEm   fim da validade do convite
    * @param contato    e-mail de dúvidas do rodapé
    * @return o e-mail
    */
-  public static Mensagem conviteEquipe(String escritorio, String link, OffsetDateTime expiraEm,
-      String contato) {
+  public static Mensagem conviteEquipe(EscritorioDoConvite escritorio, String link,
+      OffsetDateTime expiraEm, String contato) {
     return montar(new Email(
         "Convite para a equipe de um escritório no AgroConIA",
         quemNoPreCabecalho(escritorio) + " convidou você para a equipe. O convite vale até " + data(expiraEm) + ".",
         "Você recebeu um convite para uma equipe",
-        List.of(
+        semNulos(
             new Paragrafo(concatenar(quemConvidou(escritorio),
                 Trecho.de(" para a equipe dele no AgroConIA."))),
+            avisoNaoVerificado(escritorio, "Antes de entrar, confirme o convite com o escritório "
+                + "por um canal que você já conhece."),
             new Secao("O que muda se você aceitar", List.of(
                 List.of(Trecho.de("Você passa a atender os clientes do escritório com a sua "
                     + "própria conta: notas, apuração, vencimentos e pedidos de documento.")),
@@ -183,16 +192,61 @@ public final class MensagensEmail {
     return quantidade + " " + (quantidade == 1 ? singular : plural);
   }
 
-  /** "O escritório **Nome** convidou você", ou sem o nome quando ele ficou vazio na limpeza. */
-  private static List<Trecho> quemConvidou(String escritorio) {
-    return vazio(escritorio)
-        ? List.of(Trecho.de("Um escritório de contabilidade convidou você"))
-        : List.of(Trecho.de("O escritório "), Trecho.forte(escritorio),
-            Trecho.de(" convidou você"));
+  /**
+   * "O escritório **Nome** convidou você", ou sem o nome quando ele ficou vazio na limpeza. Com o
+   * CNPJ verificado, o selo vai ao lado do nome (#520): o nome é texto livre, e é o CNPJ que diz
+   * quem convidou.
+   */
+  private static List<Trecho> quemConvidou(EscritorioDoConvite escritorio) {
+    List<Trecho> quem = new ArrayList<>(vazio(escritorio.nome())
+        ? List.of(Trecho.de("Um escritório de contabilidade"))
+        : List.of(Trecho.de("O escritório "), Trecho.forte(escritorio.nome())));
+    if (escritorio.verificado()) {
+      quem.add(Trecho.de(" (CNPJ " + cnpjFormatado(escritorio.cnpjVerificado())
+          + ", verificado pelo AgroConIA)"));
+    }
+    quem.add(Trecho.de(" convidou você"));
+    return List.copyOf(quem);
   }
 
-  private static String quemNoPreCabecalho(String escritorio) {
-    return vazio(escritorio) ? "Um escritório de contabilidade" : escritorio;
+  /**
+   * Aviso do convite de escritório com o CNPJ não verificado (#520); nulo quando verificado (o
+   * {@link #semNulos} o tira da lista).
+   */
+  private static Bloco avisoNaoVerificado(EscritorioDoConvite escritorio, String confirme) {
+    if (escritorio.verificado()) {
+      return null;
+    }
+    return new Destaque(List.of(Trecho.forte("Escritório ainda não verificado."),
+        Trecho.de(" O AgroConIA ainda não conferiu o CNPJ deste escritório, e o nome foi "
+            + "informado por ele mesmo. " + confirme)));
+  }
+
+  /** Os blocos do e-mail, sem os que não se aplicam (nulos). */
+  private static List<Bloco> semNulos(Bloco... blocos) {
+    return Arrays.stream(blocos).filter(Objects::nonNull).toList();
+  }
+
+  /** {@code 11.444.777/0001-61}; fora dos 14 caracteres, como veio. */
+  static String cnpjFormatado(String cnpj) {
+    if (cnpj == null || cnpj.length() != 14) {
+      return cnpj;
+    }
+    return cnpj.substring(0, 2) + "." + cnpj.substring(2, 5) + "." + cnpj.substring(5, 8) + "/"
+        + cnpj.substring(8, 12) + "-" + cnpj.substring(12);
+  }
+
+  /**
+   * Quem convida, no pré-cabeçalho (o que a caixa de entrada mostra antes de abrir). Sem a
+   * verificação do CNPJ (#520), o aviso vai já aqui: o nome sozinho não diz quem convidou.
+   */
+  private static String quemNoPreCabecalho(EscritorioDoConvite escritorio) {
+    if (vazio(escritorio.nome())) {
+      return escritorio.verificado() ? "Um escritório de contabilidade"
+          : "Um escritório de contabilidade não verificado";
+    }
+    return escritorio.verificado() ? escritorio.nome()
+        : escritorio.nome() + " (escritório não verificado)";
   }
 
   private static List<Trecho> concatenar(List<Trecho> inicio, Trecho fim) {

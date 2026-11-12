@@ -1,9 +1,11 @@
 package br.com.agrocontabil.config.demonstracao;
 
+import br.com.agrocontabil.model.EnderecoPostal;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.SituacaoVinculo;
+import br.com.agrocontabil.model.TipoDocumentoPendencia;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -87,6 +89,27 @@ final class CenarioDemonstracao {
    */
   static final String ESCRITORIO_SLUG = "ruraloeste";
 
+  /**
+   * Telefone e endereço postal do escritório, que é empresarial (issue #519). Como o slug, na VPS
+   * só chegam pelo reset dos dados da demonstração: o escritório já gravado lá vira EMPRESARIAL pelo
+   * changeSet 0062 (tem CNPJ), mas fica sem telefone e endereço até o reset.
+   */
+  static final String ESCRITORIO_TELEFONE = "4532264100";
+
+  /** Endereço postal do escritório; um objeto novo por chamada (a entidade é mutável). */
+  static EnderecoPostal escritorioEndereco() {
+    return EnderecoPostal.builder()
+        .cep("85810000")
+        .logradouro("Rua Parana")
+        .numero("1200")
+        .complemento("Sala 3")
+        .bairro("Centro")
+        .codigoMunicipioIbge("4104808")
+        .municipio("Cascavel")
+        .uf("PR")
+        .build();
+  }
+
   /** Administradora, contador e assistente: as três funções da #228. */
   static final List<Membro> EQUIPE = List.of(
       new Membro("Patricia Moreira Lopes", cpf("318452906"), "PR-061245/O",
@@ -95,6 +118,33 @@ final class CenarioDemonstracao {
           "rafael.costa@example.com", "(45) 3226-4102", FuncaoEscritorio.CONTADOR),
       new Membro("Juliana Prado Ferreira", cpf("605914273"), null,
           "juliana.prado@example.com", "(45) 3226-4103", FuncaoEscritorio.ASSISTENTE));
+
+  /**
+   * Modelo de pedido de documento do escritório (issue #517).
+   *
+   * @param prazoEmDias prazo sugerido, em dias a partir do pedido ({@code null} = sem prazo)
+   */
+  record ModeloDePedido(String titulo, String descricao, List<TipoDocumentoPendencia> tipos,
+      Integer prazoEmDias, String observacoes) {}
+
+  /**
+   * Modelos de pedido do escritório (issue #517): os pedidos que ele repete todo mês, para o
+   * catálogo não aparecer vazio na banca. Textos com acento (#408): nenhum script de reset nem XML
+   * depende deles.
+   */
+  static final List<ModeloDePedido> MODELOS_PEDIDO = List.of(
+      new ModeloDePedido("Extrato bancário do mês",
+          "Extrato de todas as contas da fazenda no mês anterior, para conciliar as vendas e as "
+              + "compras.",
+          List.of(TipoDocumentoPendencia.EXTRATO), 10,
+          "Pode mandar em PDF, um arquivo por conta."),
+      new ModeloDePedido("Comprovante de pagamento do Funrural",
+          "Comprovante de pagamento da guia do Funrural do mês anterior.",
+          List.of(TipoDocumentoPendencia.COMPROVANTE_PAGAMENTO), 5, null),
+      new ModeloDePedido("Contrato de arrendamento",
+          "Contrato de arrendamento vigente e o último recibo pago, para o livro caixa.",
+          List.of(TipoDocumentoPendencia.CONTRATO, TipoDocumentoPendencia.COMPROVANTE_PAGAMENTO),
+          15, "Se o contrato foi renovado, mande a versão nova, assinada."));
 
   static final String OPTANTE = "Optante pelo regime regular do IBS/CBS (LC 214/2025, art. 165): "
       + "receita abaixo do limite do art. 164, inscrito como contribuinte por opção.";

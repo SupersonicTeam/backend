@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     timeout-funcao: 10s            # tempo de cada consulta aos dados do produtor (issue #157)
  *     tetos:                         # tokens gerados por tipo de chamada ao modelo (#270)
  *       funcoes: 512
+ *       explicacao: 256              # explicacao depois da resposta de dados (#268)
  *       classificacao: 256
  *       legislacao: 1024
  *       contexto: 8192               # = num-ctx do Ollama, so para a validacao
@@ -72,6 +73,9 @@ public class AssistenteProperties implements InitializingBean {
 
   /** Cota semanal de créditos (issue #166). */
   private Cota cota = new Cota();
+
+  /** Explicação do modelo depois da resposta de dados (#268), atrás da flag. */
+  private Explicacao explicacao = new Explicacao();
 
   /** Teto de tokens gerados por tipo de chamada ao modelo (#270). */
   private Tetos tetos = new Tetos();
@@ -168,6 +172,15 @@ public class AssistenteProperties implements InitializingBean {
           "app.assistente.max-conversas-simultaneas deve ser >= 1, recebido: "
               + maxConversasSimultaneas);
     }
+    explicacao.validar(timeoutPergunta);
+  }
+
+  public Explicacao getExplicacao() {
+    return explicacao;
+  }
+
+  public void setExplicacao(Explicacao explicacao) {
+    this.explicacao = explicacao;
   }
 
   public Continuidade getContinuidade() {
@@ -477,6 +490,16 @@ public class AssistenteProperties implements InitializingBean {
           caminho.saida(tetos), fator);
     }
 
+    /**
+     * Custo máximo da explicação depois da resposta de dados (#268): uma chamada, com o teto de
+     * entrada e o teto de saída próprio ({@code app.assistente.tetos.explicacao}). É uma reserva à
+     * parte, feita só quando a explicação vai acontecer; sem saldo para ela, a resposta sai sem a
+     * explicação e sem 429.
+     */
+    public long tetoDaExplicacao(Tetos tetos, double fator) {
+      return creditos(tetoTokensEntradaPorChamada, tetos.getExplicacao(), fator);
+    }
+
     /** Maior fator configurado (o padrão ou o de algum modelo). */
     public double maiorFator() {
       double maior = fatorPadrao;
@@ -647,6 +670,13 @@ public class AssistenteProperties implements InitializingBean {
      */
     private int funcoes = 512;
 
+    /**
+     * Explicação depois da resposta de dados (#268): 2 ou 3 frases, até
+     * {@code app.assistente.explicacao.max-caracteres} caracteres. Fica fora de
+     * {@link Cota#tetoDaPergunta}: a explicação tem reserva própria ({@link Cota#tetoDaExplicacao}).
+     */
+    private int explicacao = 256;
+
     /** Classificação: JSON com intenção, confiança e {@code perguntaLei} (até 300 caracteres). */
     private int classificacao = 256;
 
@@ -679,6 +709,7 @@ public class AssistenteProperties implements InitializingBean {
             + CONTEXTO_MINIMO + ", recebido: " + contexto);
       }
       exigirTeto("funcoes", funcoes);
+      exigirTeto("explicacao", explicacao);
       exigirTeto("classificacao", classificacao);
       exigirTeto("legislacao", legislacao);
       exigirTeto("reescrita", reescrita);
@@ -698,6 +729,14 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setFuncoes(int funcoes) {
       this.funcoes = funcoes;
+    }
+
+    public int getExplicacao() {
+      return explicacao;
+    }
+
+    public void setExplicacao(int explicacao) {
+      this.explicacao = explicacao;
     }
 
     public int getClassificacao() {
@@ -738,6 +777,107 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setContexto(int contexto) {
       this.contexto = contexto;
+    }
+  }
+
+  /**
+   * Explicação do modelo depois da resposta de dados (#268, com o que era da #415): 2 ou 3 frases
+   * curtas que dizem ao produtor o que o número quer dizer, conferidas em código pelo
+   * {@code VerificadorFidelidade}. Qualquer falha descarta a explicação e a resposta do template
+   * sai sozinha.
+   *
+   * <p><strong>Desligada por padrão.</strong> Com ela desligada a Ceres responde exatamente como
+   * antes: nenhuma chamada a mais, nenhum evento a mais, o mesmo JSON. Ligar exige a medição com o
+   * modelo real (taxa de descarte, tempo extra, exemplos) e o OK do Murillo (critérios da #415).
+   */
+  public static class Explicacao {
+
+    /** Liga a explicação para todos os produtores ({@code AI_EXPLICACAO_HABILITADA}). */
+    private boolean enabled;
+
+    /**
+     * Prazo da explicação, depois de a resposta ficar pronta. Nunca passa do que resta da
+     * pergunta ({@code timeout-pergunta}): a resposta do template nunca vira tempo esgotado por
+     * causa da explicação.
+     */
+    private Duration timeout = Duration.ofSeconds(8);
+
+    /** Frases da explicação, no mínimo. */
+    private int minFrases = 2;
+
+    /** Frases da explicação, no máximo. */
+    private int maxFrases = 3;
+
+    /** Caracteres da explicação, no mínimo (uma frase solta não explica nada). */
+    private int minCaracteres = 40;
+
+    /** Caracteres da explicação, no máximo (três frases curtas). */
+    private int maxCaracteres = 480;
+
+    void validar(Duration timeoutPergunta) {
+      exigirPositivo(timeout, "app.assistente.explicacao.timeout");
+      // So ligada: os testes com timeout-pergunta curto sobem com a explicacao desligada.
+      if (enabled && timeout.compareTo(timeoutPergunta) >= 0) {
+        throw new IllegalStateException("app.assistente.explicacao.timeout (" + timeout
+            + ") deve ser menor que app.assistente.timeout-pergunta (" + timeoutPergunta + ")");
+      }
+      if (minFrases < 1 || maxFrases < minFrases || maxFrases > 10) {
+        throw new IllegalStateException("app.assistente.explicacao: min-frases >= 1 e "
+            + "min-frases <= max-frases <= 10, recebido: " + minFrases + " e " + maxFrases);
+      }
+      if (minCaracteres < 1 || maxCaracteres <= minCaracteres || maxCaracteres > 2000) {
+        throw new IllegalStateException("app.assistente.explicacao: min-caracteres >= 1 e "
+            + "min-caracteres < max-caracteres <= 2000, recebido: " + minCaracteres + " e "
+            + maxCaracteres);
+      }
+    }
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public Duration getTimeout() {
+      return timeout;
+    }
+
+    public void setTimeout(Duration timeout) {
+      this.timeout = timeout;
+    }
+
+    public int getMinFrases() {
+      return minFrases;
+    }
+
+    public void setMinFrases(int minFrases) {
+      this.minFrases = minFrases;
+    }
+
+    public int getMaxFrases() {
+      return maxFrases;
+    }
+
+    public void setMaxFrases(int maxFrases) {
+      this.maxFrases = maxFrases;
+    }
+
+    public int getMinCaracteres() {
+      return minCaracteres;
+    }
+
+    public void setMinCaracteres(int minCaracteres) {
+      this.minCaracteres = minCaracteres;
+    }
+
+    public int getMaxCaracteres() {
+      return maxCaracteres;
+    }
+
+    public void setMaxCaracteres(int maxCaracteres) {
+      this.maxCaracteres = maxCaracteres;
     }
   }
 

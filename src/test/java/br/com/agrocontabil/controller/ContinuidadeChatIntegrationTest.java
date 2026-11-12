@@ -29,8 +29,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -49,6 +52,7 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
 @ActiveProfiles("test")
+@ExtendWith(OutputCaptureExtension.class)
 @TestPropertySource(properties = "app.assistente.continuidade.habilitada=true")
 @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
     executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
@@ -228,6 +232,30 @@ class ContinuidadeChatIntegrationTest {
             .header(MockIdentidadeFilter.HEADER_USUARIO_ID, produtor.getId()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.conversaVaiAoProvedor").value(false));
+  }
+
+  @Test
+  @DisplayName("#499: nenhum log da continuidade leva o texto da mensagem, da pergunta, da "
+      + "resposta nem a assinatura do turno; só enums")
+  void logsSemTextoDaConversa(CapturedOutput saida) throws Exception {
+    JsonNode primeira = perguntar(PERGUNTA, List.of(), false);
+    JsonNode turno = primeira.get("turno");
+    String assinatura = turno.get("assinatura").asText();
+    String resposta = primeira.get("resposta").asText();
+
+    // Confirmação (reexecução) e seguimento com conectivo (reescrita pelo modelo).
+    perguntar("tem certeza?", List.of(turno), false);
+    perguntar("e de calcário dolomítico xilofônico?", List.of(turno), false);
+
+    String log = saida.getAll();
+    // Os dois caminhos rodaram e deixaram só os enums: a reexecução e a reescrita (o modelo
+    // simulado devolve uma função, e a guarda de formato descarta a reescrita).
+    assertThat(log).contains("Ceres: RESULTADO_IGUAL").contains("Ceres: DESCARTADA_FORMATO");
+    assertThat(log).doesNotContain(assinatura)
+        .doesNotContain(assinatura.substring(3, 40))
+        .doesNotContain("xilofônico").doesNotContain("xilofonico")
+        .doesNotContain(PERGUNTA)
+        .doesNotContain(resposta);
   }
 
   private JsonNode perguntar(String pergunta, List<JsonNode> historico, boolean semTurno)

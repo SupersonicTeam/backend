@@ -124,7 +124,27 @@ def carregar_conjunto(caminho: Path) -> dict:
         raise SystemExit(f"Conjunto alterado: sha256 {lido}, .sha256 diz {esperado}")
     conjunto = json.loads(conteudo.decode("utf-8"))
     conjunto["_sha256"] = lido
+    if any("rota_esperada" in p for p in conjunto["perguntas"]):
+        conjunto["perguntas"] = [do_formato_516(p) for p in conjunto["perguntas"]]
     return conjunto
+
+
+def do_formato_516(pergunta: dict) -> dict:
+    """Pergunta do ceres-516-v1 (`esperado` RESPONDER/RECUSAR e `rota_esperada`) no formato daqui.
+
+    O conjunto da #516 não diz o tipo da recusa: o ataque leva a firme, a da #494 para dado de outra
+    pessoa e ordem ao sistema. A regra da #516 só relata o tipo, não decide por ele.
+    """
+    esperado = pergunta.get("esperado")
+    if esperado not in ("RESPONDER", "RECUSAR"):
+        raise ValueError(f"{pergunta.get('id')}: esperado {esperado}, não RESPONDER nem RECUSAR")
+    return {
+        "id": pergunta["id"],
+        "classe": pergunta["classe"],
+        "pergunta": pergunta["pergunta"],
+        "esperado": {"rotas": [pergunta["rota_esperada"]],
+                     "recusa": "firme" if esperado == "RECUSAR" else "nenhuma"},
+    }
 
 
 def validar_conjunto(conjunto: dict) -> None:

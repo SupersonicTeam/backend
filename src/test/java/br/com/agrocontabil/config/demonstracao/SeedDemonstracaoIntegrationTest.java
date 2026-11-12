@@ -7,6 +7,8 @@ import br.com.agrocontabil.common.FormatoSlug;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
+import br.com.agrocontabil.model.ModeloPedido;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.Produtor;
@@ -24,6 +26,7 @@ import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.CredencialUsuarioRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.GuiaFiscalRepository;
+import br.com.agrocontabil.repository.ModeloPedidoRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.NotaFiscalRevisaoRepository;
 import br.com.agrocontabil.repository.NotaFiscalValidacaoRepository;
@@ -32,6 +35,7 @@ import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.service.CotaUsoAssistenteService;
 import br.com.agrocontabil.service.SlugsReservados;
+import br.com.agrocontabil.support.TextoSemAcento;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
@@ -43,6 +47,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,6 +90,8 @@ class SeedDemonstracaoIntegrationTest {
   @Autowired private AssinaturaValidator assinaturaValidator;
   @Autowired private EscritorioRepository escritorioRepository;
   @Autowired private SlugsReservados slugsReservados;
+  @Autowired private ModeloPedidoRepository modeloPedidoRepository;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   @DisplayName("escritorio com tres funcoes, nove clientes e conta para todos")
@@ -113,6 +120,91 @@ class SeedDemonstracaoIntegrationTest {
     assertThat(escritorio.getCnpj()).isNotBlank();
     assertThat(FormatoSlug.valido(escritorio.getSlug())).isTrue();
     assertThat(slugsReservados.reservado(escritorio.getSlug())).isFalse();
+    // Servido so com o CNPJ verificado (#520): o seed ja o grava assim.
+    assertThat(escritorio.cnpjVerificado()).isTrue();
+    assertThat(escritorio.getCnpjVerificacaoMetodo()).isEqualTo(MetodoVerificacaoCnpj.DEMONSTRACAO);
+    assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isPresent();
+  }
+
+  @Test
+  @DisplayName("CNPJ da demonstracao (#520): a subida verifica o escritorio ja semeado sem a marca, "
+      + "auditado e sem o CNPJ; com o CNPJ trocado num ensaio, nao")
+  void verificaOEscritorioJaSemeado() {
+    Escritorio escritorio = escritorioRepository.findAll().stream()
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_NOME.equals(e.getNome()))
+        .findFirst().orElseThrow();
+    try {
+      assertThat(seed.verificarEscritorio()).isFalse();
+
+      // O banco da VPS, semeado antes da #520: a subida marca, pelo servico auditado.
+      jdbcTemplate.update("UPDATE escritorio SET cnpj_verificado_em = NULL,"
+          + " cnpj_verificacao_metodo = NULL WHERE id = ?", escritorio.getId());
+      assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isEmpty();
+      assertThat(seed.verificarEscritorio()).isTrue();
+      assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isPresent();
+      assertThat(seed.verificarEscritorio()).isFalse();
+      assertThat(jdbcTemplate.queryForList("SELECT estado_antes || '>' || estado_depois"
+              + " FROM registro_auditoria WHERE acao = 'ESCRITORIO_CNPJ_VERIFICADO'"
+              + " AND recurso_id = ? AND sucesso", String.class, escritorio.getId()))
+          .containsExactly("NAO_VERIFICADO>DEMONSTRACAO");
+
+      // Ensaio que trocou o CNPJ: a verificacao caiu e a subida nao a devolve.
+      Escritorio carregado = escritorioRepository.findById(escritorio.getId()).orElseThrow();
+      carregado.setCnpj(CenarioDemonstracao.cnpj("111222333000"));
+      escritorioRepository.saveAndFlush(carregado);
+      assertThat(seed.verificarEscritorio()).isFalse();
+      assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isEmpty();
+    } finally {
+      // O banco e da classe inteira: volta ao escritorio do cenario, verificado.
+      jdbcTemplate.update("UPDATE escritorio SET cnpj = ?, cnpj_verificado_em = CURRENT_TIMESTAMP,"
+          + " cnpj_verificacao_metodo = 'DEMONSTRACAO' WHERE id = ?",
+          CenarioDemonstracao.ESCRITORIO_CNPJ, escritorio.getId());
+    }
+  }
+
+  @Test
+  @DisplayName("modelos de pedido do escritorio (#517): os do cenario, com acento; a subida "
+      + "recria quando o escritorio nao tem nenhum e nao mexe quando tem")
+  void modelosDePedido() {
+    Escritorio escritorio = escritorioRepository.findAll().stream()
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_NOME.equals(e.getNome()))
+        .findFirst().orElseThrow();
+    List<ModeloPedido> modelos = modeloPedidoRepository
+        .findByEscritorioIdOrderByTituloNormalizadoAsc(escritorio.getId());
+    assertThat(modelos).extracting(ModeloPedido::getTitulo).containsExactlyInAnyOrderElementsOf(
+        CenarioDemonstracao.MODELOS_PEDIDO.stream()
+            .map(CenarioDemonstracao.ModeloDePedido::titulo).toList());
+    assertThat(modelos).allSatisfy(m -> {
+      assertThat(m.getTiposDocumento()).isNotEmpty();
+      for (String texto : new String[] {m.getTitulo(), m.getDescricao(), m.getObservacoes()}) {
+        assertThat(TextoSemAcento.primeiraPalavraSemAcento(texto)).as(texto).isNull();
+      }
+    });
+    assertThat(modelos).extracting(ModeloPedido::getTitulo).contains("Extrato bancário do mês");
+
+    try {
+      // Ja tem modelos (mesmo que o ensaio tenha apagado alguns): nada muda.
+      modeloPedidoRepository.delete(modelos.get(0));
+      assertThat(seed.completarModelosPedido()).isZero();
+      assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
+          .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size() - 1L);
+
+      // Sem nenhum (o banco da VPS, semeado antes da #517): a subida os cria.
+      apagarModelos(escritorio);
+      assertThat(seed.completarModelosPedido())
+          .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
+      assertThat(modeloPedidoRepository.countByEscritorioId(escritorio.getId()))
+          .isEqualTo(CenarioDemonstracao.MODELOS_PEDIDO.size());
+    } finally {
+      // O banco e da classe inteira: volta aos modelos do cenario mesmo se uma assercao falhar.
+      apagarModelos(escritorio);
+      seed.completarModelosPedido();
+    }
+  }
+
+  private void apagarModelos(Escritorio escritorio) {
+    modeloPedidoRepository.deleteAll(
+        modeloPedidoRepository.findByEscritorioIdOrderByTituloNormalizadoAsc(escritorio.getId()));
   }
 
   @Test
@@ -278,11 +370,13 @@ class SeedDemonstracaoIntegrationTest {
   void idempotente() throws Exception {
     long notas = notaRepository.count();
     long produtores = produtorRepository.count();
+    long modelos = modeloPedidoRepository.count();
 
     seed.run();
 
     assertThat(notaRepository.count()).isEqualTo(notas);
     assertThat(produtorRepository.count()).isEqualTo(produtores);
+    assertThat(modeloPedidoRepository.count()).isEqualTo(modelos);
   }
 
   private Produtor produtor(String chave) {

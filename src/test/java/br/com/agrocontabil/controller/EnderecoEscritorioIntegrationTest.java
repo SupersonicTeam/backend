@@ -11,9 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
+import br.com.agrocontabil.service.VerificacaoCnpjService;
+import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,6 +83,7 @@ class EnderecoEscritorioIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private TestDatabaseCleaner cleaner;
+  @Autowired private VerificacaoCnpjService verificacaoCnpj;
 
   private CadastroResponse adminA;
   private CadastroResponse adminB;
@@ -100,6 +104,9 @@ class EnderecoEscritorioIntegrationTest {
         escritorioDe(adminA.usuarioId()));
     jdbcTemplate.update("UPDATE escritorio SET cnpj = ? WHERE id = ?", CNPJ_B,
         escritorioDe(adminB.usuarioId()));
+    // Endereco proprio so no escritorio empresarial (#519); o cadastro curto da o pessoal.
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, adminA.usuarioId());
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, adminB.usuarioId());
     tokenA = token(EMAIL_A);
     tokenB = token(EMAIL_B);
   }
@@ -114,6 +121,17 @@ class EnderecoEscritorioIntegrationTest {
   private UUID escritorioDe(UUID contadorId) {
     return jdbcTemplate.queryForObject("SELECT escritorio_id FROM contadores WHERE id = ?",
         UUID.class, contadorId);
+  }
+
+  /** O administrador de B convida o e-mail para a equipe dele; devolve o token do link. */
+  private String conviteDeBPara(String email) throws Exception {
+    mockMvc.perform(post("/api/escritorio/membros/convites")
+            .header(HttpHeaders.AUTHORIZATION, tokenB).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"%s\",\"funcao\":\"CONTADOR\"}".formatted(email)))
+        .andExpect(status().isAccepted());
+    String link = LINKS.poll(5, TimeUnit.SECONDS);
+    assertThat(link).startsWith(email + "|");
+    return link.substring(link.indexOf("#token=") + "#token=".length());
   }
 
   private ResultActions definir(String token, String slug) throws Exception {
@@ -272,8 +290,62 @@ class EnderecoEscritorioIntegrationTest {
     definir(token(EMAIL_PRODUTOR), "ruraloeste").andExpect(status().isForbidden());
   }
 
+  /** O ask do Caddy com a chave do application-test.yml. */
+  private ResultActions ask(String dominio) throws Exception {
+    return mockMvc.perform(get("/interno/tls/permitido").param("domain", dominio)
+        .param("chave", "chave-do-ask-so-dos-testes-0123456789abcdef"));
+  }
+
+  private ResultActions loginNoSubdominio(String email, String slug) throws Exception {
+    return mockMvc.perform(post("/api/auth/login").header(HttpHeaders.HOST,
+            slug + ".agroconia.com.br").contentType(MediaType.APPLICATION_JSON)
+        .content("{\"email\":\"%s\",\"senha\":\"%s\",\"escritorio\":\"%s\"}"
+            .formatted(email, SENHA, slug)));
+  }
+
+  private ResultActions patchEscritorio(String token, String corpo) throws Exception {
+    return mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, token)
+        .contentType(MediaType.APPLICATION_JSON).content(corpo));
+  }
+
   @Test
-  @DisplayName("CNPJ: sem ele, 422 ao gravar; com endereco, o PATCH nao o apaga; sem endereco, apaga")
+  @DisplayName("verificacao do CNPJ (#520): o endereco so e servido depois dela; o PATCH com outro CNPJ a derruba, sem 409 nem oraculo")
+  void enderecoSoServidoComCnpjVerificado() throws Exception {
+    UUID escritorioA = escritorioDe(adminA.usuarioId());
+    definir(tokenA, "ruraloeste").andExpect(status().isOk());
+    // Reservado (outro escritorio nao o grava), mas sem a verificacao nada e servido.
+    definir(tokenB, "ruraloeste").andExpect(status().isConflict());
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isNotFound());
+    mockMvc.perform(get("/api/publico/escritorios/ruraloeste")).andExpect(status().isNotFound());
+    loginNoSubdominio(EMAIL_A, "ruraloeste").andExpect(status().isUnauthorized());
+
+    verificacaoCnpj.verificar(escritorioA, CNPJ_A, MetodoVerificacaoCnpj.MANUAL);
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isOk());
+    loginNoSubdominio(EMAIL_A, "ruraloeste").andExpect(status().isOk());
+
+    // Trocar o nome (e so o nome) mantem a verificacao.
+    patchEscritorio(tokenA, "{\"nome\":\"Rural Oeste Ltda\"}").andExpect(status().isOk());
+    patchEscritorio(tokenA, "{\"nome\":\"Rural Oeste\",\"cnpj\":\"%s\"}".formatted(CNPJ_A))
+        .andExpect(status().isOk());
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isOk());
+
+    // B grava o CNPJ verificado de A: 200, como qualquer CNPJ (sem oraculo), e B nao fica verificado.
+    patchEscritorio(tokenB, "{\"nome\":\"Campo Verde\",\"cnpj\":\"%s\"}".formatted(CNPJ_A))
+        .andExpect(status().isOk());
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM escritorio"
+        + " WHERE cnpj_verificado_em IS NOT NULL", Integer.class)).isEqualTo(1);
+
+    // A troca o proprio CNPJ: a verificacao cai na hora, e o endereco deixa de ser servido.
+    patchEscritorio(tokenA, "{\"nome\":\"Rural Oeste\",\"cnpj\":\"%s\"}".formatted(CNPJ_B))
+        .andExpect(status().isOk());
+    assertThat(jdbcTemplate.queryForList("SELECT cnpj_verificado_em FROM escritorio WHERE id = ?",
+        Object.class, escritorioA)).containsExactly((Object) null);
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isNotFound());
+    loginNoSubdominio(EMAIL_A, "ruraloeste").andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @DisplayName("CNPJ: sem ele, 422 ao gravar; o empresarial nao o apaga; o endereco do legado o protege")
   void exigeCnpj() throws Exception {
     jdbcTemplate.update("UPDATE escritorio SET cnpj = NULL WHERE id = ?",
         escritorioDe(adminA.usuarioId()));
@@ -287,10 +359,12 @@ class EnderecoEscritorioIntegrationTest {
         .andExpect(status().isOk());
     definir(tokenA, "ruraloeste").andExpect(status().isOk());
 
+    // Empresarial nao fica sem CNPJ (#519): a regra vem antes da do endereco.
     mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
         .andExpect(status().isUnprocessableEntity())
-        .andExpect(jsonPath("$.errors[0].code").value("ENDERECO_EXIGE_CNPJ"));
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ"))
+        .andExpect(jsonPath("$.errors[0].field").value("cnpj"));
     // Trocar o nome, sem mexer no CNPJ, segue igual.
     mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste Ltda\"}"))
@@ -300,23 +374,77 @@ class EnderecoEscritorioIntegrationTest {
     remover(tokenA).andExpect(status().isNoContent());
     mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_EMPRESARIAL_EXIGE_CNPJ"));
+
+    // Dado legado: pessoal com CNPJ e endereco (de antes do tipo). O endereco segue exigindo o CNPJ.
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL', slug = 'legado519' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.errors[0].code").value("ENDERECO_EXIGE_CNPJ"));
+    // Sem endereco, o pessoal apaga o CNPJ, como antes.
+    remover(tokenA).andExpect(status().isNoContent());
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenA)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Rural Oeste\",\"cnpj\":\"\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.cnpj").doesNotExist());
   }
 
   @Test
-  @DisplayName("unipessoal com endereco entra noutra equipe: slug em carencia sem escritorio, 409 a quem pedir")
+  @DisplayName("escritorio pessoal (#519): PUT do endereco e 409 ESCRITORIO_PESSOAL mesmo com CNPJ; DELETE segue 204")
+  void pessoalSemEndereco() throws Exception {
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+
+    definir(tokenA, "ruraloeste")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_PESSOAL"));
+    remover(tokenA).andExpect(status().isNoContent());
+    assertThat(jdbcTemplate.queryForObject("SELECT slug FROM escritorio WHERE id = ?", String.class,
+        escritorioDe(adminA.usuarioId()))).isNull();
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM registro_auditoria"
+        + " WHERE acao = 'ESCRITORIO_ENDERECO_ALTERADO' AND sucesso = FALSE"
+        + " AND codigo_erro = 'ESCRITORIO_PESSOAL'", Integer.class)).isOne();
+  }
+
+  @Test
+  @DisplayName("administrador do empresarial com endereco nao aceita convite (#519): 409, escritorio e slug intactos")
+  void administradorDoEmpresarialComEnderecoNaoSai() throws Exception {
+    definir(tokenA, "ruraloeste").andExpect(status().isOk());
+    UUID escritorioA = escritorioDe(adminA.usuarioId());
+    String cnpjA = jdbcTemplate.queryForObject("SELECT cnpj FROM escritorio WHERE id = ?",
+        String.class, escritorioA);
+    String convite = conviteDeBPara(EMAIL_A);
+
+    mockMvc.perform(post("/api/escritorio/membros/convites/aceitar")
+            .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"token\":\"%s\"}".formatted(convite)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.errors[0].code").value("ESCRITORIO_ATUAL_EM_USO"));
+
+    assertThat(escritorioDe(adminA.usuarioId())).isEqualTo(escritorioA);
+    assertThat(cnpjA).isNotBlank();
+    assertThat(jdbcTemplate.queryForObject("SELECT tipo || '|' || cnpj || '|' || slug"
+        + " FROM escritorio WHERE id = ?", String.class, escritorioA))
+        .isEqualTo("EMPRESARIAL|" + cnpjA + "|ruraloeste");
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM escritorio_slug_anterior",
+        Integer.class)).isZero();
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM convite_membro"
+        + " WHERE usado_em IS NULL", Integer.class)).isOne();
+  }
+
+  @Test
+  @DisplayName("pessoal antigo com endereco aceita convite: o escritorio sai e o slug fica em carencia")
   void aceiteDeEquipeGuardaACarencia() throws Exception {
     definir(tokenA, "ruraloeste").andExpect(status().isOk());
     UUID escritorioA = escritorioDe(adminA.usuarioId());
+    // Estado que a API nao produz (o pessoal nao grava endereco proprio, e o 0062 tornou
+    // empresarial quem tinha CNPJ), mas a carencia do aceite segue valendo para ele.
+    jdbcTemplate.update("UPDATE escritorio SET tipo = 'PESSOAL' WHERE id = ?", escritorioA);
+    String convite = conviteDeBPara(EMAIL_A);
 
-    mockMvc.perform(post("/api/escritorio/membros/convites")
-            .header(HttpHeaders.AUTHORIZATION, tokenB).contentType(MediaType.APPLICATION_JSON)
-            .content("{\"email\":\"%s\",\"funcao\":\"CONTADOR\"}".formatted(EMAIL_A)))
-        .andExpect(status().isAccepted());
-    String link = LINKS.poll(5, TimeUnit.SECONDS);
-    assertThat(link).startsWith(EMAIL_A + "|");
-    String convite = link.substring(link.indexOf("#token=") + "#token=".length());
     mockMvc.perform(post("/api/escritorio/membros/convites/aceitar")
             .header(HttpHeaders.AUTHORIZATION, tokenA).contentType(MediaType.APPLICATION_JSON)
             .content("{\"token\":\"%s\"}".formatted(convite)))
@@ -332,6 +460,7 @@ class EnderecoEscritorioIntegrationTest {
         PapelUsuario.CONTADOR, "Terceiro", "11144477735", "admin@terceiro.com.br", SENHA));
     jdbcTemplate.update("UPDATE escritorio SET cnpj = '11222333000262' WHERE id = ?",
         escritorioDe(adminC.usuarioId()));
+    EscritoriosDeTeste.tornarEmpresarial(jdbcTemplate, adminC.usuarioId());
     definir(token("admin@terceiro.com.br"), "ruraloeste")
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.errors[0].code").value("SLUG_INDISPONIVEL"));

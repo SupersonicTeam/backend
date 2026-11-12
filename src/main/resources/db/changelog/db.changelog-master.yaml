@@ -126,3 +126,11 @@ databaseChangeLog:
       file: db/changelog/changes/0059-escritorio-slug.xml
   - include:
       file: db/changelog/changes/0060-cota-credito-por-token.xml
+  - include:
+      file: db/changelog/changes/0061-modelo-pedido.xml
+  - include:
+      file: db/changelog/changes/0062-escritorio-tipo-e-termos.xml
+  - include:
+      file: db/changelog/changes/0063-escritorio-cnpj-verificado.xml
+  - include:
+      file: db/changelog/changes/0064-assistente-interacao-explicacao.xml

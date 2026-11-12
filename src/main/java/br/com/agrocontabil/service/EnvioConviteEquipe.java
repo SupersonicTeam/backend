@@ -14,10 +14,10 @@ public interface EnvioConviteEquipe {
    * Envia o convite.
    *
    * @param destinatario e-mail convidado
-   * @param escritorio   nome do escritório
+   * @param escritorio   nome do escritório e, só se verificado, o CNPJ (#520)
    * @param link         link com o token no fragmento
    * @param expiraEm     fim da validade do convite (vai no texto como data e hora de Brasília)
    */
-  void enviarConvite(String destinatario, String escritorio, String link,
+  void enviarConvite(String destinatario, EscritorioDoConvite escritorio, String link,
       OffsetDateTime expiraEm);
 }

@@ -7,6 +7,7 @@ import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
+import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.LlmClassificadorIntencao;
 import br.com.agrocontabil.config.AssistenteProperties;
@@ -36,6 +37,11 @@ import org.springframework.ai.chat.model.ChatModel;
  * <p>Desde a #499 toda chamada passa por {@link ContextoAssistente#chamar}, o ponto único que
  * confere a reserva, avisa o streaming (o comentário que percebe o cliente que saiu) e guarda a
  * estimativa cobrada no cancelamento: as chamadas são contadas nele, e só ele chama a porta.
+ *
+ * <p>Desde a #268 há um quarto ponto, a explicação depois da resposta de dados
+ * ({@link ExplicadorResposta}), que fica <strong>fora</strong> da fórmula da pergunta: ela tem
+ * reserva própria, feita só quando a explicação vai acontecer
+ * ({@link AssistenteProperties.Cota#tetoDaExplicacao}, uma chamada).
  */
 class TetoDaCotaCobreChamadasTest {
 
@@ -49,8 +55,8 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270/#499: os 5 pontos de chamada, um por classe, cobertos pelos caminhos")
-  void soOsPontosDosCaminhos() {
+  @DisplayName("#166/#270/#499/#268: os 5 pontos dos caminhos e o da explicacao, um por classe")
+  void soOsPontosDosCaminhosEODaExplicacao() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
         .filter(c -> c.getTargetOwner().isEquivalentTo(ContextoAssistente.class)
@@ -62,13 +68,15 @@ class TetoDaCotaCobreChamadasTest {
 
     // As 3 da pergunta comum (CHAMADAS_POR_PERGUNTA) e as 2 da continuidade (#499): a reescrita
     // e a reconferencia de lei. Cada caminho do CaminhoCota soma as que pode fazer; o com
-    // reescrita e o mais caro e e o que a subida confere.
+    // reescrita e o mais caro e e o que a subida confere. A da explicacao (#268) fica fora dos
+    // caminhos: tem reserva propria, feita depois do acerto da pergunta.
     assertThat(porClasse).containsOnly(
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
         Map.entry(RotaDados.class.getName(), 1L),
         Map.entry(RotaLegislacao.class.getName(), 1L),
         Map.entry(ReescritaContinuidade.class.getName(), 1L),
-        Map.entry(ReconferenciaLei.class.getName(), 1L));
+        Map.entry(ReconferenciaLei.class.getName(), 1L),
+        Map.entry(ExplicadorResposta.class.getName(), 1L));
     assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA)
         .isEqualTo(CaminhoCota.NORMAL.chamadas());
     assertThat(CaminhoCota.REESCRITA.chamadas()).isEqualTo(4);
@@ -92,6 +100,18 @@ class TetoDaCotaCobreChamadasTest {
         .isEqualTo(34_816);
     // 4 x 8.192 + (192 + 2.560) x 4.
     assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(43_776);
+  }
+
+  @Test
+  @DisplayName("#268/#511: a reserva da explicacao cobre uma chamada com o teto proprio: "
+      + "8.192 + 256 x 4 = 9.216 com os padroes")
+  void reservaDaExplicacao() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    assertThat(propriedades.getCota().tetoDaExplicacao(propriedades.getTetos(), 1.0))
+        .isEqualTo(9_216);
+    // O fator do modelo vale como nas outras chamadas.
+    assertThat(propriedades.getCota().tetoDaExplicacao(propriedades.getTetos(), 2.0))
+        .isEqualTo(18_432);
   }
 
   @Test

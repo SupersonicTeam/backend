@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
+import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
+import br.com.agrocontabil.service.AssistenteInteracaoService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -119,6 +121,9 @@ class LiquibaseChangelogIntegrationTest {
 
   @Autowired
   private PlatformTransactionManager transactionManager;
+
+  @Autowired
+  private AssistenteInteracaoService interacaoService;
 
   @Test
   @DisplayName("changeSet 0022 cria nota_fiscal.version como BIGINT NOT NULL com default 0")
@@ -298,6 +303,12 @@ class LiquibaseChangelogIntegrationTest {
     UUID contadorId = UUID.randomUUID();
     jdbc.update("INSERT INTO contadores (id, nome_completo, escritorio_id, funcao_escritorio)"
         + " VALUES (?, 'Contador 0059', ?, 'ADMINISTRADOR')", contadorId, emUsoId);
+    // Com CNPJ e sem a verificacao (#520): reservado, mas nada e servido.
+    assertThat(escritorioRepository.findAtivoPorSlug("emuso0059")).isEmpty();
+    assertThat(escritorioRepository.findDestinoDaCarencia("carencia0059", agora)).isEmpty();
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("emuso0059", contadorId)).isFalse();
+    jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(), cnpj_verificacao_metodo ="
+        + " 'MANUAL' WHERE id = ?", emUsoId);
     assertThat(escritorioRepository.findAtivoPorSlug("emuso0059")).isPresent();
     assertThat(escritorioRepository.findDestinoDaCarencia("carencia0059", agora))
         .hasValueSatisfying(destino -> assertThat(destino.getSlug()).isEqualTo("emuso0059"));
@@ -310,6 +321,71 @@ class LiquibaseChangelogIntegrationTest {
     jdbc.update("DELETE FROM escritorio_slug_anterior WHERE slug = 'carencia0059'");
     jdbc.update("DELETE FROM escritorio WHERE slug = 'emuso0059'");
     jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", segundo);
+  }
+
+  @Test
+  @DisplayName("changeSet 0063: verificacao do CNPJ do escritorio, CHECK e CNPJ verificado unico (#520)")
+  void changeSet0063CnpjVerificado() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'escritorio'"
+            + " AND column_name IN ('cnpj_verificado_em', 'cnpj_verificacao_metodo')"
+            + " ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("cnpj_verificacao_metodo", "character varying", "YES", 20),
+            tuple("cnpj_verificado_em", "timestamp with time zone", "YES", null));
+
+    String cnpj = "11222333000181";
+    String primeiro = UUID.randomUUID().toString();
+    String segundo = UUID.randomUUID().toString();
+    String terceiro = UUID.randomUUID().toString();
+    // O mesmo CNPJ nao verificado repete a vontade: cadastro e PATCH nunca recusam (sem oraculo).
+    for (String id : List.of(primeiro, segundo, terceiro)) {
+      jdbc.update("INSERT INTO escritorio (id, nome, cnpj) VALUES (?::uuid, 'Escritorio 0063', ?)",
+          id, cnpj);
+    }
+    jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(), cnpj_verificacao_metodo ="
+        + " 'MANUAL' WHERE id = ?::uuid", primeiro);
+    // Um CNPJ verificado em um escritorio so: o indice parcial barra o segundo.
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(),"
+        + " cnpj_verificacao_metodo = 'MANUAL' WHERE id = ?::uuid", segundo))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThat(escritorioRepository.existsByCnpjAndCnpjVerificadoEmIsNotNullAndIdNot(cnpj,
+        UUID.fromString(segundo))).isTrue();
+    assertThat(escritorioRepository.existsByCnpjAndCnpjVerificadoEmIsNotNullAndIdNot(cnpj,
+        UUID.fromString(primeiro))).isFalse();
+    // CHECK: metodo fora da lista, verificacao sem metodo e verificacao sem CNPJ.
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj = '99888777000164',"
+        + " cnpj_verificado_em = now(), cnpj_verificacao_metodo = 'RECEITA' WHERE id = ?::uuid",
+        segundo)).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now()"
+        + " WHERE id = ?::uuid", terceiro)).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj = NULL WHERE id = ?::uuid",
+        primeiro)).isInstanceOf(DataIntegrityViolationException.class);
+
+    // A entidade limpa a verificacao no mesmo UPDATE que troca o CNPJ (#520): trocar para o CNPJ
+    // verificado de outro escritorio nao esbarra no indice, e o PATCH nunca vira oraculo.
+    jdbc.update("UPDATE escritorio SET cnpj = '99888777000164' WHERE id = ?::uuid", segundo);
+    jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(), cnpj_verificacao_metodo ="
+        + " 'MANUAL' WHERE id = ?::uuid", segundo);
+    new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+      var escritorio = escritorioRepository.findById(UUID.fromString(segundo)).orElseThrow();
+      escritorio.setCnpj(cnpj);
+      escritorioRepository.saveAndFlush(escritorio);
+    });
+    assertThat(jdbc.queryForMap("SELECT cnpj, cnpj_verificado_em, cnpj_verificacao_metodo"
+        + " FROM escritorio WHERE id = ?::uuid", segundo))
+        .containsEntry("cnpj", cnpj).containsEntry("cnpj_verificado_em", null)
+        .containsEntry("cnpj_verificacao_metodo", null);
+
+    for (String id : List.of(primeiro, segundo, terceiro)) {
+      jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", id);
+    }
   }
 
   @Test
@@ -394,7 +470,8 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
-  @DisplayName("#271: o backfill da busca roda no PostgreSQL (keyset por UUID, IN, UPDATE condicional)")
+  @DisplayName("#271/#399: o backfill da busca roda no PostgreSQL e tira o documento da regra 2"
+      + " (keyset por UUID, IN, UPDATE condicional)")
   void backfillDaBuscaNoPostgres() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
     String produtorId = UUID.randomUUID().toString();
@@ -407,7 +484,8 @@ class LiquibaseChangelogIntegrationTest {
             destinatario_nome, destinatario_cpf_cnpj, valor_total_produtos, valor_total_nota,
             status, tipo_documento, origem, busca_normalizada, busca_versao)
         VALUES (?::uuid, 42, 1, '55', 'Venda', now(), ?::uuid, 'Cooperativa Agrícola',
-            '12345678000195', 10.00, 10.00, 'RASCUNHO', 'NFE', 'PROPRIA', '42 cooperativa', 1)
+            '12345678000195', 10.00, 10.00, 'RASCUNHO', 'NFE', 'PROPRIA',
+            '42 cooperativa agricola venda 12345678000195 soja em graos 12019000', 2)
         """, notaId, produtorId);
     jdbc.update("""
         INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, codigo_produto, descricao,
@@ -423,7 +501,8 @@ class LiquibaseChangelogIntegrationTest {
       assertThat(jdbc.queryForObject(
           "SELECT busca_normalizada || '|' || busca_versao FROM nota_fiscal WHERE id = ?::uuid",
           String.class, notaId))
-          .isEqualTo("42 cooperativa agricola venda 12345678000195 soja em graos 12019000|2");
+          // Regra 3 (#399): sem o CPF/CNPJ do destinatario, que a busca acha pela propria coluna.
+          .isEqualTo("42 cooperativa agricola venda soja em graos 12019000|3");
       // Segunda rodada: nada a recalcular.
       assertThat(new br.com.agrocontabil.config.BuscaNotasLegadoRunner(jdbc, false)
           .preencherLegado()).isZero();
@@ -473,6 +552,57 @@ class LiquibaseChangelogIntegrationTest {
         + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
         + " WHERE n.ncm = '04012090' AND n.permissao = 'PERMITIDO' ORDER BY 1", String.class))
         .containsExactly("200003");
+  }
+
+  @Test
+  @DisplayName("changeSet 0064: desfecho e metricas da explicacao, nulos ate ela acontecer, "
+      + "gravados uma vez so e sem texto (#268)")
+  void changeSet0064ExplicacaoNaAuditoria() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name LIKE '%explicacao%' ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("desfecho_explicacao", "character varying", "YES", 60),
+            tuple("latencia_explicacao_ms", "bigint", "YES", null),
+            tuple("tokens_entrada_explicacao", "integer", "YES", null),
+            tuple("tokens_saida_explicacao", "integer", "YES", null));
+    // O maior desfecho cabe na coluna.
+    assertThat(java.util.Arrays.stream(DesfechoExplicacao.values())
+        .mapToInt(d -> d.name().length()).max().orElseThrow()).isLessThanOrEqualTo(60);
+
+    String produtor = UUID.randomUUID().toString();
+    UUID interacao = UUID.randomUUID();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0064')",
+        produtor);
+    jdbc.update("INSERT INTO assistente_interacao (id, produtor_id, rota, desfecho,"
+        + " chamadas_funcao, latencia_ms, tamanho_pergunta, tokens_estimados, criado_em)"
+        + " VALUES (?, ?::uuid, 'DADOS', 'RESPONDIDA', 1, 10, 20, false, now())",
+        interacao, produtor);
+    assertThat(jdbc.queryForObject("SELECT desfecho_explicacao FROM assistente_interacao"
+        + " WHERE id = ?", String.class, interacao)).isNull();
+
+    interacaoService.registrarExplicacao(interacao, DesfechoExplicacao.EXPLICACAO_ACEITA, 1234,
+        800, 60);
+
+    assertThat(jdbc.queryForMap("SELECT desfecho_explicacao, latencia_explicacao_ms,"
+        + " tokens_entrada_explicacao, tokens_saida_explicacao FROM assistente_interacao"
+        + " WHERE id = ?", interacao))
+        .containsEntry("desfecho_explicacao", "EXPLICACAO_ACEITA")
+        .containsEntry("latencia_explicacao_ms", 1234L)
+        .containsEntry("tokens_entrada_explicacao", 800)
+        .containsEntry("tokens_saida_explicacao", 60);
+    // Uma vez so: o registro ja completado nao muda.
+    assertThatThrownBy(() -> interacaoService.registrarExplicacao(interacao,
+        DesfechoExplicacao.EXPLICACAO_DESCARTADA_ERRO, 1, null, null))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(jdbc.queryForObject("SELECT desfecho_explicacao FROM assistente_interacao"
+        + " WHERE id = ?", String.class, interacao)).isEqualTo("EXPLICACAO_ACEITA");
   }
 
   @Test
@@ -557,9 +687,10 @@ class LiquibaseChangelogIntegrationTest {
 
     assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
         + " WHERE table_name = 'credencial_usuario' ORDER BY column_name", String.class))
+        // termos_* chegaram no 0062 (#519).
         .containsExactly("ativo", "bloqueada_ate", "contador_id", "cpf_cnpj", "created_at", "email",
-            "falhas_login", "id", "papel", "produtor_id", "senha_hash", "updated_at",
-            "versao_sessao");
+            "falhas_login", "id", "papel", "produtor_id", "senha_hash", "termos_aceitos_em",
+            "termos_versao", "updated_at", "versao_sessao");
 
     String produtorId = UUID.randomUUID().toString();
     String contadorId = UUID.randomUUID().toString();
@@ -879,6 +1010,105 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pendencia WHERE id = ?::uuid",
         Integer.class, pendenciaId)).isZero();
     jdbc.update("DELETE FROM produtores WHERE id = ?::uuid", produtorId);
+  }
+
+  @Test
+  @DisplayName("changeSet 0061: modelo_pedido unico pelo titulo normalizado, prazo de 1 a 365 e CASCADE do escritorio (#517)")
+  void changeSet0061ModeloPedido() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'modelo_pedido' ORDER BY column_name", String.class))
+        .containsExactly("created_at", "descricao", "escritorio_id", "id", "observacoes",
+            "prazo_em_dias", "tipos_documento", "titulo", "titulo_normalizado", "updated_at");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'modelo_pedido' AND is_nullable = 'NO' ORDER BY column_name",
+        String.class))
+        .containsExactly("escritorio_id", "id", "tipos_documento", "titulo",
+            "titulo_normalizado");
+
+    String escritorioA = UUID.randomUUID().toString();
+    String escritorioB = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio A 0061')",
+        escritorioA);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Escritorio B 0061')",
+        escritorioB);
+    String insert = "INSERT INTO modelo_pedido (id, escritorio_id, titulo, titulo_normalizado,"
+        + " tipos_documento, prazo_em_dias)"
+        + " VALUES (gen_random_uuid(), ?::uuid, ?, ?, 'EXTRATO', ?)";
+    jdbc.update(insert, escritorioA, "Extrato bancário", "extrato bancario", 10);
+    // Mesmo titulo em outro escritorio: a unicidade e por escritorio.
+    jdbc.update(insert, escritorioB, "Extrato bancário", "extrato bancario", null);
+
+    assertThatThrownBy(() -> jdbc.update(insert, escritorioA, "EXTRATO BANCARIO",
+        "extrato bancario", 5)).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(insert, escritorioA, "Outro", "outro", 0))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update(insert, escritorioA, "Outro", "outro", 366))
+        .isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioA);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM modelo_pedido"
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioA)).isZero();
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM modelo_pedido"
+        + " WHERE escritorio_id = ?::uuid", Integer.class, escritorioB)).isOne();
+    jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", escritorioB);
+  }
+
+  @Test
+  @DisplayName("changeSet 0062: tipo do escritorio pela regra dos dados antigos, telefone, endereco e aceite dos termos (#519)")
+  void changeSet0062TipoDoEscritorioETermos() throws Exception {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+    assertThat(jdbc.queryForList("SELECT column_name || ':' || is_nullable FROM"
+        + " information_schema.columns WHERE table_name = 'escritorio' AND (column_name = 'tipo'"
+        + " OR column_name = 'telefone' OR column_name LIKE 'endereco%') ORDER BY column_name",
+        String.class))
+        .containsExactly("endereco_bairro:YES", "endereco_cep:YES",
+            "endereco_codigo_municipio_ibge:YES", "endereco_complemento:YES",
+            "endereco_logradouro:YES", "endereco_municipio:YES", "endereco_numero:YES",
+            "endereco_uf:YES", "telefone:YES", "tipo:NO");
+    assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns"
+        + " WHERE table_name = 'credencial_usuario' AND column_name LIKE 'termos%'"
+        + " ORDER BY column_name", String.class))
+        .containsExactly("termos_aceitos_em", "termos_versao");
+
+    // A regra dos dados antigos, com o UPDATE do proprio changeSet: CNPJ ou equipe = empresarial.
+    String sozinho = UUID.randomUUID().toString();
+    String comCnpj = UUID.randomUUID().toString();
+    String comEquipe = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Sozinho 0062')", sozinho);
+    jdbc.update("INSERT INTO escritorio (id, nome, cnpj) VALUES (?::uuid, 'Com CNPJ 0062',"
+        + " '11444777000161')", comCnpj);
+    jdbc.update("INSERT INTO escritorio (id, nome) VALUES (?::uuid, 'Com equipe 0062')",
+        comEquipe);
+    String membro = "INSERT INTO contadores (id, nome_completo, escritorio_id, funcao_escritorio)"
+        + " VALUES (gen_random_uuid(), 'Membro 0062', ?::uuid, 'CONTADOR')";
+    jdbc.update(membro, sozinho);
+    jdbc.update(membro, comEquipe);
+    jdbc.update(membro, comEquipe);
+    assertThat(jdbc.queryForObject("SELECT tipo FROM escritorio WHERE id = ?::uuid", String.class,
+        sozinho)).isEqualTo("PESSOAL");
+
+    String changeSet;
+    try (var arquivo = getClass().getResourceAsStream(
+        "/db/changelog/changes/0062-escritorio-tipo-e-termos.xml")) {
+      changeSet = new String(arquivo.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+    var regra = java.util.regex.Pattern.compile("<sql>\\s*(UPDATE escritorio[\\s\\S]*?)</sql>")
+        .matcher(changeSet);
+    assertThat(regra.find()).isTrue();
+    jdbc.update(regra.group(1));
+
+    assertThat(jdbc.queryForList("SELECT nome || ':' || tipo FROM escritorio"
+        + " WHERE nome LIKE '%0062' ORDER BY nome", String.class))
+        .containsExactly("Com CNPJ 0062:EMPRESARIAL", "Com equipe 0062:EMPRESARIAL",
+            "Sozinho 0062:PESSOAL");
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET tipo = 'OUTRO'"
+        + " WHERE id = ?::uuid", sozinho)).isInstanceOf(DataIntegrityViolationException.class);
+
+    jdbc.update("DELETE FROM contadores WHERE nome_completo = 'Membro 0062'");
+    jdbc.update("DELETE FROM escritorio WHERE nome LIKE '%0062'");
   }
 
   @Test
@@ -1210,12 +1440,14 @@ class LiquibaseChangelogIntegrationTest {
             + " WHERE table_name = 'assistente_interacao' ORDER BY column_name",
         String.class);
 
+    // As colunas da explicacao (#268, changeSet 0064) tambem sao so desfecho e metricas.
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
-        "desfecho_legislacao",
-        "funcoes", "id", "latencia_ms", "modelo", "pergunta_lei_reescrita", "produtor_id", "rota",
-        "tamanho_pergunta", "tokens_entrada", "tokens_estimados", "tokens_saida",
-        "trechos_citados");
+        "desfecho_explicacao", "desfecho_legislacao",
+        "funcoes", "id", "latencia_explicacao_ms", "latencia_ms", "modelo",
+        "pergunta_lei_reescrita", "produtor_id", "rota",
+        "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_estimados",
+        "tokens_saida", "tokens_saida_explicacao", "trechos_citados");
     // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
     assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")
         || c.equals("texto"));

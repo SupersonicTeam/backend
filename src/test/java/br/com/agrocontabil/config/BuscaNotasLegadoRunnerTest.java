@@ -65,10 +65,9 @@ class BuscaNotasLegadoRunnerTest {
     assertThat(runner.preencherLegado()).isEqualTo(2);
 
     assertThat(busca(comAcentoForaDoMapa))
-        .isEqualTo("7 krakeslottet łodz remessa para armazem 12345678901")
-        .isEqualTo(NormalizacaoBusca.juntar(7L, "Kråkeslottet Łódź",
-            "Remessa para armazém", "12345678901"));
-    assertThat(busca(comum)).isEqualTo("8 cooperativa agricola venda 12345678901");
+        .isEqualTo("7 krakeslottet łodz remessa para armazem")
+        .isEqualTo(NormalizacaoBusca.juntar(7L, "Kråkeslottet Łódź", "Remessa para armazém"));
+    assertThat(busca(comum)).isEqualTo("8 cooperativa agricola venda");
     assertThat(runner.preencherLegado()).isZero();
   }
 
@@ -83,8 +82,8 @@ class BuscaNotasLegadoRunnerTest {
   }
 
   @Test
-  @DisplayName("#271: nota da regra 1 (sem itens nem documento) e recalculada; a atual nao e tocada")
-  void recalculaNotaDaRegraAnteriorComItensEDocumento() {
+  @DisplayName("#271: nota da regra 1 (sem itens) e recalculada; a atual nao e tocada")
+  void recalculaNotaDaRegraAnteriorComItens() {
     UUID antiga = notaFiscalRepository.save(comItens(nota(10L, "Cooperativa", "Venda"),
         "Soja em grãos", "12019000")).getId();
     UUID atual = notaFiscalRepository.save(comItens(nota(11L, "Laticinio", "Venda"),
@@ -95,11 +94,32 @@ class BuscaNotasLegadoRunnerTest {
 
     assertThat(runner.preencherLegado()).isEqualTo(1);
 
-    assertThat(busca(antiga))
-        .isEqualTo("10 cooperativa venda 12345678901 soja em graos 12019000");
+    assertThat(busca(antiga)).isEqualTo("10 cooperativa venda soja em graos 12019000");
     assertThat(jdbc.queryForObject("SELECT busca_versao FROM nota_fiscal WHERE id = ?",
         Integer.class, antiga)).isEqualTo(NormalizacaoBusca.VERSAO_REGRA);
     assertThat(busca(atual)).contains("leite 04012090");
+    assertThat(runner.preencherLegado()).isZero();
+  }
+
+  @Test
+  @DisplayName("#399: nota da regra 2, com o CPF/CNPJ no texto, e reescrita sem ele, uma vez so")
+  void reescreveNotaDaRegra2SemODocumento() {
+    UUID antiga = notaFiscalRepository.save(comItens(nota(12L, "Cooperativa", "Venda"),
+        "Soja em grãos", "12019000")).getId();
+    // Como a regra 2 (#271) gravou: o documento do destinatario so com digitos no texto.
+    jdbc.update("UPDATE nota_fiscal SET busca_normalizada ="
+        + " '12 cooperativa venda 12345678901 soja em graos 12019000', busca_versao = 2"
+        + " WHERE id = ?", antiga);
+
+    assertThat(runner.preencherLegado()).isEqualTo(1);
+
+    assertThat(busca(antiga)).isEqualTo("12 cooperativa venda soja em graos 12019000")
+        .doesNotContain("12345678901");
+    assertThat(jdbc.queryForObject("SELECT busca_versao FROM nota_fiscal WHERE id = ?",
+        Integer.class, antiga)).isEqualTo(3);
+    // O documento continua na propria coluna, que a busca usa por igualdade.
+    assertThat(jdbc.queryForObject("SELECT destinatario_cpf_cnpj FROM nota_fiscal WHERE id = ?",
+        String.class, antiga)).isEqualTo("12345678901");
     assertThat(runner.preencherLegado()).isZero();
   }
 
@@ -117,7 +137,7 @@ class BuscaNotasLegadoRunnerTest {
     assertThat(emLotesDeTres.preencherLegado()).isEqualTo(7);
 
     assertThat(jdbc.queryForList("SELECT busca_normalizada FROM nota_fiscal", String.class))
-        .allMatch(b -> b.contains("produto ") && b.contains("12345678901"));
+        .allMatch(b -> b.contains("produto ") && !b.contains("12345678901"));
     assertThat(emLotesDeTres.preencherLegado()).isZero();
   }
 

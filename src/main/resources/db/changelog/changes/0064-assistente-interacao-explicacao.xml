@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0064-assistente-interacao-explicacao.xml
+         Ceres 2.0, etapa 6 (issue #268, com o que era da #415) - explicacao
+         do modelo depois da resposta de dados, atras da flag
+         app.assistente.explicacao.enabled (desligada por padrao).
+
+         A pergunta e auditada antes de a resposta sair (RF020); a explicacao
+         vem depois, e o mesmo registro e completado com o desfecho dela.
+         - desfecho_explicacao: EXPLICACAO_ACEITA ou
+           EXPLICACAO_DESCARTADA_<motivo> (DesfechoExplicacao). Nula quando a
+           explicacao nao se aplica (flag desligada, outra rota, resposta
+           descartada) e nas perguntas gravadas antes desta mudanca.
+         - latencia_explicacao_ms, tokens_entrada_explicacao e
+           tokens_saida_explicacao: custo e tempo extra da explicacao, a
+           parte dos da pergunta (a medicao da #415 compara os dois).
+         So o desfecho e as metricas: o texto da explicacao nunca e gravado
+         (#144).
+         ================================================================ -->
+
+    <changeSet id="0064-add-explicacao-assistente-interacao" author="supersonic-team">
+        <comment>Desfecho, latencia e tokens da explicacao da Ceres (#268).</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="desfecho_explicacao" type="VARCHAR(60)"/>
+            <column name="latencia_explicacao_ms" type="BIGINT"/>
+            <column name="tokens_entrada_explicacao" type="INTEGER"/>
+            <column name="tokens_saida_explicacao" type="INTEGER"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

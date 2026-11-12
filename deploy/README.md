@@ -21,7 +21,8 @@ então o backend rodava em `dev`, onde qualquer requisição declarava qualquer 
 auth era a única barreira.
 
 Continua sendo **demonstração com dados fictícios**: o certificado da NF-e é o de teste (público),
-a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro) e o envio
+a SEFAZ é o mock (com `autorizar-terceiros` ligado, para a importação de NF-e de terceiro: a
+conferência dela na SEFAZ é simulada; o profile `prod` recusa o mock, #263) e o envio
 de e-mail está desligado (`EMAIL_MODO` = `DESLIGADO`: "esqueci minha senha" e os convites respondem
 normalmente e nada é enviado) até a seção [E-mail](#e-mail-460) ser cumprida. As contas
 semeadas entram pelo login com a `SEED_SENHA`, inclusive as da **demonstração da banca**
@@ -343,8 +344,9 @@ manuais e do Murillo, na VPS e na Hostinger.
   http://backend:8080/interno/tls/permitido?chave=...&domain=...`. Essa rota fica fora de `/api`,
   então só a rede interna a alcança.
 - **Quem o backend autoriza:** só responde 200 com a `TLS_ASK_CHAVE` certa e um slug servido
-  (ativo, com CNPJ, ou em carência com redirecionamento). Slug inexistente ou reservado, inclusive o
-  `www`, nunca ganha certificado, e o handshake falha.
+  (ativo, ou em carência com redirecionamento) de escritório com o **CNPJ verificado** (#520, seção
+  abaixo). Slug inexistente, reservado (inclusive o `www`) ou de escritório não verificado nunca
+  ganha certificado, e o handshake falha.
 - **Site catch-all, nunca o curinga:** o bloco é `https://`, e não `*.{$SITE_DOMINIO}`. Testado em
   2026-11-09 com o `caddy:2.10-alpine`: com o site curinga, o Caddy **deixa de emitir o certificado
   do `www`** (passa a esperar o certificado curinga, que o `on_demand` nunca emite), e o `www` cai.
@@ -362,6 +364,59 @@ manuais e do Murillo, na VPS e na Hostinger.
   - 5 validações com falha por nome por hora.
 
   Por isso o primeiro teste é na CA de staging.
+
+### Verificação do CNPJ (#520)
+
+O cadastro público de contador empresarial grava o CNPJ e o slug na hora, e o CNPJ só tem o dígito
+verificador conferido. Sem a verificação, uns 50 cadastros com slugs diferentes esgotariam a cota
+semanal de certificados do Let's Encrypt (com o `A *` no ar, qualquer subdomínio resolve). Por
+isso o ask, a página pública e o login pelo subdomínio só valem para o escritório com o CNPJ
+verificado. O slug do escritório não verificado fica reservado (ninguém mais o grava), mas não é
+servido.
+
+- **Quem verifica:** a GWNext, depois de conferir fora do sistema que o CNPJ é do escritório
+  (contrato social, cartão CNPJ, contato com o escritório). Não há endpoint: é o comando do profile
+  `verificacao-cnpj`, auditado (`ESCRITORIO_CNPJ_VERIFICADO`) sem o CNPJ no registro nem no log.
+- **Trocar o CNPJ** (`PATCH /api/escritorio`) tira a verificação na hora: o endereço deixa de ser
+  servido e o login pelo subdomínio cai no próximo refresh. Trocar o nome não tira.
+- **A demonstração não precisa de nada:** o `SeedDemonstracao` marca a Contabilidade Rural Oeste
+  como verificada (método `DEMONSTRACAO`) ao criá-la e, no banco já semeado, na subida do backend.
+  Isso depende de `DEMONSTRACAO_HABILITADA=true` no `compose.yaml` da VPS.
+
+**Depois do deploy da #520**, conferir que o `ruraloeste` continua servido (os outros slugs de
+teste deixam de ser, de propósito):
+
+```bash
+docker compose logs backend | grep -iE "CNPJ do escritorio" | tail -3
+docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
+```
+
+O seed roda logo depois de o backend aceitar conexões: nos primeiros segundos da subida, o ask do
+`ruraloeste` ainda responde 404. Com o certificado já emitido e guardado pelo Caddy, nada muda para
+quem acessa. Sem o 200 depois disso, verifique pelo comando abaixo, com o id e o CNPJ do escritório
+da demonstração.
+
+**Verificar um escritório** (o backend continua no ar; o comando sobe outro container, sem web nem
+jobs, e encerra):
+
+```bash
+cd /opt/agrocontabil
+docker compose exec -T postgres psql -U agrocontabil -d agrocontabil -c   "SELECT id, nome, cnpj, cnpj_verificado_em FROM escritorio WHERE slug = 'campoverde'"
+docker compose run --rm -e SPRING_PROFILES_ACTIVE=homolog,verificacao-cnpj backend   --verificacao.escritorio=<id> --verificacao.cnpj=<cnpj conferido>
+echo $?   # 0 = verificado (ou ja estava); 1 = recusado, motivo no log
+```
+
+- O `--verificacao.cnpj` é o CNPJ que você conferiu. Se o administrador o trocou depois da
+  conferência, o comando recusa (`CNPJ_DIFERENTE_DO_CONFERIDO`): confira o novo.
+- Um CNPJ fica verificado em um escritório só (`CNPJ_VERIFICADO_EM_OUTRO_ESCRITORIO`). Numa
+  contestação, revogue o errado antes de verificar o outro.
+- **Revogar:** `--verificacao.escritorio=<id> --verificacao.revogar=true`. O endereço sai do ar na
+  hora. O certificado já emitido continua no cache do Caddy até vencer, mas o login pelo
+  subdomínio e a página pública param. **No escritório da demonstração a revogação não dura:** a
+  próxima subida do backend o verifica de novo pelo seed. Para tirá-lo do ar, remova o endereço
+  (`DELETE /api/escritorio/endereco`, com a administradora) ou desligue o seed.
+- Local: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,verificacao-cnpj
+  -Dspring-boot.run.arguments="--verificacao.escritorio=<id> --verificacao.cnpj=<cnpj>"`.
 
 ### Passo a passo
 

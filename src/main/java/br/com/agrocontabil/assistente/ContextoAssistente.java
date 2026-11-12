@@ -409,6 +409,15 @@ public final class ContextoAssistente {
   }
 
   /**
+   * {@code true} se a pergunta reservou cota para o modelo, ou seja, não é atalho, conversa leve
+   * nem recusa sem modelo ({@link #semReservaParaOModelo()}). A explicação depois da resposta de
+   * dados (#268) só vale para ela: o atalho fixo da tela não chama o modelo (#343).
+   */
+  public boolean reservouParaOModelo() {
+    return !semReservaParaOModelo;
+  }
+
+  /**
    * Conta as funções executadas, inclusive as que falharem (issue #144): as que o modelo pediu e,
    * no atalho fixo de dados (#343), a que o backend chamou direto.
    */

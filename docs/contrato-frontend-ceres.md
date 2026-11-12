@@ -79,6 +79,7 @@ X-Usuario-Id: <uuid do produtor>
 | `citacoes` | `Citacao[]` | Trechos de lei citados, na ordem da resposta. Vazio fora de `LEGISLACAO`/`MISTO` |
 | `fontesDados` | `FonteDado[]` | Consultas usadas. **Vazio quando a resposta foi descartada**: sem selo. Cada item traz `origem` (abaixo), que decide o selo |
 | `modoFallback` | `boolean` | `true` quando o modelo estava fora e a resposta foi montada **sem ele** (#146). Exiba um aviso ("assistente em modo limitado") |
+| `explicacao` | `string`, **ausente** quando nula | Explicação curta da resposta de dados, gerada pelo modelo e conferida em código (#268). **Ausente** com a função desligada (padrão), na resposta descartada, fora do prazo e fora da rota de dados. Detalhes abaixo |
 | `atalhos` | `("NOTAS" \| "APURACAO" \| "CREDITOS" \| "CALENDARIO")[]` | Telas onde o dado está, para perguntas de dados: no modo fallback e, desde a #266, quando a Ceres não identificou qual dado consultar (`modoFallback: false`). Mapeie cada valor para a rota do Angular e mostre como botões. Vazio nos outros casos |
 
 #### Origem do dado: `fontesDados[].origem` (#342)
@@ -110,6 +111,24 @@ Na rota `DADOS` (e na parte de dados do `MISTO`), o texto é montado pelo backen
   preenchidos e `modoFallback: false`. Mostre os botões das telas também nesse caso.
 - Siglas (IBS, CBS, Funrural, SEFAZ, NCM, CFOP, NF-e) vêm explicadas entre parênteses na primeira
   vez.
+
+#### Explicação depois da resposta de dados (#268, desligada por padrão)
+
+Nas perguntas de **dados**, com `app.assistente.explicacao.enabled` ligada (só depois da medição
+com o modelo real e do OK do Murillo), a Ceres manda, depois do número, 2 ou 3 frases que dizem o
+que ele quer dizer. Ela é conferida em código (números iguais aos da resposta, tamanho, siglas,
+nenhuma conclusão legal, nada do prompt) e, se falhar em qualquer conferência, simplesmente **não
+vem**. A `resposta` continua completa e correta sozinha.
+
+- **Síncrono:** campo `explicacao` no mesmo JSON; **ausente** quando não há explicação (o JSON é o
+  de antes). Mostre abaixo da resposta, com estilo secundário (por exemplo "Entenda:").
+- **Streaming:** evento `explicacao` entre a `resposta` e o `fim` (seção 4); o evento `resposta`
+  nunca traz o campo.
+- **Rota de lei:** não muda.
+- **Uso:** a explicação gasta créditos (#511), somados ao uso da semana; o `percentualUsado` já os
+  inclui. Sem saldo para ela, a resposta sai sem a explicação, **sem 429**.
+
+Contrato publicado para o frontend em SupersonicTeam/frontend#187 (opcional).
 
 #### Modo fallback (#146)
 
@@ -172,6 +191,7 @@ próprio: não troque `/chat` por `Accept: text/event-stream`.
 |---|---|---|
 | `rota` | `{"rota":"DADOS"}` | Assim que a intenção é decidida (em segundos): troque "pensando…" por "consultando suas notas…" / "consultando a legislação…" |
 | `resposta` | o mesmo JSON do `POST /chat` | Resposta final, já validada |
+| `explicacao` | `{"explicacao":"..."}` | **Opcional** (#268, desligada por padrão): explicação curta da resposta de dados, já conferida. Acrescente abaixo da resposta, sem mexer no texto já mostrado. Descartada ou fora do prazo, não vem |
 | `fim` | `{}` | O stream termina |
 | `erro` | envelope `ApiError` (seção 5) | Falha depois de o stream abrir (modelo fora, tempo esgotado). Encerra o stream |
 
@@ -202,6 +222,13 @@ qualquer bloco como evento (sem conferir `event:`) quebra nessa linha. Corrigido
 que, de vez em quando, fechava o stream depois da `rota` sem `resposta`, `fim` nem `erro`. Se ainda
 acontecer de o stream terminar sem `fim` nem `erro`, trate como falha de conexão e mostre o botão
 de tentar de novo.
+
+**Explicação e erro depois da resposta (#268):** com a explicação ligada, o `fim` pode demorar
+alguns segundos depois da `resposta` (o tempo da explicação, nunca mais que o prazo dela). Encerre o
+"pensando…" ao receber a `resposta`. O `fim` sempre vem, com ou sem `explicacao`; `fim` sem
+`explicacao` não é erro. Um `erro` depois da `resposta` (o prazo da pergunta venceu durante a
+explicação) **não apaga** a resposta já mostrada: só encerra o stream. A vaga da pergunta (#157) só
+volta depois do `fim` ou do `erro`.
 
 **Erros antes de o stream abrir** (400, 401, 403, 413 e 503 `ASSISTENTE_OCUPADO`) vêm como resposta
 HTTP comum, **em JSON**, mesmo com `Accept: text/event-stream`. Confira `response.ok` antes de ler o
@@ -451,6 +478,7 @@ export interface CeresResposta {
   fontesDados: CeresFonteDado[];
   modoFallback: boolean;
   atalhos: ('NOTAS' | 'APURACAO' | 'CREDITOS' | 'CALENDARIO')[];  // modo fallback e pergunta de dados sem dado identificado (#266)
+  explicacao?: string; // #268: ausente quando nula (desligada, descartada, fora do prazo, outra rota)
 }
 
 export interface ApiErrorDetail {
@@ -474,6 +502,7 @@ export interface ApiError {
 export type CeresEvento =
   | { evento: 'rota'; dado: { rota: RotaCeres } }
   | { evento: 'resposta'; dado: CeresResposta }
+  | { evento: 'explicacao'; dado: { explicacao: string } } // #268, opcional
   | { evento: 'fim'; dado: Record<string, never> }
   | { evento: 'erro'; dado: ApiError };
 ```

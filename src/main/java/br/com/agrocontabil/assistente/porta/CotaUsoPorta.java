@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente.porta;
 import br.com.agrocontabil.config.CaminhoCota;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -51,11 +52,31 @@ public interface CotaUsoPorta {
   ReservaCota reservarLeitura(UUID produtorId, String modelo, long tokensLeitura);
 
   /**
+   * Reserva o teto da explicação depois da resposta de dados (#268), à parte da reserva da
+   * pergunta, que a essa altura já foi acertada. <strong>Sem saldo, não há 429:</strong> devolve
+   * vazio, e a resposta do template sai sozinha. Sem implementação padrão de propósito, como a
+   * {@link #reservarLeitura}.
+   *
+   * @param produtorId produtor autenticado
+   * @param modelo     identificação do modelo em uso (fator)
+   * @return a reserva, a ser acertada ou estornada exatamente uma vez; vazio sem saldo
+   */
+  Optional<ReservaCota> reservarExplicacao(UUID produtorId, String modelo);
+
+  /**
    * Acerta pelo consumo real (tokens informados pelo provedor ou estimados).
    *
    * @return créditos consumidos
    */
   long acertar(ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo);
+
+  /**
+   * Acerta a reserva da explicação ({@link #reservarExplicacao}) pelo consumo real, sem contar
+   * outra pergunta na semana (#268).
+   *
+   * @return créditos consumidos
+   */
+  long acertarExplicacao(ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo);
 
   /** Devolve a reserva inteira (falha, timeout, interrupção). */
   void estornar(ReservaCota reserva);

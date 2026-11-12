@@ -1,13 +1,14 @@
 package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.model.FuncaoEscritorio;
+import br.com.agrocontabil.model.TipoEscritorio;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Escritório do contador autenticado (issue #228).
+ * Escritório do contador autenticado (issues #228, #464 e #519).
  *
  * @param id          escritório
  * @param nome        nome
@@ -19,6 +20,11 @@ import java.util.UUID;
  * @param enderecoHost host completo do endereço próprio; nulo sem endereço
  * @param enderecoAlteravelEm instante a partir do qual o endereço pode ser gravado de novo; nulo =
  *                    já pode (remover é sempre permitido)
+ * @param tipo        PESSOAL ou EMPRESARIAL (issue #519)
+ * @param telefone    telefone do escritório, só dígitos; nulo sem ele (issue #519)
+ * @param endereco    endereço postal; nulo sem ele (issue #519)
+ * @param escritorioVerificado o CNPJ foi verificado pelo AgroConIA (issue #520)? Só verificado o
+ *                    endereço próprio é servido; trocar o CNPJ tira a verificação, trocar o nome não
  */
 @Schema(description = "Escritório do contador autenticado")
 public record EscritorioResponse(
@@ -40,7 +46,19 @@ public record EscritorioResponse(
     String enderecoHost,
     @Schema(description = "A partir de quando o endereço pode ser gravado de novo (30 dias entre "
         + "trocas); nulo = já pode. Remover é sempre permitido", nullable = true)
-    Instant enderecoAlteravelEm) implements ResultadoAuditavel {
+    Instant enderecoAlteravelEm,
+    @Schema(description = "PESSOAL (um usuário só, sem equipe nem endereço próprio) ou EMPRESARIAL",
+        example = "EMPRESARIAL")
+    TipoEscritorio tipo,
+    @Schema(description = "Telefone do escritório, só dígitos; nulo sem ele", example = "4533330000",
+        nullable = true)
+    String telefone,
+    @Schema(description = "Endereço postal do escritório; nulo sem ele", nullable = true)
+    EnderecoPostalResponse endereco,
+    @Schema(description = "O CNPJ foi verificado pelo AgroConIA (#520)? Sem a verificação, o "
+        + "endereço próprio fica reservado, mas não é servido. Trocar o CNPJ tira a verificação; "
+        + "trocar o nome, não", example = "true")
+    boolean escritorioVerificado) implements ResultadoAuditavel {
 
   @JsonIgnore
   @Override

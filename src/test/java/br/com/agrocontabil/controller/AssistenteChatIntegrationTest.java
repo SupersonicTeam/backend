@@ -148,7 +148,14 @@ class AssistenteChatIntegrationTest {
         .andExpect(jsonPath("$.fontesDados[0].funcao").value("totalComprasPorInsumo"))
         .andExpect(jsonPath("$.fontesDados[0].parametros.descricaoOuNcm").value("fertilizante"))
         .andExpect(jsonPath("$.fontesDados[0].parametros.dataFim").value("2026-06-30"))
-        .andExpect(jsonPath("$.fontesDados[0].origem").value("PRODUTOR"));
+        .andExpect(jsonPath("$.fontesDados[0].origem").value("PRODUTOR"))
+        // Explicacao desligada (#268, padrao): o JSON e o de antes, sem o campo.
+        .andExpect(jsonPath("$.explicacao").doesNotExist());
+    List<String> campos = new java.util.ArrayList<>();
+    JSON.readTree(resposta.andReturn().getResponse().getContentAsString()).fieldNames()
+        .forEachRemaining(campos::add);
+    assertThat(campos).containsExactlyInAnyOrder("resposta", "rota", "citacoes", "fontesDados",
+        "modoFallback", "atalhos");
     // #266: uma chamada ao modelo por pergunta; o resultado da funcao nao volta a ele.
     assertThat(modelo.promptsRecebidos()).hasSize(1);
   }

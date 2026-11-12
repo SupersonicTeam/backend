@@ -144,12 +144,16 @@ class AssistenteStreamingIntegrationTest {
     assertThat(contrato.has("fontesDados")).isTrue();
     assertThat(contrato.path("fontesDados").path(0).path("origem").asText())
         .isEqualTo("PRODUTOR");
+    // Explicacao desligada (#268, padrao): nenhum evento, campo ou chamada ao modelo a mais.
+    assertThat(contrato.has("explicacao")).isFalse();
+    assertThat(modelo.promptsRecebidos()).hasSize(1);
 
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
         .satisfies(i -> {
           assertThat(i.getRota()).isEqualTo("DADOS");
           assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+          assertThat(i.getDesfechoExplicacao()).isNull();
         });
   }
 

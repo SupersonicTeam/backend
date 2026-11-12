@@ -1,0 +1,7 @@
+node_modules/
+playwright-report/
+test-results/
+# Segredos de teste gerados pelo rodar.sh (so desta stack, nunca os da VPS).
+.env
+# Log da stack copiado pelo rodar.sh ao fim de cada rodada.
+stack.log

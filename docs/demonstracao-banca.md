@@ -45,6 +45,16 @@ um escritório que já existe. O subdomínio só abre depois do registro `A *` e
 (`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
 existindo, num escritório à parte.
 
+O escritório é **empresarial** (#519): tem equipe, CNPJ, telefone e endereço postal (Rua Parana,
+1200, Sala 3, Centro, Cascavel/PR). Na VPS já semeada, o changeSet 0062 o marca como empresarial
+(tem CNPJ), mas o telefone e o endereço postal só chegam com o reset, como o endereço próprio.
+
+O escritório tem três **modelos de pedido de documento** (#517): extrato bancário do mês,
+comprovante de pagamento do Funrural e contrato de arrendamento. Ao contrário do resto do seed, eles
+chegam à VPS na subida, sem reset: o seed cria os três quando o escritório da demonstração não tem
+nenhum modelo (um ensaio que apague só alguns fica como está). Só a Patrícia (`ADMINISTRADOR`) cria,
+edita e apaga modelo; o Rafael e a Juliana usam.
+
 ## Roteiro sugerido
 
 1. **Contador (Patrícia): a carteira.** Ordenar por urgência: o Carlos sobe por causa da guia
@@ -169,7 +179,8 @@ O que é da demonstração: o escritório "Contabilidade Rural Oeste" (nome **e*
 contadores da equipe do seed (no escritório ou removidos dele num ensaio) e os produtores da
 carteira do `CenarioDemonstracao` (nome na lista **e** vínculo com esse escritório: CPF/CNPJ vão
 cifrados ao banco), com notas, itens, validações, revisões, alertas, apurações, guias, pendências e
-anexos, notificações, vínculos e etiquetas, convites, obrigações do escritório, créditos e
+anexos, notificações, vínculos e etiquetas, convites, obrigações e modelos de pedido do
+escritório, créditos e
 interações da Ceres, credenciais, sessões e links de senha, e os endereços anteriores do escritório
 em carência (#464). Contador de fora da equipe que entrou no
 escritório (convite de equipe) **não** é apagado: sai do escritório, como na remoção pela tela, e a
@@ -180,6 +191,13 @@ entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de refe
 **Ordem (#464):** os scripts consultam a carência dos endereços (`escritorio_slug_anterior`,
 changeSet 0059). Rode-os **depois** do deploy da versão que traz esse changeSet; antes dele, o
 passo 1 falha com "relation does not exist" e nada é apagado.
+
+**Endereço da banca e a verificação do CNPJ (#520):** o `ruraloeste.agroconia.com.br` só é servido
+com o CNPJ do escritório verificado. O seed cria a Rural Oeste já verificada (método
+`DEMONSTRACAO`) e, no banco já semeado, a marca na subida do backend; o reset não muda isso. Sem o
+seed ligado (`DEMONSTRACAO_HABILITADA`), use o comando de verificação do `deploy/README.md`. O CNPJ
+não é único: um cadastro de teste com o nome **e** o CNPJ do seed também entraria no reset. Por
+isso a linha `escritorio` do passo 1 tem de dar **1** antes do passo 2.
 
 Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
 `ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro
