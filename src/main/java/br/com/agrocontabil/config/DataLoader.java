@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -57,7 +58,16 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile({"dev", "homolog"})
+@Order(DataLoader.ORDEM)
 public class DataLoader implements CommandLineRunner {
+
+  /**
+   * Posição entre os {@code CommandLineRunner}: <strong>antes</strong> do seed da demonstração
+   * (issue #470). O seed fecha os meses antigos de todos os produtores que existem no banco; sem
+   * ordem declarada, os produtores deste loader entravam no fechamento ou não conforme a ordem de
+   * registro dos beans. É o estado que a VPS tem depois do reset da demonstração.
+   */
+  public static final int ORDEM = 10;
 
   private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
 
