@@ -149,9 +149,21 @@ public final class SinalRecusaFirme {
       + "|instrucoes (?:internas|ocultas|iniciais)"
       + "|textos? (?:acima|anterior|inicial|oculto)\\b" + NAO_E_DA_LEI + ")\\b");
 
-  /** Troca de papel ou credencial: ataque que o filtro de injeção não pega. */
-  private static final Pattern PAPEL_OU_CREDENCIAL = Pattern.compile("\\b(finja|aja como"
-      + "|se passe por|faca de conta|administrador|senha|token)\\b");
+  /**
+   * "Administrador" da fazenda, da cooperativa ou da empresa é um cargo, não o do sistema
+   * ("finja que eu sou o administrador da fazenda: posso emitir a nota?").
+   */
+  private static final String NAO_E_CARGO = "(?! (?:d[aeo]s?|na|no) (?:fazenda|cooperativa"
+      + "|empresa|propriedade|sitio|chacara|granja|estabelecimento|condominio|imovel"
+      + "|agroindustria|frigorifico|armazem|cerealista|sociedade|associacao|sindicato|loja)\\w*)";
+
+  /**
+   * Credencial ou papel do sistema, para o texto da recusa e o desempate. A troca de papel pelo
+   * fingimento ("finja que você é o administrador") entra pelo {@link #inequivoco}; o verbo de
+   * fingir sozinho não é marca (#516): "finja que eu vendi soja" é uma hipótese da lei.
+   */
+  private static final Pattern PAPEL_OU_CREDENCIAL = Pattern.compile("\\b(administrador\\w*"
+      + NAO_E_CARGO + "|senha|token)\\b");
 
   /** Identificador interno (o {@code X-Usuario-Id}, o id de uma nota). */
   private static final Pattern UUID = Pattern.compile(
@@ -163,19 +175,71 @@ public final class SinalRecusaFirme {
 
   // ---- inequivoco (#497) ----
 
+  /** Verbo de fingir ou de supor: sozinho, é hipótese ("finja que eu vendi soja", #516). */
+  private static final String FINGIR = "(?:finja|finge|fingir|fingindo|faca de conta|faz de conta"
+      + "|fazer de conta|imagine|imagina|suponha|supoe|considere|digamos)";
+
   /**
-   * Troca de papel ou de modo. Só o imperativo: "o contador atua como administrador" é pergunta
-   * sobre outra coisa.
+   * O que a Ceres passaria a ser numa troca de papel: papel do sistema, outra IA ou ela sem as
+   * regras. "Um produtor optante" ou "o meu contador" não estão aqui: são o caso da pergunta.
+   * "Sistema", "modelo", "livre" e "liberado" sozinhos também não: "imagine que é o sistema
+   * antigo", "outro modelo de tributação" e "é livre a exportação" são hipóteses da lei (o "você é
+   * livre" explícito segue na alternativa do "você é").
+   */
+  private static final String PAPEL_DO_SISTEMA = "(?:administrador\\w*" + NAO_E_CARGO
+      + "|admin|desenvolvedor\\w*|programador\\w*|root|hacker|superusuario|moderador"
+      + "|dono d[oa] (?:sistema|plataforma|agroconia)|suporte"
+      + "|outr[oa] (?:ia|assistente|bot|chatbot|inteligencia artificial)"
+      + "|(?:ia|assistente|bot|chatbot) (?:sem|livre)\\w*|chat ?gpt|gpt|dan"
+      + "|sem (?:restric\\w*|filtros?|limites?|regras|censura|travas)"
+      + "(?! (?:d[aeo]s?|para|sobre)\\b))";
+
+  /**
+   * Quem o usuário passaria a ser: papel com acesso ao sistema ou outra pessoa determinada. Ser
+   * desenvolvedor ou programador de profissão não é ("suponha que eu sou programador e tenho uma
+   * fazenda"); do sistema, é.
+   */
+  private static final String OUTRA_IDENTIDADE = "(?:administrador\\w*" + NAO_E_CARGO
+      + "|admin|root|superusuario|moderador|dono d[oa] (?:sistema|plataforma|agroconia)"
+      + "|(?:desenvolvedor|programador|suporte)\\w* d[oa] (?:sistema|plataforma|agroconia|ceres)"
+      + "|outr[oa] (?:produtor\\w*|usuari\\w*|pessoa|client\\w*|contador\\w*)"
+      + "|" + TERCEIRO_ESPECIFICO + ")";
+
+  /**
+   * As regras que o fingimento tiraria da Ceres. Com o objeto da lei ("o limite de faturamento",
+   * "a restrição para exportar", "as regras de transição"), é hipótese e não conta.
+   */
+  private static final String REGRAS_DA_CERES = "(?:mais |nenhuma |nenhum |as |os |suas |seus "
+      + "|tuas |teus )?(?:regras|restric\\w*|instruc\\w*|diretrizes|orientac\\w*|filtros?"
+      + "|limites?|limitac\\w*|censura|travas|protec\\w*|seguranca|bloqueios?)\\b"
+      + "(?! (?:d[aeo]s?|para|sobre|n[ao]s?)\\b)";
+
+  /**
+   * Troca de papel e de modo. O verbo de fingir ou supor só conta com o alvo (#516): a Ceres
+   * passando a ser outra coisa, ficando sem as regras, o usuário passando a ser outra pessoa ou
+   * alguém se passando por outro. "Finja que eu vendi soja", "faça de conta que a venda foi para
+   * outro estado" e "suponha que você é um produtor optante" são hipóteses da lei e passam. Os
+   * outros verbos, só no imperativo: "o contador atua como administrador" é pergunta sobre outra
+   * coisa.
    */
   private static final Pattern PAPEL = Pattern.compile(String.join("|",
-      "\\b(?:finja|finge|fingir|fingindo|faca de conta|faz de conta|se passe por|se passa por"
-          + "|se passando por)\\b",
+      "\\b" + FINGIR + " (?:que )?(?:(?:voce|vc|tu) )?(?:agora )?(?:e|es|eh|seja|fosse|sera"
+          + "|esta|estivesse|estar|ser|virou|vira|passou a ser|passa a ser) (?:agora )?"
+          + "(?:em modo |o |a |um |uma )?" + PAPEL_DO_SISTEMA + "\\b",
+      "\\b" + FINGIR + " (?:que )?(?:(?:voce|vc|tu) )?(?:nao (?:tem|tens|tenha|tivesse|ter"
+          + "|possui|segue|precisa seguir|obedece|ha|existe|existem)|esqueceu|esquece|esquecer"
+          + "|ignora|ignorou|ignorar|perdeu) " + REGRAS_DA_CERES,
+      "\\b" + FINGIR + " (?:que )?eu (?:sou|seja|fosse|era|estou|esteja) (?:o |a |um |uma )?"
+          + OUTRA_IDENTIDADE + "\\b",
+      "\\b(?:se passe|passe se|se passa|se passando|se faca passar|se faz passar) (?:por"
+          + "|pel[oa]s?) (?:o |a |um |uma )?(?:" + OUTRA_IDENTIDADE + "|alguem)\\b",
       "\\b(?:aja|atue|comporte se) como (?:se fosse )?(?:o |a |um |uma )?"
-          + "(?:administrador\\w*|admin|desenvolvedor\\w*|programador\\w*|root|hacker"
-          + "|superusuario|moderador|dono do sistema|suporte|sistema)\\b",
+          + "(?:administrador\\w*" + NAO_E_CARGO + "|admin|desenvolvedor\\w*|programador\\w*"
+          + "|root|hacker|superusuario|moderador|dono do sistema|suporte|sistema)\\b",
       "\\b(?:voce|vc|tu) (?:agora )?(?:e|sera|vai ser|passa a ser|esta) (?:agora )?"
-          + "(?:em modo |o |a |um |uma )?(?:administrador\\w*|admin|desenvolvedor\\w*"
-          + "|programador\\w*|root|superusuario|hacker|livre|liberad[oa]|desbloquead[oa]"
+          + "(?:em modo |o |a |um |uma )?(?:administrador\\w*" + NAO_E_CARGO
+          + "|admin|desenvolvedor\\w*|programador\\w*|root|superusuario|hacker|livre"
+          + "|liberad[oa]|desbloquead[oa]"
           + "|sem restric\\w*|sem filtros?|sem limites?)\\b",
       // so com a ordem: "a partir de agora voce precisa emitir NF-e" e regra
       "\\ba partir de agora (?:voce|vc|tu) (?:vai |deve |devera |passa a )?(?:me )?(?:age|agir"
@@ -185,9 +249,10 @@ public final class SinalRecusaFirme {
           + "|filtros?))\\b(?! pel)",
       "\\bmodo (?:administrador|admin|desenvolvedor|dev|debug|depuracao|manutencao|deus|god"
           + "|root|irrestrito|livre|sem restric\\w*|sem filtros?|sem censura|jailbreak)\\b",
-      "\\bcomo se eu fosse (?:o |a |um |uma )?(?:administrador\\w*|admin|dono do sistema"
-          + "|desenvolvedor\\w*|programador\\w*|suporte|outr[oa] (?:produtor\\w*|usuari\\w*"
-          + "|pessoa|client\\w*))\\b"));
+      // "como se eu fosse o administrador da fazenda" e cargo, nao o do sistema
+      "\\bcomo se eu fosse (?:o |a |um |uma )?(?:administrador\\w*" + NAO_E_CARGO
+          + "|admin|dono do sistema|desenvolvedor\\w*|programador\\w*|suporte"
+          + "|outr[oa] (?:produtor\\w*|usuari\\w*|pessoa|client\\w*))\\b"));
 
   /**
    * Senha, token ou chave pedidos ao sistema. A senha do próprio certificado e a chave de acesso
