@@ -75,6 +75,7 @@ public final class ContextoAssistente {
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
   private final AtomicReference<DesfechoFidelidadeLei> fidelidadeLei = new AtomicReference<>();
+  private final AtomicReference<JuizLei> juizLei = new AtomicReference<>();
   private final AtomicBoolean trechosRelacionados = new AtomicBoolean();
   private final AtomicBoolean classificacaoCortada = new AtomicBoolean();
   private final List<TextoDoBackend> textosDoBackend =
@@ -166,6 +167,27 @@ public final class ContextoAssistente {
   /** Desfecho da conferência de fidelidade; nulo se ela não rodou (flag desligada, outra rota...). */
   public DesfechoFidelidadeLei fidelidadeLei() {
     return fidelidadeLei.get();
+  }
+
+  /**
+   * Tempo e tokens da chamada do juiz da fidelidade da lei (#269, camada 2). Os tokens também
+   * estão nos totais da pergunta ({@link #tokensEntrada}), que a cota acerta; a auditoria os grava
+   * à parte e tira do total da pergunta, para a soma das colunas ser o total.
+   *
+   * @param latenciaMs    duração da chamada
+   * @param tokensEntrada tokens de entrada da chamada (0 se ela não terminou)
+   * @param tokensSaida   tokens de saída da chamada (0 se ela não terminou)
+   */
+  public record JuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {}
+
+  /** Registra o tempo e os tokens do juiz (#269); uma vez por pergunta, a última vale. */
+  public void registrarJuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {
+    juizLei.set(new JuizLei(latenciaMs, tokensEntrada, tokensSaida));
+  }
+
+  /** Tempo e tokens do juiz; nulo se ele não rodou. */
+  public JuizLei juizLei() {
+    return juizLei.get();
   }
 
   /**

@@ -57,6 +57,19 @@ public class AuditoriaAssistente {
    */
   public UUID registrar(ContextoAssistente contexto, String rota, DesfechoInteracao desfecho,
       String modelo, long latenciaMs, int tamanhoPergunta) {
+    // Juiz da fidelidade da lei (#269): os tokens e o tempo dele estao nos totais da pergunta (a
+    // cota acerta pelo total); aqui saem dos da pergunta e vao a colunas proprias, para a soma das
+    // colunas ser o total, como na explicacao (#268).
+    ContextoAssistente.JuizLei juiz = contexto.juizLei();
+    Integer tokensEntrada = contexto.tokensEntrada();
+    Integer tokensSaida = contexto.tokensSaida();
+    long latencia = latenciaMs;
+    if (juiz != null) {
+      tokensEntrada = tokensEntrada == null ? null
+          : Math.max(0, tokensEntrada - juiz.tokensEntrada());
+      tokensSaida = tokensSaida == null ? null : Math.max(0, tokensSaida - juiz.tokensSaida());
+      latencia = Math.max(0, latenciaMs - juiz.latenciaMs());
+    }
     return porta.registrar(new RegistroInteracao(
         contexto.produtorId(),
         rota,
@@ -69,13 +82,16 @@ public class AuditoriaAssistente {
         contexto.chamadasDeFuncao(),
         contexto.trechosCitados().isEmpty() ? null : json(contexto.trechosCitados()),
         modelo,
-        latenciaMs,
-        contexto.tokensEntrada(),
-        contexto.tokensSaida(),
+        latencia,
+        tokensEntrada,
+        tokensSaida,
         contexto.tokensEstimados(),
         tamanhoPergunta,
         OffsetDateTime.now(clock),
-        contexto.fidelidadeLei()));
+        contexto.fidelidadeLei(),
+        juiz == null ? null : juiz.latenciaMs(),
+        juiz == null ? null : juiz.tokensEntrada(),
+        juiz == null ? null : juiz.tokensSaida()));
   }
 
   /**

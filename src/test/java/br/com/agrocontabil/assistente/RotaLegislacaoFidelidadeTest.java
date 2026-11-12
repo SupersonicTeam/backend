@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.fidelidade.ConferenciaFidelidadeLei;
+import br.com.agrocontabil.assistente.fidelidade.JuizFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
@@ -64,12 +65,22 @@ class RotaLegislacaoFidelidadeTest {
   }
 
   private RotaLegislacao rota(boolean ligada, double cobertura) {
+    return rota(ligada, cobertura, false);
+  }
+
+  private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz) {
     AssistenteProperties propriedades = new AssistenteProperties();
     propriedades.getFidelidadeLei().setEnabled(ligada);
     propriedades.getFidelidadeLei().setCoberturaMinima(cobertura);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(juiz);
     return new RotaLegislacao(modelo, busca, new ValidadorCitacao(), new ValidadorNumeros(),
         new VerificadorAfirmacaoDados(), propriedades,
-        new ConferenciaFidelidadeLei(GlossarioProdutor.padrao()));
+        new ConferenciaFidelidadeLei(GlossarioProdutor.padrao()),
+        new JuizFidelidadeLei(modelo, propriedades));
+  }
+
+  private RotaLegislacao comJuiz() {
+    return rota(true, 0.7, true);
   }
 
   private RotaLegislacao ligada() {
@@ -108,8 +119,11 @@ class RotaLegislacaoFidelidadeTest {
     String promptAntes = sistemaRecebido();
 
     ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
-    ResultadoRota depois = rota(false, 0.7).responder("Qual a reducao dos insumos?", outro);
+    // O juiz ligado sem a camada 1 nao tem efeito (#269).
+    ResultadoRota depois = rota(false, 0.7, true).responder("Qual a reducao dos insumos?", outro);
 
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
+    assertThat(outro.juizLei()).isNull();
     assertThat(sistemaRecebido()).isEqualTo(promptAntes)
         .isEqualTo(PromptsCeres.sistemaLegislacao(HOJE, RotaLegislacao.formatar(List.of(INSUMOS))));
     assertThat(depois).isEqualTo(antes);
@@ -307,5 +321,109 @@ class RotaLegislacaoFidelidadeTest {
 
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
     assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+  }
+  private static final String SUSTENTADA = "{\"frases\": [{\"frase\": \"Os insumos "
+      + "agropecuarios tem as aliquotas reduzidas em 60%.\", \"evidencias\": [{\"trecho\": "
+      + "\"T1\", \"copia\": \"Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes "
+      + "sobre os insumos agropecuarios\"}]}]}";
+
+  @Test
+  @DisplayName("juiz desligado com a camada 1 ligada: uma chamada só, sem métricas do juiz")
+  void juizDesligadoNaoChama() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto(SUSTENTADA);
+
+    ResultadoRota r = ligada().responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
+
+  @Test
+  @DisplayName("juiz ligado e SUSTENTA: a resposta sai, depois de uma segunda chamada com o juiz")
+  void juizAprova() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(SUSTENTADA),
+        ChatModelSimulado.texto("{\"vereditos\": [\"SUSTENTA\"]}"));
+
+    ResultadoRota r = comJuiz().responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.texto()).startsWith("Os insumos agropecuarios tem as aliquotas reduzidas em 60% "
+        + "(LC 214/2025, art. 138).");
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
+    assertThat(sistemaRecebido()).isEqualTo(PromptsCeres.JUIZ_FIDELIDADE);
+    assertThat(chatModel.promptsRecebidos().get(1).getUserMessage().getText())
+        .startsWith("Frase 1: Os insumos agropecuarios tem as aliquotas reduzidas em 60%.")
+        .contains("Passagem: Ficam reduzidas em 60%")
+        .doesNotContain("Qual a reducao");
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+    assertThat(contexto.juizLei()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("juiz ligado e NAO_SUSTENTA, CONTRADIZ ou falha: o caminho da camada 1")
+  void juizReprova() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    for (var caso : java.util.Map.of(
+        "{\"vereditos\": [\"NAO_SUSTENTA\"]}", DesfechoFidelidadeLei.REPROVADA_JUIZ_NAO_SUSTENTA,
+        "{\"vereditos\": [\"CONTRADIZ\"]}", DesfechoFidelidadeLei.REPROVADA_JUIZ_CONTRADIZ,
+        "{\"vereditos\": []}", DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA).entrySet()) {
+      chatModel.responderEmSequencia(ChatModelSimulado.texto(SUSTENTADA),
+          ChatModelSimulado.texto(caso.getKey()));
+      ContextoAssistente c = new ContextoAssistente(UUID.randomUUID(), HOJE);
+
+      ResultadoRota r = comJuiz().responder("Qual a reducao dos insumos?", c);
+
+      assertThat(r.desfecho()).as(caso.getKey()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+      assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+      assertThat(r.citacoes()).extracting(CitacaoLegal::dispositivo).containsExactly("art. 138");
+      assertThat(c.fidelidadeLei()).isEqualTo(caso.getValue());
+      assertThat(c.trechosCitados()).containsExactly("id-1");
+    }
+  }
+
+  @Test
+  @DisplayName("juiz ligado: a cobertura exigida em código cai para a com juiz (0,3)")
+  void juizBaixaACobertura() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // "fertilizantes" e "defensivos" fora da copia: 4 de 6 palavras de conteudo (0,67).
+    String parafrase = "{\"frases\": [{\"frase\": \"Fertilizantes e defensivos sao insumos "
+        + "agropecuarios com aliquotas reduzidas.\", \"evidencias\": [{\"trecho\": \"T1\", "
+        + "\"copia\": \"Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os "
+        + "insumos agropecuarios\"}]}]}";
+    chatModel.responderTexto(parafrase);
+    assertThat(ligada().responder("Insumos?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(parafrase),
+        ChatModelSimulado.texto("{\"vereditos\": [\"NAO_SUSTENTA\"]}"));
+    ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(comJuiz().responder("Insumos?", outro).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    // Passou da camada 1 (com o piso de 0,3) e foi o juiz quem reprovou.
+    assertThat(outro.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_NAO_SUSTENTA);
+  }
+
+  @Test
+  @DisplayName("juiz ligado não é chamado quando a camada 1 ou os validadores já descartam")
+  void juizNaoGastaChamadaEmDescarte() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto("texto fora do formato");
+    assertThat(comJuiz().responder("Insumos?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+
+    TrechoRecuperado combustivel = new TrechoRecuperado("T1", "id-c", "LC 214/2025", "art. 172",
+        URL, "Art. 172. A base de calculo do IBS e da CBS sobre combustiveis e a quantidade.", 0.9);
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(combustivel));
+    chatModel.responderTexto(json("A base de calculo do IBS e da CBS e a quantidade.", "T1",
+        "A base de calculo do IBS e da CBS sobre combustiveis e a quantidade"));
+    ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(comJuiz().responder("Qual a base de calculo do IBS?", outro).desfecho())
+        .isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+    assertThat(outro.juizLei()).isNull();
   }
 }

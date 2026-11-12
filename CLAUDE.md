@@ -318,6 +318,12 @@ br.com.agrocontabil
 │                  #   FIDELIDADE_REPROVADA (descarte na régua da avaliação); o motivo vai em
 │                  #   assistente_interacao.fidelidade_lei (changeSet 0065). Desligada = prompt e resultado da main
 │                  #   (RotaLegislacaoFidelidadeTest). Ligar exige medição no conjunto novo e OK do Murillo;
+│                  #   camada 2, o juiz (fidelidade/JuizFidelidadeLei; app.assistente.fidelidade-lei.juiz.enabled /
+│                  #   AI_FIDELIDADE_LEI_JUIZ_HABILITADO, DESLIGADO por padrão, só com a camada 1): uma chamada ao
+│                  #   modelo com as frases e as cópias, veredito SUSTENTA/NAO_SUSTENTA/CONTRADIZ por frase; só
+│                  #   reprova, falha fecha (REPROVADA_JUIZ_*); cobertura cai para cobertura-minima-com-juiz (0,3);
+│                  #   teto tetos.juiz (128) como parcela da reserva da pergunta (AssistenteProperties.tetoDaPergunta);
+│                  #   tempo e tokens em latencia_juiz_ms/tokens_*_juiz, fora dos da pergunta;
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo, pagando só a leitura da mensagem (#511); dados → RotaDados.responderAtalho, lei →
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,

@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -149,6 +151,47 @@ public final class PromptsCeres {
       usuario: outra parte do sistema responde sobre isso. Nunca escreva "voce", "seu", "sua" \
       nem diga o que o usuario comprou, vendeu ou tem direito.
       """;
+
+  /**
+   * Instrução do juiz da fidelidade da lei (#269, camada 2, {@code
+   * app.assistente.fidelidade-lei.juiz.enabled}): toda fixa, igual byte a byte entre perguntas
+   * (cache de prefixo, #270); as frases e as cópias vão na mensagem do usuário
+   * ({@link #mensagemJuiz}). O juiz só reprova: o veredito nunca vira texto ao produtor.
+   */
+  public static final String JUIZ_FIDELIDADE = """
+      Voce confere se cada frase e sustentada pelas passagens de lei copiadas ao lado dela.
+
+      Para cada frase, responda:
+      - SUSTENTA: tudo o que a frase afirma esta dito nas passagens, com o mesmo sentido, mesmo \
+      que em palavras mais simples.
+      - NAO_SUSTENTA: a frase afirma algo que as passagens nao dizem (condicao, consequencia, \
+      exemplo, alcance maior), ou deixa de fora uma excecao ou condicao delas que muda o sentido.
+      - CONTRADIZ: a frase diz o contrario das passagens.
+
+      Use so as passagens. Nao use conhecimento proprio.
+      Responda somente com JSON, sem nada antes ou depois, com um veredito por frase, na ordem:
+      {"vereditos": ["SUSTENTA", "NAO_SUSTENTA", "CONTRADIZ"]}
+      """;
+
+  /**
+   * Mensagem do juiz (#269): cada frase numerada, seguida das passagens copiadas dela. Quem chama
+   * passa o texto pelo {@code DataSanitizer}.
+   *
+   * @param frases frases, na ordem, cada uma com as cópias
+   * @return mensagem do usuário
+   */
+  public static String mensagemJuiz(List<Map.Entry<String, List<String>>> frases) {
+    StringBuilder sb = new StringBuilder();
+    int n = 0;
+    for (Map.Entry<String, List<String>> frase : frases) {
+      sb.append("Frase ").append(++n).append(": ").append(frase.getKey()).append('\n');
+      for (String copia : frase.getValue()) {
+        sb.append("Passagem: ").append(copia).append('\n');
+      }
+      sb.append('\n');
+    }
+    return sb.toString().strip();
+  }
 
   /**
    * Prompt de lei com evidência por frase (#269), usado só com a flag

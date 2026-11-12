@@ -28,5 +28,18 @@ public enum DesfechoFidelidadeLei {
    */
   REPROVADA_POLARIDADE,
   /** Uma frase com palavras de conteúdo demais fora da evidência: afirma além do trecho. */
-  REPROVADA_COBERTURA
+  REPROVADA_COBERTURA,
+  /**
+   * Camada 2, o juiz ({@code app.assistente.fidelidade-lei.juiz.enabled}): o modelo leu uma frase
+   * e as cópias dela e respondeu que elas não sustentam tudo o que a frase afirma.
+   */
+  REPROVADA_JUIZ_NAO_SUSTENTA,
+  /** Camada 2: o juiz respondeu que uma frase diz o contrário das cópias dela. */
+  REPROVADA_JUIZ_CONTRADIZ,
+  /**
+   * Camada 2: o juiz falhou (modelo indisponível, JSON ilegível, veredito desconhecido, resposta
+   * cortada pelo teto ou número de vereditos diferente do de frases). Falha fecha: a resposta
+   * reprova.
+   */
+  REPROVADA_JUIZ_FALHA
 }

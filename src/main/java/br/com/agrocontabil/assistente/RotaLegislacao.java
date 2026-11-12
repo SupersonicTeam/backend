@@ -1,11 +1,13 @@
 package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.fidelidade.ConferenciaFidelidadeLei;
+import br.com.agrocontabil.assistente.fidelidade.JuizFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -48,6 +50,11 @@ import org.springframework.stereotype.Component;
  * número, a negação e a cobertura de cada frase, e põe a citação no nível do dispositivo em que a
  * passagem está. Reprovada, o texto do modelo sai e ficam os trechos que ele marcou, sem afirmar que
  * respondem (desfecho {@code FIDELIDADE_REPROVADA}). Desligada, nada muda.
+ *
+ * <p><strong>Juiz (#269, camada 2, {@code app.assistente.fidelidade-lei.juiz.enabled}, desligado
+ * por padrão, só com a camada 1 ligada):</strong> depois de todas as conferências em código, uma
+ * chamada ao modelo ({@link JuizFidelidadeLei}) julga se as cópias sustentam cada frase. Qualquer
+ * frase sem {@code SUSTENTA}, ou a falha do juiz, reprova a resposta pelo mesmo caminho da camada 1.
  */
 @Component
 public class RotaLegislacao {
@@ -101,6 +108,8 @@ public class RotaLegislacao {
   private final int tetoSaida;
   /** Nula = conferência de fidelidade desligada (flag desligada ou construtor sem ela). */
   private final ConferenciaFidelidadeLei conferencia;
+  /** Nulo = juiz desligado (chave, camada 1 desligada ou construtor sem ele). */
+  private final JuizFidelidadeLei juiz;
   private final double coberturaMinima;
 
   /**
@@ -110,18 +119,20 @@ public class RotaLegislacao {
   public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
       ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
       VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades) {
-    this(modelo, busca, validadorCitacao, validadorNumeros, verificadorDados, propriedades, null);
+    this(modelo, busca, validadorCitacao, validadorNumeros, verificadorDados, propriedades, null,
+        null);
   }
 
   /**
    * Constrói a rota; a conferência de fidelidade só roda com
-   * {@code app.assistente.fidelidade-lei.enabled} (#269).
+   * {@code app.assistente.fidelidade-lei.enabled}, e o juiz só com ela e
+   * {@code app.assistente.fidelidade-lei.juiz.enabled} (#269).
    */
   @Autowired
   public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
       ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
       VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades,
-      ConferenciaFidelidadeLei conferencia) {
+      ConferenciaFidelidadeLei conferencia, JuizFidelidadeLei juiz) {
     this.modelo = modelo;
     this.busca = busca;
     this.validadorCitacao = validadorCitacao;
@@ -130,7 +141,10 @@ public class RotaLegislacao {
     this.tetoSaida = propriedades.getTetos().getLegislacao();
     AssistenteProperties.FidelidadeLei fidelidade = propriedades.getFidelidadeLei();
     this.conferencia = fidelidade.isEnabled() ? conferencia : null;
-    this.coberturaMinima = fidelidade.getCoberturaMinima();
+    this.juiz = this.conferencia != null && propriedades.juizDaLeiAtivo() ? juiz : null;
+    this.coberturaMinima = this.juiz != null
+        ? fidelidade.getCoberturaMinimaComJuiz()
+        : fidelidade.getCoberturaMinima();
   }
 
   /**
@@ -228,9 +242,11 @@ public class RotaLegislacao {
     // Com a conferencia de fidelidade (#269) a citacao pode apontar um ancestral (o caput) que a
     // busca nao trouxe: ele entra depois dos trechos recebidos, com a marca seguinte.
     List<TrechoRecuperado> citaveis = trechos;
+    ConferenciaFidelidadeLei.Resultado conferida = null;
     if (conferencia != null) {
       ConferenciaFidelidadeLei.Resultado fidelidade =
           conferencia.conferir(texto, trechos, coberturaMinima);
+      conferida = fidelidade;
       contexto.registrarFidelidadeLei(fidelidade.desfecho());
       if (!fidelidade.aprovada()) {
         log.info("Ceres: resposta de legislacao reprovada na conferencia de fidelidade ({})",
@@ -282,15 +298,28 @@ public class RotaLegislacao {
     }
     // distinct: com a fidelidade (#269), o ancestral que a busca nao trouxe leva o id do trecho em
     // que a copia foi achada, e os dois podem ser citados. Sem ela os ids ja sao distintos.
-    contexto.registrarTrechosCitados(citacao.idsCitados().stream().distinct().toList());
+    List<String> idsCitados = citacao.idsCitados().stream().distinct().toList();
     String regra = soRegraGeral && perguntaSeparada
         ? semSimOuNaoInicial(citacao.texto())
         : citacao.texto();
     if (soRegraGeral && verificadorDados.afirmaSobreDados(regra)) {
       log.info("Ceres: parte de legislacao do MISTO falou dos dados do produtor; so trechos");
+      contexto.registrarTrechosCitados(idsCitados);
       return new ResultadoRota(
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
+    if (juiz != null && conferida != null) {
+      // Camada 2 (#269): depois de todas as conferencias em codigo, para nao gastar a chamada numa
+      // resposta que elas ja descartariam. So reprova, nunca reescreve. Os trechos citados sao
+      // registrados depois dele: reprovada, ficam so os que o modelo marcou.
+      DesfechoFidelidadeLei veredito = juiz.julgar(conferida.frases(), contexto);
+      if (veredito != null) {
+        log.info("Ceres: resposta de legislacao reprovada pelo juiz da fidelidade ({})", veredito);
+        contexto.registrarFidelidadeLei(veredito);
+        return fidelidadeReprovada(conferida, trechos, contexto, soRegraGeral, perguntaSeparada);
+      }
+    }
+    contexto.registrarTrechosCitados(idsCitados);
     // Depois de todas as conferencias (#269): a linha do glossario e do backend, sem numero, e nao
     // pode ser lida como parte do que o modelo afirmou.
     return ResultadoRota.aceita(LinhaGlossario.acrescentadaA(regra), citacao.citacoes());

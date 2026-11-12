@@ -180,4 +180,30 @@ class AssistentePropertiesTest {
           .hasMessageContaining("app.assistente.fidelidade-lei.cobertura-minima");
     }
   }
+
+  @Test
+  @DisplayName("#269: juiz desligado por padrao, cobertura com juiz 0,3, teto do juiz 128")
+  void juizDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().isEnabled()).isFalse();
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinimaComJuiz()).isEqualTo(0.3);
+    assertThat(p.getTetos().getJuiz()).isEqualTo(128);
+    assertThat(p.getFidelidadeLei().coberturaEmVigor()).isEqualTo(0.7);
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(p.getFidelidadeLei().coberturaEmVigor()).isEqualTo(0.3);
+    // O juiz so roda com a camada 1.
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.juizDaLeiAtivo()).isTrue();
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("cobertura-minima-com-juiz");
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0.3);
+    p.getTetos().setJuiz(AssistenteProperties.Tetos.MINIMO - 1);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.juiz");
+  }
 }

@@ -649,15 +649,22 @@ class LiquibaseChangelogIntegrationTest {
     UUID reprovada = interacaoService.registrar(AssistenteInteracao.builder()
         .produtorId(UUID.fromString(produtor)).rota("LEGISLACAO")
         .desfecho(DesfechoInteracao.FIDELIDADE_REPROVADA)
-        .fidelidadeLei(DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL).latenciaMs(10)
+        .fidelidadeLei(DesfechoFidelidadeLei.REPROVADA_JUIZ_CONTRADIZ).latenciaMs(10)
+        .latenciaJuizMs(900L).tokensEntradaJuiz(700).tokensSaidaJuiz(12)
         .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
 
-    assertThat(jdbc.queryForObject("SELECT fidelidade_lei FROM assistente_interacao WHERE id = ?",
-        String.class, semConferencia)).isNull();
-    assertThat(jdbc.queryForMap("SELECT desfecho, fidelidade_lei FROM assistente_interacao"
-        + " WHERE id = ?", reprovada))
+    assertThat(jdbc.queryForMap("SELECT fidelidade_lei, latencia_juiz_ms, tokens_entrada_juiz,"
+        + " tokens_saida_juiz FROM assistente_interacao WHERE id = ?", semConferencia))
+        .containsEntry("fidelidade_lei", null).containsEntry("latencia_juiz_ms", null)
+        .containsEntry("tokens_entrada_juiz", null).containsEntry("tokens_saida_juiz", null);
+    assertThat(jdbc.queryForMap("SELECT desfecho, fidelidade_lei, latencia_juiz_ms,"
+        + " tokens_entrada_juiz, tokens_saida_juiz FROM assistente_interacao WHERE id = ?",
+        reprovada))
         .containsEntry("desfecho", "FIDELIDADE_REPROVADA")
-        .containsEntry("fidelidade_lei", "REPROVADA_EVIDENCIA_NAO_LITERAL");
+        .containsEntry("fidelidade_lei", "REPROVADA_JUIZ_CONTRADIZ")
+        .containsEntry("latencia_juiz_ms", 900L)
+        .containsEntry("tokens_entrada_juiz", 700)
+        .containsEntry("tokens_saida_juiz", 12);
   }
 
   @Test
@@ -1486,10 +1493,11 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
         "desfecho_explicacao", "desfecho_legislacao", "fidelidade_lei",
-        "funcoes", "id", "latencia_explicacao_ms", "latencia_ms", "modelo",
+        "funcoes", "id", "latencia_explicacao_ms", "latencia_juiz_ms", "latencia_ms", "modelo",
         "pergunta_lei_reescrita", "produtor_id", "rota",
-        "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_estimados",
-        "tokens_saida", "tokens_saida_explicacao", "trechos_citados");
+        "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_entrada_juiz",
+        "tokens_estimados", "tokens_saida", "tokens_saida_explicacao", "tokens_saida_juiz",
+        "trechos_citados");
     // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
     assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")
         || c.equals("texto"));

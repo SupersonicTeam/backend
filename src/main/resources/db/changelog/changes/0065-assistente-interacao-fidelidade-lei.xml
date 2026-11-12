@@ -16,14 +16,21 @@
            conferencia nao roda (flag desligada, outra rota, sem trecho,
            NAO_ENCONTREI, resposta cortada) e nas perguntas gravadas antes
            desta mudanca.
-         So o enum: o texto da resposta e as passagens copiadas pelo modelo
-         nunca sao gravados (#144).
+         - latencia_juiz_ms, tokens_entrada_juiz e tokens_saida_juiz: tempo e
+           tokens do juiz (camada 2, app.assistente.fidelidade-lei.juiz.enabled).
+           Nulos quando ele nao roda. Com ele, latencia_ms, tokens_entrada e
+           tokens_saida da pergunta sao sem o juiz: a soma das colunas e o total.
+         So o enum e as metricas: o texto da resposta, as passagens copiadas
+         e o veredito por frase nunca sao gravados (#144).
          ================================================================ -->
 
     <changeSet id="0065-add-fidelidade-lei-assistente-interacao" author="supersonic-team">
-        <comment>Desfecho da conferencia de fidelidade da rota de lei da Ceres (#269).</comment>
+        <comment>Fidelidade da rota de lei da Ceres e metricas do juiz (#269).</comment>
         <addColumn tableName="assistente_interacao">
             <column name="fidelidade_lei" type="VARCHAR(40)"/>
+            <column name="latencia_juiz_ms" type="BIGINT"/>
+            <column name="tokens_entrada_juiz" type="INTEGER"/>
+            <column name="tokens_saida_juiz" type="INTEGER"/>
         </addColumn>
     </changeSet>
 

@@ -88,6 +88,21 @@ public class AssistenteInteracao {
       columnDefinition = "VARCHAR(40)")
   private DesfechoFidelidadeLei fidelidadeLei;
 
+  /**
+   * Tempo da chamada do juiz da fidelidade da lei (#269, camada 2, changeSet 0065); nulo se ele não
+   * rodou. Com ele, {@code latenciaMs} é o da pergunta sem o juiz: a soma é o total.
+   */
+  @Column(name = "latencia_juiz_ms", updatable = false)
+  private Long latenciaJuizMs;
+
+  /** Tokens de entrada do juiz (#269); nulo se ele não rodou. Fora de {@code tokensEntrada}. */
+  @Column(name = "tokens_entrada_juiz", updatable = false)
+  private Integer tokensEntradaJuiz;
+
+  /** Tokens de saída do juiz (#269); nulo se ele não rodou. Fora de {@code tokensSaida}. */
+  @Column(name = "tokens_saida_juiz", updatable = false)
+  private Integer tokensSaidaJuiz;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;

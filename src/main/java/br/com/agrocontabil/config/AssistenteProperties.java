@@ -145,7 +145,7 @@ public class AssistenteProperties implements InitializingBean {
           + cota.getTetoTokensEntradaPorChamada() + ") deve ser >= app.assistente.tetos.contexto ("
           + tetos.getContexto() + ")");
     }
-    long teto = cota.tetoDaPergunta(tetos, cota.maiorFator());
+    long teto = tetoDaPergunta(cota.maiorFator());
     long menorPlano = Math.min(
         cota.getCreditosPorSemanaProdutor(), cota.getCreditosPorSemanaEscritorio());
     if (cota.isHabilitada() && teto > menorPlano) {
@@ -173,6 +173,28 @@ public class AssistenteProperties implements InitializingBean {
     }
     explicacao.validar(timeoutPergunta);
     fidelidadeLei.validar();
+  }
+
+  /**
+   * {@code true} se o juiz da fidelidade da lei (#269, camada 2) roda: ele e a camada 1 ligados.
+   * Só então a reserva da pergunta inclui a chamada dele.
+   */
+  public boolean juizDaLeiAtivo() {
+    return fidelidadeLei.isEnabled() && fidelidadeLei.getJuiz().isEnabled();
+  }
+
+  /**
+   * Custo máximo de uma pergunta (#166): as chamadas da fórmula ({@link Cota#tetoDaPergunta}) e,
+   * com o juiz da lei ativo (#269), a chamada dele como parcela própria
+   * ({@link Cota#tetoDoJuiz}). O juiz roda no meio da pergunta e os tokens dele entram nos da
+   * pergunta: por isso a parcela fica na reserva dela, não numa reserva à parte como a explicação.
+   *
+   * @param fator fator de custo do modelo
+   * @return créditos
+   */
+  public long tetoDaPergunta(double fator) {
+    long teto = cota.tetoDaPergunta(tetos, fator);
+    return juizDaLeiAtivo() ? teto + cota.tetoDoJuiz(tetos, fator) : teto;
   }
 
   public FidelidadeLei getFidelidadeLei() {
@@ -459,6 +481,15 @@ public class AssistenteProperties implements InitializingBean {
     }
 
     /**
+     * Custo máximo do juiz da fidelidade da lei (#269, camada 2): uma chamada, com o teto de entrada
+     * e o teto de saída próprio ({@code app.assistente.tetos.juiz}). Entra na reserva da pergunta
+     * só com o juiz ativo ({@code AssistenteProperties.tetoDaPergunta}).
+     */
+    public long tetoDoJuiz(Tetos tetos, double fator) {
+      return creditos(tetoTokensEntradaPorChamada, tetos.getJuiz(), fator);
+    }
+
+    /**
      * Custo máximo da explicação depois da resposta de dados (#268): uma chamada, com o teto de
      * entrada e o teto de saída próprio ({@code app.assistente.tetos.explicacao}). É uma reserva à
      * parte, feita só quando a explicação vai acontecer; sem saldo para ela, a resposta sai sem a
@@ -655,6 +686,12 @@ public class AssistenteProperties implements InitializingBean {
     private int legislacao = 1024;
 
     /**
+     * Juiz da fidelidade da lei (#269, camada 2): um veredito curto por frase em JSON. Entra na
+     * reserva da pergunta só com o juiz ativo ({@link Cota#tetoDoJuiz}).
+     */
+    private int juiz = 128;
+
+    /**
      * Janela de contexto do modelo (o {@code num-ctx} do Ollama, lido da mesma propriedade). Só
      * para a validação: nenhum teto pode comer mais da metade dela, que é do prompt.
      */
@@ -669,6 +706,7 @@ public class AssistenteProperties implements InitializingBean {
       exigirTeto("explicacao", explicacao);
       exigirTeto("classificacao", classificacao);
       exigirTeto("legislacao", legislacao);
+      exigirTeto("juiz", juiz);
     }
 
     private void exigirTeto(String nome, int valor) {
@@ -704,6 +742,14 @@ public class AssistenteProperties implements InitializingBean {
 
     public int getLegislacao() {
       return legislacao;
+    }
+
+    public int getJuiz() {
+      return juiz;
+    }
+
+    public void setJuiz(int juiz) {
+      this.juiz = juiz;
     }
 
     public void setLegislacao(int legislacao) {
@@ -841,11 +887,66 @@ public class AssistenteProperties implements InitializingBean {
      */
     private double coberturaMinima = 0.7;
 
-    void validar() {
-      if (!(coberturaMinima > 0 && coberturaMinima <= 1)) {
-        throw new IllegalStateException("app.assistente.fidelidade-lei.cobertura-minima deve estar"
-            + " entre 0 (exclusive) e 1, recebido: " + coberturaMinima);
+    /**
+     * A mesma fração com o juiz ativo ({@code AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ}): um
+     * piso baixo, para a paráfrase em linguagem simples passar; quem decide o sentido passa a ser o
+     * juiz. Literalidade, número e polaridade seguem eliminatórios em código.
+     */
+    private double coberturaMinimaComJuiz = 0.3;
+
+    /** Camada 2, o juiz. */
+    private Juiz juiz = new Juiz();
+
+    /**
+     * Juiz da fidelidade da lei (#269, camada 2): uma chamada ao modelo por resposta aprovada pela
+     * camada 1, com as frases e as cópias; qualquer frase sem {@code SUSTENTA} reprova. Desligado
+     * por padrão, e sem efeito com a camada 1 desligada.
+     */
+    public static class Juiz {
+
+      /** Liga o juiz ({@code AI_FIDELIDADE_LEI_JUIZ_HABILITADO}). */
+      private boolean enabled;
+
+      public boolean isEnabled() {
+        return enabled;
       }
+
+      public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+      }
+    }
+
+    /** A cobertura mínima em vigor: a com o juiz, quando ele está ligado. */
+    public double coberturaEmVigor() {
+      return juiz.isEnabled() ? coberturaMinimaComJuiz : coberturaMinima;
+    }
+
+    void validar() {
+      exigirFracao("cobertura-minima", coberturaMinima);
+      exigirFracao("cobertura-minima-com-juiz", coberturaMinimaComJuiz);
+    }
+
+    private static void exigirFracao(String nome, double valor) {
+      if (!(valor > 0 && valor <= 1)) {
+        throw new IllegalStateException("app.assistente.fidelidade-lei." + nome + " deve estar"
+            + " entre 0 (exclusive) e 1, recebido: " + valor);
+      }
+    }
+
+    public double getCoberturaMinimaComJuiz() {
+      return coberturaMinimaComJuiz;
+    }
+
+    public void setCoberturaMinimaComJuiz(double coberturaMinimaComJuiz) {
+      this.coberturaMinimaComJuiz = coberturaMinimaComJuiz;
+    }
+
+    public Juiz getJuiz() {
+      return juiz;
+    }
+
+    public void setJuiz(Juiz juiz) {
+      this.juiz = juiz;
     }
 
     public boolean isEnabled() {

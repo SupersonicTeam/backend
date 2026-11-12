@@ -77,20 +77,37 @@ public class ConferenciaFidelidadeLei {
    *                      parágrafo), com as marcas na ordem da lista; reprovada: os recebidos
    * @param marcasCitadas marcas existentes que o modelo usou nas evidências, na ordem da primeira
    *                      menção (os trechos mostrados quando a resposta reprova)
+   * @param frases        aprovada: as frases entregues (sem marcas), cada uma com as cópias que a
+   *                      sustentam, na ordem do texto, para o juiz (camada 2); reprovada: vazia
    */
   public record Resultado(DesfechoFidelidadeLei desfecho, String texto,
-      List<TrechoRecuperado> trechos, List<String> marcasCitadas) {
+      List<TrechoRecuperado> trechos, List<String> marcasCitadas, List<FraseConferida> frases) {
 
     /** Cópias defensivas. */
     public Resultado {
       trechos = List.copyOf(trechos);
       marcasCitadas = List.copyOf(marcasCitadas);
+      frases = List.copyOf(frases);
     }
 
     /** {@code true} se a resposta pode seguir para o produtor. */
     public boolean aprovada() {
       return desfecho == DesfechoFidelidadeLei.APROVADA
           || desfecho == DesfechoFidelidadeLei.APROVADA_CITACAO_CORRIGIDA;
+    }
+  }
+
+  /**
+   * Frase aprovada pela camada 1, com as cópias que a sustentam (o que o juiz lê).
+   *
+   * @param texto  a frase, sem as marcas
+   * @param copias as passagens copiadas dos trechos, na ordem do modelo
+   */
+  public record FraseConferida(String texto, List<String> copias) {
+
+    /** Cópia defensiva. */
+    public FraseConferida {
+      copias = List.copyOf(copias);
     }
   }
 
@@ -113,12 +130,14 @@ public class ConferenciaFidelidadeLei {
     List<String> marcasCitadas = marcasCitadas(lida, trechos);
     Citacoes citacoes = new Citacoes(trechos);
     List<String> frases = new ArrayList<>();
+    List<FraseConferida> conferidas = new ArrayList<>();
     for (RespostaComEvidencia.Frase frase : lida.frases()) {
       if (frase.evidencias().isEmpty()) {
         return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
       }
       Set<String> marcasDaFrase = new LinkedHashSet<>();
       StringBuilder copias = new StringBuilder();
+      List<String> copiasDaFrase = new ArrayList<>();
       for (RespostaComEvidencia.Evidencia evidencia : frase.evidencias()) {
         int indice = indice(evidencia.marca(), trechos.size());
         if (indice < 0 || evidencia.copia() == null || evidencia.copia().isBlank()) {
@@ -131,6 +150,7 @@ public class ConferenciaFidelidadeLei {
         }
         marcasDaFrase.add(marca);
         copias.append(evidencia.copia()).append(' ');
+        copiasDaFrase.add(evidencia.copia().strip());
       }
       String textoFrase = MARCAS.matcher(frase.texto()).replaceAll(" ").replaceAll("\\s+", " ")
           .strip();
@@ -141,6 +161,7 @@ public class ConferenciaFidelidadeLei {
       }
       if (TextoLei.formas(textoFrase).stream().anyMatch(TextoLei::conteudo)) {
         frases.add(comMarcas(textoFrase, marcasDaFrase));
+        conferidas.add(new FraseConferida(textoFrase, copiasDaFrase));
       }
     }
     if (frases.isEmpty()) {
@@ -149,7 +170,8 @@ public class ConferenciaFidelidadeLei {
     DesfechoFidelidadeLei desfecho = citacoes.corrigiu
         ? DesfechoFidelidadeLei.APROVADA_CITACAO_CORRIGIDA
         : DesfechoFidelidadeLei.APROVADA;
-    return new Resultado(desfecho, String.join(" ", frases), citacoes.lista, marcasCitadas);
+    return new Resultado(desfecho, String.join(" ", frases), citacoes.lista, marcasCitadas,
+        conferidas);
   }
 
   /** Número, polaridade e cobertura; nulo se a frase passa. */
@@ -243,7 +265,7 @@ public class ConferenciaFidelidadeLei {
 
   private static Resultado reprovada(DesfechoFidelidadeLei motivo, List<TrechoRecuperado> trechos,
       List<String> marcasCitadas) {
-    return new Resultado(motivo, null, trechos, marcasCitadas);
+    return new Resultado(motivo, null, trechos, marcasCitadas, List.of());
   }
 
   /**

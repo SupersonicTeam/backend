@@ -57,6 +57,11 @@ public interface AuditoriaPorta {
    * @param criadoEm         instante do registro
    * @param fidelidadeLei    desfecho da conferência de fidelidade da resposta de lei (#269); nulo
    *                         quando ela não rodou (flag desligada, outra rota, sem trecho...)
+   * @param latenciaJuizMs   duração da chamada do juiz da fidelidade (#269, camada 2); nula se ele
+   *                         não rodou. {@code latenciaMs} é a da pergunta sem ela
+   * @param tokensEntradaJuiz tokens de entrada do juiz; nulo se ele não rodou. {@code tokensEntrada}
+   *                         é o da pergunta sem ele
+   * @param tokensSaidaJuiz  tokens de saída do juiz; nulo se ele não rodou
    */
   record RegistroInteracao(
       UUID produtorId, String rota, DesfechoInteracao desfecho,
@@ -64,7 +69,8 @@ public interface AuditoriaPorta {
       Boolean perguntaLeiReescrita, String camadaClassificacao, String funcoesJson,
       int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
       Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
-      OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei) {
+      OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei, Long latenciaJuizMs,
+      Integer tokensEntradaJuiz, Integer tokensSaidaJuiz) {
 
     /** Registro sem a conferência de fidelidade (#269): a forma de antes da flag. */
     public RegistroInteracao(
@@ -76,7 +82,8 @@ public interface AuditoriaPorta {
         OffsetDateTime criadoEm) {
       this(produtorId, rota, desfecho, desfechoDados, desfechoLegislacao, perguntaLeiReescrita,
           camadaClassificacao, funcoesJson, chamadasFuncao, trechosCitadosJson, modelo, latenciaMs,
-          tokensEntrada, tokensSaida, tokensEstimados, tamanhoPergunta, criadoEm, null);
+          tokensEntrada, tokensSaida, tokensEstimados, tamanhoPergunta, criadoEm, null, null, null,
+          null);
     }
   }
 

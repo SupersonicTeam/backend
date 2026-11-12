@@ -398,6 +398,44 @@ hoje, **não medida**), com o mesmo teto (`tetos.legislacao`, 1.024); o corte ca
 `RESPOSTA_CORTADA` de sempre. A reserva da cota não muda (é pelo teto); o consumo real sobe com a
 saída (peso 4). O tempo extra é só o da saída maior.
 
+**Camada 2: o juiz** (`app.assistente.fidelidade-lei.juiz.enabled`, `AI_FIDELIDADE_LEI_JUIZ_HABILITADO`,
+padrão `false`; decisão do Murillo de 12/11, "Sim, incluir o juiz"). Só tem efeito com a camada 1
+ligada. Depois que a camada 1 aprova e depois de todas as conferências em código (`ValidadorCitacao`,
+`ValidadorNumeros`, `GuardaRegimeEspecifico`, dados do produtor no MISTO), o `fidelidade/JuizFidelidadeLei`
+faz **uma** chamada ao modelo com as frases entregues e as cópias de cada uma (instrução fixa
+`PromptsCeres.JUIZ_FIDELIDADE` no sistema; `Frase N:` e `Passagem:` na mensagem do usuário, pelo
+`DataSanitizer`; sem os trechos inteiros nem a pergunta). O modelo responde
+`{"vereditos": ["SUSTENTA" | "NAO_SUSTENTA" | "CONTRADIZ", ...]}`, um por frase, na ordem.
+
+- **Só reprova, nunca reescreve:** qualquer `NAO_SUSTENTA` ou `CONTRADIZ` reprova a resposta inteira pelo
+  caminho da camada 1 (`TRECHOS_SEM_CONFIRMACAO` com os trechos marcados, `FIDELIDADE_REPROVADA`). Tirar
+  só a frase reprovada pode mudar o sentido do resto (uma exceção que some).
+- **Falha fecha:** modelo indisponível, JSON ilegível, veredito desconhecido, resposta cortada pelo teto
+  ou número de vereditos diferente do de frases reprovam (`REPROVADA_JUIZ_FALHA`). Pergunta interrompida
+  continua sendo interrupção.
+- **Cobertura com o juiz:** a exigida em código cai para `cobertura-minima-com-juiz`
+  (`AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ`, padrão `0.3`), para a paráfrase em linguagem simples
+  passar; literalidade, número e polaridade seguem eliminatórios.
+- **Desfechos** na mesma coluna `fidelidade_lei`: `REPROVADA_JUIZ_NAO_SUSTENTA`, `REPROVADA_JUIZ_CONTRADIZ`,
+  `REPROVADA_JUIZ_FALHA`. Aprovada pelo juiz, fica o desfecho da camada 1.
+- **Cota:** a chamada do juiz entra na **reserva da pergunta** como parcela própria
+  (`Cota.tetoDoJuiz`: o teto de entrada + `tetos.juiz`, `AI_TETO_JUIZ`, 128), só com o juiz ativo
+  (`AssistenteProperties.tetoDaPergunta`). Não é uma reserva à parte como a da explicação: o juiz roda no
+  meio da pergunta e o `ContextoAssistente.chamar` soma os tokens dele aos dela, então uma reserva à parte
+  cobraria duas vezes, e o cancelamento pelo cliente o cobraria pela reserva da pergunta. Com os padrões e
+  fator 1: 31.744 → 40.448 créditos por pergunta (`TetoDaCotaCobreChamadasTest`).
+- **Auditoria:** `latencia_juiz_ms`, `tokens_entrada_juiz` e `tokens_saida_juiz` (changeSet 0065), nulas
+  sem o juiz. Com ele, `latencia_ms`, `tokens_entrada` e `tokens_saida` da pergunta são **sem** o juiz
+  (`AuditoriaAssistente`), e a soma das colunas é o total, como na explicação.
+- **Custo e tempo (estimativa, não medida):** uma chamada a mais por resposta aprovada pela camada 1;
+  entrada de ~450 a ~1.000 tokens (instrução de ~800 caracteres + frases e cópias), saída de ~10 a ~40;
+  com o Haiku, cerca de 0,5 a 1,5 s a mais. Cabe no `timeout-pergunta`: roda dentro da pergunta.
+
+**Os três braços da medição:** tudo desligado (a `main`); só a camada 1
+(`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`).
+Com o juiz desligado, a camada 1 é a de antes dele (uma chamada, cobertura 0,7); com tudo desligado, a
+rota é a da `main` (`RotaLegislacaoFidelidadeTest`).
+
 **Limites conhecidos.** A régua é lexical: paráfrase com sinônimo fora da cópia reprova (falso
 descarte; a raiz casa "redução" com "reduzidas", mas não "isenção" com "não incide" fora da
 polaridade nem "IBS" com "imposto" sozinho; e a cópia com "salvo", "exceto" ou "não" exige negação
@@ -921,6 +959,7 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 | Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
 | Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
 | Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO; ~1.170 com a conferência de fidelidade ligada, #269) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
+| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` (~800, todo o sistema) | frases e cópias, na mensagem do usuário | nenhuma | `tetos.juiz` (128) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);

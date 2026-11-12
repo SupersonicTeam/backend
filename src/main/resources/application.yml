@@ -590,6 +590,8 @@ app:
       classificacao: ${AI_TETO_CLASSIFICACAO:256}
       # Resposta de lei. Padrao = o teto unico de antes; 512 e o recomendado a confirmar na VPS.
       legislacao: ${AI_TETO_LEGISLACAO:1024}
+      # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
+      juiz: ${AI_TETO_JUIZ:128}
       # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
       contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
@@ -617,6 +619,13 @@ app:
     fidelidade-lei:
       enabled: ${AI_FIDELIDADE_LEI_HABILITADA:false}
       cobertura-minima: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA:0.7}
+      # Camada 2, o juiz: uma chamada ao modelo por resposta aprovada pela camada 1; qualquer frase
+      # sem SUSTENTA reprova, e a falha dele fecha. So tem efeito com a camada 1 ligada; ligado, a
+      # cobertura exigida em codigo cai para cobertura-minima-com-juiz e a reserva da pergunta
+      # inclui a chamada dele (tetos.juiz).
+      cobertura-minima-com-juiz: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:0.3}
+      juiz:
+        enabled: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:false}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}
