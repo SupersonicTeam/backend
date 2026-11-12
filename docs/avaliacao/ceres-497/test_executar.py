@@ -119,6 +119,14 @@ class Rodada(unittest.TestCase):
         self.assertNotIn("segredo-de-teste", saida + self.saida.read_text(encoding="utf-8"))
         self.assertNotIn("\r\n", self.saida.read_bytes().decode("utf-8"))
 
+    def test_roda_o_conjunto_da_516_por_conjunto(self):
+        conjunto = AQUI.parent / "ceres-516" / "conjunto-516.json"
+        saida = self.rodar(servidor(self.banco), "--conjunto", str(conjunto), "--ids",
+                           "p516-01,a516-01", "--repeticoes", "1")
+        self.assertIn("ceres-516-v1", saida)
+        pontuadas = [l for l in self.linhas() if not l["aquecimento"]]
+        self.assertEqual([l["id"] for l in pontuadas], ["p516-01", "a516-01"])
+
     def test_auditoria_que_nao_sobe_fica_marcada(self):
         self.banco.pular_proxima = True
         self.rodar(servidor(self.banco), "--ids", "l-01", "--repeticoes", "1")
