@@ -6,6 +6,7 @@ import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.AvisoNotaResponse;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.ProximoNumeroResponse;
 import br.com.agrocontabil.exception.AprovacaoExigidaException;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.DanfePreviewIndisponivelException;
@@ -14,6 +15,7 @@ import br.com.agrocontabil.exception.NfaInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.SerieEsgotadaException;
 import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.exception.XmlIndisponivelException;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
@@ -125,6 +127,9 @@ public class NotaFiscalService {
       StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA,
       StatusNotaFiscal.APROVADA);
 
+  /** Maior {@code nNF} do layout da NF-e (9 dígitos). */
+  static final long NUMERO_MAXIMO = 999_999_999L;
+
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final TributacaoService tributacaoService;
@@ -184,6 +189,26 @@ public class NotaFiscalService {
     log.info("NotaFiscal criada: id={} produtor={} numero={}",
         saved.getId(), produtor.getId(), saved.getNumero());
     return comAvisos(saved);
+  }
+
+  /**
+   * Número sugerido para a próxima nota própria da série (issue #539): o maior número das notas
+   * próprias do produtor autenticado na série (modelo 55, qualquer status e tipo de documento)
+   * mais 1; sem nota, 1. Só sugestão, sem reserva: o índice único recusa o número repetido no
+   * {@code POST}.
+   *
+   * @param serie série de 0 a 999
+   * @return série e número sugerido
+   * @throws SerieEsgotadaException se o maior número já é o limite do layout (409)
+   */
+  @Transactional(readOnly = true)
+  public ProximoNumeroResponse proximoNumero(int serie) {
+    UUID produtorId = produtorProvider.get().getId();
+    long maior = notaFiscalRepository.findMaiorNumeroPropria(produtorId, serie).orElse(0L);
+    if (maior >= NUMERO_MAXIMO) {
+      throw new SerieEsgotadaException(serie);
+    }
+    return new ProximoNumeroResponse(serie, maior + 1);
   }
 
   /**
