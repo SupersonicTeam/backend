@@ -1,0 +1,75 @@
+{
+  "regra": {
+    "versao": "2026-11-12.4",
+    "parametros": {
+      "defeitosMinimosNaBase": 8,
+      "melhoraRelativaMinima": 0.25,
+      "melhoraAbsolutaMinima": 4,
+      "icConfianca": 0.8,
+      "bootstrapReamostragens": 10000,
+      "bootstrapSemente": 20261112,
+      "pioraMaximaPorTipo": 1,
+      "falsoDescarteMaximo": 3,
+      "recusaFalsaAltaMaxima": 0.05,
+      "ausenteInfielAltaMaxima": 1,
+      "p50Fator": 2.0,
+      "p95Fator": 2.0,
+      "p95TetoMs": 10000,
+      "tokensFator": 2.0,
+      "regressoesPorPerguntaMaximas": 1,
+      "falhaTecnicaMaxima": 0.1,
+      "kappaMinimo": 0.4,
+      "kappaAviso": 0.6,
+      "desacordoMaximo": 0.3,
+      "minimoDeExecucoesValidasPorBraco": 2
+    }
+  },
+  "conjunto": {
+    "versao": "2026-11-12.4",
+    "sha256": "8b98884962be3ae59edf82afe92bc6e77140e28fcb07664419c1644665657a73",
+    "perguntas": 36
+  },
+  "commit": "ed5a81fb40ff",
+  "jarSha256": "f4d1f47ccdbfb426f8174a5621a43c32cd863e7b933b80674c773f11cbe18a25",
+  "modelo": "claude-haiku-5-5",
+  "repeticoes": 3,
+  "semente": 20261112,
+  "bancoDaRodada": "fidelidade_lei",
+  "execucoesPlanejadas": 324,
+  "bracos": [
+    "desligada",
+    "camada1",
+    "camada1+juiz"
+  ],
+  "ambientes": {
+    "desligada": {},
+    "camada1": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true"
+    },
+    "camada1+juiz": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_HABILITADO": "true"
+    }
+  },
+  "iniciadoEm": "2026-11-12T14:40:41.502899-03:00",
+  "terminadoEm": "2026-11-12T15:01:41.818436-03:00",
+  "contagemPorBraco": {
+    "desligada": {
+      "descartada": 34,
+      "aceita": 50,
+      "recusa": 24
+    },
+    "camada1": {
+      "descartada": 63,
+      "recusa": 24,
+      "aceita": 21
+    },
+    "camada1+juiz": {
+      "aceita": 31,
+      "descartada": 53,
+      "recusa": 24
+    }
+  },
+  "interrompida": null,
+  "observacao": "A URL, as contas e as senhas da rodada nunca entram neste arquivo."
+}
