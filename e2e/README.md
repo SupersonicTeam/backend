@@ -89,6 +89,11 @@ gh workflow run e2e.yml --ref <branch>
 Sem `backend_image`, o backend é o do branch (build com cache do Maven); o frontend vem do GHCR. O
 artefato `e2e-playwright` traz o relatório HTML, os traces de todos os casos e o `stack.log`.
 
+**Pré-requisito:** o pacote `frontend` é privado, e o `GITHUB_TOKEN` deste repositório só o lê com
+acesso concedido no pacote (GitHub → pacote `frontend` → Package settings → Manage Actions access →
+adicionar `SupersonicTeam/backend` com papel Read). Sem isso o passo "Stack e suite" para no pull
+com `403 Forbidden`.
+
 ## Seletores
 
 Só por papel, rótulo e texto (`getByRole`, `getByLabel`, `getByText`), que aguentam as mudanças de

@@ -104,19 +104,15 @@ export class Api {
   }
 
   async enviarParaRevisao(id: string): Promise<Nota> {
-    return this.postNota(`/api/notas/${id}/enviar-para-revisao`, 'envio para revisao');
+    return this.post<Nota>(`/api/notas/${id}/enviar-para-revisao`, 'envio para revisao');
   }
 
   async gerarXml(id: string): Promise<Nota> {
-    return this.postNota(`/api/notas/${id}/gerar-xml`, 'geracao do XML');
+    return this.post<Nota>(`/api/notas/${id}/gerar-xml`, 'geracao do XML');
   }
 
   async enviarSefaz(id: string): Promise<{ status: string }> {
-    const resposta = await this.request.post(`/api/notas/${id}/enviar-sefaz`, {
-      headers: this.cabecalhos,
-    });
-    await exigirSucesso(resposta, 'envio a SEFAZ');
-    return (await resposta.json()) as { status: string };
+    return this.post(`/api/notas/${id}/enviar-sefaz`, 'envio a SEFAZ');
   }
 
   /** XML assinado da nota, como o emitente o entrega ao destinatario. */
@@ -138,16 +134,18 @@ export class Api {
 
   /** Aprovacao pelo escritorio (o contador nao edita a nota, #178). */
   async aprovar(produtorId: string, notaId: string): Promise<Nota> {
-    return this.postNota(
+    return this.post<Nota>(
       `/api/contador/produtores/${produtorId}/notas/${notaId}/aprovar`,
       'aprovacao do contador',
     );
   }
 
-  private async postNota(caminho: string, oQue: string): Promise<Nota> {
+
+  /** POST sem corpo de uma acao da nota, com o retorno em JSON. */
+  private async post<T>(caminho: string, oQue: string): Promise<T> {
     const resposta = await this.request.post(caminho, { headers: this.cabecalhos });
     await exigirSucesso(resposta, oQue);
-    return (await resposta.json()) as Nota;
+    return (await resposta.json()) as T;
   }
 }
 

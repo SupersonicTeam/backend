@@ -12,7 +12,17 @@ export async function entrar(page: Page, conta: Conta): Promise<void> {
   await page.getByLabel('E-mail').fill(CONTAS[conta]);
   await page.getByLabel('Senha').fill(senhaDeTeste());
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page).not.toHaveURL(/\/login/);
+  try {
+    await expect(page).not.toHaveURL(/\/login/);
+  } catch {
+    // A tela de login mostra o motivo num role="alert"; sem isto a falha seria so um timeout.
+    const alerta = (await page.getByRole('alert').allTextContents()).join(' ').trim();
+    throw new Error(
+      `O login de ${conta} nao saiu da tela de login${alerta ? `: "${alerta}"` : ''}. ` +
+        'Confira a SEED_SENHA (e2e/.env) e o stack.log: senha fora da politica deixa as contas ' +
+        'semeadas sem credencial.',
+    );
+  }
 }
 
 /**

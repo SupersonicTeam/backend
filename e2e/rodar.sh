@@ -24,7 +24,10 @@ while [ $# -gt 0 ]; do
     --manter) manter=true ;;
     --sem-subir) subir=false; manter=true ;;
     --derrubar)
-      docker compose down -v --remove-orphans
+      # O compose exige os segredos so para interpolar o arquivo; derrubar nao usa nenhum deles,
+      # entao funciona mesmo sem o e2e/.env.
+      E2E_DB_PASSWORD=x E2E_SENHA=x E2E_JWT_SECRET=x E2E_CRIPTO_CHAVE=x \
+        docker compose down -v --remove-orphans
       exit 0
       ;;
     --) shift; args_playwright=("$@"); break ;;
@@ -79,7 +82,12 @@ if [ "$subir" = true ]; then
   fi
   # Imagem de registro (com "/") vem sempre na versao mais nova; tag local (sem "/") fica como esta.
   if [[ "${E2E_FRONTEND_IMAGE:-ghcr.io/supersonicteam/frontend:latest}" == */* ]]; then
-    docker compose pull frontend
+    if ! docker compose pull frontend; then
+      echo "Nao foi possivel baixar a imagem do frontend (privada no GHCR). Faca 'docker login" \
+        "ghcr.io' com um token com read:packages, ou construa a imagem local e use" \
+        "E2E_FRONTEND_IMAGE (README.md, 'Imagem do frontend')." >&2
+      exit 1
+    fi
   fi
   echo "Subindo a stack (o seed da banca leva um ou dois minutos)..."
   docker compose up -d --no-build --wait --wait-timeout 600
