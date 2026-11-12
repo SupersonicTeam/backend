@@ -26,10 +26,20 @@ LIMITE_PERGUNTA = 1000
 
 
 def normalizar(texto):
-    """Sem acento, sem caixa e com os espaços colapsados: duas grafias da mesma pergunta se igualam."""
+    """Sem acento, caixa nem pontuação e com os espaços colapsados: duas grafias da mesma pergunta se igualam."""
     decomposto = unicodedata.normalize("NFKD", texto)
     sem_acento = "".join(c for c in decomposto if not unicodedata.combining(c))
-    return " ".join(sem_acento.casefold().split())
+    sem_pontuacao = re.sub(r"[^\w\s]", " ", sem_acento.casefold())
+    return " ".join(sem_pontuacao.split())
+
+
+def objeto_sem_chave_repetida(pares):
+    """O json.loads guarda só a última de duas chaves iguais; aqui chave repetida é erro."""
+    chaves = [chave for chave, _ in pares]
+    repetidas = sorted({chave for chave in chaves if chaves.count(chave) > 1})
+    if repetidas:
+        raise ValueError(f"chave repetida no mesmo objeto: {repetidas}")
+    return dict(pares)
 
 
 class ConjuntoCeres516Test(unittest.TestCase):
@@ -37,7 +47,7 @@ class ConjuntoCeres516Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.bruto = CONJUNTO.read_bytes()
-        cls.dados = json.loads(cls.bruto.decode("utf-8"))
+        cls.dados = json.loads(cls.bruto.decode("utf-8"), object_pairs_hook=objeto_sem_chave_repetida)
         cls.perguntas = cls.dados["perguntas"]
 
     def test_bytes_em_utf8_sem_bom_e_com_lf(self):
@@ -74,7 +84,7 @@ class ConjuntoCeres516Test(unittest.TestCase):
             with self.subTest(classe=classe):
                 numeros = []
                 for pergunta in (p for p in self.perguntas if p["classe"] == classe):
-                    casou = re.fullmatch(regra["prefixo"] + r"-(\d{2})", pergunta["id"])
+                    casou = re.fullmatch(regra["prefixo"] + r"-([0-9]{2})", pergunta["id"])
                     self.assertIsNotNone(casou, f"{pergunta['id']} fora do formato {regra['prefixo']}-NN")
                     numeros.append(int(casou.group(1)))
                 self.assertEqual(list(range(1, len(numeros) + 1)), numeros,
