@@ -1,8 +1,8 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.fidelidade.ConferenciaFidelidadeLei;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -169,8 +169,9 @@ public final class PromptsCeres {
       - CONTRADIZ: a frase diz o contrario das passagens.
 
       Use so as passagens. Nao use conhecimento proprio.
-      Responda somente com JSON, sem nada antes ou depois, com um veredito por frase, na ordem:
-      {"vereditos": ["SUSTENTA", "NAO_SUSTENTA", "CONTRADIZ"]}
+      Responda somente com JSON, sem nada antes ou depois: uma lista "vereditos" com exatamente \
+      um veredito por frase, na ordem das frases, escrito como acima (SUSTENTA, NAO_SUSTENTA ou \
+      CONTRADIZ). Exemplo para duas frases: {"vereditos": ["SUSTENTA", "NAO_SUSTENTA"]}
       """;
 
   /**
@@ -180,12 +181,12 @@ public final class PromptsCeres {
    * @param frases frases, na ordem, cada uma com as cópias
    * @return mensagem do usuário
    */
-  public static String mensagemJuiz(List<Map.Entry<String, List<String>>> frases) {
+  public static String mensagemJuiz(List<ConferenciaFidelidadeLei.FraseConferida> frases) {
     StringBuilder sb = new StringBuilder();
     int n = 0;
-    for (Map.Entry<String, List<String>> frase : frases) {
-      sb.append("Frase ").append(++n).append(": ").append(frase.getKey()).append('\n');
-      for (String copia : frase.getValue()) {
+    for (ConferenciaFidelidadeLei.FraseConferida frase : frases) {
+      sb.append("Frase ").append(++n).append(": ").append(frase.texto()).append('\n');
+      for (String copia : frase.copias()) {
         sb.append("Passagem: ").append(copia).append('\n');
       }
       sb.append('\n');

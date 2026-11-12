@@ -85,6 +85,14 @@ class JuizFidelidadeLeiTest {
     chatModel.responderTexto("```json\n{\"vereditos\": [\"NAO_SUSTENTA\", \"CONTRADIZ\"]}\n```");
     assertThat(juiz.julgar(DUAS, contexto))
         .isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_CONTRADIZ);
+
+    // Grafia solta do modelo: acento, espaco ou hifen.
+    chatModel.responderTexto("{\"vereditos\": [\"Sustenta\", \"NÃO SUSTENTA\"]}");
+    assertThat(juiz.julgar(DUAS, contexto))
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_NAO_SUSTENTA);
+    chatModel.responderTexto("{\"vereditos\": [\"sustenta\", \"não-sustenta\"]}");
+    assertThat(juiz.julgar(DUAS, contexto))
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_NAO_SUSTENTA);
   }
 
   @Test
@@ -128,6 +136,8 @@ class JuizFidelidadeLeiTest {
     assertThatThrownBy(() -> juiz.julgar(DUAS, contexto))
         .isInstanceOf(PerguntaInterrompidaException.class);
     assertThat(chatModel.promptsRecebidos()).isEmpty();
+    // O juiz nao rodou: as colunas dele ficam nulas na auditoria.
+    assertThat(contexto.juizLei()).isNull();
   }
 
   @Test

@@ -189,9 +189,7 @@ class AssistentePropertiesTest {
     assertThat(p.juizDaLeiAtivo()).isFalse();
     assertThat(p.getFidelidadeLei().getCoberturaMinimaComJuiz()).isEqualTo(0.3);
     assertThat(p.getTetos().getJuiz()).isEqualTo(128);
-    assertThat(p.getFidelidadeLei().coberturaEmVigor()).isEqualTo(0.7);
     p.getFidelidadeLei().getJuiz().setEnabled(true);
-    assertThat(p.getFidelidadeLei().coberturaEmVigor()).isEqualTo(0.3);
     // O juiz so roda com a camada 1.
     assertThat(p.juizDaLeiAtivo()).isFalse();
     p.getFidelidadeLei().setEnabled(true);

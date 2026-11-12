@@ -9,9 +9,10 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +75,7 @@ public class JuizFidelidadeLei {
     int entradaAntes = valor(contexto.tokensEntrada());
     int saidaAntes = valor(contexto.tokensSaida());
     boolean chamou = false;
+    boolean registrar = true;
     try {
       ChatResponse resposta = chamar(frases, contexto);
       chamou = true;
@@ -85,24 +87,29 @@ public class JuizFidelidadeLei {
           ? null : resposta.getResult().getOutput().getText();
       return decidir(vereditos(texto), frases.size());
     } catch (PerguntaInterrompidaException e) {
+      // Interrompida: a pergunta e que terminou, nao o juiz; as colunas dele ficam nulas.
+      registrar = false;
       throw e;
     } catch (RuntimeException e) {
       // Falha fecha: sem o veredito, a resposta nao chega ao produtor.
       log.warn("Ceres: juiz da fidelidade da lei falhou: {}", e.getClass().getName());
       return DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA;
     } finally {
-      long latencia = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio);
-      contexto.registrarJuizLei(latencia,
-          chamou ? valor(contexto.tokensEntrada()) - entradaAntes : 0,
-          chamou ? valor(contexto.tokensSaida()) - saidaAntes : 0);
+      if (registrar) {
+        long latencia = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio);
+        contexto.registrarJuizLei(latencia,
+            chamou ? valor(contexto.tokensEntrada()) - entradaAntes : 0,
+            chamou ? valor(contexto.tokensSaida()) - saidaAntes : 0);
+      }
     }
   }
 
   private ChatResponse chamar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
       ContextoAssistente contexto) {
-    List<Map.Entry<String, List<String>>> conteudo = new ArrayList<>();
+    List<ConferenciaFidelidadeLei.FraseConferida> conteudo = new ArrayList<>();
     for (ConferenciaFidelidadeLei.FraseConferida frase : frases) {
-      conteudo.add(Map.entry(DataSanitizer.mascarar(frase.texto()),
+      conteudo.add(new ConferenciaFidelidadeLei.FraseConferida(
+          DataSanitizer.mascarar(frase.texto()),
           frase.copias().stream().map(DataSanitizer::mascarar).toList()));
     }
     Prompt prompt = new Prompt(List.<Message>of(
@@ -138,12 +145,18 @@ public class JuizFidelidadeLei {
         return null;
       }
       try {
-        lidos.add(Veredito.valueOf(item.asText().strip().toUpperCase(java.util.Locale.ROOT)));
+        lidos.add(Veredito.valueOf(normalizar(item.asText())));
       } catch (IllegalArgumentException e) {
         return null;
       }
     }
     return lidos;
+  }
+
+  /** "Não sustenta", "NÃO_SUSTENTA" e "nao-sustenta" valem como {@code NAO_SUSTENTA}. */
+  private static String normalizar(String veredito) {
+    return NormalizacaoBusca.normalizar(veredito).replaceAll("[\\s-]+", "_")
+        .toUpperCase(Locale.ROOT);
   }
 
   /** Nulo se todas sustentam; contradição pesa mais que falta de sustentação. */

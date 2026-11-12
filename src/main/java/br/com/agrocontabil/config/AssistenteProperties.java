@@ -26,6 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       explicacao: 256              # explicacao depois da resposta de dados (#268)
  *       classificacao: 256
  *       legislacao: 1024
+ *       juiz: 128                    # juiz da fidelidade da lei (#269), so com ele ativo
  *       contexto: 8192               # = num-ctx do Ollama, so para a validacao
  * </pre>
  *
@@ -447,7 +448,9 @@ public class AssistenteProperties implements InitializingBean {
      * das camadas e na {@code perguntaLei} do MISTO, #265), escolha das funções de dados (uma
      * só desde a #266) e lei. O pior caso é o MISTO com desempate. Uma chamada nova ao modelo
      * exige rever este número e {@link #tetoDaPergunta}: o {@code TetoDaCotaCobreChamadasTest}
-     * quebra se aparecer outro ponto que chame o modelo.
+     * quebra se aparecer outro ponto que chame o modelo. O juiz da fidelidade da lei (#269) fica
+     * fora deste número: entra como parcela própria ({@link #tetoDoJuiz}), só com ele ativo, pelo
+     * {@code AssistenteProperties.tetoDaPergunta}, que é o teto inteiro.
      */
     public static final int CHAMADAS_POR_PERGUNTA = 3;
 
@@ -469,7 +472,9 @@ public class AssistenteProperties implements InitializingBean {
     }
 
     /**
-     * Custo máximo possível de uma pergunta (#166, revisto depois da #270): as
+     * Custo máximo das chamadas da fórmula de uma pergunta (#166, revisto depois da #270), sem o
+     * juiz da fidelidade da lei (#269): o teto inteiro é o {@code AssistenteProperties
+     * .tetoDaPergunta}, que soma o {@link #tetoDoJuiz} com ele ativo. As
      * {@value #CHAMADAS_POR_PERGUNTA} chamadas, cada uma com o teto de entrada e com o próprio
      * teto de saída ({@code app.assistente.tetos}: classificação + funções + lei). O teto de saída
      * é o {@code maxTokens} que a própria chamada manda ao modelo, então a saída real nunca passa
@@ -914,11 +919,6 @@ public class AssistenteProperties implements InitializingBean {
       public void setEnabled(boolean enabled) {
         this.enabled = enabled;
       }
-    }
-
-    /** A cobertura mínima em vigor: a com o juiz, quando ele está ligado. */
-    public double coberturaEmVigor() {
-      return juiz.isEnabled() ? coberturaMinimaComJuiz : coberturaMinima;
     }
 
     void validar() {
