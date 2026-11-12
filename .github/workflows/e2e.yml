@@ -6,6 +6,10 @@ name: E2E - Playwright (sob demanda)
 # e2e/compose.yaml (banco, backend e frontend) dentro do runner, roda o Playwright e publica o
 # relatorio, os traces e o log da stack como artefato. Nada aqui fala com a VPS.
 on:
+  # TEMPORARIO (validacao do PR da #321): o GitHub so aceita workflow_dispatch de workflow que ja
+  # esta na main. Sai no commit seguinte, antes do merge.
+  push:
+    branches: [feature/e2e-playwright-321]
   workflow_dispatch:
     inputs:
       backend_image:
