@@ -8,8 +8,9 @@
 	}
 }
 
-# O que todo site da aplicacao serve: API no backend, o resto no frontend (o mesmo SPA em todo host:
-# o subdominio nunca serve conteudo enviado pelo cliente, #464).
+# O que todo site da aplicacao serve: API no backend, os quadros da jornada da landing do disco (so
+# imagem e JSON, publicados pela equipe) e o resto no frontend. E o mesmo SPA em todo host: o
+# subdominio nunca serve conteudo enviado pelo cliente (#464).
 (app) {
 	encode zstd gzip
 
@@ -33,14 +34,27 @@
 
 	# Quadros da jornada 3D da landing (frontend#174): pacote versionado em /opt/agrocontabil/jornada,
 	# fora da imagem do frontend (81 MB em cada imagem). A versao vai no caminho (/jornada/v0.1/...),
-	# por isso o cache de um ano; pacote novo entra como v0.2, nunca por cima. So arquivo que existe
-	# leva o Cache-Control: o 404 de um pacote ainda nao copiado nao pode ficar um ano no navegador.
-	# Publicar um pacote: deploy/README.md, secao Jornada da landing.
+	# por isso o cache de um ano; pacote novo entra como v0.2, nunca por cima.
+	# So sai arquivo que existe, e so imagem e JSON: a pasta e servida na origem do app, em todo host,
+	# e um .html ali rodaria com a sessao de quem o abrisse (#464). O resto e 404 pelo respond, que
+	# leva os cabecalhos do snippet e nenhum Cache-Control: a falta de um arquivo (pacote ainda nao
+	# copiado) nao pode ficar um ano no navegador. Publicar: deploy/README.md, Jornada da landing.
 	handle_path /jornada/* {
 		root * /srv/jornada
-		@existe file
-		header @existe Cache-Control "public, max-age=31536000, immutable"
-		file_server
+
+		@quadro {
+			method GET HEAD
+			path *.avif *.webp *.json
+			file
+		}
+		handle @quadro {
+			header Cache-Control "public, max-age=31536000, immutable"
+			file_server
+		}
+
+		handle {
+			respond 404
+		}
 	}
 
 	handle {

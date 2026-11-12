@@ -311,8 +311,11 @@ do site. O player lê `/jornada/v0.1/manifesto.json` e tira dele os caminhos dos
   existe. Por isso **uma versão publicada nunca muda**: pacote novo entra como pasta nova (`v0.2`).
   Um arquivo trocado dentro da `v0.1` não chegaria a quem já visitou. O 404 sai sem o cabeçalho,
   para a falta de um arquivo não ficar guardada no navegador.
-- **Tudo o que estiver em `jornada/` é público.** O `publicar-jornada.sh` só deixa entrar `.avif`,
-  `.webp` e o `manifesto.json`, e tira o `LEIA-ME.md` do pacote (documento interno).
+- **Só imagem e JSON, e nada enviado por cliente.** A pasta é servida na origem do aplicativo, em
+  todo host. Um `.html` ali rodaria com a sessão de quem o abrisse (o cookie de refresh não separa
+  subdomínios, #464). Por isso há duas barreiras: o Caddy só entrega `.avif`, `.webp` e `.json`
+  (o resto é 404, mesmo que o arquivo exista), e o `publicar-jornada.sh` só deixa entrar `.avif`,
+  `.webp` e o `manifesto.json`. O `LEIA-ME.md` do pacote, documento interno, fica de fora.
 
 Conferido no `caddy:2.10-alpine`: `manifesto.json` sai como `application/json`, `.avif` como
 `image/avif` e `.webp` como `image/webp`, sem regra de tipo no Caddyfile. Caminho com `..` não chega
@@ -330,10 +333,11 @@ cd /opt/agrocontabil
 ./publicar-jornada.sh /tmp/agroconia-jornada-v0.2.zip v0.2 && rm /tmp/agroconia-jornada-v0.2.zip
 ```
 
-O script (nesta pasta, copiado para `/opt/agrocontabil`) confere o pacote numa pasta temporária e
-só então o move para `jornada/v0.2/`, de uma vez. Ele recusa a versão que já existe, o manifesto de
-outra versão e qualquer arquivo fora dos tipos esperados. Nenhum container reinicia: a pasta nova
-já aparece no Caddy.
+O script (nesta pasta, copiado para `/opt/agrocontabil`) extrai e confere o pacote fora de
+`jornada/` e só então o move para `jornada/v0.2/`, de uma vez. Ele recusa a versão que já existe, o
+manifesto de outra versão, qualquer arquivo fora dos tipos esperados e o pacote com mais de 1 GB
+aberto (`JORNADA_TETO_MB`; a extração cai no disco do banco). Nenhum container reinicia: a pasta
+nova já aparece no Caddy.
 
 Conferir de fora da VPS. O status 200 sozinho não prova nada: sem a rota no Caddy, `/jornada/*` cai
 no frontend, que devolve o `index.html` com 200 e `text/html`.
