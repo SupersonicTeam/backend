@@ -1,0 +1,102 @@
+# Stack ISOLADA da suite E2E (issue #321). Nada aqui toca a stack de desenvolvimento nem a da VPS:
+# projeto compose proprio (agroconia-e2e), rede propria, banco em tmpfs (some ao derrubar) e uma
+# porta so, a do frontend, publicada em 127.0.0.1. Quem sobe e derruba e o rodar.sh (README.md).
+#
+# Segredos (senha das contas, JWT, chave de cifra, senha do banco): valores de TESTE gerados pelo
+# rodar.sh no e2e/.env (fora do git), nunca os da VPS. Sem eles a stack nao sobe.
+#
+# O frontend (imagem do GHCR, nginx) repassa /api/ para http://backend:8080: o nome do servico do
+# backend tem de ser "backend". O navegador fala so com o frontend, como na VPS atras do Caddy.
+name: agroconia-e2e
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg16
+    environment:
+      POSTGRES_DB: agroconia_e2e
+      POSTGRES_USER: agroconia_e2e
+      POSTGRES_PASSWORD: ${E2E_DB_PASSWORD:?gere o e2e/.env pelo rodar.sh (README.md)}
+    # Banco descartavel: cada subida comeca vazia e o seed da demonstracao roda de novo.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agroconia_e2e -d agroconia_e2e']
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    # Sem E2E_BACKEND_IMAGE, a imagem e construida deste checkout (o Dockerfile da raiz). Com ela
+    # (ex.: ghcr.io/supersonicteam/backend:latest), o rodar.sh baixa a imagem e nao constroi nada.
+    image: ${E2E_BACKEND_IMAGE:-agroconia-e2e-backend:local}
+    build:
+      context: ..
+    environment:
+      # Homolog como a VPS: so o JWT do login autentica (sem o mock do X-Usuario-Id, #221).
+      SPRING_PROFILES_ACTIVE: homolog
+      SPRING_DOCKER_COMPOSE_ENABLED: 'false'
+      DB_HOST: postgres
+      DB_NAME: agroconia_e2e
+      DB_USER: agroconia_e2e
+      DB_PASSWORD: ${E2E_DB_PASSWORD}
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:${E2E_PORTA:-18321}
+      # HTTP puro em localhost: o cookie de refresh sem Secure, como em dev.
+      REFRESH_COOKIE_SEGURO: 'false'
+      # Contas do seed da banca (#315) e do DataLoader, todas com a senha de teste.
+      SEED_SENHA: ${E2E_SENHA:?gere o e2e/.env pelo rodar.sh (README.md)}
+      DEMONSTRACAO_HABILITADA: 'true'
+      JWT_SECRET: ${E2E_JWT_SECRET:?gere o e2e/.env pelo rodar.sh (README.md)}
+      CRIPTO_CHAVE: ${E2E_CRIPTO_CHAVE:?gere o e2e/.env pelo rodar.sh (README.md)}
+      # Certificado autoassinado de teste (publico, src/test/resources/certs) e SEFAZ simulada.
+      NFE_CERT_PATH: file:/certs/nfe-teste.p12
+      NFE_CERT_PASSWORD: changeit
+      NFE_CERT_ALIAS: nfe-teste
+      NFE_SEFAZ_MOCK_ENABLED: 'true'
+      # Como na VPS: o mock da a chave desconhecida como autorizada (#223). A UC002 transmite a
+      # nota do fornecedor antes, entao a importacao confere o digVal de verdade.
+      APP_NFE_SEFAZ_MOCK_AUTORIZAR_TERCEIROS: 'true'
+      # Sem modelo de chat: a suite usa so as perguntas de atalho da tela (#343), que respondem sem
+      # modelo. Nenhuma chave de API nem Ollama. O embedding aponta para um Ollama que nao existe:
+      # o health dele fica DEGRADED, o que nao impede a subida.
+      AI_CHAT_PROVIDER: none
+      AI_OLLAMA_BASE_URL: http://ollama-ausente:11434
+      # Antivirus: o padrao (CLAMAV) sobe sem o clamd (o health fica DEGRADED); a suite nao anexa
+      # arquivo a pendencia. SEM_VERIFICACAO e recusado fora de dev/test.
+      ANTIVIRUS_HOST: clamav-ausente
+      # Limites de taxa SO NESTA STACK. Na API, o login e 10/min por IP e /api/** 100/min por
+      # identidade (#150, #208); a suite entra varias vezes por minuto do mesmo IP (o do nginx do
+      # frontend) e receberia 429. O codigo e os padroes de producao nao mudam.
+      LIMITE_LOGIN_POR_MINUTO: '1000'
+      LIMITE_REFRESH_POR_MINUTO: '1000'
+      LIMITE_GERAL_POR_MINUTO: '10000'
+      LIMITE_CHAT_POR_MINUTO: '1000'
+      LOGGING_LEVEL_BR_COM_AGROCONTABIL: INFO
+      JAVA_TOOL_OPTIONS: -Xmx1g -Duser.timezone=America/Sao_Paulo
+    volumes:
+      - ../src/test/resources/certs/nfe-teste.p12:/certs/nfe-teste.p12:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # O seed da banca emite ~160 notas pelo pipeline real na primeira subida: o health so responde
+    # depois dele.
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+
+  frontend:
+    # Imagem do GHCR (main do SupersonicTeam/frontend), ou uma local construida do codigo dele
+    # (README.md, "Imagem do frontend").
+    image: ${E2E_FRONTEND_IMAGE:-ghcr.io/supersonicteam/frontend:latest}
+    ports:
+      - '127.0.0.1:${E2E_PORTA:-18321}:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1/ || exit 1']
+      interval: 3s
+      timeout: 5s
+      retries: 20
