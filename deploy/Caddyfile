@@ -31,6 +31,18 @@
 		}
 	}
 
+	# Quadros da jornada 3D da landing (frontend#174): pacote versionado em /opt/agrocontabil/jornada,
+	# fora da imagem do frontend (81 MB em cada imagem). A versao vai no caminho (/jornada/v0.1/...),
+	# por isso o cache de um ano; pacote novo entra como v0.2, nunca por cima. So arquivo que existe
+	# leva o Cache-Control: o 404 de um pacote ainda nao copiado nao pode ficar um ano no navegador.
+	# Publicar um pacote: deploy/README.md, secao Jornada da landing.
+	handle_path /jornada/* {
+		root * /srv/jornada
+		@existe file
+		header @existe Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
 	handle {
 		reverse_proxy frontend:80
 	}
