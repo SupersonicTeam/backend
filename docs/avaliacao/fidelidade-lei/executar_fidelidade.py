@@ -98,7 +98,8 @@ def validar_banco(banco: str, origem: str) -> None:
 
 
 def analisar_braco(texto: str) -> tuple:
-    """`NOME:CHAVE=valor,CHAVE=valor` -> (nome, env)."""
+    """`NOME:CHAVE=valor,CHAVE=valor` -> (nome, env). O valor não pode ter vírgula (ela separa os
+    pares); para um valor com vírgula use o `--env-ligada`, que não separa."""
     nome, separador, resto = texto.partition(":")
     if not separador or not re.fullmatch(r"[a-z][a-z0-9_+]{0,23}", nome):
         raise ValueError(f"--braco: use NOME:CHAVE=valor com nome em minúsculas ({texto!r})")

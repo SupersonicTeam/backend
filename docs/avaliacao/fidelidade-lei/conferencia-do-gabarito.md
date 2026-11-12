@@ -7,6 +7,8 @@ dispositivo, cada armadilha, cada permitido, a classe e, nas 6 perguntas de lei 
 traz algo que responda. Os 121 rótulos de dispositivo do conjunto foram conferidos contra a base por
 consulta (todos existem com o rótulo exato).
 
+(Primeira rodada de conferência, sobre a versão 2026-11-12.1: os ids FL01–FL36 abaixo são históricos; várias dessas perguntas foram trocadas depois, ver a segunda rodada no fim.)
+
 Resultado: 20 perguntas sem nenhuma observação; 8 divergências que mudavam o gabarito e 7 ajustes
 menores. Nenhuma pergunta foi trocada. Tudo abaixo foi aplicado ao conjunto antes do sha256.
 

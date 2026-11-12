@@ -211,14 +211,6 @@ Os três desfechos usam só os números e as margens desta tabela. O que o resul
 (taxas entre as aceitas, subtipos, instabilidade, lista de perguntas) é para leitura humana e não
 decide.
 
-### 7.4 Escolha entre braços
-
-Cada braço ligado tem o seu desfecho contra o `desligada`. Se **mais de um** der `ENTRA`, o escolhido é,
-nesta ordem: o de **menos execuções `INFIEL`** (M1, com base); no empate, o de **menos falsos
-descartes** (M2b); persistindo o empate, o de **menos tokens médios por execução** (o mais barato); por
-fim, o nome em ordem alfabética. Se só um der `ENTRA`, é ele; se nenhum, nada é escolhido. A escolha
-sai no `resultado.json` e no `resultado.md`; ela só vale entre braços que deram `ENTRA`.
-
 ### 7.3 O que a regra não faz
 
 - Não usa critério absoluto, como "todas as respostas fiéis": uma falha que já existe no
@@ -228,6 +220,14 @@ sai no `resultado.json` e no `resultado.md`; ela só vale entre braços que dera
 - Com 108 execuções por braço, a regra só detecta quedas grandes: a melhora mínima e o IC existem para
   que um acaso de amostragem não vire `ENTRA`. Se a correção tiver efeito menor que isso, o resultado
   honesto é `INCONCLUSIVA`.
+
+### 7.4 Escolha entre braços
+
+Cada braço ligado tem o seu desfecho contra o `desligada`. Se **mais de um** der `ENTRA`, o escolhido é,
+nesta ordem: o de **menos execuções `INFIEL`** (M1, com base); no empate, o de **menos falsos
+descartes** (M2b); persistindo o empate, o de **menos tokens médios por execução** (o mais barato); por
+fim, o nome em ordem alfabética. Se só um der `ENTRA`, é ele; se nenhum, nada é escolhido. A escolha
+sai no `resultado.json` e no `resultado.md`; ela só vale entre braços que deram `ENTRA`.
 
 ## 8. Contagem e registro
 
