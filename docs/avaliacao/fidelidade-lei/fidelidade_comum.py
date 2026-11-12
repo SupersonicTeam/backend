@@ -13,7 +13,7 @@ from pathlib import Path
 
 DIR = Path(__file__).resolve().parent
 CONJUNTO = DIR / "perguntas-fidelidade-lei.json"
-VERSAO_REGRA = "2026-11-12.2"
+VERSAO_REGRA = "2026-11-12.3"
 
 #: O braço de referência: todo braço comparado é medido contra ele (regra, seção 1).
 BASE = "desligada"

@@ -63,3 +63,22 @@ errado; ajustes aplicados em permitidos, armadilhas e observações (FL43, FL45,
 exceção do art. 76, § 3º, FL51 com o art. 181, FL54 reescrita porque a EC 132, ADCT art. 136, trata
 em termos gerais das contribuições a fundos estaduais, FL55, FL57, FL58, FL59 com o art. 90). Os 173
 rótulos do conjunto existem na base. A classe de FL45 ficou EXCECAO (condição e prazo da opção).
+
+## Terceira rodada (versão 2026-11-12.3): 13 substitutas
+
+Na segunda passada do portão, 13 das 24 substitutas foram marcadas e trocadas por 13 candidatas
+escolhidas depois de um terceiro portão (ids FL61, FL62, FL64, FL65, FL69, FL71, FL73, FL74, FL76,
+FL77, FL82, FL83, FL84). Dois subagentes independentes conferiram só essas 13 contra o texto da lei.
+Nenhum fato essencial estava errado e nenhuma pergunta foi derrubada. Ajustes aplicados:
+
+- FL77: a restrição do art. 35 (contribuições das alíneas a, b e c do art. 11, substitutivas e de
+  terceiros) e a do art. 39 entraram nos fatos; o auto de infração (art. 37) virou não essencial;
+  observação sobre o produtor rural pessoa física.
+- FL71 e FL83: a regra do próprio ano-calendário (§ 2º, II, do art. 251, excesso de 20%) entrou como
+  permitido; as armadilhas foram qualificadas ao § 1º, I.
+- FL69: a parceria ou meação do inciso VI ganhou a condição do § 9º, I.
+- FL76: "entre outras ações" saiu do F3; "ou infração" e "incisos I a III" entraram nos fatos 1 e 2.
+- FL73, FL74, FL62, FL64, FL65: incisos do art. 172, complemento do art. 473, ressalva do art. 148 e
+  permitidos novos; observações de escopo.
+
+Os 154 rótulos do conjunto existem na base.

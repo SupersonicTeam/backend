@@ -27,14 +27,16 @@ com o Haiku 5.5 pela API da Anthropic, 3 repetições por braço.
 
 ## O conjunto (36 perguntas, 6 por classe)
 
-| Classe | Ids | O que testa |
-|--------|-----|-------------|
-| `CAPUT` | FL01–FL06 | o conteúdo está no caput do artigo |
-| `PARAGRAFO` | FL07–FL12 | está num parágrafo, inciso ou alínea específico |
-| `EXCECAO` | FL13–FL18 | regra com exceção, condição ou prazo, em que inverter o sentido é fácil |
-| `AMPLA` | FL19–FL24 | pede o resumo de vários dispositivos |
-| `AUSENTE` | FL25–FL30 | assunto fiscal que a base não cobre (ITR, IRPF da atividade rural, contribuição sindical rural, Proagro, alíquota de ICMS, CPR): a resposta certa é não afirmar |
-| `SIMPLES` | FL31–FL36 | controles de resposta direta |
+| Classe | Perguntas | O que testa |
+|--------|-----------|-------------|
+| `CAPUT` | 6 | o conteúdo está no caput do artigo |
+| `PARAGRAFO` | 6 | está num parágrafo, inciso ou alínea específico |
+| `EXCECAO` | 6 | regra com exceção, condição ou prazo, em que inverter o sentido é fácil |
+| `AMPLA` | 6 | pede o resumo de vários dispositivos |
+| `AUSENTE` | 6 | assunto fiscal que a base não cobre: a resposta certa é não afirmar |
+| `SIMPLES` | 6 | controles de resposta direta |
+
+(Os ids não são contíguos por classe: parte das perguntas foi trocada depois do portão de proximidade.)
 
 Normas cobertas: LC 214/2025, EC 132/2023, LC 227/2026, Lei 8.212/1991 e Lei 9.528/1997 (art. 6º). O
 gabarito foi escrito do texto de `legislacao_trecho` (8.304 trechos vigentes, 2026-11-12) e conferido

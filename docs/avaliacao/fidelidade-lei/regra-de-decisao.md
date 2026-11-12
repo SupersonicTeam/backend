@@ -6,7 +6,7 @@ uma rodada invalida a rodada: muda-se a regra, sobe-se a versão do conjunto/da 
 novo. Quem escreveu esta regra e o conjunto nunca viu os conjuntos anteriores da Ceres nem o código
 da correção.
 
-Versão da regra: `2026-11-12.2` (a mesma do conjunto).
+Versão da regra: `2026-11-12.3` (a mesma do conjunto).
 
 ## 1. O que se compara
 

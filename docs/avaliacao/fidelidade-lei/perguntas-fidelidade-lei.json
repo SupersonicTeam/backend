@@ -1,6 +1,6 @@
 {
   "conjunto": "fidelidade-lei",
-  "versao": "2026-11-12.2",
+  "versao": "2026-11-12.3",
   "issue": "SupersonicTeam/backend#269",
   "descricao": "Perguntas de lei, na linguagem do produtor rural, com o gabarito de fidelidade escrito a partir do texto da base ingerida (legislacao_trecho, 8.304 trechos vigentes em 2026-11-12). Serve para medir a correção da fidelidade da rota de lei da Ceres, nos dois braços (flag desligada x ligada). Conjunto de TESTE: não entra no treino, não entra em prompt e não é lido por quem escreve a correção.",
   "baseDeLei": {
@@ -637,168 +637,6 @@
       "permitidos": []
     },
     {
-      "id": "FL37",
-      "classe": "CAPUT",
-      "pergunta": "Se eu comprar um trator para a lavoura, o crédito do IBS e da CBS dessa compra vale de uma vez ou só aos poucos?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "Fica assegurado o crédito integral e imediato de IBS e CBS, na forma dos arts. 47 a 56, na aquisição de bens de capital.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 108"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que o crédito dos bens de capital é aproveitado em parcelas (por exemplo, 12, 24 ou 48 meses) ou em proporção ao uso.",
-        "Dizer que a compra de bem de capital não gera crédito.",
-        "Dizer que o crédito integral e imediato dispensa as regras gerais de apropriação dos arts. 47 a 56."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "Ato conjunto do Poder Executivo da União e do Comitê Gestor do IBS pode definir hipóteses em que a aquisição de bens de capital por contribuinte do regime regular seja feita com suspensão do pagamento, caso em que o art. 108 não se aplica.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 109"
-            }
-          ]
-        },
-        {
-          "afirmacao": "As alíquotas do IBS e da CBS são reduzidas a zero no fornecimento e na importação de tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte, nos bens listados no regulamento.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 110, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 110, parágrafo único"
-            }
-          ]
-        }
-      ],
-      "observacaoDoGabarito": "A pergunta supõe um produtor contribuinte do regime regular; lembrar que o produtor não contribuinte tem outro tratamento (art. 110) não torna a resposta infiel."
-    },
-    {
-      "id": "FL38",
-      "classe": "CAPUT",
-      "pergunta": "Tenho duas fazendas, cada uma com a sua inscrição. O IBS e a CBS são calculados fazenda por fazenda ou tudo junto?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "A apuração do IBS e da CBS consolida as operações realizadas por todos os estabelecimentos do contribuinte.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 42"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que cada estabelecimento apura e paga o seu imposto separadamente.",
-        "Dizer que a consolidação vale só para estabelecimentos do mesmo município ou do mesmo estado."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "O pagamento do IBS e da CBS e o pedido de ressarcimento são centralizados em um único estabelecimento.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 42, § 1º"
-            }
-          ]
-        },
-        {
-          "afirmacao": "A apuração consolida todos os débitos e créditos do contribuinte no regime regular, inclusive os dos regimes diferenciados e específicos, salvo as hipóteses previstas expressamente na lei.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 42, § 2º"
-            }
-          ]
-        }
-      ],
-      "observacaoDoGabarito": "A pergunta supõe fazendas do mesmo titular (o mesmo contribuinte); a consolidação do art. 42 vale para os estabelecimentos do contribuinte."
-    },
-    {
-      "id": "FL39",
-      "classe": "CAPUT",
-      "pergunta": "O governo pode me mandar a conta do imposto já calculada, ou eu tenho que calcular tudo sozinho?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "O Comitê Gestor do IBS e a RFB poderão, respectivamente, apresentar ao sujeito passivo apuração assistida do saldo do IBS e da CBS do período de apuração.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que a apuração assistida é obrigatória em todos os casos ou que substitui sempre a apuração do contribuinte.",
-        "Dizer que o contribuinte não pode ajustar a apuração assistida.",
-        "Dizer que o silêncio do contribuinte invalida a apuração assistida (o § 4º presume correto o saldo)."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "O saldo da apuração assistida é calculado nos termos do caput do art. 45 e tem por base documentos fiscais eletrônicos, informações sobre a extinção dos débitos e outras informações prestadas pelo contribuinte ou a ele relativas.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 1º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 1º, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 1º, inciso III"
-            }
-          ]
-        },
-        {
-          "afirmacao": "Havendo apuração assistida, a apuração pelo contribuinte só pode ser feita mediante ajustes nela.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 2º"
-            }
-          ]
-        },
-        {
-          "afirmacao": "Se o contribuinte a confirma ou faz ajustes, isso implica confissão de dívida e constitui o crédito tributário; sem manifestação no prazo para conclusão da apuração, presume-se correto o saldo e constituído o crédito.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 3º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 46, § 4º"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "id": "FL40",
       "classe": "CAPUT",
       "pergunta": "Paguei o fornecedor com um meio de pagamento que não separa o imposto automaticamente. Posso recolher eu mesmo o IBS e a CBS dessa compra?",
@@ -904,118 +742,6 @@
       ]
     },
     {
-      "id": "FL42",
-      "classe": "CAPUT",
-      "pergunta": "O governo pode dar algum incentivo para o consumidor pedir a nota fiscal?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "O Comitê Gestor do IBS e a RFB poderão instituir programas de incentivo à cidadania fiscal por meio de estímulo à exigência, pelos consumidores, da emissão de documentos fiscais.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 61"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que o incentivo ao consumidor é obrigatório ou já está em vigor com regras definidas.",
-        "Dizer que o programa é de outro órgão (Estados, Municípios isoladamente ou o Banco Central)."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "Os programas poderão ser financiados pelo montante equivalente a até 0,05% da arrecadação do IBS e da CBS.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 61, § 1º"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "FL43",
-      "classe": "PARAGRAFO",
-      "pergunta": "Comprei insumos de um vizinho sem nota fiscal. Posso ter que responder pelo imposto que ele não pagou?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "São solidariamente responsáveis pelo pagamento do IBS e da CBS a pessoa ou entidade sem personalidade jurídica que, a qualquer título, adquire, importa, recebe, dá entrada ou saída ou mantém em depósito bem, ou toma serviço, não acobertado por documento fiscal idôneo.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 24, inciso I"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que só o vendedor responde pelo imposto.",
-        "Dizer que o adquirente só responde se souber da irregularidade (o inciso I não traz essa condição).",
-        "Dizer que a responsabilidade solidária só alcança contribuinte do regime regular."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "A responsabilidade solidária vale sem prejuízo das demais hipóteses do Código Tributário Nacional e da legislação civil.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 24"
-            }
-          ]
-        },
-        {
-          "afirmacao": "O sujeito passivo deve emitir documento fiscal eletrônico ao realizar operações com bens ou serviços.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 60"
-            }
-          ]
-        }
-      ],
-      "observacaoDoGabarito": "A responsabilidade é pelo IBS e pela CBS devidos na operação: lembrar que, se o vizinho for produtor não contribuinte, pode não haver imposto devido não torna a resposta infiel."
-    },
-    {
-      "id": "FL44",
-      "classe": "EXCECAO",
-      "pergunta": "Paguei imposto a maior numa venda. Posso pedir o dinheiro de volta?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "Em caso de pagamento indevido ou a maior, a restituição do IBS e da CBS somente será devida ao contribuinte se a operação não tiver gerado crédito para o adquirente dos bens ou serviços e se tiver sido observado o art. 166 do Código Tributário Nacional.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 38"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 38, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 38, inciso II"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que a restituição é sempre devida.",
-        "Dizer que basta uma das duas condições (a lei exige as duas, ligadas por 'e').",
-        "Dar um prazo para pedir a restituição que o trecho não traz."
-      ],
-      "permitidos": []
-    },
-    {
       "id": "FL45",
       "classe": "EXCECAO",
       "pergunta": "Posso escolher pagar a contribuição previdenciária do produtor sobre a folha de pagamento em vez de sobre a venda da safra? E se eu me arrepender no meio do ano?",
@@ -1060,119 +786,6 @@
             {
               "norma": "Lei 8.212/1991",
               "dispositivo": "art. 25, inciso I"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "FL46",
-      "classe": "AMPLA",
-      "pergunta": "Contrato um caminhoneiro autônomo, pessoa física, para levar a minha safra. Isso dá algum crédito de imposto? Em que casos não dá?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "O contribuinte do regime regular pode apropriar créditos presumidos de IBS e CBS nas aquisições de serviço de transporte de carga de transportador autônomo pessoa física que não seja contribuinte ou que seja inscrito como MEI.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169"
-            }
-          ]
-        },
-        {
-          "id": "F2",
-          "essencial": true,
-          "afirmacao": "Esses créditos só se aplicam a quem adquire bens e serviços e suporta a cobrança do valor do serviço de transporte de carga; não se aplicam a quem suporta a cobrança do transporte como parte do valor da operação, ainda que especificado em separado nos documentos da aquisição.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 1º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 1º, inciso II"
-            }
-          ]
-        },
-        {
-          "id": "F3",
-          "essencial": true,
-          "afirmacao": "O documento fiscal eletrônico da aquisição deve discriminar o valor da operação (valor pago ao fornecedor), o valor do crédito presumido e o valor líquido para efeitos fiscais, a diferença entre os dois.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 2º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 2º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 2º, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 2º, inciso III"
-            }
-          ]
-        },
-        {
-          "id": "F4",
-          "essencial": false,
-          "afirmacao": "O crédito presumido resulta da aplicação de percentuais sobre o valor líquido do documento; os percentuais são definidos e divulgados anualmente, até setembro, por ato conjunto do Ministro da Fazenda e do Comitê Gestor do IBS, e valem a partir de 1º de janeiro do ano seguinte.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 3º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 4º"
-            }
-          ]
-        },
-        {
-          "id": "F5",
-          "essencial": false,
-          "afirmacao": "Os créditos presumidos só podem ser usados para deduzir, respectivamente, o IBS e a CBS devidos pelo contribuinte.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 7º"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que o frete sempre dá crédito, inclusive quando está embutido no valor da operação.",
-        "Dizer que o crédito é o valor do frete ou um percentual fixo definido na lei.",
-        "Dizer que o transportador autônomo contribuinte do regime regular entra nessa regra.",
-        "Dizer que o crédito presumido pode ser transferido ou pago em dinheiro sem observar o § 7º."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "As alíquotas do IBS e da CBS são reduzidas a zero no fornecimento e na importação de veículos de transporte de carga destinados a transportador autônomo de carga pessoa física não contribuinte.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 110, inciso II"
-            }
-          ]
-        },
-        {
-          "afirmacao": "O direito ao crédito presumido vale também para a sociedade cooperativa em relação a serviços de transporte de seus associados transportadores autônomos pessoa física não contribuintes.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 169, § 8º"
             }
           ]
         }
@@ -1270,357 +883,6 @@
       "observacaoDoGabarito": "Nos casos que o regime do art. 22-A exclui (serviços a terceiros, cooperativas, avicultura etc.), a contribuição segue a regra do art. 22 (folha); dizê-lo não torna a resposta infiel."
     },
     {
-      "id": "FL48",
-      "classe": "AMPLA",
-      "pergunta": "Quando o cliente me paga por um meio eletrônico, o imposto já sai na hora do pagamento? Como funciona esse tal de split payment?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "Nas transações de pagamento de operações com bens ou serviços, os prestadores de serviços de pagamento eletrônico e as instituições operadoras de sistemas de pagamentos devem segregar e recolher ao Comitê Gestor do IBS e à RFB os valores do IBS e da CBS no momento da liquidação financeira da transação (split payment).",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 31"
-            }
-          ]
-        },
-        {
-          "id": "F2",
-          "essencial": true,
-          "afirmacao": "Há dois procedimentos: o padrão e o simplificado, este opcional, em que os valores são calculados por percentual preestabelecido do valor das operações.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 31, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 31, § 1º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 31, § 1º, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 33"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 33, § 1º"
-            }
-          ]
-        },
-        {
-          "id": "F3",
-          "essencial": true,
-          "afirmacao": "No procedimento padrão, o originador da transação transmite informações que permitam vincular as operações à transação de pagamento e identificar os valores do IBS e da CBS, e, antes de liberar os recursos ao fornecedor, o prestador consulta o sistema do Comitê Gestor e da RFB sobre os valores a segregar e recolher.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 1º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 1º, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 3º"
-            }
-          ]
-        },
-        {
-          "id": "F4",
-          "essencial": false,
-          "afirmacao": "A segregação ocorre na data da liquidação financeira; no pagamento parcelado pelo fornecedor, é proporcional em todas as parcelas; a antecipação de recebíveis não altera a obrigação.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 34, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 34, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 34, inciso III"
-            }
-          ]
-        },
-        {
-          "id": "F5",
-          "essencial": true,
-          "afirmacao": "O split payment não afasta a responsabilidade do sujeito passivo pelo eventual saldo a recolher; os prestadores de serviços de pagamento não são responsáveis tributários pelo IBS e pela CBS das operações cujos pagamentos liquidam.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 34, inciso IV"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 34, inciso V, alínea b"
-            }
-          ]
-        },
-        {
-          "id": "F6",
-          "essencial": false,
-          "afirmacao": "No simplificado, o percentual não guarda relação com o valor dos débitos efetivamente incidentes; o Comitê Gestor e a RFB transferem ao fornecedor, em até 3 dias úteis da conclusão da apuração, o que foi recolhido e não utilizado; originar a transação sem identificar os valores do IBS e da CBS implica a opção pelo simplificado.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 33, § 2º, inciso III"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 33, § 4º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 33, § 2º-A"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que o fornecedor recolhe o imposto e depois o repassa ao fisco, quando a lei manda segregar e recolher na liquidação financeira.",
-        "Dizer que o split payment é opcional em geral (só o procedimento simplificado é opcional).",
-        "Dizer que o prestador do serviço de pagamento passa a ser responsável tributário pelo IBS e pela CBS.",
-        "Dizer que o split payment dispensa o contribuinte de apurar e pagar o saldo a recolher.",
-        "Dizer que, no pagamento parcelado, todo o imposto é retido na primeira parcela."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "O split payment se aplica a todos os prestadores de serviços de pagamento eletrônico participantes de arranjos de pagamento abertos e fechados, públicos e privados, inclusive os não regulados pelo Banco Central.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 31, § 3º"
-            }
-          ]
-        },
-        {
-          "afirmacao": "No procedimento padrão, o valor segregado é a diferença positiva entre os débitos do IBS e da CBS destacados no documento fiscal e os valores já extintos por outras modalidades.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 3º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 3º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 32, § 3º, inciso II"
-            }
-          ]
-        }
-      ],
-      "observacaoDoGabarito": "A lei não cita meios de pagamento por nome (Pix, cartão, boleto): afirmar que a lei os cita é além do trecho; dizer que vale para os arranjos de pagamento em geral é fiel ao § 3º do art. 31."
-    },
-    {
-      "id": "FL49",
-      "classe": "AMPLA",
-      "pergunta": "O que acontece com o ICMS e o ISS que eu pago hoje até 2033? Eles acabam de uma vez?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "De 2029 a 2032, as alíquotas dos impostos dos arts. 155, II, e 156, III, da Constituição serão fixadas em proporções das alíquotas fixadas nas respectivas legislações: 9/10 em 2029, 8/10 em 2030, 7/10 em 2031 e 6/10 em 2032.",
-          "dispositivos": [
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128)"
-            },
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128, inciso I)"
-            },
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128, inciso II)"
-            },
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128, inciso III)"
-            },
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128, inciso IV)"
-            }
-          ]
-        },
-        {
-          "id": "F2",
-          "essencial": true,
-          "afirmacao": "Esses impostos ficam extintos a partir de 2033.",
-          "dispositivos": [
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 129)"
-            }
-          ]
-        },
-        {
-          "id": "F3",
-          "essencial": false,
-          "afirmacao": "Os benefícios e incentivos fiscais ou financeiros relativos a esses impostos não alcançados pelo caput do art. 128 são reduzidos na mesma proporção, e os percentuais usados para calcular benefícios já reduzidos ficam mantidos até 31 de dezembro de 2032.",
-          "dispositivos": [
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128, § 1º)"
-            },
-            {
-              "norma": "EC 132/2023",
-              "dispositivo": "art. 2º (redação do art. 128, § 3º)"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que os impostos acabam em 2027, 2029 ou 2031, ou que acabam de uma vez.",
-        "Trocar as proporções (por exemplo, 90%, 80%, 70% e 60% estão certos; outros valores ou outros anos são infiéis).",
-        "Dizer que a redução é de uma proporção fixa por ano sem a escala 9/10, 8/10, 7/10, 6/10.",
-        "Dizer que as alíquotas de 2033 são as de 2032."
-      ],
-      "permitidos": [],
-      "observacaoDoGabarito": "Os impostos dos arts. 155, II, e 156, III, da Constituição são o ICMS e o ISS: dizê-lo é correto e não torna a resposta infiel."
-    },
-    {
-      "id": "FL50",
-      "classe": "AMPLA",
-      "pergunta": "Preciso importar uma peça para a colheitadeira. Como o IBS e a CBS funcionam na importação: incide, quando pago, que alíquota e que câmbio?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "O IBS e a CBS incidem sobre a importação de bens ou de serviços do exterior realizada por pessoa física, pessoa jurídica ou entidade sem personalidade jurídica, ainda que não inscrita no regime regular, qualquer que seja a finalidade.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 63"
-            }
-          ]
-        },
-        {
-          "id": "F2",
-          "essencial": true,
-          "afirmacao": "O fato gerador da importação de bens materiais é a entrada de bens de procedência estrangeira no território nacional; o contribuinte é o importador, quem promove essa entrada.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 65"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 72, inciso I"
-            }
-          ]
-        },
-        {
-          "id": "F3",
-          "essencial": true,
-          "afirmacao": "O imposto deve ser pago até a entrega dos bens submetidos a despacho para consumo, ainda que antes da liberação pela autoridade aduaneira, salvo as hipóteses de pagamento posterior que o regulamento pode prever; o sujeito passivo pode optar por antecipar o pagamento para o registro da declaração de importação.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76, § 3º"
-            }
-          ]
-        },
-        {
-          "id": "F4",
-          "essencial": true,
-          "afirmacao": "As alíquotas na importação de bem material são as mesmas incidentes sobre a aquisição do respectivo bem no País, observadas as disposições próprias dos regimes específicos e ressalvado o § 6º do art. 126.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 71"
-            }
-          ]
-        },
-        {
-          "id": "F5",
-          "essencial": false,
-          "afirmacao": "Os valores em moeda estrangeira são convertidos pela taxa de câmbio utilizada para o cálculo do Imposto sobre a Importação, sem ajuste posterior por variação cambial.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 70"
-            }
-          ]
-        },
-        {
-          "id": "F6",
-          "essencial": false,
-          "afirmacao": "O pagamento do IBS e da CBS é condição para a entrega dos bens e, na importação, os tributos só se extinguem mediante recolhimento pelo sujeito passivo.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76, § 4º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76, § 5º"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que a pessoa física que importa não paga IBS e CBS.",
-        "Dizer que a importação tem alíquota diferente (maior ou menor) da do produto nacional, sem a ressalva da lei.",
-        "Dizer que, para o importador comum, o imposto é pago depois da entrega ou do desembaraço, em prazo fixo (o regulamento pode prever pagamento posterior só para os certificados no Programa OEA e para remessas internacionais no regime de tributação simplificada).",
-        "Dizer que o câmbio é o do dia do pagamento ou que a variação cambial posterior ajusta o imposto."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "As alíquotas do IBS e da CBS são reduzidas a zero no fornecimento e na importação de tratores, máquinas e implementos agrícolas destinados a produtor rural não contribuinte, nos bens listados no regulamento. Vale para a peça só se ela estiver na lista do regulamento.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 110, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 110, parágrafo único"
-            }
-          ]
-        },
-        {
-          "afirmacao": "O regulamento pode prever pagamento posterior ao da entrega para os sujeitos passivos certificados no Programa OEA e para bens de remessas internacionais com Regime de Tributação Simplificada; a diferença gerada pela antecipação é cobrada no fato gerador, sem acréscimos moratórios.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76, § 2º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 76, § 3º"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "id": "FL51",
       "classe": "AUSENTE",
       "pergunta": "Quanto eu pago de IOF no financiamento do custeio da safra?",
@@ -1714,106 +976,6 @@
             {
               "norma": "EC 132/2023",
               "dispositivo": "art. 2º (redação do art. 136, inciso IV)"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "FL55",
-      "classe": "SIMPLES",
-      "pergunta": "Quem define a alíquota de referência do IBS e da CBS?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "As alíquotas de referência são fixadas por resolução do Senado Federal.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 18"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que a alíquota de referência é fixada por decreto, pela Receita Federal ou pelo Comitê Gestor do IBS (eles propõem ou calculam; quem fixa é o Senado)."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "A alíquota de referência da CBS é fixada de 2027 a 2035, a do IBS de 2029 a 2035, e, após 2035, valem as do ano anterior.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 18, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 18, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 18, inciso III"
-            }
-          ]
-        },
-        {
-          "afirmacao": "As alíquotas de referência são calculadas com base em cálculos do Tribunal de Contas da União, a partir de propostas do Poder Executivo da União (CBS) e do Comitê Gestor do IBS (IBS), e fixadas pelo Senado.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 349, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 349, § 3º"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "FL56",
-      "classe": "SIMPLES",
-      "pergunta": "Preciso me cadastrar em algum cadastro especial para pagar o IBS e a CBS?",
-      "temBaseLegal": true,
-      "fatos": [
-        {
-          "id": "F1",
-          "essencial": true,
-          "afirmacao": "As pessoas físicas e jurídicas e as entidades sem personalidade jurídica sujeitas ao IBS e à CBS são obrigadas a se registrar em cadastro com identificação única.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 59"
-            }
-          ]
-        }
-      ],
-      "armadilhas": [
-        "Dizer que é um cadastro novo, só do IBS, separado do CPF e do CNPJ.",
-        "Dizer que o registro é facultativo."
-      ],
-      "permitidos": [
-        {
-          "afirmacao": "Os cadastros considerados são o CPF para pessoas físicas, o CNPJ para pessoas jurídicas e entidades sem personalidade jurídica, e o Cadastro Imobiliário Brasileiro (CIB) para imóveis rurais e urbanos.",
-          "dispositivos": [
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 59, § 1º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 59, § 1º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 59, § 1º, inciso II"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 59, § 1º, inciso III"
             }
           ]
         }
@@ -1964,59 +1126,774 @@
       "observacaoDoGabarito": "O caso descrito na pergunta (comprar insumo importado sem imposto para exportar) é o drawback na modalidade de suspensão, que o art. 90 preserva: a resposta é fiel se disser que o art. 91 afasta só a isenção e a restituição e, havendo citação do art. 90, que a suspensão tem tratamento próprio; é infiel se disser que o drawback acabou por inteiro."
     },
     {
-      "id": "FL60",
-      "classe": "SIMPLES",
-      "pergunta": "Preciso emitir nota fiscal eletrônica até nas vendas que não pagam imposto, como as isentas ou de alíquota zero?",
+      "id": "FL61",
+      "classe": "CAPUT",
+      "pergunta": "Uso um programa de computador para controlar as notas e o estoque da fazenda. Preciso guardar a documentação técnica dele?",
       "temBaseLegal": true,
       "fatos": [
         {
           "id": "F1",
           "essencial": true,
-          "afirmacao": "O sujeito passivo do IBS e da CBS, ao realizar operações com bens ou serviços, inclusive exportações e importações, deve emitir documento fiscal eletrônico.",
+          "afirmacao": "O sujeito passivo usuário de sistema de processamento de dados deve manter documentação técnica completa e atualizada do sistema, suficiente para possibilitar a sua auditoria, facultada a manutenção em meio digital, sem prejuízo da emissão gráfica quando solicitada.",
           "dispositivos": [
             {
               "norma": "LC 214/2025",
-              "dispositivo": "art. 60"
+              "dispositivo": "art. 337"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a documentação precisa existir só em papel, ou que o meio digital é proibido.",
+        "Dizer que a obrigação é do fornecedor do programa e não do usuário.",
+        "Dizer que a obrigação só vale acima de certo faturamento ou número de notas, sem trecho que o traga.",
+        "Dizer que a documentação pode ser incompleta ou desatualizada."
+      ],
+      "permitidos": [],
+      "observacaoDoGabarito": "A obrigação é do sujeito passivo usuário de sistema de processamento de dados; lembrar que o produtor que não é sujeito passivo não tem essa obrigação não torna a resposta infiel."
+    },
+    {
+      "id": "FL62",
+      "classe": "CAPUT",
+      "pergunta": "O fisco pode me intimar por meio eletrônico ou eu tenho que receber uma carta em mãos?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "As intimações dos atos do processo serão realizadas por meio de DTE (domicílio tributário eletrônico), inclusive em se tratando de intimação de procurador.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 332"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": false,
+          "afirmacao": "A intimação efetuada por DTE considera-se pessoal, para todos os efeitos legais.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 332, § 1º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a intimação por DTE não é pessoal ou não tem validade sem carta.",
+        "Dizer que a intimação só pode ser feita por carta com aviso de recebimento.",
+        "Dizer que a intimação do procurador segue regra diferente (o caput inclui o procurador)."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "As administrações tributárias também podem realizar a intimação pessoalmente, por agente do órgão, na repartição ou fora dela, provada com a assinatura do sujeito passivo ou de seu mandatário ou preposto.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 332, § 3º"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A regra do art. 332 é do processo do IBS e da CBS (LC 214); delimitar isso não torna a resposta infiel."
+    },
+    {
+      "id": "FL64",
+      "classe": "CAPUT",
+      "pergunta": "Contrato uma empreiteira que fornece os trabalhadores da colheita. Preciso reter alguma coisa da nota fiscal dela?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "A empresa contratante de serviços executados mediante cessão de mão de obra deve reter 11% do valor bruto da nota fiscal ou fatura de prestação de serviços.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 31"
             }
           ]
         },
         {
           "id": "F2",
           "essencial": true,
-          "afirmacao": "A obrigação de emitir documentos fiscais eletrônicos se aplica inclusive a operações imunes, isentas, de alíquota zero ou com suspensão, e à transferência de bens entre estabelecimentos do mesmo contribuinte.",
+          "afirmacao": "A importância retida é recolhida em nome da empresa cedente da mão de obra até o dia 20 do mês subsequente ao da emissão da nota ou fatura, ou até o dia útil imediatamente anterior se não houver expediente bancário naquele dia.",
           "dispositivos": [
             {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 60, § 2º"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 60, § 2º, inciso I"
-            },
-            {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 60, § 2º, inciso II"
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 31"
             }
           ]
         }
       ],
       "armadilhas": [
-        "Dizer que operações isentas, imunes ou de alíquota zero estão dispensadas de documento fiscal eletrônico.",
-        "Dizer que a obrigação depende do valor da operação.",
-        "Dizer que a transferência entre estabelecimentos do mesmo contribuinte não exige documento fiscal."
+        "Dar outro percentual de retenção (por exemplo 8%, 15% ou 20%).",
+        "Dizer que a retenção incide sobre o valor líquido, sobre a folha ou sobre o contrato, e não sobre o valor bruto da nota ou fatura.",
+        "Dizer que o recolhimento é em nome da contratante e não da empresa cedente, ou dar outro prazo (dia 10, dia 15, último dia útil).",
+        "Dizer que a retenção vale para qualquer prestação de serviços, e não para a cessão de mão de obra."
       ],
       "permitidos": [
         {
-          "afirmacao": "As informações prestadas no documento fiscal têm caráter declaratório e constituem confissão do valor devido de IBS e de CBS ali consignado.",
+          "afirmacao": "A empreitada de mão de obra é enquadrada expressamente como cessão de mão de obra para esse fim.",
           "dispositivos": [
             {
-              "norma": "LC 214/2025",
-              "dispositivo": "art. 60, § 1º"
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 31, § 4º, inciso III"
             }
           ]
         }
       ],
-      "observacaoDoGabarito": "A obrigação é do sujeito passivo; lembrar que o produtor rural não contribuinte do art. 164 não é sujeito passivo não torna a resposta infiel."
+      "observacaoDoGabarito": "O art. 31 fala em 'empresa contratante'; a resposta pode lembrar que o enquadramento do produtor como empresa contratante depende do caso, sem ser infiel."
+    },
+    {
+      "id": "FL65",
+      "classe": "CAPUT",
+      "pergunta": "Perdi uma ação trabalhista de um empregado da fazenda. A contribuição previdenciária sobre o que paguei também tem de ser recolhida?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "Nas ações trabalhistas de que resultar o pagamento de direitos sujeitos à incidência de contribuição previdenciária, o juiz, sob pena de responsabilidade, determinará o imediato recolhimento das importâncias devidas à Seguridade Social.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 43"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a contribuição só é devida se o empregado pedir ou se houver nova ação.",
+        "Dizer que o recolhimento só é determinado depois do trânsito em julgado ou em prazo longo (o texto fala em imediato recolhimento).",
+        "Dizer que a contribuição incide sobre qualquer verba da condenação, e não só sobre os direitos sujeitos à incidência de contribuição previdenciária.",
+        "Dizer que a determinação do recolhimento depende de requerimento do empregador."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "O recolhimento deve ser feito no mesmo prazo em que devam ser pagos os créditos encontrados em liquidação de sentença.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 43, § 3º"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A resposta pode lembrar que só se recolhe sobre os direitos sujeitos à incidência de contribuição previdenciária, sem ser infiel. Dizer que o recolhimento é feito no mesmo prazo dos créditos encontrados em liquidação de sentença (art. 43, § 3º) não é infiel."
+    },
+    {
+      "id": "FL69",
+      "classe": "PARAGRAFO",
+      "pergunta": "Meu filho trabalha comigo na roça, mas também teve um emprego remunerado de safra fora. Ele deixa de ser segurado especial?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "Não é segurado especial o membro de grupo familiar que possuir outra fonte de rendimento, exceto se decorrente das hipóteses dos incisos I a VIII do § 10 do art. 12.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": true,
+          "afirmacao": "Entre as exceções está o exercício de atividade remunerada em período não superior a 120 dias, corridos ou intercalados, no ano civil, observado o § 13.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso III"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que qualquer outra renda tira a condição de segurado especial, sem as exceções do § 10.",
+        "Dizer que o emprego remunerado nunca tira a condição, qualquer que seja o tempo.",
+        "Dar outro limite de dias (por exemplo 90 ou 180) ou dizer que os dias precisam ser corridos.",
+        "Dizer que a regra vale só para o chefe da família e não para o membro do grupo familiar."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "Também não retiram a condição de segurado especial, entre outros: benefício de pensão por morte, auxílio-acidente ou auxílio-reclusão de valor não superior ao do menor benefício de prestação continuada; mandato de dirigente sindical rural; mandato de vereador do Município em que desenvolve a atividade rural; parceria ou meação outorgada nas condições do inciso I do § 9º; atividade artesanal e atividade artística nos limites do § 10.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso I"
+            },
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso IV"
+            },
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso V, alínea a"
+            },
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso VI"
+            },
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso VII"
+            },
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 10, inciso VIII"
+            },
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 9º, inciso I"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A resposta não deve afirmar que o emprego de safra do filho se enquadra na exceção sem condicionar ao limite de 120 dias; o enquadramento do caso concreto depende dos fatos."
+    },
+    {
+      "id": "FL71",
+      "classe": "EXCECAO",
+      "pergunta": "Arrendo uma parte da minha fazenda para um vizinho plantar. Isso me torna contribuinte do IBS e da CBS por causa do arrendamento?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "A pessoa física que realiza locação, cessão onerosa ou arrendamento de bem imóvel é considerada contribuinte do regime regular do IBS e da CBS desde que, no ano-calendário anterior, a receita total com essas operações exceda R$ 240.000 e elas tenham por objeto mais de 3 bens imóveis distintos.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 1º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 1º, inciso I, alínea a"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 1º, inciso I, alínea b"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": false,
+          "afirmacao": "O valor de R$ 240.000 é atualizado mensalmente pelo IPCA, a partir da publicação da lei complementar.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 5º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que qualquer arrendamento torna a pessoa física contribuinte.",
+        "No regime do § 1º, I, dizer que basta a receita acima de R$ 240.000, ou basta ter mais de 3 imóveis (as duas condições valem juntas, ligadas por 'e').",
+        "Trocar os números (R$ 240.000 por outro valor, 3 imóveis por outro número) ou dizer que o valor é fixo para sempre.",
+        "Dizer que a regra do § 1º, I, se mede pelo ano corrente: a regra geral conta o ano-calendário anterior (o § 2º, II, só antecipa o efeito para o próprio ano quando o valor excede o limite em 20%)."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "As alíquotas do IBS e da CBS relativas às operações de locação, cessão onerosa e arrendamento de bens imóveis ficam reduzidas em 70%.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 261, parágrafo único"
+            }
+          ]
+        },
+        {
+          "afirmacao": "As operações com bens imóveis por contribuintes do regime regular ficam sujeitas ao regime específico do capítulo dos bens imóveis.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251"
+            }
+          ]
+        },
+        {
+          "afirmacao": "Também é considerada contribuinte do regime regular no próprio ano-calendário a pessoa física cuja locação, cessão onerosa ou arrendamento de bem imóvel exceda em 20% o limite de R$ 240.000 da alínea a (isto é, R$ 288.000, atualizados pelo IPCA).",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 2º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 2º, inciso II"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A pergunta é sobre arrendamento de parte da fazenda por pessoa física; lembrar que o produtor rural pode ser não contribuinte pelo art. 164 não torna a resposta infiel."
+    },
+    {
+      "id": "FL73",
+      "classe": "AMPLA",
+      "pergunta": "Como o IBS e a CBS funcionam no diesel e no etanol: sobre o que incidem e como se calcula?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "O IBS e a CBS incidem uma única vez sobre as operações, ainda que iniciadas no exterior, com os combustíveis listados no art. 172, qualquer que seja a finalidade.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 172"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 172, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 172, inciso III"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 172, inciso VI"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": true,
+          "afirmacao": "A base de cálculo é a quantidade de combustível objeto da operação, aferida pela unidade de medida própria de cada combustível.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 173"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 173, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "essencial": true,
+          "afirmacao": "O valor do IBS e da CBS corresponde à multiplicação da base de cálculo pela alíquota específica aplicável a cada combustível.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 173, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "essencial": false,
+          "afirmacao": "As alíquotas dos biocombustíveis não podem ser inferiores a 40% nem exceder 90% das dos respectivos combustíveis fósseis comparados.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 175, § 1º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o imposto incide em cada etapa da cadeia dos combustíveis (a lei diz uma única vez).",
+        "Dizer que a base de cálculo é o preço ou o valor da operação, e não a quantidade de combustível.",
+        "Dar um valor de alíquota por litro ou um percentual ad valorem para o diesel ou o etanol sem trecho que o traga.",
+        "Dizer que o biocombustível tem a mesma tributação ou tributação maior que o combustível fóssil, ou dar outra faixa (por exemplo 20% a 50%)."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "Fica assegurada aos biocombustíveis e ao hidrogênio de baixa emissão de carbono tributação inferior à incidente sobre os combustíveis fósseis.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 175"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A lista de combustíveis do art. 172 está nos incisos; a resposta não é infiel por dizer que diesel e etanol constam dela se citar o trecho que os traz, e é além do trecho se os afirmar sem esse trecho."
+    },
+    {
+      "id": "FL74",
+      "classe": "AMPLA",
+      "pergunta": "Vendo hortaliças para a prefeitura (merenda escolar). O imposto novo é diferente quando o comprador é o governo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "Nas aquisições de bens e serviços por pessoa jurídica de direito público interno, as alíquotas do IBS e da CBS são reduzidas, de modo uniforme, na proporção do redutor fixado: de 2027 a 2033, nos termos do art. 370; a partir de 2034, no nível fixado para 2033.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": true,
+          "afirmacao": "A redução não se aplica às aquisições presenciais dispensadas de licitação (cumulativamente), às sujeitas a alíquotas nacionalmente uniformes listadas e às sujeitas ao Simples Nacional ou ao MEI.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472, parágrafo único"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472, parágrafo único, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472, parágrafo único, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 472, parágrafo único, inciso III"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "essencial": false,
+          "afirmacao": "O produto da arrecadação do IBS e da CBS nas aquisições pela administração pública direta, autarquias e fundações públicas é integralmente destinado ao ente federativo contratante, mediante redução a zero das alíquotas devidas aos demais entes federativos e equivalente elevação da alíquota do tributo devido ao ente contratante.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 473"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 473, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 473, § 2º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a redução vale em qualquer venda ao governo, sem as exceções do parágrafo único.",
+        "Dizer que a redução vale para quem é optante do Simples Nacional ou MEI.",
+        "Dar um percentual do redutor sem trecho do art. 370 que o traga (o art. 472 remete ao art. 370).",
+        "Dizer que o imposto de toda compra pública vai sempre para a União (vai para o ente contratante)."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "As alíquotas do IBS e da CBS são reduzidas a zero no fornecimento de produtos hortícolas, frutas e ovos do Anexo XV.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 148"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A pergunta supõe um fornecedor que não seja Simples/MEI; lembrar as exceções do parágrafo único não torna a resposta infiel. Os produtos hortícolas, frutas e ovos do Anexo XV já têm as alíquotas reduzidas a zero (art. 148); a resposta que lembra isso, ou que diz que o redutor do art. 472 só importa onde há alíquota a reduzir, não é infiel."
+    },
+    {
+      "id": "FL76",
+      "classe": "AMPLA",
+      "pergunta": "Se o fisco abrir uma fiscalização contra mim, a partir de quando eu perco a chance de me regularizar sozinho, e o que não conta como fiscalização?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "O procedimento fiscal tem início com a ciência do primeiro ato de ofício da autoridade fiscal tendente à apuração de obrigação tributária ou infração, a apreensão de bens, a apreensão de documentos ou livros (inclusive digitais) ou o começo do despacho aduaneiro de mercadoria importada.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328, inciso III"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328, inciso IV"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": true,
+          "afirmacao": "O início do procedimento fiscal exclui a espontaneidade do sujeito passivo em relação aos atos anteriores; os atos dos incisos I a III valem por 90 dias, prorrogáveis sucessivamente por igual período com qualquer ato que formalize o prosseguimento dos trabalhos.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 328, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "essencial": true,
+          "afirmacao": "Não excluem a espontaneidade o cruzamento de dados e o monitoramento do comportamento fiscal-tributário.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 329"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 329, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 329, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "essencial": false,
+          "afirmacao": "O auto de infração contém obrigatoriamente, entre outros itens, a qualificação do autuado, o local, a data e a hora da lavratura, a descrição do fato, a disposição legal infringida e a penalidade, e a intimação para cumprir ou impugnar no prazo legal.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 330, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 330, § 1º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 330, § 1º, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 330, § 1º, inciso III"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 330, § 1º, inciso IV"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 330, § 1º, inciso V"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a espontaneidade só se perde com o auto de infração.",
+        "Dizer que o cruzamento de dados ou o monitoramento já excluem a espontaneidade.",
+        "Dar outro prazo de validade dos atos (por exemplo 30 ou 60 dias) ou dizer que não há prorrogação.",
+        "Dizer que o auto de infração dispensa a descrição do fato ou a intimação para cumprir ou impugnar."
+      ],
+      "permitidos": [],
+      "observacaoDoGabarito": "A pergunta tem duas partes (quando perde a espontaneidade; o que não conta); a resposta que cobre só uma é incompleta, não infiel."
+    },
+    {
+      "id": "FL77",
+      "classe": "AMPLA",
+      "pergunta": "Atrasei o recolhimento da contribuição previdenciária da fazenda. O que acontece com o débito: multa, juros, cobrança?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "Os débitos com a União decorrentes das contribuições sociais das alíneas a, b e c do parágrafo único do art. 11, das contribuições instituídas a título de substituição e das contribuições devidas a terceiros, não pagos nos prazos previstos em legislação, são acrescidos de multa de mora e juros de mora, nos termos do art. 61 da Lei 9.430/1996.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 35"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "essencial": false,
+          "afirmacao": "Constatado o não recolhimento total ou parcial das contribuições, não declaradas na forma do art. 32, a falta de pagamento de benefício reembolsado ou o descumprimento de obrigação acessória, será lavrado auto de infração ou notificação de lançamento.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 37"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "essencial": true,
+          "afirmacao": "O débito original e seus acréscimos legais, bem como outras multas previstas em lei, constituem dívida ativa da União, promovendo-se a inscrição em livro próprio daquela resultante das contribuições das alíneas a, b e c do parágrafo único do art. 11.",
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 39"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dar um percentual fixo de multa ou de juros que o art. 35 não traz (ele remete ao art. 61 da Lei 9.430/1996).",
+        "Dizer que o débito das contribuições do art. 39 é dívida ativa do Estado ou do Município (é da União).",
+        "Dizer que não há auto de infração ou notificação de lançamento no não recolhimento não declarado.",
+        "Dizer que a multa e os juros dependem de decisão judicial prévia."
+      ],
+      "permitidos": [],
+      "observacaoDoGabarito": "A contribuição do produtor rural pessoa física (Lei 8.212, art. 25) é instituída em substituição à dos incisos I e II do art. 22, o que a põe entre as substitutivas do art. 35. O art. 37 vale para o não recolhimento de contribuições não declaradas; quem declarou e não pagou segue o art. 39. Dizer isso não torna a resposta infiel."
+    },
+    {
+      "id": "FL82",
+      "classe": "SIMPLES",
+      "pergunta": "Quem cobra e fiscaliza o Imposto Seletivo: o estado, o município ou a União?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "Compete à RFB a administração e a fiscalização do Imposto Seletivo.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 411"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o Imposto Seletivo é administrado pelos Estados, pelos Municípios ou pelo Comitê Gestor do IBS."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "O Imposto Seletivo incide sobre a produção, extração, comercialização ou importação de bens e serviços prejudiciais à saúde ou ao meio ambiente.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 409"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FL83",
+      "classe": "SIMPLES",
+      "pergunta": "Se eu cobrar de um vizinho pela servidão de passagem na minha terra, isso entra no imposto como o aluguel?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "A servidão e o direito de passagem sujeitam-se à tributação pelo IBS e pela CBS pelas mesmas regras da locação, cessão onerosa e arrendamento de bens imóveis.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 252, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 252, § 1º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 252, § 1º, inciso II"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a servidão ou o direito de passagem estão fora do IBS e da CBS ou têm regra própria diferente da locação.",
+        "Dizer que a servidão é tributada como venda de mercadoria."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "As alíquotas do IBS e da CBS relativas às operações de locação, cessão onerosa e arrendamento de bens imóveis ficam reduzidas em 70%.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 261, parágrafo único"
+            }
+          ]
+        },
+        {
+          "afirmacao": "A pessoa física é contribuinte do regime regular nessas operações, entre outros casos, se, no ano-calendário anterior, a receita com elas exceder R$ 240.000 e os imóveis distintos forem mais de 3; no próprio ano, também se a receita exceder em 20% esse limite.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 1º, inciso I, alínea a"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 1º, inciso I, alínea b"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 251, § 2º, inciso II"
+            }
+          ]
+        }
+      ],
+      "observacaoDoGabarito": "A pergunta é de pessoa física; lembrar os limites do art. 251 para a pessoa física ser contribuinte não torna a resposta infiel."
+    },
+    {
+      "id": "FL84",
+      "classe": "SIMPLES",
+      "pergunta": "O Imposto Seletivo gera crédito para quem compra o produto e depois revende?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "essencial": true,
+          "afirmacao": "O Imposto Seletivo incide uma única vez sobre o bem ou serviço, sendo vedado qualquer tipo de aproveitamento de crédito do imposto com operações anteriores ou geração de créditos para operações posteriores.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 410"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o Imposto Seletivo gera crédito para o comprador ou para a revenda.",
+        "Dizer que o Imposto Seletivo incide em cada etapa da cadeia."
+      ],
+      "permitidos": [
+        {
+          "afirmacao": "O Imposto Seletivo incide sobre a produção, extração, comercialização ou importação de bens e serviços prejudiciais à saúde ou ao meio ambiente.",
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 409"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
