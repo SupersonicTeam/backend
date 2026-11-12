@@ -175,22 +175,24 @@ Há ainda uma **regressão por pergunta**: pergunta com 0 defeitos nas execuçõ
 
 ### 7.2 Desfechos
 
-- **`INCONCLUSIVA`** quando, nesta ordem:
-  1. a rodada é inválida (seção 2, item 3);
-  2. a leitura não é confiável (seção 4.3, kappa abaixo de 0,40 ou desacordo acima de 30%);
-  3. o `desligada` tem **menos de 8** defeitos de fidelidade (M1): a falha que a correção quer
-     eliminar não aparece o bastante na base para ser medida; é resultado, não aprovação;
-  4. nenhuma medida de não piora está fora da margem **e** há melhora em M1, mas ela não atinge a
-     melhora mínima, ou o IC de 80% inclui zero (a diferença pode ser ruído das 3 repetições);
-     a ação sugerida é repetir com mais repetições (5) sem mudar o resto.
-- **`NAO_ENTRA`** quando, rodada válida e leitura confiável:
-  - qualquer medida de não piora (M2, M3, M4, M5, M6, regressões por pergunta) está **fora da
-    margem**, qualquer que seja a melhora; ou
-  - M1 do `ligada` é **maior ou igual** ao do `desligada` (sem melhora, com defeitos para melhorar); ou
-  - algum tipo isolado piora mais que o permitido; ou
-  - as perguntas defeituosas por maioria do `ligada` são mais que as do `desligada`.
-- **`ENTRA`** quando, rodada válida, leitura confiável e **base suficiente**: M1 atinge a melhora
-  mínima **e** o IC de 80% fica acima de zero **e** nenhuma das margens acima é violada.
+Os desfechos saem de um procedimento **em ordem**; vale o primeiro passo que se aplica:
+
+1. **`INCONCLUSIVA`** se a rodada é inválida (seção 2, item 3) ou foi interrompida.
+2. **`INCONCLUSIVA`** se a leitura não é confiável (seção 4.3: kappa abaixo de 0,40 ou desacordo
+   acima de 30%).
+3. **`NAO_ENTRA`** se qualquer medida de não piora (M2, M3, M4, M5, M6, regressões por pergunta,
+   perguntas defeituosas por maioria, piora de um tipo isolado) está **fora da margem**, qualquer que
+   seja a melhora e **mesmo que a base tenha poucos defeitos**: uma piora clara não fica escondida
+   atrás de "pouco a medir".
+4. **`INCONCLUSIVA`** se o `desligada` tem **menos de 8** defeitos de fidelidade (M1): a falha que a
+   correção quer eliminar não aparece o bastante na base para ser medida; é resultado, não aprovação.
+5. **`NAO_ENTRA`** se M1 do `ligada` é **maior ou igual** ao do `desligada` (sem melhora, com defeitos
+   para melhorar).
+6. **`ENTRA`** se M1 atinge a melhora mínima **e** o IC de 80% fica acima de zero (nenhuma margem foi
+   violada, pelo passo 3).
+7. **`INCONCLUSIVA`** nos demais casos: há melhora em M1, mas ela não atinge a melhora mínima ou o IC
+   de 80% inclui zero (a diferença pode ser ruído das 3 repetições); a ação sugerida é repetir com mais
+   repetições (5) sem mudar o resto.
 
 Os três desfechos usam só os números e as margens desta tabela. O que o resultado traz além disso
 (taxas entre as aceitas, subtipos, instabilidade, lista de perguntas) é para leitura humana e não

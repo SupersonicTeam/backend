@@ -62,6 +62,20 @@ class AmbienteTest(unittest.TestCase):
         self.assertEqual(b["FLAG"], "true")
 
 
+class BancoTest(unittest.TestCase):
+    def test_banco_da_rodada_nunca_e_o_de_origem_nem_o_de_desenvolvimento(self):
+        for banco in ("agrocontabil", "postgres", "template1", "meu_origem"):
+            with self.assertRaises(ValueError, msg=banco):
+                ex.validar_banco(banco, "meu_origem")
+
+    def test_nome_do_banco_e_simples(self):
+        for banco in ('x"; drop database y; --', "Maiuscula", "com-hifen", "", "1abc"):
+            with self.assertRaises(ValueError, msg=banco):
+                ex.validar_banco(banco, "agrocontabil")
+        ex.validar_banco("fidelidade_lei", "agrocontabil")
+        ex.validar_banco("fidelidade_smoke_2", "agrocontabil")
+
+
 class PlanoTest(unittest.TestCase):
     def test_cada_pergunta_roda_nos_dois_bracos_em_cada_repeticao(self):
         ids = [f"FL{i:02d}" for i in range(1, 37)]

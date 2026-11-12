@@ -261,13 +261,13 @@ def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None) 
         desfecho = "INCONCLUSIVA"
         motivo = (f"leitura não confiável (kappa {kappa if kappa is None else round(kappa, 2)}, "
                   f"desacordo {desacordo if desacordo is None else f'{desacordo:.0%}'})")
+    elif violadas:
+        desfecho = "NAO_ENTRA"
+        motivo = "fora da margem: " + "; ".join(t["teste"] for t in violadas)
     elif defeitos_off < R["defeitosMinimosNaBase"]:
         desfecho = "INCONCLUSIVA"
         motivo = (f"o braço desligado tem só {defeitos_off} defeitos de fidelidade "
                   f"(mínimo {R['defeitosMinimosNaBase']}): não há o que medir")
-    elif violadas:
-        desfecho = "NAO_ENTRA"
-        motivo = "fora da margem: " + "; ".join(t["teste"] for t in violadas)
     elif defeitos_on >= defeitos_off:
         desfecho = "NAO_ENTRA"
         motivo = f"sem melhora: {defeitos_on} defeitos no ligado contra {defeitos_off} no desligado"
@@ -321,7 +321,7 @@ def decidir_rodada(rodada: Path) -> dict:
     esperadas = [(pid, b, rep) for pid in ids_rodada for b in comum.BRACOS
                  for rep in range(1, manifesto["repeticoes"] + 1)]
     planejadas = manifesto.get("execucoesPlanejadas")
-    if planejadas and len(esperadas) != planejadas:
+    if planejadas and not manifesto.get("interrompida") and len(esperadas) != planejadas:
         raise RodadaIncompleta(f"o manifesto planejou {planejadas} execuções e as respostas brutas "
                                f"cobrem {len(esperadas)}: pergunta ausente da rodada")
     ultimas = leitura.ultimas_execucoes(comum.ler_jsonl(rodada / "respostas-brutas.jsonl"))
@@ -393,6 +393,8 @@ def relatorio_md(r: dict) -> str:
 
 
 def main(argv=None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     argv = list(sys.argv[1:] if argv is None else argv)
     if len(argv) != 1:
         print(__doc__)

@@ -69,10 +69,10 @@ python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py \
 O que o executor faz, e o que ele exige da outra sessão:
 
 - **Nome da flag e valores:** por `--env-ligada` e `--env-desligada` (repetíveis, `CHAVE=valor`). A
-  `--env-ligada` é obrigatória e os dois braços têm de diferir. Se a flag **liga** com o valor padrão
-  (por exemplo, o desligado é a ausência da variável), basta `--env-ligada`. Se a correção precisar
-  de mais de uma variável (limiar, modelo do verificador), repita o argumento: o que não é a flag é igual
-  nos dois braços.
+  `--env-ligada` é obrigatória e os dois braços têm de diferir. Se a flag nasce **desligada** por
+  padrão, basta a `--env-ligada` (o desligado é a ausência da variável); se nasce **ligada**, passe
+  também `--env-desligada` com o valor que desliga. Se a correção precisar de mais de uma variável
+  (limiar, modelo do verificador), repita o argumento: o que não é a flag é igual nos dois braços.
 - **O que ele fixa e recusa sobrescrever:** perfil `dev`, banco, porta, `SEED_SENHA`, chave da API,
   `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`, `AI_ANTHROPIC_THINKING=disabled`,
   o Ollama do embedding e a cota semanal (levada a 1 bilhão para a rodada não parar; ela não é o que
@@ -142,5 +142,7 @@ classificador.
 - Com 108 execuções por braço e temperatura 1.0, a regra só detecta quedas grandes (25% e 4
   execuções, com o intervalo de confiança acima de zero). Efeito menor sai `INCONCLUSIVA`, por
   desenho (regra, seção 7.3).
-- As partes do executor que dependem da API, do Ollama e da base de lei local só rodam na rodada
-  real; as demais estão cobertas pelos testes.
+- O executor foi exercitado de ponta a ponta **uma vez, com chave falsa** (sobe as duas JVMs, cria o
+  banco, copia a base de lei, loga, lê a auditoria, refaz a falha e grava o manifesto; as respostas
+  saíram em fallback, como esperado sem API). A resposta real do Haiku, o Ollama do embedding e a
+  rodada de 216 execuções só rodam na rodada de verdade; o resto está coberto pelos testes.

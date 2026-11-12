@@ -222,6 +222,17 @@ class DecisaoTest(unittest.TestCase):
         self.assertEqual(r["desfecho"], "INCONCLUSIVA")
         self.assertIn("não há o que medir", r["motivo"])
 
+    def test_piora_clara_com_base_pequena_e_nao_entra_e_nao_inconclusiva(self):
+        execs = rodada(3, 3)  # só 3 defeitos no desligado: pouco a medir...
+        n = 0  # ...mas o ligado descarta 25 respostas fiéis (aceitas despencam)
+        for x in execs:
+            if x["braco"] == "ligada" and COM_BASE[x["id"]] and x["veredito"] == "FIEL" and n < 25:
+                x["estado"], x["veredito"] = "descartada", None
+                n += 1
+        r = self.avaliar(execs)
+        self.assertEqual(r["desfecho"], "NAO_ENTRA")
+        self.assertIn("M2 aceitas", r["motivo"])
+
     def test_inconclusiva_com_melhora_pequena(self):
         r = self.avaliar(rodada(20, 17))  # queda de 3, abaixo de 4 e de 25%
         self.assertEqual(r["desfecho"], "INCONCLUSIVA")
@@ -320,6 +331,40 @@ class RodadaEmDiscoTest(unittest.TestCase):
         self.assertEqual(r["desfecho"], "INCONCLUSIVA")
         self.assertEqual(r["braco"]["ligada"]["fiel"], 6)
         self.assertEqual(r["leitura"]["concordanciaJ1J2"], 1.0)
+
+    def test_rodada_interrompida_e_inconclusiva_e_nao_incompleta(self):
+        conjunto = comum.carregar_conjunto()
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            brutas = [{"id": "FL01", "braco": b, "repeticao": 1, "tentativa": 1, "status": 200,
+                       "rota": "LEGISLACAO", "modoFallback": False, "latenciaMs": 1, "resposta": "t",
+                       "citacoes": [], "auditoria": {"desfecho": "RESPONDIDA"}} for b in comum.BRACOS]
+            comum.gravar_jsonl(raiz / "respostas-brutas.jsonl", brutas)
+            (raiz / "execucao.json").write_text(json.dumps({
+                "conjunto": {"sha256": comum.sha256_arquivo(comum.CONJUNTO)}, "repeticoes": 3,
+                "execucoesPlanejadas": 216, "interrompida": "429 LIMITE_USO_ASSISTENTE"}),
+                encoding="utf-8")
+            lotes, chave = lei.montar_lotes(brutas, conjunto, 1)
+            lei.gravar_lotes(raiz, lotes, chave, ("J1", "J2"))
+            (raiz / "leitura" / "chave.json").write_text(json.dumps(chave), encoding="utf-8")
+            for juiz in ("J1", "J2"):
+                itens = [{"id": i["id"], "tipoResposta": "AFIRMA", "frases": [{"rotulo": "SUPORTADA"}]}
+                         for lote in lotes for i in lote]
+                (raiz / "leitura" / "juizes" / juiz / "lote-01.json").write_text(
+                    json.dumps({"itens": itens}), encoding="utf-8")
+            r = dec.decidir_rodada(raiz)
+        self.assertEqual(r["desfecho"], "INCONCLUSIVA")
+        self.assertIn("interrompida", r["motivo"])
+
+    def test_json_do_juiz_com_cerca_de_codigo_e_lido(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            caminho = Path(pasta) / "j.json"
+            cerca = "`" * 3
+            caminho.write_text(cerca + "json" + chr(10) + '{"itens": [{"id": "R001"}]}' + chr(10)
+                               + cerca + chr(10), encoding="utf-8")
+            self.assertEqual(lei.carregar_json_do_juiz(caminho), {"itens": [{"id": "R001"}]})
+            caminho.write_text('{"itens": []}', encoding="utf-8")
+            self.assertEqual(lei.carregar_json_do_juiz(caminho), {"itens": []})
 
     def test_item_em_desacordo_sem_j3_deixa_a_rodada_incompleta(self):
         j1 = {"R001": {"tipoResposta": "AFIRMA", "frases": [{"rotulo": "SUPORTADA"}]}}

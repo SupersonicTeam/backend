@@ -91,12 +91,22 @@ def gravar_lotes(rodada: Path, lotes: list, chave: dict, juizes: tuple, prefixo:
     return nomes
 
 
+def carregar_json_do_juiz(caminho: Path) -> dict:
+    """JSON entregue pelo juiz; tolera a cerca de código (```json) que modelos costumam pôr."""
+    texto = caminho.read_text(encoding="utf-8").strip()
+    if texto.startswith("```"):
+        quebra = chr(10)
+        texto = texto.split(quebra, 1)[1] if quebra in texto else ""
+        texto = texto.rsplit("```", 1)[0].strip()
+    return json.loads(texto)
+
+
 def ler_leituras(rodada: Path, juiz: str) -> dict:
     """{id do item: leitura} de todos os lotes entregues pelo juiz."""
     leituras = {}
     pasta = rodada / "leitura" / "juizes" / juiz
     for arquivo in sorted(pasta.glob("*.json")) if pasta.exists() else []:
-        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        dados = carregar_json_do_juiz(arquivo)
         for item in dados.get("itens", []):
             leituras[item["id"]] = item
     return leituras
@@ -126,7 +136,7 @@ def validar(rodada: Path) -> list:
                 problemas.append(f"{juiz}: falta {arquivo.name}")
                 continue
             try:
-                dados = json.loads(caminho.read_text(encoding="utf-8"))
+                dados = carregar_json_do_juiz(caminho)
             except ValueError as erro:
                 problemas.append(f"{juiz}/{arquivo.name}: JSON inválido ({erro})")
                 continue
@@ -141,7 +151,7 @@ def validar(rodada: Path) -> list:
     # J3, se existir
     for caminho in sorted((base / "juizes" / "J3").glob("*.json")) \
             if (base / "juizes" / "J3").exists() else []:
-        for item in json.loads(caminho.read_text(encoding="utf-8")).get("itens", []):
+        for item in carregar_json_do_juiz(caminho).get("itens", []):
             problemas += [f"J3/{caminho.name}: {p}" for p in problemas_da_leitura(item)]
     return problemas
 
@@ -159,6 +169,7 @@ def comando_lotes(rodada: Path) -> None:
     conjunto = comum.carregar_conjunto()
     lotes, chave = montar_lotes(brutas, conjunto, comum.REGRA["bootstrapSemente"])
     nomes = gravar_lotes(rodada, lotes, chave, ("J1", "J2"))
+    (rodada / "leitura").mkdir(parents=True, exist_ok=True)
     (rodada / "leitura" / "chave.json").write_text(
         json.dumps(chave, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{len(chave)} respostas aceitas em {len(nomes)} lotes. Chave (não mostre ao juiz): "
@@ -180,6 +191,8 @@ def comando_desacordos(rodada: Path) -> None:
 
 
 def main(argv=None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     argv = list(sys.argv[1:] if argv is None else argv)
     if len(argv) != 2 or argv[0] not in ("lotes", "validar", "desacordos"):
         print(__doc__)

@@ -80,6 +80,19 @@ def analisar_env(itens: list, nome: str) -> dict:
     return env
 
 
+BANCOS_INTOCAVEIS = ("postgres", "template0", "template1", "agrocontabil")
+
+
+def validar_banco(banco: str, origem: str) -> None:
+    """O banco da rodada é apagado e recriado: nunca o de origem, o de desenvolvimento nem o do
+    sistema, e só um nome simples (ele entra em comando SQL)."""
+    if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", banco):
+        raise ValueError(f"--banco: use só minúsculas, dígitos e _ ({banco!r})")
+    if banco == origem or banco in BANCOS_INTOCAVEIS:
+        raise ValueError(f"--banco {banco!r} é o banco de origem, o de desenvolvimento ou o do "
+                         "sistema: a rodada o apagaria; use um banco só dela (padrão fidelidade_lei)")
+
+
 def validar_bracos(desligada: dict, ligada: dict) -> None:
     if not ligada:
         raise ValueError("--env-ligada é obrigatória: sem ela os dois braços seriam iguais")
@@ -181,7 +194,8 @@ class Ambiente:
     def preparar_banco(self) -> None:
         banco = self.args.banco
         log(f"banco {banco}: recriado (a rodada nunca toca no banco de desenvolvimento)")
-        self.psql("postgres", f'DROP DATABASE IF EXISTS "{banco}"')
+        # FORCE: uma rodada anterior que caiu pode ter deixado conexões abertas (PostgreSQL 13+).
+        self.psql("postgres", f'DROP DATABASE IF EXISTS "{banco}" WITH (FORCE)')
         self.psql("postgres", f'CREATE DATABASE "{banco}"')
 
     def copiar_lei(self) -> None:
@@ -267,7 +281,7 @@ class Ambiente:
         for caminho in (self.saida / "logs").glob("*.log"):
             texto = caminho.read_text(encoding="utf-8", errors="replace")
             for segredo in segredos:
-                if segredo:
+                if segredo and len(segredo) >= 8:  # um valor curto trocaria letras soltas do log
                     texto = texto.replace(segredo, "***")
             caminho.write_text(texto, encoding="utf-8")
 
@@ -421,6 +435,9 @@ def montar_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    for fluxo in (sys.stdout, sys.stderr):  # o console do Windows (cp1252) não pode derrubar a rodada
+        if hasattr(fluxo, "reconfigure"):
+            fluxo.reconfigure(encoding="utf-8", errors="replace")
     args = montar_parser().parse_args(argv)
     args.perguntas = {i.strip() for i in args.perguntas.split(",") if i.strip()}
     args.iniciado_em = datetime.datetime.now(FUSO).isoformat()
@@ -428,6 +445,7 @@ def main(argv=None) -> int:
         args.env_desligada = analisar_env(args.env_desligada, "desligada")
         args.env_ligada = analisar_env(args.env_ligada, "ligada")
         validar_bracos(args.env_desligada, args.env_ligada)
+        validar_banco(args.banco, args.banco_origem)
         conjunto = comum.carregar_conjunto()
     except (ValueError, comum.ErroDeConjunto) as erro:
         sys.exit(str(erro))

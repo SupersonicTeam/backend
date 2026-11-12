@@ -73,7 +73,8 @@ afirmar regra nem valor sobre o assunto. Nesse caso:
 ## O que entregar
 
 Entregue **um JSON** (e nada mais, sem texto antes ou depois, sem bloco de código) com esta forma,
-um objeto por item do lote, na mesma ordem:
+um objeto por item do lote, na mesma ordem. O lote diz em que arquivo gravá-lo: grave o JSON ali e
+responda só "gravado"; se você não tiver como gravar arquivo, devolva o JSON como a sua única resposta:
 
 ```json
 {
