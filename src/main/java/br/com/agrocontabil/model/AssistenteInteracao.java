@@ -78,6 +78,16 @@ public class AssistenteInteracao {
   @Column(name = "camada_classificacao", length = 20, updatable = false)
   private String camadaClassificacao;
 
+  /**
+   * Desfecho da conferência de fidelidade da resposta de lei (#269, changeSet 0065): aprovada,
+   * aprovada com a citação corrigida ou o motivo da reprovação. Só o enum, nunca o texto (#144).
+   * Nulo quando a conferência não rodou (flag desligada, outra rota, sem trecho, resposta cortada).
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "fidelidade_lei", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private DesfechoFidelidadeLei fidelidadeLei;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;

@@ -77,6 +77,9 @@ public class AssistenteProperties implements InitializingBean {
   /** Explicação do modelo depois da resposta de dados (#268), atrás da flag. */
   private Explicacao explicacao = new Explicacao();
 
+  /** Conferência de fidelidade da rota de lei (#269); desligada por padrão. */
+  private FidelidadeLei fidelidadeLei = new FidelidadeLei();
+
   /** Teto de tokens gerados por tipo de chamada ao modelo (#270). */
   private Tetos tetos = new Tetos();
 
@@ -169,6 +172,15 @@ public class AssistenteProperties implements InitializingBean {
               + maxConversasSimultaneas);
     }
     explicacao.validar(timeoutPergunta);
+    fidelidadeLei.validar();
+  }
+
+  public FidelidadeLei getFidelidadeLei() {
+    return fidelidadeLei;
+  }
+
+  public void setFidelidadeLei(FidelidadeLei fidelidadeLei) {
+    this.fidelidadeLei = fidelidadeLei;
   }
 
   public Explicacao getExplicacao() {
@@ -805,6 +817,51 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setMaxCaracteres(int maxCaracteres) {
       this.maxCaracteres = maxCaracteres;
+    }
+  }
+
+  /**
+   * Conferência de fidelidade da rota de lei (#269): o modelo responde em JSON, cada frase com a
+   * passagem do trecho que a sustenta, e o {@code ConferenciaFidelidadeLei} confere em código a
+   * cópia, o número, a negação e a cobertura de cada frase e põe a citação no nível do dispositivo
+   * em que a passagem está (o caput, quando a regra está no caput). Reprovada, o texto do modelo sai
+   * e ficam os trechos, sem afirmar que respondem.
+   *
+   * <p><strong>Desligada por padrão.</strong> Com ela desligada a rota de lei é a de antes: o mesmo
+   * prompt, nenhuma conferência a mais. Ligar exige a medição no conjunto novo e o OK do Murillo.
+   */
+  public static class FidelidadeLei {
+
+    /** Liga a conferência para todas as perguntas de lei ({@code AI_FIDELIDADE_LEI_HABILITADA}). */
+    private boolean enabled;
+
+    /**
+     * Fração mínima (maior que 0, no máximo 1) das palavras de conteúdo de cada frase que têm de
+     * aparecer nas passagens copiadas dela ({@code AI_FIDELIDADE_LEI_COBERTURA_MINIMA}).
+     */
+    private double coberturaMinima = 0.7;
+
+    void validar() {
+      if (!(coberturaMinima > 0 && coberturaMinima <= 1)) {
+        throw new IllegalStateException("app.assistente.fidelidade-lei.cobertura-minima deve estar"
+            + " entre 0 (exclusive) e 1, recebido: " + coberturaMinima);
+      }
+    }
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public double getCoberturaMinima() {
+      return coberturaMinima;
+    }
+
+    public void setCoberturaMinima(double coberturaMinima) {
+      this.coberturaMinima = coberturaMinima;
     }
   }
 

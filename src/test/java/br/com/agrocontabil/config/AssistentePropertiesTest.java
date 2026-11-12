@@ -163,4 +163,21 @@ class AssistentePropertiesTest {
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.contexto");
   }
+
+  @Test
+  @DisplayName("#269: conferencia de fidelidade da lei desligada por padrao, cobertura entre 0 e 1")
+  void fidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().isEnabled()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinima()).isEqualTo(0.7);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinima(1.0);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+    for (double invalida : new double[] {0.0, -0.1, 1.01, Double.NaN}) {
+      p.getFidelidadeLei().setCoberturaMinima(invalida);
+      assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("app.assistente.fidelidade-lei.cobertura-minima");
+    }
+  }
 }

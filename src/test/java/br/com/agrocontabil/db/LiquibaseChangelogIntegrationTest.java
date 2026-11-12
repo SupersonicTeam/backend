@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
+import br.com.agrocontabil.model.AssistenteInteracao;
 import br.com.agrocontabil.model.DesfechoExplicacao;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
+import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import br.com.agrocontabil.service.AssistenteInteracaoService;
@@ -617,6 +620,44 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(colunas).extracting(c -> c.get("data_type"), c -> c.get("is_nullable"),
         c -> ((Number) c.get("character_maximum_length")).intValue())
         .containsExactly(tuple("character varying", "YES", 20));
+  }
+
+  @Test
+  @DisplayName("changeSet 0065: desfecho da conferencia de fidelidade da lei, nulo sem ela, so o "
+      + "enum (#269)")
+  void changeSet0065FidelidadeLei() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name = 'fidelidade_lei'");
+    assertThat(colunas).extracting(c -> c.get("data_type"), c -> c.get("is_nullable"),
+        c -> ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(tuple("character varying", "YES", 40));
+    // O maior desfecho cabe na coluna, e o novo desfecho da pergunta cabe na coluna desfecho.
+    assertThat(java.util.Arrays.stream(DesfechoFidelidadeLei.values())
+        .mapToInt(d -> d.name().length()).max().orElseThrow()).isLessThanOrEqualTo(40);
+    assertThat(DesfechoInteracao.FIDELIDADE_REPROVADA.name().length()).isLessThanOrEqualTo(40);
+
+    String produtor = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0065')",
+        produtor);
+    UUID semConferencia = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("DADOS")
+        .desfecho(DesfechoInteracao.RESPONDIDA).chamadasFuncao(1).latenciaMs(10)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+    UUID reprovada = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("LEGISLACAO")
+        .desfecho(DesfechoInteracao.FIDELIDADE_REPROVADA)
+        .fidelidadeLei(DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL).latenciaMs(10)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+
+    assertThat(jdbc.queryForObject("SELECT fidelidade_lei FROM assistente_interacao WHERE id = ?",
+        String.class, semConferencia)).isNull();
+    assertThat(jdbc.queryForMap("SELECT desfecho, fidelidade_lei FROM assistente_interacao"
+        + " WHERE id = ?", reprovada))
+        .containsEntry("desfecho", "FIDELIDADE_REPROVADA")
+        .containsEntry("fidelidade_lei", "REPROVADA_EVIDENCIA_NAO_LITERAL");
   }
 
   @Test

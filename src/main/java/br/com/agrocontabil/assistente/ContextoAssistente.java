@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -73,6 +74,7 @@ public final class ContextoAssistente {
   private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
+  private final AtomicReference<DesfechoFidelidadeLei> fidelidadeLei = new AtomicReference<>();
   private final AtomicBoolean trechosRelacionados = new AtomicBoolean();
   private final AtomicBoolean classificacaoCortada = new AtomicBoolean();
   private final List<TextoDoBackend> textosDoBackend =
@@ -149,6 +151,21 @@ public final class ContextoAssistente {
   /** Camada que decidiu a rota; nula se a pergunta acabou antes da classificação. */
   public String camadaClassificacao() {
     return camadaClassificacao.get();
+  }
+
+  /**
+   * Registra o desfecho da conferência de fidelidade da resposta de lei (#269, flag
+   * {@code app.assistente.fidelidade-lei.enabled}). Vai à auditoria, só o enum.
+   *
+   * @param desfecho aprovada ou o motivo da reprovação
+   */
+  public void registrarFidelidadeLei(DesfechoFidelidadeLei desfecho) {
+    fidelidadeLei.set(desfecho);
+  }
+
+  /** Desfecho da conferência de fidelidade; nulo se ela não rodou (flag desligada, outra rota...). */
+  public DesfechoFidelidadeLei fidelidadeLei() {
+    return fidelidadeLei.get();
   }
 
   /**

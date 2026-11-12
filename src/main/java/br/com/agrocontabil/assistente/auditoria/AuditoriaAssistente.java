@@ -74,7 +74,8 @@ public class AuditoriaAssistente {
         contexto.tokensSaida(),
         contexto.tokensEstimados(),
         tamanhoPergunta,
-        OffsetDateTime.now(clock)));
+        OffsetDateTime.now(clock),
+        contexto.fidelidadeLei()));
   }
 
   /**

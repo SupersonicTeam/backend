@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.fidelidade.ConferenciaFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +20,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,6 +41,13 @@ import org.springframework.stereotype.Component;
  *   <li>a resposta aceita ganha a linha "O que isso quer dizer" ({@link LinhaGlossario}) com a
  *       definição dos termos do glossário que ela usa sem explicar, montada pelo backend (#269).</li>
  * </ol>
+ *
+ * <p><strong>Fidelidade (#269, flag {@code app.assistente.fidelidade-lei.enabled}, desligada por
+ * padrão):</strong> ligada, o modelo responde em JSON, cada frase com a passagem do trecho que a
+ * sustenta, e a {@link ConferenciaFidelidadeLei} confere em código, antes do passo 3, a cópia, o
+ * número, a negação e a cobertura de cada frase, e põe a citação no nível do dispositivo em que a
+ * passagem está. Reprovada, o texto do modelo sai e ficam os trechos que ele marcou, sem afirmar que
+ * respondem (desfecho {@code FIDELIDADE_REPROVADA}). Desligada, nada muda.
  */
 @Component
 public class RotaLegislacao {
@@ -89,17 +99,38 @@ public class RotaLegislacao {
   private final ValidadorNumeros validadorNumeros;
   private final VerificadorAfirmacaoDados verificadorDados;
   private final int tetoSaida;
+  /** Nula = conferência de fidelidade desligada (flag desligada ou construtor sem ela). */
+  private final ConferenciaFidelidadeLei conferencia;
+  private final double coberturaMinima;
 
-  /** Constrói a rota; o teto de tokens da resposta vem de {@code app.assistente.tetos} (#270). */
+  /**
+   * Constrói a rota sem a conferência de fidelidade (#269): a rota de lei de antes da flag. O teto de
+   * tokens da resposta vem de {@code app.assistente.tetos} (#270).
+   */
   public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
       ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
       VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades) {
+    this(modelo, busca, validadorCitacao, validadorNumeros, verificadorDados, propriedades, null);
+  }
+
+  /**
+   * Constrói a rota; a conferência de fidelidade só roda com
+   * {@code app.assistente.fidelidade-lei.enabled} (#269).
+   */
+  @Autowired
+  public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
+      ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
+      VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades,
+      ConferenciaFidelidadeLei conferencia) {
     this.modelo = modelo;
     this.busca = busca;
     this.validadorCitacao = validadorCitacao;
     this.validadorNumeros = validadorNumeros;
     this.verificadorDados = verificadorDados;
     this.tetoSaida = propriedades.getTetos().getLegislacao();
+    AssistenteProperties.FidelidadeLei fidelidade = propriedades.getFidelidadeLei();
+    this.conferencia = fidelidade.isEnabled() ? conferencia : null;
+    this.coberturaMinima = fidelidade.getCoberturaMinima();
   }
 
   /**
@@ -174,9 +205,7 @@ public class RotaLegislacao {
     }
 
     String perguntaAoModelo = DataSanitizer.mascarar(pergunta);
-    String sistema = soRegraGeral
-        ? PromptsCeres.sistemaLegislacaoRegraGeral(contexto.hoje(), formatar(trechos))
-        : PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos));
+    String sistema = prompt(soRegraGeral, contexto, trechos);
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(sistema), new UserMessage(perguntaAoModelo)),
         ModeloLinguagem.comTeto(tetoSaida));
@@ -196,12 +225,27 @@ public class RotaLegislacao {
       log.info("Ceres: modelo nao encontrou a resposta nos trechos; trechos relacionados");
       return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada);
     }
-    ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
+    // Com a conferencia de fidelidade (#269) a citacao pode apontar um ancestral (o caput) que a
+    // busca nao trouxe: ele entra depois dos trechos recebidos, com a marca seguinte.
+    List<TrechoRecuperado> citaveis = trechos;
+    if (conferencia != null) {
+      ConferenciaFidelidadeLei.Resultado fidelidade =
+          conferencia.conferir(texto, trechos, coberturaMinima);
+      contexto.registrarFidelidadeLei(fidelidade.desfecho());
+      if (!fidelidade.aprovada()) {
+        log.info("Ceres: resposta de legislacao reprovada na conferencia de fidelidade ({})",
+            fidelidade.desfecho());
+        return fidelidadeReprovada(fidelidade, trechos, contexto, soRegraGeral, perguntaSeparada);
+      }
+      texto = fidelidade.texto();
+      citaveis = fidelidade.trechos();
+    }
+    ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, citaveis);
     if (!citacao.valida()) {
       // Sem marca ou com marca inventada. Com marca inventada e alguma certa, os trechos certos
       // sao os mais proximos (#258); sem nenhuma certa, os mais proximos da busca (#343). Nos dois
       // casos sem o texto e sem afirmar que respondem.
-      ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, trechos);
+      ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, citaveis);
       if (validas.citacoes().isEmpty()) {
         log.info("Ceres: resposta de legislacao sem citacao valida; trechos relacionados");
         return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada);
@@ -248,6 +292,43 @@ public class RotaLegislacao {
     // Depois de todas as conferencias (#269): a linha do glossario e do backend, sem numero, e nao
     // pode ser lida como parte do que o modelo afirmou.
     return ResultadoRota.aceita(LinhaGlossario.acrescentadaA(regra), citacao.citacoes());
+  }
+
+  /** O prompt de sistema: o de sempre, ou o com evidência por frase se a conferência está ligada. */
+  private String prompt(boolean soRegraGeral, ContextoAssistente contexto,
+      List<TrechoRecuperado> trechos) {
+    if (conferencia != null) {
+      return soRegraGeral
+          ? PromptsCeres.sistemaLegislacaoRegraGeralComEvidencia(contexto.hoje(), formatar(trechos))
+          : PromptsCeres.sistemaLegislacaoComEvidencia(contexto.hoje(), formatar(trechos));
+    }
+    return soRegraGeral
+        ? PromptsCeres.sistemaLegislacaoRegraGeral(contexto.hoje(), formatar(trechos))
+        : PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos));
+  }
+
+  /**
+   * Resposta reprovada na conferência de fidelidade (#269): o caminho da lei descartada de sempre
+   * (como o número sem fonte, #258). O texto do modelo sai inteiro; ficam os trechos que ele marcou
+   * nas evidências, sem afirmar que respondem. Sem nenhuma marca existente (formato inválido), os
+   * mais próximos da busca (#343), e no MISTO sem parte legal separada, nada da lei (#260).
+   */
+  private static ResultadoRota fidelidadeReprovada(ConferenciaFidelidadeLei.Resultado fidelidade,
+      List<TrechoRecuperado> trechos, ContextoAssistente contexto, boolean soRegraGeral,
+      boolean perguntaSeparada) {
+    Map<String, TrechoRecuperado> porMarca = new LinkedHashMap<>();
+    trechos.forEach(t -> porMarca.put(t.marca(), t));
+    List<TrechoRecuperado> marcados = fidelidade.marcasCitadas().stream()
+        .map(porMarca::get)
+        .filter(Objects::nonNull)
+        .toList();
+    if (marcados.isEmpty()) {
+      return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada,
+          DesfechoInteracao.FIDELIDADE_REPROVADA);
+    }
+    contexto.registrarTrechosCitados(marcados.stream().map(TrechoRecuperado::id).toList());
+    return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.FIDELIDADE_REPROVADA,
+        marcados.stream().map(TrechoRecuperado::comoCitacao).toList());
   }
 
   /**

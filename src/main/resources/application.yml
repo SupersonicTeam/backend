@@ -610,6 +610,13 @@ app:
       max-frases: 3
       min-caracteres: 40
       max-caracteres: 480
+    # Conferencia de fidelidade da rota de lei (#269): o modelo responde em JSON com a passagem do
+    # trecho que sustenta cada frase, e o backend confere copia, numero, negacao e cobertura e cita
+    # o nivel do dispositivo em que a passagem esta. Reprovada, ficam so os trechos. Desligada, a
+    # rota de lei e a de antes. Ligar exige a medicao no conjunto novo e o OK do Murillo.
+    fidelidade-lei:
+      enabled: ${AI_FIDELIDADE_LEI_HABILITADA:false}
+      cobertura-minima: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA:0.7}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}

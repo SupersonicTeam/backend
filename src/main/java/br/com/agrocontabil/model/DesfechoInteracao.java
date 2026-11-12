@@ -46,6 +46,13 @@ public enum DesfechoInteracao {
    * frase de "sem fundamento" se não sobra nenhum.
    */
   REGIME_ESPECIFICO_SEM_SETOR,
+  /**
+   * Resposta de lei reprovada na conferência de fidelidade (#269, flag
+   * {@code app.assistente.fidelidade-lei.enabled}): uma frase sem a passagem do trecho que a
+   * sustenta, ou com número, negação ou palavras fora dela. O texto do modelo sai; ficam os trechos
+   * que ele marcou, sem afirmar que respondem. O motivo vai em {@code fidelidade_lei}.
+   */
+  FIDELIDADE_REPROVADA,
   /** Fora de escopo ou intenção incerta: resposta fixa, sem nova chamada ao modelo (#157). */
   FORA_DE_ESCOPO,
   /**

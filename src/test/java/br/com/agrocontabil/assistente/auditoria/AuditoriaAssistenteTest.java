@@ -61,6 +61,22 @@ class AuditoriaAssistenteTest {
     assertThat(r.desfechoDados()).isNull();
     assertThat(r.desfechoLegislacao()).isNull();
     assertThat(r.perguntaLeiReescrita()).isNull();
+    assertThat(r.fidelidadeLei()).isNull();
+  }
+
+  @Test
+  @DisplayName("#269: o desfecho da conferencia de fidelidade da lei vai ao registro, so o enum")
+  void fidelidadeDaLeiVaiAoRegistro() {
+    contexto.registrarFidelidadeLei(
+        br.com.agrocontabil.model.DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+
+    auditoria.registrar(contexto, "LEGISLACAO", DesfechoInteracao.FIDELIDADE_REPROVADA,
+        "anthropic/simulado", 10, 80);
+
+    RegistroInteracao r = capturar();
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(r.fidelidadeLei())
+        .isEqualTo(br.com.agrocontabil.model.DesfechoFidelidadeLei.REPROVADA_COBERTURA);
   }
 
   private RegistroInteracao capturar() {

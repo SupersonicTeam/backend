@@ -139,12 +139,64 @@ public final class PromptsCeres {
    * {@link VerificadorAfirmacaoDados}.
    */
   public static String sistemaLegislacaoRegraGeral(LocalDate hoje, String trechos) {
-    return sistemaLegislacao(hoje, trechos, """
-        - Explique SOMENTE a regra geral da lei, em terceira pessoa (ex.: "os insumos do Anexo IX \
-        tem reducao de aliquota"). Voce NAO conhece as compras, vendas, notas nem a situacao do \
-        usuario: outra parte do sistema responde sobre isso. Nunca escreva "voce", "seu", "sua" \
-        nem diga o que o usuario comprou, vendeu ou tem direito.
-        """);
+    return sistemaLegislacao(hoje, trechos, REGRA_GERAL);
+  }
+
+  /** Regra a mais da parte de lei do MISTO (#170): só a regra geral, sem os dados do produtor. */
+  private static final String REGRA_GERAL = """
+      - Explique SOMENTE a regra geral da lei, em terceira pessoa (ex.: "os insumos do Anexo IX \
+      tem reducao de aliquota"). Voce NAO conhece as compras, vendas, notas nem a situacao do \
+      usuario: outra parte do sistema responde sobre isso. Nunca escreva "voce", "seu", "sua" \
+      nem diga o que o usuario comprou, vendeu ou tem direito.
+      """;
+
+  /**
+   * Prompt de lei com evidência por frase (#269), usado só com a flag
+   * {@code app.assistente.fidelidade-lei.enabled}: a resposta vem em JSON, cada frase com a passagem
+   * copiada do trecho que a sustenta, e o {@code ConferenciaFidelidadeLei} confere em código. A
+   * parte fixa (regras e formato) vem antes da data e dos trechos, como no prompt de sempre (#270).
+   *
+   * @param hoje    data de referência
+   * @param trechos trechos já formatados com as marcas
+   * @return instrução de sistema
+   */
+  public static String sistemaLegislacaoComEvidencia(LocalDate hoje, String trechos) {
+    return sistemaLegislacaoComEvidencia(hoje, trechos, "");
+  }
+
+  /** A variante com evidência da parte de lei do MISTO (#269, #170). */
+  public static String sistemaLegislacaoRegraGeralComEvidencia(LocalDate hoje, String trechos) {
+    return sistemaLegislacaoComEvidencia(hoje, trechos, REGRA_GERAL);
+  }
+
+  private static String sistemaLegislacaoComEvidencia(LocalDate hoje, String trechos,
+      String regraExtra) {
+    return """
+        Voce e a Ceres, assistente fiscal do AgroConIA. Explica a reforma tributaria do \
+        agronegocio (IBS e CBS) ao produtor rural.
+
+        Regras:
+        - Responda em portugues do Brasil, de forma curta e direta, usando SOMENTE os trechos de \
+        lei abaixo. Nao use conhecimento proprio.
+        - Cada frase afirma so o que o trecho diz: nao acrescente condicao, consequencia, \
+        exemplo nem excecao que nao esteja escrita nele, e nao inverta o sentido.
+        - Para cada frase, copie do trecho, palavra por palavra, a passagem que a sustenta: a \
+        menor que baste, sem resumir nem trocar palavras. Pode usar mais de uma passagem.
+        - Copie a passagem de onde a regra esta escrita. Se ela esta no comeco do trecho (o caput \
+        do artigo), copie do comeco, nao do paragrafo ou inciso que vem depois.
+        - Nao escreva numero de artigo, paragrafo, inciso nem nome de lei.
+        - Nao calcule valores. Percentuais e prazos so se estiverem escritos nos trechos.
+        - Responda somente com JSON, sem nada antes ou depois, neste formato:
+        {"frases": [{"frase": "texto da frase", "evidencias": [{"trecho": "T1", "copia": \
+        "passagem copiada do T1"}]}]}
+        - Se os trechos nao responderem a pergunta, responda apenas: %s
+        """.formatted(NAO_ENCONTREI) + regraExtra + """
+
+        Hoje e %s.
+
+        Trechos de lei:
+        %s
+        """.formatted(hoje, trechos);
   }
 
   /**
