@@ -316,7 +316,8 @@ br.com.agrocontabil
 │                  #   outra pessoa, CPF/CNPJ/e-mail/telefone/UUID ou ordem ao sistema; na RotaDados, modelo
 │                  #   sem função + sinal = recusa firme, sem a apuração forçada);
 │                  # SinalRecusaFirme.inequivoco (#497: ataque, dado de outra pessoa pedido como dado,
-│                  #   sem contraparte nem forma de regra legal, e documento sem dono saem
+│                  #   sem contraparte nem forma de regra legal, e documento sem dono saem; troca de
+│                  #   papel só com alvo, nunca o verbo de fingir ou supor sozinho, #516;
 │                  #   FORA_DE_ESCOPO antes do classificador, camada
 │                  #   SINAL_RECUSA_FIRME) e .pedeDesempate (marca de terceiro ou de ordem: regra e
 │                  #   embeddings não decidem, o modelo desempata; prompt do classificador com a linha
