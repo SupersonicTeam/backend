@@ -79,6 +79,10 @@ if [ "$subir" = true ]; then
     docker compose build backend
   elif [[ "$E2E_BACKEND_IMAGE" == */* ]]; then
     docker compose pull backend
+  elif ! docker image inspect "$E2E_BACKEND_IMAGE" > /dev/null 2>&1; then
+    echo "A imagem local $E2E_BACKEND_IMAGE nao existe. Tire o E2E_BACKEND_IMAGE para construir" \
+      "deste checkout." >&2
+    exit 1
   fi
   # Imagem de registro (com "/") vem sempre na versao mais nova; tag local (sem "/") fica como esta.
   if [[ "${E2E_FRONTEND_IMAGE:-ghcr.io/supersonicteam/frontend:latest}" == */* ]]; then
