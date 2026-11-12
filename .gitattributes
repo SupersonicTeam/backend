@@ -16,3 +16,5 @@ docs/avaliacao/ceres-497/resultados/** -text
 # Conjunto da continuidade (#499): o hash .sha256 e dos bytes, CRLF o quebraria.
 docs/avaliacao/continuidade/conversas-continuidade-teste.json -text
 docs/avaliacao/continuidade/conversas-continuidade-dev.json -text
+# Conjunto congelado da medicao de fidelidade da rota de lei (#269): o hash .sha256 e dos bytes.
+docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei.json -text

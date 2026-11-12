@@ -48,6 +48,10 @@ jobs:
       - name: Continuidade da #499 (testes do conjunto)
         run: python3 -m unittest discover -s docs/avaliacao/continuidade -p "test_*.py"
 
+      # Conjunto, regra e executor da medicao de fidelidade da rota de lei (#269): so biblioteca padrao.
+      - name: Fidelidade da rota de lei (#269, testes do conjunto, do executor e da decisao)
+        run: python3 -m unittest discover -s docs/avaliacao/fidelidade-lei -p "test_*.py"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
