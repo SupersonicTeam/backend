@@ -189,6 +189,25 @@ class RotaLegislacaoFidelidadeTest {
   }
 
   @Test
+  @DisplayName("ligada, caput e parágrafo do mesmo trecho citados: o id vai uma vez à auditoria")
+  void ligadaNaoRepeteIdNaAuditoria() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(PARAGRAFO));
+    chatModel.responderTexto("{\"frases\": ["
+        + "{\"frase\": \"Os insumos agropecuarios tem as aliquotas reduzidas em 60%.\", "
+        + "\"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"Ficam reduzidas em 60% as aliquotas"
+        + " do IBS e da CBS incidentes sobre os insumos agropecuarios\"}]},"
+        + "{\"frase\": \"Isso se aplica aos fertilizantes e defensivos.\", \"evidencias\": ["
+        + "{\"trecho\": \"T1\", \"copia\": \"aplica-se aos fertilizantes e defensivos\"}]}]}");
+
+    ResultadoRota r = ligada().responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.citacoes()).extracting(CitacaoLegal::dispositivo)
+        .containsExactly("art. 138", "art. 138, § 1º");
+    assertThat(contexto.trechosCitados()).containsExactly("id-par");
+  }
+
+  @Test
   @DisplayName("ligada e reprovada: sai o texto do modelo, ficam os trechos que ele marcou")
   void ligadaReprovadaFicamOsTrechos() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));

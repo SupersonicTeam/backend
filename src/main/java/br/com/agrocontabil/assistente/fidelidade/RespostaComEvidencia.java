@@ -73,12 +73,21 @@ record RespostaComEvidencia(List<Frase> frases) {
       JsonNode lidas = item.get("evidencias");
       if (lidas != null && lidas.isArray()) {
         for (JsonNode e : lidas) {
-          evidencias.add(new Evidencia(textoDe(e, "trecho"), textoDe(e, "copia")));
+          evidencias.add(new Evidencia(marcaDe(e), textoDe(e, "copia")));
         }
       }
       frases.add(new Frase(texto.strip(), List.copyOf(evidencias)));
     }
     return Optional.of(new RespostaComEvidencia(List.copyOf(frases)));
+  }
+
+  /** A marca como texto; o número sozinho ({@code "trecho": 2}) vale como "T2". */
+  private static String marcaDe(JsonNode evidencia) {
+    JsonNode valor = evidencia == null || !evidencia.isObject() ? null : evidencia.get("trecho");
+    if (valor != null && valor.isIntegralNumber()) {
+      return "T" + valor.asLong();
+    }
+    return textoDe(evidencia, "trecho");
   }
 
   private static String textoDe(JsonNode no, String campo) {

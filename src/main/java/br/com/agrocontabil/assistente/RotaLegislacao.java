@@ -280,7 +280,9 @@ public class RotaLegislacao {
       log.info("Ceres: resposta de lei so com regime especifico e a pergunta nao cita o setor");
       return descartePorRegimeEspecifico(trechos, contexto, soRegraGeral, perguntaSeparada);
     }
-    contexto.registrarTrechosCitados(citacao.idsCitados());
+    // distinct: com a fidelidade (#269), o ancestral que a busca nao trouxe leva o id do trecho em
+    // que a copia foi achada, e os dois podem ser citados. Sem ela os ids ja sao distintos.
+    contexto.registrarTrechosCitados(citacao.idsCitados().stream().distinct().toList());
     String regra = soRegraGeral && perguntaSeparada
         ? semSimOuNaoInicial(citacao.texto())
         : citacao.texto();
@@ -310,8 +312,9 @@ public class RotaLegislacao {
   /**
    * Resposta reprovada na conferência de fidelidade (#269): o caminho da lei descartada de sempre
    * (como o número sem fonte, #258). O texto do modelo sai inteiro; ficam os trechos que ele marcou
-   * nas evidências, sem afirmar que respondem. Sem nenhuma marca existente (formato inválido), os
-   * mais próximos da busca (#343), e no MISTO sem parte legal separada, nada da lei (#260).
+   * nas evidências, sem afirmar que respondem, também no MISTO com a pergunta inteira (como o número
+   * sem fonte). Sem nenhuma marca existente (formato inválido), o caminho do {@code NAO_ENCONTREI}:
+   * os mais próximos da busca (#343), e no MISTO sem parte legal separada, nada da lei (#260).
    */
   private static ResultadoRota fidelidadeReprovada(ConferenciaFidelidadeLei.Resultado fidelidade,
       List<TrechoRecuperado> trechos, ContextoAssistente contexto, boolean soRegraGeral,

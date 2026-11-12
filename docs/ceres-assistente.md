@@ -320,6 +320,91 @@ dar zero.
 4. `ValidadorNumeros`: percentuais, prazos e números de artigo da resposta têm de estar nos
    trechos — "redução de 70%" que a lei não diz não passa.
 
+### Fidelidade da resposta de lei (#269, desligada por padrão)
+
+**Por quê.** Na leitura cega de 10/11 com o Haiku (comentário no PR #425), das 16 respostas de lei
+que os validadores aceitaram na `main`, 3 saíram fiéis, 12 com ressalva e 1 infiel. Os dois
+defeitos: frase que afirma mais do que o trecho, ou o contrário dele, com a citação válida; e a
+citação no parágrafo quando a regra está no caput. O `ValidadorCitacao` só confere que a marca
+existe e o `ValidadorNumeros` só confere número, então nenhum dos dois pega.
+
+**Flag.** `app.assistente.fidelidade-lei.enabled` (`AI_FIDELIDADE_LEI_HABILITADA`, padrão `false`) e
+`app.assistente.fidelidade-lei.cobertura-minima` (`AI_FIDELIDADE_LEI_COBERTURA_MINIMA`, padrão
+`0.7`, maior que 0 e no máximo 1, conferida na subida). Desligada, a rota de lei é a de antes: o
+mesmo prompt (`PromptsCeres.sistemaLegislacao`) e o mesmo resultado, provados pelo
+`RotaLegislacaoFidelidadeTest` contra a rota construída sem a conferência. **Ligar** exige a medição
+no conjunto novo (escrito por outra sessão, cega ao código) e o OK do Murillo.
+
+**Como funciona (ligada).** Sem chamada a mais ao modelo; o modelo não julga o próprio texto.
+
+1. O prompt passa a ser o `PromptsCeres.sistemaLegislacaoComEvidencia` (e a variante do MISTO): a
+   resposta vem em JSON, cada frase com uma ou mais passagens copiadas, palavra por palavra, do
+   trecho que a sustenta: `{"frases": [{"frase": "...", "evidencias": [{"trecho": "T1", "copia":
+   "..."}]}]}`. `NAO_ENCONTREI` segue igual. Parte fixa antes da data e dos trechos (#270).
+2. O `fidelidade/ConferenciaFidelidadeLei` confere, frase a frase (a primeira falha reprova a
+   resposta inteira):
+   - **evidência**: ao menos uma, com marca existente e cópia não vazia (`REPROVADA_SEM_EVIDENCIA`;
+     JSON ilegível ou sem frase = `REPROVADA_FORMATO`);
+   - **literalidade**: a cópia está escrita no trecho marcado, comparada por palavras sem acento,
+     caixa nem pontuação; fragmentos separados por reticências valem se cada um for literal e na
+     ordem. Escrita só em outro trecho, a marca vai para ele; em nenhum, ou em vários que dariam
+     citações diferentes, `REPROVADA_EVIDENCIA_NAO_LITERAL`;
+   - **número**: todo número da frase está nas cópias dela (`REPROVADA_NUMERO`), mais estrito que o
+     `ValidadorNumeros`, que aceita qualquer trecho; o ordinal ("1º", "1°") conta como o número;
+   - **polaridade**: negação ("não", "nem", "vedado", "exceto", "salvo"...) ou restrição ("só",
+     "somente", "apenas", "exclusivamente") da frase precisa estar nas cópias, e negação das cópias
+     precisa estar na frase; isenção, imunidade, alíquota zero e suspensão contam como negação do
+     outro lado (`REPROVADA_POLARIDADE`). É o sinal de sentido invertido;
+   - **cobertura**: a fração das palavras de conteúdo da frase (sem as vazias da `fidelidade/TextoLei`,
+     comparadas pelos 5 primeiros caracteres, com "z" lido como "c"; sigla do glossário vale pelo nome por extenso e
+     vice-versa) que aparece nas cópias atinge a `cobertura-minima` (`REPROVADA_COBERTURA`). É o sinal
+     de afirmação além do trecho.
+   - frase sem nenhuma palavra de conteúdo ("Sim.", "Isso vale.") passa pelo número e pela
+     polaridade, mas **sai do texto**: não há o que a cópia sustente. Sem nenhuma frase com conteúdo,
+     `REPROVADA_COBERTURA`.
+
+   A marca da evidência aceita `T1`, `[T1]`, `t1` e o número sozinho; numa lista (`T1, T3`), vale a
+   primeira, e a cópia achada em outro trecho troca a marca.
+3. **Citação no nível certo.** O texto de cada trecho é o caput, o parágrafo, o inciso e a alínea
+   concatenados (`FatiadorDispositivos`). O `fidelidade/NivelDispositivo` acha onde cada nível começa
+   e a citação vai para o nível mais fundo que a cópia toca: cópia só no caput cita o `art. N`, com o
+   texto do caput (o começo do texto do trecho); se o trecho do caput veio na busca, usa ele. A
+   citação só sobe dentro do mesmo artigo. Rótulo fora da forma simples (redação dada por emenda,
+   item de anexo, `[2]`) fica como está. O ancestral que a busca não trouxe entra depois dos trechos
+   recebidos, com a marca seguinte, e na auditoria fica o id do trecho em que a cópia foi achada.
+4. **Aprovada** (`APROVADA` ou `APROVADA_CITACAO_CORRIGIDA`): o texto são as frases com as marcas, sem
+   as cópias, e segue o caminho de sempre: `ValidadorCitacao`, `ValidadorNumeros`,
+   `GuardaRegimeEspecifico`, o Sim/Não do MISTO, o `VerificadorAfirmacaoDados` e a `LinhaGlossario`.
+5. **Reprovada**: o texto do modelo sai inteiro; fica o `TRECHOS_SEM_CONFIRMACAO` com os trechos que
+   ele marcou nas evidências, o caminho do `NUMERO_SEM_FONTE` (#258), também no MISTO com a pergunta
+   inteira. Sem nenhuma marca existente (formato inválido), o caminho do `NAO_ENCONTREI`: os três mais
+   próximos da busca (#343), e no MISTO sem parte legal separada, nada da lei (#260). Desfecho
+   `FIDELIDADE_REPROVADA`, contado como descarte e recusa pela régua da avaliação
+   (`AvaliadorResposta`). Nunca entra texto novo do modelo.
+
+**Auditoria.** `assistente_interacao.fidelidade_lei` (changeSet 0065): o `DesfechoFidelidadeLei`, só o
+enum. Nula com a flag desligada e quando a conferência não roda (sem trecho, `NAO_ENCONTREI`,
+resposta cortada pelo teto). Para a medição:
+
+```sql
+SELECT fidelidade_lei, desfecho, count(*) FROM assistente_interacao
+WHERE rota IN ('LEGISLACAO', 'MISTO') AND criado_em >= :inicio
+GROUP BY 1, 2 ORDER BY 3 DESC;
+```
+
+**Custo.** Nenhuma chamada a mais. As regras do prompt crescem de ~680 para ~1.170 caracteres (~120 a
+~160 tokens de entrada a mais). A saída cresce com as cópias (estimativa: 1,5 a 3 vezes a resposta de
+hoje, **não medida**), com o mesmo teto (`tetos.legislacao`, 1.024); o corte cai no
+`RESPOSTA_CORTADA` de sempre. A reserva da cota não muda (é pelo teto); o consumo real sobe com a
+saída (peso 4). O tempo extra é só o da saída maior.
+
+**Limites conhecidos.** A régua é lexical: paráfrase com sinônimo fora da cópia reprova (falso
+descarte; a raiz casa "redução" com "reduzidas", mas não "isenção" com "não incide" fora da
+polaridade nem "IBS" com "imposto" sozinho; e a cópia com "salvo", "exceto" ou "não" exige negação
+na frase, mesmo quando a frase só resume a parte afirmativa), e frase que reordena as palavras
+da cópia com outro sentido, sem negação nem número, passa. A segunda chamada ao modelo para julgar a
+frase (no molde da #268) fica como etapa seguinte, se a medição mostrar infiel que passa por aqui.
+
 ## Orquestração, streaming e isolamento de recursos (issue #157)
 
 ### Rotas
@@ -835,7 +920,7 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 |---|---|---|---|---|---|---|
 | Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
 | Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
-| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
+| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO; ~1.170 com a conferência de fidelidade ligada, #269) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);

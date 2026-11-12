@@ -82,11 +82,16 @@ final class NivelDispositivo {
       marcadores.add(Pattern.compile("(?<![\\p{L}\\p{N}])" + m.group(9) + "\\)"));
     }
     // Do nivel mais fundo para o caput: cada um comeca na ultima ocorrencia do marcador antes do
-    // comeco do nivel seguinte (o texto proprio do nivel vem sempre depois do de quem o contem).
+    // comeco do nivel seguinte (o texto proprio do nivel vem sempre depois do de quem o contem). O
+    // marcador so vale logo depois do fim do nivel de cima (".", ":" ou ";" e espaco), como o
+    // fatiador os junta: uma remissao no meio do texto ("conforme o § 4º") nao e comeco de nivel.
     List<Integer> inicios = new ArrayList<>();
     int limite = texto.length();
     for (int i = marcadores.size() - 1; i >= 0; i--) {
-      int inicio = ultimo(marcadores.get(i), texto, limite);
+      int inicio = ultimo(
+          Pattern.compile("(?<=[.:;])\\s+(" + marcadores.get(i).pattern() + ")",
+              marcadores.get(i).flags()),
+          texto, limite);
       if (inicio <= 0) {
         return null;
       }
@@ -102,7 +107,7 @@ final class NivelDispositivo {
     m.region(0, limite);
     int ultimo = -1;
     while (m.find()) {
-      ultimo = m.start();
+      ultimo = m.start(1);
     }
     return ultimo;
   }

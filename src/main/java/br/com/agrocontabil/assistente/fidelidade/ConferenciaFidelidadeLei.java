@@ -4,12 +4,14 @@ import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,6 +39,10 @@ import org.springframework.stereotype.Component;
  *       ({@code REPROVADA_COBERTURA}) — o sinal de afirmação além do trecho.</li>
  * </ol>
  *
+ * <p>Frase sem nenhuma palavra de conteúdo ("Sim.", "Isso vale.") não tem o que a cópia sustente:
+ * passa pelas conferências de número e polaridade, mas sai do texto (não é afirmação conferida). Sem
+ * nenhuma frase com conteúdo, a resposta reprova pela cobertura.
+ *
  * <p>Aprovada, cada cópia é situada no nível do dispositivo em que está escrita
  * ({@link NivelDispositivo}): cópia só no caput passa a citar o artigo, só no parágrafo, o
  * parágrafo. O texto devolvido são as frases com as marcas, sem as cópias, para seguir pelos
@@ -50,7 +56,9 @@ public class ConferenciaFidelidadeLei {
   private static final Pattern PONTUACAO_FINAL = Pattern.compile("[.!?;:]+$");
   private static final Pattern RETICENCIAS =
       Pattern.compile("\\[\\s*(?:\\.\\.\\.|…)\\s*\\]|\\(\\s*(?:\\.\\.\\.|…)\\s*\\)|\\.\\.\\.|…");
-  private static final Pattern MARCA = Pattern.compile("^\\s*\\[?\\s*T(\\d{1,4})\\s*\\]?\\s*$");
+  /** Marca da evidência: "T1", "[T1]", "t1" ou "1"; numa lista ("T1, T3"), a primeira. */
+  private static final Pattern MARCA = Pattern.compile(
+      "^\\s*\\[?\\s*(?:T\\s*)?(\\d{1,4})\\s*(?:[,;].*)?\\]?\\s*$", Pattern.CASE_INSENSITIVE);
 
   private final GlossarioProdutor glossario;
 
@@ -131,7 +139,12 @@ public class ConferenciaFidelidadeLei {
       if (motivo != null) {
         return reprovada(motivo, trechos, marcasCitadas);
       }
-      frases.add(comMarcas(textoFrase, marcasDaFrase));
+      if (TextoLei.formas(textoFrase).stream().anyMatch(TextoLei::conteudo)) {
+        frases.add(comMarcas(textoFrase, marcasDaFrase));
+      }
+    }
+    if (frases.isEmpty()) {
+      return reprovada(DesfechoFidelidadeLei.REPROVADA_COBERTURA, trechos, marcasCitadas);
     }
     DesfechoFidelidadeLei desfecho = citacoes.corrigiu
         ? DesfechoFidelidadeLei.APROVADA_CITACAO_CORRIGIDA
@@ -237,8 +250,7 @@ public class ConferenciaFidelidadeLei {
    * Posição, no texto do trecho, da última palavra da cópia; -1 se a cópia não está escrita nele.
    * Fragmentos separados por reticências têm de estar, cada um, escritos e na ordem.
    */
-  static int posicaoDaCopia(String copia, TrechoRecuperado trecho) {
-    List<TextoLei.Palavra> texto = TextoLei.palavras(trecho.texto());
+  static int posicaoDaCopia(String copia, List<TextoLei.Palavra> texto) {
     int cursor = 0;
     int ultima = -1;
     boolean algum = false;
@@ -279,6 +291,9 @@ public class ConferenciaFidelidadeLei {
     final List<TrechoRecuperado> recebidos;
     final List<TrechoRecuperado> lista;
     final Map<String, String> marcaPorDispositivo = new LinkedHashMap<>();
+    /** Palavras e níveis de cada trecho recebido, calculados uma vez por resposta. */
+    final Map<Integer, List<TextoLei.Palavra>> palavras = new HashMap<>();
+    final Map<Integer, Optional<NivelDispositivo>> niveis = new HashMap<>();
     boolean corrigiu;
 
     Citacoes(List<TrechoRecuperado> recebidos) {
@@ -294,14 +309,13 @@ public class ConferenciaFidelidadeLei {
      * está escrita em nenhum trecho, ou se está em vários que levariam a citações diferentes.
      */
     String citar(int indice, String copia) {
-      TrechoRecuperado marcado = recebidos.get(indice);
-      int posicao = posicaoDaCopia(copia, marcado);
+      int posicao = posicaoDaCopia(copia, palavrasDe(indice));
       if (posicao >= 0) {
-        return situar(marcado, posicao);
+        return situar(indice, posicao);
       }
       Set<String> destinos = new LinkedHashSet<>();
-      for (TrechoRecuperado outro : recebidos) {
-        int p = posicaoDaCopia(copia, outro);
+      for (int outro = 0; outro < recebidos.size(); outro++) {
+        int p = posicaoDaCopia(copia, palavrasDe(outro));
         if (p >= 0) {
           destinos.add(situar(outro, p));
         }
@@ -313,10 +327,17 @@ public class ConferenciaFidelidadeLei {
       return destinos.iterator().next();
     }
 
+    private List<TextoLei.Palavra> palavrasDe(int indice) {
+      return palavras.computeIfAbsent(indice,
+          i -> TextoLei.palavras(recebidos.get(i).texto()));
+    }
+
     /** Marca do nível do dispositivo em que a cópia está escrita. */
-    private String situar(TrechoRecuperado trecho, int posicao) {
-      NivelDispositivo niveis = NivelDispositivo.de(trecho.dispositivo(), trecho.texto());
-      NivelDispositivo.Ancestral ancestral = niveis == null ? null : niveis.ancestralDe(posicao);
+    private String situar(int indice, int posicao) {
+      TrechoRecuperado trecho = recebidos.get(indice);
+      NivelDispositivo nivel = niveis.computeIfAbsent(indice, i -> Optional.ofNullable(
+          NivelDispositivo.de(trecho.dispositivo(), trecho.texto()))).orElse(null);
+      NivelDispositivo.Ancestral ancestral = nivel == null ? null : nivel.ancestralDe(posicao);
       if (ancestral == null) {
         return trecho.marca();
       }

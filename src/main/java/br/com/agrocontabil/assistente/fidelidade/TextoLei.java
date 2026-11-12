@@ -1,9 +1,8 @@
 package br.com.agrocontabil.assistente.fidelidade;
 
-import java.text.Normalizer;
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,9 +14,12 @@ import java.util.regex.Pattern;
  */
 final class TextoLei {
 
-  /** Palavra ou número; hífen e pontuação separam ("ano-calendário" = duas palavras). */
-  private static final Pattern PALAVRA = Pattern.compile("[\\p{L}\\p{N}]+");
-  private static final Pattern MARCAS_DIACRITICAS = Pattern.compile("\\p{M}+");
+  /**
+   * Palavra ou número; hífen e pontuação separam ("ano-calendário" = duas palavras). O indicador
+   * ordinal (º, ª) é letra para o Unicode, mas aqui separa: "1º" é o número 1, como "1°" ou "1o"
+   * escrito pelo modelo, e entra na conferência de número.
+   */
+  private static final Pattern PALAVRA = Pattern.compile("[\\p{L}\\p{N}&&[^ºª]]+");
   private static final Pattern SO_DIGITOS = Pattern.compile("\\d+");
 
   /** Tamanho da raiz: "cobrança" e "cobrar" casam, "estadual" e "estados" também. */
@@ -108,16 +110,18 @@ final class TextoLei {
     return palavras(texto).stream().map(Palavra::forma).toList();
   }
 
-  /** Sem acento e em minúsculas. */
+  /** Sem acento e em minúsculas, pela regra única da busca ({@link NormalizacaoBusca}). */
   static String normalizar(String palavra) {
-    String sem = MARCAS_DIACRITICAS.matcher(Normalizer.normalize(palavra, Normalizer.Form.NFD))
-        .replaceAll("");
-    return sem.toLowerCase(Locale.ROOT);
+    return NormalizacaoBusca.normalizar(palavra);
   }
 
-  /** Raiz de comparação: os primeiros {@value #RAIZ} caracteres. */
+  /**
+   * Raiz de comparação: os primeiros {@value #RAIZ} caracteres, com "z" lido como "c" ("redução" e
+   * "reduzidas" casam; o "ç" já virou "c" na normalização).
+   */
   static String raiz(String forma) {
-    return forma.length() > RAIZ ? forma.substring(0, RAIZ) : forma;
+    String raiz = forma.length() > RAIZ ? forma.substring(0, RAIZ) : forma;
+    return raiz.replace('z', 'c');
   }
 
   /** {@code true} se a forma é só dígitos. */

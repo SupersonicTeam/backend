@@ -266,6 +266,19 @@ class ConferenciaFidelidadeLeiTest {
   }
 
   @Test
+  @DisplayName("palavras da mesma raiz casam ('redução' e 'reduzidas', 'cobrança' e 'cobrar')")
+  void mesmaRaizCasa() {
+    TrechoRecuperado t = trecho("T1", "id", "art. 138", "Art. 138. Ficam reduzidas em 60% as "
+        + "alíquotas do IBS e da CBS, e o Comitê Gestor pode cobrar a diferença.");
+    ConferenciaFidelidadeLei.Resultado r = conferir(json(
+        "A redução das alíquotas é de 60%, com a cobrança da diferença pelo Comitê Gestor.", "T1",
+        "Ficam reduzidas em 60% as alíquotas do IBS e da CBS, e o Comitê Gestor pode cobrar a "
+            + "diferença"), t);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+  }
+
+  @Test
   @DisplayName("JSON entre cercas de código e com texto em volta é lido; marcas na frase saem")
   void jsonComCercaELido() {
     ConferenciaFidelidadeLei.Resultado r = conferir("Aqui está:\n```json\n" + json(
@@ -297,13 +310,73 @@ class ConferenciaFidelidadeLeiTest {
   }
 
   @Test
-  @DisplayName("frase sem palavra de conteúdo não precisa de cobertura")
-  void fraseSemConteudoPassa() {
-    ConferenciaFidelidadeLei.Resultado r = conferir(json("Sim.", "T1",
-        "será devido exclusivamente o IBS na operação"), alineaB("T1"));
+  @DisplayName("frase sem palavra de conteúdo ('Sim.') sai do texto; sozinha, a resposta reprova")
+  void fraseSemConteudoSaiDoTexto() {
+    // Sozinha: "Sim." nao afirma nada que a copia sustente.
+    assertThat(conferir(json("Sim.", "T1", "será devido exclusivamente o IBS na operação"),
+        alineaB("T1")).desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+
+    String resposta = "{\"frases\": ["
+        + "{\"frase\": \"Sim.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": "
+        + "\"será devido exclusivamente o IBS\"}]},"
+        + "{\"frase\": \"Nesse caso, será devido só o IBS na operação.\", \"evidencias\": ["
+        + "{\"trecho\": \"T1\", \"copia\": \"será devido exclusivamente o IBS na operação\"}]}]}";
+    ConferenciaFidelidadeLei.Resultado r = conferir(resposta, alineaB("T1"));
 
     assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
-    assertThat(r.texto()).isEqualTo("Sim [T1].");
+    assertThat(r.texto()).isEqualTo("Nesse caso, será devido só o IBS na operação [T1].");
+  }
+
+  @Test
+  @DisplayName("frase sem conteúdo continua passando pela polaridade ('Não.' sem negação na cópia)")
+  void fraseSemConteudoAindaConfereAPolaridade() {
+    String resposta = "{\"frases\": ["
+        + "{\"frase\": \"Não.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": "
+        + "\"será devido exclusivamente o IBS\"}]},"
+        + "{\"frase\": \"Nesse caso, será devido só o IBS na operação.\", \"evidencias\": ["
+        + "{\"trecho\": \"T1\", \"copia\": \"será devido exclusivamente o IBS na operação\"}]}]}";
+
+    assertThat(conferir(resposta, alineaB("T1")).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+  }
+
+  @Test
+  @DisplayName("ordinal ('1º') é número: conferido, e o '1°' copiado casa com o '1º' do trecho")
+  void ordinalEhNumero() {
+    TrechoRecuperado t = trecho("T1", "id", "art. 5º", "Art. 5º A CBS será exigida a partir de 1º "
+        + "de janeiro de 2027.");
+    assertThat(conferir(json("A CBS será exigida a partir de 2º de janeiro de 2027.", "T1",
+        "A CBS será exigida a partir de 1º de janeiro de 2027"), t).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(conferir(json("A CBS será exigida a partir de 1º de janeiro de 2027.", "T1",
+        "A CBS será exigida a partir de 1° de janeiro de 2027"), t).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.APROVADA);
+  }
+
+  @Test
+  @DisplayName("marca da evidência em minúscula, como número ou em lista é lida")
+  void marcaFlexivel() {
+    String copia = "será devido exclusivamente o IBS na operação";
+    String frase = "Nesse caso, será devido só o IBS na operação.";
+    for (String marca : List.of("\"t1\"", "1", "\"[T1]\"", "\"T1, T2\"")) {
+      String resposta = "{\"frases\": [{\"frase\": \"" + frase + "\", \"evidencias\": [{"
+          + "\"trecho\": " + marca + ", \"copia\": \"" + copia + "\"}]}]}";
+      assertThat(conferir(resposta, alineaB("T1"), incisoI("T2")).desfecho())
+          .as(marca).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+    }
+    assertThat(conferir("{\"frases\": [{\"frase\": \"" + frase + "\", \"evidencias\": [{"
+        + "\"trecho\": \"X1\", \"copia\": \"" + copia + "\"}]}]}", alineaB("T1")).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA);
+  }
+
+  @Test
+  @DisplayName("JSON malformado entre chaves, ou objeto sem 'frases', reprova pelo formato")
+  void jsonMalformadoReprova() {
+    for (String resposta : List.of("{frases: [", "{\"outra\": 1}", "texto {\"frases\": [}",
+        "{\"frases\": [\"texto\"]}")) {
+      assertThat(conferir(resposta, alineaB("T1")).desfecho()).as(resposta)
+          .isEqualTo(DesfechoFidelidadeLei.REPROVADA_FORMATO);
+    }
   }
 
   @Test
