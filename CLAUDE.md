@@ -183,6 +183,15 @@ oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`), a 8b (`d8b0b36`) e a
 > `SupersonicTeam/ceres-benchmark-cego`. Mensagem a uma sessão de código cita só o id da inédita
 > (`E03`), nunca o texto. Mudança da Ceres feita por quem conheceu uma inédita a contamina.
 
+**Fidelidade da rota de lei (#269):** `docs/avaliacao/fidelidade-lei/` guarda o conjunto de 36 perguntas
+(`perguntas-fidelidade-lei.json`, sha256 ao lado), a regra de decisão e os scripts da medição do
+braço flag desligada × ligada com o Haiku. Vale a mesma regra do teste cego: quem escreve ou revisa a
+correção da fidelidade **não lê** o conjunto (nem o gabarito, os prompts dos juízes ou os resultados),
+e a mensagem a essa sessão cita só o id (`FL07`). O `ConjuntoFidelidadeLeiTest` e os testes Python
+da pasta (`python3 -m unittest discover -s docs/avaliacao/fidelidade-lei -p "test_*.py"`, na CI)
+guardam o hash, o treino e o prompt; a regra (`regra-de-decisao.md`) e as margens do
+`fidelidade_comum.py` são uma coisa só: mudou uma, mude a outra e a versão.
+
 ## Arquitetura — regras inegociáveis
 
 - **Camadas:** `Controller → Service → Repository`. Sempre nessa direção.
